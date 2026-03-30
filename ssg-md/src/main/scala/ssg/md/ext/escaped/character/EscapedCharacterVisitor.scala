@@ -1,0 +1,17 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark-ext-escaped-character/src/main/java/com/vladsch/flexmark/ext/escaped/character/EscapedCharacterVisitor.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package ext
+package escaped
+package character
+
+trait EscapedCharacterVisitor {
+  def visit(node: EscapedCharacter): Unit
+}

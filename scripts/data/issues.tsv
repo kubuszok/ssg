@@ -1,2 +1,3 @@
 # SSG Issues Database
 # id	file_path	category	status	severity	description	last_updated	source
+ISS-001	ssg-md/src/main/scala/ssg/md/util/misc/ArrayUtils.scala	missing-file	open	high	File missing - migration DB says ported but file does not exist. Original ArrayUtils.java has: contained, append, firstOf, indexOf, lastOf, lastIndexOf, toArray.	2026-03-31	manual

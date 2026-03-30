@@ -1,0 +1,17 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark/src/main/java/com/vladsch/flexmark/html/renderer/RenderingPhase.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package html
+package renderer
+
+enum RenderingPhase extends java.lang.Enum[RenderingPhase] {
+  case HEAD_TOP, HEAD, HEAD_CSS, HEAD_SCRIPTS, HEAD_BOTTOM,
+    BODY_TOP, BODY, BODY_BOTTOM, BODY_LOAD_SCRIPTS, BODY_SCRIPTS
+}

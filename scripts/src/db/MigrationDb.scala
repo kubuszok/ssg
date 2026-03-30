@@ -21,12 +21,14 @@ object MigrationDb {
                   |Commands:
                   |  list [--status S] [--lib L] [--module M] [--package P] [--limit N] [--offset N]
                   |  get <source_path>
-                  |  set <source_path> --status S [--notes TEXT]
+                  |  set <source_path> --status S [--notes TEXT] [--ssg-path P]
+                  |  batch-set --pattern PAT --status S [--notes TEXT]    Update all rows matching pattern
                   |  sync       Scan original source trees and populate entries
                   |  stats      Summary counts""".stripMargin)
       case "list" :: rest => list(Cli.parse(rest))
       case "get" :: rest => get(Cli.parse(rest))
       case "set" :: rest => set(Cli.parse(rest))
+      case "batch-set" :: rest => batchSet(Cli.parse(rest))
       case "sync" :: rest => sync(Cli.parse(rest))
       case "stats" :: _ => stats()
       case other :: _ =>
@@ -65,20 +67,60 @@ object MigrationDb {
     val updates = scala.collection.mutable.Map.empty[String, String]
     args.flag("status").foreach(s => updates("status") = s)
     args.flag("notes").foreach(n => updates("notes") = n)
+    args.flag("ssg-path").foreach(p => updates("ssg_path") = p)
     updates("last_updated") = LocalDate.now().toString
 
     var table = load()
     val found = table.rows.exists(_.getOrElse("source_path", "") == path)
-    if (!found) {
-      Term.err(s"Not found: $path")
-      sys.exit(1)
+    if (found) {
+      table = table.updateRow(
+        _.getOrElse("source_path", "") == path,
+        updates.toMap
+      )
+    } else {
+      // Upsert: create new entry
+      val row = Map(
+        "source_lib" -> updates.getOrElse("source_lib", "flexmark"),
+        "source_path" -> path,
+        "ssg_path" -> updates.getOrElse("ssg_path", ""),
+        "status" -> updates.getOrElse("status", "ported"),
+        "module" -> updates.getOrElse("module", "ssg-md"),
+        "last_updated" -> updates.getOrElse("last_updated", LocalDate.now().toString),
+        "notes" -> updates.getOrElse("notes", ""),
+        "source_sync_commit" -> "",
+        "last_sync_date" -> ""
+      )
+      table = table.addRow(row)
     }
-    table = table.updateRow(
-      _.getOrElse("source_path", "") == path,
-      updates.toMap
-    )
     save(table)
     Term.ok(s"Updated: $path")
+  }
+
+  /** Bulk update rows matching a source_path pattern. */
+  def batchSet(args: Cli.Args): Unit = {
+    val pattern = args.flag("pattern").getOrElse {
+      Term.err("Missing required --pattern flag")
+      sys.exit(1)
+    }
+    val updates = scala.collection.mutable.Map.empty[String, String]
+    args.flag("status").foreach(s => updates("status") = s)
+    args.flag("notes").foreach(n => updates("notes") = n)
+    args.flag("ssg-path").foreach(p => updates("ssg_path") = p)
+    updates("last_updated") = LocalDate.now().toString
+
+    var table = load()
+    val predicate: Map[String, String] => Boolean =
+      _.getOrElse("source_path", "").contains(pattern)
+
+    val matchCount = table.rows.count(predicate)
+    if (matchCount == 0) {
+      Term.err(s"No rows match pattern: $pattern")
+      sys.exit(1)
+    }
+
+    table = table.updateRow(predicate, updates.toMap)
+    save(table)
+    Term.ok(s"Updated $matchCount rows matching '$pattern'")
   }
 
   /** Scan original source trees and populate the migration database. */

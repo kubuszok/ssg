@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark-util-format/src/main/java/com/vladsch/flexmark/util/format/CharWidthProvider.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package util
+package format
+
+import ssg.md.util.misc.CharPredicate
+
+trait CharWidthProvider {
+
+  def spaceWidth: Int
+
+  def getCharWidth(c: Char): Int
+
+  def getStringWidth(chars: CharSequence): Int =
+    getStringWidth(chars, CharPredicate.NONE)
+
+  def getStringWidth(chars: CharSequence, zeroWidthChars: CharPredicate): Int = {
+    val iMax  = chars.length()
+    var width = 0
+    var i     = 0
+    while (i < iMax) {
+      val c = chars.charAt(i)
+      if (!zeroWidthChars.test(c)) {
+        width += getCharWidth(c)
+      }
+      i += 1
+    }
+    width
+  }
+}
+
+object CharWidthProvider {
+
+  val NULL: CharWidthProvider = new CharWidthProvider {
+
+    override def spaceWidth: Int = 1
+
+    override def getCharWidth(c: Char): Int = 1
+  }
+}
