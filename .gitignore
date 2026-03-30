@@ -1,0 +1,37 @@
+## Metals
+.bloop/
+.bsp/
+.metals/
+
+## sbt
+project/*
+!project/plugins.sbt
+!project/build.properties
+!project/SsgSettings.scala
+target/
+.sbt/
+
+# VS Code, Cursor, etc.
+.vscode/
+.cursorrules
+.cursorignore
+.cursorignorerules
+
+## IntelliJ
+.idea/
+*.ipr
+*.iws
+*.iml
+
+## Metals MCP
+.mcp.json
+
+## ssg-dev CLI
+scripts/bin/
+scripts/.metals-pid
+scripts/.metals.log
+.scala-build/
+
+## OS-Specific
+.DS_Store
+Thumbs.db
