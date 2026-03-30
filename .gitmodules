@@ -1,0 +1,12 @@
+[submodule "original-src/flexmark-java"]
+	path = original-src/flexmark-java
+	url = https://github.com/vsch/flexmark-java.git
+[submodule "original-src/liqp"]
+	path = original-src/liqp
+	url = https://github.com/bkiers/Liqp.git
+[submodule "original-src/dart-sass"]
+	path = original-src/dart-sass
+	url = https://github.com/sass/dart-sass.git
+[submodule "original-src/jekyll-minifier"]
+	path = original-src/jekyll-minifier
+	url = https://github.com/digitalsparky/jekyll-minifier.git
