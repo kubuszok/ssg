@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark-util-format/src/main/java/com/vladsch/flexmark/util/format/options/ListSpacing.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package util
+package format
+package options
+
+enum ListSpacing extends java.lang.Enum[ListSpacing] {
+  case AS_IS // as is, leave all items in their state with blank lines as they are
+  case LOOSEN // if list has a loose item then loosen the list by adding blank lines to all items
+  case TIGHTEN // if list has no loose items then tighten list by removing unnecessary blank lines
+  case LOOSE // make loose by adding blank lines to all items
+  case TIGHT // make tight by removing all unnecessary blank lines from all items
+}

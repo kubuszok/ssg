@@ -1,0 +1,22 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/GfmUsersVisitorExt.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package ext
+package gfm
+package users
+
+import ssg.md.util.ast.VisitHandler
+import scala.language.implicitConversions
+
+object GfmUsersVisitorExt {
+  def VISIT_HANDLERS[V <: GfmUsersVisitor](visitor: V): Array[VisitHandler[?]] = {
+    Array(new VisitHandler[GfmUser](classOf[GfmUser], visitor.visit(_)))
+  }
+}

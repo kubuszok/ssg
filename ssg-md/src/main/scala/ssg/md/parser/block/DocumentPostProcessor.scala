@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: flexmark/src/main/java/com/vladsch/flexmark/parser/block/DocumentPostProcessor.java
+ * Original: Copyright (c) 2016-2023 Vladimir Schneider
+ * Original license: BSD-2-Clause
+ */
+package ssg
+package md
+package parser
+package block
+
+import ssg.md.parser.PostProcessor
+import ssg.md.util.ast.{ Node, NodeTracker }
+
+abstract class DocumentPostProcessor extends PostProcessor {
+
+  /** @param state
+    *   node tracker used for optimizing node processing
+    * @param node
+    *   the node to post-process
+    */
+  final override def process(state: NodeTracker, node: Node): Unit = {}
+}
