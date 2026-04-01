@@ -29,10 +29,10 @@ import scala.language.implicitConversions
  * The parsed attributes text is turned into [[AttributesNode]] nodes.
  */
 class AttributesExtension private ()
-    extends Parser.ParserExtension
-    with RendererExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    RendererExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def parserOptions(options: MutableDataHolder): Unit = {
     if (options.contains(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES) && AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES.get(options) && !options.contains(AttributesExtension.FENCED_CODE_ADD_ATTRIBUTES)) {

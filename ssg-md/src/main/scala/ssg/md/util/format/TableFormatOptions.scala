@@ -76,25 +76,25 @@ object TableFormatOptions {
   val INTELLIJ_DUMMY_IDENTIFIER:      String        = SequenceUtils.US_CHARS
   val INTELLIJ_DUMMY_IDENTIFIER_SET:  CharPredicate = (value: Int) => value == SequenceUtils.US
 
-  val FORMAT_TABLE_LEAD_TRAIL_PIPES:       DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_LEAD_TRAIL_PIPES", true)
-  val FORMAT_TABLE_SPACE_AROUND_PIPES:     DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_SPACE_AROUND_PIPES", true)
-  val FORMAT_TABLE_ADJUST_COLUMN_WIDTH:    DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_ADJUST_COLUMN_WIDTH", true)
-  val FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT: DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT", true)
-  val FORMAT_TABLE_FILL_MISSING_COLUMNS:   DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_FILL_MISSING_COLUMNS", false)
+  val FORMAT_TABLE_LEAD_TRAIL_PIPES:       DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_LEAD_TRAIL_PIPES", true)
+  val FORMAT_TABLE_SPACE_AROUND_PIPES:     DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_SPACE_AROUND_PIPES", true)
+  val FORMAT_TABLE_ADJUST_COLUMN_WIDTH:    DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_ADJUST_COLUMN_WIDTH", true)
+  val FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT: DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT", true)
+  val FORMAT_TABLE_FILL_MISSING_COLUMNS:   DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_FILL_MISSING_COLUMNS", false)
 
   /** Used by table formatting to set min column from which to add missing columns, null to use default
     */
   val FORMAT_TABLE_FILL_MISSING_MIN_COLUMN: NullableDataKey[Integer] = new NullableDataKey[Integer]("FORMAT_TABLE_FILL_MISSING_MIN_COLUMN")
 
   val FORMAT_TABLE_LEFT_ALIGN_MARKER:          DataKey[DiscretionaryText]    = new DataKey[DiscretionaryText]("FORMAT_TABLE_LEFT_ALIGN_MARKER", DiscretionaryText.AS_IS)
-  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Integer]              = new DataKey[Integer]("FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH", 3)
-  val FORMAT_TABLE_MIN_SEPARATOR_DASHES:       DataKey[Integer]              = new DataKey[Integer]("FORMAT_TABLE_MIN_SEPARATOR_DASHES", 1)
-  val FORMAT_TABLE_TRIM_CELL_WHITESPACE:       DataKey[java.lang.Boolean]    = new DataKey[java.lang.Boolean]("FORMAT_TABLE_TRIM_CELL_WHITESPACE", true)
+  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Int]     = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH", 3)
+  val FORMAT_TABLE_MIN_SEPARATOR_DASHES:       DataKey[Int]     = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_DASHES", 1)
+  val FORMAT_TABLE_TRIM_CELL_WHITESPACE:       DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_TRIM_CELL_WHITESPACE", true)
   val FORMAT_TABLE_CAPTION:                    DataKey[TableCaptionHandling] = new DataKey[TableCaptionHandling]("FORMAT_TABLE_CAPTION", TableCaptionHandling.AS_IS)
   val FORMAT_TABLE_CAPTION_SPACES:             DataKey[DiscretionaryText]    = new DataKey[DiscretionaryText]("FORMAT_TABLE_CAPTION_SPACES", DiscretionaryText.AS_IS)
   val FORMAT_TABLE_INDENT_PREFIX:              DataKey[String]               = new DataKey[String]("FORMAT_TABLE_INDENT_PREFIX", "")
   val FORMAT_TABLE_MANIPULATOR:                DataKey[TableManipulator]     = new DataKey[TableManipulator]("FORMAT_TABLE_MANIPULATOR", TableManipulator.NULL)
 
   val FORMAT_CHAR_WIDTH_PROVIDER:         DataKey[CharWidthProvider] = new DataKey[CharWidthProvider]("FORMAT_CHAR_WIDTH_PROVIDER", CharWidthProvider.NULL)
-  val FORMAT_TABLE_DUMP_TRACKING_OFFSETS: DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("FORMAT_TABLE_DUMP_TRACKING_OFFSETS", false)
+  val FORMAT_TABLE_DUMP_TRACKING_OFFSETS: DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_DUMP_TRACKING_OFFSETS", false)
 }

@@ -66,7 +66,7 @@ class MarkdownParagraph(
       wrapping.wrapText()
     }
 
-  def getContinuationStartSplice(offset: Int, afterSpace: Boolean, afterDelete: Boolean): Range = {
+  def getContinuationStartSplice(offset: Int, afterSpace: Boolean, afterDelete: Boolean): Range = boundary {
     val baseSequence = altSeq.getBaseSequence
     assert(offset >= 0 && offset <= baseSequence.length())
     if (afterSpace && afterDelete) {
@@ -79,7 +79,7 @@ class MarkdownParagraph(
           val offsetInfo            = preFormatTracker.getOffsetInfo(offset, true)
           val offsetIndex           = offsetInfo.endIndex
           val previousNonBlankIndex = altSeq.lastIndexOfAnyNot(SPACE_TAB_NBSP_EOL, offsetIndex - 1)
-          return Range.of(previousNonBlankIndex + 1, offsetIndex) // NOTE: early return with result
+          break(Range.of(previousNonBlankIndex + 1, offsetIndex)) // NOTE: early exit with result
         }
       }
     }
@@ -113,12 +113,12 @@ class MarkdownParagraph(
     wrapped
   }
 
-  def wrapText(): BasedSequence = {
+  def wrapText(): BasedSequence = boundary {
     if (getFirstWidth <= 0) {
-      return baseSeq // NOTE: early return for no-wrap case
+      break(baseSeq)
     }
     if (_trackedOffsets.isEmpty) {
-      return wrapTextNotTracked() // NOTE: early return for no-tracking case
+      break(wrapTextNotTracked())
     }
 
     // Adjust input text for wrapping by removing any continuation splice regions
@@ -163,7 +163,7 @@ class MarkdownParagraph(
   }
 
   private[format] def resolveTrackedOffsetsEdit(baseSpliced: BasedSequence, altSpliced: BasedSequence, wrappedIn: BasedSequence): BasedSequence = {
-    val inTest: java.lang.Boolean = SharedDataKeys.RUNNING_TESTS.get(options.getOrElse(null))
+    val inTest: Boolean = SharedDataKeys.RUNNING_TESTS.get(options.getOrElse(null))
     val spliced        = BasedSequence.of(baseSpliced.toString)
     val altTextWrapper = new LeftAlignedWrapping(spliced)
     val altWrapped     = {
@@ -449,9 +449,9 @@ class MarkdownParagraph(
       col += charWidthProvider.spaceWidth * count
     }
 
-    private def addSpaces(sequence: Nullable[BasedSequence], count: Int): Nullable[BasedSequence] = {
+    private def addSpaces(sequence: Nullable[BasedSequence], count: Int): Nullable[BasedSequence] = boundary {
       if (count <= 0) {
-        return sequence // NOTE: early return, no spaces to add
+        break(sequence)
       }
 
       var remainder: Nullable[BasedSequence] = Nullable(null)
@@ -485,23 +485,23 @@ class MarkdownParagraph(
       lastSpace = Nullable(null)
     }
 
-    private def processLeadInEscape(handlers: JList[? <: SpecialLeadInHandler], sequence: BasedSequence): Unit = {
+    private def processLeadInEscape(handlers: JList[? <: SpecialLeadInHandler], sequence: BasedSequence): Unit = boundary {
       if (sequence.isNotEmpty() && wrappingEscapeSpecialLeadInChars) {
         val iter = handlers.iterator()
         while (iter.hasNext)
           if (iter.next().escape(sequence, options, addChars)) {
-            return // NOTE: early return, handler consumed the sequence
+            break(())
           }
       }
       addChars(sequence)
     }
 
-    private def processLeadInUnEscape(handlers: JList[? <: SpecialLeadInHandler], sequence: BasedSequence): Unit = {
+    private def processLeadInUnEscape(handlers: JList[? <: SpecialLeadInHandler], sequence: BasedSequence): Unit = boundary {
       if (sequence.isNotEmpty() && wrappingUnEscapeSpecialLeadInChars) {
         val iter = handlers.iterator()
         while (iter.hasNext)
           if (iter.next().unEscape(sequence, options, addChars)) {
-            return // NOTE: early return, handler consumed the sequence
+            break(())
           }
       }
       addChars(sequence)

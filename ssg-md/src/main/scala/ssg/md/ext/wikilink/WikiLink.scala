@@ -14,7 +14,7 @@ package wikilink
 import ssg.md.ast.LinkRendered
 import ssg.md.util.sequence.BasedSequence
 
-class WikiLink(linkIsFirst: Boolean) extends WikiNode(linkIsFirst) with LinkRendered {
+class WikiLink(linkIsFirst: Boolean) extends WikiNode(linkIsFirst), LinkRendered {
 
   def this(chars: BasedSequence, linkIsFirst: Boolean, allowAnchors: Boolean, canEscapePipe: Boolean, canEscapeAnchor: Boolean) = {
     this(linkIsFirst)

@@ -19,7 +19,7 @@ import java.{util => ju}
 import scala.language.implicitConversions
 
 /** A GitLab block quote node */
-class GitLabBlockQuote() extends Block with ParagraphContainer {
+class GitLabBlockQuote() extends Block, ParagraphContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var openingTrailing: BasedSequence = BasedSequence.NULL

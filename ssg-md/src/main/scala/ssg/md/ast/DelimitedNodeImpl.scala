@@ -14,7 +14,7 @@ import ssg.md.util.ast.DelimitedNode
 import ssg.md.util.ast.Node
 import ssg.md.util.sequence.BasedSequence
 
-abstract class DelimitedNodeImpl extends Node with DelimitedNode {
+abstract class DelimitedNodeImpl extends Node, DelimitedNode {
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL

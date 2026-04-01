@@ -12,7 +12,7 @@ package util
 package sequence
 
 import ssg.md.Nullable
-import ssg.md.util.misc.BitFieldSet
+import ssg.md.util.misc.{ BitFieldSet, EnumBitField }
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import java.io.IOException
@@ -360,6 +360,13 @@ object LineAppendable {
     case TRIM_LEADING_WHITESPACE // allow leading spaces on a line, else remove
     case TRIM_LEADING_EOL // allow EOL at offset 0
     case PREFIX_PRE_FORMATTED // when prefixing lines, prefix pre-formatted lines
+  }
+
+  given EnumBitField[Options] with {
+    def elementType: Class[Options] = classOf[Options]
+    def typeName: String = "Options"
+    val values: Array[Options] = Options.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Options")
   }
 
   val O_CONVERT_TABS:             Options              = Options.CONVERT_TABS

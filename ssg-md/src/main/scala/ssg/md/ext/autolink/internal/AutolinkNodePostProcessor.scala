@@ -24,6 +24,8 @@ import ssg.md.util.ast.*
 import ssg.md.util.sequence.*
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 import java.util.ArrayList
 import java.util.regex.Pattern
 
@@ -42,10 +44,10 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
     ignoredLinks.exists(_.matcher(url).matches())
   }
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit = boundary {
     // TODO: figure out why optimization does not work after AutoLink inserted by inline parser
     if (node.ancestorOfType(classOf[DoNotDecorate], classOf[DoNotLinkDecorate]).isDefined) {
-      return // equivalent to early return - needed for post-processor logic
+      break(())
     }
 
     var combined = node.chars
@@ -147,7 +149,7 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
           // need to see if we need to abort because the first link is not in the first text node
           if (startOffset >= node.chars.length()) {
             // skip this, it will be processed by next Text node processor
-            return // early return
+            break(())
           }
         }
 
@@ -255,7 +257,7 @@ object AutolinkNodePostProcessor {
   /** Strip trailing punctuation from a URL match, emulating org.nibor.autolink behavior.
     * Keeps balanced parentheses (e.g., `foo_(bar)` retains trailing `)`).
     */
-  private def adjustUrlEnd(text: CharSequence, start: Int, end: Int): Int = {
+  private def adjustUrlEnd(text: CharSequence, start: Int, end: Int): Int = boundary {
     var e = end
     // Strip trailing sentence-ending punctuation that is not part of the URL
     while (e > start) {
@@ -277,10 +279,10 @@ object AutolinkNodePostProcessor {
           e -= 1
         } else {
           // balanced — stop stripping
-          return e
+          break(e)
         }
       } else {
-        return e
+        break(e)
       }
     }
     e

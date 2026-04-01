@@ -21,13 +21,15 @@ import ssg.md.util.ast.{ BlankLineContainer, Block }
 import ssg.md.util.misc.Utils
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class ListItemParser(
   val listOptions: ListOptions,
   val myParsing:   Parsing,
   val myListData:  ListBlockParser.ListData
-) extends AbstractBlockParser
-    with BlankLineContainer {
+) extends AbstractBlockParser,
+    BlankLineContainer {
 
   private val _block: ListItem =
     if (myListData.isNumberedList) OrderedListItem()
@@ -85,7 +87,7 @@ class ListItemParser(
     BlockContinue.atColumn(newColumn)
   }
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] = boundary {
     if (state.isBlank) {
       // now when we have a Blank line after empty list item, now we need to handle it because the list is not closed and we handle next list item conditions
       val firstChild = _block.firstChild
@@ -94,7 +96,7 @@ class ListItemParser(
         _block.hadBlankAfterItemParagraph_=(true)
       }
       myHadBlankLine = true
-      return Nullable(BlockContinue.atIndex(state.nextNonSpaceIndex)) // @nowarn -- early exit for blank line
+      break(Nullable(BlockContinue.atIndex(state.nextNonSpaceIndex)))
     }
 
     assert(_block.parent.exists(_.isInstanceOf[ListBlock]))
@@ -201,7 +203,7 @@ class ListItemParser(
     }
   }
 
-  private def tryContinueFixedIndent(state: ParserState, listBlockParser: ListBlockParser, itemIndent: Int): Nullable[BlockContinue] = {
+  private def tryContinueFixedIndent(state: ParserState, listBlockParser: ListBlockParser, itemIndent: Int): Nullable[BlockContinue] = boundary {
     // - FixedIndent: Pandoc, MultiMarkdown, Pegdown
     val currentIndent = state.indent
 
@@ -215,7 +217,7 @@ class ListItemParser(
         if (matched.isParagraphParser && _block.firstChild.contains(matched.getBlock)) {
           // just a lazy continuation of us
           listBlockParser.setItemHandledLineSkipActive(state.line)
-          return Nullable(continueAtColumn(newColumn)) // @nowarn -- early exit
+          break(Nullable(continueAtColumn(newColumn)))
         }
       }
 

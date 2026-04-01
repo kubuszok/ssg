@@ -13,7 +13,7 @@ package data
 
 import ssg.md.Nullable
 
-trait MutableDataHolder extends DataHolder with MutableDataSetter {
+trait MutableDataHolder extends DataHolder, MutableDataSetter {
 
   /** Get the given key, if it does not exist then use the key's factory to create a new value and put it into the collection so that the following get of the same key will find a value
     *

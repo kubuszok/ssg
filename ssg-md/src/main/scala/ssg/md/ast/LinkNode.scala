@@ -18,7 +18,7 @@ import ssg.md.util.sequence.Escaping
 import ssg.md.util.sequence.ReplacedTextMapper
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
-abstract class LinkNode extends LinkNodeBase with DoNotLinkDecorate with TextContainer {
+abstract class LinkNode extends LinkNodeBase, DoNotLinkDecorate, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

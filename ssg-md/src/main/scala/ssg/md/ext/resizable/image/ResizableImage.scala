@@ -20,7 +20,7 @@ class ResizableImage(
   var source: BasedSequence,
   var width:  BasedSequence,
   var height: BasedSequence
-) extends Node(Node.spanningChars(text, source, width, height)) with DoNotDecorate {
+) extends Node(Node.spanningChars(text, source, width, height)), DoNotDecorate {
 
   override def segments: Array[BasedSequence] = Array(text, source, width, height)
 }

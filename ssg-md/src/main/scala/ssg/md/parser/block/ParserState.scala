@@ -21,7 +21,7 @@ import ssg.md.util.sequence.BasedSequence
   *
   * ''This interface is not intended to be implemented by clients.''
   */
-trait ParserState extends BlockTracker with BlockParserTracker {
+trait ParserState extends BlockTracker, BlockParserTracker {
 
   /** @return the current line */
   def line: BasedSequence

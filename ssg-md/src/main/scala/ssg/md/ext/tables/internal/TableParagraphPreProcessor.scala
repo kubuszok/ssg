@@ -28,7 +28,6 @@ import scala.util.boundary.break
 import scala.language.implicitConversions
 import ssg.md.util.ast.Node
 import ssg.md.util.ast.{DoNotDecorate, NodeIterator}
-import java.util.Locale
 
 class TableParagraphPreProcessor private (options: DataHolder) extends ParagraphPreProcessor {
 
@@ -365,7 +364,7 @@ object TableParagraphPreProcessor {
     map
   }
 
-  private class TableSeparatorRow() extends TableRow with DoNotDecorate {
+  private class TableSeparatorRow() extends TableRow, DoNotDecorate {
     def this(chars: BasedSequence) = {
       this()
       this.chars = (chars)
@@ -391,7 +390,7 @@ object TableParagraphPreProcessor {
     val minColDash = if (minColumnDashes >= 2) minColumnDashes - 1 else 1
     val minColDashes = if (minColumnDashes >= 3) minColumnDashes - 2 else 1
     // to prevent conversion to arabic numbers, using string
-    val COL = String.format(Locale.US, "(?:" + "\\s*-{%d,}\\s*|\\s*:-{%d,}\\s*|\\s*-{%d,}:\\s*|\\s*:-{%d,}:\\s*" + ")", minCol, minColDash, minColDash, minColDashes)
+    val COL = s"(?:\\s*-{$minCol,}\\s*|\\s*:-{$minColDash,}\\s*|\\s*-{$minColDash,}:\\s*|\\s*:-{$minColDashes,}:\\s*)"
 
     val noIntelliJ = intellijDummyIdentifier.isEmpty
     val add = if (noIntelliJ) "" else TableFormatOptions.INTELLIJ_DUMMY_IDENTIFIER

@@ -20,7 +20,7 @@ import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 
-class BlockQuoteParser(options: DataHolder, marker: BasedSequence) extends AbstractBlockParser with BlankLineContainer {
+class BlockQuoteParser(options: DataHolder, marker: BasedSequence) extends AbstractBlockParser, BlankLineContainer {
 
   private val _block: BlockQuote = {
     val bq = BlockQuote()

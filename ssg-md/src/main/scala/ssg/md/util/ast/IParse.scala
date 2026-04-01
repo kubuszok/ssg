@@ -77,5 +77,5 @@ trait IParse {
     * @return
     *   true if any references were transferred
     */
-  def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[java.lang.Boolean]): Boolean
+  def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean
 }

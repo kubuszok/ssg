@@ -18,6 +18,8 @@ import ssg.md.util.data.DataHolder
 
 import java.util.regex.{ Pattern, PatternSyntaxException }
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) {
 
@@ -121,13 +123,12 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
       // could be formatter control
       val formatterOff = myFormatterOff
       val isFormatterOff = isFormatterOffTag(Nullable(node.chars))
-      if (isFormatterOff.isEmpty) {
-        return // @nowarn - early return: faithful port of guard clause
-      }
-      myFormatterOff = isFormatterOff.get
+      if (isFormatterOff.isDefined) {
+        myFormatterOff = isFormatterOff.get
 
-      if (!formatterOff && myFormatterOff) justTurnedOffFormatting = true
-      if (formatterOff && !myFormatterOff) justTurnedOnFormatting = true
+        if (!formatterOff && myFormatterOff) justTurnedOffFormatting = true
+        if (formatterOff && !myFormatterOff) justTurnedOnFormatting = true
+      }
     }
   }
 
@@ -159,7 +160,7 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
     }
   }
 
-  private def isFormattingRegionAt(offset: Int, startNode: Node, checkParent: Boolean): Boolean = {
+  private def isFormattingRegionAt(offset: Int, startNode: Node, checkParent: Boolean): Boolean = boundary {
     var node: Node = startNode
     val checkingParent = checkParent
     var continue = true
@@ -169,13 +170,13 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
         if (node.isInstanceOf[Block] && !node.isInstanceOf[Paragraph] && node.hasChildren) {
           val lastChild = node.lastChild.getOrElse(null)
           if (lastChild != null) { // @nowarn - Java interop
-            return isFormattingRegionAt(offset, lastChild, checkParent = false)
+            break(isFormattingRegionAt(offset, lastChild, checkParent = false))
           } else {
-            return true // no lastChild means formatting region
+            break(true) // no lastChild means formatting region
           }
         } else if (node.isInstanceOf[HtmlCommentBlock] || node.isInstanceOf[HtmlInnerBlockComment]) {
           val formatterOff = isFormatterOffTag(Nullable(node.chars))
-          if (formatterOff.isDefined) return !formatterOff.get
+          if (formatterOff.isDefined) break(!formatterOff.get)
         }
       }
 

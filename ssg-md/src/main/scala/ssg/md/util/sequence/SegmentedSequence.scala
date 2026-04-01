@@ -24,8 +24,8 @@ abstract class SegmentedSequence protected (
   protected var _startOffset: Int,
   protected var _endOffset:   Int,
   protected val _length:      Int
-) extends BasedSequenceImpl(0)
-    with ReplacedBasedSequence {
+) extends BasedSequenceImpl(0),
+    ReplacedBasedSequence {
 
   // NOTE: segmented sequence with no based segments in it gets both offsets as -1
   if (_startOffset < 0 && _endOffset < 0) {

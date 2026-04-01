@@ -30,10 +30,10 @@ import scala.language.implicitConversions
  * The parsed footnote definitions are turned into [[FootnoteBlock]] nodes.
  */
 class FootnoteExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Parser.ReferenceHoldingExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Parser.ReferenceHoldingExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

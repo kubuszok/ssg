@@ -23,7 +23,7 @@ import ssg.md.util.data.{MutableDataHolder, NullableDataKey}
  *
  * The parsed ins text is turned into [[Ins]] nodes.
  */
-class InsExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class InsExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

@@ -18,7 +18,7 @@ import ssg.md.util.sequence.BasedSequence
 import scala.language.implicitConversions
 
 /** An Attribute node representing a single attribute name and value in attributes node */
-class AttributeNode() extends Node with DoNotDecorate {
+class AttributeNode() extends Node, DoNotDecorate {
 
   var name: BasedSequence = BasedSequence.NULL
   var attributeSeparator: BasedSequence = BasedSequence.NULL

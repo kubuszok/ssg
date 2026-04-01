@@ -13,7 +13,7 @@ package sequence
 
 import ssg.md.Nullable
 import ssg.md.util.data.{ DataHolder, DataKeyBase, NullableDataKey }
-import ssg.md.util.misc.BitFieldSet
+import ssg.md.util.misc.{ BitFieldSet, EnumBitField }
 import ssg.md.util.sequence.builder.SegmentedSequenceStats
 
 /** Implemented by BasedOptionsSequence, use instance of it to pass to [[BasedSequence.of]] and options enabled in it will be accessible to all based sequences or uses of these for testing for options
@@ -81,6 +81,13 @@ object BasedOptionsHolder {
     case NO_ANCHORS
     case FULL_SEGMENTED_SEQUENCES
     case TREE_SEGMENTED_SEQUENCES
+  }
+
+  given EnumBitField[Options] with {
+    def elementType: Class[Options] = classOf[Options]
+    def typeName: String = "Options"
+    val values: Array[Options] = Options.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Options")
   }
 
   val O_COLLECT_SEGMENTED_STATS:  Options = Options.COLLECT_SEGMENTED_STATS

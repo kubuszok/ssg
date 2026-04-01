@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DoNotCollectText, DoNotDecorate, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** Body part of a [[TableBlock]] containing [[TableRow]]s. */
-class TableSeparator() extends Node with DoNotDecorate with DoNotCollectText {
+class TableSeparator() extends Node, DoNotDecorate, DoNotCollectText {
 
   def this(chars: BasedSequence) = {
     this()

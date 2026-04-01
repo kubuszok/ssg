@@ -172,14 +172,14 @@ class MarkdownTable(
     if (!rows.isEmpty) {
       val row = rows.get(0)
       row.normalizeIfNeeded()
-      if (row.cells.size() > 0) {
-        return row.cells.get(0).getStartOffset(Nullable(null)) // NOTE: early return with result
-      }
+      if (row.cells.size() > 0) row.cells.get(0).getStartOffset(Nullable(null))
+      else 0
+    } else {
+      0
     }
-    0
   }
 
-  def getCellOffsetInfo(offset: Int): TableCellOffsetInfo = {
+  def getCellOffsetInfo(offset: Int): TableCellOffsetInfo = boundary {
     var r       = 0
     val allRows = getAllSectionRows
     val iter    = allRows.iterator()
@@ -201,7 +201,7 @@ class MarkdownTable(
           if (if (!cell.closeMarker.isEmpty()) offset < cell.closeMarker.endOffset else offset <= cell.text.endOffset) {
             if (offset >= cell.getInsideStartOffset(previousCell) && offset <= cell.getInsideEndOffset) {
               // in the cell area
-              return new TableCellOffsetInfo(
+              break(new TableCellOffsetInfo(
                 offset,
                 this,
                 getAllRowsSection(r),
@@ -211,17 +211,17 @@ class MarkdownTable(
                 i,
                 Nullable(Integer.valueOf(i)),
                 Nullable(Integer.valueOf(offset - cell.getInsideStartOffset(previousCell)))
-              )
+              ))
             } else {
               // it the span area or before pipe of first cell
-              return new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(cell), r, i, Nullable(null), Nullable(null))
+              break(new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(cell), r, i, Nullable(null), Nullable(null)))
             }
           }
           i += 1
           previousCell = Nullable(cell)
         }
         // after the last cell
-        return new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(lastCell), r, i, Nullable(null), Nullable(null))
+        break(new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(lastCell), r, i, Nullable(null), Nullable(null)))
       }
       r += 1
     }
@@ -1500,8 +1500,8 @@ class MarkdownTable(
     manipulator: TableRowManipulator
   ): Unit = {
     if (count <= 0) {
-      return // NOTE: trivial guard clause
-    }
+      () // trivial guard clause: nothing to do
+    } else {
     var remaining    = count
     var sectionIndex = startIndex
     var allRowsIndex = startIndex
@@ -1532,6 +1532,7 @@ class MarkdownTable(
         }
       }
     }
+    } // end else
   }
 
   override def toString: String =

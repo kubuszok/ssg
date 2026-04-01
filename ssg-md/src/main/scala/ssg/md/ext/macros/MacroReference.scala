@@ -19,7 +19,7 @@ import ssg.md.util.sequence.BasedSequence
 import scala.language.implicitConversions
 
 /** A MacroReference node */
-class MacroReference() extends Node with DelimitedNode with DoNotDecorate with ReferencingNode[MacroDefinitionRepository, MacroDefinitionBlock] {
+class MacroReference() extends Node, DelimitedNode, DoNotDecorate, ReferencingNode[MacroDefinitionRepository, MacroDefinitionBlock] {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

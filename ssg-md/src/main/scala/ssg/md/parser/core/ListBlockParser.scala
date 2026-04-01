@@ -35,8 +35,8 @@ class ListBlockParser(
   val options:  ListOptions,
   val listData: ListBlockParser.ListData,
   listItemParser: ListItemParser
-) extends AbstractBlockParser
-    with BlankLineContainer {
+) extends AbstractBlockParser,
+    BlankLineContainer {
 
   private val myBlock: ListBlock = listData.listBlock
   myBlock.tight_=(true)
@@ -118,7 +118,7 @@ class ListBlockParser(
     // If there is a block start other than list item, canContain makes sure that this list is closed.
     Nullable(BlockContinue.atIndex(state.getIndex))
 
-  private def hasNonItemChildren(item: ListItem): Boolean = {
+  private def hasNonItemChildren(item: ListItem): Boolean = boundary {
     if (item.hasChildren) {
       var count = 0
       val iter = item.childIterator
@@ -127,7 +127,7 @@ class ListBlockParser(
         if (!child.isInstanceOf[ListBlock]) {
           count += 1
           if (count >= 2) {
-            return true // @nowarn -- simple early exit in private method
+            break(true)
           }
         }
       }
@@ -272,7 +272,7 @@ object ListBlockParser {
 
   /** Parse a list marker and return data on the marker or null.
     */
-  def parseListMarker(options: ListOptions, newItemCodeIndent: Int, state: ParserState): Nullable[ListData] = {
+  def parseListMarker(options: ListOptions, newItemCodeIndent: Int, state: ParserState): Nullable[ListData] = boundary {
     val parsing = state.parsing
     val line = state.line
     val markerIndex = state.nextNonSpaceIndex
@@ -282,7 +282,7 @@ object ListBlockParser {
     val rest = line.subSequence(markerIndex, line.length())
     val matcher = parsing.LIST_ITEM_MARKER.matcher(rest)
     if (!matcher.find()) {
-      return Nullable.empty // @nowarn -- early exit for no match
+      break(Nullable.empty)
     }
 
     val listBlock = createListBlock(matcher)
@@ -530,7 +530,7 @@ object ListBlockParser {
 
     private val myOptions: ListOptions = ListOptions.get(options)
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = boundary {
       val matched = matchedBlockParser.blockParser
       val emulationFamily = myOptions.getParserEmulationProfile.family
       val newItemCodeIndent = myOptions.getNewItemCodeIndent
@@ -574,7 +574,7 @@ object ListBlockParser {
             val listBlockParser = state.getActiveBlockParser(block.get.asInstanceOf[Block]).asInstanceOf[ListBlockParser]
             if (listBlockParser.itemHandledLine.exists(_ eq state.line) && listBlockParser.itemHandledSkipActiveLine) {
               listBlockParser.itemHandledLine = Nullable.empty
-              return BlockStart.none() // @nowarn -- early exit
+              break(BlockStart.none())
             }
           }
 
@@ -586,22 +586,22 @@ object ListBlockParser {
           if (emulationFamily == ParserEmulationProfile.COMMONMARK) {
             val currentIndent = state.indent
             if (currentIndent >= myOptions.getCodeIndent) {
-              return BlockStart.none() // @nowarn -- early exit
+              break(BlockStart.none())
             }
           } else if (emulationFamily == ParserEmulationProfile.FIXED_INDENT) {
             val currentIndent = state.indent
             if (currentIndent >= myOptions.getItemIndent) {
-              return BlockStart.none() // @nowarn -- early exit
+              break(BlockStart.none())
             }
           } else if (emulationFamily == ParserEmulationProfile.KRAMDOWN) {
             val currentIndent = state.indent
             if (currentIndent >= myOptions.getItemIndent) {
-              return BlockStart.none() // @nowarn -- early exit
+              break(BlockStart.none())
             }
           } else if (emulationFamily == ParserEmulationProfile.MARKDOWN) {
             val currentIndent = state.indent
             if (currentIndent >= myOptions.getItemIndent) {
-              return BlockStart.none() // @nowarn -- early exit
+              break(BlockStart.none())
             }
           }
 

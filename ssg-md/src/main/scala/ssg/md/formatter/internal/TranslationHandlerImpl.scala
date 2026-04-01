@@ -19,6 +19,8 @@ import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSet }
 import java.util.regex.Pattern
 import scala.collection.mutable
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGeneratorFactory) extends TranslationHandler {
 
@@ -59,11 +61,11 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     myIdGenerator.foreach(_.generateIds(node))
   }
 
-  private def isNotBlank(csq: CharSequence): Boolean = {
+  private def isNotBlank(csq: CharSequence): Boolean = boundary {
     val iMax = csq.length
     var i = 0
     while (i < iMax) {
-      if (!Character.isWhitespace(csq.charAt(i))) return true
+      if (!Character.isWhitespace(csq.charAt(i))) break(true)
       i += 1
     }
     false
@@ -154,46 +156,48 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         myAnchorId += 1
-        val replacedTextId = String.format(myFormatterOptions.translationIdFormat, myAnchorId: java.lang.Integer)
+        val replacedTextId = String.format(myFormatterOptions.translationIdFormat, myAnchorId: Integer)
         myAnchorTexts.put(replacedTextId, anchorRef.toString)
         replacedTextId
 
       case RenderPurpose.TRANSLATED_SPANS =>
         myAnchorId += 1
-        String.format(myFormatterOptions.translationIdFormat, myAnchorId: java.lang.Integer)
+        String.format(myFormatterOptions.translationIdFormat, myAnchorId: Integer)
 
       case RenderPurpose.TRANSLATED =>
-        myAnchorId += 1
-        val anchorIdText = String.format(myFormatterOptions.translationIdFormat, myAnchorId: java.lang.Integer)
-        val resolvedPageRef = myNonTranslatingTexts.get(pageRef.toString)
+        boundary {
+          myAnchorId += 1
+          val anchorIdText = String.format(myFormatterOptions.translationIdFormat, myAnchorId: Integer)
+          val resolvedPageRef = myNonTranslatingTexts.get(pageRef.toString)
 
-        resolvedPageRef match {
-          case Some(ref) if ref.isEmpty =>
-            // self reference, add it to the list
-            myAnchorTexts.get(anchorIdText) match {
-              case Some(refId) =>
-                // original ref id for the heading we should have them all
-                myOriginalRefTargets.get(refId) match {
-                  case Some(spanIndex) =>
-                    // have the index to translatingSpans
-                    myTranslatedRefTargets.get(spanIndex) match {
-                      case Some(translatedRefId) => return translatedRefId
-                      case None                  => ()
-                    }
-                  case None => ()
-                }
-                return refId
-              case None => ()
-            }
-            anchorRef
+          resolvedPageRef match {
+            case Some(ref) if ref.isEmpty =>
+              // self reference, add it to the list
+              myAnchorTexts.get(anchorIdText) match {
+                case Some(refId) =>
+                  // original ref id for the heading we should have them all
+                  myOriginalRefTargets.get(refId) match {
+                    case Some(spanIndex) =>
+                      // have the index to translatingSpans
+                      myTranslatedRefTargets.get(spanIndex) match {
+                        case Some(translatedRefId) => break(translatedRefId)
+                        case None                  => ()
+                      }
+                    case None => ()
+                  }
+                  break(refId)
+                case None => ()
+              }
+              anchorRef
 
-          case Some(_) =>
-            myAnchorTexts.get(anchorIdText) match {
-              case Some(resolvedAnchorRef) => resolvedAnchorRef
-              case None                    => anchorRef
-            }
+            case Some(_) =>
+              myAnchorTexts.get(anchorIdText) match {
+                case Some(resolvedAnchorRef) => resolvedAnchorRef
+                case None                    => anchorRef
+              }
 
-          case None => anchorRef
+            case None => anchorRef
+          }
         }
 
       case RenderPurpose.FORMAT | _ =>
@@ -308,7 +312,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
   }
 
   def getPlaceholderId(format: String, placeholderId: Int, prefix: Nullable[CharSequence], suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): String = {
-    val replacedTextId = myPlaceholderGenerator.fold(String.format(format, placeholderId: java.lang.Integer))(_.getPlaceholder(placeholderId))
+    val replacedTextId = myPlaceholderGenerator.fold(String.format(format, placeholderId: Integer))(_.getPlaceholder(placeholderId))
     if (prefix.isEmpty && suffix.isEmpty && suffix2.isEmpty) replacedTextId
     else TranslationHandlerImpl.addPrefixSuffix(replacedTextId, prefix, suffix, suffix2)
   }

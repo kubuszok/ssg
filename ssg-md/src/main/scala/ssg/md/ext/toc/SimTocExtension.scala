@@ -26,9 +26,9 @@ import scala.language.implicitConversions
  * Create it with [[SimTocExtension.create]] and then configure it on the builders
  */
 class SimTocExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {
     if (!options.contains(HtmlRenderer.GENERATE_HEADER_ID)) {

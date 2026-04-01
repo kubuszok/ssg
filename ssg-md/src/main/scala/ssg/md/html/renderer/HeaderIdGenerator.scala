@@ -20,7 +20,7 @@ import ssg.md.util.data.DataHolder
 import scala.collection.mutable
 import scala.language.implicitConversions
 
-class HeaderIdGenerator(options: Nullable[DataHolder]) extends HtmlIdGenerator with Disposable {
+class HeaderIdGenerator(options: Nullable[DataHolder]) extends HtmlIdGenerator, Disposable {
 
   private var headerBaseIds: mutable.HashMap[String, Int] = mutable.HashMap.empty
   var resolveDupes:          Boolean                      = HtmlRenderer.HEADER_ID_GENERATOR_RESOLVE_DUPES.get(options)

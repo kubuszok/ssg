@@ -55,18 +55,19 @@ object TocBlockParser {
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
       if (state.indent >= 4) {
-        return BlockStart.none()
-      }
-      val line = state.line
-      val matcher = tocPattern.matcher(line)
-      if (matcher.matches()) {
-        val tocChars = state.lineWithEOL
-        val styleChars: BasedSequence = if (matcher.start(1) != -1) line.subSequence(matcher.start(1), matcher.end(1))
-        else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
-        val tocBlockParser = new TocBlockParser(tocChars, styleChars)
-        Nullable(BlockStart.of(tocBlockParser).atIndex(state.getIndex))
-      } else {
         BlockStart.none()
+      } else {
+        val line = state.line
+        val matcher = tocPattern.matcher(line)
+        if (matcher.matches()) {
+          val tocChars = state.lineWithEOL
+          val styleChars: BasedSequence = if (matcher.start(1) != -1) line.subSequence(matcher.start(1), matcher.end(1))
+          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
+          val tocBlockParser = new TocBlockParser(tocChars, styleChars)
+          Nullable(BlockStart.of(tocBlockParser).atIndex(state.getIndex))
+        } else {
+          BlockStart.none()
+        }
       }
     }
   }

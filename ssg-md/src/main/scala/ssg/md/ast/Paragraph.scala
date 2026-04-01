@@ -22,7 +22,7 @@ import java.{ util => ju }
 
 import scala.language.implicitConversions
 
-class Paragraph extends Block with TextContainer {
+class Paragraph extends Block, TextContainer {
 
   private var _lineIndents: Array[Int] = Paragraph.EMPTY_INDENTS
   var trailingBlankLine:    Boolean    = false

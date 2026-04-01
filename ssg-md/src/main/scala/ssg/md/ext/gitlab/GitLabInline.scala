@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DelimitedNode, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A GitLab inline node (base class for Ins/Del) */
-class GitLabInline() extends Node with DelimitedNode {
+class GitLabInline() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

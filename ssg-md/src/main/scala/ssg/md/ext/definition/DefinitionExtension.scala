@@ -28,9 +28,9 @@ import scala.language.implicitConversions
  * The parsed definition text is turned into [[DefinitionList]], [[DefinitionTerm]] and [[DefinitionItem]] nodes.
  */
 class DefinitionExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

@@ -22,7 +22,7 @@ import ssg.md.util.data.{MutableDataHolder, NullableDataKey}
  *
  * The parsed strikethrough text regions are turned into [[Strikethrough]] nodes.
  */
-class StrikethroughSubscriptExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class StrikethroughSubscriptExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

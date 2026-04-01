@@ -21,6 +21,8 @@ import ssg.md.util.ast.{BlankLine, Block, Node}
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 import java.util.ArrayList
 
 
@@ -189,15 +191,15 @@ class TaskListNodeFormatter(options: DataHolder) extends NodeFormatter {
 
 object TaskListNodeFormatter {
 
-  def hasIncompleteDescendants(node: Node): Boolean = {
+  def hasIncompleteDescendants(node: Node): Boolean = boundary {
     var item = node.firstChild
     while (item.isDefined) {
       item.get match {
-        case tli: TaskListItem if !tli.isItemDoneMarker => return true // scalastyle:ignore
+        case tli: TaskListItem if !tli.isItemDoneMarker => break(true)
         case _ => // continue
       }
       if (item.get.isInstanceOf[Block] && !item.get.isInstanceOf[Paragraph] && hasIncompleteDescendants(item.get)) {
-        return true // scalastyle:ignore
+        break(true)
       }
       item = item.get.next
     }

@@ -19,7 +19,7 @@ import ssg.md.util.sequence.{BasedSequence, SequenceUtils}
 import scala.language.implicitConversions
 
 /** A MacroReference block node */
-class MacroDefinitionBlock() extends Block with ReferenceNode[MacroDefinitionRepository, MacroDefinitionBlock, MacroReference] {
+class MacroDefinitionBlock() extends Block, ReferenceNode[MacroDefinitionRepository, MacroDefinitionBlock, MacroReference] {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var name: BasedSequence = BasedSequence.NULL

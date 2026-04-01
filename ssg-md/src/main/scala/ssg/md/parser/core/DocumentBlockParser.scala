@@ -20,7 +20,7 @@ import ssg.md.util.sequence.BasedSequence
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
-class DocumentBlockParser extends AbstractBlockParser with BlankLineContainer {
+class DocumentBlockParser extends AbstractBlockParser, BlankLineContainer {
 
   private var _document: Document = scala.compiletime.uninitialized
 

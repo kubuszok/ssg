@@ -28,10 +28,10 @@ import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
  */
 import scala.language.implicitConversions
 
-class MacrosExtension private () extends Parser.ParserExtension
-  with HtmlRenderer.HtmlRendererExtension
-  with Parser.ReferenceHoldingExtension
-  with Formatter.FormatterExtension {
+class MacrosExtension private () extends Parser.ParserExtension,
+  HtmlRenderer.HtmlRendererExtension,
+  Parser.ReferenceHoldingExtension,
+  Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
