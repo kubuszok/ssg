@@ -131,7 +131,10 @@ object SimTocBlockParser {
       val parsing = new Parsing(options)
       val caseSensitive = TocExtension.CASE_SENSITIVE_TOC_TAG.get(options)
       if (caseSensitive) Pattern.compile("^\\[TOC(?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$")
-      else Pattern.compile("^\\[(?i:TOC)(?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$")
+      // Cross-platform: (?i:TOC) inline flag not supported on Scala Native re2.
+      // Original: "^\\[(?i:TOC)(?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$"
+      // Revert when scala-native#4810 ships.
+      else Pattern.compile("^\\[[Tt][Oo][Cc](?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$")
     }
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {

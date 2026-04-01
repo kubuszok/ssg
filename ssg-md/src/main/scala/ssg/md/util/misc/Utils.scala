@@ -582,10 +582,13 @@ object Utils {
   }
 
   def getResourceAsString(clazz: Class[?], resourcePath: String): String = {
-    val stream = clazz.getResourceAsStream(resourcePath)
-    val sb     = new StringBuilder()
-    streamAppend(sb, stream)
-    sb.toString
+    val stream = PlatformResources.getResourceAsStream(clazz, resourcePath)
+    if (stream.isEmpty) ""
+    else {
+      val sb = new StringBuilder()
+      streamAppend(sb, stream.get)
+      sb.toString
+    }
   }
 
   def escapeJavaString(param: Nullable[CharSequence]): String =

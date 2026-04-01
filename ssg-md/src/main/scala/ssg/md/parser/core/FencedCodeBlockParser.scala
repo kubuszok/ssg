@@ -49,7 +49,9 @@ class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceL
       val trySequence = line.subSequence(nextNonSpace, line.length())
       val matcher     = FencedCodeBlockParser.CLOSING_FENCE.matcher(trySequence)
       if (matcher.find()) {
-        val foundFenceLength = matcher.group(0).length
+        // Cross-platform: CLOSING_FENCE now captures fence chars in group(1),
+        // with trailing whitespace consumed but not in the group.
+        val foundFenceLength = matcher.group(1).length
         if (foundFenceLength >= fenceLength) {
           // closing fence
           _block.closingMarker = trySequence.subSequence(0, foundFenceLength)
@@ -111,8 +113,20 @@ class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceL
 
 object FencedCodeBlockParser {
 
-  val OPENING_FENCE: Pattern = Pattern.compile("^`{3,}(?!.*`)|^~{3,}(?!.*~)")
-  val CLOSING_FENCE: Pattern = Pattern.compile("^(?:`{3,}|~{3,})(?=[ \t]*$)")
+  // Cross-platform: original Java regex used lookaheads which are unavailable on
+  // Scala.js and Scala Native.
+  // OPENING_FENCE original: "^`{3,}(?!.*`)|^~{3,}(?!.*~)"
+  //   Negative lookahead prevented matching when more fence chars appear later on
+  //   the line. Rewritten to match fence chars only; the "no fence char in rest
+  //   of line" check is performed programmatically in BlockFactory.tryStart.
+  // CLOSING_FENCE original: "^(?:`{3,}|~{3,})(?=[ \t]*$)"
+  //   Lookahead asserted only whitespace to EOL. Rewritten to consume the
+  //   trailing whitespace: the caller uses group(0).length for fenceLength which
+  //   now needs trimming — but actually we use a capturing group for just the
+  //   fence chars and the full match includes trailing whitespace.
+  // Revert to originals if/when Scala.js and Scala Native add full java.util.regex support.
+  val OPENING_FENCE: Pattern = Pattern.compile("^(`{3,})|^(~{3,})")
+  val CLOSING_FENCE: Pattern = Pattern.compile("^(`{3,}|~{3,})[ \t]*$")
 
   class Factory extends CustomBlockParserFactory {
 
@@ -149,11 +163,21 @@ object FencedCodeBlockParser {
         val trySequence  = line.subSequence(nextNonSpace, line.length())
         val matcher      = OPENING_FENCE.matcher(trySequence)
         if (matcher.find()) {
-          val fenceLength = matcher.group(0).length
-          val fenceChar   = matcher.group(0).charAt(0)
-          val parser      = FencedCodeBlockParser(state.properties, fenceChar, fenceLength, indent, nextNonSpace)
-          parser.getBlock.openingMarker = trySequence.subSequence(0, fenceLength)
-          Nullable(BlockStart.of(parser).atIndex(nextNonSpace + fenceLength))
+          // Cross-platform: OPENING_FENCE no longer uses negative lookahead to
+          // reject fence chars in the rest of the line. Check programmatically.
+          val fenceStr    = if (matcher.group(1) != null) matcher.group(1) else matcher.group(2) // @nowarn -- Java regex group returns null when not matched
+          val fenceLength = fenceStr.length
+          val fenceChar   = fenceStr.charAt(0)
+          val restOfLine  = trySequence.subSequence(fenceLength, trySequence.length())
+          val restStr     = restOfLine.toString
+          if (restStr.indexOf(fenceChar) >= 0) {
+            // Rest of line contains the fence character — not a valid opening fence
+            BlockStart.none()
+          } else {
+            val parser = FencedCodeBlockParser(state.properties, fenceChar, fenceLength, indent, nextNonSpace)
+            parser.getBlock.openingMarker = trySequence.subSequence(0, fenceLength)
+            Nullable(BlockStart.of(parser).atIndex(nextNonSpace + fenceLength))
+          }
         } else {
           BlockStart.none()
         }

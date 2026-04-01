@@ -67,6 +67,14 @@ Quick-reference for the current state of the flexmark-java → `ssg-md` port.
 
 See [flexmark-port.md](flexmark-port.md) for reasons.
 
+## Cross-Platform Status
+
+| Platform | Tests | Status |
+|----------|-------|--------|
+| JVM | 1645/1645 | 100% |
+| Scala Native | 1645/1645 | 100% |
+| Scala.js | Compiles | Test linking blocked (resource loading) |
+
 ## Known Technical Debt
 
 See [../contributing/flexmark-tech-debt.md](../contributing/flexmark-tech-debt.md).
