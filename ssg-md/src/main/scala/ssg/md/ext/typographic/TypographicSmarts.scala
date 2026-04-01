@@ -18,7 +18,7 @@ import ssg.md.util.sequence.{BasedSequence, Escaping, ReplacedTextMapper}
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
 /** A TypographicSmarts node */
-class TypographicSmarts() extends Node with DoNotAttributeDecorate with TypographicText {
+class TypographicSmarts() extends Node, DoNotAttributeDecorate, TypographicText {
 
   private var _typographicText: Nullable[String] = Nullable.empty
 

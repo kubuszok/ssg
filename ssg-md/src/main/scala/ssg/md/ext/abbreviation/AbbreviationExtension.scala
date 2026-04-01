@@ -27,10 +27,10 @@ import scala.language.implicitConversions
  * Create it with [[AbbreviationExtension.create]] then configure builders
  */
 class AbbreviationExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Parser.ReferenceHoldingExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Parser.ReferenceHoldingExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

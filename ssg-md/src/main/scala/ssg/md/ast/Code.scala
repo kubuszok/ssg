@@ -17,7 +17,7 @@ import ssg.md.util.ast.TextContainer
 import ssg.md.util.sequence.BasedSequence
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
-class Code extends DelimitedNodeImpl with DoNotLinkDecorate with TextContainer {
+class Code extends DelimitedNodeImpl, DoNotLinkDecorate, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

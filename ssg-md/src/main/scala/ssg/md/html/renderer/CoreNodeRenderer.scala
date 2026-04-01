@@ -211,24 +211,18 @@ class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
     }
 
   def renderTextBlockParagraphLines(node: Paragraph, context: NodeRendererContext, html: HtmlWriter, wrapTextInSpan: Boolean): Unit = {
-    if (context.getHtmlOptions.sourcePositionParagraphLines) {
-      if (node.hasChildren) {
-        val breakCollectingVisitor = new LineCollectingVisitor()
-        myLines = Nullable(breakCollectingVisitor.collectAndGetRanges(node).asScala.toList)
-        myEOLs = Nullable(breakCollectingVisitor.getEOLs.asScala.toList.map(_.intValue()))
-        myNextLine = 0
+    if (context.getHtmlOptions.sourcePositionParagraphLines && node.hasChildren) {
+      val breakCollectingVisitor = new LineCollectingVisitor()
+      myLines = Nullable(breakCollectingVisitor.collectAndGetRanges(node).asScala.toList)
+      myEOLs = Nullable(breakCollectingVisitor.getEOLs.asScala.toList.map(_.intValue()))
+      myNextLine = 0
 
-        node.firstChild.foreach { firstChild =>
-          outputSourceLineSpan(node, firstChild, node, html)
-        }
-        context.renderChildren(node)
-        html.tag("/span")
-        // early exit - paragraph lines rendered
-        return // TODO: replace with boundary/break when refactoring
+      node.firstChild.foreach { firstChild =>
+        outputSourceLineSpan(node, firstChild, node, html)
       }
-    }
-
-    if (wrapTextInSpan) {
+      context.renderChildren(node)
+      html.tag("/span")
+    } else if (wrapTextInSpan) {
       html.withAttr().tag("span", false, false, () => context.renderChildren(node))
     } else {
       context.renderChildren(node)

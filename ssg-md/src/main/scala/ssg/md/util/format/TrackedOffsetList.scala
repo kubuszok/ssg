@@ -15,6 +15,9 @@ import ssg.md.util.sequence.BasedSequence
 import ssg.md.util.sequence.builder.Seg
 import ssg.md.util.sequence.builder.tree.{ BasedOffsetTracker, SegmentOffsetTree }
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 import java.util
 import java.util.{ ArrayList, Collections, Comparator, Iterator as JIterator, List as JList, ListIterator, Spliterator }
 import java.util.function.UnaryOperator
@@ -50,10 +53,10 @@ class TrackedOffsetList private (
     if (unresolved.isEmpty) TrackedOffsetList.EMPTY_LIST else new TrackedOffsetList(myBaseSeq, unresolved)
   }
 
-  def haveUnresolved: Boolean = {
+  def haveUnresolved: Boolean = boundary {
     val iter = myTrackedOffsets.iterator()
     while (iter.hasNext)
-      if (!iter.next().isResolved) return true // NOTE: early return from search
+      if (!iter.next().isResolved) break(true)
     false
   }
 
@@ -63,7 +66,7 @@ class TrackedOffsetList private (
 
   def getBasedOffsetTracker: BasedOffsetTracker = myBasedOffsetTracker
 
-  def getTrackedOffsets(startOffset: Int, endOffset: Int): TrackedOffsetList = {
+  def getTrackedOffsets(startOffset: Int, endOffset: Int): TrackedOffsetList = boundary {
     val startInfo = myBasedOffsetTracker.getOffsetInfo(startOffset, startOffset == endOffset)
     val endInfo   = myBasedOffsetTracker.getOffsetInfo(endOffset, true)
     var startSeg  = startInfo.pos
@@ -75,7 +78,7 @@ class TrackedOffsetList private (
     } else if (startSeg >= 0 && endSeg >= 0) {
       endSeg += 1
     } else {
-      return TrackedOffsetList.EMPTY_LIST // NOTE: early return for empty result
+      break(TrackedOffsetList.EMPTY_LIST)
     }
 
     endSeg = Math.min(myBasedOffsetTracker.size, endSeg)

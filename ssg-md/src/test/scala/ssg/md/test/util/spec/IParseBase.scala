@@ -28,7 +28,7 @@ abstract class IParseBase(val options: Nullable[DataHolder]) extends IParse {
     parse(BasedSequence.of(input))
   }
 
-  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[java.lang.Boolean]): Boolean = {
+  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean = {
     false
   }
 

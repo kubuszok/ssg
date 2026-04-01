@@ -14,7 +14,7 @@ package block
 import ssg.md.util.ast.Block
 import ssg.md.util.dependency.Dependent
 
-trait BlockPreProcessorFactory extends (ParserState => BlockPreProcessor) with Dependent {
+trait BlockPreProcessorFactory extends (ParserState => BlockPreProcessor), Dependent {
 
   /** Block types that this pre-processor processes.
     *

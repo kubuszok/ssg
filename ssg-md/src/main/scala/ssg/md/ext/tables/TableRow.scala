@@ -15,7 +15,7 @@ import ssg.md.util.ast.{LineBreakNode, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** Table row of a [[TableHead]] or [[TableBody]] containing [[TableCell]]s. */
-class TableRow() extends Node with LineBreakNode {
+class TableRow() extends Node, LineBreakNode {
 
   /** rowNumber within the table section: header, body, separator */
   var rowNumber: Int = 0

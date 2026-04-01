@@ -17,7 +17,7 @@ import ssg.md.util.sequence.BasedSequence
 import java.{util => ju}
 
 /** A sim toc contents node containing all text that came after the sim toc node */
-class SimTocContent() extends Block with DoNotDecorate {
+class SimTocContent() extends Block, DoNotDecorate {
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
 

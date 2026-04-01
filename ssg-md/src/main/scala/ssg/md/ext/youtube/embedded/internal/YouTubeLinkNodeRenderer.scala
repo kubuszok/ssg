@@ -18,7 +18,7 @@ import ssg.md.html.HtmlWriter
 import ssg.md.html.renderer.{LinkType, NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler, ResolvedLink}
 import ssg.md.util.data.DataHolder
 
-import java.net.{MalformedURLException, URL}
+import java.net.URI
 import scala.language.implicitConversions
 
 class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
@@ -36,15 +36,22 @@ class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
       // standard Link Rendering
       val resolvedLink: ResolvedLink = context.resolveLink(LinkType.LINK, node.url.unescape(), Nullable.empty)
 
-      var url: Nullable[URL] = Nullable.empty
+      var uri: Nullable[URI] = Nullable.empty
       try {
-        url = Nullable(new URL(resolvedLink.url))
+        uri = Nullable(new URI(resolvedLink.url))
       } catch {
-        case _: MalformedURLException => // ignore
+        case _: Exception => // ignore malformed URIs
       }
 
-      if (url.isDefined && "youtu.be".equalsIgnoreCase(url.get.getHost)) {
-        html.attr("src", "https://www.youtube-nocookie.com/embed" + url.get.getFile.replace("?t=", "?start="))
+      val uriHost = uri.map(u => Nullable(u.getHost)).getOrElse(Nullable.empty)
+      val uriPath = uri.map { u =>
+        val path = Nullable(u.getRawPath).getOrElse("")
+        val query = Nullable(u.getRawQuery)
+        if (query.isDefined) path + "?" + query.get else path
+      }.getOrElse("")
+
+      if (uriHost.isDefined && "youtu.be".equalsIgnoreCase(uriHost.get)) {
+        html.attr("src", "https://www.youtube-nocookie.com/embed" + uriPath.replace("?t=", "?start="))
         html.attr("width", "560")
         html.attr("height", "315")
         html.attr("class", "youtube-embedded")

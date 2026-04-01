@@ -29,10 +29,10 @@ import scala.language.implicitConversions
  *
  * The parsed enumerated_reference text is turned into [[EnumeratedReferenceText]] nodes.
  */
-class EnumeratedReferenceExtension private () extends Parser.ParserExtension
-  with HtmlRenderer.HtmlRendererExtension
-  with Parser.ReferenceHoldingExtension
-  with Formatter.FormatterExtension {
+class EnumeratedReferenceExtension private () extends Parser.ParserExtension,
+  HtmlRenderer.HtmlRendererExtension,
+  Parser.ReferenceHoldingExtension,
+  Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

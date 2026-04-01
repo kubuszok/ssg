@@ -16,7 +16,7 @@ import ssg.md.util.ast.{DoNotDecorate, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A GfmUser node */
-class GfmUser() extends Node with DoNotDecorate {
+class GfmUser() extends Node, DoNotDecorate {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

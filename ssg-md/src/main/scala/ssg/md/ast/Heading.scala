@@ -19,7 +19,7 @@ import ssg.md.util.sequence.BasedSequence
 
 import java.{ util => ju }
 
-class Heading extends Block with AnchorRefTarget {
+class Heading extends Block, AnchorRefTarget {
 
   var level:                        Int           = 0
   var openingMarker:                BasedSequence = BasedSequence.NULL

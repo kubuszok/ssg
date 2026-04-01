@@ -15,7 +15,7 @@ import ssg.md.util.visitor.AstHandler
 
 /** Node visit handler for specific node type
   */
-class VisitHandler[N <: Node](klass: Class[N], visitorAdapter: Visitor[N]) extends AstHandler[N, Visitor[N]](klass, visitorAdapter) with Visitor[Node] {
+class VisitHandler[N <: Node](klass: Class[N], visitorAdapter: Visitor[N]) extends AstHandler[N, Visitor[N]](klass, visitorAdapter), Visitor[Node] {
 
   override def visit(node: Node): Unit =
     adapter.visit(node.asInstanceOf[N])

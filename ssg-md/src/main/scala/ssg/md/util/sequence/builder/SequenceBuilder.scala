@@ -104,10 +104,10 @@ class SequenceBuilder private (
       else {
         // see if it is known to be equivalent or not equivalent
         val inCommon = equivalentBases.get(charsBaseSequence)
-        if (inCommon != null) inCommon.booleanValue() // @nowarn — Map.get returns null at Java interop boundary
+        if (inCommon != null) inCommon // @nowarn — Map.get returns null at Java interop boundary; Scala auto-unboxes java.lang.Boolean
         else {
           val equivalent = baseSeq.equals(charsBaseSequence)
-          equivalentBases.put(charsBaseSequence, java.lang.Boolean.valueOf(equivalent))
+          equivalentBases.put(charsBaseSequence, equivalent)
           equivalent
         }
       }

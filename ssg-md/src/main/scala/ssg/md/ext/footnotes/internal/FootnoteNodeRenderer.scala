@@ -19,7 +19,7 @@ import ssg.md.html.renderer.*
 import ssg.md.util.ast.{Document, NodeVisitor, VisitHandler}
 import ssg.md.util.data.DataHolder
 
-import java.util.Locale
+
 import scala.language.implicitConversions
 
 class FootnoteNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
@@ -84,7 +84,7 @@ class FootnoteNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
                 val iMax = footnoteBlock.footnoteReferences
                 var i = 0
                 while (i < iMax) {
-                  html.attr("href", "#fnref-" + footnoteOrdinal + (if (i == 0) "" else String.format(Locale.US, "-%d", i: Integer)))
+                  html.attr("href", "#fnref-" + footnoteOrdinal + (if (i == 0) "" else s"-$i"))
                   if (!footnoteOptions.footnoteBackLinkRefClass.isEmpty) html.attr("class", footnoteOptions.footnoteBackLinkRefClass)
                   html.line()
                   html.withAttr().tag("a")
@@ -114,7 +114,7 @@ class FootnoteNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
         val footnoteBlock = node.footnoteBlock.get
         val footnoteOrdinal = footnoteBlock.footnoteOrdinal
         val i = node.referenceOrdinal
-        html.attr("id", "fnref-" + footnoteOrdinal + (if (i == 0) "" else String.format(Locale.US, "-%d", i: Integer)))
+        html.attr("id", s"fnref-$footnoteOrdinal${if (i == 0) "" else s"-$i"}")
         html.srcPos(node.chars).withAttr().tag("sup", false, false, () => {
           if (!footnoteOptions.footnoteLinkRefClass.isEmpty) html.attr("class", footnoteOptions.footnoteLinkRefClass)
           html.attr("href", "#fn-" + footnoteOrdinal)

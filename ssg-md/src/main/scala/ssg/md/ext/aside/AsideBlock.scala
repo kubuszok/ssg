@@ -15,7 +15,7 @@ import ssg.md.util.ast.{Block, BlockContent, BlockQuoteLike, KeepTrailingBlankLi
 import ssg.md.util.sequence.BasedSequence
 
 /** A ExtAside block node */
-class AsideBlock() extends Block with BlockQuoteLike with KeepTrailingBlankLineContainer {
+class AsideBlock() extends Block, BlockQuoteLike, KeepTrailingBlankLineContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
 

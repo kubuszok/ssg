@@ -12,7 +12,7 @@ package parser
 
 import ssg.md.util.dependency.Dependent
 
-trait InlineParserExtensionFactory extends (LightInlineParser => InlineParserExtension) with Dependent {
+trait InlineParserExtensionFactory extends (LightInlineParser => InlineParserExtension), Dependent {
 
   /** Starting characters for this inline processor.
     *

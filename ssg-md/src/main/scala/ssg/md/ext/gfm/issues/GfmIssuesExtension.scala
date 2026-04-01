@@ -24,7 +24,7 @@ import ssg.md.util.data.{DataKey, MutableDataHolder}
  *
  * The parsed GitHub issue text is turned into [[GfmIssue]] nodes.
  */
-class GfmIssuesExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class GfmIssuesExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

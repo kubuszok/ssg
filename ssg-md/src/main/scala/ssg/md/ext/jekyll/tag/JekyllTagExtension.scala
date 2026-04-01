@@ -29,9 +29,9 @@ import scala.language.implicitConversions
  * The parsed jekyll_tag text is turned into [[JekyllTag]] nodes.
  */
 class JekyllTagExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
     formatterBuilder.nodeFormatterFactory(new JekyllTagNodeFormatter.Factory())

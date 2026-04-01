@@ -13,7 +13,7 @@ package data
 
 import ssg.md.Nullable
 
-class MutableDataSet(other: Nullable[DataHolder]) extends DataSet(other) with MutableDataHolder {
+class MutableDataSet(other: Nullable[DataHolder]) extends DataSet(other), MutableDataHolder {
 
   def this() = {
     this(Nullable.empty[DataHolder])

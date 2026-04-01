@@ -19,7 +19,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import scala.language.implicitConversions
 
-class HardLineBreak extends Node with DoNotTrim with TextContainer {
+class HardLineBreak extends Node, DoNotTrim, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

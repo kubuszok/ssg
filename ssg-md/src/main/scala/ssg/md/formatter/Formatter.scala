@@ -126,7 +126,7 @@ class Formatter private (builder: Formatter.Builder) extends IRender {
 
   def mergeRender(documents: Array[Document], output: Appendable, maxTrailingBlankLines: Int): Unit = {
     val mergeOptions = new MutableDataSet(options.get)
-    mergeOptions.set(Parser.HTML_FOR_TRANSLATOR, java.lang.Boolean.TRUE)
+    mergeOptions.set(Parser.HTML_FOR_TRANSLATOR, true)
 
     val translationHandlers = new Array[TranslationHandler](documents.length)
     val translationHandlersTexts = new Array[java.util.List[String]](documents.length)
@@ -751,7 +751,7 @@ object Formatter {
       mainNodeRenderer: MainNodeFormatter,
       out:              MarkdownWriter,
       subOptions:       Nullable[DataHolder]
-    ) extends NodeFormatterSubContext(out) with NodeFormatterContext {
+    ) extends NodeFormatterSubContext(out), NodeFormatterContext {
 
       private val mySubOptions: DataHolder =
         if (subOptions.isEmpty || subOptions.exists(_ eq mainNodeRenderer.getOptions)) mainNodeRenderer.getOptions

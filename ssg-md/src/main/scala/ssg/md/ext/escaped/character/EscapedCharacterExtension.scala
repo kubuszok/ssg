@@ -24,7 +24,7 @@ import ssg.md.util.data.MutableDataHolder
  *
  * The parsed escaped_character text is turned into [[EscapedCharacter]] nodes.
  */
-class EscapedCharacterExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class EscapedCharacterExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

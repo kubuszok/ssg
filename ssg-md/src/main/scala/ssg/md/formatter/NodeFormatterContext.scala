@@ -21,7 +21,7 @@ import java.util.Collection
 
 /** The context for node rendering, including configuration and functionality for the node renderer to use.
   */
-trait NodeFormatterContext extends NodeContext[Node, NodeFormatterContext] with TranslationContext with LinkResolverContext with ExplicitAttributeIdProvider {
+trait NodeFormatterContext extends NodeContext[Node, NodeFormatterContext], TranslationContext, LinkResolverContext, ExplicitAttributeIdProvider {
 
   /** @return
     *   the HTML writer to use

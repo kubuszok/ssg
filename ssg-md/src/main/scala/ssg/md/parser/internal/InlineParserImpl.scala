@@ -38,9 +38,9 @@ class InlineParserImpl(
   val delimiterProcessors:            Map[Char, DelimiterProcessor],
   val linkRefProcessorsData:          LinkRefProcessorData,
   inlineParserExtensionFactoriesInit: List[InlineParserExtensionFactory]
-) extends LightInlineParserImpl(dataOptions)
-    with InlineParser
-    with ParagraphPreProcessor {
+) extends LightInlineParserImpl(dataOptions),
+    InlineParser,
+    ParagraphPreProcessor {
 
   protected val originalSpecialCharacters:      BitSet                                                   = specialChars
   protected var specialCharacters:              BitSet                                                   = specialChars
@@ -1714,11 +1714,11 @@ object InlineParserImpl {
     existing.foreach { ex =>
       if (ex.getClass != toAdd.getClass) {
         throw IllegalArgumentException(
-          s"Delimiter processor conflict with delimiter char '$delimiterChar', existing ${ex.getClass.getCanonicalName}, added ${toAdd.getClass.getCanonicalName}"
+          s"Delimiter processor conflict with delimiter char '$delimiterChar', existing ${ex.getClass.getName}, added ${toAdd.getClass.getName}"
         )
       } else {
         // warning
-        println(s"Delimiter processor for char '$delimiterChar', added more than once ${ex.getClass.getCanonicalName}")
+        println(s"Delimiter processor for char '$delimiterChar', added more than once ${ex.getClass.getName}")
       }
     }
   }

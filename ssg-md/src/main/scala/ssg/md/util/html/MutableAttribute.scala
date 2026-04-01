@@ -13,7 +13,7 @@ package html
 
 import ssg.md.util.misc.Mutable
 
-trait MutableAttribute extends Attribute with Mutable[MutableAttribute, Attribute] {
+trait MutableAttribute extends Attribute, Mutable[MutableAttribute, Attribute] {
   def copy(): MutableAttribute
 
   override def containsValue(value: CharSequence): Boolean

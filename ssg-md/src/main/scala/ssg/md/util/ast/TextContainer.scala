@@ -11,8 +11,7 @@ package md
 package util
 package ast
 
-import ssg.md.util.misc.BitField
-import ssg.md.util.misc.BitFieldSet
+import ssg.md.util.misc.{ BitField, BitFieldSet, EnumBitField }
 import ssg.md.util.sequence.BasedSequence
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
@@ -54,6 +53,13 @@ object TextContainer {
     case ADD_SPACES_BETWEEN_NODES extends Flags(1) // when appending text from different nodes, ensure there is at least one space
 
     override def bits: Int = bitsValue
+  }
+
+  given EnumBitField[Flags] with {
+    def elementType: Class[Flags] = classOf[Flags]
+    def typeName: String = "Flags"
+    val values: Array[Flags] = Flags.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
   }
 
   val F_LINK_TEXT_TYPE: Int = BitFieldSet.intMask(Flags.LINK_TEXT_TYPE)

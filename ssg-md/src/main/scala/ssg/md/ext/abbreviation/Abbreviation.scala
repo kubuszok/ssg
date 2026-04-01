@@ -22,7 +22,7 @@ import scala.language.implicitConversions
  * A node containing the abbreviated text that will be rendered as an abbr tag or a link with title attribute
  */
 class Abbreviation(chars: BasedSequence, val abbreviation: BasedSequence)
-    extends Node(chars) with DoNotDecorate with DoNotLinkDecorate with ReferencingNode[AbbreviationRepository, AbbreviationBlock] {
+    extends Node(chars), DoNotDecorate, DoNotLinkDecorate, ReferencingNode[AbbreviationRepository, AbbreviationBlock] {
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
 

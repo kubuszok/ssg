@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 /**
  * A Footnote definition node containing text and other inline nodes nodes as children.
  */
-class FootnoteBlock() extends Block with ReferenceNode[FootnoteRepository, FootnoteBlock, Footnote] with ParagraphItemContainer {
+class FootnoteBlock() extends Block, ReferenceNode[FootnoteRepository, FootnoteBlock, Footnote], ParagraphItemContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

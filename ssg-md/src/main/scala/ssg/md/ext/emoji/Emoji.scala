@@ -20,7 +20,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 import scala.language.implicitConversions
 
 /** An emoji node containing emoji shortcut text */
-class Emoji() extends Node with DelimitedNode with TextContainer {
+class Emoji() extends Node, DelimitedNode, TextContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

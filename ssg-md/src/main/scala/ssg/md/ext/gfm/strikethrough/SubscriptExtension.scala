@@ -22,7 +22,7 @@ import ssg.md.util.data.{MutableDataHolder, NullableDataKey}
  *
  * The parsed subscript text regions are turned into [[Subscript]] nodes.
  */
-class SubscriptExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class SubscriptExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

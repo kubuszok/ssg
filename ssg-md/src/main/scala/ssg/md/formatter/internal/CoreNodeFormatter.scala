@@ -22,7 +22,7 @@ import ssg.md.util.misc.{ CharPredicate, Utils }
 import ssg.md.util.sequence.{ BasedSequence, RepeatedSequence, SequenceUtils }
 import ssg.md.util.sequence.mappers.SpaceMapper
 
-import java.util.Locale
+
 import scala.language.implicitConversions
 
 /** The node formatter that formats all the core nodes (comes last in the order of node formatters).
@@ -588,7 +588,7 @@ class CoreNodeFormatter(options: DataHolder)
   }
 
   private val htmlEntityPlaceholderGenerator: TranslationPlaceholderGenerator =
-    (index: Int) => String.format(Locale.US, "&#%d;", index: java.lang.Integer)
+    (index: Int) => s"&#$index;"
 
   private def renderHtmlEntity(node: HtmlEntity, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     if (context.getRenderPurpose == RenderPurpose.FORMAT) {
@@ -728,7 +728,7 @@ class CoreNodeFormatter(options: DataHolder)
         case RenderPurpose.TRANSLATION_SPANS =>
           if (node.openingMarker.isNull) {
             // unwrapped, need to store that fact
-            myTranslationStore.foreach(_.set(CoreNodeFormatter.UNWRAPPED_AUTO_LINKS, java.lang.Boolean.TRUE))
+            myTranslationStore.foreach(_.set(CoreNodeFormatter.UNWRAPPED_AUTO_LINKS, true))
 
             context.postProcessNonTranslating(
               (s: String) => {

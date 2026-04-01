@@ -25,7 +25,7 @@ import ssg.md.util.data.MutableDataHolder
  *
  * The parsed metadata is turned into [[YamlFrontMatterNode]]. You can access the metadata using [[AbstractYamlFrontMatterVisitor]].
  */
-class YamlFrontMatterExtension private () extends Parser.ParserExtension with Formatter.FormatterExtension {
+class YamlFrontMatterExtension private () extends Parser.ParserExtension, Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

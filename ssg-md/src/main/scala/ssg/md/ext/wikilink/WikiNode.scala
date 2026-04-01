@@ -19,7 +19,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import scala.language.implicitConversions
 
-class WikiNode(val linkIsFirst: Boolean) extends Node with DoNotDecorate with TextContainer with LinkRefDerived {
+class WikiNode(val linkIsFirst: Boolean) extends Node, DoNotDecorate, TextContainer, LinkRefDerived {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var link: BasedSequence = BasedSequence.NULL
