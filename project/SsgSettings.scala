@@ -33,5 +33,10 @@ object SsgSettings {
 
   val jsSettings: Seq[Setting[?]] = Seq.empty
 
-  val nativeSettings: Seq[Setting[?]] = Seq.empty
+  val nativeSettings: Seq[Setting[?]] = Seq(
+    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
+      _.withEmbedResources(true)
+        .withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
+    }
+  )
 }

@@ -56,7 +56,15 @@ class GfmUsersInlineParserExtension(inlineParser: LightInlineParser) extends Inl
 }
 
 object GfmUsersInlineParserExtension {
-  val GITHUB_USER: Pattern = Pattern.compile("^(@)([a-z\\d](?:[a-z\\d]|-(?=[a-z\\d])){0,38})\\b", Pattern.CASE_INSENSITIVE)
+  // Cross-platform: original Java regex used lookahead (?=[a-z\\d]) inside the
+  // repetition to ensure each dash is followed by an alphanumeric character.
+  // Lookaheads are unavailable on Scala.js and Scala Native. Rewritten to
+  // [a-z\\d](?:[a-z\\d-]{0,37}[a-z\\d])? which prevents leading/trailing dashes
+  // and limits total length to 39 chars. This is slightly more permissive than
+  // the original (allows consecutive dashes) but matches GitHub's actual rules.
+  // Original: "^(@)([a-z\\d](?:[a-z\\d]|-(?=[a-z\\d])){0,38})\\b"
+  // Revert to original if/when Scala.js and Scala Native add full java.util.regex support.
+  val GITHUB_USER: Pattern = Pattern.compile("^(@)([a-z\\d](?:[a-z\\d-]{0,37}[a-z\\d])?)\\b", Pattern.CASE_INSENSITIVE)
 
   class Factory extends InlineParserExtensionFactory {
 

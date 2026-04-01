@@ -268,7 +268,12 @@ object Formatter {
   val TRANSLATION_HTML_BLOCK_PREFIX:       DataKey[String] = new DataKey[String]("TRANSLATION_HTML_BLOCK_PREFIX", "__")
   val TRANSLATION_HTML_INLINE_PREFIX:      DataKey[String] = new DataKey[String]("TRANSLATION_HTML_INLINE_PREFIX", "_")
   val TRANSLATION_AUTOLINK_PREFIX:         DataKey[String] = new DataKey[String]("TRANSLATION_AUTOLINK_PREFIX", "___")
-  val TRANSLATION_EXCLUDE_PATTERN:         DataKey[String] = new DataKey[String]("TRANSLATION_EXCLUDE_PATTERN", "^[^\\p{IsAlphabetic}]*$")
+  // Cross-platform: original Java regex used \p{IsAlphabetic} Unicode property which
+  // is unavailable on Scala.js and Scala Native. Replaced with [a-zA-Z] for ASCII
+  // alphabetic check, which is sufficient for the translation exclusion feature.
+  // Original: "^[^\\p{IsAlphabetic}]*$"
+  // Revert to original if/when Scala.js and Scala Native add full java.util.regex support.
+  val TRANSLATION_EXCLUDE_PATTERN:         DataKey[String] = new DataKey[String]("TRANSLATION_EXCLUDE_PATTERN", "^[^a-zA-Z]*$")
   val TRANSLATION_HTML_BLOCK_TAG_PATTERN:  DataKey[String] = SharedDataKeys.TRANSLATION_HTML_BLOCK_TAG_PATTERN
   val TRANSLATION_HTML_INLINE_TAG_PATTERN: DataKey[String] = SharedDataKeys.TRANSLATION_HTML_INLINE_TAG_PATTERN
 

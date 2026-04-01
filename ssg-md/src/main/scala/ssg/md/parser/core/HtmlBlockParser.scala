@@ -27,6 +27,8 @@ import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
+import ssg.md.util.sequence.RegexCompat
+
 import java.util.regex.Pattern
 import scala.language.implicitConversions
 import scala.util.boundary
@@ -206,9 +208,8 @@ object HtmlBlockParser {
       var delimiter = ""
       for (tag <- Parser.HTML_BLOCK_TAGS.get(options)) {
         sb.append(delimiter)
-          .append("\\Q")
-          .append(tag)
-          .append("\\E")
+          // Cross-platform: \Q...\E not supported on Scala Native re2
+          .append(RegexCompat.regexEscape(tag))
         delimiter = "|"
       }
 

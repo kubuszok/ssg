@@ -12,7 +12,7 @@ package test
 package util
 package spec
 
-import java.io._
+import java.io.{BufferedReader, IOException, InputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 
 final class ResourceLocation private (
@@ -32,7 +32,8 @@ final class ResourceLocation private (
   }
 
   def fileDirectoryUrl: String = {
-    val pos = fileUrl.lastIndexOf(File.separatorChar)
+    // Resource paths always use '/' regardless of platform
+    val pos = fileUrl.lastIndexOf('/')
     if (pos > 0) {
       fileUrl.substring(0, pos + 1)
     } else {

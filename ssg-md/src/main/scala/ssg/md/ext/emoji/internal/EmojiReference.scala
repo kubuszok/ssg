@@ -63,36 +63,42 @@ object EmojiReference {
           // read it in
           val list = new ArrayList[EmojiData](3000)
 
-          val stream = classOf[EmojiReference.type].getResourceAsStream(EMOJI_REFERENCE_TXT)
-          if (stream == null) { // @nowarn - Java interop: InputStream may be null
-            throw new IllegalStateException("Could not load " + EMOJI_REFERENCE_TXT + " classpath resource")
-          }
+          try {
+            val stream = classOf[EmojiReference.type].getResourceAsStream(EMOJI_REFERENCE_TXT)
+            if (stream != null) { // @nowarn - Java interop: InputStream may be null
+              val reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
+              // skip first line, it is column names
+              reader.readLine()
+              var line = reader.readLine()
+              while (line != null) { // @nowarn - Java interop: readLine returns null
+                val fields = line.split("\t")
+                try {
+                  val shortcut = if (fields(0).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(0))
+                  val category = if (fields(1).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(1))
+                  val emojiCheatSheetFile = if (fields(2).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(2))
+                  val githubFile = if (fields(3).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(3))
+                  val unicodeChars = if (fields(4).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(4))
+                  val unicodeSampleFile = if (fields(5).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(5))
+                  val unicodeCldr = if (fields(6).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(6))
+                  val subcategory = if (fields(7).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(7))
+                  val aliasShortcuts = if (fields(8).charAt(0) == ' ') EMPTY_ARRAY else fields(8).split(",")
+                  val browserTypes = if (fields(9).charAt(0) == ' ') EMPTY_ARRAY else fields(9).split(",")
 
-          val reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
-          // skip first line, it is column names
-          reader.readLine()
-          var line = reader.readLine()
-          while (line != null) { // @nowarn - Java interop: readLine returns null
-            val fields = line.split("\t")
-            try {
-              val shortcut = if (fields(0).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(0))
-              val category = if (fields(1).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(1))
-              val emojiCheatSheetFile = if (fields(2).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(2))
-              val githubFile = if (fields(3).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(3))
-              val unicodeChars = if (fields(4).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(4))
-              val unicodeSampleFile = if (fields(5).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(5))
-              val unicodeCldr = if (fields(6).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(6))
-              val subcategory = if (fields(7).charAt(0) == ' ') Nullable.empty[String] else Nullable(fields(7))
-              val aliasShortcuts = if (fields(8).charAt(0) == ' ') EMPTY_ARRAY else fields(8).split(",")
-              val browserTypes = if (fields(9).charAt(0) == ' ') EMPTY_ARRAY else fields(9).split(",")
-
-              val emoji = new EmojiData(shortcut, aliasShortcuts, category, subcategory, emojiCheatSheetFile, githubFile, unicodeChars, unicodeSampleFile, unicodeCldr, browserTypes)
-              list.add(emoji)
-            } catch {
-              case e: ArrayIndexOutOfBoundsException =>
-                throw new IllegalStateException("Error processing EmojiReference.txt", e)
+                  val emoji = new EmojiData(shortcut, aliasShortcuts, category, subcategory, emojiCheatSheetFile, githubFile, unicodeChars, unicodeSampleFile, unicodeCldr, browserTypes)
+                  list.add(emoji)
+                } catch {
+                  case e: ArrayIndexOutOfBoundsException =>
+                    throw new IllegalStateException("Error processing EmojiReference.txt", e)
+                }
+                line = reader.readLine()
+              }
             }
-            line = reader.readLine()
+            // If stream is null (e.g. on JS where classpath resources are unavailable),
+            // gracefully degrade with an empty emoji list
+          } catch {
+            case _: LinkageError =>
+            // getResourceAsStream may not be available on all platforms (e.g. Scala.js);
+            // gracefully degrade with an empty emoji list
           }
 
           emojiList = Nullable(list)

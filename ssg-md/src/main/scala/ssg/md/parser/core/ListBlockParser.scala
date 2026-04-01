@@ -285,6 +285,22 @@ object ListBlockParser {
       break(Nullable.empty)
     }
 
+    // Cross-platform: LIST_ITEM_MARKER no longer uses lookaheads for the
+    // trailing space/tab/EOL check. Perform it here instead.
+    val matchEnd = matcher.end()
+    if (parsing.listsItemMarkerSpaceFlag) {
+      // listsItemMarkerSpace=true: require space or tab after marker
+      if (matchEnd >= rest.length()) break(Nullable.empty)
+      val nextCh = rest.charAt(matchEnd)
+      if (nextCh != ' ' && nextCh != '\t') break(Nullable.empty)
+    } else {
+      // listsItemMarkerSpace=false: require space, tab, or end-of-string
+      if (matchEnd < rest.length()) {
+        val nextCh = rest.charAt(matchEnd)
+        if (nextCh != ' ' && nextCh != '\t') break(Nullable.empty)
+      }
+    }
+
     val listBlock = createListBlock(matcher)
 
     val markerLength = matcher.end() - matcher.start()
