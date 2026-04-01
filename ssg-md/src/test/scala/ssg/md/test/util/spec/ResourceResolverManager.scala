@@ -14,8 +14,6 @@ package spec
 
 import ssg.md.Nullable
 
-import java.io.File
-import java.net.URL
 import java.{util => ju}
 import scala.util.boundary
 import scala.util.boundary.break
@@ -32,8 +30,11 @@ object ResourceResolverManager {
     urlResolvers.add(resolver)
   }
 
-  def adjustedFileUrl(url: URL): String = {
-    val externalForm = url.toExternalForm
+  /**
+   * Resolves a file URL string through registered resolvers.
+   * Cross-platform: uses only string operations, no java.io.File or java.net.URL.
+   */
+  def adjustedFileUrl(externalForm: String): String = {
     var bestProtocolMatch: Nullable[String] = Nullable.empty
 
     val iter = urlResolvers.iterator()
@@ -41,14 +42,13 @@ object ResourceResolverManager {
       while (iter.hasNext) {
         val resolver = iter.next()
         val filePath = resolver.apply(externalForm)
-        if (filePath != null) { // resolver returns null to indicate no match
+        if (filePath != null) { // Java interop: resolver returns null to indicate no match
           if (ResourceUrlResolver.hasProtocol(filePath) && bestProtocolMatch.isEmpty) {
             bestProtocolMatch = Nullable(filePath)
           } else {
-            val file = new File(filePath)
-            if (file.exists()) {
-              break(TestUtils.FILE_PROTOCOL + filePath)
-            }
+            // In cross-platform mode we cannot check file existence,
+            // so accept the first non-protocol match
+            break(TestUtils.FILE_PROTOCOL + filePath)
           }
         }
       }

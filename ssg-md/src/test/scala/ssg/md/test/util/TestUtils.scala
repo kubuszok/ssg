@@ -19,8 +19,6 @@ import ssg.md.util.misc.{CharPredicate, DelimitedBuilder, Extension, Pair}
 import ssg.md.util.sequence.{BasedSequence, RichSequence, SegmentedSequence, SequenceUtils}
 import ssg.md.util.sequence.builder.SequenceBuilder
 
-import java.io.File
-import java.net.URL
 import java.{util => ju}
 import java.util.function.BiFunction
 import scala.language.implicitConversions
@@ -36,9 +34,6 @@ object TestUtils {
   val CARET_PREDICATE: CharPredicate = CharPredicate.anyOf(MARKUP_CARET_CHAR)
   val MARKUP_PREDICATE: CharPredicate = CharPredicate.anyOf(MARKUP_CARET_CHAR, MARKUP_SELECTION_START_CHAR, MARKUP_SELECTION_END_CHAR)
   val EMPTY_OFFSETS: Array[Int] = new Array[Int](0)
-
-  // CAUTION: need to register our url resolvers
-  FlexmarkResourceUrlResolver.registerUrlResolvers()
 
   val DISABLED_OPTION_PREFIX_CHAR: Char = '-'
   val DISABLED_OPTION_PREFIX: String = String.valueOf(DISABLED_OPTION_PREFIX_CHAR)
@@ -527,18 +522,23 @@ object TestUtils {
   }
 
   def getResolvedSpecResourcePath(testClassName: String, resourcePath: String): String = {
-    val specInfo = new File(resourcePath)
-    val classInfo = new File("/" + testClassName.replace('.', '/'))
-    if (!specInfo.isAbsolute) new File(classInfo.getParent, resourcePath).getAbsolutePath else resourcePath
+    if (resourcePath.startsWith("/")) {
+      resourcePath
+    } else {
+      val classPath = "/" + testClassName.replace('.', '/')
+      val parentDir = classPath.substring(0, classPath.lastIndexOf('/'))
+      parentDir + "/" + resourcePath
+    }
   }
 
   def getAbsoluteSpecResourcePath(testClassPath: String, resourceRootPath: String, resourcePath: String): String = {
-    val resourceFile = if (resourcePath.startsWith("/")) {
-      new File(resourceRootPath, resourcePath.substring(1))
+    if (resourcePath.startsWith("/")) {
+      val root = if (resourceRootPath.endsWith("/")) resourceRootPath else resourceRootPath + "/"
+      root + resourcePath.substring(1)
     } else {
-      new File(new File(testClassPath).getParent, resourcePath)
+      val parentDir = testClassPath.substring(0, testClassPath.lastIndexOf('/'))
+      parentDir + "/" + resourcePath
     }
-    resourceFile.getAbsolutePath
   }
 
   def getSpecResourceFileUrl(resourceClass: Class[?], resourcePath: String): String = {
@@ -546,9 +546,11 @@ object TestUtils {
       throw new IllegalStateException("Empty resource paths not supported")
     } else {
       val resolvedResourcePath = getResolvedSpecResourcePath(resourceClass.getName, resourcePath)
-      val url = resourceClass.getResource(resolvedResourcePath)
-      assert(url != null, "Resource path: '" + resolvedResourcePath + "' not found.")
-      adjustedFileUrl(url)
+      // Cross-platform: use ResourceCompat instead of Class.getResourceAsStream
+      // (getResourceAsStream is not available on Scala.js)
+      val stream = ResourceCompat.getResourceAsStream(resourceClass, resolvedResourcePath)
+      stream.close()
+      "file:" + resolvedResourcePath
     }
   }
 
@@ -569,10 +571,6 @@ object TestUtils {
 
   def getUrlWithLineNumber(fileUrl: String, lineNumber: Int): String = {
     if (lineNumber > 0) fileUrl + ":" + (lineNumber + 1) else fileUrl
-  }
-
-  def adjustedFileUrl(url: URL): String = {
-    ResourceResolverManager.adjustedFileUrl(url)
   }
 
   def combineDefaultOptions(defaultOptions: Nullable[Array[DataHolder]]): Nullable[DataHolder] = {

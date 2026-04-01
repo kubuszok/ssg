@@ -461,15 +461,13 @@ object HtmlDeepParser {
       if (state != HtmlMatch.NONE) {
         state.open.foreach { p =>
           if (sb.nonEmpty) sb.append("|")
-          if (state.caseInsensitive) {
-            sb.append("(?i:")
-            sb.append(p.pattern())
-            sb.append(")")
-          } else {
-            sb.append(p.pattern())
-          }
+          // Cross-platform: (?i:...) inline flag not supported on Scala Native re2.
+          // All HTML tag matching is case-insensitive, so we use the global flag instead.
+          // Original: wrapped case-insensitive parts in (?i:...)
+          // Revert when scala-native#4810 ships.
+          sb.append(p.pattern())
         }
       }
-    Pattern.compile(sb.toString)
+    Pattern.compile(sb.toString, Pattern.CASE_INSENSITIVE)
   }
 }

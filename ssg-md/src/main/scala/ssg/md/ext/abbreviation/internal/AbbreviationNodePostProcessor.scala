@@ -17,7 +17,7 @@ import ssg.md.ast.{Text, TextBase}
 import ssg.md.ext.autolink.internal.AutolinkNodePostProcessor
 import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
 import ssg.md.util.ast.{DoNotDecorate, DoNotLinkDecorate, Document, Node, NodeTracker}
-import ssg.md.util.sequence.{BasedSequence, Escaping, ReplacedTextMapper}
+import ssg.md.util.sequence.{BasedSequence, Escaping, RegexCompat, ReplacedTextMapper}
 
 import java.{util => ju}
 import java.util.regex.Pattern
@@ -54,16 +54,23 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
 
               if (sb.nonEmpty) sb.append("|")
 
-              if (Character.isLetterOrDigit(abbr.charAt(0))) sb.append("\\b")
-              sb.append("\\Q").append(abbr).append("\\E")
-              if (Character.isLetterOrDigit(abbr.charAt(abbr.length - 1))) sb.append("\\b")
+              // Cross-platform: no \b, no \Q..\E, no lookaheads — boundary
+              // checked programmatically in process() below.
+              // Original: \b + Pattern.quote(abbr) + \b with UNICODE_CHARACTER_CLASS
+              // Revert when scala-native#4810 ships with full java.util.regex support.
+              sb.append(RegexCompat.regexEscape(abbr))
             }
           }
         }
       }
 
       if (sb.nonEmpty) {
-        abbreviations = Nullable(Pattern.compile(sb.toString, Pattern.UNICODE_CHARACTER_CLASS))
+        // Cross-platform: Pattern.UNICODE_CHARACTER_CLASS is not supported on Scala Native re2.
+        // The flag makes \b use Unicode word boundaries. Without it, \b uses ASCII word boundaries
+        // which is sufficient for typical abbreviation matching.
+        // Original: Pattern.compile(sb.toString, Pattern.UNICODE_CHARACTER_CLASS)
+        // Revert when scala-native#4810 ships with full java.util.regex support.
+        abbreviations = Nullable(Pattern.compile(sb.toString))
         abbreviationMap = Nullable(abbrMap)
       }
     }
@@ -82,6 +89,19 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
         var textBase: Nullable[TextBase] = if (wrapInTextBase) Nullable.empty else node.parent.map(_.asInstanceOf[TextBase])
 
         while (m.find()) {
+          // Cross-platform word boundary check: since we can't use \b or lookaheads
+          // in the regex (unavailable on Scala Native re2), check boundaries in code.
+          // A word boundary exists if the char before/after the match is not a letter/digit.
+          val matchStart = m.start(0)
+          val matchEnd = m.end(0)
+          val matched = m.group(0)
+          val needStartBoundary = matched.nonEmpty && Character.isLetterOrDigit(matched.charAt(0))
+          val needEndBoundary = matched.nonEmpty && Character.isLetterOrDigit(matched.charAt(matched.length - 1))
+          val startOk = !needStartBoundary || matchStart == 0 || !Character.isLetterOrDigit(literal.charAt(matchStart - 1))
+          val endOk = !needEndBoundary || matchEnd >= literal.length() || !Character.isLetterOrDigit(literal.charAt(matchEnd))
+          if (!startOk || !endOk) {
+            // Not at a word boundary — skip this match
+          } else {
           val abbreviation = abbrMap.get(m.group(0))
           if (abbreviation != null) { // @nowarn - Java interop: map get may return null
             val startOffset = textMapper.originalOffset(m.start(0))
@@ -109,6 +129,7 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
 
             lastEscaped = endOffset
           }
+          } // else: boundary check passed
         }
 
         if (lastEscaped > 0) {

@@ -15,8 +15,6 @@ package spec
 import ssg.md.Nullable
 import ssg.md.util.misc.Utils
 
-import java.io.File
-import java.net.URL
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import scala.language.implicitConversions
 
@@ -103,38 +101,44 @@ object SpecExample {
 
   private val classMap: ConcurrentMap[String, String] = new ConcurrentHashMap[String, String]()
 
+  /** Returns parent directory of a path string, or empty string if no parent */
+  private def parentPath(path: String): String = {
+    val pos = path.lastIndexOf('/')
+    if (pos > 0) path.substring(0, pos) else ""
+  }
+
   def ofCaller(callNesting: Int, resourceClass: Class[?], source: String, html: String, ast: Nullable[String]): SpecExample = {
     val trace = Thread.currentThread().getStackTrace
     val traceElement = trace(callNesting + 2)
     var javaClassFile = classMap.get(resourceClass.getName)
-    if (javaClassFile == null) {
+    if (javaClassFile == null) { // Java interop: ConcurrentHashMap.get returns null when key absent
       val fileName = traceElement.getFileName
       // need path to class, so fake it with class resource file
       val javaFilePath = resourceClass.getName.replace('.', '/')
-      var javaPathFile = new File("/" + javaFilePath).getParentFile
-      val javaPath = javaPathFile.getPath + "/" + fileName
-      var url: URL = null // Java interop: URL from getResource may be null
-      var prefix: String = null // Java interop: set if url found
-      var resourcePath: String = null // Java interop: set if url found
+      var javaParentPath = parentPath("/" + javaFilePath)
+      val javaPath = javaParentPath + "/" + fileName
+      var prefix: String = null // Java interop: set if resource found
+      var resourcePath: String = null // Java interop: set if resource found
       var found = false
-      while (!found && javaPathFile != null) {
-        val absolutePath = Utils.removeSuffix(javaPathFile.getPath, "/")
+      while (!found && javaParentPath.nonEmpty) {
+        val absolutePath = Utils.removeSuffix(javaParentPath, "/")
         resourcePath = Utils.removePrefix(absolutePath, '/').replace('/', '.') + ".txt"
-        url = resourceClass.getResource("/" + resourcePath)
-        if (url != null) {
+        val stream = resourceClass.getResourceAsStream("/" + resourcePath)
+        if (stream != null) { // Java interop: getResourceAsStream returns null when not found
           prefix = Utils.getResourceAsString(resourceClass, "/" + resourcePath).trim()
+          stream.close()
           found = true
         } else {
-          javaPathFile = javaPathFile.getParentFile
+          javaParentPath = parentPath(javaParentPath)
         }
       }
-      if (url == null) {
+      if (!found) {
         throw new IllegalStateException(
           "Class mapping file not found for Class " + resourceClass +
             " add file under test resources with package for name and .txt extension"
         )
       }
-      val fileUrl = TestUtils.adjustedFileUrl(url)
+      val fileUrl = "file:/" + resourcePath
       javaClassFile = fileUrl.replaceFirst(
         "/resources((?:/[^/]*?)*)/" + resourcePath,
         Utils.prefixWith(Utils.removeSuffix(prefix, '/'), '/') + "$1" + javaPath

@@ -183,6 +183,7 @@ final class DelimitedBuilder(private var delimiter: String, capacity: Int) {
     this
   }
 
+  @scala.annotation.targetName("appendAnyRef")
   def append(o: AnyRef): DelimitedBuilder =
     append(Nullable(o.toString))
 
