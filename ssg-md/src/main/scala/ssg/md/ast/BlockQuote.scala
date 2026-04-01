@@ -19,7 +19,7 @@ import ssg.md.util.sequence.BasedSequence
 
 import java.{ util => ju }
 
-class BlockQuote extends Block with BlockQuoteLike with KeepTrailingBlankLineContainer {
+class BlockQuote extends Block, BlockQuoteLike, KeepTrailingBlankLineContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
 

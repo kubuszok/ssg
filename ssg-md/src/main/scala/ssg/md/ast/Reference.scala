@@ -20,7 +20,7 @@ import ssg.md.util.sequence.SequenceUtils
 
 import scala.language.implicitConversions
 
-class Reference(label: BasedSequence, urlSeq: BasedSequence, titleSeq: Nullable[BasedSequence]) extends LinkNodeBase(BasedSequence.NULL) with ReferenceNode[ReferenceRepository, Reference, RefNode] {
+class Reference(label: BasedSequence, urlSeq: BasedSequence, titleSeq: Nullable[BasedSequence]) extends LinkNodeBase(BasedSequence.NULL), ReferenceNode[ReferenceRepository, Reference, RefNode] {
 
   var openingMarker: BasedSequence = label.subSequence(0, 1)
   var reference:     BasedSequence = label.subSequence(1, label.length - 2).trim()

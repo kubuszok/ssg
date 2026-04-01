@@ -21,7 +21,7 @@ import java.util.{ Collection, Map }
 import scala.util.boundary
 import scala.util.boundary.break
 
-class Document(options: Nullable[DataHolder], chars: BasedSequence) extends Block(chars) with MutableDataHolder {
+class Document(options: Nullable[DataHolder], chars: BasedSequence) extends Block(chars), MutableDataHolder {
 
   private val dataSet: MutableDataSet = new MutableDataSet(options)
 

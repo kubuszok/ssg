@@ -21,7 +21,7 @@ import ssg.md.util.sequence.{BasedSequence, SequenceUtils}
 import scala.language.implicitConversions
 
 /** A EnumeratedReference block node */
-class EnumeratedReferenceBlock() extends Block with ReferenceNode[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText] with ParagraphItemContainer {
+class EnumeratedReferenceBlock() extends Block, ReferenceNode[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText], ParagraphItemContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

@@ -21,7 +21,7 @@ import scala.language.implicitConversions
 /**
  * An Admonition block node
  */
-class AdmonitionBlock() extends Block with ParagraphContainer {
+class AdmonitionBlock() extends Block, ParagraphContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var info: BasedSequence = BasedSequence.NULL

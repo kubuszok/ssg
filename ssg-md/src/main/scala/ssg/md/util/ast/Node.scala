@@ -435,7 +435,7 @@ abstract class Node {
   }
 
   override def toString: String =
-    getClass.getName.substring(getClass.getPackage.getName.length + 1) + "{" + toStringAttributes + "}"
+    nodeName + "{" + toStringAttributes + "}"
 
   def astExtra(out: StringBuilder): Unit = {}
 
@@ -561,8 +561,11 @@ abstract class Node {
       }
     }
 
-  def nodeName: String =
-    getClass.getName.substring(getClass.getPackage.getName.length + 1)
+  def nodeName: String = {
+    val name = getClass.getName
+    val lastDot = name.lastIndexOf('.')
+    if (lastDot >= 0) name.substring(lastDot + 1) else name
+  }
 
   def astString(out: StringBuilder, withExtra: Boolean): Unit = {
     out.append(nodeName)

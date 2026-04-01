@@ -28,9 +28,9 @@ import java.util.{HashMap, Map as JMap}
  * The bullet list items that begin with [ ], [x] or [X] are turned into TaskListItem nodes.
  */
 class TaskListExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
     formatterBuilder.nodeFormatterFactory(new NodeFormatterFactory {

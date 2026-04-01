@@ -28,9 +28,9 @@ import scala.language.implicitConversions
  * The parsed wiki link text regions are turned into [[WikiLink]] nodes.
  */
 class WikiLinkExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

@@ -23,7 +23,7 @@ import scala.util.boundary.break
 
 /** Implementation of BasedSequence
   */
-abstract class BasedSequenceImpl(hash: Int) extends IRichSequenceBase[BasedSequence](hash) with BasedSequence {
+abstract class BasedSequenceImpl(hash: Int) extends IRichSequenceBase[BasedSequence](hash), BasedSequence {
 
   override def emptyArray(): Array[BasedSequence] = BasedSequence.EMPTY_ARRAY
 

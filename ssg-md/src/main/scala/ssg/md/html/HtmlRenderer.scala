@@ -274,7 +274,7 @@ object HtmlRenderer {
 
   /** Builder for configuring an [[HtmlRenderer]]. See methods for default configuration.
     */
-  class Builder(options: Nullable[DataHolder]) extends BuilderBase[Builder](options) with RendererBuilder {
+  class Builder(options: Nullable[DataHolder]) extends BuilderBase[Builder](options), RendererBuilder {
     var attributeProviderFactories: mutable.LinkedHashMap[Class[?], AttributeProviderFactory] = mutable.LinkedHashMap.empty
     var nodeRendererFactories:      mutable.ArrayBuffer[NodeRendererFactory]                  = mutable.ArrayBuffer.empty
     var linkResolverFactories:      mutable.ArrayBuffer[LinkResolverFactory]                  = mutable.ArrayBuffer.empty

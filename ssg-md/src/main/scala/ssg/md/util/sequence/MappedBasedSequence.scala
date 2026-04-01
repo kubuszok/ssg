@@ -21,9 +21,9 @@ import ssg.md.util.sequence.mappers.CharMapper
 final class MappedBasedSequence private (
   private val baseSeq: BasedSequence,
   private val mapper:  CharMapper
-) extends BasedSequenceImpl(0)
-    with MappedSequence[BasedSequence]
-    with ReplacedBasedSequence {
+) extends BasedSequenceImpl(0),
+    MappedSequence[BasedSequence],
+    ReplacedBasedSequence {
 
   override def charMapper: CharMapper = mapper
 

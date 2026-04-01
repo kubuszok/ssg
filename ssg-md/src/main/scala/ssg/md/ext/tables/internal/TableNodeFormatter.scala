@@ -20,7 +20,7 @@ import ssg.md.util.html.CellAlignment
 import ssg.md.util.sequence.{BasedSequence, LineAppendable}
 
 import scala.language.implicitConversions
-import java.util.Locale
+
 import ssg.md.util.format.{MarkdownTable, TableFormatOptions}
 
 class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
@@ -120,7 +120,7 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
                 while (offIter.hasNext) {
                   val trackedOffset = offIter.next()
                   i += 1
-                  markdown.append(sep).append(String.format(Locale.US, "%d:[%d,%d] was:[%d,%d]", i, trackedOffset.getIndex, trackedOffset.getIndex + 1, trackedOffset.offset, trackedOffset.offset + 1))
+                  markdown.append(sep).append(s"$i:[${trackedOffset.getIndex},${trackedOffset.getIndex + 1}] was:[${trackedOffset.offset},${trackedOffset.offset + 1}]")
                   sep = " "
                 }
                 markdown.append("\n")

@@ -16,7 +16,7 @@ import ssg.md.util.misc.Utils
 
 class FormattedCounter(
   val numberFormat: NumberFormat,
-  val isLowercase:  Nullable[java.lang.Boolean],
+  val isLowercase:  Nullable[Boolean],
   val delimiter:    Nullable[String]
 ) {
 
@@ -36,7 +36,7 @@ class FormattedCounter(
     val s = NumberFormat.getFormat(numberFormat, Utils.minLimit(_count, 1))
     val o =
       if (isLowercase.isEmpty) s
-      else if (isLowercase.get.booleanValue()) s.toLowerCase
+      else if (isLowercase.get) s.toLowerCase
       else s.toUpperCase
     if (withDelimiter && delimiter.isDefined && delimiter.get.nonEmpty) o + delimiter.get
     else o

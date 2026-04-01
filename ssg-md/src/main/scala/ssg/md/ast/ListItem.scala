@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 
 import java.{ util => ju }
 
-abstract class ListItem extends Block with ParagraphItemContainer with BlankLineContainer with ParagraphContainer {
+abstract class ListItem extends Block, ParagraphItemContainer, BlankLineContainer, ParagraphContainer {
   var openingMarker:                       BasedSequence = BasedSequence.NULL
   private var _markerSuffix:               BasedSequence = BasedSequence.NULL
   private var _tight:                      Boolean       = true

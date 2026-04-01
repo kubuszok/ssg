@@ -16,6 +16,8 @@ import ssg.md.util.data.DataKey
 
 import java.{ util => ju }
 import java.util.function.Consumer
+import scala.util.boundary
+import scala.util.boundary.break
 
 abstract class NodeRepository[T](keepType: Nullable[KeepType]) extends ju.Map[String, T] {
 
@@ -44,7 +46,7 @@ abstract class NodeRepository[T](keepType: Nullable[KeepType]) extends ju.Map[St
 
   def getValues: ju.Collection[T] = nodeMap.values
 
-  override def put(s: String, t: T): T = {
+  override def put(s: String, t: T): T = boundary {
     nodeList.add(t)
 
     if (_keepType == KeepType.LOCKED) throw new IllegalStateException("Not allowed to modify LOCKED repository")
@@ -52,7 +54,7 @@ abstract class NodeRepository[T](keepType: Nullable[KeepType]) extends ju.Map[St
       val another = nodeMap.get(s)
       if (another != null) {
         if (_keepType == KeepType.FAIL) throw new IllegalStateException("Duplicate key " + s)
-        return another
+        break(another)
       }
     }
     nodeMap.put(s, t)

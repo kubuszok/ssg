@@ -21,9 +21,11 @@ import ssg.md.util.sequence.{ BasedSequence, LineAppendable, RepeatedSequence }
 import ssg.md.util.sequence.builder.SequenceBuilder
 import ssg.md.util.sequence.mappers.SpaceMapper
 
-import java.util.Locale
+
 import java.util.regex.{ Matcher, Pattern }
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Utility methods for formatting markdown nodes.
   */
@@ -259,26 +261,26 @@ object FormatterUtils {
     renderLooseItemParagraph(node, context, markdown)
   }
 
-  def isFollowedByBlankLine(node: Nullable[Node]): Boolean = {
+  def isFollowedByBlankLine(node: Nullable[Node]): Boolean = boundary {
     var current = node
     while (current.isDefined) {
       if (current.get.nextAnyNot(classOf[HtmlCommentBlock], classOf[HtmlInnerBlockComment], classOf[HtmlInlineComment]).isInstanceOf[BlankLine]) {
-        return true // @nowarn - simple traversal, boundary/break would be excessive
+        break(true)
       }
       val nextNonBlank = current.get.nextAnyNot(classOf[BlankLine], classOf[HtmlCommentBlock], classOf[HtmlInnerBlockComment], classOf[HtmlInlineComment])
       if (nextNonBlank.isDefined) {
-        return false
+        break(false)
       }
       current = current.get.parent
     }
     false
   }
 
-  def isNotLastItem(node: Nullable[Node]): Boolean = {
+  def isNotLastItem(node: Nullable[Node]): Boolean = boundary {
     var current = node
     while (current.isDefined && !current.get.isInstanceOf[Document]) {
       if (current.get.nextAnyNot(classOf[BlankLine], classOf[HtmlCommentBlock], classOf[HtmlInnerBlockComment], classOf[HtmlInlineComment]).isDefined) {
-        return true
+        break(true)
       }
       current = current.get.parent
     }
@@ -331,26 +333,26 @@ object FormatterUtils {
     }
   }
 
-  private[formatter] def hasLooseItems(itemList: java.lang.Iterable[Node]): Boolean = {
+  private[formatter] def hasLooseItems(itemList: java.lang.Iterable[Node]): Boolean = boundary {
     val iter = itemList.iterator()
     while (iter.hasNext) {
       val item = iter.next()
       if (item.isInstanceOf[ListItem]) {
         if (!item.asInstanceOf[ListItem].isOwnTight && item.next.isDefined) { // @nowarn - Java interop
-          return true
+          break(true)
         }
       }
     }
     false
   }
 
-  private def hasLooseItems(itemList: java.util.List[Node]): Boolean = {
+  private def hasLooseItems(itemList: java.util.List[Node]): Boolean = boundary {
     val iter = itemList.iterator()
     while (iter.hasNext) {
       val item = iter.next()
       if (item.isInstanceOf[ListItem]) {
         if (!item.asInstanceOf[ListItem].isOwnTight && item.next.isDefined) { // @nowarn - Java interop
-          return true
+          break(true)
         }
       }
     }
@@ -412,12 +414,9 @@ object FormatterUtils {
 
       context.renderChildren(node)
       markdown.popPrefix()
+    } else if (options.listRemoveEmptyItems && !(node.hasChildren && node.firstChildAnyNot(classOf[BlankLine]).isDefined)) { // @nowarn - Java interop
+      // empty items removed, skip rendering
     } else {
-      if (options.listRemoveEmptyItems && !(node.hasChildren && node.firstChildAnyNot(classOf[BlankLine]).isDefined)) { // @nowarn - Java interop
-        FIRST_LIST_ITEM_CHILD.set(context.getDocument, savedFirstListItemChild)
-        return // @nowarn - early exit, avoids deeply nested code
-      }
-
       var useOpeningMarker: CharSequence = node.openingMarker
       if (node.isOrderedItem) {
         var delimiter = useOpeningMarker.charAt(useOpeningMarker.length - 1)
@@ -434,11 +433,11 @@ object FormatterUtils {
 
         if (options.listRenumberItems) {
           var itemNumber: Int = LIST_ITEM_NUMBER.get(Nullable(document))
-          useOpeningMarker = String.format(Locale.US, "%d%c", itemNumber: java.lang.Integer, delimiter: java.lang.Character)
+          useOpeningMarker = s"$itemNumber$delimiter"
           itemNumber += 1
           document.set(LIST_ITEM_NUMBER, itemNumber)
         } else {
-          useOpeningMarker = String.format("%s%c", number, delimiter: java.lang.Character)
+          useOpeningMarker = s"$number$delimiter"
         }
 
         val padding = LIST_ALIGN_NUMERIC.get(Nullable(document)).apply(useOpeningMarker)
@@ -519,7 +518,7 @@ object FormatterUtils {
     } else {
       val formatterOptions = context.getFormatterOptions
       if (formatterOptions.rightMargin > 0) {
-        val subContextOptions = context.getOptions.toMutable.set(Formatter.KEEP_SOFT_LINE_BREAKS, java.lang.Boolean.TRUE).set(Formatter.KEEP_HARD_LINE_BREAKS, java.lang.Boolean.TRUE)
+        val subContextOptions = context.getOptions.toMutable.set(Formatter.KEEP_SOFT_LINE_BREAKS, true).set(Formatter.KEEP_HARD_LINE_BREAKS, true)
         val seqBuilder = context.getDocument.chars.getBuilder.asInstanceOf[SequenceBuilder]
         val subContext = context.getSubContext(Nullable(subContextOptions), seqBuilder.getBuilder)
         val subContextMarkdown = subContext.getMarkdown

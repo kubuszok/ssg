@@ -200,15 +200,14 @@ object DefinitionItemBlockParser {
           BlockStart.none()
         } else {
           // check if we break list on double blank
-          if (defOptions.doubleBlankLineBreaksList) {
+          val doubleBlankBreak = defOptions.doubleBlankLineBreaksList && {
             lastChildAnyNot.foreach(_.setCharsFromContent())
             val charSequence = state.line.baseSubSequence(lastChildAnyNot.get.endOffset, state.line.startOffset).normalizeEOL()
             val interSpace = BasedSequence.of(charSequence)
-            if (interSpace.countLeading(ssg.md.util.misc.CharPredicate.EOL) >= 2) {
-              return BlockStart.none() // @nowarn - boundary would be overkill here
-            }
+            interSpace.countLeading(ssg.md.util.misc.CharPredicate.EOL) >= 2
           }
-          tryStartInternal(state)
+          if (doubleBlankBreak) BlockStart.none()
+          else tryStartInternal(state)
         }
       } else if (!(blockParser.isInstanceOf[DefinitionItemBlockParser] || blockParser.isInstanceOf[ParagraphParser])) {
         BlockStart.none()

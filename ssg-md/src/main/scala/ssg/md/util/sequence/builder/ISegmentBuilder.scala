@@ -13,7 +13,7 @@ package sequence
 package builder
 
 import ssg.md.Nullable
-import ssg.md.util.misc.BitFieldSet
+import ssg.md.util.misc.{ BitFieldSet, EnumBitField }
 import ssg.md.util.sequence.Range
 
 trait ISegmentBuilder[S <: ISegmentBuilder[S]] extends java.lang.Iterable[Object] {
@@ -72,6 +72,13 @@ object ISegmentBuilder {
   enum Options extends java.lang.Enum[Options] {
     case INCLUDE_ANCHORS
     case TRACK_FIRST256
+  }
+
+  given EnumBitField[Options] with {
+    def elementType: Class[Options] = classOf[Options]
+    def typeName: String = "Options"
+    val values: Array[Options] = Options.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Options")
   }
 
   val O_INCLUDE_ANCHORS: Options = Options.INCLUDE_ANCHORS

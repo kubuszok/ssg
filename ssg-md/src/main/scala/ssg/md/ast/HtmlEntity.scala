@@ -24,7 +24,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
   * @see
   *   <a href="http://spec.commonmark.org/0.24/#raw-html">CommonMark Spec</a>
   */
-class HtmlEntity extends Node with TextContainer {
+class HtmlEntity extends Node, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

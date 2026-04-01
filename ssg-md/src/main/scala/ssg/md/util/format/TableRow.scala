@@ -161,9 +161,9 @@ class TableRow {
     * @param tableCell
     *   table cell to insert, null for default
     */
-  def insertColumns(column: Int, count: Int, tableCell: Nullable[TableCell]): Unit = {
+  def insertColumns(column: Int, count: Int, tableCell: Nullable[TableCell]): Unit = boundary {
     if (count <= 0 || column < 0) {
-      return // NOTE: early return is OK here - trivial guard clause
+      break(())
     }
 
     normalizeIfNeeded()
@@ -209,9 +209,9 @@ class TableRow {
     * @param count
     *   number of columns to insert
     */
-  def deleteColumns(column: Int, count: Int): Unit = {
+  def deleteColumns(column: Int, count: Int): Unit = boundary {
     if (count <= 0 || column < 0) {
-      return // NOTE: trivial guard clause
+      break(())
     }
 
     normalizeIfNeeded()
@@ -248,9 +248,9 @@ class TableRow {
     }
   }
 
-  def moveColumn(fromColumn: Int, toColumn: Int): Unit = {
+  def moveColumn(fromColumn: Int, toColumn: Int): Unit = boundary {
     if (fromColumn < 0 || toColumn < 0) {
-      return // NOTE: trivial guard clause
+      break(())
     }
 
     normalizeIfNeeded()
@@ -258,7 +258,7 @@ class TableRow {
     val maxColumn = getTotalColumns
 
     if (fromColumn >= maxColumn) {
-      return // NOTE: trivial guard clause
+      break(())
     }
 
     var toCol = toColumn
@@ -334,12 +334,12 @@ class TableRow {
     index >= cells.size() || cells.get(index).text.isBlank()
   }
 
-  def isEmpty: Boolean = {
+  def isEmpty: Boolean = boundary {
     var i = 0
     while (i < cells.size()) {
       val cell = cells.get(i)
       if (cell != null && !cell.text.isBlank()) {
-        return false // NOTE: trivial early return
+        break(false)
       }
       i += 1
     }
@@ -349,7 +349,7 @@ class TableRow {
   def indexOf(column: Int): MarkdownTable.IndexSpanOffset =
     indexOfOrNull(column)
 
-  def indexOfOrNull(column: Int): MarkdownTable.IndexSpanOffset = {
+  def indexOfOrNull(column: Int): MarkdownTable.IndexSpanOffset = boundary {
     var remainingColumns = column
     var index            = 0
 
@@ -357,7 +357,7 @@ class TableRow {
     while (i < cells.size()) {
       val cell = cells.get(i)
       if (cell.columnSpan > remainingColumns) {
-        return new MarkdownTable.IndexSpanOffset(index, remainingColumns) // NOTE: early return from search
+        break(new MarkdownTable.IndexSpanOffset(index, remainingColumns))
       }
 
       remainingColumns -= cell.columnSpan

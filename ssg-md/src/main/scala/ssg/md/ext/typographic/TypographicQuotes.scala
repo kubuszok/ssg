@@ -16,7 +16,7 @@ import ssg.md.util.ast.{DelimitedNode, DoNotAttributeDecorate, Node, Typographic
 import ssg.md.util.sequence.BasedSequence
 
 /** A TypographicQuotes node */
-class TypographicQuotes() extends Node with DelimitedNode with DoNotAttributeDecorate with TypographicText {
+class TypographicQuotes() extends Node, DelimitedNode, DoNotAttributeDecorate, TypographicText {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

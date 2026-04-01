@@ -24,8 +24,10 @@ import ssg.md.util.sequence.ReplacedTextMapper
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
-abstract class RefNode extends Node with LinkRefDerived with ReferencingNode[ReferenceRepository, Reference] with DoNotLinkDecorate with TextContainer {
+abstract class RefNode extends Node, LinkRefDerived, ReferencingNode[ReferenceRepository, Reference], DoNotLinkDecorate, TextContainer {
   var textOpeningMarker:      BasedSequence = BasedSequence.NULL
   var text:                   BasedSequence = BasedSequence.NULL
   var textClosingMarker:      BasedSequence = BasedSequence.NULL
@@ -181,7 +183,7 @@ abstract class RefNode extends Node with LinkRefDerived with ReferencingNode[Ref
       BasedSequence.NULL
     }
 
-  override def collectText(out: ISequenceBuilder[? <: ISequenceBuilder[?, BasedSequence], BasedSequence], flags: Int, nodeVisitor: NodeVisitor): Boolean = {
+  override def collectText(out: ISequenceBuilder[? <: ISequenceBuilder[?, BasedSequence], BasedSequence], flags: Int, nodeVisitor: NodeVisitor): Boolean = boundary {
     // images no longer add alt text
 
     val urlType = flags & TextContainer.F_LINK_TEXT_TYPE
@@ -205,14 +207,14 @@ abstract class RefNode extends Node with LinkRefDerived with ReferencingNode[Ref
         out.append(chars)
       } else {
         if (ref == null) { // @nowarn - Java interop: getReferenceNode may return null
-          return true
+          break(true)
         } else {
           val refVal = ref
           val urlSeq: BasedSequence = urlType match {
             case TextContainer.F_LINK_PAGE_REF => refVal.pageRef
             case TextContainer.F_LINK_ANCHOR   => refVal.anchorRef
             case TextContainer.F_LINK_URL      => refVal.url
-            case _                             => return true
+            case _                             => break(true)
           }
 
           val textMapper     = new ReplacedTextMapper(urlSeq)

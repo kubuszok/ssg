@@ -19,7 +19,7 @@ import ssg.md.util.sequence.BasedSequence
 import scala.language.implicitConversions
 
 /** A EnumeratedReference node */
-class EnumeratedReferenceBase() extends Node with DelimitedNode with DoNotDecorate with ReferencingNode[EnumeratedReferenceRepository, EnumeratedReferenceBlock] {
+class EnumeratedReferenceBase() extends Node, DelimitedNode, DoNotDecorate, ReferencingNode[EnumeratedReferenceRepository, EnumeratedReferenceBlock] {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

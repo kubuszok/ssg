@@ -21,7 +21,7 @@ import scala.language.implicitConversions
 /**
  * A block node that contains the abbreviation definition
  */
-class AbbreviationBlock() extends Block with ReferenceNode[AbbreviationRepository, AbbreviationBlock, Abbreviation] {
+class AbbreviationBlock() extends Block, ReferenceNode[AbbreviationRepository, AbbreviationBlock, Abbreviation] {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

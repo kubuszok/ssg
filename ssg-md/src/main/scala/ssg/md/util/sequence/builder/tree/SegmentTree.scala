@@ -487,11 +487,11 @@ object SegmentTree {
     getByteOffset(bod) - getAnchorOffset(bod)
   }
 
-  def findSegmentPos(index: Int, treeData: Array[Int], startPos: Int, endPos: Int): Nullable[SegmentTreePos] = {
+  def findSegmentPos(index: Int, treeData: Array[Int], startPos: Int, endPos: Int): Nullable[SegmentTreePos] = boundary {
     // FIX: add segmented sequence stats collection for iteration counts
     // FIX: check first segment and last segment in case it is a scan from start/end of sequence
     if (index == 0 && startPos == 0) {
-      return SegmentTreePos(0, 0, 0)
+      break(Nullable(SegmentTreePos(0, 0, 0)))
     }
 
     var sp         = startPos
@@ -512,7 +512,7 @@ object SegmentTree {
         if (index < startIdx) {
           ep = pos
         } else {
-          return SegmentTreePos(pos, startIdx, iterations)
+          break(Nullable(SegmentTreePos(pos, startIdx, iterations)))
         }
       }
 

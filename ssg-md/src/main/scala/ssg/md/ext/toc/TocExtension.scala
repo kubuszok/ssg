@@ -27,7 +27,7 @@ import scala.language.implicitConversions
  * The parsed [TOC] text is turned into [[TocBlock]] nodes.
  * Rendered into table of contents based on the headings in the document.
  */
-class TocExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class TocExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {
     // set header id options if not already set

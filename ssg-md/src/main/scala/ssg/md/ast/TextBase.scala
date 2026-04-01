@@ -21,7 +21,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import scala.language.implicitConversions
 
-class TextBase extends Node with TextContainer {
+class TextBase extends Node, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

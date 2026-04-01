@@ -20,7 +20,7 @@ import java.{ util => ju }
 
 import scala.language.implicitConversions
 
-class FencedCodeBlock extends Block with DoNotDecorate {
+class FencedCodeBlock extends Block, DoNotDecorate {
 
   var fenceIndent:   Int           = 0
   var openingMarker: BasedSequence = BasedSequence.NULL

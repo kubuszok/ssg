@@ -24,7 +24,7 @@ import scala.language.implicitConversions
  *
  * The parsed typographic text is turned into [[TypographicQuotes]] and [[TypographicSmarts]] nodes.
  */
-class TypographicExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class TypographicExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

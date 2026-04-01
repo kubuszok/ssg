@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DelimitedNode, DoNotDecorate, Node, NonRenderingInline}
 import ssg.md.util.sequence.BasedSequence
 
 /** A AttributesNode node */
-class AttributesNode() extends Node with DelimitedNode with DoNotDecorate with NonRenderingInline {
+class AttributesNode() extends Node, DelimitedNode, DoNotDecorate, NonRenderingInline {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

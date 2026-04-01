@@ -15,7 +15,7 @@ import ssg.md.util.dependency.Dependent
 
 /** Factory for creating [[PostProcessor]] instances for a given document.
   */
-trait PostProcessorFactory extends (Document => PostProcessor) with Dependent {
+trait PostProcessorFactory extends (Document => PostProcessor), Dependent {
 
   /** A map of nodes of interest as keys and values a set of classes, if implemented by an ancestors then the node should be excluded from processing by this processor.
     *

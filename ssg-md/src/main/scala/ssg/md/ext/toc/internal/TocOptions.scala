@@ -57,18 +57,18 @@ final class TocOptions private (
   }
 
   def setIn(dataHolder: MutableDataHolder): MutableDataHolder = {
-    dataHolder.set(TocExtension.LEVELS, levels: Integer)
-    dataHolder.set(TocExtension.IS_TEXT_ONLY, isTextOnly: java.lang.Boolean)
-    dataHolder.set(TocExtension.IS_NUMBERED, isNumbered: java.lang.Boolean)
+    dataHolder.set(TocExtension.LEVELS, levels)
+    dataHolder.set(TocExtension.IS_TEXT_ONLY, isTextOnly)
+    dataHolder.set(TocExtension.IS_NUMBERED, isNumbered)
     dataHolder.set(TocExtension.LIST_TYPE, listType)
-    dataHolder.set(TocExtension.IS_HTML, isHtml: java.lang.Boolean)
-    dataHolder.set(TocExtension.TITLE_LEVEL, titleLevel: Integer)
+    dataHolder.set(TocExtension.IS_HTML, isHtml)
+    dataHolder.set(TocExtension.TITLE_LEVEL, titleLevel)
     dataHolder.set(TocExtension.TITLE, title)
-    dataHolder.set(TocExtension.AST_INCLUDE_OPTIONS, isAstAddOptions: java.lang.Boolean)
-    dataHolder.set(TocExtension.BLANK_LINE_SPACER, isBlankLineSpacer: java.lang.Boolean)
+    dataHolder.set(TocExtension.AST_INCLUDE_OPTIONS, isAstAddOptions)
+    dataHolder.set(TocExtension.BLANK_LINE_SPACER, isBlankLineSpacer)
     dataHolder.set(TocExtension.DIV_CLASS, divClass)
     dataHolder.set(TocExtension.LIST_CLASS, listClass)
-    dataHolder.set(TocExtension.CASE_SENSITIVE_TOC_TAG, isCaseSensitiveTocTag: java.lang.Boolean)
+    dataHolder.set(TocExtension.CASE_SENSITIVE_TOC_TAG, isCaseSensitiveTocTag)
     dataHolder
   }
 

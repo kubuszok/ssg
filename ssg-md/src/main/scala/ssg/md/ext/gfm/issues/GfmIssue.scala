@@ -16,7 +16,7 @@ import ssg.md.util.ast.{DoNotDecorate, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A GfmIssue node */
-class GfmIssue() extends Node with DoNotDecorate {
+class GfmIssue() extends Node, DoNotDecorate {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

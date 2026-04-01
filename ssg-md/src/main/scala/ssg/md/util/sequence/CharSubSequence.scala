@@ -118,8 +118,7 @@ object CharSubSequence {
       case s:   String          =>
         new CharSubSequence(s.toCharArray, s.hashCode())
       case sb: StringBuilder =>
-        val chars = new Array[Char](charSequence.length())
-        sb.getChars(0, charSequence.length(), chars, 0)
+        val chars = sb.toString.toCharArray
         new CharSubSequence(chars, 0)
       case _ =>
         new CharSubSequence(charSequence.toString.toCharArray, 0)

@@ -13,7 +13,7 @@ package html
 import ssg.md.html.renderer.LinkResolverContext
 import ssg.md.util.dependency.Dependent
 
-trait AttributeProviderFactory extends (LinkResolverContext => AttributeProvider) with Dependent {
+trait AttributeProviderFactory extends (LinkResolverContext => AttributeProvider), Dependent {
   override def afterDependents:                     Nullable[Set[Class[?]]]
   override def beforeDependents:                    Nullable[Set[Class[?]]]
   override def affectsGlobalScope:                  Boolean

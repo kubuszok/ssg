@@ -136,23 +136,24 @@ object SimTocBlockParser {
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
       if (state.indent >= 4) {
-        return BlockStart.none()
-      }
-      val line = state.line
-      val nextNonSpace = state.nextNonSpaceIndex
-      val trySequence = line.subSequence(nextNonSpace, line.length())
-      val matcher = tocPattern.matcher(line)
-      if (matcher.matches()) {
-        val tocChars = state.lineWithEOL
-        val styleChars: BasedSequence = if (matcher.start(1) != -1) trySequence.subSequence(matcher.start(1), matcher.end(1))
-        else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
-        val titleChars: BasedSequence = if (matcher.start(2) != -1) trySequence.subSequence(matcher.start(2), matcher.end(2))
-        else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: SimTocBlock accepts null
-
-        val simTocBlockParser = new SimTocBlockParser(state.properties, tocChars, styleChars, titleChars)
-        Nullable(BlockStart.of(simTocBlockParser).atIndex(state.lineEndIndex + state.lineEolLength))
-      } else {
         BlockStart.none()
+      } else {
+        val line = state.line
+        val nextNonSpace = state.nextNonSpaceIndex
+        val trySequence = line.subSequence(nextNonSpace, line.length())
+        val matcher = tocPattern.matcher(line)
+        if (matcher.matches()) {
+          val tocChars = state.lineWithEOL
+          val styleChars: BasedSequence = if (matcher.start(1) != -1) trySequence.subSequence(matcher.start(1), matcher.end(1))
+          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
+          val titleChars: BasedSequence = if (matcher.start(2) != -1) trySequence.subSequence(matcher.start(2), matcher.end(2))
+          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: SimTocBlock accepts null
+
+          val simTocBlockParser = new SimTocBlockParser(state.properties, tocChars, styleChars, titleChars)
+          Nullable(BlockStart.of(simTocBlockParser).atIndex(state.lineEndIndex + state.lineEolLength))
+        } else {
+          BlockStart.none()
+        }
       }
     }
   }

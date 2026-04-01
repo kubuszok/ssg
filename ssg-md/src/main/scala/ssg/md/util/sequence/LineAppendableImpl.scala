@@ -59,15 +59,15 @@ class LineAppendableImpl(
   private var prefix:            CharSequence                = BasedSequence.EMPTY
   private var prefixAfterEol:    CharSequence                = BasedSequence.EMPTY
   private var indentPrefix:      CharSequence                = BasedSequence.EMPTY
-  private val prefixStack:       ju.Stack[CharSequence]      = new ju.Stack[CharSequence]()
-  private val indentPrefixStack: ju.Stack[java.lang.Boolean] = new ju.Stack[java.lang.Boolean]()
+  private val prefixStack:       scala.collection.mutable.Stack[CharSequence] = scala.collection.mutable.Stack()
+  private val indentPrefixStack: scala.collection.mutable.Stack[Boolean]     = scala.collection.mutable.Stack()
 
   // current line being accumulated
   private var allWhitespace:               Boolean                = true
   private var lastWasWhitespace:           Boolean                = false
   private var eolOnFirstText:              Int                    = 0
   private val indentsOnFirstEol:           ju.ArrayList[Runnable] = new ju.ArrayList[Runnable]()
-  private val optionStack:                 ju.Stack[Integer]      = new ju.Stack[Integer]()
+  private val optionStack:                 scala.collection.mutable.Stack[Int] = scala.collection.mutable.Stack()
   private[sequence] var modificationCount: Int                    = 0
 
   def this(formatOptions: Int) = {
@@ -171,12 +171,12 @@ class LineAppendableImpl(
     prefixStack.push(prefixAfterEol)
     prefix = LineAppendable.combinedPrefix(Nullable(prefixAfterEol), Nullable(indentPrefix))
     prefixAfterEol = prefix
-    indentPrefixStack.push(java.lang.Boolean.TRUE)
+    indentPrefixStack.push(true)
   }
 
   private def rawUnIndent(): Unit = {
     if (prefixStack.isEmpty) throw new IllegalStateException("unIndent with an empty stack")
-    if (!indentPrefixStack.peek()) throw new IllegalStateException("unIndent for an element added by pushPrefix(), use popPrefix() instead")
+    if (!indentPrefixStack.top) throw new IllegalStateException("unIndent for an element added by pushPrefix(), use popPrefix() instead")
 
     prefix = prefixStack.pop()
     prefixAfterEol = prefix
@@ -208,7 +208,7 @@ class LineAppendableImpl(
   override def pushPrefix(): LineAppendable = {
     if (!passThrough) {
       prefixStack.push(prefixAfterEol)
-      indentPrefixStack.push(java.lang.Boolean.FALSE)
+      indentPrefixStack.push(false)
     }
     this
   }
@@ -216,7 +216,7 @@ class LineAppendableImpl(
   override def popPrefix(afterEol: Boolean): LineAppendable = {
     if (!passThrough) {
       if (prefixStack.isEmpty) throw new IllegalStateException("popPrefix with an empty stack")
-      if (indentPrefixStack.peek()) throw new IllegalStateException("popPrefix for element added by indent(), use unIndent() instead")
+      if (indentPrefixStack.top) throw new IllegalStateException("popPrefix for element added by indent(), use unIndent() instead")
 
       prefixAfterEol = prefixStack.pop()
       if (!afterEol) {

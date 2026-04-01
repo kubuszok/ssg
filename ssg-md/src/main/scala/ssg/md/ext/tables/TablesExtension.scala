@@ -27,9 +27,9 @@ import ssg.md.util.format.options.{DiscretionaryText, TableCaptionHandling}
  * The parsed tables are turned into [[TableBlock]] blocks.
  */
 class TablesExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
     formatterBuilder.nodeFormatterFactory(new TableNodeFormatter.Factory())
@@ -55,9 +55,9 @@ class TablesExtension private ()
 object TablesExtension {
 
   val TRIM_CELL_WHITESPACE: DataKey[Boolean] = new DataKey[Boolean]("TRIM_CELL_WHITESPACE", true)
-  val MIN_SEPARATOR_DASHES: DataKey[Integer] = new DataKey[Integer]("MIN_SEPARATOR_DASHES", 3)
-  val MAX_HEADER_ROWS: DataKey[Integer] = new DataKey[Integer]("MAX_HEADER_ROWS", Integer.MAX_VALUE)
-  val MIN_HEADER_ROWS: DataKey[Integer] = new DataKey[Integer]("MIN_HEADER_ROWS", 0)
+  val MIN_SEPARATOR_DASHES: DataKey[Int] = new DataKey[Int]("MIN_SEPARATOR_DASHES", 3)
+  val MAX_HEADER_ROWS: DataKey[Int] = new DataKey[Int]("MAX_HEADER_ROWS", Int.MaxValue)
+  val MIN_HEADER_ROWS: DataKey[Int] = new DataKey[Int]("MIN_HEADER_ROWS", 0)
   val APPEND_MISSING_COLUMNS: DataKey[Boolean] = new DataKey[Boolean]("APPEND_MISSING_COLUMNS", false)
   val DISCARD_EXTRA_COLUMNS: DataKey[Boolean] = new DataKey[Boolean]("DISCARD_EXTRA_COLUMNS", false)
   val COLUMN_SPANS: DataKey[Boolean] = new DataKey[Boolean]("COLUMN_SPANS", true)
@@ -66,19 +66,19 @@ object TablesExtension {
   val WITH_CAPTION: DataKey[Boolean] = new DataKey[Boolean]("WITH_CAPTION", true)
 
   // format options copy from TableFormatOptions
-  val FORMAT_TABLE_TRIM_CELL_WHITESPACE: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_TRIM_CELL_WHITESPACE
-  val FORMAT_TABLE_LEAD_TRAIL_PIPES: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_LEAD_TRAIL_PIPES
-  val FORMAT_TABLE_SPACE_AROUND_PIPES: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_SPACE_AROUND_PIPES
-  val FORMAT_TABLE_ADJUST_COLUMN_WIDTH: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_ADJUST_COLUMN_WIDTH
-  val FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT
-  val FORMAT_TABLE_FILL_MISSING_COLUMNS: DataKey[java.lang.Boolean] = TableFormatOptions.FORMAT_TABLE_FILL_MISSING_COLUMNS
+  val FORMAT_TABLE_TRIM_CELL_WHITESPACE: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_TRIM_CELL_WHITESPACE
+  val FORMAT_TABLE_LEAD_TRAIL_PIPES: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_LEAD_TRAIL_PIPES
+  val FORMAT_TABLE_SPACE_AROUND_PIPES: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_SPACE_AROUND_PIPES
+  val FORMAT_TABLE_ADJUST_COLUMN_WIDTH: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_ADJUST_COLUMN_WIDTH
+  val FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT
+  val FORMAT_TABLE_FILL_MISSING_COLUMNS: DataKey[Boolean] = TableFormatOptions.FORMAT_TABLE_FILL_MISSING_COLUMNS
 
   // QUERY: is this still needed???
   val FORMAT_TABLE_FILL_MISSING_MIN_COLUMN: NullableDataKey[Integer] = TableFormatOptions.FORMAT_TABLE_FILL_MISSING_MIN_COLUMN
 
   val FORMAT_TABLE_LEFT_ALIGN_MARKER: DataKey[DiscretionaryText] = TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER
-  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Integer] = TableFormatOptions.FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH
-  val FORMAT_TABLE_MIN_SEPARATOR_DASHES: DataKey[Integer] = TableFormatOptions.FORMAT_TABLE_MIN_SEPARATOR_DASHES
+  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Int] = TableFormatOptions.FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH
+  val FORMAT_TABLE_MIN_SEPARATOR_DASHES: DataKey[Int] = TableFormatOptions.FORMAT_TABLE_MIN_SEPARATOR_DASHES
   val FORMAT_CHAR_WIDTH_PROVIDER: DataKey[CharWidthProvider] = TableFormatOptions.FORMAT_CHAR_WIDTH_PROVIDER
   val FORMAT_TABLE_MANIPULATOR: DataKey[TableManipulator] = TableFormatOptions.FORMAT_TABLE_MANIPULATOR
   val FORMAT_TABLE_CAPTION: DataKey[TableCaptionHandling] = TableFormatOptions.FORMAT_TABLE_CAPTION

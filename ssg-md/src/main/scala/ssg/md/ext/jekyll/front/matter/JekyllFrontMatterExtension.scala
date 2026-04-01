@@ -27,9 +27,9 @@ import ssg.md.util.data.MutableDataHolder
  * The parsed jekyll_front_matter text is turned into [[JekyllFrontMatterBlock]] nodes.
  */
 class JekyllFrontMatterExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
     formatterBuilder.nodeFormatterFactory(new JekyllFrontMatterNodeFormatter.Factory())

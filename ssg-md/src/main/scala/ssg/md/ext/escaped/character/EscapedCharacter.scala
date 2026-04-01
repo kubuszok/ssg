@@ -16,7 +16,7 @@ import ssg.md.util.ast.{DoNotDecorate, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A EscapedCharacter node */
-class EscapedCharacter() extends Node with DoNotDecorate {
+class EscapedCharacter() extends Node, DoNotDecorate {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

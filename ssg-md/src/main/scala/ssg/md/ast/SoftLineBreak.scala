@@ -20,7 +20,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import scala.language.implicitConversions
 
-class SoftLineBreak extends Node with DoNotAttributeDecorate with DoNotTrim with TextContainer {
+class SoftLineBreak extends Node, DoNotAttributeDecorate, DoNotTrim, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

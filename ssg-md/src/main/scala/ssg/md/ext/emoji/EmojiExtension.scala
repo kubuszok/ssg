@@ -25,9 +25,9 @@ import ssg.md.util.data.{DataKey, MutableDataHolder}
  * The parsed emoji shortcuts text regions are turned into [[Emoji]] nodes.
  */
 class EmojiExtension private ()
-    extends Parser.ParserExtension
-    with HtmlRenderer.HtmlRendererExtension
-    with Formatter.FormatterExtension {
+    extends Parser.ParserExtension,
+    HtmlRenderer.HtmlRendererExtension,
+    Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

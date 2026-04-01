@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DelimitedNode, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A Ins node */
-class Ins() extends Node with DelimitedNode {
+class Ins() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

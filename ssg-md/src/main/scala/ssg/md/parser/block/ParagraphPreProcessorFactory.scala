@@ -13,7 +13,7 @@ package block
 
 import ssg.md.util.dependency.Dependent
 
-trait ParagraphPreProcessorFactory extends (ParserState => ParagraphPreProcessor) with Dependent {
+trait ParagraphPreProcessorFactory extends (ParserState => ParagraphPreProcessor), Dependent {
 
   /** Create a paragraph pre processor for the document.
     *

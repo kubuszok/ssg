@@ -11,7 +11,7 @@ package md
 package util
 package sequence
 
-import ssg.md.util.misc.{ BitField, BitFieldSet, Utils }
+import ssg.md.util.misc.{ BitField, BitFieldSet, EnumBitField, Utils }
 
 /** Line information in LineAppendable
   */
@@ -113,10 +113,24 @@ object LineInfo {
     case BLANK_TEXT extends Flags(1)
   }
 
+  given EnumBitField[Flags] with {
+    def elementType: Class[Flags] = classOf[Flags]
+    def typeName: String = "Flags"
+    val values: Array[Flags] = Flags.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
+  }
+
   enum Preformatted extends java.lang.Enum[Preformatted] {
     case NONE, FIRST, BODY, LAST
 
     val mask: Int = BitFieldSet.setBitField(0, Flags.PREFORMATTED, ordinal())
+  }
+
+  given EnumBitField[Preformatted] with {
+    def elementType: Class[Preformatted] = classOf[Preformatted]
+    def typeName: String = "Preformatted"
+    val values: Array[Preformatted] = Preformatted.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Preformatted")
   }
 
   object Preformatted {

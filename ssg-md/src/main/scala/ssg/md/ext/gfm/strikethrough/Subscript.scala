@@ -16,7 +16,7 @@ import ssg.md.util.ast.{DelimitedNode, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A Subscript node containing text and other inline nodes as children. */
-class Subscript() extends Node with DelimitedNode {
+class Subscript() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

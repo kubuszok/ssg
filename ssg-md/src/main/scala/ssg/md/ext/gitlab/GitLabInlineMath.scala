@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DelimitedNode, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A GitLab inline math node */
-class GitLabInlineMath() extends Node with DelimitedNode {
+class GitLabInlineMath() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

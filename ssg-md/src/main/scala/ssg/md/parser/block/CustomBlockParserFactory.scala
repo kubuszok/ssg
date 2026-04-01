@@ -17,7 +17,7 @@ import ssg.md.util.sequence.mappers.SpecialLeadInHandler
 
 /** Custom block parser factory to create parser instance specific block parser factory.
   */
-trait CustomBlockParserFactory extends (DataHolder => BlockParserFactory) with Dependent {
+trait CustomBlockParserFactory extends (DataHolder => BlockParserFactory), Dependent {
 
   override def apply(options: DataHolder): BlockParserFactory
 

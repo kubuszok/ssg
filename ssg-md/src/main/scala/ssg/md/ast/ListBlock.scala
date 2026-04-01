@@ -21,7 +21,7 @@ import scala.language.implicitConversions
 
 import java.{ util => ju }
 
-abstract class ListBlock extends Block with BlankLineContainer {
+abstract class ListBlock extends Block, BlankLineContainer {
 
   private var _tight: Boolean = false
 

@@ -32,16 +32,16 @@ class Parsing(val options: DataHolder) {
 
   private val patternTypeFlags = new PatternTypeFlags(options)
 
-  val intellijDummyIdentifier:         Boolean = java.lang.Boolean.TRUE == patternTypeFlags.intellijDummyIdentifier
-  val htmlForTranslator:               Boolean = java.lang.Boolean.TRUE == patternTypeFlags.htmlForTranslator
+  val intellijDummyIdentifier:         Boolean = patternTypeFlags.intellijDummyIdentifier == true
+  val htmlForTranslator:               Boolean = patternTypeFlags.htmlForTranslator == true
   val translationHtmlInlineTagPattern: String  = patternTypeFlags.translationHtmlInlineTagPattern
   val translationAutolinkTagPattern:   String  = patternTypeFlags.translationAutolinkTagPattern
-  val spaceInLinkUrl:                  Boolean = java.lang.Boolean.TRUE == patternTypeFlags.spaceInLinkUrl
-  val parseJekyllMacroInLinkUrl:       Boolean = java.lang.Boolean.TRUE == patternTypeFlags.parseJekyllMacroInLinkUrl
+  val spaceInLinkUrl:                  Boolean = patternTypeFlags.spaceInLinkUrl == true
+  val parseJekyllMacroInLinkUrl:       Boolean = patternTypeFlags.parseJekyllMacroInLinkUrl == true
   val itemPrefixChars:                 String  = patternTypeFlags.itemPrefixChars
-  val listsItemMarkerSpace:            Boolean = java.lang.Boolean.TRUE == patternTypeFlags.listsItemMarkerSpace
-  val listsOrderedItemDotOnly:         Boolean = java.lang.Boolean.TRUE == patternTypeFlags.listsOrderedItemDotOnly
-  val allowNameSpace:                  Boolean = java.lang.Boolean.TRUE == patternTypeFlags.allowNameSpace
+  val listsItemMarkerSpace:            Boolean = patternTypeFlags.listsItemMarkerSpace == true
+  val listsOrderedItemDotOnly:         Boolean = patternTypeFlags.listsOrderedItemDotOnly == true
+  val allowNameSpace:                  Boolean = patternTypeFlags.allowNameSpace == true
 
   val EOL:               String  = ST_EOL
   val ESCAPED_CHAR:      String  = ST_ESCAPED_CHAR

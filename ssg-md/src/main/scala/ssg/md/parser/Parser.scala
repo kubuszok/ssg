@@ -188,7 +188,7 @@ class Parser private (builder: Parser.Builder) extends IParse {
 
   override val options: Nullable[DataHolder] = Nullable(_options)
 
-  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[java.lang.Boolean]): Boolean = {
+  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean = {
     // transfer references from included to document
     var transferred = false
 

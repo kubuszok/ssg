@@ -29,7 +29,7 @@ import java.util as ju
   * a subSequence() returns a sub-sequence from the original base sequence with corresponding offsets
   */
 @SuppressWarnings(Array("unchecked"))
-trait BasedSequence extends IRichSequence[BasedSequence] with BasedOptionsHolder {
+trait BasedSequence extends IRichSequence[BasedSequence], BasedOptionsHolder {
 
   override def getBuilder[B <: builder.ISequenceBuilder[B, BasedSequence]]: B
 

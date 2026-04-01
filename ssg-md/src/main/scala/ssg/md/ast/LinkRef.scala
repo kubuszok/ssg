@@ -12,7 +12,7 @@ package ast
 
 import ssg.md.util.sequence.BasedSequence
 
-class LinkRef extends RefNode with LinkRendered {
+class LinkRef extends RefNode, LinkRendered {
 
   def this(chars: BasedSequence) = {
     this()

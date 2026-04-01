@@ -41,7 +41,8 @@ import java.util.concurrent.ConcurrentHashMap
 class BitFieldSet[E <: java.lang.Enum[E]] private (
   val elementType: Class[E],
   val universe:    Array[E],
-  val bitMasks:    Array[Long]
+  val bitMasks:    Array[Long],
+  val typeName:    String
 ) extends AbstractSet[E]
     with Cloneable
     with Serializable {
@@ -133,10 +134,10 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
 
   override def toString: String =
     if (elements == 0) {
-      elementType.getSimpleName + ": { }"
+      typeName + ": { }"
     } else {
       val out = new DelimitedBuilder(", ")
-      out.append(elementType.getSimpleName).append(": { ")
+      out.append(typeName).append(": { ")
       for (e <- universe)
         if (any(mask(e))) {
           out.append(e.name())
@@ -194,7 +195,7 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
     */
   def setUnsigned(e1: E, value: Long): Boolean = {
     val oldElements = elements
-    elements = BitFieldSet.setUnsigned(elementType, bitMasks, elements, e1, value)
+    elements = BitFieldSet.setUnsigned(typeName, bitMasks, elements, e1, value)
     oldElements != elements
   }
 
@@ -209,7 +210,7 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
     */
   def setSigned(e1: E, value: Long): Boolean = {
     val oldElements = elements
-    elements = BitFieldSet.setSigned(elementType, bitMasks, elements, e1, value)
+    elements = BitFieldSet.setSigned(typeName, bitMasks, elements, e1, value)
     oldElements != elements
   }
 
@@ -229,11 +230,11 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
 
   def setUnsignedField(e1: E, value: Byte): Unit = setUnsigned(e1, value.toLong)
 
-  def getUnsigned(e1: E, maxBits: Int, typeName: String): Long =
-    BitFieldSet.getUnsignedBitField(elements, e1, maxBits, typeName)
+  def getUnsigned(e1: E, maxBits: Int, valTypeName: String): Long =
+    BitFieldSet.getUnsignedBitFieldImpl(bitMasks, typeName, elements, e1, maxBits, valTypeName)
 
-  def getSigned(e1: E, maxBits: Int, typeName: String): Long =
-    BitFieldSet.getSignedBitField(elements, e1, maxBits, typeName)
+  def getSigned(e1: E, maxBits: Int, valTypeName: String): Long =
+    BitFieldSet.getSignedBitFieldImpl(bitMasks, typeName, elements, e1, maxBits, valTypeName)
 
   /** Returns signed value for the field, except if the field is 64 bits
     *
@@ -430,9 +431,13 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
   override def contains(e: Any): Boolean =
     if (e == null) false
     else {
-      val eClass = e.getClass
-      if (eClass != elementType && eClass.getSuperclass != elementType) false
-      else (elements & bitMasks(e.asInstanceOf[java.lang.Enum[?]].ordinal())) != 0
+      e match {
+        case enumVal: java.lang.Enum[?] =>
+          val ord = enumVal.ordinal()
+          ord >= 0 && ord < universe.length && (universe(ord) eq enumVal) &&
+            (elements & bitMasks(ord)) != 0
+        case _ => false
+      }
     }
 
   // Modification Operations
@@ -463,12 +468,17 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
   override def remove(e: Any): Boolean =
     if (e == null) false
     else {
-      val eClass = e.getClass
-      if (eClass != elementType && eClass.getSuperclass != elementType) false
-      else {
-        val oldElements = elements
-        elements &= ~bitMasks(e.asInstanceOf[java.lang.Enum[?]].ordinal())
-        elements != oldElements
+      e match {
+        case enumVal: java.lang.Enum[?] =>
+          val ord = enumVal.ordinal()
+          if (ord >= 0 && ord < universe.length && (universe(ord) eq enumVal)) {
+            val oldElements = elements
+            elements &= ~bitMasks(ord)
+            elements != oldElements
+          } else {
+            false
+          }
+        case _ => false
       }
     }
 
@@ -578,9 +588,9 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
 
   /** Throws an exception if e is not of the correct type for this enum set. */
   final private[misc] def typeCheck(e: E): Unit = {
-    val eClass = e.getClass
-    if (eClass != elementType && eClass.getSuperclass != elementType)
-      throw new ClassCastException(s"$eClass != $elementType")
+    val ord = e.ordinal()
+    if (ord < 0 || ord >= universe.length || !(universe(ord) eq e))
+      throw new ClassCastException(s"${e.name()} is not a member of $typeName")
   }
 
   private[misc] def writeReplace(): AnyRef = new BitFieldSet.SerializationProxy[E](this)
@@ -610,25 +620,23 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
 
 object BitFieldSet {
 
-  // Cached universe arrays and bit masks
+  // Cached universe arrays and bit masks, populated from EnumBitField type class instances
   private object UniverseLoader {
-    @SuppressWarnings(Array("unchecked"))
     val enumUniverseMap: ConcurrentHashMap[Class[?], Array[java.lang.Enum[?]]] = new ConcurrentHashMap()
     val enumBitMasksMap: ConcurrentHashMap[Class[?], Array[Long]]              = new ConcurrentHashMap()
 
-    def getUniverseSlow[E <: java.lang.Enum[E]](elementType: Class[E]): Array[java.lang.Enum[?]] = {
-      assert(elementType.isEnum)
-      val cached = enumUniverseMap.get(elementType)
+    def getUniverse[E <: java.lang.Enum[E]](using ebf: EnumBitField[E]): Array[java.lang.Enum[?]] = {
+      val elementType = ebf.elementType
+      val cached      = enumUniverseMap.get(elementType)
       if (cached != null) cached // at Java interop boundary
       else {
-        val constants = elementType.getEnumConstants
-        val enums     = constants.length
+        val values = ebf.values
         val result: Array[java.lang.Enum[?]] =
-          if (enums > 0) {
-            val arr = new Array[java.lang.Enum[?]](enums)
+          if (values.length > 0) {
+            val arr = new Array[java.lang.Enum[?]](values.length)
             var i   = 0
-            for (c <- constants) {
-              arr(i) = c
+            while (i < values.length) {
+              arr(i) = values(i)
               i += 1
             }
             arr
@@ -639,6 +647,17 @@ object BitFieldSet {
         result
       }
     }
+
+    def getBitMasks[E <: java.lang.Enum[E]](using ebf: EnumBitField[E]): Array[Long] = {
+      val elementType = ebf.elementType
+      val cached      = enumBitMasksMap.get(elementType)
+      if (cached != null) cached // at Java interop boundary
+      else {
+        val masks = ebf.bitMasks
+        enumBitMasksMap.put(elementType, masks)
+        masks
+      }
+    }
   }
 
   private val ZeroLengthEnumArray: Array[java.lang.Enum[?]] = new Array[java.lang.Enum[?]](0)
@@ -646,77 +665,37 @@ object BitFieldSet {
   def nextBitMask(nextAvailableBit: Int, bits: Int): Long =
     (-1L >>> -bits) << nextAvailableBit.toLong
 
-  /** Returns all of the values comprising E. The result is cloned and slower than SharedSecrets use but works in Java 11 and Java 8 because SharedSecrets are not shared publicly
+  /** Returns all of the values comprising E, using the EnumBitField type class.
     * @tparam E
     *   type of enum
-    * @param elementType
-    *   class of enum
     * @return
     *   array of enum values
     */
-  def getUniverse[E <: java.lang.Enum[E]](elementType: Class[E]): Array[E] =
-    UniverseLoader.getUniverseSlow(elementType).asInstanceOf[Array[E]]
+  def getUniverse[E <: java.lang.Enum[E]](using ebf: EnumBitField[E]): Array[E] =
+    UniverseLoader.getUniverse[E].asInstanceOf[Array[E]]
 
-  /** Returns all of the values comprising E. The result is cloned and slower than SharedSecrets use but works in Java 11 and Java 8 because SharedSecrets are not shared publicly
+  /** Returns all of the bit masks for E, using the EnumBitField type class.
     *
     * @tparam E
     *   type of enum
-    * @param elementType
-    *   class of enum
     * @return
     *   array of bit masks for enum values
     */
-  def getBitMasks[E <: java.lang.Enum[E]](elementType: Class[E]): Array[Long] = {
-    val cached = UniverseLoader.enumBitMasksMap.get(elementType)
-    if (cached != null) cached // at Java interop boundary
-    else {
-      // compute the bit masks for the enum
-      val universe = UniverseLoader.getUniverseSlow(elementType).asInstanceOf[Array[E]]
-      val bitMasks: Array[Long] =
-        if (classOf[BitField].isAssignableFrom(elementType)) {
-          var bitCount = 0
-          val masks    = new Array[Long](universe.length)
-          for (e <- universe) {
-            val bits = e.asInstanceOf[BitField].bits
-            if (bits <= 0)
-              throw new IllegalArgumentException(
-                s"Enum bit field ${elementType.getSimpleName}.${e.name()} bits must be >= 1, got: $bits"
-              )
-            if (bitCount + bits > 64)
-              throw new IllegalArgumentException(
-                s"Enum bit field ${elementType.getSimpleName}.${e.name()} bits exceed available 64 bits by ${bitCount + bits - 64}"
-              )
-            masks(e.ordinal()) = nextBitMask(bitCount, bits)
-            bitCount += bits
-          }
-          masks
-        } else {
-          if (universe.length <= 64) {
-            val masks = new Array[Long](universe.length)
-            for (e <- universe)
-              masks(e.ordinal()) = 1L << e.ordinal()
-            masks
-          } else {
-            throw new IllegalArgumentException("Enums with more than 64 values are not supported")
-          }
-        }
-      UniverseLoader.enumBitMasksMap.put(elementType, bitMasks)
-      bitMasks
-    }
-  }
+  def getBitMasks[E <: java.lang.Enum[E]](using ebf: EnumBitField[E]): Array[Long] =
+    UniverseLoader.getBitMasks[E]
 
   def getTotalBits(bitMasks: Array[Long]): Int =
     if (bitMasks.length == 0) 0
     else 64 - java.lang.Long.numberOfLeadingZeros(bitMasks(bitMasks.length - 1))
 
-  def longMask[E <: java.lang.Enum[E]](e1: E): Long = {
-    val bitMasks = getBitMasks(e1.getDeclaringClass)
+  def longMask[E <: java.lang.Enum[E]](e1: E)(using ebf: EnumBitField[E]): Long = {
+    val bitMasks = getBitMasks[E]
     // if we are here then there is no overflow
     bitMasks(e1.ordinal())
   }
 
-  def intMask[E <: java.lang.Enum[E]](e1: E): Int = {
-    val bitMasks  = getBitMasks(e1.getDeclaringClass)
+  def intMask[E <: java.lang.Enum[E]](e1: E)(using ebf: EnumBitField[E]): Int = {
+    val bitMasks  = getBitMasks[E]
     val totalBits = getTotalBits(bitMasks)
     if (totalBits > 32)
       throw new IllegalArgumentException(
@@ -744,25 +723,30 @@ object BitFieldSet {
     * @param value
     *   value to set
     */
-  private[misc] def setSigned[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Long): Long = {
-    val elementType = e1.getDeclaringClass
-    val bitMasks    = getBitMasks(elementType)
-    setSigned(elementType, bitMasks, elements, e1, value)
+  private[misc] def setSigned[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Long)(using ebf: EnumBitField[E]): Long = {
+    val bitMasks = getBitMasks[E]
+    setSigned(ebf.typeName, bitMasks, elements, e1, value)
   }
 
   /** Set a signed value for the field
     *
+    * @param typeName
+    *   display name for error messages
+    * @param bitMasks
+    *   pre-computed bit masks
+    * @param elements
+    *   current element bits
     * @param e1
     *   field
     * @param value
     *   value to set
     */
   private[misc] def setSigned[E <: java.lang.Enum[E]](
-    elementType: Class[E],
-    bitMasks:    Array[Long],
-    elements:    Long,
-    e1:          E,
-    value:       Long
+    typeName: String,
+    bitMasks: Array[Long],
+    elements: Long,
+    e1:       E,
+    value:    Long
   ): Long = {
     val bitMask   = bitMasks(e1.ordinal())
     val bitCount  = java.lang.Long.bitCount(bitMask)
@@ -771,7 +755,7 @@ object BitFieldSet {
     if (bitCount < 64) {
       if (value < -halfValue || value > halfValue - 1)
         throw new IllegalArgumentException(
-          s"Enum field ${elementType.getSimpleName}.${e1.name()} is $bitCount bit${if (bitCount > 1) "s" else ""}, value range is [${-halfValue}, ${halfValue - 1}], cannot be set to $value"
+          s"Enum field $typeName.${e1.name()} is $bitCount bit${if (bitCount > 1) "s" else ""}, value range is [${-halfValue}, ${halfValue - 1}], cannot be set to $value"
         )
     }
 
@@ -786,25 +770,30 @@ object BitFieldSet {
     * @param value
     *   value to set
     */
-  private[misc] def setUnsigned[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Long): Long = {
-    val elementType = e1.getDeclaringClass
-    val bitMasks    = getBitMasks(elementType)
-    setUnsigned(elementType, bitMasks, elements, e1, value)
+  private[misc] def setUnsigned[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Long)(using ebf: EnumBitField[E]): Long = {
+    val bitMasks = getBitMasks[E]
+    setUnsigned(ebf.typeName, bitMasks, elements, e1, value)
   }
 
   /** Set an unsigned value for the field
     *
+    * @param typeName
+    *   display name for error messages
+    * @param bitMasks
+    *   pre-computed bit masks
+    * @param elements
+    *   current element bits
     * @param e1
     *   field
     * @param value
     *   value to set
     */
   private[misc] def setUnsigned[E <: java.lang.Enum[E]](
-    elementType: Class[E],
-    bitMasks:    Array[Long],
-    elements:    Long,
-    e1:          E,
-    value:       Long
+    typeName: String,
+    bitMasks: Array[Long],
+    elements: Long,
+    e1:       E,
+    value:    Long
   ): Long = {
     val bitMask  = bitMasks(e1.ordinal())
     val bitCount = java.lang.Long.bitCount(bitMask)
@@ -813,7 +802,7 @@ object BitFieldSet {
     if (bitCount < 64) {
       if (!(value >= 0 && value < maxValue))
         throw new IllegalArgumentException(
-          s"Enum field ${elementType.getSimpleName}.${e1.name()} is $bitCount bit${if (bitCount > 1) "s" else ""}, value range is [0, ${maxValue - 1}), cannot be set to $value"
+          s"Enum field $typeName.${e1.name()} is $bitCount bit${if (bitCount > 1) "s" else ""}, value range is [0, ${maxValue - 1}), cannot be set to $value"
         )
     }
 
@@ -821,16 +810,16 @@ object BitFieldSet {
     elements ^ ((elements ^ shiftedValue) & bitMask)
   }
 
-  def setBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Int): Long =
+  def setBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, value: Int)(using EnumBitField[E]): Long =
     setUnsigned(elements, e1, value.toLong)
 
-  def setBitField[E <: java.lang.Enum[E]](elements: Int, e1: E, value: Int): Int =
+  def setBitField[E <: java.lang.Enum[E]](elements: Int, e1: E, value: Int)(using EnumBitField[E]): Int =
     setUnsigned(elements.toLong, e1, value.toLong).toInt
 
-  def setBitFieldShort[E <: java.lang.Enum[E]](elements: Short, e1: E, value: Short): Short =
+  def setBitFieldShort[E <: java.lang.Enum[E]](elements: Short, e1: E, value: Short)(using EnumBitField[E]): Short =
     setUnsigned(elements.toLong, e1, value.toLong).toShort
 
-  def setBitFieldByte[E <: java.lang.Enum[E]](elements: Byte, e1: E, value: Byte): Byte =
+  def setBitFieldByte[E <: java.lang.Enum[E]](elements: Byte, e1: E, value: Byte)(using EnumBitField[E]): Byte =
     setUnsigned(elements.toLong, e1, value.toLong).toByte
 
   /** Returns unsigned value for the field, except if the field is 64 bits
@@ -848,29 +837,47 @@ object BitFieldSet {
     * @return
     *   unsigned value
     */
-  def getUnsignedBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, maxBits: Int, typeName: String): Long = {
-    val elementType = e1.getDeclaringClass
-    val bitMasks    = getBitMasks(elementType)
-    val bitMask     = bitMasks(e1.ordinal())
-    val bitCount    = java.lang.Long.bitCount(bitMask)
+  def getUnsignedBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, maxBits: Int, valTypeName: String)(using ebf: EnumBitField[E]): Long =
+    getUnsignedBitFieldImpl(ebf.bitMasks, ebf.typeName, elements, e1, maxBits, valTypeName)
+
+  private[misc] def getSignedBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, maxBits: Int, valTypeName: String)(using ebf: EnumBitField[E]): Long =
+    getSignedBitFieldImpl(ebf.bitMasks, ebf.typeName, elements, e1, maxBits, valTypeName)
+
+  /** Internal implementation for getUnsignedBitField that doesn't require a type class. */
+  private[misc] def getUnsignedBitFieldImpl[E <: java.lang.Enum[E]](
+    bitMasks:     Array[Long],
+    enumTypeName: String,
+    elements:     Long,
+    e1:           E,
+    maxBits:      Int,
+    valTypeName:  String
+  ): Long = {
+    val bitMask  = bitMasks(e1.ordinal())
+    val bitCount = java.lang.Long.bitCount(bitMask)
 
     if (bitCount > maxBits)
       throw new IllegalArgumentException(
-        s"Enum field ${elementType.getSimpleName}.${e1.name()} uses $bitCount, which is more than $maxBits available in $typeName"
+        s"Enum field $enumTypeName.${e1.name()} uses $bitCount, which is more than $maxBits available in $valTypeName"
       )
 
     (elements & bitMask) >>> java.lang.Long.numberOfTrailingZeros(bitMask)
   }
 
-  private[misc] def getSignedBitField[E <: java.lang.Enum[E]](elements: Long, e1: E, maxBits: Int, typeName: String): Long = {
-    val elementType = e1.getDeclaringClass
-    val bitMasks    = getBitMasks(elementType)
-    val bitMask     = bitMasks(e1.ordinal())
-    val bitCount    = java.lang.Long.bitCount(bitMask)
+  /** Internal implementation for getSignedBitField that doesn't require a type class. */
+  private[misc] def getSignedBitFieldImpl[E <: java.lang.Enum[E]](
+    bitMasks:     Array[Long],
+    enumTypeName: String,
+    elements:     Long,
+    e1:           E,
+    maxBits:      Int,
+    valTypeName:  String
+  ): Long = {
+    val bitMask  = bitMasks(e1.ordinal())
+    val bitCount = java.lang.Long.bitCount(bitMask)
 
     if (bitCount > maxBits)
       throw new IllegalArgumentException(
-        s"Enum field ${elementType.getSimpleName}.${e1.name()} uses $bitCount, which is more than $maxBits available in $typeName"
+        s"Enum field $enumTypeName.${e1.name()} uses $bitCount, which is more than $maxBits available in $valTypeName"
       )
 
     elements << java.lang.Long.numberOfLeadingZeros(bitMask) >> 64 - bitCount
@@ -887,16 +894,16 @@ object BitFieldSet {
     * @return
     *   unsigned value
     */
-  def getBitField[E <: java.lang.Enum[E]](elements: Long, e1: E): Long =
+  def getBitField[E <: java.lang.Enum[E]](elements: Long, e1: E)(using EnumBitField[E]): Long =
     getUnsignedBitField(elements, e1, 64, "long")
 
-  def getBitField[E <: java.lang.Enum[E]](elements: Int, e1: E): Int =
+  def getBitField[E <: java.lang.Enum[E]](elements: Int, e1: E)(using EnumBitField[E]): Int =
     getUnsignedBitField(elements.toLong, e1, 32, "int").toInt
 
-  def getBitFieldShort[E <: java.lang.Enum[E]](elements: Short, e1: E): Short =
+  def getBitFieldShort[E <: java.lang.Enum[E]](elements: Short, e1: E)(using EnumBitField[E]): Short =
     getUnsignedBitField(elements.toLong, e1, 16, "short").toShort
 
-  def getBitFieldByte[E <: java.lang.Enum[E]](elements: Byte, e1: E): Byte =
+  def getBitFieldByte[E <: java.lang.Enum[E]](elements: Byte, e1: E)(using EnumBitField[E]): Byte =
     getUnsignedBitField(elements.toLong, e1, 8, "byte").toByte
 
   // Factory methods
@@ -912,12 +919,30 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if elementType is null
     */
-  def noneOf[E <: java.lang.Enum[E]](elementType: Class[E]): BitFieldSet[E] = {
-    if (!elementType.isEnum)
-      throw new ClassCastException(s"$elementType not an enum")
+  def noneOf[E <: java.lang.Enum[E]](using ebf: EnumBitField[E]): BitFieldSet[E] = {
+    val universe = getUniverse[E]
+    new BitFieldSet[E](ebf.elementType, universe, getBitMasks[E], ebf.typeName)
+  }
 
-    val universe = getUniverse(elementType)
-    new BitFieldSet[E](elementType, universe, getBitMasks(elementType))
+  /** Creates an empty enum set with the specified element type.
+    * Overload accepting Class[E] for backward compatibility; requires an EnumBitField in scope.
+    */
+  def noneOf[E <: java.lang.Enum[E]](elementType: Class[E])(using EnumBitField[E]): BitFieldSet[E] =
+    noneOf[E]
+
+  /** Internal factory that reconstructs a BitFieldSet from cached data (used by deserialization).
+    * Requires that the enum type was previously registered via an EnumBitField type class instance.
+    */
+  private[misc] def noneOfFromCache[E <: java.lang.Enum[E]](elementType: Class[E]): BitFieldSet[E] = {
+    val universe = UniverseLoader.enumUniverseMap.get(elementType)
+    val masks    = UniverseLoader.enumBitMasksMap.get(elementType)
+    if (universe == null || masks == null) // at Java interop boundary
+      throw new IllegalStateException(s"Enum type $elementType was not registered via EnumBitField type class")
+    // Derive typeName from the class name (last segment after '.')
+    val fullName = elementType.getName
+    val dotIdx   = fullName.lastIndexOf('.')
+    val name     = if (dotIdx >= 0) fullName.substring(dotIdx + 1) else fullName
+    new BitFieldSet[E](elementType, universe.asInstanceOf[Array[E]], masks, name)
   }
 
   /** Creates an enum set containing all of the elements in the specified element type.
@@ -931,8 +956,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if elementType is null
     */
-  def allOf[E <: java.lang.Enum[E]](elementType: Class[E]): BitFieldSet[E] = {
-    val result = noneOf(elementType)
+  def allOf[E <: java.lang.Enum[E]](elementType: Class[E])(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.addAll()
     result
   }
@@ -964,7 +989,7 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if c is null
     */
-  def copyOf[E <: java.lang.Enum[E]](c: Collection[E]): BitFieldSet[E] =
+  def copyOf[E <: java.lang.Enum[E]](c: Collection[E])(using EnumBitField[E]): BitFieldSet[E] =
     c match {
       case bfs: BitFieldSet[E @unchecked] => bfs.clone()
       case _ =>
@@ -1005,8 +1030,8 @@ object BitFieldSet {
     * @return
     *   bit enum set
     */
-  def of[T <: java.lang.Enum[T]](enumClass: Class[T], mask: Long): BitFieldSet[T] = {
-    val optionSet = BitFieldSet.noneOf(enumClass)
+  def of[T <: java.lang.Enum[T]](enumClass: Class[T], mask: Long)(using EnumBitField[T]): BitFieldSet[T] = {
+    val optionSet = BitFieldSet.noneOf[T]
     optionSet.orMask(mask)
     optionSet
   }
@@ -1022,8 +1047,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if e is null
     */
-  def of[E <: java.lang.Enum[E]](e: E): BitFieldSet[E] = {
-    val result = noneOf(e.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](e: E)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(e)
     result
   }
@@ -1041,8 +1066,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any parameters are null
     */
-  def of[E <: java.lang.Enum[E]](e1: E, e2: E): BitFieldSet[E] = {
-    val result = noneOf(e1.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](e1: E, e2: E)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(e1)
     result.add(e2)
     result
@@ -1063,8 +1088,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any parameters are null
     */
-  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E): BitFieldSet[E] = {
-    val result = noneOf(e1.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(e1)
     result.add(e2)
     result.add(e3)
@@ -1088,8 +1113,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any parameters are null
     */
-  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E, e4: E): BitFieldSet[E] = {
-    val result = noneOf(e1.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E, e4: E)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(e1)
     result.add(e2)
     result.add(e3)
@@ -1116,8 +1141,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any parameters are null
     */
-  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E, e4: E, e5: E): BitFieldSet[E] = {
-    val result = noneOf(e1.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](e1: E, e2: E, e3: E, e4: E, e5: E)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(e1)
     result.add(e2)
     result.add(e3)
@@ -1140,8 +1165,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any of the specified elements are null, or if rest is null
     */
-  def of[E <: java.lang.Enum[E]](first: E, rest: E*): BitFieldSet[E] = {
-    val result = noneOf(first.getDeclaringClass)
+  def of[E <: java.lang.Enum[E]](first: E, rest: E*)(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     result.add(first)
     for (e <- rest) result.add(e)
     result
@@ -1160,8 +1185,8 @@ object BitFieldSet {
     * @throws NullPointerException
     *   if any of the specified elements are null, or if rest is null
     */
-  def of[E <: java.lang.Enum[E]](declaringClass: Class[E], rest: Array[E]): BitFieldSet[E] = {
-    val result = noneOf(declaringClass)
+  def of[E <: java.lang.Enum[E]](declaringClass: Class[E], rest: Array[E])(using EnumBitField[E]): BitFieldSet[E] = {
+    val result = noneOf[E]
     for (e <- rest) result.add(e)
     result
   }
@@ -1182,10 +1207,10 @@ object BitFieldSet {
     * @throws IllegalArgumentException
     *   if from.compareTo(to) > 0
     */
-  def range[E <: java.lang.Enum[E]](from: E, to: E): BitFieldSet[E] = {
+  def range[E <: java.lang.Enum[E]](from: E, to: E)(using EnumBitField[E]): BitFieldSet[E] = {
     if (from.compareTo(to) > 0)
       throw new IllegalArgumentException(s"$from > $to")
-    val result = noneOf(from.getDeclaringClass)
+    val result = noneOf[E]
     result.addRange(from, to)
     result
   }
@@ -1203,7 +1228,7 @@ object BitFieldSet {
     private val bits: Long = set.elements
 
     private def readResolve(): AnyRef = {
-      val result = BitFieldSet.noneOf(elementType)
+      val result = BitFieldSet.noneOfFromCache(elementType)
       result.orMask(bits)
       result
     }

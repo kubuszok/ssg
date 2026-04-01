@@ -12,7 +12,7 @@ package util
 package format
 
 import ssg.md.Nullable
-import ssg.md.util.misc.BitFieldSet
+import ssg.md.util.misc.{ BitFieldSet, EnumBitField }
 
 /** Tracked Offset information <p> NOTE: purposefully equals compares the offset only and will equal an integer of the same value to allow use of TrackedOffset as a key but lookup to be done by offset
   */
@@ -119,6 +119,13 @@ object TrackedOffset {
     case AFTER_SPACE_EDIT
     case AFTER_INSERT
     case AFTER_DELETE
+  }
+
+  private given EnumBitField[Flags] with {
+    def elementType: Class[Flags] = classOf[Flags]
+    def typeName: String = "Flags"
+    val values: Array[Flags] = Flags.values
+    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
   }
 
   private val F_AFTER_SPACE_EDIT: Int = BitFieldSet.intMask(Flags.AFTER_SPACE_EDIT)

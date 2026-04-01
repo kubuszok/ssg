@@ -15,7 +15,7 @@ import ssg.md.util.ast.{DoNotDecorate, Node}
 import ssg.md.util.sequence.BasedSequence
 
 /** A sim toc option list node */
-class SimTocOptionList() extends Node with DoNotDecorate {
+class SimTocOptionList() extends Node, DoNotDecorate {
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
 

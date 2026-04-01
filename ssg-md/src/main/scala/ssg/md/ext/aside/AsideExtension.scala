@@ -24,7 +24,7 @@ import ssg.md.util.data.{DataKey, MutableDataHolder}
  *
  * The parsed pipe prefixed text is turned into [[AsideBlock]] nodes.
  */
-class AsideExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension with Formatter.FormatterExtension {
+class AsideExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

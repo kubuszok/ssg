@@ -20,6 +20,8 @@ import ssg.md.util.sequence.{ BasedSequence, SegmentedSequence }
 
 import java.util.regex.Pattern
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceLength: Int, val fenceIndent: Int, fenceMarkerIndent: Int) extends AbstractBlockParser {
 
@@ -34,7 +36,7 @@ class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceL
 
   override def isPropagatingLastBlankLine(lastMatchedBlockParser: BlockParser): Boolean = false
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] = boundary {
     val nextNonSpace = state.nextNonSpaceIndex
     var newIndex     = state.getIndex
     val line         = state.line
@@ -51,7 +53,7 @@ class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceL
         if (foundFenceLength >= fenceLength) {
           // closing fence
           _block.closingMarker = trySequence.subSequence(0, foundFenceLength)
-          return Nullable(BlockContinue.finished()) // TODO: replace with boundary/break when refactoring
+          break(Nullable(BlockContinue.finished()))
         }
       }
     }

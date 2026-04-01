@@ -19,8 +19,8 @@ import ssg.md.util.visitor.AstActionHandler
 import java.{ util => ju }
 
 class LinkResolverAdapter(handlers: LinkResolvingHandler[? <: Node]*)
-    extends AstActionHandler[LinkResolverAdapter, Node, LinkResolvingHandler.LinkResolvingVisitor[Node], LinkResolvingHandler[Node]](Node.AST_ADAPTER)
-    with LinkResolvingHandler.LinkResolvingVisitor[Node] {
+    extends AstActionHandler[LinkResolverAdapter, Node, LinkResolvingHandler.LinkResolvingVisitor[Node], LinkResolvingHandler[Node]](Node.AST_ADAPTER),
+    LinkResolvingHandler.LinkResolvingVisitor[Node] {
 
   addActionHandlers(handlers.toArray.asInstanceOf[Array[LinkResolvingHandler[Node]]])
 

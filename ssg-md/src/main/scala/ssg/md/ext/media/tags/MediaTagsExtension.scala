@@ -17,7 +17,7 @@ import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataHolder
 
-class MediaTagsExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class MediaTagsExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

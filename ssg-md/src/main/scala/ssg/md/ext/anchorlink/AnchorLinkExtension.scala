@@ -23,7 +23,7 @@ import ssg.md.util.data.{DataKey, MutableDataHolder}
  *
  * The parsed anchorlink text is turned into [[AnchorLink]] nodes.
  */
-class AnchorLinkExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class AnchorLinkExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 

@@ -89,7 +89,7 @@ class ResolvedLink private (
   def withTitle(title: Nullable[CharSequence]): ResolvedLink = {
     val haveTitle: Nullable[String] = myAttributes.flatMap(a => Nullable(a.getValue(Attribute.TITLE_ATTR)))
     val titlesEqual = (title.isEmpty && haveTitle.isEmpty) ||
-      (haveTitle.isDefined && title.isDefined && haveTitle.get.contentEquals(title.get))
+      (haveTitle.isDefined && title.isDefined && haveTitle.get == title.get.toString)
     if (titlesEqual) this
     else {
       val attributes = myAttributes.fold(new MutableAttributes())(a => new MutableAttributes(a))
@@ -111,7 +111,7 @@ class ResolvedLink private (
   def withTarget(target: Nullable[CharSequence]): ResolvedLink = {
     val haveTarget: Nullable[String] = myAttributes.flatMap(a => Nullable(a.getValue(Attribute.TARGET_ATTR)))
     val targetsEqual = (target.isEmpty && haveTarget.isEmpty) ||
-      (haveTarget.isDefined && target.isDefined && haveTarget.get.contentEquals(target.get))
+      (haveTarget.isDefined && target.isDefined && haveTarget.get == target.get.toString)
     if (targetsEqual) this
     else {
       val attributes = myAttributes.fold(new MutableAttributes())(a => new MutableAttributes(a))

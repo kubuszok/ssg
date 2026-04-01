@@ -20,7 +20,7 @@ import scala.language.implicitConversions
  * Table cell separator only used during parsing, not part of the AST, use the
  * [[ssg.md.ext.tables.TableCell#openingMarker]] and [[ssg.md.ext.tables.TableCell#closingMarker]]
  */
-private[tables] class TableColumnSeparator() extends Node with DoNotDecorate {
+private[tables] class TableColumnSeparator() extends Node, DoNotDecorate {
 
   def this(chars: BasedSequence) = {
     this()

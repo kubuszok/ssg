@@ -19,7 +19,7 @@ import scala.language.implicitConversions
 import ssg.md.util.ast.{BlankLineBreakNode, Block, BlockContent}
 
 /** Table block containing a [[TableHead]] and optionally a [[TableBody]]. */
-class TableBlock() extends Block with BlankLineBreakNode {
+class TableBlock() extends Block, BlankLineBreakNode {
 
   def this(chars: BasedSequence) = {
     this()

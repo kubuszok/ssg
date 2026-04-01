@@ -19,7 +19,7 @@ import ssg.md.util.html.CellAlignment
 import ssg.md.util.sequence.BasedSequence
 
 /** Table cell of a [[TableRow]] containing inline nodes. */
-class TableCell() extends Node with DelimitedNode {
+class TableCell() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

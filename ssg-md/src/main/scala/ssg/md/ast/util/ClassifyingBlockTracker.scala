@@ -27,7 +27,7 @@ import ssg.md.util.misc.Paired
 
 import scala.language.implicitConversions
 
-class ClassifyingBlockTracker extends BlockTracker with BlockParserTracker {
+class ClassifyingBlockTracker extends BlockTracker, BlockParserTracker {
 
   protected val nodeClassifier: ClassificationBag[Class[?], Node] = new ClassificationBag[Class[?], Node](NodeClassifier.INSTANCE)
 

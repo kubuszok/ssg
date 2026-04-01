@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 /**
  * A Footnote referencing node
  */
-class Footnote() extends Node with DelimitedNode with DoNotDecorate with LinkRendered with ReferencingNode[FootnoteRepository, FootnoteBlock] {
+class Footnote() extends Node, DelimitedNode, DoNotDecorate, LinkRendered, ReferencingNode[FootnoteRepository, FootnoteBlock] {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
   var text: BasedSequence = BasedSequence.NULL

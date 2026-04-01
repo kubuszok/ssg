@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 import scala.util.boundary
 import scala.util.boundary.break
 
-class NodeClassifierVisitor(initExclusionMap: Map[Class[? <: Node], Set[Class[?]]]) extends NodeVisitorBase with NodeTracker {
+class NodeClassifierVisitor(initExclusionMap: Map[Class[? <: Node], Set[Class[?]]]) extends NodeVisitorBase, NodeTracker {
 
   private val classifyingNodeTracker:  ClassifyingNodeTracker              = new ClassifyingNodeTracker(Nullable(this.asInstanceOf[NodeTracker]), initExclusionMap)
   private val _exclusionMap:           OrderedMap[Class[?], Set[Class[?]]] = classifyingNodeTracker.exclusionMap

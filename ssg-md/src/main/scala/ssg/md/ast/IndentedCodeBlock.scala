@@ -23,7 +23,7 @@ import ssg.md.util.sequence.builder.ISequenceBuilder
 
 import java.{ util => ju }
 
-class IndentedCodeBlock extends Block with TextContainer {
+class IndentedCodeBlock extends Block, TextContainer {
 
   def this(chars: BasedSequence) = {
     this()

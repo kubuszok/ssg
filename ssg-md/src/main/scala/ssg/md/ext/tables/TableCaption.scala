@@ -19,7 +19,7 @@ class TableCaption(
     var openingMarker: BasedSequence,
     var text: BasedSequence,
     var closingMarker: BasedSequence
-) extends Node with DelimitedNode with LineBreakNode {
+) extends Node, DelimitedNode, LineBreakNode {
 
   def this(chars: BasedSequence, openingMarker: BasedSequence, text: BasedSequence, closingMarker: BasedSequence) = {
     this(openingMarker, text, closingMarker)

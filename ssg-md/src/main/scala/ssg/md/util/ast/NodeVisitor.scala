@@ -34,7 +34,7 @@ import ssg.md.util.visitor.AstActionHandler
  * If you were overriding visit(Node) to provide your own handling of child visits, in the current implementation,
  * it only starts the visiting process and is no longer called for processing every child node.
  */
-class NodeVisitor extends AstActionHandler[NodeVisitor, Node, Visitor[Node], VisitHandler[Node]](Node.AST_ADAPTER) with NodeVisitHandler {
+class NodeVisitor extends AstActionHandler[NodeVisitor, Node, Visitor[Node], VisitHandler[Node]](Node.AST_ADAPTER), NodeVisitHandler {
 
   def this(handlers: VisitHandler[?]*) = {
     this()

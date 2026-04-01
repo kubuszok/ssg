@@ -22,8 +22,8 @@ import ssg.md.util.sequence.builder.IBasedSegmentBuilder
 final class PrefixedSubSequence private (
   private val prefix: CharSequence,
   private val base:   BasedSequence
-) extends BasedSequenceImpl(0)
-    with ReplacedBasedSequence {
+) extends BasedSequenceImpl(0),
+    ReplacedBasedSequence {
 
   private def this(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int, endIndex: Int) = {
     this(prefix, baseSeq.subSequence(startIndex, endIndex))

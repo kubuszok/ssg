@@ -24,8 +24,8 @@ class AttributeProviderAdapter(handlers: AttributeProvidingHandler[? <: Node]*)
       Node,
       AttributeProvidingHandler.AttributeProvidingVisitor[Node],
       AttributeProvidingHandler[Node]
-    ](Node.AST_ADAPTER)
-    with AttributeProvidingHandler.AttributeProvidingVisitor[Node] {
+    ](Node.AST_ADAPTER),
+    AttributeProvidingHandler.AttributeProvidingVisitor[Node] {
 
   addActionHandlers(handlers.toArray.asInstanceOf[Array[AttributeProvidingHandler[Node]]])
 

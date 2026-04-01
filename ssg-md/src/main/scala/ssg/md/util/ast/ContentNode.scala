@@ -16,7 +16,7 @@ import ssg.md.util.sequence.SegmentedSequence
 
 import java.{ util => ju }
 
-abstract class ContentNode extends Node with Content {
+abstract class ContentNode extends Node, Content {
 
   protected var lineSegments: ju.List[BasedSequence] = BasedSequence.EMPTY_LIST
 

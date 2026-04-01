@@ -23,7 +23,7 @@ import ssg.md.util.data.{MutableDataHolder, NullableDataKey}
  *
  * The parsed superscript text is turned into [[Superscript]] nodes.
  */
-class SuperscriptExtension private () extends Parser.ParserExtension with HtmlRenderer.HtmlRendererExtension {
+class SuperscriptExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
