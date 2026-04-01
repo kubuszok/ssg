@@ -16,6 +16,7 @@ import ssg.md.formatter.Formatter
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.{DataKey, MutableDataHolder, NotNullValueSupplier}
+import ssg.md.util.misc.PlatformResources
 
 import java.io.{InputStreamReader, StringWriter}
 import java.{util => ju}
@@ -103,7 +104,9 @@ object AdmonitionExtension {
   def getQualifierSvgValueMap(): ju.Map[String, String] = {
     val map = new ju.HashMap[String, String]()
     for (name <- Array("abstract", "bug", "danger", "example", "fail", "faq", "info", "note", "quote", "success", "tip", "warning")) {
-      map.put(name, getInputStreamContent(classOf[AdmonitionExtension].getResourceAsStream("/images/adm-" + name + ".svg")))
+      PlatformResources.getResourceAsStream(classOf[AdmonitionExtension], "/images/adm-" + name + ".svg").foreach { stream =>
+        map.put(name, getInputStreamContent(stream))
+      }
     }
     map
   }
@@ -122,9 +125,9 @@ object AdmonitionExtension {
     }
   }
 
-  def getDefaultCSS: String = getInputStreamContent(classOf[AdmonitionExtension].getResourceAsStream("/admonition.css"))
+  def getDefaultCSS: String = PlatformResources.getResourceAsStream(classOf[AdmonitionExtension], "/admonition.css").fold("")(getInputStreamContent)
 
-  def getDefaultScript: String = getInputStreamContent(classOf[AdmonitionExtension].getResourceAsStream("/admonition.js"))
+  def getDefaultScript: String = PlatformResources.getResourceAsStream(classOf[AdmonitionExtension], "/admonition.js").fold("")(getInputStreamContent)
 
   def copy(reader: java.io.Reader, writer: java.io.Writer): Unit = {
     val buffer = new Array[Char](4096)

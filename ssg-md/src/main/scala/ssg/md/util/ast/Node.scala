@@ -262,7 +262,9 @@ abstract class Node {
 
   def extractChainTo(node: Node): Unit = {
     var lastNode: Nullable[Node] = Nullable(this)
-    while (this.getClass.isInstance(lastNode.getOrElse(null.asInstanceOf[Node]))) {
+    // Cross-platform: Class.isInstance(null) returns false on JVM but NPEs on Scala Native.
+    // Check isDefined before calling isInstance.
+    while (lastNode.isDefined && this.getClass.isInstance(lastNode.get)) {
       val n = lastNode.get.next
       node.appendChild(lastNode.get)
       lastNode = n
@@ -271,7 +273,8 @@ abstract class Node {
 
   def firstInChain: Node = {
     var lastNode: Node = this
-    while (this.getClass.isInstance(lastNode.previous.getOrElse(null.asInstanceOf[Node])))
+    // Cross-platform: same isInstance(null) fix as extractChainTo
+    while (lastNode.previous.isDefined && this.getClass.isInstance(lastNode.previous.get))
       lastNode = lastNode.previous.get
     lastNode
   }

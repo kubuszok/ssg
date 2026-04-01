@@ -28,8 +28,7 @@ final class SegmentedSequenceTree private (
   private val endPos:      Int
 ) extends SegmentedSequence(baseSeq, startOffset, endOffset, length) {
 
-  private val cache: ThreadLocal[Nullable[SegmentedSequenceTree.Cache]] =
-    ThreadLocal.withInitial(() => Nullable.empty[SegmentedSequenceTree.Cache])
+  private var cache: Nullable[SegmentedSequenceTree.Cache] = Nullable.empty
 
   // Constructor for original sequences from builder
   private def this(baseSeq: BasedSequence, startOffset: Int, endOffset: Int, length: Int, segmentTree: SegmentTree) = {
@@ -51,13 +50,13 @@ final class SegmentedSequenceTree private (
   }
 
   private def getCache(index: Int): SegmentedSequenceTree.Cache = {
-    val c = cache.get()
+    val c = cache
     if (!c.isDefined || c.get.segment.notInSegment(index + startIndex)) {
       val prevSegment: Nullable[Segment] = if (c.isDefined) Nullable(c.get.segment) else Nullable.empty[Segment]
       val segment = segmentTree.findSegment(index + startIndex, startPos, endPos, this.baseSeq, prevSegment)
       assert(segment.isDefined)
       val newCache = new SegmentedSequenceTree.Cache(segment.get, segment.get.getCharSequence, startIndex)
-      cache.set(Nullable(newCache))
+      cache = Nullable(newCache)
       newCache
     } else {
       c.get
@@ -65,7 +64,7 @@ final class SegmentedSequenceTree private (
   }
 
   private def getCachedSegment: Nullable[Segment] = {
-    val c = cache.get()
+    val c = cache
     if (c.isDefined) Nullable(c.get.segment) else Nullable.empty[Segment]
   }
 

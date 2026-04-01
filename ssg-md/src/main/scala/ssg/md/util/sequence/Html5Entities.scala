@@ -76,7 +76,9 @@ object Html5Entities {
 
   private def readEntities(): ju.Map[String, String] = {
     val entities = new ju.HashMap[String, String]()
-    val stream   = Html5Entities.getClass.getResourceAsStream(ENTITY_PATH)
+    val stream   = ssg.md.util.misc.PlatformResources.getResourceAsStream(Html5Entities.getClass, ENTITY_PATH).getOrElse {
+      throw new IllegalStateException("Could not load " + ENTITY_PATH)
+    }
     val charset  = StandardCharsets.UTF_8
     try {
       val streamReader   = new InputStreamReader(stream, charset)

@@ -469,7 +469,6 @@ object Escaping {
   private def replaceAll(p: java.util.regex.Pattern, s: BasedSequence, startOffset: Int, endOffset: Int, replacer: Replacer, textMapper: ReplacedTextMapper): BasedSequence = {
     val matcher = p.matcher(s)
     matcher.region(startOffset, endOffset)
-    matcher.useTransparentBounds(false)
 
     if (textMapper.isModified) {
       textMapper.startNestedReplacement(s)
@@ -498,7 +497,6 @@ object Escaping {
 
   private def replaceAll(p: java.util.regex.Pattern, s: BasedSequence, ranges: java.util.List[Range], replacer: Replacer, textMapper: ReplacedTextMapper): BasedSequence = {
     val matcher = p.matcher(s)
-    matcher.useTransparentBounds(false)
 
     if (textMapper.isModified) {
       textMapper.startNestedReplacement(s)
@@ -565,7 +563,8 @@ object Escaping {
   def removeAll(s: BasedSequence, remove: CharSequence, textMapper: ReplacedTextMapper): BasedSequence = {
     val indexOf = s.indexOf(remove)
     if (indexOf != -1) {
-      replaceAll(Pattern.compile("\\Q" + remove + "\\E"), s, REMOVE_REPLACER_FULL, textMapper)
+      // Cross-platform: \Q...\E not supported on Scala Native re2
+      replaceAll(Pattern.compile(RegexCompat.regexEscape(remove.toString)), s, REMOVE_REPLACER_FULL, textMapper)
     } else {
       s
     }

@@ -12,7 +12,8 @@ package test
 package util
 package spec
 
-import java.io._
+import ssg.md.test.util.ResourceCompat
+import java.io.{BufferedReader, IOException, InputStream, InputStreamReader}
 import java.nio.charset.StandardCharsets
 
 final class ResourceLocation private (
@@ -32,7 +33,8 @@ final class ResourceLocation private (
   }
 
   def fileDirectoryUrl: String = {
-    val pos = fileUrl.lastIndexOf(File.separatorChar)
+    // Resource paths always use '/' regardless of platform
+    val pos = fileUrl.lastIndexOf('/')
     if (pos > 0) {
       fileUrl.substring(0, pos + 1)
     } else {
@@ -138,11 +140,8 @@ object ResourceLocation {
   }
 
   def getResourceInputStream(location: ResourceLocation): InputStream = {
-    val useSpecResource = location.resolvedResourcePath
-    val stream = location.resourceClass.getResourceAsStream(useSpecResource)
-    if (stream == null) {
-      throw new IllegalStateException("Could not load " + location)
-    }
-    stream
+    // Cross-platform: use ResourceCompat instead of Class.getResourceAsStream
+    // (getResourceAsStream is not available on Scala.js)
+    ResourceCompat.getResourceAsStream(location.resourceClass, location.resolvedResourcePath)
   }
 }

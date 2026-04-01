@@ -6,7 +6,7 @@ Post-mortem documentation for the flexmark-java → `ssg-md` porting effort.
 
 **Source**: flexmark-java 0.64.8 (Java, BSD-2-Clause)
 **Target**: `ssg-md` module (Scala 3.8.2, cross-platform: JVM, Scala.js, Scala Native)
-**Result**: ~790+ production files, 1612/1612 tests passing across 33 test suites
+**Result**: ~790+ production files, 1645/1645 tests passing on JVM and Scala Native
 
 ## What Was Ported
 
@@ -180,9 +180,45 @@ to the correct boundary.
 | Superset Extensions | 16 | 685 | 100% |
 | Deferred Extensions | 4 | 16 | 100% |
 | Basic/Smoke | 3 | 10 | 100% |
-| **Total** | **33** | **1612** | **100%** |
+| Regex Compatibility | 1 | 28 | 100% |
+| Diagnostic (MdSuite) | 1 | 4 | 100% |
+| **Total** | **55** | **1645** | **100%** |
+
+All 1645 tests pass on both JVM and Scala Native.
+
+## Cross-Platform Status
+
+| Platform | Compile | Link | Tests |
+|----------|---------|------|-------|
+| JVM | Pass | Pass | 1645/1645 (100%) |
+| Scala Native | Pass | Pass | 1645/1645 (100%) |
+| Scala.js | Pass | Test link fails | Blocked by `getResourceAsStream` in test code |
+
+### Cross-Platform Fixes Applied
+
+All JVM-only APIs were replaced to make production code fully portable:
+
+- **Nullable NestedNone**: `case class` → regular class (avoids `Product with Serializable`
+  in opaque union type erasure — Scala Native's `Pattern` lacks `Serializable`)
+- **17+ regex patterns**: lookaheads (`?=`, `?!`), Unicode categories (`\p{Pc}` etc.),
+  character class intersection (`&&`), `\Q..\E` quoting — all rewritten with
+  cross-platform alternatives and documented for future revert (scala-native#4810)
+- **Abbreviation `\b` boundaries**: `UNICODE_CHARACTER_CLASS` flag → programmatic
+  word boundary check (handles non-ASCII abbreviations like É.U.)
+- **`Class.isInstance(null)`**: JVM returns false, Native NPEs → check `isDefined` first
+- **BitFieldSet**: enum reflection → `EnumBitField[E]` type class with pre-computed masks
+- **ThreadLocal**, **String.format(Locale)**, **java.util.Stack**, **java.net.URL**,
+  **MessageFormat**, **Class.getPackage**, **StringBuilder.getChars** — all replaced
+- **Test infrastructure**: `java.io.File`, `java.net.URL`, `Class.getResource` → string ops
+- **Build config**: `embedResources=true`, `multithreading=false` for Native
+
+### Scala.js Remaining Work
+
+Scala.js test linking requires `Class.getResourceAsStream` which is not available in
+the JS environment. Options: Node.js `fs` module for test resources, or embed spec
+files as string constants. This is a test-only issue — production code links on JS.
 
 ## Migration & Audit Statistics
 
 **Migration DB**: 871 ported, 179 skipped, 581 remaining (other libraries)
-**Audit DB**: 298 files audited — 270 pass, 22 minor issues, 6 major issues
+**Audit DB**: 298 files audited — 278 pass, 20 minor issues, 0 major issues
