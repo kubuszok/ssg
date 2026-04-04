@@ -28,13 +28,13 @@ class BlockQuoteParser(options: DataHolder, marker: BasedSequence) extends Abstr
     bq
   }
 
-  private val continueToBlankLine: Boolean = Parser.BLOCK_QUOTE_EXTEND_TO_BLANK_LINE.get(options)
-  private val allowLeadingSpace: Boolean = Parser.BLOCK_QUOTE_ALLOW_LEADING_SPACE.get(options)
-  private val ignoreBlankLine: Boolean = Parser.BLOCK_QUOTE_IGNORE_BLANK_LINE.get(options)
-  private val interruptsParagraph: Boolean = Parser.BLOCK_QUOTE_INTERRUPTS_PARAGRAPH.get(options)
-  private val interruptsItemParagraph: Boolean = Parser.BLOCK_QUOTE_INTERRUPTS_ITEM_PARAGRAPH.get(options)
+  private val continueToBlankLine:                   Boolean = Parser.BLOCK_QUOTE_EXTEND_TO_BLANK_LINE.get(options)
+  private val allowLeadingSpace:                     Boolean = Parser.BLOCK_QUOTE_ALLOW_LEADING_SPACE.get(options)
+  private val ignoreBlankLine:                       Boolean = Parser.BLOCK_QUOTE_IGNORE_BLANK_LINE.get(options)
+  private val interruptsParagraph:                   Boolean = Parser.BLOCK_QUOTE_INTERRUPTS_PARAGRAPH.get(options)
+  private val interruptsItemParagraph:               Boolean = Parser.BLOCK_QUOTE_INTERRUPTS_ITEM_PARAGRAPH.get(options)
   private val withLeadSpacesInterruptsItemParagraph: Boolean = Parser.BLOCK_QUOTE_WITH_LEAD_SPACES_INTERRUPTS_ITEM_PARAGRAPH.get(options)
-  private var lastWasBlankLine: Int = 0
+  private var lastWasBlankLine:                      Int     = 0
 
   override def isContainer: Boolean = true
 
@@ -45,8 +45,17 @@ class BlockQuoteParser(options: DataHolder, marker: BasedSequence) extends Abstr
   override def getBlock: BlockQuote = _block
 
   override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
-    val nextNonSpace = state.nextNonSpaceIndex
-    val isMarkerResult = BlockQuoteParser.isMarker(state, nextNonSpace, false, false, allowLeadingSpace, interruptsParagraph, interruptsItemParagraph, withLeadSpacesInterruptsItemParagraph)
+    val nextNonSpace   = state.nextNonSpaceIndex
+    val isMarkerResult = BlockQuoteParser.isMarker(
+      state,
+      nextNonSpace,
+      false,
+      false,
+      allowLeadingSpace,
+      interruptsParagraph,
+      interruptsItemParagraph,
+      withLeadSpacesInterruptsItemParagraph
+    )
 
     if (!state.isBlank && (isMarkerResult || (continueToBlankLine && lastWasBlankLine == 0))) {
       var newColumn = state.column + state.indent
@@ -85,13 +94,13 @@ object BlockQuoteParser {
   val MARKER_CHAR: Char = '>'
 
   def isMarker(
-    state: ParserState,
-    index: Int,
-    inParagraph: Boolean,
-    inParagraphListItem: Boolean,
-    allowLeadingSpace: Boolean,
-    interruptsParagraph: Boolean,
-    interruptsItemParagraph: Boolean,
+    state:                                 ParserState,
+    index:                                 Int,
+    inParagraph:                           Boolean,
+    inParagraphListItem:                   Boolean,
+    allowLeadingSpace:                     Boolean,
+    interruptsParagraph:                   Boolean,
+    interruptsItemParagraph:               Boolean,
     withLeadSpacesInterruptsItemParagraph: Boolean
   ): Boolean = {
     val line = state.line

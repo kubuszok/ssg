@@ -11,7 +11,7 @@ package md
 package ext
 package toc
 
-import ssg.md.util.ast.{DoNotDecorate, Node}
+import ssg.md.util.ast.{ DoNotDecorate, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A sim toc option node */

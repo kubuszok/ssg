@@ -16,8 +16,8 @@ package internal
 import ssg.md.Nullable
 import ssg.md.parser.InlineParser
 import ssg.md.parser.core.delimiter.Delimiter
-import ssg.md.parser.delimiter.{DelimiterProcessor, DelimiterRun}
-import ssg.md.util.ast.{DelimitedNode, Node}
+import ssg.md.parser.delimiter.{ DelimiterProcessor, DelimiterRun }
+import ssg.md.util.ast.{ DelimitedNode, Node }
 import ssg.md.util.sequence.BasedSequence
 
 class StrikethroughSubscriptDelimiterProcessor extends DelimiterProcessor {
@@ -28,13 +28,31 @@ class StrikethroughSubscriptDelimiterProcessor extends DelimiterProcessor {
 
   override def minLength: Int = 1
 
-  override def canBeOpener(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = leftFlanking
+  override def canBeOpener(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = leftFlanking
 
-  override def canBeCloser(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = rightFlanking
+  override def canBeCloser(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = rightFlanking
 
   override def skipNonOpenerCloser: Boolean = false
 
-  override def getDelimiterUse(opener: DelimiterRun, closer: DelimiterRun): Int = {
+  override def getDelimiterUse(opener: DelimiterRun, closer: DelimiterRun): Int =
     // "multiple of 3" rule for internal delimiter runs
     if ((opener.canClose || closer.canOpen) && (opener.length + closer.length) % 3 == 0) {
       0
@@ -46,7 +64,6 @@ class StrikethroughSubscriptDelimiterProcessor extends DelimiterProcessor {
         if (closer.length % 2 == 0) 2 else 1
       }
     }
-  }
 
   override def unmatchedDelimiterNode(inlineParser: InlineParser, delimiter: DelimiterRun): Nullable[Node] = Nullable.empty
 

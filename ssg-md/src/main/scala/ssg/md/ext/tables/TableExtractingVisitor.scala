@@ -12,14 +12,14 @@ package ext
 package tables
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{Node, NodeVisitor, VisitHandler}
+import ssg.md.util.ast.{ Node, NodeVisitor, VisitHandler }
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.{MarkdownTable, TableFormatOptions}
+import ssg.md.util.format.{ MarkdownTable, TableFormatOptions }
 import ssg.md.util.html.CellAlignment
 
 import scala.language.implicitConversions
 
-import java.util.{ArrayList, List as JList}
+import java.util.{ ArrayList, List as JList }
 
 class TableExtractingVisitor(options: DataHolder) {
 
@@ -32,11 +32,11 @@ class TableExtractingVisitor(options: DataHolder) {
     new VisitHandler[TableBody](classOf[TableBody], visitTableBody(_)),
     new VisitHandler[TableRow](classOf[TableRow], visitTableRow(_)),
     new VisitHandler[TableCell](classOf[TableCell], visitTableCell(_)),
-    new VisitHandler[TableCaption](classOf[TableCaption], visitTableCaption(_)),
+    new VisitHandler[TableCaption](classOf[TableCaption], visitTableCaption(_))
   )
 
-  private var myTable: Nullable[MarkdownTable] = Nullable.empty
-  private val myTables: JList[MarkdownTable] = new ArrayList[MarkdownTable]()
+  private var myTable:  Nullable[MarkdownTable] = Nullable.empty
+  private val myTables: JList[MarkdownTable]    = new ArrayList[MarkdownTable]()
 
   def getTables(node: Node): Array[MarkdownTable] = {
     myTable = Nullable.empty
@@ -79,11 +79,10 @@ class TableExtractingVisitor(options: DataHolder) {
     }
   }
 
-  private def visitTableCaption(node: TableCaption): Unit = {
+  private def visitTableCaption(node: TableCaption): Unit =
     myTable.foreach(_.setCaptionWithMarkers(node, node.openingMarker, node.text, node.closingMarker))
-  }
 
-  private def visitTableCell(node: TableCell): Unit = {
+  private def visitTableCell(node: TableCell): Unit =
     myTable.foreach { t =>
       var text = node.text
       if (formatOptions.trimCellWhitespace) {
@@ -96,6 +95,4 @@ class TableExtractingVisitor(options: DataHolder) {
       val cellAlignment = node.getAlignment.fold(CellAlignment.NONE)(_.cellAlignment)
       t.addCell(new ssg.md.util.format.TableCell(node, node.openingMarker, text, node.closingMarker, 1, node.span, cellAlignment))
     }
-  }
 }
-

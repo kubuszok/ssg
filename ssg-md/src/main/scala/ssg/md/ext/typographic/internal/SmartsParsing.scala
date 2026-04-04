@@ -16,8 +16,8 @@ import ssg.md.ast.util.Parsing
 
 class SmartsParsing(val myParsing: Parsing) {
 
-  val ELIPSIS: String = "..."
+  val ELIPSIS:        String = "..."
   val ELIPSIS_SPACED: String = ". . ."
-  val EN_DASH: String = "--"
-  val EM_DASH: String = "---"
+  val EN_DASH:        String = "--"
+  val EM_DASH:        String = "---"
 }

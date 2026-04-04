@@ -13,7 +13,7 @@ package attributes
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
@@ -30,11 +30,11 @@ class AttributesInlineParserExtension(inlineParser: LightInlineParser) extends I
 
   override def parse(inlineParser: LightInlineParser): Boolean = boundary {
     if (inlineParser.peek(1) != '{') {
-      val index = inlineParser.index
-      val input = inlineParser.input
+      val index       = inlineParser.index
+      val input       = inlineParser.input
       val matchResult = inlineParser.matcher(parsing.ATTRIBUTES_TAG)
       if (matchResult.isDefined) {
-        val matcher = matchResult.get
+        val matcher        = matchResult.get
         val attributesOpen = input.subSequence(matcher.start(), matcher.end())
 
         // see what we have
@@ -69,7 +69,7 @@ class AttributesInlineParserExtension(inlineParser: LightInlineParser) extends I
               (attributeValueRaw.charAt(0) == '"' && attributeValueRaw.endCharAt(1) == '"') ||
                 (attributeValueRaw.charAt(0) == '\'' && attributeValueRaw.endCharAt(1) == '\'')
             )
-            val attributeOpen: BasedSequence = if (!isQuoted) BasedSequence.NULL else attributeValueRaw.subSequence(0, 1)
+            val attributeOpen:  BasedSequence = if (!isQuoted) BasedSequence.NULL else attributeValueRaw.subSequence(0, 1)
             val attributeClose: BasedSequence = if (!isQuoted) BasedSequence.NULL else attributeValueRaw.endSequence(1, 0)
 
             val attributeValue: BasedSequence = if (isQuoted) attributeValueRaw.midSequence(1, -1) else attributeValueRaw

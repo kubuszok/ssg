@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AsideVisitorExt {
-  def VISIT_HANDLERS[V <: AsideVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AsideVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[AsideBlock](classOf[AsideBlock], visitor.visit(_)))
-  }
 }

@@ -15,26 +15,26 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{LinkType, NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler, ResolvedLink}
+import ssg.md.html.renderer.{ LinkType, NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler, ResolvedLink }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
 
 class ResizableImageNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[ResizableImage](classOf[ResizableImage], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[ResizableImage](classOf[ResizableImage], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: ResizableImage, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: ResizableImage, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (context.isDoNotRenderLinks) {
       context.renderChildren(node)
     } else {
       val link: ResolvedLink = context.resolveLink(LinkType.IMAGE, node.source, Nullable(true))
-      html.srcPos(node.chars)
-        .attr("src", link.url)
+      html.srcPos(node.chars).attr("src", link.url)
       if (node.text.isNotEmpty()) {
         html.attr("alt", node.text)
       }
@@ -47,7 +47,6 @@ class ResizableImageNodeRenderer(options: DataHolder) extends NodeRenderer {
       html.withAttr().tag("img")
       html.tag("/img")
     }
-  }
 }
 
 object ResizableImageNodeRenderer {

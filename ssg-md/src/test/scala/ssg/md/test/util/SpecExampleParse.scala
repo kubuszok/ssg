@@ -19,16 +19,16 @@ import ssg.md.util.sequence.BasedSequence
 import scala.language.implicitConversions
 
 final class SpecExampleParse(
-    val options: DataHolder,
-    val renderer: SpecExampleRenderer,
-    val exampleOptions: Nullable[DataHolder],
-    private var mySource: String
+  val options:          DataHolder,
+  val renderer:         SpecExampleRenderer,
+  val exampleOptions:   Nullable[DataHolder],
+  private var mySource: String
 ) {
 
-  private var myTimed: Boolean = false
-  private var myIterations: Int = 1
-  private var myStartTime: Long = 0L
-  private var myParseTime: Long = 0L
+  private var myTimed:      Boolean = false
+  private var myIterations: Int     = 1
+  private var myStartTime:  Long    = 0L
+  private var myParseTime:  Long    = 0L
 
   // parse on construction
   parse(mySource)
@@ -54,9 +54,7 @@ final class SpecExampleParse(
 
     val input: BasedSequence = if (sourcePrefix.nonEmpty || sourceSuffix.nonEmpty) {
       val combinedSource = sourcePrefix + suffixWith(mySource, "\n") + sourceSuffix
-      BasedSequence.of(combinedSource)
-        .subSequence(0, combinedSource.length)
-        .subSequence(sourcePrefix.length, combinedSource.length - sourceSuffix.length)
+      BasedSequence.of(combinedSource).subSequence(0, combinedSource.length).subSequence(sourcePrefix.length, combinedSource.length - sourceSuffix.length)
     } else {
       BasedSequence.of(mySource)
     }
@@ -84,7 +82,6 @@ final class SpecExampleParse(
     mySource
   }
 
-  def finalizeRender(): Unit = {
+  def finalizeRender(): Unit =
     renderer.finalizeRender()
-  }
 }

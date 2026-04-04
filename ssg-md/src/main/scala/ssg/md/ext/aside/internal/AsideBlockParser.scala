@@ -22,7 +22,7 @@ import ssg.md.util.ast.Block
 import ssg.md.util.data.DataHolder
 import ssg.md.util.misc.CharPredicate
 import ssg.md.util.sequence.BasedSequence
-import ssg.md.util.sequence.mappers.{SpecialLeadInHandler, SpecialLeadInStartsWithCharsHandler}
+import ssg.md.util.sequence.mappers.{ SpecialLeadInHandler, SpecialLeadInStartsWithCharsHandler }
 
 import scala.language.implicitConversions
 
@@ -31,13 +31,13 @@ class AsideBlockParser(options: DataHolder, marker: BasedSequence) extends Abstr
   private val block_ = new AsideBlock()
   block_.openingMarker = marker
 
-  private val allowLeadingSpace: Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
-  private val continueToBlankLine: Boolean = AsideExtension.EXTEND_TO_BLANK_LINE.get(options)
-  private val ignoreBlankLine: Boolean = AsideExtension.IGNORE_BLANK_LINE.get(options)
-  private val interruptsParagraph: Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
-  private val interruptsItemParagraph: Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
+  private val allowLeadingSpace:                     Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
+  private val continueToBlankLine:                   Boolean = AsideExtension.EXTEND_TO_BLANK_LINE.get(options)
+  private val ignoreBlankLine:                       Boolean = AsideExtension.IGNORE_BLANK_LINE.get(options)
+  private val interruptsParagraph:                   Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
+  private val interruptsItemParagraph:               Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
   private val withLeadSpacesInterruptsItemParagraph: Boolean = AsideExtension.WITH_LEAD_SPACES_INTERRUPTS_ITEM_PARAGRAPH.get(options)
-  private var lastWasBlankLine: Int = 0
+  private var lastWasBlankLine:                      Int     = 0
 
   override def isContainer: Boolean = true
 
@@ -58,7 +58,16 @@ class AsideBlockParser(options: DataHolder, marker: BasedSequence) extends Abstr
   override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
     val nextNonSpace = state.nextNonSpaceIndex
     if (!state.isBlank) {
-      val isMarkerResult = AsideBlockParser.isMarker(state, nextNonSpace, false, false, allowLeadingSpace, interruptsParagraph, interruptsItemParagraph, withLeadSpacesInterruptsItemParagraph)
+      val isMarkerResult = AsideBlockParser.isMarker(
+        state,
+        nextNonSpace,
+        false,
+        false,
+        allowLeadingSpace,
+        interruptsParagraph,
+        interruptsItemParagraph,
+        withLeadSpacesInterruptsItemParagraph
+      )
       if (isMarkerResult || (continueToBlankLine && lastWasBlankLine == 0)) {
         var newColumn = state.column + state.indent
         lastWasBlankLine = 0
@@ -91,13 +100,13 @@ object AsideBlockParser {
   val MARKER_CHAR: Char = '|'
 
   def isMarker(
-    state: ParserState,
-    index: Int,
-    inParagraph: Boolean,
-    inParagraphListItem: Boolean,
-    allowLeadingSpace: Boolean,
-    interruptsParagraph: Boolean,
-    interruptsItemParagraph: Boolean,
+    state:                                 ParserState,
+    index:                                 Int,
+    inParagraph:                           Boolean,
+    inParagraphListItem:                   Boolean,
+    allowLeadingSpace:                     Boolean,
+    interruptsParagraph:                   Boolean,
+    interruptsItemParagraph:               Boolean,
     withLeadSpacesInterruptsItemParagraph: Boolean
   ): Boolean = {
     val line = state.line
@@ -123,24 +132,23 @@ object AsideBlockParser {
 
   class Factory extends CustomBlockParserFactory {
 
-    override def afterDependents: Nullable[Set[Class[?]]] = {
+    override def afterDependents: Nullable[Set[Class[?]]] =
       Nullable(Set.empty[Class[?]])
-    }
 
-    override def beforeDependents: Nullable[Set[Class[?]]] = {
-      Nullable(Set[Class[?]](
-        classOf[HeadingParser.Factory],
-        classOf[FencedCodeBlockParser.Factory],
-        classOf[HtmlBlockParser.Factory],
-        classOf[ThematicBreakParser.Factory],
-        classOf[ListBlockParser.Factory],
-        classOf[IndentedCodeBlockParser.Factory]
-      ))
-    }
+    override def beforeDependents: Nullable[Set[Class[?]]] =
+      Nullable(
+        Set[Class[?]](
+          classOf[HeadingParser.Factory],
+          classOf[FencedCodeBlockParser.Factory],
+          classOf[HtmlBlockParser.Factory],
+          classOf[ThematicBreakParser.Factory],
+          classOf[ListBlockParser.Factory],
+          classOf[IndentedCodeBlockParser.Factory]
+        )
+      )
 
-    override def getLeadInHandler(options: DataHolder): Nullable[SpecialLeadInHandler] = {
+    override def getLeadInHandler(options: DataHolder): Nullable[SpecialLeadInHandler] =
       Nullable(SpecialLeadInStartsWithCharsHandler.create('|'))
-    }
 
     override def affectsGlobalScope: Boolean = false
 
@@ -149,24 +157,37 @@ object AsideBlockParser {
 
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
 
-    private val allowLeadingSpace: Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
-    private val interruptsParagraph: Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
-    private val interruptsItemParagraph: Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
+    private val allowLeadingSpace:                     Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
+    private val interruptsParagraph:                   Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
+    private val interruptsItemParagraph:               Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
     private val withLeadSpacesInterruptsItemParagraph: Boolean = AsideExtension.WITH_LEAD_SPACES_INTERRUPTS_ITEM_PARAGRAPH.get(options)
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
-      val nextNonSpace = state.nextNonSpaceIndex
-      val matched = matchedBlockParser.blockParser
-      val inParagraph = matched.isParagraphParser
+      val nextNonSpace        = state.nextNonSpaceIndex
+      val matched             = matchedBlockParser.blockParser
+      val inParagraph         = matched.isParagraphParser
       val inParagraphListItem = inParagraph && matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) && matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-      if (!endsWithMarker(state.line) && isMarker(state, nextNonSpace, inParagraph, inParagraphListItem, allowLeadingSpace, interruptsParagraph, interruptsItemParagraph, withLeadSpacesInterruptsItemParagraph)) {
+      if (
+        !endsWithMarker(state.line) && isMarker(
+          state,
+          nextNonSpace,
+          inParagraph,
+          inParagraphListItem,
+          allowLeadingSpace,
+          interruptsParagraph,
+          interruptsItemParagraph,
+          withLeadSpacesInterruptsItemParagraph
+        )
+      ) {
         var newColumn = state.column + state.indent + 1
         // optional following space or tab
         if (Parsing.isSpaceOrTab(state.line, nextNonSpace + 1)) {
           newColumn += 1
         }
-        Nullable(BlockStart.of(new AsideBlockParser(state.properties, state.line.subSequence(nextNonSpace, nextNonSpace + 1))).atColumn(newColumn))
+        Nullable(
+          BlockStart.of(new AsideBlockParser(state.properties, state.line.subSequence(nextNonSpace, nextNonSpace + 1))).atColumn(newColumn)
+        )
       } else {
         BlockStart.none()
       }

@@ -123,9 +123,9 @@ object TrackedOffset {
 
   private given EnumBitField[Flags] with {
     def elementType: Class[Flags] = classOf[Flags]
-    def typeName: String = "Flags"
-    val values: Array[Flags] = Flags.values
-    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
+    def typeName:    String       = "Flags"
+    val values:      Array[Flags] = Flags.values
+    val bitMasks:    Array[Long]  = EnumBitField.computeBitMasks(values, "Flags")
   }
 
   private val F_AFTER_SPACE_EDIT: Int = BitFieldSet.intMask(Flags.AFTER_SPACE_EDIT)

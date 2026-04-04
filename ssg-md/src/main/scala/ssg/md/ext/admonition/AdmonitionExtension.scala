@@ -11,40 +11,34 @@ package md
 package ext
 package admonition
 
-import ssg.md.ext.admonition.internal.{AdmonitionBlockParser, AdmonitionNodeFormatter, AdmonitionNodeRenderer}
+import ssg.md.ext.admonition.internal.{ AdmonitionBlockParser, AdmonitionNodeFormatter, AdmonitionNodeRenderer }
 import ssg.md.formatter.Formatter
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
-import ssg.md.util.data.{DataKey, MutableDataHolder, NotNullValueSupplier}
+import ssg.md.util.data.{ DataKey, MutableDataHolder, NotNullValueSupplier }
 import ssg.md.util.misc.PlatformResources
 
-import java.io.{InputStreamReader, StringWriter}
-import java.{util => ju}
+import java.io.{ InputStreamReader, StringWriter }
+import java.{ util => ju }
 import scala.language.implicitConversions
 
-/**
- * Extension for admonitions
- *
- * Create it with [[AdmonitionExtension.create]] and then configure it on the builders
- *
- * The parsed admonition text is turned into [[AdmonitionBlock]] nodes.
- */
-class AdmonitionExtension private ()
-    extends Parser.ParserExtension,
-    HtmlRenderer.HtmlRendererExtension,
-    Formatter.FormatterExtension {
+/** Extension for admonitions
+  *
+  * Create it with [[AdmonitionExtension.create]] and then configure it on the builders
+  *
+  * The parsed admonition text is turned into [[AdmonitionBlock]] nodes.
+  */
+class AdmonitionExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
+  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit =
     formatterBuilder.nodeFormatterFactory(new AdmonitionNodeFormatter.Factory())
-  }
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.customBlockParserFactory(new AdmonitionBlockParser.Factory())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {
@@ -56,16 +50,25 @@ class AdmonitionExtension private ()
 
 object AdmonitionExtension {
 
-  val CONTENT_INDENT: DataKey[Integer] = new DataKey[Integer]("ADMONITION.CONTENT_INDENT", 4)
-  val ALLOW_LEADING_SPACE: DataKey[Boolean] = new DataKey[Boolean]("ADMONITION.ALLOW_LEADING_SPACE", true)
-  val INTERRUPTS_PARAGRAPH: DataKey[Boolean] = new DataKey[Boolean]("ADMONITION.INTERRUPTS_PARAGRAPH", true)
-  val INTERRUPTS_ITEM_PARAGRAPH: DataKey[Boolean] = new DataKey[Boolean]("ADMONITION.INTERRUPTS_ITEM_PARAGRAPH", true)
-  val WITH_SPACES_INTERRUPTS_ITEM_PARAGRAPH: DataKey[Boolean] = new DataKey[Boolean]("ADMONITION.WITH_SPACES_INTERRUPTS_ITEM_PARAGRAPH", true)
-  val ALLOW_LAZY_CONTINUATION: DataKey[Boolean] = new DataKey[Boolean]("ADMONITION.ALLOW_LAZY_CONTINUATION", true)
-  val UNRESOLVED_QUALIFIER: DataKey[String] = new DataKey[String]("ADMONITION.UNRESOLVED_QUALIFIER", "note")
-  val QUALIFIER_TYPE_MAP: DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]]("ADMONITION.QUALIFIER_TYPE_MAP", new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierTypeMap() })
-  val QUALIFIER_TITLE_MAP: DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]]("ADMONITION.QUALIFIER_TITLE_MAP", new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierTitleMap() })
-  val TYPE_SVG_MAP: DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]]("ADMONITION.TYPE_SVG_MAP", new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierSvgValueMap() })
+  val CONTENT_INDENT:                        DataKey[Integer]                = new DataKey[Integer]("ADMONITION.CONTENT_INDENT", 4)
+  val ALLOW_LEADING_SPACE:                   DataKey[Boolean]                = new DataKey[Boolean]("ADMONITION.ALLOW_LEADING_SPACE", true)
+  val INTERRUPTS_PARAGRAPH:                  DataKey[Boolean]                = new DataKey[Boolean]("ADMONITION.INTERRUPTS_PARAGRAPH", true)
+  val INTERRUPTS_ITEM_PARAGRAPH:             DataKey[Boolean]                = new DataKey[Boolean]("ADMONITION.INTERRUPTS_ITEM_PARAGRAPH", true)
+  val WITH_SPACES_INTERRUPTS_ITEM_PARAGRAPH: DataKey[Boolean]                = new DataKey[Boolean]("ADMONITION.WITH_SPACES_INTERRUPTS_ITEM_PARAGRAPH", true)
+  val ALLOW_LAZY_CONTINUATION:               DataKey[Boolean]                = new DataKey[Boolean]("ADMONITION.ALLOW_LAZY_CONTINUATION", true)
+  val UNRESOLVED_QUALIFIER:                  DataKey[String]                 = new DataKey[String]("ADMONITION.UNRESOLVED_QUALIFIER", "note")
+  val QUALIFIER_TYPE_MAP:                    DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]](
+    "ADMONITION.QUALIFIER_TYPE_MAP",
+    new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierTypeMap() }
+  )
+  val QUALIFIER_TITLE_MAP: DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]](
+    "ADMONITION.QUALIFIER_TITLE_MAP",
+    new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierTitleMap() }
+  )
+  val TYPE_SVG_MAP: DataKey[ju.Map[String, String]] = new DataKey[ju.Map[String, String]](
+    "ADMONITION.TYPE_SVG_MAP",
+    new NotNullValueSupplier[ju.Map[String, String]] { def get: ju.Map[String, String] = getQualifierSvgValueMap() }
+  )
 
   def getQualifierTypeMap(): ju.Map[String, String] = {
     val map = new ju.HashMap[String, String]()
@@ -103,15 +106,14 @@ object AdmonitionExtension {
 
   def getQualifierSvgValueMap(): ju.Map[String, String] = {
     val map = new ju.HashMap[String, String]()
-    for (name <- Array("abstract", "bug", "danger", "example", "fail", "faq", "info", "note", "quote", "success", "tip", "warning")) {
+    for (name <- Array("abstract", "bug", "danger", "example", "fail", "faq", "info", "note", "quote", "success", "tip", "warning"))
       PlatformResources.getResourceAsStream(classOf[AdmonitionExtension], "/images/adm-" + name + ".svg").foreach { stream =>
         map.put(name, getInputStreamContent(stream))
       }
-    }
     map
   }
 
-  def getInputStreamContent(inputStream: java.io.InputStream): String = {
+  def getInputStreamContent(inputStream: java.io.InputStream): String =
     try {
       val streamReader = new InputStreamReader(inputStream)
       val stringWriter = new StringWriter()
@@ -123,7 +125,6 @@ object AdmonitionExtension {
         e.printStackTrace()
         ""
     }
-  }
 
   def getDefaultCSS: String = PlatformResources.getResourceAsStream(classOf[AdmonitionExtension], "/admonition.css").fold("")(getInputStreamContent)
 
@@ -131,7 +132,7 @@ object AdmonitionExtension {
 
   def copy(reader: java.io.Reader, writer: java.io.Writer): Unit = {
     val buffer = new Array[Char](4096)
-    var n = reader.read(buffer)
+    var n      = reader.read(buffer)
     while (n != -1) {
       writer.write(buffer, 0, n)
       n = reader.read(buffer)

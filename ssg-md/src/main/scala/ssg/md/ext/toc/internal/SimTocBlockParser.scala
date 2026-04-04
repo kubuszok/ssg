@@ -13,10 +13,10 @@ package toc
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Heading, HtmlBlock, ListBlock}
+import ssg.md.ast.{ Heading, HtmlBlock, ListBlock }
 import ssg.md.ast.util.Parsing
 import ssg.md.parser.block.*
-import ssg.md.util.ast.{Block, Node}
+import ssg.md.util.ast.{ Block, Node }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -25,14 +25,14 @@ import scala.language.implicitConversions
 
 class SimTocBlockParser(options: DataHolder, tocChars: BasedSequence, styleChars: BasedSequence, titleChars: BasedSequence) extends AbstractBlockParser {
 
-  private val tocOptions: TocOptions = TocOptions.fromOptions(options, true)
-  private val block: SimTocBlock = new SimTocBlock(tocChars, styleChars, titleChars)
-  private var haveChildren: Int = 0
+  private val tocOptions:      TocOptions    = TocOptions.fromOptions(options, true)
+  private val block:           SimTocBlock   = new SimTocBlock(tocChars, styleChars, titleChars)
+  private var haveChildren:    Int           = 0
   private var blankLineSpacer: BasedSequence = BasedSequence.NULL
 
   override def getBlock: Block = block
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] =
     // we stop on a blank line if blank line spacer is not enabled or we already had one
     if ((!tocOptions.isBlankLineSpacer || haveChildren != 0) && state.isBlank) {
       BlockContinue.none()
@@ -43,9 +43,8 @@ class SimTocBlockParser(options: DataHolder, tocChars: BasedSequence, styleChars
       }
       Nullable(BlockContinue.atIndex(state.getIndex))
     }
-  }
 
-  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean = {
+  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean =
     if (block.isInstanceOf[HtmlBlock]) {
       if ((haveChildren & ~SimTocBlockParser.HAVE_BLANK_LINE) == 0) {
         haveChildren |= SimTocBlockParser.HAVE_HTML
@@ -64,7 +63,6 @@ class SimTocBlockParser(options: DataHolder, tocChars: BasedSequence, styleChars
     } else {
       false
     }
-  }
 
   override def isContainer: Boolean = true
 
@@ -88,13 +86,13 @@ class SimTocBlockParser(options: DataHolder, tocChars: BasedSequence, styleChars
     // now add the options list and options with their text
     if (tocOptions.isAstAddOptions && !block.style.isEmpty) {
       val optionsParser = new SimTocOptionsParser()
-      val pair = optionsParser.parseOption(block.style, TocOptions.DEFAULT, Nullable.empty)
+      val pair          = optionsParser.parseOption(block.style, TocOptions.DEFAULT, Nullable.empty)
       val parsedOptions = pair.second.get
       if (!parsedOptions.isEmpty) {
         val optionsNode = new SimTocOptionList()
-        val it = parsedOptions.iterator()
+        val it          = parsedOptions.iterator()
         while (it.hasNext) {
-          val option = it.next()
+          val option     = it.next()
           val optionNode = new SimTocOption(option.source)
           optionsNode.appendChild(optionNode)
         }
@@ -109,9 +107,9 @@ class SimTocBlockParser(options: DataHolder, tocChars: BasedSequence, styleChars
 
 object SimTocBlockParser {
 
-  val HAVE_HTML: Int = 1
-  val HAVE_HEADING: Int = 2
-  val HAVE_LIST: Int = 4
+  val HAVE_HTML:       Int = 1
+  val HAVE_HEADING:    Int = 2
+  val HAVE_LIST:       Int = 4
   val HAVE_BLANK_LINE: Int = 8
 
   class Factory extends CustomBlockParserFactory {
@@ -128,7 +126,7 @@ object SimTocBlockParser {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
 
     private val tocPattern: Pattern = {
-      val parsing = new Parsing(options)
+      val parsing       = new Parsing(options)
       val caseSensitive = TocExtension.CASE_SENSITIVE_TOC_TAG.get(options)
       if (caseSensitive) Pattern.compile("^\\[TOC(?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$")
       // Cross-platform: (?i:TOC) inline flag not supported on Scala Native re2.
@@ -137,20 +135,22 @@ object SimTocBlockParser {
       else Pattern.compile("^\\[[Tt][Oo][Cc](?:\\s+([^\\]]+))?]:\\s*#(?:\\s+(" + parsing.LINK_TITLE_STRING + "))?\\s*$")
     }
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val line = state.line
+        val line         = state.line
         val nextNonSpace = state.nextNonSpaceIndex
-        val trySequence = line.subSequence(nextNonSpace, line.length())
-        val matcher = tocPattern.matcher(line)
+        val trySequence  = line.subSequence(nextNonSpace, line.length())
+        val matcher      = tocPattern.matcher(line)
         if (matcher.matches()) {
           val tocChars = state.lineWithEOL
-          val styleChars: BasedSequence = if (matcher.start(1) != -1) trySequence.subSequence(matcher.start(1), matcher.end(1))
-          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
-          val titleChars: BasedSequence = if (matcher.start(2) != -1) trySequence.subSequence(matcher.start(2), matcher.end(2))
-          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: SimTocBlock accepts null
+          val styleChars: BasedSequence =
+            if (matcher.start(1) != -1) trySequence.subSequence(matcher.start(1), matcher.end(1))
+            else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
+          val titleChars: BasedSequence =
+            if (matcher.start(2) != -1) trySequence.subSequence(matcher.start(2), matcher.end(2))
+            else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: SimTocBlock accepts null
 
           val simTocBlockParser = new SimTocBlockParser(state.properties, tocChars, styleChars, titleChars)
           Nullable(BlockStart.of(simTocBlockParser).atIndex(state.lineEndIndex + state.lineEolLength))
@@ -158,6 +158,5 @@ object SimTocBlockParser {
           BlockStart.none()
         }
       }
-    }
   }
 }

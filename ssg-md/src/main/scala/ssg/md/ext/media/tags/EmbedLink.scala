@@ -37,6 +37,6 @@ class EmbedLink() extends AbstractMediaLink(EmbedLink.PREFIX, EmbedLink.TYPE) {
 }
 
 object EmbedLink {
-  val PREFIX: String = "!E"
+  val PREFIX:       String = "!E"
   private val TYPE: String = "Embed"
 }

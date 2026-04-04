@@ -18,9 +18,8 @@ import scala.language.implicitConversions
 
 object JekyllFrontMatterVisitorExt {
 
-  def VISIT_HANDLERS[V <: JekyllFrontMatterVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: JekyllFrontMatterVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
-      new VisitHandler[JekyllFrontMatterBlock](classOf[JekyllFrontMatterBlock], visitor.visit(_)),
+      new VisitHandler[JekyllFrontMatterBlock](classOf[JekyllFrontMatterBlock], visitor.visit(_))
     )
-  }
 }

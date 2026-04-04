@@ -14,7 +14,7 @@ package image
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 
 import scala.language.implicitConversions
 import java.util.regex.Pattern
@@ -27,16 +27,16 @@ class ResizableImageInlineParserExtension(inlineParser: LightInlineParser) exten
 
   override def parse(inlineParser: LightInlineParser): Boolean = {
     val index = inlineParser.index
-    val c = inlineParser.input.safeCharAt(index + 1)
+    val c     = inlineParser.input.safeCharAt(index + 1)
     if (c == '[') {
       val matchesOpt = inlineParser.matchWithGroups(ResizableImageInlineParserExtension.IMAGE_PATTERN)
       if (matchesOpt.isDefined) {
         val matches = matchesOpt.get
         inlineParser.flushTextNode()
 
-        val text = matches(1)
+        val text   = matches(1)
         val source = matches(2)
-        val width = matches(3)
+        val width  = matches(3)
         val height = matches(4)
 
         val image = new ResizableImage(text, source, width, height)
@@ -65,9 +65,8 @@ object ResizableImageInlineParserExtension {
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension = {
+    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension =
       new ResizableImageInlineParserExtension(lightInlineParser)
-    }
 
     override def affectsGlobalScope: Boolean = false
   }

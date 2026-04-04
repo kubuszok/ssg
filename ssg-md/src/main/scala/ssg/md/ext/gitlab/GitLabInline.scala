@@ -11,14 +11,14 @@ package md
 package ext
 package gitlab
 
-import ssg.md.util.ast.{DelimitedNode, Node}
+import ssg.md.util.ast.{ DelimitedNode, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A GitLab inline node (base class for Ins/Del) */
 class GitLabInline() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = {
@@ -36,7 +36,6 @@ class GitLabInline() extends Node, DelimitedNode {
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpanChars(out, openingMarker, text, closingMarker, "text")
-  }
 }

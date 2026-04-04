@@ -16,25 +16,22 @@ import ssg.md.Nullable
 import ssg.md.ext.emoji.internal.EmojiReference.EmojiData
 
 final class EmojiResolvedShortcut(
-    val emoji: Nullable[EmojiData],
-    val emojiText: Nullable[String],
-    val isUnicode: Boolean,
-    val alt: Nullable[String],
+  val emoji:     Nullable[EmojiData],
+  val emojiText: Nullable[String],
+  val isUnicode: Boolean,
+  val alt:       Nullable[String]
 )
 
 object EmojiResolvedShortcut {
 
-  def getEmojiText(node: Emoji, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String): EmojiResolvedShortcut = {
+  def getEmojiText(node: Emoji, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String): EmojiResolvedShortcut =
     getEmojiText(node.text.toString, useShortcutType, useImageType, rootImagePath, useUnicodeFileName = false)
-  }
 
-  def getEmojiText(node: Emoji, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String, useUnicodeFileName: Boolean): EmojiResolvedShortcut = {
+  def getEmojiText(node: Emoji, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String, useUnicodeFileName: Boolean): EmojiResolvedShortcut =
     getEmojiText(node.text.toString, useShortcutType, useImageType, rootImagePath, useUnicodeFileName)
-  }
 
-  def getEmojiText(emojiId: String, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String): EmojiResolvedShortcut = {
+  def getEmojiText(emojiId: String, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String): EmojiResolvedShortcut =
     getEmojiText(emojiId, useShortcutType, useImageType, rootImagePath, useUnicodeFileName = false)
-  }
 
   def getEmojiText(emojiId: String, useShortcutType: EmojiShortcutType, useImageType: EmojiImageType, rootImagePath: String, useUnicodeFileName: Boolean): EmojiResolvedShortcut = {
     val emoji = EmojiShortcuts.getEmojiFromShortcut(emojiId)
@@ -44,14 +41,14 @@ object EmojiResolvedShortcut {
 
     emoji.foreach { e =>
       var unicodeText: Nullable[String] = Nullable.empty
-      var imageText: Nullable[String] = Nullable.empty
+      var imageText:   Nullable[String] = Nullable.empty
 
       if (useImageType.isUnicode && e.unicodeChars.isDefined) {
         unicodeText = EmojiShortcuts.getUnicodeChars(e)
       }
 
       if (useImageType.isImage) {
-        var gitHubFile: Nullable[String] = Nullable.empty
+        var gitHubFile:     Nullable[String] = Nullable.empty
         var cheatSheetFile: Nullable[String] = Nullable.empty
 
         if (useShortcutType.isGitHub && e.githubFile.isDefined) {

@@ -37,6 +37,6 @@ class PictureLink() extends AbstractMediaLink(PictureLink.PREFIX, PictureLink.TY
 }
 
 object PictureLink {
-  val PREFIX: String = "!P"
+  val PREFIX:       String = "!P"
   private val TYPE: String = "Picture"
 }

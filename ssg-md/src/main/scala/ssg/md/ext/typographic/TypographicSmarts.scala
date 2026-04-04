@@ -12,9 +12,9 @@ package ext
 package typographic
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{DoNotAttributeDecorate, Node, NodeVisitor, TextContainer, TypographicText}
+import ssg.md.util.ast.{ DoNotAttributeDecorate, Node, NodeVisitor, TextContainer, TypographicText }
 import ssg.md.util.misc.BitFieldSet
-import ssg.md.util.sequence.{BasedSequence, Escaping, ReplacedTextMapper}
+import ssg.md.util.sequence.{ BasedSequence, Escaping, ReplacedTextMapper }
 import ssg.md.util.sequence.builder.ISequenceBuilder
 
 /** A TypographicSmarts node */
@@ -24,7 +24,7 @@ class TypographicSmarts() extends Node, DoNotAttributeDecorate, TypographicText 
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
   def this(typographicText: String) = {
@@ -34,7 +34,7 @@ class TypographicSmarts() extends Node, DoNotAttributeDecorate, TypographicText 
 
   def this(chars: BasedSequence, typographicText: String) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
     _typographicText = Nullable(typographicText)
   }
 
@@ -43,19 +43,18 @@ class TypographicSmarts() extends Node, DoNotAttributeDecorate, TypographicText 
       out.append(chars)
     } else {
       val textMapper = new ReplacedTextMapper(chars)
-      val unescaped = Escaping.unescape(chars, textMapper)
+      val unescaped  = Escaping.unescape(chars, textMapper)
       out.append(unescaped)
     }
     false
   }
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     _typographicText.foreach(t => out.append(" typographic: ").append(t).append(" "))
-  }
 
   def typographicText: Nullable[String] = _typographicText
 
-  def typographicText_=(text: String): Unit = { _typographicText = Nullable(text) }
+  def typographicText_=(text: String): Unit = _typographicText = Nullable(text)
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
 

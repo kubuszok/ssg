@@ -79,7 +79,7 @@ object Html5Entities {
     val stream   = ssg.md.util.misc.PlatformResources.getResourceAsStream(Html5Entities.getClass, ENTITY_PATH).getOrElse {
       throw new IllegalStateException("Could not load " + ENTITY_PATH)
     }
-    val charset  = StandardCharsets.UTF_8
+    val charset = StandardCharsets.UTF_8
     try {
       val streamReader   = new InputStreamReader(stream, charset)
       val bufferedReader = new BufferedReader(streamReader)

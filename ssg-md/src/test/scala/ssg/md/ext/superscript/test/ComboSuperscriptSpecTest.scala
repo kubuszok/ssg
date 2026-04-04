@@ -17,30 +17,28 @@ import ssg.md.ext.superscript.SuperscriptExtension
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Collections, HashMap}
+import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboSuperscriptSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboSuperscriptSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboSuperscriptSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboSuperscriptSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboSuperscriptSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboSuperscriptSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboSuperscriptSpecTest.OPTIONS_MAP
 }
 
 object ComboSuperscriptSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/superscript/test/superscript_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/superscript/test/superscript_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboSuperscriptSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(SuperscriptExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(SuperscriptExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("style-superscript", new MutableDataSet()
-      .set(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_OPEN, "<span class=\"text-sup\">")
-      .set(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_CLOSE, "</span>")
-      .toImmutable)
+    map.put(
+      "style-superscript",
+      new MutableDataSet().set(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_OPEN, "<span class=\"text-sup\">").set(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_CLOSE, "</span>").toImmutable
+    )
     map
   }
 }

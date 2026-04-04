@@ -12,8 +12,8 @@ package ext
 package gitlab
 
 trait GitLabVisitor {
-  def visit(node: GitLabIns): Unit
-  def visit(node: GitLabDel): Unit
+  def visit(node: GitLabIns):        Unit
+  def visit(node: GitLabDel):        Unit
   def visit(node: GitLabInlineMath): Unit
   def visit(node: GitLabBlockQuote): Unit
 }

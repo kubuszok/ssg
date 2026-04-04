@@ -14,8 +14,8 @@ package tasklist
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{BulletListItem, ListItem, OrderedListItem}
-import ssg.md.parser.block.{BlockPreProcessor, BlockPreProcessorFactory, ParserState}
+import ssg.md.ast.{ BulletListItem, ListItem, OrderedListItem }
+import ssg.md.parser.block.{ BlockPreProcessor, BlockPreProcessorFactory, ParserState }
 import ssg.md.util.ast.Block
 import ssg.md.util.data.DataHolder
 
@@ -23,11 +23,11 @@ import scala.language.implicitConversions
 
 class TaskListItemBlockPreProcessor(options: DataHolder) extends BlockPreProcessor {
 
-  override def preProcess(state: ParserState, block: Block): Unit = {
+  override def preProcess(state: ParserState, block: Block): Unit =
     if (block.isInstanceOf[BulletListItem] || block.isInstanceOf[OrderedListItem]) {
       // we chop up the previous paragraph into definition terms and add the definition item to the last one
       // we add all these to the previous DefinitionList or add a new one if there isn't one
-      val listItem = block.asInstanceOf[ListItem]
+      val listItem     = block.asInstanceOf[ListItem]
       val markerSuffix = listItem.markerSuffix
 
       if (markerSuffix.matches("[ ]") || markerSuffix.matches("[x]") || markerSuffix.matches("[X]")) {
@@ -39,16 +39,14 @@ class TaskListItemBlockPreProcessor(options: DataHolder) extends BlockPreProcess
         state.blockRemoved(listItem)
       }
     }
-  }
 }
 
 object TaskListItemBlockPreProcessor {
 
   class Factory extends BlockPreProcessorFactory {
 
-    override def getBlockTypes: Set[Class[? <: Block]] = {
+    override def getBlockTypes: Set[Class[? <: Block]] =
       Set[Class[? <: Block]](classOf[BulletListItem], classOf[OrderedListItem])
-    }
 
     override def afterDependents: Nullable[Set[Class[?]]] = Nullable.empty
 

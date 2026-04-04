@@ -18,7 +18,7 @@ final class MdSuite extends munit.FunSuite {
 
   test("parser can parse plain text") {
     val parser = ssg.md.parser.Parser.builder().build()
-    val doc = parser.parse("hello")
+    val doc    = parser.parse("hello")
     assert(doc != null)
     assert(doc.hasChildren)
   }
@@ -29,18 +29,18 @@ final class MdSuite extends munit.FunSuite {
   }
 
   test("renderer can render plain text") {
-    val parser = ssg.md.parser.Parser.builder().build()
+    val parser   = ssg.md.parser.Parser.builder().build()
     val renderer = ssg.md.html.HtmlRenderer.builder().build()
-    val doc = parser.parse("hello")
-    val html = renderer.render(doc)
+    val doc      = parser.parse("hello")
+    val html     = renderer.render(doc)
     assertEquals(html, "<p>hello</p>\n")
   }
 
   test("parser can parse emphasis") {
-    val parser = ssg.md.parser.Parser.builder().build()
+    val parser   = ssg.md.parser.Parser.builder().build()
     val renderer = ssg.md.html.HtmlRenderer.builder().build()
-    val doc = parser.parse("hello **world**")
-    val html = renderer.render(doc)
+    val doc      = parser.parse("hello **world**")
+    val html     = renderer.render(doc)
     assertEquals(html, "<p>hello <strong>world</strong></p>\n")
   }
 }

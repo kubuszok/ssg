@@ -51,21 +51,21 @@ class DocumentParser(
   private val blockTracker:        ClassifyingBlockTracker        = ClassifyingBlockTracker()
   private val lastLineBlankMap:    mutable.HashMap[Node, Boolean] = mutable.HashMap.empty
 
-  private var _line:         BasedSequence = scala.compiletime.uninitialized
-  private var _lineWithEOL:  BasedSequence = scala.compiletime.uninitialized
-  private var _lineNumber:   Int           = 0
-  private var _lineStart:    Int           = 0
-  private var _lineEOLIndex: Int           = 0
-  private var _lineEndIndex: Int           = 0
-  private var _index:        Int           = 0
-  private var _column:       Int           = 0
-  private var columnIsInTab:      Boolean     = false
-  private var _nextNonSpace:      Int         = 0
-  private var nextNonSpaceColumn: Int         = 0
-  private var _indent:            Int         = 0
-  private var _blank:             Boolean     = false
-  private var _isBlankLine:       Boolean     = false
-  private var currentPhase:       ParserPhase = ParserPhase.STARTING
+  private var _line:              BasedSequence = scala.compiletime.uninitialized
+  private var _lineWithEOL:       BasedSequence = scala.compiletime.uninitialized
+  private var _lineNumber:        Int           = 0
+  private var _lineStart:         Int           = 0
+  private var _lineEOLIndex:      Int           = 0
+  private var _lineEndIndex:      Int           = 0
+  private var _index:             Int           = 0
+  private var _column:            Int           = 0
+  private var columnIsInTab:      Boolean       = false
+  private var _nextNonSpace:      Int           = 0
+  private var nextNonSpaceColumn: Int           = 0
+  private var _indent:            Int           = 0
+  private var _blank:             Boolean       = false
+  private var _isBlankLine:       Boolean       = false
+  private var currentPhase:       ParserPhase   = ParserPhase.STARTING
 
   activateBlockParser(documentBlockParser)
 
@@ -237,9 +237,8 @@ class DocumentParser(
       _index = _nextNonSpace
       _column = nextNonSpaceColumn
     }
-    while (_index < newIndex && _index != _line.length()) {
+    while (_index < newIndex && _index != _line.length())
       advance()
-    }
     // If we're going to an index as opposed to a column, we're never within a tab
     columnIsInTab = false
   }
@@ -250,9 +249,8 @@ class DocumentParser(
       _index = _nextNonSpace
       _column = nextNonSpaceColumn
     }
-    while (_column < newColumn && _index != _line.length()) {
+    while (_column < newColumn && _index != _line.length())
       advance()
-    }
     if (_column > newColumn) {
       // Last character was a tab and we overshot our target
       _index -= 1
@@ -280,8 +278,8 @@ class DocumentParser(
     // Bail out on failure: container will point to the last matching block.
     // Set all_matched to false if not all containers match.
     // The document will always match, can be skipped
-    var matches                          = 1
-    var blankLine: Nullable[BlankLine]   = Nullable.empty
+    var matches = 1
+    var blankLine: Nullable[BlankLine] = Nullable.empty
 
     findNextNonSpace()
 
@@ -293,7 +291,7 @@ class DocumentParser(
       }
     }
 
-    var earlyReturn = false
+    var earlyReturn   = false
     val activeSubList = _activeBlockParsers.slice(1, _activeBlockParsers.size)
     boundary {
       for (blockParser <- activeSubList) {
@@ -361,10 +359,10 @@ class DocumentParser(
 
     if (earlyReturn) break(())
 
-    val unmatchedBlockParsers    = ArrayBuffer.from(_activeBlockParsers.slice(matches, _activeBlockParsers.size))
-    val lastMatchedBlockParser   = _activeBlockParsers(matches - 1)
+    val unmatchedBlockParsers  = ArrayBuffer.from(_activeBlockParsers.slice(matches, _activeBlockParsers.size))
+    val lastMatchedBlockParser = _activeBlockParsers(matches - 1)
     var blockParser: BlockParser = lastMatchedBlockParser
-    var allClosed                = unmatchedBlockParsers.isEmpty
+    var allClosed = unmatchedBlockParsers.isEmpty
 
     // Check to see if we've hit 2nd blank line; if so break out of list or any other block type that handles this
     if (_blank && isLastLineBlank(blockParser.getBlock)) {
@@ -374,8 +372,8 @@ class DocumentParser(
 
     // Unless last matched container is a code block, try new container starts,
     // adding children to the last matched container:
-    var tryBlockStartsFlag                        = blockParser.isInterruptible || blockParser.isContainer
-    var lastPrefixClaimer: Nullable[BlockParser]  = Nullable.empty
+    var tryBlockStartsFlag = blockParser.isInterruptible || blockParser.isContainer
+    var lastPrefixClaimer: Nullable[BlockParser] = Nullable.empty
 
     while (tryBlockStartsFlag) {
       val wasBlank = _blank
@@ -460,7 +458,7 @@ class DocumentParser(
   private def findBlockStart(blockParser: BlockParser): Nullable[BlockStartImpl] = {
     val matchedBlockParser = MatchedBlockParserImpl(blockParser)
     boundary {
-      for (blockParserFactory <- blockParserFactories) {
+      for (blockParserFactory <- blockParserFactories)
         if (blockParser.canInterruptBy(blockParserFactory)) {
           val result = blockParserFactory.tryStart(this, matchedBlockParser)
           if (result.isDefined) {
@@ -470,18 +468,15 @@ class DocumentParser(
             }
           }
         }
-      }
       Nullable.empty
     }
   }
 
-  /** Add block parser as a child of the currently active parser. If the tip can't accept children, close and finalize it and try its parent, and so on til
-    * we find a block that can accept children.
+  /** Add block parser as a child of the currently active parser. If the tip can't accept children, close and finalize it and try its parent, and so on til we find a block that can accept children.
     */
   private def addChild(blockParser: BlockParser): BlockParser = {
-    while (!activeBlockParser.canContain(this, blockParser, blockParser.getBlock)) {
+    while (!activeBlockParser.canContain(this, blockParser, blockParser.getBlock))
       finalize(activeBlockParser)
-    }
 
     activeBlockParser.getBlock.appendChild(blockParser.getBlock)
     activateBlockParser(blockParser)
@@ -489,8 +484,8 @@ class DocumentParser(
     blockParser
   }
 
-  /** Finalize a block. Close it and do any necessary postprocessing, e.g. creating string_content from strings, setting the 'tight' or 'loose' status of a
-    * list, and parsing the beginnings of paragraphs for reference definitions.
+  /** Finalize a block. Close it and do any necessary postprocessing, e.g. creating string_content from strings, setting the 'tight' or 'loose' status of a list, and parsing the beginnings of
+    * paragraphs for reference definitions.
     */
   private def finalize(blockParser: BlockParser): Unit = {
     if (activeBlockParser eq blockParser) {
@@ -554,17 +549,16 @@ class DocumentParser(
       val rest   = content.subSequence(1)
       val spaces = Parsing.columnsToNextTabStop(_column)
       val sb     = new StringBuilder(spaces + rest.length())
-      for (_ <- 0 until spaces) {
+      for (_ <- 0 until spaces)
         sb.append(' ')
-      }
       content = PrefixedSubSequence.prefixOf(sb.toString, rest)
     }
 
     activeBlockParser.addLine(this, content)
   }
 
-  /** Break out of all containing lists, resetting the tip of the document to the parent of the highest list, and finalizing all the lists. (This is used to
-    * implement the "two blank lines break out of all lists" feature.)
+  /** Break out of all containing lists, resetting the tip of the document to the parent of the highest list, and finalizing all the lists. (This is used to implement the "two blank lines break out of
+    * all lists" feature.)
     */
   private def breakOutOfLists(blockParsers: List[BlockParser]): Unit = {
     var lastList = -1
@@ -707,7 +701,7 @@ class DocumentParser(
     }
   }
 
-  private def preProcessParagraphs(): Unit = {
+  private def preProcessParagraphs(): Unit =
     // run paragraph pre-processors - use classifier to iterate only Paragraph nodes
     if (blockTracker.getNodeClassifier.containsCategory(Nullable(classOf[Paragraph]))) {
       val processorMap = mutable.HashMap[ParagraphPreProcessorFactory, ParagraphPreProcessor]()
@@ -716,38 +710,33 @@ class DocumentParser(
           classOf[Paragraph],
           Array[Class[?]](classOf[Paragraph])
         )
-        for (paragraph <- paragraphs.asScala) {
+        for (paragraph <- paragraphs.asScala)
           preProcessParagraph(paragraph, factoryStage, processorMap)
-        }
       }
     }
-  }
 
   private def preProcessBlocks(): Unit = {
     // Collect all block types that pre-processors are interested in
     val blockTypes = new java.util.HashSet[Class[?]]()
-    for (dependents <- blockPreProcessorDependencies) {
+    for (dependents <- blockPreProcessorDependencies)
       for (factory <- dependents) {
         val bt = factory.getBlockTypes
         bt.foreach(blockTypes.add)
       }
-    }
 
     val preProcessBitSet = blockTracker.getNodeClassifier.categoriesBitSet(blockTypes)
 
     if (!preProcessBitSet.isEmpty) {
-      for (dependents <- blockPreProcessorDependencies) {
+      for (dependents <- blockPreProcessorDependencies)
         for (factory <- dependents) {
           val categorySet = new java.util.HashSet[Class[?]]()
           factory.getBlockTypes.foreach(categorySet.add)
-          val blockList = blockTracker.getNodeClassifier.getCategoryItems[Block](classOf[Block], categorySet)
+          val blockList         = blockTracker.getNodeClassifier.getCategoryItems[Block](classOf[Block], categorySet)
           val blockPreProcessor = factory.apply(this)
 
-          for (block <- blockList.asScala) {
+          for (block <- blockList.asScala)
             blockPreProcessor.preProcess(this, block)
-          }
         }
-      }
     }
   }
 

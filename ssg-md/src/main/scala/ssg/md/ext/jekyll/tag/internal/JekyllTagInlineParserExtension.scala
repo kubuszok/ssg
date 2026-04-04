@@ -14,29 +14,29 @@ package tag
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 
 import scala.language.implicitConversions
 
 class JekyllTagInlineParserExtension(lightInlineParser: LightInlineParser) extends InlineParserExtension {
 
-  private val parsing: JekyllTagParsing = new JekyllTagParsing(lightInlineParser.parsing)
-  private val listIncludesOnly: Boolean = JekyllTagExtension.LIST_INCLUDES_ONLY.get(lightInlineParser.document)
+  private val parsing:          JekyllTagParsing = new JekyllTagParsing(lightInlineParser.parsing)
+  private val listIncludesOnly: Boolean          = JekyllTagExtension.LIST_INCLUDES_ONLY.get(lightInlineParser.document)
 
   override def finalizeDocument(inlineParser: InlineParser): Unit = {}
 
   override def finalizeBlock(inlineParser: InlineParser): Unit = {}
 
-  override def parse(inlineParser: LightInlineParser): Boolean = {
+  override def parse(inlineParser: LightInlineParser): Boolean =
     if (inlineParser.peek(1) == '%' && (inlineParser.peek(2) == ' ' || inlineParser.peek(2) == '\t')) {
-      val input = inlineParser.input
+      val input      = inlineParser.input
       val matcherOpt = inlineParser.matcher(parsing.MACRO_TAG)
       if (matcherOpt.isDefined) {
-        val matcher = matcherOpt.get
-        val tagSeq = input.subSequence(matcher.start(), matcher.end())
-        val tagName = input.subSequence(matcher.start(1), matcher.end(1))
+        val matcher    = matcherOpt.get
+        val tagSeq     = input.subSequence(matcher.start(), matcher.end())
+        val tagName    = input.subSequence(matcher.start(1), matcher.end(1))
         val parameters = input.subSequence(matcher.end(1), matcher.end() - 2).trim()
-        val macro_ = new JekyllTag(tagSeq.subSequence(0, 2), tagName, parameters, tagSeq.endSequence(2))
+        val macro_     = new JekyllTag(tagSeq.subSequence(0, 2), tagName, parameters, tagSeq.endSequence(2))
         macro_.setCharsFromContent()
 
         if (!listIncludesOnly || tagName.equals(JekyllTagBlockParser.INCLUDE_TAG)) {
@@ -53,7 +53,6 @@ class JekyllTagInlineParserExtension(lightInlineParser: LightInlineParser) exten
     } else {
       false
     }
-  }
 }
 
 object JekyllTagInlineParserExtension {
@@ -66,9 +65,8 @@ object JekyllTagInlineParserExtension {
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension = {
+    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension =
       new JekyllTagInlineParserExtension(lightInlineParser)
-    }
 
     override def affectsGlobalScope: Boolean = false
   }

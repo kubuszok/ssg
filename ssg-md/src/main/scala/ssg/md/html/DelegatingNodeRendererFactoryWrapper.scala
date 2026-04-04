@@ -23,8 +23,8 @@ private[html] class DelegatingNodeRendererFactoryWrapper(
   private var nodeRenderers:       Nullable[List[DelegatingNodeRendererFactoryWrapper]],
   private val nodeRendererFactory: NodeRendererFactory
 ) extends (DataHolder => NodeRenderer),
-    Dependent,
-    DelegatingNodeRendererFactory {
+      Dependent,
+      DelegatingNodeRendererFactory {
 
   private var myDelegates: Nullable[Set[Class[?]]] = Nullable.empty
 

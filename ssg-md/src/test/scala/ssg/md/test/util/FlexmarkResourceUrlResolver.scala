@@ -11,7 +11,7 @@ package md
 package test
 package util
 
-import ssg.md.test.util.spec.{ResourceResolverManager, ResourceUrlResolver}
+import ssg.md.test.util.spec.{ ResourceResolverManager, ResourceUrlResolver }
 
 import scala.language.implicitConversions
 
@@ -25,7 +25,7 @@ object FlexmarkResourceUrlResolver {
 
   private class TargetTestResourceUrlResolver extends ResourceUrlResolver {
 
-    override def apply(externalForm: String): String = {
+    override def apply(externalForm: String): String =
       if (ResourceUrlResolver.isFileProtocol(externalForm)) {
         val noFileProtocol = ResourceUrlResolver.removeProtocol(externalForm)
 
@@ -40,17 +40,16 @@ object FlexmarkResourceUrlResolver {
       } else {
         null // Java interop: resolver returns null to indicate no match
       }
-    }
   }
 
   private object TargetTestResourceUrlResolver {
-    val TEST_RESOURCES: String = "/target/test-classes/"
+    val TEST_RESOURCES:     String = "/target/test-classes/"
     val SRC_TEST_RESOURCES: String = "/src/test/resources/"
   }
 
   private class BuildTestResourceUrlResolver extends ResourceUrlResolver {
 
-    override def apply(externalForm: String): String = {
+    override def apply(externalForm: String): String =
       if (ResourceUrlResolver.isFileProtocol(externalForm)) {
         val noFileProtocol = ResourceUrlResolver.removeProtocol(externalForm)
 
@@ -65,17 +64,16 @@ object FlexmarkResourceUrlResolver {
       } else {
         null // Java interop: resolver returns null to indicate no match
       }
-    }
   }
 
   private object BuildTestResourceUrlResolver {
-    val TEST_RESOURCES: String = "/build/resources/test/"
+    val TEST_RESOURCES:     String = "/build/resources/test/"
     val SRC_TEST_RESOURCES: String = "/src/test/resources/"
   }
 
   private class OutTestResourcesUrlResolver extends ResourceUrlResolver {
 
-    override def apply(externalForm: String): String = {
+    override def apply(externalForm: String): String =
       if (ResourceUrlResolver.isFileProtocol(externalForm)) {
         val noFileProtocol = ResourceUrlResolver.removeProtocol(externalForm)
 
@@ -96,11 +94,10 @@ object FlexmarkResourceUrlResolver {
       } else {
         null // Java interop: resolver returns null to indicate no match
       }
-    }
   }
 
   private object OutTestResourcesUrlResolver {
-    val OUT_TEST: String = "/out/test/"
+    val OUT_TEST:           String = "/out/test/"
     val SRC_TEST_RESOURCES: String = "/src/test/resources/"
   }
 }

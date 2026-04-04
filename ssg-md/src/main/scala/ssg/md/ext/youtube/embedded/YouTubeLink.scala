@@ -12,7 +12,7 @@ package ext
 package youtube
 package embedded
 
-import ssg.md.ast.{InlineLinkNode, Link}
+import ssg.md.ast.{ InlineLinkNode, Link }
 import ssg.md.util.sequence.BasedSequence
 
 class YouTubeLink() extends InlineLinkNode {

@@ -11,10 +11,10 @@ package md
 package ext
 package toc
 
-import ssg.md.util.ast.{Block, BlockContent, DoNotDecorate, Node}
+import ssg.md.util.ast.{ Block, BlockContent, DoNotDecorate, Node }
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 
 /** A sim toc contents node containing all text that came after the sim toc node */
 class SimTocContent() extends Block, DoNotDecorate {

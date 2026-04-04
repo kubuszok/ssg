@@ -56,19 +56,19 @@ class LineAppendableImpl(
   private[sequence] val lines: ju.ArrayList[LineInfo] = new ju.ArrayList[LineInfo]()
 
   // indent level to use after the next \n and before text is appended
-  private var prefix:            CharSequence                = BasedSequence.EMPTY
-  private var prefixAfterEol:    CharSequence                = BasedSequence.EMPTY
-  private var indentPrefix:      CharSequence                = BasedSequence.EMPTY
+  private var prefix:            CharSequence                                 = BasedSequence.EMPTY
+  private var prefixAfterEol:    CharSequence                                 = BasedSequence.EMPTY
+  private var indentPrefix:      CharSequence                                 = BasedSequence.EMPTY
   private val prefixStack:       scala.collection.mutable.Stack[CharSequence] = scala.collection.mutable.Stack()
-  private val indentPrefixStack: scala.collection.mutable.Stack[Boolean]     = scala.collection.mutable.Stack()
+  private val indentPrefixStack: scala.collection.mutable.Stack[Boolean]      = scala.collection.mutable.Stack()
 
   // current line being accumulated
-  private var allWhitespace:               Boolean                = true
-  private var lastWasWhitespace:           Boolean                = false
-  private var eolOnFirstText:              Int                    = 0
-  private val indentsOnFirstEol:           ju.ArrayList[Runnable] = new ju.ArrayList[Runnable]()
+  private var allWhitespace:               Boolean                             = true
+  private var lastWasWhitespace:           Boolean                             = false
+  private var eolOnFirstText:              Int                                 = 0
+  private val indentsOnFirstEol:           ju.ArrayList[Runnable]              = new ju.ArrayList[Runnable]()
   private val optionStack:                 scala.collection.mutable.Stack[Int] = scala.collection.mutable.Stack()
-  private[sequence] var modificationCount: Int                    = 0
+  private[sequence] var modificationCount: Int                                 = 0
 
   def this(formatOptions: Int) = {
     this(Nullable.empty[Appendable], LineAppendable.toOptionSet(formatOptions))

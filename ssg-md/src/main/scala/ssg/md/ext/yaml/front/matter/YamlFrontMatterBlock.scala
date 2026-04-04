@@ -13,7 +13,7 @@ package yaml
 package front
 package matter
 
-import ssg.md.util.ast.{Block, Node}
+import ssg.md.util.ast.{ Block, Node }
 import ssg.md.util.sequence.BasedSequence
 
 class YamlFrontMatterBlock extends Block {

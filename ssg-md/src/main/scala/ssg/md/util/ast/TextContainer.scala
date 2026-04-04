@@ -57,9 +57,9 @@ object TextContainer {
 
   given EnumBitField[Flags] with {
     def elementType: Class[Flags] = classOf[Flags]
-    def typeName: String = "Flags"
-    val values: Array[Flags] = Flags.values
-    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
+    def typeName:    String       = "Flags"
+    val values:      Array[Flags] = Flags.values
+    val bitMasks:    Array[Long]  = EnumBitField.computeBitMasks(values, "Flags")
   }
 
   val F_LINK_TEXT_TYPE: Int = BitFieldSet.intMask(Flags.LINK_TEXT_TYPE)

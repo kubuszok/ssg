@@ -13,8 +13,6 @@ package definition
 
 import ssg.md.ast.ListItem
 
-/**
- * A Definition item block node, starts with : followed by any content like a list item
- */
-class DefinitionItem() extends ListItem {
-}
+/** A Definition item block node, starts with : followed by any content like a list item
+  */
+class DefinitionItem() extends ListItem {}

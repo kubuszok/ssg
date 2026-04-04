@@ -14,23 +14,24 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
 
 class InsNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  private val insStyleHtmlOpen: Nullable[String] = Nullable(InsExtension.INS_STYLE_HTML_OPEN.get(options))
+  private val insStyleHtmlOpen:  Nullable[String] = Nullable(InsExtension.INS_STYLE_HTML_OPEN.get(options))
   private val insStyleHtmlClose: Nullable[String] = Nullable(InsExtension.INS_STYLE_HTML_CLOSE.get(options))
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[Ins](classOf[Ins], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[Ins](classOf[Ins], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: Ins, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: Ins, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (insStyleHtmlOpen.isEmpty || insStyleHtmlClose.isEmpty) {
       if (context.getHtmlOptions.sourcePositionParagraphLines) {
         html.withAttr().tag("ins")
@@ -44,7 +45,6 @@ class InsNodeRenderer(options: DataHolder) extends NodeRenderer {
       context.renderChildren(node)
       html.raw(insStyleHtmlClose.get)
     }
-  }
 }
 
 object InsNodeRenderer {

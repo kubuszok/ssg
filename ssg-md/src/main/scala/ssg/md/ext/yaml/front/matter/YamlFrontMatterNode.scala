@@ -16,11 +16,11 @@ package matter
 import ssg.md.util.ast.Node
 import ssg.md.util.sequence.BasedSequence
 
-import java.util.{ArrayList, List as JList}
+import java.util.{ ArrayList, List as JList }
 
 class YamlFrontMatterNode(private var _key: BasedSequence, values: JList[BasedSequence]) extends Node {
 
-  //private List<BasedSequence> values;
+  // private List<BasedSequence> values;
   values.forEach { value =>
     appendChild(new YamlFrontMatterValue(value))
   }
@@ -31,12 +31,11 @@ class YamlFrontMatterNode(private var _key: BasedSequence, values: JList[BasedSe
 
   def keySequence: BasedSequence = _key
 
-  def key_=(key: BasedSequence): Unit = {
+  def key_=(key: BasedSequence): Unit =
     _key = key
-  }
 
   def getValues: JList[String] = {
-    val list = new ArrayList[String]()
+    val list  = new ArrayList[String]()
     var child = firstChild
     while (child.isDefined) {
       list.add(child.get.chars.toString)
@@ -46,7 +45,7 @@ class YamlFrontMatterNode(private var _key: BasedSequence, values: JList[BasedSe
   }
 
   def valuesSequences: JList[BasedSequence] = {
-    val list = new ArrayList[BasedSequence]()
+    val list  = new ArrayList[BasedSequence]()
     var child = firstChild
     while (child.isDefined) {
       list.add(child.get.chars)

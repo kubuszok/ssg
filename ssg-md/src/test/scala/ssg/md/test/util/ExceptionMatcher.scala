@@ -16,17 +16,15 @@ package util
 
 import java.util.regex.Pattern
 
-/**
- * Matches exceptions by class prefix and message pattern.
- * Replaces the original Hamcrest-based ExceptionMatcher.
- */
+/** Matches exceptions by class prefix and message pattern. Replaces the original Hamcrest-based ExceptionMatcher.
+  */
 final class ExceptionMatcher private (
-    private val prefix: String,
-    private val pattern: Pattern,
-    private val message: String
+  private val prefix:  String,
+  private val pattern: Pattern,
+  private val message: String
 ) {
 
-  def matches(o: Any): Boolean = {
+  def matches(o: Any): Boolean =
     o match {
       case re: RuntimeException =>
         if (re.toString.startsWith(prefix + ": ")) {
@@ -43,22 +41,18 @@ final class ExceptionMatcher private (
         }
       case _ => false
     }
-  }
 
   def description: String = prefix + ": " + message
 }
 
 object ExceptionMatcher {
 
-  def `match`(throwable: Class[? <: Throwable], text: String): ExceptionMatcher = {
+  def `match`(throwable: Class[? <: Throwable], text: String): ExceptionMatcher =
     new ExceptionMatcher(throwable.getName, Pattern.compile(Pattern.quote(text)), text)
-  }
 
-  def matchPrefix(throwable: Class[? <: Throwable], text: String): ExceptionMatcher = {
+  def matchPrefix(throwable: Class[? <: Throwable], text: String): ExceptionMatcher =
     new ExceptionMatcher(throwable.getName, Pattern.compile(Pattern.quote(text) + "(?s:.*)"), text)
-  }
 
-  def matchRegEx(throwable: Class[? <: Throwable], regEx: String): ExceptionMatcher = {
+  def matchRegEx(throwable: Class[? <: Throwable], regEx: String): ExceptionMatcher =
     new ExceptionMatcher(throwable.getName, Pattern.compile(regEx), regEx)
-  }
 }

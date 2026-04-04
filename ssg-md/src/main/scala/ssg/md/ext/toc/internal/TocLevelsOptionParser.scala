@@ -13,41 +13,51 @@ package toc
 package internal
 
 import ssg.md.Nullable
-import ssg.md.util.misc.{DelimitedBuilder, Pair, Utils}
+import ssg.md.util.misc.{ DelimitedBuilder, Pair, Utils }
 import ssg.md.util.options.*
-import ssg.md.util.sequence.{BasedSequence, SequenceUtils}
+import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
 
 import java.util.Collections
 
 class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOptions] {
 
   override def parseOption(optionText: BasedSequence, options: TocOptions, provider: Nullable[MessageProvider]): Pair[TocOptions, java.util.List[ParsedOption[TocOptions]]] = {
-    var result = options
+    var result            = options
     val levelsOptionValue = optionText.split(",")
-    val parserParams = new ParserParams()
-    val useProvider = if (provider.isDefined) provider.get else MessageProvider.DEFAULT
+    val parserParams      = new ParserParams()
+    val useProvider       = if (provider.isDefined) provider.get else MessageProvider.DEFAULT
 
     var newLevels = 0
 
     for (option <- levelsOptionValue) {
       val optionRange = option.split("-", 2, SequenceUtils.SPLIT_TRIM_PARTS | SequenceUtils.SPLIT_INCLUDE_DELIM_PARTS, Nullable.empty)
-      var skip = false
+      var skip        = false
       var rangeStart: Nullable[Int] = Nullable.empty
-      var rangeEnd: Nullable[Int] = Nullable.empty
+      var rangeEnd:   Nullable[Int] = Nullable.empty
 
-      def convertWithMessage(opt: BasedSequence): Nullable[Int] = {
+      def convertWithMessage(opt: BasedSequence): Nullable[Int] =
         if (opt.isEmpty) Nullable.empty
         else {
-          try {
+          try
             Nullable(Integer.parseInt(opt.toString))
-          } catch {
+          catch {
             case _: Exception =>
-              parserParams.add(new ParserMessage(opt, ParsedOptionStatus.ERROR, useProvider.message(TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_NOT_INTEGER, TocLevelsOptionParser.OPTION_0_VALUE_1_NOT_INTEGER, optionName.asInstanceOf[AnyRef], opt.asInstanceOf[AnyRef])))
+              parserParams.add(
+                new ParserMessage(
+                  opt,
+                  ParsedOptionStatus.ERROR,
+                  useProvider.message(
+                    TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_NOT_INTEGER,
+                    TocLevelsOptionParser.OPTION_0_VALUE_1_NOT_INTEGER,
+                    optionName.asInstanceOf[AnyRef],
+                    opt.asInstanceOf[AnyRef]
+                  )
+                )
+              )
               skip = true
               Nullable.empty
           }
         }
-      }
 
       if (optionRange.length >= 2) {
         rangeStart = convertWithMessage(optionRange(0))
@@ -68,7 +78,18 @@ class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOpti
 
       if (!skip) {
         if (rangeStart.isEmpty) {
-          parserParams.add(new ParserMessage(option, ParsedOptionStatus.IGNORED, useProvider.message(TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE, TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE, optionName.asInstanceOf[AnyRef], option.asInstanceOf[AnyRef])))
+          parserParams.add(
+            new ParserMessage(
+              option,
+              ParsedOptionStatus.IGNORED,
+              useProvider.message(
+                TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE,
+                TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE,
+                optionName.asInstanceOf[AnyRef],
+                option.asInstanceOf[AnyRef]
+              )
+            )
+          )
         } else {
           var rs = rangeStart.get
           var re = rangeEnd.get
@@ -80,17 +101,51 @@ class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOpti
 
           if (re < 1 || rs > 6) {
             if (rs == re) {
-              parserParams.add(new ParserMessage(option, ParsedOptionStatus.IGNORED, useProvider.message(TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_NOT_IN_RANGE, TocLevelsOptionParser.OPTION_0_VALUE_1_NOT_IN_RANGE, optionName.asInstanceOf[AnyRef], option.asInstanceOf[AnyRef])))
+              parserParams.add(
+                new ParserMessage(
+                  option,
+                  ParsedOptionStatus.IGNORED,
+                  useProvider.message(
+                    TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_NOT_IN_RANGE,
+                    TocLevelsOptionParser.OPTION_0_VALUE_1_NOT_IN_RANGE,
+                    optionName.asInstanceOf[AnyRef],
+                    option.asInstanceOf[AnyRef]
+                  )
+                )
+              )
             } else {
-              parserParams.add(new ParserMessage(option, ParsedOptionStatus.WARNING, useProvider.message(TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE, TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE, optionName.asInstanceOf[AnyRef], option.asInstanceOf[AnyRef])))
+              parserParams.add(
+                new ParserMessage(
+                  option,
+                  ParsedOptionStatus.WARNING,
+                  useProvider.message(
+                    TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE,
+                    TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE,
+                    optionName.asInstanceOf[AnyRef],
+                    option.asInstanceOf[AnyRef]
+                  )
+                )
+              )
             }
           } else {
             val wasStart = rs
-            val wasEnd = re
+            val wasEnd   = re
             rs = Utils.minLimit(rs, 1)
             re = Utils.maxLimit(re, 6)
             if (wasStart != rs || wasEnd != re) {
-              parserParams.add(new ParserMessage(option, ParsedOptionStatus.WEAK_WARNING, useProvider.message(TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2, TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2, optionName.asInstanceOf[AnyRef], option.asInstanceOf[AnyRef], s"$rs, $re".asInstanceOf[AnyRef])))
+              parserParams.add(
+                new ParserMessage(
+                  option,
+                  ParsedOptionStatus.WEAK_WARNING,
+                  useProvider.message(
+                    TocLevelsOptionParser.KEY_OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2,
+                    TocLevelsOptionParser.OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2,
+                    optionName.asInstanceOf[AnyRef],
+                    option.asInstanceOf[AnyRef],
+                    s"$rs, $re".asInstanceOf[AnyRef]
+                  )
+                )
+              )
             }
             var b = rs
             while (b <= re) {
@@ -104,10 +159,17 @@ class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOpti
 
     if (newLevels != 0) result = result.withLevels(newLevels)
 
-    new Pair(Nullable(result), Nullable(Collections.singletonList(new ParsedOption[TocOptions](optionText, this, parserParams.status, parserParams.messages.map(_.toList), Nullable.empty)).asInstanceOf[java.util.List[ParsedOption[TocOptions]]]))
+    new Pair(
+      Nullable(result),
+      Nullable(
+        Collections
+          .singletonList(new ParsedOption[TocOptions](optionText, this, parserParams.status, parserParams.messages.map(_.toList), Nullable.empty))
+          .asInstanceOf[java.util.List[ParsedOption[TocOptions]]]
+      )
+    )
   }
 
-  override def getOptionText(options: TocOptions, defaultOptions: Nullable[TocOptions]): String = {
+  override def getOptionText(options: TocOptions, defaultOptions: Nullable[TocOptions]): String =
     if (defaultOptions.isEmpty || options.levels != defaultOptions.get.levels) {
       val out = new DelimitedBuilder()
       out.append("levels=")
@@ -119,8 +181,8 @@ class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOpti
         out.push(",")
 
         var firstBit = 0
-        var lastBit = 0
-        var i = 1
+        var lastBit  = 0
+        var i        = 1
         while (i <= 6) {
           if (options.isLevelIncluded(i)) {
             if (firstBit == 0) {
@@ -158,25 +220,24 @@ class TocLevelsOptionParser(val optionName: String) extends OptionParser[TocOpti
       }
       out.toString
     } else ""
-  }
 }
 
 object TocLevelsOptionParser {
-  val OPTION_0_VALUE_1_NOT_IN_RANGE: String = "{0} option value {1} is not an integer in the range [1, 6]"
-  val KEY_OPTION_0_VALUE_1_NOT_IN_RANGE: String = "options.parser.toc-levels-option.not-in-range"
-  val OPTION_0_VALUE_1_NOT_INTEGER: String = "{0} option value {1} is not an integer"
-  val KEY_OPTION_0_VALUE_1_NOT_INTEGER: String = "options.parser.toc-levels-option.not-integer"
-  val OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2: String = "{0} option value {1} truncated to range [{2}]"
-  val KEY_OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2: String = "options.parser.toc-levels-option.truncated-to-range"
-  val OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE: String = "{0} option value {1} truncated to empty range []"
+  val OPTION_0_VALUE_1_NOT_IN_RANGE:                 String = "{0} option value {1} is not an integer in the range [1, 6]"
+  val KEY_OPTION_0_VALUE_1_NOT_IN_RANGE:             String = "options.parser.toc-levels-option.not-in-range"
+  val OPTION_0_VALUE_1_NOT_INTEGER:                  String = "{0} option value {1} is not an integer"
+  val KEY_OPTION_0_VALUE_1_NOT_INTEGER:              String = "options.parser.toc-levels-option.not-integer"
+  val OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2:         String = "{0} option value {1} truncated to range [{2}]"
+  val KEY_OPTION_0_VALUE_1_TRUNCATED_TO_RANGE_2:     String = "options.parser.toc-levels-option.truncated-to-range"
+  val OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE:     String = "{0} option value {1} truncated to empty range []"
   val KEY_OPTION_0_VALUE_1_TRUNCATED_TO_EMPTY_RANGE: String = "options.parser.toc-levels-option.truncated-to-empty"
 
   private val TOC_LEVELS_MAP: Map[Int, String] = Map(
     0x04 -> "2",
-    0x0C -> "3",
-    0x1C -> "4",
-    0x3C -> "5",
-    0x7C -> "6",
+    0x0c -> "3",
+    0x1c -> "4",
+    0x3c -> "5",
+    0x7c -> "6",
     (1 << 1) -> "1",
     (1 << 3) -> "3-3",
     (1 << 4) -> "4-4",

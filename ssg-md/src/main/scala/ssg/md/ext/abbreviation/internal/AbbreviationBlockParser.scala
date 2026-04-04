@@ -28,13 +28,11 @@ class AbbreviationBlockParser extends AbstractBlockParser {
 
   override def getBlock: Block = block
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] =
     BlockContinue.none()
-  }
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     throw new IllegalStateException("Abbreviation Blocks hold a single line")
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     // add it to the map
@@ -66,21 +64,21 @@ object AbbreviationBlockParser {
 
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val line = state.line
+        val line         = state.line
         val nextNonSpace = state.nextNonSpaceIndex
 
         val trySequence = line.subSequence(nextNonSpace, line.length())
-        val matcher = ABBREVIATION_BLOCK.matcher(trySequence)
+        val matcher     = ABBREVIATION_BLOCK.matcher(trySequence)
         if (matcher.find()) {
           // abbreviation definition
-          val openingStart = nextNonSpace + matcher.start()
-          val openingEnd = nextNonSpace + matcher.end()
+          val openingStart  = nextNonSpace + matcher.start()
+          val openingEnd    = nextNonSpace + matcher.end()
           val openingMarker = trySequence.subSequence(openingStart, openingStart + 2)
-          val text = trySequence.subSequence(openingStart + 2, openingEnd - 2).trim()
+          val text          = trySequence.subSequence(openingStart + 2, openingEnd - 2).trim()
           val closingMarker = trySequence.subSequence(openingEnd - 2, openingEnd)
 
           val abbreviationBlock = new AbbreviationBlockParser()
@@ -95,6 +93,5 @@ object AbbreviationBlockParser {
           BlockStart.none()
         }
       }
-    }
   }
 }

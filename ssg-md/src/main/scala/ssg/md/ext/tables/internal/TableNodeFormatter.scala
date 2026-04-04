@@ -13,36 +13,37 @@ package tables
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Paragraph, Text}
+import ssg.md.ast.{ Paragraph, Text }
 import ssg.md.formatter.*
 import ssg.md.util.data.DataHolder
 import ssg.md.util.html.CellAlignment
-import ssg.md.util.sequence.{BasedSequence, LineAppendable}
+import ssg.md.util.sequence.{ BasedSequence, LineAppendable }
 
 import scala.language.implicitConversions
 
-import ssg.md.util.format.{MarkdownTable, TableFormatOptions}
+import ssg.md.util.format.{ MarkdownTable, TableFormatOptions }
 
 class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
 
-  private val formatOptions: TableFormatOptions = new TableFormatOptions(options)
-  private val parserTrimCellWhiteSpace: Boolean = TablesExtension.TRIM_CELL_WHITESPACE.get(options)
-  private var myTable: Nullable[MarkdownTable] = Nullable.empty
+  private val formatOptions:            TableFormatOptions      = new TableFormatOptions(options)
+  private val parserTrimCellWhiteSpace: Boolean                 = TablesExtension.TRIM_CELL_WHITESPACE.get(options)
+  private var myTable:                  Nullable[MarkdownTable] = Nullable.empty
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[TableBlock](classOf[TableBlock], (node, ctx, md) => renderBlock(node, ctx, md)),
-      new NodeFormattingHandler[TableHead](classOf[TableHead], (node, ctx, md) => renderHead(node, ctx, md)),
-      new NodeFormattingHandler[TableSeparator](classOf[TableSeparator], (node, ctx, md) => renderSeparator(node, ctx, md)),
-      new NodeFormattingHandler[TableBody](classOf[TableBody], (node, ctx, md) => renderBody(node, ctx, md)),
-      new NodeFormattingHandler[TableRow](classOf[TableRow], (node, ctx, md) => renderRow(node, ctx, md)),
-      new NodeFormattingHandler[TableCell](classOf[TableCell], (node, ctx, md) => renderCell(node, ctx, md)),
-      new NodeFormattingHandler[TableCaption](classOf[TableCaption], (node, ctx, md) => renderCaption(node, ctx, md)),
-      new NodeFormattingHandler[Text](classOf[Text], (node, ctx, md) => renderText(node, ctx, md)),
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[TableBlock](classOf[TableBlock], (node, ctx, md) => renderBlock(node, ctx, md)),
+        new NodeFormattingHandler[TableHead](classOf[TableHead], (node, ctx, md) => renderHead(node, ctx, md)),
+        new NodeFormattingHandler[TableSeparator](classOf[TableSeparator], (node, ctx, md) => renderSeparator(node, ctx, md)),
+        new NodeFormattingHandler[TableBody](classOf[TableBody], (node, ctx, md) => renderBody(node, ctx, md)),
+        new NodeFormattingHandler[TableRow](classOf[TableRow], (node, ctx, md) => renderRow(node, ctx, md)),
+        new NodeFormattingHandler[TableCell](classOf[TableCell], (node, ctx, md) => renderCell(node, ctx, md)),
+        new NodeFormattingHandler[TableCaption](classOf[TableCaption], (node, ctx, md) => renderCaption(node, ctx, md)),
+        new NodeFormattingHandler[Text](classOf[Text], (node, ctx, md) => renderText(node, ctx, md))
+      )
+    )
 
   private def renderBlock(node: TableBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     myTable = Nullable(new MarkdownTable(node.chars, formatOptions))
@@ -56,7 +57,7 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
       case _ => // FORMAT and default
         context.renderChildren(node)
 
-        val trackedOffsets = context.getTrackedOffsets
+        val trackedOffsets      = context.getTrackedOffsets
         val tableTrackedOffsets = trackedOffsets.getTrackedOffsets(node.startOffset, node.endOffset)
 
         if (!trackedOffsets.isEmpty) {
@@ -82,12 +83,12 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
             markdown.blankLine()
 
             val prefix = markdown.getPrefix
-            t.formatTableIndentPrefix = (prefix)
+            t.formatTableIndentPrefix = prefix
             val formattedTable = new MarkdownWriter(markdown.getOptions)
             t.appendTable(formattedTable)
 
             val tableOffsets = t.getTrackedOffsets
-            val startOffset = markdown.offsetWithPending()
+            val startOffset  = markdown.offsetWithPending()
             if (!tableTrackedOffsets.isEmpty) {
               assert(tableTrackedOffsets.size() == tableOffsets.size())
 
@@ -102,20 +103,15 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
               }
             }
 
-            markdown.pushPrefix().setPrefix("", false)
-              .pushOptions()
-              .removeOptions(LineAppendable.F_WHITESPACE_REMOVAL)
-              .append(formattedTable)
-              .popOptions()
-              .popPrefix(false)
+            markdown.pushPrefix().setPrefix("", false).pushOptions().removeOptions(LineAppendable.F_WHITESPACE_REMOVAL).append(formattedTable).popOptions().popPrefix(false)
 
             markdown.tailBlankLine()
 
             if (t.getMaxColumns > 0 && !tableTrackedOffsets.isEmpty) {
               if (formatOptions.dumpIntellijOffsets) {
                 markdown.append("\nTracked Offsets").line() // simulate flex example ast dump
-                var sep = "  "
-                var i = 0
+                var sep     = "  "
+                var i       = 0
                 val offIter = tableOffsets.iterator()
                 while (offIter.hasNext) {
                   val trackedOffset = offIter.next()
@@ -165,23 +161,22 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
     }
   }
 
-  private def renderCaption(node: TableCaption, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderCaption(node: TableCaption, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.getRenderPurpose == RenderPurpose.FORMAT) {
       myTable.foreach(_.setCaptionWithMarkers(node, node.openingMarker, node.text, node.closingMarker))
     } else {
       // HACK: to reuse the table formatting logic of MarkdownTable
-      val dummyCaption = if (node.hasChildren) "dummy" else ""
+      val dummyCaption     = if (node.hasChildren) "dummy" else ""
       val formattedCaption = MarkdownTable.formattedCaption(BasedSequence.of(dummyCaption).subSequence(0, dummyCaption.length), formatOptions)
 
-      if (formattedCaption .isDefined) {
+      if (formattedCaption.isDefined) {
         markdown.line().append(node.openingMarker)
         context.renderChildren(node)
         markdown.append(node.closingMarker).line()
       }
     }
-  }
 
-  private def renderCell(node: TableCell, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderCell(node: TableCell, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.getRenderPurpose == RenderPurpose.FORMAT) {
       var text = node.text
       if (formatOptions.trimCellWhitespace) {
@@ -194,7 +189,7 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
       val cellAlignment = node.getAlignment.fold(CellAlignment.NONE)(_.cellAlignment)
       myTable.foreach(_.addCell(new ssg.md.util.format.TableCell(node, node.openingMarker, text, node.closingMarker, 1, node.span, cellAlignment)))
     } else {
-      if (node.previous .isEmpty) {
+      if (node.previous.isEmpty) {
         if (formatOptions.leadTrailPipes && node.openingMarker.isEmpty) markdown.append('|')
         else markdown.append(node.openingMarker)
       } else {
@@ -207,25 +202,24 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
 
       val childText = Array("")
 
-      context.translatingSpan((context1, writer) => {
+      context.translatingSpan { (context1, writer) =>
         context1.renderChildren(node)
         childText(0) = writer.toString(-1, -1)
-      })
+      }
 
       myTable.foreach { t =>
         if (!t.isSeparator && formatOptions.spaceAroundPipes && (!childText(0).endsWith(" ") || parserTrimCellWhiteSpace)) markdown.append(' ')
       }
 
-      if (node.next .isEmpty) {
+      if (node.next.isEmpty) {
         if (formatOptions.leadTrailPipes && node.closingMarker.isEmpty) markdown.append('|')
         else markdown.append(node.closingMarker)
       } else {
         markdown.append(node.closingMarker)
       }
     }
-  }
 
-  private def renderText(node: Text, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderText(node: Text, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (myTable.exists(_.isSeparator)) {
       val parent = node.ancestorOfType(classOf[Paragraph])
       if (parent.isDefined && parent.get.isInstanceOf[Paragraph] && parent.get.asInstanceOf[Paragraph].hasTableSeparator) {
@@ -236,7 +230,6 @@ class TableNodeFormatter(options: DataHolder) extends NodeFormatter {
     } else {
       markdown.append(node.chars)
     }
-  }
 }
 
 object TableNodeFormatter {

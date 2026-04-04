@@ -13,7 +13,7 @@ package util
 package spec
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{IRender, Node}
+import ssg.md.util.ast.{ IRender, Node }
 import ssg.md.util.data.DataHolder
 
 import java.io.IOException
@@ -39,14 +39,13 @@ object IRenderBase {
   }
 
   val TEXT_RENDERER: IRender = new IRenderBase() {
-    override def render(document: Node, output: Appendable): Unit = {
-      try {
+    override def render(document: Node, output: Appendable): Unit =
+      try
         output.append(document.chars)
-      } catch {
+      catch {
         case e: IOException =>
           e.printStackTrace()
       }
-    }
   }
 
   @deprecated("Use NULL_RENDERER", "0.1.0")

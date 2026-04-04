@@ -11,35 +11,29 @@ package md
 package ext
 package emoji
 
-import ssg.md.ext.emoji.internal.{EmojiDelimiterProcessor, EmojiNodeFormatter, EmojiNodeRenderer}
+import ssg.md.ext.emoji.internal.{ EmojiDelimiterProcessor, EmojiNodeFormatter, EmojiNodeRenderer }
 import ssg.md.formatter.Formatter
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
-import ssg.md.util.data.{DataKey, MutableDataHolder}
+import ssg.md.util.data.{ DataKey, MutableDataHolder }
 
-/**
- * Extension for emoji shortcuts using Emoji-Cheat-Sheet.com.
- *
- * Create it with [[EmojiExtension.create]] and then configure it on the builders.
- *
- * The parsed emoji shortcuts text regions are turned into [[Emoji]] nodes.
- */
-class EmojiExtension private ()
-    extends Parser.ParserExtension,
-    HtmlRenderer.HtmlRendererExtension,
-    Formatter.FormatterExtension {
+/** Extension for emoji shortcuts using Emoji-Cheat-Sheet.com.
+  *
+  * Create it with [[EmojiExtension.create]] and then configure it on the builders.
+  *
+  * The parsed emoji shortcuts text regions are turned into [[Emoji]] nodes.
+  */
+class EmojiExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
+  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit =
     formatterBuilder.nodeFormatterFactory(new EmojiNodeFormatter.Factory())
-  }
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.customDelimiterProcessor(new EmojiDelimiterProcessor())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {
@@ -51,13 +45,13 @@ class EmojiExtension private ()
 
 object EmojiExtension {
 
-  val ATTR_ALIGN: DataKey[String] = new DataKey[String]("ATTR_ALIGN", "absmiddle")
-  val ATTR_IMAGE_SIZE: DataKey[String] = new DataKey[String]("ATTR_IMAGE_SIZE", "20")
-  val ATTR_IMAGE_CLASS: DataKey[String] = new DataKey[String]("ATTR_IMAGE_CLASS", "")
-  val ROOT_IMAGE_PATH: DataKey[String] = new DataKey[String]("ROOT_IMAGE_PATH", "/img/")
-  val USE_SHORTCUT_TYPE: DataKey[EmojiShortcutType] = new DataKey[EmojiShortcutType]("USE_SHORTCUT_TYPE", EmojiShortcutType.EMOJI_CHEAT_SHEET)
-  val USE_IMAGE_TYPE: DataKey[EmojiImageType] = new DataKey[EmojiImageType]("USE_IMAGE_TYPE", EmojiImageType.IMAGE_ONLY)
-  val USE_UNICODE_FILE_NAMES: DataKey[Boolean] = new DataKey[Boolean]("USE_UNICODE_FILE_NAMES", false)
+  val ATTR_ALIGN:             DataKey[String]            = new DataKey[String]("ATTR_ALIGN", "absmiddle")
+  val ATTR_IMAGE_SIZE:        DataKey[String]            = new DataKey[String]("ATTR_IMAGE_SIZE", "20")
+  val ATTR_IMAGE_CLASS:       DataKey[String]            = new DataKey[String]("ATTR_IMAGE_CLASS", "")
+  val ROOT_IMAGE_PATH:        DataKey[String]            = new DataKey[String]("ROOT_IMAGE_PATH", "/img/")
+  val USE_SHORTCUT_TYPE:      DataKey[EmojiShortcutType] = new DataKey[EmojiShortcutType]("USE_SHORTCUT_TYPE", EmojiShortcutType.EMOJI_CHEAT_SHEET)
+  val USE_IMAGE_TYPE:         DataKey[EmojiImageType]    = new DataKey[EmojiImageType]("USE_IMAGE_TYPE", EmojiImageType.IMAGE_ONLY)
+  val USE_UNICODE_FILE_NAMES: DataKey[Boolean]           = new DataKey[Boolean]("USE_UNICODE_FILE_NAMES", false)
 
   def create(): EmojiExtension = new EmojiExtension()
 }

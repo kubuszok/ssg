@@ -15,16 +15,16 @@ package md
 package test
 package util
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ ByteArrayInputStream, InputStream }
 
 import scala.scalajs.js
-import scala.scalajs.js.typedarray.{Int8Array, Uint8Array}
+import scala.scalajs.js.typedarray.{ Int8Array, Uint8Array }
 import scala.util.boundary
 import scala.util.boundary.break
 
 object ResourceCompatPlatform {
 
-  private val fs = js.Dynamic.global.require("fs")
+  private val fs       = js.Dynamic.global.require("fs")
   private val nodePath = js.Dynamic.global.require("path")
 
   /** Base directories where sbt places test resources, in search order. */
@@ -41,14 +41,14 @@ object ResourceCompatPlatform {
         val filePath = nodePath.join(baseDirs(i), cleanPath).asInstanceOf[String]
         if (fs.existsSync(filePath).asInstanceOf[Boolean]) {
           val buffer = fs.readFileSync(filePath)
-          val uint8 = new Uint8Array(
+          val uint8  = new Uint8Array(
             buffer.buffer.asInstanceOf[js.typedarray.ArrayBuffer],
             buffer.byteOffset.asInstanceOf[Int],
             buffer.length.asInstanceOf[Int]
           )
-          val int8 = new Int8Array(uint8.buffer, uint8.byteOffset, uint8.length)
+          val int8  = new Int8Array(uint8.buffer, uint8.byteOffset, uint8.length)
           val bytes = new Array[Byte](int8.length)
-          var j = 0
+          var j     = 0
           while (j < bytes.length) {
             bytes(j) = int8(j)
             j += 1

@@ -13,14 +13,14 @@ package gfm
 package issues
 package internal
 
-import ssg.md.util.data.{DataHolder, MutableDataHolder, MutableDataSetter}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSetter }
 
 import scala.language.implicitConversions
 
 class GfmIssuesOptions(options: DataHolder) extends MutableDataSetter {
-  val gitHubIssuesUrlRoot: String = GfmIssuesExtension.GIT_HUB_ISSUES_URL_ROOT.get(options)
-  val gitHubIssueUrlPrefix: String = GfmIssuesExtension.GIT_HUB_ISSUE_URL_PREFIX.get(options)
-  val gitHubIssueUrlSuffix: String = GfmIssuesExtension.GIT_HUB_ISSUE_URL_SUFFIX.get(options)
+  val gitHubIssuesUrlRoot:   String = GfmIssuesExtension.GIT_HUB_ISSUES_URL_ROOT.get(options)
+  val gitHubIssueUrlPrefix:  String = GfmIssuesExtension.GIT_HUB_ISSUE_URL_PREFIX.get(options)
+  val gitHubIssueUrlSuffix:  String = GfmIssuesExtension.GIT_HUB_ISSUE_URL_SUFFIX.get(options)
   val gitHubIssueTextPrefix: String = GfmIssuesExtension.GIT_HUB_ISSUE_HTML_PREFIX.get(options)
   val gitHubIssueTextSuffix: String = GfmIssuesExtension.GIT_HUB_ISSUE_HTML_SUFFIX.get(options)
 

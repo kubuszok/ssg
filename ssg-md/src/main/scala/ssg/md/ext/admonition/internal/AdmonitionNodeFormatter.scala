@@ -25,11 +25,12 @@ class AdmonitionNodeFormatter(options: DataHolder) extends NodeFormatter {
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[AdmonitionBlock](classOf[AdmonitionBlock], (node, ctx, md) => render(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[AdmonitionBlock](classOf[AdmonitionBlock], (node, ctx, md) => render(node, ctx, md))
+      )
+    )
 
   private def render(node: AdmonitionBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.blankLine()

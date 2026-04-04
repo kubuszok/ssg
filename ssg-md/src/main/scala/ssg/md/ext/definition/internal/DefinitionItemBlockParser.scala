@@ -13,22 +13,22 @@ package definition
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Paragraph, util}
-import ssg.md.parser.{InlineParser, ParserEmulationProfile}
+import ssg.md.ast.{ Paragraph, util }
+import ssg.md.parser.{ InlineParser, ParserEmulationProfile }
 import ssg.md.parser.block.*
-import ssg.md.parser.core.{DocumentBlockParser, ParagraphParser}
-import ssg.md.util.ast.{BlankLine, Block, Document}
+import ssg.md.parser.core.{ DocumentBlockParser, ParagraphParser }
+import ssg.md.util.ast.{ BlankLine, Block, Document }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
-import ssg.md.util.sequence.mappers.{SpecialLeadInCharsHandler, SpecialLeadInHandler}
+import ssg.md.util.sequence.mappers.{ SpecialLeadInCharsHandler, SpecialLeadInHandler }
 
 import scala.language.implicitConversions
 
 class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlockParser.ItemData) extends AbstractBlockParser {
 
-  private val defOptions: DefinitionOptions = new DefinitionOptions(options)
-  private val block: DefinitionItem = new DefinitionItem()
-  private var hadBlankLine: Boolean = false
+  private val defOptions:   DefinitionOptions = new DefinitionOptions(options)
+  private val block:        DefinitionItem    = new DefinitionItem()
+  private var hadBlankLine: Boolean           = false
 
   block.openingMarker = itemData.itemMarker
   block.tight_=(itemData.isTight)
@@ -43,7 +43,7 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
 
   override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
     val firstChild = block.firstChild
-    val isEmpty = firstChild.isEmpty
+    val isEmpty    = firstChild.isEmpty
 
     if (state.isBlank) {
       firstChild.foreach { fc =>
@@ -57,7 +57,7 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
       val emulationFamily = defOptions.myParserEmulationProfile.family
       if (emulationFamily == ParserEmulationProfile.COMMONMARK || emulationFamily == ParserEmulationProfile.KRAMDOWN || emulationFamily == ParserEmulationProfile.MARKDOWN) {
         val currentIndent = state.indent
-        val newColumn = state.column + contentIndent
+        val newColumn     = state.column + contentIndent
 
         if (currentIndent >= contentIndent) {
           // our child element
@@ -78,7 +78,7 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
         }
       } else if (emulationFamily == ParserEmulationProfile.FIXED_INDENT) {
         val currentIndent = state.indent
-        val newColumn = state.column + defOptions.itemIndent
+        val newColumn     = state.column + defOptions.itemIndent
 
         if (currentIndent >= defOptions.itemIndent) {
           Nullable(BlockContinue.atColumn(newColumn))
@@ -104,9 +104,8 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
 
   override def addLine(state: ParserState, line: BasedSequence): Unit = {}
 
-  override def closeBlock(state: ParserState): Unit = {
+  override def closeBlock(state: ParserState): Unit =
     block.setCharsFromContent()
-  }
 
   override def parseInlines(inlineParser: InlineParser): Unit = {}
 }
@@ -114,23 +113,23 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
 object DefinitionItemBlockParser {
 
   final case class ItemData(
-    isEmpty: Boolean,
-    isTight: Boolean,
-    markerIndex: Int,
-    markerColumn: Int,
-    markerIndent: Int,
+    isEmpty:       Boolean,
+    isTight:       Boolean,
+    markerIndex:   Int,
+    markerColumn:  Int,
+    markerIndent:  Int,
     contentOffset: Int,
-    itemMarker: BasedSequence
+    itemMarker:    BasedSequence
   )
 
   def parseItemMarker(options: DefinitionOptions, state: ParserState, isTight: Boolean): ItemData = {
-    val line = state.line
-    val markerIndex = state.nextNonSpaceIndex
+    val line         = state.line
+    val markerIndex  = state.nextNonSpaceIndex
     val markerColumn = state.column + state.indent
     val markerIndent = state.indent
 
     val rest = line.subSequence(markerIndex, line.length())
-    val c1 = rest.firstChar()
+    val c1   = rest.firstChar()
     if (!(c1 == ':' && options.colonMarker) && !(c1 == '~' && options.tildeMarker)) {
       null.asInstanceOf[ItemData] // @nowarn - faithful port: returns null when no match
     } else {
@@ -139,7 +138,7 @@ object DefinitionItemBlockParser {
 
       // See at which column the content starts if there is content
       var hasContent = false
-      var i = markerIndex + 1
+      var i          = markerIndex + 1
       while (i < line.length()) {
         val c = line.charAt(i)
         if (c == '\t') {
@@ -194,7 +193,7 @@ object DefinitionItemBlockParser {
       val blockParser = matchedBlockParser.blockParser
       if (blockParser.isInstanceOf[DocumentBlockParser]) {
         // if document has paragraph or another definition item at end then we can proceed
-        val node = blockParser.asInstanceOf[DocumentBlockParser].getBlock.asInstanceOf[Document]
+        val node            = blockParser.asInstanceOf[DocumentBlockParser].getBlock.asInstanceOf[Document]
         val lastChildAnyNot = node.lastChildAnyNot(classOf[BlankLine])
         if (!lastChildAnyNot.exists(_.isInstanceOf[Paragraph]) && !lastChildAnyNot.exists(_.isInstanceOf[DefinitionItem])) {
           BlockStart.none()
@@ -203,7 +202,7 @@ object DefinitionItemBlockParser {
           val doubleBlankBreak = defOptions.doubleBlankLineBreaksList && {
             lastChildAnyNot.foreach(_.setCharsFromContent())
             val charSequence = state.line.baseSubSequence(lastChildAnyNot.get.endOffset, state.line.startOffset).normalizeEOL()
-            val interSpace = BasedSequence.of(charSequence)
+            val interSpace   = BasedSequence.of(charSequence)
             interSpace.countLeading(ssg.md.util.misc.CharPredicate.EOL) >= 2
           }
           if (doubleBlankBreak) BlockStart.none()
@@ -219,14 +218,15 @@ object DefinitionItemBlockParser {
     private def tryStartInternal(state: ParserState): Nullable[BlockStart] = {
       // check if we break list on double blank
       val emulationFamily = defOptions.myParserEmulationProfile
-      val currentIndent = state.indent
-      val codeIndent = if (emulationFamily == ParserEmulationProfile.COMMONMARK || emulationFamily == ParserEmulationProfile.FIXED_INDENT) defOptions.codeIndent else defOptions.itemIndent
+      val currentIndent   = state.indent
+      val codeIndent      = if (emulationFamily == ParserEmulationProfile.COMMONMARK || emulationFamily == ParserEmulationProfile.FIXED_INDENT) defOptions.codeIndent else defOptions.itemIndent
 
       if (currentIndent < codeIndent) {
         val itemData = parseItemMarker(defOptions, state, state.activeBlockParser.isInstanceOf[ParagraphParser])
         if (itemData != null) { // @nowarn - parseItemMarker may return null
-          Nullable(BlockStart.of(new DefinitionItemBlockParser(state.properties, itemData))
-            .atColumn(itemData.markerColumn + itemData.itemMarker.length() + itemData.contentOffset))
+          Nullable(
+            BlockStart.of(new DefinitionItemBlockParser(state.properties, itemData)).atColumn(itemData.markerColumn + itemData.itemMarker.length() + itemData.contentOffset)
+          )
         } else {
           BlockStart.none()
         }

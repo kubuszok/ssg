@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object GfmUsersVisitorExt {
-  def VISIT_HANDLERS[V <: GfmUsersVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: GfmUsersVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[GfmUser](classOf[GfmUser], visitor.visit(_)))
-  }
 }

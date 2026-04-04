@@ -14,7 +14,7 @@ package issues
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 
 import scala.language.implicitConversions
 import java.util.regex.Pattern
@@ -32,7 +32,7 @@ class GfmIssuesInlineParserExtension(inlineParser: LightInlineParser) extends In
       inlineParser.flushTextNode()
 
       val openMarker = matches(1)
-      val text = matches(2)
+      val text       = matches(2)
 
       val gfmIssue = new GfmIssue(openMarker, text)
       inlineParser.block.appendChild(gfmIssue)
@@ -54,9 +54,8 @@ object GfmIssuesInlineParserExtension {
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(inlineParser: LightInlineParser): InlineParserExtension = {
+    override def apply(inlineParser: LightInlineParser): InlineParserExtension =
       new GfmIssuesInlineParserExtension(inlineParser)
-    }
 
     override def affectsGlobalScope: Boolean = false
   }

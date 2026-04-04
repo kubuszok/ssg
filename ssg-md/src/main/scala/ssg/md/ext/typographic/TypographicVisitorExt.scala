@@ -16,10 +16,9 @@ import scala.language.implicitConversions
 
 object TypographicVisitorExt {
 
-  def VISIT_HANDLERS[V <: TypographicVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: TypographicVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[TypographicSmarts](classOf[TypographicSmarts], visitor.visit(_)),
-      new VisitHandler[TypographicQuotes](classOf[TypographicQuotes], visitor.visit(_)),
+      new VisitHandler[TypographicQuotes](classOf[TypographicQuotes], visitor.visit(_))
     )
-  }
 }

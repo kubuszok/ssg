@@ -14,7 +14,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.parser.block.*
-import ssg.md.util.ast.{Block, BlockContent}
+import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 
 class FootnoteBlockParser(options: FootnoteOptions, contentOffset: Int) extends AbstractBlockParser {
 
-  private val block: FootnoteBlock = new FootnoteBlock()
+  private val block:   FootnoteBlock          = new FootnoteBlock()
   private var content: Nullable[BlockContent] = Nullable(new BlockContent())
 
   def blockContent: BlockContent = content.get
@@ -47,9 +47,8 @@ class FootnoteBlockParser(options: FootnoteOptions, contentOffset: Int) extends 
     }
   }
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     content.foreach(_.add(line, state.indent))
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     // set the footnote from closingMarker to end
@@ -68,8 +67,8 @@ class FootnoteBlockParser(options: FootnoteOptions, contentOffset: Int) extends 
 
 object FootnoteBlockParser {
 
-  val FOOTNOTE_ID: String = ".*"
-  val FOOTNOTE_ID_PATTERN: Pattern = Pattern.compile("\\[\\^\\s*(" + FOOTNOTE_ID + ")\\s*\\]")
+  val FOOTNOTE_ID:          String  = ".*"
+  val FOOTNOTE_ID_PATTERN:  Pattern = Pattern.compile("\\[\\^\\s*(" + FOOTNOTE_ID + ")\\s*\\]")
   val FOOTNOTE_DEF_PATTERN: Pattern = Pattern.compile("^\\[\\^\\s*(" + FOOTNOTE_ID + ")\\s*\\]:")
 
   class Factory extends CustomBlockParserFactory {
@@ -87,21 +86,21 @@ object FootnoteBlockParser {
 
     private val footnoteOptions: FootnoteOptions = new FootnoteOptions(options)
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val line = state.line
+        val line         = state.line
         val nextNonSpace = state.nextNonSpaceIndex
 
         val trySequence = line.subSequence(nextNonSpace, line.length())
-        val matcher = FOOTNOTE_DEF_PATTERN.matcher(trySequence)
+        val matcher     = FOOTNOTE_DEF_PATTERN.matcher(trySequence)
         if (matcher.find()) {
           // abbreviation definition
-          val openingStart = nextNonSpace + matcher.start()
-          val openingEnd = nextNonSpace + matcher.end()
+          val openingStart  = nextNonSpace + matcher.start()
+          val openingEnd    = nextNonSpace + matcher.end()
           val openingMarker = line.subSequence(openingStart, openingStart + 2)
-          val text = line.subSequence(openingStart + 2, openingEnd - 2).trim()
+          val text          = line.subSequence(openingStart + 2, openingEnd - 2).trim()
           val closingMarker = line.subSequence(openingEnd - 2, openingEnd)
 
           val contentOffset = footnoteOptions.contentIndent
@@ -116,6 +115,5 @@ object FootnoteBlockParser {
           BlockStart.none()
         }
       }
-    }
   }
 }

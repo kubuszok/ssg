@@ -12,8 +12,8 @@ package ext
 package wikilink
 package internal
 
-import ssg.md.parser.{LinkRefProcessor, LinkRefProcessorFactory}
-import ssg.md.util.ast.{Document, Node, TextCollectingVisitor, TextContainer}
+import ssg.md.parser.{ LinkRefProcessor, LinkRefProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, TextCollectingVisitor, TextContainer }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -40,10 +40,9 @@ class WikiLinkLinkRefProcessor(document: Document) extends LinkRefProcessor {
     } else false
   }
 
-  override def createNode(nodeChars: BasedSequence): Node = {
+  override def createNode(nodeChars: BasedSequence): Node =
     if (nodeChars.firstChar() == '!') new WikiImage(nodeChars, options.linkFirstSyntax, options.allowPipeEscape)
     else new WikiLink(nodeChars, options.linkFirstSyntax, options.allowAnchors, options.allowPipeEscape, options.allowAnchorEscape)
-  }
 
   override def adjustInlineText(document: Document, node: Node): BasedSequence = {
     assert(node.isInstanceOf[WikiNode])

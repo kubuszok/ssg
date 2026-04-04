@@ -14,28 +14,25 @@ import ssg.md.Nullable
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.test.util.spec.SpecExample
-import ssg.md.util.data.{DataHolder, DataSet, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, DataSet, MutableDataSet }
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
-/**
- * munit suite for HTML rendering spec tests.
- *
- * Parses markdown with Parser, renders with HtmlRenderer,
- * compares against expected HTML from the spec file.
- *
- * Mirrors the original RendererSpecTest which sets INDENT_SIZE=2
- * and provides a "src-pos" option.
- */
+/** munit suite for HTML rendering spec tests.
+  *
+  * Parses markdown with Parser, renders with HtmlRenderer, compares against expected HTML from the spec file.
+  *
+  * Mirrors the original RendererSpecTest which sets INDENT_SIZE=2 and provides a "src-pos" option.
+  */
 abstract class RendererSpecTestSuite extends SpecTestSuite {
 
   /** Aggregate INDENT_SIZE=2 (from original RendererSpecTest) with subclass defaults. */
   override protected def optionsFor(example: SpecExample): DataHolder = {
     val subclassBase = defaultOptions.getOrElse(new MutableDataSet())
     // Merge renderer base options (INDENT_SIZE=2) with subclass defaults
-    val base = DataSet.aggregate(Nullable(RendererSpecTestSuite.RENDERER_OPTIONS), Nullable(subclassBase)).toImmutable
+    val base      = DataSet.aggregate(Nullable(RendererSpecTestSuite.RENDERER_OPTIONS), Nullable(subclassBase)).toImmutable
     val optionSet = example.optionsSet
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](RendererSpecTestSuite.BASE_OPTIONS_MAP)
@@ -56,7 +53,7 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
 
   /** Prepare the source for parsing, trimming trailing EOL and applying SOURCE_PREFIX/SUFFIX/INDENT. */
   protected def prepareSource(example: SpecExample, options: DataHolder): String = {
-    val noFileEol = TestUtils.NO_FILE_EOL.get(options)
+    val noFileEol     = TestUtils.NO_FILE_EOL.get(options)
     val trimmedSource = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
 
     val sourcePrefix = TestUtils.SOURCE_PREFIX.get(options)
@@ -76,17 +73,17 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
   }
 
   override protected def renderHtml(example: SpecExample, options: DataHolder): String = {
-    val parser = Parser.builder(options).build()
+    val parser   = Parser.builder(options).build()
     val renderer = HtmlRenderer.builder(options).build()
-    val source = prepareSource(example, options)
+    val source   = prepareSource(example, options)
     val document = parser.parse(source)
     renderer.render(document)
   }
 
   override protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = {
-    val parser = Parser.builder(options).build()
+    val parser   = Parser.builder(options).build()
     val renderer = HtmlRenderer.builder(options).build()
-    val source = prepareSource(example, options)
+    val source   = prepareSource(example, options)
     val document = parser.parse(source)
     // Render first so side effects (e.g. footnote ordinal resolution) are applied before AST collection
     renderer.render(document)
@@ -98,9 +95,7 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
 object RendererSpecTestSuite {
 
   /** Base renderer options: INDENT_SIZE=2 (matches original RendererSpecTest). */
-  val RENDERER_OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.INDENT_SIZE, 2)
-    .toImmutable
+  val RENDERER_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).toImmutable
 
   /** Base options map with "src-pos" (matches original RendererSpecTest). */
   val BASE_OPTIONS_MAP: ju.Map[String, DataHolder] = {

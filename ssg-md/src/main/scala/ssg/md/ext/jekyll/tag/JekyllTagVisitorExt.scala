@@ -17,10 +17,9 @@ import scala.language.implicitConversions
 
 object JekyllTagVisitorExt {
 
-  def VISIT_HANDLERS[V <: JekyllTagVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: JekyllTagVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[JekyllTag](classOf[JekyllTag], visitor.visit(_)),
-      new VisitHandler[JekyllTagBlock](classOf[JekyllTagBlock], visitor.visit(_)),
+      new VisitHandler[JekyllTagBlock](classOf[JekyllTagBlock], visitor.visit(_))
     )
-  }
 }

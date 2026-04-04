@@ -12,14 +12,14 @@ package ext
 package gfm
 package strikethrough
 
-import ssg.md.util.ast.{DelimitedNode, Node}
+import ssg.md.util.ast.{ DelimitedNode, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A strikethrough node containing text and other inline nodes as children. */
 class Strikethrough() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = {
@@ -37,7 +37,6 @@ class Strikethrough() extends Node, DelimitedNode {
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpan(out, openingMarker, text, closingMarker, "text")
-  }
 }

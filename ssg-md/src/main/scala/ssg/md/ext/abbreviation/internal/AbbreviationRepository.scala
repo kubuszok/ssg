@@ -13,10 +13,10 @@ package abbreviation
 package internal
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{KeepType, Node, NodeRepository}
-import ssg.md.util.data.{DataHolder, DataKey}
+import ssg.md.util.ast.{ KeepType, Node, NodeRepository }
+import ssg.md.util.data.{ DataHolder, DataKey }
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 class AbbreviationRepository(options: Nullable[DataHolder]) extends NodeRepository[AbbreviationBlock](options.map(AbbreviationExtension.ABBREVIATIONS_KEEP.get(_))) {

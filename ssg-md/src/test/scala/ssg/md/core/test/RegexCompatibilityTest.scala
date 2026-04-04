@@ -19,9 +19,9 @@ import scala.language.implicitConversions
 final class RegexCompatibilityTest extends munit.FunSuite {
 
   private def render(markdown: String): String = {
-    val parser = Parser.builder().build()
+    val parser   = Parser.builder().build()
     val renderer = HtmlRenderer.builder().build()
-    val doc = parser.parse(markdown)
+    val doc      = parser.parse(markdown)
     renderer.render(doc)
   }
 
@@ -96,7 +96,7 @@ final class RegexCompatibilityTest extends munit.FunSuite {
   test("fenced code: backtick in info string prevents opening") {
     // A line like ```not`code``` should not open a fenced code block because
     // the info string contains a backtick
-    val md = "```not`code```\n\nparagraph"
+    val md   = "```not`code```\n\nparagraph"
     val html = render(md)
     // Should not produce a <pre><code> block — backtick in info string is illegal
     assert(!html.contains("<pre><code>"), s"Should not open fenced code with backtick in info: $html")
@@ -147,10 +147,9 @@ final class RegexCompatibilityTest extends munit.FunSuite {
 
   test("unicode whitespace: NBSP in text is preserved") {
     // NBSP (\u00A0) should appear in output — it is a space separator (\p{Zs})
-    val md = "hello\u00A0world"
+    val md   = "hello\u00A0world"
     val html = render(md)
-    assert(html.contains("hello\u00A0world") || html.contains("hello&nbsp;world"),
-      s"NBSP should be preserved in output: $html")
+    assert(html.contains("hello\u00A0world") || html.contains("hello&nbsp;world"), s"NBSP should be preserved in output: $html")
   }
 
   test("hard line break with trailing spaces") {

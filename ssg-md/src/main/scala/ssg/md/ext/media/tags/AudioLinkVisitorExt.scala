@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AudioLinkVisitorExt {
-  def VISIT_HANDLERS[V <: AudioLinkVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AudioLinkVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[AudioLink](classOf[AudioLink], visitor.visit(_)))
-  }
 }

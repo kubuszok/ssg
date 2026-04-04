@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object EmojiVisitorExt {
-  def VISIT_HANDLERS[V <: EmojiVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: EmojiVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[Emoji](classOf[Emoji], visitor.visit(_)))
-  }
 }

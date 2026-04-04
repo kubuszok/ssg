@@ -13,7 +13,7 @@ package enumerated
 package reference
 
 final case class EnumeratedReferenceRendering(
-  referenceFormat: EnumeratedReferenceBlock,
-  referenceType: String,
+  referenceFormat:  EnumeratedReferenceBlock,
+  referenceType:    String,
   referenceOrdinal: Int
 )

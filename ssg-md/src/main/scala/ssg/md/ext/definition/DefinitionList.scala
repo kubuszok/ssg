@@ -12,15 +12,14 @@ package ext
 package definition
 
 import ssg.md.ast.ListBlock
-import ssg.md.util.ast.{BlockContent, Node}
+import ssg.md.util.ast.{ BlockContent, Node }
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
-/**
- * A DefinitionList block node
- */
+/** A DefinitionList block node
+  */
 class DefinitionList() extends ListBlock {
 
   def this(chars: BasedSequence) = {

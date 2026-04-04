@@ -14,11 +14,11 @@ package reference
 package internal
 
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
 class EnumeratedReferenceFormatOptions(options: DataHolder) {
-  val enumeratedReferencePlacement: ElementPlacement = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_PLACEMENT.get(options)
-  val enumeratedReferenceSort: ElementPlacementSort = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_SORT.get(options)
+  val enumeratedReferencePlacement: ElementPlacement     = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_PLACEMENT.get(options)
+  val enumeratedReferenceSort:      ElementPlacementSort = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_SORT.get(options)
 }

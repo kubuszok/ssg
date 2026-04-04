@@ -11,7 +11,7 @@ package md
 package ext
 package toc
 
-import ssg.md.util.ast.{Block, Node}
+import ssg.md.util.ast.{ Block, Node }
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
@@ -20,8 +20,8 @@ import scala.language.implicitConversions
 abstract class TocBlockBase(chars: BasedSequence, styleChars: BasedSequence, closingSimToc: Boolean) extends Block(chars) {
 
   var openingMarker: BasedSequence = chars.subSequence(0, 1)
-  var tocKeyword: BasedSequence = chars.subSequence(1, 4)
-  var style: BasedSequence = if (styleChars != null) styleChars else BasedSequence.NULL // @nowarn - Java interop: may be passed null
+  var tocKeyword:    BasedSequence = chars.subSequence(1, 4)
+  var style:         BasedSequence = if (styleChars != null) styleChars else BasedSequence.NULL // @nowarn - Java interop: may be passed null
   var closingMarker: BasedSequence = {
     val closingPos = chars.indexOf(']', 4)
     if (closingSimToc && !(closingPos != -1 && closingPos + 1 < chars.length() && chars.charAt(closingPos + 1) == ':')) {
@@ -32,7 +32,7 @@ abstract class TocBlockBase(chars: BasedSequence, styleChars: BasedSequence, clo
 
   def this(chars: BasedSequence) = this(chars, null.asInstanceOf[BasedSequence], false) // @nowarn - overloaded ctor
   def this(chars: BasedSequence, closingSimToc: Boolean) = this(chars, null.asInstanceOf[BasedSequence], closingSimToc) // @nowarn - overloaded ctor
-  def this(chars: BasedSequence, styleChars: BasedSequence) = this(chars, styleChars, false)
+  def this(chars: BasedSequence, styleChars:    BasedSequence) = this(chars, styleChars, false)
 
   override def astExtra(out: StringBuilder): Unit = {
     Node.segmentSpan(out, openingMarker, "openingMarker")

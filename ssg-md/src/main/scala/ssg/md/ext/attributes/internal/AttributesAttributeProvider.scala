@@ -13,16 +13,16 @@ package attributes
 package internal
 
 import ssg.md.ast.AnchorRefTarget
-import ssg.md.html.{AttributeProvider, IndependentAttributeProviderFactory}
-import ssg.md.html.renderer.{AttributablePart, CoreNodeRenderer, LinkResolverContext}
+import ssg.md.html.{ AttributeProvider, IndependentAttributeProviderFactory }
+import ssg.md.html.renderer.{ AttributablePart, CoreNodeRenderer, LinkResolverContext }
 import ssg.md.util.ast.Node
-import ssg.md.util.html.{Attribute, MutableAttributes}
+import ssg.md.util.html.{ Attribute, MutableAttributes }
 
 import scala.language.implicitConversions
 
 class AttributesAttributeProvider(context: LinkResolverContext) extends AttributeProvider {
 
-  private val attributeOptions: AttributesOptions = new AttributesOptions(context.getOptions)
+  private val attributeOptions:        AttributesOptions       = new AttributesOptions(context.getOptions)
   private val nodeAttributeRepository: NodeAttributeRepository = AttributesExtension.NODE_ATTRIBUTES.get(context.getOptions)
 
   override def setAttributes(node: Node, part: AttributablePart, attributes: MutableAttributes): Unit = {
@@ -38,7 +38,7 @@ class AttributesAttributeProvider(context: LinkResolverContext) extends Attribut
         val it = nodeAttributesList.iterator()
         while (it.hasNext) {
           val nodeAttributes = it.next()
-          val childIt = nodeAttributes.children.iterator()
+          val childIt        = nodeAttributes.children.iterator()
           while (childIt.hasNext) {
             val attribute = childIt.next()
             attribute match {

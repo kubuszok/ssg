@@ -18,23 +18,21 @@ import ssg.md.ext.jekyll.tag.JekyllTagExtension
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Collections, HashMap}
+import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboJekyllTagSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboJekyllTagSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboJekyllTagSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboJekyllTagSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboJekyllTagSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboJekyllTagSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboJekyllTagSpecTest.OPTIONS_MAP
 }
 
 object ComboJekyllTagSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/jekyll/tag/test/jekyll_tag_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/jekyll/tag/test/jekyll_tag_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboJekyllTagSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

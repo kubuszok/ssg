@@ -20,19 +20,19 @@ import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
 import ssg.md.util.ast.KeepType
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Arrays, HashMap}
+import java.util.{ Arrays, HashMap }
 import scala.language.implicitConversions
 
 final class ComboMacrosSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboMacrosSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboMacrosSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboMacrosSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboMacrosSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboMacrosSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboMacrosSpecTest.OPTIONS_MAP
 }
 
 object ComboMacrosSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/macros/test/ext_macros_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/macros/test/ext_macros_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMacrosSpecTest], SPEC_RESOURCE)
   // Note: original OPTIONS is not .toImmutable — but we call .toImmutable for consistency
   val OPTIONS: DataHolder = new MutableDataSet()

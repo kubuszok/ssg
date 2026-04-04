@@ -11,7 +11,7 @@ package md
 package ext
 package aside
 
-import ssg.md.util.ast.{Block, BlockContent, BlockQuoteLike, KeepTrailingBlankLineContainer, Node}
+import ssg.md.util.ast.{ Block, BlockContent, BlockQuoteLike, KeepTrailingBlankLineContainer, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A ExtAside block node */
@@ -19,9 +19,8 @@ class AsideBlock() extends Block, BlockQuoteLike, KeepTrailingBlankLineContainer
 
   var openingMarker: BasedSequence = BasedSequence.NULL
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.segmentSpanChars(out, openingMarker, "marker")
-  }
 
   override def segments: Array[BasedSequence] = Array(openingMarker)
 

@@ -13,31 +13,29 @@ package enumerated
 package reference
 
 import ssg.md.Nullable
-import ssg.md.ast.{Paragraph, ParagraphItemContainer}
-import ssg.md.util.ast.{Block, Node, ReferenceNode}
+import ssg.md.ast.{ Paragraph, ParagraphItemContainer }
+import ssg.md.util.ast.{ Block, Node, ReferenceNode }
 import ssg.md.util.data.DataHolder
-import ssg.md.util.sequence.{BasedSequence, SequenceUtils}
+import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
 
 import scala.language.implicitConversions
 
 /** A EnumeratedReference block node */
 class EnumeratedReferenceBlock() extends Block, ReferenceNode[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText], ParagraphItemContainer {
 
-  var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
-  var closingMarker: BasedSequence = BasedSequence.NULL
+  var openingMarker:       BasedSequence = BasedSequence.NULL
+  var text:                BasedSequence = BasedSequence.NULL
+  var closingMarker:       BasedSequence = BasedSequence.NULL
   var enumeratedReference: BasedSequence = BasedSequence.NULL
 
-  override def compareTo(other: EnumeratedReferenceBlock): Int = {
+  override def compareTo(other: EnumeratedReferenceBlock): Int =
     SequenceUtils.compare(text, other.text, true)
-  }
 
-  override def referencingNode(node: Node): Nullable[EnumeratedReferenceText] = {
+  override def referencingNode(node: Node): Nullable[EnumeratedReferenceText] =
     node match {
       case ref: EnumeratedReferenceText => Nullable(ref)
       case _ => Nullable.empty
     }
-  }
 
   override def astExtra(out: StringBuilder): Unit = {
     Node.segmentSpan(out, openingMarker, "open")
@@ -53,9 +51,8 @@ class EnumeratedReferenceBlock() extends Block, ReferenceNode[EnumeratedReferenc
     this.chars = chars
   }
 
-  override def isItemParagraph(node: Paragraph): Boolean = {
+  override def isItemParagraph(node: Paragraph): Boolean =
     firstChild.contains(node)
-  }
 
   override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = true
 

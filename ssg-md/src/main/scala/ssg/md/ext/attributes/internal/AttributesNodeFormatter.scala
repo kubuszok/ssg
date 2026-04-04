@@ -23,12 +23,13 @@ class AttributesNodeFormatter(options: DataHolder) extends NodeFormatter {
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[AttributesNode](classOf[AttributesNode], (node, ctx, md) => render(node, ctx, md)),
-      new NodeFormattingHandler[AttributesDelimiter](classOf[AttributesDelimiter], (node, ctx, md) => renderDelimiter(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[AttributesNode](classOf[AttributesNode], (node, ctx, md) => render(node, ctx, md)),
+        new NodeFormattingHandler[AttributesDelimiter](classOf[AttributesDelimiter], (node, ctx, md) => renderDelimiter(node, ctx, md))
+      )
+    )
 
   private def render(node: AttributesNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(node.openingMarker)

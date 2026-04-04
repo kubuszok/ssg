@@ -18,23 +18,21 @@ import ssg.md.ext.toc.internal.TocOptions
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Collections, HashMap}
+import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboTocSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboTocSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboTocSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboTocSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboTocSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboTocSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboTocSpecTest.OPTIONS_MAP
 }
 
 object ComboTocSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/toc/test/ext_toc_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/toc/test/ext_toc_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboTocSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singletonList(TocExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singletonList(TocExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

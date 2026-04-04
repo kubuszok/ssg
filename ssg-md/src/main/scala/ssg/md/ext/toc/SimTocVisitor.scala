@@ -12,8 +12,8 @@ package ext
 package toc
 
 trait SimTocVisitor {
-  def visit(node: SimTocBlock): Unit
+  def visit(node: SimTocBlock):      Unit
   def visit(node: SimTocOptionList): Unit
-  def visit(node: SimTocOption): Unit
-  def visit(node: SimTocContent): Unit
+  def visit(node: SimTocOption):     Unit
+  def visit(node: SimTocContent):    Unit
 }

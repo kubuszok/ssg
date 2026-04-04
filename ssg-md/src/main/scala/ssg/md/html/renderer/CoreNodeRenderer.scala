@@ -27,13 +27,13 @@ import scala.language.implicitConversions
 /** The node renderer that renders all the core nodes (comes last in the order of node renderers).
   */
 class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
-  private val referenceRepository:       ReferenceRepository = Parser.REFERENCES.get(options)
-  private val recheckUndefinedReferences: Boolean            = HtmlRenderer.RECHECK_UNDEFINED_REFERENCES.get(Nullable(options))
-  private val listOptions:               ListOptions        = ListOptions.get(options)
-  private val obfuscateEmail:            Boolean            = HtmlRenderer.OBFUSCATE_EMAIL.get(Nullable(options))
-  private val obfuscateEmailRandom:      Boolean            = HtmlRenderer.OBFUSCATE_EMAIL_RANDOM.get(Nullable(options))
-  private val codeContentBlock:          Boolean            = Parser.FENCED_CODE_CONTENT_BLOCK.get(options)
-  private val codeSoftLineBreaks:        Boolean            = Parser.CODE_SOFT_LINE_BREAKS.get(options)
+  private val referenceRepository:        ReferenceRepository = Parser.REFERENCES.get(options)
+  private val recheckUndefinedReferences: Boolean             = HtmlRenderer.RECHECK_UNDEFINED_REFERENCES.get(Nullable(options))
+  private val listOptions:                ListOptions         = ListOptions.get(options)
+  private val obfuscateEmail:             Boolean             = HtmlRenderer.OBFUSCATE_EMAIL.get(Nullable(options))
+  private val obfuscateEmailRandom:       Boolean             = HtmlRenderer.OBFUSCATE_EMAIL_RANDOM.get(Nullable(options))
+  private val codeContentBlock:           Boolean             = Parser.FENCED_CODE_CONTENT_BLOCK.get(options)
+  private val codeSoftLineBreaks:         Boolean             = Parser.CODE_SOFT_LINE_BREAKS.get(options)
 
   private var myLines:             Nullable[List[Range]] = Nullable.empty
   private var myEOLs:              Nullable[List[Int]]   = Nullable.empty
@@ -210,7 +210,7 @@ class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
         )
     }
 
-  def renderTextBlockParagraphLines(node: Paragraph, context: NodeRendererContext, html: HtmlWriter, wrapTextInSpan: Boolean): Unit = {
+  def renderTextBlockParagraphLines(node: Paragraph, context: NodeRendererContext, html: HtmlWriter, wrapTextInSpan: Boolean): Unit =
     if (context.getHtmlOptions.sourcePositionParagraphLines && node.hasChildren) {
       val breakCollectingVisitor = new LineCollectingVisitor()
       myLines = Nullable(breakCollectingVisitor.collectAndGetRanges(node).asScala.toList)
@@ -227,7 +227,6 @@ class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
     } else {
       context.renderChildren(node)
     }
-  }
 
   private def outputSourceLineSpan(parentNode: Node, startNode: Node, endNode: Node, html: HtmlWriter): Unit = {
     var startOffset = startNode.startOffset
@@ -361,7 +360,7 @@ class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private def renderEmphasis(node: Emphasis, context: NodeRendererContext, html: HtmlWriter): Unit = {
-    val htmlOptions = context.getHtmlOptions
+    val htmlOptions    = context.getHtmlOptions
     val useCustomStyle = htmlOptions.emphasisStyleHtmlOpen.isDefined && htmlOptions.emphasisStyleHtmlClose.isDefined
     if (!useCustomStyle) {
       if (context.getHtmlOptions.sourcePositionParagraphLines) {
@@ -380,7 +379,7 @@ class CoreNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private def renderStrongEmphasis(node: StrongEmphasis, context: NodeRendererContext, html: HtmlWriter): Unit = {
-    val htmlOptions = context.getHtmlOptions
+    val htmlOptions    = context.getHtmlOptions
     val useCustomStyle = htmlOptions.strongEmphasisStyleHtmlOpen.isDefined && htmlOptions.strongEmphasisStyleHtmlClose.isDefined
     if (!useCustomStyle) {
       if (context.getHtmlOptions.sourcePositionParagraphLines) {

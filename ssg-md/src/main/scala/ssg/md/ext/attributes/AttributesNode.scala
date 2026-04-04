@@ -11,14 +11,14 @@ package md
 package ext
 package attributes
 
-import ssg.md.util.ast.{DelimitedNode, DoNotDecorate, Node, NonRenderingInline}
+import ssg.md.util.ast.{ DelimitedNode, DoNotDecorate, Node, NonRenderingInline }
 import ssg.md.util.sequence.BasedSequence
 
 /** A AttributesNode node */
 class AttributesNode() extends Node, DelimitedNode, DoNotDecorate, NonRenderingInline {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = { this(); this.chars = chars }
@@ -35,7 +35,6 @@ class AttributesNode() extends Node, DelimitedNode, DoNotDecorate, NonRenderingI
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpanChars(out, openingMarker, text, closingMarker, "text")
-  }
 }

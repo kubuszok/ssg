@@ -15,7 +15,6 @@ import java.io.InputStream
 
 object PlatformResourcesImpl {
 
-  def getResourceAsStream(cls: Class[?], path: String): Nullable[InputStream] = {
+  def getResourceAsStream(cls: Class[?], path: String): Nullable[InputStream] =
     Nullable(cls.getResourceAsStream(path))
-  }
 }

@@ -11,14 +11,7 @@ package md
 package parser
 package core
 
-import ssg.md.ast.{
-  HtmlBlock,
-  HtmlBlockBase,
-  HtmlCommentBlock,
-  HtmlInnerBlock,
-  HtmlInnerBlockComment,
-  Paragraph
-}
+import ssg.md.ast.{ HtmlBlock, HtmlBlockBase, HtmlCommentBlock, HtmlInnerBlock, HtmlInnerBlockComment, Paragraph }
 import ssg.md.ast.util.Parsing
 import ssg.md.parser.Parser
 import ssg.md.parser.block._
@@ -35,10 +28,10 @@ import scala.util.boundary
 import scala.util.boundary.break
 
 class HtmlBlockParser(
-  options:                  DataHolder,
-  val closingPattern:       Nullable[Pattern],
-  isComment:                Boolean,
-  private val deepParser:   Nullable[HtmlDeepParser]
+  options:                DataHolder,
+  val closingPattern:     Nullable[Pattern],
+  isComment:              Boolean,
+  private val deepParser: Nullable[HtmlDeepParser]
 ) extends AbstractBlockParser {
 
   private val _block: HtmlBlockBase =
@@ -70,15 +63,15 @@ class HtmlBlockParser(
 
   override def getBlockContent: Nullable[BlockContent] = content
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] =
     deepParser match {
       case dp if dp.isDefined =>
         val parser = dp.get
         if (state.isBlank) {
           if (
             parser.isHtmlClosed
-              || (myHtmlBlockDeepParseBlankLineInterrupts && !parser.haveOpenRawTag)
-              || (myHtmlBlockDeepParseBlankLineInterruptsPartialTag && parser.isBlankLineInterruptible)
+            || (myHtmlBlockDeepParseBlankLineInterrupts && !parser.haveOpenRawTag)
+            || (myHtmlBlockDeepParseBlankLineInterruptsPartialTag && parser.isBlankLineInterruptible)
           ) {
             BlockContinue.none()
           } else {
@@ -98,7 +91,6 @@ class HtmlBlockParser(
           Nullable(BlockContinue.atIndex(state.getIndex))
         }
     }
-  }
 
   override def addLine(state: ParserState, line: BasedSequence): Unit = {
     deepParser match {
@@ -122,14 +114,12 @@ class HtmlBlockParser(
     content.foreach(_.add(line, state.indent))
   }
 
-  override def canInterruptBy(blockParserFactory: BlockParserFactory): Boolean = {
+  override def canInterruptBy(blockParserFactory: BlockParserFactory): Boolean =
     myHtmlBlockDeepParseMarkdownInterruptsClosed
       && deepParser.isDefined
       && !(blockParserFactory.isInstanceOf[HtmlBlockParser.Factory]
-        || (!myHtmlBlockDeepParseIndentedCodeInterrupts && blockParserFactory
-          .isInstanceOf[IndentedCodeBlockParser.BlockFactory]))
+        || (!myHtmlBlockDeepParseIndentedCodeInterrupts && blockParserFactory.isInstanceOf[IndentedCodeBlockParser.BlockFactory]))
       && deepParser.get.isHtmlClosed
-  }
 
   override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean =
     false
@@ -215,8 +205,7 @@ object HtmlBlockParser {
 
       val forTranslator = Parser.HTML_FOR_TRANSLATOR.get(options)
       if (forTranslator) {
-        sb.append(delimiter)
-          .append(Parser.TRANSLATION_HTML_BLOCK_TAG_PATTERN.get(options))
+        sb.append(delimiter).append(Parser.TRANSLATION_HTML_BLOCK_TAG_PATTERN.get(options))
         delimiter = "|"
       }
 
@@ -317,8 +306,8 @@ object HtmlBlockParser {
 
       if (
         state.indent < 4
-          && line.charAt(nextNonSpace) == '<'
-          && !matchedBlockParser.blockParser.isInstanceOf[HtmlBlockParser]
+        && line.charAt(nextNonSpace) == '<'
+        && !matchedBlockParser.blockParser.isInstanceOf[HtmlBlockParser]
       ) {
         if (myHtmlBlockDeepParser) {
           val deepParser = HtmlDeepParser(Parser.HTML_BLOCK_TAGS.get(state.properties))
@@ -331,10 +320,8 @@ object HtmlBlockParser {
           if (deepParser.hadHtml) {
             if (
               (deepParser.htmlMatch.contains(HtmlDeepParser.HtmlMatch.OPEN_TAG)
-                || (!myHtmlCommentBlocksInterruptParagraph && deepParser.htmlMatch
-                  .contains(HtmlDeepParser.HtmlMatch.COMMENT)))
-                && (!deepParser.isFirstBlockTag && matchedBlockParser.blockParser.getBlock
-                  .isInstanceOf[Paragraph])
+                || (!myHtmlCommentBlocksInterruptParagraph && deepParser.htmlMatch.contains(HtmlDeepParser.HtmlMatch.COMMENT)))
+              && (!deepParser.isFirstBlockTag && matchedBlockParser.blockParser.getBlock.isInstanceOf[Paragraph])
             ) {
               // cannot interrupt paragraph with non-block open tag or comment (when configured)
               BlockStart.none()
@@ -359,12 +346,11 @@ object HtmlBlockParser {
         } else {
           boundary[Nullable[BlockStart]] {
             var blockType = 1
-            while (blockType <= 7) {
+            while (blockType <= 7)
               // Type 7 cannot interrupt a paragraph or may not start a block altogether
               if (
                 blockType == 7
-                  && (myHtmlBlockStartOnlyOnBlockTags || matchedBlockParser.blockParser.getBlock
-                    .isInstanceOf[Paragraph])
+                && (myHtmlBlockStartOnlyOnBlockTags || matchedBlockParser.blockParser.getBlock.isInstanceOf[Paragraph])
               ) {
                 blockType += 1
               } else {
@@ -372,24 +358,21 @@ object HtmlBlockParser {
                   myPatterns = Nullable(Patterns(state.parsing, state.properties))
                 }
 
-                val patterns       = myPatterns.get
+                val patterns         = myPatterns.get
                 val (opener, closer) = patterns.BLOCK_PATTERNS(blockType)
-                val matcher        = opener.get.matcher(line.subSequence(nextNonSpace, line.length()))
-                val matches        = matcher.find()
+                val matcher          = opener.get.matcher(line.subSequence(nextNonSpace, line.length()))
+                val matches          = matcher.find()
 
                 // TEST: non-interrupting of paragraphs by HTML comments
                 if (
                   matches
-                    && (myHtmlCommentBlocksInterruptParagraph
-                      || blockType != patterns.COMMENT_PATTERN_INDEX
-                      || !matchedBlockParser.blockParser.isInstanceOf[ParagraphParser])
+                  && (myHtmlCommentBlocksInterruptParagraph
+                    || blockType != patterns.COMMENT_PATTERN_INDEX
+                    || !matchedBlockParser.blockParser.isInstanceOf[ParagraphParser])
                 ) {
                   // Issue #158, HTML Comment followed by text
                   if (blockType == patterns.COMMENT_PATTERN_INDEX && myHtmlBlockCommentOnlyFullLine) {
-                    val endMatcher = patterns
-                      .BLOCK_PATTERNS(patterns.COMMENT_PATTERN_INDEX)._2
-                      .get
-                      .matcher(line.subSequence(matcher.end(), line.length()))
+                    val endMatcher = patterns.BLOCK_PATTERNS(patterns.COMMENT_PATTERN_INDEX)._2.get.matcher(line.subSequence(matcher.end(), line.length()))
                     if (endMatcher.find()) {
                       // see if nothing follows
                       val trailing =
@@ -417,7 +400,6 @@ object HtmlBlockParser {
 
                 blockType += 1
               }
-            }
 
             BlockStart.none()
           }

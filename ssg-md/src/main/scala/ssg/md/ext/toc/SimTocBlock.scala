@@ -17,8 +17,7 @@ import ssg.md.util.sequence.BasedSequence
 import scala.language.implicitConversions
 
 /** A simulated toc block node */
-class SimTocBlock(chars: BasedSequence, styleChars: BasedSequence, titleChars: BasedSequence)
-    extends TocBlockBase(chars, styleChars, true) {
+class SimTocBlock(chars: BasedSequence, styleChars: BasedSequence, titleChars: BasedSequence) extends TocBlockBase(chars, styleChars, true) {
 
   var anchorMarker: BasedSequence = {
     val anchorPos = chars.indexOf('#', closingMarker.endOffset - chars.startOffset)
@@ -27,7 +26,7 @@ class SimTocBlock(chars: BasedSequence, styleChars: BasedSequence, titleChars: B
   }
 
   var openingTitleMarker: BasedSequence = BasedSequence.NULL
-  var title: BasedSequence = BasedSequence.NULL
+  var title:              BasedSequence = BasedSequence.NULL
   var closingTitleMarker: BasedSequence = BasedSequence.NULL
 
   if (titleChars != null) { // @nowarn - Java interop: may be null

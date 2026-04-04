@@ -11,16 +11,15 @@ package md
 package ext
 package definition
 
-import ssg.md.ast.{ListItem, Paragraph}
+import ssg.md.ast.{ ListItem, Paragraph }
 import ssg.md.util.ast.Node
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 
-/**
- * A Definition block node
- */
+/** A Definition block node
+  */
 class DefinitionTerm() extends ListItem {
 
   override def astExtra(out: StringBuilder): Unit = {}

@@ -14,9 +14,9 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.ast.Paragraph
-import ssg.md.html.{HtmlRenderer, HtmlWriter}
+import ssg.md.html.{ HtmlRenderer, HtmlWriter }
 import ssg.md.html.renderer.*
-import ssg.md.util.ast.{Document, NodeVisitor, VisitHandler}
+import ssg.md.util.ast.{ Document, NodeVisitor, VisitHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
@@ -24,37 +24,39 @@ import scala.language.implicitConversions
 class MacrosNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
 
   private val macrosOptions = new MacrosOptions(options)
-  private val repository: MacroDefinitionRepository = MacrosExtension.MACRO_DEFINITIONS.get(options)
-  private val recheckUndefinedReferences: Boolean = HtmlRenderer.RECHECK_UNDEFINED_REFERENCES.get(options)
+  private val repository:                 MacroDefinitionRepository = MacrosExtension.MACRO_DEFINITIONS.get(options)
+  private val recheckUndefinedReferences: Boolean                   = HtmlRenderer.RECHECK_UNDEFINED_REFERENCES.get(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[MacroReference](classOf[MacroReference], (node, ctx, html) => renderMacroReference(node, ctx, html)),
-      new NodeRenderingHandler[MacroDefinitionBlock](classOf[MacroDefinitionBlock], (node, ctx, html) => renderMacroDefinitionBlock(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[MacroReference](classOf[MacroReference], (node, ctx, html) => renderMacroReference(node, ctx, html)),
+        new NodeRenderingHandler[MacroDefinitionBlock](classOf[MacroDefinitionBlock], (node, ctx, html) => renderMacroDefinitionBlock(node, ctx, html))
+      )
+    )
 
-  override def getRenderingPhases: Nullable[Set[RenderingPhase]] = {
+  override def getRenderingPhases: Nullable[Set[RenderingPhase]] =
     Nullable(Set(RenderingPhase.BODY_TOP))
-  }
 
-  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit = {
+  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit =
     if (phase == RenderingPhase.BODY_TOP) {
       if (recheckUndefinedReferences) {
         // need to see if have undefined footnotes that were defined after parsing
         var hadNewFootnotes = false
-        val visitor = new NodeVisitor(
-          new VisitHandler[MacroReference](classOf[MacroReference], (node: MacroReference) => {
-            if (!node.isDefined) {
-              val macroDefinitionBlock = node.getMacroDefinitionBlock(repository)
+        val visitor         = new NodeVisitor(
+          new VisitHandler[MacroReference](
+            classOf[MacroReference],
+            (node: MacroReference) =>
+              if (!node.isDefined) {
+                val macroDefinitionBlock = node.getMacroDefinitionBlock(repository)
 
-              if (macroDefinitionBlock != null) {
-                repository.addMacrosReference(macroDefinitionBlock, node)
-                node.macroDefinitionBlock = macroDefinitionBlock
-                hadNewFootnotes = true
+                if (macroDefinitionBlock != null) {
+                  repository.addMacrosReference(macroDefinitionBlock, node)
+                  node.macroDefinitionBlock = macroDefinitionBlock
+                  hadNewFootnotes = true
+                }
               }
-            }
-          })
+          )
         )
 
         visitor.visit(document)
@@ -63,7 +65,6 @@ class MacrosNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
         }
       }
     }
-  }
 
   private def renderMacroReference(node: MacroReference, context: NodeRendererContext, html: HtmlWriter): Unit = {
     // render contents of macro definition
@@ -92,9 +93,8 @@ class MacrosNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
               context.renderChildren(macroDefinitionBlock)
             }
           }
-        } finally {
+        } finally
           macroDefinitionBlock.inExpansion = false
-        }
       }
     } else {
       html.text(node.chars)

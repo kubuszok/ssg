@@ -13,5 +13,5 @@ package footnotes
 
 trait FootnoteVisitor {
   def visit(node: FootnoteBlock): Unit
-  def visit(node: Footnote): Unit
+  def visit(node: Footnote):      Unit
 }

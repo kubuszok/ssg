@@ -16,7 +16,7 @@ package internal
 import ssg.md.util.data.DataHolder
 
 class EscapedCharacterOptions(options: DataHolder) {
-  //this.escaped_characterOption1 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION1.getFrom(options)
-  //this.escaped_characterOption2 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION2.getFrom(options)
-  //this.escaped_characterOption3 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION3.getFrom(options)
+  // this.escaped_characterOption1 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION1.getFrom(options)
+  // this.escaped_characterOption2 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION2.getFrom(options)
+  // this.escaped_characterOption3 = EscapedCharacterExtension.ESCAPED_CHARACTER_OPTION3.getFrom(options)
 }

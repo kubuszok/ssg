@@ -25,25 +25,25 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
 
   private val admonitionOptions: AdmonitionOptions = new AdmonitionOptions(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set[NodeRenderingHandler[?]](
-      new NodeRenderingHandler[AdmonitionBlock](classOf[AdmonitionBlock], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set[NodeRenderingHandler[?]](
+        new NodeRenderingHandler[AdmonitionBlock](classOf[AdmonitionBlock], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  override def getRenderingPhases: Nullable[Set[RenderingPhase]] = {
+  override def getRenderingPhases: Nullable[Set[RenderingPhase]] =
     Nullable(Set(RenderingPhase.BODY_TOP))
-  }
 
-  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit = {
+  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit =
     if (phase == RenderingPhase.BODY_TOP) {
       // dump out the SVG used by the rest of the nodes
       val resolvedQualifiers = new java.util.HashSet[String]()
 
       val referencedQualifiers = new AdmonitionCollectingVisitor().collectAndGetQualifiers(document)
-      val iter = referencedQualifiers.iterator()
+      val iter                 = referencedQualifiers.iterator()
       while (iter.hasNext) {
-        val qualifier = iter.next()
+        val qualifier         = iter.next()
         var resolvedQualifier = admonitionOptions.qualifierTypeMap.get(qualifier)
         if (resolvedQualifier == null) resolvedQualifier = admonitionOptions.unresolvedQualifier // @nowarn - Java map get may return null
         resolvedQualifiers.add(resolvedQualifier)
@@ -51,12 +51,11 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
 
       if (!resolvedQualifiers.isEmpty) {
         html.line()
-        html.attr("xmlns", "http://www.w3.org/2000/svg").attr(Attribute.CLASS_ATTR, "adm-hidden").withAttr(AdmonitionNodeRenderer.ADMONITION_SVG_OBJECT_PART)
-          .tag("svg")
+        html.attr("xmlns", "http://www.w3.org/2000/svg").attr(Attribute.CLASS_ATTR, "adm-hidden").withAttr(AdmonitionNodeRenderer.ADMONITION_SVG_OBJECT_PART).tag("svg")
         html.indent().line()
         val qIter = resolvedQualifiers.iterator()
         while (qIter.hasNext) {
-          val info = qIter.next()
+          val info       = qIter.next()
           val svgContent = admonitionOptions.typeSvgMap.get(info)
           if (svgContent != null && !svgContent.isEmpty) { // @nowarn - Java map get may return null
             html.raw("<symbol id=\"adm-").raw(info).raw("\">")
@@ -73,10 +72,9 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
         html.line()
       }
     }
-  }
 
   private def render(node: AdmonitionBlock, context: NodeRendererContext, html: HtmlWriter): Unit = {
-    val info = node.info.toString.toLowerCase
+    val info     = node.info.toString.toLowerCase
     var nodeType = admonitionOptions.qualifierTypeMap.get(info)
     if (nodeType == null) { // @nowarn - Java map get may return null
       nodeType = admonitionOptions.unresolvedQualifier
@@ -97,10 +95,7 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
       else Nullable.empty
 
     if (title.isEmpty) {
-      html.srcPos(node.chars).withAttr()
-        .attr(Attribute.CLASS_ATTR, "adm-block")
-        .attr(Attribute.CLASS_ATTR, "adm-" + nodeType)
-        .tag("div", false)
+      html.srcPos(node.chars).withAttr().attr(Attribute.CLASS_ATTR, "adm-block").attr(Attribute.CLASS_ATTR, "adm-" + nodeType).tag("div", false)
       html.line()
 
       html.attr(Attribute.CLASS_ATTR, "adm-body").withAttr(AdmonitionNodeRenderer.ADMONITION_BODY_PART).tag("div")
@@ -112,8 +107,7 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
       html.closeTag("div").line()
       html.closeTag("div").line()
     } else {
-      html.srcPos(node.chars)
-        .attr(Attribute.CLASS_ATTR, "adm-block").attr(Attribute.CLASS_ATTR, "adm-" + nodeType)
+      html.srcPos(node.chars).attr(Attribute.CLASS_ATTR, "adm-block").attr(Attribute.CLASS_ATTR, "adm-" + nodeType)
 
       openClose.foreach { oc =>
         html.attr(Attribute.CLASS_ATTR, oc).attr(Attribute.CLASS_ATTR, "adm-" + nodeType)
@@ -137,10 +131,10 @@ class AdmonitionNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
 object AdmonitionNodeRenderer {
 
   val ADMONITION_SVG_OBJECT_PART: AttributablePart = new AttributablePart("ADMONITION_SVG_OBJECT_PART")
-  val ADMONITION_HEADING_PART: AttributablePart = new AttributablePart("ADMONITION_HEADING_PART")
-  val ADMONITION_ICON_PART: AttributablePart = new AttributablePart("ADMONITION_ICON_PART")
-  val ADMONITION_TITLE_PART: AttributablePart = new AttributablePart("ADMONITION_TITLE_PART")
-  val ADMONITION_BODY_PART: AttributablePart = new AttributablePart("ADMONITION_BODY_PART")
+  val ADMONITION_HEADING_PART:    AttributablePart = new AttributablePart("ADMONITION_HEADING_PART")
+  val ADMONITION_ICON_PART:       AttributablePart = new AttributablePart("ADMONITION_ICON_PART")
+  val ADMONITION_TITLE_PART:      AttributablePart = new AttributablePart("ADMONITION_TITLE_PART")
+  val ADMONITION_BODY_PART:       AttributablePart = new AttributablePart("ADMONITION_BODY_PART")
 
   class Factory extends NodeRendererFactory {
     override def apply(options: DataHolder): NodeRenderer = new AdmonitionNodeRenderer(options)

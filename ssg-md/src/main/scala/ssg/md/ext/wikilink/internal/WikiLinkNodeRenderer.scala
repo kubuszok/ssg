@@ -23,14 +23,15 @@ class WikiLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   private val wikiOptions: WikiLinkOptions = new WikiLinkOptions(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set[NodeRenderingHandler[?]](
-      new NodeRenderingHandler[WikiLink](classOf[WikiLink], (node, ctx, html) => renderWikiLink(node, ctx, html)),
-      new NodeRenderingHandler[WikiImage](classOf[WikiImage], (node, ctx, html) => renderWikiImage(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set[NodeRenderingHandler[?]](
+        new NodeRenderingHandler[WikiLink](classOf[WikiLink], (node, ctx, html) => renderWikiLink(node, ctx, html)),
+        new NodeRenderingHandler[WikiImage](classOf[WikiImage], (node, ctx, html) => renderWikiImage(node, ctx, html))
+      )
+    )
 
-  private def renderWikiLink(node: WikiLink, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderWikiLink(node: WikiLink, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (!context.isDoNotRenderLinks) {
       if (wikiOptions.disableRendering) {
         html.text(node.chars.unescape())
@@ -42,9 +43,8 @@ class WikiLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
         html.tag("/a")
       }
     }
-  }
 
-  private def renderWikiImage(node: WikiImage, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderWikiImage(node: WikiImage, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (!context.isDoNotRenderLinks) {
       if (wikiOptions.disableRendering) {
         html.text(node.chars.unescape())
@@ -52,14 +52,13 @@ class WikiLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
         val altText = if (node.text.isNotNull) node.text.toString else node.link.unescape()
 
         val resolvedLink = context.resolveLink(WikiLinkExtension.WIKI_LINK, node.link, Nullable.empty)
-        val url = resolvedLink.url
+        val url          = resolvedLink.url
 
         html.attr("src", url)
         html.attr("alt", altText)
         html.srcPos(node.chars).withAttr(resolvedLink).tagVoid("img")
       }
     }
-  }
 }
 
 object WikiLinkNodeRenderer {

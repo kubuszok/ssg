@@ -21,20 +21,20 @@ import scala.language.implicitConversions
 class EnumeratedReferences(options: DataHolder) {
 
   private val referenceRepository: EnumeratedReferenceRepository = EnumeratedReferenceExtension.ENUMERATED_REFERENCES.get(options)
-  private val enumerationCounters = mutable.HashMap.empty[String, Int]
+  private val enumerationCounters         = mutable.HashMap.empty[String, Int]
   private val enumeratedReferenceOrdinals = mutable.HashMap.empty[String, Array[Int]]
 
   def add(text: String): Unit = {
     val typeStr = EnumeratedReferenceRepository.getType(text)
 
-    val types = typeStr.split(":")
+    val types    = typeStr.split(":")
     val ordinals = new Array[Int](types.length)
 
     // replace all types but the last with ordinal of that type
     val nestedType = new StringBuilder()
 
     val iMax = types.length
-    var i = 0
+    var i    = 0
     while (i < iMax) {
       val typeText = types(i)
       nestedType.append(typeText)
@@ -67,17 +67,17 @@ class EnumeratedReferences(options: DataHolder) {
   def getEnumeratedReferenceOrdinals(text: String): Array[EnumeratedReferenceRendering] = {
     val typeStr = EnumeratedReferenceRepository.getType(text)
 
-    val types = typeStr.split(":")
+    val types      = typeStr.split(":")
     val renderings = new Array[EnumeratedReferenceRendering](types.length)
 
     val ordinals = enumeratedReferenceOrdinals.getOrElse(text, EnumeratedReferences.EMPTY_ORDINALS)
 
     val iMax = types.length
-    var i = 0
+    var i    = 0
     while (i < iMax) {
-      val typeText = types(i)
+      val typeText        = types(i)
       val referenceFormat = referenceRepository.get(typeText)
-      val ordinal = if (i < ordinals.length) ordinals(i) else 0
+      val ordinal         = if (i < ordinals.length) ordinals(i) else 0
       renderings(i) = EnumeratedReferenceRendering(referenceFormat, typeText, ordinal)
       i += 1
     }
@@ -92,7 +92,7 @@ class EnumeratedReferences(options: DataHolder) {
 }
 
 object EnumeratedReferences {
-  val EMPTY_TYPE: String = ""
+  val EMPTY_TYPE:     String     = ""
   val EMPTY_ORDINALS: Array[Int] = Array.empty[Int]
 
   def renderReferenceOrdinals(renderings: Array[EnumeratedReferenceRendering], renderer: EnumeratedOrdinalRenderer): Unit = {
@@ -104,7 +104,7 @@ object EnumeratedReferences {
     val lastRendering = renderings(renderings.length - 1)
 
     for (rendering <- renderings) {
-      val ordinal = rendering.referenceOrdinal
+      val ordinal     = rendering.referenceOrdinal
       val defaultText = rendering.referenceType
 
       var needSeparator = false
@@ -112,9 +112,8 @@ object EnumeratedReferences {
       if (rendering ne lastRendering) {
         if (rendering.referenceFormat != null) { // @nowarn - referenceFormat may be null from repository.get
           var lastChild = rendering.referenceFormat.lastChild
-          while (lastChild.isDefined && !lastChild.get.isInstanceOf[EnumeratedReferenceBase]) {
+          while (lastChild.isDefined && !lastChild.get.isInstanceOf[EnumeratedReferenceBase])
             lastChild = lastChild.get.lastChild
-          }
           needSeparator = lastChild.isDefined && lastChild.get.isInstanceOf[EnumeratedReferenceBase] && lastChild.get.asInstanceOf[EnumeratedReferenceBase].text.isEmpty
         } else {
           needSeparator = true
@@ -124,22 +123,26 @@ object EnumeratedReferences {
       compoundReferences.add(CompoundEnumeratedReferenceRendering(ordinal, rendering.referenceFormat, defaultText, needSeparator))
     }
 
-    val iMax = compoundReferences.size() - 1
+    val iMax        = compoundReferences.size() - 1
     val wasRunnable = renderer.getEnumOrdinalRunnable
 
-    renderer.setEnumOrdinalRunnable(Nullable(new Runnable {
-      override def run(): Unit = {
-        var i = 0
-        while (i < iMax) {
-          val rendering = compoundReferences.get(i)
-          val wasRunnable1 = renderer.getEnumOrdinalRunnable
-          renderer.setEnumOrdinalRunnable(Nullable.empty)
-          renderer.render(rendering.ordinal, rendering.referenceFormat, rendering.defaultText, rendering.needSeparator)
-          renderer.setEnumOrdinalRunnable(wasRunnable1)
-          i += 1
+    renderer.setEnumOrdinalRunnable(
+      Nullable(
+        new Runnable {
+          override def run(): Unit = {
+            var i = 0
+            while (i < iMax) {
+              val rendering    = compoundReferences.get(i)
+              val wasRunnable1 = renderer.getEnumOrdinalRunnable
+              renderer.setEnumOrdinalRunnable(Nullable.empty)
+              renderer.render(rendering.ordinal, rendering.referenceFormat, rendering.defaultText, rendering.needSeparator)
+              renderer.setEnumOrdinalRunnable(wasRunnable1)
+              i += 1
+            }
+          }
         }
-      }
-    }))
+      )
+    )
 
     val rendering = compoundReferences.get(iMax)
     renderer.render(rendering.ordinal, rendering.referenceFormat, rendering.defaultText, rendering.needSeparator)

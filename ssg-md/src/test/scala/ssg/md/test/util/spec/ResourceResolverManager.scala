@@ -14,26 +14,21 @@ package spec
 
 import ssg.md.Nullable
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.util.boundary
 import scala.util.boundary.break
 
 object ResourceResolverManager {
 
-  /**
-   * urlResolvers map test resource location url to source resource url to allow tests to
-   * output file URLs which refer to source location, not copies in test location
-   */
+  /** urlResolvers map test resource location url to source resource url to allow tests to output file URLs which refer to source location, not copies in test location
+    */
   private val urlResolvers: ju.ArrayList[String => String] = new ju.ArrayList[String => String]()
 
-  def registerUrlResolver(resolver: String => String): Unit = {
+  def registerUrlResolver(resolver: String => String): Unit =
     urlResolvers.add(resolver)
-  }
 
-  /**
-   * Resolves a file URL string through registered resolvers.
-   * Cross-platform: uses only string operations, no java.io.File or java.net.URL.
-   */
+  /** Resolves a file URL string through registered resolvers. Cross-platform: uses only string operations, no java.io.File or java.net.URL.
+    */
   def adjustedFileUrl(externalForm: String): String = {
     var bestProtocolMatch: Nullable[String] = Nullable.empty
 

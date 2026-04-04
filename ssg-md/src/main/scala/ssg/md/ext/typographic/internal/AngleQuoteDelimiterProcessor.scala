@@ -14,14 +14,31 @@ package internal
 
 import scala.language.implicitConversions
 
-class AngleQuoteDelimiterProcessor(options: TypographicOptions)
-    extends QuoteDelimiterProcessorBase(options, '<', '>', options.angleQuoteOpen, options.angleQuoteClose, options.angleQuoteUnmatched) {
+class AngleQuoteDelimiterProcessor(options: TypographicOptions) extends QuoteDelimiterProcessorBase(options, '<', '>', options.angleQuoteOpen, options.angleQuoteClose, options.angleQuoteUnmatched) {
 
   override def minLength: Int = 2
 
-  override def canBeOpener(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = true
+  override def canBeOpener(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = true
 
-  override def canBeCloser(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = true
+  override def canBeCloser(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = true
 
   override protected def isAllowed(seq: CharSequence, index: Int): Boolean = true
 }

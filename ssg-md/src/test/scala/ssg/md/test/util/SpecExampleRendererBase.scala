@@ -13,35 +13,34 @@ package util
 
 import ssg.md.Nullable
 import ssg.md.test.util.spec.SpecExample
-import ssg.md.util.data.{DataHolder, DataSet}
+import ssg.md.util.data.{ DataHolder, DataSet }
 
 import scala.language.implicitConversions
 
 abstract class SpecExampleRendererBase(
-    protected val myExample: SpecExample,
-    exampleOptions: Nullable[DataHolder],
-    protected val myIncludeExampleInfo: Boolean
+  protected val myExample:            SpecExample,
+  exampleOptions:                     Nullable[DataHolder],
+  protected val myIncludeExampleInfo: Boolean
 ) extends SpecExampleRenderer {
 
-  def this(example: SpecExample, options: Nullable[DataHolder]) = {
+  def this(example: SpecExample, options: Nullable[DataHolder]) =
     this(example, options, true)
-  }
 
-  protected val myOptions: DataHolder = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable)
-  private var myIsFinalized: Boolean = false
+  protected val myOptions:    DataHolder       = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable)
+  private var myIsFinalized:  Boolean          = false
   private var myRenderedHtml: Nullable[String] = Nullable.empty
-  private var myRenderedAst: Nullable[String] = Nullable.empty
+  private var myRenderedAst:  Nullable[String] = Nullable.empty
 
   def isFinalized: Boolean = myIsFinalized
 
-  override final def getHtml: String = {
+  final override def getHtml: String = {
     if (myRenderedHtml.isEmpty || !isFinalized) {
       myRenderedHtml = Nullable(renderHtml())
     }
     myRenderedHtml.get
   }
 
-  override final def getAst: Nullable[String] = {
+  final override def getAst: Nullable[String] = {
     if (myRenderedAst.isEmpty || !isFinalized) {
       myRenderedAst = Nullable(renderAst())
     }
@@ -52,9 +51,8 @@ abstract class SpecExampleRendererBase(
 
   protected def renderAst(): String
 
-  override def finalizeRender(): Unit = {
+  override def finalizeRender(): Unit =
     myIsFinalized = true
-  }
 
   override def includeExampleInfo: Boolean = myIncludeExampleInfo
 

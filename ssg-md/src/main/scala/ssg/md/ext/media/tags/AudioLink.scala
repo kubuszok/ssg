@@ -38,6 +38,6 @@ class AudioLink() extends AbstractMediaLink(AudioLink.PREFIX, AudioLink.TYPE) {
 }
 
 object AudioLink {
-  val PREFIX: String = "!A"
+  val PREFIX:       String = "!A"
   private val TYPE: String = "Audio"
 }

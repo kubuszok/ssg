@@ -17,23 +17,21 @@ import ssg.md.ext.typographic.TypographicExtension
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Collections, HashMap}
+import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboTypographicSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboTypographicSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboTypographicSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboTypographicSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboTypographicSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboTypographicSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboTypographicSpecTest.OPTIONS_MAP
 }
 
 object ComboTypographicSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/typographic/test/ext_typographic_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/typographic/test/ext_typographic_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboTypographicSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(TypographicExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TypographicExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

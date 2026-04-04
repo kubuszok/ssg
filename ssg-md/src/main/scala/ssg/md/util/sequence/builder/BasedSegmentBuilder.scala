@@ -19,7 +19,7 @@ class BasedSegmentBuilder private (
   val optimizer: SegmentOptimizer,
   options:       Int
 ) extends SegmentBuilderBase[BasedSegmentBuilder](options),
-    IBasedSegmentBuilder[BasedSegmentBuilder] {
+      IBasedSegmentBuilder[BasedSegmentBuilder] {
 
   private def this(baseSeq: BasedSequence) = {
     this(baseSeq.getBaseSequence, new CharRecoveryOptimizer(PositionAnchor.CURRENT), ISegmentBuilder.F_INCLUDE_ANCHORS)

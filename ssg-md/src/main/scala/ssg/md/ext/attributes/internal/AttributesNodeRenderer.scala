@@ -24,28 +24,33 @@ class AttributesNodeRenderer(options: DataHolder) extends NodeRenderer {
   private val myOptions: AttributesOptions = new AttributesOptions(options)
 
   // only registered if assignTextAttributes is enabled
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set[NodeRenderingHandler[?]](
-      new NodeRenderingHandler[AttributesNode](classOf[AttributesNode], (node, context, html) => {
-        // AttributesNode is NonRenderingInline - not rendered directly
-      }),
-      new NodeRenderingHandler[TextBase](classOf[TextBase], (node, context, html) => {
-        if (myOptions.assignTextAttributes) {
-          val nodeAttributes = context.extendRenderingNodeAttributes(AttributablePart.NODE, Nullable.empty)
-          if (!nodeAttributes.isEmpty) {
-            // has attributes then we wrap it in a span
-            html.setAttributes(nodeAttributes).withAttr().tag("span")
-            context.delegateRender()
-            html.closeTag("span")
-          } else {
-            context.delegateRender()
-          }
-        } else {
-          context.delegateRender()
-        }
-      })
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set[NodeRenderingHandler[?]](
+        new NodeRenderingHandler[AttributesNode](classOf[AttributesNode],
+                                                 (node, context, html) => {
+                                                   // AttributesNode is NonRenderingInline - not rendered directly
+                                                 }
+        ),
+        new NodeRenderingHandler[TextBase](
+          classOf[TextBase],
+          (node, context, html) =>
+            if (myOptions.assignTextAttributes) {
+              val nodeAttributes = context.extendRenderingNodeAttributes(AttributablePart.NODE, Nullable.empty)
+              if (!nodeAttributes.isEmpty) {
+                // has attributes then we wrap it in a span
+                html.setAttributes(nodeAttributes).withAttr().tag("span")
+                context.delegateRender()
+                html.closeTag("span")
+              } else {
+                context.delegateRender()
+              }
+            } else {
+              context.delegateRender()
+            }
+        )
+      )
+    )
 }
 
 object AttributesNodeRenderer {

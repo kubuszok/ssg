@@ -14,8 +14,8 @@ package reference
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{HardLineBreak, HtmlEntity, SoftLineBreak, Text, TextBase}
-import ssg.md.util.ast.{DoNotCollectText, NodeVisitor, VisitHandler}
+import ssg.md.ast.{ HardLineBreak, HtmlEntity, SoftLineBreak, Text, TextBase }
+import ssg.md.util.ast.{ DoNotCollectText, NodeVisitor, VisitHandler }
 import ssg.md.util.sequence.BasedSequence
 import ssg.md.util.sequence.builder.SequenceBuilder
 
@@ -23,10 +23,13 @@ import scala.language.implicitConversions
 
 class EnumRefTextCollectingVisitor(ordinal: Int) {
 
-  private var out: SequenceBuilder = scala.compiletime.uninitialized
-  private var ordinalRunnable: Nullable[Runnable] = if (ordinal < 0) Nullable.empty else Nullable(new Runnable {
-    override def run(): Unit = out.add(String.valueOf(ordinal))
-  })
+  private var out:             SequenceBuilder    = scala.compiletime.uninitialized
+  private var ordinalRunnable: Nullable[Runnable] =
+    if (ordinal < 0) Nullable.empty
+    else
+      Nullable(new Runnable {
+        override def run(): Unit = out.add(String.valueOf(ordinal))
+      })
 
   private val visitor: NodeVisitor = new NodeVisitor(
     new VisitHandler[Text](classOf[Text], (node: Text) => visitText(node)),
@@ -56,25 +59,25 @@ class EnumRefTextCollectingVisitor(ordinal: Int) {
 
     override def startRendering(renderings: Array[EnumeratedReferenceRendering]): Unit = {}
 
-    override def setEnumOrdinalRunnable(runnable: Nullable[Runnable]): Unit = {
+    override def setEnumOrdinalRunnable(runnable: Nullable[Runnable]): Unit =
       renderer.ordinalRunnable = runnable
-    }
 
-    override def getEnumOrdinalRunnable: Nullable[Runnable] = {
+    override def getEnumOrdinalRunnable: Nullable[Runnable] =
       renderer.ordinalRunnable
-    }
 
     override def render(referenceOrdinal: Int, referenceFormat: EnumeratedReferenceBlock, defaultText: String, needSeparator: Boolean): Unit = {
       val compoundRunnable = renderer.ordinalRunnable
 
       if (referenceFormat != null) { // @nowarn - referenceFormat may be null from repository.get
-        renderer.ordinalRunnable = Nullable(new Runnable {
-          override def run(): Unit = {
-            if (compoundRunnable.isDefined) compoundRunnable.get.run()
-            renderer.out.add(String.valueOf(referenceOrdinal))
-            if (needSeparator) renderer.out.add(".")
+        renderer.ordinalRunnable = Nullable(
+          new Runnable {
+            override def run(): Unit = {
+              if (compoundRunnable.isDefined) compoundRunnable.get.run()
+              renderer.out.add(String.valueOf(referenceOrdinal))
+              if (needSeparator) renderer.out.add(".")
+            }
           }
-        })
+        )
 
         renderer.visitor.visitChildren(referenceFormat)
       } else {
@@ -104,26 +107,22 @@ class EnumRefTextCollectingVisitor(ordinal: Int) {
     }
   }
 
-  private def visitSoftLineBreak(node: SoftLineBreak): Unit = {
+  private def visitSoftLineBreak(node: SoftLineBreak): Unit =
     out.add(node.chars)
-  }
 
   private def visitHardLineBreak(node: HardLineBreak): Unit = {
     val chars = node.chars
     out.add(chars.subSequence(chars.length() - 1, chars.length()))
   }
 
-  private def visitHtmlEntity(node: HtmlEntity): Unit = {
+  private def visitHtmlEntity(node: HtmlEntity): Unit =
     out.add(node.chars.unescape())
-  }
 
-  private def visitText(node: Text): Unit = {
+  private def visitText(node: Text): Unit =
     if (!node.isOrDescendantOfType(classOf[DoNotCollectText])) {
       out.add(node.chars)
     }
-  }
 
-  private def visitTextBase(node: TextBase): Unit = {
+  private def visitTextBase(node: TextBase): Unit =
     out.add(node.chars)
-  }
 }

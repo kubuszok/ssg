@@ -11,27 +11,25 @@ package md
 package ext
 package superscript
 
-import ssg.md.ext.superscript.internal.{SuperscriptDelimiterProcessor, SuperscriptNodeRenderer}
+import ssg.md.ext.superscript.internal.{ SuperscriptDelimiterProcessor, SuperscriptNodeRenderer }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
-import ssg.md.util.data.{MutableDataHolder, NullableDataKey}
+import ssg.md.util.data.{ MutableDataHolder, NullableDataKey }
 
-/**
- * Extension for superscripts.
- *
- * Create it with [[SuperscriptExtension.create]] and then configure it on the builders.
- *
- * The parsed superscript text is turned into [[Superscript]] nodes.
- */
+/** Extension for superscripts.
+  *
+  * Create it with [[SuperscriptExtension.create]] and then configure it on the builders.
+  *
+  * The parsed superscript text is turned into [[Superscript]] nodes.
+  */
 class SuperscriptExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.customDelimiterProcessor(new SuperscriptDelimiterProcessor())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {
@@ -42,7 +40,7 @@ class SuperscriptExtension private () extends Parser.ParserExtension, HtmlRender
 }
 
 object SuperscriptExtension {
-  val SUPERSCRIPT_STYLE_HTML_OPEN: NullableDataKey[String] = new NullableDataKey[String]("SUPERSCRIPT_STYLE_HTML_OPEN")
+  val SUPERSCRIPT_STYLE_HTML_OPEN:  NullableDataKey[String] = new NullableDataKey[String]("SUPERSCRIPT_STYLE_HTML_OPEN")
   val SUPERSCRIPT_STYLE_HTML_CLOSE: NullableDataKey[String] = new NullableDataKey[String]("SUPERSCRIPT_STYLE_HTML_CLOSE")
 
   def create(): SuperscriptExtension = new SuperscriptExtension()

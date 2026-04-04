@@ -32,20 +32,20 @@ import scala.util.boundary
 import scala.util.boundary.break
 
 class ListBlockParser(
-  val options:  ListOptions,
-  val listData: ListBlockParser.ListData,
+  val options:    ListOptions,
+  val listData:   ListBlockParser.ListData,
   listItemParser: ListItemParser
 ) extends AbstractBlockParser,
-    BlankLineContainer {
+      BlankLineContainer {
 
   private val myBlock: ListBlock = listData.listBlock
   myBlock.tight_=(true)
 
-  var lastChild: ListItemParser                 = listItemParser
-  var itemHandledLine: Nullable[BasedSequence]  = Nullable.empty
-  var itemHandledNewListLine:    Boolean         = false
-  var itemHandledNewItemLine:    Boolean         = false
-  var itemHandledSkipActiveLine: Boolean         = false
+  var lastChild:                 ListItemParser          = listItemParser
+  var itemHandledLine:           Nullable[BasedSequence] = Nullable.empty
+  var itemHandledNewListLine:    Boolean                 = false
+  var itemHandledNewItemLine:    Boolean                 = false
+  var itemHandledSkipActiveLine: Boolean                 = false
 
   def setItemHandledLine(line: BasedSequence): Unit = {
     itemHandledLine = Nullable(line)
@@ -121,7 +121,7 @@ class ListBlockParser(
   private def hasNonItemChildren(item: ListItem): Boolean = boundary {
     if (item.hasChildren) {
       var count = 0
-      val iter = item.childIterator
+      val iter  = item.childIterator
       while (iter.hasNext) {
         val child = iter.next()
         if (!child.isInstanceOf[ListBlock]) {
@@ -137,25 +137,25 @@ class ListBlockParser(
 
   private def finalizeListTight(parserState: ParserState): Unit = {
     var item: Nullable[Node] = getBlock.firstChild
-    var isTight = true
+    var isTight                          = true
     var prevItemHadTrueTrailingBlankLine = false
-    var haveNestedList = false
+    var haveNestedList                   = false
 
     while (item.isDefined) {
       val currentItem = item.get
       // check for non-final list item ending with blank line:
       var thisItemHadBlankAfterItemPara = false
-      var thisItemContainsBlankLine = false
+      var thisItemContainsBlankLine     = false
       @annotation.nowarn("msg=was mutated but not read") // faithful port: tracks state used to set thisItemHadTrueTrailingBlankLine
-      var thisItemHadTrailingBlankLine = false
+      var thisItemHadTrailingBlankLine     = false
       var thisItemHadTrueTrailingBlankLine = false
-      var thisItemHadChildren = false
-      var thisItemLoose = false
+      var thisItemHadChildren              = false
+      var thisItemLoose                    = false
 
       currentItem match {
         case listItem: ListItem =>
           if (listItem.isHadBlankAfterItemParagraph) {
-            //noinspection StatementWithEmptyBody
+            // noinspection StatementWithEmptyBody
             if (currentItem.next.isEmpty && (currentItem.firstChild.isEmpty || currentItem.firstChild.get.next.isEmpty)) {
               // not for last block
             } else {
@@ -175,7 +175,7 @@ class ListBlockParser(
             thisItemHadChildren = true
           }
 
-          //noinspection PointlessBooleanExpression
+          // noinspection PointlessBooleanExpression
           thisItemLoose = false ||
             (thisItemHadTrueTrailingBlankLine && options.isLooseWhenHasTrailingBlankLine) ||
             (thisItemHadBlankAfterItemPara && options.isLooseWhenBlankLineFollowsItemParagraph) ||
@@ -211,7 +211,7 @@ class ListBlockParser(
                 thisItemLoose = true
                 currentItem match {
                   case li: ListItem => li.loose_=(true)
-                  case _            =>
+                  case _ =>
                 }
               }
             }
@@ -229,7 +229,7 @@ class ListBlockParser(
                     isTight = false
                     currentItem match {
                       case li: ListItem => li.loose_=(true)
-                      case _            =>
+                      case _ =>
                     }
                     break(())
                   }
@@ -273,13 +273,13 @@ object ListBlockParser {
   /** Parse a list marker and return data on the marker or null.
     */
   def parseListMarker(options: ListOptions, newItemCodeIndent: Int, state: ParserState): Nullable[ListData] = boundary {
-    val parsing = state.parsing
-    val line = state.line
-    val markerIndex = state.nextNonSpaceIndex
+    val parsing      = state.parsing
+    val line         = state.line
+    val markerIndex  = state.nextNonSpaceIndex
     val markerColumn = state.column + state.indent
     val markerIndent = state.indent
 
-    val rest = line.subSequence(markerIndex, line.length())
+    val rest    = line.subSequence(markerIndex, line.length())
     val matcher = parsing.LIST_ITEM_MARKER.matcher(rest)
     if (!matcher.find()) {
       break(Nullable.empty)
@@ -303,8 +303,8 @@ object ListBlockParser {
 
     val listBlock = createListBlock(matcher)
 
-    val markerLength = matcher.end() - matcher.start()
-    val isNumberedList = !"+-*".contains(matcher.group())
+    val markerLength     = matcher.end() - matcher.start()
+    val isNumberedList   = !"+-*".contains(matcher.group())
     val indexAfterMarker = markerIndex + markerLength
 
     // marker doesn't include tabs, so counting them as columns directly is ok
@@ -314,7 +314,7 @@ object ListBlockParser {
     var contentOffset = 0
 
     // See at which column the content starts if there is content
-    var hasContent = false
+    var hasContent   = false
     var contentIndex = indexAfterMarker
     boundary {
       var i = indexAfterMarker
@@ -414,18 +414,20 @@ object ListBlockParser {
       }
     }
 
-    Nullable(ListData(
-      listBlock,
-      !hasContent,
-      markerIndex,
-      markerColumn,
-      markerIndent,
-      contentOffset,
-      rest.subSequence(matcher.start(), matcher.end()),
-      isNumberedList,
-      markerSuffix,
-      markerSuffixOffset
-    ))
+    Nullable(
+      ListData(
+        listBlock,
+        !hasContent,
+        markerIndex,
+        markerColumn,
+        markerIndent,
+        contentOffset,
+        rest.subSequence(matcher.start(), matcher.end()),
+        isNumberedList,
+        markerSuffix,
+        markerSuffixOffset
+      )
+    )
   }
 
   private def createListBlock(matcher: Matcher): ListBlock = {
@@ -435,8 +437,8 @@ object ListBlockParser {
       bulletList.openingMarker = bullet.charAt(0)
       bulletList
     } else {
-      val digit = matcher.group(2)
-      val delimiter = matcher.group(3)
+      val digit       = matcher.group(2)
+      val delimiter   = matcher.group(3)
       val orderedList = OrderedList()
       orderedList.startNumber = Integer.parseInt(digit)
       orderedList.delimiter = delimiter.charAt(0)
@@ -480,10 +482,12 @@ object ListBlockParser {
     override def apply(options: DataHolder): BlockParserFactory = BlockFactory(options)
 
     override def getLeadInHandler(options: DataHolder): Nullable[SpecialLeadInHandler] =
-      Nullable(ListItemLeadInHandler.create(
-        Parser.LISTS_ITEM_PREFIX_CHARS.get(options),
-        Parser.LISTS_ORDERED_ITEM_DOT_ONLY.get(options)
-      ))
+      Nullable(
+        ListItemLeadInHandler.create(
+          Parser.LISTS_ITEM_PREFIX_CHARS.get(options),
+          Parser.LISTS_ORDERED_ITEM_DOT_ONLY.get(options)
+        )
+      )
   }
 
   private class ListItemLeadInHandler(listItemDelims: CharSequence, dotOnly: Boolean) extends SpecialLeadInCharsHandler(CharPredicate.anyOf(listItemDelims)) {
@@ -492,7 +496,7 @@ object ListBlockParser {
       if (dotOnly) ListItemLeadInHandler.ORDERED_DELIM_DOT
       else ListItemLeadInHandler.ORDERED_DELIM_DOT_PARENS
 
-    override def escape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean = {
+    override def escape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean =
       if (super.escape(sequence, options, consumer)) {
         true
       } else if (ssg.md.util.data.SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN.get(options)) {
@@ -508,9 +512,8 @@ object ListBlockParser {
       } else {
         false
       }
-    }
 
-    override def unEscape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean = {
+    override def unEscape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean =
       if (super.unEscape(sequence, options, consumer)) {
         true
       } else {
@@ -523,23 +526,21 @@ object ListBlockParser {
           false
         }
       }
-    }
   }
 
   private object ListItemLeadInHandler {
-    val ORDERED_DELIM_DOT:        CharPredicate       = CharPredicate.anyOf('.')
-    val ORDERED_DELIM_DOT_PARENS: CharPredicate       = CharPredicate.anyOf(".)")
-    val ORDERED_DELIM_DOT_HANDLER: SpecialLeadInHandler       = new ListItemLeadInHandler(Parser.LISTS_ITEM_PREFIX_CHARS.defaultValue, true)
+    val ORDERED_DELIM_DOT:                CharPredicate        = CharPredicate.anyOf('.')
+    val ORDERED_DELIM_DOT_PARENS:         CharPredicate        = CharPredicate.anyOf(".)")
+    val ORDERED_DELIM_DOT_HANDLER:        SpecialLeadInHandler = new ListItemLeadInHandler(Parser.LISTS_ITEM_PREFIX_CHARS.defaultValue, true)
     val ORDERED_DELIM_DOT_PARENS_HANDLER: SpecialLeadInHandler = new ListItemLeadInHandler(Parser.LISTS_ITEM_PREFIX_CHARS.defaultValue, false)
 
-    def create(listItemDelims: CharSequence, dotOnly: Boolean): SpecialLeadInHandler = {
+    def create(listItemDelims: CharSequence, dotOnly: Boolean): SpecialLeadInHandler =
       if (SequenceUtils.equals(Parser.LISTS_ITEM_PREFIX_CHARS.defaultValue, listItemDelims)) {
         if (dotOnly) ORDERED_DELIM_DOT_HANDLER
         else ORDERED_DELIM_DOT_PARENS_HANDLER
       } else {
         new ListItemLeadInHandler(listItemDelims, dotOnly)
       }
-    }
   }
 
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
@@ -547,8 +548,8 @@ object ListBlockParser {
     private val myOptions: ListOptions = ListOptions.get(options)
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = boundary {
-      val matched = matchedBlockParser.blockParser
-      val emulationFamily = myOptions.getParserEmulationProfile.family
+      val matched           = matchedBlockParser.blockParser
+      val emulationFamily   = myOptions.getParserEmulationProfile.family
       val newItemCodeIndent = myOptions.getNewItemCodeIndent
 
       matched match {
@@ -559,18 +560,18 @@ object ListBlockParser {
               // it is a new list already determined by the item
               val listData = parseListMarker(myOptions, newItemCodeIndent, state)
               assert(listData.isDefined)
-              val ld = listData.get
-              val listItemParser = new ListItemParser(myOptions, state.parsing, ld)
-              val newColumn = ld.markerColumn + ld.listMarker.length() + ld.contentOffset
+              val ld                 = listData.get
+              val listItemParser     = new ListItemParser(myOptions, state.parsing, ld)
+              val newColumn          = ld.markerColumn + ld.listMarker.length() + ld.contentOffset
               val newListBlockParser = new ListBlockParser(myOptions, ld, listItemParser)
               Nullable(BlockStart.of(newListBlockParser, listItemParser).atColumn(newColumn))
             } else if (listBlockParser.itemHandledNewItemLine) {
               // it is a new item for this list already determined by the previous item
               val listData = parseListMarker(myOptions, newItemCodeIndent, state)
               assert(listData.isDefined)
-              val ld = listData.get
+              val ld             = listData.get
               val listItemParser = new ListItemParser(myOptions, state.parsing, ld)
-              val newColumn = ld.markerColumn + ld.listMarker.length() + ld.contentOffset
+              val newColumn      = ld.markerColumn + ld.listMarker.length() + ld.contentOffset
               listBlockParser.lastChild = listItemParser
               Nullable(BlockStart.of(listItemParser).atColumn(newColumn))
             } else {
@@ -624,10 +625,10 @@ object ListBlockParser {
           val listData = parseListMarker(myOptions, newItemCodeIndent, state)
 
           if (listData.isDefined) {
-            val ld = listData.get
+            val ld        = listData.get
             val newColumn = ld.markerColumn + ld.listMarker.length() + ld.contentOffset
 
-            val inParagraph = matched.isParagraphParser
+            val inParagraph         = matched.isParagraphParser
             val inParagraphListItem = inParagraph &&
               matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
               matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)

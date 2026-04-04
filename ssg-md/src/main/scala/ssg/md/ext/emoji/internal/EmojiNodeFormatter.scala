@@ -23,11 +23,12 @@ class EmojiNodeFormatter(options: DataHolder) extends NodeFormatter {
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
   // only registered if assignTextAttributes is enabled
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[Emoji](classOf[Emoji], (node, ctx, md) => render(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[Emoji](classOf[Emoji], (node, ctx, md) => render(node, ctx, md))
+      )
+    )
 
   private[internal] def render(node: Emoji, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(node.openingMarker)

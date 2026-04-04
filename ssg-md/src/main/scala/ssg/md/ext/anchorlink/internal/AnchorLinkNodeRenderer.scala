@@ -14,7 +14,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
@@ -23,13 +23,14 @@ class AnchorLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   private val anchorLinkOptions = new AnchorLinkOptions(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[AnchorLink](classOf[AnchorLink], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[AnchorLink](classOf[AnchorLink], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: AnchorLink, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: AnchorLink, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (context.isDoNotRenderLinks) {
       if (anchorLinkOptions.wrapText) {
         context.renderChildren(node)
@@ -49,11 +50,18 @@ class AnchorLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
           if (anchorLinkOptions.textSuffix.nonEmpty) html.raw(anchorLinkOptions.textSuffix)
           html.tag("/a")
         } else {
-          html.withAttr().tag("a", false, false, () => {
-            if (anchorLinkOptions.textPrefix.nonEmpty) html.raw(anchorLinkOptions.textPrefix)
-            context.renderChildren(node)
-            if (anchorLinkOptions.textSuffix.nonEmpty) html.raw(anchorLinkOptions.textSuffix)
-          })
+          html
+            .withAttr()
+            .tag(
+              "a",
+              false,
+              false,
+              () => {
+                if (anchorLinkOptions.textPrefix.nonEmpty) html.raw(anchorLinkOptions.textPrefix)
+                context.renderChildren(node)
+                if (anchorLinkOptions.textSuffix.nonEmpty) html.raw(anchorLinkOptions.textSuffix)
+              }
+            )
         }
       } else {
         if (anchorLinkOptions.wrapText) {
@@ -61,7 +69,6 @@ class AnchorLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
         }
       }
     }
-  }
 }
 
 object AnchorLinkNodeRenderer {

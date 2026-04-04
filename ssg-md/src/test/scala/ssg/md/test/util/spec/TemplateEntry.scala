@@ -12,7 +12,7 @@ package test
 package util
 package spec
 
-import java.{util => ju}
+import java.{ util => ju }
 import java.util.regex.Pattern
 
 final class TemplateEntry(val entryNumber: Int, val source: String) {
@@ -32,7 +32,7 @@ final class TemplateEntry(val entryNumber: Int, val source: String) {
 
   def replaceParams(paramsMap: ju.Map[String, String], sb: StringBuilder): Unit = {
     // create an expanded template result
-    val m = TemplateEntry.PARAMETER_PATTERN.matcher(source)
+    val m   = TemplateEntry.PARAMETER_PATTERN.matcher(source)
     var pos = 0
     while (m.find()) {
       val param = m.group().substring(1, m.group().length - 1)

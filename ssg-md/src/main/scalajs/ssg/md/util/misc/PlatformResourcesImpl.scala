@@ -15,21 +15,19 @@ package md
 package util
 package misc
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ ByteArrayInputStream, InputStream }
 
 import scala.scalajs.js
-import scala.scalajs.js.typedarray.{Int8Array, Uint8Array}
+import scala.scalajs.js.typedarray.{ Int8Array, Uint8Array }
 import scala.util.boundary
 import scala.util.boundary.break
 
 object PlatformResourcesImpl {
 
-  private lazy val fs: js.Dynamic = js.Dynamic.global.require("fs")
+  private lazy val fs:       js.Dynamic = js.Dynamic.global.require("fs")
   private lazy val nodePath: js.Dynamic = js.Dynamic.global.require("path")
 
-  /** Base directories where sbt places resources, in search order.
-    * Includes both compiled target directories and source resources directory
-    * as a fallback for development environments.
+  /** Base directories where sbt places resources, in search order. Includes both compiled target directories and source resources directory as a fallback for development environments.
     */
   private val baseDirs: Array[String] = Array(
     "ssg-md/target/js-3/classes",
@@ -55,19 +53,19 @@ object PlatformResourcesImpl {
     }
   }
 
-  private def tryReadFile(baseDir: String, cleanPath: String): Nullable[InputStream] = {
+  private def tryReadFile(baseDir: String, cleanPath: String): Nullable[InputStream] =
     try {
       val filePath = nodePath.join(baseDir, cleanPath).asInstanceOf[String]
       if (fs.existsSync(filePath).asInstanceOf[Boolean]) {
         val buffer = fs.readFileSync(filePath)
-        val uint8 = new Uint8Array(
+        val uint8  = new Uint8Array(
           buffer.buffer.asInstanceOf[js.typedarray.ArrayBuffer],
           buffer.byteOffset.asInstanceOf[Int],
           buffer.length.asInstanceOf[Int]
         )
-        val int8 = new Int8Array(uint8.buffer, uint8.byteOffset, uint8.length)
+        val int8  = new Int8Array(uint8.buffer, uint8.byteOffset, uint8.length)
         val bytes = new Array[Byte](int8.length)
-        var j = 0
+        var j     = 0
         while (j < bytes.length) {
           bytes(j) = int8(j)
           j += 1
@@ -79,5 +77,4 @@ object PlatformResourcesImpl {
     } catch {
       case _: Throwable => Nullable.empty[InputStream]
     }
-  }
 }

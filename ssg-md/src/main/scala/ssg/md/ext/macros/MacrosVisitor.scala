@@ -12,6 +12,6 @@ package ext
 package macros
 
 trait MacrosVisitor {
-  def visit(node: MacroReference): Unit
+  def visit(node: MacroReference):       Unit
   def visit(node: MacroDefinitionBlock): Unit
 }

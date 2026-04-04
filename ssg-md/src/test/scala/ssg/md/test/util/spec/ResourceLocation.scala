@@ -13,24 +13,23 @@ package util
 package spec
 
 import ssg.md.test.util.ResourceCompat
-import java.io.{BufferedReader, IOException, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, IOException, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
 
 final class ResourceLocation private (
-    val resourceClass: Class[?],
-    val resourcePath: String,
-    val fileUrl: String,
-    val resolvedResourcePath: String
+  val resourceClass:        Class[?],
+  val resourcePath:         String,
+  val fileUrl:              String,
+  val resolvedResourcePath: String
 ) {
 
-  def this(resourceClass: Class[?], resourcePath: String, fileUrl: String) = {
+  def this(resourceClass: Class[?], resourcePath: String, fileUrl: String) =
     this(
       resourceClass,
       resourcePath,
       fileUrl,
       TestUtils.getResolvedSpecResourcePath(resourceClass.getName, resourcePath)
     )
-  }
 
   def fileDirectoryUrl: String = {
     // Resource paths always use '/' regardless of platform
@@ -42,19 +41,16 @@ final class ResourceLocation private (
     }
   }
 
-  def getFileUrl(lineNumber: Int): String = {
+  def getFileUrl(lineNumber: Int): String =
     TestUtils.getUrlWithLineNumber(fileUrl, lineNumber)
-  }
 
   def isNull: Boolean = this eq ResourceLocation.NULL
 
-  def resourceInputStream: InputStream = {
+  def resourceInputStream: InputStream =
     ResourceLocation.getResourceInputStream(this)
-  }
 
-  def resourceText: String = {
+  def resourceText: String =
     ResourceLocation.getResourceText(this)
-  }
 
   // @formatter:off
   def withResourceClass(resourceClass: Class[?]): ResourceLocation = new ResourceLocation(resourceClass, resourcePath, fileUrl, resolvedResourcePath)
@@ -63,20 +59,19 @@ final class ResourceLocation private (
   def withResolvedResourcePath(resolvedResourcePath: String): ResourceLocation = new ResourceLocation(resourceClass, resourcePath, fileUrl, resolvedResourcePath)
   // @formatter:on
 
-  override def equals(o: Any): Boolean = {
+  override def equals(o: Any): Boolean =
     if (this eq o.asInstanceOf[AnyRef]) {
       true
     } else {
       o match {
         case that: ResourceLocation =>
           resourceClass == that.resourceClass &&
-            resourcePath == that.resourcePath &&
-            fileUrl == that.fileUrl &&
-            resolvedResourcePath == that.resolvedResourcePath
+          resourcePath == that.resourcePath &&
+          fileUrl == that.fileUrl &&
+          resolvedResourcePath == that.resolvedResourcePath
         case _ => false
       }
     }
-  }
 
   override def hashCode(): Int = {
     var result = resourceClass.hashCode()
@@ -86,44 +81,40 @@ final class ResourceLocation private (
     result
   }
 
-  override def toString: String = {
+  override def toString: String =
     s"ResourceLocation { resourceClass=$resourceClass, resourcePath='$resourcePath' }"
-  }
 }
 
 object ResourceLocation {
 
   val NULL: ResourceLocation = of(classOf[Object], "", "")
 
-  def of(resourcePath: String): ResourceLocation = {
+  def of(resourcePath: String): ResourceLocation =
     new ResourceLocation(
       classOf[ComboSpecTestCase],
       resourcePath,
       TestUtils.getSpecResourceFileUrl(classOf[ComboSpecTestCase], resourcePath),
       TestUtils.getResolvedSpecResourcePath(classOf[ComboSpecTestCase].getName, resourcePath)
     )
-  }
 
-  def of(resourceClass: Class[?], resourcePath: String): ResourceLocation = {
+  def of(resourceClass: Class[?], resourcePath: String): ResourceLocation =
     new ResourceLocation(
       resourceClass,
       resourcePath,
       TestUtils.getSpecResourceFileUrl(resourceClass, resourcePath),
       TestUtils.getResolvedSpecResourcePath(resourceClass.getName, resourcePath)
     )
-  }
 
-  def of(resourceClass: Class[?], resourcePath: String, fileUrl: String): ResourceLocation = {
+  def of(resourceClass: Class[?], resourcePath: String, fileUrl: String): ResourceLocation =
     new ResourceLocation(resourceClass, resourcePath, fileUrl)
-  }
 
   def getResourceText(location: ResourceLocation): String = {
     val sb = new StringBuilder()
     try {
-      val inputStream = getResourceInputStream(location)
+      val inputStream  = getResourceInputStream(location)
       val streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)
-      val reader = new BufferedReader(streamReader)
-      var line = reader.readLine()
+      val reader       = new BufferedReader(streamReader)
+      var line         = reader.readLine()
       while (line != null) {
         sb.append(line)
         sb.append("\n")
@@ -139,9 +130,8 @@ object ResourceLocation {
     }
   }
 
-  def getResourceInputStream(location: ResourceLocation): InputStream = {
+  def getResourceInputStream(location: ResourceLocation): InputStream =
     // Cross-platform: use ResourceCompat instead of Class.getResourceAsStream
     // (getResourceAsStream is not available on Scala.js)
     ResourceCompat.getResourceAsStream(location.resourceClass, location.resolvedResourcePath)
-  }
 }

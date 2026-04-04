@@ -18,13 +18,13 @@ final class BasicParseTest extends munit.FunSuite {
 
   test("parse empty string") {
     val parser = Parser.builder().build()
-    val doc = parser.parse("")
+    val doc    = parser.parse("")
     assertNotEquals(doc, null)
   }
 
   test("block parser factories are registered") {
     // Check that core block parser factories are actually created
-    val options = new ssg.md.util.data.MutableDataSet().toImmutable
+    val options   = new ssg.md.util.data.MutableDataSet().toImmutable
     val factories = ssg.md.parser.internal.DocumentParser.calculateBlockParserFactories(options, Nil)
     println(s"Number of block parser factories: ${factories.size}")
     factories.foreach(f => println(s"  Factory: ${f.getClass.getSimpleName}"))
@@ -32,7 +32,7 @@ final class BasicParseTest extends munit.FunSuite {
   }
 
   test("parse simple paragraph") {
-    val parser = Parser.builder().build()
+    val parser   = Parser.builder().build()
     val renderer = HtmlRenderer.builder().build()
 
     // Debug: test parsing chain
@@ -43,7 +43,7 @@ final class BasicParseTest extends munit.FunSuite {
 
     // Debug: check AST
     val astVisitor = new ssg.md.test.util.AstCollectingVisitor()
-    val ast = astVisitor.collectAndGetAstText(doc)
+    val ast        = astVisitor.collectAndGetAstText(doc)
     println(s"AST:\n$ast")
     println(s"Doc children: ${doc.hasChildren}")
     println(s"Doc firstChild: ${doc.firstChild}")
@@ -64,9 +64,9 @@ final class BasicParseTest extends munit.FunSuite {
   }
 
   test("parse heading") {
-    val parser = Parser.builder().build()
+    val parser   = Parser.builder().build()
     val renderer = HtmlRenderer.builder().build()
-    val doc = parser.parse("# Hello")
+    val doc      = parser.parse("# Hello")
 
     // Debug: check Heading node
     val heading = doc.firstChild.get
@@ -83,7 +83,10 @@ final class BasicParseTest extends munit.FunSuite {
     // Debug: check LineAppendableImpl internals
     val htmlWriter = new ssg.md.html.HtmlWriter(
       Nullable(new java.lang.StringBuilder(): Appendable),
-      0, 0, false, false
+      0,
+      0,
+      false,
+      false
     )
     val lineAppendable = htmlWriter.asInstanceOf[ssg.md.util.sequence.LineAppendable]
     println(s"LineAppendable builder class: ${lineAppendable.getBuilder.getClass.getSimpleName}")
@@ -92,9 +95,8 @@ final class BasicParseTest extends munit.FunSuite {
     val html = renderer.render(doc)
     println(s"render() output: '$html'")
     println(s"render() output class: ${html.getClass.getSimpleName}")
-    for (i <- 0 until math.min(html.length, 20)) {
+    for (i <- 0 until math.min(html.length, 20))
       println(s"  char[$i] = '${html.charAt(i)}' (${html.charAt(i).toInt})")
-    }
 
     assertEquals(html, "<h1>Hello</h1>\n")
   }
@@ -119,9 +121,11 @@ final class BasicParseTest extends munit.FunSuite {
 
   test("Empty URL link AST includes url and pageRef fields") {
     val parser = Parser.builder().build()
-    val doc = parser.parse("[link]()")
-    val link = doc.firstChild.get.firstChild.get.asInstanceOf[ssg.md.ast.Link]
-    println(s"link.url = '${link.url}', isNull=${link.url.isNull}, isNotNull=${link.url.isNotNull}, length=${link.url.length()}, startOffset=${link.url.startOffset}, endOffset=${link.url.endOffset}")
+    val doc    = parser.parse("[link]()")
+    val link   = doc.firstChild.get.firstChild.get.asInstanceOf[ssg.md.ast.Link]
+    println(
+      s"link.url = '${link.url}', isNull=${link.url.isNull}, isNotNull=${link.url.isNotNull}, length=${link.url.length()}, startOffset=${link.url.startOffset}, endOffset=${link.url.endOffset}"
+    )
     println(s"link.pageRef = '${link.pageRef}', isNull=${link.pageRef.isNull}, isNotNull=${link.pageRef.isNotNull}")
     println(s"link.url eq BasedSequence.NULL: ${link.url eq ssg.md.util.sequence.BasedSequence.NULL}")
     val ast = new ssg.md.test.util.AstCollectingVisitor().collectAndGetAstText(doc)
@@ -130,7 +134,7 @@ final class BasicParseTest extends munit.FunSuite {
   }
 
   test("Nullable wrapping null NullableDataKey") {
-    val key = ssg.md.html.HtmlRenderer.EMPHASIS_STYLE_HTML_OPEN
+    val key     = ssg.md.html.HtmlRenderer.EMPHASIS_STYLE_HTML_OPEN
     val options = new ssg.md.util.data.MutableDataSet().toImmutable
     val rawValue: String = key.get(Nullable(options))
     println(s"rawValue: '$rawValue', isNull: ${rawValue == null}")

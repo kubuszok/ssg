@@ -23,16 +23,16 @@ class SimTocNodeFormatter(options: DataHolder) extends NodeFormatter {
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[SimTocBlock](classOf[SimTocBlock], (node, ctx, md) => render(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[SimTocBlock](classOf[SimTocBlock], (node, ctx, md) => render(node, ctx, md))
+      )
+    )
 
-  private def render(node: SimTocBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def render(node: SimTocBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     // TODO: implement SimToc formatting
     context.renderChildren(node)
-  }
 }
 
 object SimTocNodeFormatter {

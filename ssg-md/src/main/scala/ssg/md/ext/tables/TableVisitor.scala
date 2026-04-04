@@ -12,11 +12,11 @@ package ext
 package tables
 
 trait TableVisitor {
-  def visit(node: TableBlock): Unit
-  def visit(node: TableHead): Unit
+  def visit(node: TableBlock):     Unit
+  def visit(node: TableHead):      Unit
   def visit(node: TableSeparator): Unit
-  def visit(node: TableBody): Unit
-  def visit(node: TableRow): Unit
-  def visit(node: TableCell): Unit
-  def visit(node: TableCaption): Unit
+  def visit(node: TableBody):      Unit
+  def visit(node: TableRow):       Unit
+  def visit(node: TableCell):      Unit
+  def visit(node: TableCaption):   Unit
 }

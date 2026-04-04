@@ -12,7 +12,7 @@ package ext
 package resizable
 package image
 
-import ssg.md.util.ast.{DoNotDecorate, Node}
+import ssg.md.util.ast.{ DoNotDecorate, Node }
 import ssg.md.util.sequence.BasedSequence
 
 class ResizableImage(
@@ -20,7 +20,8 @@ class ResizableImage(
   var source: BasedSequence,
   var width:  BasedSequence,
   var height: BasedSequence
-) extends Node(Node.spanningChars(text, source, width, height)), DoNotDecorate {
+) extends Node(Node.spanningChars(text, source, width, height)),
+      DoNotDecorate {
 
   override def segments: Array[BasedSequence] = Array(text, source, width, height)
 }

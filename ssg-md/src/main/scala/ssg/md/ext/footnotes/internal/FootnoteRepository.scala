@@ -13,10 +13,10 @@ package footnotes
 package internal
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{Document, KeepType, Node, NodeRepository, NodeVisitor, VisitHandler}
-import ssg.md.util.data.{DataHolder, DataKey}
+import ssg.md.util.ast.{ Document, KeepType, Node, NodeRepository, NodeVisitor, VisitHandler }
+import ssg.md.util.data.{ DataHolder, DataKey }
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
@@ -84,18 +84,20 @@ object FootnoteRepository {
     val footnoteRepository = FootnoteExtension.FOOTNOTES.get(document)
 
     var hadNewFootnotes = false
-    val visitor = new NodeVisitor(
-      new VisitHandler[Footnote](classOf[Footnote], node => {
-        if (!node.isDefined) {
-          val footonoteBlock = node.getFootnoteBlock(footnoteRepository)
+    val visitor         = new NodeVisitor(
+      new VisitHandler[Footnote](
+        classOf[Footnote],
+        node =>
+          if (!node.isDefined) {
+            val footonoteBlock = node.getFootnoteBlock(footnoteRepository)
 
-          if (footonoteBlock != null) { // @nowarn - Java interop: may be null
-            footnoteRepository.addFootnoteReference(footonoteBlock, node)
-            node.footnoteBlock = Nullable(footonoteBlock)
-            hadNewFootnotes = true
+            if (footonoteBlock != null) { // @nowarn - Java interop: may be null
+              footnoteRepository.addFootnoteReference(footonoteBlock, node)
+              node.footnoteBlock = Nullable(footonoteBlock)
+              hadNewFootnotes = true
+            }
           }
-        }
-      })
+      )
     )
 
     visitor.visit(document)

@@ -15,37 +15,36 @@ package spec
 import ssg.md.Nullable
 import ssg.md.util.misc.Utils
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
+import java.util.concurrent.{ ConcurrentHashMap, ConcurrentMap }
 import scala.language.implicitConversions
 
 final class SpecExample private (
-    val resourceLocation: ResourceLocation,
-    val lineNumber: Int,
-    val optionsSet: Nullable[String],
-    val section: Nullable[String],
-    val exampleNumber: Int,
-    val source: String,
-    val html: String,
-    val ast: Nullable[String],
-    val comment: Nullable[String],
-    val isNull: Boolean
+  val resourceLocation: ResourceLocation,
+  val lineNumber:       Int,
+  val optionsSet:       Nullable[String],
+  val section:          Nullable[String],
+  val exampleNumber:    Int,
+  val source:           String,
+  val html:             String,
+  val ast:              Nullable[String],
+  val comment:          Nullable[String],
+  val isNull:           Boolean
 ) {
 
   def this(
-      resourceLocation: ResourceLocation,
-      lineNumber: Int,
-      optionsSet: Nullable[String],
-      section: Nullable[String],
-      exampleNumber: Int,
-      source: String,
-      html: String,
-      ast: Nullable[String],
-      comment: Nullable[String]
-  ) = {
+    resourceLocation: ResourceLocation,
+    lineNumber:       Int,
+    optionsSet:       Nullable[String],
+    section:          Nullable[String],
+    exampleNumber:    Int,
+    source:           String,
+    html:             String,
+    ast:              Nullable[String],
+    comment:          Nullable[String]
+  ) =
     this(resourceLocation, lineNumber, optionsSet, section, exampleNumber, source, html, ast, comment, false)
-  }
 
-  def isFullSpecExample: Boolean = {
+  def isFullSpecExample: Boolean =
     (this ne SpecExample.NULL) && isNull &&
       !java.util.Objects.equals(this.resourceLocation, SpecExample.NULL.resourceLocation) &&
       java.util.Objects.equals(this.optionsSet, SpecExample.NULL.optionsSet) &&
@@ -55,7 +54,6 @@ final class SpecExample private (
       java.util.Objects.equals(this.html, SpecExample.NULL.html) &&
       java.util.Objects.equals(this.ast, SpecExample.NULL.ast) &&
       java.util.Objects.equals(this.comment, SpecExample.NULL.comment)
-  }
 
   def isSpecExample: Boolean = isNotNull && !isFullSpecExample
 
@@ -63,9 +61,8 @@ final class SpecExample private (
 
   def fileUrlWithLineNumber: String = getFileUrlWithLineNumber(0)
 
-  def getFileUrlWithLineNumber(lineOffset: Int): String = {
+  def getFileUrlWithLineNumber(lineOffset: Int): String =
     resourceLocation.getFileUrl(Utils.minLimit(lineNumber + lineOffset, 0))
-  }
 
   def fileUrl: String = resourceLocation.fileUrl
 
@@ -81,7 +78,7 @@ final class SpecExample private (
   def withAst(ast: Nullable[String]): SpecExample = new SpecExample(resourceLocation, lineNumber, optionsSet, section, exampleNumber, source, html, ast, comment, isNull)
   // @formatter:on
 
-  override def toString: String = {
+  override def toString: String =
     if (this.isFullSpecExample) {
       "Full Spec"
     } else if (this eq SpecExample.NULL) {
@@ -89,14 +86,22 @@ final class SpecExample private (
     } else {
       "" + section.getOrElse("") + ": " + exampleNumber
     }
-  }
 }
 
 object SpecExample {
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   val NULL: SpecExample = new SpecExample(
-    ResourceLocation.NULL, 0, Nullable.empty, "", 0, "", "", Nullable.empty, Nullable.empty, true
+    ResourceLocation.NULL,
+    0,
+    Nullable.empty,
+    "",
+    0,
+    "",
+    "",
+    Nullable.empty,
+    Nullable.empty,
+    true
   )
 
   private val classMap: ConcurrentMap[String, String] = new ConcurrentHashMap[String, String]()
@@ -108,16 +113,16 @@ object SpecExample {
   }
 
   def ofCaller(callNesting: Int, resourceClass: Class[?], source: String, html: String, ast: Nullable[String]): SpecExample = {
-    val trace = Thread.currentThread().getStackTrace
-    val traceElement = trace(callNesting + 2)
+    val trace         = Thread.currentThread().getStackTrace
+    val traceElement  = trace(callNesting + 2)
     var javaClassFile = classMap.get(resourceClass.getName)
     if (javaClassFile == null) { // Java interop: ConcurrentHashMap.get returns null when key absent
       val fileName = traceElement.getFileName
       // need path to class, so fake it with class resource file
-      val javaFilePath = resourceClass.getName.replace('.', '/')
+      val javaFilePath   = resourceClass.getName.replace('.', '/')
       var javaParentPath = parentPath("/" + javaFilePath)
-      val javaPath = javaParentPath + "/" + fileName
-      var prefix: String = null // Java interop: set if resource found
+      val javaPath       = javaParentPath + "/" + fileName
+      var prefix:       String = null // Java interop: set if resource found
       var resourcePath: String = null // Java interop: set if resource found
       var found = false
       while (!found && javaParentPath.nonEmpty) {
@@ -147,6 +152,16 @@ object SpecExample {
     }
 
     val location = new ResourceLocation(resourceClass, "", javaClassFile)
-    new SpecExample(location, traceElement.getLineNumber - 1, Nullable.empty, Nullable(traceElement.getMethodName), 0, source, html, ast, Nullable(""))
+    new SpecExample(
+      location,
+      traceElement.getLineNumber - 1,
+      Nullable.empty,
+      Nullable(traceElement.getMethodName),
+      0,
+      source,
+      html,
+      ast,
+      Nullable("")
+    )
   }
 }

@@ -14,22 +14,22 @@ package tables
 import ssg.md.Nullable
 import ssg.md.util.sequence.BasedSequence
 
-import java.util.{List as JList}
+import java.util.List as JList
 import scala.language.implicitConversions
-import ssg.md.util.ast.{BlankLineBreakNode, Block, BlockContent}
+import ssg.md.util.ast.{ BlankLineBreakNode, Block, BlockContent }
 
 /** Table block containing a [[TableHead]] and optionally a [[TableBody]]. */
 class TableBlock() extends Block, BlankLineBreakNode {
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
   def this(chars: BasedSequence, lineSegments: JList[BasedSequence]) = {
     this()
-    this.chars = (chars)
-    this.contentLines = (lineSegments)
+    this.chars = chars
+    this.contentLines = lineSegments
   }
 
   def this(lineSegments: JList[BasedSequence]) = {

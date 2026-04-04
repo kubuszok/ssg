@@ -12,9 +12,8 @@ package test
 package util
 package spec
 
-/**
- * Used to resolve test resource URL from copy in test location to URL of source file
- */
+/** Used to resolve test resource URL from copy in test location to URL of source file
+  */
 trait ResourceUrlResolver extends (String => String) {
 
   override def apply(externalForm: String): String
@@ -24,9 +23,8 @@ object ResourceUrlResolver {
 
   val FILE_PROTOCOL: String = "file://"
 
-  def isFileProtocol(externalForm: String): Boolean = {
+  def isFileProtocol(externalForm: String): Boolean =
     externalForm.startsWith("file:/")
-  }
 
   def hasProtocol(externalForm: String): Boolean = {
     val pos = externalForm.indexOf(":")

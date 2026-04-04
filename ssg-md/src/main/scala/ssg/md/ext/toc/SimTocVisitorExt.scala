@@ -15,12 +15,11 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object SimTocVisitorExt {
-  def VISIT_HANDLERS[V <: SimTocVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: SimTocVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[SimTocBlock](classOf[SimTocBlock], visitor.visit(_)),
       new VisitHandler[SimTocOptionList](classOf[SimTocOptionList], visitor.visit(_)),
       new VisitHandler[SimTocOption](classOf[SimTocOption], visitor.visit(_)),
       new VisitHandler[SimTocContent](classOf[SimTocContent], visitor.visit(_))
     )
-  }
 }

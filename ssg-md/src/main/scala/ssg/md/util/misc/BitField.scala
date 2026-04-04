@@ -15,11 +15,9 @@ trait BitField {
   def bits: Int // return number of bits for the field, must be > 0
 }
 
-/** Type class providing pre-computed bit masks and enum values for a given enum type,
-  * eliminating the need for JVM-only reflection APIs (getDeclaringClass, isEnum, getEnumConstants).
+/** Type class providing pre-computed bit masks and enum values for a given enum type, eliminating the need for JVM-only reflection APIs (getDeclaringClass, isEnum, getEnumConstants).
   *
-  * Each enum type that is used with [[BitFieldSet]] must provide a given instance
-  * of this type class in its companion object.
+  * Each enum type that is used with [[BitFieldSet]] must provide a given instance of this type class in its companion object.
   *
   * @tparam E
   *   the enum type
@@ -35,18 +33,16 @@ trait EnumBitField[E <: java.lang.Enum[E]] {
   /** All enum values in ordinal order. */
   def values: Array[E]
 
-  /** Pre-computed bit masks for each enum value. For simple enums, mask(i) = 1L << i.
-    * For BitField enums, masks are computed based on each field's bit width.
+  /** Pre-computed bit masks for each enum value. For simple enums, mask(i) = 1L << i. For BitField enums, masks are computed based on each field's bit width.
     */
   def bitMasks: Array[Long]
 }
 
 object EnumBitField {
 
-  /** Compute bit masks for an array of enum values. Handles both simple enums (1 bit each)
-    * and BitField enums (variable bit widths).
+  /** Compute bit masks for an array of enum values. Handles both simple enums (1 bit each) and BitField enums (variable bit widths).
     */
-  def computeBitMasks[E <: java.lang.Enum[E]](universe: Array[E], typeName: String): Array[Long] = {
+  def computeBitMasks[E <: java.lang.Enum[E]](universe: Array[E], typeName: String): Array[Long] =
     if (universe.length == 0) {
       new Array[Long](0)
     } else if (universe.length > 0 && universe(0).isInstanceOf[BitField]) {
@@ -76,5 +72,4 @@ object EnumBitField {
         throw new IllegalArgumentException("Enums with more than 64 values are not supported")
       }
     }
-  }
 }

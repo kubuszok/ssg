@@ -435,7 +435,7 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
         case enumVal: java.lang.Enum[?] =>
           val ord = enumVal.ordinal()
           ord >= 0 && ord < universe.length && (universe(ord) eq enumVal) &&
-            (elements & bitMasks(ord)) != 0
+          (elements & bitMasks(ord)) != 0
         case _ => false
       }
     }
@@ -924,14 +924,12 @@ object BitFieldSet {
     new BitFieldSet[E](ebf.elementType, universe, getBitMasks[E], ebf.typeName)
   }
 
-  /** Creates an empty enum set with the specified element type.
-    * Overload accepting Class[E] for backward compatibility; requires an EnumBitField in scope.
+  /** Creates an empty enum set with the specified element type. Overload accepting Class[E] for backward compatibility; requires an EnumBitField in scope.
     */
   def noneOf[E <: java.lang.Enum[E]](elementType: Class[E])(using EnumBitField[E]): BitFieldSet[E] =
     noneOf[E]
 
-  /** Internal factory that reconstructs a BitFieldSet from cached data (used by deserialization).
-    * Requires that the enum type was previously registered via an EnumBitField type class instance.
+  /** Internal factory that reconstructs a BitFieldSet from cached data (used by deserialization). Requires that the enum type was previously registered via an EnumBitField type class instance.
     */
   private[misc] def noneOfFromCache[E <: java.lang.Enum[E]](elementType: Class[E]): BitFieldSet[E] = {
     val universe = UniverseLoader.enumUniverseMap.get(elementType)

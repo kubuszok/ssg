@@ -13,8 +13,8 @@ package enumerated
 package reference
 
 final case class CompoundEnumeratedReferenceRendering(
-  ordinal: Int,
+  ordinal:         Int,
   referenceFormat: EnumeratedReferenceBlock,
-  defaultText: String,
-  needSeparator: Boolean
+  defaultText:     String,
+  needSeparator:   Boolean
 )

@@ -12,30 +12,30 @@ package ext
 package tables
 
 import ssg.md.Nullable
-import ssg.md.ast.{Text, WhiteSpace}
+import ssg.md.ast.{ Text, WhiteSpace }
 import ssg.md.ast.util.TextNodeConverter
-import ssg.md.util.ast.{DelimitedNode, Node}
+import ssg.md.util.ast.{ DelimitedNode, Node }
 import ssg.md.util.html.CellAlignment
 import ssg.md.util.sequence.BasedSequence
 
 /** Table cell of a [[TableRow]] containing inline nodes. */
 class TableCell() extends Node, DelimitedNode {
 
-  var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
-  var closingMarker: BasedSequence = BasedSequence.NULL
-  private var _header: Boolean = false
+  var openingMarker:      BasedSequence                 = BasedSequence.NULL
+  var text:               BasedSequence                 = BasedSequence.NULL
+  var closingMarker:      BasedSequence                 = BasedSequence.NULL
+  private var _header:    Boolean                       = false
   private var _alignment: Nullable[TableCell.Alignment] = Nullable.empty
-  private var _span: Int = 1
+  private var _span:      Int                           = 1
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
   def trimWhiteSpace(): Unit = {
     val savedFirstChild = firstChild
-    var child = firstChild
+    var child           = firstChild
 
     while (child.isDefined && child.get.isInstanceOf[WhiteSpace]) {
       val nextChild = child.get.next
@@ -59,11 +59,11 @@ class TableCell() extends Node, DelimitedNode {
 
   def mergeWhiteSpace(): Unit = {
     var hadWhitespace = false
-    var child = firstChild
+    var child         = firstChild
 
     while (child.isDefined && child.get.isInstanceOf[WhiteSpace]) {
       val nextChild = child.get.next
-      val textNode = new Text(child.get.chars)
+      val textNode  = new Text(child.get.chars)
       child.get.insertBefore(textNode)
       child.get.unlink()
       child = nextChild
@@ -73,7 +73,7 @@ class TableCell() extends Node, DelimitedNode {
     child = lastChild
     while (child.isDefined && child.get.isInstanceOf[WhiteSpace]) {
       val prevChild = child.get.previous
-      val textNode = new Text(child.get.chars)
+      val textNode  = new Text(child.get.chars)
       child.get.insertBefore(textNode)
       child.get.unlink()
       child = prevChild
@@ -87,15 +87,15 @@ class TableCell() extends Node, DelimitedNode {
 
   def span: Int = _span
 
-  def span_=(span: Int): Unit = { _span = span }
+  def span_=(span: Int): Unit = _span = span
 
   def header: Boolean = _header
 
-  def header_=(header: Boolean): Unit = { _header = header }
+  def header_=(header: Boolean): Unit = _header = header
 
   def alignment: Nullable[TableCell.Alignment] = _alignment
 
-  def alignment_=(alignment: Nullable[TableCell.Alignment]): Unit = { _alignment = alignment }
+  def alignment_=(alignment: Nullable[TableCell.Alignment]): Unit = _alignment = alignment
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
@@ -120,9 +120,9 @@ object TableCell {
     case LEFT, CENTER, RIGHT
 
     def cellAlignment: CellAlignment = this match {
-      case LEFT => CellAlignment.LEFT
+      case LEFT   => CellAlignment.LEFT
       case CENTER => CellAlignment.CENTER
-      case RIGHT => CellAlignment.RIGHT
+      case RIGHT  => CellAlignment.RIGHT
     }
   }
 }

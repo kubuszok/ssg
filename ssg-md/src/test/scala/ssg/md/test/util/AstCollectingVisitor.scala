@@ -11,14 +11,14 @@ package md
 package test
 package util
 
-import ssg.md.util.ast.{Node, NodeVisitorBase}
+import ssg.md.util.ast.{ Node, NodeVisitorBase }
 
 class AstCollectingVisitor extends NodeVisitorBase {
 
-  val EOL: String = "\n"
-  protected var output: StringBuilder = new StringBuilder()
-  protected var indent: Int = 0
-  protected var eolPending: Boolean = false
+  val EOL:                  String        = "\n"
+  protected var output:     StringBuilder = new StringBuilder()
+  protected var indent:     Int           = 0
+  protected var eolPending: Boolean       = false
 
   def ast: String = output.toString()
 
@@ -42,18 +42,16 @@ class AstCollectingVisitor extends NodeVisitorBase {
     eolPending = false
   }
 
-  protected def appendPendingEOL(): Unit = {
+  protected def appendPendingEOL(): Unit =
     if (eolPending) appendEOL()
-  }
 
   def collectAndGetAstText(node: Node): String = {
     visit(node)
     ast
   }
 
-  def collect(node: Node): Unit = {
+  def collect(node: Node): Unit =
     visit(node)
-  }
 
   override protected def visit(node: Node): Unit = {
     appendIndent()
@@ -61,11 +59,10 @@ class AstCollectingVisitor extends NodeVisitorBase {
     output.append(EOL)
     indent += 1
 
-    try {
+    try
       super.visitChildren(node)
-    } finally {
+    finally
       indent -= 1
-    }
   }
 }
 
