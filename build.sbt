@@ -25,8 +25,10 @@ val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
   .settings(
     name := "ssg-liquid",
     libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+      "io.github.cquiroz" %%% "scala-java-time"    % "2.6.0",
+      "io.github.cquiroz" %%% "scala-java-locales" % "1.5.4",
+      "org.scalameta"      %%% "munit"              % "1.2.3" % Test,
+      "org.scalameta"      %%% "munit-scalacheck"   % "1.0.0" % Test
     )
   )
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
