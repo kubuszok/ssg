@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: liqp/src/main/java/liqp/filters/Times.java
+ * Original: Copyright (c) 2012 Bart Kiers
+ * Original license: MIT
+ */
+package ssg
+package liquid
+package filters
+
+/** Liquid "times" filter — multiplication. */
+class Times extends Filter {
+
+  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+    var v: Any = value
+    if (v == null) {
+      v = 0L
+    }
+    checkParams(params, 1)
+    val rhsObj = params(0)
+    if (canBeInteger(v) && canBeInteger(rhsObj)) {
+      asNumber(v).longValue() * asNumber(rhsObj).longValue()
+    } else {
+      val first  = PlainBigDecimal(asNumber(v).toString)
+      val second = PlainBigDecimal(asNumber(rhsObj).toString)
+      PlainBigDecimal(first.multiply(second))
+    }
+  }
+}
