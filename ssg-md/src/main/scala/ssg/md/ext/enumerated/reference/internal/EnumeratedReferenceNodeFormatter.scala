@@ -16,20 +16,22 @@ package internal
 import ssg.md.Nullable
 import ssg.md.formatter.*
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 
-class EnumeratedReferenceNodeFormatter(options: DataHolder) extends NodeRepositoryFormatter[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText](
-  options, null, null // @nowarn - translation/uniquification maps not needed for enumerated references
-) {
+class EnumeratedReferenceNodeFormatter(options: DataHolder)
+    extends NodeRepositoryFormatter[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText](
+      options,
+      null,
+      null // @nowarn - translation/uniquification maps not needed for enumerated references
+    ) {
 
   private val formatOptions = new EnumeratedReferenceFormatOptions(options)
 
-  override def getRepository(options: DataHolder): EnumeratedReferenceRepository = {
+  override def getRepository(options: DataHolder): EnumeratedReferenceRepository =
     EnumeratedReferenceExtension.ENUMERATED_REFERENCES.get(options)
-  }
 
   override def getReferencePlacement: ElementPlacement = formatOptions.enumeratedReferencePlacement
 
@@ -44,24 +46,23 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder) extends NodeReposito
     markdown.blankLine()
   }
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[EnumeratedReferenceText](classOf[EnumeratedReferenceText], (node, ctx, md) => renderText(node, ctx, md)),
-      new NodeFormattingHandler[EnumeratedReferenceLink](classOf[EnumeratedReferenceLink], (node, ctx, md) => renderLink(node, ctx, md)),
-      new NodeFormattingHandler[EnumeratedReferenceBlock](classOf[EnumeratedReferenceBlock], (node, ctx, md) => renderBlock(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[EnumeratedReferenceText](classOf[EnumeratedReferenceText], (node, ctx, md) => renderText(node, ctx, md)),
+        new NodeFormattingHandler[EnumeratedReferenceLink](classOf[EnumeratedReferenceLink], (node, ctx, md) => renderLink(node, ctx, md)),
+        new NodeFormattingHandler[EnumeratedReferenceBlock](classOf[EnumeratedReferenceBlock], (node, ctx, md) => renderBlock(node, ctx, md))
+      )
+    )
 
-  override def getNodeClasses: Nullable[Set[Class[?]]] = {
+  override def getNodeClasses: Nullable[Set[Class[?]]] =
     if (formatOptions.enumeratedReferencePlacement.isNoChange || !formatOptions.enumeratedReferenceSort.isUnused) Nullable.empty
     else {
       Nullable(Set[Class[?]](classOf[EnumeratedReferenceBlock]))
     }
-  }
 
-  private def renderBlock(node: EnumeratedReferenceBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderBlock(node: EnumeratedReferenceBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     renderReference(node, context, markdown)
-  }
 
   private def renderText(node: EnumeratedReferenceText, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append("[#")
@@ -83,17 +84,16 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder) extends NodeReposito
     markdown.append("]")
   }
 
-  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!text.isEmpty) {
       val valueChars = text
-      val pos = valueChars.indexOf(':')
+      val pos        = valueChars.indexOf(':')
       @annotation.nowarn("msg=unused local definition") // will be used when AttributesNodeFormatter.getEncodedIdAttribute is ported
       val category: String = if (pos == -1) text.toString else valueChars.subSequence(0, pos).toString
       // NOTE: AttributesNodeFormatter.getEncodedIdAttribute not yet fully ported,
       // falling back to direct category:id output
       markdown.append(text)
     }
-  }
 }
 
 object EnumeratedReferenceNodeFormatter {

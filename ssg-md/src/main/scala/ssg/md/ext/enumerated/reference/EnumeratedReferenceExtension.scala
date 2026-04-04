@@ -17,28 +17,24 @@ import ssg.md.formatter.Formatter
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.ast.KeepType
-import ssg.md.util.data.{DataHolder, DataKey, MutableDataHolder}
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.data.{ DataHolder, DataKey, MutableDataHolder }
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
-/**
- * Extension for enumerated_references
- *
- * Create it with [[EnumeratedReferenceExtension.create]] and then configure it on the builders
- *
- * The parsed enumerated_reference text is turned into [[EnumeratedReferenceText]] nodes.
- */
-class EnumeratedReferenceExtension private () extends Parser.ParserExtension,
-  HtmlRenderer.HtmlRendererExtension,
-  Parser.ReferenceHoldingExtension,
-  Formatter.FormatterExtension {
+/** Extension for enumerated_references
+  *
+  * Create it with [[EnumeratedReferenceExtension.create]] and then configure it on the builders
+  *
+  * The parsed enumerated_reference text is turned into [[EnumeratedReferenceText]] nodes.
+  */
+class EnumeratedReferenceExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension, Parser.ReferenceHoldingExtension, Formatter.FormatterExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def transferReferences(document: MutableDataHolder, included: DataHolder): Boolean = {
+  override def transferReferences(document: MutableDataHolder, included: DataHolder): Boolean =
     if (document.contains(EnumeratedReferenceExtension.ENUMERATED_REFERENCES) && included.contains(EnumeratedReferenceExtension.ENUMERATED_REFERENCES)) {
       Parser.transferReferences(
         EnumeratedReferenceExtension.ENUMERATED_REFERENCES.get(document),
@@ -48,18 +44,16 @@ class EnumeratedReferenceExtension private () extends Parser.ParserExtension,
     } else {
       false
     }
-  }
 
   override def extend(parserBuilder: Parser.Builder): Unit = {
-    //parserBuilder.paragraphPreProcessorFactory(EnumeratedReferenceParagraphPreProcessor.Factory())
+    // parserBuilder.paragraphPreProcessorFactory(EnumeratedReferenceParagraphPreProcessor.Factory())
     parserBuilder.postProcessorFactory(new EnumeratedReferenceNodePostProcessor.Factory())
     parserBuilder.customBlockParserFactory(new EnumeratedReferenceBlockParser.Factory())
     parserBuilder.linkRefProcessorFactory(new EnumeratedReferenceLinkRefProcessor.Factory())
   }
 
-  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit = {
+  override def extend(formatterBuilder: Formatter.Builder, rendererType: String): Unit =
     formatterBuilder.nodeFormatterFactory(new EnumeratedReferenceNodeFormatter.Factory())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {
@@ -71,12 +65,19 @@ class EnumeratedReferenceExtension private () extends Parser.ParserExtension,
 
 object EnumeratedReferenceExtension {
   val ENUMERATED_REFERENCES_KEEP: DataKey[KeepType] = new DataKey[KeepType]("ENUMERATED_REFERENCES_KEEP", KeepType.FIRST) // standard option to allow control over how to handle duplicates
-  val ENUMERATED_REFERENCES: DataKey[EnumeratedReferenceRepository] = new DataKey[EnumeratedReferenceRepository]("ENUMERATED_REFERENCES", new EnumeratedReferenceRepository(null), (options: DataHolder) => new EnumeratedReferenceRepository(options)) // @nowarn - initial value uses null for DataKey pattern
-  val ENUMERATED_REFERENCE_ORDINALS: DataKey[EnumeratedReferences] = new DataKey[EnumeratedReferences]("ENUMERATED_REFERENCE_ORDINALS", new EnumeratedReferences(null), (options: DataHolder) => new EnumeratedReferences(options)) // @nowarn - initial value uses null for DataKey pattern
+  val ENUMERATED_REFERENCES: DataKey[EnumeratedReferenceRepository] = new DataKey[EnumeratedReferenceRepository](
+    "ENUMERATED_REFERENCES",
+    new EnumeratedReferenceRepository(null),
+    (options: DataHolder) => new EnumeratedReferenceRepository(options)
+  ) // @nowarn - initial value uses null for DataKey pattern
+  val ENUMERATED_REFERENCE_ORDINALS: DataKey[EnumeratedReferences] = new DataKey[EnumeratedReferences]("ENUMERATED_REFERENCE_ORDINALS",
+                                                                                                       new EnumeratedReferences(null),
+                                                                                                       (options: DataHolder) => new EnumeratedReferences(options)
+  ) // @nowarn - initial value uses null for DataKey pattern
 
   // formatter options
-  val ENUMERATED_REFERENCE_PLACEMENT: DataKey[ElementPlacement] = new DataKey[ElementPlacement]("ENUMERATED_REFERENCE_PLACEMENT", ElementPlacement.AS_IS)
-  val ENUMERATED_REFERENCE_SORT: DataKey[ElementPlacementSort] = new DataKey[ElementPlacementSort]("ENUMERATED_REFERENCE_SORT", ElementPlacementSort.AS_IS)
+  val ENUMERATED_REFERENCE_PLACEMENT: DataKey[ElementPlacement]     = new DataKey[ElementPlacement]("ENUMERATED_REFERENCE_PLACEMENT", ElementPlacement.AS_IS)
+  val ENUMERATED_REFERENCE_SORT:      DataKey[ElementPlacementSort] = new DataKey[ElementPlacementSort]("ENUMERATED_REFERENCE_SORT", ElementPlacementSort.AS_IS)
 
   def create(): EnumeratedReferenceExtension = new EnumeratedReferenceExtension()
 }

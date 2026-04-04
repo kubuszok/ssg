@@ -16,11 +16,10 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object EnumeratedReferenceVisitorExt {
-  def VISIT_HANDLERS[V <: EnumeratedReferenceVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: EnumeratedReferenceVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[EnumeratedReferenceText](classOf[EnumeratedReferenceText], visitor.visit(_)),
       new VisitHandler[EnumeratedReferenceLink](classOf[EnumeratedReferenceLink], visitor.visit(_)),
       new VisitHandler[EnumeratedReferenceBlock](classOf[EnumeratedReferenceBlock], visitor.visit(_))
     )
-  }
 }

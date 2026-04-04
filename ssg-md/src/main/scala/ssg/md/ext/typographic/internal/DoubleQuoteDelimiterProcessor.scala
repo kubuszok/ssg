@@ -12,5 +12,4 @@ package ext
 package typographic
 package internal
 
-class DoubleQuoteDelimiterProcessor(options: TypographicOptions)
-    extends QuoteDelimiterProcessorBase(options, '"', '"', options.doubleQuoteOpen, options.doubleQuoteClose, options.doubleQuoteUnmatched)
+class DoubleQuoteDelimiterProcessor(options: TypographicOptions) extends QuoteDelimiterProcessorBase(options, '"', '"', options.doubleQuoteOpen, options.doubleQuoteClose, options.doubleQuoteUnmatched)

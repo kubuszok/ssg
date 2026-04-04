@@ -19,7 +19,7 @@ class TableBody() extends Node {
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS

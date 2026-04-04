@@ -18,6 +18,6 @@ import scala.language.implicitConversions
 
 class TocFormatOptions(options: DataHolder) {
 
-  val updateOnFormat: SimTocGenerateOnFormat = TocExtension.FORMAT_UPDATE_ON_FORMAT.get(options)
-  val formatTocOptions: TocOptions = TocExtension.FORMAT_OPTIONS.get(options)
+  val updateOnFormat:   SimTocGenerateOnFormat = TocExtension.FORMAT_UPDATE_ON_FORMAT.get(options)
+  val formatTocOptions: TocOptions             = TocExtension.FORMAT_OPTIONS.get(options)
 }

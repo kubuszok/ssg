@@ -12,7 +12,7 @@ package ext
 package youtube
 package embedded
 
-import ssg.md.ext.youtube.embedded.internal.{YouTubeLinkNodePostProcessor, YouTubeLinkNodeRenderer}
+import ssg.md.ext.youtube.embedded.internal.{ YouTubeLinkNodePostProcessor, YouTubeLinkNodeRenderer }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataHolder
@@ -23,9 +23,8 @@ class YouTubeLinkExtension private () extends Parser.ParserExtension, HtmlRender
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.postProcessorFactory(new YouTubeLinkNodePostProcessor.Factory(parserBuilder))
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {

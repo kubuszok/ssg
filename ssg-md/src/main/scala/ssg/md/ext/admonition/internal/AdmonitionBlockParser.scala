@@ -25,8 +25,8 @@ import scala.language.implicitConversions
 
 class AdmonitionBlockParser(options: AdmonitionOptions, contentIndent: Int) extends AbstractBlockParser {
 
-  val block: AdmonitionBlock = new AdmonitionBlock()
-  private var hadBlankLine: Boolean = false
+  val block:                AdmonitionBlock = new AdmonitionBlock()
+  private var hadBlankLine: Boolean         = false
 
   override def getBlock: Block = block
 
@@ -49,16 +49,15 @@ class AdmonitionBlockParser(options: AdmonitionOptions, contentIndent: Int) exte
     }
   }
 
-  override def closeBlock(state: ParserState): Unit = {
+  override def closeBlock(state: ParserState): Unit =
     block.setCharsFromContent()
-  }
 }
 
 object AdmonitionBlockParser {
 
   private val ADMONITION_START_FORMAT: String = "^(\\?{3}\\+|\\?{3}|!{3})\\s+(%s)(?:\\s+(%s))?\\s*$"
 
-  def isMarker(state: ParserState, index: Int, inParagraph: Boolean, inParagraphListItem: Boolean, options: AdmonitionOptions): Boolean = {
+  def isMarker(state: ParserState, index: Int, inParagraph: Boolean, inParagraphListItem: Boolean, options: AdmonitionOptions): Boolean =
     if (!inParagraph || options.interruptsParagraph) {
       if ((options.allowLeadingSpace || state.indent == 0) && (!inParagraphListItem || options.interruptsItemParagraph)) {
         if (inParagraphListItem && !options.withSpacesInterruptsItemParagraph) {
@@ -68,23 +67,20 @@ object AdmonitionBlockParser {
         }
       } else false
     } else false
-  }
 
   class AdmonitionLeadInHandler extends SpecialLeadInHandler {
-    override def escape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean = {
+    override def escape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean =
       if ((sequence.length() == 3 || sequence.length() == 4 && sequence.charAt(3) == '+') && (sequence.startsWith("???") || sequence.startsWith("!!!"))) {
         consumer("\\")
         consumer(sequence)
         true
       } else false
-    }
 
-    override def unEscape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean = {
+    override def unEscape(sequence: BasedSequence, options: Nullable[DataHolder], consumer: CharSequence => Unit): Boolean =
       if ((sequence.length() == 4 || sequence.length() == 5 && sequence.charAt(4) == '+') && (sequence.startsWith("\\???") || sequence.startsWith("\\!!!"))) {
         consumer(sequence.subSequence(1))
         true
       } else false
-    }
   }
 
   object AdmonitionLeadInHandler {
@@ -108,28 +104,29 @@ object AdmonitionBlockParser {
 
     private val admonitionOptions: AdmonitionOptions = new AdmonitionOptions(options)
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val nextNonSpace = state.nextNonSpaceIndex
-        val matched = matchedBlockParser.blockParser
-        val inParagraph = matched.isParagraphParser
+        val nextNonSpace        = state.nextNonSpaceIndex
+        val matched             = matchedBlockParser.blockParser
+        val inParagraph         = matched.isParagraphParser
         val inParagraphListItem = inParagraph && matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) && matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
         if (isMarker(state, nextNonSpace, inParagraph, inParagraphListItem, admonitionOptions)) {
-          val line = state.line
-          val trySequence = line.subSequence(nextNonSpace, line.length())
-          val parsing = state.parsing
+          val line         = state.line
+          val trySequence  = line.subSequence(nextNonSpace, line.length())
+          val parsing      = state.parsing
           val startPattern = Pattern.compile(String.format(ADMONITION_START_FORMAT, parsing.ATTRIBUTENAME, parsing.LINK_TITLE_STRING))
-          val matcher = startPattern.matcher(trySequence)
+          val matcher      = startPattern.matcher(trySequence)
 
           if (matcher.find()) {
             // admonition block
             val openingMarker = line.subSequence(nextNonSpace + matcher.start(1), nextNonSpace + matcher.end(1))
-            val info = line.subSequence(nextNonSpace + matcher.start(2), nextNonSpace + matcher.end(2))
-            val titleChars = if (matcher.group(3) == null) BasedSequence.NULL // @nowarn - regex group may be null
-            else line.subSequence(nextNonSpace + matcher.start(3), nextNonSpace + matcher.end(3))
+            val info          = line.subSequence(nextNonSpace + matcher.start(2), nextNonSpace + matcher.end(2))
+            val titleChars    =
+              if (matcher.group(3) == null) BasedSequence.NULL // @nowarn - regex group may be null
+              else line.subSequence(nextNonSpace + matcher.start(3), nextNonSpace + matcher.end(3))
 
             val contentOffset = admonitionOptions.contentIndent
 
@@ -146,6 +143,5 @@ object AdmonitionBlockParser {
           BlockStart.none()
         }
       }
-    }
   }
 }

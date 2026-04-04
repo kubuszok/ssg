@@ -14,7 +14,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.parser.Parser
-import ssg.md.parser.block.{BlockPreProcessor, BlockPreProcessorFactory, ParserState}
+import ssg.md.parser.block.{ BlockPreProcessor, BlockPreProcessorFactory, ParserState }
 import ssg.md.util.ast.Block
 import ssg.md.util.data.DataHolder
 
@@ -33,7 +33,7 @@ class DefinitionListBlockPreProcessor(options: DataHolder) extends BlockPreProce
         // need to propagate loose/tight
         var isTight = definitionList.isTight
         if (defOptions.autoLoose && isTight) {
-          for (child <- definitionList.children.asScala) {
+          for (child <- definitionList.children.asScala)
             child match {
               case defItem: DefinitionItem =>
                 if (defItem.isLoose) {
@@ -46,7 +46,6 @@ class DefinitionListBlockPreProcessor(options: DataHolder) extends BlockPreProce
                 }
               case _ => ()
             }
-          }
           definitionList.tight_=(isTight)
         }
 
@@ -62,13 +61,11 @@ object DefinitionListBlockPreProcessor {
 
   class Factory extends BlockPreProcessorFactory {
 
-    override def getBlockTypes: Set[Class[? <: Block]] = {
+    override def getBlockTypes: Set[Class[? <: Block]] =
       Set[Class[? <: Block]](classOf[DefinitionList])
-    }
 
-    override def afterDependents: Nullable[Set[Class[?]]] = {
+    override def afterDependents: Nullable[Set[Class[?]]] =
       Nullable(Set[Class[?]](classOf[DefinitionListItemBlockPreProcessor.Factory]))
-    }
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 

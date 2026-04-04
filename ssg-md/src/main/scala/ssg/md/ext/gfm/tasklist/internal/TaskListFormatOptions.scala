@@ -13,20 +13,20 @@ package gfm
 package tasklist
 package internal
 
-import ssg.md.util.data.{DataHolder, MutableDataHolder, MutableDataSetter}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSetter }
 
 import scala.language.implicitConversions
 
-import java.util.{Map as JMap}
+import java.util.Map as JMap
 
 class TaskListFormatOptions(options: DataHolder) extends MutableDataSetter {
 
-  val taskListItemCase: TaskListItemCase = TaskListExtension.FORMAT_LIST_ITEM_CASE.get(options)
-  val taskListItemPlacement: TaskListItemPlacement = TaskListExtension.FORMAT_LIST_ITEM_PLACEMENT.get(options)
-  val formatOrderedTaskItemPriority: Int = TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY.get(options)
-  val formatDefaultTaskItemPriority: Int = TaskListExtension.FORMAT_DEFAULT_TASK_ITEM_PRIORITY.get(options)
-  val formatTaskItemPriorities: JMap[Character, Integer] = TaskListExtension.FORMAT_TASK_ITEM_PRIORITIES.get(options)
-  val formatPrioritizedTaskItems: Boolean = TaskListExtension.FORMAT_PRIORITIZED_TASK_ITEMS.get(options)
+  val taskListItemCase:              TaskListItemCase         = TaskListExtension.FORMAT_LIST_ITEM_CASE.get(options)
+  val taskListItemPlacement:         TaskListItemPlacement    = TaskListExtension.FORMAT_LIST_ITEM_PLACEMENT.get(options)
+  val formatOrderedTaskItemPriority: Int                      = TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY.get(options)
+  val formatDefaultTaskItemPriority: Int                      = TaskListExtension.FORMAT_DEFAULT_TASK_ITEM_PRIORITY.get(options)
+  val formatTaskItemPriorities:      JMap[Character, Integer] = TaskListExtension.FORMAT_TASK_ITEM_PRIORITIES.get(options)
+  val formatPrioritizedTaskItems:    Boolean                  = TaskListExtension.FORMAT_PRIORITIZED_TASK_ITEMS.get(options)
 
   def this() = this(null)
 
@@ -39,4 +39,3 @@ class TaskListFormatOptions(options: DataHolder) extends MutableDataSetter {
     dataHolder
   }
 }
-

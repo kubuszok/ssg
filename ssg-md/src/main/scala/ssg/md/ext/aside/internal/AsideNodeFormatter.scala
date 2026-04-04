@@ -25,15 +25,15 @@ class AsideNodeFormatter(options: DataHolder) extends NodeFormatter {
   override def getBlockQuoteLikePrefixChar: Char = '|'
 
   // only registered if assignTextAttributes is enabled
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[AsideBlock](classOf[AsideBlock], (node, ctx, md) => render(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[AsideBlock](classOf[AsideBlock], (node, ctx, md) => render(node, ctx, md))
+      )
+    )
 
-  private def render(node: AsideBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def render(node: AsideBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     FormatterUtils.renderBlockQuoteLike(node, context, markdown)
-  }
 }
 
 object AsideNodeFormatter {

@@ -201,27 +201,33 @@ class MarkdownTable(
           if (if (!cell.closeMarker.isEmpty()) offset < cell.closeMarker.endOffset else offset <= cell.text.endOffset) {
             if (offset >= cell.getInsideStartOffset(previousCell) && offset <= cell.getInsideEndOffset) {
               // in the cell area
-              break(new TableCellOffsetInfo(
-                offset,
-                this,
-                getAllRowsSection(r),
-                Nullable(row),
-                Nullable(cell),
-                r,
-                i,
-                Nullable(Integer.valueOf(i)),
-                Nullable(Integer.valueOf(offset - cell.getInsideStartOffset(previousCell)))
-              ))
+              break(
+                new TableCellOffsetInfo(
+                  offset,
+                  this,
+                  getAllRowsSection(r),
+                  Nullable(row),
+                  Nullable(cell),
+                  r,
+                  i,
+                  Nullable(Integer.valueOf(i)),
+                  Nullable(Integer.valueOf(offset - cell.getInsideStartOffset(previousCell)))
+                )
+              )
             } else {
               // it the span area or before pipe of first cell
-              break(new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(cell), r, i, Nullable(null), Nullable(null)))
+              break(
+                new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(cell), r, i, Nullable(null), Nullable(null))
+              )
             }
           }
           i += 1
           previousCell = Nullable(cell)
         }
         // after the last cell
-        break(new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(lastCell), r, i, Nullable(null), Nullable(null)))
+        break(
+          new TableCellOffsetInfo(offset, this, getAllRowsSection(r), Nullable(row), Nullable(lastCell), r, i, Nullable(null), Nullable(null))
+        )
       }
       r += 1
     }
@@ -1498,42 +1504,41 @@ class MarkdownTable(
     count:       Int,
     sections:    Array[TableSection],
     manipulator: TableRowManipulator
-  ): Unit = {
+  ): Unit =
     if (count <= 0) {
       () // trivial guard clause: nothing to do
     } else {
-    var remaining    = count
-    var sectionIndex = startIndex
-    var allRowsIndex = startIndex
+      var remaining    = count
+      var sectionIndex = startIndex
+      var allRowsIndex = startIndex
 
-    boundary {
-      for (section <- sections) {
-        var currentIndex = 0
+      boundary {
+        for (section <- sections) {
+          var currentIndex = 0
 
-        if (sectionIndex >= section.rows.size()) {
-          sectionIndex -= section.rows.size()
-        } else {
-          currentIndex = sectionIndex
-          sectionIndex = 0
+          if (sectionIndex >= section.rows.size()) {
+            sectionIndex -= section.rows.size()
+          } else {
+            currentIndex = sectionIndex
+            sectionIndex = 0
 
-          while (currentIndex < section.rows.size()) {
-            val result = manipulator.apply(section.rows.get(currentIndex), allRowsIndex, section.rows, currentIndex)
-            if (result == TableRowManipulator.BREAK) break()
-            if (result < 0) {
-              allRowsIndex -= result // adjust for deleted rows
-              remaining += result
-            } else {
-              currentIndex += result + 1
-              remaining -= 1
+            while (currentIndex < section.rows.size()) {
+              val result = manipulator.apply(section.rows.get(currentIndex), allRowsIndex, section.rows, currentIndex)
+              if (result == TableRowManipulator.BREAK) break()
+              if (result < 0) {
+                allRowsIndex -= result // adjust for deleted rows
+                remaining += result
+              } else {
+                currentIndex += result + 1
+                remaining -= 1
+              }
+              if (remaining <= 0) break()
+              allRowsIndex += 1
             }
-            if (remaining <= 0) break()
-            allRowsIndex += 1
           }
         }
       }
-    }
     } // end else
-  }
 
   override def toString: String =
     // NOTE: show not simple name but name of container class if any

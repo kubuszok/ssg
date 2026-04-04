@@ -82,7 +82,7 @@ class FencedCodeBlockParser(options: DataHolder, val fenceChar: Char, val fenceL
           _block.info = infoLine.trim()
         }
 
-        val charsSeq     = c.spanningChars
+        val charsSeq      = c.spanningChars
         val spanningChars = charsSeq.baseSubSequence(charsSeq.startOffset, lines.get(0).endOffset)
 
         if (lines.size > 1) {

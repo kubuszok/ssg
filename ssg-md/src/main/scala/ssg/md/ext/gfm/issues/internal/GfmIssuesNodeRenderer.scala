@@ -15,7 +15,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
@@ -24,13 +24,14 @@ class GfmIssuesNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   private val gfmIssuesOptions = new GfmIssuesOptions(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[GfmIssue](classOf[GfmIssue], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[GfmIssue](classOf[GfmIssue], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: GfmIssue, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: GfmIssue, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (context.isDoNotRenderLinks) {
       html.text(node.chars)
     } else {
@@ -44,7 +45,6 @@ class GfmIssuesNodeRenderer(options: DataHolder) extends NodeRenderer {
       html.raw(gfmIssuesOptions.gitHubIssueTextSuffix)
       html.tag("/a")
     }
-  }
 }
 
 object GfmIssuesNodeRenderer {

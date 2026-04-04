@@ -18,9 +18,9 @@ import scala.language.implicitConversions
 
 class AttributesOptions(options: DataHolder) {
 
-  val assignTextAttributes: Boolean = AttributesExtension.ASSIGN_TEXT_ATTRIBUTES.get(options)
-  val fencedCodeInfoAttributes: Boolean = AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES.get(options)
-  val fencedCodeAddAttributes: FencedCodeAddType = AttributesExtension.FENCED_CODE_ADD_ATTRIBUTES.get(options)
-  val wrapNonAttributeText: Boolean = AttributesExtension.WRAP_NON_ATTRIBUTE_TEXT.get(options)
-  val useEmptyImplicitAsSpanDelimiter: Boolean = AttributesExtension.USE_EMPTY_IMPLICIT_AS_SPAN_DELIMITER.get(options)
+  val assignTextAttributes:            Boolean           = AttributesExtension.ASSIGN_TEXT_ATTRIBUTES.get(options)
+  val fencedCodeInfoAttributes:        Boolean           = AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES.get(options)
+  val fencedCodeAddAttributes:         FencedCodeAddType = AttributesExtension.FENCED_CODE_ADD_ATTRIBUTES.get(options)
+  val wrapNonAttributeText:            Boolean           = AttributesExtension.WRAP_NON_ATTRIBUTE_TEXT.get(options)
+  val useEmptyImplicitAsSpanDelimiter: Boolean           = AttributesExtension.USE_EMPTY_IMPLICIT_AS_SPAN_DELIMITER.get(options)
 }

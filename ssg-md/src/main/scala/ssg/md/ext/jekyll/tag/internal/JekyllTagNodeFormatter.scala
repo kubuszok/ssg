@@ -24,28 +24,26 @@ class JekyllTagNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
 
   private var embedIncludedContent: Boolean = false
 
-  override def getFormattingPhases: Nullable[Set[FormattingPhase]] = {
+  override def getFormattingPhases: Nullable[Set[FormattingPhase]] =
     Nullable(Set(FormattingPhase.COLLECT))
-  }
 
-  override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit = {
+  override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit =
     this.embedIncludedContent = JekyllTagExtension.EMBED_INCLUDED_CONTENT.get(document)
-  }
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[JekyllTagBlock](classOf[JekyllTagBlock], (node, context, markdown) => renderBlock(node, context, markdown)),
-      new NodeFormattingHandler[JekyllTag](classOf[JekyllTag], (node, context, markdown) => renderTag(node, context, markdown)),
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[JekyllTagBlock](classOf[JekyllTagBlock], (node, context, markdown) => renderBlock(node, context, markdown)),
+        new NodeFormattingHandler[JekyllTag](classOf[JekyllTag], (node, context, markdown) => renderTag(node, context, markdown))
+      )
+    )
 
-  private def renderBlock(node: JekyllTagBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderBlock(node: JekyllTagBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     context.renderChildren(node)
-  }
 
-  private def renderTag(node: JekyllTag, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderTag(node: JekyllTag, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (embedIncludedContent) {
       // remove jekyll tag node and just leave the included content
       context.renderChildren(node)
@@ -54,23 +52,18 @@ class JekyllTagNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
         val prev = node.previous
         if (prev.isDefined) {
           val prevChars = prev.get.chars
-          markdown.pushOptions().preserveSpaces()
-            .append(prevChars.baseSubSequence(prevChars.endOffset, node.startOffset))
-            .popOptions()
+          markdown.pushOptions().preserveSpaces().append(prevChars.baseSubSequence(prevChars.endOffset, node.startOffset)).popOptions()
         } else {
           val startLine = node.baseSequence.startOfLine(node.startOffset)
           if (startLine < node.startOffset) {
             val nodeChars = node.baseSubSequence(startLine, node.startOffset)
-            markdown.pushOptions().preserveSpaces()
-              .append(nodeChars)
-              .popOptions()
+            markdown.pushOptions().preserveSpaces().append(nodeChars).popOptions()
           }
         }
       }
 
       markdown.append(node.chars)
     }
-  }
 }
 
 object JekyllTagNodeFormatter {

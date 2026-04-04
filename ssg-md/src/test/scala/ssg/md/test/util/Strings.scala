@@ -15,7 +15,7 @@ object Strings {
 
   def repeat(s: String, count: Int): String = {
     val sb = new StringBuilder(s.length * count)
-    var i = 0
+    var i  = 0
     while (i < count) {
       sb.append(s)
       i += 1

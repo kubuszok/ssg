@@ -13,12 +13,12 @@ package gfm
 package users
 package internal
 
-import ssg.md.util.data.{DataHolder, MutableDataHolder, MutableDataSetter}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSetter }
 
 import scala.language.implicitConversions
 
 class GfmUsersOptions(options: DataHolder) extends MutableDataSetter {
-  val gitHubIssuesUrlRoot: String = GfmUsersExtension.GIT_HUB_USERS_URL_ROOT.get(options)
+  val gitHubIssuesUrlRoot:  String = GfmUsersExtension.GIT_HUB_USERS_URL_ROOT.get(options)
   val gitHubIssueUrlPrefix: String = GfmUsersExtension.GIT_HUB_USER_URL_PREFIX.get(options)
   val gitHubIssueUrlSuffix: String = GfmUsersExtension.GIT_HUB_USER_URL_SUFFIX.get(options)
   val gitHubUserTextPrefix: String = GfmUsersExtension.GIT_HUB_USER_HTML_PREFIX.get(options)

@@ -23,7 +23,7 @@ class RichSequenceImpl private (val charSequence: CharSequence)
     extends IRichSequenceBase[RichSequence](
       if (charSequence.isInstanceOf[String]) charSequence.hashCode() else 0
     ),
-    RichSequence {
+      RichSequence {
 
   override def emptyArray(): Array[RichSequence] = RichSequence.EMPTY_ARRAY
 

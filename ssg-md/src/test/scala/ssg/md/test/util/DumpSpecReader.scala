@@ -12,30 +12,29 @@ package test
 package util
 
 import ssg.md.Nullable
-import ssg.md.test.util.spec.{ResourceLocation, SpecExample, SpecReader}
+import ssg.md.test.util.spec.{ ResourceLocation, SpecExample, SpecReader }
 import ssg.md.util.data.DataHolder
 
 import java.io.InputStream
 import scala.language.implicitConversions
 
 class DumpSpecReader(
-    stream: InputStream,
-    protected val testCase: SpecExampleProcessor,
-    location: ResourceLocation,
-    compoundSections: Boolean
+  stream:                 InputStream,
+  protected val testCase: SpecExampleProcessor,
+  location:               ResourceLocation,
+  compoundSections:       Boolean
 ) extends SpecReader(stream, location, compoundSections) {
 
-  protected val sb: StringBuilder = new StringBuilder()
-  protected val sbExp: StringBuilder = new StringBuilder()
+  protected val sb:             StringBuilder           = new StringBuilder()
+  protected val sbExp:          StringBuilder           = new StringBuilder()
   protected var exampleComment: Nullable[StringBuilder] = Nullable.empty
 
   def fullSpec: String = sb.toString()
 
   def expectedFullSpec: String = sbExp.toString()
 
-  override def readExamples(): Unit = {
+  override def readExamples(): Unit =
     super.readExamples()
-  }
 
   override def addSpecLine(line: String, isSpecExampleOpen: Boolean): Unit = {
     if (!isSpecExampleOpen) sb.append(line).append("\n")
@@ -50,9 +49,9 @@ class DumpSpecReader(
     var exampleOptions: Nullable[DataHolder] = Nullable.empty
     var ignoredTestCase = false
 
-    try {
+    try
       exampleOptions = TestUtils.getOptions(example, example.optionsSet, testCase.options)
-    } catch {
+    catch {
       // JUnit 4: AssumptionViolatedException — stubbed as generic exception check
       case _: Exception =>
         ignoredTestCase = true
@@ -66,11 +65,11 @@ class DumpSpecReader(
     val exampleRenderer = testCase.getSpecExampleRenderer(example, exampleOptions)
 
     val exampleParse = new SpecExampleParse(exampleRenderer.options.get, exampleRenderer, exampleOptions, example.source)
-    val source = exampleParse.source
-    val timed = exampleParse.isTimed
-    val iterations = exampleParse.iterations
-    val start = exampleParse.startTime
-    val parse = exampleParse.parseTime
+    val source       = exampleParse.source
+    val timed        = exampleParse.isTimed
+    val iterations   = exampleParse.iterations
+    val start        = exampleParse.startTime
+    val parse        = exampleParse.parseTime
 
     val html: String = if (!ignoredTestCase) {
       val h = exampleRenderer.getHtml
@@ -88,7 +87,12 @@ class DumpSpecReader(
     val embedTimed = TestUtils.EMBED_TIMED.get(exampleRenderer.options.get)
 
     val timingInfo = TestUtils.getFormattedTimingInfo(
-      example.section.getOrElse(""), example.exampleNumber, iterations, start, parse, render
+      example.section.getOrElse(""),
+      example.exampleNumber,
+      iterations,
+      start,
+      parse,
+      render
     )
 
     if (timed || embedTimed) {
@@ -113,6 +117,16 @@ class DumpSpecReader(
 
     // include source so that diff can be used to update spec
     TestUtils.addSpecExample(true, sb, source, html, ast, example.optionsSet, exampleRenderer.includeExampleInfo, example.section, example.exampleNumber)
-    TestUtils.addSpecExample(false, sbExp, source, example.html, example.ast, example.optionsSet, exampleRenderer.includeExampleInfo, example.section, example.exampleNumber)
+    TestUtils.addSpecExample(
+      false,
+      sbExp,
+      source,
+      example.html,
+      example.ast,
+      example.optionsSet,
+      exampleRenderer.includeExampleInfo,
+      example.section,
+      example.exampleNumber
+    )
   }
 }

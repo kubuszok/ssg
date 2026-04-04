@@ -14,7 +14,7 @@ package users
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 
 import scala.language.implicitConversions
 import java.util.regex.Pattern
@@ -26,7 +26,7 @@ class GfmUsersInlineParserExtension(inlineParser: LightInlineParser) extends Inl
   override def finalizeBlock(inlineParser: InlineParser): Unit = {}
 
   override def parse(inlineParser: LightInlineParser): Boolean = {
-    val index = inlineParser.index
+    val index      = inlineParser.index
     var isPossible = index == 0
     if (!isPossible) {
       val c = inlineParser.input.charAt(index - 1)
@@ -41,7 +41,7 @@ class GfmUsersInlineParserExtension(inlineParser: LightInlineParser) extends Inl
         inlineParser.flushTextNode()
 
         val openMarker = matches(1)
-        val text = matches(2)
+        val text       = matches(2)
 
         val gitHubUser = new GfmUser(openMarker, text)
         inlineParser.block.appendChild(gitHubUser)
@@ -74,9 +74,8 @@ object GfmUsersInlineParserExtension {
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension = {
+    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension =
       new GfmUsersInlineParserExtension(lightInlineParser)
-    }
 
     override def affectsGlobalScope: Boolean = false
   }

@@ -12,16 +12,12 @@ import munit.FunSuite
 
 import scala.language.implicitConversions
 
-/**
- * Test suite for the EnumeratedReference extension.
- *
- * Spec resources:
- *   ext/enumerated/reference/ext_enumerated_reference_ast_spec.md
- *   ext/enumerated/reference/ext_enumerated_reference_formatter_spec.md
- *
- * TODO: Implement spec-based rendering tests once the test harness
- * (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
- */
+/** Test suite for the EnumeratedReference extension.
+  *
+  * Spec resources: ext/enumerated/reference/ext_enumerated_reference_ast_spec.md ext/enumerated/reference/ext_enumerated_reference_formatter_spec.md
+  *
+  * TODO: Implement spec-based rendering tests once the test harness (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
+  */
 class EnumeratedReferenceExtensionSuite extends FunSuite {
 
   test("EnumeratedReferenceExtension can be created") {

@@ -14,16 +14,16 @@ package spec
 
 import ssg.md.Nullable
 
-import java.io.{BufferedReader, IOException, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, IOException, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 class TemplateReader protected (protected val inputStream: InputStream) {
 
-  protected var state: TemplateReader.State = TemplateReader.State.BEFORE
-  protected var source: StringBuilder = new StringBuilder()
-  protected var entryNumber: Int = 0
+  protected var state:       TemplateReader.State = TemplateReader.State.BEFORE
+  protected var source:      StringBuilder        = new StringBuilder()
+  protected var entryNumber: Int                  = 0
 
   protected var examples: ju.List[TemplateEntry] = new ju.ArrayList[TemplateEntry]()
 
@@ -31,7 +31,7 @@ class TemplateReader protected (protected val inputStream: InputStream) {
     resetContents()
 
     val reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
-    var line = reader.readLine()
+    var line   = reader.readLine()
     while (line != null) {
       processLine(line)
       line = reader.readLine()
@@ -45,9 +45,8 @@ class TemplateReader protected (protected val inputStream: InputStream) {
     // default no-op
   }
 
-  protected def addTemplateEntry(example: TemplateEntry): Unit = {
+  protected def addTemplateEntry(example: TemplateEntry): Unit =
     examples.add(example)
-  }
 
   protected def processLine(line: String): Unit = {
     var lineAbsorbed = false
@@ -77,9 +76,8 @@ class TemplateReader protected (protected val inputStream: InputStream) {
     }
   }
 
-  protected def resetContents(): Unit = {
+  protected def resetContents(): Unit =
     source = new StringBuilder()
-  }
 }
 
 object TemplateReader {
@@ -91,7 +89,7 @@ object TemplateReader {
 
   def readEntries(resource: Nullable[String]): ju.List[TemplateEntry] = readEntries(resource, Nullable.empty)
 
-  def readEntries(resource: Nullable[String], readerFactory: Nullable[TemplateReaderFactory]): ju.List[TemplateEntry] = {
+  def readEntries(resource: Nullable[String], readerFactory: Nullable[TemplateReaderFactory]): ju.List[TemplateEntry] =
     try {
       val stream = getSpecInputStream(resource)
       val reader = readerFactory.fold(new TemplateReader(stream))(f => f.create(stream))
@@ -100,7 +98,6 @@ object TemplateReader {
       case e: IOException =>
         throw new RuntimeException(e)
     }
-  }
 
   def readExamplesAsString(): ju.List[String] = readExamplesAsString(Nullable.empty, Nullable.empty)
 
@@ -108,11 +105,10 @@ object TemplateReader {
 
   def readExamplesAsString(resource: Nullable[String], readerFactory: Nullable[TemplateReaderFactory]): ju.List[String] = {
     val entries = readEntries(resource, readerFactory)
-    val result = new ju.ArrayList[String]()
-    val iter = entries.iterator()
-    while (iter.hasNext) {
+    val result  = new ju.ArrayList[String]()
+    val iter    = entries.iterator()
+    while (iter.hasNext)
       result.add(iter.next().source)
-    }
     result
   }
 
@@ -122,7 +118,7 @@ object TemplateReader {
     val sb = new StringBuilder()
     try {
       val reader = new BufferedReader(new InputStreamReader(getSpecInputStream(resource), StandardCharsets.UTF_8))
-      var line = reader.readLine()
+      var line   = reader.readLine()
       while (line != null) {
         sb.append(line)
         sb.append("\n")
@@ -139,7 +135,7 @@ object TemplateReader {
 
   def getSpecInputStream(resource: Nullable[String]): InputStream = {
     val specPath = resource.getOrElse("/template.txt")
-    val stream = classOf[TemplateReader].getResourceAsStream(specPath)
+    val stream   = classOf[TemplateReader].getResourceAsStream(specPath)
     if (stream == null) {
       throw new IllegalStateException("Could not load " + resource + " classpath resource")
     }

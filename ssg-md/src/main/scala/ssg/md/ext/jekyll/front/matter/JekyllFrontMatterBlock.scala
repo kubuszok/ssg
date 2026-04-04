@@ -13,7 +13,7 @@ package jekyll
 package front
 package matter
 
-import ssg.md.util.ast.{Block, Node}
+import ssg.md.util.ast.{ Block, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A JekyllFrontMatter block node */
@@ -43,7 +43,6 @@ class JekyllFrontMatterBlock() extends Block {
 
   def content: BasedSequence = contentChars
 
-  def accept(visitor: JekyllFrontMatterVisitor): Unit = {
+  def accept(visitor: JekyllFrontMatterVisitor): Unit =
     visitor.visit(this)
-  }
 }

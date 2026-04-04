@@ -15,36 +15,33 @@ package matter
 package test
 
 import ssg.md.Nullable
-import ssg.md.ext.yaml.front.matter.{AbstractYamlFrontMatterVisitor, YamlFrontMatterExtension}
+import ssg.md.ext.yaml.front.matter.{ AbstractYamlFrontMatterVisitor, YamlFrontMatterExtension }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.test.util.TestUtils
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
 import java.util.Collections
 import scala.language.implicitConversions
 
 final class YamlFrontMatterTest extends munit.FunSuite {
 
-  private val OPTIONS: DataHolder = new MutableDataSet()
-    .set(TestUtils.NO_FILE_EOL, false)
-    .set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create()))
-    .toImmutable
+  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).toImmutable
 
-  private val PARSER: Parser = Parser.builder(OPTIONS).build()
+  private val PARSER:   Parser       = Parser.builder(OPTIONS).build()
   private val RENDERER: HtmlRenderer = HtmlRenderer.builder(OPTIONS).build()
 
   private def assertRendering(input: String, expectedHtml: String): Unit = {
-    val document = PARSER.parse(input)
+    val document   = PARSER.parse(input)
     val actualHtml = RENDERER.render(document)
     assertEquals(actualHtml, expectedHtml)
   }
 
   test("simpleValue") {
-    val input = "---\nhello: world\n...\n\ngreat"
+    val input    = "---\nhello: world\n...\n\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -58,10 +55,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("emptyValue") {
-    val input = "---\nkey:\n---\n\ngreat"
+    val input    = "---\nkey:\n---\n\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -74,10 +71,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("listValues") {
-    val input = "---\nlist:\n  - value1\n  - value2\n...\n\ngreat"
+    val input    = "---\nlist:\n  - value1\n  - value2\n...\n\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -92,10 +89,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("literalValue1") {
-    val input = "---\nliteral: |\n  hello markdown!\n  literal thing...\n---\n\ngreat"
+    val input    = "---\nliteral: |\n  hello markdown!\n  literal thing...\n---\n\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -109,10 +106,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("literalValue2") {
-    val input = "---\nliteral: |\n  - hello markdown!\n---\n\ngreat"
+    val input    = "---\nliteral: |\n  - hello markdown!\n---\n\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -126,10 +123,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("complexValues") {
-    val input = "---\nsimple: value\nliteral: |\n  hello markdown!\n\n  literal literal\nlist:\n    - value1\n    - value2\n---\ngreat"
+    val input    = "---\nsimple: value\nliteral: |\n  hello markdown!\n\n  literal literal\nlist:\n    - value1\n    - value2\n---\ngreat"
     val rendered = "<p>great</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -153,10 +150,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("yamlInParagraph") {
-    val input = "# hello\n\nhello markdown world!\n---\nhello: world\n---"
+    val input    = "# hello\n\nhello markdown world!\n---\nhello: world\n---"
     val rendered = "<h1>hello</h1>\n<h2>hello markdown world!</h2>\n<h2>hello: world</h2>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 
@@ -167,10 +164,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
   }
 
   test("nonMatchedStartTag") {
-    val input = "----\ntest"
+    val input    = "----\ntest"
     val rendered = "<hr />\n<p>test</p>\n"
 
-    val visitor = new AbstractYamlFrontMatterVisitor()
+    val visitor  = new AbstractYamlFrontMatterVisitor()
     val document = PARSER.parse(input)
     visitor.visit(document)
 

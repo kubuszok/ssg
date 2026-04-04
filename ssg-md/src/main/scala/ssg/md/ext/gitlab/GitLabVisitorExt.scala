@@ -15,12 +15,11 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object GitLabVisitorExt {
-  def VISIT_HANDLERS[V <: GitLabVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: GitLabVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[GitLabIns](classOf[GitLabIns], visitor.visit(_)),
       new VisitHandler[GitLabDel](classOf[GitLabDel], visitor.visit(_)),
       new VisitHandler[GitLabInlineMath](classOf[GitLabInlineMath], visitor.visit(_)),
       new VisitHandler[GitLabBlockQuote](classOf[GitLabBlockQuote], visitor.visit(_))
     )
-  }
 }

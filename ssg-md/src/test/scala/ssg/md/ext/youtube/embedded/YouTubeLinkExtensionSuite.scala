@@ -10,14 +10,12 @@ package embedded
 
 import munit.FunSuite
 
-/**
- * Test suite for the YouTubeLink extension.
- *
- * Spec resource: ext/youtube/embedded/ext_youtube_link_spec.md
- *
- * TODO: Implement spec-based rendering tests once the test harness
- * (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
- */
+/** Test suite for the YouTubeLink extension.
+  *
+  * Spec resource: ext/youtube/embedded/ext_youtube_link_spec.md
+  *
+  * TODO: Implement spec-based rendering tests once the test harness (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
+  */
 class YouTubeLinkExtensionSuite extends FunSuite {
 
   test("YouTubeLinkExtension can be created") {

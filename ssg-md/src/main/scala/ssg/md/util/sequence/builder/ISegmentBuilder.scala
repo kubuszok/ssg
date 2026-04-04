@@ -76,9 +76,9 @@ object ISegmentBuilder {
 
   given EnumBitField[Options] with {
     def elementType: Class[Options] = classOf[Options]
-    def typeName: String = "Options"
-    val values: Array[Options] = Options.values
-    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Options")
+    def typeName:    String         = "Options"
+    val values:      Array[Options] = Options.values
+    val bitMasks:    Array[Long]    = EnumBitField.computeBitMasks(values, "Options")
   }
 
   val O_INCLUDE_ANCHORS: Options = Options.INCLUDE_ANCHORS

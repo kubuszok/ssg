@@ -12,10 +12,10 @@ package ext
 package attributes
 package internal
 
-import ssg.md.ast.{AnchorRefTarget, FencedCodeBlock, Paragraph, ParagraphItemContainer, Text, TextBase}
-import ssg.md.parser.{LightInlineParser, LightInlineParserImpl}
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{BlankLine, DoNotAttributeDecorate, Document, Node, NodeTracker}
+import ssg.md.ast.{ AnchorRefTarget, FencedCodeBlock, Paragraph, ParagraphItemContainer, Text, TextBase }
+import ssg.md.parser.{ LightInlineParser, LightInlineParserImpl }
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ BlankLine, DoNotAttributeDecorate, Document, Node, NodeTracker }
 import ssg.md.util.misc.CharPredicate
 
 import scala.collection.mutable.ArrayBuffer
@@ -26,15 +26,15 @@ import scala.util.boundary.break
 
 class AttributesNodePostProcessor(document: Document) extends NodePostProcessor {
 
-  private val nodeAttributeRepository: NodeAttributeRepository = AttributesExtension.NODE_ATTRIBUTES.get(document)
-  private val myOptions: AttributesOptions = new AttributesOptions(document)
-  private var myLightInlineParser: Nullable[LightInlineParser] = Nullable.empty
-  private var myParserExtension: Nullable[AttributesInlineParserExtension] = Nullable.empty
+  private val nodeAttributeRepository: NodeAttributeRepository                   = AttributesExtension.NODE_ATTRIBUTES.get(document)
+  private val myOptions:               AttributesOptions                         = new AttributesOptions(document)
+  private var myLightInlineParser:     Nullable[LightInlineParser]               = Nullable.empty
+  private var myParserExtension:       Nullable[AttributesInlineParserExtension] = Nullable.empty
 
   def getAttributeOwner(state: NodeTracker, attributesNode: AttributesNode): Nullable[Node] = {
-    val previous: Nullable[Node] = attributesNode.previousAnyNot(classOf[BlankLine], classOf[DoNotAttributeDecorate])
+    val previous:       Nullable[Node] = attributesNode.previousAnyNot(classOf[BlankLine], classOf[DoNotAttributeDecorate])
     var attributeOwner: Nullable[Node] = Nullable.empty
-    val parent: Nullable[Node] = attributesNode.parent
+    val parent:         Nullable[Node] = attributesNode.parent
 
     if (previous.isEmpty) {
       // attributes are first
@@ -117,7 +117,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
         var effectivePrevious: Node = prev
         if (myOptions.wrapNonAttributeText) {
           // find first previous not delimited by attribute
-          var first: Nullable[Node] = attributesNode.previous
+          var first:                 Nullable[Node] = attributesNode.previous
           var lastNonAttributesNode: Nullable[Node] = Nullable.empty
           var hadDoNotDecorate = false
 
@@ -173,7 +173,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
       case attributesNode: AttributesNode =>
         // apply to sibling unless the sibling is a Text node then apply it to the parent
         var previous: Nullable[Node] = attributesNode.previous
-        var next: Nullable[Node] = attributesNode.next
+        var next:     Nullable[Node] = attributesNode.next
 
         // need to trim end of previous sibling if we are last
         // and to trim start of next sibling if we are first
@@ -214,7 +214,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
           // set the heading id for this node so the correct id will be used
           if (attributeOwner.get.isInstanceOf[AnchorRefTarget]) {
             boundary {
-              for (attributeNode <- attributesNode.reversedChildren.iterator().asScala) {
+              for (attributeNode <- attributesNode.reversedChildren.iterator().asScala)
                 attributeNode match {
                   case an: AttributeNode if an.isId =>
                     attributeOwner.get.asInstanceOf[AnchorRefTarget].anchorRefId = an.value.toString
@@ -222,7 +222,6 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
                     break()
                   case _ => // continue
                 }
-              }
             }
           }
         }
@@ -233,7 +232,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
     node match {
       case fencedCodeBlock: FencedCodeBlock if myOptions.fencedCodeInfoAttributes =>
         // see if has { after the first word
-        val info = fencedCodeBlock.info
+        val info     = fencedCodeBlock.info
         val language = fencedCodeBlock.infoDelimitedByAny(CharPredicate.SPACE_TAB)
         val infoTail = info.subSequence(language.length()).trimStart()
 
@@ -246,7 +245,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
           }
 
           val lip = myLightInlineParser.get
-          val pe = myParserExtension.get
+          val pe  = myParserExtension.get
 
           lip.input = infoTail
           lip.index = pos
@@ -256,7 +255,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
           boundary {
             while (true) {
               val startIndex = lip.index
-              val parsed = pe.parse(lip)
+              val parsed     = pe.parse(lip)
 
               lip.spnl()
               val index = lip.index + (if (lip.index == startIndex) 1 else 0)
@@ -275,13 +274,13 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
           if (dummyBlock.hasChildren) {
             // attributes added to block, move them as first child of fencedCode
             val firstAttributes = dummyBlock.firstChild.get
-            val lastAttributes = dummyBlock.lastChild.get
+            val lastAttributes  = dummyBlock.lastChild.get
 
             // truncate info to exclude attributes
             fencedCodeBlock.info = fencedCodeBlock.baseSubSequence(info.startOffset, firstAttributes.startOffset)
             fencedCodeBlock.attributes = fencedCodeBlock.baseSubSequence(firstAttributes.startOffset, lastAttributes.endOffset)
 
-            for (attributesNode <- dummyBlock.children.iterator().asScala) {
+            for (attributesNode <- dummyBlock.children.iterator().asScala)
               if (lip.index >= lip.input.length()) {
                 if (fencedCodeBlock.hasChildren) {
                   fencedCodeBlock.lastChild.get.insertBefore(attributesNode)
@@ -292,7 +291,6 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
                 // set attributes owner
                 nodeAttributeRepository.put(fencedCodeBlock, attributesNode.asInstanceOf[AttributesNode])
               }
-            }
           }
         }
 
@@ -304,7 +302,7 @@ class AttributesNodePostProcessor(document: Document) extends NodePostProcessor 
 object AttributesNodePostProcessor {
 
   def matchDelimitedSpans(state: NodeTracker, attributesNode: AttributesNode, previous: Node): Node = {
-    var first: Nullable[Node] = attributesNode.previous
+    var first:                 Nullable[Node] = attributesNode.previous
     var lastNonAttributesNode: Nullable[Node] = Nullable.empty
     val unmatchedAttributes = ArrayBuffer[Node]()
     var result: Node = previous

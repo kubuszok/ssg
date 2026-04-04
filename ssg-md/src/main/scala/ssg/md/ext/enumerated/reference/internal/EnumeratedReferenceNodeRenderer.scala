@@ -27,28 +27,27 @@ class EnumeratedReferenceNodeRenderer(options: DataHolder) extends PhasedNodeRen
   @annotation.nowarn("msg=unused private member") // stub: will be used when rendering is completed
   private val options_ = new EnumeratedReferenceOptions(options)
   private var enumeratedOrdinals: EnumeratedReferences = scala.compiletime.uninitialized
-  private var ordinalRunnable: Nullable[Runnable] = Nullable.empty
-  private val headerIdGenerator: HtmlIdGenerator = new HeaderIdGenerator.Factory().create()
+  private var ordinalRunnable:    Nullable[Runnable]   = Nullable.empty
+  private val headerIdGenerator:  HtmlIdGenerator      = new HeaderIdGenerator.Factory().create()
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[EnumeratedReferenceText](classOf[EnumeratedReferenceText], (node, ctx, html) => renderText(node, ctx, html)),
-      new NodeRenderingHandler[EnumeratedReferenceLink](classOf[EnumeratedReferenceLink], (node, ctx, html) => renderLink(node, ctx, html)),
-      new NodeRenderingHandler[EnumeratedReferenceBlock](classOf[EnumeratedReferenceBlock], (node, ctx, html) => renderBlock(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[EnumeratedReferenceText](classOf[EnumeratedReferenceText], (node, ctx, html) => renderText(node, ctx, html)),
+        new NodeRenderingHandler[EnumeratedReferenceLink](classOf[EnumeratedReferenceLink], (node, ctx, html) => renderLink(node, ctx, html)),
+        new NodeRenderingHandler[EnumeratedReferenceBlock](classOf[EnumeratedReferenceBlock], (node, ctx, html) => renderBlock(node, ctx, html))
+      )
+    )
 
-  override def getRenderingPhases: Nullable[Set[RenderingPhase]] = {
+  override def getRenderingPhases: Nullable[Set[RenderingPhase]] =
     Nullable(Set(RenderingPhase.HEAD_TOP, RenderingPhase.BODY_TOP))
-  }
 
-  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit = {
+  override def renderDocument(context: NodeRendererContext, html: HtmlWriter, document: Document, phase: RenderingPhase): Unit =
     if (phase == RenderingPhase.HEAD_TOP) {
       headerIdGenerator.generateIds(document)
     } else if (phase == RenderingPhase.BODY_TOP) {
       enumeratedOrdinals = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_ORDINALS.get(document)
     }
-  }
 
   private def renderLink(node: EnumeratedReferenceLink, context: NodeRendererContext, html: HtmlWriter): Unit = {
     val text = node.text.toString
@@ -58,16 +57,18 @@ class EnumeratedReferenceNodeRenderer(options: DataHolder) extends PhasedNodeRen
       if (ordinalRunnable.isDefined) ordinalRunnable.get.run()
     } else {
       val htmlWriter = html
-      enumeratedOrdinals.renderReferenceOrdinals(text, new OrdinalRenderer(this, context, htmlWriter) {
-        override def startRendering(renderings: Array[EnumeratedReferenceRendering]): Unit = {
-          val title = new EnumRefTextCollectingVisitor().collectAndGetText(node.chars.getBaseSequence, renderings, null)
-          htmlWriter.withAttr().attr("href", "#" + text).attr("title", title).tag("a")
-        }
+      enumeratedOrdinals.renderReferenceOrdinals(
+        text,
+        new OrdinalRenderer(this, context, htmlWriter) {
+          override def startRendering(renderings: Array[EnumeratedReferenceRendering]): Unit = {
+            val title = new EnumRefTextCollectingVisitor().collectAndGetText(node.chars.getBaseSequence, renderings, null)
+            htmlWriter.withAttr().attr("href", "#" + text).attr("title", title).tag("a")
+          }
 
-        override def endRendering(): Unit = {
-          htmlWriter.tag("/a")
+          override def endRendering(): Unit =
+            htmlWriter.tag("/a")
         }
-      })
+      )
     }
   }
 
@@ -100,25 +101,25 @@ class EnumeratedReferenceNodeRenderer(options: DataHolder) extends PhasedNodeRen
 
     override def startRendering(renderings: Array[EnumeratedReferenceRendering]): Unit = {}
 
-    override def setEnumOrdinalRunnable(runnable: Nullable[Runnable]): Unit = {
+    override def setEnumOrdinalRunnable(runnable: Nullable[Runnable]): Unit =
       renderer.ordinalRunnable = runnable
-    }
 
-    override def getEnumOrdinalRunnable: Nullable[Runnable] = {
+    override def getEnumOrdinalRunnable: Nullable[Runnable] =
       renderer.ordinalRunnable
-    }
 
     override def render(referenceOrdinal: Int, referenceFormat: EnumeratedReferenceBlock, defaultText: String, needSeparator: Boolean): Unit = {
       val compoundRunnable = renderer.ordinalRunnable
 
       if (referenceFormat != null) { // @nowarn - referenceFormat may be null from repository.get
-        renderer.ordinalRunnable = Nullable(new Runnable {
-          override def run(): Unit = {
-            if (compoundRunnable.isDefined) compoundRunnable.get.run()
-            html.text(String.valueOf(referenceOrdinal))
-            if (needSeparator) html.text(".")
+        renderer.ordinalRunnable = Nullable(
+          new Runnable {
+            override def run(): Unit = {
+              if (compoundRunnable.isDefined) compoundRunnable.get.run()
+              html.text(String.valueOf(referenceOrdinal))
+              if (needSeparator) html.text(".")
+            }
           }
-        })
+        )
 
         context.renderChildren(referenceFormat)
       } else {

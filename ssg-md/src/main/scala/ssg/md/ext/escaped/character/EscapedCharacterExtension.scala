@@ -12,27 +12,25 @@ package ext
 package escaped
 package character
 
-import ssg.md.ext.escaped.character.internal.{EscapedCharacterNodePostProcessor, EscapedCharacterNodeRenderer}
+import ssg.md.ext.escaped.character.internal.{ EscapedCharacterNodePostProcessor, EscapedCharacterNodeRenderer }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataHolder
 
-/**
- * Extension for escaped_characters.
- *
- * Create it with [[EscapedCharacterExtension.create]] and then configure it on the builders.
- *
- * The parsed escaped_character text is turned into [[EscapedCharacter]] nodes.
- */
+/** Extension for escaped_characters.
+  *
+  * Create it with [[EscapedCharacterExtension.create]] and then configure it on the builders.
+  *
+  * The parsed escaped_character text is turned into [[EscapedCharacter]] nodes.
+  */
 class EscapedCharacterExtension private () extends Parser.ParserExtension, HtmlRenderer.HtmlRendererExtension {
 
   override def rendererOptions(options: MutableDataHolder): Unit = {}
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.postProcessorFactory(new EscapedCharacterNodePostProcessor.Factory())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {

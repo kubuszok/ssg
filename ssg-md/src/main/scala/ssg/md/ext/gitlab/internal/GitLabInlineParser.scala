@@ -14,7 +14,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.ast.Text
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 import ssg.md.util.sequence.BasedSequence
 
 import scala.collection.mutable.ArrayBuffer
@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 class GitLabInlineParser(inlineParser: LightInlineParser) extends InlineParserExtension {
 
   private val openInlines: ArrayBuffer[GitLabInline] = ArrayBuffer.empty
-  private val options: GitLabOptions = new GitLabOptions(inlineParser.document)
+  private val options:     GitLabOptions             = new GitLabOptions(inlineParser.document)
 
   override def finalizeDocument(inlineParser: InlineParser): Unit = {}
 
@@ -33,7 +33,7 @@ class GitLabInlineParser(inlineParser: LightInlineParser) extends InlineParserEx
     while (j > 0) {
       j -= 1
       val gitLabInline = openInlines(j)
-      val textNode = new Text(gitLabInline.chars)
+      val textNode     = new Text(gitLabInline.chars)
       gitLabInline.insertBefore(textNode)
       gitLabInline.unlink()
     }
@@ -41,7 +41,7 @@ class GitLabInlineParser(inlineParser: LightInlineParser) extends InlineParserEx
   }
 
   override def parse(inlineParser: LightInlineParser): Boolean = {
-    val firstChar = inlineParser.peek()
+    val firstChar  = inlineParser.peek()
     val secondChar = inlineParser.peek(1)
     if ((firstChar == '{' || firstChar == '[') && (options.insParser && secondChar == '+' || options.delParser && secondChar == '-')) {
       // possible open, if matched close
@@ -51,23 +51,23 @@ class GitLabInlineParser(inlineParser: LightInlineParser) extends InlineParserEx
       inlineParser.flushTextNode()
       inlineParser.block.appendChild(open)
       openInlines += open
-      inlineParser.index = (inlineParser.index + 2)
+      inlineParser.index = inlineParser.index + 2
       true
     } else if ((options.insParser && firstChar == '+' || options.delParser && firstChar == '-') && (secondChar == ']' || secondChar == '}')) {
       // possible closed, if matches open
       val input = inlineParser.input.subSequence(inlineParser.index)
-      val matchOpen: CharSequence = if (secondChar == ']') (if (firstChar == '+') "[+" else "[-") else (if (firstChar == '+') "{+" else "{-")
+      val matchOpen: CharSequence = if (secondChar == ']') if (firstChar == '+') "[+" else "[-" else if (firstChar == '+') "{+" else "{-"
       val matchOpenSeq = BasedSequence.of(matchOpen)
 
-      var i = openInlines.size
+      var i     = openInlines.size
       var found = false
       while (i > 0 && !found) {
         i -= 1
-        val open = openInlines(i)
+        val open       = openInlines(i)
         val openMarker = open.chars
         if (openMarker.equals(matchOpenSeq)) {
           // this one is now closed, we remove all intervening ones since they did not match
-          inlineParser.index = (inlineParser.index + 2)
+          inlineParser.index = inlineParser.index + 2
           val closingMarker = input.subSequence(0, 2)
           open.openingMarker = openMarker
           open.closingMarker = closingMarker

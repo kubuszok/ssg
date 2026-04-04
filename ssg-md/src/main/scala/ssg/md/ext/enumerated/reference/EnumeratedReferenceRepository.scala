@@ -13,15 +13,16 @@ package enumerated
 package reference
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{KeepType, Node, NodeRepository}
-import ssg.md.util.data.{DataHolder, DataKey}
+import ssg.md.util.ast.{ KeepType, Node, NodeRepository }
+import ssg.md.util.data.{ DataHolder, DataKey }
 
 import scala.language.implicitConversions
-import java.util.{ArrayList, HashSet}
+import java.util.{ ArrayList, HashSet }
 
-class EnumeratedReferenceRepository(options: DataHolder) extends NodeRepository[EnumeratedReferenceBlock](
-  EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP.get(options)
-) {
+class EnumeratedReferenceRepository(options: DataHolder)
+    extends NodeRepository[EnumeratedReferenceBlock](
+      EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP.get(options)
+    ) {
 
   private val referencedEnumeratedReferenceBlocks_ = new ArrayList[EnumeratedReferenceBlock]()
 
@@ -33,16 +34,20 @@ class EnumeratedReferenceRepository(options: DataHolder) extends NodeRepository[
 
   override def getReferencedElements(parent: Node): java.util.Set[EnumeratedReferenceBlock] = {
     val references = new HashSet[EnumeratedReferenceBlock]()
-    visitNodes(parent, value => {
-      value match {
-        case ref: EnumeratedReferenceBase =>
-          val reference = ref.getReferenceNode(EnumeratedReferenceRepository.this)
-          if (reference != null) { // @nowarn - getReferenceNode may return null
-            references.add(reference)
-          }
-        case _ =>
-      }
-    }, classOf[EnumeratedReferenceText], classOf[EnumeratedReferenceLink])
+    visitNodes(
+      parent,
+      value =>
+        value match {
+          case ref: EnumeratedReferenceBase =>
+            val reference = ref.getReferenceNode(EnumeratedReferenceRepository.this)
+            if (reference != null) { // @nowarn - getReferenceNode may return null
+              references.add(reference)
+            }
+          case _ =>
+        },
+      classOf[EnumeratedReferenceText],
+      classOf[EnumeratedReferenceLink]
+    )
     references
   }
 }

@@ -14,24 +14,24 @@ package reference
 package internal
 
 import ssg.md.ast.Heading
-import ssg.md.ext.attributes.{AttributeNode, AttributesNode}
-import ssg.md.html.renderer.{HeaderIdGenerator, HtmlIdGenerator}
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{Document, Node, NodeTracker}
+import ssg.md.ext.attributes.{ AttributeNode, AttributesNode }
+import ssg.md.html.renderer.{ HeaderIdGenerator, HtmlIdGenerator }
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, NodeTracker }
 
 import scala.language.implicitConversions
 
 class EnumeratedReferenceNodePostProcessor(document: Document) extends NodePostProcessor {
 
   private val enumeratedReferences: EnumeratedReferences = EnumeratedReferenceExtension.ENUMERATED_REFERENCE_ORDINALS.get(document)
-  private val headerIdGenerator: HtmlIdGenerator = new HeaderIdGenerator.Factory().create()
+  private val headerIdGenerator:    HtmlIdGenerator      = new HeaderIdGenerator.Factory().create()
   headerIdGenerator.generateIds(document)
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     if (node.isInstanceOf[AttributesNode]) {
       val attributesNode = node.asInstanceOf[AttributesNode]
 
-      val iter = attributesNode.children.iterator()
+      val iter  = attributesNode.children.iterator()
       var found = false
       while (iter.hasNext && !found) {
         val attributeNode = iter.next()
@@ -49,7 +49,7 @@ class EnumeratedReferenceNodePostProcessor(document: Document) extends NodePostP
       while (iter.hasNext) {
         val child = iter.next()
         if (child.isInstanceOf[EnumeratedReferenceText]) {
-          val text = child.asInstanceOf[EnumeratedReferenceText].text
+          val text    = child.asInstanceOf[EnumeratedReferenceText].text
           val typeStr = EnumeratedReferenceRepository.getType(text.toString)
           if (typeStr.isEmpty || text.equals(typeStr + ":")) {
             val id = (if (typeStr.isEmpty) text.toString else typeStr) + ":" + headerIdGenerator.getId(node)
@@ -58,7 +58,6 @@ class EnumeratedReferenceNodePostProcessor(document: Document) extends NodePostP
         }
       }
     }
-  }
 }
 
 object EnumeratedReferenceNodePostProcessor {
@@ -66,8 +65,7 @@ object EnumeratedReferenceNodePostProcessor {
   class Factory extends NodePostProcessorFactory(false) {
     addNodes(classOf[AttributesNode], classOf[Heading])
 
-    override def apply(document: Document): NodePostProcessor = {
+    override def apply(document: Document): NodePostProcessor =
       new EnumeratedReferenceNodePostProcessor(document)
-    }
   }
 }

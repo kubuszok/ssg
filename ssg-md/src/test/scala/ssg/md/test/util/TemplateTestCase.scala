@@ -12,7 +12,7 @@ package test
 package util
 
 import ssg.md.Nullable
-import ssg.md.test.util.spec.{TemplateEntry, TemplateReader, TemplateReaderFactory}
+import ssg.md.test.util.spec.{ TemplateEntry, TemplateReader, TemplateReaderFactory }
 
 import java.io.InputStream
 import scala.language.implicitConversions
@@ -30,20 +30,19 @@ abstract class TemplateTestCase extends TemplateReaderFactory {
 
   def getExpandedEntry(entry: TemplateEntry, sb: StringBuilder): Unit
 
-  protected def processTemplate(template: String, expandedTemplate: String): Unit = {
+  protected def processTemplate(template: String, expandedTemplate: String): Unit =
     if (outputTemplate()) {
       System.out.println(expandedTemplate)
     }
-  }
 
-  /**
-   * @return return resource name for the spec to use for the examples of the test
-   */
+  /** @return
+    *   return resource name for the spec to use for the examples of the test
+    */
   protected def templateResourceName: String
 
-  /**
-   * @return return true if template to be dumped to stdout
-   */
+  /** @return
+    *   return true if template to be dumped to stdout
+    */
   protected def outputTemplate(): Boolean = true
 
   // JUnit 4: @Test — will need adaptation to munit later
@@ -51,7 +50,7 @@ abstract class TemplateTestCase extends TemplateReaderFactory {
     val specResourcePath = templateResourceName
     TemplateReader.readEntries(Nullable(specResourcePath), Nullable(this))
     val fullSpec = TemplateReader.readSpec(Nullable(specResourcePath))
-    val actual = dumpTemplateReader.get.template
+    val actual   = dumpTemplateReader.get.template
     processTemplate(fullSpec, actual)
   }
 }

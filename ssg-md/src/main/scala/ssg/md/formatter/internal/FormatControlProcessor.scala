@@ -111,9 +111,8 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
       }
     }
 
-  def initializeFrom(element: Node): Unit = {
+  def initializeFrom(element: Node): Unit =
     myFormatterOff = !isFormattingRegionAt(element.startOffset, element, checkParent = true)
-  }
 
   def processFormatControl(node: Node): Unit = {
     justTurnedOffFormatting = false
@@ -121,7 +120,7 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
 
     if ((node.isInstanceOf[HtmlCommentBlock] || node.isInstanceOf[HtmlInnerBlockComment]) && formatterTagsEnabled) {
       // could be formatter control
-      val formatterOff = myFormatterOff
+      val formatterOff   = myFormatterOff
       val isFormatterOff = isFormatterOffTag(Nullable(node.chars))
       if (isFormatterOff.isDefined) {
         myFormatterOff = isFormatterOff.get
@@ -132,7 +131,7 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
     }
   }
 
-  private def isFormatterOffTag(commentText: Nullable[CharSequence]): Nullable[Boolean] = {
+  private def isFormatterOffTag(commentText: Nullable[CharSequence]): Nullable[Boolean] =
     if (commentText.isEmpty) Nullable.empty
     else {
       var text = commentText.get.toString.trim
@@ -158,12 +157,11 @@ class FormatControlProcessor(document: Document, options: Nullable[DataHolder]) 
         Nullable.empty
       }
     }
-  }
 
   private def isFormattingRegionAt(offset: Int, startNode: Node, checkParent: Boolean): Boolean = boundary {
     var node: Node = startNode
     val checkingParent = checkParent
-    var continue = true
+    var continue       = true
 
     while (node != null && continue) { // @nowarn - Java interop: node traversal via getPrevious/getParent may return null
       if (node.startOffset <= offset) {

@@ -12,20 +12,19 @@ package ext
 package escaped
 package character
 
-import ssg.md.util.ast.{DoNotDecorate, Node}
+import ssg.md.util.ast.{ DoNotDecorate, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A EscapedCharacter node */
 class EscapedCharacter() extends Node, DoNotDecorate {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpanChars(out, openingMarker, text, BasedSequence.NULL, "text")
-  }
 
   def this(chars: BasedSequence) = {
     this()

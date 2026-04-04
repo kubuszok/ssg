@@ -12,7 +12,7 @@ package ext
 package emoji
 
 import ssg.md.html.HtmlRenderer
-import ssg.md.util.ast.{DelimitedNode, Node, NodeVisitor, TextContainer}
+import ssg.md.util.ast.{ DelimitedNode, Node, NodeVisitor, TextContainer }
 import ssg.md.util.misc.BitFieldSet
 import ssg.md.util.sequence.BasedSequence
 import ssg.md.util.sequence.builder.ISequenceBuilder
@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 class Emoji() extends Node, DelimitedNode, TextContainer {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = {
@@ -41,9 +41,8 @@ class Emoji() extends Node, DelimitedNode, TextContainer {
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpanChars(out, openingMarker, text, closingMarker, "text")
-  }
 
   override def collectText(out: ISequenceBuilder[? <: ISequenceBuilder[?, BasedSequence], BasedSequence], flags: Int, nodeVisitor: NodeVisitor): Boolean = {
     if (BitFieldSet.any(flags, TextContainer.F_FOR_HEADING_ID)) {
@@ -54,4 +53,3 @@ class Emoji() extends Node, DelimitedNode, TextContainer {
     false
   }
 }
-

@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object VideoLinkVisitorExt {
-  def VISIT_HANDLERS[V <: VideoLinkVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: VideoLinkVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[VideoLink](classOf[VideoLink], visitor.visit(_)))
-  }
 }

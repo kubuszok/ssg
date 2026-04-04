@@ -14,8 +14,7 @@ import java.io.InputStream
 
 /** Provides `getResourceAsStream`-like functionality across JVM, Scala.js, and Scala Native.
   *
-  * On JVM and Native, delegates to `Class.getResourceAsStream`. On Scala.js (where that method
-  * does not exist), reads resource files from the filesystem via Node.js.
+  * On JVM and Native, delegates to `Class.getResourceAsStream`. On Scala.js (where that method does not exist), reads resource files from the filesystem via Node.js.
   */
 object ResourceCompat {
 
@@ -30,7 +29,6 @@ object ResourceCompat {
     * @throws IllegalStateException
     *   if the resource is not found
     */
-  def getResourceAsStream(cls: Class[?], path: String): InputStream = {
+  def getResourceAsStream(cls: Class[?], path: String): InputStream =
     ResourceCompatPlatform.getResourceAsStream(cls, path)
-  }
 }

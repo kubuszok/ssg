@@ -13,24 +13,22 @@ package util
 package spec
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{Document, IParse, Node}
+import ssg.md.util.ast.{ Document, IParse, Node }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
-import java.io.{BufferedReader, IOException, Reader}
+import java.io.{ BufferedReader, IOException, Reader }
 import scala.language.implicitConversions
 
 abstract class IParseBase(val options: Nullable[DataHolder]) extends IParse {
 
   def this() = this(Nullable.empty)
 
-  override def parse(input: String): Node = {
+  override def parse(input: String): Node =
     parse(BasedSequence.of(input))
-  }
 
-  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean = {
+  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean =
     false
-  }
 
   @throws[IOException]
   override def parseReader(input: Reader): Node = {
@@ -39,7 +37,7 @@ abstract class IParseBase(val options: Nullable[DataHolder]) extends IParse {
       case _ => new BufferedReader(input)
     }
 
-    val file = new StringBuilder()
+    val file   = new StringBuilder()
     val buffer = new Array[Char](16384)
 
     var charsRead = bufferedReader.read(buffer)

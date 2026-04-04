@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object StrikethroughVisitorExt {
-  def VISIT_HANDLERS[V <: StrikethroughVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: StrikethroughVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[Strikethrough](classOf[Strikethrough], visitor.visit(_)))
-  }
 }

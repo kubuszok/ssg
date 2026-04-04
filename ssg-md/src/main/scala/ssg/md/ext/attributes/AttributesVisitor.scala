@@ -13,5 +13,5 @@ package attributes
 
 trait AttributesVisitor {
   def visit(node: AttributesNode): Unit
-  def visit(node: AttributeNode): Unit
+  def visit(node: AttributeNode):  Unit
 }

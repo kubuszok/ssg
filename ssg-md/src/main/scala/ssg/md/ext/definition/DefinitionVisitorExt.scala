@@ -15,11 +15,10 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object DefinitionVisitorExt {
-  def VISIT_HANDLERS[V <: DefinitionVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: DefinitionVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[DefinitionList](classOf[DefinitionList], visitor.visit(_)),
       new VisitHandler[DefinitionTerm](classOf[DefinitionTerm], visitor.visit(_)),
       new VisitHandler[DefinitionItem](classOf[DefinitionItem], visitor.visit(_))
     )
-  }
 }

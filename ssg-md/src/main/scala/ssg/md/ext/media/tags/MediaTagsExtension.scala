@@ -12,7 +12,7 @@ package ext
 package media
 package tags
 
-import ssg.md.ext.media.tags.internal.{MediaTagsNodePostProcessor, MediaTagsNodeRenderer}
+import ssg.md.ext.media.tags.internal.{ MediaTagsNodePostProcessor, MediaTagsNodeRenderer }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataHolder
@@ -23,9 +23,8 @@ class MediaTagsExtension private () extends Parser.ParserExtension, HtmlRenderer
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.postProcessorFactory(new MediaTagsNodePostProcessor.Factory(parserBuilder))
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {

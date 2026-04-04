@@ -15,7 +15,7 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{LinkType, NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler, ResolvedLink}
+import ssg.md.html.renderer.{ LinkType, NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler, ResolvedLink }
 import ssg.md.util.data.DataHolder
 
 import java.net.URI
@@ -23,13 +23,14 @@ import scala.language.implicitConversions
 
 class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[YouTubeLink](classOf[YouTubeLink], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[YouTubeLink](classOf[YouTubeLink], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: YouTubeLink, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: YouTubeLink, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (context.isDoNotRenderLinks) {
       context.renderChildren(node)
     } else {
@@ -37,18 +38,20 @@ class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
       val resolvedLink: ResolvedLink = context.resolveLink(LinkType.LINK, node.url.unescape(), Nullable.empty)
 
       var uri: Nullable[URI] = Nullable.empty
-      try {
+      try
         uri = Nullable(new URI(resolvedLink.url))
-      } catch {
+      catch {
         case _: Exception => // ignore malformed URIs
       }
 
       val uriHost = uri.map(u => Nullable(u.getHost)).getOrElse(Nullable.empty)
-      val uriPath = uri.map { u =>
-        val path = Nullable(u.getRawPath).getOrElse("")
-        val query = Nullable(u.getRawQuery)
-        if (query.isDefined) path + "?" + query.get else path
-      }.getOrElse("")
+      val uriPath = uri
+        .map { u =>
+          val path  = Nullable(u.getRawPath).getOrElse("")
+          val query = Nullable(u.getRawQuery)
+          if (query.isDefined) path + "?" + query.get else path
+        }
+        .getOrElse("")
 
       if (uriHost.isDefined && "youtu.be".equalsIgnoreCase(uriHost.get)) {
         html.attr("src", "https://www.youtube-nocookie.com/embed" + uriPath.replace("?t=", "?start="))
@@ -68,7 +71,7 @@ class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
         html.attr("allowfullscreen", "true")
         html.attr("frameborder", "0")
         html.srcPos(node.chars).withAttr(resolvedLink).tag("iframe")
-        //context.renderChildren(node)
+        // context.renderChildren(node)
         html.tag("/iframe")
       } else {
         html.attr("href", resolvedLink.url)
@@ -80,7 +83,6 @@ class YouTubeLinkNodeRenderer(options: DataHolder) extends NodeRenderer {
         html.tag("/a")
       }
     }
-  }
 }
 
 object YouTubeLinkNodeRenderer {

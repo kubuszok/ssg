@@ -13,8 +13,8 @@ package enumerated
 package reference
 package internal
 
-import ssg.md.parser.{LinkRefProcessor, LinkRefProcessorFactory}
-import ssg.md.util.ast.{Document, Node}
+import ssg.md.parser.{ LinkRefProcessor, LinkRefProcessorFactory }
+import ssg.md.util.ast.{ Document, Node }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -28,9 +28,9 @@ class EnumeratedReferenceLinkRefProcessor(document: Document) extends LinkRefPro
 
   override def bracketNestingLevel: Int = EnumeratedReferenceLinkRefProcessor.BRACKET_NESTING_LEVEL
 
-  override def isMatch(nodeChars: BasedSequence): Boolean = {
-    nodeChars.length() >= 3 && nodeChars.charAt(0) == '[' && (nodeChars.charAt(1) == '@' || nodeChars.charAt(1) == '#') && nodeChars.endCharAt(1) == ']' && (nodeChars.length() == 3 || !Character.isDigit(nodeChars.charAt(2)))
-  }
+  override def isMatch(nodeChars: BasedSequence): Boolean =
+    nodeChars.length() >= 3 && nodeChars.charAt(0) == '[' && (nodeChars.charAt(1) == '@' || nodeChars.charAt(1) == '#') && nodeChars.endCharAt(1) == ']' && (nodeChars.length() == 3 || !Character
+      .isDigit(nodeChars.charAt(2)))
 
   override def createNode(nodeChars: BasedSequence): Node = {
     val enumeratedReferenceId = nodeChars.midSequence(2, -1).trim()
@@ -64,7 +64,7 @@ class EnumeratedReferenceLinkRefProcessor(document: Document) extends LinkRefPro
 object EnumeratedReferenceLinkRefProcessor {
 
   val WANT_EXCLAMATION_PREFIX: Boolean = false
-  val BRACKET_NESTING_LEVEL: Int = 0
+  val BRACKET_NESTING_LEVEL:   Int     = 0
 
   class Factory extends LinkRefProcessorFactory {
 

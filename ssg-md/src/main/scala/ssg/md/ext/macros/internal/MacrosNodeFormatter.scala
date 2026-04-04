@@ -15,20 +15,22 @@ package internal
 import ssg.md.Nullable
 import ssg.md.ast.Paragraph
 import ssg.md.formatter.*
-import ssg.md.util.data.{DataHolder, DataKey}
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.data.{ DataHolder, DataKey }
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
-class MacrosNodeFormatter(options: DataHolder) extends NodeRepositoryFormatter[MacroDefinitionRepository, MacroDefinitionBlock, MacroReference](
-  options, MacrosNodeFormatter.MACROS_TRANSLATION_MAP, MacrosNodeFormatter.MACROS_UNIQUIFICATION_MAP
-) {
+class MacrosNodeFormatter(options: DataHolder)
+    extends NodeRepositoryFormatter[MacroDefinitionRepository, MacroDefinitionBlock, MacroReference](
+      options,
+      MacrosNodeFormatter.MACROS_TRANSLATION_MAP,
+      MacrosNodeFormatter.MACROS_UNIQUIFICATION_MAP
+    ) {
 
   private val macroFormatOptions = new MacroFormatOptions(options)
 
-  override def getRepository(options: DataHolder): MacroDefinitionRepository = {
+  override def getRepository(options: DataHolder): MacroDefinitionRepository =
     MacrosExtension.MACRO_DEFINITIONS.get(options)
-  }
 
   override def getReferencePlacement: ElementPlacement = macroFormatOptions.macrosPlacement
 
@@ -46,23 +48,22 @@ class MacrosNodeFormatter(options: DataHolder) extends NodeRepositoryFormatter[M
     markdown.line().append("<<<").blankLine()
   }
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[MacroReference](classOf[MacroReference], (node, ctx, md) => renderMacroReference(node, ctx, md)),
-      new NodeFormattingHandler[MacroDefinitionBlock](classOf[MacroDefinitionBlock], (node, ctx, md) => renderMacroDefinition(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[MacroReference](classOf[MacroReference], (node, ctx, md) => renderMacroReference(node, ctx, md)),
+        new NodeFormattingHandler[MacroDefinitionBlock](classOf[MacroDefinitionBlock], (node, ctx, md) => renderMacroDefinition(node, ctx, md))
+      )
+    )
 
-  override def getNodeClasses: Nullable[Set[Class[?]]] = {
+  override def getNodeClasses: Nullable[Set[Class[?]]] =
     if (macroFormatOptions.macrosPlacement.isNoChange || !macroFormatOptions.macrosSort.isUnused) Nullable.empty
     else {
       Nullable(Set[Class[?]](classOf[MacroReference]))
     }
-  }
 
-  private def renderMacroDefinition(node: MacroDefinitionBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderMacroDefinition(node: MacroDefinitionBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     renderReference(node, context, markdown)
-  }
 
   private def renderMacroReference(node: MacroReference, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append("<<<")
@@ -77,8 +78,9 @@ class MacrosNodeFormatter(options: DataHolder) extends NodeRepositoryFormatter[M
 }
 
 object MacrosNodeFormatter {
-  val MACROS_TRANSLATION_MAP: DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]]("MACROS_TRANSLATION_MAP", new java.util.HashMap[String, String]())
-  val MACROS_UNIQUIFICATION_MAP: DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]]("MACROS_UNIQUIFICATION_MAP", new java.util.HashMap[String, String]()) // uniquified references
+  val MACROS_TRANSLATION_MAP:    DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]]("MACROS_TRANSLATION_MAP", new java.util.HashMap[String, String]())
+  val MACROS_UNIQUIFICATION_MAP: DataKey[java.util.Map[String, String]] =
+    new DataKey[java.util.Map[String, String]]("MACROS_UNIQUIFICATION_MAP", new java.util.HashMap[String, String]()) // uniquified references
 
   class Factory extends NodeFormatterFactory {
     override def create(options: DataHolder): NodeFormatter = new MacrosNodeFormatter(options)

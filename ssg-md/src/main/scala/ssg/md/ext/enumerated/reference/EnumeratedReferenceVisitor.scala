@@ -13,7 +13,7 @@ package enumerated
 package reference
 
 trait EnumeratedReferenceVisitor {
-  def visit(node: EnumeratedReferenceText): Unit
-  def visit(node: EnumeratedReferenceLink): Unit
+  def visit(node: EnumeratedReferenceText):  Unit
+  def visit(node: EnumeratedReferenceLink):  Unit
   def visit(node: EnumeratedReferenceBlock): Unit
 }

@@ -19,6 +19,6 @@ import scala.language.implicitConversions
 
 class DefinitionFormatOptions(options: DataHolder) {
 
-  val markerSpaces: Int = DefinitionExtension.FORMAT_MARKER_SPACES.get(options)
-  val markerType: DefinitionMarker = DefinitionExtension.FORMAT_MARKER_TYPE.get(options)
+  val markerSpaces: Int              = DefinitionExtension.FORMAT_MARKER_SPACES.get(options)
+  val markerType:   DefinitionMarker = DefinitionExtension.FORMAT_MARKER_TYPE.get(options)
 }

@@ -13,31 +13,31 @@ package tables
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Paragraph, Text, WhiteSpace}
+import ssg.md.ast.{ Paragraph, Text, WhiteSpace }
 import ssg.md.parser.InlineParser
-import ssg.md.parser.block.{CharacterNodeFactory, ParagraphPreProcessor, ParagraphPreProcessorFactory, ParserState}
+import ssg.md.parser.block.{ CharacterNodeFactory, ParagraphPreProcessor, ParagraphPreProcessorFactory, ParserState }
 import ssg.md.parser.core.ReferencePreProcessorFactory
 import ssg.md.util.data.DataHolder
 import ssg.md.util.format.TableFormatOptions
 import ssg.md.util.sequence.BasedSequence
 
-import java.util.{ArrayList, HashMap, List as JList}
+import java.util.{ ArrayList, HashMap, List as JList }
 import java.util.regex.Pattern
 import scala.util.boundary
 import scala.util.boundary.break
 import scala.language.implicitConversions
 import ssg.md.util.ast.Node
-import ssg.md.util.ast.{DoNotDecorate, NodeIterator}
+import ssg.md.util.ast.{ DoNotDecorate, NodeIterator }
 
 class TableParagraphPreProcessor private (options: DataHolder) extends ParagraphPreProcessor {
 
-  private val parserOptions: TableParserOptions = new TableParserOptions(options)
-  private val TABLE_HEADER_SEPARATOR: Pattern = TableParagraphPreProcessor.getTableHeaderSeparator(parserOptions.minSeparatorDashes, "")
+  private val parserOptions:          TableParserOptions = new TableParserOptions(options)
+  private val TABLE_HEADER_SEPARATOR: Pattern            = TableParagraphPreProcessor.getTableHeaderSeparator(parserOptions.minSeparatorDashes, "")
 
   override def preProcessBlock(block: Paragraph, state: ParserState): Int = {
     val inlineParser = state.inlineParser
 
-    val tableLines = new ArrayList[BasedSequence]()
+    val tableLines          = new ArrayList[BasedSequence]()
     var separatorLineNumber = -1
     var separatorLine: Nullable[BasedSequence] = Nullable.empty
     val blockIndent = block.getLineIndent(0)
@@ -71,8 +71,10 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
           val trimmedRowLine = rowLine.subSequence(block.getLineIndent(rowNumber))
 
           if (separatorLineNumber == -1) {
-            if (rowNumber >= parserOptions.minHeaderRows
-              && TABLE_HEADER_SEPARATOR.matcher(trimmedRowLine).matches()) {
+            if (
+              rowNumber >= parserOptions.minHeaderRows
+              && TABLE_HEADER_SEPARATOR.matcher(trimmedRowLine).matches()
+            ) {
               // must start with | or cell, whitespace means its not a separator line
               if (rowLine.charAt(0) != ' ' && rowLine.charAt(0) != '\t' || rowLine.charAt(0) != '|') {
                 separatorLineNumber = rowNumber
@@ -101,7 +103,7 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
           }
 
           val isSeparator = rowNumber == separatorLineNumber
-          val tableRow = new TableRow(fullRowLine)
+          val tableRow    = new TableRow(fullRowLine)
 
           val tableRowNumber: Int =
             if (isSeparator) 0
@@ -110,7 +112,7 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
 
           val sepList: Nullable[Any] = if (isSeparator) {
             val fakeRow = new TableParagraphPreProcessor.TableSeparatorRow(fullRowLine)
-            val list = inlineParser.parseCustom(fullRowLine, fakeRow, separators, nodeMap)
+            val list    = inlineParser.parseCustom(fullRowLine, fakeRow, separators, nodeMap)
             tableRow.takeChildren(fakeRow)
             list
           } else {
@@ -141,7 +143,7 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
 
       val alignments = parseAlignment(separatorLine.get)
 
-      var rowNumber = 0
+      var rowNumber        = 0
       val separatorColumns = alignments.size()
       for (tableRow <- scala.jdk.CollectionConverters.IterableHasAsScala(tableRows).asScala) {
         if (rowNumber == separatorLineNumber) {
@@ -154,9 +156,9 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
           tableBlock.appendChild(section)
         }
 
-        var firstCell = true
-        var cellCount = 0
-        val nodes = new NodeIterator(tableRow.firstChild.get) // safe: tableRow always has children at this point
+        var firstCell   = true
+        var cellCount   = 0
+        val nodes       = new NodeIterator(tableRow.firstChild.get) // safe: tableRow always has children at this point
         val newTableRow = new TableRow(tableRow.chars)
         newTableRow.rowNumber = tableRow.rowNumber
         var accumulatedSpanOffset = 0
@@ -179,22 +181,20 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
               firstCell = false
             }
 
-            val alignment: Nullable[TableCell.Alignment] = {
+            val alignment: Nullable[TableCell.Alignment] =
               if (cellCount + accumulatedSpanOffset < separatorColumns) alignments.get(cellCount + accumulatedSpanOffset)
               else Nullable.empty
-            }
             tableCell.header = rowNumber < separatorLineNumber
             tableCell.alignment = alignment
 
             // take all until separator or end of iterator
             boundary {
-              while (nodes.hasNext) {
+              while (nodes.hasNext)
                 if (nodes.peek.isDefined && nodes.peek.get.isInstanceOf[TableColumnSeparator]) {
                   break(()) // break from inner while — hit a separator
                 } else {
                   tableCell.appendChild(nodes.next())
                 }
-              }
             }
 
             // accumulate closers, and optional spans
@@ -280,7 +280,7 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
     // any separators which do not have tableRow as parent are embedded into inline elements and should be
     // converted back to text
     var removedSeparators: Nullable[ArrayList[Node]] = Nullable.empty
-    var mergeTextParents: Nullable[ArrayList[Node]] = Nullable.empty
+    var mergeTextParents:  Nullable[ArrayList[Node]] = Nullable.empty
 
     val iter = sepList.iterator()
     while (iter.hasNext) {
@@ -288,7 +288,7 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
       if (node.parent.isDefined && !node.parent.contains(tableRow)) {
         // embedded, convert it and surrounding whitespace to text
         val firstNode: Node = if (node.previous.isDefined && node.previous.get.isInstanceOf[WhiteSpace]) node.previous.get else node
-        val lastNode: Node = if (node.next.isDefined && node.next.get.isInstanceOf[WhiteSpace]) node.next.get else node
+        val lastNode:  Node = if (node.next.isDefined && node.next.get.isInstanceOf[WhiteSpace]) node.next.get else node
 
         val text = new Text(node.baseSubSequence(firstNode.startOffset, lastNode.endOffset))
         node.insertBefore(text)
@@ -322,14 +322,14 @@ class TableParagraphPreProcessor private (options: DataHolder) extends Paragraph
   }
 
   private def parseAlignment(separatorLine: BasedSequence): JList[Nullable[TableCell.Alignment]] = {
-    val parts = TableParagraphPreProcessor.split(separatorLine, columnSpans = false, wantPipes = false)
+    val parts      = TableParagraphPreProcessor.split(separatorLine, columnSpans = false, wantPipes = false)
     val alignments = new ArrayList[Nullable[TableCell.Alignment]]()
-    val iter = parts.iterator()
+    val iter       = parts.iterator()
     while (iter.hasNext) {
-      val part = iter.next()
-      val trimmed = part.trim()
-      val left = trimmed.startsWith(":")
-      val right = trimmed.endsWith(":")
+      val part      = iter.next()
+      val trimmed   = part.trim()
+      val left      = trimmed.startsWith(":")
+      val right     = trimmed.endsWith(":")
       val alignment = TableParagraphPreProcessor.getAlignment(left, right)
       alignments.add(alignment)
     }
@@ -355,48 +355,49 @@ object TableParagraphPreProcessor {
 
   private val pipeNodeMap: HashMap[Character, CharacterNodeFactory] = {
     val map = new HashMap[Character, CharacterNodeFactory]()
-    map.put('|', new CharacterNodeFactory {
-      override def skipNext(c: Char): Boolean = c == ' ' || c == '\t'
-      override def skipPrev(c: Char): Boolean = c == ' ' || c == '\t'
-      override def wantSkippedWhitespace: Boolean = true
-      override def apply(): Node = new TableColumnSeparator()
-    })
+    map.put(
+      '|',
+      new CharacterNodeFactory {
+        override def skipNext(c: Char):     Boolean = c == ' ' || c == '\t'
+        override def skipPrev(c: Char):     Boolean = c == ' ' || c == '\t'
+        override def wantSkippedWhitespace: Boolean = true
+        override def apply():               Node    = new TableColumnSeparator()
+      }
+    )
     map
   }
 
   private class TableSeparatorRow() extends TableRow, DoNotDecorate {
     def this(chars: BasedSequence) = {
       this()
-      this.chars = (chars)
+      this.chars = chars
     }
   }
 
   def Factory(): ParagraphPreProcessorFactory = new ParagraphPreProcessorFactory {
     override def affectsGlobalScope: Boolean = false
 
-    override def afterDependents: Nullable[Set[Class[?]]] = {
+    override def afterDependents: Nullable[Set[Class[?]]] =
       Nullable(Set[Class[?]](classOf[ReferencePreProcessorFactory]))
-    }
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(state: ParserState): ParagraphPreProcessor = {
+    override def apply(state: ParserState): ParagraphPreProcessor =
       new TableParagraphPreProcessor(state.properties)
-    }
   }
 
   def getTableHeaderSeparator(minColumnDashes: Int, intellijDummyIdentifier: String): Pattern = {
-    val minCol = if (minColumnDashes >= 1) minColumnDashes else 1
-    val minColDash = if (minColumnDashes >= 2) minColumnDashes - 1 else 1
+    val minCol       = if (minColumnDashes >= 1) minColumnDashes else 1
+    val minColDash   = if (minColumnDashes >= 2) minColumnDashes - 1 else 1
     val minColDashes = if (minColumnDashes >= 3) minColumnDashes - 2 else 1
     // to prevent conversion to arabic numbers, using string
     val COL = s"(?:\\s*-{$minCol,}\\s*|\\s*:-{$minColDash,}\\s*|\\s*-{$minColDash,}:\\s*|\\s*:-{$minColDashes,}:\\s*)"
 
     val noIntelliJ = intellijDummyIdentifier.isEmpty
-    val add = if (noIntelliJ) "" else TableFormatOptions.INTELLIJ_DUMMY_IDENTIFIER
-    val sp = if (noIntelliJ) "\\s" else "(?:\\s" + add + "?)"
-    val ds = if (noIntelliJ) "-" else "(?:-" + add + "?)"
-    val pipe = if (noIntelliJ) "\\|" else "(?:" + add + "?\\|" + add + "?)"
+    val add        = if (noIntelliJ) "" else TableFormatOptions.INTELLIJ_DUMMY_IDENTIFIER
+    val sp         = if (noIntelliJ) "\\s" else "(?:\\s" + add + "?)"
+    val ds         = if (noIntelliJ) "-" else "(?:-" + add + "?)"
+    val pipe       = if (noIntelliJ) "\\|" else "(?:" + add + "?\\|" + add + "?)"
 
     val regex = "\\|" + COL + "\\|?\\s*" + "|" +
       COL + "\\|\\s*" + "|" +
@@ -408,9 +409,9 @@ object TableParagraphPreProcessor {
   }
 
   private def split(input: BasedSequence, columnSpans: Boolean, wantPipes: Boolean): JList[BasedSequence] = {
-    var line = input.trim()
+    var line       = input.trim()
     var lineLength = line.length()
-    val segments = new ArrayList[BasedSequence]()
+    val segments   = new ArrayList[BasedSequence]()
 
     if (line.startsWith("|")) {
       if (wantPipes) segments.add(line.subSequence(0, 1))
@@ -418,10 +419,10 @@ object TableParagraphPreProcessor {
       lineLength -= 1
     }
 
-    var escape = false
-    var lastPos = 0
+    var escape    = false
+    var lastPos   = 0
     var cellChars = 0
-    var i = 0
+    var i         = 0
     while (i < lineLength) {
       val c = line.charAt(i)
       if (escape) {
@@ -451,7 +452,7 @@ object TableParagraphPreProcessor {
     segments
   }
 
-  private def getAlignment(left: Boolean, right: Boolean): Nullable[TableCell.Alignment] = {
+  private def getAlignment(left: Boolean, right: Boolean): Nullable[TableCell.Alignment] =
     if (left && right) {
       Nullable(TableCell.Alignment.CENTER)
     } else if (left) {
@@ -461,5 +462,4 @@ object TableParagraphPreProcessor {
     } else {
       Nullable.empty
     }
-  }
 }

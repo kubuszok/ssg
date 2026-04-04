@@ -12,10 +12,10 @@ package ext
 package attributes
 package internal
 
-import ssg.md.util.ast.{KeepType, Node}
-import ssg.md.util.data.{DataHolder, DataKey}
+import ssg.md.util.ast.{ KeepType, Node }
+import ssg.md.util.data.{ DataHolder, DataKey }
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 class NodeAttributeRepository(options: DataHolder) extends ju.AbstractMap[Node, ju.ArrayList[AttributesNode]] {

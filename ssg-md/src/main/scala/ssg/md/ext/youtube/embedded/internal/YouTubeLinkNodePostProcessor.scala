@@ -13,20 +13,20 @@ package youtube
 package embedded
 package internal
 
-import ssg.md.ast.{Link, Text}
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{Document, Node, NodeTracker}
+import ssg.md.ast.{ Link, Text }
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, NodeTracker }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.misc.CharPredicate
 
 class YouTubeLinkNodePostProcessor(options: DataHolder) extends NodePostProcessor {
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     if (node.isInstanceOf[Link]) {
       val previous = node.previous
 
       if (previous.isDefined && previous.get.isInstanceOf[Text]) {
-        val prev = previous.get
+        val prev  = previous.get
         val chars = prev.chars
         if (chars.endsWith("@") && chars.isContinuedBy(node.chars)) {
           val prevBackslash = chars.subSequence(0, chars.length() - 1).countTrailing(CharPredicate.BACKSLASH)
@@ -44,7 +44,6 @@ class YouTubeLinkNodePostProcessor(options: DataHolder) extends NodePostProcesso
         }
       }
     }
-  }
 }
 
 object YouTubeLinkNodePostProcessor {
@@ -52,8 +51,7 @@ object YouTubeLinkNodePostProcessor {
   class Factory(options: DataHolder) extends NodePostProcessorFactory(false) {
     addNodes(classOf[Link])
 
-    override def apply(document: Document): NodePostProcessor = {
+    override def apply(document: Document): NodePostProcessor =
       new YouTubeLinkNodePostProcessor(document)
-    }
   }
 }

@@ -24,8 +24,8 @@ trait SpecExampleRenderer {
   def options: Nullable[DataHolder]
   def example: SpecExample
 
-  def includeDocument(includedText: String): Unit
-  def parse(input: CharSequence): Unit
+  def includeDocument(includedText: String):       Unit
+  def parse(input:                  CharSequence): Unit
 
   // after all parsing is complete gives a chance to handle insertion of included doc
   def finalizeDocument(): Unit
@@ -36,7 +36,7 @@ trait SpecExampleRenderer {
 
   // caches values and does not regenerate
   def getHtml: String
-  def getAst: Nullable[String]
+  def getAst:  Nullable[String]
 }
 
 object SpecExampleRenderer {

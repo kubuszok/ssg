@@ -13,8 +13,8 @@ package footnotes
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{LinkRefProcessor, LinkRefProcessorFactory}
-import ssg.md.util.ast.{Document, Node}
+import ssg.md.parser.{ LinkRefProcessor, LinkRefProcessorFactory }
+import ssg.md.util.ast.{ Document, Node }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -28,9 +28,8 @@ class FootnoteLinkRefProcessor(document: Document) extends LinkRefProcessor {
 
   override def bracketNestingLevel: Int = FootnoteLinkRefProcessor.BRACKET_NESTING_LEVEL
 
-  override def isMatch(nodeChars: BasedSequence): Boolean = {
+  override def isMatch(nodeChars: BasedSequence): Boolean =
     nodeChars.length() >= 3 && nodeChars.charAt(0) == '[' && nodeChars.charAt(1) == '^' && nodeChars.endCharAt(1) == ']'
-  }
 
   override def createNode(nodeChars: BasedSequence): Node = {
     val footnoteId = nodeChars.midSequence(2, -1).trim()
@@ -60,7 +59,7 @@ class FootnoteLinkRefProcessor(document: Document) extends LinkRefProcessor {
 object FootnoteLinkRefProcessor {
 
   val WANT_EXCLAMATION_PREFIX: Boolean = false
-  val BRACKET_NESTING_LEVEL: Int = 0
+  val BRACKET_NESTING_LEVEL:   Int     = 0
 
   class Factory extends LinkRefProcessorFactory {
 

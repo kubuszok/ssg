@@ -12,7 +12,7 @@ package ext
 package admonition
 package internal
 
-import ssg.md.util.ast.{Node, NodeVisitor, VisitHandler}
+import ssg.md.util.ast.{ Node, NodeVisitor, VisitHandler }
 
 import java.util.LinkedHashSet
 import scala.language.implicitConversions
@@ -20,7 +20,7 @@ import scala.language.implicitConversions
 class AdmonitionCollectingVisitor {
 
   private var qualifiers: LinkedHashSet[String] = new LinkedHashSet[String]()
-  private val myVisitor: NodeVisitor = new NodeVisitor(
+  private val myVisitor:  NodeVisitor           = new NodeVisitor(
     new VisitHandler[AdmonitionBlock](classOf[AdmonitionBlock], node => visit(node))
   )
 
@@ -36,7 +36,6 @@ class AdmonitionCollectingVisitor {
     qualifiers
   }
 
-  private def visit(node: AdmonitionBlock): Unit = {
+  private def visit(node: AdmonitionBlock): Unit =
     qualifiers.add(node.info.toString)
-  }
 }

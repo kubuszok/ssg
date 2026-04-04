@@ -24,35 +24,35 @@ import scala.util.boundary.break
 
 class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGeneratorFactory) extends TranslationHandler {
 
-  private val myFormatterOptions: FormatterOptions       = new FormatterOptions(options)
-  private val myNonTranslatingTexts: mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder to non-translating text
-  private val myAnchorTexts: mutable.HashMap[String, String]         = mutable.HashMap.empty // map anchor id to non-translating text
-  private val myTranslatingTexts: mutable.HashMap[String, String]    = mutable.HashMap.empty // map placeholder to translating original text
-  private val myTranslatedTexts: mutable.HashMap[String, String]     = mutable.HashMap.empty // map placeholder to translated text
-  private val myTranslatingPlaceholders: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty // list of placeholders to index
-  private val myTranslatingSpans: mutable.ArrayBuffer[String]        = mutable.ArrayBuffer.empty
-  private val myNonTranslatingSpans: mutable.ArrayBuffer[String]     = mutable.ArrayBuffer.empty
-  private val myTranslatedSpans: mutable.ArrayBuffer[String]         = mutable.ArrayBuffer.empty
-  private val myPlaceHolderMarkerPattern: Pattern                    = Pattern.compile(myFormatterOptions.translationExcludePattern)
-  private val myTranslationStore: MutableDataSet                     = new MutableDataSet()
+  private val myFormatterOptions:         FormatterOptions                = new FormatterOptions(options)
+  private val myNonTranslatingTexts:      mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder to non-translating text
+  private val myAnchorTexts:              mutable.HashMap[String, String] = mutable.HashMap.empty // map anchor id to non-translating text
+  private val myTranslatingTexts:         mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder to translating original text
+  private val myTranslatedTexts:          mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder to translated text
+  private val myTranslatingPlaceholders:  mutable.ArrayBuffer[String]     = mutable.ArrayBuffer.empty // list of placeholders to index
+  private val myTranslatingSpans:         mutable.ArrayBuffer[String]     = mutable.ArrayBuffer.empty
+  private val myNonTranslatingSpans:      mutable.ArrayBuffer[String]     = mutable.ArrayBuffer.empty
+  private val myTranslatedSpans:          mutable.ArrayBuffer[String]     = mutable.ArrayBuffer.empty
+  private val myPlaceHolderMarkerPattern: Pattern                         = Pattern.compile(myFormatterOptions.translationExcludePattern)
+  private val myTranslationStore:         MutableDataSet                  = new MutableDataSet()
 
-  private val myOriginalRefTargets: mutable.HashMap[String, Int]     = mutable.HashMap.empty // map ref target id to translation index
-  private val myTranslatedRefTargets: mutable.HashMap[Int, String]   = mutable.HashMap.empty // map translation index to translated ref target id
+  private val myOriginalRefTargets:   mutable.HashMap[String, Int] = mutable.HashMap.empty // map ref target id to translation index
+  private val myTranslatedRefTargets: mutable.HashMap[Int, String] = mutable.HashMap.empty // map translation index to translated ref target id
   @annotation.nowarn("msg=unused private member") // faithful port: maps used in full translation pipeline
-  private val myOriginalAnchors: mutable.HashMap[String, String]     = mutable.HashMap.empty // map placeholder id to original ref id
+  private val myOriginalAnchors: mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder id to original ref id
   @annotation.nowarn("msg=unused private member") // faithful port: maps used in full translation pipeline
-  private val myTranslatedAnchors: mutable.HashMap[String, String]   = mutable.HashMap.empty // map placeholder id to translated ref target id
+  private val myTranslatedAnchors: mutable.HashMap[String, String] = mutable.HashMap.empty // map placeholder id to translated ref target id
 
-  private var myPlaceholderId: Int                      = 0
-  private var myAnchorId: Int                           = 0
-  private var myTranslatingSpanId: Int                  = 0
-  private var myNonTranslatingSpanId: Int               = 0
-  private var myRenderPurpose: RenderPurpose            = RenderPurpose.FORMAT
-  private var myWriter: Nullable[MarkdownWriter]        = Nullable.empty
-  private var myIdGenerator: Nullable[HtmlIdGenerator]  = Nullable.empty
-  private var myPlaceholderGenerator: Nullable[TranslationPlaceholderGenerator] = Nullable.empty
-  private var myNonTranslatingPostProcessor: Nullable[String => CharSequence]   = Nullable.empty
-  private var myMergeContext: Nullable[MergeContext]     = Nullable.empty
+  private var myPlaceholderId:               Int                                       = 0
+  private var myAnchorId:                    Int                                       = 0
+  private var myTranslatingSpanId:           Int                                       = 0
+  private var myNonTranslatingSpanId:        Int                                       = 0
+  private var myRenderPurpose:               RenderPurpose                             = RenderPurpose.FORMAT
+  private var myWriter:                      Nullable[MarkdownWriter]                  = Nullable.empty
+  private var myIdGenerator:                 Nullable[HtmlIdGenerator]                 = Nullable.empty
+  private var myPlaceholderGenerator:        Nullable[TranslationPlaceholderGenerator] = Nullable.empty
+  private var myNonTranslatingPostProcessor: Nullable[String => CharSequence]          = Nullable.empty
+  private var myMergeContext:                Nullable[MergeContext]                    = Nullable.empty
 
   override def beginRendering(node: Document, context: NodeFormatterContext, out: MarkdownWriter): Unit = {
     // collect anchor ref ids
@@ -63,7 +63,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
 
   private def isNotBlank(csq: CharSequence): Boolean = boundary {
     val iMax = csq.length
-    var i = 0
+    var i    = 0
     while (i < iMax) {
       if (!Character.isWhitespace(csq.charAt(i))) break(true)
       i += 1
@@ -73,11 +73,11 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
 
   override def getTranslatingTexts: List[String] = {
     myTranslatingPlaceholders.clear()
-    val translatingSnippets = mutable.ArrayBuffer.empty[String]
+    val translatingSnippets        = mutable.ArrayBuffer.empty[String]
     val repeatedTranslatingIndices = mutable.HashMap.empty[String, Int]
 
     // collect all the translating snippets first
-    for ((key, value) <- myTranslatingTexts) {
+    for ((key, value) <- myTranslatingTexts)
       if (isNotBlank(value) && !myPlaceHolderMarkerPattern.matcher(value).matches()) {
         // see if it is repeating
         if (!repeatedTranslatingIndices.contains(value)) {
@@ -87,13 +87,11 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
           myTranslatingPlaceholders += key
         }
       }
-    }
 
-    for (text <- myTranslatingSpans) {
+    for (text <- myTranslatingSpans)
       if (isNotBlank(text) && !myPlaceHolderMarkerPattern.matcher(text).matches()) {
         translatingSnippets += text
       }
-    }
 
     translatingSnippets.toList
   }
@@ -104,12 +102,12 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     myTranslatedSpans.clear()
 
     // collect all the translating snippets first
-    var i = 0
-    val iMax = translatedTexts.size
-    val placeholderSize = myTranslatingPlaceholders.size
+    var i                          = 0
+    val iMax                       = translatedTexts.size
+    val placeholderSize            = myTranslatingPlaceholders.size
     val repeatedTranslatingIndices = mutable.HashMap.empty[String, Int]
 
-    for ((key, value) <- myTranslatingTexts) {
+    for ((key, value) <- myTranslatingTexts)
       if (isNotBlank(value) && !myPlaceHolderMarkerPattern.matcher(value).matches()) {
         repeatedTranslatingIndices.get(value) match {
           case None =>
@@ -125,9 +123,8 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
             myTranslatedTexts.put(key, translatedTexts(index).toString)
         }
       }
-    }
 
-    for (text <- myTranslatingSpans) {
+    for (text <- myTranslatingSpans)
       if (isNotBlank(text) && !myPlaceHolderMarkerPattern.matcher(text).matches()) {
         if (i < iMax) {
           myTranslatedSpans += translatedTexts(i).toString
@@ -137,7 +134,6 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
         // add original blank sequence
         myTranslatedSpans += text
       }
-    }
   }
 
   override def setRenderPurpose(renderPurpose: RenderPurpose): Unit = {
@@ -152,7 +148,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
 
   override def isTransformingText: Boolean = myRenderPurpose != RenderPurpose.FORMAT
 
-  override def transformAnchorRef(pageRef: CharSequence, anchorRef: CharSequence): CharSequence = {
+  override def transformAnchorRef(pageRef: CharSequence, anchorRef: CharSequence): CharSequence =
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         myAnchorId += 1
@@ -167,7 +163,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
       case RenderPurpose.TRANSLATED =>
         boundary {
           myAnchorId += 1
-          val anchorIdText = String.format(myFormatterOptions.translationIdFormat, myAnchorId: Integer)
+          val anchorIdText    = String.format(myFormatterOptions.translationIdFormat, myAnchorId: Integer)
           val resolvedPageRef = myNonTranslatingTexts.get(pageRef.toString)
 
           resolvedPageRef match {
@@ -203,24 +199,22 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
       case RenderPurpose.FORMAT | _ =>
         anchorRef
     }
-  }
 
-  override def customPlaceholderFormat(generator: TranslationPlaceholderGenerator, render: TranslatingSpanRender): Unit = {
+  override def customPlaceholderFormat(generator: TranslationPlaceholderGenerator, render: TranslatingSpanRender): Unit =
     if (myRenderPurpose != RenderPurpose.TRANSLATED_SPANS) {
       val savedGenerator = myPlaceholderGenerator
       myPlaceholderGenerator = Nullable(generator)
       render.render(myWriter.get.getContext, myWriter.get)
       myPlaceholderGenerator = savedGenerator
     }
-  }
 
   override def translatingSpan(render: TranslatingSpanRender): Unit =
     translatingRefTargetSpan(Nullable.empty, render)
 
   private def renderInSubContext(render: TranslatingSpanRender, copyToMain: Boolean): String = {
     val savedMarkdown = myWriter.get
-    val subContext = myWriter.get.getContext.getSubContext()
-    val writer = subContext.getMarkdown
+    val subContext    = myWriter.get.getContext.getSubContext()
+    val writer        = subContext.getMarkdown
     myWriter = Nullable(writer)
 
     render.render(subContext, writer)
@@ -235,7 +229,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     spanText
   }
 
-  override def translatingRefTargetSpan(target: Nullable[Node], render: TranslatingSpanRender): Unit = {
+  override def translatingRefTargetSpan(target: Nullable[Node], render: TranslatingSpanRender): Unit =
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         val spanText = renderInSubContext(render, copyToMain = true)
@@ -280,9 +274,8 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
       case RenderPurpose.FORMAT | _ =>
         render.render(myWriter.get.getContext, myWriter.get)
     }
-  }
 
-  override def nonTranslatingSpan(render: TranslatingSpanRender): Unit = {
+  override def nonTranslatingSpan(render: TranslatingSpanRender): Unit =
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         val spanText = renderInSubContext(render, copyToMain = false)
@@ -309,7 +302,6 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
       case RenderPurpose.FORMAT | _ =>
         render.render(myWriter.get.getContext, myWriter.get)
     }
-  }
 
   def getPlaceholderId(format: String, placeholderId: Int, prefix: Nullable[CharSequence], suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): String = {
     val replacedTextId = myPlaceholderGenerator.fold(String.format(format, placeholderId: Integer))(_.getPlaceholder(placeholderId))
@@ -322,9 +314,8 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     try {
       myNonTranslatingPostProcessor = Nullable(postProcessor)
       scope.run()
-    } finally {
+    } finally
       myNonTranslatingPostProcessor = savedValue
-    }
   }
 
   override def postProcessNonTranslating[T](postProcessor: String => CharSequence, scope: () => T): T = {
@@ -332,9 +323,8 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     try {
       myNonTranslatingPostProcessor = Nullable(postProcessor)
       scope()
-    } finally {
+    } finally
       myNonTranslatingPostProcessor = savedValue
-    }
   }
 
   override def isPostProcessingNonTranslating: Boolean = myNonTranslatingPostProcessor.isDefined
@@ -349,7 +339,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         myPlaceholderId += 1
-        val replacedTextId = getPlaceholderId(myFormatterOptions.translationIdFormat, myPlaceholderId, prefix, suffix, Nullable(trimmedEOL))
+        val replacedTextId    = getPlaceholderId(myFormatterOptions.translationIdFormat, myPlaceholderId, prefix, suffix, Nullable(trimmedEOL))
         val useReplacedTextId = myNonTranslatingPostProcessor.fold(replacedTextId)(pp => pp(replacedTextId).toString)
         myNonTranslatingTexts.put(useReplacedTextId, nonTranslatingText.toString)
         useReplacedTextId
@@ -372,7 +362,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
     }
   }
 
-  override def transformTranslating(prefix: Nullable[CharSequence], translatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence = {
+  override def transformTranslating(prefix: Nullable[CharSequence], translatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence =
     myRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         myPlaceholderId += 1
@@ -396,7 +386,6 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
       case RenderPurpose.FORMAT | _ =>
         translatingText
     }
-  }
 
   override def setMergeContext(context: MergeContext): Unit =
     myMergeContext = Nullable(context)
@@ -409,7 +398,7 @@ class TranslationHandlerImpl(options: DataHolder, idGeneratorFactory: HtmlIdGene
 }
 
 object TranslationHandlerImpl {
-  def addPrefixSuffix(placeholderId: CharSequence, prefix: Nullable[CharSequence], suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): String = {
+  def addPrefixSuffix(placeholderId: CharSequence, prefix: Nullable[CharSequence], suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): String =
     if (prefix.isEmpty && suffix.isEmpty && suffix2.isEmpty) placeholderId.toString
     else {
       val sb = new StringBuilder()
@@ -419,5 +408,4 @@ object TranslationHandlerImpl {
       suffix2.foreach(sb.append)
       sb.toString
     }
-  }
 }

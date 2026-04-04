@@ -13,39 +13,38 @@ package toc
 package internal
 
 import ssg.md.Nullable
-import ssg.md.util.data.{DataHolder, MutableDataHolder}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder }
 import ssg.md.util.misc.CharPredicate
-import ssg.md.util.sequence.{BasedSequence, SequenceUtils}
+import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
 
 import scala.language.implicitConversions
 
 /** TOC options - immutable with `with*` copy methods.
   *
-  * The primary constructor is private; all construction goes through the companion `create` which
-  * normalizes `title` / `titleLevel` exactly as the original Java constructor does.
+  * The primary constructor is private; all construction goes through the companion `create` which normalizes `title` / `titleLevel` exactly as the original Java constructor does.
   */
 final class TocOptions private (
-  val levels: Int,
-  val isHtml: Boolean,
-  val isTextOnly: Boolean,
-  val isNumbered: Boolean,
-  val titleLevel: Int,
-  val title: String,
-  val listType: TocOptions.ListType,
-  val isAstAddOptions: Boolean,
-  val isBlankLineSpacer: Boolean,
-  val divClass: String,
-  val listClass: String,
+  val levels:                Int,
+  val isHtml:                Boolean,
+  val isTextOnly:            Boolean,
+  val isNumbered:            Boolean,
+  val titleLevel:            Int,
+  val title:                 String,
+  val listType:              TocOptions.ListType,
+  val isAstAddOptions:       Boolean,
+  val isBlankLineSpacer:     Boolean,
+  val divClass:              String,
+  val listClass:             String,
   val isCaseSensitiveTocTag: Boolean
 ) {
 
   def isLevelIncluded(level: Int): Boolean =
     level >= 1 && level <= 6 && (levels & (1 << level)) != 0
 
-  def getTitleHeading: String = {
+  def getTitleHeading: String =
     if (title.trim.nonEmpty) {
       val out = new StringBuilder()
-      var lv = titleLevel
+      var lv  = titleLevel
       while (lv > 0) {
         out.append('#')
         lv -= 1
@@ -54,7 +53,6 @@ final class TocOptions private (
       out.append(title)
       out.toString()
     } else ""
-  }
 
   def setIn(dataHolder: MutableDataHolder): MutableDataHolder = {
     dataHolder.set(TocExtension.LEVELS, levels)
@@ -73,17 +71,160 @@ final class TocOptions private (
   }
 
   // with* methods - they go through `create` to normalize title/titleLevel
-  def withLevels(newLevels: Int): TocOptions = TocOptions.create(newLevels, isHtml, isTextOnly, isNumbered, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withIsHtml(v: Boolean): TocOptions = TocOptions.create(levels, v, isTextOnly, isNumbered, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withIsTextOnly(v: Boolean): TocOptions = TocOptions.create(levels, isHtml, v, isNumbered, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withIsNumbered(v: Boolean): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, v, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withTitleLevel(v: Int): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, v, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withTitle(v: String): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, v, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withListType(v: TocOptions.ListType): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, title, v, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withIsAstAddOptions(v: Boolean): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, title, listType, v, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
-  def withIsBlankLineSpacer(v: Boolean): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, title, listType, isAstAddOptions, v, divClass, listClass, isCaseSensitiveTocTag)
-  def withDivClass(v: String): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, v, listClass, isCaseSensitiveTocTag)
-  def withListClass(v: String): TocOptions = TocOptions.create(levels, isHtml, isTextOnly, isNumbered, titleLevel, title, listType, isAstAddOptions, isBlankLineSpacer, divClass, v, isCaseSensitiveTocTag)
+  def withLevels(newLevels: Int): TocOptions = TocOptions.create(
+    newLevels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withIsHtml(v: Boolean): TocOptions = TocOptions.create(
+    levels,
+    v,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withIsTextOnly(v: Boolean): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    v,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withIsNumbered(v: Boolean): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    v,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withTitleLevel(v: Int): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    v,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withTitle(v: String): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    v,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withListType(v: TocOptions.ListType): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    v,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withIsAstAddOptions(v: Boolean): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    v,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withIsBlankLineSpacer(v: Boolean): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    v,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withDivClass(v: String): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    v,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+  def withListClass(v: String): TocOptions = TocOptions.create(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    v,
+    isCaseSensitiveTocTag
+  )
 
   override def toString: String =
     s"TocOptions { levels=$levels, isHtml=$isHtml, isTextOnly=$isTextOnly, isNumbered=$isNumbered, titleLevel=$titleLevel, title='$title', listType=$listType, divClass='$divClass', listClass='$listClass' }"
@@ -91,14 +232,24 @@ final class TocOptions private (
 
 object TocOptions {
 
-  val DEFAULT_LEVELS: Int = 4 | 8 // bits for H2 & H3
-  val DEFAULT_TITLE: String = "Table of Contents"
-  val DEFAULT_TITLE_LEVEL: Int = 1
-  val VALID_LEVELS: Int = 0x7e
+  val DEFAULT_LEVELS:      Int    = 4 | 8 // bits for H2 & H3
+  val DEFAULT_TITLE:       String = "Table of Contents"
+  val DEFAULT_TITLE_LEVEL: Int    = 1
+  val VALID_LEVELS:        Int    = 0x7e
 
   val DEFAULT: TocOptions = new TocOptions(
-    DEFAULT_LEVELS, false, false, false, DEFAULT_TITLE_LEVEL, DEFAULT_TITLE,
-    ListType.HIERARCHY, false, true, "", "", true
+    DEFAULT_LEVELS,
+    false,
+    false,
+    false,
+    DEFAULT_TITLE_LEVEL,
+    DEFAULT_TITLE,
+    ListType.HIERARCHY,
+    false,
+    true,
+    "",
+    "",
+    true
   )
 
   enum ListType extends java.lang.Enum[ListType] {
@@ -108,21 +259,21 @@ object TocOptions {
   /** Normalizing factory matching the original Java main constructor. */
   @annotation.nowarn("msg=null")
   def create(
-    levels: Int,
-    isHtml: Boolean,
-    isTextOnly: Boolean,
-    isNumbered: Boolean,
-    titleLevelIn: Int,
-    titleIn: String,
-    listType: ListType,
-    isAstAddOptions: Boolean,
-    isBlankLineSpacer: Boolean,
-    divClass: String,
-    listClass: String,
+    levels:                Int,
+    isHtml:                Boolean,
+    isTextOnly:            Boolean,
+    isNumbered:            Boolean,
+    titleLevelIn:          Int,
+    titleIn:               String,
+    listType:              ListType,
+    isAstAddOptions:       Boolean,
+    isBlankLineSpacer:     Boolean,
+    divClass:              String,
+    listClass:             String,
     isCaseSensitiveTocTag: Boolean
   ): TocOptions = {
     val maskedLevels = VALID_LEVELS & levels
-    var titleLevel = titleLevelIn
+    var titleLevel   = titleLevelIn
     val resolvedTitle: String =
       if (titleIn != null) { // @nowarn - Java interop: may be null from callers
         val trimmed = SequenceUtils.trim(titleIn)
@@ -135,14 +286,28 @@ object TocOptions {
         if (useTitle.isEmpty) " " else useTitle
       } else ""
     titleLevel = Math.max(1, Math.min(titleLevel, 6))
-    new TocOptions(maskedLevels, isHtml, isTextOnly, isNumbered, titleLevel, resolvedTitle, listType, isAstAddOptions, isBlankLineSpacer, divClass, listClass, isCaseSensitiveTocTag)
+    new TocOptions(
+      maskedLevels,
+      isHtml,
+      isTextOnly,
+      isNumbered,
+      titleLevel,
+      resolvedTitle,
+      listType,
+      isAstAddOptions,
+      isBlankLineSpacer,
+      divClass,
+      listClass,
+      isCaseSensitiveTocTag
+    )
   }
 
   /** Constructor from DataHolder, matching original `TocOptions(DataHolder, boolean)`. */
   @annotation.nowarn("msg=null")
   def fromOptions(options: DataHolder, isSimToc: Boolean): TocOptions = {
-    val t = TocExtension.TITLE.get(options)
-    val titleStr = if (t == null) { if (isSimToc) DEFAULT_TITLE else "" } else t // @nowarn - Java interop: NullableDataKey may return null
+    val t        = TocExtension.TITLE.get(options)
+    val titleStr = if (t == null) { if (isSimToc) DEFAULT_TITLE else "" }
+    else t // @nowarn - Java interop: NullableDataKey may return null
     create(
       TocExtension.LEVELS.get(options),
       TocExtension.IS_HTML.get(options),

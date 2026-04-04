@@ -11,22 +11,21 @@ package md
 package ext
 package ins
 
-import ssg.md.util.ast.{DelimitedNode, Node}
+import ssg.md.util.ast.{ DelimitedNode, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** A Ins node */
 class Ins() extends Node, DelimitedNode {
 
   var openingMarker: BasedSequence = BasedSequence.NULL
-  var text: BasedSequence = BasedSequence.NULL
+  var text:          BasedSequence = BasedSequence.NULL
   var closingMarker: BasedSequence = BasedSequence.NULL
-  var insBlockText: String = scala.compiletime.uninitialized
+  var insBlockText:  String        = scala.compiletime.uninitialized
 
   override def segments: Array[BasedSequence] = Array(openingMarker, text, closingMarker)
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     Node.delimitedSegmentSpanChars(out, openingMarker, text, closingMarker, "text")
-  }
 
   def this(chars: BasedSequence) = {
     this()

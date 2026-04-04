@@ -11,7 +11,7 @@ package md
 package parser
 package core
 
-import ssg.md.ast.{CodeBlock, IndentedCodeBlock}
+import ssg.md.ast.{ CodeBlock, IndentedCodeBlock }
 import ssg.md.parser.Parser
 import ssg.md.parser.block._
 import ssg.md.util.ast.BlockContent
@@ -47,10 +47,10 @@ class IndentedCodeBlockParser(options: DataHolder) extends AbstractBlockParser {
     content.foreach { c =>
       // trim trailing blank lines out of the block
       if (trimTrailingBlankLines) {
-        val lines = c.lines
-        val lineCount = lines.size
+        val lines              = c.lines
+        val lineCount          = lines.size
         var trailingBlankLines = 0
-        var i = lineCount - 1
+        var i                  = lineCount - 1
         while (i >= 0 && lines.get(i).isBlank()) {
           trailingBlankLines += 1
           i -= 1

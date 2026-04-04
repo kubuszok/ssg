@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AdmonitionVisitorExt {
-  def VISIT_HANDLERS[V <: AdmonitionVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AdmonitionVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[AdmonitionBlock](classOf[AdmonitionBlock], visitor.visit(_)))
-  }
 }

@@ -20,15 +20,15 @@ import scala.language.implicitConversions
 
 class GitLabNodeFormatter(options: DataHolder) extends NodeFormatter {
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[GitLabBlockQuote](classOf[GitLabBlockQuote], (node, ctx, md) => render(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[GitLabBlockQuote](classOf[GitLabBlockQuote], (node, ctx, md) => render(node, ctx, md))
+      )
+    )
 
-  override def getNodeClasses: Nullable[Set[Class[?]]] = {
+  override def getNodeClasses: Nullable[Set[Class[?]]] =
     Nullable(Set[Class[?]](classOf[GitLabBlockQuote]))
-  }
 
   private def render(node: GitLabBlockQuote, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(">>>").line()

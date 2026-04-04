@@ -13,11 +13,11 @@ package abbreviation
 package internal
 
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
 class AbbreviationFormatOptions(options: DataHolder) {
-  val abbreviationsPlacement: ElementPlacement = AbbreviationExtension.ABBREVIATIONS_PLACEMENT.get(options)
-  val abbreviationsSort: ElementPlacementSort = AbbreviationExtension.ABBREVIATIONS_SORT.get(options)
+  val abbreviationsPlacement: ElementPlacement     = AbbreviationExtension.ABBREVIATIONS_PLACEMENT.get(options)
+  val abbreviationsSort:      ElementPlacementSort = AbbreviationExtension.ABBREVIATIONS_SORT.get(options)
 }

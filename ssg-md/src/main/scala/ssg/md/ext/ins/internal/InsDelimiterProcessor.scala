@@ -15,7 +15,7 @@ package internal
 import ssg.md.Nullable
 import ssg.md.parser.InlineParser
 import ssg.md.parser.core.delimiter.Delimiter
-import ssg.md.parser.delimiter.{DelimiterProcessor, DelimiterRun}
+import ssg.md.parser.delimiter.{ DelimiterProcessor, DelimiterRun }
 import ssg.md.util.ast.Node
 import ssg.md.util.sequence.BasedSequence
 
@@ -27,15 +27,32 @@ class InsDelimiterProcessor extends DelimiterProcessor {
 
   override def minLength: Int = 2
 
-  override def canBeOpener(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = leftFlanking
+  override def canBeOpener(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = leftFlanking
 
-  override def canBeCloser(before: String, after: String, leftFlanking: Boolean, rightFlanking: Boolean, beforeIsPunctuation: Boolean, afterIsPunctuation: Boolean, beforeIsWhitespace: Boolean, afterIsWhiteSpace: Boolean): Boolean = rightFlanking
+  override def canBeCloser(
+    before:              String,
+    after:               String,
+    leftFlanking:        Boolean,
+    rightFlanking:       Boolean,
+    beforeIsPunctuation: Boolean,
+    afterIsPunctuation:  Boolean,
+    beforeIsWhitespace:  Boolean,
+    afterIsWhiteSpace:   Boolean
+  ): Boolean = rightFlanking
 
   override def skipNonOpenerCloser: Boolean = false
 
-  override def getDelimiterUse(opener: DelimiterRun, closer: DelimiterRun): Int = {
+  override def getDelimiterUse(opener: DelimiterRun, closer: DelimiterRun): Int =
     if (opener.length >= 2 && closer.length >= 2) 2 else 0
-  }
 
   override def unmatchedDelimiterNode(inlineParser: InlineParser, delimiter: DelimiterRun): Nullable[Node] = Nullable.empty
 

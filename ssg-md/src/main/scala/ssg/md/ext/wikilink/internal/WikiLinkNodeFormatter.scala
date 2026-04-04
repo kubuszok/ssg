@@ -18,28 +18,27 @@ import ssg.md.util.ast.Document
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.mappers.SpaceMapper
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
 
   private var attributeUniquificationIdMap: Nullable[ju.Map[String, String]] = Nullable.empty
-  private var wikiOptions: Nullable[WikiLinkOptions] = Nullable.empty
+  private var wikiOptions:                  Nullable[WikiLinkOptions]        = Nullable.empty
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[WikiLink](classOf[WikiLink], (node, ctx, md) => renderLink(node, ctx, md)),
-      new NodeFormattingHandler[WikiImage](classOf[WikiImage], (node, ctx, md) => renderImage(node, ctx, md))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[WikiLink](classOf[WikiLink], (node, ctx, md) => renderLink(node, ctx, md)),
+        new NodeFormattingHandler[WikiImage](classOf[WikiImage], (node, ctx, md) => renderImage(node, ctx, md))
+      )
+    )
 
-  override def getNodeClasses: Nullable[Set[Class[?]]] = {
+  override def getNodeClasses: Nullable[Set[Class[?]]] =
     Nullable(Set[Class[?]](classOf[WikiLink], classOf[WikiImage]))
-  }
 
-  override def getFormattingPhases: Nullable[Set[FormattingPhase]] = {
+  override def getFormattingPhases: Nullable[Set[FormattingPhase]] =
     Nullable(Set(FormattingPhase.COLLECT, FormattingPhase.DOCUMENT_TOP))
-  }
 
   override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit = {
     attributeUniquificationIdMap = Nullable(Formatter.ATTRIBUTE_UNIQUIFICATION_ID_MAP.get(context.getTranslationStore))
@@ -70,7 +69,7 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
     markdown.append(node.closingMarker)
   }
 
-  private def renderTextPart(node: WikiNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderTextPart(node: WikiNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!context.isTransformingText) {
       if (node.text.isNotNull) {
         if (node.linkIsFirst) {
@@ -126,7 +125,6 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
         case _ => throw new IllegalStateException("Unexpected renderer purpose")
       }
     }
-  }
 
   private def escapePipeAnchors(chars: CharSequence, opts: WikiLinkOptions): CharSequence = {
     val iMax = chars.length()
@@ -137,9 +135,9 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
       val c = chars.charAt(i)
       c match {
         case '\\' => text.append('\\')
-        case '|' => if (opts.allowPipeEscape) text.append('\\')
-        case '#' => if (opts.allowAnchors && opts.allowAnchorEscape) text.append('\\')
-        case _ => ()
+        case '|'  => if (opts.allowPipeEscape) text.append('\\')
+        case '#'  => if (opts.allowAnchors && opts.allowAnchorEscape) text.append('\\')
+        case _    => ()
       }
       text.append(c)
       i += 1
@@ -147,7 +145,7 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
     text
   }
 
-  private def renderLinkPart(node: WikiNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderLinkPart(node: WikiNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!context.isTransformingText) {
       if (context.getFormatterOptions.rightMargin > 0) {
         // no wrapping of link text
@@ -165,7 +163,7 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
         }
       } else {
         val pageRef = context.transformNonTranslating(Nullable.empty, node.pageRef, Nullable.empty, Nullable.empty)
-        val opts = wikiOptions.get
+        val opts    = wikiOptions.get
         // NOTE: need to escape pipes and hashes in page refs
         markdown.append(escapeUnescapedPipeAnchors(pageRef, opts))
         markdown.append(node.anchorMarker)
@@ -188,20 +186,19 @@ class WikiLinkNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
         }
       }
     }
-  }
 
   // Need to escape un-escaped \, |, and #
   private def escapeUnescapedPipeAnchors(chars: CharSequence, opts: WikiLinkOptions): CharSequence = {
     var isEscaped = false
-    val iMax = chars.length()
-    val text = new StringBuilder()
+    val iMax      = chars.length()
+    val text      = new StringBuilder()
 
     var i = 0
     while (i < iMax) {
       val c = chars.charAt(i)
       c match {
         case '\\' => isEscaped = !isEscaped
-        case '|' =>
+        case '|'  =>
           if (!isEscaped && opts.allowPipeEscape) text.append('\\')
           isEscaped = false
         case '#' =>

@@ -19,7 +19,7 @@ package internal
 import ssg.md.Nullable
 import ssg.md.ast.*
 import ssg.md.parser.Parser
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
 import ssg.md.util.ast.*
 import ssg.md.util.sequence.*
 
@@ -28,7 +28,6 @@ import scala.util.boundary
 import scala.util.boundary.break
 import java.util.ArrayList
 import java.util.regex.Pattern
-
 
 class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
 
@@ -40,9 +39,8 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
 
   private val intellijDummyIdentifier: Boolean = Parser.INTELLIJ_DUMMY_IDENTIFIER.get(document)
 
-  def isIgnoredLinkPrefix(url: CharSequence): Boolean = {
+  def isIgnoredLinkPrefix(url: CharSequence): Boolean =
     ignoredLinks.exists(_.matcher(url).matches())
-  }
 
   override def process(state: NodeTracker, node: Node): Unit = boundary {
     // TODO: figure out why optimization does not work after AutoLink inserted by inline parser
@@ -50,10 +48,10 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
       break(())
     }
 
-    var combined = node.chars
-    var original = combined
+    var combined  = node.chars
+    var original  = combined
     val firstNode = node
-    var lastNode = node
+    var lastNode  = node
 
     val htmlEntities = new ArrayList[Range]()
 
@@ -65,7 +63,7 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
         val combinedSequences = new ArrayList[BasedSequence]()
         combinedSequences.add(combined)
 
-        while (typoGraphic.isDefined && (typoGraphic.get.isInstanceOf[TypographicText] || typoGraphic.get.isInstanceOf[HtmlEntity] || typoGraphic.get.isInstanceOf[Text])) {
+        while (typoGraphic.isDefined && (typoGraphic.get.isInstanceOf[TypographicText] || typoGraphic.get.isInstanceOf[HtmlEntity] || typoGraphic.get.isInstanceOf[Text]))
           if (!typoGraphic.get.chars.isContinuationOf(combined) || typoGraphic.get.chars.startsWith(" ") || combined.endsWith(" ")) {
             // break equivalent
             typoGraphic = Nullable.empty
@@ -78,13 +76,12 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
             lastNode = typoGraphic.get
             typoGraphic = typoGraphic.get.next
           }
-        }
 
         original = SegmentedSequence.create(node.chars, combinedSequences)
       }
     }
 
-    val textMapper = new ReplacedTextMapper(original)
+    val textMapper    = new ReplacedTextMapper(original)
     var unescapedHtml = original
 
     if (!htmlEntities.isEmpty) {
@@ -105,14 +102,14 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
     val uriMatcher = AutolinkNodePostProcessor.URI_PREFIX.matcher(literal)
     while (uriMatcher.find()) {
       val start = uriMatcher.start(1)
-      val end = uriMatcher.end(1)
+      val end   = uriMatcher.end(1)
 
       if (linksList.isEmpty) {
         linksList.add(new AutolinkNodePostProcessor.LinkSpan(AutolinkNodePostProcessor.LinkType.URL, start, end))
       } else {
         val iMax = linksList.size()
         var skip = false
-        var i = 0
+        var i    = 0
 
         while (i < iMax && !skip) {
           val link = linksList.get(i)
@@ -131,15 +128,15 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
       }
     }
 
-    var lastEscaped = 0
+    var lastEscaped    = 0
     val wrapInTextBase = !(node.parent.isDefined && node.parent.get.isInstanceOf[TextBase])
     var textBase: Nullable[TextBase] = if (wrapInTextBase || !(node.parent.isDefined && node.parent.get.isInstanceOf[TextBase])) Nullable.empty else Nullable(node.parent.get.asInstanceOf[TextBase])
-    var processedNode = false
+    var processedNode     = false
     var wrappedInTextBase = false
 
     val iter = linksList.iterator()
     while (iter.hasNext) {
-      val link = iter.next()
+      val link     = iter.next()
       val linkText = literal.subSequence(link.beginIndex, link.endIndex).trimEnd()
       if (!isIgnoredLinkPrefix(linkText)) {
         val startOffset = textMapper.originalOffset(link.beginIndex)
@@ -163,12 +160,12 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
 
         if (startOffset > lastEscaped) {
           val escapedChars = original.subSequence(lastEscaped, startOffset)
-          val node1 = new Text(escapedChars)
+          val node1        = new Text(escapedChars)
           textBase.foreach(_.appendChild(node1))
           state.nodeAdded(node1)
         }
 
-        val linkChars = linkText.baseSubSequence(linkText.startOffset, linkText.endOffset)
+        val linkChars   = linkText.baseSubSequence(linkText.startOffset, linkText.endOffset)
         val contentNode = new Text(linkChars)
         val linkNode: LinkNode = if (link.linkType == AutolinkNodePostProcessor.LinkType.EMAIL) {
           val ml = new MailLink()
@@ -194,9 +191,9 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
       if (firstNode != lastNode) {
         // remove all typographic nodes already processed and truncate sequence to exclude ones not processed
         var removeNode = firstNode.next
-        var length = node.chars.length()
+        var length     = node.chars.length()
 
-        while (removeNode.isDefined) {
+        while (removeNode.isDefined)
           if (length >= lastEscaped) {
             // we are done, the rest should be excluded
             original = original.subSequence(0, length)
@@ -213,12 +210,11 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
               removeNode = nextNode
             }
           }
-        }
       }
 
       if (lastEscaped < original.length()) {
         val escapedChars = original.subSequence(lastEscaped, original.length())
-        val node1 = new Text(escapedChars)
+        val node1        = new Text(escapedChars)
         textBase.foreach(_.appendChild(node1))
         state.nodeAdded(node1)
       }
@@ -254,8 +250,7 @@ object AutolinkNodePostProcessor {
 
   final class LinkSpan(val linkType: LinkType, val beginIndex: Int, val endIndex: Int)
 
-  /** Strip trailing punctuation from a URL match, emulating org.nibor.autolink behavior.
-    * Keeps balanced parentheses (e.g., `foo_(bar)` retains trailing `)`).
+  /** Strip trailing punctuation from a URL match, emulating org.nibor.autolink behavior. Keeps balanced parentheses (e.g., `foo_(bar)` retains trailing `)`).
     */
   private def adjustUrlEnd(text: CharSequence, start: Int, end: Int): Int = boundary {
     var e = end
@@ -266,9 +261,9 @@ object AutolinkNodePostProcessor {
         e -= 1
       } else if (c == ')') {
         // Only strip closing paren if it has no matching open paren in the URL
-        var openCount = 0
+        var openCount  = 0
         var closeCount = 0
-        var i = start
+        var i          = start
         while (i < e) {
           val ch = text.charAt(i)
           if (ch == '(') openCount += 1
@@ -302,7 +297,7 @@ object AutolinkNodePostProcessor {
     val emailMatcher = EMAIL_PATTERN.matcher(text)
     while (emailMatcher.find()) {
       var overlaps = false
-      val iter = out.iterator()
+      val iter     = out.iterator()
       while (iter.hasNext && !overlaps) {
         val existing = iter.next()
         if (emailMatcher.start() >= existing.beginIndex && emailMatcher.start() < existing.endIndex) {
@@ -320,7 +315,7 @@ object AutolinkNodePostProcessor {
 
   class Factory extends NodePostProcessorFactory(false) {
     // TODO: figure out why optimization does not work after AutoLink inserted by inline parser
-    //addNodeWithExclusions(Text.class, DoNotDecorate.class, DoNotLinkDecorate.class);
+    // addNodeWithExclusions(Text.class, DoNotDecorate.class, DoNotLinkDecorate.class);
     addNodes(classOf[Text])
 
     override def apply(document: Document): NodePostProcessor = new AutolinkNodePostProcessor(document)

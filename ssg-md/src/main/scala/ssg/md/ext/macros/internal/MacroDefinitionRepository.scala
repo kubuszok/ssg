@@ -13,15 +13,16 @@ package macros
 package internal
 
 import ssg.md.Nullable
-import ssg.md.util.ast.{KeepType, Node, NodeRepository}
-import ssg.md.util.data.{DataHolder, DataKey}
+import ssg.md.util.ast.{ KeepType, Node, NodeRepository }
+import ssg.md.util.data.{ DataHolder, DataKey }
 
 import scala.language.implicitConversions
-import java.util.{ArrayList, Comparator}
+import java.util.{ ArrayList, Comparator }
 
-class MacroDefinitionRepository(options: DataHolder) extends NodeRepository[MacroDefinitionBlock](
-  if (options != null) Nullable(MacrosExtension.MACRO_DEFINITIONS_KEEP.get(options)) else Nullable.empty
-) {
+class MacroDefinitionRepository(options: DataHolder)
+    extends NodeRepository[MacroDefinitionBlock](
+      if (options != null) Nullable(MacrosExtension.MACRO_DEFINITIONS_KEEP.get(options)) else Nullable.empty
+    ) {
 
   private val myReferencedMacroDefinitionBlocks = new ArrayList[MacroDefinitionBlock]()
 
@@ -37,7 +38,7 @@ class MacroDefinitionRepository(options: DataHolder) extends NodeRepository[Macr
     // need to sort by first referenced offset then set each to its ordinal position in the array+1
     myReferencedMacroDefinitionBlocks.sort(Comparator.comparingInt[MacroDefinitionBlock](_.firstReferenceOffset))
     var ordinal = 0
-    val iter = myReferencedMacroDefinitionBlocks.iterator()
+    val iter    = myReferencedMacroDefinitionBlocks.iterator()
     while (iter.hasNext) {
       val block = iter.next()
       ordinal += 1
@@ -53,16 +54,19 @@ class MacroDefinitionRepository(options: DataHolder) extends NodeRepository[Macr
 
   override def getReferencedElements(parent: Node): java.util.Set[MacroDefinitionBlock] = {
     val references = new java.util.HashSet[MacroDefinitionBlock]()
-    visitNodes(parent, value => {
-      value match {
-        case ref: MacroReference =>
-          val reference = ref.getReferenceNode(MacroDefinitionRepository.this)
-          if (reference != null) { // @nowarn - getReferenceNode may return null
-            references.add(reference)
-          }
-        case _ =>
-      }
-    }, classOf[MacroReference])
+    visitNodes(
+      parent,
+      value =>
+        value match {
+          case ref: MacroReference =>
+            val reference = ref.getReferenceNode(MacroDefinitionRepository.this)
+            if (reference != null) { // @nowarn - getReferenceNode may return null
+              references.add(reference)
+            }
+          case _ =>
+        },
+      classOf[MacroReference]
+    )
     references
   }
 }

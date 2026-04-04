@@ -37,6 +37,6 @@ class VideoLink() extends AbstractMediaLink(VideoLink.PREFIX, VideoLink.TYPE) {
 }
 
 object VideoLink {
-  val PREFIX: String = "!V"
+  val PREFIX:       String = "!V"
   private val TYPE: String = "Video"
 }

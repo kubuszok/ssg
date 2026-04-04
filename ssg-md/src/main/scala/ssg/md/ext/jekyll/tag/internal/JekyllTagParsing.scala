@@ -19,7 +19,7 @@ import java.util.regex.Pattern
 
 class JekyllTagParsing(val myParsing: Parsing) {
 
-  val OPEN_MACROTAG: String = "\\{%\\s+(" + myParsing.TAGNAME + ")(?:\\s+.+)?\\s+%\\}"
-  val MACRO_OPEN: Pattern = Pattern.compile('^' + OPEN_MACROTAG + "\\s*$", Pattern.CASE_INSENSITIVE)
-  val MACRO_TAG: Pattern = Pattern.compile(OPEN_MACROTAG)
+  val OPEN_MACROTAG: String  = "\\{%\\s+(" + myParsing.TAGNAME + ")(?:\\s+.+)?\\s+%\\}"
+  val MACRO_OPEN:    Pattern = Pattern.compile('^' + OPEN_MACROTAG + "\\s*$", Pattern.CASE_INSENSITIVE)
+  val MACRO_TAG:     Pattern = Pattern.compile(OPEN_MACROTAG)
 }
