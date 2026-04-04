@@ -280,9 +280,8 @@ object HtmlRenderer {
     var linkResolverFactories:      mutable.ArrayBuffer[LinkResolverFactory]                  = mutable.ArrayBuffer.empty
     var htmlIdGeneratorFactory:     Nullable[HeaderIdGeneratorFactory]                        = Nullable.empty
 
-    def this() = {
+    def this() =
       this(Nullable.empty)
-    }
 
     if (options.isDefined) {
       loadExtensions()

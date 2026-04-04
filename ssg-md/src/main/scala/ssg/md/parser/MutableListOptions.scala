@@ -18,13 +18,11 @@ class MutableListOptions private[parser] (other: ListOptions) extends ListOption
 
   itemInterrupt = ListOptions.MutableItemInterrupt(super.getItemInterrupt)
 
-  def this() = {
+  def this() =
     this(ListOptions())
-  }
 
-  def this(options: Nullable[DataHolder]) = {
+  def this(options: Nullable[DataHolder]) =
     this(ListOptions.get(options.getOrElse(null.asInstanceOf[DataHolder]))) // @nowarn: DataHolder.get handles null
-  }
 
   override def getMutable: MutableListOptions = MutableListOptions(this)
 

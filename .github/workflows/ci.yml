@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  # JVM: compile and test all modules
+  jvm:
+    name: JVM — compile + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false  # original-src not needed for compilation
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Compile all modules (JVM)
+        run: sbt "ssg-md/compile; ssg-liquid/compile"
+
+      - name: Test ssg-md (JVM)
+        run: sbt ssg-md/test
+
+      - name: Test ssg-liquid (JVM)
+        run: sbt ssg-liquid/test
+
+  # Scala.js: compile and test all modules
+  js:
+    name: JS — compile + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Compile all modules (JS)
+        run: sbt "ssg-mdJS/compile; ssg-liquidJS/compile"
+
+      - name: Test ssg-md (JS)
+        run: sbt ssg-mdJS/test
+
+      - name: Test ssg-liquid (JS)
+        run: sbt ssg-liquidJS/test
+
+  # Scala Native: compile and test all modules
+  native:
+    name: Native — compile + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Install LLVM/Clang
+        run: sudo apt-get update && sudo apt-get install -y clang libstdc++-12-dev
+
+      - name: Compile all modules (Native)
+        run: sbt "ssg-mdNative/compile; ssg-liquidNative/compile"
+
+      - name: Test ssg-md (Native)
+        run: sbt ssg-mdNative/test
+
+      - name: Test ssg-liquid (Native)
+        run: sbt ssg-liquidNative/test
+
+  # Format check (no changes needed, just verify)
+  format:
+    name: Scalafmt check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Check formatting
+        run: sbt "scalafmtCheckAll; scalafmtSbtCheck"

@@ -29,9 +29,8 @@ class HeaderIdGenerator(options: Nullable[DataHolder]) extends HtmlIdGenerator, 
   var noDupedDashes:         Boolean                      = HtmlRenderer.HEADER_ID_GENERATOR_NO_DUPED_DASHES.get(options)
   var nonAsciiToLowercase:   Boolean                      = HtmlRenderer.HEADER_ID_GENERATOR_NON_ASCII_TO_LOWERCASE.get(options)
 
-  def this() = {
+  def this() =
     this(Nullable.empty)
-  }
 
   override def dispose(): Unit =
     headerBaseIds = mutable.HashMap.empty
