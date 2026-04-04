@@ -11,7 +11,7 @@ package md
 package ext
 package tables
 
-import ssg.md.util.ast.{LineBreakNode, Node}
+import ssg.md.util.ast.{ LineBreakNode, Node }
 import ssg.md.util.sequence.BasedSequence
 
 /** Table row of a [[TableHead]] or [[TableBody]] containing [[TableCell]]s. */
@@ -22,13 +22,12 @@ class TableRow() extends Node, LineBreakNode {
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
-  override def astExtra(out: StringBuilder): Unit = {
+  override def astExtra(out: StringBuilder): Unit =
     // Node.astExtra is empty, no need for super call
     if (rowNumber != 0) out.append(" rowNumber=").append(rowNumber)
-  }
 
   override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
 }

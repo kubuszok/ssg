@@ -23,13 +23,12 @@ import ssg.md.util.ast.Document
 
 class JekyllFrontMatterNodeFormatter(options: DataHolder) extends PhasedNodeFormatter {
 
-  override def getFormattingPhases: Nullable[Set[FormattingPhase]] = {
+  override def getFormattingPhases: Nullable[Set[FormattingPhase]] =
     Nullable(Set[FormattingPhase](FormattingPhase.DOCUMENT_FIRST))
-  }
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
-  override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit = {
+  override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit =
     if (phase == FormattingPhase.DOCUMENT_FIRST) {
       document.firstChild.foreach { node =>
         if (node.isInstanceOf[JekyllFrontMatterBlock]) {
@@ -39,13 +38,13 @@ class JekyllFrontMatterNodeFormatter(options: DataHolder) extends PhasedNodeForm
         }
       }
     }
-  }
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set[NodeFormattingHandler[?]](
-      new NodeFormattingHandler[JekyllFrontMatterBlock](classOf[JekyllFrontMatterBlock], (node, context, markdown) => render(node, context, markdown))
-    ))
-  }
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set[NodeFormattingHandler[?]](
+        new NodeFormattingHandler[JekyllFrontMatterBlock](classOf[JekyllFrontMatterBlock], (node, context, markdown) => render(node, context, markdown))
+      )
+    )
 
   private def render(node: JekyllFrontMatterBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {}
 }

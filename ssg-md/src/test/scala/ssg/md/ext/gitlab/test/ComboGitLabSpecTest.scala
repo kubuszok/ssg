@@ -18,24 +18,21 @@ import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Collections, HashMap}
+import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboGitLabSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboGitLabSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboGitLabSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboGitLabSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboGitLabSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboGitLabSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboGitLabSpecTest.OPTIONS_MAP
 }
 
 object ComboGitLabSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/gitlab/test/ext_gitlab_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/gitlab/test/ext_gitlab_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboGitLabSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.RENDER_HEADER_ID, true)
-    .set(Parser.EXTENSIONS, Collections.singletonList(GitLabExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(HtmlRenderer.RENDER_HEADER_ID, true).set(Parser.EXTENSIONS, Collections.singletonList(GitLabExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
@@ -54,7 +51,10 @@ object ComboGitLabSpecTest {
     map.put("mermaid-alias", new MutableDataSet().set(GitLabExtension.MERMAID_LANGUAGES, Array("mermaid", "alias")).toImmutable)
     map.put("code-content-block", new MutableDataSet().set(Parser.FENCED_CODE_CONTENT_BLOCK, true).toImmutable)
     map.put("video-extensions", new MutableDataSet().set(GitLabExtension.VIDEO_IMAGE_EXTENSIONS, "tst").toImmutable)
-    map.put("video-link-format", new MutableDataSet().set(GitLabExtension.VIDEO_IMAGE_LINK_TEXT_FORMAT, "Get Video '%s'").toImmutable)
+    map.put(
+      "video-link-format",
+      new MutableDataSet().set(GitLabExtension.VIDEO_IMAGE_LINK_TEXT_FORMAT, "Get Video '%s'").toImmutable
+    )
     map.put("video-class", new MutableDataSet().set(GitLabExtension.VIDEO_IMAGE_CLASS, "video-class").toImmutable)
     map
   }

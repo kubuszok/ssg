@@ -13,7 +13,7 @@ package media
 package tags
 package internal
 
-import ssg.md.ast.{InlineLinkNode, Link}
+import ssg.md.ast.{ InlineLinkNode, Link }
 import ssg.md.util.sequence.BasedSequence
 
 abstract class AbstractMediaLink(val prefix: String, val typeName: String) extends InlineLinkNode {
@@ -43,9 +43,8 @@ abstract class AbstractMediaLink(val prefix: String, val typeName: String) exten
     textClosingMarker = textChars.subSequence(textCharsLength - 1, textCharsLength)
   }
 
-  protected final def verifyBasedSequence(chars: BasedSequence, startOffset: Int): Unit = {
+  final protected def verifyBasedSequence(chars: BasedSequence, startOffset: Int): Unit =
     if (!chars.baseSubSequence(startOffset, startOffset + prefix.length).matches(prefix)) {
       throw new IllegalArgumentException(s"$typeName Link's CharSequence MUST start with an '$prefix'!")
     }
-  }
 }

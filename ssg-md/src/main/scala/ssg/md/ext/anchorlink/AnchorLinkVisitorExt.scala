@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AnchorLinkVisitorExt {
-  def VISIT_HANDLERS[V <: AnchorLinkVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AnchorLinkVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[AnchorLink](classOf[AnchorLink], visitor.visit(_)))
-  }
 }

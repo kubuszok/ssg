@@ -18,19 +18,18 @@ import ssg.md.Nullable
 import ssg.md.parser.InlineParser
 import ssg.md.parser.block.*
 import ssg.md.parser.core.DocumentBlockParser
-import ssg.md.util.ast.{Block, BlockContent}
+import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 import java.util.regex.Pattern
 
-
 class JekyllFrontMatterBlockParser(options: DataHolder, openingMarker: BasedSequence) extends AbstractBlockParser {
 
-  private val block: JekyllFrontMatterBlock = new JekyllFrontMatterBlock()
-  private var content: Nullable[BlockContent] = Nullable(new BlockContent())
-  private var inYAMLBlock: Boolean = true
+  private val block:       JekyllFrontMatterBlock = new JekyllFrontMatterBlock()
+  private var content:     Nullable[BlockContent] = Nullable(new BlockContent())
+  private var inYAMLBlock: Boolean                = true
 
   block.openingMarker = openingMarker
 
@@ -54,9 +53,8 @@ class JekyllFrontMatterBlockParser(options: DataHolder, openingMarker: BasedSequ
     }
   }
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     content.foreach(_.add(line, state.indent))
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     content.foreach { c =>
@@ -72,7 +70,7 @@ class JekyllFrontMatterBlockParser(options: DataHolder, openingMarker: BasedSequ
 object JekyllFrontMatterBlockParser {
 
   val JEKYLL_FRONT_MATTER_BLOCK_START: Pattern = Pattern.compile("^-{3}(\\s.*)?")
-  val JEKYLL_FRONT_MATTER_BLOCK_END: Pattern = Pattern.compile("^(-{3}|\\.{3})(\\s.*)?")
+  val JEKYLL_FRONT_MATTER_BLOCK_END:   Pattern = Pattern.compile("^(-{3}|\\.{3})(\\s.*)?")
 
   class Factory extends CustomBlockParserFactory {
 
@@ -88,13 +86,13 @@ object JekyllFrontMatterBlockParser {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
-      val line = state.line
+      val line         = state.line
       val parentParser = matchedBlockParser.blockParser
       if (parentParser.isInstanceOf[DocumentBlockParser] && parentParser.getBlock.firstChild.isEmpty) {
         val matcher = JEKYLL_FRONT_MATTER_BLOCK_START.matcher(line)
         if (matcher.matches()) {
           val openingMarker = line.subSequence(0, 3)
-          val parser = new JekyllFrontMatterBlockParser(state.properties, openingMarker)
+          val parser        = new JekyllFrontMatterBlockParser(state.properties, openingMarker)
           Nullable(BlockStart.of(parser).atIndex(-1))
         } else {
           BlockStart.none()

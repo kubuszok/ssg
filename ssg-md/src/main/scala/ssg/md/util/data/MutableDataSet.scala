@@ -15,9 +15,8 @@ import ssg.md.Nullable
 
 class MutableDataSet(other: Nullable[DataHolder]) extends DataSet(other), MutableDataHolder {
 
-  def this() = {
+  def this() =
     this(Nullable.empty[DataHolder])
-  }
 
   override def set[T](key: DataKey[T], value: T): MutableDataSet =
     setByBase(key, value)
@@ -51,18 +50,17 @@ class MutableDataSet(other: Nullable[DataHolder]) extends DataSet(other), Mutabl
   }
 
   @annotation.nowarn("msg=deprecated") // orNull needed at DataSet storage boundary
-  override def getOrCompute(key: DataKeyBase[?], factory: DataValueFactory[?]): AnyRef = {
+  override def getOrCompute(key: DataKeyBase[?], factory: DataValueFactory[?]): AnyRef =
     if (dataSet.containsKey(key)) {
       dataSet.get(key)
     } else {
       // Factory returns Nullable[T] (opaque type). Must unwrap to raw value
       // before storing in HashMap, otherwise NestedNone leaks into storage.
       val result = factory.apply(this)
-      val value = result.orNull.asInstanceOf[AnyRef]
+      val value  = result.orNull.asInstanceOf[AnyRef]
       dataSet.put(key, value)
       value
     }
-  }
 
   override def toMutable: MutableDataSet =
     this

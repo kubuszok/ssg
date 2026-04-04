@@ -20,8 +20,8 @@ enum EmojiShortcutType(val isEmojiCheatSheet: Boolean, val isGitHub: Boolean) {
   case ANY_GITHUB_PREFERRED extends EmojiShortcutType(true, true)
 
   def getPreferred(emojiCheatSheet: Nullable[String], gitHub: Nullable[String]): Nullable[String] = this match {
-    case EMOJI_CHEAT_SHEET => emojiCheatSheet
-    case GITHUB => gitHub
+    case EMOJI_CHEAT_SHEET               => emojiCheatSheet
+    case GITHUB                          => gitHub
     case ANY_EMOJI_CHEAT_SHEET_PREFERRED =>
       if (emojiCheatSheet.isDefined) emojiCheatSheet else gitHub
     case ANY_GITHUB_PREFERRED =>

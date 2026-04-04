@@ -10,18 +10,13 @@ package tags
 
 import munit.FunSuite
 
-/**
- * Test suite for the MediaTags extension.
- *
- * Spec resources:
- *   ext/media/tags/ext_media_tags_audio_link_spec.md
- *   ext/media/tags/ext_media_tags_embed_link_spec.md
- *   ext/media/tags/ext_media_tags_picture_link_spec.md
- *   ext/media/tags/ext_media_tags_video_link_spec.md
- *
- * TODO: Implement spec-based rendering tests once the test harness
- * (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
- */
+/** Test suite for the MediaTags extension.
+  *
+  * Spec resources: ext/media/tags/ext_media_tags_audio_link_spec.md ext/media/tags/ext_media_tags_embed_link_spec.md ext/media/tags/ext_media_tags_picture_link_spec.md
+  * ext/media/tags/ext_media_tags_video_link_spec.md
+  *
+  * TODO: Implement spec-based rendering tests once the test harness (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
+  */
 class MediaTagsExtensionSuite extends FunSuite {
 
   test("MediaTagsExtension can be created") {

@@ -11,19 +11,19 @@ package md
 package ext
 package gitlab
 
-import ssg.md.ast.{Paragraph, ParagraphContainer}
-import ssg.md.util.ast.{Block, BlockContent, Node}
+import ssg.md.ast.{ Paragraph, ParagraphContainer }
+import ssg.md.util.ast.{ Block, BlockContent, Node }
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 /** A GitLab block quote node */
 class GitLabBlockQuote() extends Block, ParagraphContainer {
 
-  var openingMarker: BasedSequence = BasedSequence.NULL
+  var openingMarker:   BasedSequence = BasedSequence.NULL
   var openingTrailing: BasedSequence = BasedSequence.NULL
-  var closingMarker: BasedSequence = BasedSequence.NULL
+  var closingMarker:   BasedSequence = BasedSequence.NULL
   var closingTrailing: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = {
@@ -51,11 +51,9 @@ class GitLabBlockQuote() extends Block, ParagraphContainer {
 
   override def segments: Array[BasedSequence] = Array(openingMarker, openingTrailing, closingMarker, closingTrailing)
 
-  override def isParagraphEndWrappingDisabled(node: Paragraph): Boolean = {
+  override def isParagraphEndWrappingDisabled(node: Paragraph): Boolean =
     lastChild.contains(node) || node.next.exists(_.isInstanceOf[GitLabBlockQuote])
-  }
 
-  override def isParagraphStartWrappingDisabled(node: Paragraph): Boolean = {
+  override def isParagraphStartWrappingDisabled(node: Paragraph): Boolean =
     firstChild.contains(node) || node.previous.exists(_.isInstanceOf[GitLabBlockQuote])
-  }
 }

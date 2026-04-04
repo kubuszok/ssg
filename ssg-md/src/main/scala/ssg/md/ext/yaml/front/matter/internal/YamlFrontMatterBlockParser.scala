@@ -18,30 +18,29 @@ import ssg.md.Nullable
 import ssg.md.parser.InlineParser
 import ssg.md.parser.block.*
 import ssg.md.parser.core.DocumentBlockParser
-import ssg.md.util.ast.{Block, BlockContent}
+import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
-import ssg.md.util.sequence.{BasedSequence, PrefixedSubSequence, SegmentedSequence}
+import ssg.md.util.sequence.{ BasedSequence, PrefixedSubSequence, SegmentedSequence }
 
 import scala.language.implicitConversions
 import java.util.regex.Pattern
-import java.util.{ArrayList, List as JList}
+import java.util.{ ArrayList, List as JList }
 
 class YamlFrontMatterBlockParser extends AbstractBlockParser {
 
-  private var inYAMLBlock: Boolean = true
-  private var inLiteral: Boolean = false
-  private var currentKey: Nullable[BasedSequence] = Nullable.empty
-  private var currentValues: JList[BasedSequence] = new ArrayList[BasedSequence]()
-  private val block: YamlFrontMatterBlock = new YamlFrontMatterBlock()
-  private var content: Nullable[BlockContent] = Nullable(new BlockContent())
+  private var inYAMLBlock:   Boolean                 = true
+  private var inLiteral:     Boolean                 = false
+  private var currentKey:    Nullable[BasedSequence] = Nullable.empty
+  private var currentValues: JList[BasedSequence]    = new ArrayList[BasedSequence]()
+  private val block:         YamlFrontMatterBlock    = new YamlFrontMatterBlock()
+  private var content:       Nullable[BlockContent]  = Nullable(new BlockContent())
 
   override def getBlock: Block = block
 
   override def isContainer: Boolean = false
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     content.foreach(_.add(line, state.indent))
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     content.foreach { c =>
@@ -120,11 +119,11 @@ class YamlFrontMatterBlockParser extends AbstractBlockParser {
 
 object YamlFrontMatterBlockParser {
 
-  private val REGEX_METADATA: Pattern = Pattern.compile("^[ ]{0,3}([A-Za-z0-9_\\-.]+):\\s*(.*)")
-  private val REGEX_METADATA_LIST: Pattern = Pattern.compile("^[ ]+-\\s*(.*)")
+  private val REGEX_METADATA:         Pattern = Pattern.compile("^[ ]{0,3}([A-Za-z0-9_\\-.]+):\\s*(.*)")
+  private val REGEX_METADATA_LIST:    Pattern = Pattern.compile("^[ ]+-\\s*(.*)")
   private val REGEX_METADATA_LITERAL: Pattern = Pattern.compile("^\\s*(.*)")
-  private val REGEX_BEGIN: Pattern = Pattern.compile("^-{3}(\\s.*)?")
-  private val REGEX_END: Pattern = Pattern.compile("^(-{3}|\\.{3})(\\s.*)?")
+  private val REGEX_BEGIN:            Pattern = Pattern.compile("^-{3}(\\s.*)?")
+  private val REGEX_END:              Pattern = Pattern.compile("^(-{3}|\\.{3})(\\s.*)?")
 
   class Factory extends CustomBlockParserFactory {
 
@@ -140,11 +139,13 @@ object YamlFrontMatterBlockParser {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
 
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
-      val line = state.line
+      val line         = state.line
       val parentParser = matchedBlockParser.blockParser
       // check whether this line is the first line of whole document or not
-      if (parentParser.isInstanceOf[DocumentBlockParser] && parentParser.getBlock.firstChild .isEmpty &&
-        REGEX_BEGIN.matcher(line).matches()) {
+      if (
+        parentParser.isInstanceOf[DocumentBlockParser] && parentParser.getBlock.firstChild.isEmpty &&
+        REGEX_BEGIN.matcher(line).matches()
+      ) {
         BlockStart.of(new YamlFrontMatterBlockParser()).atIndex(state.nextNonSpaceIndex)
       } else {
         BlockStart.none()

@@ -22,7 +22,6 @@ import ssg.md.util.misc.{ CharPredicate, Utils }
 import ssg.md.util.sequence.{ BasedSequence, RepeatedSequence, SequenceUtils }
 import ssg.md.util.sequence.mappers.SpaceMapper
 
-
 import scala.language.implicitConversions
 
 /** The node formatter that formats all the core nodes (comes last in the order of node formatters).
@@ -30,63 +29,69 @@ import scala.language.implicitConversions
 class CoreNodeFormatter(options: DataHolder)
     extends NodeRepositoryFormatter[ReferenceRepository, Reference, RefNode](options, null.asInstanceOf[DataKey[java.util.Map[String, String]]], Formatter.UNIQUIFICATION_MAP) { // @nowarn - Java interop: parent class checks for null
 
-  private val formatterOptions: FormatterOptions = new FormatterOptions(options)
-  private val listOptions:      ListOptions      = ListOptions.get(options)
-  private val myHtmlBlockPrefix:            String = "<" + formatterOptions.translationHtmlBlockPrefix
-  private val myHtmlInlinePrefix:           String = formatterOptions.translationHtmlInlinePrefix
-  private val myTranslationAutolinkPrefix:  String = formatterOptions.translationAutolinkPrefix
-  private var blankLines: Int = 0
-  private var myTranslationStore: Nullable[MutableDataHolder] = Nullable.empty
+  private val formatterOptions:             FormatterOptions                        = new FormatterOptions(options)
+  private val listOptions:                  ListOptions                             = ListOptions.get(options)
+  private val myHtmlBlockPrefix:            String                                  = "<" + formatterOptions.translationHtmlBlockPrefix
+  private val myHtmlInlinePrefix:           String                                  = formatterOptions.translationHtmlInlinePrefix
+  private val myTranslationAutolinkPrefix:  String                                  = formatterOptions.translationAutolinkPrefix
+  private var blankLines:                   Int                                     = 0
+  private var myTranslationStore:           Nullable[MutableDataHolder]             = Nullable.empty
   private var attributeUniquificationIdMap: Nullable[java.util.Map[String, String]] = Nullable.empty
 
   override def getBlockQuoteLikePrefixChar: Char = '>'
 
-  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] = {
-    Nullable(Set(
-      // Generic unknown node formatter
-      new NodeFormattingHandler[Node](classOf[Node], (node, context, markdown) => renderGenericNode(node, context, markdown)),
+  override def getNodeFormattingHandlers: Nullable[Set[NodeFormattingHandler[?]]] =
+    Nullable(
+      Set(
+        // Generic unknown node formatter
+        new NodeFormattingHandler[Node](classOf[Node], (node, context, markdown) => renderGenericNode(node, context, markdown)),
 
-      // specific nodes
-      new NodeFormattingHandler[AutoLink](classOf[AutoLink], (node, context, markdown) => renderAutoLink(node, context, markdown)),
-      new NodeFormattingHandler[BlankLine](classOf[BlankLine], (node, context, markdown) => renderBlankLine(node, context, markdown)),
-      new NodeFormattingHandler[BlockQuote](classOf[BlockQuote], (node, context, markdown) => renderBlockQuote(node, context, markdown)),
-      new NodeFormattingHandler[Code](classOf[Code], (node, context, markdown) => renderCode(node, context, markdown)),
-      new NodeFormattingHandler[Document](classOf[Document], (node, context, markdown) => renderDocument(node, context, markdown)),
-      new NodeFormattingHandler[Emphasis](classOf[Emphasis], (node, context, markdown) => renderEmphasis(node, context, markdown)),
-      new NodeFormattingHandler[FencedCodeBlock](classOf[FencedCodeBlock], (node, context, markdown) => renderFencedCodeBlock(node, context, markdown)),
-      new NodeFormattingHandler[HardLineBreak](classOf[HardLineBreak], (node, context, markdown) => renderHardLineBreak(node, context, markdown)),
-      new NodeFormattingHandler[Heading](classOf[Heading], (node, context, markdown) => renderHeading(node, context, markdown)),
-      new NodeFormattingHandler[HtmlBlock](classOf[HtmlBlock], (node, context, markdown) => renderHtmlBlock(node, context, markdown)),
-      new NodeFormattingHandler[HtmlCommentBlock](classOf[HtmlCommentBlock], (node, context, markdown) => renderHtmlCommentBlock(node, context, markdown)),
-      new NodeFormattingHandler[HtmlInnerBlock](classOf[HtmlInnerBlock], (node, context, markdown) => renderHtmlInnerBlock(node, context, markdown)),
-      new NodeFormattingHandler[HtmlInnerBlockComment](classOf[HtmlInnerBlockComment], (node, context, markdown) => renderHtmlInnerBlockComment(node, context, markdown)),
-      new NodeFormattingHandler[HtmlEntity](classOf[HtmlEntity], (node, context, markdown) => renderHtmlEntity(node, context, markdown)),
-      new NodeFormattingHandler[HtmlInline](classOf[HtmlInline], (node, context, markdown) => renderHtmlInline(node, context, markdown)),
-      new NodeFormattingHandler[HtmlInlineComment](classOf[HtmlInlineComment], (node, context, markdown) => renderHtmlInlineComment(node, context, markdown)),
-      new NodeFormattingHandler[Image](classOf[Image], (node, context, markdown) => renderImage(node, context, markdown)),
-      new NodeFormattingHandler[ImageRef](classOf[ImageRef], (node, context, markdown) => renderImageRef(node, context, markdown)),
-      new NodeFormattingHandler[IndentedCodeBlock](classOf[IndentedCodeBlock], (node, context, markdown) => renderIndentedCodeBlock(node, context, markdown)),
-      new NodeFormattingHandler[Link](classOf[Link], (node, context, markdown) => renderLink(node, context, markdown)),
-      new NodeFormattingHandler[LinkRef](classOf[LinkRef], (node, context, markdown) => renderLinkRef(node, context, markdown)),
-      new NodeFormattingHandler[BulletList](classOf[BulletList], (node, context, markdown) => FormatterUtils.renderList(node, context, markdown)),
-      new NodeFormattingHandler[OrderedList](classOf[OrderedList], (node, context, markdown) => FormatterUtils.renderList(node, context, markdown)),
-      new NodeFormattingHandler[BulletListItem](classOf[BulletListItem], (node, context, markdown) => FormatterUtils.renderListItem(node, context, markdown, listOptions, node.markerSuffix, false)),
-      new NodeFormattingHandler[OrderedListItem](classOf[OrderedListItem], (node, context, markdown) => FormatterUtils.renderListItem(node, context, markdown, listOptions, node.markerSuffix, false)),
-      new NodeFormattingHandler[MailLink](classOf[MailLink], (node, context, markdown) => renderMailLink(node, context, markdown)),
-      new NodeFormattingHandler[Paragraph](classOf[Paragraph], (node, context, markdown) => renderParagraph(node, context, markdown)),
-      new NodeFormattingHandler[Reference](classOf[Reference], (node, context, markdown) => renderReference(node, context, markdown)),
-      new NodeFormattingHandler[SoftLineBreak](classOf[SoftLineBreak], (node, context, markdown) => renderSoftLineBreak(node, context, markdown)),
-      new NodeFormattingHandler[StrongEmphasis](classOf[StrongEmphasis], (node, context, markdown) => renderStrongEmphasis(node, context, markdown)),
-      new NodeFormattingHandler[Text](classOf[Text], (node, context, markdown) => renderText(node, context, markdown)),
-      new NodeFormattingHandler[TextBase](classOf[TextBase], (node, context, markdown) => context.renderChildren(node)),
-      new NodeFormattingHandler[ThematicBreak](classOf[ThematicBreak], (node, context, markdown) => renderThematicBreak(node, context, markdown))
-    ))
-  }
+        // specific nodes
+        new NodeFormattingHandler[AutoLink](classOf[AutoLink], (node, context, markdown) => renderAutoLink(node, context, markdown)),
+        new NodeFormattingHandler[BlankLine](classOf[BlankLine], (node, context, markdown) => renderBlankLine(node, context, markdown)),
+        new NodeFormattingHandler[BlockQuote](classOf[BlockQuote], (node, context, markdown) => renderBlockQuote(node, context, markdown)),
+        new NodeFormattingHandler[Code](classOf[Code], (node, context, markdown) => renderCode(node, context, markdown)),
+        new NodeFormattingHandler[Document](classOf[Document], (node, context, markdown) => renderDocument(node, context, markdown)),
+        new NodeFormattingHandler[Emphasis](classOf[Emphasis], (node, context, markdown) => renderEmphasis(node, context, markdown)),
+        new NodeFormattingHandler[FencedCodeBlock](classOf[FencedCodeBlock], (node, context, markdown) => renderFencedCodeBlock(node, context, markdown)),
+        new NodeFormattingHandler[HardLineBreak](classOf[HardLineBreak], (node, context, markdown) => renderHardLineBreak(node, context, markdown)),
+        new NodeFormattingHandler[Heading](classOf[Heading], (node, context, markdown) => renderHeading(node, context, markdown)),
+        new NodeFormattingHandler[HtmlBlock](classOf[HtmlBlock], (node, context, markdown) => renderHtmlBlock(node, context, markdown)),
+        new NodeFormattingHandler[HtmlCommentBlock](classOf[HtmlCommentBlock], (node, context, markdown) => renderHtmlCommentBlock(node, context, markdown)),
+        new NodeFormattingHandler[HtmlInnerBlock](classOf[HtmlInnerBlock], (node, context, markdown) => renderHtmlInnerBlock(node, context, markdown)),
+        new NodeFormattingHandler[HtmlInnerBlockComment](classOf[HtmlInnerBlockComment], (node, context, markdown) => renderHtmlInnerBlockComment(node, context, markdown)),
+        new NodeFormattingHandler[HtmlEntity](classOf[HtmlEntity], (node, context, markdown) => renderHtmlEntity(node, context, markdown)),
+        new NodeFormattingHandler[HtmlInline](classOf[HtmlInline], (node, context, markdown) => renderHtmlInline(node, context, markdown)),
+        new NodeFormattingHandler[HtmlInlineComment](classOf[HtmlInlineComment], (node, context, markdown) => renderHtmlInlineComment(node, context, markdown)),
+        new NodeFormattingHandler[Image](classOf[Image], (node, context, markdown) => renderImage(node, context, markdown)),
+        new NodeFormattingHandler[ImageRef](classOf[ImageRef], (node, context, markdown) => renderImageRef(node, context, markdown)),
+        new NodeFormattingHandler[IndentedCodeBlock](classOf[IndentedCodeBlock], (node, context, markdown) => renderIndentedCodeBlock(node, context, markdown)),
+        new NodeFormattingHandler[Link](classOf[Link], (node, context, markdown) => renderLink(node, context, markdown)),
+        new NodeFormattingHandler[LinkRef](classOf[LinkRef], (node, context, markdown) => renderLinkRef(node, context, markdown)),
+        new NodeFormattingHandler[BulletList](classOf[BulletList], (node, context, markdown) => FormatterUtils.renderList(node, context, markdown)),
+        new NodeFormattingHandler[OrderedList](classOf[OrderedList], (node, context, markdown) => FormatterUtils.renderList(node, context, markdown)),
+        new NodeFormattingHandler[BulletListItem](
+          classOf[BulletListItem],
+          (node, context, markdown) => FormatterUtils.renderListItem(node, context, markdown, listOptions, node.markerSuffix, false)
+        ),
+        new NodeFormattingHandler[OrderedListItem](
+          classOf[OrderedListItem],
+          (node, context, markdown) => FormatterUtils.renderListItem(node, context, markdown, listOptions, node.markerSuffix, false)
+        ),
+        new NodeFormattingHandler[MailLink](classOf[MailLink], (node, context, markdown) => renderMailLink(node, context, markdown)),
+        new NodeFormattingHandler[Paragraph](classOf[Paragraph], (node, context, markdown) => renderParagraph(node, context, markdown)),
+        new NodeFormattingHandler[Reference](classOf[Reference], (node, context, markdown) => renderReference(node, context, markdown)),
+        new NodeFormattingHandler[SoftLineBreak](classOf[SoftLineBreak], (node, context, markdown) => renderSoftLineBreak(node, context, markdown)),
+        new NodeFormattingHandler[StrongEmphasis](classOf[StrongEmphasis], (node, context, markdown) => renderStrongEmphasis(node, context, markdown)),
+        new NodeFormattingHandler[Text](classOf[Text], (node, context, markdown) => renderText(node, context, markdown)),
+        new NodeFormattingHandler[TextBase](classOf[TextBase], (node, context, markdown) => context.renderChildren(node)),
+        new NodeFormattingHandler[ThematicBreak](classOf[ThematicBreak], (node, context, markdown) => renderThematicBreak(node, context, markdown))
+      )
+    )
 
-  override def getNodeClasses: Nullable[Set[Class[?]]] = {
+  override def getNodeClasses: Nullable[Set[Class[?]]] =
     if (formatterOptions.referencePlacement.isNoChange || !formatterOptions.referenceSort.isUnused) Nullable.empty
     else Nullable(Set(classOf[RefNode]))
-  }
 
   override def getRepository(options: DataHolder): ReferenceRepository =
     Parser.REFERENCES.get(Nullable(options))
@@ -97,18 +102,17 @@ class CoreNodeFormatter(options: DataHolder)
   override def getReferenceSort: ElementPlacementSort =
     formatterOptions.referenceSort
 
-  private def appendReference(id: CharSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def appendReference(id: CharSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.isTransformingText && context.getRenderPurpose == RenderPurpose.TRANSLATED && context.getMergeContext.isDefined) {
       // may need to map references
-      val reference = String.valueOf(context.transformTranslating(Nullable.empty, id, Nullable.empty, Nullable.empty))
+      val reference           = String.valueOf(context.transformTranslating(Nullable.empty, id, Nullable.empty, Nullable.empty))
       val uniquifiedReference = referenceUniqificationMap.fold(reference)(_.getOrDefault(reference, reference))
       markdown.append(uniquifiedReference)
     } else {
       markdown.appendTranslating(id)
     }
-  }
 
-  override def renderReferenceBlock(node: Reference, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  override def renderReferenceBlock(node: Reference, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.isTransformingText) {
       markdown.append(node.openingMarker)
       appendReference(node.reference, context, markdown)
@@ -126,7 +130,7 @@ class CoreNodeFormatter(options: DataHolder)
           markdown.append("#")
           val anchorRef = context.transformAnchorRef(resolvedLink.getPageRef, resolvedLink.getAnchorRef.get)
           if (attributeUniquificationIdMap.isDefined && resolvedLink.getPageRef.isEmpty && context.isTransformingText && context.getMergeContext.isDefined) {
-            val stringAnchorRef = String.valueOf(anchorRef)
+            val stringAnchorRef     = String.valueOf(anchorRef)
             val uniquifiedAnchorRef = attributeUniquificationIdMap.get.getOrDefault(stringAnchorRef, stringAnchorRef)
             markdown.append(uniquifiedAnchorRef)
           } else {
@@ -164,7 +168,6 @@ class CoreNodeFormatter(options: DataHolder)
       }
       markdown.line()
     }
-  }
 
   override def renderDocument(context: NodeFormatterContext, markdown: MarkdownWriter, document: Document, phase: FormattingPhase): Unit = {
     super.renderDocument(context, markdown, document, phase)
@@ -193,7 +196,7 @@ class CoreNodeFormatter(options: DataHolder)
           val key = keyIter.next()
           if (key.get(Nullable(document)).isInstanceOf[NodeRepository[?]]) {
             val repository = key.get(Nullable(document: DataHolder)).asInstanceOf[NodeRepository[?]]
-            val nodes = repository.getReferencedElements(document)
+            val nodes      = repository.getReferencedElements(document)
 
             val nodeIter = nodes.iterator()
             while (nodeIter.hasNext) {
@@ -244,7 +247,7 @@ class CoreNodeFormatter(options: DataHolder)
     }
   }
 
-  private def renderBlankLine(node: BlankLine, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderBlankLine(node: BlankLine, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (FormatterUtils.LIST_ITEM_SPACING.get(Nullable(context.getDocument)) == null && markdown.offsetWithPending() > 0) { // @nowarn - NullableDataKey may return null
       if (!(node.previous.isEmpty || node.previous.exists(_.isInstanceOf[BlankLine]))) {
         blankLines = 0
@@ -252,7 +255,6 @@ class CoreNodeFormatter(options: DataHolder)
       blankLines += 1
       if (blankLines <= formatterOptions.maxBlankLines) markdown.blankLine(blankLines)
     }
-  }
 
   private def renderDocument(node: Document, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     // No rendering itself
@@ -310,7 +312,10 @@ class CoreNodeFormatter(options: DataHolder)
         markdown.line()
 
         if (formatterOptions.setextHeadingEqualizeMarker) {
-          markdown.append(node.closingMarker.charAt(0), Utils.minLimit(markdown.getLineInfo(markdown.getLineCountWithPending - 1).textLength, formatterOptions.minSetextMarkerLength))
+          markdown.append(
+            node.closingMarker.charAt(0),
+            Utils.minLimit(markdown.getLineInfo(markdown.getLineCountWithPending - 1).textLength, formatterOptions.minSetextMarkerLength)
+          )
         } else {
           markdown.append(node.closingMarker)
         }
@@ -322,7 +327,10 @@ class CoreNodeFormatter(options: DataHolder)
       val closingMarker = if (node.level == 1) '=' else '-'
 
       if (formatterOptions.setextHeadingEqualizeMarker) {
-        markdown.append(closingMarker, Utils.minLimit(markdown.getLineInfo(markdown.getLineCountWithPending - 1).textLength, formatterOptions.minSetextMarkerLength))
+        markdown.append(
+          closingMarker,
+          Utils.minLimit(markdown.getLineInfo(markdown.getLineCountWithPending - 1).textLength, formatterOptions.minSetextMarkerLength)
+        )
       } else {
         markdown.append(RepeatedSequence.repeatOf(closingMarker, formatterOptions.minSetextMarkerLength))
       }
@@ -370,11 +378,11 @@ class CoreNodeFormatter(options: DataHolder)
     var closingMarker: CharSequence = node.closingMarker
     var openingMarkerChar = openingMarker.charAt(0)
     var closingMarkerChar = if (closingMarker.length > 0) closingMarker.charAt(0) else SequenceUtils.NUL
-    var openingMarkerLen = openingMarker.length
-    var closingMarkerLen = closingMarker.length
+    var openingMarkerLen  = openingMarker.length
+    var closingMarkerLen  = closingMarker.length
 
     formatterOptions.fencedCodeMarkerType match {
-      case CodeFenceMarker.ANY => ()
+      case CodeFenceMarker.ANY       => ()
       case CodeFenceMarker.BACK_TICK =>
         openingMarkerChar = '`'
         closingMarkerChar = openingMarkerChar
@@ -403,11 +411,11 @@ class CoreNodeFormatter(options: DataHolder)
       markdown.appendNonTranslating(node.contentChars)
     } else {
       if (formatterOptions.fencedCodeMinimizeIndent) {
-        val lines = node.contentLines
+        val lines       = node.contentLines
         val leadColumns = new Array[Int](lines.size)
-        var minSpaces = Int.MaxValue
-        var i = 0
-        val lineIter = lines.iterator()
+        var minSpaces   = Int.MaxValue
+        var i           = 0
+        val lineIter    = lines.iterator()
         while (lineIter.hasNext) {
           val line = lineIter.next()
           leadColumns(i) = line.countLeadingColumns(0, CharPredicate.SPACE_TAB)
@@ -433,7 +441,7 @@ class CoreNodeFormatter(options: DataHolder)
     markdown.closePreFormatted()
     markdown.line().append(closingMarker).line()
 
-    if (!(node.parent.get.isInstanceOf[ListItem]) || !FormatterUtils.isLastOfItem(Nullable(node)) || FormatterUtils.LIST_ITEM_SPACING.get(Nullable(context.getDocument)) == ListSpacing.LOOSE) {
+    if (!node.parent.get.isInstanceOf[ListItem] || !FormatterUtils.isLastOfItem(Nullable(node)) || FormatterUtils.LIST_ITEM_SPACING.get(Nullable(context.getDocument)) == ListSpacing.LOOSE) {
       markdown.tailBlankLine()
     }
   }
@@ -444,7 +452,7 @@ class CoreNodeFormatter(options: DataHolder)
     if (context.isTransformingText) {
       // here we need actual prefix in the code or the generated partial doc will not be accurate and cause translated AST to be wrong
       var contentChars = node.contentChars
-      val prefix = FormatterUtils.getActualAdditionalPrefix(contentChars, markdown)
+      val prefix       = FormatterUtils.getActualAdditionalPrefix(contentChars, markdown)
 
       // need to always have EOL at the end and make sure no leading spaces on id at translated collection
       if (context.getRenderPurpose == RenderPurpose.TRANSLATED) {
@@ -468,11 +476,11 @@ class CoreNodeFormatter(options: DataHolder)
       markdown.openPreFormatted(true)
 
       if (formatterOptions.indentedCodeMinimizeIndent) {
-        val lines = node.contentLines
+        val lines       = node.contentLines
         val leadColumns = new Array[Int](lines.size)
-        var minSpaces = Int.MaxValue
-        var i = 0
-        val lineIter = lines.iterator()
+        var minSpaces   = Int.MaxValue
+        var i           = 0
+        val lineIter    = lines.iterator()
         while (lineIter.hasNext) {
           val line = lineIter.next()
           leadColumns(i) = line.countLeadingColumns(0, CharPredicate.SPACE_TAB)
@@ -513,7 +521,7 @@ class CoreNodeFormatter(options: DataHolder)
     markdown.append(node.openingMarker)
   }
 
-  private def renderParagraph(node: Paragraph, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderParagraph(node: Paragraph, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.isTransformingText) {
       // leave all as is
       FormatterUtils.renderTextBlockParagraphLines(node, context, markdown)
@@ -524,7 +532,7 @@ class CoreNodeFormatter(options: DataHolder)
       if (!node.parent.get.isInstanceOf[ParagraphItemContainer]) {
         if (node.parent.get.isInstanceOf[ParagraphContainer]) {
           val startWrappingDisabled = node.parent.get.asInstanceOf[ParagraphContainer].isParagraphStartWrappingDisabled(node)
-          val endWrappingDisabled = node.parent.get.asInstanceOf[ParagraphContainer].isParagraphEndWrappingDisabled(node)
+          val endWrappingDisabled   = node.parent.get.asInstanceOf[ParagraphContainer].isParagraphEndWrappingDisabled(node)
           if (startWrappingDisabled || endWrappingDisabled) {
             if (!startWrappingDisabled) markdown.blankLine()
             FormatterUtils.renderTextBlockParagraphLines(node, context, markdown)
@@ -567,44 +575,39 @@ class CoreNodeFormatter(options: DataHolder)
         }
       }
     }
-  }
 
-  private def renderSoftLineBreak(node: SoftLineBreak, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderSoftLineBreak(node: SoftLineBreak, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (formatterOptions.keepSoftLineBreaks || formatterOptions.rightMargin > 0) {
       markdown.append(node.chars)
     } else if (!markdown.isPendingSpace) {
       // need to add a space
       markdown.append(' ')
     }
-  }
 
-  private def renderHardLineBreak(node: HardLineBreak, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderHardLineBreak(node: HardLineBreak, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (formatterOptions.keepHardLineBreaks) {
       markdown.append(node.chars)
     } else if (!markdown.isPendingSpace) {
       // need to add a space
       markdown.append(' ')
     }
-  }
 
   private val htmlEntityPlaceholderGenerator: TranslationPlaceholderGenerator =
     (index: Int) => s"&#$index;"
 
-  private def renderHtmlEntity(node: HtmlEntity, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderHtmlEntity(node: HtmlEntity, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.getRenderPurpose == RenderPurpose.FORMAT) {
       markdown.append(node.chars)
     } else {
       context.customPlaceholderFormat(htmlEntityPlaceholderGenerator, (context1, markdown1) => markdown1.appendNonTranslating(node.chars))
     }
-  }
 
-  private def renderText(node: Text, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderText(node: Text, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (formatterOptions.keepSoftLineBreaks) {
       markdown.append(node.chars)
     } else {
       markdown.append(FormatterUtils.stripSoftLineBreak(node.chars, " "))
     }
-  }
 
   private def renderCode(node: Code, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(node.openingMarker)
@@ -625,7 +628,7 @@ class CoreNodeFormatter(options: DataHolder)
     markdown.append(node.closingMarker)
   }
 
-  private def renderHtmlBlock(node: HtmlBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderHtmlBlock(node: HtmlBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (node.hasChildren) {
       // inner blocks handle rendering
       context.renderChildren(node)
@@ -634,11 +637,10 @@ class CoreNodeFormatter(options: DataHolder)
       renderHtmlBlockBase(node, context, markdown)
       markdown.tailBlankLine()
     }
-  }
 
   private def renderHtmlCommentBlock(node: HtmlCommentBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     // here we need to make it translating, it is a comment
-    val text = node.chars.trim().midSequence(4, -3)
+    val text       = node.chars.trim().midSequence(4, -3)
     val trimmedEOL = BasedSequence.EOL
 
     if (!context.isTransformingText && formatterOptions.linkMarkerCommentPattern.isDefined && formatterOptions.linkMarkerCommentPattern.get.matcher(text).matches()) {
@@ -651,7 +653,7 @@ class CoreNodeFormatter(options: DataHolder)
     }
   }
 
-  private def renderHtmlBlockBase(node: HtmlBlockBase, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderHtmlBlockBase(node: HtmlBlockBase, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     context.getRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS | RenderPurpose.TRANSLATED_SPANS =>
         markdown.appendNonTranslating(myHtmlBlockPrefix, node.chars.trimEOL(), ">", node.chars.trimmedEOL())
@@ -667,15 +669,13 @@ class CoreNodeFormatter(options: DataHolder)
         val spanningChars = node.spanningChars
         if (spanningChars.equals(node.chars)) {
           val lineIter = node.contentLines.iterator()
-          while (lineIter.hasNext) {
+          while (lineIter.hasNext)
             markdown.append(lineIter.next())
-          }
         } else {
           markdown.append(node.chars)
         }
         markdown.line().closePreFormatted()
     }
-  }
 
   private def renderHtmlInnerBlock(node: HtmlInnerBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     renderHtmlBlockBase(node, context, markdown)
@@ -693,7 +693,7 @@ class CoreNodeFormatter(options: DataHolder)
     }
   }
 
-  private def renderHtmlInline(node: HtmlInline, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderHtmlInline(node: HtmlInline, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     context.getRenderPurpose match {
       case RenderPurpose.TRANSLATED_SPANS | RenderPurpose.TRANSLATION_SPANS =>
         val prefix = if (node.chars.startsWith("</")) "</" else "<"
@@ -705,7 +705,6 @@ class CoreNodeFormatter(options: DataHolder)
       case RenderPurpose.FORMAT | _ =>
         markdown.append(node.chars)
     }
-  }
 
   private def renderHtmlInlineComment(node: HtmlInlineComment, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     val text = node.chars.trim().midSequence(4, -3)
@@ -722,7 +721,7 @@ class CoreNodeFormatter(options: DataHolder)
   private def renderMailLink(node: MailLink, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     renderAutoLinkNode(node, context, markdown, myTranslationAutolinkPrefix, Nullable.empty)
 
-  private def renderAutoLinkNode(node: DelimitedLinkNode, context: NodeFormatterContext, markdown: MarkdownWriter, prefix: String, suffix: Nullable[String]): Unit = {
+  private def renderAutoLinkNode(node: DelimitedLinkNode, context: NodeFormatterContext, markdown: MarkdownWriter, prefix: String, suffix: Nullable[String]): Unit =
     if (context.isTransformingText) {
       context.getRenderPurpose match {
         case RenderPurpose.TRANSLATION_SPANS =>
@@ -756,7 +755,10 @@ class CoreNodeFormatter(options: DataHolder)
 
         case RenderPurpose.TRANSLATED =>
           // NOTE: on entry the node text is a placeholder, so we can check if it is wrapped or unwrapped
-          if (CoreNodeFormatter.UNWRAPPED_AUTO_LINKS.get(Nullable(myTranslationStore.get)) && CoreNodeFormatter.UNWRAPPED_AUTO_LINKS_MAP.get(Nullable(myTranslationStore.get)).contains(node.text.toString)) {
+          if (
+            CoreNodeFormatter.UNWRAPPED_AUTO_LINKS
+              .get(Nullable(myTranslationStore.get)) && CoreNodeFormatter.UNWRAPPED_AUTO_LINKS_MAP.get(Nullable(myTranslationStore.get)).contains(node.text.toString)
+          ) {
             markdown.appendNonTranslating(prefix, node.text, suffix.getOrElse(null): String) // @nowarn - Java interop
           } else {
             markdown.append("<")
@@ -770,7 +772,6 @@ class CoreNodeFormatter(options: DataHolder)
     } else {
       markdown.append(node.chars)
     }
-  }
 
   private def renderImage(node: Image, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     if (!context.isTransformingText && formatterOptions.rightMargin > 0 && formatterOptions.keepImageLinksAtStart) {
@@ -812,8 +813,8 @@ class CoreNodeFormatter(options: DataHolder)
         markdown.pushOptions().preserveSpaces()
 
         if (!context.isTransformingText && formatterOptions.rightMargin > 0) {
-          val chars = node.urlContent
-          val iMax = chars.length
+          val chars  = node.urlContent
+          val iMax   = chars.length
           var hadEOL = true
           markdown.append('\n')
 
@@ -927,7 +928,7 @@ class CoreNodeFormatter(options: DataHolder)
     }
   }
 
-  private def renderImageRef(node: ImageRef, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderImageRef(node: ImageRef, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!formatterOptions.optimizedInlineRendering || context.isTransformingText) {
       if (context.isTransformingText || formatterOptions.rightMargin == 0) {
         if (node.isReferenceTextCombined) {
@@ -971,9 +972,8 @@ class CoreNodeFormatter(options: DataHolder)
     } else {
       markdown.append(node.chars)
     }
-  }
 
-  private def renderLinkRef(node: LinkRef, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderLinkRef(node: LinkRef, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!formatterOptions.optimizedInlineRendering || context.isTransformingText) {
       if (context.isTransformingText || formatterOptions.rightMargin == 0) {
         if (node.isReferenceTextCombined) {
@@ -1023,13 +1023,15 @@ class CoreNodeFormatter(options: DataHolder)
     } else {
       markdown.append(node.chars)
     }
-  }
 }
 
 object CoreNodeFormatter {
 
-  val UNWRAPPED_AUTO_LINKS: DataKey[Boolean] = new DataKey[Boolean]("UNWRAPPED_AUTO_LINKS", false)
-  val UNWRAPPED_AUTO_LINKS_MAP: DataKey[java.util.HashSet[String]] = new DataKey[java.util.HashSet[String]]("UNWRAPPED_AUTO_LINKS_MAP", new ssg.md.util.data.NotNullValueSupplier[java.util.HashSet[String]] { def get: java.util.HashSet[String] = new java.util.HashSet[String]() })
+  val UNWRAPPED_AUTO_LINKS:     DataKey[Boolean]                   = new DataKey[Boolean]("UNWRAPPED_AUTO_LINKS", false)
+  val UNWRAPPED_AUTO_LINKS_MAP: DataKey[java.util.HashSet[String]] = new DataKey[java.util.HashSet[String]](
+    "UNWRAPPED_AUTO_LINKS_MAP",
+    new ssg.md.util.data.NotNullValueSupplier[java.util.HashSet[String]] { def get: java.util.HashSet[String] = new java.util.HashSet[String]() }
+  )
 
   class Factory extends NodeFormatterFactory {
     override def create(options: DataHolder): NodeFormatter =

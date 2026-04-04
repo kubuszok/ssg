@@ -24,13 +24,14 @@ class DefinitionNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   private val listOptions: ListOptions = ListOptions.get(options)
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set[NodeRenderingHandler[?]](
-      new NodeRenderingHandler[DefinitionList](classOf[DefinitionList], (node, ctx, html) => renderList(node, ctx, html)),
-      new NodeRenderingHandler[DefinitionTerm](classOf[DefinitionTerm], (node, ctx, html) => renderTerm(node, ctx, html)),
-      new NodeRenderingHandler[DefinitionItem](classOf[DefinitionItem], (node, ctx, html) => renderItem(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set[NodeRenderingHandler[?]](
+        new NodeRenderingHandler[DefinitionList](classOf[DefinitionList], (node, ctx, html) => renderList(node, ctx, html)),
+        new NodeRenderingHandler[DefinitionTerm](classOf[DefinitionTerm], (node, ctx, html) => renderTerm(node, ctx, html)),
+        new NodeRenderingHandler[DefinitionItem](classOf[DefinitionItem], (node, ctx, html) => renderItem(node, ctx, html))
+      )
+    )
 
   private def renderList(node: DefinitionList, context: NodeRendererContext, html: HtmlWriter): Unit = {
     html.withAttr().tag("dl").indent()
@@ -42,26 +43,42 @@ class DefinitionNodeRenderer(options: DataHolder) extends NodeRenderer {
   private def renderTerm(node: DefinitionTerm, context: NodeRendererContext, html: HtmlWriter): Unit = {
     val childText = node.firstChild
     if (childText.isDefined) {
-      html.srcPosWithEOL(node.chars).withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM).withCondIndent().tagLine("dt", () => {
-        html.text(node.markerSuffix.unescape())
-        context.renderChildren(node)
-      })
+      html
+        .srcPosWithEOL(node.chars)
+        .withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM)
+        .withCondIndent()
+        .tagLine("dt",
+                 () => {
+                   html.text(node.markerSuffix.unescape())
+                   context.renderChildren(node)
+                 }
+        )
     }
   }
 
-  private def renderItem(node: DefinitionItem, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderItem(node: DefinitionItem, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (listOptions.isTightListItem(node)) {
-      html.srcPosWithEOL(node.chars).withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM).withCondIndent().tagLine("dd", () => {
-        html.text(node.markerSuffix.unescape())
-        context.renderChildren(node)
-      })
+      html
+        .srcPosWithEOL(node.chars)
+        .withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM)
+        .withCondIndent()
+        .tagLine("dd",
+                 () => {
+                   html.text(node.markerSuffix.unescape())
+                   context.renderChildren(node)
+                 }
+        )
     } else {
-      html.srcPosWithEOL(node.chars).withAttr(CoreNodeRenderer.LOOSE_LIST_ITEM).tagIndent("dd", () => {
-        html.text(node.markerSuffix.unescape())
-        context.renderChildren(node)
-      })
+      html
+        .srcPosWithEOL(node.chars)
+        .withAttr(CoreNodeRenderer.LOOSE_LIST_ITEM)
+        .tagIndent("dd",
+                   () => {
+                     html.text(node.markerSuffix.unescape())
+                     context.renderChildren(node)
+                   }
+        )
     }
-  }
 }
 
 object DefinitionNodeRenderer {

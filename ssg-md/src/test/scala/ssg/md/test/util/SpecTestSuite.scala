@@ -11,20 +11,17 @@ package test
 package util
 
 import ssg.md.Nullable
-import ssg.md.test.util.spec.{ResourceLocation, SpecExample, SpecReader}
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.test.util.spec.{ ResourceLocation, SpecExample, SpecReader }
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
-/**
- * Base munit suite for flexmark spec-driven tests.
- *
- * Subclasses override `specResource` and `defaultOptions`, then
- * this suite reads the spec file at init time and registers each
- * example as an individual munit test.
- */
+/** Base munit suite for flexmark spec-driven tests.
+  *
+  * Subclasses override `specResource` and `defaultOptions`, then this suite reads the spec file at init time and registers each example as an individual munit test.
+  */
 abstract class SpecTestSuite extends munit.FunSuite {
 
   /** Location of the spec .txt/.md resource file. */
@@ -39,12 +36,11 @@ abstract class SpecTestSuite extends munit.FunSuite {
   /** Option map for named option sets in spec examples. */
   def optionsMap: ju.Map[String, ? <: DataHolder] = new ju.HashMap[String, DataHolder]()
 
-  /** Resolve options for a specific example based on its optionsSet string.
-   * Handles comma-separated option names (e.g. "closed-item-class, open-item-class")
-   * by splitting and aggregating each named option set.
-   */
+  /** Resolve options for a specific example based on its optionsSet string. Handles comma-separated option names (e.g. "closed-item-class, open-item-class") by splitting and aggregating each named
+    * option set.
+    */
   protected def optionsFor(example: SpecExample): DataHolder = {
-    val base = defaultOptions.getOrElse(new MutableDataSet())
+    val base      = defaultOptions.getOrElse(new MutableDataSet())
     val optionSet = example.optionsSet
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val optionsProvider: String => Nullable[DataHolder] = { name =>
@@ -87,7 +83,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
         // Handle FAIL option: test is expected to fail (known issue in original flexmark)
         val expectFail = TestUtils.FAIL.get(options)
 
-        val actualHtml = renderHtml(example, options)
+        val actualHtml   = renderHtml(example, options)
         val expectedHtml = example.html
 
         if (expectFail) {

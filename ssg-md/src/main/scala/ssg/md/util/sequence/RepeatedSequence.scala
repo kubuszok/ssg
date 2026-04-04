@@ -68,8 +68,8 @@ class RepeatedSequence private (
 
   override def toString: String = {
     val len = length()
-    val sb = new java.lang.StringBuilder(len)
-    var i = 0
+    val sb  = new java.lang.StringBuilder(len)
+    var i   = 0
     while (i < len) {
       sb.append(charAt(i))
       i += 1

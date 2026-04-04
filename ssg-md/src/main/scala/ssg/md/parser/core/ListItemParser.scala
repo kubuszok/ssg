@@ -29,7 +29,7 @@ class ListItemParser(
   val myParsing:   Parsing,
   val myListData:  ListBlockParser.ListData
 ) extends AbstractBlockParser,
-    BlankLineContainer {
+      BlankLineContainer {
 
   private val _block: ListItem =
     if (myListData.isNumberedList) OrderedListItem()
@@ -54,7 +54,7 @@ class ListItemParser(
 
   override def isContainer: Boolean = true
 
-  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean = {
+  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean =
     // Issue 66, fenced code can only be contained in GitHub Doc mode if it is indented more than list item
     block match {
       case _: FencedCodeBlock =>
@@ -68,7 +68,6 @@ class ListItemParser(
         }
       case _ => true
     }
-  }
 
   override def isPropagatingLastBlankLine(lastMatchedBlockParser: BlockParser): Boolean =
     !(_block.firstChild.isEmpty && (this ne lastMatchedBlockParser))
@@ -104,7 +103,7 @@ class ListItemParser(
     val listBlockParser = state.getActiveBlockParser(_block.parent.get.asInstanceOf[Block]).asInstanceOf[ListBlockParser]
 
     val emulationProfile = listOptions.getParserEmulationProfile
-    val emulationFamily = emulationProfile.family
+    val emulationFamily  = emulationProfile.family
     val theContentIndent = contentIndent
 
     if (emulationFamily == COMMONMARK) {
@@ -133,7 +132,7 @@ class ListItemParser(
   private def tryContinueCommonMark(state: ParserState, listBlockParser: ListBlockParser, theContentIndent: Int): Nullable[BlockContinue] = {
     // - CommonMark: version 0.27 of the spec, all common mark parsers
     val currentIndent = state.indent
-    val newColumn = state.column + theContentIndent
+    val newColumn     = state.column + theContentIndent
 
     if (currentIndent >= theContentIndent + listOptions.getCodeIndent) {
       // our indented code child
@@ -144,16 +143,18 @@ class ListItemParser(
 
       if (currentIndent >= theContentIndent) {
         if (listData.isDefined) {
-          val ld = listData.get
-          val matched = state.activeBlockParser
-          val inParagraph = matched.isParagraphParser
+          val ld                  = listData.get
+          val matched             = state.activeBlockParser
+          val inParagraph         = matched.isParagraphParser
           val inParagraphListItem = inParagraph &&
             matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
             matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-          if (inParagraphListItem &&
+          if (
+            inParagraphListItem &&
             (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+          ) {
             // just a lazy continuation of us
             listBlockParser.setItemHandledLineSkipActive(state.line)
             Nullable(continueAtColumn(newColumn))
@@ -228,15 +229,17 @@ class ListItemParser(
 
       if (currentIndent >= itemIndent) {
         if (listData.isDefined) {
-          val ld = listData.get
-          val matched = state.activeBlockParser
-          val inParagraph = matched.isParagraphParser
+          val ld                  = listData.get
+          val matched             = state.activeBlockParser
+          val inParagraph         = matched.isParagraphParser
           val inParagraphListItem = inParagraph &&
             matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
             matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-          if (inParagraphListItem && (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-            !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+          if (
+            inParagraphListItem && (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
+              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+          ) {
             // just a lazy continuation of us
             listBlockParser.setItemHandledLineSkipActive(state.line)
             Nullable(continueAtColumn(state.column + currentIndent))
@@ -288,24 +291,26 @@ class ListItemParser(
 
   private def tryContinueKramdown(state: ParserState, listBlockParser: ListBlockParser, theContentIndent: Int, itemIndent: Int, markerIndent: Int): Nullable[BlockContinue] = {
     val currentIndent = state.indent
-    val listIndent = markerIndent
-    val newColumn = state.column + theContentIndent
+    val listIndent    = markerIndent
+    val newColumn     = state.column + theContentIndent
 
     val listData = ListBlockParser.parseListMarker(listOptions, -1, state)
 
     if (currentIndent >= theContentIndent) {
       // our sub item
       if (listData.isDefined) {
-        val ld = listData.get
-        val matched = state.activeBlockParser
-        val inParagraph = matched.isParagraphParser
+        val ld                  = listData.get
+        val matched             = state.activeBlockParser
+        val inParagraph         = matched.isParagraphParser
         val inParagraphListItem = inParagraph &&
           matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
           matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-        if (inParagraphListItem &&
+        if (
+          inParagraphListItem &&
           (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-            !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+            !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+        ) {
           // just a lazy continuation of us
           listBlockParser.setItemHandledLineSkipActive(state.line)
           Nullable(continueAtColumn(newColumn))
@@ -368,8 +373,8 @@ class ListItemParser(
   private def tryContinueGithubDoc(state: ParserState, listBlockParser: ListBlockParser, theContentIndent: Int, itemIndent: Int, markerIndent: Int): Nullable[BlockContinue] = {
     val currentIndent = state.indent
     @annotation.nowarn("msg=unused") // faithful port, used in contentIndentRemoval calculation
-    val currentIndex = state.getIndex + currentIndent
-    val listIndent = markerIndent
+    val currentIndex         = state.getIndex + currentIndent
+    val listIndent           = markerIndent
     val contentIndentRemoval = Utils.maxLimit(currentIndent, theContentIndent, listIndent + 4)
 
     if (currentIndent >= listOptions.getCodeIndent) {
@@ -383,15 +388,17 @@ class ListItemParser(
         if (listData.isDefined) {
           val ld = listData.get
           // our sub item
-          val matched = state.activeBlockParser
-          val inParagraph = matched.isParagraphParser
+          val matched             = state.activeBlockParser
+          val inParagraph         = matched.isParagraphParser
           val inParagraphListItem = inParagraph &&
             matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
             matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-          if (inParagraphListItem &&
+          if (
+            inParagraphListItem &&
             (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+          ) {
             // just a lazy continuation of us
             listBlockParser.setItemHandledLineSkipActive(state.line)
             Nullable(continueAtColumn(state.column + currentIndent))
@@ -410,15 +417,17 @@ class ListItemParser(
           if (listData.isDefined) {
             val ld = listData.get
             // our sublist
-            val matched = state.activeBlockParser
-            val inParagraph = matched.isParagraphParser
+            val matched             = state.activeBlockParser
+            val inParagraph         = matched.isParagraphParser
             val inParagraphListItem = inParagraph &&
               matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
               matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-            if (inParagraphListItem &&
+            if (
+              inParagraphListItem &&
               (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-                !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+                !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+            ) {
               // just a lazy continuation of us
               listBlockParser.setItemHandledLineSkipActive(state.line)
               Nullable(continueAtColumn(state.column + currentIndent))
@@ -448,15 +457,17 @@ class ListItemParser(
                 listBlockParser.setItemHandledNewListLine(state.line)
                 BlockContinue.none()
               } else {
-                val matched = state.activeBlockParser
-                val inParagraph = matched.isParagraphParser
+                val matched             = state.activeBlockParser
+                val inParagraph         = matched.isParagraphParser
                 val inParagraphListItem = inParagraph &&
                   matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
                   matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-                if (inParagraphListItem &&
+                if (
+                  inParagraphListItem &&
                   (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-                    !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+                    !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+                ) {
                   // just a lazy continuation of us
                   listBlockParser.setItemHandledLineSkipActive(state.line)
                   Nullable(continueAtColumn(state.column + currentIndent))
@@ -494,15 +505,17 @@ class ListItemParser(
         if (listData.isDefined) {
           val ld = listData.get
           // our sub item
-          val matched = state.activeBlockParser
-          val inParagraph = matched.isParagraphParser
+          val matched             = state.activeBlockParser
+          val inParagraph         = matched.isParagraphParser
           val inParagraphListItem = inParagraph &&
             matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
             matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-          if (inParagraphListItem &&
+          if (
+            inParagraphListItem &&
             (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+              !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+          ) {
             // just a lazy continuation of us
             listBlockParser.setItemHandledLineSkipActive(state.line)
             Nullable(continueAtColumn(state.column + currentIndent))
@@ -522,15 +535,17 @@ class ListItemParser(
           if (listData.isDefined) {
             val ld = listData.get
             // our sublist
-            val matched = state.activeBlockParser
-            val inParagraph = matched.isParagraphParser
+            val matched             = state.activeBlockParser
+            val inParagraph         = matched.isParagraphParser
             val inParagraphListItem = inParagraph &&
               matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
               matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-            if (inParagraphListItem &&
+            if (
+              inParagraphListItem &&
               (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-                !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+                !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+            ) {
               // just a lazy continuation of us
               listBlockParser.setItemHandledLineSkipActive(state.line)
               Nullable(continueAtColumn(state.column + currentIndent))
@@ -559,15 +574,17 @@ class ListItemParser(
               listBlockParser.setItemHandledNewListLine(state.line)
               BlockContinue.none()
             } else {
-              val matched = state.activeBlockParser
-              val inParagraph = matched.isParagraphParser
+              val matched             = state.activeBlockParser
+              val inParagraph         = matched.isParagraphParser
               val inParagraphListItem = inParagraph &&
                 matched.getBlock.parent.exists(_.isInstanceOf[ListItem]) &&
                 matched.getBlock.parent.flatMap(_.firstChild).contains(matched.getBlock)
 
-              if (inParagraphListItem &&
+              if (
+                inParagraphListItem &&
                 (!listOptions.canInterrupt(ld.listBlock, ld.isEmpty, true) ||
-                  !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))) {
+                  !listOptions.canStartSubList(ld.listBlock, ld.isEmpty))
+              ) {
                 // just a lazy continuation of us
                 listBlockParser.setItemHandledLineSkipActive(state.line)
                 Nullable(continueAtColumn(state.column + currentIndent))

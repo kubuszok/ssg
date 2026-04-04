@@ -21,9 +21,8 @@ class MutableScopedDataSet(
   other:      Nullable[MutableDataHolder]
 ) extends MutableDataSet(other.map(_.asInstanceOf[DataHolder])) {
 
-  def this(parent: Nullable[DataHolder]) = {
+  def this(parent: Nullable[DataHolder]) =
     this(parent, Nullable.empty[MutableDataHolder])
-  }
 
   override def getAll: Map[? <: DataKeyBase[?], AnyRef] =
     if (parent.isDefined) {

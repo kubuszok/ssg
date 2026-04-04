@@ -17,7 +17,7 @@ import ssg.md.util.sequence.SequenceUtils
 enum AttributeValueQuotes extends java.lang.Enum[AttributeValueQuotes] {
   case AS_IS, NO_QUOTES_SINGLE_PREFERRED, NO_QUOTES_DOUBLE_PREFERRED, SINGLE_PREFERRED, DOUBLE_PREFERRED, SINGLE_QUOTES, DOUBLE_QUOTES
 
-  def quotesFor(text: CharSequence, defaultQuotes: CharSequence): String = {
+  def quotesFor(text: CharSequence, defaultQuotes: CharSequence): String =
     this match {
       case NO_QUOTES_SINGLE_PREFERRED =>
         if (!SequenceUtils.containsAny(text, AttributeValueQuotes.P_SPACES_OR_QUOTES)) ""
@@ -35,13 +35,12 @@ enum AttributeValueQuotes extends java.lang.Enum[AttributeValueQuotes] {
         else "'"
       case SINGLE_QUOTES => "'"
       case DOUBLE_QUOTES => "\""
-      case AS_IS => defaultQuotes.toString
+      case AS_IS         => defaultQuotes.toString
     }
-  }
 }
 
 object AttributeValueQuotes {
   val P_SPACES_OR_QUOTES: CharPredicate = CharPredicate.anyOf(" \t\n'\"")
-  val P_SINGLE_QUOTES: CharPredicate = CharPredicate.anyOf("'")
-  val P_DOUBLE_QUOTES: CharPredicate = CharPredicate.anyOf("\"")
+  val P_SINGLE_QUOTES:    CharPredicate = CharPredicate.anyOf("'")
+  val P_DOUBLE_QUOTES:    CharPredicate = CharPredicate.anyOf("\"")
 }

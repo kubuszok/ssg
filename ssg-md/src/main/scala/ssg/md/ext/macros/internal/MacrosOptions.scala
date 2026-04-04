@@ -12,7 +12,7 @@ package ext
 package macros
 package internal
 
-import ssg.md.util.data.{DataHolder, MutableDataHolder, MutableDataSetter}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSetter }
 
 import scala.language.implicitConversions
 

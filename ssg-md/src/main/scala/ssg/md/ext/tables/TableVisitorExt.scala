@@ -16,7 +16,7 @@ import scala.language.implicitConversions
 
 object TableVisitorExt {
 
-  def VISIT_HANDLERS[V <: TableVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: TableVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[TableBlock](classOf[TableBlock], visitor.visit(_)),
       new VisitHandler[TableHead](classOf[TableHead], visitor.visit(_)),
@@ -24,7 +24,6 @@ object TableVisitorExt {
       new VisitHandler[TableBody](classOf[TableBody], visitor.visit(_)),
       new VisitHandler[TableRow](classOf[TableRow], visitor.visit(_)),
       new VisitHandler[TableCell](classOf[TableCell], visitor.visit(_)),
-      new VisitHandler[TableCaption](classOf[TableCaption], visitor.visit(_)),
+      new VisitHandler[TableCaption](classOf[TableCaption], visitor.visit(_))
     )
-  }
 }

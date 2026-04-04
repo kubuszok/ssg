@@ -13,6 +13,6 @@ package jekyll
 package tag
 
 trait JekyllTagVisitor {
-  def visit(node: JekyllTag): Unit
+  def visit(node: JekyllTag):      Unit
   def visit(node: JekyllTagBlock): Unit
 }

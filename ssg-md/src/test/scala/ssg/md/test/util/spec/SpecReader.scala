@@ -14,34 +14,34 @@ package spec
 
 import ssg.md.Nullable
 
-import java.io.{BufferedReader, IOException, InputStream, InputStreamReader}
+import java.io.{ BufferedReader, IOException, InputStream, InputStreamReader }
 import java.nio.charset.StandardCharsets
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 import java.util.regex.Pattern
 
 class SpecReader(
-    protected val inputStream: InputStream,
-    protected val resourceLocation: ResourceLocation,
-    protected val compoundSections: Boolean
+  protected val inputStream:      InputStream,
+  protected val resourceLocation: ResourceLocation,
+  protected val compoundSections: Boolean
 ) {
 
   protected val examples: ju.List[SpecExample] = new ju.ArrayList[SpecExample]()
 
-  protected val sections: Array[Nullable[String]] = new Array[Nullable[String]](7) // 0 is not used and signals no section when indexed by lastSectionLevel
-  protected var lastSectionLevel: Int = 1
+  protected val sections:         Array[Nullable[String]] = new Array[Nullable[String]](7) // 0 is not used and signals no section when indexed by lastSectionLevel
+  protected var lastSectionLevel: Int                     = 1
 
-  protected var state: SpecReader.State = SpecReader.State.BEFORE
-  protected var section: Nullable[String] = Nullable.empty
-  protected var optionsSet: String = ""
-  protected var source: StringBuilder = new StringBuilder()
-  protected var html: StringBuilder = new StringBuilder()
-  protected var ast: StringBuilder = new StringBuilder()
-  protected var comment: Nullable[StringBuilder] = Nullable.empty
-  protected var exampleNumber: Int = 0
-  protected var lineNumber: Int = 0
-  protected var contentLineNumber: Int = 0
-  protected var commentLineNumber: Int = 0
+  protected var state:             SpecReader.State        = SpecReader.State.BEFORE
+  protected var section:           Nullable[String]        = Nullable.empty
+  protected var optionsSet:        String                  = ""
+  protected var source:            StringBuilder           = new StringBuilder()
+  protected var html:              StringBuilder           = new StringBuilder()
+  protected var ast:               StringBuilder           = new StringBuilder()
+  protected var comment:           Nullable[StringBuilder] = Nullable.empty
+  protected var exampleNumber:     Int                     = 0
+  protected var lineNumber:        Int                     = 0
+  protected var contentLineNumber: Int                     = 0
+  protected var commentLineNumber: Int                     = 0
 
   def fileUrl: String = resourceLocation.fileUrl
 
@@ -49,14 +49,13 @@ class SpecReader(
 
   def getExamplesSourceAsString: ju.List[String] = {
     val result = new ju.ArrayList[String]()
-    val iter = examples.iterator()
-    while (iter.hasNext) {
+    val iter   = examples.iterator()
+    while (iter.hasNext)
       result.add(iter.next().source)
-    }
     result
   }
 
-  def readExamples(): Unit = {
+  def readExamples(): Unit =
     try {
       resetContents()
 
@@ -78,19 +77,17 @@ class SpecReader(
       case e: IOException =>
         throw new RuntimeException(e)
     }
-  }
 
   // can use these to generate spec from source
   protected def addSpecLine(line: String, isSpecExampleOpen: Boolean): Unit = {
     // default no-op
   }
 
-  protected def addSpecExample(example: SpecExample): Unit = {
+  protected def addSpecExample(example: SpecExample): Unit =
     examples.add(example)
-  }
 
   protected def processLine(line: String): Unit = {
-    var lineAbsorbed = false
+    var lineAbsorbed  = false
     var lineProcessed = false
 
     state match {
@@ -139,7 +136,7 @@ class SpecReader(
             exampleNumber += 1
             contentLineNumber = lineNumber
             // NOTE: let dump spec reader get the actual definition line for comparison
-            //lineAbsorbed = true
+            // lineAbsorbed = true
           }
         }
 
@@ -156,11 +153,19 @@ class SpecReader(
       case SpecReader.State.HTML =>
         if (line == SpecReader.EXAMPLE_BREAK) {
           state = SpecReader.State.BEFORE
-          addSpecExample(new SpecExample(
-            resourceLocation, contentLineNumber, Nullable(optionsSet), section, exampleNumber,
-            source.toString(), html.toString(), Nullable.empty,
-            comment.map(_.toString)
-          ))
+          addSpecExample(
+            new SpecExample(
+              resourceLocation,
+              contentLineNumber,
+              Nullable(optionsSet),
+              section,
+              exampleNumber,
+              source.toString(),
+              html.toString(),
+              Nullable.empty,
+              comment.map(_.toString)
+            )
+          )
           resetContents()
           lineAbsorbed = true
         } else if (line == SpecReader.SECTION_BREAK) {
@@ -175,11 +180,19 @@ class SpecReader(
       case SpecReader.State.AST =>
         if (line == SpecReader.EXAMPLE_BREAK) {
           state = SpecReader.State.BEFORE
-          addSpecExample(new SpecExample(
-            resourceLocation, contentLineNumber, Nullable(optionsSet), section, exampleNumber,
-            source.toString(), html.toString(), Nullable(ast.toString()),
-            comment.map(_.toString)
-          ))
+          addSpecExample(
+            new SpecExample(
+              resourceLocation,
+              contentLineNumber,
+              Nullable(optionsSet),
+              section,
+              exampleNumber,
+              source.toString(),
+              html.toString(),
+              Nullable(ast.toString()),
+              comment.map(_.toString)
+            )
+          )
           resetContents()
         } else {
           ast.append(line).append('\n')
@@ -212,31 +225,29 @@ class SpecReader(
 
 object SpecReader {
 
-  val EXAMPLE_KEYWORD: String = "example"
-  val EXAMPLE_BREAK: String = "````````````````````````````````"
-  val EXAMPLE_START: String = EXAMPLE_BREAK + " " + EXAMPLE_KEYWORD
-  val EXAMPLE_START_NBSP: String = EXAMPLE_BREAK + "\u00A0" + EXAMPLE_KEYWORD
-  val EXAMPLE_TEST_BREAK: String = "````````````````"
-  val EXAMPLE_TEST_START: String = EXAMPLE_TEST_BREAK + " " + EXAMPLE_KEYWORD
-  val OPTIONS_KEYWORD: String = "options"
-  val OPTIONS_STRING: String = " " + OPTIONS_KEYWORD
-  val OPTIONS_PATTERN: Pattern = Pattern.compile(".*(?:\\s|\u00A0)\\Q" + OPTIONS_KEYWORD + "\\E(?:\\s|\u00A0)*\\((?:\\s|\u00A0)*(.*)(?:\\s|\u00A0)*\\)(?:\\s|\u00A0)*")
-  val SECTION_BREAK: String = "."
-  val SECTION_TEST_BREAK: String = "\u2026"
+  val EXAMPLE_KEYWORD:           String  = "example"
+  val EXAMPLE_BREAK:             String  = "````````````````````````````````"
+  val EXAMPLE_START:             String  = EXAMPLE_BREAK + " " + EXAMPLE_KEYWORD
+  val EXAMPLE_START_NBSP:        String  = EXAMPLE_BREAK + "\u00A0" + EXAMPLE_KEYWORD
+  val EXAMPLE_TEST_BREAK:        String  = "````````````````"
+  val EXAMPLE_TEST_START:        String  = EXAMPLE_TEST_BREAK + " " + EXAMPLE_KEYWORD
+  val OPTIONS_KEYWORD:           String  = "options"
+  val OPTIONS_STRING:            String  = " " + OPTIONS_KEYWORD
+  val OPTIONS_PATTERN:           Pattern = Pattern.compile(".*(?:\\s|\u00A0)\\Q" + OPTIONS_KEYWORD + "\\E(?:\\s|\u00A0)*\\((?:\\s|\u00A0)*(.*)(?:\\s|\u00A0)*\\)(?:\\s|\u00A0)*")
+  val SECTION_BREAK:             String  = "."
+  val SECTION_TEST_BREAK:        String  = "\u2026"
   protected val SECTION_PATTERN: Pattern = Pattern.compile("#{1,6} +(.*)")
 
-  def create(location: ResourceLocation, compoundSections: Boolean): SpecReader = {
+  def create(location: ResourceLocation, compoundSections: Boolean): SpecReader =
     create(location, (stream, loc) => new SpecReader(stream, loc, compoundSections))
-  }
 
   def create[S <: SpecReader](location: ResourceLocation, readerFactory: SpecReaderFactory[S]): S = {
     val stream = location.resourceInputStream
     readerFactory.create(stream, location)
   }
 
-  def createAndReadExamples(location: ResourceLocation, compoundSections: Boolean): SpecReader = {
+  def createAndReadExamples(location: ResourceLocation, compoundSections: Boolean): SpecReader =
     createAndReadExamples(location, (stream, loc) => new SpecReader(stream, loc, compoundSections))
-  }
 
   def createAndReadExamples[S <: SpecReader](location: ResourceLocation, readerFactory: SpecReaderFactory[S]): S = {
     val reader = create(location, readerFactory)

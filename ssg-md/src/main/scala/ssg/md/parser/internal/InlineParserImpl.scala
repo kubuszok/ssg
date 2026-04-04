@@ -39,8 +39,8 @@ class InlineParserImpl(
   val linkRefProcessorsData:          LinkRefProcessorData,
   inlineParserExtensionFactoriesInit: List[InlineParserExtensionFactory]
 ) extends LightInlineParserImpl(dataOptions),
-    InlineParser,
-    ParagraphPreProcessor {
+      InlineParser,
+      ParagraphPreProcessor {
 
   protected val originalSpecialCharacters:      BitSet                                                   = specialChars
   protected var specialCharacters:              BitSet                                                   = specialChars
@@ -201,7 +201,7 @@ class InlineParserImpl(
     mergeIfNeeded(first, last)
   }
 
-  override def mergeIfNeeded(first: Nullable[Text], last: Nullable[Text]): Unit = {
+  override def mergeIfNeeded(first: Nullable[Text], last: Nullable[Text]): Unit =
     if (first.isDefined && last.isDefined && (first.get ne last.get)) {
       val sb = new java.util.ArrayList[BasedSequence]()
       sb.add(first.get.chars)
@@ -216,7 +216,6 @@ class InlineParserImpl(
       val literal = SegmentedSequence.create(first.get.chars, sb)
       first.get.chars = literal
     }
-  }
 
   /*
    *  ParagraphPreProcessor implementation
@@ -409,7 +408,7 @@ class InlineParserImpl(
   }
 
   private def processCustomCharacters(): Boolean = boundary {
-    val c          = peek()
+    val c = peek()
     if (customSpecialCharacterFactoryMap.isEmpty) break(false)
     val factoryOpt = customSpecialCharacterFactoryMap.get.get(c)
     if (factoryOpt.isEmpty) break(false)
@@ -503,9 +502,8 @@ class InlineParserImpl(
     }
 
     // gobble leading spaces in next line
-    while (peek() == ' ') {
+    while (peek() == ' ')
       _index += 1
-    }
     true
   }
 
@@ -546,7 +544,7 @@ class InlineParserImpl(
       if (matched.get == ticksVal) {
         val ticksLength = ticksVal.length()
         val codeText    = _input.subSequence(afterOpenTicks, _index - ticksLength)
-        val node = Code(
+        val node        = Code(
           _input.subSequence(afterOpenTicks - ticksLength, afterOpenTicks),
           codeText,
           _input.subSequence(_index - ticksLength, _index)
@@ -599,7 +597,7 @@ class InlineParserImpl(
     true
   }
 
-  private[internal] final class DelimiterData(val count: Int, val canOpen: Boolean, val canClose: Boolean)
+  final private[internal] class DelimiterData(val count: Int, val canOpen: Boolean, val canClose: Boolean)
 
   /** Attempt to parse delimiters like emphasis, strong emphasis or custom delimiters.
     *
@@ -678,11 +676,10 @@ class InlineParserImpl(
     _lastBracket = Nullable(bracket)
   }
 
-  private def removeLastBracket(): Unit = {
+  private def removeLastBracket(): Unit =
     _lastBracket = _lastBracket.flatMap(_.previous)
-  }
 
-  private final class ReferenceProcessorMatch(
+  final private class ReferenceProcessorMatch(
     val processor:       LinkRefProcessor,
     val wantExclamation: Boolean,
     val nodeChars:       BasedSequence
@@ -764,17 +761,17 @@ class InlineParserImpl(
     val nestedBrackets = 0
 
     // Check to see if we have a link/image
-    var dest:                    Nullable[BasedSequence]       = Nullable.empty
-    var title:                   Nullable[BasedSequence]       = Nullable.empty
-    var ref:                     Nullable[BasedSequence]       = Nullable.empty
-    var isLinkOrImage                                          = false
-    var refIsBare                                              = false
-    var linkRefProcessorMatch:   Nullable[ReferenceProcessorMatch] = Nullable.empty
-    var refIsDefined                                           = false
-    var linkOpener:              BasedSequence                  = BasedSequence.NULL
-    var linkCloser:              BasedSequence                  = BasedSequence.NULL
-    var bareRef:                 BasedSequence                  = BasedSequence.NULL
-    var imageUrlContent:         Nullable[BasedSequence]        = Nullable.empty
+    var dest:  Nullable[BasedSequence] = Nullable.empty
+    var title: Nullable[BasedSequence] = Nullable.empty
+    var ref:   Nullable[BasedSequence] = Nullable.empty
+    var isLinkOrImage = false
+    var refIsBare     = false
+    var linkRefProcessorMatch: Nullable[ReferenceProcessorMatch] = Nullable.empty
+    var refIsDefined = false
+    var linkOpener:      BasedSequence           = BasedSequence.NULL
+    var linkCloser:      BasedSequence           = BasedSequence.NULL
+    var bareRef:         BasedSequence           = BasedSequence.NULL
+    var imageUrlContent: Nullable[BasedSequence] = Nullable.empty
 
     // Inline link?
     val preSpaceIndex = _index
@@ -917,7 +914,7 @@ class InlineParserImpl(
         if (ref.isDefined) {
           val normalizedLabel = Escaping.normalizeReferenceChars(ref.get, true)
           if (referenceRepository.containsKey(normalizedLabel)) {
-            val sequence     = _input.subSequence(opener.startIndex, startIndex)
+            val sequence      = _input.subSequence(opener.startIndex, startIndex)
             val containsLinks = InlineParserImpl.containsLinkRefs(if (refIsBare) ref.get else sequence, opener.node.next, Nullable(false))
             isLinkOrImage = !containsLinks
             refIsDefined = true
@@ -1011,7 +1008,7 @@ class InlineParserImpl(
             // now need to truncate child text
             val iter = insertNode.children.iterator()
             while (iter.hasNext) {
-              val childNode     = iter.next()
+              val childNode      = iter.next()
               val childNodeChars = childNode.chars
               if (text.containsSomeOf(childNodeChars)) {
                 if (!text.containsAllOf(childNodeChars)) {
@@ -1356,8 +1353,24 @@ class InlineParserImpl(
           !beforeIsWhitespace && !(beforeIsPunctuation && !afterIsWhitespace && !afterIsPunctuation)
         }
 
-      val canOpen  = delimiterChar == delimiterProcessor.openingCharacter && delimiterProcessor.canBeOpener(before, after, leftFlanking, rightFlanking, beforeIsPunctuation, afterIsPunctuation, beforeIsWhitespace, afterIsWhitespace)
-      val canClose = delimiterChar == delimiterProcessor.closingCharacter && delimiterProcessor.canBeCloser(before, after, leftFlanking, rightFlanking, beforeIsPunctuation, afterIsPunctuation, beforeIsWhitespace, afterIsWhitespace)
+      val canOpen = delimiterChar == delimiterProcessor.openingCharacter && delimiterProcessor.canBeOpener(before,
+                                                                                                           after,
+                                                                                                           leftFlanking,
+                                                                                                           rightFlanking,
+                                                                                                           beforeIsPunctuation,
+                                                                                                           afterIsPunctuation,
+                                                                                                           beforeIsWhitespace,
+                                                                                                           afterIsWhitespace
+      )
+      val canClose = delimiterChar == delimiterProcessor.closingCharacter && delimiterProcessor.canBeCloser(before,
+                                                                                                            after,
+                                                                                                            leftFlanking,
+                                                                                                            rightFlanking,
+                                                                                                            beforeIsPunctuation,
+                                                                                                            afterIsPunctuation,
+                                                                                                            beforeIsWhitespace,
+                                                                                                            afterIsWhitespace
+      )
 
       _index = startIndex
 
@@ -1374,9 +1387,8 @@ class InlineParserImpl(
 
     // find first closer above stackBottom:
     var closer = _lastDelimiter
-    while (closer.isDefined && closer.get.previousNullable != stackBottom) {
+    while (closer.isDefined && closer.get.previousNullable != stackBottom)
       closer = closer.get.previousNullable
-    }
 
     // move forward, looking for closers, and handling each
     while (closer.isDefined) {
@@ -1386,7 +1398,7 @@ class InlineParserImpl(
       if (!closer.get.canClose || delimiterProcessor.isEmpty) {
         closer = closer.get.nextNullable
       } else {
-        val dp = delimiterProcessor.get
+        val dp                   = delimiterProcessor.get
         val openingDelimiterChar = dp.openingCharacter
 
         // found delimiter closer. now look back for first matching opener:
@@ -1463,9 +1475,8 @@ class InlineParserImpl(
     }
 
     // removeIndex all delimiters
-    while (_lastDelimiter.isDefined && _lastDelimiter != stackBottom) {
+    while (_lastDelimiter.isDefined && _lastDelimiter != stackBottom)
       removeDelimiterKeepNode(_lastDelimiter.get)
-    }
   }
 
   override def removeDelimitersBetween(opener: Delimiter, closer: Delimiter): Unit = {
@@ -1492,7 +1503,7 @@ class InlineParserImpl(
 
   override def removeDelimiterKeepNode(delim: Delimiter): Unit = {
     var node: Nullable[Node] = Nullable.empty
-    val delimiterProcessor   = delimiterProcessors.get(delim.delimiterChar)
+    val delimiterProcessor = delimiterProcessors.get(delim.delimiterChar)
     delimiterProcessor.foreach { dp =>
       node = dp.unmatchedDelimiterNode(this, delim)
     }

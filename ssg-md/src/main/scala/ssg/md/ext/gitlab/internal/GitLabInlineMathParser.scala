@@ -13,7 +13,7 @@ package gitlab
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 
 import java.util.regex.Pattern
 import scala.language.implicitConversions
@@ -26,15 +26,15 @@ class GitLabInlineMathParser(inlineParser: LightInlineParser) extends InlinePars
 
   override def finalizeBlock(inlineParser: InlineParser): Unit = {}
 
-  override def parse(inlineParser: LightInlineParser): Boolean = {
+  override def parse(inlineParser: LightInlineParser): Boolean =
     if (inlineParser.peek(1) == '`') {
-      val input = inlineParser.input
+      val input         = inlineParser.input
       val matcherResult = inlineParser.matcher(MATH_PATTERN)
       if (matcherResult.isDefined) {
         val matcher = matcherResult.get
         inlineParser.flushTextNode()
 
-        val mathOpen = input.subSequence(matcher.start(), matcher.start(1))
+        val mathOpen   = input.subSequence(matcher.start(), matcher.start(1))
         val mathClosed = input.subSequence(matcher.end(1), matcher.end())
         val inlineMath = new GitLabInlineMath(mathOpen, mathOpen.baseSubSequence(mathOpen.endOffset, mathClosed.startOffset), mathClosed)
         inlineParser.block.appendChild(inlineMath)
@@ -45,7 +45,6 @@ class GitLabInlineMathParser(inlineParser: LightInlineParser) extends InlinePars
     } else {
       false
     }
-  }
 }
 
 object GitLabInlineMathParser {

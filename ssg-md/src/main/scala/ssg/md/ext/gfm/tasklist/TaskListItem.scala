@@ -12,19 +12,19 @@ package ext
 package gfm
 package tasklist
 
-import ssg.md.ast.{ListItem, OrderedListItem, Paragraph}
+import ssg.md.ast.{ ListItem, OrderedListItem, Paragraph }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 
-import java.util.{List as JList}
+import java.util.List as JList
 import ssg.md.util.ast.BlockContent
 
 /** A Task list item */
 class TaskListItem() extends ListItem {
 
-  private var _isOrderedItem: Boolean = false
+  private var _isOrderedItem:   Boolean = false
   private var _canChangeMarker: Boolean = true
 
   def this(chars: BasedSequence) = {
@@ -80,9 +80,9 @@ class TaskListItem() extends ListItem {
 
   override def isOrderedItem: Boolean = _isOrderedItem
 
-  def isOrderedItem_=(orderedItem: Boolean): Unit = { _isOrderedItem = orderedItem }
+  def isOrderedItem_=(orderedItem: Boolean): Unit = _isOrderedItem = orderedItem
 
   override def canChangeMarker: Boolean = _canChangeMarker
 
-  def canChangeMarker_=(canChangeMarker: Boolean): Unit = { _canChangeMarker = canChangeMarker }
+  def canChangeMarker_=(canChangeMarker: Boolean): Unit = _canChangeMarker = canChangeMarker
 }

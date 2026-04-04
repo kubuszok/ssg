@@ -20,9 +20,8 @@ import scala.util.boundary.break
 
 class DataSet(other: Nullable[DataHolder]) extends DataHolder {
 
-  def this() = {
+  def this() =
     this(Nullable.empty[DataHolder])
-  }
 
   protected[data] val dataSet: HashMap[DataKeyBase[?], AnyRef] =
     if (other.isEmpty) {
@@ -41,7 +40,7 @@ class DataSet(other: Nullable[DataHolder]) extends DataHolder {
     dataSet.containsKey(key)
 
   @annotation.nowarn("msg=deprecated") // orNull needed at DataSet storage boundary
-  override def getOrCompute(key: DataKeyBase[?], factory: DataValueFactory[?]): AnyRef = {
+  override def getOrCompute(key: DataKeyBase[?], factory: DataValueFactory[?]): AnyRef =
     if (dataSet.containsKey(key)) {
       dataSet.get(key)
     } else {
@@ -50,7 +49,6 @@ class DataSet(other: Nullable[DataHolder]) extends DataHolder {
       val result = factory.apply(this)
       result.orNull.asInstanceOf[AnyRef]
     }
-  }
 
   /** Apply aggregate action to data and return result
     *

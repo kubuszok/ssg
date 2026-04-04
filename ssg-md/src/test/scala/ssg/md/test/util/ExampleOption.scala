@@ -14,27 +14,26 @@ package util
 import ssg.md.Nullable
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
 final class ExampleOption private (
-    val optionText: BasedSequence,
-    val optionName: BasedSequence,
-    val customParams: BasedSequence,
-    val isBuiltIn: Boolean,
-    val isDisabled: Boolean,
-    val isCustom: Boolean,
-    val isValid: Boolean
+  val optionText:   BasedSequence,
+  val optionName:   BasedSequence,
+  val customParams: BasedSequence,
+  val isBuiltIn:    Boolean,
+  val isDisabled:   Boolean,
+  val isCustom:     Boolean,
+  val isValid:      Boolean
 ) {
 
   def getOptionText: String = optionText.toString
 
   def getOptionName: String = optionName.toString
 
-  def getCustomParams: Nullable[String] = {
+  def getCustomParams: Nullable[String] =
     if (customParams.isNull) Nullable.empty
     else Nullable(customParams.toString)
-  }
 
   def isIgnore: Boolean = isBuiltIn && optionName.equals(TestUtils.IGNORE_OPTION_NAME)
 
@@ -66,7 +65,7 @@ object ExampleOption {
   }
 
   private def build(option: CharSequence): ExampleOption = {
-    var optionName: BasedSequence = BasedSequence.NULL
+    var optionName:   BasedSequence = BasedSequence.NULL
     var customParams: BasedSequence = BasedSequence.NULL
     var isDisabled = false
     val optionText = BasedSequence.of(option)
@@ -112,7 +111,6 @@ object ExampleOption {
     map
   }
 
-  def getBuiltInOptions: ju.HashMap[String, ExampleOption] = {
+  def getBuiltInOptions: ju.HashMap[String, ExampleOption] =
     new ju.HashMap[String, ExampleOption](BUILT_IN_OPTIONS_MAP)
-  }
 }

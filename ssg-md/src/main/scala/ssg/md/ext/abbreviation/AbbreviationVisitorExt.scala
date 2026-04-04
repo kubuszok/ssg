@@ -15,10 +15,9 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AbbreviationVisitorExt {
-  def VISIT_HANDLERS[V <: AbbreviationVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AbbreviationVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[AbbreviationBlock](classOf[AbbreviationBlock], visitor.visit(_)),
       new VisitHandler[Abbreviation](classOf[Abbreviation], visitor.visit(_))
     )
-  }
 }

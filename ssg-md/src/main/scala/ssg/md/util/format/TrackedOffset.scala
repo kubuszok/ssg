@@ -27,7 +27,7 @@ final class TrackedOffset private (
   var isSpliced:      Boolean = false // spaces reset to 0
   private var _index: Int     = -1
 
-  private def this(offset: Int, afterSpaceEdit: Boolean, afterInsert: Boolean, afterDelete: Boolean) = {
+  private def this(offset: Int, afterSpaceEdit: Boolean, afterInsert: Boolean, afterDelete: Boolean) =
     this(
       Nullable(null),
       offset, {
@@ -38,7 +38,6 @@ final class TrackedOffset private (
         f
       }
     )
-  }
 
   private def this(other: TrackedOffset) = {
     this(other.original, other.offset, other.flags)
@@ -123,9 +122,9 @@ object TrackedOffset {
 
   private given EnumBitField[Flags] with {
     def elementType: Class[Flags] = classOf[Flags]
-    def typeName: String = "Flags"
-    val values: Array[Flags] = Flags.values
-    val bitMasks: Array[Long] = EnumBitField.computeBitMasks(values, "Flags")
+    def typeName:    String       = "Flags"
+    val values:      Array[Flags] = Flags.values
+    val bitMasks:    Array[Long]  = EnumBitField.computeBitMasks(values, "Flags")
   }
 
   private val F_AFTER_SPACE_EDIT: Int = BitFieldSet.intMask(Flags.AFTER_SPACE_EDIT)

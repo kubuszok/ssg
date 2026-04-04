@@ -14,22 +14,22 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
 
 class AsideNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[AsideBlock](classOf[AsideBlock], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[AsideBlock](classOf[AsideBlock], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: AsideBlock, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: AsideBlock, context: NodeRendererContext, html: HtmlWriter): Unit =
     html.withAttr().withCondIndent().tagLine("aside", () => context.renderChildren(node))
-  }
 }
 
 object AsideNodeRenderer {

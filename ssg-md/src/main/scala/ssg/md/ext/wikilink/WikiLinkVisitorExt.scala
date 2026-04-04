@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object WikiLinkVisitorExt {
-  def VISIT_HANDLERS[V <: WikiLinkVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: WikiLinkVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[WikiLink](classOf[WikiLink], visitor.visit(_)))
-  }
 }

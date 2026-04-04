@@ -56,22 +56,22 @@ object TocBlockParser {
       else Pattern.compile("^\\[[Tt][Oo][Cc](?:\\s+([^\\]]+))?]\\s*$")
     }
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val line = state.line
+        val line    = state.line
         val matcher = tocPattern.matcher(line)
         if (matcher.matches()) {
           val tocChars = state.lineWithEOL
-          val styleChars: BasedSequence = if (matcher.start(1) != -1) line.subSequence(matcher.start(1), matcher.end(1))
-          else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
+          val styleChars: BasedSequence =
+            if (matcher.start(1) != -1) line.subSequence(matcher.start(1), matcher.end(1))
+            else null.asInstanceOf[BasedSequence] // @nowarn - Java interop: TocBlockBase accepts null
           val tocBlockParser = new TocBlockParser(tocChars, styleChars)
           Nullable(BlockStart.of(tocBlockParser).atIndex(state.getIndex))
         } else {
           BlockStart.none()
         }
       }
-    }
   }
 }

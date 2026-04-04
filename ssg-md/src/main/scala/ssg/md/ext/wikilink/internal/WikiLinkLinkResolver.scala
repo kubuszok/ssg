@@ -13,8 +13,8 @@ package wikilink
 package internal
 
 import ssg.md.Nullable
-import ssg.md.html.{LinkResolver, LinkResolverFactory}
-import ssg.md.html.renderer.{LinkResolverBasicContext, LinkStatus, LinkType, ResolvedLink}
+import ssg.md.html.{ LinkResolver, LinkResolverFactory }
+import ssg.md.html.renderer.{ LinkResolverBasicContext, LinkStatus, LinkType, ResolvedLink }
 import ssg.md.util.ast.Node
 
 import scala.language.implicitConversions
@@ -23,21 +23,21 @@ class WikiLinkLinkResolver(context: LinkResolverBasicContext) extends LinkResolv
 
   private val options: WikiLinkOptions = new WikiLinkOptions(context.getOptions)
 
-  override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink = {
+  override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink =
     if (link.linkType == WikiLinkExtension.WIKI_LINK) {
-      val sb = new StringBuilder()
+      val sb          = new StringBuilder()
       val isWikiImage = node.isInstanceOf[WikiImage]
-      val wikiLink = link.url
-      val iMax = wikiLink.length
-      val absolute = iMax > 0 && wikiLink.charAt(0) == '/'
+      val wikiLink    = link.url
+      val iMax        = wikiLink.length
+      val absolute    = iMax > 0 && wikiLink.charAt(0) == '/'
       sb.append(if (isWikiImage) options.getImagePrefix(absolute) else options.getLinkPrefix(absolute))
 
       var hadAnchorRef = false
-      var isEscaped = false
+      var isEscaped    = false
 
-      val linkEscapeChars = options.linkEscapeChars
+      val linkEscapeChars  = options.linkEscapeChars
       val linkReplaceChars = options.linkReplaceChars
-      var i = if (absolute) 1 else 0
+      var i                = if (absolute) 1 else 0
       while (i < iMax) {
         val c = wikiLink.charAt(i)
 
@@ -86,7 +86,6 @@ class WikiLinkLinkResolver(context: LinkResolverBasicContext) extends LinkResolv
     } else {
       link
     }
-  }
 }
 
 object WikiLinkLinkResolver {

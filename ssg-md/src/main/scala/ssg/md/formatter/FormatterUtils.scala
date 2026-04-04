@@ -21,7 +21,6 @@ import ssg.md.util.sequence.{ BasedSequence, LineAppendable, RepeatedSequence }
 import ssg.md.util.sequence.builder.SequenceBuilder
 import ssg.md.util.sequence.mappers.SpaceMapper
 
-
 import java.util.regex.{ Matcher, Pattern }
 import scala.language.implicitConversions
 import scala.util.boundary
@@ -31,10 +30,11 @@ import scala.util.boundary.break
   */
 object FormatterUtils {
 
-  val LIST_ITEM_NUMBER: DataKey[Int]             = new DataKey[Int]("LIST_ITEM_NUMBER", 0)
-  val FIRST_LIST_ITEM_CHILD: DataKey[Boolean]    = new DataKey[Boolean]("FIRST_LIST_ITEM_CHILD", false) // Set to true for first block list item child of an empty list item
-  val NULL_PADDING: CharSequence => Pair[Int, Int] = (_: CharSequence) => Pair.of(0, 0)
-  val LIST_ALIGN_NUMERIC: DataKey[CharSequence => Pair[Int, Int]] = new DataKey[CharSequence => Pair[Int, Int]]("LIST_ITEM_NUMBER", NULL_PADDING) // function takes ordered marker and returns Pair LeftPad,RightPad
+  val LIST_ITEM_NUMBER:      DataKey[Int]                            = new DataKey[Int]("LIST_ITEM_NUMBER", 0)
+  val FIRST_LIST_ITEM_CHILD: DataKey[Boolean]                        = new DataKey[Boolean]("FIRST_LIST_ITEM_CHILD", false) // Set to true for first block list item child of an empty list item
+  val NULL_PADDING:          CharSequence => Pair[Int, Int]          = (_: CharSequence) => Pair.of(0, 0)
+  val LIST_ALIGN_NUMERIC:    DataKey[CharSequence => Pair[Int, Int]] =
+    new DataKey[CharSequence => Pair[Int, Int]]("LIST_ITEM_NUMBER", NULL_PADDING) // function takes ordered marker and returns Pair LeftPad,RightPad
   val LIST_ITEM_SPACING: NullableDataKey[ListSpacing] = new NullableDataKey[ListSpacing]("LIST_ITEM_SPACING")
 
   def getBlockLikePrefix(node: BlockQuoteLike, context: NodeFormatterContext, blockQuoteMarkers: BlockQuoteMarker, prefix: BasedSequence): String = {
@@ -85,9 +85,8 @@ object FormatterUtils {
       // Use Java StringBuffer for matcher compatibility
       val javaSb = new StringBuffer()
       matcher.reset()
-      while (matcher.find()) {
+      while (matcher.find())
         matcher.appendReplacement(javaSb, Matcher.quoteReplacement(spaceChar.toString))
-      }
       matcher.appendTail(javaSb)
       javaSb
     } else {
@@ -97,17 +96,17 @@ object FormatterUtils {
 
   def getActualAdditionalPrefix(contentChars: BasedSequence, markdown: MarkdownWriter): String = {
     val parentPrefix = markdown.getPrefix.length
-    val column = contentChars.baseColumnAtStart()
+    val column       = contentChars.baseColumnAtStart()
     RepeatedSequence.repeatOf(" ", Utils.minLimit(0, column - parentPrefix)).toString
   }
 
   def getAdditionalPrefix(fromChars: BasedSequence, toChars: BasedSequence): String = {
     val parentPrefix = fromChars.startOffset
-    val column = toChars.startOffset
+    val column       = toChars.startOffset
     RepeatedSequence.repeatOf(" ", Utils.minLimit(0, column - parentPrefix)).toString
   }
 
-  def getSoftLineBreakSpan(node: Nullable[Node]): BasedSequence = {
+  def getSoftLineBreakSpan(node: Nullable[Node]): BasedSequence =
     if (node.isEmpty) BasedSequence.NULL
     else {
       var lastNode = node.get
@@ -120,29 +119,27 @@ object FormatterUtils {
 
       Node.spanningChars(lastNode.chars, lastNode.chars)
     }
-  }
 
   def appendWhiteSpaceBetween(
-    markdown:       MarkdownWriter,
-    prev:           Node,
-    next:           Node,
-    preserve:       Boolean,
-    collapse:       Boolean,
-    collapseToEOL:  Boolean
-  ): Unit = {
+    markdown:      MarkdownWriter,
+    prev:          Node,
+    next:          Node,
+    preserve:      Boolean,
+    collapse:      Boolean,
+    collapseToEOL: Boolean
+  ): Unit =
     if (next != null && prev != null && (preserve || collapse)) { // @nowarn - Java interop: nodes can be null
       appendWhiteSpaceBetween(markdown, prev.chars, next.chars, preserve, collapse, collapseToEOL)
     }
-  }
 
   def appendWhiteSpaceBetween(
-    markdown:       MarkdownWriter,
-    prev:           BasedSequence,
-    next:           BasedSequence,
-    preserve:       Boolean,
-    collapse:       Boolean,
-    collapseToEOL:  Boolean
-  ): Unit = {
+    markdown:      MarkdownWriter,
+    prev:          BasedSequence,
+    next:          BasedSequence,
+    preserve:      Boolean,
+    collapse:      Boolean,
+    collapseToEOL: Boolean
+  ): Unit =
     if ((next ne null) && (prev ne null) && (preserve || collapse)) { // @nowarn - Java interop: sequences can be null
       if (prev.endOffset <= next.startOffset) {
         val sequence = prev.baseSubSequence(prev.endOffset, next.startOffset)
@@ -165,22 +162,20 @@ object FormatterUtils {
         // nodes reversed due to children being rendered before the parent
       }
     }
-  }
 
-  def renderList(node: ListBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  def renderList(node: ListBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.isTransformingText) {
       // CAUTION: during translation no formatting should be done
       context.renderChildren(node)
     } else {
       val itemList = new java.util.ArrayList[Node]()
-      var item = node.firstChild
+      var item     = node.firstChild
       while (item.isDefined) {
         itemList.add(item.get)
         item = item.get.next
       }
       renderList(node, context, markdown, itemList)
     }
-  }
 
   def renderList(node: ListBlock, context: NodeFormatterContext, markdown: MarkdownWriter, itemList: java.util.List[Node]): Unit = {
     val formatterOptions = context.getFormatterOptions
@@ -188,8 +183,8 @@ object FormatterUtils {
       markdown.blankLine()
     }
 
-    val document = context.getDocument
-    val listSpacing = LIST_ITEM_SPACING.get(Nullable(document))
+    val document       = context.getDocument
+    val listSpacing    = LIST_ITEM_SPACING.get(Nullable(document))
     val listItemNumber = LIST_ITEM_NUMBER.get(Nullable(document))
     val startingNumber = node match {
       case ol: OrderedList =>
@@ -214,8 +209,8 @@ object FormatterUtils {
     if (!formatterOptions.listAlignNumeric.isNoChange && node.isInstanceOf[OrderedList]) {
       var maxLen = Int.MinValue
       var minLen = Int.MaxValue
-      var i = startingNumber
-      val iter = itemList.iterator()
+      var i      = startingNumber
+      val iter   = itemList.iterator()
       while (iter.hasNext) {
         val item = iter.next()
         if (!formatterOptions.listRemoveEmptyItems || (item.hasChildren && item.firstChildAnyNot(classOf[BlankLine]).isDefined)) { // @nowarn - Java interop: may return null
@@ -238,7 +233,10 @@ object FormatterUtils {
       }
     }
 
-    document.set(LIST_ITEM_SPACING, if (itemSpacing.exists(_ == ListSpacing.LOOSE) && (listSpacing == null || listSpacing == ListSpacing.LOOSE)) ListSpacing.LOOSE else itemSpacing.getOrElse(null)) // @nowarn - NullableDataKey expects nullable value
+    document.set(
+      LIST_ITEM_SPACING,
+      if (itemSpacing.exists(_ == ListSpacing.LOOSE) && (listSpacing == null || listSpacing == ListSpacing.LOOSE)) ListSpacing.LOOSE else itemSpacing.getOrElse(null)
+    ) // @nowarn - NullableDataKey expects nullable value
     val iter = itemList.iterator()
     while (iter.hasNext) {
       val item = iter.next()
@@ -295,7 +293,7 @@ object FormatterUtils {
     val parent = node.parent.get
     if (parent.isInstanceOf[ListItem]) {
       if (context.getFormatterOptions.blankLinesInAst) {
-        var addBlankLine = false
+        var addBlankLine        = false
         val canAddTailBlankLine = !parent.asInstanceOf[ParagraphContainer].isParagraphEndWrappingDisabled(node)
 
         val listItem = parent.asInstanceOf[ListItem]
@@ -360,29 +358,29 @@ object FormatterUtils {
   }
 
   def renderListItem(
-    node:                    ListItem,
-    context:                 NodeFormatterContext,
-    markdown:                MarkdownWriter,
-    listOptions:             ListOptions,
-    markerSuffix:            BasedSequence,
-    addBlankLineLooseItems:  Boolean
+    node:                   ListItem,
+    context:                NodeFormatterContext,
+    markdown:               MarkdownWriter,
+    listOptions:            ListOptions,
+    markerSuffix:           BasedSequence,
+    addBlankLineLooseItems: Boolean
   ): Unit = {
-    val options = context.getFormatterOptions
+    val options                 = context.getFormatterOptions
     val savedFirstListItemChild = FIRST_LIST_ITEM_CHILD.get(Nullable(context.getDocument))
 
     if (context.isTransformingText) {
-      val openingMarker = node.openingMarker
+      val openingMarker    = node.openingMarker
       val additionalPrefix = getActualAdditionalPrefix(openingMarker, markdown)
 
       val (itemContentPrefix, itemContentSpacer) = if (node.firstChild.isEmpty) {
         // empty list item with no children
         val count = openingMarker.length + (if (listOptions.isItemContentAfterSuffix) markerSuffix.length else 0) + 1
-        val icp = RepeatedSequence.repeatOf(' ', count).toString
+        val icp   = RepeatedSequence.repeatOf(' ', count).toString
         (icp, " ")
       } else {
         val childContent = node.firstChild.get.chars
-        val icp = getAdditionalPrefix(if (markerSuffix.isEmpty) openingMarker else markerSuffix, childContent)
-        val ics = getAdditionalPrefix(if (markerSuffix.isEmpty) openingMarker.getEmptySuffix else markerSuffix.getEmptySuffix, childContent)
+        val icp          = getAdditionalPrefix(if (markerSuffix.isEmpty) openingMarker else markerSuffix, childContent)
+        val ics          = getAdditionalPrefix(if (markerSuffix.isEmpty) openingMarker.getEmptySuffix else markerSuffix.getEmptySuffix, childContent)
         (icp, ics)
       }
 
@@ -420,13 +418,13 @@ object FormatterUtils {
       var useOpeningMarker: CharSequence = node.openingMarker
       if (node.isOrderedItem) {
         var delimiter = useOpeningMarker.charAt(useOpeningMarker.length - 1)
-        val number = useOpeningMarker.subSequence(0, useOpeningMarker.length - 1)
+        val number    = useOpeningMarker.subSequence(0, useOpeningMarker.length - 1)
 
         options.listNumberedMarker match {
           case ListNumberedMarker.ANY   => ()
           case ListNumberedMarker.DOT   => delimiter = '.'
           case ListNumberedMarker.PAREN => delimiter = ')'
-          case null => throw new IllegalStateException("Missing case for ListNumberedMarker") // @nowarn - defensive null case
+          case null                     => throw new IllegalStateException("Missing case for ListNumberedMarker") // @nowarn - defensive null case
         }
 
         val document = context.getDocument
@@ -450,7 +448,7 @@ object FormatterUtils {
             case ListBulletMarker.DASH     => useOpeningMarker = "-"
             case ListBulletMarker.ASTERISK => useOpeningMarker = "*"
             case ListBulletMarker.PLUS     => useOpeningMarker = "+"
-            case null => throw new IllegalStateException("Missing case for ListBulletMarker") // @nowarn - defensive null case
+            case null                      => throw new IllegalStateException("Missing case for ListBulletMarker") // @nowarn - defensive null case
           }
         }
       }
@@ -458,22 +456,17 @@ object FormatterUtils {
       // NOTE: if list item content after suffix is set in the parser, then sub-items are indented after suffix
       //    otherwise only the item's lazy continuation for the paragraph can be indented after suffix, child items are normally indented
       val itemContinuationCount = if (listOptions.isItemContentAfterSuffix || options.listsItemContentAfterSuffix) markerSuffix.length else 0
-      val continuationCount = useOpeningMarker.length + (if (listOptions.isItemContentAfterSuffix) markerSuffix.length else 0) + 1
+      val continuationCount     = useOpeningMarker.length + (if (listOptions.isItemContentAfterSuffix) markerSuffix.length else 0) + 1
       val additionalItemPrefix: CharSequence = if (options.itemContentIndent) RepeatedSequence.repeatOf(' ', itemContinuationCount) else ""
-      val childPrefix: CharSequence = if (options.itemContentIndent) RepeatedSequence.repeatOf(' ', continuationCount) else RepeatedSequence.repeatOf(" ", listOptions.getItemIndent).toString
+      val childPrefix:          CharSequence = if (options.itemContentIndent) RepeatedSequence.repeatOf(' ', continuationCount) else RepeatedSequence.repeatOf(" ", listOptions.getItemIndent).toString
 
-      val openingMarker = node.openingMarker
+      val openingMarker      = node.openingMarker
       val replacedOpenMarker = {
         val b = openingMarker.getBuilder.asInstanceOf[SequenceBuilder]
         b.append(openingMarker.getEmptyPrefix).append(useOpeningMarker).append(openingMarker.getEmptySuffix).toSequence
       }
 
-      markdown.pushOptions()
-        .preserveSpaces()
-        .append(replacedOpenMarker)
-        .append(' ')
-        .append(markerSuffix)
-        .popOptions()
+      markdown.pushOptions().preserveSpaces().append(replacedOpenMarker).append(' ').append(markerSuffix).popOptions()
 
       markdown.pushPrefix().addPrefix(childPrefix, true)
 
@@ -511,21 +504,21 @@ object FormatterUtils {
     FIRST_LIST_ITEM_CHILD.set(context.getDocument, savedFirstListItemChild)
   }
 
-  def renderTextBlockParagraphLines(node: Node, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  def renderTextBlockParagraphLines(node: Node, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (context.isTransformingText) {
       context.translatingSpan((context1, writer) => context1.renderChildren(node))
       markdown.line()
     } else {
       val formatterOptions = context.getFormatterOptions
       if (formatterOptions.rightMargin > 0) {
-        val subContextOptions = context.getOptions.toMutable.set(Formatter.KEEP_SOFT_LINE_BREAKS, true).set(Formatter.KEEP_HARD_LINE_BREAKS, true)
-        val seqBuilder = context.getDocument.chars.getBuilder.asInstanceOf[SequenceBuilder]
-        val subContext = context.getSubContext(Nullable(subContextOptions), seqBuilder.getBuilder)
+        val subContextOptions  = context.getOptions.toMutable.set(Formatter.KEEP_SOFT_LINE_BREAKS, true).set(Formatter.KEEP_HARD_LINE_BREAKS, true)
+        val seqBuilder         = context.getDocument.chars.getBuilder.asInstanceOf[SequenceBuilder]
+        val subContext         = context.getSubContext(Nullable(subContextOptions), seqBuilder.getBuilder)
         val subContextMarkdown = subContext.getMarkdown
         subContextMarkdown.removeOptions(LineAppendable.F_TRIM_TRAILING_WHITESPACE)
         subContext.renderChildren(node)
 
-        val nodeLessEol = node.chars.trimEOL()
+        val nodeLessEol    = node.chars.trimEOL()
         val trailingSpaces = node.chars.trimmedEnd()
         if (trailingSpaces.isNotEmpty() && !subContextMarkdown.endsWithEOL) {
           // add these so our tracked offsets at end of paragraph after whitespaces are not outside the sequence
@@ -534,11 +527,11 @@ object FormatterUtils {
         subContextMarkdown.line()
         subContextMarkdown.appendToSilently(seqBuilder, 0, -1)
 
-        val paragraphChars = seqBuilder.toSequence
+        val paragraphChars    = seqBuilder.toSequence
         val altParagraphChars = seqBuilder.toSequence(context.getTrackedSequence)
-        val haveAltSequence = paragraphChars ne altParagraphChars
+        val haveAltSequence   = paragraphChars ne altParagraphChars
         var startOffset: Int = 0
-        var endOffset: Int = 0
+        var endOffset:   Int = 0
 
         val trackedOffsets = context.getTrackedOffsets
         if (haveAltSequence) {
@@ -573,12 +566,11 @@ object FormatterUtils {
         }
 
         val ptIter = paragraphTrackedOffsets.iterator()
-        while (ptIter.hasNext) {
+        while (ptIter.hasNext)
           formatter.addTrackedOffset(ptIter.next())
-        }
 
-        val wrappedText = formatter.wrapText().toMapped(SpaceMapper.fromNonBreakSpace)
-        val startLine = markdown.getLineCount
+        val wrappedText     = formatter.wrapText().toMapped(SpaceMapper.fromNonBreakSpace)
+        val startLine       = markdown.getLineCount
         val firstLineOffset = markdown.column()
         markdown.pushOptions().preserveSpaces().append(wrappedText).line().popOptions()
 
@@ -590,13 +582,13 @@ object FormatterUtils {
             val trackedOffset = ptIter2.next()
             if (trackedOffset.isResolved) {
               val offsetIndex = trackedOffset.getIndex
-              val lineColumn = wrappedText.lineColumnAtIndex(offsetIndex)
+              val lineColumn  = wrappedText.lineColumnAtIndex(offsetIndex)
               val trackedLine = lineColumn.first.get
-              val lineInfo = markdown.getLineInfo(startLine + trackedLine)
+              val lineInfo    = markdown.getLineInfo(startLine + trackedLine)
 
               val lengthOffset = startLineInfo.sumLength - startLineInfo.length
-              val prefixDelta = lineInfo.sumPrefixLength - startLineInfo.sumPrefixLength + startLineInfo.prefixLength
-              val delta = firstLineOffset + lengthOffset + prefixDelta
+              val prefixDelta  = lineInfo.sumPrefixLength - startLineInfo.sumPrefixLength + startLineInfo.prefixLength
+              val delta        = firstLineOffset + lengthOffset + prefixDelta
               trackedOffset.setIndex(offsetIndex + delta)
             }
           }
@@ -606,7 +598,6 @@ object FormatterUtils {
         markdown.line()
       }
     }
-  }
 
   def renderBlockQuoteLike(node: BlockQuoteLike, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     val formatterOptions = context.getFormatterOptions

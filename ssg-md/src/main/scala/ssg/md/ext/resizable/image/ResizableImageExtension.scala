@@ -12,7 +12,7 @@ package ext
 package resizable
 package image
 
-import ssg.md.ext.resizable.image.internal.{ResizableImageInlineParserExtension, ResizableImageNodeRenderer}
+import ssg.md.ext.resizable.image.internal.{ ResizableImageInlineParserExtension, ResizableImageNodeRenderer }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataHolder
@@ -23,9 +23,8 @@ class ResizableImageExtension private () extends Parser.ParserExtension, HtmlRen
 
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.customInlineParserExtensionFactory(new ResizableImageInlineParserExtension.Factory())
-  }
 
   override def extend(htmlRendererBuilder: HtmlRenderer.Builder, rendererType: String): Unit = {
     if (htmlRendererBuilder.isRendererType("HTML")) {

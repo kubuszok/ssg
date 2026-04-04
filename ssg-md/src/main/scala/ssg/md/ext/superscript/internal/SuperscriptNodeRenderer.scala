@@ -14,23 +14,24 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
 
 class SuperscriptNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  private val superscriptStyleHtmlOpen: Nullable[String] = Nullable(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_OPEN.get(options))
+  private val superscriptStyleHtmlOpen:  Nullable[String] = Nullable(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_OPEN.get(options))
   private val superscriptStyleHtmlClose: Nullable[String] = Nullable(SuperscriptExtension.SUPERSCRIPT_STYLE_HTML_CLOSE.get(options))
 
-  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
-    Nullable(Set(
-      new NodeRenderingHandler[Superscript](classOf[Superscript], (node, ctx, html) => render(node, ctx, html))
-    ))
-  }
+  override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] =
+    Nullable(
+      Set(
+        new NodeRenderingHandler[Superscript](classOf[Superscript], (node, ctx, html) => render(node, ctx, html))
+      )
+    )
 
-  private def render(node: Superscript, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def render(node: Superscript, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (superscriptStyleHtmlOpen.isEmpty || superscriptStyleHtmlClose.isEmpty) {
       if (context.getHtmlOptions.sourcePositionParagraphLines) {
         html.withAttr().tag("sup")
@@ -44,7 +45,6 @@ class SuperscriptNodeRenderer(options: DataHolder) extends NodeRenderer {
       context.renderChildren(node)
       html.raw(superscriptStyleHtmlClose.get)
     }
-  }
 }
 
 object SuperscriptNodeRenderer {

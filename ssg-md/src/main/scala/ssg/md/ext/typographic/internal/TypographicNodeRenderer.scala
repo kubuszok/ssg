@@ -13,7 +13,7 @@ package typographic
 package internal
 
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
@@ -37,9 +37,8 @@ class TypographicNodeRenderer(options: DataHolder) extends NodeRenderer {
     }
   }
 
-  private def renderSmarts(node: TypographicSmarts, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderSmarts(node: TypographicSmarts, context: NodeRendererContext, html: HtmlWriter): Unit =
     node.typographicText.foreach(html.raw)
-  }
 }
 
 object TypographicNodeRenderer {

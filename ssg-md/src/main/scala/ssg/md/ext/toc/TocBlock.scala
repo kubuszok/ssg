@@ -14,10 +14,9 @@ package toc
 import ssg.md.util.sequence.BasedSequence
 
 /** A TOC node */
-class TocBlock(chars: BasedSequence, styleChars: BasedSequence, closingSimToc: Boolean)
-    extends TocBlockBase(chars, styleChars, closingSimToc) {
+class TocBlock(chars: BasedSequence, styleChars: BasedSequence, closingSimToc: Boolean) extends TocBlockBase(chars, styleChars, closingSimToc) {
 
   def this(chars: BasedSequence) = this(chars, null.asInstanceOf[BasedSequence], false) // @nowarn - overloaded ctor
   def this(chars: BasedSequence, closingSimToc: Boolean) = this(chars, null.asInstanceOf[BasedSequence], closingSimToc) // @nowarn - overloaded ctor
-  def this(chars: BasedSequence, styleChars: BasedSequence) = this(chars, styleChars, false)
+  def this(chars: BasedSequence, styleChars:    BasedSequence) = this(chars, styleChars, false)
 }

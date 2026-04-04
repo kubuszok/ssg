@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object ResizableImageVisitorExt {
-  def VISIT_HANDLERS[V <: ResizableImageVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: ResizableImageVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[ResizableImage](classOf[ResizableImage], visitor.visit(_)))
-  }
 }

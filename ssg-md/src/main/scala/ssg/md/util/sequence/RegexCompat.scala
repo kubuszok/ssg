@@ -13,9 +13,8 @@ package sequence
 
 /** Cross-platform replacements for `\Q...\E` regex literal quoting.
   *
-  * The JVM's `java.util.regex` and `Pattern.quote()` use `\Q...\E` internally,
-  * which is not supported by Scala Native's re2-based regex engine. These methods
-  * manually escape regex metacharacters instead.
+  * The JVM's `java.util.regex` and `Pattern.quote()` use `\Q...\E` internally, which is not supported by Scala Native's re2-based regex engine. These methods manually escape regex metacharacters
+  * instead.
   */
 object RegexCompat {
 
@@ -24,12 +23,11 @@ object RegexCompat {
 
   /** Escape all regex metacharacters in `s` so it matches literally.
     *
-    * This is a cross-platform replacement for `Pattern.quote(s)` /
-    * `"\\Q" + s + "\\E"`.
+    * This is a cross-platform replacement for `Pattern.quote(s)` / `"\\Q" + s + "\\E"`.
     */
   def regexEscape(s: String): String = {
     val sb = new StringBuilder(s.length + 8)
-    var i = 0
+    var i  = 0
     while (i < s.length) {
       val c = s.charAt(i)
       if (REGEX_META.indexOf(c) >= 0) {
@@ -43,12 +41,11 @@ object RegexCompat {
 
   /** Escape characters for use inside a regex character class `[...]`.
     *
-    * Inside a character class, only `]`, `\`, `^` (at start), and `-` (between
-    * chars) are special. This method escapes all four unconditionally.
+    * Inside a character class, only `]`, `\`, `^` (at start), and `-` (between chars) are special. This method escapes all four unconditionally.
     */
   def charClassEscape(chars: String): String = {
     val sb = new StringBuilder(chars.length + 4)
-    var i = 0
+    var i  = 0
     while (i < chars.length) {
       val c = chars.charAt(i)
       c match {

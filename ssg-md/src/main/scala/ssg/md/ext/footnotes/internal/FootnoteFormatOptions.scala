@@ -13,12 +13,12 @@ package footnotes
 package internal
 
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
 class FootnoteFormatOptions(options: DataHolder) {
 
-  val footnotePlacement: ElementPlacement = FootnoteExtension.FOOTNOTE_PLACEMENT.get(options)
-  val footnoteSort: ElementPlacementSort = FootnoteExtension.FOOTNOTE_SORT.get(options)
+  val footnotePlacement: ElementPlacement     = FootnoteExtension.FOOTNOTE_PLACEMENT.get(options)
+  val footnoteSort:      ElementPlacementSort = FootnoteExtension.FOOTNOTE_SORT.get(options)
 }

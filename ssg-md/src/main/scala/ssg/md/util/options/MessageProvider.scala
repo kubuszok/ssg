@@ -22,12 +22,11 @@ object MessageProvider {
       else defaultText
   }
 
-  /** Simple cross-platform replacement for java.text.MessageFormat.format.
-    * Replaces `{0}`, `{1}`, etc. with the corresponding parameter values.
+  /** Simple cross-platform replacement for java.text.MessageFormat.format. Replaces `{0}`, `{1}`, etc. with the corresponding parameter values.
     */
   private def simpleFormat(pattern: String, params: AnyRef*): String = {
     var result = pattern
-    var i = 0
+    var i      = 0
     while (i < params.length) {
       result = result.replace(s"{$i}", String.valueOf(params(i)))
       i += 1

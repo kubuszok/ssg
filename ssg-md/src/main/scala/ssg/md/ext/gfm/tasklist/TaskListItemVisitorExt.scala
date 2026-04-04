@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object TaskListItemVisitorExt {
-  def VISIT_HANDLERS[V <: TaskListItemVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: TaskListItemVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[TaskListItem](classOf[TaskListItem], visitor.visit(_)))
-  }
 }

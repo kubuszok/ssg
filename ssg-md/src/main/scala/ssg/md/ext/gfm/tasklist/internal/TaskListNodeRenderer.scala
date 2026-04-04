@@ -21,17 +21,16 @@ import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
 
-
 class TaskListNodeRenderer(options: DataHolder) extends NodeRenderer {
 
-  val doneMarker: String = TaskListExtension.ITEM_DONE_MARKER.get(options)
-  val notDoneMarker: String = TaskListExtension.ITEM_NOT_DONE_MARKER.get(options)
-  private val tightItemClass: String = TaskListExtension.TIGHT_ITEM_CLASS.get(options)
-  private val looseItemClass: String = TaskListExtension.LOOSE_ITEM_CLASS.get(options)
-  private val itemDoneClass: String = TaskListExtension.ITEM_DONE_CLASS.get(options)
-  private val itemNotDoneClass: String = TaskListExtension.ITEM_NOT_DONE_CLASS.get(options)
-  val paragraphClass: String = TaskListExtension.PARAGRAPH_CLASS.get(options)
-  private val listOptions: ListOptions = ListOptions.get(options)
+  val doneMarker:               String      = TaskListExtension.ITEM_DONE_MARKER.get(options)
+  val notDoneMarker:            String      = TaskListExtension.ITEM_NOT_DONE_MARKER.get(options)
+  private val tightItemClass:   String      = TaskListExtension.TIGHT_ITEM_CLASS.get(options)
+  private val looseItemClass:   String      = TaskListExtension.LOOSE_ITEM_CLASS.get(options)
+  private val itemDoneClass:    String      = TaskListExtension.ITEM_DONE_CLASS.get(options)
+  private val itemNotDoneClass: String      = TaskListExtension.ITEM_NOT_DONE_CLASS.get(options)
+  val paragraphClass:           String      = TaskListExtension.PARAGRAPH_CLASS.get(options)
+  private val listOptions:      ListOptions = ListOptions.get(options)
 
   override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
     val set = scala.collection.mutable.HashSet[NodeRenderingHandler[?]]()
@@ -45,20 +44,36 @@ class TaskListNodeRenderer(options: DataHolder) extends NodeRenderer {
     if (listOptions.isTightListItem(node)) {
       if (!tightItemClass.isEmpty) html.attr("class", tightItemClass)
       if (!itemDoneStatusClass.isEmpty && itemDoneStatusClass != tightItemClass) html.attr("class", itemDoneStatusClass)
-      html.srcPos(sourceText.startOffset, sourceText.endOffset).withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM).withCondIndent().tagLine("li", () => {
-        html.raw(if (node.isItemDoneMarker) doneMarker else notDoneMarker)
-        context.renderChildren(node)
-      })
+      html
+        .srcPos(sourceText.startOffset, sourceText.endOffset)
+        .withAttr(CoreNodeRenderer.TIGHT_LIST_ITEM)
+        .withCondIndent()
+        .tagLine("li",
+                 () => {
+                   html.raw(if (node.isItemDoneMarker) doneMarker else notDoneMarker)
+                   context.renderChildren(node)
+                 }
+        )
     } else {
       if (!looseItemClass.isEmpty) html.attr("class", looseItemClass)
       if (!itemDoneStatusClass.isEmpty && itemDoneStatusClass != looseItemClass) html.attr("class", itemDoneStatusClass)
-      html.withAttr(CoreNodeRenderer.LOOSE_LIST_ITEM).tagIndent("li", () => {
-        if (!paragraphClass.isEmpty) html.attr("class", paragraphClass)
-        html.srcPos(sourceText.startOffset, sourceText.endOffset).withAttr(TaskListNodeRenderer.TASK_ITEM_PARAGRAPH).tagLine("p", () => {
-          html.raw(if (node.isItemDoneMarker) doneMarker else notDoneMarker)
-          context.renderChildren(node)
-        })
-      })
+      html
+        .withAttr(CoreNodeRenderer.LOOSE_LIST_ITEM)
+        .tagIndent(
+          "li",
+          () => {
+            if (!paragraphClass.isEmpty) html.attr("class", paragraphClass)
+            html
+              .srcPos(sourceText.startOffset, sourceText.endOffset)
+              .withAttr(TaskListNodeRenderer.TASK_ITEM_PARAGRAPH)
+              .tagLine("p",
+                       () => {
+                         html.raw(if (node.isItemDoneMarker) doneMarker else notDoneMarker)
+                         context.renderChildren(node)
+                       }
+              )
+          }
+        )
     }
   }
 }

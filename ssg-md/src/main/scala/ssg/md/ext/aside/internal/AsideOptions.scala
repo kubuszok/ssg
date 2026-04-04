@@ -17,10 +17,10 @@ import ssg.md.util.data.DataHolder
 import scala.language.implicitConversions
 
 class AsideOptions(options: DataHolder) {
-  val extendToBlankLine: Boolean = AsideExtension.EXTEND_TO_BLANK_LINE.get(options)
-  val ignoreBlankLine: Boolean = AsideExtension.IGNORE_BLANK_LINE.get(options)
-  val allowLeadingSpace: Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
-  val interruptsParagraph: Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
-  val interruptsItemParagraph: Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
+  val extendToBlankLine:                     Boolean = AsideExtension.EXTEND_TO_BLANK_LINE.get(options)
+  val ignoreBlankLine:                       Boolean = AsideExtension.IGNORE_BLANK_LINE.get(options)
+  val allowLeadingSpace:                     Boolean = AsideExtension.ALLOW_LEADING_SPACE.get(options)
+  val interruptsParagraph:                   Boolean = AsideExtension.INTERRUPTS_PARAGRAPH.get(options)
+  val interruptsItemParagraph:               Boolean = AsideExtension.INTERRUPTS_ITEM_PARAGRAPH.get(options)
   val withLeadSpacesInterruptsItemParagraph: Boolean = AsideExtension.WITH_LEAD_SPACES_INTERRUPTS_ITEM_PARAGRAPH.get(options)
 }

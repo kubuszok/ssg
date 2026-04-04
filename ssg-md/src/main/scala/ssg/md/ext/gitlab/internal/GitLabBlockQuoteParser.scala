@@ -15,7 +15,7 @@ package internal
 import ssg.md.Nullable
 import ssg.md.parser.InlineParser
 import ssg.md.parser.block.*
-import ssg.md.util.ast.{Block, BlockContent}
+import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -24,21 +24,21 @@ import scala.language.implicitConversions
 
 class GitLabBlockQuoteParser(options: DataHolder, openMarker: BasedSequence, openTrailing: BasedSequence) extends AbstractBlockParser {
 
-  private val block: GitLabBlockQuote = new GitLabBlockQuote()
-  private var content: Nullable[BlockContent] = Nullable(new BlockContent())
-  private var hadClose: Boolean = false
+  private val block:    GitLabBlockQuote       = new GitLabBlockQuote()
+  private var content:  Nullable[BlockContent] = Nullable(new BlockContent())
+  private var hadClose: Boolean                = false
 
   block.openingMarker = openMarker
   block.openingTrailing = openTrailing
 
   override def getBlock: Block = block
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] =
     if (hadClose) {
       BlockContinue.none()
     } else {
-      val index = state.getIndex
-      val line = state.lineWithEOL
+      val index   = state.getIndex
+      val line    = state.lineWithEOL
       val matcher = GitLabBlockQuoteParser.GIT_LAB_BLOCK_END.matcher(line.subSequence(index))
       if (!matcher.matches()) {
         Nullable(BlockContinue.atIndex(index))
@@ -46,7 +46,7 @@ class GitLabBlockQuoteParser(options: DataHolder, openMarker: BasedSequence, ope
         // if have open gitlab block quote last child then let them handle it
         val lastChild = block.lastChild
         if (lastChild.exists(_.isInstanceOf[GitLabBlockQuote])) {
-          val lc = lastChild.get.asInstanceOf[GitLabBlockQuote]
+          val lc     = lastChild.get.asInstanceOf[GitLabBlockQuote]
           val parser = state.getActiveBlockParser(lc.asInstanceOf[Block])
           parser match {
             case glParser: GitLabBlockQuoteParser if !glParser.hadClose =>
@@ -60,7 +60,6 @@ class GitLabBlockQuoteParser(options: DataHolder, openMarker: BasedSequence, ope
         }
       }
     }
-  }
 
   private def closeAndReturn(state: ParserState, index: Int, matcher: java.util.regex.Matcher): Nullable[BlockContinue] = {
     hadClose = true
@@ -69,9 +68,8 @@ class GitLabBlockQuoteParser(options: DataHolder, openMarker: BasedSequence, ope
     Nullable(BlockContinue.atIndex(state.lineEndIndex))
   }
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     content.foreach(_.add(line, state.indent))
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     content.foreach { c =>
@@ -91,7 +89,7 @@ class GitLabBlockQuoteParser(options: DataHolder, openMarker: BasedSequence, ope
 object GitLabBlockQuoteParser {
 
   val GIT_LAB_BLOCK_START: Pattern = Pattern.compile(">>>(\\s*$)")
-  val GIT_LAB_BLOCK_END: Pattern = Pattern.compile(">>>(\\s*$)")
+  val GIT_LAB_BLOCK_END:   Pattern = Pattern.compile(">>>(\\s*$)")
 
   class Factory extends CustomBlockParserFactory {
 
@@ -113,19 +111,19 @@ object GitLabBlockQuoteParser {
       parsers.exists(_.isInstanceOf[GitLabBlockQuoteParser])
     }
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (gitLabOptions.nestedBlockQuotes || !haveBlockQuoteParser(state)) {
-        val line = state.lineWithEOL
+        val line    = state.lineWithEOL
         val matcher = GIT_LAB_BLOCK_START.matcher(line)
         if (matcher.matches()) {
-          Nullable(BlockStart.of(new GitLabBlockQuoteParser(state.properties, line.subSequence(0, 3), line.subSequence(matcher.start(1), matcher.end(1))))
-            .atIndex(state.lineEndIndex))
+          Nullable(
+            BlockStart.of(new GitLabBlockQuoteParser(state.properties, line.subSequence(0, 3), line.subSequence(matcher.start(1), matcher.end(1)))).atIndex(state.lineEndIndex)
+          )
         } else {
           BlockStart.none()
         }
       } else {
         BlockStart.none()
       }
-    }
   }
 }

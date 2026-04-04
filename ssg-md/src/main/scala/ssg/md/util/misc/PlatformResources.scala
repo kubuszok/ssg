@@ -15,10 +15,8 @@ import java.io.InputStream
 
 object PlatformResources {
 
-  /** Cross-platform resource loading. Returns Nullable.empty if the resource is not found
-    * or the platform doesn't support classpath resources (Scala.js).
+  /** Cross-platform resource loading. Returns Nullable.empty if the resource is not found or the platform doesn't support classpath resources (Scala.js).
     */
-  def getResourceAsStream(cls: Class[?], path: String): Nullable[InputStream] = {
+  def getResourceAsStream(cls: Class[?], path: String): Nullable[InputStream] =
     PlatformResourcesImpl.getResourceAsStream(cls, path)
-  }
 }

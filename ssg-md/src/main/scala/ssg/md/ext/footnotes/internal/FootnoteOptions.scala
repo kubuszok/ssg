@@ -19,10 +19,10 @@ import scala.language.implicitConversions
 
 class FootnoteOptions(options: DataHolder) {
 
-  val footnoteRefPrefix: String = FootnoteExtension.FOOTNOTE_REF_PREFIX.get(options)
-  val footnoteRefSuffix: String = FootnoteExtension.FOOTNOTE_REF_SUFFIX.get(options)
-  val footnoteBackRefString: String = FootnoteExtension.FOOTNOTE_BACK_REF_STRING.get(options)
-  val footnoteLinkRefClass: String = FootnoteExtension.FOOTNOTE_LINK_REF_CLASS.get(options)
+  val footnoteRefPrefix:        String = FootnoteExtension.FOOTNOTE_REF_PREFIX.get(options)
+  val footnoteRefSuffix:        String = FootnoteExtension.FOOTNOTE_REF_SUFFIX.get(options)
+  val footnoteBackRefString:    String = FootnoteExtension.FOOTNOTE_BACK_REF_STRING.get(options)
+  val footnoteLinkRefClass:     String = FootnoteExtension.FOOTNOTE_LINK_REF_CLASS.get(options)
   val footnoteBackLinkRefClass: String = FootnoteExtension.FOOTNOTE_BACK_LINK_REF_CLASS.get(options)
-  val contentIndent: Int = Parser.LISTS_ITEM_INDENT.get(options)
+  val contentIndent:            Int    = Parser.LISTS_ITEM_INDENT.get(options)
 }

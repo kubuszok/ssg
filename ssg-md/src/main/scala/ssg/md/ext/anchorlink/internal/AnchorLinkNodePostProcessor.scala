@@ -13,9 +13,9 @@ package anchorlink
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{BlockQuote, Heading}
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{Document, Node, NodeTracker}
+import ssg.md.ast.{ BlockQuote, Heading }
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, NodeTracker }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
@@ -24,7 +24,7 @@ class AnchorLinkNodePostProcessor(options: DataHolder) extends NodePostProcessor
 
   private val anchorLinkOptions = new AnchorLinkOptions(options)
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     node match {
       case heading: Heading =>
         if (heading.text.isNotNull) {
@@ -48,7 +48,6 @@ class AnchorLinkNodePostProcessor(options: DataHolder) extends NodePostProcessor
         }
       case _ => // do nothing
     }
-  }
 }
 
 object AnchorLinkNodePostProcessor {
@@ -61,8 +60,7 @@ object AnchorLinkNodePostProcessor {
       addNodes(classOf[Heading])
     }
 
-    override def apply(document: Document): NodePostProcessor = {
+    override def apply(document: Document): NodePostProcessor =
       new AnchorLinkNodePostProcessor(document)
-    }
   }
 }

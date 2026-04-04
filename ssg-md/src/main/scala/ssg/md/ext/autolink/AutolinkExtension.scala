@@ -13,24 +13,22 @@ package autolink
 
 import ssg.md.ext.autolink.internal.AutolinkNodePostProcessor
 import ssg.md.parser.Parser
-import ssg.md.util.data.{DataKey, MutableDataHolder}
+import ssg.md.util.data.{ DataKey, MutableDataHolder }
 import scala.language.implicitConversions
 
-/**
- * Extension for automatically turning plain URLs and email addresses into links.
- *
- * Create it with [[AutolinkExtension.create]] and then configure it on the builders.
- *
- * The parsed links are turned into normal [[Link]] nodes.
- */
+/** Extension for automatically turning plain URLs and email addresses into links.
+  *
+  * Create it with [[AutolinkExtension.create]] and then configure it on the builders.
+  *
+  * The parsed links are turned into normal [[Link]] nodes.
+  */
 class AutolinkExtension private () extends Parser.ParserExtension {
 
   //  regex to match all link texts which should be ignored for auto-linking
   override def parserOptions(options: MutableDataHolder): Unit = {}
 
-  override def extend(parserBuilder: Parser.Builder): Unit = {
+  override def extend(parserBuilder: Parser.Builder): Unit =
     parserBuilder.postProcessorFactory(new AutolinkNodePostProcessor.Factory())
-  }
 }
 
 object AutolinkExtension {

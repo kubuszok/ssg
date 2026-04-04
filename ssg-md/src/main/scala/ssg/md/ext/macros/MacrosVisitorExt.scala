@@ -15,10 +15,9 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object MacrosVisitorExt {
-  def VISIT_HANDLERS[V <: MacrosVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: MacrosVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[MacroReference](classOf[MacroReference], visitor.visit(_)),
       new VisitHandler[MacroDefinitionBlock](classOf[MacroDefinitionBlock], visitor.visit(_))
     )
-  }
 }

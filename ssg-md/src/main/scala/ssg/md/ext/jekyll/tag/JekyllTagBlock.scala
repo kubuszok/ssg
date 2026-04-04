@@ -12,28 +12,28 @@ package ext
 package jekyll
 package tag
 
-import ssg.md.util.ast.{Block, BlockContent, Node}
+import ssg.md.util.ast.{ Block, BlockContent, Node }
 import ssg.md.util.sequence.BasedSequence
 
-import java.util.{List as JList}
+import java.util.List as JList
 
 /** A JekyllTag block node */
 class JekyllTagBlock() extends Block {
 
   def this(chars: BasedSequence) = {
     this()
-    this.chars = (chars)
+    this.chars = chars
   }
 
   def this(chars: BasedSequence, lineSegments: JList[BasedSequence]) = {
     this()
-    this.chars = (chars)
-    this.contentLines = (lineSegments)
+    this.chars = chars
+    this.contentLines = lineSegments
   }
 
   def this(lineSegments: JList[BasedSequence]) = {
     this()
-    this.contentLines = (lineSegments)
+    this.contentLines = lineSegments
   }
 
   def this(blockContent: BlockContent) = {

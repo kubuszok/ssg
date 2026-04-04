@@ -14,9 +14,9 @@ package tags
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Link, Text}
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{Document, Node, NodeTracker}
+import ssg.md.ast.{ Link, Text }
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, NodeTracker }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.misc.CharPredicate
 
@@ -24,12 +24,12 @@ import scala.language.implicitConversions
 
 class MediaTagsNodePostProcessor(options: DataHolder) extends NodePostProcessor {
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     if (node.isInstanceOf[Link]) {
       val previous = node.previous
 
       if (previous.isDefined && previous.get.isInstanceOf[Text]) {
-        val prev = previous.get
+        val prev  = previous.get
         val chars = prev.chars
         if (chars.isContinuedBy(node.chars)) {
           val mediaLinkOpt: Nullable[AbstractMediaLink] =
@@ -61,7 +61,6 @@ class MediaTagsNodePostProcessor(options: DataHolder) extends NodePostProcessor 
         }
       }
     }
-  }
 
   private def isEscaped(chars: ssg.md.util.sequence.BasedSequence, prefix: String): Boolean = {
     val backslashCount = chars.subSequence(0, chars.length() - prefix.length).countTrailing(CharPredicate.BACKSLASH)
@@ -74,8 +73,7 @@ object MediaTagsNodePostProcessor {
   class Factory(options: DataHolder) extends NodePostProcessorFactory(false) {
     addNodes(classOf[Link])
 
-    override def apply(document: Document): NodePostProcessor = {
+    override def apply(document: Document): NodePostProcessor =
       new MediaTagsNodePostProcessor(document)
-    }
   }
 }

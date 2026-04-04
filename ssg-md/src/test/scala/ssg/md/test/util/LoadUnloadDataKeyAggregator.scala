@@ -15,18 +15,18 @@ import ssg.md.Nullable
 import ssg.md.util.data._
 import ssg.md.util.misc.Extension
 
-import java.{util => ju}
+import java.{ util => ju }
 import java.util.Collections
 import scala.language.implicitConversions
 
 class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
 
-  override def aggregate(combined: DataHolder): DataHolder = {
+  override def aggregate(combined: DataHolder): DataHolder =
     if (combined.contains(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS) || combined.contains(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)) {
       // have something to work with, or at least clean
       if (combined.contains(SharedDataKeys.EXTENSIONS) || combined.contains(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS)) {
-        val extensions = SharedDataKeys.EXTENSIONS.get(combined)
-        val loadExtensions = LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS.get(combined)
+        val extensions       = SharedDataKeys.EXTENSIONS.get(combined)
+        val loadExtensions   = LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS.get(combined)
         val unloadExtensions = LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS.get(combined)
 
         if (!loadExtensions.isEmpty || !unloadExtensions.isEmpty && !extensions.isEmpty) {
@@ -47,7 +47,6 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
     } else {
       combined
     }
-  }
 
   override def aggregateActions(combined: DataHolder, other: DataHolder, overrides: DataHolder): DataHolder = {
     var result = combined
@@ -67,13 +66,12 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
     result
   }
 
-  override def clean(combined: DataHolder): DataHolder = {
+  override def clean(combined: DataHolder): DataHolder =
     if (combined.contains(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS) || combined.contains(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)) {
       combined.toMutable.remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
     } else {
       combined
     }
-  }
 
   override def invokeAfterSet(): Nullable[Set[Class[?]]] = Nullable.empty
 }

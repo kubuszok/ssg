@@ -27,27 +27,24 @@ class NodeIterator(val firstNode: Node, val lastNode: Nullable[Node], val revers
   /** @param firstNode
     *   node from which to start the iteration and continue until all sibling nodes have been traversed
     */
-  def this(firstNode: Node) = {
+  def this(firstNode: Node) =
     this(firstNode, Nullable.empty, false)
-  }
 
   /** @param firstNode
     *   node from which to start the iteration and continue until all sibling nodes have been traversed
     * @param reversed
     *   true/false if the nodes are to be traversed in reverse order
     */
-  def this(firstNode: Node, reversed: Boolean) = {
+  def this(firstNode: Node, reversed: Boolean) =
     this(firstNode, Nullable.empty, reversed)
-  }
 
   /** @param firstNode
     *   node from which to start the iteration and continue until all sibling nodes have been traversed or lastNode has been traversed
     * @param lastNode
     *   the last node to be traversed
     */
-  def this(firstNode: Node, lastNode: Node) = {
+  def this(firstNode: Node, lastNode: Node) =
     this(firstNode, Nullable(lastNode), false)
-  }
 
   /** @return
     *   true if the iterator is a reversed iterator

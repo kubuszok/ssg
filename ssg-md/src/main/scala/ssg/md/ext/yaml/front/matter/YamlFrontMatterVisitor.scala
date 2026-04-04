@@ -14,6 +14,6 @@ package front
 package matter
 
 trait YamlFrontMatterVisitor {
-  def visit(node: YamlFrontMatterNode): Unit
+  def visit(node: YamlFrontMatterNode):  Unit
   def visit(node: YamlFrontMatterBlock): Unit
 }

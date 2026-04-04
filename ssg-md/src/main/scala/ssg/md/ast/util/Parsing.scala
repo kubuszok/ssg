@@ -310,164 +310,164 @@ object Parsing {
   // Ranges are sorted by codepoint; hyphen-minus placed at the very end.
   private val UNICODE_PUNCT_ALL =
     "\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF" + // common Latin punct
-    "\u2010\u2011\u2012\u2013\u2014\u2015" + // dashes (Pd)
-    "\u2016\u2017" + // double vertical line, double low line (Po)
-    "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" + // smart quotes (Pi/Pf/Ps)
-    "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" + // daggers, bullets, ellipsis (Po)
-    "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" + // per-mille, primes (Po)
-    "\u2039\u203A" + // single angle quotes (Pi/Pf)
-    "\u203B\u203C\u203D\u203E" + // reference mark, double excl, interrobang (Po)
-    "\u203F\u2040" + // undertie, char tie (Pc)
-    "\u2041\u2042\u2043" + // caret insertion, asterism, hyphen bullet (Po)
-    "\u2045\u2046" + // square bracket with quill (Ps/Pe)
-    "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" + // double ?!, etc. (Po)
-    "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" + // swung dash, connectors, dots (Pc/Po)
-    "\u207D\u207E\u208D\u208E" + // super/subscript parens (Ps/Pe)
-    "\u2308\u2309\u230A\u230B" + // ceiling/floor brackets (Ps/Pe)
-    "\u2329\u232A" + // angle brackets (Ps/Pe)
-    "\u2768\u2769\u276A\u276B\u276C\u276D\u276E\u276F" + // ornamental brackets (Ps/Pe)
-    "\u2770\u2771\u2772\u2773\u2774\u2775" + // ornamental brackets (Ps/Pe)
-    "\u27C5\u27C6" + // S-shaped bag delimiters (Ps/Pe)
-    "\u27E6\u27E7\u27E8\u27E9\u27EA\u27EB\u27EC\u27ED\u27EE\u27EF" + // math brackets (Ps/Pe)
-    "\u2983\u2984\u2985\u2986\u2987\u2988\u2989\u298A\u298B\u298C\u298D\u298E\u298F\u2990" + // math brackets (Ps/Pe)
-    "\u2991\u2992\u2993\u2994\u2995\u2996\u2997\u2998" + // math brackets (Ps/Pe)
-    "\u29D8\u29D9\u29DA\u29DB\u29FC\u29FD" + // math brackets (Ps/Pe)
-    "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" + // Coptic punct (Po)
-    "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" + // supplemental punct (Pi/Pf/Po)
-    "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" + // supplemental punct
-    "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" + // supplemental punct
-    "\u2E22\u2E23\u2E24\u2E25\u2E26\u2E27\u2E28\u2E29" + // half brackets (Ps/Pe)
-    "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" + // supplemental punct (Po)
-    "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" + // supplemental punct
-    "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
-    "\u3001\u3002\u3003\u3008\u3009\u300A\u300B\u300C\u300D\u300E\u300F" + // CJK punct (Po/Ps/Pe)
-    "\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019\u301A\u301B\u301C\u301D\u301E\u301F" + // CJK brackets
-    "\u3030\u303D\u30A0\u30FB" + // wavy dash, part alt mark, katakana-hiragana (Pd/Po)
-    "\uFD3E\uFD3F" + // ornamental parens (Pe/Ps)
-    "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE17\uFE18\uFE19" + // presentation forms (Po/Ps/Pe)
-    "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE35\uFE36\uFE37\uFE38\uFE39\uFE3A\uFE3B\uFE3C\uFE3D\uFE3E\uFE3F\uFE40" + // compat forms
-    "\uFE41\uFE42\uFE43\uFE44\uFE45\uFE46\uFE47\uFE48\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // compat forms
-    "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE59\uFE5A\uFE5B\uFE5C\uFE5D\uFE5E\uFE5F\uFE60\uFE61" + // small forms
-    "\uFE63\uFE68\uFE6A\uFE6B" + // small forms
-    "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF08\uFF09\uFF0A\uFF0C\uFF0E\uFF0F" + // fullwidth punct
-    "\uFF1A\uFF1B\uFF1F\uFF20\uFF3B\uFF3C\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F\uFF60\uFF61\uFF62\uFF63\uFF64\uFF65" + // fullwidth punct
-    "\uFF0D" // fullwidth hyphen-minus (Pd) — placed last to avoid range issues
+      "\u2010\u2011\u2012\u2013\u2014\u2015" + // dashes (Pd)
+      "\u2016\u2017" + // double vertical line, double low line (Po)
+      "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" + // smart quotes (Pi/Pf/Ps)
+      "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" + // daggers, bullets, ellipsis (Po)
+      "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" + // per-mille, primes (Po)
+      "\u2039\u203A" + // single angle quotes (Pi/Pf)
+      "\u203B\u203C\u203D\u203E" + // reference mark, double excl, interrobang (Po)
+      "\u203F\u2040" + // undertie, char tie (Pc)
+      "\u2041\u2042\u2043" + // caret insertion, asterism, hyphen bullet (Po)
+      "\u2045\u2046" + // square bracket with quill (Ps/Pe)
+      "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" + // double ?!, etc. (Po)
+      "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" + // swung dash, connectors, dots (Pc/Po)
+      "\u207D\u207E\u208D\u208E" + // super/subscript parens (Ps/Pe)
+      "\u2308\u2309\u230A\u230B" + // ceiling/floor brackets (Ps/Pe)
+      "\u2329\u232A" + // angle brackets (Ps/Pe)
+      "\u2768\u2769\u276A\u276B\u276C\u276D\u276E\u276F" + // ornamental brackets (Ps/Pe)
+      "\u2770\u2771\u2772\u2773\u2774\u2775" + // ornamental brackets (Ps/Pe)
+      "\u27C5\u27C6" + // S-shaped bag delimiters (Ps/Pe)
+      "\u27E6\u27E7\u27E8\u27E9\u27EA\u27EB\u27EC\u27ED\u27EE\u27EF" + // math brackets (Ps/Pe)
+      "\u2983\u2984\u2985\u2986\u2987\u2988\u2989\u298A\u298B\u298C\u298D\u298E\u298F\u2990" + // math brackets (Ps/Pe)
+      "\u2991\u2992\u2993\u2994\u2995\u2996\u2997\u2998" + // math brackets (Ps/Pe)
+      "\u29D8\u29D9\u29DA\u29DB\u29FC\u29FD" + // math brackets (Ps/Pe)
+      "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" + // Coptic punct (Po)
+      "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" + // supplemental punct (Pi/Pf/Po)
+      "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" + // supplemental punct
+      "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" + // supplemental punct
+      "\u2E22\u2E23\u2E24\u2E25\u2E26\u2E27\u2E28\u2E29" + // half brackets (Ps/Pe)
+      "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" + // supplemental punct (Po)
+      "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" + // supplemental punct
+      "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
+      "\u3001\u3002\u3003\u3008\u3009\u300A\u300B\u300C\u300D\u300E\u300F" + // CJK punct (Po/Ps/Pe)
+      "\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019\u301A\u301B\u301C\u301D\u301E\u301F" + // CJK brackets
+      "\u3030\u303D\u30A0\u30FB" + // wavy dash, part alt mark, katakana-hiragana (Pd/Po)
+      "\uFD3E\uFD3F" + // ornamental parens (Pe/Ps)
+      "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE17\uFE18\uFE19" + // presentation forms (Po/Ps/Pe)
+      "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE35\uFE36\uFE37\uFE38\uFE39\uFE3A\uFE3B\uFE3C\uFE3D\uFE3E\uFE3F\uFE40" + // compat forms
+      "\uFE41\uFE42\uFE43\uFE44\uFE45\uFE46\uFE47\uFE48\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // compat forms
+      "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE59\uFE5A\uFE5B\uFE5C\uFE5D\uFE5E\uFE5F\uFE60\uFE61" + // small forms
+      "\uFE63\uFE68\uFE6A\uFE6B" + // small forms
+      "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF08\uFF09\uFF0A\uFF0C\uFF0E\uFF0F" + // fullwidth punct
+      "\uFF1A\uFF1B\uFF1F\uFF20\uFF3B\uFF3C\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F\uFF60\uFF61\uFF62\uFF63\uFF64\uFF65" + // fullwidth punct
+      "\uFF0D" // fullwidth hyphen-minus (Pd) — placed last to avoid range issues
 
   // Open punctuation subset: all of UNICODE_PUNCT_ALL except ASCII close chars ()>]})
   // and the Unicode close punctuation characters
   private val UNICODE_PUNCT_NOT_CLOSE =
     "\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF" +
-    "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
-    "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
-    "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
-    "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
-    "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
-    "\u2041\u2042\u2043\u2045" + // skip \u2046 (Pe)
-    "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
-    "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
-    "\u207D" + // skip \u207E (Pe)
-    "\u208D" + // skip \u208E (Pe)
-    "\u2308" + // skip \u2309 (Pe)
-    "\u230A" + // skip \u230B (Pe)
-    "\u2329" + // skip \u232A (Pe)
-    "\u2768\u276A\u276C\u276E\u2770\u2772\u2774" + // open only
-    "\u27C5" + // skip \u27C6 (Pe)
-    "\u27E6\u27E8\u27EA\u27EC\u27EE" + // open only
-    "\u2983\u2985\u2987\u2989\u298B\u298D\u298F\u2991\u2993\u2995\u2997" + // open only
-    "\u29D8\u29DA\u29FC" + // open only
-    "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
-    "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
-    "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
-    "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
-    "\u2E22\u2E24\u2E26\u2E28" + // open only, skip close halves
-    "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
-    "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
-    "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
-    "\u3001\u3002\u3003\u3008\u300A\u300C\u300E" + // open only CJK
-    "\u3010\u3014\u3016\u3018\u301A\u301C\u301D" + // open only CJK
-    "\u3030\u303D\u30A0\u30FB" +
-    "\uFD3F" + // Ps only (skip \uFD3E Pe)
-    "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE17\uFE19" + // skip \uFE18 (Pe)
-    "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE35\uFE37\uFE39\uFE3B\uFE3D\uFE3F" + // open halves
-    "\uFE41\uFE43\uFE45\uFE46\uFE47\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // open halves
-    "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE59\uFE5B\uFE5D\uFE5F\uFE60\uFE61" + // skip close forms
-    "\uFE63\uFE68\uFE6A\uFE6B" +
-    "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF08\uFF0A\uFF0C\uFF0E\uFF0F" + // skip \uFF09 (Pe)
-    "\uFF1A\uFF1B\uFF1F\uFF20\uFF3B\uFF3C\uFF3F\uFF5B\uFF5F\uFF61\uFF62\uFF64\uFF65" + // skip close forms
-    "\uFF0D"
+      "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
+      "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
+      "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
+      "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
+      "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
+      "\u2041\u2042\u2043\u2045" + // skip \u2046 (Pe)
+      "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
+      "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
+      "\u207D" + // skip \u207E (Pe)
+      "\u208D" + // skip \u208E (Pe)
+      "\u2308" + // skip \u2309 (Pe)
+      "\u230A" + // skip \u230B (Pe)
+      "\u2329" + // skip \u232A (Pe)
+      "\u2768\u276A\u276C\u276E\u2770\u2772\u2774" + // open only
+      "\u27C5" + // skip \u27C6 (Pe)
+      "\u27E6\u27E8\u27EA\u27EC\u27EE" + // open only
+      "\u2983\u2985\u2987\u2989\u298B\u298D\u298F\u2991\u2993\u2995\u2997" + // open only
+      "\u29D8\u29DA\u29FC" + // open only
+      "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
+      "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
+      "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
+      "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
+      "\u2E22\u2E24\u2E26\u2E28" + // open only, skip close halves
+      "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
+      "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
+      "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
+      "\u3001\u3002\u3003\u3008\u300A\u300C\u300E" + // open only CJK
+      "\u3010\u3014\u3016\u3018\u301A\u301C\u301D" + // open only CJK
+      "\u3030\u303D\u30A0\u30FB" +
+      "\uFD3F" + // Ps only (skip \uFD3E Pe)
+      "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE17\uFE19" + // skip \uFE18 (Pe)
+      "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE35\uFE37\uFE39\uFE3B\uFE3D\uFE3F" + // open halves
+      "\uFE41\uFE43\uFE45\uFE46\uFE47\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // open halves
+      "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE59\uFE5B\uFE5D\uFE5F\uFE60\uFE61" + // skip close forms
+      "\uFE63\uFE68\uFE6A\uFE6B" +
+      "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF08\uFF0A\uFF0C\uFF0E\uFF0F" + // skip \uFF09 (Pe)
+      "\uFF1A\uFF1B\uFF1F\uFF20\uFF3B\uFF3C\uFF3F\uFF5B\uFF5F\uFF61\uFF62\uFF64\uFF65" + // skip close forms
+      "\uFF0D"
 
   // Close punctuation subset: all of UNICODE_PUNCT_ALL except ASCII open chars ((<[{)
   // and the Unicode open punctuation characters
   private val UNICODE_PUNCT_NOT_OPEN =
     "\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF" +
-    "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
-    "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
-    "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
-    "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
-    "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
-    "\u2041\u2042\u2043\u2046" + // skip \u2045 (Ps)
-    "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
-    "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
-    "\u207E" + // skip \u207D (Ps)
-    "\u208E" + // skip \u208D (Ps)
-    "\u2309" + // skip \u2308 (Ps)
-    "\u230B" + // skip \u230A (Ps)
-    "\u232A" + // skip \u2329 (Ps)
-    "\u2769\u276B\u276D\u276F\u2771\u2773\u2775" + // close only
-    "\u27C6" + // skip \u27C5 (Ps)
-    "\u27E7\u27E9\u27EB\u27ED\u27EF" + // close only
-    "\u2984\u2986\u2988\u298A\u298C\u298E\u2990\u2992\u2994\u2996\u2998" + // close only
-    "\u29D9\u29DB\u29FD" + // close only
-    "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
-    "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
-    "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
-    "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
-    "\u2E23\u2E25\u2E27\u2E29" + // close only, skip open halves
-    "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
-    "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
-    "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
-    "\u3001\u3002\u3003\u3009\u300B\u300D\u300F" + // close only CJK
-    "\u3011\u3015\u3017\u3019\u301B\u301C\u301E\u301F" + // close only CJK
-    "\u3030\u303D\u30A0\u30FB" +
-    "\uFD3E" + // Pe only (skip \uFD3F Ps)
-    "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE18\uFE19" + // skip \uFE17 (Ps)
-    "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE36\uFE38\uFE3A\uFE3C\uFE3E\uFE40" + // close halves
-    "\uFE42\uFE44\uFE45\uFE46\uFE48\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // close halves
-    "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE5A\uFE5C\uFE5E\uFE5F\uFE60\uFE61" + // skip open forms
-    "\uFE63\uFE68\uFE6A\uFE6B" +
-    "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF09\uFF0A\uFF0C\uFF0E\uFF0F" + // skip \uFF08 (Ps)
-    "\uFF1A\uFF1B\uFF1F\uFF20\uFF3C\uFF3D\uFF3F\uFF5D\uFF60\uFF61\uFF63\uFF64\uFF65" + // skip open forms
-    "\uFF0D"
+      "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
+      "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
+      "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
+      "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
+      "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
+      "\u2041\u2042\u2043\u2046" + // skip \u2045 (Ps)
+      "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
+      "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
+      "\u207E" + // skip \u207D (Ps)
+      "\u208E" + // skip \u208D (Ps)
+      "\u2309" + // skip \u2308 (Ps)
+      "\u230B" + // skip \u230A (Ps)
+      "\u232A" + // skip \u2329 (Ps)
+      "\u2769\u276B\u276D\u276F\u2771\u2773\u2775" + // close only
+      "\u27C6" + // skip \u27C5 (Ps)
+      "\u27E7\u27E9\u27EB\u27ED\u27EF" + // close only
+      "\u2984\u2986\u2988\u298A\u298C\u298E\u2990\u2992\u2994\u2996\u2998" + // close only
+      "\u29D9\u29DB\u29FD" + // close only
+      "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
+      "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
+      "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
+      "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
+      "\u2E23\u2E25\u2E27\u2E29" + // close only, skip open halves
+      "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
+      "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
+      "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
+      "\u3001\u3002\u3003\u3009\u300B\u300D\u300F" + // close only CJK
+      "\u3011\u3015\u3017\u3019\u301B\u301C\u301E\u301F" + // close only CJK
+      "\u3030\u303D\u30A0\u30FB" +
+      "\uFD3E" + // Pe only (skip \uFD3F Ps)
+      "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE18\uFE19" + // skip \uFE17 (Ps)
+      "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE36\uFE38\uFE3A\uFE3C\uFE3E\uFE40" + // close halves
+      "\uFE42\uFE44\uFE45\uFE46\uFE48\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // close halves
+      "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE5A\uFE5C\uFE5E\uFE5F\uFE60\uFE61" + // skip open forms
+      "\uFE63\uFE68\uFE6A\uFE6B" +
+      "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF09\uFF0A\uFF0C\uFF0E\uFF0F" + // skip \uFF08 (Ps)
+      "\uFF1A\uFF1B\uFF1F\uFF20\uFF3C\uFF3D\uFF3F\uFF5D\uFF60\uFF61\uFF63\uFF64\uFF65" + // skip open forms
+      "\uFF0D"
 
   // Punctuation that is neither open nor close — non-ASCII subset
   private val UNICODE_PUNCT_NOT_OPEN_CLOSE =
     "\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF" +
-    "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
-    "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
-    "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
-    "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
-    "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
-    "\u2041\u2042\u2043" + // skip both \u2045 (Ps) and \u2046 (Pe)
-    "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
-    "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
-    // skip all bracket pairs (Ps/Pe)
-    "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
-    "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
-    "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
-    "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
-    // skip bracket pairs \u2E22-\u2E29
-    "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
-    "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
-    "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
-    "\u3001\u3002\u3003" + // skip all CJK brackets
-    "\u301C\u3030\u303D\u30A0\u30FB" +
-    "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE19" + // skip bracket forms
-    "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE45\uFE46\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // skip bracket forms
-    "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE5F\uFE60\uFE61" + // skip bracket forms
-    "\uFE63\uFE68\uFE6A\uFE6B" +
-    "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF0A\uFF0C\uFF0E\uFF0F" + // skip brackets
-    "\uFF1A\uFF1B\uFF1F\uFF20\uFF3C\uFF3F\uFF61\uFF64\uFF65" + // skip brackets
-    "\uFF0D"
+      "\u2010\u2011\u2012\u2013\u2014\u2015\u2016\u2017" +
+      "\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F" +
+      "\u2020\u2021\u2022\u2023\u2024\u2025\u2026\u2027" +
+      "\u2030\u2031\u2032\u2033\u2034\u2035\u2036\u2037\u2038" +
+      "\u2039\u203A\u203B\u203C\u203D\u203E\u203F\u2040" +
+      "\u2041\u2042\u2043" + // skip both \u2045 (Ps) and \u2046 (Pe)
+      "\u2047\u2048\u2049\u204A\u204B\u204C\u204D\u204E\u204F\u2050\u2051" +
+      "\u2053\u2054\u2055\u2056\u2057\u2058\u2059\u205A\u205B\u205C\u205D\u205E" +
+      // skip all bracket pairs (Ps/Pe)
+      "\u2CF9\u2CFA\u2CFB\u2CFC\u2CFE\u2CFF" +
+      "\u2E00\u2E01\u2E02\u2E03\u2E04\u2E05\u2E06\u2E07\u2E08\u2E09\u2E0A\u2E0B" +
+      "\u2E0C\u2E0D\u2E0E\u2E0F\u2E10\u2E11\u2E12\u2E13\u2E14\u2E15\u2E16\u2E17" +
+      "\u2E18\u2E19\u2E1A\u2E1B\u2E1C\u2E1D\u2E1E\u2E1F\u2E20\u2E21" +
+      // skip bracket pairs \u2E22-\u2E29
+      "\u2E2A\u2E2B\u2E2C\u2E2D\u2E2E" +
+      "\u2E30\u2E31\u2E32\u2E33\u2E34\u2E35\u2E36\u2E37\u2E38\u2E39\u2E3A\u2E3B" +
+      "\u2E3C\u2E3D\u2E3E\u2E3F\u2E40\u2E41\u2E42\u2E43\u2E44\u2E45\u2E46\u2E47\u2E48\u2E49\u2E4A\u2E4B\u2E4C\u2E4D\u2E4E\u2E4F" +
+      "\u3001\u3002\u3003" + // skip all CJK brackets
+      "\u301C\u3030\u303D\u30A0\u30FB" +
+      "\uFE10\uFE11\uFE12\uFE13\uFE14\uFE15\uFE16\uFE19" + // skip bracket forms
+      "\uFE30\uFE31\uFE32\uFE33\uFE34\uFE45\uFE46\uFE49\uFE4A\uFE4B\uFE4C\uFE4D\uFE4E\uFE4F" + // skip bracket forms
+      "\uFE50\uFE51\uFE52\uFE54\uFE55\uFE56\uFE57\uFE58\uFE5F\uFE60\uFE61" + // skip bracket forms
+      "\uFE63\uFE68\uFE6A\uFE6B" +
+      "\uFF01\uFF02\uFF03\uFF05\uFF06\uFF07\uFF0A\uFF0C\uFF0E\uFF0F" + // skip brackets
+      "\uFF1A\uFF1B\uFF1F\uFF20\uFF3C\uFF3F\uFF61\uFF64\uFF65" + // skip brackets
+      "\uFF0D"
 
   private val ST_PUNCTUATION = Pattern.compile(
     "^[" + ST_ASCII_PUNCTUATION + ST_ASCII_OPEN_PUNCTUATION + ST_ASCII_CLOSE_PUNCTUATION + UNICODE_PUNCT_ALL + "]"
@@ -484,24 +484,24 @@ object Parsing {
   private val ST_PUNCTUATION_OPEN_ONLY  = Pattern.compile("^[" + ST_ASCII_OPEN_PUNCTUATION + "]")
   private val ST_PUNCTUATION_CLOSE_ONLY = Pattern.compile("^[" + ST_ASCII_CLOSE_PUNCTUATION + "]")
 
-  private val ST_ESCAPABLE                      = Pattern.compile('^' + Escaping.ESCAPABLE)
-  private val ST_TICKS                          = Pattern.compile("`+")
-  private val ST_TICKS_HERE                     = Pattern.compile("^`+")
-  private val ST_SPNL                           = Pattern.compile("^(?:[ \t])*(?:" + ST_EOL + "(?:[ \t])*)?")
-  private val ST_SPNL_URL                       = Pattern.compile("^(?:[ \t])*" + ST_EOL)
-  private val ST_SPNI                           = Pattern.compile("^ {0,3}")
-  private val ST_SP                             = Pattern.compile("^(?:[ \t])*")
-  private val ST_REST_OF_LINE                   = Pattern.compile("^.*" + ST_EOL)
+  private val ST_ESCAPABLE    = Pattern.compile('^' + Escaping.ESCAPABLE)
+  private val ST_TICKS        = Pattern.compile("`+")
+  private val ST_TICKS_HERE   = Pattern.compile("^`+")
+  private val ST_SPNL         = Pattern.compile("^(?:[ \t])*(?:" + ST_EOL + "(?:[ \t])*)?")
+  private val ST_SPNL_URL     = Pattern.compile("^(?:[ \t])*" + ST_EOL)
+  private val ST_SPNI         = Pattern.compile("^ {0,3}")
+  private val ST_SP           = Pattern.compile("^(?:[ \t])*")
+  private val ST_REST_OF_LINE = Pattern.compile("^.*" + ST_EOL)
   // Cross-platform: original Java regex used \p{Zs} (space separator Unicode category)
   // which is unavailable on Scala.js and Scala Native. Expanded to explicit BMP ranges.
   // \p{Zs} = U+0020, U+00A0, U+1680, U+2000-U+200A, U+202F, U+205F, U+3000
   // Original: "^[\\p{Zs}\t\r\n\f]"
   // Revert to original if/when Scala.js and Scala Native add full java.util.regex support.
-  private val UNICODE_Zs = "\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000"
-  private val ST_UNICODE_WHITESPACE_CHAR        = Pattern.compile("^[" + UNICODE_Zs + "\t\r\n\f]")
-  private val ST_WHITESPACE                     = Pattern.compile("\\s+")
-  private val ST_FINAL_SPACE                    = Pattern.compile(" *$")
-  private val ST_LINE_END                       = Pattern.compile("^[ \t]*(?:" + ST_EOL + "|$)")
+  private val UNICODE_Zs                 = "\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000"
+  private val ST_UNICODE_WHITESPACE_CHAR = Pattern.compile("^[" + UNICODE_Zs + "\t\r\n\f]")
+  private val ST_WHITESPACE              = Pattern.compile("\\s+")
+  private val ST_FINAL_SPACE             = Pattern.compile(" *$")
+  private val ST_LINE_END                = Pattern.compile("^[ \t]*(?:" + ST_EOL + "|$)")
   // Cross-platform: original Java regex used negative lookahead (?![\"']) to prevent
   // matching a space followed by a quote character inside angle-bracket links.
   // Lookaheads are unavailable on Scala.js and Scala Native. Rewritten to allow
@@ -607,7 +607,7 @@ object Parsing {
     val allowNameSpace:                  java.lang.Boolean
   ) {
 
-    def this(options: DataHolder) = {
+    def this(options: DataHolder) =
       this(
         intellijDummyIdentifier = Parser.INTELLIJ_DUMMY_IDENTIFIER.get(options),
         htmlForTranslator = Parser.HTML_FOR_TRANSLATOR.get(options),
@@ -620,7 +620,6 @@ object Parsing {
         listsOrderedItemDotOnly = Parser.LISTS_ORDERED_ITEM_DOT_ONLY.get(options),
         allowNameSpace = Parser.HTML_ALLOW_NAME_SPACE.get(options)
       )
-    }
 
     def withJekyllMacroInLinkUrl(): PatternTypeFlags = new PatternTypeFlags(intellijDummyIdentifier, null, null, null, null, parseJekyllMacroInLinkUrl, null, null, null, null)
 

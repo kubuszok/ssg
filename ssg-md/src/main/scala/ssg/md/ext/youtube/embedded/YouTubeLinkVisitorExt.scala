@@ -16,7 +16,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object YouTubeLinkVisitorExt {
-  def VISIT_HANDLERS[V <: YouTubeLinkVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: YouTubeLinkVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[YouTubeLink](classOf[YouTubeLink], visitor.visit(_)))
-  }
 }

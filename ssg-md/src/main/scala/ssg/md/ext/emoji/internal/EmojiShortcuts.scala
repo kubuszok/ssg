@@ -29,8 +29,8 @@ object EmojiShortcuts {
 
   val gitHubUrlPrefix: String = EmojiReference.githubUrl
 
-  private val emojiShortcuts: HashMap[String, EmojiData] = new HashMap[String, EmojiData]()
-  private val emojiURIs: HashMap[String, EmojiData] = new HashMap[String, EmojiData]()
+  private val emojiShortcuts:    HashMap[String, EmojiData] = new HashMap[String, EmojiData]()
+  private val emojiURIs:         HashMap[String, EmojiData] = new HashMap[String, EmojiData]()
   private val emojiUnicodeChars: HashMap[EmojiData, String] = new HashMap[EmojiData, String]()
 
   def getUnicodeChars(emoji: EmojiData): Nullable[String] = synchronized {
@@ -44,10 +44,9 @@ object EmojiShortcuts {
         Nullable(value)
       } else {
         val unicodePoints = emoji.unicodeChars.get.replace("U+", "").split(" ")
-        val sb = new StringBuilder(16)
-        for (unicodePoint <- unicodePoints) {
+        val sb            = new StringBuilder(16)
+        for (unicodePoint <- unicodePoints)
           sb.appendAll(Character.toChars(Integer.parseInt(unicodePoint, 16)))
-        }
         val result = sb.toString()
         emojiUnicodeChars.put(emoji, result)
         Nullable(result)
@@ -57,7 +56,7 @@ object EmojiShortcuts {
 
   def extractFileName(emojiURI: String): String = {
     val fileName = new File(emojiURI).getName
-    val pos = fileName.indexOf(".png")
+    val pos      = fileName.indexOf(".png")
     if (pos >= 0) fileName.substring(0, pos) else fileName
   }
 
@@ -108,4 +107,3 @@ object EmojiShortcuts {
     }
   }
 }
-

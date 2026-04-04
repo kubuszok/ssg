@@ -45,9 +45,8 @@ class TableFormatOptions(options: Nullable[DataHolder]) extends MutableDataSette
   val colonWidth: Int = charWidthProvider.getCharWidth(':')
   val dashWidth:  Int = charWidthProvider.getCharWidth('-')
 
-  def this() = {
+  def this() =
     this(Nullable(null))
-  }
 
   override def setIn(dataHolder: MutableDataHolder): MutableDataHolder = {
     dataHolder.set(TableFormatOptions.FORMAT_TABLE_LEAD_TRAIL_PIPES, leadTrailPipes)
@@ -87,14 +86,14 @@ object TableFormatOptions {
   val FORMAT_TABLE_FILL_MISSING_MIN_COLUMN: NullableDataKey[Integer] = new NullableDataKey[Integer]("FORMAT_TABLE_FILL_MISSING_MIN_COLUMN")
 
   val FORMAT_TABLE_LEFT_ALIGN_MARKER:          DataKey[DiscretionaryText]    = new DataKey[DiscretionaryText]("FORMAT_TABLE_LEFT_ALIGN_MARKER", DiscretionaryText.AS_IS)
-  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Int]     = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH", 3)
-  val FORMAT_TABLE_MIN_SEPARATOR_DASHES:       DataKey[Int]     = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_DASHES", 1)
-  val FORMAT_TABLE_TRIM_CELL_WHITESPACE:       DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_TRIM_CELL_WHITESPACE", true)
+  val FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH: DataKey[Int]                  = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH", 3)
+  val FORMAT_TABLE_MIN_SEPARATOR_DASHES:       DataKey[Int]                  = new DataKey[Int]("FORMAT_TABLE_MIN_SEPARATOR_DASHES", 1)
+  val FORMAT_TABLE_TRIM_CELL_WHITESPACE:       DataKey[Boolean]              = new DataKey[Boolean]("FORMAT_TABLE_TRIM_CELL_WHITESPACE", true)
   val FORMAT_TABLE_CAPTION:                    DataKey[TableCaptionHandling] = new DataKey[TableCaptionHandling]("FORMAT_TABLE_CAPTION", TableCaptionHandling.AS_IS)
   val FORMAT_TABLE_CAPTION_SPACES:             DataKey[DiscretionaryText]    = new DataKey[DiscretionaryText]("FORMAT_TABLE_CAPTION_SPACES", DiscretionaryText.AS_IS)
   val FORMAT_TABLE_INDENT_PREFIX:              DataKey[String]               = new DataKey[String]("FORMAT_TABLE_INDENT_PREFIX", "")
   val FORMAT_TABLE_MANIPULATOR:                DataKey[TableManipulator]     = new DataKey[TableManipulator]("FORMAT_TABLE_MANIPULATOR", TableManipulator.NULL)
 
   val FORMAT_CHAR_WIDTH_PROVIDER:         DataKey[CharWidthProvider] = new DataKey[CharWidthProvider]("FORMAT_CHAR_WIDTH_PROVIDER", CharWidthProvider.NULL)
-  val FORMAT_TABLE_DUMP_TRACKING_OFFSETS: DataKey[Boolean] = new DataKey[Boolean]("FORMAT_TABLE_DUMP_TRACKING_OFFSETS", false)
+  val FORMAT_TABLE_DUMP_TRACKING_OFFSETS: DataKey[Boolean]           = new DataKey[Boolean]("FORMAT_TABLE_DUMP_TRACKING_OFFSETS", false)
 }

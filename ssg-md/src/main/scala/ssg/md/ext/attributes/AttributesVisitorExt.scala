@@ -15,10 +15,9 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object AttributesVisitorExt {
-  def VISIT_HANDLERS[V <: AttributesVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: AttributesVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[AttributesNode](classOf[AttributesNode], visitor.visit(_)),
       new VisitHandler[AttributeNode](classOf[AttributeNode], visitor.visit(_))
     )
-  }
 }

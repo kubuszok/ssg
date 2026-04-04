@@ -565,7 +565,7 @@ abstract class Node {
     }
 
   def nodeName: String = {
-    val name = getClass.getName
+    val name    = getClass.getName
     val lastDot = name.lastIndexOf('.')
     if (lastDot >= 0) name.substring(lastDot + 1) else name
   }

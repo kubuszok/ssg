@@ -18,12 +18,11 @@ import scala.language.implicitConversions
 
 class EmojiOptions(options: DataHolder) {
 
-  val rootImagePath: String = EmojiExtension.ROOT_IMAGE_PATH.get(options)
-  val useShortcutType: EmojiShortcutType = EmojiExtension.USE_SHORTCUT_TYPE.get(options)
-  val useImageType: EmojiImageType = EmojiExtension.USE_IMAGE_TYPE.get(options)
-  val attrImageSize: String = EmojiExtension.ATTR_IMAGE_SIZE.get(options)
-  val attrAlign: String = EmojiExtension.ATTR_ALIGN.get(options)
-  val attrImageClass: String = EmojiExtension.ATTR_IMAGE_CLASS.get(options)
-  val useUnicodeFileNames: Boolean = EmojiExtension.USE_UNICODE_FILE_NAMES.get(options)
+  val rootImagePath:       String            = EmojiExtension.ROOT_IMAGE_PATH.get(options)
+  val useShortcutType:     EmojiShortcutType = EmojiExtension.USE_SHORTCUT_TYPE.get(options)
+  val useImageType:        EmojiImageType    = EmojiExtension.USE_IMAGE_TYPE.get(options)
+  val attrImageSize:       String            = EmojiExtension.ATTR_IMAGE_SIZE.get(options)
+  val attrAlign:           String            = EmojiExtension.ATTR_ALIGN.get(options)
+  val attrImageClass:      String            = EmojiExtension.ATTR_IMAGE_CLASS.get(options)
+  val useUnicodeFileNames: Boolean           = EmojiExtension.USE_UNICODE_FILE_NAMES.get(options)
 }
-

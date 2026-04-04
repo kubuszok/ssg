@@ -15,18 +15,17 @@ package internal
 
 import ssg.md.Nullable
 import ssg.md.html.HtmlWriter
-import ssg.md.html.renderer.{NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler}
+import ssg.md.html.renderer.{ NodeRenderer, NodeRendererContext, NodeRendererFactory, NodeRenderingHandler }
 import ssg.md.util.data.DataHolder
 
 import scala.language.implicitConversions
-import java.util.{Map as JMap}
-
+import java.util.Map as JMap
 
 class JekyllTagNodeRenderer(options: DataHolder) extends NodeRenderer {
 
   @annotation.nowarn("msg=unused private member")
   private val includeContent: Nullable[JMap[String, String]] = Nullable(JekyllTagExtension.INCLUDED_HTML.get(options))
-  private val embedIncludes: Boolean = JekyllTagExtension.EMBED_INCLUDED_CONTENT.get(options)
+  private val embedIncludes:  Boolean                        = JekyllTagExtension.EMBED_INCLUDED_CONTENT.get(options)
 
   override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
     val set = scala.collection.mutable.HashSet[NodeRenderingHandler[?]]()
@@ -35,17 +34,15 @@ class JekyllTagNodeRenderer(options: DataHolder) extends NodeRenderer {
     Nullable(set.toSet)
   }
 
-  private def renderTag(node: JekyllTag, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderTag(node: JekyllTag, context: NodeRendererContext, html: HtmlWriter): Unit =
     if (embedIncludes) {
       context.renderChildren(node)
     } else {
       // nothing to do since includes are not rendered
     }
-  }
 
-  private def renderBlock(node: JekyllTagBlock, context: NodeRendererContext, html: HtmlWriter): Unit = {
+  private def renderBlock(node: JekyllTagBlock, context: NodeRendererContext, html: HtmlWriter): Unit =
     context.renderChildren(node)
-  }
 }
 
 object JekyllTagNodeRenderer {
@@ -54,4 +51,3 @@ object JekyllTagNodeRenderer {
     override def apply(options: DataHolder): NodeRenderer = new JekyllTagNodeRenderer(options)
   }
 }
-

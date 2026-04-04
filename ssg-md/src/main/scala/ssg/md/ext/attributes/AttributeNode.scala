@@ -11,7 +11,7 @@ package md
 package ext
 package attributes
 
-import ssg.md.util.ast.{DoNotDecorate, Node}
+import ssg.md.util.ast.{ DoNotDecorate, Node }
 import ssg.md.util.html.Attribute
 import ssg.md.util.sequence.BasedSequence
 
@@ -20,11 +20,11 @@ import scala.language.implicitConversions
 /** An Attribute node representing a single attribute name and value in attributes node */
 class AttributeNode() extends Node, DoNotDecorate {
 
-  var name: BasedSequence = BasedSequence.NULL
+  var name:               BasedSequence = BasedSequence.NULL
   var attributeSeparator: BasedSequence = BasedSequence.NULL
-  var openingMarker: BasedSequence = BasedSequence.NULL
-  var value: BasedSequence = BasedSequence.NULL
-  var closingMarker: BasedSequence = BasedSequence.NULL
+  var openingMarker:      BasedSequence = BasedSequence.NULL
+  var value:              BasedSequence = BasedSequence.NULL
+  var closingMarker:      BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = { this(); this.chars = chars }
 

@@ -15,7 +15,6 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object TocVisitorExt {
-  def VISIT_HANDLERS[V <: TocVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: TocVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(new VisitHandler[TocBlock](classOf[TocBlock], visitor.visit(_)))
-  }
 }

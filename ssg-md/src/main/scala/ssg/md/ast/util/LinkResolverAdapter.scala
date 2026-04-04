@@ -20,7 +20,7 @@ import java.{ util => ju }
 
 class LinkResolverAdapter(handlers: LinkResolvingHandler[? <: Node]*)
     extends AstActionHandler[LinkResolverAdapter, Node, LinkResolvingHandler.LinkResolvingVisitor[Node], LinkResolvingHandler[Node]](Node.AST_ADAPTER),
-    LinkResolvingHandler.LinkResolvingVisitor[Node] {
+      LinkResolvingHandler.LinkResolvingVisitor[Node] {
 
   addActionHandlers(handlers.toArray.asInstanceOf[Array[LinkResolvingHandler[Node]]])
 

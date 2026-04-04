@@ -17,7 +17,7 @@ import ssg.md.Nullable
 import ssg.md.ast.Paragraph
 import ssg.md.parser.InlineParser
 import ssg.md.parser.block.*
-import ssg.md.util.ast.{Block, BlockContent}
+import ssg.md.util.ast.{ Block, BlockContent }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -26,20 +26,18 @@ import java.util.regex.Pattern
 
 class EnumeratedReferenceBlockParser(options: EnumeratedReferenceOptions, contentOffset: Int) extends AbstractBlockParser {
 
-  val block_ = new EnumeratedReferenceBlock()
+  val block_          = new EnumeratedReferenceBlock()
   private var content = new BlockContent()
 
   def blockContent: BlockContent = content
 
   override def getBlock: Block = block_
 
-  override def tryContinue(state: ParserState): Nullable[BlockContinue] = {
+  override def tryContinue(state: ParserState): Nullable[BlockContinue] =
     BlockContinue.none()
-  }
 
-  override def addLine(state: ParserState, line: BasedSequence): Unit = {
+  override def addLine(state: ParserState, line: BasedSequence): Unit =
     throw new IllegalStateException("Abbreviation Blocks hold a single line")
-  }
 
   override def closeBlock(state: ParserState): Unit = {
     // set the enumeratedReference from closingMarker to end
@@ -61,14 +59,13 @@ class EnumeratedReferenceBlockParser(options: EnumeratedReferenceOptions, conten
 
   override def isContainer: Boolean = true
 
-  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean = {
+  override def canContain(state: ParserState, blockParser: BlockParser, block: Block): Boolean =
     blockParser.isParagraphParser
-  }
 }
 
 object EnumeratedReferenceBlockParser {
-  val ENUM_REF_ID: String = "(?:[^0-9].*)?";
-  val ENUM_REF_ID_PATTERN: Pattern = Pattern.compile("\\[[\\@|#]\\s*(" + ENUM_REF_ID + ")\\s*\\]")
+  val ENUM_REF_ID:          String  = "(?:[^0-9].*)?";
+  val ENUM_REF_ID_PATTERN:  Pattern = Pattern.compile("\\[[\\@|#]\\s*(" + ENUM_REF_ID + ")\\s*\\]")
   val ENUM_REF_DEF_PATTERN: Pattern = Pattern.compile("^(\\[[\\@]\\s*(" + ENUM_REF_ID + ")\\s*\\]:)\\s+")
 
   class Factory extends CustomBlockParserFactory {
@@ -85,21 +82,21 @@ object EnumeratedReferenceBlockParser {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
     private val options_ = new EnumeratedReferenceOptions(options)
 
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] = {
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.indent >= 4) {
         BlockStart.none()
       } else {
-        val line = state.lineWithEOL
+        val line         = state.lineWithEOL
         val nextNonSpace = state.nextNonSpaceIndex
 
         val trySequence = line.subSequence(nextNonSpace, line.length())
-        val matcher = ENUM_REF_DEF_PATTERN.matcher(trySequence)
+        val matcher     = ENUM_REF_DEF_PATTERN.matcher(trySequence)
         if (matcher.find()) {
           // abbreviation definition
-          val openingStart = nextNonSpace + matcher.start(1)
-          val openingEnd = nextNonSpace + matcher.end(1)
+          val openingStart  = nextNonSpace + matcher.start(1)
+          val openingEnd    = nextNonSpace + matcher.end(1)
           val openingMarker = line.subSequence(openingStart, openingStart + 2)
-          val text = line.subSequence(matcher.start(2), matcher.end(2))
+          val text          = line.subSequence(matcher.start(2), matcher.end(2))
           val closingMarker = line.subSequence(openingEnd - 2, openingEnd)
 
           val contentOffset = options_.contentIndent
@@ -114,12 +111,10 @@ object EnumeratedReferenceBlockParser {
           enumeratedReferenceBlockParser.block_.appendChild(paragraph)
           enumeratedReferenceBlockParser.block_.setCharsFromContent()
 
-          Nullable(BlockStart.of(enumeratedReferenceBlockParser)
-            .atIndex(line.length()))
+          Nullable(BlockStart.of(enumeratedReferenceBlockParser).atIndex(line.length()))
         } else {
           BlockStart.none()
         }
       }
-    }
   }
 }

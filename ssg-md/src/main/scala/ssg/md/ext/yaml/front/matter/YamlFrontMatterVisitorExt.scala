@@ -18,10 +18,9 @@ import scala.language.implicitConversions
 
 object YamlFrontMatterVisitorExt {
 
-  def VISIT_HANDLERS[V <: YamlFrontMatterVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: YamlFrontMatterVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[YamlFrontMatterNode](classOf[YamlFrontMatterNode], visitor.visit(_)),
-      new VisitHandler[YamlFrontMatterBlock](classOf[YamlFrontMatterBlock], visitor.visit(_)),
+      new VisitHandler[YamlFrontMatterBlock](classOf[YamlFrontMatterBlock], visitor.visit(_))
     )
-  }
 }

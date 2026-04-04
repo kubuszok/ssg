@@ -18,23 +18,21 @@ import ssg.md.ext.tables.TablesExtension
 import ssg.md.parser.Parser
 import ssg.md.test.util.RendererSpecTestSuite
 import ssg.md.test.util.spec.ResourceLocation
-import ssg.md.util.data.{DataHolder, MutableDataSet}
+import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import java.util.{Arrays, HashMap}
+import java.util.{ Arrays, HashMap }
 import scala.language.implicitConversions
 
 final class ComboAdmonitionSpecTest extends RendererSpecTestSuite {
-  override def specResource: ResourceLocation = ComboAdmonitionSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboAdmonitionSpecTest.OPTIONS)
-  override def optionsMap: java.util.Map[String, ? <: DataHolder] = ComboAdmonitionSpecTest.OPTIONS_MAP
+  override def specResource:   ResourceLocation                       = ComboAdmonitionSpecTest.RESOURCE_LOCATION
+  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAdmonitionSpecTest.OPTIONS)
+  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAdmonitionSpecTest.OPTIONS_MAP
 }
 
 object ComboAdmonitionSpecTest {
-  val SPEC_RESOURCE: String = "/ssg/md/ext/admonition/test/ext_admonition_ast_spec.md"
+  val SPEC_RESOURCE:     String           = "/ssg/md/ext/admonition/test/ext_admonition_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAdmonitionSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Arrays.asList(AdmonitionExtension.create(), TablesExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(AdmonitionExtension.create(), TablesExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

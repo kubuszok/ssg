@@ -18,25 +18,24 @@ import ssg.md.ast.Paragraph
 import ssg.md.html.*
 import ssg.md.html.renderer.*
 import ssg.md.parser.Parser
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{Document, Node, NodeTracker}
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ Document, Node, NodeTracker }
 import ssg.md.util.data.DataHolder
 
-import java.util.{ArrayList, HashMap, List as JList, Map as JMap}
+import java.util.{ ArrayList, HashMap, List as JList, Map as JMap }
 
 import scala.language.implicitConversions
 import ssg.md.util.dependency.FirstDependent
 
-
 class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor {
 
-  val includedDocuments: HashMap[JekyllTag, String] = new HashMap[JekyllTag, String]()
-  val resolvedLinks: HashMap[String, ResolvedLink] = new HashMap[String, ResolvedLink]()
-  val parser: Parser = Parser.builder(document).build()
+  val includedDocuments: HashMap[JekyllTag, String]    = new HashMap[JekyllTag, String]()
+  val resolvedLinks:     HashMap[String, ResolvedLink] = new HashMap[String, ResolvedLink]()
+  val parser:            Parser                        = Parser.builder(document).build()
 
   val context: LinkResolverBasicContext = new LinkResolverBasicContext {
-    override def getOptions: DataHolder = document
-    override def getDocument: Document = IncludeNodePostProcessor.this.document
+    override def getOptions:  DataHolder = document
+    override def getDocument: Document   = IncludeNodePostProcessor.this.document
   }
 
   // TODO: DependencyResolver.resolveFlatDependencies expects scala.List not java.util.List
@@ -60,17 +59,17 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
     resolvers
   }
 
-  private val embedIncludedContent: Boolean = JekyllTagExtension.EMBED_INCLUDED_CONTENT.get(document)
-  private val includedHtml: Nullable[JMap[String, String]] = Nullable(JekyllTagExtension.INCLUDED_HTML.get(document))
+  private val embedIncludedContent: Boolean                        = JekyllTagExtension.EMBED_INCLUDED_CONTENT.get(document)
+  private val includedHtml:         Nullable[JMap[String, String]] = Nullable(JekyllTagExtension.INCLUDED_HTML.get(document))
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     if (node.isInstanceOf[JekyllTag] && !includedDocuments.containsKey(node)) {
       val jekyllTag = node.asInstanceOf[JekyllTag]
       if (embedIncludedContent && jekyllTag.tag.equals("include")) {
         // see if can find file
         val parameters = jekyllTag.parameters
-        val rawUrl = parameters.unescape()
+        val rawUrl     = parameters.unescape()
         var fileContent: Nullable[String] = Nullable.empty
 
         if (includedHtml.exists(_.containsKey(rawUrl))) {
@@ -93,7 +92,7 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
 
           if (resolvedLink.status == LinkStatus.VALID) {
             var resolvedContent = new ResolvedContent(resolvedLink, LinkStatus.UNKNOWN, Nullable.empty)
-            val iter = contentResolvers.iterator()
+            val iter            = contentResolvers.iterator()
             while (iter.hasNext) {
               val contentResolver = iter.next()
               resolvedContent = contentResolver.resolveContent(node, context, resolvedContent)
@@ -142,7 +141,6 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
         }
       }
     }
-  }
 }
 
 object IncludeNodePostProcessor {
@@ -150,10 +148,9 @@ object IncludeNodePostProcessor {
   class Factory extends NodePostProcessorFactory(false) {
     addNodes(classOf[JekyllTag])
 
-    override def beforeDependents: Nullable[Set[Class[?]]] = {
+    override def beforeDependents: Nullable[Set[Class[?]]] =
       // NOTE: add this as the first node post processor
       Nullable(Set[Class[?]](classOf[FirstDependent]))
-    }
 
     override def apply(document: Document): NodePostProcessor = new IncludeNodePostProcessor(document)
   }

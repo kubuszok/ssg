@@ -11,22 +11,21 @@ package md
 package ext
 package admonition
 
-import ssg.md.ast.{Paragraph, ParagraphContainer}
-import ssg.md.util.ast.{Block, Node}
+import ssg.md.ast.{ Paragraph, ParagraphContainer }
+import ssg.md.util.ast.{ Block, Node }
 import ssg.md.util.sequence.BasedSequence
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.language.implicitConversions
 
-/**
- * An Admonition block node
- */
+/** An Admonition block node
+  */
 class AdmonitionBlock() extends Block, ParagraphContainer {
 
-  var openingMarker: BasedSequence = BasedSequence.NULL
-  var info: BasedSequence = BasedSequence.NULL
+  var openingMarker:      BasedSequence = BasedSequence.NULL
+  var info:               BasedSequence = BasedSequence.NULL
   var titleOpeningMarker: BasedSequence = BasedSequence.NULL
-  var title: BasedSequence = BasedSequence.NULL
+  var title:              BasedSequence = BasedSequence.NULL
   var titleClosingMarker: BasedSequence = BasedSequence.NULL
 
   def this(chars: BasedSequence) = {
@@ -42,13 +41,11 @@ class AdmonitionBlock() extends Block, ParagraphContainer {
     this.info = info
   }
 
-  override def segments: Array[BasedSequence] = {
+  override def segments: Array[BasedSequence] =
     Array(openingMarker, info, titleOpeningMarker, title, titleClosingMarker)
-  }
 
-  override def segmentsForChars: Array[BasedSequence] = {
+  override def segmentsForChars: Array[BasedSequence] =
     Array(openingMarker, info, titleOpeningMarker, title, titleClosingMarker)
-  }
 
   override def astExtra(out: StringBuilder): Unit = {
     Node.segmentSpanChars(out, openingMarker, "open")
@@ -58,7 +55,7 @@ class AdmonitionBlock() extends Block, ParagraphContainer {
 
   def titleChars: BasedSequence = Node.spanningChars(titleOpeningMarker, title, titleClosingMarker)
 
-  def titleChars_=(titleChars: BasedSequence): Unit = {
+  def titleChars_=(titleChars: BasedSequence): Unit =
     if (titleChars != null && (titleChars ne BasedSequence.NULL)) { // @nowarn - Java interop: defensive null check
       val titleCharsLength = titleChars.length()
       titleOpeningMarker = titleChars.subSequence(0, 1)
@@ -69,18 +66,16 @@ class AdmonitionBlock() extends Block, ParagraphContainer {
       title = BasedSequence.NULL
       titleClosingMarker = BasedSequence.NULL
     }
-  }
 
   override def isParagraphEndWrappingDisabled(node: Paragraph): Boolean = false
 
-  override def isParagraphStartWrappingDisabled(node: Paragraph): Boolean = {
+  override def isParagraphStartWrappingDisabled(node: Paragraph): Boolean =
     if (firstChild.contains(node)) {
       // need to see if there is a blank line between it and our start
-      val ourEOL = chars.getBaseSequence.endOfLine(chars.startOffset)
+      val ourEOL        = chars.getBaseSequence.endOfLine(chars.startOffset)
       val childStartEOL = node.startOfLine
       ourEOL + 1 == childStartEOL
     } else {
       false
     }
-  }
 }

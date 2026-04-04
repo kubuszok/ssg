@@ -11,14 +11,13 @@ package md
 package test
 package util
 
-import ssg.md.test.util.spec.{ResourceLocation, SpecReader}
+import ssg.md.test.util.spec.{ ResourceLocation, SpecReader }
 
 // JUnit 4: abstract test case with @Test annotation — will need adaptation to munit later
 abstract class FullSpecTestCase extends RenderingTestCase with SpecExampleProcessor {
 
-  def create(location: ResourceLocation): DumpSpecReader = {
+  def create(location: ResourceLocation): DumpSpecReader =
     SpecReader.create(location, (stream, fileUrl) => new DumpSpecReader(stream, this, fileUrl, compoundSections()))
-  }
 
   protected def compoundSections(): Boolean = false
 
@@ -39,7 +38,7 @@ abstract class FullSpecTestCase extends RenderingTestCase with SpecExampleProces
       reader.readExamples()
       fullTestSpecComplete()
 
-      val actual = reader.fullSpec
+      val actual   = reader.fullSpec
       val expected = reader.expectedFullSpec
 
       if (reader.fileUrl.nonEmpty) {

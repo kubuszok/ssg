@@ -13,34 +13,34 @@ package gitlab
 package internal
 
 import ssg.md.html.HtmlRenderer
-import ssg.md.util.data.{DataHolder, MutableDataHolder, MutableDataSetter}
+import ssg.md.util.data.{ DataHolder, MutableDataHolder, MutableDataSetter }
 import ssg.md.util.misc.CharPredicate
 
 import scala.language.implicitConversions
 
 class GitLabOptions(options: DataHolder) extends MutableDataSetter {
 
-  val insParser: Boolean = GitLabExtension.INS_PARSER.get(options)
-  val delParser: Boolean = GitLabExtension.DEL_PARSER.get(options)
-  val inlineMathParser: Boolean = GitLabExtension.INLINE_MATH_PARSER.get(options)
-  val blockQuoteParser: Boolean = GitLabExtension.BLOCK_QUOTE_PARSER.get(options)
-  val nestedBlockQuotes: Boolean = GitLabExtension.NESTED_BLOCK_QUOTES.get(options)
-  val inlineMathClass: String = GitLabExtension.INLINE_MATH_CLASS.get(options)
-  val renderBlockMath: Boolean = GitLabExtension.RENDER_BLOCK_MATH.get(options)
-  val renderBlockMermaid: Boolean = GitLabExtension.RENDER_BLOCK_MERMAID.get(options)
-  val renderVideoImages: Boolean = GitLabExtension.RENDER_VIDEO_IMAGES.get(options)
-  val renderVideoLink: Boolean = GitLabExtension.RENDER_VIDEO_LINK.get(options)
-  val blockMathClass: String = GitLabExtension.BLOCK_MATH_CLASS.get(options)
-  val blockMermaidClass: String = GitLabExtension.BLOCK_MERMAID_CLASS.get(options)
-  val blockInfoDelimiters: String = HtmlRenderer.FENCED_CODE_LANGUAGE_DELIMITERS.get(options)
-  val blockInfoDelimiterSet: CharPredicate = CharPredicate.anyOf(blockInfoDelimiters)
-  val mathLanguages: Array[String] = GitLabExtension.MATH_LANGUAGES.get(options)
-  val mermaidLanguages: Array[String] = GitLabExtension.MERMAID_LANGUAGES.get(options)
-  val videoImageClass: String = GitLabExtension.VIDEO_IMAGE_CLASS.get(options)
-  val videoImageLinkTextFormat: String = GitLabExtension.VIDEO_IMAGE_LINK_TEXT_FORMAT.get(options)
-  val videoImageExtensions: String = GitLabExtension.VIDEO_IMAGE_EXTENSIONS.get(options)
-  val videoImageExtensionSet: java.util.HashSet[String] = {
-    val set = new java.util.HashSet[String]()
+  val insParser:                Boolean                   = GitLabExtension.INS_PARSER.get(options)
+  val delParser:                Boolean                   = GitLabExtension.DEL_PARSER.get(options)
+  val inlineMathParser:         Boolean                   = GitLabExtension.INLINE_MATH_PARSER.get(options)
+  val blockQuoteParser:         Boolean                   = GitLabExtension.BLOCK_QUOTE_PARSER.get(options)
+  val nestedBlockQuotes:        Boolean                   = GitLabExtension.NESTED_BLOCK_QUOTES.get(options)
+  val inlineMathClass:          String                    = GitLabExtension.INLINE_MATH_CLASS.get(options)
+  val renderBlockMath:          Boolean                   = GitLabExtension.RENDER_BLOCK_MATH.get(options)
+  val renderBlockMermaid:       Boolean                   = GitLabExtension.RENDER_BLOCK_MERMAID.get(options)
+  val renderVideoImages:        Boolean                   = GitLabExtension.RENDER_VIDEO_IMAGES.get(options)
+  val renderVideoLink:          Boolean                   = GitLabExtension.RENDER_VIDEO_LINK.get(options)
+  val blockMathClass:           String                    = GitLabExtension.BLOCK_MATH_CLASS.get(options)
+  val blockMermaidClass:        String                    = GitLabExtension.BLOCK_MERMAID_CLASS.get(options)
+  val blockInfoDelimiters:      String                    = HtmlRenderer.FENCED_CODE_LANGUAGE_DELIMITERS.get(options)
+  val blockInfoDelimiterSet:    CharPredicate             = CharPredicate.anyOf(blockInfoDelimiters)
+  val mathLanguages:            Array[String]             = GitLabExtension.MATH_LANGUAGES.get(options)
+  val mermaidLanguages:         Array[String]             = GitLabExtension.MERMAID_LANGUAGES.get(options)
+  val videoImageClass:          String                    = GitLabExtension.VIDEO_IMAGE_CLASS.get(options)
+  val videoImageLinkTextFormat: String                    = GitLabExtension.VIDEO_IMAGE_LINK_TEXT_FORMAT.get(options)
+  val videoImageExtensions:     String                    = GitLabExtension.VIDEO_IMAGE_EXTENSIONS.get(options)
+  val videoImageExtensionSet:   java.util.HashSet[String] = {
+    val set        = new java.util.HashSet[String]()
     val extensions = videoImageExtensions.split(",")
     for (ext <- extensions) {
       val trimmed = ext.trim

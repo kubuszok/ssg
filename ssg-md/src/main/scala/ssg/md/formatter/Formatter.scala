@@ -11,7 +11,7 @@ package md
 package formatter
 
 import ssg.md.formatter.internal.{ CoreNodeFormatter, FormatControlProcessor, MergeContextImpl, MergeLinkResolver, TranslationHandlerImpl }
-import ssg.md.html.renderer.{ HeaderIdGenerator, HeaderIdGeneratorFactory, HtmlIdGenerator, HtmlIdGeneratorFactory, LinkType, ResolvedLink, LinkStatus }
+import ssg.md.html.renderer.{ HeaderIdGenerator, HeaderIdGeneratorFactory, HtmlIdGenerator, HtmlIdGeneratorFactory, LinkStatus, LinkType, ResolvedLink }
 import ssg.md.html.{ LinkResolver, LinkResolverFactory }
 import ssg.md.parser.{ Parser, ParserEmulationProfile }
 import ssg.md.util.ast.*
@@ -81,7 +81,13 @@ class Formatter private (builder: Formatter.Builder) extends IRender {
       sequence = output.asInstanceOf[SequenceBuilder].toSequence(renderer.trackedSequence)
     }
 
-    TrackedOffsetUtils.resolveTrackedOffsets(sequence, markdown, renderer.trackedOffsets.getUnresolvedOffsets, maxTrailingBlankLines, SharedDataKeys.RUNNING_TESTS.get(options))
+    TrackedOffsetUtils.resolveTrackedOffsets(
+      sequence,
+      markdown,
+      renderer.trackedOffsets.getUnresolvedOffsets,
+      maxTrailingBlankLines,
+      SharedDataKeys.RUNNING_TESTS.get(options)
+    )
   }
 
   override def render(document: Node): String = {
@@ -101,7 +107,13 @@ class Formatter private (builder: Formatter.Builder) extends IRender {
 
   def translationRender(document: Node, output: Appendable, maxTrailingBlankLines: Int, translationHandler: TranslationHandler, renderPurpose: RenderPurpose): Unit = {
     translationHandler.setRenderPurpose(renderPurpose)
-    val renderer = new Formatter.MainNodeFormatter(this, options.get, new MarkdownWriter(Formatter.FORMAT_FLAGS.get(options) & ~LineAppendable.F_TRIM_LEADING_WHITESPACE), document.document, Nullable(translationHandler))
+    val renderer = new Formatter.MainNodeFormatter(
+      this,
+      options.get,
+      new MarkdownWriter(Formatter.FORMAT_FLAGS.get(options) & ~LineAppendable.F_TRIM_LEADING_WHITESPACE),
+      document.document,
+      Nullable(translationHandler)
+    )
     renderer.render(document)
     renderer.flushTo(output, Formatter.MAX_BLANK_LINES.get(options), maxTrailingBlankLines)
   }
@@ -128,16 +140,15 @@ class Formatter private (builder: Formatter.Builder) extends IRender {
     val mergeOptions = new MutableDataSet(options.get)
     mergeOptions.set(Parser.HTML_FOR_TRANSLATOR, true)
 
-    val translationHandlers = new Array[TranslationHandler](documents.length)
+    val translationHandlers      = new Array[TranslationHandler](documents.length)
     val translationHandlersTexts = new Array[java.util.List[String]](documents.length)
 
     val iMax = documents.length
-    for (i <- 0 until iMax) {
+    for (i <- 0 until iMax)
       translationHandlers(i) = getTranslationHandler(idGeneratorFactory)
-    }
 
-    val mergeContext = new MergeContextImpl(documents, translationHandlers)
-    val formatFlags = Formatter.FORMAT_FLAGS.get(options)
+    val mergeContext  = new MergeContextImpl(documents, translationHandlers)
+    val formatFlags   = Formatter.FORMAT_FLAGS.get(options)
     val maxBlankLines = Formatter.MAX_BLANK_LINES.get(options)
 
     mergeContext.forEachPrecedingDocument(
@@ -185,7 +196,7 @@ class Formatter private (builder: Formatter.Builder) extends IRender {
           handler.setRenderPurpose(RenderPurpose.TRANSLATED)
 
           val markdownWriter = new MarkdownWriter(formatFlags)
-          val renderer = new Formatter.MainNodeFormatter(Formatter.this, mergeOptions, markdownWriter, document, Nullable(handler))
+          val renderer       = new Formatter.MainNodeFormatter(Formatter.this, mergeOptions, markdownWriter, document, Nullable(handler))
           renderer.render(document)
           markdownWriter.blankLine()
           renderer.flushTo(output, maxBlankLines, maxTrailingBlankLines)
@@ -221,53 +232,59 @@ object Formatter {
   val ESCAPE_NUMBERED_LEAD_IN:        DataKey[Boolean] = SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN
   val UNESCAPE_SPECIAL_CHARS:         DataKey[Boolean] = SharedDataKeys.UNESCAPE_SPECIAL_CHARS
 
-  val SPACE_AFTER_ATX_MARKER:          DataKey[DiscretionaryText]      = new DataKey[DiscretionaryText]("SPACE_AFTER_ATX_MARKER", DiscretionaryText.ADD)
-  val SETEXT_HEADING_EQUALIZE_MARKER:  DataKey[Boolean]                = new DataKey[Boolean]("SETEXT_HEADING_EQUALIZE_MARKER", true)
-  val ATX_HEADING_TRAILING_MARKER:     DataKey[EqualizeTrailingMarker] = new DataKey[EqualizeTrailingMarker]("ATX_HEADING_TRAILING_MARKER", EqualizeTrailingMarker.AS_IS)
-  val HEADING_STYLE:                   DataKey[HeadingStyle]           = new DataKey[HeadingStyle]("HEADING_STYLE", HeadingStyle.AS_IS)
-  val THEMATIC_BREAK:                  NullableDataKey[String]         = new NullableDataKey[String]("THEMATIC_BREAK")
-  val BLOCK_QUOTE_BLANK_LINES:         DataKey[Boolean]                = SharedDataKeys.BLOCK_QUOTE_BLANK_LINES
-  val BLOCK_QUOTE_MARKERS:             DataKey[BlockQuoteMarker]       = new DataKey[BlockQuoteMarker]("BLOCK_QUOTE_MARKERS", BlockQuoteMarker.ADD_COMPACT_WITH_SPACE)
-  val INDENTED_CODE_MINIMIZE_INDENT:   DataKey[Boolean]                = new DataKey[Boolean]("INDENTED_CODE_MINIMIZE_INDENT", true)
-  val FENCED_CODE_MINIMIZE_INDENT:     DataKey[Boolean]                = new DataKey[Boolean]("FENCED_CODE_MINIMIZE_INDENT", true)
-  val FENCED_CODE_MATCH_CLOSING_MARKER: DataKey[Boolean]               = new DataKey[Boolean]("FENCED_CODE_MATCH_CLOSING_MARKER", true)
-  val FENCED_CODE_SPACE_BEFORE_INFO:   DataKey[Boolean]                = new DataKey[Boolean]("FENCED_CODE_SPACE_BEFORE_INFO", false)
-  val FENCED_CODE_MARKER_LENGTH:       DataKey[Int]                    = new DataKey[Int]("FENCED_CODE_MARKER_LENGTH", 3)
-  val FENCED_CODE_MARKER_TYPE:         DataKey[CodeFenceMarker]        = new DataKey[CodeFenceMarker]("FENCED_CODE_MARKER_TYPE", CodeFenceMarker.ANY)
-  val LIST_ADD_BLANK_LINE_BEFORE:      DataKey[Boolean]                = new DataKey[Boolean]("LIST_ADD_BLANK_LINE_BEFORE", false)
-  val LIST_RENUMBER_ITEMS:             DataKey[Boolean]                = new DataKey[Boolean]("LIST_RENUMBER_ITEMS", true)
-  val LIST_REMOVE_EMPTY_ITEMS:         DataKey[Boolean]                = new DataKey[Boolean]("LIST_REMOVE_EMPTY_ITEMS", false)
-  val LIST_ALIGN_NUMERIC:              DataKey[ElementAlignment]       = new DataKey[ElementAlignment]("LIST_ALIGN_NUMERIC", ElementAlignment.NONE)
-  val LIST_RESET_FIRST_ITEM_NUMBER:    DataKey[Boolean]                = new DataKey[Boolean]("LIST_RESET_FIRST_ITEM_NUMBER", false)
-  val LIST_BULLET_MARKER:              DataKey[ListBulletMarker]       = new DataKey[ListBulletMarker]("LIST_BULLET_MARKER", ListBulletMarker.ANY)
-  val LIST_NUMBERED_MARKER:            DataKey[ListNumberedMarker]     = new DataKey[ListNumberedMarker]("LIST_NUMBERED_MARKER", ListNumberedMarker.ANY)
-  val LIST_SPACING:                    DataKey[ListSpacing]            = new DataKey[ListSpacing]("LIST_SPACING", ListSpacing.AS_IS)
-  val LISTS_ITEM_CONTENT_AFTER_SUFFIX: DataKey[Boolean]                = new DataKey[Boolean]("LISTS_ITEM_CONTENT_AFTER_SUFFIX", false)
-  val REFERENCE_PLACEMENT:             DataKey[ElementPlacement]       = new DataKey[ElementPlacement]("REFERENCE_PLACEMENT", ElementPlacement.AS_IS)
-  val REFERENCE_SORT:                  DataKey[ElementPlacementSort]   = new DataKey[ElementPlacementSort]("REFERENCE_SORT", ElementPlacementSort.AS_IS)
-  val KEEP_IMAGE_LINKS_AT_START:       DataKey[Boolean]                = new DataKey[Boolean]("KEEP_IMAGE_LINKS_AT_START", false)
-  val KEEP_EXPLICIT_LINKS_AT_START:    DataKey[Boolean]                = new DataKey[Boolean]("KEEP_EXPLICIT_LINKS_AT_START", false)
-  val OPTIMIZED_INLINE_RENDERING:      DataKey[Boolean]                = new DataKey[Boolean]("OPTIMIZED_INLINE_RENDERING", false)
-  val FORMAT_CHAR_WIDTH_PROVIDER:      DataKey[CharWidthProvider]      = TableFormatOptions.FORMAT_CHAR_WIDTH_PROVIDER
-  val KEEP_HARD_LINE_BREAKS:           DataKey[Boolean]                = new DataKey[Boolean]("KEEP_HARD_LINE_BREAKS", true)
-  val KEEP_SOFT_LINE_BREAKS:           DataKey[Boolean]                = new DataKey[Boolean]("KEEP_SOFT_LINE_BREAKS", true)
-  val FORMATTER_ON_TAG:                DataKey[String]                 = new DataKey[String]("FORMATTER_ON_TAG", "@formatter:on")
-  val FORMATTER_OFF_TAG:               DataKey[String]                 = new DataKey[String]("FORMATTER_OFF_TAG", "@formatter:off")
-  val FORMATTER_TAGS_ENABLED:          DataKey[Boolean]                = new DataKey[Boolean]("FORMATTER_TAGS_ENABLED", false)
-  val FORMATTER_TAGS_ACCEPT_REGEXP:    DataKey[Boolean]                = new DataKey[Boolean]("FORMATTER_TAGS_ACCEPT_REGEXP", false)
-  val LINK_MARKER_COMMENT_PATTERN:     NullableDataKey[java.util.regex.Pattern] = new NullableDataKey[java.util.regex.Pattern]("FORMATTER_TAGS_ACCEPT_REGEXP")
+  val SPACE_AFTER_ATX_MARKER:           DataKey[DiscretionaryText]               = new DataKey[DiscretionaryText]("SPACE_AFTER_ATX_MARKER", DiscretionaryText.ADD)
+  val SETEXT_HEADING_EQUALIZE_MARKER:   DataKey[Boolean]                         = new DataKey[Boolean]("SETEXT_HEADING_EQUALIZE_MARKER", true)
+  val ATX_HEADING_TRAILING_MARKER:      DataKey[EqualizeTrailingMarker]          = new DataKey[EqualizeTrailingMarker]("ATX_HEADING_TRAILING_MARKER", EqualizeTrailingMarker.AS_IS)
+  val HEADING_STYLE:                    DataKey[HeadingStyle]                    = new DataKey[HeadingStyle]("HEADING_STYLE", HeadingStyle.AS_IS)
+  val THEMATIC_BREAK:                   NullableDataKey[String]                  = new NullableDataKey[String]("THEMATIC_BREAK")
+  val BLOCK_QUOTE_BLANK_LINES:          DataKey[Boolean]                         = SharedDataKeys.BLOCK_QUOTE_BLANK_LINES
+  val BLOCK_QUOTE_MARKERS:              DataKey[BlockQuoteMarker]                = new DataKey[BlockQuoteMarker]("BLOCK_QUOTE_MARKERS", BlockQuoteMarker.ADD_COMPACT_WITH_SPACE)
+  val INDENTED_CODE_MINIMIZE_INDENT:    DataKey[Boolean]                         = new DataKey[Boolean]("INDENTED_CODE_MINIMIZE_INDENT", true)
+  val FENCED_CODE_MINIMIZE_INDENT:      DataKey[Boolean]                         = new DataKey[Boolean]("FENCED_CODE_MINIMIZE_INDENT", true)
+  val FENCED_CODE_MATCH_CLOSING_MARKER: DataKey[Boolean]                         = new DataKey[Boolean]("FENCED_CODE_MATCH_CLOSING_MARKER", true)
+  val FENCED_CODE_SPACE_BEFORE_INFO:    DataKey[Boolean]                         = new DataKey[Boolean]("FENCED_CODE_SPACE_BEFORE_INFO", false)
+  val FENCED_CODE_MARKER_LENGTH:        DataKey[Int]                             = new DataKey[Int]("FENCED_CODE_MARKER_LENGTH", 3)
+  val FENCED_CODE_MARKER_TYPE:          DataKey[CodeFenceMarker]                 = new DataKey[CodeFenceMarker]("FENCED_CODE_MARKER_TYPE", CodeFenceMarker.ANY)
+  val LIST_ADD_BLANK_LINE_BEFORE:       DataKey[Boolean]                         = new DataKey[Boolean]("LIST_ADD_BLANK_LINE_BEFORE", false)
+  val LIST_RENUMBER_ITEMS:              DataKey[Boolean]                         = new DataKey[Boolean]("LIST_RENUMBER_ITEMS", true)
+  val LIST_REMOVE_EMPTY_ITEMS:          DataKey[Boolean]                         = new DataKey[Boolean]("LIST_REMOVE_EMPTY_ITEMS", false)
+  val LIST_ALIGN_NUMERIC:               DataKey[ElementAlignment]                = new DataKey[ElementAlignment]("LIST_ALIGN_NUMERIC", ElementAlignment.NONE)
+  val LIST_RESET_FIRST_ITEM_NUMBER:     DataKey[Boolean]                         = new DataKey[Boolean]("LIST_RESET_FIRST_ITEM_NUMBER", false)
+  val LIST_BULLET_MARKER:               DataKey[ListBulletMarker]                = new DataKey[ListBulletMarker]("LIST_BULLET_MARKER", ListBulletMarker.ANY)
+  val LIST_NUMBERED_MARKER:             DataKey[ListNumberedMarker]              = new DataKey[ListNumberedMarker]("LIST_NUMBERED_MARKER", ListNumberedMarker.ANY)
+  val LIST_SPACING:                     DataKey[ListSpacing]                     = new DataKey[ListSpacing]("LIST_SPACING", ListSpacing.AS_IS)
+  val LISTS_ITEM_CONTENT_AFTER_SUFFIX:  DataKey[Boolean]                         = new DataKey[Boolean]("LISTS_ITEM_CONTENT_AFTER_SUFFIX", false)
+  val REFERENCE_PLACEMENT:              DataKey[ElementPlacement]                = new DataKey[ElementPlacement]("REFERENCE_PLACEMENT", ElementPlacement.AS_IS)
+  val REFERENCE_SORT:                   DataKey[ElementPlacementSort]            = new DataKey[ElementPlacementSort]("REFERENCE_SORT", ElementPlacementSort.AS_IS)
+  val KEEP_IMAGE_LINKS_AT_START:        DataKey[Boolean]                         = new DataKey[Boolean]("KEEP_IMAGE_LINKS_AT_START", false)
+  val KEEP_EXPLICIT_LINKS_AT_START:     DataKey[Boolean]                         = new DataKey[Boolean]("KEEP_EXPLICIT_LINKS_AT_START", false)
+  val OPTIMIZED_INLINE_RENDERING:       DataKey[Boolean]                         = new DataKey[Boolean]("OPTIMIZED_INLINE_RENDERING", false)
+  val FORMAT_CHAR_WIDTH_PROVIDER:       DataKey[CharWidthProvider]               = TableFormatOptions.FORMAT_CHAR_WIDTH_PROVIDER
+  val KEEP_HARD_LINE_BREAKS:            DataKey[Boolean]                         = new DataKey[Boolean]("KEEP_HARD_LINE_BREAKS", true)
+  val KEEP_SOFT_LINE_BREAKS:            DataKey[Boolean]                         = new DataKey[Boolean]("KEEP_SOFT_LINE_BREAKS", true)
+  val FORMATTER_ON_TAG:                 DataKey[String]                          = new DataKey[String]("FORMATTER_ON_TAG", "@formatter:on")
+  val FORMATTER_OFF_TAG:                DataKey[String]                          = new DataKey[String]("FORMATTER_OFF_TAG", "@formatter:off")
+  val FORMATTER_TAGS_ENABLED:           DataKey[Boolean]                         = new DataKey[Boolean]("FORMATTER_TAGS_ENABLED", false)
+  val FORMATTER_TAGS_ACCEPT_REGEXP:     DataKey[Boolean]                         = new DataKey[Boolean]("FORMATTER_TAGS_ACCEPT_REGEXP", false)
+  val LINK_MARKER_COMMENT_PATTERN:      NullableDataKey[java.util.regex.Pattern] = new NullableDataKey[java.util.regex.Pattern]("FORMATTER_TAGS_ACCEPT_REGEXP")
 
   val APPEND_TRANSFERRED_REFERENCES: DataKey[Boolean] = new DataKey[Boolean]("APPEND_TRANSFERRED_REFERENCES", false)
 
   // used during translation
-  val UNIQUIFICATION_MAP:              DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]]("REFERENCES_UNIQUIFICATION_MAP", new NotNullValueSupplier[java.util.Map[String, String]] { def get: java.util.Map[String, String] = new java.util.HashMap[String, String]() })
-  val ATTRIBUTE_UNIQUIFICATION_ID_MAP: DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]]("ATTRIBUTE_UNIQUIFICATION_ID_MAP", new NotNullValueSupplier[java.util.Map[String, String]] { def get: java.util.Map[String, String] = new java.util.HashMap[String, String]() })
+  val UNIQUIFICATION_MAP: DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]](
+    "REFERENCES_UNIQUIFICATION_MAP",
+    new NotNullValueSupplier[java.util.Map[String, String]] { def get: java.util.Map[String, String] = new java.util.HashMap[String, String]() }
+  )
+  val ATTRIBUTE_UNIQUIFICATION_ID_MAP: DataKey[java.util.Map[String, String]] = new DataKey[java.util.Map[String, String]](
+    "ATTRIBUTE_UNIQUIFICATION_ID_MAP",
+    new NotNullValueSupplier[java.util.Map[String, String]] { def get: java.util.Map[String, String] = new java.util.HashMap[String, String]() }
+  )
 
   // used for translation phases of rendering
-  val TRANSLATION_ID_FORMAT:               DataKey[String] = new DataKey[String]("TRANSLATION_ID_FORMAT", "_%d_")
-  val TRANSLATION_HTML_BLOCK_PREFIX:       DataKey[String] = new DataKey[String]("TRANSLATION_HTML_BLOCK_PREFIX", "__")
-  val TRANSLATION_HTML_INLINE_PREFIX:      DataKey[String] = new DataKey[String]("TRANSLATION_HTML_INLINE_PREFIX", "_")
-  val TRANSLATION_AUTOLINK_PREFIX:         DataKey[String] = new DataKey[String]("TRANSLATION_AUTOLINK_PREFIX", "___")
+  val TRANSLATION_ID_FORMAT:          DataKey[String] = new DataKey[String]("TRANSLATION_ID_FORMAT", "_%d_")
+  val TRANSLATION_HTML_BLOCK_PREFIX:  DataKey[String] = new DataKey[String]("TRANSLATION_HTML_BLOCK_PREFIX", "__")
+  val TRANSLATION_HTML_INLINE_PREFIX: DataKey[String] = new DataKey[String]("TRANSLATION_HTML_INLINE_PREFIX", "_")
+  val TRANSLATION_AUTOLINK_PREFIX:    DataKey[String] = new DataKey[String]("TRANSLATION_AUTOLINK_PREFIX", "___")
   // Cross-platform: original Java regex used \p{IsAlphabetic} Unicode property which
   // is unavailable on Scala.js and Scala Native. Replaced with [a-zA-Z] for ASCII
   // alphabetic check, which is sufficient for the translation exclusion feature.
@@ -313,9 +330,8 @@ object Formatter {
     */
   class Builder(options: Nullable[DataHolder]) extends ssg.md.util.build.BuilderBase[Builder](options) {
 
-    def this() = {
+    def this() =
       this(Nullable.empty)
-    }
 
     if (options.isDefined) {
       loadExtensions()
@@ -323,32 +339,29 @@ object Formatter {
 
     private[formatter] val nodeFormatterFactories: java.util.List[NodeFormatterFactory] = new java.util.ArrayList[NodeFormatterFactory]()
     private[formatter] val linkResolverFactories:  java.util.List[LinkResolverFactory]  = new java.util.ArrayList[LinkResolverFactory]()
-    private[formatter] var htmlIdGeneratorFactory:  Nullable[HeaderIdGeneratorFactory]   = Nullable.empty
+    private[formatter] var htmlIdGeneratorFactory: Nullable[HeaderIdGeneratorFactory]   = Nullable.empty
 
-    override protected def removeApiPoint(apiPoint: AnyRef): Unit = {
+    override protected def removeApiPoint(apiPoint: AnyRef): Unit =
       apiPoint match {
-        case f: NodeFormatterFactory    => nodeFormatterFactories.remove(f)
-        case f: LinkResolverFactory     => linkResolverFactories.remove(f)
+        case f: NodeFormatterFactory     => nodeFormatterFactories.remove(f)
+        case f: LinkResolverFactory      => linkResolverFactories.remove(f)
         case _: HeaderIdGeneratorFactory => htmlIdGeneratorFactory = Nullable.empty
         case _ => throw new IllegalStateException("Unknown data point type: " + apiPoint.getClass.getName)
       }
-    }
 
-    override protected def preloadExtension(extension: Extension): Unit = {
+    override protected def preloadExtension(extension: Extension): Unit =
       extension match {
         case fe: FormatterExtension => fe.rendererOptions(this)
-        case _                      => ()
+        case _ => ()
       }
-    }
 
-    override protected def loadExtension(extension: Extension): Boolean = {
+    override protected def loadExtension(extension: Extension): Boolean =
       extension match {
         case fe: FormatterExtension =>
           fe.extend(this, "")
           true
         case _ => false
       }
-    }
 
     def nodeFormatterFactory(factory: NodeFormatterFactory): Builder = {
       nodeFormatterFactories.add(factory)
@@ -376,7 +389,7 @@ object Formatter {
   /** Extension for [[Formatter]].
     */
   trait FormatterExtension extends Extension {
-    def rendererOptions(options: MutableDataHolder):                    Unit
+    def rendererOptions(options: MutableDataHolder):             Unit
     def extend(formatterBuilder: Builder, rendererType: String): Unit
   }
 
@@ -390,35 +403,33 @@ object Formatter {
     translationHandler: Nullable[TranslationHandler]
   ) extends NodeFormatterSubContext(out) {
 
-    private val document: Document                                     = doc
-    private val renderers: mutable.HashMap[Class[?], mutable.Buffer[NodeFormattingHandler[?]]] = mutable.HashMap.empty
-    private val collectedNodes: Nullable[SubClassingBag[Node]]        = Nullable.empty
-    private val phasedFormatters: mutable.Buffer[PhasedNodeFormatter]  = mutable.ArrayBuffer.empty
-    private val renderingPhases: mutable.Set[FormattingPhase]          = mutable.HashSet.empty
-    private val myOptions: DataHolder                                  = new ScopedDataSet(document, opts)
-    private val isFormatControlEnabled: Boolean                        = FORMATTER_TAGS_ENABLED.get(Nullable(myOptions))
-    private var phase: FormattingPhase                                 = FormattingPhase.DOCUMENT
-    private val linkResolvers: Array[LinkResolver]                     = {
+    private val document:               Document                                                            = doc
+    private val renderers:              mutable.HashMap[Class[?], mutable.Buffer[NodeFormattingHandler[?]]] = mutable.HashMap.empty
+    private val collectedNodes:         Nullable[SubClassingBag[Node]]                                      = Nullable.empty
+    private val phasedFormatters:       mutable.Buffer[PhasedNodeFormatter]                                 = mutable.ArrayBuffer.empty
+    private val renderingPhases:        mutable.Set[FormattingPhase]                                        = mutable.HashSet.empty
+    private val myOptions:              DataHolder                                                          = new ScopedDataSet(document, opts)
+    private val isFormatControlEnabled: Boolean                                                             = FORMATTER_TAGS_ENABLED.get(Nullable(myOptions))
+    private var phase:                  FormattingPhase                                                     = FormattingPhase.DOCUMENT
+    private val linkResolvers:          Array[LinkResolver]                                                 = {
       val defaultLinkResolver = DEFAULT_LINK_RESOLVER.get(Nullable(myOptions))
-      val arr = new Array[LinkResolver](formatter.linkResolverFactories.size + (if (defaultLinkResolver) 1 else 0))
-      for (i <- formatter.linkResolverFactories.indices) {
+      val arr                 = new Array[LinkResolver](formatter.linkResolverFactories.size + (if (defaultLinkResolver) 1 else 0))
+      for (i <- formatter.linkResolverFactories.indices)
         arr(i) = formatter.linkResolverFactories(i).apply(this)
-      }
       if (defaultLinkResolver) {
         arr(formatter.linkResolverFactories.size) = new MergeLinkResolver.Factory().apply(this)
       }
       arr
     }
-    private val resolvedLinkMap: mutable.HashMap[LinkType, mutable.HashMap[String, ResolvedLink]] = mutable.HashMap.empty
-    private var myExplicitAttributeIdProvider: Nullable[ExplicitAttributeIdProvider] = Nullable.empty
-    private val idGenerator: Nullable[HtmlIdGenerator] = {
+    private val resolvedLinkMap:               mutable.HashMap[LinkType, mutable.HashMap[String, ResolvedLink]] = mutable.HashMap.empty
+    private var myExplicitAttributeIdProvider: Nullable[ExplicitAttributeIdProvider]                            = Nullable.empty
+    private val idGenerator:                   Nullable[HtmlIdGenerator]                                        =
       if (GENERATE_HEADER_ID.get(Nullable(myOptions)))
         Nullable(formatter.idGeneratorFactory.create(this))
       else Nullable.empty
-    }
-    private var controlProcessor: Nullable[FormatControlProcessor] = Nullable.empty
-    private val blockQuoteLikePredicate: CharPredicate = {
-      val sb = new java.lang.StringBuilder()
+    private var controlProcessor:        Nullable[FormatControlProcessor] = Nullable.empty
+    private val blockQuoteLikePredicate: CharPredicate                    = {
+      val sb        = new java.lang.StringBuilder()
       val factories = formatter.nodeFormatterFactories
       for (i <- factories.indices.reverse) {
         val nodeFormatter = factories(i).create(myOptions)
@@ -461,15 +472,16 @@ object Formatter {
     }
     private val blockQuoteLikeChars: BasedSequence = BasedSequence.of(blockQuoteLikePredicate.toString)
 
-    val restoreTrackedSpaces: Boolean = RESTORE_TRACKED_SPACES.get(Nullable(myOptions))
+    val restoreTrackedSpaces:     Boolean       = RESTORE_TRACKED_SPACES.get(Nullable(myOptions))
     private val _trackedSequence: BasedSequence = {
       val seq = TRACKED_SEQUENCE.get(Nullable(myOptions))
       if (seq.isEmpty) document.chars else seq
     }
-    val trackedSequence: BasedSequence = _trackedSequence
-    val trackedOffsets: TrackedOffsetList = {
+    val trackedSequence: BasedSequence     = _trackedSequence
+    val trackedOffsets:  TrackedOffsetList = {
       val offsets = TRACKED_OFFSETS.get(Nullable(myOptions))
-      if (offsets.isEmpty) TrackedOffsetList.EMPTY_LIST else {
+      if (offsets.isEmpty) TrackedOffsetList.EMPTY_LIST
+      else {
         import scala.jdk.CollectionConverters.*
         TrackedOffsetList.create(_trackedSequence, offsets.asJava)
       }
@@ -490,31 +502,32 @@ object Formatter {
 
     private def resolveLinkInContext(context: NodeFormatterSubContext, linkType: LinkType, url: CharSequence, attributes: Nullable[Attributes]): ResolvedLink = {
       val resolvedLinks = resolvedLinkMap.getOrElseUpdate(linkType, mutable.HashMap.empty)
-      val urlSeq = String.valueOf(url)
-      resolvedLinks.getOrElseUpdate(urlSeq, {
-        var resolved = new ResolvedLink(linkType, urlSeq, attributes)
-        if (urlSeq.nonEmpty) {
-          val currentNode = context.renderingNode
-          import scala.util.boundary
-          import scala.util.boundary.break
-          boundary {
-            for (linkResolver <- linkResolvers) {
-              resolved = linkResolver.resolveLink(currentNode.get, this, resolved)
-              if (resolved.status != LinkStatus.UNKNOWN) {
-                break()
+      val urlSeq        = String.valueOf(url)
+      resolvedLinks.getOrElseUpdate(
+        urlSeq, {
+          var resolved = new ResolvedLink(linkType, urlSeq, attributes)
+          if (urlSeq.nonEmpty) {
+            val currentNode = context.renderingNode
+            import scala.util.boundary
+            import scala.util.boundary.break
+            boundary {
+              for (linkResolver <- linkResolvers) {
+                resolved = linkResolver.resolveLink(currentNode.get, this, resolved)
+                if (resolved.status != LinkStatus.UNKNOWN) {
+                  break()
+                }
               }
             }
           }
+          resolved
         }
-        resolved
-      })
+      )
     }
 
-    override def addExplicitId(node: Node, id: Nullable[String], context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+    override def addExplicitId(node: Node, id: Nullable[String], context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
       id.foreach { idStr =>
         myExplicitAttributeIdProvider.foreach(_.addExplicitId(node, Nullable(idStr), context, markdown))
       }
-    }
 
     override def getRenderPurpose: RenderPurpose =
       translationHandler.fold(RenderPurpose.FORMAT)(_.getRenderPurpose)
@@ -610,21 +623,24 @@ object Formatter {
       new SubNodeFormatter(this, writer, options)
     }
 
-    private[formatter] def renderNode(node: Node, subContext: NodeFormatterSubContext): Unit = {
+    private[formatter] def renderNode(node: Node, subContext: NodeFormatterSubContext): Unit =
       if (node.isInstanceOf[Document]) {
         // here we render multiple phases
         translationHandler.foreach { handler =>
           handler.beginRendering(node.asInstanceOf[Document], subContext, subContext.getMarkdown)
         }
 
-        for (p <- FormattingPhase.values) {
+        for (p <- FormattingPhase.values)
           if (p != FormattingPhase.DOCUMENT && !renderingPhases.contains(p)) {
             // skip
           } else {
             this.phase = p
             if (this.phase == FormattingPhase.DOCUMENT) {
               // pre-indent document
-              subContext.getMarkdown.pushPrefix().setPrefix(DOCUMENT_FIRST_PREFIX.get(Nullable(node.asInstanceOf[Document])), false).setPrefix(DOCUMENT_PREFIX.get(Nullable(node.asInstanceOf[Document])), true)
+              subContext.getMarkdown
+                .pushPrefix()
+                .setPrefix(DOCUMENT_FIRST_PREFIX.get(Nullable(node.asInstanceOf[Document])), false)
+                .setPrefix(DOCUMENT_PREFIX.get(Nullable(node.asInstanceOf[Document])), true)
 
               val nodeRendererList = renderers.get(node.getClass)
               nodeRendererList.foreach { nrl =>
@@ -650,7 +666,6 @@ object Formatter {
               }
             }
           }
-        }
       } else {
         if (isFormatControlEnabled) {
           if (controlProcessor.isEmpty) {
@@ -674,7 +689,7 @@ object Formatter {
 
           nodeRendererList match {
             case Some(nrl) =>
-              val oldRendererList = subContext.rendererList
+              val oldRendererList  = subContext.rendererList
               val oldRendererIndex = subContext.rendererIndex
               val oldRenderingNode = subContext.renderingNode
 
@@ -692,7 +707,6 @@ object Formatter {
           }
         }
       }
-    }
 
     override def renderChildren(parent: Node): Unit = renderChildrenNode(parent, this)
 
@@ -707,10 +721,10 @@ object Formatter {
         throw new IllegalStateException("Delegate rendering can only be called from node render handler")
       }
 
-      val node = subContext.renderingNode.get
-      val oldRendererList = subContext.rendererList
-      var currentRendererList = oldRendererList.get
-      val oldRendererIndex = subContext.rendererIndex
+      val node                 = subContext.renderingNode.get
+      val oldRendererList      = subContext.rendererList
+      var currentRendererList  = oldRendererList.get
+      val oldRendererIndex     = subContext.rendererIndex
       var currentRendererIndex = oldRendererIndex + 1
 
       if (currentRendererIndex >= currentRendererList.size) {
@@ -756,58 +770,62 @@ object Formatter {
       mainNodeRenderer: MainNodeFormatter,
       out:              MarkdownWriter,
       subOptions:       Nullable[DataHolder]
-    ) extends NodeFormatterSubContext(out), NodeFormatterContext {
+    ) extends NodeFormatterSubContext(out),
+          NodeFormatterContext {
 
       private val mySubOptions: DataHolder =
         if (subOptions.isEmpty || subOptions.exists(_ eq mainNodeRenderer.getOptions)) mainNodeRenderer.getOptions
         else new ScopedDataSet(mainNodeRenderer.getOptions, subOptions.get)
       private val mySubFormatterOptions: FormatterOptions = new FormatterOptions(mySubOptions)
 
-      override def getTranslationStore: MutableDataHolder = mainNodeRenderer.getTranslationStore
-      override def nodesOfType(classes: Array[Class[?]]): Iterable[? <: Node] = mainNodeRenderer.nodesOfType(classes)
-      override def nodesOfType(classes: Collection[Class[?]]): Iterable[? <: Node] = mainNodeRenderer.nodesOfType(classes)
-      override def reversedNodesOfType(classes: Array[Class[?]]): Iterable[? <: Node] = mainNodeRenderer.reversedNodesOfType(classes)
+      override def getTranslationStore:                                MutableDataHolder   = mainNodeRenderer.getTranslationStore
+      override def nodesOfType(classes:         Array[Class[?]]):      Iterable[? <: Node] = mainNodeRenderer.nodesOfType(classes)
+      override def nodesOfType(classes:         Collection[Class[?]]): Iterable[? <: Node] = mainNodeRenderer.nodesOfType(classes)
+      override def reversedNodesOfType(classes: Array[Class[?]]):      Iterable[? <: Node] = mainNodeRenderer.reversedNodesOfType(classes)
       override def reversedNodesOfType(classes: Collection[Class[?]]): Iterable[? <: Node] = mainNodeRenderer.reversedNodesOfType(classes)
-      override def getOptions: DataHolder = mySubOptions
-      override def getFormatterOptions: FormatterOptions = mySubFormatterOptions
-      override def getDocument: Document = mainNodeRenderer.getDocument
-      override def getBlockQuoteLikePrefixPredicate: CharPredicate = mainNodeRenderer.getBlockQuoteLikePrefixPredicate
-      override def getBlockQuoteLikePrefixChars: BasedSequence = mainNodeRenderer.getBlockQuoteLikePrefixChars
+      override def getOptions:                                         DataHolder          = mySubOptions
+      override def getFormatterOptions:                                FormatterOptions    = mySubFormatterOptions
+      override def getDocument:                                        Document            = mainNodeRenderer.getDocument
+      override def getBlockQuoteLikePrefixPredicate:                   CharPredicate       = mainNodeRenderer.getBlockQuoteLikePrefixPredicate
+      override def getBlockQuoteLikePrefixChars:                       BasedSequence       = mainNodeRenderer.getBlockQuoteLikePrefixChars
 
       /** Sub-context does not have offset tracking */
-      override def getTrackedOffsets: TrackedOffsetList = TrackedOffsetList.EMPTY_LIST
-      override def isRestoreTrackedSpaces: Boolean = false
-      override def getTrackedSequence: BasedSequence = mainNodeRenderer.getTrackedSequence
-      override def getFormattingPhase: FormattingPhase = mainNodeRenderer.getFormattingPhase
-      override def render(node: Node): Unit = mainNodeRenderer.renderNode(node, this)
-      override def getCurrentNode: Node = this.renderingNode.get
-      override def delegateRender(): Unit = mainNodeRenderer.delegateRenderInContext(this)
-      override def getSubContext(): NodeFormatterContext = getSubContext(Nullable.empty, markdown.getBuilder)
-      override def getSubContext(options: Nullable[DataHolder]): NodeFormatterContext = getSubContext(options, markdown.getBuilder)
+      override def getTrackedOffsets:                                                             TrackedOffsetList    = TrackedOffsetList.EMPTY_LIST
+      override def isRestoreTrackedSpaces:                                                        Boolean              = false
+      override def getTrackedSequence:                                                            BasedSequence        = mainNodeRenderer.getTrackedSequence
+      override def getFormattingPhase:                                                            FormattingPhase      = mainNodeRenderer.getFormattingPhase
+      override def render(node:           Node):                                                  Unit                 = mainNodeRenderer.renderNode(node, this)
+      override def getCurrentNode:                                                                Node                 = this.renderingNode.get
+      override def delegateRender():                                                              Unit                 = mainNodeRenderer.delegateRenderInContext(this)
+      override def getSubContext():                                                               NodeFormatterContext = getSubContext(Nullable.empty, markdown.getBuilder)
+      override def getSubContext(options: Nullable[DataHolder]):                                  NodeFormatterContext = getSubContext(options, markdown.getBuilder)
       override def getSubContext(options: Nullable[DataHolder], builder: ISequenceBuilder[?, ?]): NodeFormatterContext = {
         val htmlWriter = new MarkdownWriter(Nullable(builder), this.markdown.getOptions)
         htmlWriter.setContext(this)
         val subOpts = if (options.isEmpty || options.exists(_ eq mySubOptions)) mySubOptions else new ScopedDataSet(mySubOptions, options.get)
         new SubNodeFormatter(mainNodeRenderer, htmlWriter, Nullable(subOpts))
       }
-      override def renderChildren(parent: Node): Unit = mainNodeRenderer.renderChildrenNode(parent, this)
-      override def getMarkdown: MarkdownWriter = markdown
-      override def getRenderPurpose: RenderPurpose = mainNodeRenderer.getRenderPurpose
-      override def isTransformingText: Boolean = mainNodeRenderer.isTransformingText
-      override def transformNonTranslating(prefix: Nullable[CharSequence], nonTranslatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence = mainNodeRenderer.transformNonTranslating(prefix, nonTranslatingText, suffix, suffix2)
-      override def transformTranslating(prefix: Nullable[CharSequence], translatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence = mainNodeRenderer.transformTranslating(prefix, translatingText, suffix, suffix2)
-      override def transformAnchorRef(pageRef: CharSequence, anchorRef: CharSequence): CharSequence = mainNodeRenderer.transformAnchorRef(pageRef, anchorRef)
-      override def translatingSpan(render: TranslatingSpanRender): Unit = mainNodeRenderer.translatingSpan(render)
-      override def nonTranslatingSpan(render: TranslatingSpanRender): Unit = mainNodeRenderer.nonTranslatingSpan(render)
-      override def translatingRefTargetSpan(target: Nullable[Node], render: TranslatingSpanRender): Unit = mainNodeRenderer.translatingRefTargetSpan(target, render)
-      override def customPlaceholderFormat(generator: TranslationPlaceholderGenerator, render: TranslatingSpanRender): Unit = mainNodeRenderer.customPlaceholderFormat(generator, render)
-      override def encodeUrl(url: CharSequence): String = mainNodeRenderer.encodeUrl(url)
+      override def renderChildren(parent: Node): Unit           = mainNodeRenderer.renderChildrenNode(parent, this)
+      override def getMarkdown:                  MarkdownWriter = markdown
+      override def getRenderPurpose:             RenderPurpose  = mainNodeRenderer.getRenderPurpose
+      override def isTransformingText:           Boolean        = mainNodeRenderer.isTransformingText
+      override def transformNonTranslating(prefix: Nullable[CharSequence], nonTranslatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence =
+        mainNodeRenderer.transformNonTranslating(prefix, nonTranslatingText, suffix, suffix2)
+      override def transformTranslating(prefix: Nullable[CharSequence], translatingText: CharSequence, suffix: Nullable[CharSequence], suffix2: Nullable[CharSequence]): CharSequence =
+        mainNodeRenderer.transformTranslating(prefix, translatingText, suffix, suffix2)
+      override def transformAnchorRef(pageRef:        CharSequence, anchorRef:                 CharSequence):          CharSequence = mainNodeRenderer.transformAnchorRef(pageRef, anchorRef)
+      override def translatingSpan(render:            TranslatingSpanRender):                                          Unit         = mainNodeRenderer.translatingSpan(render)
+      override def nonTranslatingSpan(render:         TranslatingSpanRender):                                          Unit         = mainNodeRenderer.nonTranslatingSpan(render)
+      override def translatingRefTargetSpan(target:   Nullable[Node], render:                  TranslatingSpanRender): Unit         = mainNodeRenderer.translatingRefTargetSpan(target, render)
+      override def customPlaceholderFormat(generator: TranslationPlaceholderGenerator, render: TranslatingSpanRender): Unit         = mainNodeRenderer.customPlaceholderFormat(generator, render)
+      override def encodeUrl(url:                     CharSequence):                                                   String       = mainNodeRenderer.encodeUrl(url)
       override def resolveLink(linkType: LinkType, url: CharSequence, urlEncode: Nullable[Boolean]): ResolvedLink = mainNodeRenderer.resolveLinkInContext(this, linkType, url, Nullable.empty)
-      override def resolveLink(linkType: LinkType, url: CharSequence, attributes: Nullable[Attributes], urlEncode: Nullable[Boolean]): ResolvedLink = mainNodeRenderer.resolveLinkInContext(this, linkType, url, attributes)
-      override def postProcessNonTranslating(postProcessor: String => CharSequence, scope: Runnable): Unit = mainNodeRenderer.postProcessNonTranslating(postProcessor, scope)
-      override def postProcessNonTranslating[T](postProcessor: String => CharSequence, scope: () => T): T = mainNodeRenderer.postProcessNonTranslating(postProcessor, scope)
-      override def isPostProcessingNonTranslating: Boolean = mainNodeRenderer.isPostProcessingNonTranslating
-      override def getMergeContext: Nullable[MergeContext] = mainNodeRenderer.getMergeContext
+      override def resolveLink(linkType: LinkType, url: CharSequence, attributes: Nullable[Attributes], urlEncode: Nullable[Boolean]): ResolvedLink =
+        mainNodeRenderer.resolveLinkInContext(this, linkType, url, attributes)
+      override def postProcessNonTranslating(postProcessor:    String => CharSequence, scope: Runnable): Unit                   = mainNodeRenderer.postProcessNonTranslating(postProcessor, scope)
+      override def postProcessNonTranslating[T](postProcessor: String => CharSequence, scope: () => T):  T                      = mainNodeRenderer.postProcessNonTranslating(postProcessor, scope)
+      override def isPostProcessingNonTranslating:                                                       Boolean                = mainNodeRenderer.isPostProcessingNonTranslating
+      override def getMergeContext:                                                                      Nullable[MergeContext] = mainNodeRenderer.getMergeContext
       override def addExplicitId(node: Node, id: Nullable[String], context: NodeFormatterContext, markdown: MarkdownWriter): Unit = mainNodeRenderer.addExplicitId(node, id, context, markdown)
       override def getIdGenerator: Nullable[HtmlIdGenerator] = mainNodeRenderer.getIdGenerator
     }

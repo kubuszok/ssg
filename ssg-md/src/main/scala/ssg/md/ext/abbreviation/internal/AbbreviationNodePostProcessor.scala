@@ -13,19 +13,19 @@ package abbreviation
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{Text, TextBase}
+import ssg.md.ast.{ Text, TextBase }
 import ssg.md.ext.autolink.internal.AutolinkNodePostProcessor
-import ssg.md.parser.block.{NodePostProcessor, NodePostProcessorFactory}
-import ssg.md.util.ast.{DoNotDecorate, DoNotLinkDecorate, Document, Node, NodeTracker}
-import ssg.md.util.sequence.{BasedSequence, Escaping, RegexCompat, ReplacedTextMapper}
+import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
+import ssg.md.util.ast.{ DoNotDecorate, DoNotLinkDecorate, Document, Node, NodeTracker }
+import ssg.md.util.sequence.{ BasedSequence, Escaping, RegexCompat, ReplacedTextMapper }
 
-import java.{util => ju}
+import java.{ util => ju }
 import java.util.regex.Pattern
 import scala.language.implicitConversions
 
 class AbbreviationNodePostProcessor private (document: Document) extends NodePostProcessor {
 
-  private var abbreviations: Nullable[Pattern] = Nullable.empty
+  private var abbreviations:   Nullable[Pattern]                           = Nullable.empty
   private var abbreviationMap: Nullable[ju.HashMap[String, BasedSequence]] = Nullable.empty
 
   computeAbbreviations(document)
@@ -35,7 +35,7 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
 
     if (!abbrRepository.isEmpty) {
       val abbrMap = new ju.HashMap[String, BasedSequence]()
-      val sb = new StringBuilder()
+      val sb      = new StringBuilder()
 
       // sort reverse alphabetical order so longer ones match first. for sdk7
       val abbreviationsList = new ju.ArrayList[String](abbrRepository.keySet())
@@ -76,15 +76,15 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
     }
   }
 
-  override def process(state: NodeTracker, node: Node): Unit = {
+  override def process(state: NodeTracker, node: Node): Unit =
     abbreviations.foreach { abbrPattern =>
       abbreviationMap.foreach { abbrMap =>
-        val original = node.chars
+        val original   = node.chars
         val textMapper = new ReplacedTextMapper(original)
-        val literal = Escaping.unescape(original, textMapper)
+        val literal    = Escaping.unescape(original, textMapper)
 
-        val m = abbrPattern.matcher(literal)
-        var lastEscaped = 0
+        val m              = abbrPattern.matcher(literal)
+        var lastEscaped    = 0
         var wrapInTextBase = !node.parent.exists(_.isInstanceOf[TextBase])
         var textBase: Nullable[TextBase] = if (wrapInTextBase) Nullable.empty else node.parent.map(_.asInstanceOf[TextBase])
 
@@ -92,50 +92,50 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
           // Cross-platform word boundary check: since we can't use \b or lookaheads
           // in the regex (unavailable on Scala Native re2), check boundaries in code.
           // A word boundary exists if the char before/after the match is not a letter/digit.
-          val matchStart = m.start(0)
-          val matchEnd = m.end(0)
-          val matched = m.group(0)
+          val matchStart        = m.start(0)
+          val matchEnd          = m.end(0)
+          val matched           = m.group(0)
           val needStartBoundary = matched.nonEmpty && Character.isLetterOrDigit(matched.charAt(0))
-          val needEndBoundary = matched.nonEmpty && Character.isLetterOrDigit(matched.charAt(matched.length - 1))
-          val startOk = !needStartBoundary || matchStart == 0 || !Character.isLetterOrDigit(literal.charAt(matchStart - 1))
-          val endOk = !needEndBoundary || matchEnd >= literal.length() || !Character.isLetterOrDigit(literal.charAt(matchEnd))
+          val needEndBoundary   = matched.nonEmpty && Character.isLetterOrDigit(matched.charAt(matched.length - 1))
+          val startOk           = !needStartBoundary || matchStart == 0 || !Character.isLetterOrDigit(literal.charAt(matchStart - 1))
+          val endOk             = !needEndBoundary || matchEnd >= literal.length() || !Character.isLetterOrDigit(literal.charAt(matchEnd))
           if (!startOk || !endOk) {
             // Not at a word boundary — skip this match
           } else {
-          val abbreviation = abbrMap.get(m.group(0))
-          if (abbreviation != null) { // @nowarn - Java interop: map get may return null
-            val startOffset = textMapper.originalOffset(m.start(0))
-            val endOffset = textMapper.originalOffset(m.end(0))
+            val abbreviation = abbrMap.get(m.group(0))
+            if (abbreviation != null) { // @nowarn - Java interop: map get may return null
+              val startOffset = textMapper.originalOffset(m.start(0))
+              val endOffset   = textMapper.originalOffset(m.end(0))
 
-            if (wrapInTextBase) {
-              wrapInTextBase = false
-              val tb = new TextBase(original)
-              node.insertBefore(tb)
-              state.nodeAdded(tb)
-              textBase = Nullable(tb)
+              if (wrapInTextBase) {
+                wrapInTextBase = false
+                val tb = new TextBase(original)
+                node.insertBefore(tb)
+                state.nodeAdded(tb)
+                textBase = Nullable(tb)
+              }
+
+              if (startOffset != lastEscaped) {
+                val escapedChars = original.subSequence(lastEscaped, startOffset)
+                val node1        = new Text(escapedChars)
+                textBase.foreach(_.appendChild(node1))
+                state.nodeAdded(node1)
+              }
+
+              val origToDecorateText = original.subSequence(startOffset, endOffset)
+              val decorationNode     = new Abbreviation(origToDecorateText, abbreviation)
+              textBase.foreach(_.appendChild(decorationNode))
+              state.nodeAdded(decorationNode)
+
+              lastEscaped = endOffset
             }
-
-            if (startOffset != lastEscaped) {
-              val escapedChars = original.subSequence(lastEscaped, startOffset)
-              val node1 = new Text(escapedChars)
-              textBase.foreach(_.appendChild(node1))
-              state.nodeAdded(node1)
-            }
-
-            val origToDecorateText = original.subSequence(startOffset, endOffset)
-            val decorationNode = new Abbreviation(origToDecorateText, abbreviation)
-            textBase.foreach(_.appendChild(decorationNode))
-            state.nodeAdded(decorationNode)
-
-            lastEscaped = endOffset
-          }
           } // else: boundary check passed
         }
 
         if (lastEscaped > 0) {
           if (lastEscaped != original.length()) {
             val escapedChars = original.subSequence(lastEscaped, original.length())
-            val node1 = new Text(escapedChars)
+            val node1        = new Text(escapedChars)
             textBase.foreach(_.appendChild(node1))
             state.nodeAdded(node1)
           }
@@ -145,7 +145,6 @@ class AbbreviationNodePostProcessor private (document: Document) extends NodePos
         }
       }
     }
-  }
 }
 
 object AbbreviationNodePostProcessor {
@@ -153,9 +152,8 @@ object AbbreviationNodePostProcessor {
   class Factory extends NodePostProcessorFactory(false) {
     addNodeWithExclusions(classOf[Text], classOf[DoNotDecorate], classOf[DoNotLinkDecorate])
 
-    override def afterDependents: Nullable[Set[Class[?]]] = {
+    override def afterDependents: Nullable[Set[Class[?]]] =
       Nullable(Set[Class[?]](classOf[AutolinkNodePostProcessor.Factory]))
-    }
 
     override def apply(document: Document): NodePostProcessor = new AbbreviationNodePostProcessor(document)
   }

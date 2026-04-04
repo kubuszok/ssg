@@ -13,11 +13,11 @@ package macros
 package internal
 
 import ssg.md.util.data.DataHolder
-import ssg.md.util.format.options.{ElementPlacement, ElementPlacementSort}
+import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
 
 import scala.language.implicitConversions
 
 class MacroFormatOptions(options: DataHolder) {
-  val macrosPlacement: ElementPlacement = MacrosExtension.MACRO_DEFINITIONS_PLACEMENT.get(options)
-  val macrosSort: ElementPlacementSort = MacrosExtension.MACRO_DEFINITIONS_SORT.get(options)
+  val macrosPlacement: ElementPlacement     = MacrosExtension.MACRO_DEFINITIONS_PLACEMENT.get(options)
+  val macrosSort:      ElementPlacementSort = MacrosExtension.MACRO_DEFINITIONS_SORT.get(options)
 }

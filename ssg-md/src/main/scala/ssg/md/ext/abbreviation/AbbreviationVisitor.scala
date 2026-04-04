@@ -13,5 +13,5 @@ package abbreviation
 
 trait AbbreviationVisitor {
   def visit(node: AbbreviationBlock): Unit
-  def visit(node: Abbreviation): Unit
+  def visit(node: Abbreviation):      Unit
 }

@@ -425,7 +425,7 @@ object Escaping {
 
   /** Full Replacer trait handling both String and BasedSequence replacements. */
   private trait Replacer {
-    def replace(s: String, sb: StringBuilder): Unit
+    def replace(s:        String, sb:                StringBuilder):                                      Unit
     def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit
   }
 
@@ -478,7 +478,7 @@ object Escaping {
       textMapper.addOriginalText(0, s.length())
       s
     } else {
-      var lastEnd  = 0
+      var lastEnd   = 0
       var continue_ = true
       while (continue_) {
         textMapper.addOriginalText(lastEnd, matcher.start())
@@ -508,7 +508,7 @@ object Escaping {
     while (it.hasNext) {
       val range = it.next()
       val start = ssg.md.util.misc.Utils.rangeLimit(range.start, lastEnd, s.length())
-      val end = ssg.md.util.misc.Utils.rangeLimit(range.end, start, s.length())
+      val end   = ssg.md.util.misc.Utils.rangeLimit(range.end, start, s.length())
       matcher.region(start, end)
 
       while (matcher.find()) {

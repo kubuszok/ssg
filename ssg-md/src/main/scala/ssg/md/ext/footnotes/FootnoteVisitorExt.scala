@@ -15,10 +15,9 @@ import ssg.md.util.ast.VisitHandler
 import scala.language.implicitConversions
 
 object FootnoteVisitorExt {
-  def VISIT_HANDLERS[V <: FootnoteVisitor](visitor: V): Array[VisitHandler[?]] = {
+  def VISIT_HANDLERS[V <: FootnoteVisitor](visitor: V): Array[VisitHandler[?]] =
     Array(
       new VisitHandler[FootnoteBlock](classOf[FootnoteBlock], visitor.visit(_)),
       new VisitHandler[Footnote](classOf[Footnote], visitor.visit(_))
     )
-  }
 }

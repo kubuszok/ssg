@@ -13,7 +13,7 @@ package typographic
 package internal
 
 import ssg.md.Nullable
-import ssg.md.parser.{InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser}
+import ssg.md.parser.{ InlineParser, InlineParserExtension, InlineParserExtensionFactory, LightInlineParser }
 import ssg.md.util.sequence.BasedSequence
 
 import scala.language.implicitConversions
@@ -29,8 +29,8 @@ class SmartsInlineParser(inlineParser: LightInlineParser) extends InlineParserEx
   override def parse(inlineParser: LightInlineParser): Boolean = {
     // hard coding implementation because pattern matching can be very slow for large files
     val input = inlineParser.input
-    var typographicSmarts: Nullable[String] = Nullable.empty
-    var matched: Nullable[BasedSequence] = Nullable.empty
+    var typographicSmarts: Nullable[String]        = Nullable.empty
+    var matched:           Nullable[BasedSequence] = Nullable.empty
 
     val i = inlineParser.index
     val c = input.charAt(i)
@@ -55,7 +55,7 @@ class SmartsInlineParser(inlineParser: LightInlineParser) extends InlineParserEx
 
     matched.fold(false) { m =>
       inlineParser.flushTextNode()
-      inlineParser.index = (i + m.length())
+      inlineParser.index = i + m.length()
       val smarts = new TypographicSmarts(m, typographicSmarts.get)
       inlineParser.block.appendChild(smarts)
       true
@@ -73,9 +73,8 @@ object SmartsInlineParser {
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
-    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension = {
+    override def apply(lightInlineParser: LightInlineParser): InlineParserExtension =
       new SmartsInlineParser(lightInlineParser)
-    }
 
     override def affectsGlobalScope: Boolean = false
   }
