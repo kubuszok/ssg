@@ -6,7 +6,7 @@ object SsgSettings {
   val scalaVersion = "3.8.2"
 
   object versions {
-    val munit          = "1.2.3"
+    val munit           = "1.2.3"
     val munitScalacheck = "1.0.0"
   }
 
@@ -35,8 +35,7 @@ object SsgSettings {
 
   val nativeSettings: Seq[Setting[?]] = Seq(
     scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
-      _.withEmbedResources(true)
-        .withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
+      _.withEmbedResources(true).withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
     }
   )
 }

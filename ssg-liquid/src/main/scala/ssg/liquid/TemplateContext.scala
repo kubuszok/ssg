@@ -33,18 +33,15 @@ class TemplateContext(
   private var environmentMap: JMap[String, Any] = scala.compiletime.uninitialized
   private var registry:       JMap[String, Any] = scala.compiletime.uninitialized
 
-  def this(parser: TemplateParser, variables: JMap[String, Any]) = {
+  def this(parser: TemplateParser, variables: JMap[String, Any]) =
     this(parser, null, new LinkedHashMap[String, Any](variables), new ArrayList[Exception]())
-  }
 
-  def this(parser: TemplateParser) = {
+  def this(parser: TemplateParser) =
     this(parser, new LinkedHashMap[String, Any]())
-  }
 
   /** Creates a child context for nested scopes. */
-  private def this(parentCtx: TemplateContext) = {
+  private def this(parentCtx: TemplateContext) =
     this(parentCtx.parser, parentCtx, new LinkedHashMap[String, Any](), parentCtx.errorsList)
-  }
 
   /** Creates a new child context for nested scopes (blocks, loops). */
   def newChildContext(): TemplateContext =

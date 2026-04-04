@@ -16,16 +16,22 @@ package nodes
 import java.util.{ List => JList }
 
 class InsertionNode(
+  private val tagName:   String,
   private val insertion: Insertion,
   private val tokens:    Array[LNode]
 ) extends LNode {
 
-  def this(insertion: Insertion, tokens: JList[LNode]) = {
-    this(insertion, tokens.toArray(new Array[LNode](0)))
-  }
+  def this(insertion: Insertion, tokens: Array[LNode]) =
+    this(if (insertion != null) insertion.name else null, insertion, tokens)
 
+  def this(insertion: Insertion, tokens: JList[LNode]) =
+    this(insertion, tokens.toArray(new Array[LNode](0)))
+
+  if (tagName == null) {
+    throw new IllegalArgumentException("tagName == null")
+  }
   if (insertion == null) {
-    throw new IllegalArgumentException("insertion == null")
+    throw new IllegalArgumentException("no tag available named: " + tagName)
   }
 
   override def render(context: TemplateContext): Any =
