@@ -1235,9 +1235,9 @@ liqp	src/main/java/liqp/tags/Include.java		done	ssg-liquid	2026-04-04			2026-03-
 liqp	src/main/java/liqp/tags/IncludeRelative.java		done	ssg-liquid	2026-04-04			2026-03-30
 liqp	src/main/java/liqp/tags/Increment.java		done	ssg-liquid	2026-04-04			2026-03-30
 liqp	src/main/java/liqp/tags/Tag.java		done	ssg-liquid	2026-04-04			2026-03-30
-dart-sass	bin/sass.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/sass.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	bin/sass.dart		skipped	ssg-sass	2026-04-05	CLI entry point — SSG has its own		2026-03-30
+dart-sass	lib/sass.dart		skipped	ssg-sass	2026-04-05	Public API barrel — SSG creates its own		2026-03-30
+dart-sass	lib/src/ast/css.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
 dart-sass	lib/src/ast/css/at_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1245,7 +1245,7 @@ dart-sass	lib/src/ast/css/import.dart		not_started	ssg-sass	2026-03-30			2026-03
 dart-sass	lib/src/ast/css/keyframe_block.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/media_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/media_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/ast/css/modifiable.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
 dart-sass	lib/src/ast/css/modifiable/at_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/modifiable/comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/modifiable/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1262,7 +1262,7 @@ dart-sass	lib/src/ast/css/stylesheet.dart		not_started	ssg-sass	2026-03-30			202
 dart-sass	lib/src/ast/css/supports_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/css/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/ast/sass.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
 dart-sass	lib/src/ast/sass/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/sass/at_root_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/sass/boolean_operator.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1365,12 +1365,12 @@ dart-sass	lib/src/ast/selector/qualified_name.dart		not_started	ssg-sass	2026-03
 dart-sass	lib/src/ast/selector/simple.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/selector/type.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/selector/universal.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/async_compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/async_environment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/async_import_cache.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/async_compile.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
+dart-sass	lib/src/async_environment.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
+dart-sass	lib/src/async_import_cache.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
 dart-sass	lib/src/callable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/callable/async.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/callable/async_built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/callable/async.dart		skipped	ssg-sass	2026-04-05	Async callable — not needed		2026-03-30
+dart-sass	lib/src/callable/async_built_in.dart		skipped	ssg-sass	2026-04-05	Async built-in callable — not needed		2026-03-30
 dart-sass	lib/src/callable/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/plain_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/user_defined.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1380,32 +1380,32 @@ dart-sass	lib/src/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03
 dart-sass	lib/src/configuration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/configured_value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/deprecation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/compilation_dispatcher.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/executable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/host_callable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/importer/base.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/importer/file.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/importer/host.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/isolate_dispatcher.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/logger.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/opaque_registry.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/protofier.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/reusable_isolate.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/unavailable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/util/length_delimited_transformer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/util/proto_extensions.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/util/varint_builder.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/embedded/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/embedded/compilation_dispatcher.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/executable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/host_callable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/importer/base.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/importer/file.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/importer/host.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/isolate_dispatcher.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/logger.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/opaque_registry.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/protofier.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/reusable_isolate.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/unavailable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/util/length_delimited_transformer.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/util/proto_extensions.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/util/varint_builder.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
+dart-sass	lib/src/embedded/utils.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/environment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/evaluation_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/exception.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/compile_stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/concurrent.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/concurrent/js.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/concurrent/vm.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/options.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/repl.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/executable/watch.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/executable/compile_stylesheet.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/concurrent.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/concurrent/js.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/concurrent/vm.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/options.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/repl.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
+dart-sass	lib/src/executable/watch.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/extend/empty_extension_store.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/extend/extension.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/extend/extension_store.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1422,17 +1422,17 @@ dart-sass	lib/src/functions/selector.dart		not_started	ssg-sass	2026-03-30			202
 dart-sass	lib/src/functions/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/import_cache.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/async.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/importer/async.dart		skipped	ssg-sass	2026-04-05	Async importer — not needed		2026-03-30
 dart-sass	lib/src/importer/canonicalize_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer/filesystem.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/async.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/async_file.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/file.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/sync.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/legacy_node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/legacy_node/implementation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/legacy_node/interface.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/importer/js_to_dart/async.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/async_file.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/file.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/sync.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/utils.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
+dart-sass	lib/src/importer/legacy_node.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
+dart-sass	lib/src/importer/legacy_node/implementation.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
+dart-sass	lib/src/importer/legacy_node/interface.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
 dart-sass	lib/src/importer/no_op.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer/node_package.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer/package.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1440,67 +1440,67 @@ dart-sass	lib/src/importer/result.dart		not_started	ssg-sass	2026-03-30			2026-0
 dart-sass	lib/src/importer/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/interpolation_buffer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/interpolation_map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/io.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/io/interface.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/io/js.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/io/vm.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/array.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/chokidar.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/compile_options.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/compiler.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/deprecations.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/exception.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/exports.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/immutable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/importer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/importer/canonicalize_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/fiber.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/importer_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/render_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/render_options.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/render_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/types.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/boolean.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/null.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/legacy/value/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/logger.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/module.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/parcel_watcher.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/parser.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/reflection.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/set.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/source_span.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/url.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/boolean.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/calculation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/mixin.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/value/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/visitor/expression.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/visitor/if_condition_expression.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/visitor/simple_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/js/visitor/statement.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/io.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
+dart-sass	lib/src/io/interface.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
+dart-sass	lib/src/io/js.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
+dart-sass	lib/src/io/vm.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
+dart-sass	lib/src/js.dart		skipped	ssg-sass	2026-04-05	JS API entry — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/array.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/chokidar.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/compile.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/compile_options.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/compile_result.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/compiler.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/deprecations.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/exception.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/exports.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/function.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/immutable.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/importer.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/importer/canonicalize_context.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/fiber.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/importer_result.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/render_context.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/render_options.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/render_result.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/types.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/boolean.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/color.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/list.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/map.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/null.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/number.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/legacy/value/string.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/logger.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/module.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/parcel_watcher.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/parser.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/reflection.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/set.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/source_span.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/url.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/utils.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/argument_list.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/boolean.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/calculation.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/color.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/function.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/list.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/map.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/mixin.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/number.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/value/string.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/visitor/expression.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/visitor/if_condition_expression.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/visitor/simple_selector.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
+dart-sass	lib/src/js/visitor/statement.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
 dart-sass	lib/src/logger.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/logger/default.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/logger/deprecation_processing.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/logger/js_to_dart.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/logger/js_to_dart.dart		skipped	ssg-sass	2026-04-05	JS-specific logger — not needed		2026-03-30
 dart-sass	lib/src/logger/stderr.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/logger/tracking.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1526,7 +1526,7 @@ dart-sass	lib/src/util/lazy_file_span.dart		not_started	ssg-sass	2026-03-30			20
 dart-sass	lib/src/util/limited_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/util/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/util/merged_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/multi_dir_watcher.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/util/multi_dir_watcher.dart		skipped	ssg-sass	2026-04-05	File watching utility — not needed for SSG		2026-03-30
 dart-sass	lib/src/util/multi_span.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/util/no_source_map_buffer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/util/nullable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1581,7 +1581,7 @@ dart-sass	lib/src/value/number/unitless.dart		not_started	ssg-sass	2026-03-30			
 dart-sass	lib/src/value/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/any_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/ast_search.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/visitor/async_evaluate.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/visitor/async_evaluate.dart		skipped	ssg-sass	2026-04-05	Async evaluator — not needed		2026-03-30
 dart-sass	lib/src/visitor/clone_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/evaluate.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/every_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1605,17 +1605,17 @@ dart-sass	lib/src/visitor/selector_search.dart		not_started	ssg-sass	2026-03-30	
 dart-sass	lib/src/visitor/serialize.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/source_interpolation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/statement_search.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	pkg/sass_api/lib/sass_api.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/benchmark.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/bump_version.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/double_check.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/frameworks.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/generate_deprecations.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/sass_api.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/synchronize.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/grind/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	tool/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	pkg/sass_api/lib/sass_api.dart		skipped	ssg-sass	2026-04-05	Package tooling — not library code		2026-03-30
+dart-sass	tool/grind.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/benchmark.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/bump_version.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/double_check.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/frameworks.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/generate_deprecations.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/sass_api.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/synchronize.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/grind/utils.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
+dart-sass	tool/utils.dart		skipped	ssg-sass	2026-04-05	Build/tooling scripts — not library code		2026-03-30
 jekyll-minifier	lib/jekyll-minifier.rb		ported	ssg-minify	2026-04-04	Ported as ssg.minify.{Minifier,MinifyOptions,JsCompressor,FileType} + html/css/js/json subpackages		2026-03-30
 jekyll-minifier	lib/jekyll-minifier/version.rb		ported	ssg-minify	2026-04-04	Version in ssg.minify.package.scala		2026-03-30
 jekyll-minifier	spec/caching_performance_spec.rb		skipped	ssg-minify	2026-04-04	No caching — stateless pure functions		2026-03-30
@@ -1631,29 +1631,29 @@ jekyll-minifier	spec/performance_spec.rb		skipped	ssg-minify	2026-04-04	Performa
 jekyll-minifier	spec/security_redos_spec.rb		skipped	ssg-minify	2026-04-04	ReDoS not applicable — no user-supplied regex compilation at runtime		2026-03-30
 jekyll-minifier	spec/security_validation_spec.rb		skipped	ssg-minify	2026-04-04	ReDoS not applicable — no user-supplied regex compilation at runtime		2026-03-30
 jekyll-minifier	spec/spec_helper.rb		skipped	ssg-minify	2026-04-04	munit framework replaces RSpec		2026-03-30
-terser	lib/ast.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast (10 files, ~130 node types)
-terser	lib/parse.js		ported	ssg-js	2026-04-05	Ported as ssg.js.parse (Token, Tokenizer, Parser)
-terser	lib/output.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output (OutputStream, OutputOptions, FirstInStatement)
-terser	lib/scope.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope (SymbolDef, ScopeAnalysis, Mangler)
-terser	lib/transform.js		ported	ssg-js	2026-04-05	Ported as TreeWalker/TreeTransformer in ssg.js.ast.AstNode
-terser	lib/minify.js		ported	ssg-js	2026-04-05	Ported as ssg.js.Terser
-terser	lib/compress/index.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Compressor (25+ node optimizers)
-terser	lib/compress/common.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Common
-terser	lib/compress/compressor-flags.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.CompressorFlags
-terser	lib/compress/native-objects.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.NativeObjects
-terser	lib/compress/global-defs.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.GlobalDefs
-terser	lib/compress/evaluate.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Evaluate
-terser	lib/compress/inference.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inference
-terser	lib/compress/reduce-vars.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.ReduceVars
-terser	lib/compress/drop-side-effect-free.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropSideEffectFree
-terser	lib/compress/drop-unused.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropUnused
-terser	lib/compress/inline.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inline (stubs)
-terser	lib/compress/tighten-body.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.TightenBody
-terser	lib/cli.js		skipped	ssg-js	2026-04-05	CLI not applicable — SSG uses ssg-dev
-terser	lib/mozilla-ast.js		skipped	ssg-js	2026-04-05	SpiderMonkey AST compat not needed
-terser	lib/sourcemap.js		skipped	ssg-js	2026-04-05	Source maps deferred to future version
-terser	lib/equivalent-to.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstEquivalent
-terser	lib/propmangle.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope.PropMangler
-terser	lib/size.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstSize
-terser	lib/utils/index.js		ported	ssg-js	2026-04-05	Utilities distributed across Common.scala and Token.scala
-terser	lib/utils/first_in_statement.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output.FirstInStatement
+terser	lib/ast.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast (10 files, ~130 node types)		
+terser	lib/parse.js		ported	ssg-js	2026-04-05	Ported as ssg.js.parse (Token, Tokenizer, Parser)		
+terser	lib/output.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output (OutputStream, OutputOptions, FirstInStatement)		
+terser	lib/scope.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope (SymbolDef, ScopeAnalysis, Mangler)		
+terser	lib/transform.js		ported	ssg-js	2026-04-05	Ported as TreeWalker/TreeTransformer in ssg.js.ast.AstNode		
+terser	lib/minify.js		ported	ssg-js	2026-04-05	Ported as ssg.js.Terser		
+terser	lib/compress/index.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Compressor (25+ node optimizers)		
+terser	lib/compress/common.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Common		
+terser	lib/compress/compressor-flags.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.CompressorFlags		
+terser	lib/compress/native-objects.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.NativeObjects		
+terser	lib/compress/global-defs.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.GlobalDefs		
+terser	lib/compress/evaluate.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Evaluate		
+terser	lib/compress/inference.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inference		
+terser	lib/compress/reduce-vars.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.ReduceVars		
+terser	lib/compress/drop-side-effect-free.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropSideEffectFree		
+terser	lib/compress/drop-unused.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropUnused		
+terser	lib/compress/inline.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inline (stubs)		
+terser	lib/compress/tighten-body.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.TightenBody		
+terser	lib/cli.js		skipped	ssg-js	2026-04-05	CLI not applicable — SSG uses ssg-dev		
+terser	lib/mozilla-ast.js		skipped	ssg-js	2026-04-05	SpiderMonkey AST compat not needed		
+terser	lib/sourcemap.js		skipped	ssg-js	2026-04-05	Source maps deferred to future version		
+terser	lib/equivalent-to.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstEquivalent		
+terser	lib/propmangle.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope.PropMangler		
+terser	lib/size.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstSize		
+terser	lib/utils/index.js		ported	ssg-js	2026-04-05	Utilities distributed across Common.scala and Token.scala		
+terser	lib/utils/first_in_statement.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output.FirstInStatement		
