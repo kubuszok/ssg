@@ -437,3 +437,8 @@ ssg-sass/src/main/scala/ssg/sass/util/CharCode.scala	util	pass	yes	2026-04-05	Al
 ssg-sass/src/main/scala/ssg/sass/util/SourceSpan.scala	util	pass	yes	2026-04-05	FileSpan/FileLocation/SourceFile with trim/expand/between/contains.	
 ssg-sass/src/main/scala/ssg/sass/util/SpanScanner.scala	util	pass	yes	2026-04-05	Complete scanner API: peekChar, readChar, scanChar, expectChar, scan regex, state save/restore, spanFrom.	
 ssg-sass/src/main/scala/ssg/sass/util/Trace.scala	util	pass	no	2026-04-05	Lightweight Frame/Trace for Sass stack traces.	
+ssg-sass/src/main/scala/ssg/sass/Syntax.scala	sass	pass	yes	2026-04-05	3-value enum with forPath factory. Complete 1:1 port.	
+ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	sass	pass	yes	2026-04-05	29 deprecation entries with id, deprecatedIn, description. fromId lookup.	
+ssg-sass/src/main/scala/ssg/sass/SassException.scala	sass	pass	yes	2026-04-05	Full hierarchy: SassException, MultiSpan*, Runtime*, Format*, SassScriptException. toCssString present.	
+ssg-sass/src/main/scala/ssg/sass/Logger.scala	sass	pass	yes	2026-04-05	Logger trait, QuietLogger, StderrLogger, TrackingLogger, DeprecationProcessingLogger. All merged from 5 Dart files.	
+ssg-sass/src/main/scala/ssg/sass/Utils.scala	sass	pass	yes	2026-04-05	All utility functions: toSentence, indent, pluralize, trimAscii, isPublic, unvendor, equalsIgnoreCase, LCS, flattenVertically, codepointIndex conversion.	

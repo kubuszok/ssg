@@ -1374,12 +1374,12 @@ dart-sass	lib/src/callable/async_built_in.dart		skipped	ssg-sass	2026-04-05	Asyn
 dart-sass	lib/src/callable/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/plain_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/user_defined.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-04-05	Deferred to Phase 3 — depends on SassColor		2026-03-30
 dart-sass	lib/src/compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/configuration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/configured_value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/deprecation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/deprecation.dart	ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/embedded/compilation_dispatcher.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/embedded/executable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/embedded/host_callable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
@@ -1398,7 +1398,7 @@ dart-sass	lib/src/embedded/util/varint_builder.dart		skipped	ssg-sass	2026-04-05
 dart-sass	lib/src/embedded/utils.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/environment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/evaluation_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/exception.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/exception.dart	ssg-sass/src/main/scala/ssg/sass/SassException.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/executable/compile_stylesheet.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/executable/concurrent.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/executable/concurrent/js.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
@@ -1497,12 +1497,12 @@ dart-sass	lib/src/js/visitor/expression.dart		skipped	ssg-sass	2026-04-05	JS API
 dart-sass	lib/src/js/visitor/if_condition_expression.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
 dart-sass	lib/src/js/visitor/simple_selector.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
 dart-sass	lib/src/js/visitor/statement.dart		skipped	ssg-sass	2026-04-05	JS API interop — SSG has its own cross-platform approach		2026-03-30
-dart-sass	lib/src/logger.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/logger/default.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/logger/deprecation_processing.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/logger.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	Merged all logger files into Logger.scala		2026-03-30
+dart-sass	lib/src/logger/default.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	DefaultLogger merged into Logger.scala		2026-03-30
+dart-sass	lib/src/logger/deprecation_processing.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	DeprecationProcessingLogger merged into Logger.scala		2026-03-30
 dart-sass	lib/src/logger/js_to_dart.dart		skipped	ssg-sass	2026-04-05	JS-specific logger — not needed		2026-03-30
-dart-sass	lib/src/logger/stderr.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/logger/tracking.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/logger/stderr.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	StderrLogger merged into Logger.scala		2026-03-30
+dart-sass	lib/src/logger/tracking.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	TrackingLogger merged into Logger.scala		2026-03-30
 dart-sass	lib/src/module.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module/forwarded_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1517,7 +1517,7 @@ dart-sass	lib/src/parse/scss.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/parse/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/parse/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/stylesheet_graph.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/syntax.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/syntax.dart	ssg-sass/src/main/scala/ssg/sass/Syntax.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/box.dart	ssg-sass/src/main/scala/ssg/sass/util/Box.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/character.dart	ssg-sass/src/main/scala/ssg/sass/util/CharCode.scala	ported	ssg-sass	2026-04-05	Ported in Phase 0		2026-03-30
 dart-sass	lib/src/util/fuzzy_equality.dart	ssg-sass/src/main/scala/ssg/sass/util/FuzzyEquality.scala	ported	ssg-sass	2026-04-05			2026-03-30
@@ -1538,7 +1538,7 @@ dart-sass	lib/src/util/source_map_buffer.dart	ssg-sass/src/main/scala/ssg/sass/u
 dart-sass	lib/src/util/span.dart	ssg-sass/src/main/scala/ssg/sass/util/SourceSpan.scala	ported	ssg-sass	2026-04-05	Merged into Phase 0 SourceSpan.scala		2026-03-30
 dart-sass	lib/src/util/string.dart	ssg-sass/src/main/scala/ssg/sass/util/StringUtil.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/unprefixed_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
-dart-sass	lib/src/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/utils.dart	ssg-sass/src/main/scala/ssg/sass/Utils.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/boolean.dart		not_started	ssg-sass	2026-03-30			2026-03-30
