@@ -73,7 +73,7 @@ abstract class Value {
     throw SassScriptException(s"$this is not a boolean.", name.toOption)
 
   /** Asserts this is a SassColor. */
-  def assertColor(name: Nullable[String] = Nullable.Null): Value =
+  def assertColor(name: Nullable[String] = Nullable.Null): SassColor =
     throw SassScriptException(s"$this is not a color.", name.toOption)
 
   /** Asserts this is a SassFunction. */

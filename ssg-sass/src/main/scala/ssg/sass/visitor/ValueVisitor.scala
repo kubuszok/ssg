@@ -20,7 +20,7 @@ import ssg.sass.value.*
 trait ValueVisitor[T] {
   def visitBoolean(value: SassBoolean): T
   def visitCalculation(value: SassCalculation): T
-  def visitColor(value: Value): T // Will be SassColor in Phase 3c
+  def visitColor(value: SassColor): T
   def visitFunction(value: SassFunction): T
   def visitList(value: SassList): T
   def visitMap(value: SassMap): T

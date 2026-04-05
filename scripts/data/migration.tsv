@@ -1374,7 +1374,7 @@ dart-sass	lib/src/callable/async_built_in.dart		skipped	ssg-sass	2026-04-05	Asyn
 dart-sass	lib/src/callable/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/plain_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/callable/user_defined.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-04-05	Deferred to Phase 3 — depends on SassColor		2026-03-30
+dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-04-05	Depends on SassColor (Phase 3c complete) — can port now but deferred to when serializer needs it		2026-03-30
 dart-sass	lib/src/compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/configuration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1543,32 +1543,32 @@ dart-sass	lib/src/value.dart	ssg-sass/src/main/scala/ssg/sass/value/Value.scala	
 dart-sass	lib/src/value/argument_list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/boolean.dart	ssg-sass/src/main/scala/ssg/sass/value/SassBoolean.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/calculation.dart	ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	ported	ssg-sass	2026-04-05	Includes CalculationOperation, CalculationOperator, CalculationInterpolation		2026-03-30
-dart-sass	lib/src/value/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/channel.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/conversions.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/gamut_map_method.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/gamut_map_method/clip.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/gamut_map_method/local_minde.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/interpolation_method.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/a98_rgb.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/display_p3.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/display_p3_linear.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/hsl.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/hwb.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/lab.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/lch.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/lms.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/oklab.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/oklch.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/prophoto_rgb.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/rec2020.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/rgb.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/srgb.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/srgb_linear.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/xyz_d50.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/color/space/xyz_d65.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value/color.dart	ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/channel.dart	ssg-sass/src/main/scala/ssg/sass/value/color/ColorChannel.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/conversions.dart	ssg-sass/src/main/scala/ssg/sass/value/color/Conversions.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/gamut_map_method.dart	ssg-sass/src/main/scala/ssg/sass/value/color/GamutMapMethod.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/gamut_map_method/clip.dart		ported	ssg-sass	2026-04-05	Merged into GamutMapMethod.scala		2026-03-30
+dart-sass	lib/src/value/color/gamut_map_method/local_minde.dart		ported	ssg-sass	2026-04-05	Merged into GamutMapMethod.scala		2026-03-30
+dart-sass	lib/src/value/color/interpolation_method.dart	ssg-sass/src/main/scala/ssg/sass/value/color/InterpolationMethod.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/space.dart	ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/color/space/a98_rgb.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/display_p3.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/display_p3_linear.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/hsl.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/hwb.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/lab.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/lch.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/lms.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/oklab.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/oklch.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/prophoto_rgb.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/rec2020.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/rgb.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/srgb.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/srgb_linear.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/utils.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/xyz_d50.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
+dart-sass	lib/src/value/color/space/xyz_d65.dart		ported	ssg-sass	2026-04-05	All 16 color spaces merged into ColorSpaces.scala		2026-03-30
 dart-sass	lib/src/value/function.dart	ssg-sass/src/main/scala/ssg/sass/value/SassFunction.scala	ported	ssg-sass	2026-04-05	Callable type is Any placeholder until Phase 8		2026-03-30
 dart-sass	lib/src/value/list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassList.scala	ported	ssg-sass	2026-04-05	ListSeparator in separate file		2026-03-30
 dart-sass	lib/src/value/map.dart	ssg-sass/src/main/scala/ssg/sass/value/SassMap.scala	ported	ssg-sass	2026-04-05			2026-03-30
