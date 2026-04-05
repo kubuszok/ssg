@@ -1263,92 +1263,92 @@ dart-sass	lib/src/ast/css/supports_rule.dart		ported	ssg-sass	2026-04-05	Merged 
 dart-sass	lib/src/ast/css/value.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
 dart-sass	lib/src/ast/node.dart	ssg-sass/src/main/scala/ssg/sass/ast/AstNode.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/ast/sass.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
-dart-sass	lib/src/ast/sass/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/at_root_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/boolean_operator.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/callable_invocation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/configured_variable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/dependency.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/binary_operation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/boolean.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/if.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/interpolated_function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/legacy_if.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/null.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/parenthesized.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/supports.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/unary_operation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/expression/variable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/import.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/import/dynamic.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/import/static.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/attribute.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/class.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/complex.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/complex_component.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/compound.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/id.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/parent.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/placeholder.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/pseudo.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/qualified_name.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/simple.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/type.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolated_selector/universal.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/interpolation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/parameter.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/parameter_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/reference.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/at_root_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/at_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/callable_declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/content_block.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/content_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/debug_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/each_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/error_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/extend_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/for_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/forward_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/function_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/if_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/import_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/include_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/loud_comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/media_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/mixin_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/parent.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/return_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/silent_comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/style_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/supports_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/use_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/variable_declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/warn_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/statement/while_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/anything.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/interpolation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/negation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/sass/supports_condition/operation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/ast/sass/argument_list.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/at_root_query.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/boolean_operator.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/callable_invocation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/configured_variable.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/declaration.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/dependency.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/binary_operation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/boolean.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/color.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/function.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/if.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/interpolated_function.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/legacy_if.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/list.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/map.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/null.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/number.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/parenthesized.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/selector.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/string.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/supports.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/unary_operation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/value.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/expression/variable.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/import.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/import/dynamic.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/import/static.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/attribute.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/class.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/complex.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/complex_component.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/compound.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/id.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/list.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/parent.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/placeholder.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/pseudo.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/qualified_name.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/simple.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/type.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolated_selector/universal.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/interpolation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/node.dart	ssg-sass/src/main/scala/ssg/sass/ast/sass/SassNode.scala	ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/parameter.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/parameter_list.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/reference.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/at_root_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/at_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/callable_declaration.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/content_block.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/content_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/debug_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/declaration.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/each_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/error_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/extend_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/for_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/forward_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/function_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/if_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/import_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/include_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/loud_comment.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/media_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/mixin_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/parent.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/return_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/silent_comment.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/style_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/stylesheet.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/supports_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/use_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/variable_declaration.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/warn_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/statement/while_rule.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/anything.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/declaration.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/function.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/interpolation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/negation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
+dart-sass	lib/src/ast/sass/supports_condition/operation.dart		ported	ssg-sass	2026-04-05	Merged into Expression.scala, Statement.scala, SassNode.scala, Interpolation.scala, etc.		2026-03-30
 dart-sass	lib/src/ast/selector.dart	ssg-sass/src/main/scala/ssg/sass/ast/selector/Selector.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/ast/selector/attribute.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
 dart-sass	lib/src/ast/selector/class.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30

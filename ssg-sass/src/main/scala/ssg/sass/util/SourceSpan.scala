@@ -70,6 +70,9 @@ final class SourceFile(
   /** Returns the text between two offsets. */
   def getText(start: Int, end: Int): String = text.substring(start, end)
 
+  /** Returns the text from the given offset to the end. */
+  def getText(start: Int): String = text.substring(start)
+
   /** Creates a span covering the given range. */
   def span(start: Int, end: Int): FileSpan =
     FileSpan(this, location(start), location(end))
@@ -211,5 +214,68 @@ object FileSpan {
   def synthetic(text: String): FileSpan = {
     val file = SourceFile(Nullable.Null, text)
     file.span(0, text.length)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Span utility extension methods (ported from dart-sass lib/src/util/span.dart)
+// ---------------------------------------------------------------------------
+
+extension (span: FileSpan) {
+
+  /** Returns the span covering the initial identifier in this span.
+    * If [includeLeading] is given, includes that many characters before the
+    * identifier (e.g. 1 for `$` in variable names).
+    */
+  def initialIdentifier(includeLeading: Int = 0): FileSpan = {
+    val t = span.text
+    var i = includeLeading
+    if (i < t.length && (t.charAt(i).isLetter || t.charAt(i) == '_' || t.charAt(i) == '-')) {
+      i += 1
+      while (i < t.length && (t.charAt(i).isLetterOrDigit || t.charAt(i) == '_' || t.charAt(i) == '-')) {
+        i += 1
+      }
+    }
+    span.subspan(0, i)
+  }
+
+  /** Returns the span with the initial `namespace.` prefix removed. */
+  def withoutNamespace(): FileSpan = {
+    val t = span.text
+    val dotIdx = t.indexOf('.')
+    if (dotIdx < 0) span
+    else span.subspan(dotIdx + 1)
+  }
+
+  /** Returns the span with the initial `@rule ` prefix removed. */
+  def withoutInitialAtRule(): FileSpan = {
+    val t = span.text
+    // Skip past @rule and any whitespace
+    var i = 0
+    if (i < t.length && t.charAt(i) == '@') {
+      i += 1
+      while (i < t.length && !Character.isWhitespace(t.charAt(i))) i += 1
+      while (i < t.length && Character.isWhitespace(t.charAt(i))) i += 1
+    }
+    span.subspan(i)
+  }
+
+  /** Returns the span covering the first quoted string in this span. */
+  def initialQuoted(): FileSpan = {
+    val t = span.text
+    var i = 0
+    while (i < t.length && t.charAt(i) != '\'' && t.charAt(i) != '"') i += 1
+    if (i >= t.length) span
+    else {
+      val quote = t.charAt(i)
+      val start = i
+      i += 1
+      while (i < t.length && t.charAt(i) != quote) {
+        if (t.charAt(i) == '\\') i += 1
+        i += 1
+      }
+      if (i < t.length) i += 1 // include closing quote
+      span.subspan(start, i)
+    }
   }
 }
