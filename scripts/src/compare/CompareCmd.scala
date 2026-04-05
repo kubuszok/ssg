@@ -10,7 +10,8 @@ object CompareCmd {
     "flexmark" -> "ssg-md",
     "liqp" -> "ssg-liquid",
     "dart-sass" -> "ssg-sass",
-    "jekyll-minifier" -> "ssg-html"
+    "jekyll-minifier" -> "ssg-minify",
+    "terser" -> "ssg-js"
   )
 
   def run(args: List[String]): Unit = {

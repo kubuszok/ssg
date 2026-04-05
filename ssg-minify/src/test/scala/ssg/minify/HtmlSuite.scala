@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 package ssg
-package html
+package minify
 
 final class HtmlSuite extends munit.FunSuite {
 
-  test("ssg-html module loads") {
+  test("ssg-minify module loads") {
     assertEquals(Version, "0.1.0-SNAPSHOT")
   }
 }

@@ -11,7 +11,8 @@ battle-tested libraries to idiomatic Scala 3.
 | `ssg-md` | [flexmark-java](https://github.com/vsch/flexmark-java) 0.64.8 | Java | Markdown engine | 1645/1645 tests |
 | `ssg-liquid` | [liqp](https://github.com/bkiers/Liqp) 0.9.2 | Java | Liquid template engine | 280/280 tests |
 | `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) | Dart | SASS/SCSS compiler | Planned |
-| `ssg-html` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) | Ruby | HTML/JS/CSS minification | Planned |
+| `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) | Ruby | HTML/CSS/JS/JSON minification | 113/113 tests |
+| `ssg-js` | [terser](https://github.com/terser/terser) | JavaScript | JavaScript compiler/minifier | 116/116 tests |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
 
 All completed modules pass tests on **JVM, Scala.js, and Scala Native**.
@@ -59,6 +60,27 @@ Key replacements:
 - Jackson → `LiquidSupport` trait
 - strftime4j → `DateTimeFormatter` via scala-java-time polyfill
 
+### ssg-minify (HTML/CSS/JS/JSON Minification)
+
+Ports jekyll-minifier as pure Scala minification functions for HTML, CSS,
+JavaScript, and JSON. Full HTML minification (comment removal, whitespace
+collapsing, attribute optimization, inline CSS/JS compression). Pluggable
+`JsCompressor` trait allows using the basic whitespace-only minifier or
+the full Terser engine from ssg-js.
+
+### ssg-js (JavaScript Compiler/Minifier)
+
+Ports Terser (fork of UglifyJS) — a full JavaScript compiler with:
+- ES2020+ parser (recursive descent, ~130 AST node types)
+- Code generator (minified and beautified output)
+- Scope analysis and variable mangling
+- Compressor with 25+ per-node optimizations (dead code elimination,
+  constant folding, statement tightening)
+- Pure Scala, cross-platform (no regex lookahead/backreference)
+
+Usage: `ssg.js.Terser.minifyToString("var x = 1 + 2;")` or integrate
+with ssg-minify via `ssg.TerserJsCompressorAdapter`.
+
 ## Project Structure
 
 ```
@@ -66,7 +88,8 @@ ssg/
 ├── ssg-md/          Markdown engine (flexmark-java port)
 ├── ssg-liquid/      Liquid template engine (liqp port)
 ├── ssg-sass/        SASS/SCSS compiler (dart-sass port) — planned
-├── ssg-html/        HTML/JS/CSS minification — planned
+├── ssg-minify/      HTML/CSS/JS/JSON minification (jekyll-minifier port)
+├── ssg-js/          JavaScript compiler/minifier (Terser port)
 ├── ssg/             Aggregator module
 ├── original-src/    Reference sources (git submodules, not compiled)
 ├── scripts/         ssg-dev CLI toolkit
@@ -78,6 +101,7 @@ ssg/
 
 - [CLAUDE.md](CLAUDE.md) — project conventions and tooling
 - [docs/contributing/](docs/contributing/) — conversion guides, code style, type mappings
+- [docs/contributing/cross-platform-regex.md](docs/contributing/cross-platform-regex.md) — regex limitations on Scala Native/JS
 - [docs/architecture/](docs/architecture/) — module design, build structure, port status
 
 ## License
@@ -91,5 +115,7 @@ original licenses:
 |---------|---------|-----------|
 | flexmark-java | BSD 2-Clause | 2015-2016 Atlassian, 2016-2018 Vladimir Schneider |
 | liqp | MIT | 2010-2013 Bart Kiers |
+| jekyll-minifier | MIT | 2014-2024 DigitalSparky |
+| terser | BSD 2-Clause | 2012 Mihai Bazon |
 
 See [LICENSE](LICENSE) for full third-party notices.

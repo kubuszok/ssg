@@ -33,10 +33,11 @@ object Paths {
   def ssgMdSrc: String = s"$projectRoot/ssg-md/src/main/scala/ssg/md"
   def ssgLiquidSrc: String = s"$projectRoot/ssg-liquid/src/main/scala/ssg/liquid"
   def ssgSassSrc: String = s"$projectRoot/ssg-sass/src/main/scala/ssg/sass"
-  def ssgHtmlSrc: String = s"$projectRoot/ssg-html/src/main/scala/ssg/html"
+  def ssgMinifySrc: String = s"$projectRoot/ssg-minify/src/main/scala/ssg/minify"
+  def ssgJsSrc: String = s"$projectRoot/ssg-js/src/main/scala/ssg/js"
 
   /** All SSG module source directories. */
-  def allSsgSrcDirs: List[String] = List(ssgMdSrc, ssgLiquidSrc, ssgSassSrc, ssgHtmlSrc)
+  def allSsgSrcDirs: List[String] = List(ssgMdSrc, ssgLiquidSrc, ssgSassSrc, ssgMinifySrc, ssgJsSrc)
 
   /** Resolve original source root by library name. */
   def originalSrc(lib: String): String = lib match {
@@ -44,6 +45,7 @@ object Paths {
     case "liqp" => liqpSrc
     case "dart-sass" => dartSassSrc
     case "jekyll-minifier" => jekyllMinifierSrc
+    case "terser" => s"$projectRoot/original-src/terser"
     case other => throw new IllegalArgumentException(s"Unknown library: $other")
   }
 
@@ -52,7 +54,8 @@ object Paths {
     case "ssg-md" => ssgMdSrc
     case "ssg-liquid" => ssgLiquidSrc
     case "ssg-sass" => ssgSassSrc
-    case "ssg-html" => ssgHtmlSrc
+    case "ssg-minify" => ssgMinifySrc
+    case "ssg-js" => ssgJsSrc
     case other => throw new IllegalArgumentException(s"Unknown module: $other")
   }
 

@@ -25,13 +25,19 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: Compile all modules (JVM)
-        run: sbt "ssg-md/compile; ssg-liquid/compile"
+        run: sbt "ssg-md/compile; ssg-liquid/compile; ssg-sass/compile; ssg-minify/compile; ssg-js/compile; ssg/compile"
 
       - name: Test ssg-md (JVM)
         run: sbt ssg-md/test
 
       - name: Test ssg-liquid (JVM)
         run: sbt ssg-liquid/test
+
+      - name: Test ssg-minify (JVM)
+        run: sbt ssg-minify/test
+
+      - name: Test ssg-js (JVM)
+        run: sbt ssg-js/test
 
   # Scala.js: compile and test all modules
   js:
@@ -55,13 +61,19 @@ jobs:
           node-version: 22
 
       - name: Compile all modules (JS)
-        run: sbt "ssg-mdJS/compile; ssg-liquidJS/compile"
+        run: sbt "ssg-mdJS/compile; ssg-liquidJS/compile; ssg-sassJS/compile; ssg-minifyJS/compile; ssg-jsJS/compile; ssgJS/compile"
 
       - name: Test ssg-md (JS)
         run: sbt ssg-mdJS/test
 
       - name: Test ssg-liquid (JS)
         run: sbt ssg-liquidJS/test
+
+      - name: Test ssg-minify (JS)
+        run: sbt ssg-minifyJS/test
+
+      - name: Test ssg-js (JS)
+        run: sbt ssg-jsJS/test
 
   # Scala Native: compile and test all modules
   native:
@@ -84,13 +96,19 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang libstdc++-12-dev
 
       - name: Compile all modules (Native)
-        run: sbt "ssg-mdNative/compile; ssg-liquidNative/compile"
+        run: sbt "ssg-mdNative/compile; ssg-liquidNative/compile; ssg-sassNative/compile; ssg-minifyNative/compile; ssg-jsNative/compile; ssgNative/compile"
 
       - name: Test ssg-md (Native)
         run: sbt ssg-mdNative/test
 
       - name: Test ssg-liquid (Native)
         run: sbt ssg-liquidNative/test
+
+      - name: Test ssg-minify (Native)
+        run: sbt ssg-minifyNative/test
+
+      - name: Test ssg-js (Native)
+        run: sbt ssg-jsNative/test
 
   # Format check (no changes needed, just verify)
   format:
