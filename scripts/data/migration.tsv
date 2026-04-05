@@ -1616,18 +1616,44 @@ dart-sass	tool/grind/sass_api.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	tool/grind/synchronize.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	tool/grind/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	tool/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-jekyll-minifier	lib/jekyll-minifier.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	lib/jekyll-minifier/version.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/caching_performance_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/compressor_cache_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/coverage_enhancement_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/enhanced_css_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/environment_validation_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/fixtures/_plugins/generate_categories.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/input_validation_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/jekyll-minifier_enhanced_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/jekyll-minifier_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/performance_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/security_redos_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/security_validation_spec.rb		not_started	ssg-html	2026-03-30			2026-03-30
-jekyll-minifier	spec/spec_helper.rb		not_started	ssg-html	2026-03-30			2026-03-30
+jekyll-minifier	lib/jekyll-minifier.rb		ported	ssg-minify	2026-04-04	Ported as ssg.minify.{Minifier,MinifyOptions,JsCompressor,FileType} + html/css/js/json subpackages		2026-03-30
+jekyll-minifier	lib/jekyll-minifier/version.rb		ported	ssg-minify	2026-04-04	Version in ssg.minify.package.scala		2026-03-30
+jekyll-minifier	spec/caching_performance_spec.rb		skipped	ssg-minify	2026-04-04	No caching — stateless pure functions		2026-03-30
+jekyll-minifier	spec/compressor_cache_spec.rb		skipped	ssg-minify	2026-04-04	No caching — stateless pure functions		2026-03-30
+jekyll-minifier	spec/coverage_enhancement_spec.rb		ported	ssg-minify	2026-04-04	Coverage addressed by all test suites		2026-03-30
+jekyll-minifier	spec/enhanced_css_spec.rb		ported	ssg-minify	2026-04-04	Covered by CssMinifySuite		2026-03-30
+jekyll-minifier	spec/environment_validation_spec.rb		skipped	ssg-minify	2026-04-04	No environment coupling — pure library		2026-03-30
+jekyll-minifier	spec/fixtures/_plugins/generate_categories.rb		skipped	ssg-minify	2026-04-04	Jekyll plugin not applicable to SSG		2026-03-30
+jekyll-minifier	spec/input_validation_spec.rb		skipped	ssg-minify	2026-04-04	Validation not needed — pure Scala types provide safety		2026-03-30
+jekyll-minifier	spec/jekyll-minifier_enhanced_spec.rb		ported	ssg-minify	2026-04-04	Functionality covered by CssMinifySuite, JsMinifySuite, HtmlMinifySuite		2026-03-30
+jekyll-minifier	spec/jekyll-minifier_spec.rb		ported	ssg-minify	2026-04-04	Ported as MinifierSuite + HtmlMinifySuite in ssg-minify		2026-03-30
+jekyll-minifier	spec/performance_spec.rb		skipped	ssg-minify	2026-04-04	Performance benchmarking not ported		2026-03-30
+jekyll-minifier	spec/security_redos_spec.rb		skipped	ssg-minify	2026-04-04	ReDoS not applicable — no user-supplied regex compilation at runtime		2026-03-30
+jekyll-minifier	spec/security_validation_spec.rb		skipped	ssg-minify	2026-04-04	ReDoS not applicable — no user-supplied regex compilation at runtime		2026-03-30
+jekyll-minifier	spec/spec_helper.rb		skipped	ssg-minify	2026-04-04	munit framework replaces RSpec		2026-03-30
+terser	lib/ast.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast (10 files, ~130 node types)
+terser	lib/parse.js		ported	ssg-js	2026-04-05	Ported as ssg.js.parse (Token, Tokenizer, Parser)
+terser	lib/output.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output (OutputStream, OutputOptions, FirstInStatement)
+terser	lib/scope.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope (SymbolDef, ScopeAnalysis, Mangler)
+terser	lib/transform.js		ported	ssg-js	2026-04-05	Ported as TreeWalker/TreeTransformer in ssg.js.ast.AstNode
+terser	lib/minify.js		ported	ssg-js	2026-04-05	Ported as ssg.js.Terser
+terser	lib/compress/index.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Compressor (25+ node optimizers)
+terser	lib/compress/common.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Common
+terser	lib/compress/compressor-flags.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.CompressorFlags
+terser	lib/compress/native-objects.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.NativeObjects
+terser	lib/compress/global-defs.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.GlobalDefs
+terser	lib/compress/evaluate.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Evaluate
+terser	lib/compress/inference.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inference
+terser	lib/compress/reduce-vars.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.ReduceVars
+terser	lib/compress/drop-side-effect-free.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropSideEffectFree
+terser	lib/compress/drop-unused.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropUnused
+terser	lib/compress/inline.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inline (stubs)
+terser	lib/compress/tighten-body.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.TightenBody
+terser	lib/cli.js		skipped	ssg-js	2026-04-05	CLI not applicable — SSG uses ssg-dev
+terser	lib/mozilla-ast.js		skipped	ssg-js	2026-04-05	SpiderMonkey AST compat not needed
+terser	lib/sourcemap.js		skipped	ssg-js	2026-04-05	Source maps deferred to future version
+terser	lib/equivalent-to.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstEquivalent
+terser	lib/propmangle.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope.PropMangler
+terser	lib/size.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstSize
+terser	lib/utils/index.js		ported	ssg-js	2026-04-05	Utilities distributed across Common.scala and Token.scala
+terser	lib/utils/first_in_statement.js		ported	ssg-js	2026-04-05	Ported as ssg.js.output.FirstInStatement

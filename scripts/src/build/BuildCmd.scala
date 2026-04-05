@@ -94,7 +94,7 @@ object BuildCmd {
 
     val modules = module match {
       case Some(m) => List(m)
-      case None if all => List("ssg-md", "ssg-liquid", "ssg-sass", "ssg-html", "ssg")
+      case None if all => List("ssg-md", "ssg-liquid", "ssg-sass", "ssg-minify", "ssg-js", "ssg")
       case None => List("ssg-md") // default to ssg-md
     }
 

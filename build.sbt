@@ -51,13 +51,29 @@ val `ssg-sass` = (projectMatrix in file("ssg-sass"))
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
-// --- HTML/JS minification (jekyll-minifier port) ---
+// --- Web asset minification (jekyll-minifier port) ---
 
-val `ssg-html` = (projectMatrix in file("ssg-html"))
+val `ssg-minify` = (projectMatrix in file("ssg-minify"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
   .settings(SsgSettings.commonSettings *)
   .settings(
-    name := "ssg-html",
+    name := "ssg-minify",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
+// --- JavaScript compiler/minifier (Terser port) ---
+
+val `ssg-js` = (projectMatrix in file("ssg-js"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-js",
     libraryDependencies ++= Seq(
       "org.scalameta" %%% "munit"            % "1.2.3" % Test,
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
@@ -79,7 +95,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-html`)
+  .dependsOn(`ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)

@@ -39,14 +39,31 @@
 | `lib/src/extend/` | `ssg.sass.extend` |
 | `lib/src/importer/` | `ssg.sass.importer` |
 
-## jekyll-minifier → ssg.html
+## jekyll-minifier → ssg.minify
 
 | Ruby Concept | SSG Package |
 |-------------|-------------|
-| HTML minification | `ssg.html.minify` |
-| CSS minification | `ssg.html.css` |
-| JS minification | `ssg.html.js` |
-| Configuration | `ssg.html.config` |
+| HTML minification | `ssg.minify.html` |
+| CSS minification | `ssg.minify.css` |
+| JS minification | `ssg.minify.js` |
+| JSON minification | `ssg.minify.json` |
+| Configuration | `ssg.minify.MinifyOptions` |
+| Facade | `ssg.minify.Minifier` |
+
+## terser → ssg.js
+
+| Terser Module | SSG Package |
+|---------------|-------------|
+| `lib/ast.js` | `ssg.js.ast` |
+| `lib/parse.js` | `ssg.js.parse` |
+| `lib/output.js` | `ssg.js.output` |
+| `lib/scope.js` | `ssg.js.scope` |
+| `lib/compress/` | `ssg.js.compress` |
+| `lib/minify.js` | `ssg.js.Terser` |
+| `AST_*` classes | `Ast*` classes in `ssg.js.ast` |
+| `SymbolDef` | `ssg.js.scope.SymbolDef` |
+| `Compressor` | `ssg.js.compress.Compressor` |
+| `OutputStream` | `ssg.js.output.OutputStream` |
 
 ## Common Java → Scala Collection Mappings
 

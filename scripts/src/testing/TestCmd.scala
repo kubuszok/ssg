@@ -46,7 +46,7 @@ object TestCmd {
 
   private def verify(): Unit = {
     Term.info("Verifying all modules on all platforms...")
-    val modules = List("ssg-md", "ssg-liquid", "ssg-sass", "ssg-html", "ssg")
+    val modules = List("ssg-md", "ssg-liquid", "ssg-sass", "ssg-minify", "ssg-js", "ssg")
     for (module <- modules) {
       for (suffix <- List("", "JS", "Native")) {
         val target = s"$module$suffix"
