@@ -10,3 +10,6 @@
 [submodule "original-src/jekyll-minifier"]
 	path = original-src/jekyll-minifier
 	url = https://github.com/digitalsparky/jekyll-minifier.git
+[submodule "original-src/terser"]
+	path = original-src/terser
+	url = https://github.com/terser/terser.git
