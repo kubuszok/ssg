@@ -1518,26 +1518,26 @@ dart-sass	lib/src/parse/selector.dart		not_started	ssg-sass	2026-03-30			2026-03
 dart-sass	lib/src/parse/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/stylesheet_graph.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/syntax.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/box.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/character.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/fuzzy_equality.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/iterable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/lazy_file_span.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/limited_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/merged_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/util/box.dart	ssg-sass/src/main/scala/ssg/sass/util/Box.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/character.dart	ssg-sass/src/main/scala/ssg/sass/util/CharCode.scala	ported	ssg-sass	2026-04-05	Ported in Phase 0		2026-03-30
+dart-sass	lib/src/util/fuzzy_equality.dart	ssg-sass/src/main/scala/ssg/sass/util/FuzzyEquality.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/iterable.dart	ssg-sass/src/main/scala/ssg/sass/util/IterableUtil.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/lazy_file_span.dart	ssg-sass/src/main/scala/ssg/sass/util/LazyFileSpan.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/limited_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/map.dart	ssg-sass/src/main/scala/ssg/sass/util/MapUtil.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/merged_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/multi_dir_watcher.dart		skipped	ssg-sass	2026-04-05	File watching utility — not needed for SSG		2026-03-30
-dart-sass	lib/src/util/multi_span.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/no_source_map_buffer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/nullable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/option.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/prefixed_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/public_member_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/source_map_buffer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/span.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/util/unprefixed_map_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/util/multi_span.dart	ssg-sass/src/main/scala/ssg/sass/util/MultiSpan.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/no_source_map_buffer.dart	ssg-sass/src/main/scala/ssg/sass/util/SourceMapBuffer.scala	ported	ssg-sass	2026-04-05	NoSourceMapBuffer in same file		2026-03-30
+dart-sass	lib/src/util/nullable.dart		done	ssg-sass	2026-04-05	Covered by ssg-sass Nullable opaque type		2026-03-30
+dart-sass	lib/src/util/number.dart	ssg-sass/src/main/scala/ssg/sass/util/NumberUtil.scala	ported	ssg-sass	2026-04-05	SassNumber functions deferred to Phase 9		2026-03-30
+dart-sass	lib/src/util/option.dart		done	ssg-sass	2026-04-05	Not needed — use Scala Option directly		2026-03-30
+dart-sass	lib/src/util/prefixed_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/PrefixedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/public_member_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/PublicMemberMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/source_map_buffer.dart	ssg-sass/src/main/scala/ssg/sass/util/SourceMapBuffer.scala	ported	ssg-sass	2026-04-05	SourceMapBuffer in same file		2026-03-30
+dart-sass	lib/src/util/span.dart	ssg-sass/src/main/scala/ssg/sass/util/SourceSpan.scala	ported	ssg-sass	2026-04-05	Merged into Phase 0 SourceSpan.scala		2026-03-30
+dart-sass	lib/src/util/string.dart	ssg-sass/src/main/scala/ssg/sass/util/StringUtil.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/util/unprefixed_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30

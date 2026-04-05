@@ -419,3 +419,21 @@ ssg-liquid/src/main/scala/ssg/liquid/tags/Include.scala	tags	pass	no	2026-04-04
 ssg-liquid/src/main/scala/ssg/liquid/tags/IncludeRelative.scala	tags	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Increment.scala	tags	minor_issues	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	tags	pass	no	2026-04-04		
+ssg-sass/src/main/scala/ssg/sass/util/NumberUtil.scala	util	pass	yes	2026-04-05	All 14 fuzzy functions. SassNumber trig deferred to Phase 9. moduloLikeSass fixed for Scala % semantics.	
+ssg-sass/src/main/scala/ssg/sass/util/FuzzyEquality.scala	util	minor_issues	no	2026-04-05	Missing hash method for collection use; Scala Equiv only requires equiv.	
+ssg-sass/src/main/scala/ssg/sass/util/Box.scala	util	pass	yes	2026-04-05	Box and ModifiableBox with reference equality. All APIs match.	
+ssg-sass/src/main/scala/ssg/sass/util/IterableUtil.scala	util	pass	no	2026-04-05	search and exceptLast. Uses boundary/break.	
+ssg-sass/src/main/scala/ssg/sass/util/MapUtil.scala	util	minor_issues	no	2026-04-05	putOrMerge and setAll present. pairs/getOption omitted (Scala stdlib equivalents).	
+ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	util	pass	yes	2026-04-05	safelist/blocklist factories. remove() supported for @use with.	
+ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	util	pass	yes	2026-04-05	Flattens nested views. Update existing key, throws on new key.	
+ssg-sass/src/main/scala/ssg/sass/util/PrefixedMapView.scala	util	pass	yes	2026-04-05	Adds prefix to keys. Immutable read-only view.	
+ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	util	pass	yes	2026-04-05	Strips prefix from keys. remove() supported.	
+ssg-sass/src/main/scala/ssg/sass/util/PublicMemberMapView.scala	util	pass	yes	2026-04-05	Filters Sass private members (- or _ prefix). Uses CharCode.	
+ssg-sass/src/main/scala/ssg/sass/util/LazyFileSpan.scala	util	minor_issues	no	2026-04-05	Core delegation present. Missing compareTo/context/union from FileSpan interface.	
+ssg-sass/src/main/scala/ssg/sass/util/MultiSpan.scala	util	minor_issues	no	2026-04-05	Core fields and delegation. Simplified message/highlight without color support.	
+ssg-sass/src/main/scala/ssg/sass/util/StringUtil.scala	util	pass	yes	2026-04-05	toCssIdentifier with surrogate pairs. codeUnitAtOrNull helper. Uses boundary/break.	
+ssg-sass/src/main/scala/ssg/sass/util/SourceMapBuffer.scala	util	pass	no	2026-04-05	SassBuffer trait with NoSourceMapBuffer and SourceMapBuffer. buildSourceMap deferred.	
+ssg-sass/src/main/scala/ssg/sass/util/CharCode.scala	util	pass	yes	2026-04-05	All constants and classification methods. Replaces charcode package + character.dart.	
+ssg-sass/src/main/scala/ssg/sass/util/SourceSpan.scala	util	pass	yes	2026-04-05	FileSpan/FileLocation/SourceFile with trim/expand/between/contains.	
+ssg-sass/src/main/scala/ssg/sass/util/SpanScanner.scala	util	pass	yes	2026-04-05	Complete scanner API: peekChar, readChar, scanChar, expectChar, scan regex, state save/restore, spanFrom.	
+ssg-sass/src/main/scala/ssg/sass/util/Trace.scala	util	pass	no	2026-04-05	Lightweight Frame/Trace for Sass stack traces.	
