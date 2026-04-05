@@ -11,7 +11,8 @@ Scala.js, and Scala Native — without external binary dependencies.
 | flexmark-java | Java | `ssg-md` | Markdown engine |
 | liqp | Java | `ssg-liquid` | Liquid template engine |
 | dart-sass | Dart | `ssg-sass` | SASS/SCSS compiler |
-| jekyll-minifier | Ruby | `ssg-html` | HTML/JS/CSS minification |
+| jekyll-minifier | Ruby | `ssg-minify` | HTML/JS/CSS/JSON minification |
+| terser | JavaScript | `ssg-js` | JavaScript compiler/minifier |
 
 ## Build Rules
 
@@ -37,7 +38,8 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `ssg-md/` | Markdown engine (flexmark-java port) |
 | `ssg-liquid/` | Liquid template engine (liqp port) |
 | `ssg-sass/` | SASS/SCSS compiler (dart-sass port) |
-| `ssg-html/` | HTML/JS/CSS minification (jekyll-minifier port) |
+| `ssg-minify/` | HTML/JS/CSS/JSON minification (jekyll-minifier port) |
+| `ssg-js/` | JavaScript compiler/minifier (Terser port) |
 | `ssg/` | Aggregator module (depends on all 4 above) |
 | `scripts/` | `ssg-dev` CLI toolkit (Scala CLI, no sbt) |
 | `scripts/data/` | TSV databases (migration, issues, audit) |
@@ -111,6 +113,7 @@ Load the relevant skill when working on specific areas:
 | Post-conversion verification | `/guide-verification` |
 | sbt build config, projectMatrix | `/arch-build` |
 | Cross-platform settings | `/arch-cross-platform` |
+| Regex cross-platform (re2/JS) | `/guide-regex` |
 | Auditing a file | `/audit-file <path>` |
 | Auditing a package | `/audit-package <pkg>` |
 | Migration progress | `/check-progress` |
@@ -126,6 +129,7 @@ Load the relevant skill when working on specific areas:
 - [Nullable guide](docs/contributing/nullable-guide.md) — `Nullable[A]` opaque type
 - [Control flow guide](docs/contributing/control-flow-guide.md) — `boundary`/`break` patterns
 - [Verification checklist](docs/contributing/verification-checklist.md) — post-conversion checks
+- [Cross-platform regex](docs/contributing/cross-platform-regex.md) — re2/JS regex limitations and workarounds
 
 ## Source Reference
 
@@ -136,7 +140,8 @@ Path mappings for each library:
 | flexmark-java | `original-src/flexmark-java/<module>/src/main/java/com/vladsch/flexmark/` | `ssg-md/src/main/scala/ssg/md/` |
 | liqp | `original-src/liqp/src/main/java/liqp/` | `ssg-liquid/src/main/scala/ssg/liquid/` |
 | dart-sass | `original-src/dart-sass/lib/src/` | `ssg-sass/src/main/scala/ssg/sass/` |
-| jekyll-minifier | `original-src/jekyll-minifier/lib/` | `ssg-html/src/main/scala/ssg/html/` |
+| jekyll-minifier | `original-src/jekyll-minifier/lib/` | `ssg-minify/src/main/scala/ssg/minify/` |
+| terser | `original-src/terser/lib/` | `ssg-js/src/main/scala/ssg/js/` |
 
 **Never fetch from GitHub** — always use the local submodule copies.
 
