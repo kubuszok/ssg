@@ -453,3 +453,7 @@ ssg-sass/src/main/scala/ssg/sass/value/SassMap.scala	value	pass	yes	2026-04-05	L
 ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	value	pass	yes	2026-04-05	Extends SassList with keyword tracking. wereKeywordsAccessed.	
 ssg-sass/src/main/scala/ssg/sass/value/ListSeparator.scala	value	pass	yes	2026-04-05	4-value enum: Space, Comma, Slash, Undecided.	
 ssg-sass/src/main/scala/ssg/sass/visitor/ValueVisitor.scala	visitor	pass	no	2026-04-05	Forward declaration. Visit methods for all value types.	
+ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala	value	pass	yes	2026-04-05	Unit conversion tables, factory methods, arithmetic, comparison, coerce/convert. All methods present.	
+ssg-sass/src/main/scala/ssg/sass/value/number/UnitlessSassNumber.scala	number	pass	yes	2026-04-05	Optimized unitless subclass.	
+ssg-sass/src/main/scala/ssg/sass/value/number/SingleUnitSassNumber.scala	number	pass	yes	2026-04-05	Single unit fast-path coercion.	
+ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	number	pass	yes	2026-04-05	Multi-unit subclass for complex unit expressions.	

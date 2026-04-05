@@ -91,8 +91,8 @@ abstract class Value {
   /** Tries to interpret this as a map. Returns None by default. */
   def tryMap(): Option[SassMap] = None
 
-  /** Asserts this is a SassNumber. Returns Value until SassNumber is ported in Phase 3b. */
-  def assertNumber(name: Nullable[String] = Nullable.Null): Value =
+  /** Asserts this is a SassNumber. */
+  def assertNumber(name: Nullable[String] = Nullable.Null): SassNumber =
     throw SassScriptException(s"$this is not a number.", name.toOption)
 
   /** Asserts this is a SassString. */

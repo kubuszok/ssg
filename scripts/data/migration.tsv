@@ -1574,10 +1574,10 @@ dart-sass	lib/src/value/list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassLis
 dart-sass	lib/src/value/map.dart	ssg-sass/src/main/scala/ssg/sass/value/SassMap.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/mixin.dart	ssg-sass/src/main/scala/ssg/sass/value/SassMixin.scala	ported	ssg-sass	2026-04-05	Callable type is Any placeholder until Phase 8		2026-03-30
 dart-sass	lib/src/value/null.dart	ssg-sass/src/main/scala/ssg/sass/value/SassNull.scala	ported	ssg-sass	2026-04-05			2026-03-30
-dart-sass	lib/src/value/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/number/complex.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/number/single_unit.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/number/unitless.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value/number.dart	ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/number/complex.dart	ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/number/single_unit.dart	ssg-sass/src/main/scala/ssg/sass/value/number/SingleUnitSassNumber.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/number/unitless.dart	ssg-sass/src/main/scala/ssg/sass/value/number/UnitlessSassNumber.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/string.dart	ssg-sass/src/main/scala/ssg/sass/value/SassString.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/visitor/any_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/ast_search.dart		not_started	ssg-sass	2026-03-30			2026-03-30

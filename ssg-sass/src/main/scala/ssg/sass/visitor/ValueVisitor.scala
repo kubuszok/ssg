@@ -26,6 +26,6 @@ trait ValueVisitor[T] {
   def visitMap(value: SassMap): T
   def visitMixin(value: SassMixin): T
   def visitNull(): T
-  def visitNumber(value: Value): T // Will be SassNumber in Phase 3b
+  def visitNumber(value: SassNumber): T
   def visitString(value: SassString): T
 }
