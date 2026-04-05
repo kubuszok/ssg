@@ -1542,7 +1542,7 @@ dart-sass	lib/src/utils.dart	ssg-sass/src/main/scala/ssg/sass/Utils.scala	ported
 dart-sass	lib/src/value.dart	ssg-sass/src/main/scala/ssg/sass/value/Value.scala	ported	ssg-sass	2026-04-05	Base Value class + ListSeparator in separate file		2026-03-30
 dart-sass	lib/src/value/argument_list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/boolean.dart	ssg-sass/src/main/scala/ssg/sass/value/SassBoolean.scala	ported	ssg-sass	2026-04-05			2026-03-30
-dart-sass	lib/src/value/calculation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value/calculation.dart	ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	ported	ssg-sass	2026-04-05	Includes CalculationOperation, CalculationOperator, CalculationInterpolation		2026-03-30
 dart-sass	lib/src/value/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color/channel.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color/conversions.dart		not_started	ssg-sass	2026-03-30			2026-03-30

@@ -457,3 +457,4 @@ ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala	value	pass	yes	2026-04-0
 ssg-sass/src/main/scala/ssg/sass/value/number/UnitlessSassNumber.scala	number	pass	yes	2026-04-05	Optimized unitless subclass.	
 ssg-sass/src/main/scala/ssg/sass/value/number/SingleUnitSassNumber.scala	number	pass	yes	2026-04-05	Single unit fast-path coercion.	
 ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	number	pass	yes	2026-04-05	Multi-unit subclass for complex unit expressions.	
+ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	value	pass	no	2026-04-05	calc/min/max/clamp factory methods, CalculationOperation, CalculationOperator enum. Auto-simplification logic preserved.	

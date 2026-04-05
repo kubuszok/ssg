@@ -100,7 +100,7 @@ abstract class Value {
     throw SassScriptException(s"$this is not a string.", name.toOption)
 
   /** Asserts this is a SassCalculation. */
-  def assertCalculation(name: Nullable[String] = Nullable.Null): Value =
+  def assertCalculation(name: Nullable[String] = Nullable.Null): SassCalculation =
     throw SassScriptException(s"$this is not a calculation.", name.toOption)
 
   /** Asserts this value is an integer. Placeholder until SassNumber Phase 3b. */

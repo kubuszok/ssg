@@ -19,7 +19,7 @@ import ssg.sass.value.*
 /** Visitor interface for SassScript value types. */
 trait ValueVisitor[T] {
   def visitBoolean(value: SassBoolean): T
-  def visitCalculation(value: Value): T // Will be SassCalculation in Phase 3c
+  def visitCalculation(value: SassCalculation): T
   def visitColor(value: Value): T // Will be SassColor in Phase 3c
   def visitFunction(value: SassFunction): T
   def visitList(value: SassList): T
