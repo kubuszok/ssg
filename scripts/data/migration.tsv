@@ -1238,30 +1238,30 @@ liqp	src/main/java/liqp/tags/Tag.java		done	ssg-liquid	2026-04-04			2026-03-30
 dart-sass	bin/sass.dart		skipped	ssg-sass	2026-04-05	CLI entry point — SSG has its own		2026-03-30
 dart-sass	lib/sass.dart		skipped	ssg-sass	2026-04-05	Public API barrel — SSG creates its own		2026-03-30
 dart-sass	lib/src/ast/css.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
-dart-sass	lib/src/ast/css/at_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/import.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/keyframe_block.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/media_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/media_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
-dart-sass	lib/src/ast/css/modifiable/at_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/comment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/declaration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/import.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/keyframe_block.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/media_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/style_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/modifiable/supports_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/style_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/supports_rule.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/css/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/node.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/ast/css/at_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/comment.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/declaration.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/import.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/keyframe_block.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/media_query.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/media_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/at_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/comment.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/declaration.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/import.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/keyframe_block.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/media_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/node.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/style_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/stylesheet.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/modifiable/supports_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/node.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/style_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/stylesheet.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/supports_rule.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/css/value.dart		ported	ssg-sass	2026-04-05	Merged into CssNode/CssStylesheet/CssStyleRule etc. Scala files		2026-03-30
+dart-sass	lib/src/ast/node.dart	ssg-sass/src/main/scala/ssg/sass/ast/AstNode.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/ast/sass.dart		done	ssg-sass	2026-04-05	Barrel file — re-exports only, no Scala equivalent needed		2026-03-30
 dart-sass	lib/src/ast/sass/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/sass/at_root_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1349,22 +1349,22 @@ dart-sass	lib/src/ast/sass/supports_condition/function.dart		not_started	ssg-sas
 dart-sass	lib/src/ast/sass/supports_condition/interpolation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/sass/supports_condition/negation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/ast/sass/supports_condition/operation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/attribute.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/class.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/combinator.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/complex.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/complex_component.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/compound.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/id.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/parent.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/placeholder.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/pseudo.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/qualified_name.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/simple.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/type.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/ast/selector/universal.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/ast/selector.dart	ssg-sass/src/main/scala/ssg/sass/ast/selector/Selector.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/ast/selector/attribute.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/class.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/combinator.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/complex.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/complex_component.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/compound.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/id.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/list.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/parent.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/placeholder.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/pseudo.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/qualified_name.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/simple.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/type.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
+dart-sass	lib/src/ast/selector/universal.dart		ported	ssg-sass	2026-04-05	Merged into Selector/SelectorList/ComplexSelector/CompoundSelector/SimpleSelector/PseudoSelector/QualifiedName Scala files		2026-03-30
 dart-sass	lib/src/async_compile.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
 dart-sass	lib/src/async_environment.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
 dart-sass	lib/src/async_import_cache.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
