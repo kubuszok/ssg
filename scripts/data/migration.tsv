@@ -1539,9 +1539,9 @@ dart-sass	lib/src/util/span.dart	ssg-sass/src/main/scala/ssg/sass/util/SourceSpa
 dart-sass	lib/src/util/string.dart	ssg-sass/src/main/scala/ssg/sass/util/StringUtil.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/unprefixed_map_view.dart	ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/utils.dart	ssg-sass/src/main/scala/ssg/sass/Utils.scala	ported	ssg-sass	2026-04-05			2026-03-30
-dart-sass	lib/src/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/argument_list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/boolean.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value.dart	ssg-sass/src/main/scala/ssg/sass/value/Value.scala	ported	ssg-sass	2026-04-05	Base Value class + ListSeparator in separate file		2026-03-30
+dart-sass	lib/src/value/argument_list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/boolean.dart	ssg-sass/src/main/scala/ssg/sass/value/SassBoolean.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/calculation.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color/channel.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1569,16 +1569,16 @@ dart-sass	lib/src/value/color/space/srgb_linear.dart		not_started	ssg-sass	2026-
 dart-sass	lib/src/value/color/space/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color/space/xyz_d50.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/color/space/xyz_d65.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/function.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/mixin.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/null.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value/function.dart	ssg-sass/src/main/scala/ssg/sass/value/SassFunction.scala	ported	ssg-sass	2026-04-05	Callable type is Any placeholder until Phase 8		2026-03-30
+dart-sass	lib/src/value/list.dart	ssg-sass/src/main/scala/ssg/sass/value/SassList.scala	ported	ssg-sass	2026-04-05	ListSeparator in separate file		2026-03-30
+dart-sass	lib/src/value/map.dart	ssg-sass/src/main/scala/ssg/sass/value/SassMap.scala	ported	ssg-sass	2026-04-05			2026-03-30
+dart-sass	lib/src/value/mixin.dart	ssg-sass/src/main/scala/ssg/sass/value/SassMixin.scala	ported	ssg-sass	2026-04-05	Callable type is Any placeholder until Phase 8		2026-03-30
+dart-sass	lib/src/value/null.dart	ssg-sass/src/main/scala/ssg/sass/value/SassNull.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/value/number.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/number/complex.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/number/single_unit.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/value/number/unitless.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/value/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/value/string.dart	ssg-sass/src/main/scala/ssg/sass/value/SassString.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/visitor/any_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/ast_search.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/async_evaluate.dart		skipped	ssg-sass	2026-04-05	Async evaluator — not needed		2026-03-30
@@ -1594,7 +1594,7 @@ dart-sass	lib/src/visitor/interface/interpolated_selector.dart		not_started	ssg-
 dart-sass	lib/src/visitor/interface/modifiable_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/interface/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/interface/statement.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/visitor/interface/value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/visitor/interface/value.dart	ssg-sass/src/main/scala/ssg/sass/visitor/ValueVisitor.scala	ported	ssg-sass	2026-04-05	Forward declaration; will be refined in Phase 5		2026-03-30
 dart-sass	lib/src/visitor/is_calculation_safe.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/is_plain_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/visitor/recursive_ast.dart		not_started	ssg-sass	2026-03-30			2026-03-30

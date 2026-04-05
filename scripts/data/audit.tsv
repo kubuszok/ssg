@@ -442,3 +442,14 @@ ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	sass	pass	yes	2026-04-05	29 d
 ssg-sass/src/main/scala/ssg/sass/SassException.scala	sass	pass	yes	2026-04-05	Full hierarchy: SassException, MultiSpan*, Runtime*, Format*, SassScriptException. toCssString present.	
 ssg-sass/src/main/scala/ssg/sass/Logger.scala	sass	pass	yes	2026-04-05	Logger trait, QuietLogger, StderrLogger, TrackingLogger, DeprecationProcessingLogger. All merged from 5 Dart files.	
 ssg-sass/src/main/scala/ssg/sass/Utils.scala	sass	pass	yes	2026-04-05	All utility functions: toSentence, indent, pluralize, trimAscii, isPublic, unvendor, equalsIgnoreCase, LCS, flattenVertically, codepointIndex conversion.	
+ssg-sass/src/main/scala/ssg/sass/value/Value.scala	value	pass	yes	2026-04-05	Base class with assert*, arithmetic operators, list/CSS methods. All public APIs present.	
+ssg-sass/src/main/scala/ssg/sass/value/SassBoolean.scala	value	pass	yes	2026-04-05	Singleton true/false. assertBoolean, unaryNot, equals.	
+ssg-sass/src/main/scala/ssg/sass/value/SassNull.scala	value	pass	yes	2026-04-05	Singleton. Falsy, blank, realNull returns Nullable.Null.	
+ssg-sass/src/main/scala/ssg/sass/value/SassString.scala	value	pass	yes	2026-04-05	Quoted/unquoted, sassLength, isBlank, isSpecialNumber, plus. sassIndexTo* placeholders until SassNumber.	
+ssg-sass/src/main/scala/ssg/sass/value/SassFunction.scala	value	pass	yes	2026-04-05	Any placeholder for Callable. assertFunction, equals.	
+ssg-sass/src/main/scala/ssg/sass/value/SassMixin.scala	value	pass	yes	2026-04-05	Any placeholder for Callable. assertMixin, equals.	
+ssg-sass/src/main/scala/ssg/sass/value/SassList.scala	value	pass	yes	2026-04-05	List with separator/brackets. assertMap for empty. isBlank.	
+ssg-sass/src/main/scala/ssg/sass/value/SassMap.scala	value	pass	yes	2026-04-05	ListMap for order. asList returns key-value pairs. Empty equals empty list.	
+ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	value	pass	yes	2026-04-05	Extends SassList with keyword tracking. wereKeywordsAccessed.	
+ssg-sass/src/main/scala/ssg/sass/value/ListSeparator.scala	value	pass	yes	2026-04-05	4-value enum: Space, Comma, Slash, Undecided.	
+ssg-sass/src/main/scala/ssg/sass/visitor/ValueVisitor.scala	visitor	pass	no	2026-04-05	Forward declaration. Visit methods for all value types.	
