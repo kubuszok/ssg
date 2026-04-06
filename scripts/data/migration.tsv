@@ -1438,8 +1438,8 @@ dart-sass	lib/src/importer/node_package.dart		not_started	ssg-sass	2026-03-30			
 dart-sass	lib/src/importer/package.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer/result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/importer/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/interpolation_buffer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/interpolation_map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/interpolation_buffer.dart	ssg-sass/src/main/scala/ssg/sass/InterpolationBuffer.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/interpolation_map.dart	ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/io.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
 dart-sass	lib/src/io/interface.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
 dart-sass	lib/src/io/js.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
@@ -1507,15 +1507,15 @@ dart-sass	lib/src/module.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module/forwarded_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/module/shadowed_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/at_root_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/keyframe_selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/media_query.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/parser.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/sass.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/scss.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/parse/stylesheet.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/parse/at_root_query.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/css.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/keyframe_selector.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/media_query.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/parser.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/sass.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/scss.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/selector.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
+dart-sass	lib/src/parse/stylesheet.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
 dart-sass	lib/src/stylesheet_graph.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/syntax.dart	ssg-sass/src/main/scala/ssg/sass/Syntax.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/box.dart	ssg-sass/src/main/scala/ssg/sass/util/Box.scala	ported	ssg-sass	2026-04-05			2026-03-30
