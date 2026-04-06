@@ -276,9 +276,9 @@ final class SassColor private (
         // logic for the declaration-value case; this branch covers
         // interpolation (`#{$color}`) and any other path that goes through
         // `toCssString` directly.
-        val ri = math.round(channel0).toInt
-        val gi = math.round(channel1).toInt
-        val bi = math.round(channel2).toInt
+        val ri     = math.round(channel0).toInt
+        val gi     = math.round(channel1).toInt
+        val bi     = math.round(channel2).toInt
         val opaque = alphaOrNull.isDefined && fuzzyEquals(alphaOrNull.get, 1.0)
         if (!opaque) {
           val r = fmt(channel0)
@@ -291,7 +291,7 @@ final class SassColor private (
           val b = fmt(channel2)
           s"rgb($r, $g, $b)"
         } else {
-          val hex = "#%02x%02x%02x".format(ri, gi, bi)
+          val hex   = "#%02x%02x%02x".format(ri, gi, bi)
           val short =
             if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6))
               "#" + hex.charAt(1) + hex.charAt(3) + hex.charAt(5)
