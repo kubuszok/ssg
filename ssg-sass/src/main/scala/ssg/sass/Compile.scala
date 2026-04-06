@@ -8,29 +8,59 @@
  *
  * Migration notes:
  *   Renames: compile.dart + compile_result.dart -> Compile.scala
- *   Convention: Phase 10/11 skeleton — top-level entry point that wires the
- *               parser, evaluator, and serializer together. The current
- *               implementation returns a stub CompileResult.
+ *   Convention: Wires StylesheetParser -> EvaluateVisitor -> SerializeVisitor.
  *   Idiom: Dart top-level functions -> Scala 3 object methods.
  */
 package ssg
 package sass
 
+import ssg.sass.parse.ScssParser
+import ssg.sass.visitor.{EvaluateVisitor, OutputStyle, SerializeVisitor}
+
 /** The result of compiling a Sass document to CSS. */
-final case class CompileResult(css: String, sourceMap: Option[String], loadedUrls: Set[String])
+final case class CompileResult(
+  css: String,
+  sourceMap: Option[String] = None,
+  loadedUrls: Set[String] = Set.empty
+)
 
 /** Top-level Sass compilation entry points. */
 object Compile {
 
   /** Compile a Sass/SCSS source string to CSS.
     *
-    * Skeleton — currently returns an empty stub result. Will dispatch through
-    * StylesheetParser -> EvaluateVisitor -> SerializeVisitor in a future phase.
+    * Wires the full pipeline: StylesheetParser → EvaluateVisitor → SerializeVisitor.
+    *
+    * @param source the Sass/SCSS source text
+    * @param style  the output style ("expanded" or "compressed")
     */
-  def compileString(source: String): CompileResult =
-    CompileResult(css = "", sourceMap = None, loadedUrls = Set.empty)
+  def compileString(source: String, style: String = OutputStyle.Expanded): CompileResult = {
+    // 1. Parse source to Sass AST
+    val parser = new ScssParser(source)
+    val sassAst = parser.parse()
 
-  /** Compile a Sass/SCSS file at the given path. */
+    // 2. Evaluate Sass AST to CSS AST
+    val evaluator = new EvaluateVisitor()
+    val result = evaluator.run(sassAst)
+
+    // 3. Serialize CSS AST to text
+    val serializer = new SerializeVisitor(style = style)
+    val serialized = serializer.serialize(result.stylesheet)
+
+    CompileResult(
+      css = serialized.css,
+      sourceMap = serialized.sourceMap,
+      loadedUrls = result.loadedUrls
+    )
+  }
+
+  /** Compile a Sass/SCSS file at the given path.
+    *
+    * Currently not implemented — file I/O is Phase 8's `ImportCache` /
+    * `FilesystemImporter` territory.
+    */
   def compile(path: String): CompileResult =
-    CompileResult(css = "", sourceMap = None, loadedUrls = Set.empty)
+    throw new UnsupportedOperationException(
+      "Compile.compile(path): file I/O not implemented. Use compileString with loaded source."
+    )
 }

@@ -573,7 +573,7 @@ abstract class SassNumber protected (
 
   override def toString: String = {
     val sb = new StringBuilder()
-    sb.append(value)
+    sb.append(SassNumber.formatNumber(value))
     sb.append(unitString)
     sb.toString()
   }
@@ -583,6 +583,29 @@ object SassNumber {
 
   /** The number of distinct digits that are emitted when converting a number to CSS. */
   val precision: Int = 10
+
+  /** Formats a Double for CSS output: integers as `10`, non-integers rounded
+    * to `precision` significant digits with trailing zeros stripped.
+    */
+  def formatNumber(value: Double): String = {
+    if (value.isNaN) "NaN"
+    else if (value.isPosInfinity) "Infinity"
+    else if (value.isNegInfinity) "-Infinity"
+    else if (value == value.toLong.toDouble && math.abs(value) < 1e15) {
+      // Integer-valued: emit without decimal point
+      value.toLong.toString
+    } else {
+      // Fractional: round to precision decimal places, strip trailing zeros
+      val formatted = String.format(s"%.${precision}f", java.lang.Double.valueOf(value))
+      // Strip trailing zeros and possibly the decimal point
+      var end = formatted.length
+      while (end > 0 && formatted.charAt(end - 1) == '0') end -= 1
+      if (end > 0 && formatted.charAt(end - 1) == '.') end -= 1
+      val trimmed = formatted.substring(0, end)
+      // Handle -0 → 0
+      if (trimmed == "-0") "0" else trimmed
+    }
+  }
 
   /** Creates a number, optionally with a single numerator unit. */
   def apply(value: Double): UnitlessSassNumber = UnitlessSassNumber(value)
