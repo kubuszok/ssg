@@ -143,7 +143,20 @@ or serializer.
 - ✅ `children(child)` — block parsing with `{...}`
 - ✅ `statements(statement)` — top-level sequence
 
-### `parse/SassParser.scala` — same 7 methods as ScssParser, indented variants
+### `parse/SassParser.scala` ✅ MVP IMPLEMENTED
+- ✅ `parse()` — overridden to translate the indented Sass source to its
+  SCSS equivalent (`SassParser.indentedToScss`) and delegate to
+  `ScssParser`. Handles variables, declarations, nested style rules,
+  simple @-rules, and `//`/`/* */` comments. Indentation drives block
+  open/close; statements terminate at newlines.
+- ⚠️  Override hooks (`styleRuleSelector`, `expectStatementSeparator`,
+  `atEndOfStatement`, `lookingAtChildren`, `scanElse`, `children`,
+  `statements`) are stubs (`UnsupportedOperationException`) since the
+  preprocessing approach skips StylesheetParser's statement loop.
+- ❌ Multi-line selector continuations, `===`-style flags, and other
+  edge cases of the indented syntax are not yet supported.
+- ✅ `Compile.compileString` accepts `syntax: Syntax = Syntax.Scss`;
+  `Syntax.Sass` selects `SassParser` instead of `ScssParser`.
 
 ### `parse/SelectorParser.scala`
 - ❌ `parse()` — medium
