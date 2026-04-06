@@ -4,6 +4,44 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Modern CSS color space support (lab / lch / oklab / oklch / hwb / color())
+
+- `ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala` —
+  registered six new global color constructors: `lab`, `lch`, `oklab`,
+  `oklch`, `hwb`, and `color($space, ...)`. All accept comma-separated
+  arguments (the modern space-separated / slash syntax isn't parsed by
+  `StylesheetParser` yet, so SCSS sources must use `lab(50, 20, -30)`
+  for now). `color($space, c1, c2, c3, $alpha: 1)` accepts any of the
+  names exposed by `ColorSpace.fromName` (srgb, srgb-linear, display-p3,
+  display-p3-linear, a98-rgb, prophoto-rgb, rec2020, xyz, xyz-d50,
+  xyz-d65, lab, lch, oklab, oklch, hwb, hsl, rgb).
+- `mixFn` now takes an optional `$space` kwarg: when supplied it routes
+  through `SassColor.interpolate` with an `InterpolationMethod` in the
+  given space (Shorter hue interpolation for polar spaces). When omitted
+  it falls back to the legacy rgb-alpha-weighted mix for backwards
+  compatibility with existing `CompileSuite` tests.
+- `ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala` — overrode
+  `toCssString` to render modern CSS syntax for every non-legacy-rgb
+  space: `hsl(...)` / `hwb(...)` / `lab(...)` / `lch(...)` /
+  `oklab(...)` / `oklch(...)` / `color(<space> ...)` with a `/ alpha`
+  suffix when alpha ≠ 1 and `none` for missing channels. Legacy `rgb`
+  colors still go through `SerializeVisitor.formatColor` (hex / name /
+  rgba) so existing compile tests are untouched.
+- The underlying color space conversions (sRGB ↔ XYZ D65/D50, XYZ D50 ↔
+  Lab, Lab ↔ Lch, LMS ↔ Oklab via `oklabToLms`/`lmsToOklab`, and all
+  predefined-space matrices) were already ported into
+  `ssg-sass/src/main/scala/ssg/sass/value/color/Conversions.scala` and
+  wired through `ColorSpaces.scala`; this task only needed to expose
+  them via constructors/serializer.
+- `ssg-sass/src/test/scala/ssg/sass/ColorSpacesSuite.scala` — new
+  cross-platform suite, 12 cases covering: lab/lch/oklch/oklab/hwb
+  parsing, `color(display-p3 1 0.5 0)`, modern serialization, rgb→lab→rgb
+  and rgb→oklch→rgb round-trips within 1e-3, legacy rgb `mix`, `mix`
+  with `$space: oklch`, and direct `SassColor.interpolate` in oklch.
+
+All 3 platforms: JVM 510, JS 489 (+2 ignored), Native 489 (+2 ignored),
+green (+12 per platform).
+
 ### Cross-platform MapImporter + ImportMapSuite
 
 - `ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala` — new

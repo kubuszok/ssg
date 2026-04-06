@@ -20,8 +20,8 @@ package sass
 package functions
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
-import ssg.sass.value.{ SassColor, SassNull, SassNumber, Value }
-import ssg.sass.value.color.ColorSpace
+import ssg.sass.value.{ SassColor, SassNull, SassNumber, SassString, Value }
+import ssg.sass.value.color.{ ColorSpace, HueInterpolationMethod, InterpolationMethod }
 import ssg.sass.util.NumberUtil.fuzzyRound
 
 /** Built-in color functions: rgb, rgba, hsl, hsla, and legacy accessors / manipulation functions (red, green, blue, hue, saturation, lightness, alpha, mix, lighten, darken, saturate, desaturate,
@@ -143,6 +143,119 @@ object ColorFunctions {
   private val hslaFn: BuiltInCallable =
     BuiltInCallable.function("hsla", "$hue, $saturation, $lightness, $alpha", hslFn.callback)
 
+  // --- Modern CSS color constructors ---
+  // These accept comma-separated arguments. The modern space-separated / slash
+  // syntax (`lab(50% 20 -30 / 0.5)`) is not yet parsed by StylesheetParser, so
+  // SCSS sources must use the comma form for now.
+
+  /** Returns the raw numeric value of a SassNumber, stripping `%` (which is treated as "100" for Lab-style percentages — Lab lightness has a 0-100 range, and a/b have implicit ranges that the CSS
+    * spec percent-maps).
+    */
+  private def labChannel(n: SassNumber, percentScale: Double): Double =
+    if (n.hasUnit("%")) n.value * percentScale / 100.0
+    else n.value
+
+  private val labFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "lab",
+      "$lightness, $a, $b, $alpha: 1",
+      { args =>
+        val l     = labChannel(args(0).assertNumber(), 100)
+        val a     = labChannel(args(1).assertNumber(), 125)
+        val b     = labChannel(args(2).assertNumber(), 125)
+        val alpha =
+          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
+        SassColor.lab(Nullable(l), Nullable(a), Nullable(b), Nullable(clamp(alpha, 0, 1)))
+      }
+    )
+
+  private val lchFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "lch",
+      "$lightness, $chroma, $hue, $alpha: 1",
+      { args =>
+        val l     = labChannel(args(0).assertNumber(), 100)
+        val c     = labChannel(args(1).assertNumber(), 150)
+        val h     = hueOf(args(2).assertNumber())
+        val alpha =
+          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
+        SassColor.lch(Nullable(l), Nullable(c), Nullable(h), Nullable(clamp(alpha, 0, 1)))
+      }
+    )
+
+  private val oklabFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "oklab",
+      "$lightness, $a, $b, $alpha: 1",
+      { args =>
+        val l     = labChannel(args(0).assertNumber(), 1)
+        val a     = labChannel(args(1).assertNumber(), 0.4)
+        val b     = labChannel(args(2).assertNumber(), 0.4)
+        val alpha =
+          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
+        SassColor.oklab(Nullable(l), Nullable(a), Nullable(b), Nullable(clamp(alpha, 0, 1)))
+      }
+    )
+
+  private val oklchFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "oklch",
+      "$lightness, $chroma, $hue, $alpha: 1",
+      { args =>
+        val l     = labChannel(args(0).assertNumber(), 1)
+        val c     = labChannel(args(1).assertNumber(), 0.4)
+        val h     = hueOf(args(2).assertNumber())
+        val alpha =
+          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
+        SassColor.oklch(Nullable(l), Nullable(c), Nullable(h), Nullable(clamp(alpha, 0, 1)))
+      }
+    )
+
+  private val hwbFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "hwb",
+      "$hue, $whiteness, $blackness, $alpha: 1",
+      { args =>
+        val h     = hueOf(args(0).assertNumber())
+        val w     = args(1).assertNumber().value
+        val b     = args(2).assertNumber().value
+        val alpha =
+          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
+        SassColor.hwb(Nullable(h), Nullable(clamp(w, 0, 100)), Nullable(clamp(b, 0, 100)), Nullable(clamp(alpha, 0, 1)))
+      }
+    )
+
+  /** `color($space, $c1, $c2, $c3, $alpha: 1)` — constructs a color in an explicit non-legacy color space (srgb, display-p3, a98-rgb, etc.).
+    */
+  private val colorFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "color",
+      "$space, $channel1, $channel2, $channel3, $alpha: 1",
+      { args =>
+        if (args.length < 4)
+          throw SassScriptException(
+            s"color() requires at least 4 arguments, was ${args.length}."
+          )
+        val spaceName = args(0) match {
+          case s: SassString => s.text
+          case other => other.assertString().text
+        }
+        val space = ColorSpace.fromName(spaceName)
+        val c1    = args(1).assertNumber().value
+        val c2    = args(2).assertNumber().value
+        val c3    = args(3).assertNumber().value
+        val alpha =
+          if (args.length >= 5) scalar(args(4).assertNumber()) else 1.0
+        SassColor.forSpaceInternal(
+          space,
+          Nullable(c1),
+          Nullable(c2),
+          Nullable(c3),
+          Nullable(clamp(alpha, 0, 1))
+        )
+      }
+    )
+
   // --- Accessors ---
 
   private val redFn: BuiltInCallable =
@@ -174,34 +287,59 @@ object ColorFunctions {
   private val mixFn: BuiltInCallable =
     BuiltInCallable.function(
       "mix",
-      "$color1, $color2, $weight: 50%",
+      "$color1, $color2, $weight: 50%, $space: null",
       { args =>
         val c1     = args(0).assertColor()
         val c2     = args(1).assertColor()
         val weight =
-          if (args.length >= 3) scalar(args(2).assertNumber(), 100) / 100.0
+          if (args.length >= 3 && !(args(2) eq SassNull))
+            scalar(args(2).assertNumber(), 100) / 100.0
           else 0.5
         val w = clamp(weight, 0, 1)
-        // dart-sass legacy mix: weight of c1; weight factor adjusted by alpha diff.
-        val normalizedWeight = w * 2 - 1
-        val alphaDiff        = c1.alpha - c2.alpha
-        val combinedWeight   =
-          if (normalizedWeight * alphaDiff == -1) normalizedWeight
-          else (normalizedWeight + alphaDiff) / (1 + normalizedWeight * alphaDiff)
-        val weight1 = (combinedWeight + 1) / 2
-        val weight2 = 1 - weight1
-        val r1      = c1.toSpace(ColorSpace.rgb).channel0
-        val g1      = c1.toSpace(ColorSpace.rgb).channel1
-        val b1      = c1.toSpace(ColorSpace.rgb).channel2
-        val r2      = c2.toSpace(ColorSpace.rgb).channel0
-        val g2      = c2.toSpace(ColorSpace.rgb).channel1
-        val b2      = c2.toSpace(ColorSpace.rgb).channel2
-        rgbFrom(
-          r1 * weight1 + r2 * weight2,
-          g1 * weight1 + g2 * weight2,
-          b1 * weight1 + b2 * weight2,
-          c1.alpha * w + c2.alpha * (1 - w)
-        )
+        // $space: if supplied and not null, perform interpolation in the given
+        // non-legacy color space using SassColor.interpolate (which handles the
+        // conversions and hue interpolation).
+        val spaceArg: Option[String] =
+          if (args.length >= 4 && !(args(3) eq SassNull))
+            args(3) match {
+              case s: SassString => Some(s.text)
+              case other => Some(other.assertString().text)
+            }
+          else None
+        spaceArg match {
+          case Some(name) =>
+            val space  = ColorSpace.fromName(name)
+            val method =
+              if (space.isPolar)
+                InterpolationMethod(space, Nullable(HueInterpolationMethod.Shorter))
+              else
+                InterpolationMethod(space)
+            // SassColor.interpolate uses this-weight: passing `w` means the
+            // mix is weighted toward c1 by w, matching the documented mix()
+            // semantics where $weight is how much of $color1 is kept.
+            c1.interpolate(c2, method, weight = w)
+          case None =>
+            // dart-sass legacy mix: weight of c1; weight factor adjusted by alpha diff.
+            val normalizedWeight = w * 2 - 1
+            val alphaDiff        = c1.alpha - c2.alpha
+            val combinedWeight   =
+              if (normalizedWeight * alphaDiff == -1) normalizedWeight
+              else (normalizedWeight + alphaDiff) / (1 + normalizedWeight * alphaDiff)
+            val weight1 = (combinedWeight + 1) / 2
+            val weight2 = 1 - weight1
+            val r1      = c1.toSpace(ColorSpace.rgb).channel0
+            val g1      = c1.toSpace(ColorSpace.rgb).channel1
+            val b1      = c1.toSpace(ColorSpace.rgb).channel2
+            val r2      = c2.toSpace(ColorSpace.rgb).channel0
+            val g2      = c2.toSpace(ColorSpace.rgb).channel1
+            val b2      = c2.toSpace(ColorSpace.rgb).channel2
+            rgbFrom(
+              r1 * weight1 + r2 * weight2,
+              g1 * weight1 + g2 * weight2,
+              b1 * weight1 + b2 * weight2,
+              c1.alpha * w + c2.alpha * (1 - w)
+            )
+        }
       }
     )
 
@@ -515,6 +653,12 @@ object ColorFunctions {
     rgbaFn,
     hslFn,
     hslaFn,
+    hwbFn,
+    labFn,
+    lchFn,
+    oklabFn,
+    oklchFn,
+    colorFn,
     redFn,
     greenFn,
     blueFn,

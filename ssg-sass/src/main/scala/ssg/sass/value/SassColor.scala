@@ -253,6 +253,50 @@ final class SassColor private (
 
   override def assertColor(name: Nullable[String] = Nullable.Null): SassColor = this
 
+  /** Renders a SassColor in modern CSS color syntax for non-legacy-rgb spaces.
+    *
+    * Legacy `rgb` colors are handled by `SerializeVisitor.formatColor` which picks hex/name/rgba; we only need to cover the other spaces here. `hsl` and `hwb` are legacy but also render as functional
+    * notation in modern output when not going through `formatColor`.
+    */
+  override def toCssString(quote: Boolean = true): String = {
+    def fmt(d: Double): String = {
+      val r = math.rint(d * 100000.0) / 100000.0
+      if (r == r.toLong.toDouble) r.toLong.toString else r.toString
+    }
+    def ch(n: Nullable[Double]): String = if (n.isEmpty) "none" else fmt(n.get)
+    val alphaSuffix =
+      if (alphaOrNull.isEmpty) " / none"
+      else if (fuzzyEquals(alphaOrNull.get, 1.0)) ""
+      else s" / ${fmt(alphaOrNull.get)}"
+    space match {
+      case ColorSpace.rgb =>
+        // Minimal fallback: rgba(...) / rgb(...). `SerializeVisitor` usually
+        // intercepts legacy rgb before this is called.
+        val r = fmt(channel0)
+        val g = fmt(channel1)
+        val b = fmt(channel2)
+        if (alphaOrNull.isDefined && fuzzyEquals(alphaOrNull.get, 1.0)) s"rgb($r, $g, $b)"
+        else s"rgba($r, $g, $b, ${fmt(alpha)})"
+      case ColorSpace.hsl =>
+        s"hsl(${ch(channel0OrNull)}, ${ch(channel1OrNull)}%, ${ch(channel2OrNull)}%${alphaSuffix.replace(" / ", ", ")})"
+      case ColorSpace.hwb =>
+        s"hwb(${ch(channel0OrNull)} ${ch(channel1OrNull)}% ${ch(channel2OrNull)}%$alphaSuffix)"
+      case ColorSpace.lab =>
+        s"lab(${ch(channel0OrNull)}% ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
+      case ColorSpace.lch =>
+        s"lch(${ch(channel0OrNull)}% ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
+      case ColorSpace.oklab =>
+        s"oklab(${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
+      case ColorSpace.oklch =>
+        s"oklch(${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
+      case _ =>
+        // Predefined spaces (srgb, srgb-linear, display-p3, a98-rgb,
+        // prophoto-rgb, rec2020, xyz, xyz-d50, xyz-d65, lms): use
+        // `color(<space> c1 c2 c3 / alpha)` notation.
+        s"color(${space.name} ${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
+    }
+  }
+
   /** Throws a SassScriptException if this isn't in a legacy color space. */
   def assertLegacy(name: Nullable[String] = Nullable.Null): Unit =
     if (!isLegacy) {

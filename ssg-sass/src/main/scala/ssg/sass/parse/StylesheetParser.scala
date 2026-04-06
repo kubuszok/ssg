@@ -1296,7 +1296,7 @@ abstract class StylesheetParser protected (
       // evaluated — `--foo: 1 + 2` emits `--foo: 1 + 2;` literally. Only
       // `#{...}` interpolation is parsed, so `--foo: #{$x}` still works.
       if (name.startsWith("--")) {
-        val rawStart = scanner.state
+        val rawStart    = scanner.state
         val valueInterp = _readCustomPropertyValue(rawStart)
         whitespace(consumeNewlines = false)
         scanner.scanChar(CharCode.$semicolon)
@@ -1318,9 +1318,7 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** If the scanner is positioned at `!important` (optionally with whitespace
-    * between the `!` and `important`), consume it and return true. Otherwise
-    * leave the scanner unchanged and return false.
+  /** If the scanner is positioned at `!important` (optionally with whitespace between the `!` and `important`), consume it and return true. Otherwise leave the scanner unchanged and return false.
     */
   private def _tryScanImportant(): Boolean = {
     val saved = scanner.state
@@ -1891,13 +1889,9 @@ abstract class StylesheetParser protected (
     else None
   }
 
-  /** Reads the raw value portion of a CSS custom property declaration
-    * (`--foo: <raw>;`). Everything up to the terminating `;` or the
-    * closing `}` of the enclosing block is collected verbatim, with one
-    * exception: `#{...}` interpolation segments are parsed as expressions
-    * so `--foo: #{$x}` still evaluates. Balanced parens/brackets/braces
-    * and string literals are respected so `;`/`}` inside them do not
-    * end the value.
+  /** Reads the raw value portion of a CSS custom property declaration (`--foo: <raw>;`). Everything up to the terminating `;` or the closing `}` of the enclosing block is collected verbatim, with one
+    * exception: `#{...}` interpolation segments are parsed as expressions so `--foo: #{$x}` still evaluates. Balanced parens/brackets/braces and string literals are respected so `;`/`}` inside them
+    * do not end the value.
     */
   private def _readCustomPropertyValue(
     rawStart: ssg.sass.util.LineScannerState
@@ -1955,9 +1949,7 @@ abstract class StylesheetParser protected (
             contents += _parseSimpleExpression(exprText, exprSpan)
           }
           spans += Nullable(exprSpan)
-        } else if (
-          pDepth == 0 && (ch == CharCode.$semicolon || ch == CharCode.$rbrace)
-        ) {
+        } else if (pDepth == 0 && (ch == CharCode.$semicolon || ch == CharCode.$rbrace)) {
           break(())
         } else if (ch == CharCode.$lparen || ch == CharCode.$lbrace || ch == CharCode.$lbracket) {
           pDepth += 1
