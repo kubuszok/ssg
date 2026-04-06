@@ -6,7 +6,7 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Current state
 
-- **Tests**: 497 JVM / 477 JS / 477 Native (last recorded)
+- **Tests**: 521 JVM / 500 JS / 500 Native (last recorded)
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
 - **Feature-complete for typical SCSS workloads.** The compiler drives the
@@ -63,6 +63,21 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
   compilation with a `SassException`); warnings surfaced through
   `CompileResult.warnings`
 
+### Color spaces (CSS Color 4)
+- Full `lab` / `lch` / `oklab` / `oklch` / `hwb` constructors + legacy
+  `rgb` / `hsl` / `hsla`
+- `color(<space> c1 c2 c3 / alpha)` for all predefined spaces
+  (srgb, srgb-linear, display-p3, a98-rgb, prophoto-rgb, rec2020,
+  xyz, xyz-d50, xyz-d65)
+- Modern CSS function-call syntax end-to-end: `lab(50% 20 -30 / 0.5)`
+  and friends parse as space-separated channels with optional `/ alpha`;
+  legacy comma form still works. `none` is accepted as a channel keyword
+  and round-trips through the serializer
+- `color.mix($a, $b, $space: oklch)` (and any non-legacy space) performs
+  the interpolation in the requested space via `InterpolationMethod`
+- Round-tripping through the full lab ↔ xyz ↔ rgb ↔ oklch pipeline is
+  exercised by `ColorSpacesSuite` end-to-end compile tests
+
 ### Values
 - `SassNumber` with the full absolute-length / time / angle / frequency /
   resolution conversion table, coercion, arithmetic, comparison
@@ -108,11 +123,6 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Still stubbed / partial
 
-- **Color spaces beyond sRGB** — `value/color/*` now has `ColorSpace(s)`,
-  `ColorChannel`, `GamutMapMethod`, `InterpolationMethod`, `Conversions`
-  tables; round-tripping through the full lab/lch/oklab/oklch/xyz pipeline
-  is audit status `pass` but not end-to-end exercised by the test suite.
-  Non-RGB color functions may still hit gaps — verify before trusting.
 - **`meta.apply($mixin, …)`** — throws
   `"meta.apply is not yet supported"`. Needs a fresh statement-visitor
   entry point to invoke a mixin from a built-in.
@@ -150,16 +160,21 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Next steps (priority order)
 
-1. **End-to-end tests for non-sRGB color spaces** — verify `lab`/`lch`/
-   `oklab`/`oklch`/`color(xyz ...)` round-trip through parse → evaluate →
-   serialize. Fix fallout in color functions or `SerializeVisitor.formatColor`.
-2. **Selector AST on style rules** — parse selectors at style-rule build
+1. **Selector AST on style rules** — parse selectors at style-rule build
    time, drop textual `_expandSelector`, and unlock proper unification.
-3. **`ExtensionStore` real unification** — port `unifyComplex` / `weave` /
+2. **`ExtensionStore` real unification** — port `unifyComplex` / `weave` /
    `paths` from dart-sass so `@extend` produces the dart-sass output for
    non-trivial compound cases.
-4. **`meta.apply`** — add a statement-visitor entry point that can run a
+3. **`meta.apply`** — add a statement-visitor entry point that can run a
    `UserDefinedCallable[MixinRule]` from a built-in.
+4. **Hex color literals (`#ff0000`) in StylesheetParser** — today a bare
+   `#RRGGBB` token in an expression context is parsed as an unquoted
+   string rather than a `ColorExpression`, so calls like
+   `color.mix(#ff0000, #0000ff, $space: oklch)` fail with "is not a
+   color". The tokenizer already recognizes `#` for interpolation; add
+   a hex-literal branch before falling through to unquoted strings. The
+   named-color keyword resolution (`red` / `blue` → color) is subject to
+   the same gap.
 5. **StylesheetParser proper expression lexer** — replace the text-based
    collector with a tokenizer covering space-separated lists, function
    calls, interpolation, and unary forms uniformly.

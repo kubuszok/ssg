@@ -1828,8 +1828,36 @@ abstract class StylesheetParser protected (
     // Special-case: url() — passes through as an unquoted string. Skip for now.
     if (namespace.isEmpty && name == "url") return None
 
-    val argsText   = raw.substring(parenIdx + 1, raw.length - 1).trim
-    val rawArgs    = if (argsText.isEmpty) Nil else _splitTopLevel(argsText, ',')
+    val argsText = raw.substring(parenIdx + 1, raw.length - 1).trim
+    // Modern CSS color-function syntax: `rgb/rgba/hsl/hsla/hwb/lab/lch/oklab/
+    // oklch/color` accept space-separated channels with optional `/ <alpha>`
+    // trailing, in addition to the legacy comma-separated form. When the head
+    // name is in the allowlist and the arg text has no top-level commas,
+    // reparse the arguments as whitespace-separated with a `/` alpha split.
+    val isColorFn = namespace.isEmpty && (
+      name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" ||
+        name == "hwb" || name == "lab" || name == "lch" || name == "oklab" ||
+        name == "oklch" || name == "color"
+    )
+    val commaSplit  = if (argsText.isEmpty) Nil else _splitTopLevel(argsText, ',')
+    val rawArgs: List[String] =
+      if (argsText.isEmpty) Nil
+      else if (isColorFn && commaSplit.length <= 1) {
+        // No top-level comma: parse as modern space-separated channels with
+        // an optional `/ <alpha>` trailing segment.
+        val normalized = argsText.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
+        val slashParts = _splitTopLevel(normalized, '/')
+        if (slashParts.length == 2) {
+          val channels = _splitTopLevel(slashParts(0), ' ').filter(_.nonEmpty)
+          channels :+ slashParts(1).trim
+        } else if (slashParts.length == 1) {
+          _splitTopLevel(normalized, ' ').filter(_.nonEmpty)
+        } else {
+          commaSplit
+        }
+      } else {
+        commaSplit
+      }
     val positional = scala.collection.mutable.ListBuffer.empty[Expression]
     val named      = scala.collection.mutable.LinkedHashMap.empty[String, Expression]
     for (a <- rawArgs) {

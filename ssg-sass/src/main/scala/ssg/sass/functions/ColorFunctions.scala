@@ -155,17 +155,42 @@ object ColorFunctions {
     if (n.hasUnit("%")) n.value * percentScale / 100.0
     else n.value
 
+  /** Returns true if [v] is the CSS `none` channel keyword (parsed as an unquoted SassString). */
+  private def isNone(v: Value): Boolean = v match {
+    case s: SassString => !s.hasQuotes && s.text == "none"
+    case _             => false
+  }
+
+  /** Interprets [v] as a lab/lch-style channel, returning Nullable.Null for `none`. */
+  private def labChannelOrNone(v: Value, percentScale: Double): Nullable[Double] =
+    if (isNone(v)) Nullable.Null
+    else Nullable(labChannel(v.assertNumber(), percentScale))
+
+  /** Interprets [v] as a hue channel, returning Nullable.Null for `none`. */
+  private def hueOrNone(v: Value): Nullable[Double] =
+    if (isNone(v)) Nullable.Null
+    else Nullable(hueOf(v.assertNumber()))
+
+  /** Interprets [v] as an alpha channel, returning Nullable.Null for `none`, clamped to `[0, 1]`. */
+  private def alphaOrNone(v: Value): Nullable[Double] =
+    if (isNone(v)) Nullable.Null
+    else Nullable(clamp(scalar(v.assertNumber()), 0, 1))
+
+  /** Interprets [v] as a plain numeric channel with no percentage scaling, returning Nullable.Null for `none`. */
+  private def numberOrNone(v: Value): Nullable[Double] =
+    if (isNone(v)) Nullable.Null
+    else Nullable(v.assertNumber().value)
+
   private val labFn: BuiltInCallable =
     BuiltInCallable.function(
       "lab",
       "$lightness, $a, $b, $alpha: 1",
       { args =>
-        val l     = labChannel(args(0).assertNumber(), 100)
-        val a     = labChannel(args(1).assertNumber(), 125)
-        val b     = labChannel(args(2).assertNumber(), 125)
-        val alpha =
-          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
-        SassColor.lab(Nullable(l), Nullable(a), Nullable(b), Nullable(clamp(alpha, 0, 1)))
+        val l     = labChannelOrNone(args(0), 100)
+        val a     = labChannelOrNone(args(1), 125)
+        val b     = labChannelOrNone(args(2), 125)
+        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+        SassColor.lab(l, a, b, alpha)
       }
     )
 
@@ -174,12 +199,11 @@ object ColorFunctions {
       "lch",
       "$lightness, $chroma, $hue, $alpha: 1",
       { args =>
-        val l     = labChannel(args(0).assertNumber(), 100)
-        val c     = labChannel(args(1).assertNumber(), 150)
-        val h     = hueOf(args(2).assertNumber())
-        val alpha =
-          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
-        SassColor.lch(Nullable(l), Nullable(c), Nullable(h), Nullable(clamp(alpha, 0, 1)))
+        val l     = labChannelOrNone(args(0), 100)
+        val c     = labChannelOrNone(args(1), 150)
+        val h     = hueOrNone(args(2))
+        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+        SassColor.lch(l, c, h, alpha)
       }
     )
 
@@ -188,12 +212,11 @@ object ColorFunctions {
       "oklab",
       "$lightness, $a, $b, $alpha: 1",
       { args =>
-        val l     = labChannel(args(0).assertNumber(), 1)
-        val a     = labChannel(args(1).assertNumber(), 0.4)
-        val b     = labChannel(args(2).assertNumber(), 0.4)
-        val alpha =
-          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
-        SassColor.oklab(Nullable(l), Nullable(a), Nullable(b), Nullable(clamp(alpha, 0, 1)))
+        val l     = labChannelOrNone(args(0), 1)
+        val a     = labChannelOrNone(args(1), 0.4)
+        val b     = labChannelOrNone(args(2), 0.4)
+        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+        SassColor.oklab(l, a, b, alpha)
       }
     )
 
@@ -202,12 +225,11 @@ object ColorFunctions {
       "oklch",
       "$lightness, $chroma, $hue, $alpha: 1",
       { args =>
-        val l     = labChannel(args(0).assertNumber(), 1)
-        val c     = labChannel(args(1).assertNumber(), 0.4)
-        val h     = hueOf(args(2).assertNumber())
-        val alpha =
-          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
-        SassColor.oklch(Nullable(l), Nullable(c), Nullable(h), Nullable(clamp(alpha, 0, 1)))
+        val l     = labChannelOrNone(args(0), 1)
+        val c     = labChannelOrNone(args(1), 0.4)
+        val h     = hueOrNone(args(2))
+        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+        SassColor.oklch(l, c, h, alpha)
       }
     )
 
@@ -216,12 +238,11 @@ object ColorFunctions {
       "hwb",
       "$hue, $whiteness, $blackness, $alpha: 1",
       { args =>
-        val h     = hueOf(args(0).assertNumber())
-        val w     = args(1).assertNumber().value
-        val b     = args(2).assertNumber().value
-        val alpha =
-          if (args.length >= 4) scalar(args(3).assertNumber()) else 1.0
-        SassColor.hwb(Nullable(h), Nullable(clamp(w, 0, 100)), Nullable(clamp(b, 0, 100)), Nullable(clamp(alpha, 0, 1)))
+        val h = hueOrNone(args(0))
+        val w = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
+        val b = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
+        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+        SassColor.hwb(h, w, b, alpha)
       }
     )
 
@@ -241,18 +262,11 @@ object ColorFunctions {
           case other => other.assertString().text
         }
         val space = ColorSpace.fromName(spaceName)
-        val c1    = args(1).assertNumber().value
-        val c2    = args(2).assertNumber().value
-        val c3    = args(3).assertNumber().value
-        val alpha =
-          if (args.length >= 5) scalar(args(4).assertNumber()) else 1.0
-        SassColor.forSpaceInternal(
-          space,
-          Nullable(c1),
-          Nullable(c2),
-          Nullable(c3),
-          Nullable(clamp(alpha, 0, 1))
-        )
+        val c1    = numberOrNone(args(1))
+        val c2    = numberOrNone(args(2))
+        val c3    = numberOrNone(args(3))
+        val alpha = if (args.length >= 5) alphaOrNone(args(4)) else Nullable(1.0)
+        SassColor.forSpaceInternal(space, c1, c2, c3, alpha)
       }
     )
 
