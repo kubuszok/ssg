@@ -504,8 +504,8 @@ ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala	visitor	m
 ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	minor_issues	no	2026-04-06	Large stub; main evaluation/serialization logic pending	
 ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	minor_issues	no	2026-04-06	Large stub; main evaluation/serialization logic pending	
 ssg-sass/src/main/scala/ssg/sass/parse/Parser.scala	parse	pass	yes	2026-04-06	Tokenizer fully implemented: whitespace/comments/identifier/string/declarationValue/escape/naturalNumber. 6/6 tests passing.	
-ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/ScssParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	yes	2026-04-06	Minimum viable: parses style rules, variables, declarations, comments, generic @-rules. 18/18 tests. Expression parser is text-based; proper tokenizer TODO.	
+ssg-sass/src/main/scala/ssg/sass/parse/ScssParser.scala	parse	pass	yes	2026-04-06	All abstract hooks implemented. Sequences statements, handles blocks, scanElse, statement separators.	
 ssg-sass/src/main/scala/ssg/sass/parse/SassParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
 ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
 ssg-sass/src/main/scala/ssg/sass/parse/SelectorParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	

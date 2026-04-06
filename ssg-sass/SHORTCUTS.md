@@ -42,22 +42,26 @@ or serializer.
 - ✅ `Parser.isVariableDeclarationLike(text)`
 - ✅ `wrapSpanFormatException` — now rewrites StringScannerException
 
-### `parse/StylesheetParser.scala`
-- ❌ `parse()` — large (100+ lines, error recovery)
-- ❌ `parseExpression()` — medium (50-80 lines)
-- ❌ `parseNumber()` — medium (40-60 lines)
-- ❌ `parseVariableDeclaration()` — medium
-- ❌ `parseUseRule()` — large (config syntax)
+### `parse/StylesheetParser.scala` ⚠️  MINIMUM VIABLE
+- ✅ `parse()` — full stylesheets with style rules, variables, comments, generic @-rules
+- ✅ `parseExpression()` — numbers, strings, booleans, null, variables
+- ✅ `parseNumber()` — with units
+- ✅ `parseVariableDeclaration()` — with !default/!global flags
+- ❌ `parseUseRule()` — still throws (UseRule factory incomplete)
 - ❌ `parseSignature(requireParens)` — medium
+- ⚠️  Expression parsing is TEXT-BASED — collects raw text then pattern-matches.
+  A proper tokenizer for operators (+/-/*), function calls, interpolation `#{...}`,
+  and space-separated lists is still TODO.
+- ⚠️  Style rule selectors stored as plain Interpolation (no interpolation parsing yet).
 
-### `parse/ScssParser.scala`
-- ❌ `styleRuleSelector()` — medium
-- ❌ `expectStatementSeparator(name)` — small
-- ❌ `atEndOfStatement()` — trivial
-- ❌ `lookingAtChildren()` — trivial
-- ❌ `scanElse(ifIndentation)` — small
-- ❌ `children(child)` — medium
-- ❌ `statements(statement)` — medium
+### `parse/ScssParser.scala` ✅ IMPLEMENTED
+- ✅ `styleRuleSelector()` — collects raw selector text
+- ✅ `expectStatementSeparator(name)`
+- ✅ `atEndOfStatement()`
+- ✅ `lookingAtChildren()`
+- ✅ `scanElse(ifIndentation)`
+- ✅ `children(child)` — block parsing with `{...}`
+- ✅ `statements(statement)` — top-level sequence
 
 ### `parse/SassParser.scala` — same 7 methods as ScssParser, indented variants
 

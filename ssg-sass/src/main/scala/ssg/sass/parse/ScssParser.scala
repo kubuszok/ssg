@@ -8,14 +8,22 @@
  *
  * Migration notes:
  *   Renames: scss.dart -> ScssParser.scala
- *   Skeleton: inherits from StylesheetParser; overrides are stubs.
+ *   Idiom: Minimum viable implementation providing styleRuleSelector,
+ *     statement sequencing, and child block parsing.
  */
 package ssg
 package sass
 package parse
 
 import ssg.sass.Nullable
+import ssg.sass.Nullable.*
 import ssg.sass.ast.sass.{Interpolation, Statement}
+import ssg.sass.util.CharCode
+
+import scala.collection.mutable
+import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A parser for the CSS-superset SCSS syntax. */
 class ScssParser(
@@ -27,24 +35,84 @@ class ScssParser(
   override def indented: Boolean = false
   override def currentIndentation: Int = 0
 
-  override protected def styleRuleSelector(): Interpolation =
-    throw new UnsupportedOperationException("ScssParser.styleRuleSelector: not yet implemented in skeleton")
+  /** Consumes a selector interpolation until `{`.
+    *
+    * Simplified: collects raw text as plain interpolation. Proper interpolation
+    * parsing (with `#{...}` expressions) is a TODO.
+    */
+  override protected def styleRuleSelector(): Interpolation = {
+    val start = scanner.state
+    val buf = new StringBuilder()
+    var brackets = 0
 
-  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit =
-    throw new UnsupportedOperationException("ScssParser.expectStatementSeparator: not yet implemented in skeleton")
+    boundary {
+      while (!scanner.isDone) {
+        val c = scanner.peekChar()
+        if (c < 0) break(())
+        if (brackets == 0 && c == CharCode.$lbrace) break(())
+        if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
+        else if (c == CharCode.$rparen || c == CharCode.$rbracket) brackets -= 1
+        buf.append(scanner.readChar().toChar)
+      }
+    }
 
-  override protected def atEndOfStatement(): Boolean =
-    throw new UnsupportedOperationException("ScssParser.atEndOfStatement: not yet implemented in skeleton")
+    val selectorText = buf.toString().trim
+    if (selectorText.isEmpty) scanner.error("Expected selector.")
+    Interpolation.plain(selectorText, spanFrom(start))
+  }
+
+  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
+    whitespace(consumeNewlines = false)
+    if (scanner.isDone) return
+    val c = scanner.peekChar()
+    if (c == CharCode.$semicolon) scanner.readChar()
+    else if (c == CharCode.$rbrace) () // close of block implies statement end
+    else {
+      val label = name.fold("statement")(n => s"$n statement")
+      scanner.error(s"Expected ';' after $label.")
+    }
+  }
+
+  override protected def atEndOfStatement(): Boolean = {
+    val c = scanner.peekChar()
+    c < 0 || c == CharCode.$semicolon || c == CharCode.$rbrace
+  }
 
   override protected def lookingAtChildren(): Boolean =
-    throw new UnsupportedOperationException("ScssParser.lookingAtChildren: not yet implemented in skeleton")
+    scanner.peekChar() == CharCode.$lbrace
 
-  override protected def scanElse(ifIndentation: Int): Boolean =
-    throw new UnsupportedOperationException("ScssParser.scanElse: not yet implemented in skeleton")
+  override protected def scanElse(ifIndentation: Int): Boolean = {
+    whitespace(consumeNewlines = true)
+    val start = scanner.state
+    if (scanner.scanChar(CharCode.$at)) {
+      if (scanIdentifier("else")) true
+      else {
+        scanner.state = start
+        false
+      }
+    } else false
+  }
 
-  override protected def children(child: () => Statement): List[Statement] =
-    throw new UnsupportedOperationException("ScssParser.children: not yet implemented in skeleton")
+  override protected def children(child: () => Statement): List[Statement] = {
+    scanner.expectChar(CharCode.$lbrace)
+    whitespace(consumeNewlines = true)
+    val stmts = mutable.ListBuffer.empty[Statement]
+    while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+      stmts += child()
+      whitespace(consumeNewlines = true)
+    }
+    scanner.expectChar(CharCode.$rbrace)
+    stmts.toList
+  }
 
-  override protected def statements(statement: () => Nullable[Statement]): List[Statement] =
-    throw new UnsupportedOperationException("ScssParser.statements: not yet implemented in skeleton")
+  override protected def statements(statement: () => Nullable[Statement]): List[Statement] = {
+    val stmts = mutable.ListBuffer.empty[Statement]
+    whitespace(consumeNewlines = true)
+    while (!scanner.isDone) {
+      val s = statement()
+      if (s.isDefined) stmts += s.get
+      whitespace(consumeNewlines = true)
+    }
+    stmts.toList
+  }
 }
