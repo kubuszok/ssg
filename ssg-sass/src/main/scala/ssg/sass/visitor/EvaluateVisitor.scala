@@ -198,15 +198,33 @@ final class EvaluateVisitor(
     _root = Nullable(root)
     _parent = Nullable(root: ModifiableCssParentNode)
     _endOfImports = 0
-    visitStylesheet(stylesheet)
-    // Apply basic `@extend` rewrites before serialising.
-    _applyExtends(root)
-    // Read back the current root (usually the same instance) to build the
-    // unmodifiable wrapper; also read `_endOfImports` for future ordering.
-    val finalRoot = _root.getOrElse(root)
-    val _         = _endOfImports
-    val out       = CssStylesheet(finalRoot.children, stylesheet.span)
-    EvaluateResult(out, _loadedUrls.toSet)
+    val savedCur = ssg.sass.CurrentEnvironment.set(Nullable(_environment))
+    try {
+      visitStylesheet(stylesheet)
+      // Apply basic `@extend` rewrites before serialising.
+      _applyExtends(root)
+      // Read back the current root (usually the same instance) to build the
+      // unmodifiable wrapper; also read `_endOfImports` for future ordering.
+      val finalRoot = _root.getOrElse(root)
+      val _         = _endOfImports
+      val out       = CssStylesheet(finalRoot.children, stylesheet.span)
+      EvaluateResult(out, _loadedUrls.toSet)
+    } finally {
+      val _ = ssg.sass.CurrentEnvironment.set(savedCur)
+    }
+  }
+
+  /** Switches the active environment, keeping [[CurrentEnvironment]] in sync so built-in callables (e.g. `mixin-exists`) introspect the right scope.
+    */
+  private def _withEnvironment[T](env: Environment)(body: => T): T = {
+    val savedEnv = _environment
+    val savedCur = ssg.sass.CurrentEnvironment.set(Nullable(env))
+    _environment = env
+    try body
+    finally {
+      _environment = savedEnv
+      val _ = ssg.sass.CurrentEnvironment.set(savedCur)
+    }
   }
 
   /** Evaluate an expression in isolation against this visitor's environment. Used for tests, REPL and command-line --watch.
@@ -215,12 +233,8 @@ final class EvaluateVisitor(
     expression.accept(this)
 
   /** Evaluate an expression in isolation against an explicit environment. */
-  def runExpression(expression: Expression, environment: Environment): Value = {
-    val saved = _environment
-    _environment = environment
-    try expression.accept(this)
-    finally _environment = saved
-  }
+  def runExpression(expression: Expression, environment: Environment): Value =
+    _withEnvironment(environment)(expression.accept(this))
 
   // ===========================================================================
   // ExpressionVisitor
@@ -1027,14 +1041,11 @@ final class EvaluateVisitor(
               val cvValue = cv.expression.accept(this)
               moduleEnv.setVariable(cv.name, cvValue)
             }
-            val savedEnv = _environment
-            _environment = moduleEnv
-            try
+            _withEnvironment(moduleEnv) {
               importedSheet.children.get.foreach { stmt =>
                 val _ = stmt.accept(this)
               }
-            finally
-              _environment = savedEnv
+            }
             if (node.namespace.isDefined) {
               node.namespace.foreach { ns =>
                 _environment.addNamespace(ns, moduleEnv)
@@ -1085,14 +1096,17 @@ final class EvaluateVisitor(
           imp.load(canonicalUrl).foreach { result =>
             val importedSheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
             val moduleEnv     = Environment.withBuiltins()
-            val savedEnv      = _environment
-            _environment = moduleEnv
-            try
+            // Apply `with (...)` configuration before evaluating the module
+            // so that `!default` declarations honor the override (mirrors @use).
+            for (cv <- node.configuration) {
+              val cvValue = cv.expression.accept(this)
+              moduleEnv.setVariable(cv.name, cvValue)
+            }
+            _withEnvironment(moduleEnv) {
               importedSheet.children.get.foreach { stmt =>
                 val _ = stmt.accept(this)
               }
-            finally
-              _environment = savedEnv
+            }
             val prefix:                   String  = if (node.prefix.isDefined) node.prefix.get else ""
             def varAllowed(name: String): Boolean =
               if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
@@ -1415,18 +1429,40 @@ final class EvaluateVisitor(
       i += 1
     }
     // Bind any remaining positional arguments to the rest parameter as
-    // a comma-separated SassList. Parameters declared with `$name...`
-    // always bind, even when no extras were supplied (empty list).
+    // a comma-separated SassList (or SassArgumentList carrying any extra
+    // keyword arguments). Parameters declared with `$name...` always
+    // bind, even when no extras were supplied (empty list).
     declared.restParameter.foreach { restName =>
       val extras =
         if (positional.length > params.length)
           positional.drop(params.length)
         else Nil
-      val restList = ssg.sass.value.SassList(
-        extras,
-        ssg.sass.value.ListSeparator.Comma
-      )
-      _environment.setVariable(restName, restList)
+      // Leftover named args = anything not consumed by a declared param.
+      val declaredNames = params.iterator.map(_.name).toSet
+      val leftover      = named.filter { case (k, _) => !declaredNames.contains(k) }
+      val restValue: ssg.sass.value.Value =
+        if (declared.keywordRestParameter.isDefined || leftover.nonEmpty) {
+          new ssg.sass.value.SassArgumentList(
+            extras,
+            leftover,
+            ssg.sass.value.ListSeparator.Comma
+          )
+        } else {
+          ssg.sass.value.SassList(
+            extras,
+            ssg.sass.value.ListSeparator.Comma
+          )
+        }
+      _environment.setVariable(restName, restValue)
+    }
+    // Bind the keyword-rest parameter to a map of leftover keyword args.
+    declared.keywordRestParameter.foreach { kwName =>
+      val declaredNames = params.iterator.map(_.name).toSet
+      val leftover      = named.filter { case (k, _) => !declaredNames.contains(k) }
+      val entries       = leftover.iterator.map { case (k, v) =>
+        (ssg.sass.value.SassString(k, hasQuotes = false): ssg.sass.value.Value) -> v
+      }.toList
+      _environment.setVariable(kwName, ssg.sass.value.SassMap(ListMap.from(entries)))
     }
   }
 

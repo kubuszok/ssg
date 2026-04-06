@@ -26,10 +26,10 @@ import ssg.sass.ast.sass.{ Interpolation, Statement, Stylesheet }
 
 /** A parser for the whitespace-sensitive indented Sass syntax.
   *
-  * Implements indented Sass by translating the source to SCSS in a
-  * preprocessing pass, then delegating to [[ScssParser]]. This handles the
-  * common cases — variables, declarations, nested style rules, simple
-  * @-rules, `//` and `/* */` comments — while staying compact.
+  * Implements indented Sass by translating the source to SCSS in a preprocessing pass, then delegating to [[ScssParser]]. This handles the common cases — variables, declarations, nested style rules,
+  * simple
+  * @-rules,
+  *   `//` and `/* */` comments — while staying compact.
   */
 class SassParser(
   contents:       String,
@@ -40,9 +40,7 @@ class SassParser(
   override def indented:           Boolean = true
   override def currentIndentation: Int     = 0
 
-  /** Override the public entry point: translate indented input to SCSS,
-    * then parse via the SCSS parser so all of StylesheetParser's machinery
-    * is reused.
+  /** Override the public entry point: translate indented input to SCSS, then parse via the SCSS parser so all of StylesheetParser's machinery is reused.
     */
   override def parse(): Stylesheet = {
     val translated = SassParser.indentedToScss(contents)
@@ -78,15 +76,10 @@ object SassParser {
 
   /** Translate an indented Sass source string into the equivalent SCSS source.
     *
-    * Algorithm: walk lines, track an indentation stack. A line whose
-    * indentation is greater than the previous non-blank line opens a new
-    * block (`{`), greater closes the appropriate number of blocks (`}`).
-    * Statements are terminated with `;`. Blank lines and `//` line
-    * comments are passed through. `/* ... */` block comments are passed
-    * through verbatim across lines.
+    * Algorithm: walk lines, track an indentation stack. A line whose indentation is greater than the previous non-blank line opens a new block (`{`), greater closes the appropriate number of blocks
+    * (`}`). Statements are terminated with `;`. Blank lines and `//` line comments are passed through. `/* ... */` block comments are passed through verbatim across lines.
     *
-    * Limitations: no line continuations, no trailing-comma selectors that
-    * span lines, no `===`/`!default` quirks beyond what SCSS already accepts.
+    * Limitations: no line continuations, no trailing-comma selectors that span lines, no `===`/`!default` quirks beyond what SCSS already accepts.
     */
   def indentedToScss(source: String): String = {
     val out      = new StringBuilder()
@@ -135,7 +128,7 @@ object SassParser {
           var childIndent = -1
           var scanning    = true
           while (scanning && j < rawLines.length) {
-            val nl     = rawLines(j)
+            val nl      = rawLines(j)
             val nIndent = nl.takeWhile(c => c == ' ' || c == '\t').length
             val nRest   = nl.substring(nIndent)
             if (nRest.isEmpty) {

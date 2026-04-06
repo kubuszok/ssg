@@ -456,6 +456,21 @@ final class CompileSuite extends munit.FunSuite {
     assert(!result.css.contains("error"), result.css)
   }
 
+  test("selector-unify merges two compound selectors via AST") {
+    val result = Compile.compileString(""".x { y: selector-unify(".a", ".b"); }""")
+    assert(result.css.contains(".a.b") || result.css.contains(".b.a"), result.css)
+  }
+
+  test("selector-unify of conflicting ids fails gracefully") {
+    val result = Compile.compileString(""".x { y: selector-unify("#a", "#b"); }""")
+    assert(!result.css.contains("error"), result.css)
+  }
+
+  test("selector-append AST preserves compound merge") {
+    val result = Compile.compileString(""".x { y: selector-append(".a", ".b", ".c"); }""")
+    assert(result.css.contains(".a.b.c"), result.css)
+  }
+
   test("nested rule with &:hover expands to parent:hover") {
     val result = Compile.compileString(
       """.btn { &:hover { color: blue; } }""",

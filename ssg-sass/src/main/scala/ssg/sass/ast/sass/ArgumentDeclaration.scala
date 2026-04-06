@@ -139,13 +139,14 @@ final class Parameter(
   *   the name of the rest parameter (as in `$args...`), or empty
   */
 final class ParameterList(
-  val parameters:    List[Parameter],
-  val span:          FileSpan,
-  val restParameter: Nullable[String] = Nullable.empty
+  val parameters:           List[Parameter],
+  val span:                 FileSpan,
+  val restParameter:        Nullable[String] = Nullable.empty,
+  val keywordRestParameter: Nullable[String] = Nullable.empty
 ) extends SassNode {
 
   /** Returns whether this declaration takes no parameters. */
-  def isEmpty: Boolean = parameters.isEmpty && restParameter.isEmpty
+  def isEmpty: Boolean = parameters.isEmpty && restParameter.isEmpty && keywordRestParameter.isEmpty
 
   /** Returns [span] expanded to include an identifier immediately before the declaration, if possible.
     */

@@ -76,6 +76,19 @@ final class Environment() {
   /** Returns whether a variable named [name] exists. */
   def variableExists(name: String): Boolean = variables.contains(name)
 
+  /** Returns whether a function named [name] exists in this environment. */
+  def functionExists(name: String): Boolean = functions.contains(name)
+
+  /** Returns whether a mixin named [name] exists in this environment. */
+  def mixinExists(name: String): Boolean = mixins.contains(name)
+
+  /** Returns the namespaced module environment registered under [name], if any. */
+  def getNamespace(name: String): Nullable[Environment] =
+    namespaces.get(name) match {
+      case Some(env)  => Nullable(env)
+      case scala.None => Nullable.empty
+    }
+
   /** Returns the function callable with the given [name], or `Nullable.empty`. */
   def getFunction(name: String): Nullable[Callable] =
     functions.get(name) match {

@@ -67,9 +67,31 @@ final class SelectorList(
     *
     * Returns `Nullable.Null` if no such list can be produced.
     *
-    * Note: The full implementation requires `unifyComplex` from the extend functions module, which will be ported separately. This is a stub.
+    * Note: The full implementation requires `unifyComplex` from the extend functions module, which will be ported separately. This implementation handles the common case where every complex selector
+    * is a single compound selector — pairs of compounds are unified via [[SimpleSelector.unify]] and the cross-product results are returned.
     */
-  def unify(other: SelectorList): Nullable[SelectorList] = Nullable.Null
+  def unify(other: SelectorList): Nullable[SelectorList] = {
+    val unified = scala.collection.mutable.ListBuffer.empty[ComplexSelector]
+    for {
+      a <- components
+      b <- other.components
+    } {
+      val aSingle = a.singleCompound
+      val bSingle = b.singleCompound
+      if (aSingle.isDefined && bSingle.isDefined) {
+        val merged = SelectorList.unifyCompounds(aSingle.get, bSingle.get)
+        if (merged.isDefined) {
+          unified += new ComplexSelector(
+            Nil,
+            List(new ComplexSelectorComponent(merged.get, Nil, span)),
+            span
+          )
+        }
+      }
+    }
+    if (unified.isEmpty) Nullable.Null
+    else Nullable(SelectorList(unified.toList, span))
+  }
 
   /** Returns a new selector list that represents `this` nested within `parent`.
     *
@@ -321,6 +343,27 @@ final class SelectorList(
 }
 
 object SelectorList {
+
+  /** Unifies two compound selectors into a single compound selector that matches every element matched by both. Returns `Nullable.Null` if unification is impossible.
+    *
+    * The simple selectors of `right` are folded into `left` one at a time using each simple's [[SimpleSelector.unify]] hook.
+    */
+  private[selector] def unifyCompounds(
+    left:  CompoundSelector,
+    right: CompoundSelector
+  ): Nullable[CompoundSelector] =
+    boundary[Nullable[CompoundSelector]] {
+      var current: List[SimpleSelector] = left.components
+      val it                            = right.components.iterator
+      while (it.hasNext) {
+        val next   = it.next()
+        val merged = next.unify(current)
+        if (merged.isEmpty) break(Nullable.Null)
+        current = merged.get
+      }
+      if (current.isEmpty) Nullable.Null
+      else Nullable(new CompoundSelector(current, left.span))
+    }
 
   /** Returns whether `selector` recursively contains a parent selector. */
   private[selector] def containsParentSelector(selector: Selector): Boolean =

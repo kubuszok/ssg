@@ -43,6 +43,7 @@ import ssg.sass.ast.sass.{
   ImportRule,
   IncludeRule,
   Interpolation,
+  LegacyIfExpression,
   ListExpression,
   LoudComment,
   MapExpression,
@@ -279,6 +280,41 @@ abstract class StylesheetParser protected (
               skip = true
             }
           }
+          // Optional `with ($name: expr [!default], ...)` configuration —
+          // mirrors @use's parsing.
+          val fwdConfigBuf = mutable.ListBuffer.empty[ConfiguredVariable]
+          if (!skip && scanIdentifier("with")) {
+            whitespace(consumeNewlines = true)
+            scanner.expectChar(CharCode.$lparen)
+            whitespace(consumeNewlines = true)
+            var fmore = true
+            while (fmore) {
+              whitespace(consumeNewlines = true)
+              val cvStart = scanner.state
+              val varName = variableName()
+              whitespace(consumeNewlines = true)
+              scanner.expectChar(CharCode.$colon)
+              whitespace(consumeNewlines = true)
+              val expr = _expression()
+              whitespace(consumeNewlines = true)
+              var guarded = false
+              if (scanner.scanChar(CharCode.$exclamation)) {
+                val flag = identifier()
+                if (flag == "default") guarded = true
+                else scanner.error(s"Unknown flag !$flag.")
+                whitespace(consumeNewlines = true)
+              }
+              fwdConfigBuf += ConfiguredVariable(varName, expr, spanFrom(cvStart), guarded)
+              whitespace(consumeNewlines = true)
+              if (scanner.scanChar(CharCode.$comma)) {
+                whitespace(consumeNewlines = true)
+                if (scanner.peekChar() == CharCode.$rparen) fmore = false
+                else fmore = true
+              } else fmore = false
+            }
+            whitespace(consumeNewlines = true)
+            scanner.expectChar(CharCode.$rparen)
+          }
           // Swallow remaining content up to ;
           while (!scanner.isDone && scanner.peekChar() != CharCode.$semicolon) {
             val _ = scanner.readChar()
@@ -296,7 +332,8 @@ abstract class StylesheetParser protected (
                 shownMixinsAndFunctions = shownNames,
                 shownVariables = shownVars,
                 hiddenMixinsAndFunctions = hiddenNames,
-                hiddenVariables = hiddenVars
+                hiddenVariables = hiddenVars,
+                configuration = fwdConfigBuf.toList
               )
             )
           }
@@ -783,7 +820,8 @@ abstract class StylesheetParser protected (
       scanner.expectChar(CharCode.$lparen)
       whitespace(consumeNewlines = true)
       val params = scala.collection.mutable.ListBuffer.empty[Parameter]
-      var restParam: Nullable[String] = Nullable.empty
+      var restParam:       Nullable[String] = Nullable.empty
+      var kwargsRestParam: Nullable[String] = Nullable.empty
       var more = scanner.peekChar() != CharCode.$rparen
       while (more) {
         whitespace(consumeNewlines = true)
@@ -800,6 +838,23 @@ abstract class StylesheetParser protected (
           val _ = scanner.readChar()
           restParam = Nullable(pname)
           whitespace(consumeNewlines = true)
+          // Optional second rest parameter `, $kwargs...` for keyword args.
+          if (scanner.scanChar(CharCode.$comma)) {
+            whitespace(consumeNewlines = true)
+            val kname = variableName()
+            whitespace(consumeNewlines = true)
+            if (
+              scanner.peekChar() == CharCode.$dot &&
+              scanner.peekChar(1) == CharCode.$dot &&
+              scanner.peekChar(2) == CharCode.$dot
+            ) {
+              val _ = scanner.readChar()
+              val _ = scanner.readChar()
+              val _ = scanner.readChar()
+              kwargsRestParam = Nullable(kname)
+              whitespace(consumeNewlines = true)
+            } else scanner.error("Expected `...` after keyword rest parameter.")
+          }
           more = false
         } else if (scanner.peekChar() == CharCode.$colon) {
           val _ = scanner.readChar()
@@ -860,7 +915,7 @@ abstract class StylesheetParser protected (
       }
       whitespace(consumeNewlines = true)
       scanner.expectChar(CharCode.$rparen)
-      new ParameterList(params.toList, spanFrom(startState), restParam)
+      new ParameterList(params.toList, spanFrom(startState), restParam, kwargsRestParam)
     }
 
   /** Parses a parenthesized argument list for a `@include` invocation. Supports positional arguments, named arguments (`$name: value`), and a trailing rest argument (`$list...`, or any expression
@@ -1615,8 +1670,12 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** Attempts to parse a function call `name(args)`. */
-  private def _tryParseFunctionCall(raw: String, span: FileSpan): Option[FunctionExpression] = {
+  /** Attempts to parse a function call `name(args)`. The bare `if(...)`
+    * three-argument call is recognized as a [[LegacyIfExpression]] so that
+    * the unchosen branch is never evaluated; everything else becomes a
+    * regular [[FunctionExpression]].
+    */
+  private def _tryParseFunctionCall(raw: String, span: FileSpan): Option[Expression] = {
     val parenIdx = raw.indexOf('(')
     if (parenIdx <= 0 || !raw.endsWith(")")) return None
     val head = raw.substring(0, parenIdx)
@@ -1668,7 +1727,12 @@ abstract class StylesheetParser protected (
     }
 
     val arguments = new ArgumentList(positional.toList, named.toMap, Map.empty, span)
-    Some(FunctionExpression(name, arguments, span, namespace))
+    // Lazy `if($cond, $t, $f)` — only the chosen branch is evaluated.
+    if (namespace.isEmpty && name == "if" && positional.length == 3 && named.isEmpty) {
+      Some(LegacyIfExpression(arguments, span))
+    } else {
+      Some(FunctionExpression(name, arguments, span, namespace))
+    }
   }
 
   /** Attempts to parse a number literal with optional unit. */

@@ -36,3 +36,22 @@ object EvaluationContext {
   def warn(message: String, deprecation: Boolean = false): Unit =
     current.foreach(_.warn(message, deprecation))
 }
+
+/** Holds a reference to the [[Environment]] currently active inside an [[ssg.sass.visitor.EvaluateVisitor]] invocation. Built-in callables (e.g. `mixin-exists`, `variable-exists`, `module-functions`)
+  * consult this so they can introspect lexical state without an explicit env parameter. The visitor sets it on entry and restores the previous value on exit.
+  *
+  * NOTE: this is a simple shared `var` rather than a real `ThreadLocal`/scala-native zone — Sass evaluation is single-threaded and ssg-js/ssg-native runtimes don't share the holder. If multi-threaded
+  * evaluation is ever needed, swap this for `DynamicVariable`.
+  */
+object CurrentEnvironment {
+
+  private var _env: Nullable[Environment] = Nullable.empty
+
+  def get: Nullable[Environment] = _env
+
+  def set(env: Nullable[Environment]): Nullable[Environment] = {
+    val prev = _env
+    _env = env
+    prev
+  }
+}
