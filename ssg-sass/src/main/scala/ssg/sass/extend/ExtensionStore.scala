@@ -284,16 +284,125 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       for ((target, extenders) <- astExtensions)
         if (compound.components.contains(target)) {
           for (extender <- extenders) {
-            val merged = substituteInComplex(complex, i, target, extender)
-            // Second law of extend: drop generated selectors whose
-            // specificity is lower than the original complex selector's.
-            if (merged.specificity >= originalSpecificity && !results.contains(merged))
-              results += merged
+            val mergedOpt: List[ComplexSelector] =
+              if (i == complex.components.length - 1 && extender.components.length > 1) {
+                // Target sits at the tail of the complex and the extender
+                // itself is a complex selector. Use weave/unifyComplex so the
+                // extender's leading components properly interleave with the
+                // complex's prefix.
+                weaveExtension(complex, i, target, extender)
+              } else {
+                substituteInComplexUnified(complex, i, target, extender)
+              }
+            for (merged <- mergedOpt)
+              // Second law of extend: drop generated selectors whose
+              // specificity is lower than the original complex selector's.
+              if (merged.specificity >= originalSpecificity && !results.contains(merged))
+                results += merged
           }
         }
       i += 1
     }
     results.toList
+  }
+
+  /** Weaves [extender]'s leading components into [complex]'s prefix, replacing the target at [componentIndex] with the extender's last compound merged against the original.
+    *
+    * Used when the target sits at the tail of the complex and the extender itself has multiple components; the simpler `substituteInComplex` shortcut would only emit one of the possible orderings.
+    */
+  private def weaveExtension(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    target:         SimpleSelector,
+    extender:       ComplexSelector
+  ): List[ComplexSelector] = {
+    val origComponent     = complex.components(componentIndex)
+    val origCompound      = origComponent.selector
+    val extLast           = extender.components.last
+    val origWithoutTarget = origCompound.components.filterNot(_ == target)
+    val mergedCompoundOpt =
+      if (origWithoutTarget.isEmpty) Nullable(extLast.selector)
+      else
+        ExtendFunctions.unifyCompound(
+          extLast.selector,
+          new CompoundSelector(origWithoutTarget, origCompound.span)
+        )
+    if (mergedCompoundOpt.isEmpty) {
+      // Incompatible merge (e.g. two IDs in one compound): drop the
+      // generated selector rather than emitting invalid CSS.
+      Nil
+    } else weaveExtensionRest(complex, componentIndex, extender, mergedCompoundOpt.get)
+  }
+
+  /** Tail-half of [weaveExtension] extracted so we can avoid an early return.
+    */
+  private def weaveExtensionRest(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    extender:       ComplexSelector,
+    mergedCompound: CompoundSelector
+  ): List[ComplexSelector] = {
+    val origComponent = complex.components(componentIndex)
+    val newLast       = new ComplexSelectorComponent(
+      mergedCompound,
+      origComponent.combinators,
+      origComponent.span
+    )
+
+    // Prefix is complex's components up to the target position; extender's
+    // leading components are the parents to weave in.
+    val prefixComponents = complex.components.take(componentIndex)
+    val extLeading       = extender.components.init
+
+    if (prefixComponents.isEmpty) {
+      val newComponents = extLeading :+ newLast
+      List(
+        new ComplexSelector(
+          complex.leadingCombinators ++ extender.leadingCombinators,
+          newComponents,
+          complex.span,
+          lineBreak = complex.lineBreak
+        )
+      )
+    } else {
+      val prefixComplex = new ComplexSelector(
+        complex.leadingCombinators,
+        prefixComponents,
+        complex.span,
+        lineBreak = complex.lineBreak
+      )
+      val extPrefix = new ComplexSelector(
+        extender.leadingCombinators,
+        extLeading,
+        extender.span,
+        lineBreak = extender.lineBreak
+      )
+      val woven = ExtendFunctions.weave(List(prefixComplex, extPrefix), complex.span)
+      woven.map(p => p.withAdditionalComponent(newLast, complex.span))
+    }
+  }
+
+  /** Wraps [substituteInComplex] with a compound-unification check so that incompatible merges (e.g. two IDs in one compound) gracefully drop the generated selector rather than emitting invalid CSS.
+    */
+  private def substituteInComplexUnified(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    target:         SimpleSelector,
+    extender:       ComplexSelector
+  ): List[ComplexSelector] = {
+    val origComponent     = complex.components(componentIndex)
+    val origCompound      = origComponent.selector
+    val extLast           = extender.components.last
+    val origWithoutTarget = origCompound.components.filterNot(_ == target)
+    val unified           =
+      if (origWithoutTarget.isEmpty) Nullable(extLast.selector)
+      else
+        ExtendFunctions.unifyCompound(
+          extLast.selector,
+          new CompoundSelector(origWithoutTarget, origCompound.span)
+        )
+    if (unified.isEmpty) Nil
+    else List(substituteInComplex(complex, componentIndex, target, extender))
   }
 
   /** Produces a new complex selector based on [complex] where the component at [componentIndex] has its [target] simple selector replaced by the simples drawn from [extender]'s last compound, with

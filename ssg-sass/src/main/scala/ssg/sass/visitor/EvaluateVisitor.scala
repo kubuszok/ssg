@@ -124,6 +124,7 @@ import ssg.sass.{ BuiltInCallable, Callable, Environment, ImportCache, Logger, N
 import ssg.sass.extend.{ ExtendMode, ExtendUtils, MutableExtensionStore }
 import ssg.sass.importer.Importer
 import ssg.sass.parse.SelectorParser
+import ssg.sass.ast.selector.SelectorList
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs that were loaded during evaluation.
   */
@@ -724,7 +725,27 @@ final class EvaluateVisitor(
     }
     val expandedSelector: String = _expandSelector(childSelectorText, parentSelector)
 
-    val modifiableSelectorBox = new ModifiableBox[Any](expandedSelector: Any)
+    // Prefer an AST-based expansion: parse both child and parent, then use
+    // `SelectorList.nestWithin` so we store a real `SelectorList` in the
+    // rule's box. Fall back to the textual expansion when either side fails
+    // to parse, matching the previous behaviour.
+    val parsedExpanded: Nullable[SelectorList] = {
+      val childParsed  = SelectorParser.tryParse(childSelectorText)
+      val parentParsed = _styleRule.flatMap { p =>
+        p.selector match {
+          case sl: SelectorList => Nullable(sl)
+          case other => SelectorParser.tryParse(other.toString)
+        }
+      }
+      if (childParsed.isEmpty) SelectorParser.tryParse(expandedSelector)
+      else if (parentParsed.isEmpty) Nullable(childParsed.get)
+      else
+        try Nullable(childParsed.get.nestWithin(parentParsed))
+        catch { case _: Throwable => SelectorParser.tryParse(expandedSelector) }
+    }
+
+    val boxValue: Any = parsedExpanded.fold[Any](expandedSelector)(sl => sl: Any)
+    val modifiableSelectorBox = new ModifiableBox[Any](boxValue)
     val selectorBox           = modifiableSelectorBox.seal()
     val rule                  = new ModifiableCssStyleRule(selectorBox, node.span)
     _selectorBoxes(rule) = modifiableSelectorBox
@@ -1517,7 +1538,10 @@ final class EvaluateVisitor(
         var removed = false
         _selectorBoxes.get(rule).foreach { box =>
           val currentSelector = box.value.toString
-          val parsed          = SelectorParser.tryParse(currentSelector)
+          val parsed: Nullable[SelectorList] = box.value match {
+            case sl: SelectorList => Nullable(sl)
+            case _ => SelectorParser.tryParse(currentSelector)
+          }
           if (hasAst && parsed.isDefined) {
             // Mark any pending extends whose target simple selector appears
             // in this rule's selector list as "found" in the current scope.
@@ -1536,9 +1560,9 @@ final class EvaluateVisitor(
               removed = true
             } else if (filtered.length != extended.components.length) {
               val newList = new ssg.sass.ast.selector.SelectorList(filtered, extended.span)
-              box.value = newList.toString
+              box.value = newList: Any
             } else {
-              box.value = extended.toString
+              box.value = extended: Any
             }
           } else if (hasLegacy) {
             val parts     = currentSelector.split(',').map((s: String) => s.trim).toList

@@ -6,7 +6,7 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Current state
 
-- **Tests**: 521 JVM / 500 JS / 500 Native (last recorded)
+- **Tests**: 526 JVM / 505 JS / 505 Native (last recorded)
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
 - **Feature-complete for typical SCSS workloads.** The compiler drives the
@@ -50,7 +50,12 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 - `@use` module loading (default + explicit + `as *` flat merge + `with`)
 - `@forward` with show/hide/as-prefix/with
 - `@extend` with media-scoped `ExtensionStore`, `!optional`, cross-media
-  isolation, compound-target errors
+  isolation, compound-target errors, AST-level `paths` / `unifyCompound`
+  / `unifyComplex` / `weave` with descendant-combinator interleaving
+  and incompatible-compound skipping (e.g. two IDs → no-op)
+- Style rules carry a real `SelectorList` AST built via
+  `SelectorList.nestWithin` for `&` expansion, with textual fallback
+  when either parent or child selector fails to parse
 - Nested `@media` / `@supports` / style-rule bubbling
 - Parent selector `&` expansion
 - Full `Environment` with namespaces and built-ins pre-registered
@@ -127,11 +132,13 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
   `"meta.apply is not yet supported"`. Needs a fresh statement-visitor
   entry point to invoke a mixin from a built-in.
 - **`content-exists`** — placeholder pending mixin-call-stack tracking.
-- **`@extend` selector unification** — textual rewrite only.
-  `ExtendFunctions.unifyComplex` / `unifyCompound` / `weave` / `paths`
-  remain stubs. The "second law of extend" (specificity trimming) is
-  not implemented. Basic cases and `!optional` / compound-target errors
-  work.
+- **`@extend` second-law edge cases** — the "second law of extend"
+  trailing-sibling-combinator merging matrix (the
+  `_mergeTrailingCombinators` matrix in dart-sass `functions.dart`) is
+  skipped. Basic specificity trimming is already enforced by
+  `extendComplex`. Extended weave interleaving currently covers the
+  descendant-combinator path only; mid-complex sibling combinator
+  interleavings fall back to plain concatenation.
 - **`CssParser` strict mode** — skeleton only. Plain CSS is currently
   parsed through `ScssParser` / `StylesheetParser`.
 - **Cross-media `@extend` warnings** —
@@ -153,21 +160,12 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
   rather than a proper lexer. Rare edge cases can mis-split.
 - **`FindDependenciesVisitor`** — handles `meta.load-css` with literal
   strings; dynamic load-css is TODO.
-- **Selector AST on style rules** — style rules still carry their
-  selectors as plain `Interpolation`, not a parsed `SelectorList`.
-  `SelectorParser` is used by selector functions and extend-targets but
-  not yet for every rule's selector field.
 
 ## Next steps (priority order)
 
-1. **Selector AST on style rules** — parse selectors at style-rule build
-   time, drop textual `_expandSelector`, and unlock proper unification.
-2. **`ExtensionStore` real unification** — port `unifyComplex` / `weave` /
-   `paths` from dart-sass so `@extend` produces the dart-sass output for
-   non-trivial compound cases.
-3. **`meta.apply`** — add a statement-visitor entry point that can run a
+1. **`meta.apply`** — add a statement-visitor entry point that can run a
    `UserDefinedCallable[MixinRule]` from a built-in.
-4. **Hex color literals (`#ff0000`) in StylesheetParser** — today a bare
+2. **Hex color literals (`#ff0000`) in StylesheetParser** — today a bare
    `#RRGGBB` token in an expression context is parsed as an unquoted
    string rather than a `ColorExpression`, so calls like
    `color.mix(#ff0000, #0000ff, $space: oklch)` fail with "is not a
@@ -175,13 +173,13 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
    a hex-literal branch before falling through to unquoted strings. The
    named-color keyword resolution (`red` / `blue` → color) is subject to
    the same gap.
-5. **StylesheetParser proper expression lexer** — replace the text-based
+3. **StylesheetParser proper expression lexer** — replace the text-based
    collector with a tokenizer covering space-separated lists, function
    calls, interpolation, and unary forms uniformly.
-6. **Full v3 source maps** — per-token mappings, `sourcesContent`,
+4. **Full v3 source maps** — per-token mappings, `sourcesContent`,
    `sourceRoot`, `file`, and propagation through `@import` boundaries.
-7. **CssParser strict mode** — for the (rare) consumers who need to
+5. **CssParser strict mode** — for the (rare) consumers who need to
    reject Sass-only syntax.
-8. **Error-span fidelity** — propagate the original `FileSpan` through
+6. **Error-span fidelity** — propagate the original `FileSpan` through
    all synthesized expressions so error messages never point at a
    placeholder URL.

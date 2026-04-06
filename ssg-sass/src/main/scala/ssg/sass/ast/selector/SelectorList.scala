@@ -348,7 +348,7 @@ object SelectorList {
     *
     * The simple selectors of `right` are folded into `left` one at a time using each simple's [[SimpleSelector.unify]] hook.
     */
-  private[selector] def unifyCompounds(
+  private[sass] def unifyCompounds(
     left:  CompoundSelector,
     right: CompoundSelector
   ): Nullable[CompoundSelector] =
