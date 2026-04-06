@@ -687,8 +687,8 @@ abstract class StylesheetParser protected (
         // If a selector precedes the `{`, wrap the body in a StyleRule so
         // that children are re-parented under a fresh top-level rule.
         whitespace(consumeNewlines = true)
-        val selBuf    = new StringBuilder()
-        var arDepth   = 0
+        val selBuf  = new StringBuilder()
+        var arDepth = 0
         var arQuote: Int = 0
         boundary {
           while (!scanner.isDone) {
@@ -1254,10 +1254,29 @@ abstract class StylesheetParser protected (
     if (trimmed == "false") return new BooleanExpression(value = false, span)
     if (trimmed == "null") return new NullExpression(span)
 
-    // Quoted string
+    // Quoted string. Only treat as a single string literal if the opening
+    // quote's matching close is at the very end (i.e. the entire trimmed
+    // text is one quoted token); otherwise something like
+    // `"a" + "b"` would be misread as one big string.
     if (
-      (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2)
+      trimmed.length >= 2 &&
+      (trimmed.charAt(0) == '"' || trimmed.charAt(0) == '\'') &&
+      trimmed.charAt(trimmed.length - 1) == trimmed.charAt(0) && {
+        val q  = trimmed.charAt(0)
+        var k  = 1
+        var ok = true
+        boundary[Boolean] {
+          while (k < trimmed.length - 1) {
+            val ch = trimmed.charAt(k)
+            if (ch == '\\' && k + 1 < trimmed.length - 1) k += 2
+            else if (ch == q) {
+              ok = false
+              break(false)
+            } else k += 1
+          }
+          ok
+        }
+      }
     ) {
       val inner = trimmed.substring(1, trimmed.length - 1)
       return StringExpression(_parseInterpolatedString(inner, span), hasQuotes = true)
@@ -1350,6 +1369,17 @@ abstract class StylesheetParser protected (
     _tryParseFunctionCall(trimmed, span) match {
       case Some(fn) => return fn
       case None     =>
+    }
+
+    // Unary `not <expr>`: parses the rest as an expression and wraps it.
+    if (trimmed == "not") {
+      // Bare `not` with no operand — fall through.
+    } else if (trimmed.startsWith("not ") || trimmed.startsWith("not\t")) {
+      val rest = trimmed.substring(3).trim
+      if (rest.nonEmpty) {
+        val operand = _parseSimpleExpression(rest, span)
+        return UnaryOperationExpression(UnaryOperator.Not, operand, span)
+      }
     }
 
     // Unary minus on a variable or function call: `-$x`, `-fn(...)`.
@@ -1449,6 +1479,20 @@ abstract class StylesheetParser protected (
         } else if (c == '+' || c == '*' || c == '/' || c == '%') {
           tokens += c.toString
           i += 1
+        } else if (c == '=' && i + 1 < n && s.charAt(i + 1) == '=') {
+          tokens += "=="
+          i += 2
+        } else if (c == '!' && i + 1 < n && s.charAt(i + 1) == '=') {
+          tokens += "!="
+          i += 2
+        } else if (c == '<' || c == '>') {
+          if (i + 1 < n && s.charAt(i + 1) == '=') {
+            tokens += s.substring(i, i + 2)
+            i += 2
+          } else {
+            tokens += c.toString
+            i += 1
+          }
         } else if (c == '-') {
           // Binary `-` unless we're at the start or the previous token is
           // itself an operator (meaning this `-` starts a new operand).
@@ -1774,18 +1818,29 @@ abstract class StylesheetParser protected (
     new Interpolation(contents.toList, spans.toList, span)
   }
 
-  /** Returns true if [t] is a bare arithmetic operator token. */
+  /** Returns true if [t] is a bare arithmetic / comparison / logical operator token. */
   private def _isOperatorToken(t: String): Boolean =
-    t == "+" || t == "-" || t == "*" || t == "/" || t == "%"
+    t == "+" || t == "-" || t == "*" || t == "/" || t == "%" ||
+      t == "==" || t == "!=" ||
+      t == "<" || t == "<=" || t == ">" || t == ">=" ||
+      t == "and" || t == "or"
 
   /** Returns the [BinaryOperator] for an operator token, or `None`. */
   private def _binaryOpFor(t: String): Option[BinaryOperator] = t match {
-    case "+" => Some(BinaryOperator.Plus)
-    case "-" => Some(BinaryOperator.Minus)
-    case "*" => Some(BinaryOperator.Times)
-    case "/" => Some(BinaryOperator.DividedBy)
-    case "%" => Some(BinaryOperator.Modulo)
-    case _   => None
+    case "+"   => Some(BinaryOperator.Plus)
+    case "-"   => Some(BinaryOperator.Minus)
+    case "*"   => Some(BinaryOperator.Times)
+    case "/"   => Some(BinaryOperator.DividedBy)
+    case "%"   => Some(BinaryOperator.Modulo)
+    case "=="  => Some(BinaryOperator.Equals)
+    case "!="  => Some(BinaryOperator.NotEquals)
+    case "<"   => Some(BinaryOperator.LessThan)
+    case "<="  => Some(BinaryOperator.LessThanOrEquals)
+    case ">"   => Some(BinaryOperator.GreaterThan)
+    case ">="  => Some(BinaryOperator.GreaterThanOrEquals)
+    case "and" => Some(BinaryOperator.And)
+    case "or"  => Some(BinaryOperator.Or)
+    case _     => None
   }
 
   /** Parses a sequence of whitespace-separated tokens as a left-associative binary expression using operator precedence. Returns `None` if the tokens don't form a valid operator expression (e.g. two

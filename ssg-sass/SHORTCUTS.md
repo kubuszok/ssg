@@ -56,8 +56,15 @@ or serializer.
   precedence). Tight-binding operators (`10px+5px`, `$a*2`, `10px-5px`) are
   now handled via a small arithmetic tokenizer that splits operand/operator
   boundaries even without surrounding spaces. Identifier hyphens (`border-color`,
-  `a-b`) are preserved. A proper tokenizer for function calls, interpolation
-  `#{...}`, and space-separated lists is still TODO.
+  `a-b`) are preserved. Comparison operators (`== != < <= > >=`) and logical
+  operators (`and`, `or`, `not`) are also recognized in both space-split and
+  tight-binding paths, with the standard Sass precedence (logical < comparison
+  < arithmetic). String concatenation via `+` (`"a" + "b"`, `"v" + 1`) works
+  through `Value.plus`'s string fallback. The `if($cond, $t, $f)` ternary is
+  registered as a built-in function in `MetaFunctions.global` (eager argument
+  evaluation — short-circuiting via `LegacyIfExpression` is still TODO). A
+  proper tokenizer for function calls, interpolation `#{...}`, and
+  space-separated lists is still TODO.
 - ✅ `@mixin` / `@function` / `@include` — parsed with positional parameters,
   default values, and a trailing rest parameter (`$args...`). `@include` call
   sites accept a trailing rest argument (`$list...`) that is splatted into

@@ -934,4 +934,120 @@ final class CompileSuite extends munit.FunSuite {
     val result = Compile.compileString(""".box { x: global-variable-exists("foo"); }""")
     assert(result.css.contains("x: false"), result.css)
   }
+
+  // ---------------------------------------------------------------------------
+  // Color manipulation built-ins (opacify/transparentize/change/adjust/scale)
+  // ---------------------------------------------------------------------------
+
+  test("opacify() increases alpha") {
+    val result = Compile.compileString(".a { x: opacify(rgba(0, 0, 0, 0.4), 0.5); }")
+    assert(result.css.contains("rgba(0, 0, 0, 0.9)"), result.css)
+  }
+
+  test("transparentize() / fade-out decrease alpha") {
+    val result = Compile.compileString(".a { x: fade-out(rgba(0, 0, 0, 0.8), 0.3); }")
+    assert(result.css.contains("rgba(0, 0, 0, 0.5)"), result.css)
+  }
+
+  test("rgba($color, $alpha) overload sets alpha") {
+    val result = Compile.compileString(".a { x: rgba(rgb(255, 0, 0), 0.25); }")
+    assert(result.css.contains("rgba(255, 0, 0, 0.25)"), result.css)
+  }
+
+  test("change-color() with $alpha replaces alpha") {
+    val result = Compile.compileString(".a { x: change-color(rgb(255, 0, 0), $alpha: 0.5); }")
+    assert(result.css.contains("rgba(255, 0, 0, 0.5)"), result.css)
+  }
+
+  test("change-color() with $lightness replaces HSL channel") {
+    val result = Compile.compileString(".a { x: red(change-color(rgb(255, 0, 0), $lightness: 25%)); }")
+    // 25% lightness of pure red ⇒ rgb(128,0,0)
+    assert(result.css.contains("x: 128"), result.css)
+  }
+
+  test("adjust-color() shifts a channel") {
+    val result = Compile.compileString(".a { x: adjust-color(rgb(16, 32, 48), $blue: 5); }")
+    assert(result.css.contains("#102035"), result.css)
+  }
+
+  test("adjust-hue() rotates hue") {
+    val result = Compile.compileString(".a { x: red(adjust-hue(rgb(255, 0, 0), 120deg)); }")
+    // 120deg from red → green; red channel of green is 0.
+    assert(result.css.contains("x: 0"), result.css)
+  }
+
+  test("scale-color() scales lightness toward bound") {
+    val result = Compile.compileString(".a { x: red(scale-color(rgb(128, 0, 0), $lightness: 50%)); }")
+    // rgb(128,0,0) lightness ~25% → 25 + (100-25)*0.5 = 62.5%; red channel rises.
+    assert(result.css.contains("x: 255") || result.css.contains("x: 254"), result.css)
+  }
+
+  test("color.red accessor under module namespace") {
+    val result = Compile.compileString("""
+      @use "sass:color";
+      .a { x: color.red(rgb(255, 0, 0)); }
+    """)
+    assert(result.css.contains("x: 255"), result.css)
+  }
+
+  // ---------------------------------------------------------------------------
+  // if() built-in function, comparison & logical operators, string concat
+  // ---------------------------------------------------------------------------
+
+  test("if() built-in returns the true branch") {
+    val result = Compile.compileString(".a { x: if(true, red, blue); }")
+    assert(result.css.contains("x: red"), result.css)
+  }
+
+  test("if() built-in returns the false branch") {
+    val result = Compile.compileString(".a { x: if(false, red, blue); }")
+    assert(result.css.contains("x: blue"), result.css)
+  }
+
+  test("equality operator ==") {
+    val result = Compile.compileString(".a { x: if(1 == 1, yes, no); y: if(1 == 2, yes, no); }")
+    assert(result.css.contains("x: yes"), result.css)
+    assert(result.css.contains("y: no"), result.css)
+  }
+
+  test("inequality operator !=") {
+    val result = Compile.compileString(".a { x: if(1 != 2, yes, no); }")
+    assert(result.css.contains("x: yes"), result.css)
+  }
+
+  test("less-than and greater-than operators") {
+    val result = Compile.compileString(".a { x: if(3 < 5, yes, no); y: if(3 > 5, yes, no); }")
+    assert(result.css.contains("x: yes"), result.css)
+    assert(result.css.contains("y: no"), result.css)
+  }
+
+  test("less-than-or-equals and greater-than-or-equals") {
+    val result = Compile.compileString(".a { x: if(5 <= 5, yes, no); y: if(5 >= 6, yes, no); }")
+    assert(result.css.contains("x: yes"), result.css)
+    assert(result.css.contains("y: no"), result.css)
+  }
+
+  test("logical and / or operators") {
+    val result = Compile.compileString(
+      ".a { x: if(true and true, yes, no); y: if(false or true, yes, no); z: if(false and true, yes, no); }"
+    )
+    assert(result.css.contains("x: yes"), result.css)
+    assert(result.css.contains("y: yes"), result.css)
+    assert(result.css.contains("z: no"), result.css)
+  }
+
+  test("logical not operator") {
+    val result = Compile.compileString(".a { x: if(not false, yes, no); }")
+    assert(result.css.contains("x: yes"), result.css)
+  }
+
+  test("string concatenation with +") {
+    val result = Compile.compileString(""".a { x: "hello " + "world"; }""")
+    assert(result.css.contains("hello world"), result.css)
+  }
+
+  test("string + number concatenation") {
+    val result = Compile.compileString(""".a { x: "v" + 1; }""")
+    assert(result.css.contains("v1"), result.css)
+  }
 }

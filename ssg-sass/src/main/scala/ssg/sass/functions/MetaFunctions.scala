@@ -36,6 +36,13 @@ object MetaFunctions {
     case _ => "unknown"
   }
 
+  private val ifFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "if",
+      "$condition, $if-true, $if-false",
+      args => if (args.head.isTruthy) args(1) else args(2)
+    )
+
   private val typeOfFn: BuiltInCallable =
     BuiltInCallable.function("type-of", "$value", args => SassString(typeName(args.head), hasQuotes = false))
 
@@ -139,6 +146,7 @@ object MetaFunctions {
     )
 
   val global: List[Callable] = List(
+    ifFn,
     typeOfFn,
     inspectFn,
     featureExistsFn,
