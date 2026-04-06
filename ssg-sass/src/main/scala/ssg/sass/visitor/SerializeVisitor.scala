@@ -305,10 +305,13 @@ final class SerializeVisitor(
   }
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
+    // Record one mapping for the property name and a second for the value
+    // so debuggers can highlight either side of the `name: value;` pair.
     recordMapping(node.span)
     buffer.append(node.name.value)
     buffer.append(':')
     writeSpace()
+    recordMapping(node.span)
     buffer.append(formatValue(node.value.value))
     buffer.append(';')
   }

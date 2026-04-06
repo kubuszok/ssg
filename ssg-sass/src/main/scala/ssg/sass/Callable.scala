@@ -116,14 +116,18 @@ final class PlainCssCallable(val name: String) extends Callable {
   override def hashCode(): Int = name.hashCode
 }
 
-/** A callable defined in user Sass source via `@function` or `@mixin`. */
+/** A callable defined in user Sass source via `@function` or `@mixin`.
+  *
+  * `declaration` is typed as the loose [[Statement]] base for backwards compatibility, but in practice it is always a [[CallableDeclaration]] (FunctionRule, MixinRule, or ContentBlock). The [[name]]
+  * is taken from the declaration when possible.
+  */
 final class UserDefinedCallable[E](
   val declaration:  Statement, // The Sass AST node (FunctionRule or MixinRule)
   val environment:  E,
   val inDependency: Boolean = false
 ) extends Callable {
 
-  def name: String = declaration match {
+  val name: String = declaration match {
     case cd: CallableDeclaration => cd.name
     case _ => "user-defined"
   }

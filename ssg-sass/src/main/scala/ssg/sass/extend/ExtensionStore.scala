@@ -268,11 +268,15 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   }
 
   /** Expands a single complex selector into itself plus any extension-generated variants.
+    *
+    * Implements the "second law of extend": a generated selector is only emitted if its specificity is greater than or equal to the specificity of the original complex selector being extended. This
+    * preserves the user's intent that an `@extend`-generated selector never selects fewer elements than its source.
     */
   private def extendComplex(complex: ComplexSelector): List[ComplexSelector] = {
     val results = mutable.ListBuffer.empty[ComplexSelector]
     results += complex
-    var i = 0
+    val originalSpecificity = complex.specificity
+    var i                   = 0
     while (i < complex.components.length) {
       val component = complex.components(i)
       val compound  = component.selector
@@ -281,7 +285,10 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
         if (compound.components.contains(target)) {
           for (extender <- extenders) {
             val merged = substituteInComplex(complex, i, target, extender)
-            if (!results.contains(merged)) results += merged
+            // Second law of extend: drop generated selectors whose
+            // specificity is lower than the original complex selector's.
+            if (merged.specificity >= originalSpecificity && !results.contains(merged))
+              results += merged
           }
         }
       i += 1

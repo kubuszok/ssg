@@ -31,6 +31,8 @@ final class Environment() {
   private val mixins:        mutable.Map[String, Callable]             = mutable.Map.empty
   private val scopes:        mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
   private val namespaces:    mutable.Map[String, Environment]          = mutable.Map.empty
+  // Names of variables declared with `!global` (used by `global()`).
+  private val globalVarNames: mutable.Set[String] = mutable.Set.empty
 
   /** Registers a namespaced module environment under [name]. */
   def addNamespace(name: String, module: Environment): Unit =
@@ -71,6 +73,13 @@ final class Environment() {
   def setVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
     variables(name) = value
     nodeWithSpan.foreach(n => variableNodes(name) = n)
+  }
+
+  /** Sets the variable named [name] to [value] and marks it as `!global` so it survives `global()` snapshots.
+    */
+  def setGlobalVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
+    setVariable(name, value, nodeWithSpan)
+    val _ = globalVarNames.add(name)
   }
 
   /** Returns whether a variable named [name] exists. */
@@ -148,12 +157,30 @@ final class Environment() {
   def content_=(block: Nullable[ContentBlock]): Unit =
     _content = block
 
-  /** Creates a closure — a snapshot of the current environment that can be used to evaluate callbacks later. TODO: actually snapshot scopes.
+  /** Creates a closure — a snapshot of the current environment that can be used to evaluate callbacks later.
+    *
+    * Variables, functions, and mixins are cloned so subsequent mutations to this environment don't leak into the closure (and vice versa).
     */
-  def closure(): Environment = this
+  def closure(): Environment = {
+    val snap = new Environment()
+    snap.variables ++= variables
+    snap.variableNodes ++= variableNodes
+    snap.functions ++= functions
+    snap.mixins ++= mixins
+    snap.namespaces ++= namespaces
+    snap.globalVarNames ++= globalVarNames
+    snap._content = _content
+    snap
+  }
 
-  /** Creates a new global-only environment. TODO. */
-  def global(): Environment = this
+  /** Creates a new global-only environment containing the built-in functions and any variables that were declared with `!global` in this environment.
+    */
+  def global(): Environment = {
+    val g = Environment.withBuiltins()
+    for (name <- globalVarNames)
+      variables.get(name).foreach(v => g.setGlobalVariable(name, v))
+    g
+  }
 }
 
 object Environment {
