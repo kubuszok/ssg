@@ -34,8 +34,17 @@ import ssg.sass.ast.css.{
   CssMediaRule,
   CssStyleRule,
   CssStylesheet,
-  CssSupportsRule
+  CssSupportsRule,
+  CssValue,
+  ModifiableCssAtRule,
+  ModifiableCssComment,
+  ModifiableCssDeclaration,
+  ModifiableCssNode,
+  ModifiableCssParentNode,
+  ModifiableCssStyleRule,
+  ModifiableCssStylesheet
 }
+import ssg.sass.util.ModifiableBox
 import ssg.sass.ast.sass.{
   AtRootRule,
   AtRule,
@@ -145,16 +154,44 @@ final class EvaluateVisitor(
     */
   private val _loadedUrls = scala.collection.mutable.LinkedHashSet.empty[String]
 
+  /** The root modifiable CSS stylesheet currently being built. Set at the
+    * start of [[run]] and used as the initial value of [[_parent]].
+    */
+  private var _root: Nullable[ModifiableCssStylesheet] = Nullable.empty
+
+  /** The current parent node in the CSS tree. New children produced by
+    * statement visitors are added here via [[_addChild]].
+    */
+  private var _parent: Nullable[ModifiableCssParentNode] = Nullable.empty
+
+  /** The current enclosing style rule, or empty if none. */
+  private var _styleRule: Nullable[ModifiableCssStyleRule] = Nullable.empty
+
+  /** Index of the end of the leading `@import`/`@use`/`@forward` block in
+    * `_root.children`. Not yet used for ordering but kept for parity with
+    * the Dart evaluator.
+    */
+  private var _endOfImports: Int = 0
+
   // ---------------------------------------------------------------------------
   // Public entry points
   // ---------------------------------------------------------------------------
 
-  /** Evaluate a parsed [[Stylesheet]] to a CSS AST. Statements are not yet
-    * implemented; this returns an empty stylesheet.
+  /** Evaluate a parsed [[Stylesheet]] to a CSS AST. Walks children, builds
+    * a modifiable CSS tree, then wraps it in an unmodifiable stylesheet.
     */
   def run(stylesheet: Stylesheet): EvaluateResult = {
-    // TODO: walk children, build CSS tree.
-    EvaluateResult(CssStylesheet.empty(), _loadedUrls.toSet)
+    val root = new ModifiableCssStylesheet(stylesheet.span)
+    _root = Nullable(root)
+    _parent = Nullable(root: ModifiableCssParentNode)
+    _endOfImports = 0
+    visitStylesheet(stylesheet)
+    // Read back the current root (usually the same instance) to build the
+    // unmodifiable wrapper; also read `_endOfImports` for future ordering.
+    val finalRoot = _root.getOrElse(root)
+    val _ = _endOfImports
+    val out = CssStylesheet(finalRoot.children, stylesheet.span)
+    EvaluateResult(out, _loadedUrls.toSet)
   }
 
   /** Evaluate an expression in isolation against this visitor's environment.
@@ -423,48 +460,307 @@ final class EvaluateVisitor(
     }
   }
 
+  /** Adds [[child]] as a child of the current parent node. Throws if no
+    * parent is currently set (which should never happen during normal
+    * statement evaluation).
+    */
+  private def _addChild(child: ModifiableCssNode): Unit = {
+    val parent = _parent.getOrElse {
+      throw new IllegalStateException("EvaluateVisitor has no active parent node.")
+    }
+    parent.addChild(child)
+  }
+
+  /** Runs [[body]] with [[parent]] as the active parent node, restoring
+    * the previous parent when complete. Mirrors Dart's `_withParent`.
+    */
+  private def _withParent[T, S <: ModifiableCssParentNode](parent: S, addChild: Boolean = true)(body: => T): T = {
+    if (addChild) _addChild(parent)
+    val saved = _parent
+    _parent = Nullable(parent: ModifiableCssParentNode)
+    try body
+    finally _parent = saved
+  }
+
+  /** Runs [[body]] with [[rule]] as the active enclosing style rule. */
+  private def _withStyleRule[T](rule: ModifiableCssStyleRule)(body: => T): T = {
+    val saved = _styleRule
+    _styleRule = Nullable(rule)
+    try body
+    finally _styleRule = saved
+  }
+
+  /** Runs [[body]] inside a new lexical scope in [[_environment]]. */
+  private def _withScope[T](body: => T): T =
+    _environment.withinScope(() => body)
+
+  /** Resolves the active logger, falling back to [[Logger.quiet]] when
+    * no explicit logger is provided.
+    */
+  private def _logger: Logger = logger.getOrElse(Logger.quiet)
+
   // ===========================================================================
-  // StatementVisitor — stubs (Phase 19+)
+  // StatementVisitor
   // ===========================================================================
 
   private def statementStub(name: String): Value =
     throw new UnsupportedOperationException(s"EvaluateVisitor.$name not yet implemented")
 
-  override def visitAtRootRule(node: AtRootRule): Value = statementStub("visitAtRootRule")
-  override def visitAtRule(node: AtRule): Value = statementStub("visitAtRule")
-  override def visitContentBlock(node: ContentBlock): Value = statementStub("visitContentBlock")
-  override def visitContentRule(node: ContentRule): Value = statementStub("visitContentRule")
-  override def visitDebugRule(node: DebugRule): Value = SassNull
-  override def visitDeclaration(node: Declaration): Value = statementStub("visitDeclaration")
-  override def visitEachRule(node: EachRule): Value = statementStub("visitEachRule")
+  /** Walks the top-level statements of [[node]], letting each one attach
+    * itself to the current parent (the root modifiable stylesheet set by
+    * [[run]]). Returns [[SassNull]] — the CSS tree lives in [[_root]].
+    */
+  override def visitStylesheet(node: Stylesheet): Value = {
+    node.children.foreach { kids =>
+      for (statement <- kids) {
+        val _ = statement.accept(this)
+      }
+    }
+    SassNull
+  }
+
+  override def visitStyleRule(node: StyleRule): Value = {
+    // Evaluate the selector interpolation. Full selector parsing and
+    // normalisation is deferred — we currently store the raw text as
+    // an `Any` placeholder matching the ModifiableCssStyleRule contract.
+    val selectorText: Any = node.selector.fold(
+      node.parsedSelector.fold[Any]("")(ps => ps.toString: Any)
+    )(interpolation => _performInterpolation(interpolation): Any)
+
+    val selectorBox = new ModifiableBox[Any](selectorText).seal()
+    val rule = new ModifiableCssStyleRule(selectorBox, node.span)
+
+    _withParent(rule) {
+      _withStyleRule(rule) {
+        _withScope {
+          node.children.foreach { kids =>
+            for (statement <- kids) {
+              val _ = statement.accept(this)
+            }
+          }
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitDeclaration(node: Declaration): Value = {
+    val nameText = _performInterpolation(node.name)
+    val nameValue = new CssValue[String](nameText, node.name.span)
+
+    // A declaration may have no value if it's purely a container for
+    // nested declarations (e.g. `font: { family: ...; }`).
+    node.value.foreach { expression =>
+      val rawValue = expression.accept(this)
+      val cssVal: Value =
+        if (node.parsedAsSassScript) rawValue
+        else {
+          // Custom property / non-SassScript: must be a SassString.
+          rawValue match {
+            case s: SassString => s
+            case other         => new SassString(other.toCssString(quote = false), hasQuotes = false)
+          }
+        }
+      val valueWrapper = new CssValue[Value](cssVal, expression.span)
+      val decl = new ModifiableCssDeclaration(
+        nameValue,
+        valueWrapper,
+        node.span,
+        parsedAsSassScript = node.parsedAsSassScript
+      )
+      _addChild(decl)
+    }
+
+    // Nested declarations: recurse with no added parent (they attach to
+    // the enclosing style rule in place for now).
+    node.children.foreach { kids =>
+      _withScope {
+        for (statement <- kids) {
+          val _ = statement.accept(this)
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitVariableDeclaration(node: VariableDeclaration): Value = {
+    val skip =
+      if (node.isGuarded) {
+        val existing = _environment.getVariable(node.name)
+        existing.isDefined && existing.get != SassNull
+      } else false
+    if (!skip) {
+      val value = node.expression.accept(this)
+      _environment.setVariable(node.name, value)
+    }
+    SassNull
+  }
+
+  override def visitIfRule(node: IfRule): Value = {
+    import scala.util.boundary, boundary.break
+    boundary {
+      for (clause <- node.clauses) {
+        if (clause.expression.accept(this).isTruthy) {
+          _withScope {
+            for (statement <- clause.children) {
+              val _ = statement.accept(this)
+            }
+          }
+          break(SassNull)
+        }
+      }
+      node.lastClause.foreach { elseClause =>
+        _withScope {
+          for (statement <- elseClause.children) {
+            val _ = statement.accept(this)
+          }
+        }
+      }
+      SassNull
+    }
+  }
+
+  override def visitForRule(node: ForRule): Value = {
+    val fromValue = node.from.accept(this).assertNumber()
+    val toValue = node.to.accept(this).assertNumber()
+    val fromInt = fromValue.assertInt()
+    val toInt = toValue.assertInt()
+
+    val direction = if (fromInt > toInt) -1 else 1
+    val end =
+      if (node.isExclusive) toInt
+      else toInt + direction
+
+    _withScope {
+      var i = fromInt
+      while (i != end) {
+        _environment.setVariable(node.variable, SassNumber(i.toDouble))
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+        i += direction
+      }
+    }
+    SassNull
+  }
+
+  override def visitEachRule(node: EachRule): Value = {
+    val listValue = node.list.accept(this)
+    _withScope {
+      for (element <- listValue.asList) {
+        if (node.variables.length == 1) {
+          _environment.setVariable(node.variables.head, element)
+        } else {
+          // Destructure sub-list values; pad with null for missing slots.
+          val sub = element.asList
+          var i = 0
+          while (i < node.variables.length) {
+            val v = if (i < sub.length) sub(i) else SassNull
+            _environment.setVariable(node.variables(i), v)
+            i += 1
+          }
+        }
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitWhileRule(node: WhileRule): Value = {
+    _withScope {
+      while (node.condition.accept(this).isTruthy) {
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitDebugRule(node: DebugRule): Value = {
+    val value = node.expression.accept(this)
+    val message = value match {
+      case s: SassString => s.text
+      case other         => other.toCssString(quote = false)
+    }
+    _logger.debug(message, node.span)
+    SassNull
+  }
+
+  override def visitWarnRule(node: WarnRule): Value = {
+    val value = node.expression.accept(this)
+    val message = value match {
+      case s: SassString => s.text
+      case other         => other.toCssString(quote = false)
+    }
+    _logger.warn(message)
+    SassNull
+  }
+
   override def visitErrorRule(node: ErrorRule): Value = {
     val value = node.expression.accept(this)
-    throw SassScriptException(value.toCssString(quote = false))
+    val message = value match {
+      case s: SassString => s.text
+      case other         => other.toCssString(quote = false)
+    }
+    throw SassException(message, node.span)
   }
+
+  override def visitSilentComment(node: SilentComment): Value = SassNull
+
+  override def visitLoudComment(node: LoudComment): Value = {
+    val text = _performInterpolation(node.text)
+    val comment = new ModifiableCssComment(text, node.text.span)
+    _addChild(comment)
+    SassNull
+  }
+
+  override def visitAtRule(node: AtRule): Value = {
+    val nameText = _performInterpolation(node.name)
+    val nameValue = new CssValue[String](nameText, node.name.span)
+    val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
+      new CssValue[String](_performInterpolation(interp), interp.span)
+    }
+
+    val childless = node.children.isEmpty
+    val rule = new ModifiableCssAtRule(
+      nameValue,
+      node.span,
+      childless = childless,
+      value = valueWrapper
+    )
+
+    if (childless) {
+      _addChild(rule)
+    } else {
+      _withParent(rule) {
+        _withScope {
+          for (statement <- node.children.get) {
+            val _ = statement.accept(this)
+          }
+        }
+      }
+    }
+    SassNull
+  }
+
+  // --- Deferred statements (stubs / simple fallbacks) ------------------------
+
+  override def visitAtRootRule(node: AtRootRule): Value = statementStub("visitAtRootRule")
+  override def visitContentBlock(node: ContentBlock): Value = statementStub("visitContentBlock")
+  override def visitContentRule(node: ContentRule): Value = statementStub("visitContentRule")
   override def visitExtendRule(node: ExtendRule): Value = statementStub("visitExtendRule")
-  override def visitForRule(node: ForRule): Value = statementStub("visitForRule")
   override def visitForwardRule(node: ForwardRule): Value = statementStub("visitForwardRule")
   override def visitFunctionRule(node: FunctionRule): Value = statementStub("visitFunctionRule")
-  override def visitIfRule(node: IfRule): Value = statementStub("visitIfRule")
   override def visitImportRule(node: ImportRule): Value = statementStub("visitImportRule")
   override def visitIncludeRule(node: IncludeRule): Value = statementStub("visitIncludeRule")
-  override def visitLoudComment(node: LoudComment): Value = SassNull
   override def visitMediaRule(node: MediaRule): Value = statementStub("visitMediaRule")
   override def visitMixinRule(node: MixinRule): Value = statementStub("visitMixinRule")
   override def visitReturnRule(node: ReturnRule): Value = node.expression.accept(this)
-  override def visitSilentComment(node: SilentComment): Value = SassNull
-  override def visitStyleRule(node: StyleRule): Value = statementStub("visitStyleRule")
-  override def visitStylesheet(node: Stylesheet): Value = SassNull
   override def visitSupportsRule(node: SupportsRule): Value = statementStub("visitSupportsRule")
   override def visitUseRule(node: UseRule): Value = statementStub("visitUseRule")
-  override def visitVariableDeclaration(node: VariableDeclaration): Value = {
-    // Minimal variable declaration: evaluate expression, store in environment.
-    val value = node.expression.accept(this)
-    _environment.setVariable(node.name, value)
-    SassNull
-  }
-  override def visitWarnRule(node: WarnRule): Value = SassNull
-  override def visitWhileRule(node: WhileRule): Value = statementStub("visitWhileRule")
 
   // ===========================================================================
   // CssVisitor — stubs (Phase 19+)
