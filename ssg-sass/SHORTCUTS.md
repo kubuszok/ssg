@@ -291,7 +291,7 @@ or serializer.
 ## HIGH — Built-in Functions (6/8 implemented)
 
 ### `functions/*.scala`
-- ✅ `ColorFunctions` — rgb/rgba/hsl/hsla, accessors (red/green/blue/hue/saturation/lightness/alpha), manipulations (lighten/darken/saturate/desaturate/mix/invert/grayscale/complement)
+- ✅ `ColorFunctions` — rgb/rgba/hsl/hsla, accessors (red/green/blue/hue/saturation/lightness/alpha), manipulations (lighten/darken/saturate/desaturate/mix/invert/grayscale/complement, opacify/fade-in, transparentize/fade-out, adjust-hue, change-color, adjust-color, scale-color, `rgba($color, $alpha)` overload). Module-namespaced via `@use "sass:color"` — `color.red`, `color.adjust`, etc. resolve through built-in module dispatch in `visitUseRule`. Serializer now emits non-opaque legacy RGB colors as `rgba(r, g, b, a)` instead of falling back to the default `Value.toCssString`.
 - ✅ `MathFunctions` — abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable/random/sqrt/pow/sin/cos/tan/asin/acos/atan/log/clamp/hypot
 - ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice/unique-id, `string.split` (module-only)
 - ✅ `ListFunctions` — length/nth (supports negative indices)/set-nth/join/append/zip/index/list-separator/is-bracketed, `list.slash` (module-only)

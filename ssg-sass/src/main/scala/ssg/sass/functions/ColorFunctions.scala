@@ -20,7 +20,7 @@ package sass
 package functions
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
-import ssg.sass.value.{ SassColor, SassNumber, Value }
+import ssg.sass.value.{ SassColor, SassNull, SassNumber, Value }
 import ssg.sass.value.color.ColorSpace
 import ssg.sass.util.NumberUtil.fuzzyRound
 
@@ -355,6 +355,159 @@ object ColorFunctions {
   private val fadeOutFn: BuiltInCallable =
     BuiltInCallable.function("fade-out", "$color, $amount", transparentizeFn.callback)
 
+  // --- change/adjust/scale-color helpers ---
+
+  /** Returns `Some(scalar)` for a SassNumber (with optional `%` scaling), or `None` for `SassNull` / unset positional slots produced by the named-arg binder.
+    */
+  private def optScalar(v: Value, percentScale: Double = 1.0): Option[Double] =
+    if (v eq SassNull) None
+    else
+      v match {
+        case n: SassNumber =>
+          Some(if (n.hasUnit("%")) n.value * percentScale / 100.0 else n.value)
+        case other =>
+          Some(other.assertNumber().value)
+      }
+
+  /** Scale `value` toward `min`/`max` by `factor` in [-1,1]. */
+  private def scaleToward(value: Double, factor: Double, min: Double, max: Double): Double =
+    if (factor > 0) value + (max - value) * factor
+    else if (factor < 0) value + (value - min) * factor
+    else value
+
+  private val changeColorFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "change-color",
+      "$color, $red, $green, $blue, $hue, $saturation, $lightness, $alpha",
+      { args =>
+        val c          = args(0).assertColor()
+        val red        = if (args.length > 1) optScalar(args(1), 255) else None
+        val green      = if (args.length > 2) optScalar(args(2), 255) else None
+        val blue       = if (args.length > 3) optScalar(args(3), 255) else None
+        val hue        = if (args.length > 4) optScalar(args(4)) else None
+        val sat        = if (args.length > 5) optScalar(args(5), 100) else None
+        val light      = if (args.length > 6) optScalar(args(6), 100) else None
+        val alpha      = if (args.length > 7) optScalar(args(7)) else None
+        val touchesRgb = red.isDefined || green.isDefined || blue.isDefined
+        val touchesHsl = hue.isDefined || sat.isDefined || light.isDefined
+        if (touchesRgb && touchesHsl)
+          throw SassScriptException(
+            "RGB parameters may not be passed along with HSL parameters."
+          )
+        if (touchesHsl) {
+          val hsl = c.toSpace(ColorSpace.hsl)
+          val out = hslFrom(
+            hue.getOrElse(hsl.channel0),
+            sat.getOrElse(hsl.channel1),
+            light.getOrElse(hsl.channel2),
+            alpha.getOrElse(c.alpha)
+          )
+          if (c.space eq ColorSpace.hsl) out else out.toSpace(c.space)
+        } else if (touchesRgb) {
+          val rgb = c.toSpace(ColorSpace.rgb)
+          val out = rgbFrom(
+            red.getOrElse(rgb.channel0),
+            green.getOrElse(rgb.channel1),
+            blue.getOrElse(rgb.channel2),
+            alpha.getOrElse(c.alpha)
+          )
+          if (c.space eq ColorSpace.rgb) out else out.toSpace(c.space)
+        } else {
+          // Only alpha (or nothing) supplied.
+          alpha match {
+            case Some(a) => c.changeAlpha(clamp(a, 0, 1))
+            case None    => c
+          }
+        }
+      }
+    )
+
+  private val adjustColorFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "adjust-color",
+      "$color, $red, $green, $blue, $hue, $saturation, $lightness, $alpha",
+      { args =>
+        val c          = args(0).assertColor()
+        val red        = if (args.length > 1) optScalar(args(1), 255) else None
+        val green      = if (args.length > 2) optScalar(args(2), 255) else None
+        val blue       = if (args.length > 3) optScalar(args(3), 255) else None
+        val hue        = if (args.length > 4) optScalar(args(4)) else None
+        val sat        = if (args.length > 5) optScalar(args(5), 100) else None
+        val light      = if (args.length > 6) optScalar(args(6), 100) else None
+        val alpha      = if (args.length > 7) optScalar(args(7)) else None
+        val touchesRgb = red.isDefined || green.isDefined || blue.isDefined
+        val touchesHsl = hue.isDefined || sat.isDefined || light.isDefined
+        if (touchesRgb && touchesHsl)
+          throw SassScriptException(
+            "RGB parameters may not be passed along with HSL parameters."
+          )
+        val newAlpha = clamp(c.alpha + alpha.getOrElse(0.0), 0, 1)
+        if (touchesHsl) {
+          val out = adjustHsl(
+            c,
+            hDelta = hue.getOrElse(0.0),
+            sDelta = sat.getOrElse(0.0),
+            lDelta = light.getOrElse(0.0)
+          )
+          out.changeAlpha(newAlpha)
+        } else if (touchesRgb) {
+          val rgb = c.toSpace(ColorSpace.rgb)
+          val out = rgbFrom(
+            rgb.channel0 + red.getOrElse(0.0),
+            rgb.channel1 + green.getOrElse(0.0),
+            rgb.channel2 + blue.getOrElse(0.0),
+            newAlpha
+          )
+          if (c.space eq ColorSpace.rgb) out else out.toSpace(c.space)
+        } else {
+          c.changeAlpha(newAlpha)
+        }
+      }
+    )
+
+  private val scaleColorFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "scale-color",
+      "$color, $red, $green, $blue, $saturation, $lightness, $alpha",
+      { args =>
+        val c          = args(0).assertColor()
+        val red        = if (args.length > 1) optScalar(args(1), 100).map(_ / 100.0) else None
+        val green      = if (args.length > 2) optScalar(args(2), 100).map(_ / 100.0) else None
+        val blue       = if (args.length > 3) optScalar(args(3), 100).map(_ / 100.0) else None
+        val sat        = if (args.length > 4) optScalar(args(4), 100).map(_ / 100.0) else None
+        val light      = if (args.length > 5) optScalar(args(5), 100).map(_ / 100.0) else None
+        val alpha      = if (args.length > 6) optScalar(args(6), 100).map(_ / 100.0) else None
+        val touchesRgb = red.isDefined || green.isDefined || blue.isDefined
+        val touchesHsl = sat.isDefined || light.isDefined
+        if (touchesRgb && touchesHsl)
+          throw SassScriptException(
+            "RGB parameters may not be passed along with HSL parameters."
+          )
+        val newAlpha = alpha.fold(c.alpha)(f => scaleToward(c.alpha, f, 0, 1))
+        if (touchesHsl) {
+          val hsl = c.toSpace(ColorSpace.hsl)
+          val out = hslFrom(
+            hsl.channel0,
+            sat.fold(hsl.channel1)(f => scaleToward(hsl.channel1, f, 0, 100)),
+            light.fold(hsl.channel2)(f => scaleToward(hsl.channel2, f, 0, 100)),
+            newAlpha
+          )
+          if (c.space eq ColorSpace.hsl) out else out.toSpace(c.space)
+        } else if (touchesRgb) {
+          val rgb = c.toSpace(ColorSpace.rgb)
+          val out = rgbFrom(
+            red.fold(rgb.channel0)(f => scaleToward(rgb.channel0, f, 0, 255)),
+            green.fold(rgb.channel1)(f => scaleToward(rgb.channel1, f, 0, 255)),
+            blue.fold(rgb.channel2)(f => scaleToward(rgb.channel2, f, 0, 255)),
+            newAlpha
+          )
+          if (c.space eq ColorSpace.rgb) out else out.toSpace(c.space)
+        } else {
+          c.changeAlpha(newAlpha)
+        }
+      }
+    )
+
   // --- Registration ---
 
   val global: List[Callable] = List(
@@ -382,7 +535,10 @@ object ColorFunctions {
     opacifyFn,
     transparentizeFn,
     fadeInFn,
-    fadeOutFn
+    fadeOutFn,
+    changeColorFn,
+    adjustColorFn,
+    scaleColorFn
   )
 
   def module: List[Callable] = global

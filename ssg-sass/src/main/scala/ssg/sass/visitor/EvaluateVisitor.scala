@@ -984,6 +984,32 @@ final class EvaluateVisitor(
   }
 
   override def visitUseRule(node: UseRule): Value = {
+    val urlStr0 = node.url.toString
+    if (urlStr0.startsWith("sass:")) {
+      val moduleName = urlStr0.substring("sass:".length)
+      ssg.sass.functions.Functions.modules.get(moduleName).foreach { callables =>
+        val moduleEnv = Environment.withBuiltins()
+        for (c <- callables) c match {
+          case bic: BuiltInCallable => moduleEnv.setFunction(bic)
+          case _ => ()
+        }
+        // Use the explicit namespace only when it differs from the raw URL
+        // (e.g. `@use "sass:color" as c`); otherwise default to the bare
+        // module name so `color.red(...)` resolves regardless of how the
+        // parser derived the default namespace from the `sass:` URL.
+        val ns =
+          if (node.namespace.isDefined && node.namespace.get != urlStr0) node.namespace.get
+          else moduleName
+        _environment.addNamespace(ns, moduleEnv)
+      }
+      SassNull
+    } else {
+      _visitFileUseRule(node)
+      SassNull
+    }
+  }
+
+  private def _visitFileUseRule(node: UseRule): Unit =
     importer.foreach { imp =>
       val urlStr    = node.url.toString
       val canonical = imp.canonicalize(urlStr)
@@ -1028,8 +1054,6 @@ final class EvaluateVisitor(
         }
       }
     }
-    SassNull
-  }
 
   /** Returns a [[Callable]] equivalent to [orig] but reporting [newName] as its name. Used for `@forward ... as prefix-*`. If [newName] equals the original name, returns [orig] unchanged.
     */

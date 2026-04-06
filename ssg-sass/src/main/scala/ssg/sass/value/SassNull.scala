@@ -34,10 +34,7 @@ object SassNull extends Value {
 
   override def hashCode(): Int = 0
 
-  override def equals(other: Any): Boolean = other match {
-    case SassNull => true
-    case _        => false
-  }
+  override def equals(other: Any): Boolean = other.asInstanceOf[AnyRef] eq this
 
   override def toString: String = "null"
 }

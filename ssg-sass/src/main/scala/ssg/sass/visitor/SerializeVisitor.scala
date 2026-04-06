@@ -254,8 +254,15 @@ final class SerializeVisitor(
     val g = math.round(c.channel1).toInt
     val b = math.round(c.channel2).toInt
     if (a < 1.0) {
-      // Defer to default rendering for non-opaque colors.
-      c.toCssString()
+      // Render non-opaque legacy RGB colors as `rgba(r, g, b, a)`. The alpha
+      // is formatted with trailing zeros stripped (e.g. `0.5` not `0.50`).
+      val alphaStr = {
+        val s = "%s".format(a)
+        if (s.contains('.')) s.replaceAll("0+$", "").replaceAll("\\.$", "")
+        else s
+      }
+      val sep = if (isCompressed) "," else ", "
+      s"rgba($r$sep$g$sep$b$sep$alphaStr)"
     } else if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
       c.toCssString()
     } else {
