@@ -1402,4 +1402,81 @@ final class CompileSuite extends munit.FunSuite {
       .css
     assert(css.contains("type: mixin"), css)
   }
+
+  // ---------------------------------------------------------------------------
+  // CSS custom properties and modern @supports syntax
+  // ---------------------------------------------------------------------------
+
+  test("custom property with literal value passes through") {
+    val css = Compile
+      .compileString(":root { --brand: #ff0066; }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, ":root{--brand:#ff0066;}")
+  }
+
+  test("custom property with #{...} interpolation evaluates") {
+    val src = "$c: red; :root { --brand: #{$c}; }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, ":root{--brand:red;}")
+  }
+
+  test("custom property value does NOT evaluate + operator") {
+    val css = Compile
+      .compileString(":root { --foo: 1 + 2; }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, ":root{--foo:1 + 2;}")
+  }
+
+  test("custom property value preserves nested parens") {
+    val css = Compile
+      .compileString(":root { --grid: repeat(3, 1fr); }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, ":root{--grid:repeat(3, 1fr);}")
+  }
+
+  test("var(--foo) passes through as a plain CSS function") {
+    val css = Compile
+      .compileString("a { color: var(--brand); }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, "a{color:var(--brand);}")
+  }
+
+  test("@supports selector(:has(> img)) compiles") {
+    val css = Compile
+      .compileString("@supports selector(:has(> img)) { a { color: red; } }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, "@supports selector(:has(> img)){a{color:red;}}")
+  }
+
+  test("@supports selector(...) uses function syntax without extra parens") {
+    val css = Compile
+      .compileString("@supports selector(:is(a, b)) { .x { color: red; } }", OutputStyle.Compressed)
+      .css
+    assertEquals(css, "@supports selector(:is(a, b)){.x{color:red;}}")
+  }
+
+  test("!important flag emits ` !important` before the trailing semicolon") {
+    val css = Compile.compileString("a { color: red !important; }", OutputStyle.Compressed).css
+    assertEquals(css, "a{color:red!important;}")
+  }
+
+  test("!important flag is omitted when absent") {
+    val css = Compile.compileString("a { color: red; }", OutputStyle.Compressed).css
+    assertEquals(css, "a{color:red;}")
+  }
+
+  test("!important tolerates whitespace between ! and important") {
+    val css = Compile.compileString("a { color: red !  important; }", OutputStyle.Compressed).css
+    assertEquals(css, "a{color:red!important;}")
+  }
+
+  test("!important expanded-mode output has space before !important") {
+    val css = Compile.compileString("a { color: red !important; }").css
+    assert(css.contains("color: red !important;"))
+  }
+
+  test("!important works with variable-valued expressions") {
+    val css = Compile.compileString("$c: blue; a { color: $c !important; }", OutputStyle.Compressed).css
+    assertEquals(css, "a{color:blue!important;}")
+  }
 }

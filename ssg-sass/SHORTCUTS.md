@@ -112,6 +112,18 @@ edge-case helpers.
   style rule is placed inside the media rule, and the media rule
   attaches to the nearest non-style parent, producing the expected
   Sass output `@media (q) { .a { color: red; } }`.
+- ✅ **CSS custom properties** — property names starting with `--`
+  (`--brand: #ff0066;`) are parsed by `_declarationOrStyleRule` via a
+  new `_readCustomPropertyValue` helper that collects the value
+  verbatim up to the terminating `;` (respecting balanced parens,
+  brackets, braces, and string literals). `#{...}` interpolation is
+  still parsed and evaluated, so `--brand: #{$c}` works. Everything
+  else is preserved literally — `--foo: 1 + 2` emits `--foo: 1 + 2;`
+  with no SassScript evaluation of the `+`. The declaration is built
+  via `Declaration.notSassScript` wrapping a `StringExpression`, so
+  the existing evaluator/serializer pipeline emits the raw value.
+  `var(--foo)` call sites already passed through as plain CSS
+  functions via `visitFunctionExpression`'s unknown-callable fallback.
 - ✅ `@supports <condition> { body }` — parsed in `_atRule` reusing
   the same bracket/interpolation-aware condition scanner as `@media`.
   One balanced outer `(...)` layer is stripped before wrapping the
@@ -122,7 +134,13 @@ edge-case helpers.
   condition. `visitSupportsRule` mirrors the media bubbling pattern:
   when nested inside a style rule, the supports rule attaches to the
   nearest non-style parent and a clone of the enclosing style rule
-  is placed inside it.
+  is placed inside it. The modern function-form
+  `@supports selector(:has(> img))` is also recognized: when the
+  condition text matches `<ident>(...)` with balanced parens over the
+  whole string, the parser builds a `SupportsFunction` (instead of a
+  `SupportsAnything`) so the serializer emits the raw
+  `selector(:has(> img))` form without wrapping it in an extra layer
+  of `(...)`.
 - ✅ `@at-root` — parsed in `_atRule`. Supports the bare form
   `@at-root { ... }` and the selector form `@at-root .sel { ... }`.
   In the selector form the body is wrapped in a fresh `StyleRule`

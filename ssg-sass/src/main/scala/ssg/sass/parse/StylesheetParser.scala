@@ -66,6 +66,8 @@ import ssg.sass.ast.sass.{
   StyleRule,
   Stylesheet,
   SupportsAnything,
+  SupportsCondition,
+  SupportsFunction,
   SupportsRule,
   UnaryOperationExpression,
   UnaryOperator,
@@ -632,7 +634,42 @@ abstract class StylesheetParser protected (
           else _parseInterpolatedString(condInnerText, condSpan)
         whitespace(consumeNewlines = true)
         val supportsKids = _children()
-        val condition    = SupportsAnything(innerInterp, condSpan)
+        // Detect function-syntax conditions like `selector(:has(> a))`
+        // and build a `SupportsFunction` so the serializer emits the
+        // raw form without an extra wrapping `(...)`. Matches
+        // `<ident>( ... )` with balanced parens over the whole string.
+        val condition: SupportsCondition = {
+          val src = condRawAll
+          var i   = 0
+          while (i < src.length && (CharCode.isName(src.charAt(i).toInt) || src.charAt(i) == '-'))
+            i += 1
+          if (
+            i > 0 && i < src.length && src.charAt(i) == '(' &&
+            src.length >= 2 && src.charAt(src.length - 1) == ')'
+          ) {
+            var pd      = 0
+            var matched = true
+            var k       = i
+            while (k < src.length && matched) {
+              val c = src.charAt(k)
+              if (c == '(') pd += 1
+              else if (c == ')') {
+                pd -= 1
+                if (pd == 0 && k != src.length - 1) matched = false
+              }
+              k += 1
+            }
+            if (matched) {
+              val fnName     = src.substring(0, i)
+              val fnArgsText = src.substring(i + 1, src.length - 1)
+              val nameInterp = Interpolation.plain(fnName, condSpan)
+              val argsInterp =
+                if (fnArgsText.isEmpty) Interpolation.plain("", condSpan)
+                else _parseInterpolatedString(fnArgsText, condSpan)
+              SupportsFunction(nameInterp, argsInterp, condSpan)
+            } else SupportsAnything(innerInterp, condSpan)
+          } else SupportsAnything(innerInterp, condSpan)
+        }
         Nullable(new SupportsRule(condition, supportsKids, spanFrom(start)))
       case "keyframes" | "-webkit-keyframes" | "-moz-keyframes" | "-o-keyframes" | "-ms-keyframes" =>
         // @keyframes <name> { <keyframe-block>* }
@@ -1174,8 +1211,9 @@ abstract class StylesheetParser protected (
       whitespace(consumeNewlines = true)
       val expression = _expression()
       whitespace(consumeNewlines = false)
+      val important1 = _tryScanImportant()
       scanner.scanChar(CharCode.$semicolon)
-      return Nullable(Declaration(nameInterp, expression, spanFrom(start)))
+      return Nullable(Declaration(nameInterp, expression, spanFrom(start), isImportant = important1))
     }
     // Try to read an identifier followed by `:` to detect a declaration.
     if (!lookingAtIdentifier()) {
@@ -1209,8 +1247,9 @@ abstract class StylesheetParser protected (
           whitespace(consumeNewlines = true)
           val expression = _expression()
           whitespace(consumeNewlines = false)
+          val important2 = _tryScanImportant()
           scanner.scanChar(CharCode.$semicolon)
-          return Nullable(Declaration(nameInterp, expression, spanFrom(start)))
+          return Nullable(Declaration(nameInterp, expression, spanFrom(start), isImportant = important2))
         }
       }
     val name =
@@ -1252,16 +1291,50 @@ abstract class StylesheetParser protected (
       }
       val nameInterp = Interpolation.plain(name, nameSpan)
 
+      // CSS custom property (`--foo: value`): everything after the colon
+      // is a raw string. SassScript operators (`+`, `-`, ...) are NOT
+      // evaluated — `--foo: 1 + 2` emits `--foo: 1 + 2;` literally. Only
+      // `#{...}` interpolation is parsed, so `--foo: #{$x}` still works.
+      if (name.startsWith("--")) {
+        val rawStart = scanner.state
+        val valueInterp = _readCustomPropertyValue(rawStart)
+        whitespace(consumeNewlines = false)
+        scanner.scanChar(CharCode.$semicolon)
+        val strExpr = StringExpression(valueInterp, hasQuotes = false)
+        return Nullable(Declaration.notSassScript(nameInterp, strExpr, spanFrom(start)))
+      }
+
       // If we're at end of declaration (no value), it's a nested declaration
       // For simplicity, require a value.
       val expression = _expression()
       whitespace(consumeNewlines = false)
+      val important3 = _tryScanImportant()
       scanner.scanChar(CharCode.$semicolon)
-      Nullable(Declaration(nameInterp, expression, spanFrom(start)))
+      Nullable(Declaration(nameInterp, expression, spanFrom(start), isImportant = important3))
     } else {
       // Not a declaration — rewind and parse as style rule
       scanner.state = savedState
       Nullable(_styleRule())
+    }
+  }
+
+  /** If the scanner is positioned at `!important` (optionally with whitespace
+    * between the `!` and `important`), consume it and return true. Otherwise
+    * leave the scanner unchanged and return false.
+    */
+  private def _tryScanImportant(): Boolean = {
+    val saved = scanner.state
+    if (scanner.peekChar() != CharCode.$exclamation) false
+    else {
+      scanner.readChar() // '!'
+      whitespace(consumeNewlines = false)
+      if (scanIdentifier("important", caseSensitive = false)) {
+        whitespace(consumeNewlines = false)
+        true
+      } else {
+        scanner.state = saved
+        false
+      }
     }
   }
 
@@ -1816,6 +1889,99 @@ abstract class StylesheetParser protected (
     else if (unit == "%") Some(NumberExpression(value, span, Nullable("%")))
     else if (_allChars(unit, (c: Char) => c.isLetter)) Some(NumberExpression(value, span, Nullable(unit)))
     else None
+  }
+
+  /** Reads the raw value portion of a CSS custom property declaration
+    * (`--foo: <raw>;`). Everything up to the terminating `;` or the
+    * closing `}` of the enclosing block is collected verbatim, with one
+    * exception: `#{...}` interpolation segments are parsed as expressions
+    * so `--foo: #{$x}` still evaluates. Balanced parens/brackets/braces
+    * and string literals are respected so `;`/`}` inside them do not
+    * end the value.
+    */
+  private def _readCustomPropertyValue(
+    rawStart: ssg.sass.util.LineScannerState
+  ): Interpolation = {
+    val contents = scala.collection.mutable.ListBuffer.empty[Any]
+    val spans    = scala.collection.mutable.ListBuffer.empty[Nullable[FileSpan]]
+    val literal  = new StringBuilder()
+    var pDepth   = 0
+    var inQuote: Int = 0
+    boundary {
+      while (!scanner.isDone) {
+        val ch = scanner.peekChar()
+        if (ch < 0) break(())
+        if (inQuote > 0) {
+          if (ch == CharCode.$backslash) {
+            literal.append(scanner.readChar().toChar)
+            if (!scanner.isDone) literal.append(scanner.readChar().toChar)
+          } else {
+            if (ch == inQuote) inQuote = 0
+            literal.append(scanner.readChar().toChar)
+          }
+        } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+          inQuote = ch
+          literal.append(scanner.readChar().toChar)
+        } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          if (literal.nonEmpty) {
+            contents += literal.toString()
+            spans += Nullable.empty
+            literal.clear()
+          }
+          val _       = scanner.readChar() // '#'
+          val _       = scanner.readChar() // '{'
+          val exprBuf = new StringBuilder()
+          var depth   = 1
+          boundary {
+            while (!scanner.isDone) {
+              val cc = scanner.peekChar()
+              if (cc < 0) break(())
+              if (cc == CharCode.$lbrace) depth += 1
+              else if (cc == CharCode.$rbrace) {
+                depth -= 1
+                if (depth == 0) {
+                  val _ = scanner.readChar()
+                  break(())
+                }
+              }
+              exprBuf.append(scanner.readChar().toChar)
+            }
+          }
+          val exprText = exprBuf.toString().trim
+          val exprSpan = spanFrom(rawStart)
+          if (exprText.isEmpty) {
+            contents += StringExpression(Interpolation.plain("", exprSpan), hasQuotes = false)
+          } else {
+            contents += _parseSimpleExpression(exprText, exprSpan)
+          }
+          spans += Nullable(exprSpan)
+        } else if (
+          pDepth == 0 && (ch == CharCode.$semicolon || ch == CharCode.$rbrace)
+        ) {
+          break(())
+        } else if (ch == CharCode.$lparen || ch == CharCode.$lbrace || ch == CharCode.$lbracket) {
+          pDepth += 1
+          literal.append(scanner.readChar().toChar)
+        } else if (ch == CharCode.$rparen || ch == CharCode.$rbrace || ch == CharCode.$rbracket) {
+          if (pDepth > 0) pDepth -= 1
+          literal.append(scanner.readChar().toChar)
+        } else {
+          literal.append(scanner.readChar().toChar)
+        }
+      }
+    }
+    if (literal.nonEmpty || contents.isEmpty) {
+      contents += literal.toString().replaceAll("\\s+$", "")
+      spans += Nullable.empty
+    } else {
+      // Trim trailing whitespace from the final literal chunk if any.
+      contents.lastOption match {
+        case Some(s: String) =>
+          contents(contents.length - 1) = s.replaceAll("\\s+$", "")
+        case _ => ()
+      }
+    }
+    new Interpolation(contents.toList, spans.toList, spanFrom(rawStart))
   }
 
   /** Reads an interpolated property name from the scanner: a sequence of identifier characters and `#{...}` segments, stopping at the first character that ends the name (whitespace, `:`, `;`, `{`,
