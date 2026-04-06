@@ -385,4 +385,40 @@ final class CompileSuite extends munit.FunSuite {
     val result = Compile.compileString(""".x { y: selector-unify(".a", ".b"); }""")
     assert(!result.css.contains("error"), result.css)
   }
+
+  test("nested rule with &:hover expands to parent:hover") {
+    val result = Compile.compileString(
+      """.btn { &:hover { color: blue; } }""",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains(".btn:hover{color:blue;}"), result.css)
+    assert(!result.css.contains("&"), result.css)
+  }
+
+  test("nested rule with &.active expands to parent.active") {
+    val result = Compile.compileString(
+      """.btn { &.active { color: blue; } }""",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains(".btn.active{color:blue;}"), result.css)
+    assert(!result.css.contains("&"), result.css)
+  }
+
+  test("nested rule without & is descendant selector") {
+    val result = Compile.compileString(
+      """.a { .b { color: red; } }""",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains(".a .b{color:red;}"), result.css)
+  }
+
+  test("nested rule with parent declarations and & emits both") {
+    val result = Compile.compileString(
+      """.btn { color: red; &:hover { color: blue; } }""",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains(".btn{color:red;}"), result.css)
+    assert(result.css.contains(".btn:hover{color:blue;}"), result.css)
+    assert(!result.css.contains("&"), result.css)
+  }
 }

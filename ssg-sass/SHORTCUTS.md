@@ -100,7 +100,7 @@ or serializer.
 - ⚠️  @extend — no-op (needs ExtensionStore integration)
 - ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
 - ⚠️  Parameter binding: basic; rest/keyword-rest args deferred
-- ⚠️  Selector parent expansion (`&`) returns SassNull — needs selector parsing
+- ✅ Selector parent expansion (`&`) — text-based: `visitSelectorExpression` returns the active style rule's selector as an unquoted SassString, and nested style rules substitute `&` against the parent selector via `_expandSelector`. Full SelectorList value type still deferred.
 
 ### `visitor/SerializeVisitor.scala` ✅ MVP IMPLEMENTED
 - ✅ `serialize(node)` — expanded + compressed output styles
@@ -189,7 +189,7 @@ or serializer.
 ## HIGH — Built-in Functions (6/8 implemented)
 
 ### `functions/*.scala`
-- ❌ `ColorFunctions` — **still stub** (large, needs color conversion)
+- ✅ `ColorFunctions` — rgb/rgba/hsl/hsla, accessors (red/green/blue/hue/saturation/lightness/alpha), manipulations (lighten/darken/saturate/desaturate/mix/invert/grayscale/complement)
 - ✅ `MathFunctions` — abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable
 - ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice
 - ✅ `ListFunctions` — length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed
