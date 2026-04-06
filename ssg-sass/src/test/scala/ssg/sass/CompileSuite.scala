@@ -196,4 +196,95 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("y: string"))
     assert(result.css.contains("z: bool"))
   }
+
+  // --- Color functions ---
+
+  test("calls rgb() 3-arg constructor") {
+    // Verify via accessor round-trip.
+    val result = Compile.compileString(".box { r: red(rgb(255, 0, 0)); }")
+    assert(result.css.contains("r: 255"))
+  }
+
+  test("calls rgb() 4-arg with alpha") {
+    val result = Compile.compileString(".box { a: alpha(rgb(255, 0, 0, 0.5)); }")
+    assert(result.css.contains("a: 0.5") || result.css.contains("a: .5"))
+  }
+
+  test("calls hsl() 3-arg constructor") {
+    val result = Compile.compileString(".box { r: red(hsl(0, 100%, 50%)); }")
+    assert(result.css.contains("r: 255"))
+  }
+
+  test("calls red() accessor") {
+    val result = Compile.compileString(".box { x: red(rgb(128, 64, 32)); }")
+    assert(result.css.contains("x: 128"))
+  }
+
+  test("calls green() accessor") {
+    val result = Compile.compileString(".box { x: green(rgb(128, 64, 32)); }")
+    assert(result.css.contains("x: 64"))
+  }
+
+  test("calls blue() accessor") {
+    val result = Compile.compileString(".box { x: blue(rgb(128, 64, 32)); }")
+    assert(result.css.contains("x: 32"))
+  }
+
+  test("calls alpha() accessor") {
+    val result = Compile.compileString(".box { x: alpha(rgb(1, 2, 3, 0.5)); }")
+    assert(result.css.contains("x: 0.5") || result.css.contains("x: .5"))
+  }
+
+  test("calls lightness() accessor") {
+    val result = Compile.compileString(".box { x: lightness(hsl(0, 100%, 50%)); }")
+    assert(result.css.contains("x: 50%"))
+  }
+
+  test("calls saturation() accessor") {
+    val result = Compile.compileString(".box { x: saturation(hsl(0, 100%, 50%)); }")
+    assert(result.css.contains("x: 100%"))
+  }
+
+  test("calls lighten() function") {
+    val result = Compile.compileString(".box { color: lighten(hsl(0, 100%, 50%), 10%); }")
+    // Lightness should now be 60%
+    val r2 = Compile.compileString(".box { x: lightness(lighten(hsl(0, 100%, 50%), 10%)); }")
+    assert(r2.css.contains("x: 60%"))
+    assert(result.css.contains("color:"))
+  }
+
+  test("calls darken() function") {
+    val result = Compile.compileString(
+      ".box { x: lightness(darken(hsl(0, 100%, 50%), 20%)); }"
+    )
+    assert(result.css.contains("x: 30%"))
+  }
+
+  test("calls invert() function") {
+    val result = Compile.compileString(".box { x: red(invert(rgb(255, 0, 0))); }")
+    assert(result.css.contains("x: 0"))
+  }
+
+  test("calls grayscale() function") {
+    val result = Compile.compileString(
+      ".box { x: saturation(grayscale(hsl(120, 80%, 50%))); }"
+    )
+    assert(result.css.contains("x: 0%"))
+  }
+
+  test("interpolation in string literals") {
+    val result = Compile.compileString("""
+      $name: "world";
+      a { content: "hello #{$name}"; }
+    """)
+    assert(result.css.contains("hello world"))
+  }
+
+  test("interpolation in selector") {
+    val result = Compile.compileString("""
+      $class: "button";
+      .#{$class} { color: red; }
+    """)
+    assert(result.css.contains(".button"))
+  }
 }

@@ -586,6 +586,9 @@ object SassNumber {
 
   /** Formats a Double for CSS output: integers as `10`, non-integers rounded
     * to `precision` significant digits with trailing zeros stripped.
+    *
+    * Locale-independent (Scala.js can't link `String.format` with `Locale`).
+    * Uses integer arithmetic: round(value * 10^precision) / 10^precision.
     */
   def formatNumber(value: Double): String = {
     if (value.isNaN) "NaN"
@@ -595,15 +598,31 @@ object SassNumber {
       // Integer-valued: emit without decimal point
       value.toLong.toString
     } else {
-      // Fractional: round to precision decimal places, strip trailing zeros
-      val formatted = String.format(s"%.${precision}f", java.lang.Double.valueOf(value))
-      // Strip trailing zeros and possibly the decimal point
-      var end = formatted.length
-      while (end > 0 && formatted.charAt(end - 1) == '0') end -= 1
-      if (end > 0 && formatted.charAt(end - 1) == '.') end -= 1
-      val trimmed = formatted.substring(0, end)
-      // Handle -0 → 0
-      if (trimmed == "-0") "0" else trimmed
+      val scale = math.pow(10.0, precision.toDouble)
+      val scaled = math.round(value * scale)
+      val isNeg = scaled < 0
+      val absScaled = math.abs(scaled)
+      // Split into integer and fractional parts
+      val intPart = absScaled / scale.toLong
+      val fracPart = absScaled - intPart * scale.toLong
+      val sb = new StringBuilder()
+      if (isNeg) sb.append('-')
+      sb.append(intPart.toString)
+      if (fracPart != 0) {
+        sb.append('.')
+        // Zero-pad the fractional part to `precision` digits
+        val fracStr = fracPart.toString
+        var padding = precision - fracStr.length
+        while (padding > 0) { sb.append('0'); padding -= 1 }
+        sb.append(fracStr)
+        // Strip trailing zeros
+        var end = sb.length
+        while (end > 0 && sb.charAt(end - 1) == '0') end -= 1
+        if (end > 0 && sb.charAt(end - 1) == '.') end -= 1
+        sb.setLength(end)
+      }
+      val result = sb.toString()
+      if (result == "-0") "0" else result
     }
   }
 

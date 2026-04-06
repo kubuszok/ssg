@@ -362,23 +362,61 @@ abstract class StylesheetParser protected (
     val c = scanner.peekChar()
     if (c < 0) scanner.error("Expected expression.")
 
-    // Collect until end-of-statement markers
+    // Collect until end-of-statement markers. Respects quoted strings and
+    // `#{...}` interpolation so braces inside them don't terminate collection.
     val buf = new StringBuilder()
     var brackets = 0
+    var inQuote: Int = 0       // 0 = not in string, else the opening quote char
+    var interpDepth: Int = 0   // brace depth inside #{...}
     boundary {
       while (!scanner.isDone) {
         val ch = scanner.peekChar()
         if (ch < 0) break(())
-        if (brackets == 0) {
-          if (ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace) break(())
-          if (ch == CharCode.$exclamation) break(()) // start of flag like !default
+
+        if (interpDepth > 0) {
+          // Inside #{...} — may itself be nested within a quoted string.
+          if (ch == CharCode.$lbrace) interpDepth += 1
+          else if (ch == CharCode.$rbrace) {
+            interpDepth -= 1
+            if (interpDepth == 0 && inQuote < 0) inQuote = -inQuote // resume string
+          }
+          buf.append(scanner.readChar().toChar)
+        } else if (inQuote > 0) {
+          // Inside a quoted string literal.
+          if (ch == CharCode.$backslash) {
+            buf.append(scanner.readChar().toChar)
+            if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+          } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+            buf.append(scanner.readChar().toChar) // '#'
+            buf.append(scanner.readChar().toChar) // '{'
+            interpDepth = 1
+            inQuote = -inQuote // stash quote, negative => we're in interp-inside-string
+          } else {
+            if (ch == inQuote) inQuote = 0
+            buf.append(scanner.readChar().toChar)
+          }
+        } else {
+          // Top-level expression text.
+          if (brackets == 0) {
+            if (ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace) break(())
+            if (ch == CharCode.$exclamation) break(()) // start of flag like !default
+          }
+          if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+            inQuote = ch
+            buf.append(scanner.readChar().toChar)
+          } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+            buf.append(scanner.readChar().toChar) // '#'
+            buf.append(scanner.readChar().toChar) // '{'
+            interpDepth = 1
+          } else {
+            if (ch == CharCode.$lparen || ch == CharCode.$lbracket) brackets += 1
+            else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
+              if (brackets == 0) break(())
+              brackets -= 1
+            }
+            buf.append(scanner.readChar().toChar)
+          }
         }
-        if (ch == CharCode.$lparen || ch == CharCode.$lbracket) brackets += 1
-        else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
-          if (brackets == 0) break(())
-          brackets -= 1
-        }
-        buf.append(scanner.readChar().toChar)
       }
     }
 
@@ -408,7 +446,7 @@ abstract class StylesheetParser protected (
     if ((trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) ||
         (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2)) {
       val inner = trimmed.substring(1, trimmed.length - 1)
-      return StringExpression(Interpolation.plain(inner, span), hasQuotes = true)
+      return StringExpression(_parseInterpolatedString(inner, span), hasQuotes = true)
     }
 
     // Variable reference
@@ -535,6 +573,66 @@ abstract class StylesheetParser protected (
     else if (unit.startsWith("%")) Some(NumberExpression(value, span, Nullable("%")))
     else if (_allChars(unit, (c: Char) => CharCode.isName(c.toInt))) Some(NumberExpression(value, span, Nullable(unit)))
     else None
+  }
+
+  /** Parses [raw] into an [[Interpolation]], detecting `#{...}` segments and
+    * treating the content of each as an expression (recursively parsed via
+    * [[_parseSimpleExpression]]). Literal text segments become [String]
+    * elements; interpolated regions become [Expression] elements. Matching
+    * braces inside `#{...}` are balanced.
+    */
+  protected def _parseInterpolatedString(raw: String, span: FileSpan): Interpolation = {
+    val contents = scala.collection.mutable.ListBuffer.empty[Any]
+    val spans = scala.collection.mutable.ListBuffer.empty[Nullable[FileSpan]]
+    val literal = new StringBuilder()
+    var i = 0
+    val n = raw.length
+    while (i < n) {
+      val c = raw.charAt(i)
+      if (c == '#' && i + 1 < n && raw.charAt(i + 1) == '{') {
+        // Flush any accumulated literal text (only if nonempty — adjacent
+        // Expressions are allowed in Interpolation contents, only adjacent
+        // Strings are forbidden).
+        if (literal.nonEmpty) {
+          contents += literal.toString()
+          spans += Nullable.empty
+          literal.clear()
+        }
+        // Find matching closing brace, balancing nested braces.
+        var j = i + 2
+        var depth = 1
+        boundary {
+          while (j < n) {
+            val cc = raw.charAt(j)
+            if (cc == '{') depth += 1
+            else if (cc == '}') {
+              depth -= 1
+              if (depth == 0) break(())
+            }
+            j += 1
+          }
+        }
+        if (depth != 0) scanner.error("Expected '}'.")
+        val exprText = raw.substring(i + 2, j).trim
+        if (exprText.isEmpty) {
+          // Empty interpolation #{} — emit an empty unquoted string expression
+          contents += StringExpression(Interpolation.plain("", span), hasQuotes = false)
+        } else {
+          contents += _parseSimpleExpression(exprText, span)
+        }
+        spans += Nullable(span)
+        i = j + 1
+      } else {
+        literal.append(c)
+        i += 1
+      }
+    }
+    // Flush trailing literal, or ensure contents is non-empty with a string.
+    if (literal.nonEmpty || contents.isEmpty) {
+      contents += literal.toString()
+      spans += Nullable.empty
+    }
+    new Interpolation(contents.toList, spans.toList, span)
   }
 
   /** Helper: returns true if every character of [s] satisfies [p]. Explicit

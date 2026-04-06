@@ -49,16 +49,31 @@ class ScssParser(
       while (!scanner.isDone) {
         val c = scanner.peekChar()
         if (c < 0) break(())
-        if (brackets == 0 && c == CharCode.$lbrace) break(())
-        if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
-        else if (c == CharCode.$rparen || c == CharCode.$rbracket) brackets -= 1
-        buf.append(scanner.readChar().toChar)
+        // Detect `#{` interpolation start so we don't mistake its inner `{`/`}`
+        // for selector braces. Consume the whole `#{...}` region balancing braces.
+        if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          buf.append(scanner.readChar().toChar) // '#'
+          buf.append(scanner.readChar().toChar) // '{'
+          var depth = 1
+          while (!scanner.isDone && depth > 0) {
+            val cc = scanner.peekChar()
+            if (cc == CharCode.$lbrace) depth += 1
+            else if (cc == CharCode.$rbrace) depth -= 1
+            buf.append(scanner.readChar().toChar)
+          }
+        } else if (brackets == 0 && c == CharCode.$lbrace) {
+          break(())
+        } else {
+          if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
+          else if (c == CharCode.$rparen || c == CharCode.$rbracket) brackets -= 1
+          buf.append(scanner.readChar().toChar)
+        }
       }
     }
 
     val selectorText = buf.toString().trim
     if (selectorText.isEmpty) scanner.error("Expected selector.")
-    Interpolation.plain(selectorText, spanFrom(start))
+    _parseInterpolatedString(selectorText, spanFrom(start))
   }
 
   override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
