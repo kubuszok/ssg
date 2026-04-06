@@ -4,6 +4,45 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Module system tightening: private hiding + transitive forwards (ISS-034, ISS-066, ISS-063)
+
+- `ssg-sass/src/main/scala/ssg/sass/Environment.scala` — new
+  `publicView()` method builds a new `Environment` containing only
+  non-private members (variables, functions, mixins) plus all
+  namespaces. `Environment.isPrivate(name)` centralises the Sass
+  convention: a leading `-` or `_` marks a member as private to its
+  defining module; embedded dashes (`$theme-color`) do not.
+- `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
+  - `_visitFileUseRule` now derives a `publicView()` of the loaded
+    module's environment before exposing it to the caller. Both the
+    namespaced-`@use` path and the `as *` flat-merge path iterate
+    the filtered view, so private members stay trapped inside the
+    original `moduleEnv` and are never reachable from outside.
+  - `visitForwardRule` applies `!Environment.isPrivate` before
+    re-exporting each kind of member, so `@forward` chains don't
+    smuggle `$-secret`/`$_secret` into the caller. The show/hide
+    filters remain per-kind — `show $bar` only scopes the variable
+    namespace, not a mixin or function named `bar`.
+  - New `_pendingConfig: Map[String, Value]` threaded through both
+    `_visitFileUseRule` and `visitForwardRule`: an enclosing
+    `@use "mid" with (...)` now flows its configuration through any
+    `@forward` chain inside the loaded module, matching dart-sass's
+    Configuration propagation. Local `with (...)` wins on overlap,
+    and `_pendingConfig` is saved/restored in a try/finally so
+    sibling rules don't inherit stale state.
+- `ssg-sass/src/test/scala/ssg/sass/ImportMapSuite.scala` — 9 new
+  cross-platform cases: dash-private hidden from namespaced `@use`,
+  underscore-private hidden the same way, private hidden via `as *`
+  flat merge, mid-name dashes still public, transitive `A → B → C`
+  forward chain, `@forward` of a module with `$-secret` drops the
+  private var, `@forward show $bar, bar` re-exports variable and
+  function without affecting `$baz`, `@forward with (...)` through
+  a chain, loadedUrls regression check.
+
+All 3 platforms: JVM, JS, Native green. sass-spec self-contained
+compliance moved from 29.3% to 29.4% (3474 passing, +2
+exact-output-pass). Resolved ISS-034, ISS-066, ISS-063.
+
 ### Full extend trailing-combinator merging matrix (ISS-036, ISS-037)
 
 - `ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala` — ported

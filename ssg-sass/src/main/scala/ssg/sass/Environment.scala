@@ -173,6 +173,29 @@ final class Environment() {
     snap
   }
 
+  /** Creates a public-facing copy of this environment that hides private members.
+    *
+    * Per the Sass convention, any variable / function / mixin whose name starts with `-` or `_` is considered private to the module that defines it and must not be visible to importers (either
+    * through a namespace or via `@use ... as *` flat merge). Namespaces and non-private members are copied over; built-in global functions carried in via `Environment.withBuiltins()` are
+    * re-initialised.
+    *
+    * Note: a leading `-`/`_` is the only trigger — embedded dashes like `$theme-color` do not mark a member as private.
+    */
+  def publicView(): Environment = {
+    val out = new Environment()
+    for ((n, v) <- variables if !Environment.isPrivate(n)) {
+      out.variables(n) = v
+      variableNodes.get(n).foreach(node => out.variableNodes(n) = node)
+    }
+    for ((n, c) <- functions if !Environment.isPrivate(n))
+      out.functions(n) = c
+    for ((n, c) <- mixins if !Environment.isPrivate(n))
+      out.mixins(n) = c
+    for ((n, e) <- namespaces)
+      out.namespaces(n) = e
+    out
+  }
+
   /** Creates a new global-only environment containing the built-in functions and any variables that were declared with `!global` in this environment.
     */
   def global(): Environment = {
@@ -186,6 +209,10 @@ final class Environment() {
 object Environment {
 
   def apply(): Environment = new Environment()
+
+  /** Whether [name] is a Sass-private member name (leading `-` or `_`). Per the Sass convention only a leading dash/underscore marks privacy; embedded dashes (e.g. `theme-color`) do not. */
+  def isPrivate(name: String): Boolean =
+    name.nonEmpty && { val c = name.charAt(0); c == '-' || c == '_' }
 
   /** Creates a new environment pre-populated with all global built-in functions (math, string, list, map, meta).
     */

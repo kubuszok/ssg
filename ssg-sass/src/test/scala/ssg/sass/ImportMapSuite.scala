@@ -114,6 +114,148 @@ final class ImportMapSuite extends munit.FunSuite {
     assert(result.css.contains("red"), result.css)
   }
 
+  // --- Module system tightening: private hiding, transitive forward ------
+
+  test("private variable ($-name) hidden from @use namespace") {
+    val importer = importerOf(
+      "_m.scss" -> "$-private: red; $public: blue;"
+    )
+    val source = """
+      @use "m";
+      a { color: m.$public; }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    // Accessing m.$-private must error out at compile time.
+    val failing = """
+      @use "m";
+      a { color: m.$-private; }
+    """
+    intercept[Exception] {
+      val _ = Compile.compileString(failing, importer = Nullable(importer))
+    }
+  }
+
+  test("underscore-private ($_name) hidden the same as dash-private") {
+    val importer = importerOf(
+      "_m.scss" -> "$_private: red; $public: blue;"
+    )
+    val failing = """
+      @use "m";
+      a { color: m.$_private; }
+    """
+    intercept[Exception] {
+      val _ = Compile.compileString(failing, importer = Nullable(importer))
+    }
+  }
+
+  test("private variable hidden via `as *` flat merge") {
+    val importer = importerOf(
+      "_m.scss" -> "$-private: red; $public: blue;"
+    )
+    val source = """
+      @use "m" as *;
+      a { color: $public; }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    val failing = """
+      @use "m" as *;
+      a { color: $-private; }
+    """
+    intercept[Exception] {
+      val _ = Compile.compileString(failing, importer = Nullable(importer))
+    }
+  }
+
+  test("dashes mid-name are NOT private (e.g. $theme-color)") {
+    val importer = importerOf(
+      "_m.scss" -> "$theme-color: #3498db;"
+    )
+    val source = """
+      @use "m";
+      a { color: m.$theme-color; }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("#3498db"), result.css)
+  }
+
+  test("transitive @forward chain (A → B → C)") {
+    val importer = importerOf(
+      "_c.scss" -> "$x: 1px;",
+      "_b.scss" -> """@forward "c";""",
+      "_a.scss" -> """@forward "b";"""
+    )
+    val source = """
+      @use "a";
+      .x { foo: a.$x; }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("foo: 1px"), result.css)
+  }
+
+  test("@forward does not re-export private members") {
+    val importer = importerOf(
+      "_inner.scss" -> "$-secret: red; $public: blue;",
+      "_mid.scss" -> """@forward "inner";"""
+    )
+    val source = """
+      @use "mid";
+      a { color: mid.$public; }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    val failing = """
+      @use "mid";
+      a { color: mid.$-secret; }
+    """
+    intercept[Exception] {
+      val _ = Compile.compileString(failing, importer = Nullable(importer))
+    }
+  }
+
+  test("@forward show only filters the named variable kind") {
+    // `show $bar` exposes the variable `$bar` without hiding a mixin
+    // or function that happens to share the name.
+    val importer = importerOf(
+      "_inner.scss" ->
+        """
+          |$bar: #123456;
+          |@function bar() { @return #abcdef; }
+          |$baz: #deadbe;
+          |""".stripMargin,
+      "_mid.scss" -> """@forward "inner" show $bar, bar;"""
+    )
+    val source = """
+      @use "mid";
+      .a { c: mid.$bar; d: mid.bar(); }
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("#123456"), result.css)
+    assert(result.css.contains("#abcdef"), result.css)
+    // $baz should NOT be forwarded.
+    val failing = """
+      @use "mid";
+      .a { c: mid.$baz; }
+    """
+    intercept[Exception] {
+      val _ = Compile.compileString(failing, importer = Nullable(importer))
+    }
+  }
+
+  test("@forward with (...) configures through chain") {
+    val importer = importerOf(
+      "_inner.scss" -> "$primary: red !default; .x { color: $primary; }",
+      "_mid.scss" -> """@forward "inner";"""
+    )
+    val source = """
+      @use "mid" with ($primary: blue);
+    """
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    assert(!result.css.contains("red"), result.css)
+  }
+
   test("loadedUrls tracks imported files") {
     val importer = importerOf("_foo.scss" -> "$x: 1;")
     val source   = """@import "foo"; a { color: red; }"""
