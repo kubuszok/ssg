@@ -141,7 +141,21 @@ or serializer.
 - ✅ `serialize(node)` — expanded + compressed output styles
 - ✅ All 9 visit methods (stylesheet, style rule, declaration, comment,
   at-rule, media rule, supports rule, import, keyframe block)
-- ⚠️ Source map generation not implemented (returns None)
+- ⚠️ Source map generation: minimal v3 source map. Opt-in via
+  `Compile.compileString(..., sourceMap = true)` and
+  `new SerializeVisitor(sourceMap = true)`. The serializer records one
+  mapping per emitted style rule and per declaration using the source
+  span carried on each `CssNode` (`AstNode.span: FileSpan`), then emits
+  a JSON object of the form
+  `{"version":3,"sources":[...],"names":[],"mappings":"<vlq>"}` via a
+  small inline base64 VLQ encoder (`SerializeVisitor.vlqEncode`).
+  `CompileResult.sourceMap` and `SerializeResult.sourceMap` are
+  `Nullable[String]`. When `sourceMap=false` (default) the field is
+  empty and serialization is unchanged. Limitations: mappings are
+  per-rule/declaration only (not per token); selector spans are taken
+  from the style rule's own span (not yet from a parsed selector AST);
+  there is no `sourcesContent`, `sourceRoot`, or `file` field. Source
+  files without a known URL fall back to the literal name `"stdin"`.
 - ✅ Value formatting: SassColor (rgb space) emits `#fff`/`#abc` shorthand,
   named colors when shorter (`#ff0000` → `red`), full 6-digit hex otherwise.
   SassNumber strips trailing zeros (`1.50px` → `1.5px`, `3.0` → `3`) via

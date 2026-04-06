@@ -132,6 +132,35 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     assert(result.css.contains("@charset \"UTF-8\";"))
   }
 
+  test("vlqEncode encodes signed integers per source map v3 spec") {
+    // Reference values per source-map spec
+    assertEquals(SerializeVisitor.vlqEncode(0), "A")
+    assertEquals(SerializeVisitor.vlqEncode(1), "C")
+    assertEquals(SerializeVisitor.vlqEncode(-1), "D")
+    assertEquals(SerializeVisitor.vlqEncode(15), "e")
+    assertEquals(SerializeVisitor.vlqEncode(16), "gB")
+    assertEquals(SerializeVisitor.vlqEncode(-16), "hB")
+  }
+
+  test("serialize without sourceMap flag returns empty source map") {
+    val rule   = styleRule("a", List(declaration("color", "red")))
+    val s      = stylesheet(List(rule))
+    val result = new SerializeVisitor(sourceMap = false).serialize(s)
+    assert(result.sourceMap.isEmpty)
+  }
+
+  test("serialize with sourceMap flag returns v3 JSON") {
+    val rule   = styleRule("a", List(declaration("color", "red")))
+    val s      = stylesheet(List(rule))
+    val result = new SerializeVisitor(sourceMap = true).serialize(s)
+    assert(result.sourceMap.isDefined)
+    val json = result.sourceMap.get
+    assert(json.contains("\"version\":3"), s"json=$json")
+    assert(json.contains("\"sources\":["), s"json=$json")
+    assert(json.contains("\"names\":[]"), s"json=$json")
+    assert(json.contains("\"mappings\":\""), s"json=$json")
+  }
+
   test("serialize at-rule with block") {
     val inner  = styleRule("from", List(declaration("color", "red")))
     val atRule = new ModifiableCssAtRule(

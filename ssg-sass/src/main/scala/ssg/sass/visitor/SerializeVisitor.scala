@@ -11,13 +11,17 @@
  *   Idiom: Minimum viable implementation. Supports expanded (default) and
  *     compressed output styles. Emits stylesheets, style rules, declarations,
  *     comments, at-rules, media rules, supports rules, imports, keyframe blocks.
- *   Source map generation is NOT YET IMPLEMENTED.
+ *   Source map generation: minimal v3 source map. When sourceMap=true, the
+ *     visitor records (genLine, genCol, srcIdx, srcLine, srcCol) per emitted
+ *     declaration and serializes them as a VLQ-encoded "mappings" string in a
+ *     v3 JSON object: {"version":3,"sources":[...],"names":[],"mappings":"..."}.
  */
 package ssg
 package sass
 package visitor
 
 import ssg.sass.ColorNames
+import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.value.{ SassColor, SassNumber, Value }
 import ssg.sass.value.color.ColorSpace
@@ -30,25 +34,155 @@ object OutputStyle {
 }
 
 /** Result of serializing a CSS AST: the CSS text plus an optional source map. */
-final case class SerializeResult(css: String, sourceMap: Option[String] = None)
+final case class SerializeResult(css: String, sourceMap: Nullable[String] = Nullable.empty[String])
 
 /** A visitor that converts a CSS AST into CSS text. */
 final class SerializeVisitor(
-  val style:   String = OutputStyle.Expanded,
-  val inspect: Boolean = false
+  val style:        String = OutputStyle.Expanded,
+  val inspect:      Boolean = false,
+  val sourceMap:    Boolean = false
 ) extends CssVisitor[Unit] {
 
   private val buffer = new StringBuilder()
   private var indentLevel: Int = 0
 
+  // ---- Source map state -----------------------------------------------------
+  // 0-based generated cursor, recomputed lazily from `buffer` before each entry.
+  private var genLine: Int = 0
+  private var genCol:  Int = 0
+
+  // Sources table (insertion order) and url -> index map.
+  private val sourcesList = scala.collection.mutable.ArrayBuffer[String]()
+  private val sourceIndex = scala.collection.mutable.LinkedHashMap[String, Int]()
+
+  // Per-generated-line list of mapping segments. Each segment is
+  // (genCol, srcIdx, srcLine, srcCol).
+  private val segmentsByLine = scala.collection.mutable.ArrayBuffer[scala.collection.mutable.ArrayBuffer[(Int, Int, Int, Int)]]()
+  segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
+
   private def isCompressed: Boolean = style == OutputStyle.Compressed
+
+  /** Recomputes the (line, column) cursor from the current buffer length. */
+  private def syncCursor(): Unit = {
+    var line = 0
+    var col  = 0
+    var i    = 0
+    val len  = buffer.length
+    while (i < len) {
+      if (buffer.charAt(i) == '\n') {
+        line += 1
+        col = 0
+      } else {
+        col += 1
+      }
+      i += 1
+    }
+    genLine = line
+    genCol = col
+    while (segmentsByLine.length <= line) {
+      segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
+    }
+  }
+
+  /** Records a source-map entry at the current generated cursor for the given source span. */
+  private def recordMapping(span: ssg.sass.util.FileSpan): Unit =
+    if (sourceMap && span != null) {
+      syncCursor()
+      val url = span.file.url.getOrElse("stdin")
+      val idx = sourceIndex.getOrElseUpdate(
+        url, {
+          val n = sourcesList.length
+          sourcesList += url
+          n
+        }
+      )
+      segmentsByLine(genLine) += ((genCol, idx, span.start.line, span.start.column))
+    }
 
   /** Serialize the given stylesheet to CSS text. */
   def serialize(node: CssStylesheet): SerializeResult = {
     buffer.clear()
     indentLevel = 0
+    genLine = 0
+    genCol = 0
+    sourcesList.clear()
+    sourceIndex.clear()
+    segmentsByLine.clear()
+    segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
     visitCssStylesheet(node)
-    SerializeResult(buffer.toString(), sourceMap = None)
+    val mapJson: Nullable[String] =
+      if (sourceMap) Nullable(buildSourceMapJson()) else Nullable.empty[String]
+    SerializeResult(buffer.toString(), sourceMap = mapJson)
+  }
+
+  /** Builds a v3 source map JSON object from the recorded segments. */
+  private def buildSourceMapJson(): String = {
+    val sources = sourcesList.toList
+    val mappings = encodeMappings()
+    val sb = new StringBuilder()
+    sb.append("{\"version\":3,\"sources\":[")
+    var first = true
+    for (s <- sources) {
+      if (!first) sb.append(',')
+      first = false
+      sb.append('"')
+      sb.append(jsonEscape(s))
+      sb.append('"')
+    }
+    sb.append("],\"names\":[],\"mappings\":\"")
+    sb.append(mappings)
+    sb.append("\"}")
+    sb.toString()
+  }
+
+  private def jsonEscape(s: String): String = {
+    val sb = new StringBuilder()
+    var i  = 0
+    while (i < s.length) {
+      val c = s.charAt(i)
+      c match {
+        case '"'  => sb.append("\\\"")
+        case '\\' => sb.append("\\\\")
+        case '\n' => sb.append("\\n")
+        case '\r' => sb.append("\\r")
+        case '\t' => sb.append("\\t")
+        case _    =>
+          if (c < 0x20) sb.append("\\u%04x".format(c.toInt))
+          else sb.append(c)
+      }
+      i += 1
+    }
+    sb.toString()
+  }
+
+  /** VLQ-encodes the recorded segments into a source map "mappings" string. */
+  private def encodeMappings(): String = {
+    val sb = new StringBuilder()
+    var prevSrcIdx  = 0
+    var prevSrcLine = 0
+    var prevSrcCol  = 0
+    var lineIdx     = 0
+    val totalLines  = segmentsByLine.length
+    while (lineIdx < totalLines) {
+      if (lineIdx > 0) sb.append(';')
+      val segs = segmentsByLine(lineIdx)
+      var prevGenCol = 0
+      var first      = true
+      for ((gc, si, sl, sc) <- segs) {
+        if (!first) sb.append(',')
+        first = false
+        sb.append(SerializeVisitor.vlqEncode(gc - prevGenCol))
+        sb.append(SerializeVisitor.vlqEncode(si - prevSrcIdx))
+        sb.append(SerializeVisitor.vlqEncode(sl - prevSrcLine))
+        sb.append(SerializeVisitor.vlqEncode(sc - prevSrcCol))
+        prevGenCol = gc
+        prevSrcIdx = si
+        prevSrcLine = sl
+        prevSrcCol = sc
+      }
+      lineIdx += 1
+    }
+    sb.toString()
   }
 
   // ---------------------------------------------------------------------------
@@ -158,12 +292,14 @@ final class SerializeVisitor(
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {
     // Selector is stored as Any (placeholder until selector AST is wired)
+    recordMapping(node.span)
     buffer.append(node.selector.toString)
     writeSpace()
     writeChildren(node.children)
   }
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
+    recordMapping(node.span)
     buffer.append(node.name.value)
     buffer.append(':')
     writeSpace()
@@ -232,4 +368,25 @@ object SerializeVisitor {
   /** Serialize compressed (minified). */
   def serializeCompressed(node: CssStylesheet): SerializeResult =
     new SerializeVisitor(style = OutputStyle.Compressed).serialize(node)
+
+  // ---------------------------------------------------------------------------
+  // VLQ base64 encoding (source map v3 mapping segments)
+  // ---------------------------------------------------------------------------
+
+  private val vlqAlphabet: Array[Char] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toCharArray
+
+  /** VLQ-encode a single signed integer into the base64 form used by source maps. */
+  def vlqEncode(value: Int): String = {
+    var v = if (value < 0) (-value << 1) | 1 else value << 1
+    val sb = new StringBuilder()
+    var more = true
+    while (more) {
+      var digit = v & 0x1f
+      v >>>= 5
+      if (v > 0) digit |= 0x20 else more = false
+      sb.append(vlqAlphabet(digit))
+    }
+    sb.toString()
+  }
 }

@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 /** The result of compiling a Sass document to CSS. */
 final case class CompileResult(
   css:        String,
-  sourceMap:  Option[String] = None,
+  sourceMap:  Nullable[String] = Nullable.empty[String],
   loadedUrls: Set[String] = Set.empty
 )
 
@@ -42,9 +42,10 @@ object Compile {
     *   optional importer for resolving `@import`/`@use` (JVM/Native only)
     */
   def compileString(
-    source:   String,
-    style:    String = OutputStyle.Expanded,
-    importer: Nullable[Importer] = Nullable.empty
+    source:    String,
+    style:     String = OutputStyle.Expanded,
+    importer:  Nullable[Importer] = Nullable.empty,
+    sourceMap: Boolean = false
   ): CompileResult = {
     // 1. Parse source to Sass AST
     val parser  = new ScssParser(source)
@@ -55,7 +56,7 @@ object Compile {
     val result    = evaluator.run(sassAst)
 
     // 3. Serialize CSS AST to text
-    val serializer = new SerializeVisitor(style = style)
+    val serializer = new SerializeVisitor(style = style, sourceMap = sourceMap)
     val serialized = serializer.serialize(result.stylesheet)
 
     CompileResult(
