@@ -4,6 +4,34 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Media / Keyframe / AtRoot query parsers (Phase 11)
+
+- `ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala` — full
+  recursive-descent parser. Handles bare types (`screen`, `print`, `all`),
+  feature queries (`(max-width: 600px)`), `type and (cond) and (cond)`,
+  comma-separated query lists, and `not`/`only` modifiers. Returns
+  `List[CssMediaQuery]`. Static helpers `parseList` / `tryParseList`.
+- `ssg-sass/src/main/scala/ssg/sass/parse/KeyframeSelectorParser.scala` —
+  parses `0%`, `100%`, `12.5%`, `from`, `to`, and comma-separated lists.
+  Normalizes `from`->`0%`, `to`->`100%`, validates percentages in [0,100].
+- `ssg-sass/src/main/scala/ssg/sass/parse/AtRootQueryParser.scala` —
+  parses `(with: media supports)` / `(without: rule)` / `(without: all)`
+  into `AtRootQuery`. Static helpers `parseQuery` / `tryParseQuery`.
+- `EvaluateVisitor.visitMediaRule` now calls `MediaQueryParser.tryParseList`
+  on the interpolated text and falls back to wrapping the raw text as a
+  condition-only query (preserves all existing tests including the
+  `@media supports #{...}` interpolation case).
+- `EvaluateVisitor.visitAtRootRule` now uses `AtRootQueryParser` (or the
+  default query if absent) and walks the parent chain to pick the
+  topmost non-excluded ancestor as the new attachment point. Style-rule
+  context is cleared when `excludesStyleRules` is true.
+- Tests: `MediaQueryParserSuite`, `KeyframeSelectorParserSuite`,
+  `AtRootQueryParserSuite` under
+  `ssg-sass/src/test/scala/ssg/sass/parse/`, plus a new CompileSuite case
+  `@at-root (with: media) inside @media keeps the media wrapper`.
+
+All 3 platforms: JVM 425, JS 408 (+2 ignored), Native 408 (+2 ignored), green.
+
 ### Import infrastructure (ImportCache / StylesheetGraph / PackageImporter)
 
 - `ssg-sass/src/main/scala/ssg/sass/ImportCache.scala` — working cache:

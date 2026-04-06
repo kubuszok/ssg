@@ -14,6 +14,24 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
+  test("@at-root (with: media) inside @media keeps the media wrapper") {
+    val src =
+      """@media screen {
+        |  .a {
+        |    @at-root (with: media) {
+        |      .b { color: red; }
+        |    }
+        |  }
+        |}""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    // The .b rule should remain inside @media screen, not pop out to the top.
+    assert(css.contains("@media screen"), s"expected @media screen in: $css")
+    assert(css.contains(".b"), s"expected .b in: $css")
+    val mediaIdx = css.indexOf("@media")
+    val bIdx     = css.indexOf(".b")
+    assert(bIdx > mediaIdx, s"expected .b after @media in: $css")
+  }
+
   test("compiles a simple style rule") {
     val result = Compile.compileString("a { color: red; }")
     assert(result.css.contains("a"))

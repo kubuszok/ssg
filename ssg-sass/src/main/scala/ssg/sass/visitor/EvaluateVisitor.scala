@@ -904,11 +904,11 @@ final class EvaluateVisitor(
 
   override def visitMediaRule(node: MediaRule): Value = {
     val queryText = _performInterpolation(node.query)
-    // Full Dart implementation parses the query into structured
-    // CssMediaQuery objects. Until we wire up MediaQueryParser, wrap
-    // the raw text as a single condition-only query.
+    // Try the structured parser first; fall back to wrapping the raw text
+    // as a condition-only query when the text doesn't conform to the
+    // Level-3 syntax our parser supports (e.g. interpolated fragments).
     val parsed: List[CssMediaQuery] =
-      List(CssMediaQuery.condition(List(queryText)))
+      ssg.sass.parse.MediaQueryParser.tryParseList(queryText).getOrElse(List(CssMediaQuery.condition(List(queryText))))
     val rule         = new ModifiableCssMediaRule(parsed, node.span)
     val savedQueries = _mediaQueries
     _mediaQueries = parsed
@@ -1002,17 +1002,57 @@ final class EvaluateVisitor(
   }
 
   override def visitAtRootRule(node: AtRootRule): Value = {
-    // Simplified: ignore any query and bypass all intermediate parents,
-    // emitting children directly under the root stylesheet. A full
-    // implementation evaluates the query to determine exactly which
-    // parent rules to exclude.
     val root = _root.getOrElse {
       throw new IllegalStateException("@at-root used before a root stylesheet is set.")
     }
+
+    // Resolve the query: parse the interpolated text if present, otherwise
+    // use the default query (which excludes only style rules).
+    val query: ssg.sass.ast.sass.AtRootQuery = node.query.fold(
+      ssg.sass.ast.sass.AtRootQuery.defaultQuery
+    ) { interp =>
+      val queryText = _performInterpolation(interp)
+      ssg.sass.parse.AtRootQueryParser.tryParseQuery(queryText).getOrElse(ssg.sass.ast.sass.AtRootQuery.defaultQuery)
+    }
+
+    // Walk up the current parent chain and find the topmost non-excluded
+    // ancestor. The new attachment point is that ancestor (or `root` if
+    // every ancestor is excluded).
+    def excludes(node: ModifiableCssParentNode): Boolean = node match {
+      case _:  ModifiableCssStyleRule    => query.excludesStyleRules
+      case _:  ModifiableCssMediaRule    => query.excludesName("media")
+      case _:  ModifiableCssSupportsRule => query.excludesName("supports")
+      case ar: ModifiableCssAtRule       => query.excludesName(ar.name.value.toLowerCase)
+      case _ => false
+    }
+
+    // Collect ancestors innermost-first, stopping at the root stylesheet.
+    val ancestors = scala.collection.mutable.ListBuffer.empty[ModifiableCssParentNode]
+    var cur: Nullable[ModifiableCssParentNode] = _parent
+    var atRoot = false
+    while (cur.isDefined && !atRoot) {
+      val n = cur.get
+      n match {
+        case _: ModifiableCssStylesheet => atRoot = true
+        case _ =>
+          ancestors += n
+          cur = n.parent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) {
+            case mp: ModifiableCssParentNode => Nullable(mp)
+            case _ => Nullable.empty
+          }
+      }
+    }
+
+    // Find the deepest non-excluded ancestor — that's the new parent.
+    // If none qualify, attach to the root stylesheet.
+    val newParent: ModifiableCssParentNode =
+      ancestors.find(a => !excludes(a)).getOrElse(root: ModifiableCssParentNode)
+
     val savedParent    = _parent
     val savedStyleRule = _styleRule
-    _parent = Nullable(root: ModifiableCssParentNode)
-    _styleRule = Nullable.empty
+    _parent = Nullable(newParent)
+    // Clear the active style rule if it's no longer in the kept chain.
+    if (query.excludesStyleRules) _styleRule = Nullable.empty
     try
       _withScope {
         for (statement <- node.children.get) {
