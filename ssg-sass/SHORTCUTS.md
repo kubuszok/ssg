@@ -132,6 +132,16 @@ edge-case helpers.
   the declared variables: iterating a `SassMap` yields `(key, value)`
   pairs via `SassMap.asList`, and iterating a list of lists binds each
   sub-list's elements positionally (missing slots become `null`).
+- ✅ `@debug expr;` / `@warn expr;` / `@error expr;` — parsed in `_atRule`
+  as `DebugRule` / `WarnRule` / `ErrorRule`. The expression is evaluated
+  via the normal expression visitor (variables, arithmetic, interpolation,
+  function calls, etc.) and rendered as its CSS string form (unquoted for
+  `SassString`). `@debug` appends `"DEBUG: <msg>"` to
+  `EvaluateResult.warnings` (also forwarded through `_logger.debug`);
+  `@warn` appends `"WARNING: <msg>"` (also `_logger.warn`); `@error`
+  throws a `SassException` with the rendered message and the rule's
+  span, aborting compilation. Surfaced through
+  `CompileResult.warnings`.
 - ✅ `@charset "UTF-8";` — handled by the generic at-rule path and
   round-tripped verbatim. (dart-sass strips `@charset` and emits a BOM
   in compressed mode for non-ascii output; we currently preserve it

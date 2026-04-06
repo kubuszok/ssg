@@ -872,6 +872,7 @@ final class EvaluateVisitor(
       case other => other.toCssString(quote = false)
     }
     _logger.debug(message, node.span)
+    _warnings += s"DEBUG: $message"
     SassNull
   }
 
@@ -882,6 +883,7 @@ final class EvaluateVisitor(
       case other => other.toCssString(quote = false)
     }
     _logger.warn(message)
+    _warnings += s"WARNING: $message"
     SassNull
   }
 

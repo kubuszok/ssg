@@ -31,9 +31,13 @@ import ssg.sass.ast.sass.{
   BinaryOperator,
   BooleanExpression,
   ConfiguredVariable,
+  ContentBlock,
+  ContentRule,
+  DebugRule,
   Declaration,
   DynamicImport,
   EachRule,
+  ErrorRule,
   Expression,
   ExtendRule,
   ForwardRule,
@@ -67,7 +71,8 @@ import ssg.sass.ast.sass.{
   UnaryOperator,
   UseRule,
   VariableDeclaration,
-  VariableExpression
+  VariableExpression,
+  WarnRule
 }
 import ssg.sass.value.ListSeparator
 import ssg.sass.util.{ CharCode, FileSpan }
@@ -719,6 +724,27 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val eachKids = _children()
         Nullable(new EachRule(vars.toList, listExpr, eachKids, spanFrom(start)))
+      case "debug" =>
+        // @debug <expression> ;
+        whitespace(consumeNewlines = true)
+        val dExpr = _expression()
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        Nullable(new DebugRule(dExpr, spanFrom(start)))
+      case "warn" =>
+        // @warn <expression> ;
+        whitespace(consumeNewlines = true)
+        val wExpr = _expression()
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        Nullable(new WarnRule(wExpr, spanFrom(start)))
+      case "error" =>
+        // @error <expression> ;
+        whitespace(consumeNewlines = true)
+        val eExpr = _expression()
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        Nullable(new ErrorRule(eExpr, spanFrom(start)))
       case "at-root" =>
         // @at-root [<selector>] { body }
         // If a selector precedes the `{`, wrap the body in a StyleRule so
