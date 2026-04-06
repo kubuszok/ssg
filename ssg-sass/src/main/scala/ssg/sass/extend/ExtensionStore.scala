@@ -347,6 +347,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   /** Whether the store contains any AST-level extensions. */
   def hasAstExtensions: Boolean = astExtensions.nonEmpty
+
+  /** Returns the set of target simple selectors currently registered. Used by
+    * the evaluator's `!optional` check to detect unmatched extend targets.
+    */
+  def astTargets: Iterable[SimpleSelector] = astExtensions.keys
 }
 
 /** Returns true if the given complex selector is composed solely of placeholder selectors (and so should be stripped from CSS output).

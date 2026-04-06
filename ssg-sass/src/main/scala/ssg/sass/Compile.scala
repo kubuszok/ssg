@@ -24,7 +24,8 @@ import scala.language.implicitConversions
 final case class CompileResult(
   css:        String,
   sourceMap:  Nullable[String] = Nullable.empty[String],
-  loadedUrls: Set[String] = Set.empty
+  loadedUrls: Set[String] = Set.empty,
+  warnings:   List[String] = Nil
 )
 
 /** Top-level Sass compilation entry points. */
@@ -67,7 +68,8 @@ object Compile {
     CompileResult(
       css = serialized.css,
       sourceMap = serialized.sourceMap,
-      loadedUrls = result.loadedUrls
+      loadedUrls = result.loadedUrls,
+      warnings = result.warnings
     )
   }
 

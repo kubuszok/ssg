@@ -127,7 +127,11 @@ import ssg.sass.parse.SelectorParser
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs that were loaded during evaluation.
   */
-final case class EvaluateResult(stylesheet: CssStylesheet, loadedUrls: Set[String])
+final case class EvaluateResult(
+  stylesheet: CssStylesheet,
+  loadedUrls: Set[String],
+  warnings:   List[String] = Nil
+)
 
 /** A visitor that executes Sass code to produce a CSS AST.
   *
@@ -197,17 +201,49 @@ final class EvaluateVisitor(
     */
   private var _endOfImports: Int = 0
 
-  /** AST-level extension store. Populated by [[visitExtendRule]] and applied by [[_applyExtends]] after the stylesheet has been fully evaluated. Falls back to a legacy textual rewrite if selector
-    * parsing fails for a rule.
+  /** AST-level extension store keyed by media context. The `null` key holds
+    * extensions declared outside any `@media` block. Each media rule gets its
+    * own store so extensions declared inside `@media` only apply to rules in
+    * the same media block.
     */
-  private val _extensionStore: MutableExtensionStore = new MutableExtensionStore(ExtendMode.Normal)
+  private val _mediaExtensionStores: scala.collection.mutable.LinkedHashMap[
+    ModifiableCssMediaRule | Null,
+    MutableExtensionStore
+  ] = {
+    val m = scala.collection.mutable.LinkedHashMap.empty[ModifiableCssMediaRule | Null, MutableExtensionStore]
+    m.put(null, new MutableExtensionStore(ExtendMode.Normal))
+    m
+  }
 
-  /** Legacy textual extend map, kept as a fallback for cases where the extender or target text fails to round-trip through [[SelectorParser.tryParse]].
+  /** Legacy textual extend map, keyed by the same media-scope identity used
+    * by `_mediaExtensionStores`.
     */
-  private val _extends: scala.collection.mutable.LinkedHashMap[
-    String,
-    scala.collection.mutable.ListBuffer[String]
+  private val _mediaLegacyExtends: scala.collection.mutable.LinkedHashMap[
+    ModifiableCssMediaRule | Null,
+    scala.collection.mutable.LinkedHashMap[String, scala.collection.mutable.ListBuffer[String]]
   ] = scala.collection.mutable.LinkedHashMap.empty
+
+  /** A pending `@extend` whose target must be matched somewhere in the same
+    * media scope, unless it is marked `!optional`. Populated by
+    * [[visitExtendRule]] and validated at the end of [[_applyExtends]].
+    */
+  final private case class PendingExtend(
+    targetText: String,
+    target:     Nullable[ssg.sass.ast.selector.SimpleSelector],
+    isOptional: Boolean,
+    span:       ssg.sass.util.FileSpan,
+    mediaKey:   ModifiableCssMediaRule | Null,
+    var found:  Boolean
+  )
+
+  private val _pendingExtends: scala.collection.mutable.ListBuffer[PendingExtend] =
+    scala.collection.mutable.ListBuffer.empty
+
+  /** Warnings produced during evaluation. Currently populated by the extend
+    * subsystem and surfaced through [[EvaluateResult.warnings]].
+    */
+  private val _warnings: scala.collection.mutable.ListBuffer[String] =
+    scala.collection.mutable.ListBuffer.empty
 
   /** Side map from a style rule to the underlying ModifiableBox that holds its selector. Used by `_applyExtends` to mutate selectors in place, since Box itself is unmodifiable.
     */
@@ -237,7 +273,7 @@ final class EvaluateVisitor(
       val finalRoot = _root.getOrElse(root)
       val _         = _endOfImports
       val out       = CssStylesheet(finalRoot.children, stylesheet.span)
-      EvaluateResult(out, _loadedUrls.toSet)
+      EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
     } finally {
       val _ = ssg.sass.CurrentEnvironment.set(savedCur)
     }
@@ -1268,48 +1304,146 @@ final class EvaluateVisitor(
       }
     }
 
+  /** Returns the nearest enclosing `@media` rule in the current CSS parent
+    * chain, or `null` if this `@extend` is declared outside any media block.
+    */
+  private def _enclosingMediaRule(): ModifiableCssMediaRule | Null = {
+    var cur: Nullable[ModifiableCssParentNode] = _parent
+    var out: ModifiableCssMediaRule | Null = null
+    import scala.util.boundary, boundary.break
+    boundary {
+      while (cur.isDefined) {
+        val node = cur.get
+        node match {
+          case mr: ModifiableCssMediaRule =>
+            out = mr
+            break(())
+          case _ =>
+            cur = node.parent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) { pn =>
+              pn match {
+                case mp: ModifiableCssParentNode => Nullable(mp)
+                case _                           => Nullable.empty
+              }
+            }
+        }
+      }
+    }
+    out
+  }
+
   override def visitExtendRule(node: ExtendRule): Value = {
     // AST-based `@extend` support: record each (extender, target) pair into
-    // the extension store, falling back to a textual mapping if either side
-    // fails to parse. Actual selector rewriting happens in `_applyExtends`
-    // once the stylesheet has been fully evaluated. Full "second law of
-    // extend" unification, cross-media-query validation and `!optional`
-    // checking are still TODO.
+    // a media-scoped extension store, falling back to a textual mapping if
+    // either side fails to parse. Selector rewriting happens in
+    // `_applyExtends` once the stylesheet has been fully evaluated.
+    //
+    // This method also enforces two dart-sass constraints:
+    //   1. Extend targets must be a single simple selector (e.g. `.foo`,
+    //      `%bar`, `h1`). Compound (`.a.b`) or complex (`.a .b`) targets
+    //      raise a SassException.
+    //   2. Each extend call site is recorded as a `PendingExtend` so that,
+    //      after the tree walk, unmatched non-optional targets raise
+    //      `"The target selector was not found"`.
     _styleRule.foreach { rule =>
       val extenderText = rule.selector.toString
-      val targetText   = _performInterpolation(node.selector)
+      val targetText   = _performInterpolation(node.selector).trim
       val extenderList = SelectorParser.tryParse(extenderText)
       val targetList   = SelectorParser.tryParse(targetText)
-      val ok           = extenderList.isDefined && targetList.isDefined && {
-        var allMatched = true
+
+      // Reject compound/complex extend targets up-front (dart-sass parity).
+      if (targetList.isDefined) {
         for (targetComplex <- targetList.get.components) {
           val singleCompound = targetComplex.singleCompound
-          if (singleCompound.isEmpty || singleCompound.get.components.length != 1) {
-            allMatched = false
-          } else {
-            val target = singleCompound.get.components.head
-            for (extender <- extenderList.get.components)
-              _extensionStore.addExtensionAst(extender, target, node.isOptional)
-          }
+          if (singleCompound.isEmpty || singleCompound.get.components.length != 1)
+            throw new SassException(
+              "compound selectors may no longer be extended.",
+              node.span
+            )
         }
-        allMatched
+      }
+
+      val mediaKey: ModifiableCssMediaRule | Null = _enclosingMediaRule()
+      val store    = _mediaExtensionStores.getOrElseUpdate(
+        mediaKey,
+        new MutableExtensionStore(ExtendMode.Normal)
+      )
+
+      val ok = extenderList.isDefined && targetList.isDefined && {
+        for (targetComplex <- targetList.get.components) {
+          val target = targetComplex.singleCompound.get.components.head
+          for (extender <- extenderList.get.components)
+            store.addExtensionAst(extender, target, node.isOptional)
+          _pendingExtends += PendingExtend(
+            targetText = targetComplex.toString,
+            target     = Nullable(target),
+            isOptional = node.isOptional,
+            span       = node.span,
+            mediaKey   = mediaKey,
+            found      = false
+          )
+        }
+        true
       }
       if (!ok) {
+        // Legacy textual fallback — `tryParse` failed for one side.
+        val legacy = _mediaLegacyExtends.getOrElseUpdate(
+          mediaKey,
+          scala.collection.mutable.LinkedHashMap.empty
+        )
         for (target <- targetText.split(',').map((s: String) => s.trim))
           if (target.nonEmpty) {
-            _extends.getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
+            legacy.getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
+            _pendingExtends += PendingExtend(
+              targetText = target,
+              target     = Nullable.empty,
+              isOptional = node.isOptional,
+              span       = node.span,
+              mediaKey   = mediaKey,
+              found      = false
+            )
           }
       }
     }
     SassNull
   }
 
-  /** Walks the modifiable CSS tree and, for every style rule whose comma-separated selector list contains an `@extend` target, appends a new comma-separated entry derived from the matching extender.
-    * This is a deliberately simple textual rewrite — no selector AST unification.
+  /** Entry point: walk the root with no active media scope, then validate
+    * any non-optional `@extend`s whose targets were never matched.
     */
   private def _applyExtends(node: ModifiableCssParentNode): Unit = {
-    val hasAst    = _extensionStore.hasAstExtensions
-    val hasLegacy = _extends.nonEmpty
+    _applyExtendsIn(node, null)
+    // Emit any buffered cross-media warnings first, then enforce the
+    // non-optional target-not-found check.
+    for (pending <- _pendingExtends)
+      if (!pending.found && !pending.isOptional) {
+        throw new SassException(
+          "The target selector was not found.\n" +
+            "Use \"@extend " + pending.targetText + " !optional\" to avoid this error.",
+          pending.span
+        )
+      }
+  }
+
+  /** Walks the modifiable CSS tree under `node`, rewriting every style
+    * rule's selectors to include any extensions declared in the same
+    * media scope (`mediaKey`). A new `ModifiableCssMediaRule` encountered
+    * as a child switches the active `mediaKey`, so that extensions inside
+    * `@media` blocks only apply to rules in the same block.
+    *
+    * This is still a textual rewrite over the parsed `SelectorList` AST:
+    * no unification, no "second law of extend" beyond what
+    * `ExtensionStore.extendList` provides. The per-media scope and
+    * pending-check tracking are the parts that make `!optional` work.
+    */
+  private def _applyExtendsIn(
+    node:     ModifiableCssParentNode,
+    mediaKey: ModifiableCssMediaRule | Null
+  ): Unit = {
+    val astStore    = _mediaExtensionStores.get(mediaKey)
+    val legacyStore = _mediaLegacyExtends.get(mediaKey)
+    val hasAst      = astStore.exists(_.hasAstExtensions)
+    val hasLegacy   = legacyStore.exists(_.nonEmpty)
+
     // Snapshot children because rule removal mutates the live list.
     val toVisit = node.modifiableChildren
     for (child <- toVisit) child match {
@@ -1319,7 +1453,17 @@ final class EvaluateVisitor(
           val currentSelector = box.value.toString
           val parsed          = SelectorParser.tryParse(currentSelector)
           if (hasAst && parsed.isDefined) {
-            val extended = _extensionStore.extendList(parsed.get)
+            // Mark any pending extends whose target simple selector appears
+            // in this rule's selector list as "found" in the current scope.
+            for (pending <- _pendingExtends)
+              if (!pending.found && pending.mediaKey == mediaKey && pending.target.isDefined) {
+                val tgt = pending.target.get
+                val hit = parsed.get.components.exists { complex =>
+                  complex.components.exists(_.selector.components.contains(tgt))
+                }
+                if (hit) pending.found = true
+              }
+            val extended = astStore.get.extendList(parsed.get)
             val filtered = extended.components.filterNot(ExtendUtils.isPlaceholderOnly)
             if (filtered.isEmpty) {
               rule.remove()
@@ -1335,8 +1479,11 @@ final class EvaluateVisitor(
             val augmented = scala.collection.mutable.ListBuffer[String]()
             augmented ++= parts
             for (part <- parts)
-              for ((target, extenders) <- _extends)
+              for ((target, extenders) <- legacyStore.get)
                 if (part == target || part.contains(target)) {
+                  for (pending <- _pendingExtends)
+                    if (!pending.found && pending.mediaKey == mediaKey && pending.targetText == target)
+                      pending.found = true
                   for (extender <- extenders)
                     augmented += part.replace(target, extender)
                 }
@@ -1351,11 +1498,11 @@ final class EvaluateVisitor(
             }
           }
         }
-        if (!removed) _applyExtends(rule)
-      case parent: ModifiableCssParentNode => _applyExtends(parent)
-      case _ => ()
+        if (!removed) _applyExtendsIn(rule, mediaKey)
+      case mr: ModifiableCssMediaRule      => _applyExtendsIn(mr, mr)
+      case parent: ModifiableCssParentNode => _applyExtendsIn(parent, mediaKey)
+      case _                               => ()
     }
-    val _ = (hasAst, hasLegacy)
   }
 
   override def visitContentBlock(node: ContentBlock): Value = {

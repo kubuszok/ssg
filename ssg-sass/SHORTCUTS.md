@@ -5,7 +5,7 @@ created compiling skeletons for the entire dart-sass codebase; this document
 catalogs what still needs real implementation.
 
 **Status:** Parser, evaluator, serializer, and most built-in function modules
-are working end-to-end. Tests pass (382 JVM / 365 JS / 365 Native) and
+are working end-to-end. Tests pass (455 JVM / 434 JS / 434 Native) and
 exercise the full Compile → AST → Evaluate → Serialize pipeline including
 @import/@use/@forward (with `with (...)` config), @mixin/@function/@include
 (positional + named + `$args...` + `$kwargs...` rest), control flow,
@@ -242,10 +242,30 @@ edge-case helpers.
 ## HIGH — Selector Unification & Extend
 
 ### Basic @extend ✅ WORKING
-- ✅ `visitExtendRule` records target/extender pairs
-- ✅ `_applyExtends` walks the CSS tree after evaluation and textually
-  rewrites style rule selectors to add extender-replaced variants
-- ✅ `@extend .button` appends `.primary` to matching selectors
+- ✅ `visitExtendRule` records target/extender pairs into a media-scoped
+  extension store. The nearest enclosing `@media` rule (if any) is used
+  as the store key, so extensions inside a `@media` block only apply to
+  rules in the same block and never leak out to top-level rules with
+  the same selector.
+- ✅ `_applyExtends` walks the CSS tree after evaluation, switching the
+  active media scope when it descends into a `ModifiableCssMediaRule`,
+  and textually rewrites style rule selectors to add extender-replaced
+  variants drawn from the matching store.
+- ✅ `@extend .button` appends `.primary` to matching selectors.
+- ✅ **`!optional` flag**: `visitExtendRule` records a `PendingExtend`
+  check for every extend call site. After `_applyExtends`, any target
+  that was never found in its own media scope raises
+  `SassException("The target selector was not found. Use \"@extend ... !optional\" to avoid this error.")`
+  unless the extend was marked `!optional`.
+- ✅ **Compound/complex extend targets**: a target selector list whose
+  complex components are not a single simple selector (e.g. `.a.b`,
+  `.a .b`) raises
+  `SassException("compound selectors may no longer be extended.")`
+  at evaluation time, matching dart-sass.
+- ✅ `CompileResult.warnings: List[String]` is wired through
+  `EvaluateResult.warnings`. Currently always empty — with correct
+  media scoping no cross-media-extend warning is emitted — but the
+  channel is in place for future logger output.
 - ⚠️ **Textual rewrite only** — no selector AST unification
 
 ### Still stubbed (not needed for basic use)
