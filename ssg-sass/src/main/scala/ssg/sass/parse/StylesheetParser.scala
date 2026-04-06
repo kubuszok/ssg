@@ -1670,10 +1670,8 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** Attempts to parse a function call `name(args)`. The bare `if(...)`
-    * three-argument call is recognized as a [[LegacyIfExpression]] so that
-    * the unchosen branch is never evaluated; everything else becomes a
-    * regular [[FunctionExpression]].
+  /** Attempts to parse a function call `name(args)`. The bare `if(...)` three-argument call is recognized as a [[LegacyIfExpression]] so that the unchosen branch is never evaluated; everything else
+    * becomes a regular [[FunctionExpression]].
     */
   private def _tryParseFunctionCall(raw: String, span: FileSpan): Option[Expression] = {
     val parenIdx = raw.indexOf('(')

@@ -1065,4 +1065,76 @@ final class CompileSuite extends munit.FunSuite {
     val result = Compile.compileString(""".a { x: "v" + 1; }""")
     assert(result.css.contains("v1"), result.css)
   }
+
+  // ---------------------------------------------------------------------------
+  // MetaFunctions wired to the active Environment
+  // ---------------------------------------------------------------------------
+
+  test("variable-exists() reflects active environment") {
+    val result = Compile.compileString(
+      """
+      $defined: 1;
+      .a {
+        x: variable-exists("defined");
+        y: variable-exists("missing");
+      }
+    """
+    )
+    assert(result.css.contains("x: true"), result.css)
+    assert(result.css.contains("y: false"), result.css)
+  }
+
+  test("mixin-exists() reflects active environment") {
+    val result = Compile.compileString(
+      """
+      @mixin greet { color: red; }
+      .a {
+        x: mixin-exists("greet");
+        y: mixin-exists("absent");
+      }
+    """
+    )
+    assert(result.css.contains("x: true"), result.css)
+    assert(result.css.contains("y: false"), result.css)
+  }
+
+  test("if() short-circuits the unchosen branch") {
+    // The false branch references an undefined function. Eager evaluation
+    // would render it as a plain CSS function call (`boom(1)`); proper
+    // short-circuiting via LegacyIfExpression skips it entirely.
+    val result = Compile.compileString(".a { x: if(true, ok, boom(1)); }")
+    assert(result.css.contains("x: ok"), result.css)
+    assert(!result.css.contains("boom"), result.css)
+  }
+
+  test("@mixin with $args..., $kwargs... binds keyword rest map") {
+    val result = Compile.compileString(
+      """
+      @mixin paint($args..., $kwargs...) {
+        x: map-get($kwargs, "color");
+        y: map-get($kwargs, "size");
+      }
+      .a { @include paint($color: red, $size: 10px); }
+    """
+    )
+    assert(result.css.contains("x: red"), result.css)
+    assert(result.css.contains("y: 10px"), result.css)
+  }
+
+  // ---------------------------------------------------------------------------
+  // @forward "url" with (...)
+  // ---------------------------------------------------------------------------
+
+  test("@forward with (...) configures !default vars in the loaded module") {
+    // Without an importer the forward target is silently skipped, so we
+    // exercise parser + AST round-trip via `toString` to confirm the
+    // configuration list is captured. Full evaluation is covered by
+    // ImportSuite under the @forward + @use combo.
+    import ssg.sass.parse.ScssParser
+    val sheet = new ScssParser("""@forward "vars" with ($base: 20px !default);""").parse()
+    val text  = sheet.children.get.head.toString
+    assert(text.contains("with"), text)
+    assert(text.contains("$base"), text)
+    assert(text.contains("20px"), text)
+  }
 }

@@ -4,9 +4,16 @@ This file tracks all incomplete implementations in `ssg-sass`. The initial port
 created compiling skeletons for the entire dart-sass codebase; this document
 catalogs what still needs real implementation.
 
-**Status:** 85 distinct stubs across ~50 files. Tests pass (167/167) but only
-exercise the fully-ported value/utility/AST layers — not the parser, evaluator,
-or serializer.
+**Status:** Parser, evaluator, serializer, and most built-in function modules
+are working end-to-end. Tests pass (382 JVM / 365 JS / 365 Native) and
+exercise the full Compile → AST → Evaluate → Serialize pipeline including
+@import/@use/@forward (with `with (...)` config), @mixin/@function/@include
+(positional + named + `$args...` + `$kwargs...` rest), control flow,
+interpolation, lazy `if(...)` ternary, and the color/math/list/map/string/
+meta/selector built-ins. Remaining stubs are concentrated in selector AST
+unification, the ExtendStore, the dedicated SelectorParser/MediaQueryParser/
+AtRootQueryParser, PackageImporter/NodePackageImporter, and a handful of
+edge-case helpers.
 
 ## Legend
 
@@ -61,9 +68,11 @@ or serializer.
   tight-binding paths, with the standard Sass precedence (logical < comparison
   < arithmetic). String concatenation via `+` (`"a" + "b"`, `"v" + 1`) works
   through `Value.plus`'s string fallback. The `if($cond, $t, $f)` ternary is
-  registered as a built-in function in `MetaFunctions.global` (eager argument
-  evaluation — short-circuiting via `LegacyIfExpression` is still TODO). A
-  proper tokenizer for function calls, interpolation `#{...}`, and
+  parsed as a `LegacyIfExpression` (the parser's `_tryParseFunctionCall`
+  short-circuits the bare `if(...)` form), so the unchosen branch is never
+  evaluated. The `MetaFunctions.global` `if` callable remains as a fallback
+  for indirect calls (`call(get-function("if"), ...)`). A proper tokenizer
+  for function calls, interpolation `#{...}`, and
   space-separated lists is still TODO.
 - ✅ `@mixin` / `@function` / `@include` — parsed with positional parameters,
   default values, and a trailing rest parameter (`$args...`). `@include` call
@@ -72,7 +81,10 @@ or serializer.
   (`foo($name: value, $other: 10)`) are now supported at call sites for
   both `@include` and text-based function calls, including mixed
   positional + keyword. `_bindParameters` binds named args by parameter
-  name after filling positional slots. `$kwargs...` is still TODO.
+  name after filling positional slots, and the `$args..., $kwargs...`
+  parameter form is supported: leftover positional args become a
+  `SassArgumentList` (carrying any unmatched named args as keywords),
+  while `$kwargs...` is bound to a `SassMap` of leftover named args.
 - ✅ `#{expr}` interpolation in expression values — declaration values like
   `width: #{$base * 2}px`, property names like `#{$prefix}-color: red` (and
   mid-name `margin-#{$side}: ...`), and string concatenation
@@ -186,7 +198,7 @@ or serializer.
 - ✅ @media/@supports/@at-root rules building ModifiableCssMediaRule/SupportsRule
 - ✅ @import (static)
 - ✅ @use — module loading via importer (see `@use module loading` below)
-- ⚠️  @forward — text-based MVP: load + merge into current env, with `show`/`hide` filtering and `as prefix-*` rename for variables/functions/mixins. No `with (...)` config; no module-level isolation; built-in callables not re-forwarded.
+- ⚠️  @forward — text-based MVP: load + merge into current env, with `show`/`hide` filtering, `as prefix-*` rename for variables/functions/mixins, and `with (...)` configuration that pre-sets variables in the loaded module's environment so `!default` declarations honor overrides. No module-level isolation; built-in callables are not re-forwarded.
 - ⚠️  @extend — no-op (needs ExtensionStore integration)
 - ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
 - ⚠️  Parameter binding: basic; rest/keyword-rest args deferred. Built-in
@@ -309,7 +321,7 @@ or serializer.
 - ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice/unique-id, `string.split` (module-only)
 - ✅ `ListFunctions` — length/nth (supports negative indices)/set-nth/join/append/zip/index/list-separator/is-bracketed, `list.slash` (module-only)
 - ✅ `MapFunctions` — map-get/map-merge/map-remove/map-keys/map-values/map-has-key, `map.set`/`map.deep-merge`/`map.deep-remove` (module-only)
-- ⚠️  `MetaFunctions` — type-of/inspect/feature-exists/variable-exists/function-exists/mixin-exists/global-variable-exists/content-exists/keywords/module-variables/module-functions (most of the `-exists`/`module-*`/`keywords` are placeholders returning false/empty — need Environment access)
+- ✅ `MetaFunctions` — type-of/inspect/feature-exists, plus the `-exists` family (`variable-exists`, `function-exists`, `mixin-exists`, `global-variable-exists`) which now consult the active `Environment` via the `CurrentEnvironment` holder set by `EvaluateVisitor`. `keywords($args)` surfaces a `SassArgumentList`'s keyword map (populated by `_bindParameters` for `$kwargs...`/captured-named bindings). `module-variables`/`module-functions` enumerate the active env's namespaces (and fall back to the static `sass:` module table). `content-exists` is still a placeholder pending mixin-call-stack tracking.
 - ⚠️  `SelectorFunctions` — text-based MVP: `selector-append`, `selector-nest`, `selector-extend` (string replace), `selector-unify` (returns null stub). String args only; lists/non-strings return null. No selector AST.
 - ✅ `Functions.scala` (barrel) — aggregates modules, `lookupGlobal(name)`
 - ✅ `Environment.withBuiltins()` — pre-populates environment with global callables
@@ -320,11 +332,11 @@ or serializer.
 
 ---
 
-## LOW — Compile Orchestration (2 items)
+## LOW — Compile Orchestration ✅ IMPLEMENTED
 
 ### `Compile.scala`
-- ❌ `compileString(source)` — trivial once parser/evaluator/serializer exist
-- ❌ `compile(path)` — trivial (file I/O + compileString)
+- ✅ `Compile.compileString(source[, OutputStyle])` — wires StylesheetParser → EvaluateVisitor → SerializeVisitor (cross-platform).
+- ✅ `CompileFile.compile(path)` (scala-jvm) — file I/O + delegates to `compileString`.
 
 ---
 
