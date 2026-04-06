@@ -22,7 +22,7 @@ package visitor
 
 import ssg.sass.ColorNames
 import ssg.sass.Nullable
-import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssStyleRule, CssStylesheet, CssSupportsRule }
+import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.value.{ SassColor, SassNumber, Value }
 import ssg.sass.value.color.ColorSpace
 
@@ -61,6 +61,23 @@ final class SerializeVisitor(
   segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
 
   private def isCompressed: Boolean = style == OutputStyle.Compressed
+
+  // ---------------------------------------------------------------------------
+  // Invisibility check — matches dart-sass `_IsInvisibleVisitor` semantics in
+  // the subset of the AST that ssg-sass currently populates. A parent node is
+  // considered invisible if it isn't childless AND every child is invisible.
+  // Declarations, imports, and preserved comments are always visible. Regular
+  // comments are visible except in compressed mode.
+  // ---------------------------------------------------------------------------
+  private def isNodeInvisible(node: CssNode): Boolean = node match {
+    case _: CssDeclaration => false
+    case _: CssImport      => false
+    case c: CssComment     => isCompressed && !c.isPreserved
+    case p: CssParentNode  =>
+      if (p.isChildless) false
+      else p.children.forall(isNodeInvisible)
+    case _ => false
+  }
 
   /** Recomputes the (line, column) cursor from the current buffer length. */
   private def syncCursor(): Unit = {
@@ -204,11 +221,12 @@ final class SerializeVisitor(
     if (!isCompressed) buffer.append(' ')
 
   private def writeChildren(children: List[CssNode]): Unit = {
+    val visible = children.filter(c => !isNodeInvisible(c))
     buffer.append('{')
     writeLine()
     indentLevel += 1
     var first = true
-    for (child <- children) {
+    for (child <- visible) {
       if (!first && !isCompressed) writeLine()
       first = false
       writeIndent()
@@ -288,13 +306,14 @@ final class SerializeVisitor(
   }
 
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
-    var first = true
-    for (child <- node.children) {
+    val visible = node.children.filter(c => !isNodeInvisible(c))
+    var first   = true
+    for (child <- visible) {
       if (!first) writeLine()
       first = false
       child.accept(this)
     }
-    if (!isCompressed && node.children.nonEmpty) buffer.append('\n')
+    if (!isCompressed && visible.nonEmpty) buffer.append('\n')
   }
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {

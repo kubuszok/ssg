@@ -173,4 +173,70 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("@keyframes fade"))
   }
+
+  // ---- Invisible-parent skipping (wrong-output parity fixes) ---------------
+
+  test("serialize skips an empty style rule") {
+    val empty  = styleRule("a", Nil)
+    val s      = stylesheet(List(empty))
+    val result = SerializeVisitor.serialize(s)
+    assertEquals(result.css, "")
+  }
+
+  test("serialize skips a style rule whose only children are empty rules") {
+    val innerEmpty = styleRule("b", Nil)
+    val outer      = styleRule("a", List(innerEmpty))
+    val s          = stylesheet(List(outer))
+    val result     = SerializeVisitor.serialize(s)
+    assertEquals(result.css, "")
+  }
+
+  test("serialize skips an empty @media at-rule") {
+    val media = new ModifiableCssAtRule(str("media"), span, value = Nullable(str("print")))
+    val s     = stylesheet(List(media))
+    assertEquals(SerializeVisitor.serialize(s).css, "")
+  }
+
+  test("serialize keeps a non-empty rule next to an empty sibling") {
+    val empty  = styleRule("a", Nil)
+    val real   = styleRule("b", List(declaration("color", "red")))
+    val s      = stylesheet(List(empty, real))
+    val result = SerializeVisitor.serialize(s)
+    assert(!result.css.contains("a {"), s"css=${result.css}")
+    assert(result.css.contains("b {"), s"css=${result.css}")
+    assert(result.css.contains("color: red;"), s"css=${result.css}")
+  }
+
+  test("serialize keeps a childless at-rule (e.g. @charset)") {
+    val atRule = new ModifiableCssAtRule(
+      str("charset"),
+      span,
+      childless = true,
+      value = Nullable(str("\"UTF-8\""))
+    )
+    val s = stylesheet(List(atRule))
+    assertEquals(SerializeVisitor.serialize(s).css.trim, "@charset \"UTF-8\";")
+  }
+
+  test("serialize keeps a rule that contains only a loud comment") {
+    val comment = new ModifiableCssComment("/* hi */", span)
+    val rule    = styleRule("a", List(comment))
+    val s       = stylesheet(List(rule))
+    val result  = SerializeVisitor.serialize(s)
+    assert(result.css.contains("/* hi */"), s"css=${result.css}")
+    assert(result.css.contains("a {"), s"css=${result.css}")
+  }
+
+  test("compressed: empty rule is skipped") {
+    val empty = styleRule("a", Nil)
+    val s     = stylesheet(List(empty))
+    assertEquals(SerializeVisitor.serializeCompressed(s).css, "")
+  }
+
+  test("compressed: rule with only a non-preserved comment is skipped") {
+    val comment = new ModifiableCssComment("/* hi */", span)
+    val rule    = styleRule("a", List(comment))
+    val s       = stylesheet(List(rule))
+    assertEquals(SerializeVisitor.serializeCompressed(s).css, "")
+  }
 }

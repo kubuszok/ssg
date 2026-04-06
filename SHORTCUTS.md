@@ -4,6 +4,30 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### SerializeVisitor: skip invisible parent nodes (sass-spec parity)
+
+- `ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala` — added a
+  local `isNodeInvisible` helper mirroring dart-sass's `_IsInvisibleVisitor`
+  semantics for the ssg-sass AST subset. A `CssParentNode` is invisible when
+  `!isChildless && children.forall(isNodeInvisible)`. Declarations and imports
+  are always visible; comments are invisible in compressed mode unless marked
+  `isPreserved`. `writeChildren` and `visitCssStylesheet` now filter children
+  through this check before emission.
+- Previously the serializer eagerly emitted every `CssStyleRule` / `CssAtRule`
+  / `CssMediaRule` / `CssSupportsRule` even when the rule had no effective
+  output, producing `a {\n\n}` and residual `@if`/`@while`/`@media` wrappers
+  that never match dart-sass's output.
+- `ssg-sass/src/test/scala/ssg/sass/visitor/SerializeVisitorSuite.scala` — 8
+  new cases: empty style rule skipped, rule whose children are all empty
+  rules skipped, empty `@media` skipped, empty sibling dropped while real
+  sibling emits, childless `@charset` still emitted, rule containing only a
+  loud comment still emitted (expanded), compressed empty-rule skip,
+  compressed comment-only rule skip.
+
+All 3 platforms: JVM 616, JS 602 (+1 ignored), Native 602 (+1 ignored), green
+(+8 per platform). sass-spec self-contained compliance moved from 27.8% to
+29.3% (+172 passing, wrong-output 6003 -> 5791).
+
 ### Deprecation framework (ISS-057, ISS-058)
 
 - `ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala` — trait now
