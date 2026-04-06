@@ -306,11 +306,24 @@ final class SerializeVisitor(
   }
 
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
+    // dart-sass separates top-level siblings with a blank line in expanded mode
+    // (i.e. the closing `}` of one rule is followed by `\n\n` before the next
+    // rule starts). In compressed mode nothing is written between siblings.
     val visible = node.children.filter(c => !isNodeInvisible(c))
     var first   = true
+    var prevWasComment = false
     for (child <- visible) {
-      if (!first) writeLine()
+      if (!first) {
+        if (isCompressed) ()
+        else {
+          // Single newline after a loud/preserved comment, blank line otherwise,
+          // to match dart-sass top-level spacing conventions.
+          buffer.append('\n')
+          if (!prevWasComment) buffer.append('\n')
+        }
+      }
       first = false
+      prevWasComment = child.isInstanceOf[CssComment]
       child.accept(this)
     }
     if (!isCompressed && visible.nonEmpty) buffer.append('\n')

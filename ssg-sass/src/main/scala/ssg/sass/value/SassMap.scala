@@ -48,10 +48,18 @@ final class SassMap(val contents: ListMap[Value, Value]) extends Value {
     case _ => false
   }
 
-  override def toString: String = {
-    val entries = contents.map { case (k, v) => s"$k: $v" }.mkString(", ")
+  /** CSS representation of this map. Maps don't have a direct CSS literal; this
+    * matches dart-sass's inspect form `(k: v, ...)` and recurses via
+    * `toCssString` so nested values render consistently with the serializer.
+    */
+  override def toCssString(quote: Boolean = true): String = {
+    val entries = contents.map { case (k, v) =>
+      s"${k.toCssString()}: ${v.toCssString()}"
+    }.mkString(", ")
     s"($entries)"
   }
+
+  override def toString: String = toCssString()
 }
 
 object SassMap {

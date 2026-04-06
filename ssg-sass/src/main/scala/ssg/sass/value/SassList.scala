@@ -16,7 +16,6 @@ package sass
 package value
 
 import ssg.sass.Nullable
-import ssg.sass.Nullable.*
 import ssg.sass.visitor.ValueVisitor
 
 import scala.language.implicitConversions
@@ -60,15 +59,36 @@ class SassList(
     case _ => false
   }
 
-  override def toString: String = {
-    val sep        = separator.separatorChar.getOrElse(" ")
-    val inner      = contents.map(_.toString).mkString(sep + (if (sep == ",") " " else ""))
-    val withParens =
+  /** CSS representation of this list.
+    *
+    * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`):
+    *   - space-separated lists drop `null`/blank elements (matching
+    *     `_elementNeedsParens == false` + `isBlank` filter)
+    *   - comma-separated lists keep all elements; a single-element comma list
+    *     is rendered as `(x,)` to disambiguate from a paren-wrapped value
+    *   - bracketed lists wrap the content in `[...]`
+    *   - elements are emitted via `toCssString`, not `toString`, so nested
+    *     colors/strings/etc. round-trip correctly.
+    */
+  override def toCssString(quote: Boolean = true): String = {
+    val elems =
+      if (separator == ListSeparator.Comma || hasBrackets) contents
+      else contents.filterNot(_.isBlank)
+    val sepStr = separator match {
+      case ListSeparator.Comma     => ", "
+      case ListSeparator.Space     => " "
+      case ListSeparator.Slash     => " / "
+      case ListSeparator.Undecided => " "
+    }
+    val inner = elems.map(_.toCssString()).mkString(sepStr)
+    val body  =
       if (contents.length == 1 && separator == ListSeparator.Comma) s"($inner,)"
       else inner
-    if (hasBrackets) s"[$withParens]"
-    else withParens
+    if (hasBrackets) s"[$body]"
+    else body
   }
+
+  override def toString: String = toCssString()
 }
 
 object SassList {
