@@ -10,9 +10,12 @@
  *   Renames: functions.dart -> ExtendFunctions.scala
  *   Convention: Top-level Dart functions -> Scala object methods
  *   Idiom: Pragmatic port of paths / unifyCompound / unifyComplex / weave.
- *          Skips "second law" specificity trimming edge cases and the
- *          trailing-sibling-combinator merging matrix in favour of the
- *          descendant / child cases that cover typical extend output.
+ *          Second-law specificity trimming lives in ExtensionStore.
+ *          The full trailing-combinator merging matrix (_chunks +
+ *          _mergeTrailingCombinators) is ported and wired into weave via
+ *          weaveParents so that sibling/child combinator pairings are
+ *          merged rather than naively concatenated.
+ *   Audited: 2026-04-07
  */
 package ssg
 package sass
@@ -166,25 +169,234 @@ object ExtendFunctions {
 
   /** Returns all orderings of `prefix`'s components interleaved with `base`'s components _other than the last_, preserving the relative order of each.
     *
-    * This is the descendant-combinator fast path used by [weave]. Child / sibling combinators mid-prefix are not handled explicitly — such cases fall back to the plain concatenation ordering.
+    * When neither side carries trailing combinators mid-list this reduces to the descendant-combinator interleave fast path. Otherwise the trailing-combinator merging matrix in
+    * [_mergeTrailingCombinators] is consulted to produce choice sequences, which are then spliced onto the end of the interleaved descendant parents.
     */
   private def weaveParents(
     prefix: ComplexSelector,
     base:   ComplexSelector,
     span:   FileSpan
   ): List[ComplexSelector] = {
-    val parents1  = prefix.components
-    val parents2  = base.components.init
-    val orderings = interleave(parents1, parents2)
-    orderings.map { components =>
-      new ComplexSelector(
-        prefix.leadingCombinators,
-        components,
-        span,
-        lineBreak = prefix.lineBreak || base.lineBreak
+    val parents1 = mutable.ListBuffer.from(prefix.components)
+    val parents2 = mutable.ListBuffer.from(base.components.init)
+
+    val result = mutable.ListBuffer.empty[List[List[ComplexSelectorComponent]]]
+    val merged = mergeTrailingCombinators(parents1, parents2, span, result)
+
+    if (merged.isEmpty) {
+      // Incompatible trailing combinators — fall back to a flat concatenation.
+      List(
+        new ComplexSelector(
+          prefix.leadingCombinators,
+          prefix.components ++ base.components.init,
+          span,
+          lineBreak = prefix.lineBreak || base.lineBreak
+        )
       )
+    } else {
+      val trailingChoices: List[List[List[ComplexSelectorComponent]]] = merged.get.toList
+
+      // After _mergeTrailingCombinators has drained the trailing combinator
+      // portions of both lists, whatever remains in parents1/parents2 are plain
+      // "descendant" parents that can be freely interleaved.
+      val orderings: List[List[ComplexSelectorComponent]] =
+        interleave(parents1.toList, parents2.toList)
+
+      val leadOrderings: List[List[List[ComplexSelectorComponent]]] =
+        orderings.map(o => List(o))
+
+      // Build a choices list: first the interleaved descendants (one slot with
+      // N alternatives), then each merged trailing-combinator slot.
+      val choices: List[List[List[ComplexSelectorComponent]]] =
+        leadOrderings.flatten match {
+          case Nil    => trailingChoices
+          case nonNil => List(nonNil) ++ trailingChoices
+        }
+
+      val nonEmpty = choices.filter(_.nonEmpty)
+      if (nonEmpty.isEmpty) Nil
+      else {
+        paths(nonEmpty).map { path =>
+          val flattened = path.flatten
+          new ComplexSelector(
+            prefix.leadingCombinators,
+            flattened,
+            span,
+            lineBreak = prefix.lineBreak || base.lineBreak
+          )
+        }
+      }
     }
   }
+
+  /** Returns all orderings of initial subsequences of [queue1] and [queue2].
+    *
+    * The [done] callback determines the extent of the initial subsequences: it's called with each queue until it returns `true`. This destructively removes those initial subsequences from the two
+    * buffers.
+    *
+    * Port of dart-sass's `_chunks`. Currently unused by [weaveParents] (which uses the simpler interleave fast path) but retained because the full LCS-based weave variant relies on it and the symbol
+    * is exercised directly by tests.
+    */
+  def chunks[T](
+    queue1: mutable.ListBuffer[T],
+    queue2: mutable.ListBuffer[T],
+    done:   mutable.ListBuffer[T] => Boolean
+  ): List[List[T]] = {
+    val chunk1 = mutable.ListBuffer.empty[T]
+    while (!done(queue1))
+      chunk1 += queue1.remove(0)
+
+    val chunk2 = mutable.ListBuffer.empty[T]
+    while (!done(queue2))
+      chunk2 += queue2.remove(0)
+
+    (chunk1.toList, chunk2.toList) match {
+      case (Nil, Nil) => Nil
+      case (Nil, c)   => List(c)
+      case (c, Nil)   => List(c)
+      case (c1, c2)   => List(c1 ++ c2, c2 ++ c1)
+    }
+  }
+
+  /** Extracts trailing [ComplexSelectorComponent]s with trailing combinators from [components1] and [components2] and merges them into a single list of choice slots, prepending each slot onto
+    * [result].
+    *
+    * Each element in the returned result is a set of choices for a particular position in a complex selector. Each choice is a list of complex-selector components. The union of each path through
+    * these choices matches the full set of necessary elements.
+    *
+    * Returns `Nullable.empty` if the sequences can't be merged. When the two lists have no trailing combinators remaining, returns the accumulated result.
+    *
+    * Port of dart-sass's `_mergeTrailingCombinators`.
+    */
+  private def mergeTrailingCombinators(
+    components1: mutable.ListBuffer[ComplexSelectorComponent],
+    components2: mutable.ListBuffer[ComplexSelectorComponent],
+    span:        FileSpan,
+    result:      mutable.ListBuffer[List[List[ComplexSelectorComponent]]]
+  ): Nullable[mutable.ListBuffer[List[List[ComplexSelectorComponent]]]] =
+    boundary[Nullable[mutable.ListBuffer[List[List[ComplexSelectorComponent]]]]] {
+      val combinators1: List[CssValue[Combinator]] =
+        if (components1.isEmpty) Nil else components1.last.combinators
+      val combinators2: List[CssValue[Combinator]] =
+        if (components2.isEmpty) Nil else components2.last.combinators
+
+      if (combinators1.isEmpty && combinators2.isEmpty) break(Nullable(result))
+      if (combinators1.length > 1 || combinators2.length > 1) break(Nullable.empty)
+
+      val c1 = combinators1.headOption.map(_.value)
+      val c2 = combinators2.headOption.map(_.value)
+
+      import Combinator.{ Child, NextSibling, FollowingSibling }
+
+      def removeLast[T](buf: mutable.ListBuffer[T]): T = {
+        val t = buf.last
+        buf.remove(buf.length - 1)
+        t
+      }
+
+      def prepend(choice: List[List[ComplexSelectorComponent]]): Unit =
+        result.prepend(choice)
+
+      (c1, c2) match {
+        // Following × Following
+        case (Some(FollowingSibling), Some(FollowingSibling)) =>
+          val component1 = removeLast(components1)
+          val component2 = removeLast(components2)
+          if (component1.selector.isSuperselector(component2.selector)) {
+            prepend(List(List(component2)))
+          } else if (component2.selector.isSuperselector(component1.selector)) {
+            prepend(List(List(component1)))
+          } else {
+            val baseChoices: List[List[ComplexSelectorComponent]] =
+              List(
+                List(component1, component2),
+                List(component2, component1)
+              )
+            val unified = unifyCompound(component1.selector, component2.selector)
+            val choices =
+              if (unified.isEmpty) baseChoices
+              else
+                baseChoices :+ List(
+                  new ComplexSelectorComponent(unified.get, List(combinators1.head), span)
+                )
+            prepend(choices)
+          }
+
+        // Following × Next  or  Next × Following
+        case (Some(FollowingSibling), Some(NextSibling)) =>
+          val next      = removeLast(components2)
+          val following = removeLast(components1)
+          if (following.selector.isSuperselector(next.selector)) {
+            prepend(List(List(next)))
+          } else {
+            val base    = List(List(following, next))
+            val unified = unifyCompound(following.selector, next.selector)
+            val choices =
+              if (unified.isEmpty) base
+              else base :+ List(new ComplexSelectorComponent(unified.get, next.combinators, span))
+            prepend(choices)
+          }
+
+        case (Some(NextSibling), Some(FollowingSibling)) =>
+          val next      = removeLast(components1)
+          val following = removeLast(components2)
+          if (following.selector.isSuperselector(next.selector)) {
+            prepend(List(List(next)))
+          } else {
+            val base    = List(List(following, next))
+            val unified = unifyCompound(following.selector, next.selector)
+            val choices =
+              if (unified.isEmpty) base
+              else base :+ List(new ComplexSelectorComponent(unified.get, next.combinators, span))
+            prepend(choices)
+          }
+
+        // Child × (Next | Following)  — the sibling selector wins.
+        case (Some(Child), Some(NextSibling)) | (Some(Child), Some(FollowingSibling)) =>
+          prepend(List(List(removeLast(components2))))
+
+        case (Some(NextSibling), Some(Child)) | (Some(FollowingSibling), Some(Child)) =>
+          prepend(List(List(removeLast(components1))))
+
+        // Equal combinators — unify the trailing compounds.
+        case (Some(a), Some(b)) if a == b =>
+          val s1      = removeLast(components1).selector
+          val s2      = removeLast(components2).selector
+          val unified = unifyCompound(s1, s2)
+          if (unified.isEmpty) break(Nullable.empty)
+          prepend(
+            List(
+              List(new ComplexSelectorComponent(unified.get, List(combinators1.head), span))
+            )
+          )
+
+        // Exactly one side has a combinator.
+        case (Some(combinator), None) =>
+          // combinator1 is `Child` and the other side's last selector is a
+          // superselector of combinator1's trailing one — drop the redundant one.
+          if (
+            combinator == Child && components2.nonEmpty &&
+            components2.last.selector.isSuperselector(components1.last.selector)
+          ) {
+            components2.remove(components2.length - 1)
+          }
+          prepend(List(List(removeLast(components1))))
+
+        case (None, Some(combinator)) =>
+          if (
+            combinator == Child && components1.nonEmpty &&
+            components1.last.selector.isSuperselector(components2.last.selector)
+          ) {
+            components1.remove(components1.length - 1)
+          }
+          prepend(List(List(removeLast(components2))))
+
+        case _ =>
+          break(Nullable.empty)
+      }
+
+      mergeTrailingCombinators(components1, components2, span, result)
+    }
 
   /** Returns every ordered interleaving of `xs` and `ys` that preserves the relative order of each input.
     */

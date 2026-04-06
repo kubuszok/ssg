@@ -4,6 +4,36 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Full extend trailing-combinator merging matrix (ISS-036, ISS-037)
+
+- `ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala` — ported
+  dart-sass's `_chunks` and `_mergeTrailingCombinators` as
+  `chunks` / `mergeTrailingCombinators`. The matrix covers every pair of
+  trailing combinators between two `ComplexSelector` components:
+  following x following (with superselector short-circuit and unify-or-swap
+  choices), following x next / next x following (swap-sensitive), child x
+  next / child x following / next x child / following x child (sibling
+  wins), equal combinators (unify compounds), and single-combinator cases
+  (with the `child + descendant` redundancy drop). Recurses via
+  `boundary`/`break` on incompat and returns `Nullable.empty` when the
+  sequences can't be merged.
+- `weaveParents` now pre-drains trailing combinator tails via
+  `mergeTrailingCombinators`, interleaves the remaining descendant parents
+  with the old `interleave` fast path, and runs the accumulated per-slot
+  choices through `paths` to produce the full cross-product. When the
+  matrix rejects the pair, we fall back to a flat concatenation so the
+  previous descendant-only behaviour is strictly non-regressing.
+- `ssg-sass/src/test/scala/ssg/sass/ExtendUnifySuite.scala` — 5 new cases:
+  child x child weave, next-sibling extend, following-sibling pairs,
+  child x next-sibling combo, nested multi-combinator extension. The
+  existing descendant and id-unification cases still pass unchanged.
+- Resolved ISS-036 and ISS-037.
+
+All 10/10 `ExtendUnifySuite` green on JVM; full ssg-sass suite 615/615 +1
+ignored green on JVM and Native. JS is blocked from running by an
+unrelated pre-existing `-Werror` warning on
+`EvaluateVisitor._pendingConfig` in the do-not-touch zone.
+
 ### Plain-CSS function preservation + sass:meta gap fills (ISS-093, ISS-014)
 
 - `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
