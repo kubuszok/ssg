@@ -1839,7 +1839,7 @@ abstract class StylesheetParser protected (
         name == "hwb" || name == "lab" || name == "lch" || name == "oklab" ||
         name == "oklch" || name == "color"
     )
-    val commaSplit  = if (argsText.isEmpty) Nil else _splitTopLevel(argsText, ',')
+    val commaSplit = if (argsText.isEmpty) Nil else _splitTopLevel(argsText, ',')
     val rawArgs: List[String] =
       if (argsText.isEmpty) Nil
       else if (isColorFn && commaSplit.length <= 1) {

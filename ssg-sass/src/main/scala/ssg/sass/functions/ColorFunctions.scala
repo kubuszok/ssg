@@ -158,7 +158,7 @@ object ColorFunctions {
   /** Returns true if [v] is the CSS `none` channel keyword (parsed as an unquoted SassString). */
   private def isNone(v: Value): Boolean = v match {
     case s: SassString => !s.hasQuotes && s.text == "none"
-    case _             => false
+    case _ => false
   }
 
   /** Interprets [v] as a lab/lch-style channel, returning Nullable.Null for `none`. */
@@ -238,9 +238,9 @@ object ColorFunctions {
       "hwb",
       "$hue, $whiteness, $blackness, $alpha: 1",
       { args =>
-        val h = hueOrNone(args(0))
-        val w = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
-        val b = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
+        val h     = hueOrNone(args(0))
+        val w     = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
+        val b     = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
         val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
         SassColor.hwb(h, w, b, alpha)
       }

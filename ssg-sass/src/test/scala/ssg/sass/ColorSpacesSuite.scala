@@ -20,16 +20,13 @@ final class ColorSpacesSuite extends munit.FunSuite {
 
   // Resolve a registered global color function by name.
   private def fn(name: String): List[Value] => Value = {
-    val cb = ColorFunctions.global
-      .collect { case b: BuiltInCallable if b.name == name => b }
-      .headOption
-      .getOrElse(fail(s"Could not find color function '$name'"))
+    val cb = ColorFunctions.global.collect { case b: BuiltInCallable if b.name == name => b }.headOption.getOrElse(fail(s"Could not find color function '$name'"))
     cb.callback
   }
 
-  private def num(d: Double): SassNumber       = SassNumber(d)
-  private def pct(d: Double): SassNumber       = SassNumber(d, "%")
-  private def str(s: String): SassString       = SassString(s, hasQuotes = false)
+  private def num(d: Double): SassNumber = SassNumber(d)
+  private def pct(d: Double): SassNumber = SassNumber(d, "%")
+  private def str(s: String): SassString = SassString(s, hasQuotes = false)
 
   // ------------------------------------------------------------------
   // Constructors parse / produce the right color space
@@ -94,8 +91,8 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("rgb -> lab -> rgb round-trip preserves the color within epsilon") {
-    val rgb  = SassColor.rgb(Nullable(128.0), Nullable(64.0), Nullable(200.0))
-    val lab  = rgb.toSpace(ColorSpace.lab)
+    val rgb = SassColor.rgb(Nullable(128.0), Nullable(64.0), Nullable(200.0))
+    val lab = rgb.toSpace(ColorSpace.lab)
     assertEquals(lab.space, ColorSpace.lab)
     val back = lab.toSpace(ColorSpace.rgb)
     assertEqualsDouble(back.channel0, 128.0, 1e-3)
@@ -122,9 +119,9 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("color.mix(red, blue, $space: oklch) uses oklch interpolation") {
-    val red   = SassColor.rgb(Nullable(255.0), Nullable(0.0), Nullable(0.0))
-    val blue  = SassColor.rgb(Nullable(0.0), Nullable(0.0), Nullable(255.0))
-    val mix   = fn("mix")(List(red, blue, pct(50), str("oklch"))).asInstanceOf[SassColor]
+    val red  = SassColor.rgb(Nullable(255.0), Nullable(0.0), Nullable(0.0))
+    val blue = SassColor.rgb(Nullable(0.0), Nullable(0.0), Nullable(255.0))
+    val mix  = fn("mix")(List(red, blue, pct(50), str("oklch"))).asInstanceOf[SassColor]
     // interpolate(...).toSpace(this.space) returns a color in red's space (rgb).
     // Verify it's NOT equal to the legacy rgb midpoint — oklch interpolation
     // yields a perceptually different color (typically a less-muddy purple).
