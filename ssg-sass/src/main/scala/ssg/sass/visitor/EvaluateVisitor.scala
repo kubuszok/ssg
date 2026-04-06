@@ -115,7 +115,7 @@ import ssg.sass.value.{
   SassString,
   Value
 }
-import ssg.sass.{Callable, Environment, ImportCache, Logger, Nullable, SassScriptException}
+import ssg.sass.{BuiltInCallable, Callable, Environment, ImportCache, Logger, Nullable, SassException, SassScriptException, UserDefinedCallable}
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs
   * that were loaded during evaluation.
@@ -252,6 +252,14 @@ final class EvaluateVisitor(
         case bic: ssg.sass.BuiltInCallable =>
           val argValues = node.arguments.positional.map(_.accept(this))
           bic.callback(argValues)
+        case ud: UserDefinedCallable[?] =>
+          ud.declaration match {
+            case fr: FunctionRule =>
+              val (positional, named) = _evaluateArguments(node.arguments)
+              _runUserDefinedFunction(fr, positional, named)
+            case _ =>
+              throw SassScriptException(s"Callable ${node.name} is not a function.")
+          }
         case _ =>
           throw SassScriptException(s"Callable type not yet supported: $c")
       }
@@ -750,17 +758,162 @@ final class EvaluateVisitor(
 
   override def visitAtRootRule(node: AtRootRule): Value = statementStub("visitAtRootRule")
   override def visitContentBlock(node: ContentBlock): Value = statementStub("visitContentBlock")
-  override def visitContentRule(node: ContentRule): Value = statementStub("visitContentRule")
   override def visitExtendRule(node: ExtendRule): Value = statementStub("visitExtendRule")
   override def visitForwardRule(node: ForwardRule): Value = statementStub("visitForwardRule")
-  override def visitFunctionRule(node: FunctionRule): Value = statementStub("visitFunctionRule")
   override def visitImportRule(node: ImportRule): Value = statementStub("visitImportRule")
-  override def visitIncludeRule(node: IncludeRule): Value = statementStub("visitIncludeRule")
   override def visitMediaRule(node: MediaRule): Value = statementStub("visitMediaRule")
-  override def visitMixinRule(node: MixinRule): Value = statementStub("visitMixinRule")
-  override def visitReturnRule(node: ReturnRule): Value = node.expression.accept(this)
   override def visitSupportsRule(node: SupportsRule): Value = statementStub("visitSupportsRule")
   override def visitUseRule(node: UseRule): Value = statementStub("visitUseRule")
+
+  // ---------------------------------------------------------------------------
+  // Callables: @function, @mixin, @include, @return, @content
+  // ---------------------------------------------------------------------------
+
+  /** Sentinel exception used to unwind a function body when a `@return` rule
+    * is encountered. Caught exclusively inside
+    * [[_runUserDefinedCallableFunction]]; never escapes into user code.
+    */
+  private final class ReturnSignal(val value: Value) extends RuntimeException {
+    override def fillInStackTrace(): Throwable = this
+  }
+
+  override def visitFunctionRule(node: FunctionRule): Value = {
+    val callable = UserDefinedCallable[Environment](node, _environment.closure())
+    _environment.setFunction(callable)
+    SassNull
+  }
+
+  override def visitMixinRule(node: MixinRule): Value = {
+    val callable = UserDefinedCallable[Environment](node, _environment.closure())
+    _environment.setMixin(callable)
+    SassNull
+  }
+
+  override def visitReturnRule(node: ReturnRule): Value = {
+    throw new ReturnSignal(node.expression.accept(this))
+  }
+
+  override def visitContentRule(node: ContentRule): Value = {
+    val _ = node
+    val block: Nullable[ContentBlock] = _environment.content
+    block.foreach { cb =>
+      _withScope {
+        for (statement <- cb.childrenList) {
+          val _ = statement.accept(this)
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitIncludeRule(node: IncludeRule): Value = {
+    val lookup: Nullable[Callable] = _environment.getMixin(node.name)
+    val mixin = lookup.getOrElse {
+      throw SassException(s"Undefined mixin: ${node.name}.", node.span)
+    }
+    mixin match {
+      case ud: UserDefinedCallable[?] =>
+        ud.declaration match {
+          case mr: MixinRule =>
+            // Evaluate arguments against the current environment.
+            val (positional, named) = _evaluateArguments(node.arguments)
+            _environment.withSnapshot {
+              _bindParameters(mr.parameters, positional, named)
+              // Install the content block (if any) so @content can find it.
+              val savedContent = _environment.content
+              _environment.content = node.content.asInstanceOf[Nullable[ContentBlock]]
+              try {
+                for (statement <- mr.childrenList) {
+                  val _ = statement.accept(this)
+                }
+              } finally {
+                _environment.content = savedContent
+              }
+            }
+          case other =>
+            throw SassException(
+              s"Mixin ${node.name} is not backed by a MixinRule (got $other).",
+              node.span
+            )
+        }
+      case bic: BuiltInCallable =>
+        val (positional, _) = _evaluateArguments(node.arguments)
+        val _ = bic.callback(positional)
+      case other =>
+        throw SassException(s"Unsupported mixin callable: $other", node.span)
+    }
+    SassNull
+  }
+
+  /** Evaluates a function call by invoking a UserDefinedCallable whose
+    * declaration is a [[FunctionRule]]. Runs the function body in a fresh
+    * scope with parameters bound, catching [[ReturnSignal]] to capture the
+    * result.
+    */
+  private def _runUserDefinedFunction(
+    fr: FunctionRule,
+    positional: List[Value],
+    named: ListMap[String, Value]
+  ): Value = {
+    _environment.withSnapshot {
+      _bindParameters(fr.parameters, positional, named)
+      try {
+        for (statement <- fr.childrenList) {
+          val _ = statement.accept(this)
+        }
+        // Falling off the end of a function body with no @return is an error
+        // in Sass; return null for now (matches "null" result of no-op).
+        SassNull
+      } catch {
+        case rs: ReturnSignal => rs.value
+      }
+    }
+  }
+
+  /** Binds the supplied positional and named argument values to the
+    * declared parameters, applying defaults for any missing trailing
+    * parameters. Does not yet handle rest parameters, keyword rest, or
+    * error reporting for extras.
+    */
+  private def _bindParameters(
+    declared: ssg.sass.ast.sass.ParameterList,
+    positional: List[Value],
+    named: ListMap[String, Value]
+  ): Unit = {
+    val params = declared.parameters
+    var i = 0
+    while (i < params.length) {
+      val param = params(i)
+      val value: Value =
+        if (i < positional.length) positional(i)
+        else named.get(param.name) match {
+          case Some(v) => v
+          case scala.None =>
+            param.defaultValue.fold[Value] {
+              // Missing argument — bind to null for now. A full port would
+              // throw a "Missing argument" SassScriptException here.
+              SassNull
+            }(_.accept(this))
+        }
+      _environment.setVariable(param.name, value)
+      i += 1
+    }
+  }
+
+  /** Evaluates the positional and named expressions in [[args]] against the
+    * current environment, returning a `(positional, named)` pair. Rest and
+    * keyword-rest arguments are not yet expanded.
+    */
+  private def _evaluateArguments(
+    args: ssg.sass.ast.sass.ArgumentList
+  ): (List[Value], ListMap[String, Value]) = {
+    val positional = args.positional.map(_.accept(this))
+    var named: ListMap[String, Value] = ListMap.empty
+    for ((k, v) <- args.named) {
+      named = named.updated(k, v.accept(this))
+    }
+    (positional, named)
+  }
 
   // ===========================================================================
   // CssVisitor — stubs (Phase 19+)

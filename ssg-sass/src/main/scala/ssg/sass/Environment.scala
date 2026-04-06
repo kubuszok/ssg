@@ -16,6 +16,7 @@ package sass
 import scala.collection.mutable
 import scala.language.implicitConversions
 import ssg.sass.ast.AstNode
+import ssg.sass.ast.sass.ContentBlock
 import ssg.sass.value.Value
 
 /** The lexical environment in which Sass code is evaluated.
@@ -78,6 +79,38 @@ final class Environment() {
     scopes.push(mutable.Map.empty)
     try callback()
     finally { val _ = scopes.pop() }
+  }
+
+  /** Runs [body] in a fully isolated scope: saves a snapshot of variables,
+    * functions, and mixins, runs the body, then restores. Used when invoking
+    * user-defined callables where parameter bindings must not leak out.
+    */
+  def withSnapshot[T](body: => T): T = {
+    val savedVars = variables.clone()
+    val savedNodes = variableNodes.clone()
+    val savedFns = functions.clone()
+    val savedMix = mixins.clone()
+    val savedContent = _content
+    try body
+    finally {
+      variables.clear(); variables ++= savedVars
+      variableNodes.clear(); variableNodes ++= savedNodes
+      functions.clear(); functions ++= savedFns
+      mixins.clear(); mixins ++= savedMix
+      _content = savedContent
+    }
+  }
+
+  // --- Content block ---------------------------------------------------------
+
+  private var _content: Nullable[ContentBlock] = Nullable.empty
+
+  /** The currently-active `@content` block, if any. */
+  def content: Nullable[ContentBlock] = _content
+
+  /** Sets the currently-active `@content` block. */
+  def content_=(block: Nullable[ContentBlock]): Unit = {
+    _content = block
   }
 
   /** Creates a closure — a snapshot of the current environment that can be

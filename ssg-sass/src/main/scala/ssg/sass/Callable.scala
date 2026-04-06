@@ -15,7 +15,7 @@
 package ssg
 package sass
 
-import ssg.sass.ast.sass.{ParameterList, Statement}
+import ssg.sass.ast.sass.{CallableDeclaration, ParameterList, Statement}
 import ssg.sass.value.Value
 
 /** An interface for functions and mixins that can be invoked from Sass by
@@ -90,8 +90,10 @@ final class UserDefinedCallable[E](
   val inDependency: Boolean = false
 ) extends Callable {
 
-  // TODO: extract name from declaration
-  def name: String = "user-defined"
+  def name: String = declaration match {
+    case cd: CallableDeclaration => cd.name
+    case _ => "user-defined"
+  }
 
   override def toString: String = s"UserDefinedCallable($name)"
 }
