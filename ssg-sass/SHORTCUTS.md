@@ -82,11 +82,21 @@ or serializer.
 
 ---
 
-## HIGH — Evaluator and Serializer (3 items, but huge)
+## HIGH — Evaluator and Serializer
 
-### `visitor/EvaluateVisitor.scala`
-- ❌ `run(stylesheet)` — **large (1000+ lines)** — orchestrates entire pipeline
-- ❌ `runExpression(stylesheet, expression)` — large
+### `visitor/EvaluateVisitor.scala` ⚠️  MVP IMPLEMENTED
+- ✅ `run(stylesheet)` — builds CSS tree via ModifiableCssStylesheet
+- ✅ `runExpression(stylesheet, expression)`
+- ✅ All 17 expression visitor methods (binary/unary ops, booleans, numbers, strings, lists, maps, variables, functions, if, interpolation)
+- ✅ Statement builders: style rules, declarations, variables (guarded + global), control flow (@if/@for/@each/@while), comments, generic @-rules
+- ✅ Callables: @function/@mixin/@include/@return/@content with UserDefinedCallable dispatch
+- ✅ @media/@supports/@at-root rules building ModifiableCssMediaRule/SupportsRule
+- ✅ @import (static)
+- ⚠️  @use/@forward — recorded but no module loading (needs ImportCache)
+- ⚠️  @extend — no-op (needs ExtensionStore integration)
+- ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
+- ⚠️  Parameter binding: basic; rest/keyword-rest args deferred
+- ⚠️  Selector parent expansion (`&`) returns SassNull — needs selector parsing
 
 ### `visitor/SerializeVisitor.scala` ✅ MVP IMPLEMENTED
 - ✅ `serialize(node)` — expanded + compressed output styles

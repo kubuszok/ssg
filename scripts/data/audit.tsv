@@ -501,7 +501,7 @@ ssg-sass/src/main/scala/ssg/sass/visitor/ExpressionToCalcVisitor.scala	visitor	m
 ssg-sass/src/main/scala/ssg/sass/visitor/ReplaceExpressionVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
 ssg-sass/src/main/scala/ssg/sass/visitor/SourceInterpolationVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
 ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
-ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	minor_issues	no	2026-04-06	Large stub; main evaluation/serialization logic pending	
+ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	minor_issues	yes	2026-04-06	MVP: all expressions, statements, callables, modules (no file I/O), control flow. Full extend/function-dispatch/parent-selector TODO.	
 ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	minor_issues	yes	2026-04-06	MVP implementation: expanded/compressed styles, all 9 visit methods. 11/11 tests. Source maps and custom value formatting TODO.	
 ssg-sass/src/main/scala/ssg/sass/parse/Parser.scala	parse	pass	yes	2026-04-06	Tokenizer fully implemented: whitespace/comments/identifier/string/declarationValue/escape/naturalNumber. 6/6 tests passing.	
 ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	yes	2026-04-06	Minimum viable: parses style rules, variables, declarations, comments, generic @-rules. 18/18 tests. Expression parser is text-based; proper tokenizer TODO.	
@@ -538,11 +538,11 @@ ssg-sass/src/main/scala/ssg/sass/value/color/InterpolationMethod.scala	color	pas
 ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	value	pass	no	2026-04-06	Full SassColor value type	
 ssg-sass/src/main/scala/ssg/sass/Callable.scala	sass	minor_issues	no	2026-04-06	Callable trait skeleton	
 ssg-sass/src/main/scala/ssg/sass/Configuration.scala	sass	minor_issues	no	2026-04-06	Configuration skeleton	
-ssg-sass/src/main/scala/ssg/sass/Environment.scala	sass	minor_issues	no	2026-04-06	Environment skeleton	
+ssg-sass/src/main/scala/ssg/sass/Environment.scala	sass	minor_issues	yes	2026-04-06	setVariable/getVariable/setFunction/getFunction/setMixin/getMixin/withSnapshot/content all working. Closure semantics simplified.	
 ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala	sass	minor_issues	no	2026-04-06	EvaluationContext skeleton	
 ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	sass	minor_issues	no	2026-04-06	ImportCache skeleton	
 ssg-sass/src/main/scala/ssg/sass/Module.scala	sass	minor_issues	no	2026-04-06	Module skeleton	
 ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	sass	minor_issues	no	2026-04-06	StylesheetGraph skeleton	
-ssg-sass/src/main/scala/ssg/sass/Compile.scala	sass	minor_issues	no	2026-04-06	Compile entry-point skeleton	
+ssg-sass/src/main/scala/ssg/sass/Compile.scala	sass	pass	yes	2026-04-06	Wires Parser->Evaluator->Serializer. 14 integration tests passing. compile(path) requires file I/O (Phase 8).	
 ssg-sass/src/main/scala/ssg/sass/ColorNames.scala	sass	pass	no	2026-04-06	Full CSS named color table	
 ssg-sass/src/main/scala/ssg/sass/Nullable.scala	sass	pass	no	2026-04-06	Nullable opaque type for ssg-sass	
