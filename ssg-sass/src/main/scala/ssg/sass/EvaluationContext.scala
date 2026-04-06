@@ -24,6 +24,11 @@ trait EvaluationContext {
 
   /** Emits a warning with the given [message]. */
   def warn(message: String, deprecation: Boolean = false): Unit
+
+  /** Emits a deprecation warning tagged with the given [[Deprecation]]. Default forwards to `warn` with a `[id]` prefix so the id surfaces in the flat warnings list.
+    */
+  def warnForDeprecation(deprecation: Deprecation, message: String): Unit =
+    warn(s"[${deprecation.id}] $message", deprecation = true)
 }
 
 object EvaluationContext {
@@ -52,6 +57,10 @@ object EvaluationContext {
   /** Emits a warning via the current context, if any. */
   def warn(message: String, deprecation: Boolean = false): Unit =
     current.foreach(_.warn(message, deprecation))
+
+  /** Emits a deprecation warning via the current context, if any. */
+  def warnForDeprecation(deprecation: Deprecation, message: String): Unit =
+    current.foreach(_.warnForDeprecation(deprecation, message))
 }
 
 /** Holds a reference to the [[Environment]] currently active inside an [[ssg.sass.visitor.EvaluateVisitor]] invocation. Built-in callables (e.g. `mixin-exists`, `variable-exists`, `module-functions`)

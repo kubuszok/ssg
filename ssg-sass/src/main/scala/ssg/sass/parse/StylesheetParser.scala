@@ -98,6 +98,10 @@ abstract class StylesheetParser protected (
   /** Warnings discovered while parsing. */
   protected val warnings: mutable.ListBuffer[ParseTimeWarning] = mutable.ListBuffer.empty
 
+  /** Record a parse-time deprecation warning for later forwarding to the evaluator / caller. */
+  protected def warnDeprecation(deprecation: Deprecation, message: String, span: FileSpan): Unit =
+    warnings += ParseTimeWarning(Nullable(deprecation), span, message)
+
   /** Whether this parser emits plain CSS. Overridden by [[CssParser]]. */
   def plainCss: Boolean = false
 
@@ -871,6 +875,22 @@ abstract class StylesheetParser protected (
           }
         Nullable(new AtRootRule(wrapped, spanFrom(start)))
       case _ =>
+        // Deprecation detection for at-rules we don't specially handle.
+        name match {
+          case "elseif" =>
+            warnDeprecation(
+              Deprecation.Elseif,
+              "@elseif is deprecated and will not be supported in future Sass versions. Recommendation: @else if.",
+              spanFrom(start)
+            )
+          case "-moz-document" =>
+            warnDeprecation(
+              Deprecation.MozDocument,
+              "@-moz-document is deprecated and support will be removed in Dart Sass 2.0.0. For details, see https://sass-lang.com/d/moz-document.",
+              spanFrom(start)
+            )
+          case _ => ()
+        }
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()
         while (!scanner.isDone) {

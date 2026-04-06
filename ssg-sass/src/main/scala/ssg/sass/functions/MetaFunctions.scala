@@ -66,11 +66,17 @@ object MetaFunctions {
     BuiltInCallable.function("inspect", "$value", args => SassString(args.head.toString, hasQuotes = false))
 
   private val featureExistsFn: BuiltInCallable =
-    BuiltInCallable.function("feature-exists",
-                             "$feature",
-                             _ =>
-                               // Deprecated; we don't claim to support any features.
-                               SassBoolean.sassFalse
+    BuiltInCallable.function(
+      "feature-exists",
+      "$feature",
+      _ => {
+        EvaluationContext.warnForDeprecation(
+          Deprecation.FeatureExists,
+          "The feature-exists() function is deprecated. Recommendation: remove all usage — no new Sass features require this check."
+        )
+        // Deprecated; we don't claim to support any features.
+        SassBoolean.sassFalse
+      }
     )
 
   private val variableExistsFn: BuiltInCallable =

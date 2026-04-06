@@ -4,6 +4,48 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Deprecation framework (ISS-057, ISS-058)
+
+- `ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala` — trait now
+  exposes `warnForDeprecation(d: Deprecation, message: String)` with a
+  default that tags messages with `[id]`. Companion object has a
+  matching static `warnForDeprecation` that forwards to `current`.
+- `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
+  visitor now extends `EvaluationContext`, pushes itself via
+  `EvaluationContext.withContext` at the top of `run()`, and forwards
+  parse-time warnings from `stylesheet.parseTimeWarnings` into
+  `_warnings` using the same `DEPRECATION WARNING [id]: message`
+  format as runtime emissions. `warn` / `warnForDeprecation` overrides
+  append to `_warnings` and also fan out to the configured `_logger`.
+- `ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala` — new
+  `warnDeprecation(d, message, span)` helper that pushes a
+  `ParseTimeWarning`; `_atRule` now emits `elseif` and `moz-document`
+  deprecations when it encounters `@elseif` or `@-moz-document` in the
+  generic at-rule fallback branch.
+- `ssg-sass/src/main/scala/ssg/sass/logger/DeprecationProcessing.scala`
+  — thin factory / default shim around the existing
+  `DeprecationProcessingLogger` (silence / fatal / future /
+  repetition-limited) already defined in `Logger.scala`.
+- **Deprecations emitted at runtime**:
+  - `slash-div` — `EvaluateVisitor.visitBinaryOperationExpression`
+    on `number / number`.
+  - `elseif` — `StylesheetParser._atRule` on `@elseif` (parse-time).
+  - `moz-document` — `StylesheetParser._atRule` on `@-moz-document`
+    (parse-time).
+  - `color-functions` — `ColorFunctions` on `lighten`, `darken`,
+    `saturate`, `desaturate`, `opacify`, `transparentize`.
+  - `color-module-compat` — `ColorFunctions` on `rgb($color, $alpha)`
+    two-arg form.
+  - `null-alpha` — `ColorFunctions` on `rgb/rgba(r, g, b, null)`.
+  - `abs-percent` — `EvaluateVisitor._evaluateCalculation` on
+    `abs(<percent>)`.
+  - `feature-exists` — `MetaFunctions` on every call.
+- `ssg-sass/src/test/scala/ssg/sass/DeprecationSuite.scala` — 14 cases
+  covering each emitted deprecation plus `DeprecationProcessingLogger`
+  forwarding and silencing.
+
+All 3 platforms: JVM / JS / Native 594/594 green (+14 per platform).
+
 ### Strict `CssParser` for plain CSS (ISS-019)
 
 - `ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala` — previously a

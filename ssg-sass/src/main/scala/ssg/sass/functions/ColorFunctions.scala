@@ -100,9 +100,19 @@ object ColorFunctions {
             val r = scalar(args(0).assertNumber(), 255)
             val g = scalar(args(1).assertNumber(), 255)
             val b = scalar(args(2).assertNumber(), 255)
-            val a = scalar(args(3).assertNumber())
+            if (args(3) eq SassNull) {
+              EvaluationContext.warnForDeprecation(
+                Deprecation.NullAlpha,
+                "Passing null as the alpha channel to rgb()/rgba() is deprecated. Recommendation: use `none` or omit the alpha argument."
+              )
+            }
+            val a = if (args(3) eq SassNull) 1.0 else scalar(args(3).assertNumber())
             rgbFrom(r, g, b, a)
           case 2 =>
+            EvaluationContext.warnForDeprecation(
+              Deprecation.ColorModuleCompat,
+              "Passing a color and alpha to the global rgb()/rgba() is deprecated. Recommendation: color.change($color, $alpha: ...)."
+            )
             val color = args(0).assertColor()
             val a     = scalar(args(1).assertNumber())
             color.changeAlpha(clamp(a, 0, 1))
@@ -681,19 +691,17 @@ object ColorFunctions {
     else
       v match {
         case s: SassString => Some(ColorSpace.fromName(s.text))
-        case other         => Some(ColorSpace.fromName(other.assertString().text))
+        case other => Some(ColorSpace.fromName(other.assertString().text))
       }
 
-  /** Parse a string argument (for channel / space / method names). Unquoted SassString
-    * is the canonical representation; quoted strings are also accepted.
+  /** Parse a string argument (for channel / space / method names). Unquoted SassString is the canonical representation; quoted strings are also accepted.
     */
   private def strArg(v: Value): String = v match {
     case s: SassString => s.text
-    case other         => other.assertString().text
+    case other => other.assertString().text
   }
 
-  /** Build a SassNumber for a channel value, attaching the channel's associated unit
-    * (e.g. "deg" for hue, "%" for hsl saturation/lightness when not normalized).
+  /** Build a SassNumber for a channel value, attaching the channel's associated unit (e.g. "deg" for hue, "%" for hsl saturation/lightness when not normalized).
     */
   private def channelNumber(value: Double, channel: ssg.sass.value.color.ColorChannel): SassNumber = {
     val unit = channel.associatedUnit
@@ -875,8 +883,7 @@ object ColorFunctions {
     scaleColorFn
   )
 
-  /** Color Module 4 introspection entry points — only registered under the
-    * `sass:color` module (not as globals).
+  /** Color Module 4 introspection entry points — only registered under the `sass:color` module (not as globals).
     */
   private val moduleOnly: List[Callable] = List(
     channelFn,

@@ -33,7 +33,21 @@ object MathFunctions {
       }
     )
 
-  private val absFn:   BuiltInCallable = numericUnary("abs", math.abs)
+  private val absFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "abs",
+      "$number",
+      { args =>
+        val n = args.head.assertNumber()
+        if (n.hasUnit("%")) {
+          EvaluationContext.warnForDeprecation(
+            Deprecation.AbsPercent,
+            "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module) or abs($number * 1%) to keep the unit."
+          )
+        }
+        SassNumber.withUnits(math.abs(n.value), n.numeratorUnits, n.denominatorUnits)
+      }
+    )
   private val ceilFn:  BuiltInCallable = numericUnary("ceil", v => math.ceil(v))
   private val floorFn: BuiltInCallable = numericUnary("floor", v => math.floor(v))
   private val roundFn: BuiltInCallable = numericUnary("round", v => math.round(v).toDouble)

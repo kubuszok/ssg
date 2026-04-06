@@ -145,7 +145,29 @@ final class EvaluateVisitor(
 ) extends StatementVisitor[Value]
     with ExpressionVisitor[Value]
     with IfConditionExpressionVisitor[Any]
-    with CssVisitor[Value] {
+    with CssVisitor[Value]
+    with ssg.sass.EvaluationContext {
+
+  // ---------------------------------------------------------------------------
+  // EvaluationContext — deprecation / warning emission
+  // ---------------------------------------------------------------------------
+
+  override def currentCallableNode: ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode]
+
+  override def warn(message: String, deprecation: Boolean = false): Unit = {
+    if (deprecation) {
+      _warnings += s"DEPRECATION WARNING: $message"
+      _logger.warn(message, deprecation = Nullable(Deprecation.UserAuthored))
+    } else {
+      _warnings += s"WARNING: $message"
+      _logger.warn(message)
+    }
+  }
+
+  override def warnForDeprecation(deprecation: Deprecation, message: String): Unit = {
+    _warnings += s"DEPRECATION WARNING [${deprecation.id}]: $message"
+    _logger.warnForDeprecation(deprecation, message)
+  }
 
   // ---------------------------------------------------------------------------
   // State
@@ -266,7 +288,14 @@ final class EvaluateVisitor(
     val savedMixinInv = ssg.sass.CurrentMixinInvoker.set(
       Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeMixinCallable(c, pos, named, Nullable.empty))
     )
-    try {
+    try ssg.sass.EvaluationContext.withContext(this) {
+      // Forward any warnings discovered during parsing into the evaluator's
+      // warning buffer so they surface on CompileResult.warnings.
+      for (ptw <- stylesheet.parseTimeWarnings) {
+        ptw.deprecation.fold(_warnings += s"WARNING: ${ptw.message}") { d =>
+          _warnings += s"DEPRECATION WARNING [${d.id}]: ${ptw.message}"
+        }
+      }
       visitStylesheet(stylesheet)
       // Apply basic `@extend` rewrites before serialising.
       _applyExtends(root)
@@ -345,7 +374,11 @@ final class EvaluateVisitor(
       case BinaryOperator.Plus                => left.plus(node.right.accept(this))
       case BinaryOperator.Minus               => left.minus(node.right.accept(this))
       case BinaryOperator.Times               => left.times(node.right.accept(this))
-      case BinaryOperator.DividedBy           => left.dividedBy(node.right.accept(this))
+      case BinaryOperator.DividedBy           =>
+        val rightVal = node.right.accept(this)
+        if (left.isInstanceOf[SassNumber] && rightVal.isInstanceOf[SassNumber])
+          warnForDeprecation(Deprecation.SlashDiv, "Using / for division is deprecated and will be removed in Dart Sass 2.0.0. Recommendation: math.div($left, $right) or calc($left / $right).")
+        left.dividedBy(rightVal)
       case BinaryOperator.Modulo              => left.modulo(node.right.accept(this))
     }
   } catch {
@@ -659,7 +692,13 @@ final class EvaluateVisitor(
         case "asin" if converted.length == 1  => SassCalculation.asin(converted.head)
         case "acos" if converted.length == 1  => SassCalculation.acos(converted.head)
         case "atan" if converted.length == 1  => SassCalculation.atan(converted.head)
-        case "abs" if converted.length == 1   => SassCalculation.abs(converted.head)
+        case "abs" if converted.length == 1   =>
+          converted.head match {
+            case n: SassNumber if n.hasUnit("%") =>
+              warnForDeprecation(Deprecation.AbsPercent, "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module).")
+            case _ => ()
+          }
+          SassCalculation.abs(converted.head)
         case "sign" if converted.length == 1  => SassCalculation.sign(converted.head)
         case "exp" if converted.length == 1   => SassCalculation.exp(converted.head)
         case "atan2" if converted.length == 2 => SassCalculation.atan2(converted(0), Nullable(converted(1)))
