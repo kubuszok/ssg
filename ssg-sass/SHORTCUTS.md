@@ -84,6 +84,26 @@ or serializer.
   style rule is placed inside the media rule, and the media rule
   attaches to the nearest non-style parent, producing the expected
   Sass output `@media (q) { .a { color: red; } }`.
+- ✅ `@supports <condition> { body }` — parsed in `_atRule` reusing
+  the same bracket/interpolation-aware condition scanner as `@media`.
+  One balanced outer `(...)` layer is stripped before wrapping the
+  result in `SupportsAnything(Interpolation)` so
+  `_visitSupportsCondition` re-adds a single pair of parens at
+  serialize time. Handles `@supports (display: grid)`,
+  `@supports (a) and (b)`, and `#{...}` interpolation in the
+  condition. `visitSupportsRule` mirrors the media bubbling pattern:
+  when nested inside a style rule, the supports rule attaches to the
+  nearest non-style parent and a clone of the enclosing style rule
+  is placed inside it.
+- ✅ `@keyframes <name> { <block>* }` (plus `-webkit-`/`-moz-`/`-o-`/
+  `-ms-` prefixed variants) — parsed in `_atRule`. The body is a
+  sequence of keyframe blocks where each block is a comma-separated
+  selector list followed by a declaration block parsed via
+  `_children()`. Selectors `from`/`to` are normalized to
+  `0%`/`100%`. The whole rule is represented as a generic `AtRule`
+  whose `childStatements` are `StyleRule` nodes with the
+  (normalized) keyframe selector text, which the existing
+  evaluator/serializer handle without changes.
 
 ### `parse/ScssParser.scala` ✅ IMPLEMENTED
 - ✅ `styleRuleSelector()` — collects raw selector text

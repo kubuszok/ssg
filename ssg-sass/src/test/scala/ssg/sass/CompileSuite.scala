@@ -708,4 +708,105 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("@media (max-width: 600px)"), result.css)
     assert(result.css.contains(".a{color:red;}"), result.css)
   }
+
+  // ---------------------------------------------------------------------------
+  // @supports
+  // ---------------------------------------------------------------------------
+
+  test("@supports with single condition compiles") {
+    val result = Compile.compileString(
+      "@supports (display: grid) { .a { color: red; } }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@supports (display: grid)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("@supports with `and` operator preserves both conditions") {
+    val result = Compile.compileString(
+      "@supports (display: grid) and (color: red) { .a { color: red; } }",
+      OutputStyle.Compressed
+    )
+    assert(
+      result.css.contains("(display: grid) and (color: red)"),
+      result.css
+    )
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("@supports supports #{...} interpolation in the condition") {
+    val result = Compile.compileString(
+      """
+        $prop: display;
+        @supports (#{$prop}: grid) { .a { color: red; } }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@supports (display: grid)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("nested @supports inside style rule bubbles out") {
+    val result = Compile.compileString(
+      ".a { @supports (display: grid) { color: red; } }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@supports (display: grid)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+    val atIdx   = result.css.indexOf("@supports")
+    val ruleIdx = result.css.indexOf(".a{color:red;}")
+    assert(atIdx >= 0 && ruleIdx > atIdx, result.css)
+  }
+
+  // ---------------------------------------------------------------------------
+  // @keyframes
+  // ---------------------------------------------------------------------------
+
+  test("@keyframes with percent selectors compiles") {
+    val result = Compile.compileString(
+      """
+        @keyframes spin {
+          0% { opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@keyframes spin"), result.css)
+    assert(result.css.contains("0%{opacity:0;}"), result.css)
+    assert(result.css.contains("50%{opacity:"), result.css)
+    assert(result.css.contains("100%{opacity:1;}"), result.css)
+  }
+
+  test("@keyframes maps from/to to 0%/100%") {
+    val result = Compile.compileString(
+      """
+        @keyframes fade {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@keyframes fade"), result.css)
+    assert(result.css.contains("0%{opacity:0;}"), result.css)
+    assert(result.css.contains("100%{opacity:1;}"), result.css)
+    assert(!result.css.contains("from{"), result.css)
+    assert(!result.css.contains("to{"), result.css)
+  }
+
+  test("@keyframes supports comma-separated selectors") {
+    val result = Compile.compileString(
+      """
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@keyframes pulse"), result.css)
+    assert(result.css.contains("0%, 100%"), result.css)
+  }
 }

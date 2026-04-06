@@ -57,6 +57,8 @@ import ssg.sass.ast.sass.{
   StringExpression,
   StyleRule,
   Stylesheet,
+  SupportsAnything,
+  SupportsRule,
   UnaryOperationExpression,
   UnaryOperator,
   UseRule,
@@ -461,6 +463,163 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val kids = _children()
         Nullable(new MediaRule(queryInterp, kids, spanFrom(start)))
+      case "supports" =>
+        // @supports <condition> { body }
+        // The condition text is collected up to the opening `{`, respecting
+        // balanced parens, `#{...}` interpolations, and string literals so
+        // that a `{` inside interpolation does not terminate the condition.
+        whitespace(consumeNewlines = true)
+        val cStart = scanner.state
+        val cBuf   = new StringBuilder()
+        var cDepth = 0
+        var cQuote: Int = 0
+        boundary {
+          while (!scanner.isDone) {
+            val ch = scanner.peekChar()
+            if (ch < 0) break(())
+            if (cQuote > 0) {
+              if (ch == CharCode.$backslash) {
+                cBuf.append(scanner.readChar().toChar)
+                if (!scanner.isDone) cBuf.append(scanner.readChar().toChar)
+              } else {
+                if (ch == cQuote) cQuote = 0
+                cBuf.append(scanner.readChar().toChar)
+              }
+            } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+              cQuote = ch
+              cBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+              // Copy an entire `#{...}` interpolation verbatim, balancing
+              // nested braces within so an inner `{` / `}` does not end
+              // the condition.
+              cBuf.append(scanner.readChar().toChar) // '#'
+              cBuf.append(scanner.readChar().toChar) // '{'
+              var iDepth = 1
+              boundary {
+                while (!scanner.isDone) {
+                  val cc = scanner.peekChar()
+                  if (cc < 0) break(())
+                  if (cc == CharCode.$lbrace) iDepth += 1
+                  else if (cc == CharCode.$rbrace) {
+                    iDepth -= 1
+                    cBuf.append(scanner.readChar().toChar)
+                    if (iDepth == 0) break(())
+                  } else {
+                    cBuf.append(scanner.readChar().toChar)
+                  }
+                }
+              }
+            } else if (ch == CharCode.$lparen) {
+              cDepth += 1
+              cBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$rparen) {
+              if (cDepth > 0) cDepth -= 1
+              cBuf.append(scanner.readChar().toChar)
+            } else if (cDepth == 0 && (ch == CharCode.$lbrace || ch == CharCode.$semicolon)) {
+              break(())
+            } else {
+              cBuf.append(scanner.readChar().toChar)
+            }
+          }
+        }
+        val condRawAll = cBuf.toString().trim
+        val condSpan   = spanFrom(cStart)
+        // `SupportsAnything` renders as `(<contents>)` in the evaluator,
+        // so strip one balanced outer `(...)` layer when the source
+        // already provided one (`@supports (display: grid)`). Conditions
+        // like `(a) and (b)` leave the outer pair absent and are kept
+        // verbatim.
+        val condInnerText =
+          if (
+            condRawAll.length >= 2 && condRawAll.charAt(0) == '(' &&
+            condRawAll.charAt(condRawAll.length - 1) == ')'
+          ) {
+            var outerBalanced = true
+            var pd            = 0
+            var i             = 0
+            while (i < condRawAll.length && outerBalanced) {
+              val ch = condRawAll.charAt(i)
+              if (ch == '(') pd += 1
+              else if (ch == ')') {
+                pd -= 1
+                if (pd == 0 && i != condRawAll.length - 1) outerBalanced = false
+              }
+              i += 1
+            }
+            if (outerBalanced) condRawAll.substring(1, condRawAll.length - 1).trim
+            else condRawAll
+          } else condRawAll
+        val innerInterp =
+          if (condInnerText.isEmpty) Interpolation.plain("", condSpan)
+          else _parseInterpolatedString(condInnerText, condSpan)
+        whitespace(consumeNewlines = true)
+        val supportsKids = _children()
+        val condition    = SupportsAnything(innerInterp, condSpan)
+        Nullable(new SupportsRule(condition, supportsKids, spanFrom(start)))
+      case "keyframes" | "-webkit-keyframes" | "-moz-keyframes" | "-o-keyframes" | "-ms-keyframes" =>
+        // @keyframes <name> { <keyframe-block>* }
+        // Each keyframe block is `<selector-list> { <declaration>* }`
+        // where each selector is `0%`, `50%`, `from`, or `to`. We
+        // represent the whole keyframes rule as a generic `AtRule` whose
+        // children are `StyleRule`s with the (normalized) selector text.
+        whitespace(consumeNewlines = true)
+        val kfNameBuf = new StringBuilder()
+        while (
+          !scanner.isDone && scanner.peekChar() != CharCode.$lbrace &&
+          scanner.peekChar() != CharCode.$space && scanner.peekChar() != CharCode.$tab &&
+          scanner.peekChar() != CharCode.$lf && scanner.peekChar() != CharCode.$cr
+        )
+          kfNameBuf.append(scanner.readChar().toChar)
+        val kfName = kfNameBuf.toString()
+        whitespace(consumeNewlines = true)
+        scanner.expectChar(CharCode.$lbrace)
+        whitespace(consumeNewlines = true)
+        val kfBlocks = mutable.ListBuffer.empty[Statement]
+        while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+          val blockStart = scanner.state
+          // Read selector text up to `{`, splitting comma-separated
+          // entries and normalizing `from`/`to`.
+          val selBuf = new StringBuilder()
+          while (!scanner.isDone && scanner.peekChar() != CharCode.$lbrace && scanner.peekChar() != CharCode.$rbrace)
+            selBuf.append(scanner.readChar().toChar)
+          val rawSel = selBuf.toString().trim
+          if (rawSel.isEmpty) {
+            // Malformed: abort remainder of body.
+            while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+              val _ = scanner.readChar()
+            }
+          } else {
+            val normSel = rawSel
+              .split(',')
+              .toList
+              .map(_.trim)
+              .map {
+                case "from" => "0%"
+                case "to"   => "100%"
+                case other  => other
+              }
+              .mkString(", ")
+            val selSpan   = spanFrom(blockStart)
+            val selInterp = Interpolation.plain(normSel, selSpan)
+            val blockKids = _children()
+            kfBlocks += StyleRule(selInterp, blockKids, spanFrom(blockStart))
+          }
+          whitespace(consumeNewlines = true)
+        }
+        scanner.expectChar(CharCode.$rbrace)
+        val nameSpan     = spanFrom(start)
+        val atNameInterp = Interpolation.plain(name, nameSpan)
+        val atValue      =
+          if (kfName.isEmpty) Nullable.empty[Interpolation]
+          else Nullable(Interpolation.plain(kfName, nameSpan))
+        Nullable(
+          new AtRule(
+            name = atNameInterp,
+            span = spanFrom(start),
+            value = atValue,
+            childStatements = Nullable(kfBlocks.toList)
+          )
+        )
       case _ =>
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()

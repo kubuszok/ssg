@@ -38,9 +38,9 @@ final case class SerializeResult(css: String, sourceMap: Nullable[String] = Null
 
 /** A visitor that converts a CSS AST into CSS text. */
 final class SerializeVisitor(
-  val style:        String = OutputStyle.Expanded,
-  val inspect:      Boolean = false,
-  val sourceMap:    Boolean = false
+  val style:     String = OutputStyle.Expanded,
+  val inspect:   Boolean = false,
+  val sourceMap: Boolean = false
 ) extends CssVisitor[Unit] {
 
   private val buffer = new StringBuilder()
@@ -79,9 +79,8 @@ final class SerializeVisitor(
     }
     genLine = line
     genCol = col
-    while (segmentsByLine.length <= line) {
+    while (segmentsByLine.length <= line)
       segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
-    }
   }
 
   /** Records a source-map entry at the current generated cursor for the given source span. */
@@ -117,9 +116,9 @@ final class SerializeVisitor(
 
   /** Builds a v3 source map JSON object from the recorded segments. */
   private def buildSourceMapJson(): String = {
-    val sources = sourcesList.toList
+    val sources  = sourcesList.toList
     val mappings = encodeMappings()
-    val sb = new StringBuilder()
+    val sb       = new StringBuilder()
     sb.append("{\"version\":3,\"sources\":[")
     var first = true
     for (s <- sources) {
@@ -157,7 +156,7 @@ final class SerializeVisitor(
 
   /** VLQ-encodes the recorded segments into a source map "mappings" string. */
   private def encodeMappings(): String = {
-    val sb = new StringBuilder()
+    val sb          = new StringBuilder()
     var prevSrcIdx  = 0
     var prevSrcLine = 0
     var prevSrcCol  = 0
@@ -165,7 +164,7 @@ final class SerializeVisitor(
     val totalLines  = segmentsByLine.length
     while (lineIdx < totalLines) {
       if (lineIdx > 0) sb.append(';')
-      val segs = segmentsByLine(lineIdx)
+      val segs       = segmentsByLine(lineIdx)
       var prevGenCol = 0
       var first      = true
       for ((gc, si, sl, sc) <- segs) {
@@ -378,8 +377,8 @@ object SerializeVisitor {
 
   /** VLQ-encode a single signed integer into the base64 form used by source maps. */
   def vlqEncode(value: Int): String = {
-    var v = if (value < 0) (-value << 1) | 1 else value << 1
-    val sb = new StringBuilder()
+    var v    = if (value < 0) (-value << 1) | 1 else value << 1
+    val sb   = new StringBuilder()
     var more = true
     while (more) {
       var digit = v & 0x1f

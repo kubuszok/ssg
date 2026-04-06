@@ -919,10 +919,39 @@ final class EvaluateVisitor(
     val conditionText = _visitSupportsCondition(node.condition)
     val cssCondition  = new CssValue[String](conditionText, node.condition.span)
     val rule          = new ModifiableCssSupportsRule(cssCondition, node.span)
-    _withParent(rule) {
-      _withScope {
-        for (statement <- node.children.get) {
-          val _ = statement.accept(this)
+
+    // Sass supports-bubbling (mirrors @media): when a `@supports` rule
+    // appears inside a style rule, the supports rule itself attaches to
+    // the nearest non-style parent and a clone of the enclosing style
+    // rule is placed inside the supports rule to hold the nested
+    // children. `.a { @supports (q) { color: red; } }` serializes as
+    // `@supports (q) { .a { color: red; } }`.
+    val enclosingStyleRule = _styleRule
+    if (enclosingStyleRule.isDefined) {
+      val savedParent = _parent
+      val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
+      _parent = Nullable(nearestNonStyle)
+      try
+        _withParent(rule) {
+          val outer     = enclosingStyleRule.get
+          val innerRule = outer.copyWithoutChildren()
+          _withParent(innerRule) {
+            _withStyleRule(innerRule) {
+              _withScope {
+                for (statement <- node.children.get) {
+                  val _ = statement.accept(this)
+                }
+              }
+            }
+          }
+        }
+      finally _parent = savedParent
+    } else {
+      _withParent(rule) {
+        _withScope {
+          for (statement <- node.children.get) {
+            val _ = statement.accept(this)
+          }
         }
       }
     }
