@@ -14,12 +14,12 @@ package ssg
 package sass
 package value
 
-import ssg.sass.Nullable
+import ssg.sass.{Callable, Nullable}
 import ssg.sass.visitor.ValueVisitor
 
 /** A SassScript function reference. */
 final class SassFunction(
-  val callable: Any // TODO: Replace with Callable type in Phase 8
+  val callable: Callable
 ) extends Value {
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitFunction(this)

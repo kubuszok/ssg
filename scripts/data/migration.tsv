@@ -1368,17 +1368,17 @@ dart-sass	lib/src/ast/selector/universal.dart		ported	ssg-sass	2026-04-05	Merged
 dart-sass	lib/src/async_compile.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
 dart-sass	lib/src/async_environment.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
 dart-sass	lib/src/async_import_cache.dart		skipped	ssg-sass	2026-04-05	Async variant — not needed		2026-03-30
-dart-sass	lib/src/callable.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/callable/async.dart		skipped	ssg-sass	2026-04-05	Async callable — not needed		2026-03-30
-dart-sass	lib/src/callable/async_built_in.dart		skipped	ssg-sass	2026-04-05	Async built-in callable — not needed		2026-03-30
-dart-sass	lib/src/callable/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/callable/plain_css.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/callable/user_defined.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/callable.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/callable/async.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/callable/async_built_in.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/callable/built_in.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/callable/plain_css.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/callable/user_defined.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
 dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-04-05	Depends on SassColor (Phase 3c complete) — can port now but deferred to when serializer needs it		2026-03-30
 dart-sass	lib/src/compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/configuration.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/configured_value.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/configuration.dart	ssg-sass/src/main/scala/ssg/sass/Configuration.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/configured_value.dart	ssg-sass/src/main/scala/ssg/sass/Configuration.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/deprecation.dart	ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/embedded/compilation_dispatcher.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/embedded/executable.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
@@ -1396,8 +1396,8 @@ dart-sass	lib/src/embedded/util/length_delimited_transformer.dart		skipped	ssg-s
 dart-sass	lib/src/embedded/util/proto_extensions.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/embedded/util/varint_builder.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
 dart-sass	lib/src/embedded/utils.dart		skipped	ssg-sass	2026-04-05	Protobuf embedded compiler protocol — not needed for SSG		2026-03-30
-dart-sass	lib/src/environment.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/evaluation_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/environment.dart	ssg-sass/src/main/scala/ssg/sass/Environment.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/evaluation_context.dart	ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/exception.dart	ssg-sass/src/main/scala/ssg/sass/SassException.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/executable/compile_stylesheet.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/executable/concurrent.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
@@ -1406,12 +1406,12 @@ dart-sass	lib/src/executable/concurrent/vm.dart		skipped	ssg-sass	2026-04-05	CLI
 dart-sass	lib/src/executable/options.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/executable/repl.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
 dart-sass	lib/src/executable/watch.dart		skipped	ssg-sass	2026-04-05	CLI binary — SSG has its own entry point		2026-03-30
-dart-sass	lib/src/extend/empty_extension_store.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/extend/extension.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/extend/extension_store.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/extend/functions.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/extend/merged_extension.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/extend/mode.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/extend/empty_extension_store.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
+dart-sass	lib/src/extend/extension.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
+dart-sass	lib/src/extend/extension_store.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
+dart-sass	lib/src/extend/functions.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
+dart-sass	lib/src/extend/merged_extension.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
+dart-sass	lib/src/extend/mode.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
 dart-sass	lib/src/functions.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/functions/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/functions/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
@@ -1420,24 +1420,24 @@ dart-sass	lib/src/functions/math.dart		not_started	ssg-sass	2026-03-30			2026-03
 dart-sass	lib/src/functions/meta.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/functions/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
 dart-sass	lib/src/functions/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/import_cache.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/async.dart		skipped	ssg-sass	2026-04-05	Async importer — not needed		2026-03-30
-dart-sass	lib/src/importer/canonicalize_context.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/filesystem.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/js_to_dart/async.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
-dart-sass	lib/src/importer/js_to_dart/async_file.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
-dart-sass	lib/src/importer/js_to_dart/file.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
-dart-sass	lib/src/importer/js_to_dart/sync.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
-dart-sass	lib/src/importer/js_to_dart/utils.dart		skipped	ssg-sass	2026-04-05	Node.js-specific importer wrappers		2026-03-30
-dart-sass	lib/src/importer/legacy_node.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
-dart-sass	lib/src/importer/legacy_node/implementation.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
-dart-sass	lib/src/importer/legacy_node/interface.dart		skipped	ssg-sass	2026-04-05	Legacy Node.js importer — not needed for SSG		2026-03-30
-dart-sass	lib/src/importer/no_op.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/node_package.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/package.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/importer/utils.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/import_cache.dart	ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/importer.dart	ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/importer/async.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/canonicalize_context.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/filesystem.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/async.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/async_file.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/file.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/sync.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/js_to_dart/utils.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/legacy_node.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/legacy_node/implementation.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/legacy_node/interface.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/no_op.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/node_package.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/package.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/result.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/importer/utils.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
 dart-sass	lib/src/interpolation_buffer.dart	ssg-sass/src/main/scala/ssg/sass/InterpolationBuffer.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/interpolation_map.dart	ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/io.dart		skipped	ssg-sass	2026-04-05	Dart VM I/O — SSG provides its own abstraction		2026-03-30
@@ -1503,10 +1503,10 @@ dart-sass	lib/src/logger/deprecation_processing.dart	ssg-sass/src/main/scala/ssg
 dart-sass	lib/src/logger/js_to_dart.dart		skipped	ssg-sass	2026-04-05	JS-specific logger — not needed		2026-03-30
 dart-sass	lib/src/logger/stderr.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	StderrLogger merged into Logger.scala		2026-03-30
 dart-sass	lib/src/logger/tracking.dart	ssg-sass/src/main/scala/ssg/sass/Logger.scala	ported	ssg-sass	2026-04-05	TrackingLogger merged into Logger.scala		2026-03-30
-dart-sass	lib/src/module.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/module/built_in.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/module/forwarded_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/module/shadowed_view.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/module.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/module/built_in.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/module/forwarded_view.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
+dart-sass	lib/src/module/shadowed_view.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
 dart-sass	lib/src/parse/at_root_query.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
 dart-sass	lib/src/parse/css.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
 dart-sass	lib/src/parse/keyframe_selector.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
@@ -1516,7 +1516,7 @@ dart-sass	lib/src/parse/sass.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton p
 dart-sass	lib/src/parse/scss.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
 dart-sass	lib/src/parse/selector.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
 dart-sass	lib/src/parse/stylesheet.dart		ported	ssg-sass	2026-04-06	Phase 6 skeleton parsers — full implementation deferred		2026-03-30
-dart-sass	lib/src/stylesheet_graph.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/stylesheet_graph.dart	ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/syntax.dart	ssg-sass/src/main/scala/ssg/sass/Syntax.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/box.dart	ssg-sass/src/main/scala/ssg/sass/util/Box.scala	ported	ssg-sass	2026-04-05			2026-03-30
 dart-sass	lib/src/util/character.dart	ssg-sass/src/main/scala/ssg/sass/util/CharCode.scala	ported	ssg-sass	2026-04-05	Ported in Phase 0		2026-03-30

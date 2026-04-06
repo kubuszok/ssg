@@ -1,0 +1,96 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Ported from: lib/src/environment.dart
+ * Original: Copyright (c) 2016 Google Inc.
+ * Original license: MIT
+ *
+ * Migration notes:
+ *   Renames: environment.dart -> Environment.scala
+ *   Convention: Skeleton — public API surface only, TODOs for scope logic
+ */
+package ssg
+package sass
+
+import scala.collection.mutable
+import scala.language.implicitConversions
+import ssg.sass.ast.AstNode
+import ssg.sass.value.Value
+
+/** The lexical environment in which Sass code is evaluated.
+  *
+  * Tracks variables, functions, mixins, modules and their scopes.
+  * TODO: full scope chain, module imports, configuration, forwards.
+  */
+final class Environment() {
+
+  private val variables: mutable.Map[String, Value] = mutable.Map.empty
+  private val variableNodes: mutable.Map[String, AstNode] = mutable.Map.empty
+  private val functions: mutable.Map[String, Callable] = mutable.Map.empty
+  private val mixins: mutable.Map[String, Callable] = mutable.Map.empty
+  private val scopes: mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
+
+  /** Returns the value of the variable named [name], or `Nullable.empty` if
+    * none exists.
+    */
+  def getVariable(name: String): Nullable[Value] =
+    variables.get(name) match {
+      case Some(v) => v
+      case scala.None => Nullable.empty
+    }
+
+  /** Sets the variable named [name] to [value]. */
+  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
+    variables(name) = value
+    nodeWithSpan.foreach(n => variableNodes(name) = n)
+  }
+
+  /** Returns whether a variable named [name] exists. */
+  def variableExists(name: String): Boolean = variables.contains(name)
+
+  /** Returns the function callable with the given [name], or `Nullable.empty`. */
+  def getFunction(name: String): Nullable[Callable] =
+    functions.get(name) match {
+      case Some(c) => c
+      case scala.None => Nullable.empty
+    }
+
+  /** Sets a function in this environment. */
+  def setFunction(callable: Callable): Unit = {
+    functions(callable.name) = callable
+  }
+
+  /** Returns the mixin callable with the given [name], or `Nullable.empty`. */
+  def getMixin(name: String): Nullable[Callable] =
+    mixins.get(name) match {
+      case Some(c) => c
+      case scala.None => Nullable.empty
+    }
+
+  /** Sets a mixin in this environment. */
+  def setMixin(callable: Callable): Unit = {
+    mixins(callable.name) = callable
+  }
+
+  /** Runs [callback] within a new lexical scope. */
+  def withinScope[T](callback: () => T): T = {
+    scopes.push(mutable.Map.empty)
+    try callback()
+    finally { val _ = scopes.pop() }
+  }
+
+  /** Creates a closure — a snapshot of the current environment that can be
+    * used to evaluate callbacks later.
+    * TODO: actually snapshot scopes.
+    */
+  def closure(): Environment = this
+
+  /** Creates a new global-only environment. TODO. */
+  def global(): Environment = this
+}
+
+object Environment {
+
+  def apply(): Environment = new Environment()
+}

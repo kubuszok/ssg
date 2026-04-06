@@ -91,22 +91,29 @@ final class ValueSuite extends munit.FunSuite {
 
   // --- SassFunction ---
 
+  private def fakeCallable(name: String): Callable =
+    Callable.function(name, "", _ => SassNull)
+
   test("SassFunction stores callable") {
-    val f = SassFunction("myFunc")
-    assertEquals(f.callable, "myFunc")
+    val c = fakeCallable("myFunc")
+    val f = SassFunction(c)
+    assertEquals(f.callable.name, "myFunc")
     assertEquals(f.assertFunction(), f)
   }
 
   test("SassFunction equality by callable") {
-    assertEquals(SassFunction("a"), SassFunction("a"))
-    assertNotEquals(SassFunction("a"), SassFunction("b"))
+    val c1 = fakeCallable("a")
+    val c2 = fakeCallable("b")
+    assertEquals(SassFunction(c1), SassFunction(c1))
+    assertNotEquals(SassFunction(c1), SassFunction(c2))
   }
 
   // --- SassMixin ---
 
   test("SassMixin stores callable") {
-    val m = SassMixin("myMixin")
-    assertEquals(m.callable, "myMixin")
+    val c = fakeCallable("myMixin")
+    val m = SassMixin(c)
+    assertEquals(m.callable.name, "myMixin")
     assertEquals(m.assertMixin(), m)
   }
 
