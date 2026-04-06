@@ -518,15 +518,15 @@ ssg-sass/src/main/scala/ssg/sass/extend/ExtendMode.scala	extend	pass	no	2026-04-
 ssg-sass/src/main/scala/ssg/sass/extend/Extension.scala	extend	pass	no	2026-04-06	Full Extension data class	
 ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend logic pending	
 ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend helpers pending	
-ssg-sass/src/main/scala/ssg/sass/functions/Functions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/Functions.scala	functions	pass	yes	2026-04-06	Barrel aggregating all module callables with lookupGlobal(name).	
 ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/functions/MathFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/functions/StringFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/functions/ListFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/functions/MapFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/MathFunctions.scala	functions	pass	yes	2026-04-06	11 math functions: abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable.	
+ssg-sass/src/main/scala/ssg/sass/functions/StringFunctions.scala	functions	pass	yes	2026-04-06	8 string functions: unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice.	
+ssg-sass/src/main/scala/ssg/sass/functions/ListFunctions.scala	functions	pass	yes	2026-04-06	9 list functions: length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed.	
+ssg-sass/src/main/scala/ssg/sass/functions/MapFunctions.scala	functions	pass	yes	2026-04-06	6 map functions: map-get/merge/remove/keys/values/has-key.	
+ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	functions	pass	yes	2026-04-06	5 meta functions: type-of/inspect/feature-exists/variable-exists/function-exists.	
 ssg-sass/src/main/scala/ssg/sass/functions/SelectorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
-ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	importer	minor_issues	no	2026-04-06	Importer trait skeleton	
+ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	importer	minor_issues	no	2026-04-06	Trait + NoOp impl. FilesystemImporter moved to src/main/scala-jvm/. Package/NodePackage importers still stubs.	
 ssg-sass/src/main/scala/ssg/sass/importer/ImporterResult.scala	importer	minor_issues	no	2026-04-06	ImporterResult skeleton	
 ssg-sass/src/main/scala/ssg/sass/value/color/ColorChannel.scala	color	pass	no	2026-04-06	Full color-space implementation	
 ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	color	pass	no	2026-04-06	Full color-space implementation	

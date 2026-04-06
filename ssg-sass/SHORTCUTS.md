@@ -161,35 +161,41 @@ or serializer.
 
 ---
 
-## HIGH — Import Resolution (7 items)
+## HIGH — Import Resolution (partial)
 
 ### `ImportCache.scala`
-- ❌ `canonicalize(url, ...)` — large (resolution against importers + load paths)
-- ❌ `importCanonical(...)` — medium (load + parse)
+- ❌ `canonicalize(url, ...)` — ImportCache still unused; direct importer in Evaluator instead
+- ❌ `importCanonical(...)` — ImportCache still unused
 
-### `importer/Importer.scala`
-- ❌ `FilesystemImporter.canonicalize(url)` — medium (partials, extensions)
-- ❌ `FilesystemImporter.load(url)` — medium (file I/O)
-- ❌ `PackageImporter` — large (config parsing)
-- ❌ `NodePackageImporter` — large (node_modules traversal)
+### `importer/Importer.scala` + `src/main/scala-jvm/.../FilesystemImporter.scala`
+- ✅ `FilesystemImporter.canonicalize(url)` — partials, extensions, index files (JVM-only)
+- ✅ `FilesystemImporter.load(url)` — file I/O via `java.nio.file` (JVM-only)
+- ❌ `PackageImporter` — stub (package config parsing)
+- ❌ `NodePackageImporter` — stub (node_modules traversal)
 
 ### `StylesheetGraph.scala`
 - ⚠️ `addCanonical(...)` — medium (circular dep detection)
 
+### EvaluateVisitor `@import` dynamic loading
+- ✅ `_loadDynamicImport(url)` — resolves via importer, parses, evaluates inline
+- ✅ Cycle prevention via `_loadedUrls`
+- ✅ Variables/functions/mixins propagate across @import boundary
+
 ---
 
-## HIGH — Built-in Functions (8 files, all stubbed)
+## HIGH — Built-in Functions (6/8 implemented)
 
 ### `functions/*.scala`
-All function modules are skeletons with empty `globals` lists:
-- ❌ `ColorFunctions` — large (~1500 lines in Dart)
-- ❌ `MathFunctions` — medium
-- ❌ `StringFunctions` — medium
-- ❌ `ListFunctions` — small
-- ❌ `MapFunctions` — small
-- ❌ `MetaFunctions` — medium
-- ❌ `SelectorFunctions` — medium (depends on extend)
-- ⚠️ `Functions.scala` (barrel) — registers all module functions
+- ❌ `ColorFunctions` — **still stub** (large, needs color conversion)
+- ✅ `MathFunctions` — abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable
+- ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice
+- ✅ `ListFunctions` — length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed
+- ✅ `MapFunctions` — map-get/map-merge/map-remove/map-keys/map-values/map-has-key
+- ✅ `MetaFunctions` — type-of/inspect/feature-exists/variable-exists/function-exists
+- ❌ `SelectorFunctions` — **still stub** (needs selector parser)
+- ✅ `Functions.scala` (barrel) — aggregates modules, `lookupGlobal(name)`
+- ✅ `Environment.withBuiltins()` — pre-populates environment with global callables
+- ✅ StylesheetParser recognizes `name(args)` as `FunctionExpression`
 
 ### `visitor/FindDependenciesVisitor.scala`
 - ⚠️ `visitIncludeRule` — handles meta.load-css with literal strings (TODO)
