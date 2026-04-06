@@ -23,7 +23,7 @@ import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.css.CssMediaQuery
 import ssg.sass.ast.sass.ExtendRule
-import ssg.sass.ast.selector.{ SelectorList, SimpleSelector }
+import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, PlaceholderSelector, SelectorList, SimpleSelector }
 import ssg.sass.util.{ Box, ModifiableBox }
 
 import scala.collection.mutable
@@ -216,4 +216,139 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     //   `simpleSelectors` reports something meaningful once extend runs.
     val _ = (list, box)
   }
+
+  // ---------------------------------------------------------------------------
+  // AST-based extension API
+  //
+  // Minimal implementation covering the common cases needed by the evaluator:
+  //   * `.foo { ... } .bar { @extend .foo; }` — the extender selector is
+  //     appended to the target's rule.
+  //   * Placeholder targets (`%base`) — placeholder rules are stripped from
+  //     output by `_applyExtends`.
+  //   * Compound extend (`.a.b` + `@extend .a` from `.x` -> `.x.b`).
+  //   * Multiple extenders for a single target.
+  //
+  // Full selector unification, the second law of extend and media-context
+  // checks remain TODOs.
+  // ---------------------------------------------------------------------------
+
+  /** AST extension map: target simple selector -> list of extender complex selectors.
+    */
+  private val astExtensions: mutable.LinkedHashMap[SimpleSelector, mutable.ListBuffer[ComplexSelector]] =
+    mutable.LinkedHashMap.empty
+
+  /** Records an AST-level extension: `extender { @extend target }`.
+    *
+    * This is the entry point used by the evaluator. `optional` is accepted but not yet validated.
+    */
+  def addExtensionAst(
+    extender: ComplexSelector,
+    target:   SimpleSelector,
+    optional: Boolean
+  ): Unit = {
+    val _      = optional
+    val buffer = astExtensions.getOrElseUpdate(target, mutable.ListBuffer.empty)
+    if (!buffer.contains(extender)) buffer += extender
+  }
+
+  /** Returns a new [SelectorList] with all applicable extensions applied to [list].
+    *
+    * For each complex selector in the list, emits the original selector plus one additional complex selector for every extender whose target appears in any of its compound components.
+    */
+  def extendList(list: SelectorList): SelectorList = {
+    if (astExtensions.isEmpty) return list
+    val out = mutable.ListBuffer.empty[ComplexSelector]
+    for (complex <- list.components) {
+      val extended = extendComplex(complex)
+      for (c <- extended)
+        if (!out.contains(c)) out += c
+    }
+    if (out.isEmpty) list
+    else new SelectorList(out.toList, list.span)
+  }
+
+  /** Expands a single complex selector into itself plus any extension-generated variants.
+    */
+  private def extendComplex(complex: ComplexSelector): List[ComplexSelector] = {
+    val results = mutable.ListBuffer.empty[ComplexSelector]
+    results += complex
+    var i = 0
+    while (i < complex.components.length) {
+      val component = complex.components(i)
+      val compound  = component.selector
+      // For each target in the store, check whether this compound contains it.
+      for ((target, extenders) <- astExtensions)
+        if (compound.components.contains(target)) {
+          for (extender <- extenders) {
+            val merged = substituteInComplex(complex, i, target, extender)
+            if (!results.contains(merged)) results += merged
+          }
+        }
+      i += 1
+    }
+    results.toList
+  }
+
+  /** Produces a new complex selector based on [complex] where the component at [componentIndex] has its [target] simple selector replaced by the simples drawn from [extender]'s last compound, with
+    * any leading components of [extender] prepended as additional complex components.
+    */
+  private def substituteInComplex(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    target:         SimpleSelector,
+    extender:       ComplexSelector
+  ): ComplexSelector = {
+    val origComponent = complex.components(componentIndex)
+    val origCompound  = origComponent.selector
+    // Merge target-stripped original simples with the extender's last compound.
+    val extLast           = extender.components.last
+    val extLastSimples    = extLast.selector.components
+    val origWithoutTarget = origCompound.components.filterNot(_ == target)
+    val mergedSimples     = mergeSimples(extLastSimples, origWithoutTarget)
+    val mergedCompound    = new CompoundSelector(mergedSimples, origCompound.span)
+
+    val newComponent = new ComplexSelectorComponent(
+      mergedCompound,
+      origComponent.combinators,
+      origComponent.span
+    )
+
+    // Prepend any leading components of the extender (e.g. for `.a .b` extender).
+    val extLeading    = extender.components.init
+    val newComponents =
+      complex.components.take(componentIndex) ++ extLeading ++ (newComponent :: complex.components.drop(componentIndex + 1))
+
+    new ComplexSelector(
+      complex.leadingCombinators ++ extender.leadingCombinators,
+      newComponents,
+      complex.span,
+      lineBreak = complex.lineBreak
+    )
+  }
+
+  /** Merges two simple-selector lists, preserving order and avoiding duplicates.
+    */
+  private def mergeSimples(
+    first:  List[SimpleSelector],
+    second: List[SimpleSelector]
+  ): List[SimpleSelector] = {
+    val out = mutable.ListBuffer.empty[SimpleSelector]
+    for (s <- first) if (!out.contains(s)) out += s
+    for (s <- second) if (!out.contains(s)) out += s
+    out.toList
+  }
+
+  /** Whether the store contains any AST-level extensions. */
+  def hasAstExtensions: Boolean = astExtensions.nonEmpty
+}
+
+/** Returns true if the given complex selector is composed solely of placeholder selectors (and so should be stripped from CSS output).
+  */
+object ExtendUtils {
+  def isPlaceholderOnly(complex: ComplexSelector): Boolean =
+    complex.components.nonEmpty &&
+      complex.components.forall { component =>
+        component.selector.components.nonEmpty &&
+        component.selector.components.forall(_.isInstanceOf[PlaceholderSelector])
+      }
 }

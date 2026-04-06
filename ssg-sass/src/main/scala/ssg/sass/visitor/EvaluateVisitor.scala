@@ -121,8 +121,9 @@ import ssg.sass.ast.sass.{
 }
 import ssg.sass.value.{ SassBoolean, SassList, SassMap, SassNull, SassNumber, SassString, Value }
 import ssg.sass.{ BuiltInCallable, Callable, Environment, ImportCache, Logger, Nullable, SassException, SassScriptException, UserDefinedCallable }
+import ssg.sass.extend.{ ExtendMode, ExtendUtils, MutableExtensionStore }
 import ssg.sass.importer.Importer
-import ssg.sass.parse.ScssParser
+import ssg.sass.parse.SelectorParser
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs that were loaded during evaluation.
   */
@@ -157,6 +158,30 @@ final class EvaluateVisitor(
     */
   private val _loadedUrls = scala.collection.mutable.LinkedHashSet.empty[String]
 
+  /** Effective ImportCache used for parse-deduping across `@use`/`@forward`/`@import`. If the caller didn't supply one, we build a fresh cache whose only importer is the evaluator's `importer` (if
+    * any), so repeated loads of the same canonical URL still hit the parse cache within a single compilation.
+    */
+  private val _effectiveImportCache: ImportCache = {
+    val supplied = importCache.fold[Nullable[ImportCache]](Nullable.empty)(c => Nullable(c))
+    supplied.getOrElse {
+      val imps = importer.fold[List[Importer]](Nil)(i => List(i))
+      new ImportCache(importers = imps)
+    }
+  }
+
+  /** Parses (via the import cache) and returns the stylesheet at [canonicalUrl], or empty if [imp] can't load it. Dedupes parses across repeated `@use` of the same URL.
+    */
+  private def _loadAndParseCached(
+    imp:          Importer,
+    canonicalUrl: String
+  ): Nullable[ssg.sass.ast.sass.Stylesheet] =
+    _effectiveImportCache.importCanonical(imp, canonicalUrl)
+
+  /** Stack of canonical URLs currently being loaded, used to detect `@import`/`@use`/`@forward` cycles within a single compilation.
+    */
+  private val _activeImports: scala.collection.mutable.LinkedHashSet[String] =
+    scala.collection.mutable.LinkedHashSet.empty
+
   /** The root modifiable CSS stylesheet currently being built. Set at the start of [[run]] and used as the initial value of [[_parent]].
     */
   private var _root: Nullable[ModifiableCssStylesheet] = Nullable.empty
@@ -172,8 +197,12 @@ final class EvaluateVisitor(
     */
   private var _endOfImports: Int = 0
 
-  /** Map from target selector text to the list of extender selector texts that should be appended to any rule whose selector matches the target. Populated by `visitExtendRule` and applied by
-    * `_applyExtends` after the stylesheet has been fully evaluated.
+  /** AST-level extension store. Populated by [[visitExtendRule]] and applied by [[_applyExtends]] after the stylesheet has been fully evaluated. Falls back to a legacy textual rewrite if selector
+    * parsing fails for a rule.
+    */
+  private val _extensionStore: MutableExtensionStore = new MutableExtensionStore(ExtendMode.Normal)
+
+  /** Legacy textual extend map, kept as a fallback for cases where the extender or target text fails to round-trip through [[SelectorParser.tryParse]].
     */
   private val _extends: scala.collection.mutable.LinkedHashMap[
     String,
@@ -1028,39 +1057,45 @@ final class EvaluateVisitor(
       val urlStr    = node.url.toString
       val canonical = imp.canonicalize(urlStr)
       canonical.foreach { canonicalUrl =>
-        if (!_loadedUrls.contains(canonicalUrl)) {
+        if (_activeImports.contains(canonicalUrl)) {
+          // Cycle — skip silently to mirror existing `_loadedUrls` behaviour.
+        } else if (!_loadedUrls.contains(canonicalUrl)) {
           _loadedUrls += canonicalUrl
-          imp.load(canonicalUrl).foreach { result =>
-            val importedSheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
-            // Evaluate the module in a fresh environment, then register its
-            // members either as a namespace or by merging them flat (`as *`).
-            val moduleEnv = Environment.withBuiltins()
-            // Apply `with (...)` configuration before evaluating the module
-            // so that `!default` declarations honor the override.
-            for (cv <- node.configuration) {
-              val cvValue = cv.expression.accept(this)
-              moduleEnv.setVariable(cv.name, cvValue)
-            }
-            _withEnvironment(moduleEnv) {
-              importedSheet.children.get.foreach { stmt =>
-                val _ = stmt.accept(this)
+          _activeImports += canonicalUrl
+          try
+            _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
+              // Evaluate the module in a fresh environment, then register its
+              // members either as a namespace or by merging them flat (`as *`).
+              val moduleEnv = Environment.withBuiltins()
+              // Apply `with (...)` configuration before evaluating the module
+              // so that `!default` declarations honor the override.
+              for (cv <- node.configuration) {
+                val cvValue = cv.expression.accept(this)
+                moduleEnv.setVariable(cv.name, cvValue)
               }
-            }
-            if (node.namespace.isDefined) {
-              node.namespace.foreach { ns =>
-                _environment.addNamespace(ns, moduleEnv)
-              }
-            } else {
-              // Flat (`as *`) — merge members into the current environment.
-              for ((name, value) <- moduleEnv.variableEntries)
-                if (!_environment.variableExists(name)) {
-                  _environment.setVariable(name, value)
+              _withEnvironment(moduleEnv) {
+                importedSheet.children.get.foreach { stmt =>
+                  val _ = stmt.accept(this)
                 }
-              for (fn <- moduleEnv.functionValues)
-                _environment.setFunction(fn)
-              for (mx <- moduleEnv.mixinValues)
-                _environment.setMixin(mx)
+              }
+              if (node.namespace.isDefined) {
+                node.namespace.foreach { ns =>
+                  _environment.addNamespace(ns, moduleEnv)
+                }
+              } else {
+                // Flat (`as *`) — merge members into the current environment.
+                for ((name, value) <- moduleEnv.variableEntries)
+                  if (!_environment.variableExists(name)) {
+                    _environment.setVariable(name, value)
+                  }
+                for (fn <- moduleEnv.functionValues)
+                  _environment.setFunction(fn)
+                for (mx <- moduleEnv.mixinValues)
+                  _environment.setMixin(mx)
+              }
             }
+          finally {
+            val _ = _activeImports.remove(canonicalUrl)
           }
         }
       }
@@ -1091,49 +1126,55 @@ final class EvaluateVisitor(
       val urlStr    = node.url.toString
       val canonical = imp.canonicalize(urlStr)
       canonical.foreach { canonicalUrl =>
-        if (!_loadedUrls.contains(canonicalUrl)) {
+        if (_activeImports.contains(canonicalUrl)) {
+          // Cycle — skip silently.
+        } else if (!_loadedUrls.contains(canonicalUrl)) {
           _loadedUrls += canonicalUrl
-          imp.load(canonicalUrl).foreach { result =>
-            val importedSheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
-            val moduleEnv     = Environment.withBuiltins()
-            // Apply `with (...)` configuration before evaluating the module
-            // so that `!default` declarations honor the override (mirrors @use).
-            for (cv <- node.configuration) {
-              val cvValue = cv.expression.accept(this)
-              moduleEnv.setVariable(cv.name, cvValue)
-            }
-            _withEnvironment(moduleEnv) {
-              importedSheet.children.get.foreach { stmt =>
-                val _ = stmt.accept(this)
+          _activeImports += canonicalUrl
+          try
+            _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
+              val moduleEnv = Environment.withBuiltins()
+              // Apply `with (...)` configuration before evaluating the module
+              // so that `!default` declarations honor the override (mirrors @use).
+              for (cv <- node.configuration) {
+                val cvValue = cv.expression.accept(this)
+                moduleEnv.setVariable(cv.name, cvValue)
               }
-            }
-            val prefix:                   String  = if (node.prefix.isDefined) node.prefix.get else ""
-            def varAllowed(name: String): Boolean =
-              if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
-              else if (node.hiddenVariables.isDefined) !node.hiddenVariables.get.contains(name)
-              else true
-            def memberAllowed(name: String): Boolean =
-              if (node.shownMixinsAndFunctions.isDefined) node.shownMixinsAndFunctions.get.contains(name)
-              else if (node.hiddenMixinsAndFunctions.isDefined) !node.hiddenMixinsAndFunctions.get.contains(name)
-              else true
-            // Names of global built-in callables — not forwarded.
-            val builtinNames: Set[String] =
-              ssg.sass.functions.Functions.global.iterator.map(_.name).toSet
-            for ((name, value) <- moduleEnv.variableEntries)
-              if (varAllowed(name)) {
-                val newName = prefix + name
-                if (!_environment.variableExists(newName)) {
-                  _environment.setVariable(newName, value)
+              _withEnvironment(moduleEnv) {
+                importedSheet.children.get.foreach { stmt =>
+                  val _ = stmt.accept(this)
                 }
               }
-            for (fn <- moduleEnv.functionValues)
-              if (!builtinNames.contains(fn.name) && memberAllowed(fn.name)) {
-                _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
-              }
-            for (mx <- moduleEnv.mixinValues)
-              if (!builtinNames.contains(mx.name) && memberAllowed(mx.name)) {
-                _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
-              }
+              val prefix:                   String  = if (node.prefix.isDefined) node.prefix.get else ""
+              def varAllowed(name: String): Boolean =
+                if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
+                else if (node.hiddenVariables.isDefined) !node.hiddenVariables.get.contains(name)
+                else true
+              def memberAllowed(name: String): Boolean =
+                if (node.shownMixinsAndFunctions.isDefined) node.shownMixinsAndFunctions.get.contains(name)
+                else if (node.hiddenMixinsAndFunctions.isDefined) !node.hiddenMixinsAndFunctions.get.contains(name)
+                else true
+              // Names of global built-in callables — not forwarded.
+              val builtinNames: Set[String] =
+                ssg.sass.functions.Functions.global.iterator.map(_.name).toSet
+              for ((name, value) <- moduleEnv.variableEntries)
+                if (varAllowed(name)) {
+                  val newName = prefix + name
+                  if (!_environment.variableExists(newName)) {
+                    _environment.setVariable(newName, value)
+                  }
+                }
+              for (fn <- moduleEnv.functionValues)
+                if (!builtinNames.contains(fn.name) && memberAllowed(fn.name)) {
+                  _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
+                }
+              for (mx <- moduleEnv.mixinValues)
+                if (!builtinNames.contains(mx.name) && memberAllowed(mx.name)) {
+                  _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
+                }
+            }
+          finally {
+            val _ = _activeImports.remove(canonicalUrl)
           }
         }
       }
@@ -1166,40 +1207,59 @@ final class EvaluateVisitor(
     importer.foreach { imp =>
       val canonical = imp.canonicalize(url)
       canonical.foreach { canonicalUrl =>
-        if (!_loadedUrls.contains(canonicalUrl)) {
+        if (_activeImports.contains(canonicalUrl)) {
+          // Cycle — skip silently.
+        } else if (!_loadedUrls.contains(canonicalUrl)) {
           _loadedUrls += canonicalUrl
-          imp.load(canonicalUrl).foreach { result =>
-            val importedSheet = result.syntax match {
-              case Syntax.Scss | Syntax.Css =>
-                new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
-              case Syntax.Sass =>
-                // Indented syntax not yet supported — fall back to SCSS parser
-                new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+          _activeImports += canonicalUrl
+          try
+            _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
+              // Evaluate the imported stylesheet's children as if they were
+              // written inline at the @import point. No new scope — imports
+              // share the enclosing environment.
+              importedSheet.children.get.foreach { stmt =>
+                val _ = stmt.accept(this)
+              }
             }
-            // Evaluate the imported stylesheet's children as if they were
-            // written inline at the @import point. No new scope — imports
-            // share the enclosing environment.
-            importedSheet.children.get.foreach { stmt =>
-              val _ = stmt.accept(this)
-            }
+          finally {
+            val _ = _activeImports.remove(canonicalUrl)
           }
         }
       }
     }
 
   override def visitExtendRule(node: ExtendRule): Value = {
-    // Basic `@extend` support: record the mapping from target selector to
-    // the enclosing style rule's selector. Actual selector rewriting happens
-    // in `_applyExtends` once the stylesheet has been fully evaluated.
-    // This skips the full "second law of extend" unification used by the
-    // Dart ExtensionStore.
+    // AST-based `@extend` support: record each (extender, target) pair into
+    // the extension store, falling back to a textual mapping if either side
+    // fails to parse. Actual selector rewriting happens in `_applyExtends`
+    // once the stylesheet has been fully evaluated. Full "second law of
+    // extend" unification, cross-media-query validation and `!optional`
+    // checking are still TODO.
     _styleRule.foreach { rule =>
       val extenderText = rule.selector.toString
       val targetText   = _performInterpolation(node.selector)
-      for (target <- targetText.split(',').map((s: String) => s.trim))
-        if (target.nonEmpty) {
-          _extends.getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
+      val extenderList = SelectorParser.tryParse(extenderText)
+      val targetList   = SelectorParser.tryParse(targetText)
+      val ok           = extenderList.isDefined && targetList.isDefined && {
+        var allMatched = true
+        for (targetComplex <- targetList.get.components) {
+          val singleCompound = targetComplex.singleCompound
+          if (singleCompound.isEmpty || singleCompound.get.components.length != 1) {
+            allMatched = false
+          } else {
+            val target = singleCompound.get.components.head
+            for (extender <- extenderList.get.components)
+              _extensionStore.addExtensionAst(extender, target, node.isOptional)
+          }
         }
+        allMatched
+      }
+      if (!ok) {
+        for (target <- targetText.split(',').map((s: String) => s.trim))
+          if (target.nonEmpty) {
+            _extends.getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
+          }
+      }
     }
     SassNull
   }
@@ -1207,32 +1267,56 @@ final class EvaluateVisitor(
   /** Walks the modifiable CSS tree and, for every style rule whose comma-separated selector list contains an `@extend` target, appends a new comma-separated entry derived from the matching extender.
     * This is a deliberately simple textual rewrite — no selector AST unification.
     */
-  private def _applyExtends(node: ModifiableCssParentNode): Unit =
-    if (_extends.isEmpty) {
-      ()
-    } else {
-      for (child <- node.modifiableChildren)
-        child match {
-          case rule: ModifiableCssStyleRule =>
-            _selectorBoxes.get(rule).foreach { box =>
-              val currentSelector = box.value.toString
-              val parts           = currentSelector.split(',').map((s: String) => s.trim).toList
-              val augmented       = scala.collection.mutable.ListBuffer[String]()
-              augmented ++= parts
-              for (part <- parts)
-                for ((target, extenders) <- _extends)
-                  if (part == target || part.contains(target)) {
-                    for (extender <- extenders)
-                      augmented += part.replace(target, extender)
-                  }
-              val newSelector = augmented.distinct.mkString(", ")
-              box.value = newSelector
+  private def _applyExtends(node: ModifiableCssParentNode): Unit = {
+    val hasAst    = _extensionStore.hasAstExtensions
+    val hasLegacy = _extends.nonEmpty
+    // Snapshot children because rule removal mutates the live list.
+    val toVisit = node.modifiableChildren
+    for (child <- toVisit) child match {
+      case rule: ModifiableCssStyleRule =>
+        var removed = false
+        _selectorBoxes.get(rule).foreach { box =>
+          val currentSelector = box.value.toString
+          val parsed          = SelectorParser.tryParse(currentSelector)
+          if (hasAst && parsed.isDefined) {
+            val extended = _extensionStore.extendList(parsed.get)
+            val filtered = extended.components.filterNot(ExtendUtils.isPlaceholderOnly)
+            if (filtered.isEmpty) {
+              rule.remove()
+              removed = true
+            } else if (filtered.length != extended.components.length) {
+              val newList = new ssg.sass.ast.selector.SelectorList(filtered, extended.span)
+              box.value = newList.toString
+            } else {
+              box.value = extended.toString
             }
-            _applyExtends(rule)
-          case parent: ModifiableCssParentNode => _applyExtends(parent)
-          case _ => ()
+          } else if (hasLegacy) {
+            val parts     = currentSelector.split(',').map((s: String) => s.trim).toList
+            val augmented = scala.collection.mutable.ListBuffer[String]()
+            augmented ++= parts
+            for (part <- parts)
+              for ((target, extenders) <- _extends)
+                if (part == target || part.contains(target)) {
+                  for (extender <- extenders)
+                    augmented += part.replace(target, extender)
+                }
+            box.value = augmented.distinct.mkString(", ")
+          } else if (parsed.isDefined) {
+            // No extensions, but still strip any placeholder-only rules so
+            // bare `%foo { ... }` never leaks into CSS output.
+            val filtered = parsed.get.components.filterNot(ExtendUtils.isPlaceholderOnly)
+            if (filtered.isEmpty) {
+              rule.remove()
+              removed = true
+            }
+          }
         }
+        if (!removed) _applyExtends(rule)
+      case parent: ModifiableCssParentNode => _applyExtends(parent)
+      case _ => ()
     }
+    val _ = (hasAst, hasLegacy)
+  }
 
   override def visitContentBlock(node: ContentBlock): Value = {
     // Content blocks are normally consumed by @include via _environment.content

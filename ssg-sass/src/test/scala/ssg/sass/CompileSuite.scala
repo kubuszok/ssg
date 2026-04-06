@@ -1125,6 +1125,45 @@ final class CompileSuite extends munit.FunSuite {
   // @forward "url" with (...)
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // @extend — AST-based tests
+  // ---------------------------------------------------------------------------
+
+  test("@extend: placeholder selector is stripped from output") {
+    val result = Compile.compileString("""
+      %base { color: blue; }
+      .a { @extend %base; }
+    """)
+    assert(!result.css.contains("%base"), result.css)
+    assert(result.css.contains(".a"), result.css)
+    assert(result.css.contains("color: blue"), result.css)
+  }
+
+  test("@extend: compound target merges extender into compound") {
+    val result = Compile.compileString("""
+      .a.b { color: red; }
+      .x { @extend .a; }
+    """)
+    // Original .a.b stays; plus .x.b should be produced.
+    assert(result.css.contains(".a.b"), result.css)
+    assert(result.css.contains(".x.b") || result.css.contains(".b.x"), result.css)
+  }
+
+  test("@extend: multiple extenders for a single target") {
+    val result = Compile.compileString("""
+      .foo { color: red; }
+      .a { @extend .foo; }
+      .b { @extend .foo; }
+    """)
+    // All three should share the `color: red` rule selector list.
+    val redIdx = result.css.indexOf("color: red")
+    assert(redIdx >= 0, result.css)
+    val header = result.css.substring(0, redIdx)
+    assert(header.contains(".foo"), result.css)
+    assert(header.contains(".a"), result.css)
+    assert(header.contains(".b"), result.css)
+  }
+
   test("@forward with (...) configures !default vars in the loaded module") {
     // Without an importer the forward target is silently skipped, so we
     // exercise parser + AST round-trip via `toString` to confirm the
