@@ -363,7 +363,7 @@ final class EvaluateVisitor(
       // (or a simplified SassNumber) instead of falling through to plain text.
       if (node.namespace.isEmpty) {
         node.name match {
-          case "calc" | "min" | "max" | "clamp" =>
+          case "calc" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
             val calcResult = _evaluateCalculation(node)
             if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
           case _ => ()
@@ -623,9 +623,25 @@ final class EvaluateVisitor(
           }
           if (co.isEmpty) expr.accept(this)
           else SassCalculation.operate(co.get, toArg(l), toArg(r))
-        case _ => expr.accept(this)
+        case _ =>
+          val v = expr.accept(this)
+          // Special CSS calc keywords: pi, e, infinity, -infinity, NaN.
+          v match {
+            case s: SassString if !s.hasQuotes =>
+              s.text match {
+                case "pi"        => SassNumber(math.Pi)
+                case "e"         => SassNumber(math.E)
+                case "infinity"  => SassNumber(Double.PositiveInfinity)
+                case "-infinity" => SassNumber(Double.NegativeInfinity)
+                case "NaN"       => SassNumber(Double.NaN)
+                case _           => v
+              }
+            case _ => v
+          }
       }
       val converted = args.map(toArg)
+      def nOpt(i: Int): Nullable[Any] =
+        if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
       val result: Value = node.name match {
         case "calc" if converted.length == 1 =>
           SassCalculation.calc(converted.head)
@@ -633,7 +649,29 @@ final class EvaluateVisitor(
         case "max"                            => SassCalculation.max(converted)
         case "clamp" if converted.length == 3 =>
           SassCalculation.clamp(converted(0), Nullable(converted(1)), Nullable(converted(2)))
-        case _ => return Nullable.empty
+        case "clamp" if converted.length >= 1 && converted.length <= 3 =>
+          SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
+        case "hypot"                          => SassCalculation.hypot(converted)
+        case "sqrt" if converted.length == 1  => SassCalculation.sqrt(converted.head)
+        case "sin" if converted.length == 1   => SassCalculation.sin(converted.head)
+        case "cos" if converted.length == 1   => SassCalculation.cos(converted.head)
+        case "tan" if converted.length == 1   => SassCalculation.tan(converted.head)
+        case "asin" if converted.length == 1  => SassCalculation.asin(converted.head)
+        case "acos" if converted.length == 1  => SassCalculation.acos(converted.head)
+        case "atan" if converted.length == 1  => SassCalculation.atan(converted.head)
+        case "abs" if converted.length == 1   => SassCalculation.abs(converted.head)
+        case "sign" if converted.length == 1  => SassCalculation.sign(converted.head)
+        case "exp" if converted.length == 1   => SassCalculation.exp(converted.head)
+        case "atan2" if converted.length == 2 => SassCalculation.atan2(converted(0), Nullable(converted(1)))
+        case "pow" if converted.length == 2   => SassCalculation.pow(converted(0), Nullable(converted(1)))
+        case "log" if converted.length == 1   => SassCalculation.log(converted.head, Nullable.empty[Any])
+        case "log" if converted.length == 2   => SassCalculation.log(converted(0), Nullable(converted(1)))
+        case "mod" if converted.length == 2   => SassCalculation.mod(converted(0), Nullable(converted(1)))
+        case "rem" if converted.length == 2   => SassCalculation.rem(converted(0), Nullable(converted(1)))
+        case "round" if converted.length == 1 => SassCalculation.round(converted.head)
+        case "round" if converted.length == 2 => SassCalculation.round(converted(0), Nullable(converted(1)))
+        case "round" if converted.length == 3 => SassCalculation.round(converted(0), Nullable(converted(1)), Nullable(converted(2)))
+        case _                                => return Nullable.empty
       }
       Nullable(result)
     } catch {

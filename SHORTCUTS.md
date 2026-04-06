@@ -4,6 +4,37 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### First-class CSS Math 3 calculation functions (ISS-005 / ISS-006)
+
+- `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
+  `_evaluateCalculation` now intercepts `round`, `mod`, `rem`, `abs`, `sign`,
+  `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `sqrt`, `exp`, `pow`,
+  `log`, `hypot` (plus the existing `calc` / `min` / `max` / `clamp`) before
+  built-in callable dispatch. Arithmetic operators inside the arguments are
+  turned into `CalculationOperation`s and the call is routed to the matching
+  `SassCalculation` factory. Each factory already does eager collapse to a
+  `SassNumber` when all arguments are known numbers and otherwise round-trips
+  to a CSS-level `name(...)` call (preserving deferred `var()`, variables, or
+  incompatible units). `clamp` now also accepts 1- or 2-arg forms.
+- `toArg` additionally recognises the CSS calc keywords `pi`, `e`, `infinity`,
+  `-infinity`, `NaN` as their `SassNumber` equivalents when they surface as
+  unquoted strings from the inner expression evaluation.
+- The `SassCalculation` factories themselves already existed in full
+  (round-with-strategy, nested simplification, unit coercion, etc.) — this
+  task only wired them through the evaluator so global calls like
+  `sqrt(16)` / `pow(2, 10)` / `mod(7px, 3px)` / `round(up, 12.3px, 5px)`
+  short-circuit through the calc machinery instead of the legacy math-module
+  built-ins.
+- `ssg-sass/src/test/scala/ssg/sass/CalcSuite.scala` — new cross-platform
+  suite, 14 cases: unitless round, round with explicit step, round with
+  strategy (up / to-zero), mod, rem, abs, sign, sqrt, pow, hypot,
+  round-through-variable, cos(0), sin(0deg).
+- Resolved ISS-005 and ISS-006 in `scripts/data/issues.tsv`.
+
+All 3 platforms: JVM 568, JS 568, Native 568 (+14 per platform), green.
+sass-spec self-contained compliance moved from ~20.7% to 27.8% over the
+parallel work in this session.
+
 ### PseudoSelector per-name specificity specialization (ISS-040)
 
 - `ssg-sass/src/main/scala/ssg/sass/ast/selector/PseudoSelector.scala` —
