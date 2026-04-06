@@ -26,7 +26,7 @@ final class ExtendSuite extends munit.FunSuite {
   }
 
   test("@extend of missing target with !optional is silent") {
-    val src = ".a { @extend .missing !optional; color: red; }"
+    val src    = ".a { @extend .missing !optional; color: red; }"
     val result = Compile.compileString(src, OutputStyle.Compressed)
     assertEquals(result.css, ".a{color:red;}")
     assertEquals(result.warnings, Nil)
@@ -68,7 +68,7 @@ final class ExtendSuite extends munit.FunSuite {
     val css = Compile.compileString(src, OutputStyle.Compressed).css
     // Inside @media, `.bar` should extend `.foo`.
     assert(css.contains("@media screen"), s"missing @media in: $css")
-    val mediaIdx = css.indexOf("@media")
+    val mediaIdx   = css.indexOf("@media")
     val afterMedia = css.substring(mediaIdx)
     assert(
       afterMedia.contains(".foo,.bar") || afterMedia.contains(".foo, .bar"),

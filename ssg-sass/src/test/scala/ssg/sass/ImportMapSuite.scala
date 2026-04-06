@@ -24,7 +24,7 @@ final class ImportMapSuite extends munit.FunSuite {
       @import "colors";
       .button { color: $primary; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("#3498db"))
   }
 
@@ -34,7 +34,7 @@ final class ImportMapSuite extends munit.FunSuite {
       @import "vars.scss";
       .box { width: $size; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("42px"))
   }
 
@@ -44,7 +44,7 @@ final class ImportMapSuite extends munit.FunSuite {
       @import "nonexistent";
       a { color: red; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("color: red"))
   }
 
@@ -54,7 +54,7 @@ final class ImportMapSuite extends munit.FunSuite {
       @use "colors";
       a { color: colors.$primary; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("#3498db"))
   }
 
@@ -64,7 +64,7 @@ final class ImportMapSuite extends munit.FunSuite {
       @use "vars" as *;
       .box { width: $size; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("7px"))
   }
 
@@ -74,14 +74,14 @@ final class ImportMapSuite extends munit.FunSuite {
       @use "t" as th;
       a { color: th.$c; }
     """
-    val result = Compile.compileString(source, importer = Nullable(importer))
+    val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("#abcdef"))
   }
 
   test("@forward re-exports variables to caller of @use") {
     val importer = importerOf(
       "_inner.scss" -> "$primary: #abcdef;",
-      "_mid.scss"   -> """@forward "inner";"""
+      "_mid.scss" -> """@forward "inner";"""
     )
     val source = """
       @use "mid";

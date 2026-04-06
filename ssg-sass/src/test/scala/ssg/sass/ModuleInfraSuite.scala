@@ -50,14 +50,14 @@ final class ModuleInfraSuite extends munit.FunSuite {
       mixinList = mxs,
       variableMap = Map[String, Value](
         "color" -> SassString("red", hasQuotes = false),
-        "size"  -> SassNumber(1.0)
+        "size" -> SassNumber(1.0)
       )
     )
   }
 
   test("ForwardedView show filter only exposes listed members") {
     val inner = makeInner()
-    val view = new ForwardedView[BuiltInCallable](
+    val view  = new ForwardedView[BuiltInCallable](
       inner = inner,
       shownMixinsAndFunctions = Nullable(Set("foo")),
       shownVariables = Nullable(Set("color"))
@@ -70,7 +70,7 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("ForwardedView hide filter drops listed members") {
     val inner = makeInner()
-    val view = new ForwardedView[BuiltInCallable](
+    val view  = new ForwardedView[BuiltInCallable](
       inner = inner,
       hiddenMixinsAndFunctions = Nullable(Set("bar")),
       hiddenVariables = Nullable(Set("size"))
@@ -99,7 +99,7 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("ShadowedView hides the shadowed names from variables/functions/mixins") {
     val inner = makeInner()
-    val view = new ShadowedView[BuiltInCallable](
+    val view  = new ShadowedView[BuiltInCallable](
       inner = inner,
       shadowedVars = Set("color"),
       shadowedFunctions = Set("foo")
@@ -115,14 +115,14 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext pushes/pops a current context") {
     final class StubCtx(label: String) extends EvaluationContext {
-      def currentCallableNode: ssg.sass.ast.AstNode                  = null.asInstanceOf[ssg.sass.ast.AstNode]
-      def warn(message: String, deprecation: Boolean = false): Unit  = ()
-      override def toString:                                  String = s"Stub($label)"
+      def currentCallableNode:                                 ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode]
+      def warn(message: String, deprecation: Boolean = false): Unit                 = ()
+      override def toString:                                   String               = s"Stub($label)"
     }
     assert(EvaluationContext.current.isEmpty)
     val outer = new StubCtx("outer")
     val inner = new StubCtx("inner")
-    val seen = EvaluationContext.withContext(outer) {
+    val seen  = EvaluationContext.withContext(outer) {
       val a = EvaluationContext.current
       val b = EvaluationContext.withContext(inner) {
         EvaluationContext.current
@@ -139,8 +139,8 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext restores the previous context on exception") {
     final class StubCtx extends EvaluationContext {
-      def currentCallableNode: ssg.sass.ast.AstNode                 = null.asInstanceOf[ssg.sass.ast.AstNode]
-      def warn(message: String, deprecation: Boolean = false): Unit = ()
+      def currentCallableNode:                                 ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode]
+      def warn(message: String, deprecation: Boolean = false): Unit                 = ()
     }
     val ctx = new StubCtx
     intercept[RuntimeException] {
@@ -161,12 +161,12 @@ final class ModuleInfraSuite extends munit.FunSuite {
     val tag1   = SassString("one", hasQuotes = false)
     val tag2   = SassString("two", hasQuotes = false)
     val tagAny = SassString("rest", hasQuotes = false)
-    val fn = BuiltInCallable.overloadedFunction(
+    val fn     = BuiltInCallable.overloadedFunction(
       "pick",
       Map(
-        "$a"             -> ((_: List[Value]) => tag1),
-        "$a, $b"         -> ((_: List[Value]) => tag2),
-        "$args..."       -> ((_: List[Value]) => tagAny)
+        "$a" -> ((_: List[Value]) => tag1),
+        "$a, $b" -> ((_: List[Value]) => tag2),
+        "$args..." -> ((_: List[Value]) => tagAny)
       )
     )
     assertEquals(fn.callback(List(one)).asInstanceOf[SassString].text, "one")

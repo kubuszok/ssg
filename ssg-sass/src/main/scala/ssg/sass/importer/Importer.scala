@@ -100,15 +100,12 @@ final class PackageImporter(
 
 /** A cross-platform, in-memory importer backed by a map of URL -> SCSS source.
   *
-  * Useful for tests and any environment without a filesystem. Resolves imports
-  * using the same order as [[FilesystemImporter]]:
+  * Useful for tests and any environment without a filesystem. Resolves imports using the same order as [[FilesystemImporter]]:
   *   1. exact `basename.scss`
   *   2. `_basename.scss` (partial)
   *   3. `basename/_index.scss` / `basename/index.scss`
   *
-  * Keys in [[sources]] should be the canonical form (what [[canonicalize]]
-  * returns) — typically the resolved file name including extension, e.g.
-  * `_colors.scss` or `vars.scss`.
+  * Keys in [[sources]] should be the canonical form (what [[canonicalize]] returns) — typically the resolved file name including extension, e.g. `_colors.scss` or `vars.scss`.
   */
 final class MapImporter(val sources: Map[String, String]) extends Importer {
 
@@ -157,7 +154,7 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
 
   def load(url: String): Nullable[ImporterResult] =
     sources.get(url) match {
-      case Some(src) => Nullable(ImporterResult(src, Syntax.Scss))
+      case Some(src)  => Nullable(ImporterResult(src, Syntax.Scss))
       case scala.None => Nullable.empty
     }
 
