@@ -272,7 +272,7 @@ final class EvaluateVisitor(
       c match {
         case bic: ssg.sass.BuiltInCallable =>
           val (positional, named) = _evaluateArguments(node.arguments)
-          val merged =
+          val merged              =
             if (named.isEmpty) positional
             else _mergeBuiltInNamedArgs(bic, positional, named)
           bic.callback(merged)
@@ -869,11 +869,44 @@ final class EvaluateVisitor(
     val rule         = new ModifiableCssMediaRule(parsed, node.span)
     val savedQueries = _mediaQueries
     _mediaQueries = parsed
+
+    // Sass media bubbling: when a `@media` rule appears inside a style
+    // rule, the media rule itself attaches to the nearest non-style
+    // parent (typically the stylesheet root or an enclosing media rule),
+    // and a clone of the enclosing style rule is placed inside the media
+    // rule to hold the nested children. This produces output like
+    // `.a { @media (q) { color: red; } }` => `@media (q) { .a { color: red; } }`.
+    val enclosingStyleRule = _styleRule
     try
-      _withParent(rule) {
-        _withScope {
-          for (statement <- node.children.get) {
-            val _ = statement.accept(this)
+      if (enclosingStyleRule.isDefined) {
+        val savedParent = _parent
+        val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
+        _parent = Nullable(nearestNonStyle)
+        try
+          _withParent(rule) {
+            // Build a fresh style rule inside the media rule with the
+            // same selector box as the enclosing style rule, then run
+            // the media's children as if they were direct children of
+            // that style rule.
+            val outer     = enclosingStyleRule.get
+            val innerRule = outer.copyWithoutChildren()
+            _withParent(innerRule) {
+              _withStyleRule(innerRule) {
+                _withScope {
+                  for (statement <- node.children.get) {
+                    val _ = statement.accept(this)
+                  }
+                }
+              }
+            }
+          }
+        finally _parent = savedParent
+      } else {
+        _withParent(rule) {
+          _withScope {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
           }
         }
       }

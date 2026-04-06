@@ -73,6 +73,17 @@ or serializer.
   string form into surrounding literal text. Property-name interpolation
   goes through a dedicated `_readInterpolatedName` scanner.
 - ⚠️  Style rule selectors stored as plain Interpolation (no interpolation parsing yet).
+- ✅ `@media <query> { body }` — parsed in `_atRule`. The query text is
+  collected up to the opening `{` while respecting balanced parens,
+  `#{...}` interpolations, and string literals, then fed through
+  `_parseInterpolatedString` so `#{expr}` inside the query is
+  evaluated (e.g. `@media (max-width: #{$bp})`). Child statements are
+  parsed via `_children()` and the result becomes a `MediaRule` AST
+  node. Nested media rules parse recursively; nested media inside a
+  style rule bubbles out in `visitMediaRule` — a clone of the enclosing
+  style rule is placed inside the media rule, and the media rule
+  attaches to the nearest non-style parent, producing the expected
+  Sass output `@media (q) { .a { color: red; } }`.
 
 ### `parse/ScssParser.scala` ✅ IMPLEMENTED
 - ✅ `styleRuleSelector()` — collects raw selector text

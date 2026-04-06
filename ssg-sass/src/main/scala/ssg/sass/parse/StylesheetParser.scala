@@ -43,6 +43,7 @@ import ssg.sass.ast.sass.{
   Interpolation,
   ListExpression,
   LoudComment,
+  MediaRule,
   MixinRule,
   NullExpression,
   NumberExpression,
@@ -393,6 +394,73 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new IncludeRule(mixName, argList, spanFrom(start)))
+      case "media" =>
+        // @media <query> { body }
+        // Collect the raw query text up to the opening `{`, respecting
+        // balanced parens, `#{...}` interpolations, and string literals so
+        // that a `{` inside interpolation does not terminate the query.
+        whitespace(consumeNewlines = true)
+        val qStart = scanner.state
+        val qBuf   = new StringBuilder()
+        var depth  = 0
+        var qQuote: Int = 0
+        boundary {
+          while (!scanner.isDone) {
+            val ch = scanner.peekChar()
+            if (ch < 0) break(())
+            if (qQuote > 0) {
+              if (ch == CharCode.$backslash) {
+                qBuf.append(scanner.readChar().toChar)
+                if (!scanner.isDone) qBuf.append(scanner.readChar().toChar)
+              } else {
+                if (ch == qQuote) qQuote = 0
+                qBuf.append(scanner.readChar().toChar)
+              }
+            } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+              qQuote = ch
+              qBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+              // Copy an entire `#{...}` interpolation verbatim, balancing
+              // nested braces within so an inner `{` / `}` does not end
+              // the query.
+              qBuf.append(scanner.readChar().toChar) // '#'
+              qBuf.append(scanner.readChar().toChar) // '{'
+              var iDepth = 1
+              boundary {
+                while (!scanner.isDone) {
+                  val cc = scanner.peekChar()
+                  if (cc < 0) break(())
+                  if (cc == CharCode.$lbrace) iDepth += 1
+                  else if (cc == CharCode.$rbrace) {
+                    iDepth -= 1
+                    qBuf.append(scanner.readChar().toChar)
+                    if (iDepth == 0) break(())
+                  } else {
+                    qBuf.append(scanner.readChar().toChar)
+                  }
+                }
+              }
+            } else if (ch == CharCode.$lparen) {
+              depth += 1
+              qBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$rparen) {
+              if (depth > 0) depth -= 1
+              qBuf.append(scanner.readChar().toChar)
+            } else if (depth == 0 && (ch == CharCode.$lbrace || ch == CharCode.$semicolon)) {
+              break(())
+            } else {
+              qBuf.append(scanner.readChar().toChar)
+            }
+          }
+        }
+        val queryRaw    = qBuf.toString().trim
+        val querySpan   = spanFrom(qStart)
+        val queryInterp =
+          if (queryRaw.isEmpty) Interpolation.plain("", querySpan)
+          else _parseInterpolatedString(queryRaw, querySpan)
+        whitespace(consumeNewlines = true)
+        val kids = _children()
+        Nullable(new MediaRule(queryInterp, kids, spanFrom(start)))
       case _ =>
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()
@@ -475,7 +543,7 @@ abstract class StylesheetParser protected (
           val defStart = scanner.state
           val defBuf   = new StringBuilder()
           var depth    = 0
-          var dQuote:  Int = 0
+          var dQuote: Int = 0
           boundary {
             while (!scanner.isDone) {
               val dch = scanner.peekChar()
@@ -505,7 +573,7 @@ abstract class StylesheetParser protected (
               }
             }
           }
-          val defRaw  = defBuf.toString().trim
+          val defRaw = defBuf.toString().trim
           if (defRaw.isEmpty) scanner.error("Expected expression.")
           val defaultExpr = _parseSimpleExpression(defRaw, spanFrom(defStart))
           params += new Parameter(pname, spanFrom(paramStart), Nullable(defaultExpr))
@@ -938,23 +1006,22 @@ abstract class StylesheetParser protected (
 
     // Variable reference: plain `$var`
     if (trimmed.startsWith("$")) {
-      val name = trimmed.substring(1)
-      if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
-        return VariableExpression(name.replace('_', '-'), span)
+      val plainName = trimmed.substring(1)
+      if (plainName.nonEmpty && _allChars(plainName, (c: Char) => CharCode.isName(c.toInt))) {
+        return VariableExpression(plainName.replace('_', '-'), span)
       }
     }
-    // Namespaced variable: `ns.$var`
-    {
-      val dollarIdx = trimmed.indexOf(".$")
-      if (dollarIdx > 0) {
-        val ns   = trimmed.substring(0, dollarIdx)
-        val name = trimmed.substring(dollarIdx + 2)
-        if (
-          _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
-          name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))
-        ) {
-          return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
-        }
+    // Namespaced variable: `ns.$var` — must be outside the `$` guard above
+    // so that `mid.$primary`-style references are recognized.
+    val nsDollarIdx = trimmed.indexOf(".$")
+    if (nsDollarIdx > 0) {
+      val ns     = trimmed.substring(0, nsDollarIdx)
+      val nsName = trimmed.substring(nsDollarIdx + 2)
+      if (
+        _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+        nsName.nonEmpty && _allChars(nsName, (c: Char) => CharCode.isName(c.toInt))
+      ) {
+        return VariableExpression(nsName.replace('_', '-'), span, Nullable(ns))
       }
     }
 

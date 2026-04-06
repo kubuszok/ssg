@@ -43,12 +43,8 @@ final class BuiltInCallable(
   val signature:      String = ""
 ) extends Callable {
 
-  /** Positional parameter names derived from the textual [[signature]] (e.g.
-    * `"$color, $amount"` → `List("color", "amount")`). Underscores are
-    * normalized to hyphens to match Sass name conventions. Rest parameters
-    * (`$args...`) and trailing defaults are ignored — only the leading name
-    * is extracted. Returns an empty list when the signature is a rest-only
-    * form such as `"$args..."`.
+  /** Positional parameter names derived from the textual [[signature]] (e.g. `"$color, $amount"` → `List("color", "amount")`). Underscores are normalized to hyphens to match Sass name conventions.
+    * Rest parameters (`$args...`) and trailing defaults are ignored — only the leading name is extracted. Returns an empty list when the signature is a rest-only form such as `"$args..."`.
     */
   lazy val parameterNames: List[String] = {
     val trimmed = signature.trim
