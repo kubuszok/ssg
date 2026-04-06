@@ -14,13 +14,13 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.{InterpolationMap, Nullable}
+import ssg.sass.{ InterpolationMap, Nullable }
 import ssg.sass.ast.css.CssMediaQuery
 
 /** A parser for `@media` queries. */
 class MediaQueryParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:         String,
+  url:              Nullable[String] = Nullable.Null,
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 

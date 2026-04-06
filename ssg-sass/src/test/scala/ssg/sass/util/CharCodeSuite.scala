@@ -10,9 +10,9 @@ final class CharCodeSuite extends munit.FunSuite {
 
   test("ASCII letter constants are correct") {
     assertEquals(CharCode.$a, 0x61)
-    assertEquals(CharCode.$z, 0x7A)
+    assertEquals(CharCode.$z, 0x7a)
     assertEquals(CharCode.$A, 0x41)
-    assertEquals(CharCode.$Z, 0x5A)
+    assertEquals(CharCode.$Z, 0x5a)
   }
 
   test("digit constants are correct") {
@@ -122,7 +122,7 @@ final class CharCodeSuite extends munit.FunSuite {
 
   test("combineSurrogates produces correct code point") {
     // U+10000 = high 0xD800 + low 0xDC00
-    assertEquals(CharCode.combineSurrogates(0xD800, 0xDC00), 0x10000)
+    assertEquals(CharCode.combineSurrogates(0xd800, 0xdc00), 0x10000)
   }
 
   test("isPrivate identifies private Sass identifiers") {

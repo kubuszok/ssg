@@ -21,13 +21,13 @@ package number
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.util.NumberUtil.*
-import ssg.sass.value.{Value, SassBoolean, SassNumber}
+import ssg.sass.value.{ SassBoolean, SassNumber, Value }
 
 import scala.language.implicitConversions
 
 /** A specialized subclass of SassNumber for numbers that have no units. */
 final class UnitlessSassNumber(
-  value: Double,
+  value:   Double,
   asSlash: Nullable[(SassNumber, SassNumber)] = Nullable.Null
 ) extends SassNumber(value, asSlash) {
 
@@ -35,7 +35,7 @@ final class UnitlessSassNumber(
 
   def denominatorUnits: List[String] = Nil
 
-  def hasUnits: Boolean = false
+  def hasUnits:        Boolean = false
   def hasComplexUnits: Boolean = false
 
   protected[value] def withValue(value: Double): SassNumber = UnitlessSassNumber(value)
@@ -52,61 +52,58 @@ final class UnitlessSassNumber(
   def compatibleWithUnit(unit: String): Boolean = true
 
   override def coerceToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): SassNumber =
     other.withValue(value)
 
   override def coerceValueToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): Double =
     value
 
   override def convertToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
-  ): SassNumber = {
+  ): SassNumber =
     if (other.hasUnits) {
       // Call super to generate a consistent error message.
       super.convertToMatch(other, name, otherName)
     } else {
       this
     }
-  }
 
   override def convertValueToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
-  ): Double = {
+  ): Double =
     if (other.hasUnits) {
       // Call super to generate a consistent error message.
       super.convertValueToMatch(other, name, otherName)
     } else {
       value
     }
-  }
 
   override def coerce(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String]
-  ): SassNumber = {
+    name:            Nullable[String]
+  ): SassNumber =
     SassNumber.withUnits(
       value,
       numeratorUnits = newNumerators,
       denominatorUnits = newDenominators
     )
-  }
 
   override def coerceValue(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String]
+    name:            Nullable[String]
   ): Double =
     value
 

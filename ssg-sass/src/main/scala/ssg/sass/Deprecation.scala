@@ -21,11 +21,11 @@ import scala.language.implicitConversions
 
 /** A deprecated feature in the Sass language. */
 enum Deprecation(
-  val id: String,
+  val id:           String,
   val deprecatedIn: Nullable[String],
-  val description: Nullable[String] = Nullable.Null,
-  val obsoleteIn: Nullable[String] = Nullable.Null,
-  val isFuture: Boolean = false
+  val description:  Nullable[String] = Nullable.Null,
+  val obsoleteIn:   Nullable[String] = Nullable.Null,
+  val isFuture:     Boolean = false
 ) extends java.lang.Enum[Deprecation] {
 
   case CallString extends Deprecation("call-string", "0.0.0", "Passing a string directly to meta.call().")
@@ -62,6 +62,7 @@ enum Deprecation(
 }
 
 object Deprecation {
+
   /** Returns the deprecation with the given ID, or None. */
   def fromId(id: String): Option[Deprecation] =
     Deprecation.values.find(_.id == id)

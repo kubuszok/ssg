@@ -28,8 +28,7 @@ import ssg.sass.util.FileSpan
 /** An abstract class for defining the condition a `@supports` rule selects. */
 trait SupportsCondition extends SassNode {
 
-  /** Converts this condition into an interpolation that produces the same value.
-    * Deferred to Phase 5 when InterpolationBuffer is available.
+  /** Converts this condition into an interpolation that produces the same value. Deferred to Phase 5 when InterpolationBuffer is available.
     */
   def toInterpolation(): Interpolation
 
@@ -41,21 +40,21 @@ trait SupportsCondition extends SassNode {
 // SupportsAnything — forwards-compatible `<general-enclosed>` production
 // ---------------------------------------------------------------------------
 
-/** A supports condition that represents the forwards-compatible
-  * `<general-enclosed>` production.
+/** A supports condition that represents the forwards-compatible `<general-enclosed>` production.
   *
-  * @param contents the contents of the condition
-  * @param span     the source span
+  * @param contents
+  *   the contents of the condition
+  * @param span
+  *   the source span
   */
 final case class SupportsAnything(
   contents: Interpolation,
-  span: FileSpan
+  span:     FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation = {
+  def toInterpolation(): Interpolation =
     // Simplified: full version uses InterpolationBuffer
     Interpolation.plain(toString, span)
-  }
 
   def withSpan(newSpan: FileSpan): SupportsAnything =
     SupportsAnything(contents, newSpan)
@@ -69,14 +68,17 @@ final case class SupportsAnything(
 
 /** A condition that selects for browsers where a given declaration is supported.
   *
-  * @param name  the name of the declaration being tested
-  * @param value the value of the declaration being tested
-  * @param span  the source span
+  * @param name
+  *   the name of the declaration being tested
+  * @param value
+  *   the value of the declaration being tested
+  * @param span
+  *   the source span
   */
 final case class SupportsDeclaration(
-  name: Expression,
+  name:  Expression,
   value: Expression,
-  span: FileSpan
+  span:  FileSpan
 ) extends SupportsCondition {
 
   /** Returns whether this is a CSS Custom Property declaration. */
@@ -86,10 +88,9 @@ final case class SupportsDeclaration(
     case _ => false
   }
 
-  def toInterpolation(): Interpolation = {
+  def toInterpolation(): Interpolation =
     // Simplified: full version uses InterpolationBuffer
     Interpolation.plain(toString, span)
-  }
 
   def withSpan(newSpan: FileSpan): SupportsDeclaration =
     SupportsDeclaration(name, value, newSpan)
@@ -103,20 +104,22 @@ final case class SupportsDeclaration(
 
 /** A function-syntax condition.
   *
-  * @param name      the name of the function
-  * @param arguments the arguments to the function
-  * @param span      the source span
+  * @param name
+  *   the name of the function
+  * @param arguments
+  *   the arguments to the function
+  * @param span
+  *   the source span
   */
 final case class SupportsFunction(
-  name: Interpolation,
+  name:      Interpolation,
   arguments: Interpolation,
-  span: FileSpan
+  span:      FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation = {
+  def toInterpolation(): Interpolation =
     // Simplified: full version uses InterpolationBuffer
     Interpolation.plain(toString, span)
-  }
 
   def withSpan(newSpan: FileSpan): SupportsFunction =
     SupportsFunction(name, arguments, newSpan)
@@ -130,12 +133,14 @@ final case class SupportsFunction(
 
 /** An interpolated condition.
   *
-  * @param expression the expression in the interpolation
-  * @param span       the source span
+  * @param expression
+  *   the expression in the interpolation
+  * @param span
+  *   the source span
   */
 final case class SupportsInterpolation(
   expression: Expression,
-  span: FileSpan
+  span:       FileSpan
 ) extends SupportsCondition {
 
   def toInterpolation(): Interpolation =
@@ -153,18 +158,19 @@ final case class SupportsInterpolation(
 
 /** A negated condition.
   *
-  * @param condition the condition that's been negated
-  * @param span      the source span
+  * @param condition
+  *   the condition that's been negated
+  * @param span
+  *   the source span
   */
 final case class SupportsNegation(
   condition: SupportsCondition,
-  span: FileSpan
+  span:      FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation = {
+  def toInterpolation(): Interpolation =
     // Simplified: full version uses InterpolationBuffer
     Interpolation.plain(toString, span)
-  }
 
   def withSpan(newSpan: FileSpan): SupportsNegation =
     SupportsNegation(condition, newSpan)
@@ -172,7 +178,7 @@ final case class SupportsNegation(
   override def toString: String = condition match {
     case _: SupportsNegation  => s"not ($condition)"
     case _: SupportsOperation => s"not ($condition)"
-    case _                    => s"not $condition"
+    case _ => s"not $condition"
   }
 }
 
@@ -182,22 +188,25 @@ final case class SupportsNegation(
 
 /** An operation defining the relationship between two conditions.
   *
-  * @param left     the left-hand operand
-  * @param right    the right-hand operand
-  * @param operator the operator
-  * @param span     the source span
+  * @param left
+  *   the left-hand operand
+  * @param right
+  *   the right-hand operand
+  * @param operator
+  *   the operator
+  * @param span
+  *   the source span
   */
 final case class SupportsOperation(
-  left: SupportsCondition,
-  right: SupportsCondition,
+  left:     SupportsCondition,
+  right:    SupportsCondition,
   operator: BooleanOperator,
-  span: FileSpan
+  span:     FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation = {
+  def toInterpolation(): Interpolation =
     // Simplified: full version uses InterpolationBuffer
     Interpolation.plain(toString, span)
-  }
 
   def withSpan(newSpan: FileSpan): SupportsOperation =
     SupportsOperation(left, right, operator, newSpan)
@@ -206,7 +215,7 @@ final case class SupportsOperation(
     s"${_parenthesize(left)} $operator ${_parenthesize(right)}"
 
   private def _parenthesize(cond: SupportsCondition): String = cond match {
-    case _: SupportsNegation => s"($cond)"
+    case _:  SupportsNegation                             => s"($cond)"
     case op: SupportsOperation if op.operator == operator => s"($cond)"
     case _ => cond.toString
   }

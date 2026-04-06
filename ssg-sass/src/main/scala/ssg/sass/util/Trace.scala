@@ -11,17 +11,20 @@ package util
 
 import ssg.sass.Nullable.*
 
-/**
- * A single frame in a Sass stack trace.
- *
- * @param url    the source URL
- * @param line   1-based line number
- * @param column 1-based column number (or -1 if unknown)
- * @param member the member name (mixin, function, or rule)
- */
+/** A single frame in a Sass stack trace.
+  *
+  * @param url
+  *   the source URL
+  * @param line
+  *   1-based line number
+  * @param column
+  *   1-based column number (or -1 if unknown)
+  * @param member
+  *   the member name (mixin, function, or rule)
+  */
 final case class Frame(
-  url: String,
-  line: Int,
+  url:    String,
+  line:   Int,
   column: Int = -1,
   member: Nullable[String] = Nullable.Null
 ) {
@@ -34,24 +37,23 @@ final case class Frame(
 object Frame {
 
   /** Creates a Frame from a FileSpan and optional member name. */
-  def fromSpan(span: FileSpan, member: Nullable[String] = Nullable.Null): Frame = {
+  def fromSpan(span: FileSpan, member: Nullable[String] = Nullable.Null): Frame =
     Frame(
       url = span.file.url.getOrElse("<unknown>"),
       line = span.start.line + 1,
       column = span.start.column + 1,
       member = member
     )
-  }
 }
 
-/**
- * A Sass stack trace, consisting of a list of frames.
- *
- * @param frames the stack frames, from innermost to outermost
- */
+/** A Sass stack trace, consisting of a list of frames.
+  *
+  * @param frames
+  *   the stack frames, from innermost to outermost
+  */
 final case class Trace(frames: List[Frame]) {
 
-  override def toString: String = {
+  override def toString: String =
     if (frames.isEmpty) ""
     else {
       val sb = new StringBuilder()
@@ -61,7 +63,6 @@ final case class Trace(frames: List[Frame]) {
       }
       sb.toString()
     }
-  }
 }
 
 object Trace {

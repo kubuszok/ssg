@@ -19,13 +19,11 @@ package ssg
 package sass
 package importer
 
-/** An interface for importers that resolve URLs in `@import`/`@use`/`@forward`
-  * to stylesheet contents.
+/** An interface for importers that resolve URLs in `@import`/`@use`/`@forward` to stylesheet contents.
   */
 trait Importer {
 
-  /** Canonicalizes [url] to an absolute URL, or returns `Nullable.empty` if
-    * this importer doesn't recognize it.
+  /** Canonicalizes [url] to an absolute URL, or returns `Nullable.empty` if this importer doesn't recognize it.
     */
   def canonicalize(url: String): Nullable[String]
 
@@ -35,8 +33,7 @@ trait Importer {
   /** Returns the modification time of the stylesheet at [url]. */
   def modificationTime(url: String): Long = System.currentTimeMillis()
 
-  /** Whether this importer could potentially canonicalize [url] to
-    * [canonicalUrl].
+  /** Whether this importer could potentially canonicalize [url] to [canonicalUrl].
     */
   def couldCanonicalize(url: String, canonicalUrl: String): Boolean = true
 
@@ -53,8 +50,8 @@ object Importer {
 /** An importer that never imports any stylesheets. */
 final class NoOpImporter extends Importer {
 
-  def canonicalize(url: String): Nullable[String] = Nullable.empty
-  def load(url: String): Nullable[ImporterResult] = Nullable.empty
+  def canonicalize(url: String): Nullable[String]         = Nullable.empty
+  def load(url:         String): Nullable[ImporterResult] = Nullable.empty
 
   override def toString: String = "(unknown)"
 }
@@ -64,13 +61,13 @@ final class NoOpImporter extends Importer {
 /** An importer resolving `package:` URLs. TODO. */
 final class PackageImporter(val packageConfig: String) extends Importer {
 
-  def canonicalize(url: String): Nullable[String] = Nullable.empty
-  def load(url: String): Nullable[ImporterResult] = Nullable.empty
+  def canonicalize(url: String): Nullable[String]         = Nullable.empty
+  def load(url:         String): Nullable[ImporterResult] = Nullable.empty
 }
 
 /** An importer resolving Node-style `pkg:` URLs. TODO. */
 final class NodePackageImporter(val entryPoint: String) extends Importer {
 
-  def canonicalize(url: String): Nullable[String] = Nullable.empty
-  def load(url: String): Nullable[ImporterResult] = Nullable.empty
+  def canonicalize(url: String): Nullable[String]         = Nullable.empty
+  def load(url:         String): Nullable[ImporterResult] = Nullable.empty
 }

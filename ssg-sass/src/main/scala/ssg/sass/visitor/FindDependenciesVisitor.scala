@@ -27,8 +27,7 @@ import ssg.sass.ast.sass.*
 def findDependencies(stylesheet: Stylesheet): DependencyReport =
   new FindDependenciesVisitor().run(stylesheet)
 
-/** A visitor that traverses a stylesheet and records all its dependencies on
-  * other stylesheets.
+/** A visitor that traverses a stylesheet and records all its dependencies on other stylesheets.
   */
 final class FindDependenciesVisitor extends RecursiveStatementVisitor {
   private val _uses        = mutable.LinkedHashSet.empty[URI]
@@ -36,9 +35,7 @@ final class FindDependenciesVisitor extends RecursiveStatementVisitor {
   private val _metaLoadCss = mutable.LinkedHashSet.empty[URI]
   private val _imports     = mutable.LinkedHashSet.empty[URI]
 
-  /** The namespaces under which `sass:meta` has been `@use`d in this
-    * stylesheet. An empty `Nullable` namespace means `sass:meta` was loaded
-    * without a namespace.
+  /** The namespaces under which `sass:meta` has been `@use`d in this stylesheet. An empty `Nullable` namespace means `sass:meta` was loaded without a namespace.
     */
   private val _metaNamespaces = mutable.HashSet.empty[Nullable[String]]
 
@@ -53,34 +50,30 @@ final class FindDependenciesVisitor extends RecursiveStatementVisitor {
   }
 
   // These can never contain imports.
-  override def visitEachRule(node: EachRule): Unit  = ()
-  override def visitForRule(node: ForRule): Unit    = ()
-  override def visitIfRule(node: IfRule): Unit      = ()
-  override def visitWhileRule(node: WhileRule): Unit = ()
+  override def visitEachRule(node:                      EachRule):            Unit = ()
+  override def visitForRule(node:                       ForRule):             Unit = ()
+  override def visitIfRule(node:                        IfRule):              Unit = ()
+  override def visitWhileRule(node:                     WhileRule):           Unit = ()
   override protected def visitCallableDeclaration(node: CallableDeclaration): Unit = ()
 
-  override def visitUseRule(node: UseRule): Unit = {
+  override def visitUseRule(node: UseRule): Unit =
     if (node.url.getScheme != "sass") {
       _uses += node.url
     } else if (node.url.toString == "sass:meta") {
       _metaNamespaces += node.namespace
     }
-  }
 
-  override def visitForwardRule(node: ForwardRule): Unit = {
+  override def visitForwardRule(node: ForwardRule): Unit =
     if (node.url.getScheme != "sass") _forwards += node.url
-  }
 
-  override def visitImportRule(node: ImportRule): Unit = {
-    for (imp <- node.imports) {
+  override def visitImportRule(node: ImportRule): Unit =
+    for (imp <- node.imports)
       imp match {
         case di: DynamicImport => _imports += di.url
-        case _                 => ()
+        case _ => ()
       }
-    }
-  }
 
-  override def visitIncludeRule(node: IncludeRule): Unit = {
+  override def visitIncludeRule(node: IncludeRule): Unit =
     // TODO(ssg-sass): handle meta.load-css() with static string arguments.
     // Requires inspecting node.arguments.positional for a single
     // StringExpression(text = Interpolation(asPlain = url)).
@@ -88,22 +81,24 @@ final class FindDependenciesVisitor extends RecursiveStatementVisitor {
       // Skeleton — full positional-arg inspection deferred.
       ()
     }
-  }
 }
 
 /** A struct of different types of dependencies a Sass stylesheet can contain.
   *
-  * @param uses        all `@use`d URLs (excluding built-in modules)
-  * @param forwards    all `@forward`ed URLs (excluding built-in modules)
-  * @param metaLoadCss all URLs loaded by `meta.load-css()` calls with static
-  *                    string arguments outside of mixins
-  * @param imports     all dynamically `@import`ed URLs
+  * @param uses
+  *   all `@use`d URLs (excluding built-in modules)
+  * @param forwards
+  *   all `@forward`ed URLs (excluding built-in modules)
+  * @param metaLoadCss
+  *   all URLs loaded by `meta.load-css()` calls with static string arguments outside of mixins
+  * @param imports
+  *   all dynamically `@import`ed URLs
   */
 final case class DependencyReport(
-  uses: Set[URI],
-  forwards: Set[URI],
+  uses:        Set[URI],
+  forwards:    Set[URI],
   metaLoadCss: Set[URI],
-  imports: Set[URI]
+  imports:     Set[URI]
 ) {
 
   /** All URLs in [[uses]], [[forwards]], and [[metaLoadCss]]. */

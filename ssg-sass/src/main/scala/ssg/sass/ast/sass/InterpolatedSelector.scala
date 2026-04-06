@@ -35,7 +35,7 @@ package sass
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.css.CssValue
-import ssg.sass.ast.selector.{AttributeOperator, Combinator}
+import ssg.sass.ast.selector.{ AttributeOperator, Combinator }
 import ssg.sass.util.FileSpan
 
 // ===========================================================================
@@ -44,17 +44,17 @@ import ssg.sass.util.FileSpan
 
 /** Visitor interface for [InterpolatedSelector] nodes. */
 trait InterpolatedSelectorVisitor[T] {
-  def visitSelectorList(node: InterpolatedSelectorList): T
-  def visitComplexSelector(node: InterpolatedComplexSelector): T
-  def visitCompoundSelector(node: InterpolatedCompoundSelector): T
-  def visitAttributeSelector(node: InterpolatedAttributeSelector): T
-  def visitClassSelector(node: InterpolatedClassSelector): T
-  def visitIDSelector(node: InterpolatedIDSelector): T
-  def visitParentSelector(node: InterpolatedParentSelector): T
+  def visitSelectorList(node:        InterpolatedSelectorList):        T
+  def visitComplexSelector(node:     InterpolatedComplexSelector):     T
+  def visitCompoundSelector(node:    InterpolatedCompoundSelector):    T
+  def visitAttributeSelector(node:   InterpolatedAttributeSelector):   T
+  def visitClassSelector(node:       InterpolatedClassSelector):       T
+  def visitIDSelector(node:          InterpolatedIDSelector):          T
+  def visitParentSelector(node:      InterpolatedParentSelector):      T
   def visitPlaceholderSelector(node: InterpolatedPlaceholderSelector): T
-  def visitPseudoSelector(node: InterpolatedPseudoSelector): T
-  def visitTypeSelector(node: InterpolatedTypeSelector): T
-  def visitUniversalSelector(node: InterpolatedUniversalSelector): T
+  def visitPseudoSelector(node:      InterpolatedPseudoSelector):      T
+  def visitTypeSelector(node:        InterpolatedTypeSelector):        T
+  def visitUniversalSelector(node:   InterpolatedUniversalSelector):   T
 }
 
 // ===========================================================================
@@ -63,8 +63,7 @@ trait InterpolatedSelectorVisitor[T] {
 
 /** A selector before interpolation is resolved.
   *
-  * Unlike [Selector], this is parsed during the initial stylesheet parse
-  * when `parseSelectors: true` is passed to `Stylesheet.parse`.
+  * Unlike [Selector], this is parsed during the initial stylesheet parse when `parseSelectors: true` is passed to `Stylesheet.parse`.
   */
 abstract class InterpolatedSelector extends SassNode {
 
@@ -85,13 +84,16 @@ abstract class InterpolatedSimpleSelector extends InterpolatedSelector
 
 /** A qualified name in an interpolated selector context.
   *
-  * @param name      the identifier name
-  * @param span      the source span
-  * @param namespace the namespace name, or empty
+  * @param name
+  *   the identifier name
+  * @param span
+  *   the source span
+  * @param namespace
+  *   the namespace name, or empty
   */
 final class InterpolatedQualifiedName(
-  val name: Interpolation,
-  val span: FileSpan,
+  val name:      Interpolation,
+  val span:      FileSpan,
   val namespace: Nullable[Interpolation] = Nullable.empty
 ) extends SassNode {
 
@@ -105,13 +107,16 @@ final class InterpolatedQualifiedName(
 
 /** A component of an [InterpolatedComplexSelector].
   *
-  * @param selector   this component's compound selector
-  * @param span       the source span
-  * @param combinator this selector's combinator, or empty for implicit descendant
+  * @param selector
+  *   this component's compound selector
+  * @param span
+  *   the source span
+  * @param combinator
+  *   this selector's combinator, or empty for implicit descendant
   */
 final class InterpolatedComplexSelectorComponent(
-  val selector: InterpolatedCompoundSelector,
-  val span: FileSpan,
+  val selector:   InterpolatedCompoundSelector,
+  val span:       FileSpan,
   val combinator: Nullable[CssValue[Combinator]] = Nullable.empty
 ) extends SassNode {
 
@@ -125,7 +130,8 @@ final class InterpolatedComplexSelectorComponent(
 
 /** A selector list before interpolation is resolved.
   *
-  * @param components the components of this selector (never empty)
+  * @param components
+  *   the components of this selector (never empty)
   */
 final class InterpolatedSelectorList(
   val components: List[InterpolatedComplexSelector]
@@ -148,13 +154,16 @@ final class InterpolatedSelectorList(
 
 /** A complex selector before interpolation is resolved.
   *
-  * @param components         the components of this selector
-  * @param span               the source span
-  * @param leadingCombinator  the leading combinator, or empty
+  * @param components
+  *   the components of this selector
+  * @param span
+  *   the source span
+  * @param leadingCombinator
+  *   the leading combinator, or empty
   */
 final class InterpolatedComplexSelector(
-  val components: List[InterpolatedComplexSelectorComponent],
-  val span: FileSpan,
+  val components:        List[InterpolatedComplexSelectorComponent],
+  val span:              FileSpan,
   val leadingCombinator: Nullable[CssValue[Combinator]] = Nullable.empty
 ) extends InterpolatedSelector {
   require(
@@ -174,7 +183,8 @@ final class InterpolatedComplexSelector(
 
 /** A compound selector before interpolation is resolved.
   *
-  * @param components the components of this selector (never empty)
+  * @param components
+  *   the components of this selector (never empty)
   */
 final class InterpolatedCompoundSelector(
   val components: List[InterpolatedSimpleSelector]
@@ -197,17 +207,22 @@ final class InterpolatedCompoundSelector(
 
 /** An attribute selector.
   *
-  * @param name     the name of the attribute being selected for
-  * @param span     the source span
-  * @param op       the operator, or empty
-  * @param value    an assertion about the value of [name], or empty
-  * @param modifier the modifier, or empty
+  * @param name
+  *   the name of the attribute being selected for
+  * @param span
+  *   the source span
+  * @param op
+  *   the operator, or empty
+  * @param value
+  *   an assertion about the value of [name], or empty
+  * @param modifier
+  *   the modifier, or empty
   */
 final class InterpolatedAttributeSelector(
-  val name: InterpolatedQualifiedName,
-  val span: FileSpan,
-  val op: Nullable[CssValue[AttributeOperator]] = Nullable.empty,
-  val value: Nullable[Interpolation] = Nullable.empty,
+  val name:     InterpolatedQualifiedName,
+  val span:     FileSpan,
+  val op:       Nullable[CssValue[AttributeOperator]] = Nullable.empty,
+  val value:    Nullable[Interpolation] = Nullable.empty,
   val modifier: Nullable[Interpolation] = Nullable.empty
 ) extends InterpolatedSimpleSelector {
 
@@ -231,7 +246,8 @@ final class InterpolatedAttributeSelector(
 
 /** A class selector.
   *
-  * @param name the class name this selects for
+  * @param name
+  *   the class name this selects for
   */
 final class InterpolatedClassSelector(
   val name: Interpolation
@@ -252,7 +268,8 @@ final class InterpolatedClassSelector(
 
 /** An ID selector.
   *
-  * @param name the id name this selects for
+  * @param name
+  *   the id name this selects for
   */
 final class InterpolatedIDSelector(
   val name: Interpolation
@@ -273,11 +290,13 @@ final class InterpolatedIDSelector(
 
 /** A parent selector.
   *
-  * @param span   the source span
-  * @param suffix the suffix that will be added to the parent selector after resolution
+  * @param span
+  *   the source span
+  * @param suffix
+  *   the suffix that will be added to the parent selector after resolution
   */
 final class InterpolatedParentSelector(
-  val span: FileSpan,
+  val span:   FileSpan,
   val suffix: Nullable[Interpolation] = Nullable.empty
 ) extends InterpolatedSimpleSelector {
 
@@ -294,7 +313,8 @@ final class InterpolatedParentSelector(
 
 /** A placeholder selector.
   *
-  * @param name the name of the placeholder
+  * @param name
+  *   the name of the placeholder
   */
 final class InterpolatedPlaceholderSelector(
   val name: Interpolation
@@ -315,18 +335,23 @@ final class InterpolatedPlaceholderSelector(
 
 /** A pseudo-class or pseudo-element selector.
   *
-  * @param name             the name of this selector (including any vendor prefixes)
-  * @param span             the source span
-  * @param isSyntacticClass whether this is syntactically a pseudo-class selector
-  * @param argument         the non-selector argument, or empty
-  * @param selector         the selector argument, or empty
+  * @param name
+  *   the name of this selector (including any vendor prefixes)
+  * @param span
+  *   the source span
+  * @param isSyntacticClass
+  *   whether this is syntactically a pseudo-class selector
+  * @param argument
+  *   the non-selector argument, or empty
+  * @param selector
+  *   the selector argument, or empty
   */
 final class InterpolatedPseudoSelector(
-  val name: Interpolation,
-  val span: FileSpan,
+  val name:             Interpolation,
+  val span:             FileSpan,
   val isSyntacticClass: Boolean = true,
-  val argument: Nullable[Interpolation] = Nullable.empty,
-  val selector: Nullable[InterpolatedSelectorList] = Nullable.empty
+  val argument:         Nullable[Interpolation] = Nullable.empty,
+  val selector:         Nullable[InterpolatedSelectorList] = Nullable.empty
 ) extends InterpolatedSimpleSelector {
 
   /** Whether this is syntactically a pseudo-element selector. */
@@ -357,7 +382,8 @@ final class InterpolatedPseudoSelector(
 
 /** A type selector.
   *
-  * @param name the element name being selected for
+  * @param name
+  *   the element name being selected for
   */
 final class InterpolatedTypeSelector(
   val name: InterpolatedQualifiedName
@@ -377,11 +403,13 @@ final class InterpolatedTypeSelector(
 
 /** A universal selector.
   *
-  * @param span      the source span
-  * @param namespace the selector namespace, or empty
+  * @param span
+  *   the source span
+  * @param namespace
+  *   the selector namespace, or empty
   */
 final class InterpolatedUniversalSelector(
-  val span: FileSpan,
+  val span:      FileSpan,
   val namespace: Nullable[Interpolation] = Nullable.empty
 ) extends InterpolatedSimpleSelector {
 

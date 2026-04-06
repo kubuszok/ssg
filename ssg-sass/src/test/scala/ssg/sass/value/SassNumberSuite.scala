@@ -65,29 +65,29 @@ final class SassNumberSuite extends munit.FunSuite {
   }
 
   test("SassNumber arithmetic: plus") {
-    val a = SassNumber(10.0, "px")
-    val b = SassNumber(5.0, "px")
+    val a      = SassNumber(10.0, "px")
+    val b      = SassNumber(5.0, "px")
     val result = a.plus(b).asInstanceOf[SassNumber]
     assertEquals(result.value, 15.0)
   }
 
   test("SassNumber arithmetic: minus") {
-    val a = SassNumber(10.0, "px")
-    val b = SassNumber(3.0, "px")
+    val a      = SassNumber(10.0, "px")
+    val b      = SassNumber(3.0, "px")
     val result = a.minus(b).asInstanceOf[SassNumber]
     assertEquals(result.value, 7.0)
   }
 
   test("SassNumber arithmetic: times") {
-    val a = SassNumber(4.0, "px")
-    val b = SassNumber(3.0)
+    val a      = SassNumber(4.0, "px")
+    val b      = SassNumber(3.0)
     val result = a.times(b).asInstanceOf[SassNumber]
     assertEquals(result.value, 12.0)
   }
 
   test("SassNumber arithmetic: dividedBy") {
-    val a = SassNumber(12.0, "px")
-    val b = SassNumber(3.0)
+    val a      = SassNumber(12.0, "px")
+    val b      = SassNumber(3.0)
     val result = a.dividedBy(b).asInstanceOf[SassNumber]
     assertEquals(result.value, 4.0)
   }
@@ -114,7 +114,7 @@ final class SassNumberSuite extends munit.FunSuite {
   }
 
   test("SassNumber unit conversion: compatible units") {
-    val n = SassNumber(1.0, "in")
+    val n      = SassNumber(1.0, "in")
     val result = n.coerceValue(List("px"), Nil)
     assert(ssg.sass.util.NumberUtil.fuzzyEquals(result, 96.0))
   }
@@ -125,14 +125,14 @@ final class SassNumberSuite extends munit.FunSuite {
   }
 
   test("SassNumber.unaryMinus negates") {
-    val n = SassNumber(5.0, "px")
+    val n      = SassNumber(5.0, "px")
     val result = n.unaryMinus().asInstanceOf[SassNumber]
     assertEquals(result.value, -5.0)
     assertEquals(result.numeratorUnits, List("px"))
   }
 
   test("SassNumber.unaryPlus preserves") {
-    val n = SassNumber(5.0, "px")
+    val n      = SassNumber(5.0, "px")
     val result = n.unaryPlus().asInstanceOf[SassNumber]
     assertEquals(result.value, 5.0)
   }

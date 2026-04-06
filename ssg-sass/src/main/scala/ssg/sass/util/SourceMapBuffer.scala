@@ -14,17 +14,16 @@ package ssg
 package sass
 package util
 
-
 /** Trait for CSS output buffers, with optional source map tracking. */
 trait SassBuffer {
-  def write(obj: Any): Unit
-  def writeCharCode(code: Int): Unit
-  def writeln(obj: Any = ""): Unit
-  def forSpan[T](span: FileSpan)(callback: => T): T
-  def length: Int
-  def isEmpty: Boolean
-  def isNotEmpty: Boolean = !isEmpty
-  override def toString: String
+  def write(obj:          Any):                      Unit
+  def writeCharCode(code: Int):                      Unit
+  def writeln(obj:        Any = ""):                 Unit
+  def forSpan[T](span:    FileSpan)(callback: => T): T
+  def length:                                        Int
+  def isEmpty:                                       Boolean
+  def isNotEmpty:                                    Boolean = !isEmpty
+  override def toString:                             String
 }
 
 /** A buffer that outputs CSS without tracking source maps. */
@@ -54,7 +53,7 @@ final class NoSourceMapBuffer extends SassBuffer {
 final class SourceMapBuffer extends SassBuffer {
 
   private val buffer = new StringBuilder()
-  private var _line: Int = 0
+  private var _line:   Int = 0
   private var _column: Int = 0
   private val entries = scala.collection.mutable.ArrayBuffer.empty[(FileSpan, Int, Int)]
   private var inSpan: Boolean = false

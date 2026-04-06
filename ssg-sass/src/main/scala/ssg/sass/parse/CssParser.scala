@@ -19,8 +19,8 @@ import ssg.sass.Nullable
 
 /** A parser for plain CSS. */
 class CssParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:       String,
+  url:            Nullable[String] = Nullable.Null,
   parseSelectors: Boolean = false
 ) extends ScssParser(contents, url, parseSelectors) {
 

@@ -18,9 +18,9 @@ import scala.collection.immutable.ListMap
 
 /** A SassScript argument list — a list with keyword arguments. */
 final class SassArgumentList(
-  contents: List[Value],
+  contents:              List[Value],
   private val _keywords: ListMap[String, Value],
-  separator: ListSeparator
+  separator:             ListSeparator
 ) extends SassList(contents, separator) {
 
   private var _wereKeywordsAccessed: Boolean = false

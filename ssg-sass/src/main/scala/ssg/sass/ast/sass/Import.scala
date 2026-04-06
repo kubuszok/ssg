@@ -30,16 +30,18 @@ trait Import extends SassNode
 
 /** An import that will load a Sass file at runtime.
   *
-  * @param urlString the URL of the file to import, as a string
-  * @param span      the source span
+  * @param urlString
+  *   the URL of the file to import, as a string
+  * @param span
+  *   the source span
   */
 final case class DynamicImport(
   urlString: String,
-  span: FileSpan
-) extends Import with SassDependency {
+  span:      FileSpan
+) extends Import
+    with SassDependency {
 
-  /** The URL of the file to import. If this is relative, it's relative to the
-    * containing file.
+  /** The URL of the file to import. If this is relative, it's relative to the containing file.
     */
   def url: URI = URI.create(urlString)
 
@@ -51,13 +53,16 @@ final case class DynamicImport(
 
 /** An import that produces a plain CSS `@import` rule.
   *
-  * @param url       the URL for this import (already contains quotes)
-  * @param span      the source span
-  * @param modifiers the modifiers (such as media or supports queries), or empty
+  * @param url
+  *   the URL for this import (already contains quotes)
+  * @param span
+  *   the source span
+  * @param modifiers
+  *   the modifiers (such as media or supports queries), or empty
   */
 final case class StaticImport(
-  url: Interpolation,
-  span: FileSpan,
+  url:       Interpolation,
+  span:      FileSpan,
   modifiers: Nullable[Interpolation] = Nullable.empty
 ) extends Import {
 

@@ -63,22 +63,22 @@ final class Phase2Suite extends munit.FunSuite {
 
   test("SassException stores message and span") {
     val span = FileSpan.synthetic("test")
-    val ex = SassException("bad input", span)
+    val ex   = SassException("bad input", span)
     assertEquals(ex.sassMessage, "bad input")
     assert(ex.toString.contains("bad input"))
   }
 
   test("SassException.withTrace creates SassRuntimeException") {
-    val span = FileSpan.synthetic("test")
+    val span  = FileSpan.synthetic("test")
     val trace = ssg.sass.util.Trace.empty
-    val ex = SassException("msg", span).withTrace(trace)
+    val ex    = SassException("msg", span).withTrace(trace)
     assert(ex.isInstanceOf[SassRuntimeException])
   }
 
   test("SassFormatException has source and offset") {
     val file = ssg.sass.util.SourceFile("test.scss", "abc\ndef")
     val span = file.span(4, 7)
-    val ex = SassFormatException("parse error", span)
+    val ex   = SassFormatException("parse error", span)
     assertEquals(ex.source, "abc\ndef")
     assertEquals(ex.offset, 4)
   }
@@ -90,16 +90,16 @@ final class Phase2Suite extends munit.FunSuite {
   }
 
   test("SassScriptException.withSpan creates SassException") {
-    val ex = SassScriptException("error")
-    val span = FileSpan.synthetic("x")
+    val ex     = SassScriptException("error")
+    val span   = FileSpan.synthetic("x")
     val sassEx = ex.withSpan(span)
     assert(sassEx.isInstanceOf[SassException])
   }
 
   test("SassException.toCssString produces valid CSS") {
     val span = FileSpan.synthetic("x")
-    val ex = SassException("test error", span)
-    val css = ex.toCssString
+    val ex   = SassException("test error", span)
+    val css  = ex.toCssString
     assert(css.contains("body::before"))
     assert(css.contains("content:"))
   }
@@ -179,10 +179,12 @@ final class Phase2Suite extends munit.FunSuite {
   }
 
   test("Utils.flattenVertically interleaves") {
-    val result = Utils.flattenVertically(List(
-      List("1a", "1b"),
-      List("2a", "2b")
-    ))
+    val result = Utils.flattenVertically(
+      List(
+        List("1a", "1b"),
+        List("2a", "2b")
+      )
+    )
     assertEquals(result, List("1a", "2a", "1b", "2b"))
   }
 

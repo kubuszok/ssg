@@ -25,12 +25,11 @@ final class Configuration private (val values: Map[String, ConfiguredValue]) {
   /** Removes and returns the configured value for [name], if any. */
   def remove(name: String): Nullable[ConfiguredValue] =
     values.get(name) match {
-      case Some(v) => v
+      case Some(v)    => v
       case scala.None => Nullable.empty
     }
 
-  /** Throws a [[SassException]] if any values remain — i.e. for values that
-    * weren't used by the module.
+  /** Throws a [[SassException]] if any values remain — i.e. for values that weren't used by the module.
     */
   def throwErrorForUnknownVariables(): Unit = {
     // TODO: implement
@@ -54,9 +53,9 @@ object Configuration {
 
 /** A single value in a [[Configuration]]. */
 final class ConfiguredValue(
-  val value: Value,
+  val value:             Value,
   val configurationSpan: Nullable[AstNode],
-  val assignmentNode: Nullable[AstNode]
+  val assignmentNode:    Nullable[AstNode]
 ) {
 
   override def toString: String = s"ConfiguredValue($value)"

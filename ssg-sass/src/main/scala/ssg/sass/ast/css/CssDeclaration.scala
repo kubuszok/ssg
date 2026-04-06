@@ -17,7 +17,7 @@ package ast
 package css
 
 import ssg.sass.util.FileSpan
-import ssg.sass.value.{SassString, Value}
+import ssg.sass.value.{ SassString, Value }
 import ssg.sass.visitor.CssVisitor
 
 /** A plain CSS declaration (that is, a `name: value` pair). */
@@ -31,35 +31,31 @@ trait CssDeclaration extends CssNode {
 
   /** The span for value that should be emitted to the source map.
     *
-    * When the declaration's expression is just a variable, this is the span
-    * where that variable was declared whereas value.span is the span where
-    * the variable was used. Otherwise, this is identical to value.span.
+    * When the declaration's expression is just a variable, this is the span where that variable was declared whereas value.span is the span where the variable was used. Otherwise, this is identical
+    * to value.span.
     */
   def valueSpanForMap: FileSpan
 
   /** Returns whether this is a CSS Custom Property declaration. */
   def isCustomProperty: Boolean
 
-  /** Whether this property's value was originally parsed as SassScript, as
-    * opposed to a custom property which is parsed as an interpolated sequence
-    * of tokens.
+  /** Whether this property's value was originally parsed as SassScript, as opposed to a custom property which is parsed as an interpolated sequence of tokens.
     *
-    * If this is false, value will contain an unquoted SassString.
-    * isCustomProperty will usually be true, but there are other properties
-    * that may not be parsed as SassScript, like `return` in a plain CSS
-    * `@function`.
+    * If this is false, value will contain an unquoted SassString. isCustomProperty will usually be true, but there are other properties that may not be parsed as SassScript, like `return` in a plain
+    * CSS `@function`.
     */
   def parsedAsSassScript: Boolean
 }
 
 /** A modifiable version of CssDeclaration for use in the evaluation step. */
 final class ModifiableCssDeclaration(
-  val name: CssValue[String],
-  val value: CssValue[Value],
-  val span: FileSpan,
+  val name:               CssValue[String],
+  val value:              CssValue[Value],
+  val span:               FileSpan,
   val parsedAsSassScript: Boolean,
-  valueSpanForMapOpt: Option[FileSpan] = None
-) extends ModifiableCssNode with CssDeclaration {
+  valueSpanForMapOpt:     Option[FileSpan] = None
+) extends ModifiableCssNode
+    with CssDeclaration {
 
   val valueSpanForMap: FileSpan = valueSpanForMapOpt.getOrElse(value.span)
 

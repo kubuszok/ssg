@@ -477,6 +477,79 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("x: 3"), result.css)
   }
 
+  // --- Interpolation in expression values / names ---
+
+  test("interpolation in declaration value: #{$base * 2}px") {
+    val result = Compile.compileString("""
+      $base: 8px;
+      .box { width: #{$base * 2}px; }
+    """)
+    assert(result.css.contains("width: 16px"), result.css)
+  }
+
+  test("interpolation in declaration value: prefix-#{$x}") {
+    val result = Compile.compileString("""
+      $x: 3;
+      .box { margin: m-#{$x}-end; }
+    """)
+    assert(result.css.contains("m-3-end"), result.css)
+  }
+
+  test("interpolation in property name") {
+    val result = Compile.compileString("""
+      $prefix: border;
+      .box { #{$prefix}-color: red; }
+    """)
+    assert(result.css.contains("border-color: red"), result.css)
+  }
+
+  test("interpolation in middle of property name") {
+    val result = Compile.compileString("""
+      $side: left;
+      .box { margin-#{$side}: 10px; }
+    """)
+    assert(result.css.contains("margin-left: 10px"), result.css)
+  }
+
+  test("string concatenation with interpolation") {
+    val result = Compile.compileString("""
+      $x: 42;
+      a { content: "foo-#{$x}-bar"; }
+    """)
+    assert(result.css.contains("foo-42-bar"), result.css)
+  }
+
+  // --- Keyword arguments ---
+
+  test("@mixin accepts keyword arguments") {
+    val result = Compile.compileString("""
+      @mixin box($w, $h) { width: $w; height: $h; }
+      .card { @include box($h: 20px, $w: 10px); }
+    """)
+    assert(result.css.contains("width: 10px"), result.css)
+    assert(result.css.contains("height: 20px"), result.css)
+  }
+
+  test("@mixin accepts mixed positional and keyword arguments") {
+    val result = Compile.compileString(
+      """
+      @mixin box($w, $h, $c) { width: $w; height: $h; color: $c; }
+      .card { @include box(10px, $c: red, $h: 20px); }
+    """
+    )
+    assert(result.css.contains("width: 10px"), result.css)
+    assert(result.css.contains("height: 20px"), result.css)
+    assert(result.css.contains("color: red"), result.css)
+  }
+
+  test("named arguments in function call parse without error") {
+    // Keyword-aware dispatch for built-ins is deferred — unknown functions
+    // fall back to plain CSS. We just verify the parse completes and the
+    // output contains the original call name.
+    val result = Compile.compileString(""".x { y: my-fn($a: 1, $b: 2); }""")
+    assert(result.css.contains("my-fn"), result.css)
+  }
+
   test("@include splats list rest argument into positional params") {
     val result = Compile.compileString("""
       @mixin pair($a, $b) { x: $a; y: $b; }

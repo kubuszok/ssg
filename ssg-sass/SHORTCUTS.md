@@ -61,8 +61,17 @@ or serializer.
 - ✅ `@mixin` / `@function` / `@include` — parsed with positional parameters,
   default values, and a trailing rest parameter (`$args...`). `@include` call
   sites accept a trailing rest argument (`$list...`) that is splatted into
-  positional parameters when the value is a `SassList`. Keyword arguments and
-  `$kwargs...` are not yet supported.
+  positional parameters when the value is a `SassList`. **Keyword arguments**
+  (`foo($name: value, $other: 10)`) are now supported at call sites for
+  both `@include` and text-based function calls, including mixed
+  positional + keyword. `_bindParameters` binds named args by parameter
+  name after filling positional slots. `$kwargs...` is still TODO.
+- ✅ `#{expr}` interpolation in expression values — declaration values like
+  `width: #{$base * 2}px`, property names like `#{$prefix}-color: red` (and
+  mid-name `margin-#{$side}: ...`), and string concatenation
+  `"foo-#{$x}-bar"` all parse the inner expression and splice its CSS
+  string form into surrounding literal text. Property-name interpolation
+  goes through a dedicated `_readInterpolatedName` scanner.
 - ⚠️  Style rule selectors stored as plain Interpolation (no interpolation parsing yet).
 
 ### `parse/ScssParser.scala` ✅ IMPLEMENTED

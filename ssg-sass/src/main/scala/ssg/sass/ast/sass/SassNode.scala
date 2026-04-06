@@ -25,7 +25,7 @@ package sass
 import java.net.URI
 
 import ssg.sass.Nullable
-import ssg.sass.util.{FileSpan, initialIdentifier}
+import ssg.sass.util.{ FileSpan, initialIdentifier }
 
 /** A node in the abstract syntax tree for an unevaluated Sass or SCSS file. */
 trait SassNode extends AstNode
@@ -33,13 +33,11 @@ trait SassNode extends AstNode
 /** A common interface for any node that declares a Sass member. */
 trait SassDeclaration extends SassNode {
 
-  /** The name of the declaration, with underscores converted to hyphens.
-    * This does not include the `$` for variables.
+  /** The name of the declaration, with underscores converted to hyphens. This does not include the `$` for variables.
     */
   def name: String
 
-  /** The span containing this declaration's name.
-    * This includes the `$` for variables.
+  /** The span containing this declaration's name. This includes the `$` for variables.
     */
   def nameSpan: FileSpan
 }
@@ -57,23 +55,19 @@ trait SassDependency extends SassNode {
 /** A common interface for any node that references a Sass member. */
 trait SassReference extends SassNode {
 
-  /** The namespace of the member being referenced, or empty if it's
-    * referenced without a namespace.
+  /** The namespace of the member being referenced, or empty if it's referenced without a namespace.
     */
   def namespace: Nullable[String]
 
-  /** The name of the member being referenced, with underscores converted to
-    * hyphens. This does not include the `$` for variables.
+  /** The name of the member being referenced, with underscores converted to hyphens. This does not include the `$` for variables.
     */
   def name: String
 
-  /** The span containing this reference's name.
-    * For variables, this should include the `$`.
+  /** The span containing this reference's name. For variables, this should include the `$`.
     */
   def nameSpan: FileSpan
 
-  /** The span containing this reference's namespace, empty if [namespace] is
-    * empty.
+  /** The span containing this reference's namespace, empty if [namespace] is empty.
     */
   def namespaceSpan: Nullable[FileSpan]
 }
@@ -87,17 +81,22 @@ trait CallableInvocation extends SassNode {
 
 /** A variable configured by a `with` clause in a `@use` or `@forward` rule.
   *
-  * @param name       the name of the variable being configured
-  * @param expression the variable's value
-  * @param span       the source span
-  * @param isGuarded  whether the variable can be further configured by outer modules
+  * @param name
+  *   the name of the variable being configured
+  * @param expression
+  *   the variable's value
+  * @param span
+  *   the source span
+  * @param isGuarded
+  *   whether the variable can be further configured by outer modules
   */
 final case class ConfiguredVariable(
-  name: String,
+  name:       String,
   expression: Expression,
-  span: FileSpan,
-  isGuarded: Boolean = false
-) extends SassNode with SassDeclaration {
+  span:       FileSpan,
+  isGuarded:  Boolean = false
+) extends SassNode
+    with SassDeclaration {
 
   def nameSpan: FileSpan = span.initialIdentifier(includeLeading = 1)
 

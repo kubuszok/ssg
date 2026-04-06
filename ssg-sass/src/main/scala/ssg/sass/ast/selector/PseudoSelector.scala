@@ -17,23 +17,21 @@ package sass
 package ast
 package selector
 
-import ssg.sass.{Nullable, Utils}
+import ssg.sass.{ Nullable, Utils }
 import ssg.sass.Nullable.*
-import ssg.sass.util.{CharCode, FileSpan}
+import ssg.sass.util.{ CharCode, FileSpan }
 
 import scala.language.implicitConversions
 
 /** A pseudo-class or pseudo-element selector.
   *
-  * The semantics of a specific pseudo selector depends on its name. Some
-  * selectors take arguments, including other selectors. Sass manually encodes
-  * logic for each pseudo selector that takes a selector as an argument, to
-  * ensure that extension and other selector operations work properly.
+  * The semantics of a specific pseudo selector depends on its name. Some selectors take arguments, including other selectors. Sass manually encodes logic for each pseudo selector that takes a
+  * selector as an argument, to ensure that extension and other selector operations work properly.
   */
 final class PseudoSelector(
-  val name: String,
-  span: FileSpan,
-  element: Boolean = false,
+  val name:     String,
+  span:         FileSpan,
+  element:      Boolean = false,
   val argument: Nullable[String] = Nullable.Null,
   val selector: Nullable[SelectorList] = Nullable.Null
 ) extends SimpleSelector(span) {
@@ -49,9 +47,7 @@ final class PseudoSelector(
 
   /** Whether this is syntactically a pseudo-class selector.
     *
-    * This is the same as [[isClass]] unless this selector is a pseudo-element
-    * that was written syntactically as a pseudo-class (`:before`, `:after`,
-    * `:first-line`, or `:first-letter`).
+    * This is the same as [[isClass]] unless this selector is a pseudo-element that was written syntactically as a pseudo-class (`:before`, `:after`, `:first-line`, or `:first-letter`).
     *
     * This is `true` if and only if [[isSyntacticElement]] is `false`.
     */
@@ -79,14 +75,14 @@ final class PseudoSelector(
   override def hasComplicatedSuperselectorSemantics: Boolean =
     isElement || selector.isDefined
 
-  override lazy val specificity: Int = {
+  override lazy val specificity: Int =
     if (isElement) 1
     else if (selector.isEmpty) super.specificity
     else {
       val sel = selector.get
       // https://drafts.csswg.org/selectors/#specificity-rules
       normalizedName match {
-        case "where" => 0
+        case "where"                          => 0
         case "is" | "not" | "has" | "matches" =>
           sel.components.map(_.specificity).max
         case "nth-child" | "nth-last-child" =>
@@ -95,10 +91,8 @@ final class PseudoSelector(
         case _ => super.specificity
       }
     }
-  }
 
-  /** Returns a new [[PseudoSelector]] based on this, but with the selector
-    * replaced with `newSelector`.
+  /** Returns a new [[PseudoSelector]] based on this, but with the selector replaced with `newSelector`.
     */
   def withSelector(newSelector: SelectorList): PseudoSelector =
     PseudoSelector(name, span, element = isElement, argument = argument, selector = Nullable(newSelector))
@@ -108,12 +102,14 @@ final class PseudoSelector(
     PseudoSelector(name + suffix, span, element = isElement)
   }
 
-  override def unify(compound: List[SimpleSelector]): Nullable[List[SimpleSelector]] = {
+  override def unify(compound: List[SimpleSelector]): Nullable[List[SimpleSelector]] =
     if (name == "host" || name == "host-context") {
-      if (!compound.forall {
-        case p: PseudoSelector => p.isHost || p.selector.isDefined
-        case _                 => false
-      }) {
+      if (
+        !compound.forall {
+          case p: PseudoSelector => p.isHost || p.selector.isDefined
+          case _ => false
+        }
+      ) {
         Nullable.Null
       } else {
         super.unify(compound)
@@ -127,7 +123,7 @@ final class PseudoSelector(
         case _ =>
           if (compound.contains(this)) Nullable(compound)
           else {
-            val result = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
+            val result    = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
             var addedThis = false
             for (simple <- compound) {
               simple match {
@@ -152,26 +148,23 @@ final class PseudoSelector(
           }
       }
     }
-  }
 
-  override def isSuperselector(other: SimpleSelector): Boolean = {
+  override def isSuperselector(other: SimpleSelector): Boolean =
     if (super.isSuperselector(other)) true
     else if (selector.isEmpty) this == other
     else {
       val sel = selector.get
       other match {
         case otherPseudo: PseudoSelector
-          if isElement && otherPseudo.isElement &&
-            normalizedName == "slotted" && otherPseudo.name == name =>
+            if isElement && otherPseudo.isElement &&
+              normalizedName == "slotted" && otherPseudo.name == name =>
           otherPseudo.selector.exists(sel.isSuperselector)
         case _ =>
           // Fall back to the logic defined in functions, which knows how to
           // compare selector pseudoclasses against raw selectors.
-          CompoundSelector(List(this), span)
-            .isSuperselector(CompoundSelector(List(other), span))
+          CompoundSelector(List(this), span).isSuperselector(CompoundSelector(List(other), span))
       }
     }
-  }
 
   override def accept[T](visitor: SelectorVisitor[T]): T =
     visitor.visitPseudoSelector(this)
@@ -188,18 +181,16 @@ final class PseudoSelector(
 
   override def hashCode(): Int =
     name.hashCode() ^
-    isElement.hashCode() ^
-    argument.hashCode() ^
-    selector.hashCode()
+      isElement.hashCode() ^
+      argument.hashCode() ^
+      selector.hashCode()
 }
 
 object PseudoSelector {
 
-  /** Returns whether `name` is the name of a pseudo-element that can be written
-    * with pseudo-class syntax (`:before`, `:after`, `:first-line`, or
-    * `:first-letter`).
+  /** Returns whether `name` is the name of a pseudo-element that can be written with pseudo-class syntax (`:before`, `:after`, `:first-line`, or `:first-letter`).
     */
-  private[selector] def isFakePseudoElement(name: String): Boolean = {
+  private[selector] def isFakePseudoElement(name: String): Boolean =
     if (name.isEmpty) false
     else {
       val first = name.charAt(0).toInt
@@ -214,5 +205,4 @@ object PseudoSelector {
         case _ => false
       }
     }
-  }
 }

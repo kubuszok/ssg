@@ -11,21 +11,22 @@ package util
 
 import ssg.sass.Nullable.*
 
-/**
- * Represents a source file that can be referenced by spans.
- *
- * @param url    optional URL identifying the source
- * @param text   the full source text
- */
+/** Represents a source file that can be referenced by spans.
+  *
+  * @param url
+  *   optional URL identifying the source
+  * @param text
+  *   the full source text
+  */
 final class SourceFile(
-  val url: Nullable[String],
+  val url:  Nullable[String],
   val text: String
 ) {
 
   /** Line start offsets, computed lazily. */
   private lazy val lineStarts: Array[Int] = {
     val builder = scala.collection.mutable.ArrayBuffer[Int](0)
-    var i = 0
+    var i       = 0
     while (i < text.length) {
       val c = text.charAt(i).toInt
       if (c == CharCode.$lf) {
@@ -80,18 +81,21 @@ final class SourceFile(
   override def toString: String = url.getOrElse("<unknown>")
 }
 
-/**
- * A location within a source file.
- *
- * @param file   the source file
- * @param offset byte offset from the start of the file
- * @param line   0-based line number
- * @param column 0-based column number
- */
+/** A location within a source file.
+  *
+  * @param file
+  *   the source file
+  * @param offset
+  *   byte offset from the start of the file
+  * @param line
+  *   0-based line number
+  * @param column
+  *   0-based column number
+  */
 final case class FileLocation(
-  file: SourceFile,
+  file:   SourceFile,
   offset: Int,
-  line: Int,
+  line:   Int,
   column: Int
 ) {
   def pointSpan: FileSpan = FileSpan(file, this, this)
@@ -102,17 +106,19 @@ final case class FileLocation(
   }
 }
 
-/**
- * A span within a source file, used for error reporting.
- *
- * @param file  the source file
- * @param start start location (inclusive)
- * @param end   end location (exclusive)
- */
+/** A span within a source file, used for error reporting.
+  *
+  * @param file
+  *   the source file
+  * @param start
+  *   start location (inclusive)
+  * @param end
+  *   end location (exclusive)
+  */
 final case class FileSpan(
-  file: SourceFile,
+  file:  SourceFile,
   start: FileLocation,
-  end: FileLocation
+  end:   FileLocation
 ) {
 
   /** The source text covered by this span. */
@@ -142,12 +148,12 @@ final case class FileSpan(
   /** Returns highlighted source context for error display. */
   def highlight(): String = {
     val lineNum = start.line + 1
-    val prefix = s"$lineNum | "
+    val prefix  = s"$lineNum | "
     // Get the full line text
     val lineStart = start.offset - start.column
-    var lineEnd = file.text.indexOf('\n', lineStart)
+    var lineEnd   = file.text.indexOf('\n', lineStart)
     if (lineEnd < 0) lineEnd = file.text.length
-    val lineText = file.text.substring(lineStart, lineEnd)
+    val lineText  = file.text.substring(lineStart, lineEnd)
     val underline = " " * prefix.length + " " * start.column + "^" * math.max(1, length)
     s"$prefix$lineText\n$underline"
   }
@@ -155,7 +161,7 @@ final case class FileSpan(
   /** Creates a span that covers the range between this span and [other]. */
   def expand(other: FileSpan): FileSpan = {
     val newStart = if (start.offset <= other.start.offset) start else other.start
-    val newEnd = if (end.offset >= other.end.offset) end else other.end
+    val newEnd   = if (end.offset >= other.end.offset) end else other.end
     FileSpan(file, newStart, newEnd)
   }
 
@@ -223,25 +229,22 @@ object FileSpan {
 
 extension (span: FileSpan) {
 
-  /** Returns the span covering the initial identifier in this span.
-    * If [includeLeading] is given, includes that many characters before the
-    * identifier (e.g. 1 for `$` in variable names).
+  /** Returns the span covering the initial identifier in this span. If [includeLeading] is given, includes that many characters before the identifier (e.g. 1 for `$` in variable names).
     */
   def initialIdentifier(includeLeading: Int = 0): FileSpan = {
     val t = span.text
     var i = includeLeading
     if (i < t.length && (t.charAt(i).isLetter || t.charAt(i) == '_' || t.charAt(i) == '-')) {
       i += 1
-      while (i < t.length && (t.charAt(i).isLetterOrDigit || t.charAt(i) == '_' || t.charAt(i) == '-')) {
+      while (i < t.length && (t.charAt(i).isLetterOrDigit || t.charAt(i) == '_' || t.charAt(i) == '-'))
         i += 1
-      }
     }
     span.subspan(0, i)
   }
 
   /** Returns the span with the initial `namespace.` prefix removed. */
   def withoutNamespace(): FileSpan = {
-    val t = span.text
+    val t      = span.text
     val dotIdx = t.indexOf('.')
     if (dotIdx < 0) span
     else span.subspan(dotIdx + 1)

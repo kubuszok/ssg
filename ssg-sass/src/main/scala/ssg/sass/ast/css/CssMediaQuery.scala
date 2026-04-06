@@ -25,9 +25,7 @@ final class CssMediaQuery private (
   val type_ : Option[String],
   /** Whether conditions is a conjunction or a disjunction.
     *
-    * If true, this query matches when all conditions are met.
-    * If false, this query matches when any condition is met.
-    * If false, modifier and type_ will both be None.
+    * If true, this query matches when all conditions are met. If false, this query matches when any condition is met. If false, modifier and type_ will both be None.
     */
   val conjunction: Boolean,
   /** Media conditions, including parentheses. */
@@ -38,17 +36,16 @@ final class CssMediaQuery private (
   def matchesAllTypes: Boolean =
     type_.isEmpty || type_.exists(_.equalsIgnoreCase("all"))
 
-  /** Merges this with [other] to return a query that matches the intersection
-    * of both inputs.
+  /** Merges this with [other] to return a query that matches the intersection of both inputs.
     */
-  def merge(other: CssMediaQuery): MediaQueryMergeResult = {
+  def merge(other: CssMediaQuery): MediaQueryMergeResult =
     if (!conjunction || !other.conjunction) {
       MediaQueryMergeResult.Unrepresentable
     } else {
-      val ourModifier = modifier.map(_.toLowerCase)
-      val ourType = type_.map(_.toLowerCase)
+      val ourModifier   = modifier.map(_.toLowerCase)
+      val ourType       = type_.map(_.toLowerCase)
       val theirModifier = other.modifier.map(_.toLowerCase)
-      val theirType = other.type_.map(_.toLowerCase)
+      val theirType     = other.type_.map(_.toLowerCase)
 
       if (ourType.isEmpty && theirType.isEmpty) {
         MediaQueryMergeResult.Success(
@@ -61,18 +58,17 @@ final class CssMediaQuery private (
         mergeWithTypes(other, ourModifier, ourType, theirModifier, theirType)
       }
     }
-  }
 
   private def mergeWithTypes(
-    other: CssMediaQuery,
-    ourModifier: Option[String],
-    ourType: Option[String],
+    other:         CssMediaQuery,
+    ourModifier:   Option[String],
+    ourType:       Option[String],
     theirModifier: Option[String],
-    theirType: Option[String]
+    theirType:     Option[String]
   ): MediaQueryMergeResult = {
-    var resultModifier: Option[String] = None
-    var resultType: Option[String] = None
-    var resultConditions: List[String] = Nil
+    var resultModifier:   Option[String] = None
+    var resultType:       Option[String] = None
+    var resultConditions: List[String]   = Nil
 
     if (ourModifier.contains("not") != theirModifier.contains("not")) {
       if (ourType == theirType) {
@@ -188,8 +184,8 @@ final class CssMediaQuery private (
   override def equals(other: Any): Boolean = other match {
     case that: CssMediaQuery =>
       that.modifier == modifier &&
-        that.type_ == type_ &&
-        that.conditions == conditions
+      that.type_ == type_ &&
+      that.conditions == conditions
     case _ => false
   }
 
@@ -215,25 +211,23 @@ object CssMediaQuery {
     * This always sets conjunction to true.
     */
   def type_(
-    type_ : Option[String],
-    modifier: Option[String] = None,
+    type_     : Option[String],
+    modifier:   Option[String] = None,
     conditions: List[String] = Nil
-  ): CssMediaQuery = {
+  ): CssMediaQuery =
     new CssMediaQuery(
       modifier = modifier,
       type_ = type_,
       conjunction = true,
       conditions = conditions
     )
-  }
 
   /** Creates a media query that matches conditions according to conjunction.
     *
-    * The conjunction argument must not be None if conditions is longer than
-    * a single element.
+    * The conjunction argument must not be None if conditions is longer than a single element.
     */
   def condition(
-    conditions: List[String],
+    conditions:  List[String],
     conjunction: Option[Boolean] = None
   ): CssMediaQuery = {
     if (conditions.length > 1 && conjunction.isEmpty) {
@@ -258,8 +252,7 @@ object MediaQueryMergeResult {
   /** There are no contexts that match both input queries. */
   case object Empty extends MediaQueryMergeResult
 
-  /** The contexts that match both input queries can't be represented
-    * by a Level 3 media query.
+  /** The contexts that match both input queries can't be represented by a Level 3 media query.
     */
   case object Unrepresentable extends MediaQueryMergeResult
 

@@ -52,7 +52,7 @@ final class ValueSuite extends munit.FunSuite {
   // --- SassString ---
 
   test("SassString stores text and quotes") {
-    val quoted = SassString("hello", hasQuotes = true)
+    val quoted   = SassString("hello", hasQuotes = true)
     val unquoted = SassString("hello", hasQuotes = false)
     assertEquals(quoted.text, "hello")
     assert(quoted.hasQuotes)
@@ -82,8 +82,8 @@ final class ValueSuite extends munit.FunSuite {
   }
 
   test("SassString.plus concatenates") {
-    val a = SassString("hello", hasQuotes = true)
-    val b = SassString(" world", hasQuotes = false)
+    val a      = SassString("hello", hasQuotes = true)
+    val b      = SassString(" world", hasQuotes = false)
     val result = a.plus(b)
     assert(result.isInstanceOf[SassString])
     assertEquals(result.asInstanceOf[SassString].text, "hello world")
@@ -137,7 +137,7 @@ final class ValueSuite extends munit.FunSuite {
 
   test("SassList empty assertMap returns empty map") {
     val empty = SassList.empty()
-    val map = empty.assertMap()
+    val map   = empty.assertMap()
     assert(map.contents.isEmpty)
   }
 
@@ -149,10 +149,12 @@ final class ValueSuite extends munit.FunSuite {
   // --- SassMap ---
 
   test("SassMap stores key-value pairs") {
-    val map = SassMap(ListMap(
-      SassString("a") -> SassString("1"),
-      SassString("b") -> SassString("2")
-    ))
+    val map = SassMap(
+      ListMap(
+        SassString("a") -> SassString("1"),
+        SassString("b") -> SassString("2")
+      )
+    )
     assertEquals(map.contents.size, 2)
     assertEquals(map.separator, ListSeparator.Comma)
   }
@@ -162,9 +164,11 @@ final class ValueSuite extends munit.FunSuite {
   }
 
   test("SassMap.asList returns key-value pairs as lists") {
-    val map = SassMap(ListMap(
-      SassString("a") -> SassString("1")
-    ))
+    val map = SassMap(
+      ListMap(
+        SassString("a") -> SassString("1")
+      )
+    )
     val asList = map.asList
     assertEquals(asList.length, 1)
     assertEquals(asList.head.asList.length, 2)

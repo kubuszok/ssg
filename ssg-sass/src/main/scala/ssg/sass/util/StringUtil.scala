@@ -23,7 +23,7 @@ object StringUtil {
 
     /** Returns a minimally-escaped CSS identifier whose contents evaluates to this string. */
     def toCssIdentifier: String = boundary[String] {
-      val buffer = new StringBuilder()
+      val buffer  = new StringBuilder()
       val scanner = new SpanScanner(str)
 
       def writeEscape(character: Int): Unit = {
@@ -94,7 +94,6 @@ object StringUtil {
   }
 
   /** Safe codeUnitAt that returns -1 instead of throwing for out-of-bounds. */
-  def codeUnitAtOrNull(s: String, index: Int): Int = {
+  def codeUnitAtOrNull(s: String, index: Int): Int =
     if (index >= s.length) -1 else s.charAt(index).toInt
-  }
 }

@@ -23,9 +23,9 @@ import scala.language.implicitConversions
 
 /** A SassScript list value. */
 class SassList(
-  private val contents: List[Value],
+  private val contents:   List[Value],
   override val separator: ListSeparator,
-  brackets: Boolean = false
+  brackets:               Boolean = false
 ) extends Value {
 
   override val hasBrackets: Boolean = brackets
@@ -38,34 +38,31 @@ class SassList(
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitList(this)
 
-  override def assertMap(name: Nullable[String]): SassMap = {
+  override def assertMap(name: Nullable[String]): SassMap =
     if (contents.isEmpty) SassMap.empty
     else super.assertMap(name)
-  }
 
-  override def tryMap(): Option[SassMap] = {
+  override def tryMap(): Option[SassMap] =
     if (contents.isEmpty) Some(SassMap.empty)
     else None
-  }
 
-  override def hashCode(): Int = {
+  override def hashCode(): Int =
     if (contents.isEmpty) SassMap.empty.hashCode()
     else contents.hashCode()
-  }
 
   override def equals(other: Any): Boolean = other match {
     case that: SassList =>
       this.separator == that.separator &&
-        this.hasBrackets == that.hasBrackets &&
-        this.contents == that.contents
+      this.hasBrackets == that.hasBrackets &&
+      this.contents == that.contents
     case that: SassMap =>
       contents.isEmpty && that.contents.isEmpty
     case _ => false
   }
 
   override def toString: String = {
-    val sep = separator.separatorChar.getOrElse(" ")
-    val inner = contents.map(_.toString).mkString(sep + (if (sep == ",") " " else ""))
+    val sep        = separator.separatorChar.getOrElse(" ")
+    val inner      = contents.map(_.toString).mkString(sep + (if (sep == ",") " " else ""))
     val withParens =
       if (contents.length == 1 && separator == ListSeparator.Comma) s"($inner,)"
       else inner
@@ -79,9 +76,9 @@ object SassList {
   val emptyComma: SassList = new SassList(Nil, ListSeparator.Comma)
 
   def apply(
-    contents: List[Value],
+    contents:  List[Value],
     separator: ListSeparator,
-    brackets: Boolean = false
+    brackets:  Boolean = false
   ): SassList = new SassList(contents, separator, brackets)
 
   def empty(separator: ListSeparator = ListSeparator.Undecided, brackets: Boolean = false): SassList =

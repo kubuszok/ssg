@@ -15,15 +15,15 @@
 package ssg
 package sass
 
-import ssg.sass.util.{FileSpan, Frame, Trace}
+import ssg.sass.util.{ FileSpan, Frame, Trace }
 
 import scala.language.implicitConversions
 
 /** An exception thrown by Sass. */
 class SassException(
   val sassMessage: String,
-  val span: FileSpan,
-  val loadedUrls: Set[String] = Set.empty
+  val span:        FileSpan,
+  val loadedUrls:  Set[String] = Set.empty
 ) extends RuntimeException(s"Error: $sassMessage\n${span.highlight()}") {
 
   /** The Sass stack trace at the point this exception was thrown. */
@@ -43,15 +43,13 @@ class SassException(
 
   /** Returns CSS that will display this error message. */
   def toCssString: String = {
-    val openComment = "/" + "*"
-    val closeComment = "*" + "/"
-    val commentMessage = toString
-      .replace(closeComment, "*\u2215")
-      .replaceAll("\r\n", "\n")
+    val openComment    = "/" + "*"
+    val closeComment   = "*" + "/"
+    val commentMessage = toString.replace(closeComment, "*\u2215").replaceAll("\r\n", "\n")
 
-    val commentBody = commentMessage.split("\n").mkString("\n * ")
+    val commentBody  = commentMessage.split("\n").mkString("\n * ")
     val contentValue = escapeForCssContent(sassMessage)
-    val sb = new StringBuilder()
+    val sb           = new StringBuilder()
     sb.append(openComment)
     sb.append(" ")
     sb.append(commentBody)
@@ -72,8 +70,8 @@ class SassException(
 
   private def escapeForCssContent(s: String): String = {
     val sb = new StringBuilder()
-    for (c <- s) {
-      if (c > 0x7F) {
+    for (c <- s)
+      if (c > 0x7f) {
         sb.append('\\')
         sb.append(c.toInt.toHexString)
         sb.append(' ')
@@ -86,7 +84,6 @@ class SassException(
       } else {
         sb.append(c)
       }
-    }
     sb.toString()
   }
 
@@ -95,23 +92,22 @@ class SassException(
     sb.append(s"Error: $sassMessage\n")
     sb.append(span.highlight())
     val traceStr = trace.toString
-    for (frame <- traceStr.split("\n")) {
+    for (frame <- traceStr.split("\n"))
       if (frame.nonEmpty) {
         sb.append("\n  ")
         sb.append(frame)
       }
-    }
     sb.toString()
   }
 }
 
 /** A SassException with secondary spans for multi-location messages. */
 class MultiSpanSassException(
-  sassMessage: String,
-  span: FileSpan,
-  val primaryLabel: String,
+  sassMessage:        String,
+  span:               FileSpan,
+  val primaryLabel:   String,
   val secondarySpans: Map[FileSpan, String],
-  loadedUrls: Set[String] = Set.empty
+  loadedUrls:         Set[String] = Set.empty
 ) extends SassException(sassMessage, span, loadedUrls) {
 
   override def withAdditionalSpan(additionalSpan: FileSpan, label: String): MultiSpanSassException =
@@ -126,10 +122,10 @@ class MultiSpanSassException(
 
 /** An exception thrown during Sass evaluation (has a stack trace). */
 class SassRuntimeException(
-  sassMessage: String,
-  span: FileSpan,
+  sassMessage:        String,
+  span:               FileSpan,
   override val trace: Trace,
-  loadedUrls: Set[String] = Set.empty
+  loadedUrls:         Set[String] = Set.empty
 ) extends SassException(sassMessage, span, loadedUrls) {
 
   override def withAdditionalSpan(additionalSpan: FileSpan, label: String): SassException =
@@ -141,12 +137,12 @@ class SassRuntimeException(
 
 /** A SassRuntimeException with secondary spans. */
 class MultiSpanSassRuntimeException(
-  sassMessage: String,
-  span: FileSpan,
-  val primaryLabel: String,
+  sassMessage:        String,
+  span:               FileSpan,
+  val primaryLabel:   String,
   val secondarySpans: Map[FileSpan, String],
   override val trace: Trace,
-  loadedUrls: Set[String] = Set.empty
+  loadedUrls:         Set[String] = Set.empty
 ) extends SassRuntimeException(sassMessage, span, trace, loadedUrls) {
 
   override def withAdditionalSpan(additionalSpan: FileSpan, label: String): MultiSpanSassRuntimeException =
@@ -159,8 +155,8 @@ class MultiSpanSassRuntimeException(
 /** An exception thrown during Sass parsing. */
 class SassFormatException(
   sassMessage: String,
-  span: FileSpan,
-  loadedUrls: Set[String] = Set.empty
+  span:        FileSpan,
+  loadedUrls:  Set[String] = Set.empty
 ) extends SassException(sassMessage, span, loadedUrls) {
 
   /** The source text that caused the error. */
@@ -178,11 +174,11 @@ class SassFormatException(
 
 /** A SassFormatException with secondary spans. */
 class MultiSpanSassFormatException(
-  sassMessage: String,
-  span: FileSpan,
-  val primaryLabel: String,
+  sassMessage:        String,
+  span:               FileSpan,
+  val primaryLabel:   String,
   val secondarySpans: Map[FileSpan, String],
-  loadedUrls: Set[String] = Set.empty
+  loadedUrls:         Set[String] = Set.empty
 ) extends SassFormatException(sassMessage, span, loadedUrls) {
 
   override def withAdditionalSpan(additionalSpan: FileSpan, label: String): MultiSpanSassFormatException =
@@ -195,10 +191,10 @@ class MultiSpanSassFormatException(
 /** An exception thrown by SassScript (no span yet; caught and wrapped with span later). */
 class SassScriptException(
   val sassMessage: String,
-  argumentName: Option[String] = None
+  argumentName:    Option[String] = None
 ) extends RuntimeException(
-  argumentName.fold(sassMessage)(name => s"$$$name: $sassMessage")
-) {
+      argumentName.fold(sassMessage)(name => s"$$$name: $sassMessage")
+    ) {
 
   /** The full message including argument name. */
   def fullMessage: String = getMessage
@@ -212,8 +208,8 @@ class SassScriptException(
 
 /** A SassScriptException with secondary spans. */
 class MultiSpanSassScriptException(
-  sassMessage: String,
-  val primaryLabel: String,
+  sassMessage:        String,
+  val primaryLabel:   String,
   val secondarySpans: Map[FileSpan, String]
 ) extends SassScriptException(sassMessage) {
 

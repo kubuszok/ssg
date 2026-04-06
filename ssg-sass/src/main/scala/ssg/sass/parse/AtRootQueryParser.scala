@@ -14,13 +14,13 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.{InterpolationMap, Nullable}
+import ssg.sass.{ InterpolationMap, Nullable }
 import ssg.sass.ast.sass.AtRootQuery
 
 /** A parser for `@at-root` queries. */
 class AtRootQueryParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:         String,
+  url:              Nullable[String] = Nullable.Null,
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 

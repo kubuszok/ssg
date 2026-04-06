@@ -32,19 +32,19 @@ trait CssAtRule extends CssParentNode {
 
   /** Whether the rule has no children.
     *
-    * This implies `children.isEmpty`, but the reverse is not true -- for a rule
-    * like `@foo {}`, children is empty but isChildless is false.
+    * This implies `children.isEmpty`, but the reverse is not true -- for a rule like `@foo {}`, children is empty but isChildless is false.
     */
   def isChildless: Boolean
 }
 
 /** A modifiable version of CssAtRule for use in the evaluation step. */
 final class ModifiableCssAtRule(
-  val name: CssValue[String],
-  val span: FileSpan,
+  val name:  CssValue[String],
+  val span:  FileSpan,
   childless: Boolean = false,
   val value: Nullable[CssValue[String]] = Nullable.empty
-) extends ModifiableCssParentNode with CssAtRule {
+) extends ModifiableCssParentNode
+    with CssAtRule {
 
   override val isChildless: Boolean = childless
 

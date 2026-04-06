@@ -28,8 +28,7 @@ trait CssComment extends CssNode {
   /** The contents of this comment, including slash-star and star-slash. */
   def text: String
 
-  /** Whether this comment starts with slash-star-bang and so should be
-    * preserved even in compressed mode.
+  /** Whether this comment starts with slash-star-bang and so should be preserved even in compressed mode.
     */
   def isPreserved: Boolean
 }
@@ -38,7 +37,8 @@ trait CssComment extends CssNode {
 final class ModifiableCssComment(
   val text: String,
   val span: FileSpan
-) extends ModifiableCssNode with CssComment {
+) extends ModifiableCssNode
+    with CssComment {
 
   def isPreserved: Boolean = text.charAt(2) == '!'
 

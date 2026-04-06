@@ -18,10 +18,10 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{SassScriptException, Nullable}
+import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
 import ssg.sass.util.NumberUtil.*
-import ssg.sass.value.number.{UnitlessSassNumber, SingleUnitSassNumber, ComplexSassNumber}
+import ssg.sass.value.number.{ ComplexSassNumber, SingleUnitSassNumber, UnitlessSassNumber }
 import ssg.sass.visitor.ValueVisitor
 
 import scala.collection.mutable.ArrayBuffer
@@ -31,14 +31,12 @@ import scala.util.boundary.break
 
 /** A SassScript number.
   *
-  * Numbers can have units. Although there's no literal syntax for it, numbers
-  * support scientific-style numerator and denominator units (for example,
-  * `miles/hour`). These are expected to be resolved before being emitted to
-  * CSS.
+  * Numbers can have units. Although there's no literal syntax for it, numbers support scientific-style numerator and denominator units (for example, `miles/hour`). These are expected to be resolved
+  * before being emitted to CSS.
   */
 abstract class SassNumber protected (
   private val _value: Double,
-  val asSlash: Nullable[(SassNumber, SassNumber)]
+  val asSlash:        Nullable[(SassNumber, SassNumber)]
 ) extends Value {
 
   /** The value of this number. */
@@ -82,8 +80,7 @@ abstract class SassNumber protected (
 
   override def assertNumber(name: Nullable[String]): SassNumber = this
 
-  /** Returns value as an Int, if it's an integer value according to isInt.
-    * Throws a SassScriptException if value isn't an integer.
+  /** Returns value as an Int, if it's an integer value according to isInt. Throws a SassScriptException if value isn't an integer.
     */
   override def assertInt(name: Nullable[String]): Int = {
     val integer = fuzzyAsInt(value)
@@ -95,31 +92,32 @@ abstract class SassNumber protected (
   def valueInRange(min: Double, max: Double, name: Nullable[String] = Nullable.Null): Double = {
     val result = fuzzyCheckRange(value, min, max)
     if (result.isDefined) result.get
-    else throw SassScriptException(
-      s"Expected $this to be within $min$unitString and $max$unitString.",
-      name.toOption
-    )
+    else
+      throw SassScriptException(
+        s"Expected $this to be within $min$unitString and $max$unitString.",
+        name.toOption
+      )
   }
 
   /** Like valueInRange, but with an explicit unit for the expected upper and lower bounds. */
   def valueInRangeWithUnit(min: Double, max: Double, name: String, unit: String): Double = {
     val result = fuzzyCheckRange(value, min, max)
     if (result.isDefined) result.get
-    else throw SassScriptException(
-      s"Expected $this to be within $min$unit and $max$unit.",
-      Some(name)
-    )
+    else
+      throw SassScriptException(
+        s"Expected $this to be within $min$unit and $max$unit.",
+        Some(name)
+      )
   }
 
   /** Returns whether this has unit as its only unit (and as a numerator). */
   def hasUnit(unit: String): Boolean
 
   /** Returns whether this has units that are compatible with other. */
-  def hasCompatibleUnits(other: SassNumber): Boolean = {
+  def hasCompatibleUnits(other: SassNumber): Boolean =
     if (numeratorUnits.length != other.numeratorUnits.length) false
     else if (denominatorUnits.length != other.denominatorUnits.length) false
     else isComparableTo(other)
-  }
 
   /** Returns whether this has units that are possibly-compatible with other, as defined by the Sass spec. */
   def hasPossiblyCompatibleUnits(other: SassNumber): Boolean
@@ -128,77 +126,68 @@ abstract class SassNumber protected (
   def compatibleWithUnit(unit: String): Boolean
 
   /** Throws a SassScriptException unless this has unit as its only unit (and as a numerator). */
-  def assertUnit(unit: String, name: Nullable[String] = Nullable.Null): Unit = {
+  def assertUnit(unit: String, name: Nullable[String] = Nullable.Null): Unit =
     if (!hasUnit(unit)) {
       throw SassScriptException(s"""Expected $this to have unit "$unit".""", name.toOption)
     }
-  }
 
   /** Throws a SassScriptException unless this has no units. */
-  def assertNoUnits(name: Nullable[String] = Nullable.Null): Unit = {
+  def assertNoUnits(name: Nullable[String] = Nullable.Null): Unit =
     if (hasUnits) {
       throw SassScriptException(s"Expected $this to have no units.", name.toOption)
     }
-  }
 
-  /** Returns a copy of this number, converted to the units represented by newNumerators and newDenominators.
-    * Throws if units aren't compatible, or if either number is unitless but the other is not.
+  /** Returns a copy of this number, converted to the units represented by newNumerators and newDenominators. Throws if units aren't compatible, or if either number is unitless but the other is not.
     */
   def convert(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String] = Nullable.Null
-  ): SassNumber = {
+    name:            Nullable[String] = Nullable.Null
+  ): SassNumber =
     SassNumber.withUnits(
       convertValue(newNumerators, newDenominators, name),
       numeratorUnits = newNumerators,
       denominatorUnits = newDenominators
     )
-  }
 
-  /** Returns value, converted to the units represented by newNumerators and newDenominators.
-    * Throws if units aren't compatible or this number is unitless.
+  /** Returns value, converted to the units represented by newNumerators and newDenominators. Throws if units aren't compatible or this number is unitless.
     */
   def convertValue(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String] = Nullable.Null
-  ): Double = {
+    name:            Nullable[String] = Nullable.Null
+  ): Double =
     coerceOrConvertValue(
       newNumerators,
       newDenominators,
       coerceUnitless = false,
       name = name
     )
-  }
 
   /** A shorthand for convertValue with only one numerator unit. */
   def convertValueToUnit(unit: String, name: Nullable[String] = Nullable.Null): Double =
     convertValue(List(unit), Nil, name)
 
-  /** Returns a copy of this number, converted to the same units as other.
-    * Throws if units aren't compatible, or if either number is unitless but the other is not.
+  /** Returns a copy of this number, converted to the same units as other. Throws if units aren't compatible, or if either number is unitless but the other is not.
     */
   def convertToMatch(
-    other: SassNumber,
-    name: Nullable[String] = Nullable.Null,
+    other:     SassNumber,
+    name:      Nullable[String] = Nullable.Null,
     otherName: Nullable[String] = Nullable.Null
-  ): SassNumber = {
+  ): SassNumber =
     SassNumber.withUnits(
       convertValueToMatch(other, name, otherName),
       numeratorUnits = other.numeratorUnits,
       denominatorUnits = other.denominatorUnits
     )
-  }
 
-  /** Returns value, converted to the same units as other.
-    * Throws if units aren't compatible, or if either number is unitless but the other is not.
+  /** Returns value, converted to the same units as other. Throws if units aren't compatible, or if either number is unitless but the other is not.
     */
   def convertValueToMatch(
-    other: SassNumber,
-    name: Nullable[String] = Nullable.Null,
+    other:     SassNumber,
+    name:      Nullable[String] = Nullable.Null,
     otherName: Nullable[String] = Nullable.Null
-  ): Double = {
+  ): Double =
     coerceOrConvertValue(
       other.numeratorUnits,
       other.denominatorUnits,
@@ -207,66 +196,59 @@ abstract class SassNumber protected (
       other = other,
       otherName = otherName
     )
-  }
 
-  /** Returns a copy of this number, coerced to the units represented by newNumerators and newDenominators.
-    * Unlike convert, treats unitless numbers as convertible to/from all units without changing value.
+  /** Returns a copy of this number, coerced to the units represented by newNumerators and newDenominators. Unlike convert, treats unitless numbers as convertible to/from all units without changing
+    * value.
     */
   def coerce(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String] = Nullable.Null
-  ): SassNumber = {
+    name:            Nullable[String] = Nullable.Null
+  ): SassNumber =
     SassNumber.withUnits(
       coerceValue(newNumerators, newDenominators, name),
       numeratorUnits = newNumerators,
       denominatorUnits = newDenominators
     )
-  }
 
-  /** Returns value, coerced to the units represented by newNumerators and newDenominators.
-    * Unlike convertValue, treats unitless numbers as convertible to/from all units.
+  /** Returns value, coerced to the units represented by newNumerators and newDenominators. Unlike convertValue, treats unitless numbers as convertible to/from all units.
     */
   def coerceValue(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String] = Nullable.Null
-  ): Double = {
+    name:            Nullable[String] = Nullable.Null
+  ): Double =
     coerceOrConvertValue(
       newNumerators,
       newDenominators,
       coerceUnitless = true,
       name = name
     )
-  }
 
   /** A shorthand for coerceValue with only one numerator unit. */
   def coerceValueToUnit(unit: String, name: Nullable[String] = Nullable.Null): Double =
     coerceValue(List(unit), Nil, name)
 
-  /** Returns a copy of this number, coerced to the same units as other.
-    * Unlike convertToMatch, treats unitless numbers as convertible to/from all units.
+  /** Returns a copy of this number, coerced to the same units as other. Unlike convertToMatch, treats unitless numbers as convertible to/from all units.
     */
   def coerceToMatch(
-    other: SassNumber,
-    name: Nullable[String] = Nullable.Null,
+    other:     SassNumber,
+    name:      Nullable[String] = Nullable.Null,
     otherName: Nullable[String] = Nullable.Null
-  ): SassNumber = {
+  ): SassNumber =
     SassNumber.withUnits(
       coerceValueToMatch(other, name, otherName),
       numeratorUnits = other.numeratorUnits,
       denominatorUnits = other.denominatorUnits
     )
-  }
 
-  /** Returns value, coerced to the same units as other.
-    * Unlike convertValueToMatch, treats unitless numbers as convertible to/from all units.
+  /** Returns value, coerced to the same units as other. Unlike convertValueToMatch, treats unitless numbers as convertible to/from all units.
     */
   def coerceValueToMatch(
-    other: SassNumber,
-    name: Nullable[String] = Nullable.Null,
+    other:     SassNumber,
+    name:      Nullable[String] = Nullable.Null,
     otherName: Nullable[String] = Nullable.Null
-  ): Double = {
+  ): Double =
     coerceOrConvertValue(
       other.numeratorUnits,
       other.denominatorUnits,
@@ -275,30 +257,30 @@ abstract class SassNumber protected (
       other = other,
       otherName = otherName
     )
-  }
 
   /** Converts value to newNumerators and newDenominators.
     *
-    * If coerceUnitless is true, considers unitless numbers convertible to and from any unit.
-    * Otherwise, throws a SassScriptException for such a conversion.
+    * If coerceUnitless is true, considers unitless numbers convertible to and from any unit. Otherwise, throws a SassScriptException for such a conversion.
     */
   protected def coerceOrConvertValue(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    coerceUnitless: Boolean,
-    name: Nullable[String] = Nullable.Null,
-    other: Nullable[SassNumber] = Nullable.Null,
-    otherName: Nullable[String] = Nullable.Null
+    coerceUnitless:  Boolean,
+    name:            Nullable[String] = Nullable.Null,
+    other:           Nullable[SassNumber] = Nullable.Null,
+    otherName:       Nullable[String] = Nullable.Null
   ): Double = boundary[Double] {
-    if (Utils.listEquals(Nullable(numeratorUnits), Nullable(newNumerators)) &&
-        Utils.listEquals(Nullable(denominatorUnits), Nullable(newDenominators))) {
+    if (
+      Utils.listEquals(Nullable(numeratorUnits), Nullable(newNumerators)) &&
+      Utils.listEquals(Nullable(denominatorUnits), Nullable(newDenominators))
+    ) {
       break(this.value)
     }
 
     val otherHasUnits = newNumerators.nonEmpty || newDenominators.nonEmpty
     if (coerceUnitless && (!hasUnits || !otherHasUnits)) break(this.value)
 
-    def compatibilityException(): SassScriptException = {
+    def compatibilityException(): SassScriptException =
       if (other.isDefined) {
         val message = new StringBuilder()
         message.append(s"$this and")
@@ -316,11 +298,13 @@ abstract class SassNumber protected (
           if (unitType.isDefined) {
             // If we're converting to a unit of a named type, use that type name
             // and make it clear exactly which units are convertible.
-            break(throw SassScriptException(
-              s"Expected $this to have ${Utils.a(unitType.get)} unit " +
-                s"(${SassNumber.unitsByType(unitType.get).mkString(", ")}).",
-              name.toOption
-            ))
+            break(
+              throw SassScriptException(
+                s"Expected $this to have ${Utils.a(unitType.get)} unit " +
+                  s"(${SassNumber.unitsByType(unitType.get).mkString(", ")}).",
+                name.toOption
+              )
+            )
           }
         }
 
@@ -334,32 +318,37 @@ abstract class SassNumber protected (
           name.toOption
         )
       }
-    }
 
-    var result = this.value
+    var result        = this.value
     val oldNumerators = ArrayBuffer.from(numeratorUnits)
-    for (newNumerator <- newNumerators) {
-      Utils.removeFirstWhere[String](oldNumerators, { oldNumerator =>
-        val factor = SassNumber.conversionFactor(newNumerator, oldNumerator)
-        if (factor.isEmpty) false
-        else {
-          result *= factor.get
-          true
-        }
-      }, orElse = () => throw compatibilityException())
-    }
+    for (newNumerator <- newNumerators)
+      Utils.removeFirstWhere[String](
+        oldNumerators,
+        { oldNumerator =>
+          val factor = SassNumber.conversionFactor(newNumerator, oldNumerator)
+          if (factor.isEmpty) false
+          else {
+            result *= factor.get
+            true
+          }
+        },
+        orElse = () => throw compatibilityException()
+      )
 
     val oldDenominators = ArrayBuffer.from(denominatorUnits)
-    for (newDenominator <- newDenominators) {
-      Utils.removeFirstWhere[String](oldDenominators, { oldDenominator =>
-        val factor = SassNumber.conversionFactor(newDenominator, oldDenominator)
-        if (factor.isEmpty) false
-        else {
-          result /= factor.get
-          true
-        }
-      }, orElse = () => throw compatibilityException())
-    }
+    for (newDenominator <- newDenominators)
+      Utils.removeFirstWhere[String](
+        oldDenominators,
+        { oldDenominator =>
+          val factor = SassNumber.conversionFactor(newDenominator, oldDenominator)
+          if (factor.isEmpty) false
+          else {
+            result /= factor.get
+            true
+          }
+        },
+        orElse = () => throw compatibilityException()
+      )
 
     if (oldNumerators.nonEmpty || oldDenominators.nonEmpty) {
       throw compatibilityException()
@@ -368,10 +357,9 @@ abstract class SassNumber protected (
     result
   }
 
-  /** Returns whether this number can be compared to other.
-    * Two numbers can be compared if they have compatible units, or if either number has no units.
+  /** Returns whether this number can be compared to other. Two numbers can be compared if they have compatible units, or if either number has no units.
     */
-  def isComparableTo(other: SassNumber): Boolean = {
+  def isComparableTo(other: SassNumber): Boolean =
     if (!hasUnits || !other.hasUnits) true
     else {
       try {
@@ -381,7 +369,6 @@ abstract class SassNumber protected (
         case _: SassScriptException => false
       }
     }
-  }
 
   override def greaterThan(other: Value): SassBoolean = other match {
     case n: SassNumber =>
@@ -453,10 +440,10 @@ abstract class SassNumber protected (
   override def unaryPlus(): Value = this
 
   /** Converts other's value to be compatible with this number's, and calls operation with the resulting numbers. */
-  protected def coerceUnits[T](other: SassNumber, operation: (Double, Double) => T): T = {
-    try {
+  protected def coerceUnits[T](other: SassNumber, operation: (Double, Double) => T): T =
+    try
       operation(value, other.coerceValueToMatch(this))
-    } catch {
+    catch {
       case e: SassScriptException =>
         // If the conversion fails, re-run it in the other direction. This will
         // generate an error message that prints `this` before other, which is
@@ -464,12 +451,11 @@ abstract class SassNumber protected (
         coerceValueToMatch(other)
         throw e // This should be unreachable.
     }
-  }
 
   /** Returns a new number that's equivalent to `value this.numeratorUnits/this.denominatorUnits * 1 otherNumerators/otherDenominators`. */
   protected def multiplyUnits(
-    value: Double,
-    otherNumerators: List[String],
+    value:             Double,
+    otherNumerators:   List[String],
     otherDenominators: List[String]
   ): SassNumber = boundary[SassNumber] {
     // Short-circuit without allocating any new unit lists if possible.
@@ -485,31 +471,37 @@ abstract class SassNumber protected (
       case _ => // fall through
     }
 
-    var mutableValue = value
-    val newNumerators = ArrayBuffer.empty[String]
+    var mutableValue             = value
+    val newNumerators            = ArrayBuffer.empty[String]
     val mutableOtherDenominators = ArrayBuffer.from(otherDenominators)
-    for (numerator <- numeratorUnits) {
-      Utils.removeFirstWhere[String](mutableOtherDenominators, { denominator =>
-        val factor = SassNumber.conversionFactor(numerator, denominator)
-        if (factor.isEmpty) false
-        else {
-          mutableValue /= factor.get
-          true
-        }
-      }, orElse = () => newNumerators += numerator)
-    }
+    for (numerator <- numeratorUnits)
+      Utils.removeFirstWhere[String](
+        mutableOtherDenominators,
+        { denominator =>
+          val factor = SassNumber.conversionFactor(numerator, denominator)
+          if (factor.isEmpty) false
+          else {
+            mutableValue /= factor.get
+            true
+          }
+        },
+        orElse = () => newNumerators += numerator
+      )
 
     val mutableDenominatorUnits = ArrayBuffer.from(denominatorUnits)
-    for (numerator <- otherNumerators) {
-      Utils.removeFirstWhere[String](mutableDenominatorUnits, { denominator =>
-        val factor = SassNumber.conversionFactor(numerator, denominator)
-        if (factor.isEmpty) false
-        else {
-          mutableValue /= factor.get
-          true
-        }
-      }, orElse = () => newNumerators += numerator)
-    }
+    for (numerator <- otherNumerators)
+      Utils.removeFirstWhere[String](
+        mutableDenominatorUnits,
+        { denominator =>
+          val factor = SassNumber.conversionFactor(numerator, denominator)
+          if (factor.isEmpty) false
+          else {
+            mutableValue /= factor.get
+            true
+          }
+        },
+        orElse = () => newNumerators += numerator
+      )
 
     mutableDenominatorUnits ++= mutableOtherDenominators
 
@@ -522,8 +514,10 @@ abstract class SassNumber protected (
 
   override def equals(other: Any): Boolean = other match {
     case that: SassNumber =>
-      if (numeratorUnits.length != that.numeratorUnits.length ||
-          denominatorUnits.length != that.denominatorUnits.length) {
+      if (
+        numeratorUnits.length != that.numeratorUnits.length ||
+        denominatorUnits.length != that.denominatorUnits.length
+      ) {
         false
       } else if (!hasUnits) {
         fuzzyEquals(value, that.value)
@@ -559,15 +553,14 @@ abstract class SassNumber protected (
     hashCache.get
   }
 
-  /** Returns a suggested Sass snippet for converting a variable named name (without %)
-    * containing this number into a number with the same value and the given unit.
+  /** Returns a suggested Sass snippet for converting a variable named name (without %) containing this number into a number with the same value and the given unit.
     */
   def unitSuggestion(name: String, unit: Nullable[String] = Nullable.Null): String = {
     val result =
       s"$$$name" +
-      denominatorUnits.map(u => s" * 1$u").mkString +
-      numeratorUnits.map(u => s" / 1$u").mkString +
-      (if (unit.isEmpty) "" else s" * 1${unit.get}")
+        denominatorUnits.map(u => s" * 1$u").mkString +
+        numeratorUnits.map(u => s" / 1$u").mkString +
+        (if (unit.isEmpty) "" else s" * 1${unit.get}")
     if (numeratorUnits.isEmpty) result else s"calc($result)"
   }
 
@@ -584,13 +577,11 @@ object SassNumber {
   /** The number of distinct digits that are emitted when converting a number to CSS. */
   val precision: Int = 10
 
-  /** Formats a Double for CSS output: integers as `10`, non-integers rounded
-    * to `precision` significant digits with trailing zeros stripped.
+  /** Formats a Double for CSS output: integers as `10`, non-integers rounded to `precision` significant digits with trailing zeros stripped.
     *
-    * Locale-independent (Scala.js can't link `String.format` with `Locale`).
-    * Uses integer arithmetic: round(value * 10^precision) / 10^precision.
+    * Locale-independent (Scala.js can't link `String.format` with `Locale`). Uses integer arithmetic: round(value * 10^precision) / 10^precision.
     */
-  def formatNumber(value: Double): String = {
+  def formatNumber(value: Double): String =
     if (value.isNaN) "NaN"
     else if (value.isPosInfinity) "Infinity"
     else if (value.isNegInfinity) "-Infinity"
@@ -598,14 +589,14 @@ object SassNumber {
       // Integer-valued: emit without decimal point
       value.toLong.toString
     } else {
-      val scale = math.pow(10.0, precision.toDouble)
-      val scaled = math.round(value * scale)
-      val isNeg = scaled < 0
+      val scale     = math.pow(10.0, precision.toDouble)
+      val scaled    = math.round(value * scale)
+      val isNeg     = scaled < 0
       val absScaled = math.abs(scaled)
       // Split into integer and fractional parts
-      val intPart = absScaled / scale.toLong
+      val intPart  = absScaled / scale.toLong
       val fracPart = absScaled - intPart * scale.toLong
-      val sb = new StringBuilder()
+      val sb       = new StringBuilder()
       if (isNeg) sb.append('-')
       sb.append(intPart.toString)
       if (fracPart != 0) {
@@ -624,7 +615,6 @@ object SassNumber {
       val result = sb.toString()
       if (result == "-0") "0" else result
     }
-  }
 
   /** Creates a number, optionally with a single numerator unit. */
   def apply(value: Double): UnitlessSassNumber = UnitlessSassNumber(value)
@@ -634,10 +624,10 @@ object SassNumber {
 
   /** Creates a number with full numeratorUnits and denominatorUnits. */
   def withUnits(
-    value: Double,
-    numeratorUnits: List[String] = Nil,
+    value:            Double,
+    numeratorUnits:   List[String] = Nil,
     denominatorUnits: List[String] = Nil
-  ): SassNumber = {
+  ): SassNumber =
     (numeratorUnits, denominatorUnits) match {
       case (Nil, Nil) =>
         UnitlessSassNumber(value)
@@ -649,9 +639,9 @@ object SassNumber {
         ComplexSassNumber(value, Nil, denoms)
       case _ =>
         // Simplify compatible numerator/denominator pairs
-        val mutableNumerators = ArrayBuffer.from(numeratorUnits)
+        val mutableNumerators        = ArrayBuffer.from(numeratorUnits)
         val unsimplifiedDenominators = ArrayBuffer.from(denominatorUnits)
-        var mutableValue = value
+        var mutableValue             = value
 
         val finalDenominators = ArrayBuffer.empty[String]
         for (denominator <- unsimplifiedDenominators) {
@@ -673,47 +663,80 @@ object SassNumber {
         }
 
         (mutableNumerators.toList, finalDenominators.toList) match {
-          case (Nil, Nil) => UnitlessSassNumber(mutableValue)
+          case (Nil, Nil)         => UnitlessSassNumber(mutableValue)
           case (unit :: Nil, Nil) => SingleUnitSassNumber(mutableValue, unit)
-          case (nums, denoms) => ComplexSassNumber(mutableValue, nums, denoms)
+          case (nums, denoms)     => ComplexSassNumber(mutableValue, nums, denoms)
         }
     }
-  }
 
   // --- Unit conversion tables ---
 
-  /** A nested map containing unit conversion rates.
-    * `1unit1 * conversions(unit2)(unit1) = 1unit2`.
+  /** A nested map containing unit conversion rates. `1unit1 * conversions(unit2)(unit1) = 1unit2`.
     */
   private[value] val conversions: Map[String, Map[String, Double]] = Map(
     // Length
     "in" -> Map(
-      "in" -> 1.0, "cm" -> 1.0 / 2.54, "pc" -> 1.0 / 6.0, "mm" -> 1.0 / 25.4,
-      "q" -> 1.0 / 101.6, "pt" -> 1.0 / 72.0, "px" -> 1.0 / 96.0
+      "in" -> 1.0,
+      "cm" -> 1.0 / 2.54,
+      "pc" -> 1.0 / 6.0,
+      "mm" -> 1.0 / 25.4,
+      "q" -> 1.0 / 101.6,
+      "pt" -> 1.0 / 72.0,
+      "px" -> 1.0 / 96.0
     ),
     "cm" -> Map(
-      "in" -> 2.54, "cm" -> 1.0, "pc" -> 2.54 / 6.0, "mm" -> 1.0 / 10.0,
-      "q" -> 1.0 / 40.0, "pt" -> 2.54 / 72.0, "px" -> 2.54 / 96.0
+      "in" -> 2.54,
+      "cm" -> 1.0,
+      "pc" -> 2.54 / 6.0,
+      "mm" -> 1.0 / 10.0,
+      "q" -> 1.0 / 40.0,
+      "pt" -> 2.54 / 72.0,
+      "px" -> 2.54 / 96.0
     ),
     "pc" -> Map(
-      "in" -> 6.0, "cm" -> 6.0 / 2.54, "pc" -> 1.0, "mm" -> 6.0 / 25.4,
-      "q" -> 6.0 / 101.6, "pt" -> 1.0 / 12.0, "px" -> 1.0 / 16.0
+      "in" -> 6.0,
+      "cm" -> 6.0 / 2.54,
+      "pc" -> 1.0,
+      "mm" -> 6.0 / 25.4,
+      "q" -> 6.0 / 101.6,
+      "pt" -> 1.0 / 12.0,
+      "px" -> 1.0 / 16.0
     ),
     "mm" -> Map(
-      "in" -> 25.4, "cm" -> 10.0, "pc" -> 25.4 / 6.0, "mm" -> 1.0,
-      "q" -> 1.0 / 4.0, "pt" -> 25.4 / 72.0, "px" -> 25.4 / 96.0
+      "in" -> 25.4,
+      "cm" -> 10.0,
+      "pc" -> 25.4 / 6.0,
+      "mm" -> 1.0,
+      "q" -> 1.0 / 4.0,
+      "pt" -> 25.4 / 72.0,
+      "px" -> 25.4 / 96.0
     ),
     "q" -> Map(
-      "in" -> 101.6, "cm" -> 40.0, "pc" -> 101.6 / 6.0, "mm" -> 4.0,
-      "q" -> 1.0, "pt" -> 101.6 / 72.0, "px" -> 101.6 / 96.0
+      "in" -> 101.6,
+      "cm" -> 40.0,
+      "pc" -> 101.6 / 6.0,
+      "mm" -> 4.0,
+      "q" -> 1.0,
+      "pt" -> 101.6 / 72.0,
+      "px" -> 101.6 / 96.0
     ),
     "pt" -> Map(
-      "in" -> 72.0, "cm" -> 72.0 / 2.54, "pc" -> 12.0, "mm" -> 72.0 / 25.4,
-      "q" -> 72.0 / 101.6, "pt" -> 1.0, "px" -> 3.0 / 4.0
+      "in" -> 72.0,
+      "cm" -> 72.0 / 2.54,
+      "pc" -> 12.0,
+      "mm" -> 72.0 / 25.4,
+      "q" -> 72.0 / 101.6,
+      "pt" -> 1.0,
+      "px" -> 3.0 / 4.0
     ),
     "px" -> Map(
-      "in" -> 96.0, "cm" -> 96.0 / 2.54, "pc" -> 16.0, "mm" -> 96.0 / 25.4,
-      "q" -> 96.0 / 101.6, "pt" -> 4.0 / 3.0, "px" -> 1.0
+      "in" -> 96.0,
+      "cm" -> 96.0 / 2.54,
+      "pc" -> 16.0,
+      "mm" -> 96.0 / 25.4,
+      "q" -> 96.0 / 101.6,
+      "pt" -> 4.0 / 3.0,
+      "px" -> 1.0
     ),
     // Rotation
     "deg" -> Map("deg" -> 1.0, "grad" -> 9.0 / 10.0, "rad" -> 180.0 / math.Pi, "turn" -> 360.0),
@@ -742,94 +765,129 @@ object SassNumber {
   )
 
   /** A map from units to the human-readable names of those unit types. */
-  private[value] val typesByUnit: Map[String, String] = {
+  private[value] val typesByUnit: Map[String, String] =
     unitsByType.flatMap { case (typeName, units) =>
       units.map(unit => unit -> typeName)
     }
-  }
 
-  /** Returns the number of unit1s per unit2.
-    * Equivalently, `1unit2 * conversionFactor(unit1, unit2) = 1unit1`.
+  /** Returns the number of unit1s per unit2. Equivalently, `1unit2 * conversionFactor(unit1, unit2) = 1unit1`.
     */
-  private[value] def conversionFactor(unit1: String, unit2: String): Nullable[Double] = {
+  private[value] def conversionFactor(unit1: String, unit2: String): Nullable[Double] =
     if (unit1 == unit2) Nullable(1.0)
     else {
       conversions.get(unit1) match {
         case Some(innerMap) =>
           innerMap.get(unit2) match {
             case Some(factor) => Nullable(factor)
-            case scala.None => Nullable.Null
+            case scala.None   => Nullable.Null
           }
         case scala.None => Nullable.Null
       }
     }
-  }
 
   /** Returns whether there exists a unit in units1 that can be converted to a unit in units2. */
-  private[value] def areAnyConvertible(units1: List[String], units2: List[String]): Boolean = {
+  private[value] def areAnyConvertible(units1: List[String], units2: List[String]): Boolean =
     units1.exists { unit1 =>
       conversions.get(unit1) match {
         case Some(innerMap) => units2.exists(innerMap.contains)
-        case scala.None => units2.contains(unit1)
+        case scala.None     => units2.contains(unit1)
       }
     }
-  }
 
   /** Returns a human-readable string representation of numerators and denominators. */
-  private[value] def unitString(numerators: List[String], denominators: List[String]): String = {
+  private[value] def unitString(numerators: List[String], denominators: List[String]): String =
     (numerators, denominators) match {
-      case (Nil, Nil) => "no units"
+      case (Nil, Nil)      => "no units"
       case (Nil, d :: Nil) => s"$d^-1"
-      case (Nil, _) => s"(${denominators.mkString("*")})^-1"
-      case (_, Nil) => numerators.mkString("*")
-      case (_, d :: Nil) => s"${numerators.mkString("*")}/$d"
-      case _ => s"${numerators.mkString("*")}/(${denominators.mkString("*")})"
+      case (Nil, _)        => s"(${denominators.mkString("*")})^-1"
+      case (_, Nil)        => numerators.mkString("*")
+      case (_, d :: Nil)   => s"${numerators.mkString("*")}/$d"
+      case _               => s"${numerators.mkString("*")}/(${denominators.mkString("*")})"
     }
-  }
 
-  /** Converts a unit list into an equivalent list in canonical form, to make it easier to check
-    * whether two numbers have compatible units.
+  /** Converts a unit list into an equivalent list in canonical form, to make it easier to check whether two numbers have compatible units.
     */
-  private[value] def canonicalizeUnitList(units: List[String]): List[String] = {
+  private[value] def canonicalizeUnitList(units: List[String]): List[String] =
     if (units.isEmpty) units
     else if (units.length == 1) {
       typesByUnit.get(units.head) match {
         case Some(typeName) => List(unitsByType(typeName).head)
-        case scala.None => units
+        case scala.None     => units
       }
     } else {
       units.map { unit =>
         typesByUnit.get(unit) match {
           case Some(typeName) => unitsByType(typeName).head
-          case scala.None => unit
+          case scala.None     => unit
         }
       }.sorted
     }
-  }
 
   /** Returns a multiplier that encapsulates unit equivalence in units. */
-  private[value] def canonicalMultiplier(units: List[String]): Double = {
+  private[value] def canonicalMultiplier(units: List[String]): Double =
     units.foldLeft(1.0) { (multiplier, unit) =>
       multiplier * canonicalMultiplierForUnit(unit)
     }
-  }
 
   /** Returns a multiplier that encapsulates unit equivalence with unit. */
-  private[value] def canonicalMultiplierForUnit(unit: String): Double = {
+  private[value] def canonicalMultiplierForUnit(unit: String): Double =
     conversions.get(unit) match {
       case Some(innerMap) => 1.0 / innerMap.values.head
-      case scala.None => 1.0
+      case scala.None     => 1.0
     }
-  }
 
   /** Sets of units that are known to be compatible with one another in the browser. */
   private[value] val knownCompatibilities: List[Set[String]] = List(
     Set(
-      "em", "rem", "ex", "rex", "cap", "rcap", "ch", "rch", "ic", "ric", "lh",
-      "rlh", "vw", "lvw", "svw", "dvw", "vh", "lvh", "svh", "dvh", "vi", "lvi",
-      "svi", "dvi", "vb", "lvb", "svb", "dvb", "vmin", "lvmin", "svmin",
-      "dvmin", "vmax", "lvmax", "svmax", "dvmax", "cqw", "cqh", "cqi", "cqb",
-      "cqmin", "cqmax", "cm", "mm", "q", "in", "pt", "pc", "px"
+      "em",
+      "rem",
+      "ex",
+      "rex",
+      "cap",
+      "rcap",
+      "ch",
+      "rch",
+      "ic",
+      "ric",
+      "lh",
+      "rlh",
+      "vw",
+      "lvw",
+      "svw",
+      "dvw",
+      "vh",
+      "lvh",
+      "svh",
+      "dvh",
+      "vi",
+      "lvi",
+      "svi",
+      "dvi",
+      "vb",
+      "lvb",
+      "svb",
+      "dvb",
+      "vmin",
+      "lvmin",
+      "svmin",
+      "dvmin",
+      "vmax",
+      "lvmax",
+      "svmax",
+      "dvmax",
+      "cqw",
+      "cqh",
+      "cqi",
+      "cqb",
+      "cqmin",
+      "cqmax",
+      "cm",
+      "mm",
+      "q",
+      "in",
+      "pt",
+      "pc",
+      "px"
     ),
     Set("deg", "grad", "rad", "turn"),
     Set("s", "ms"),
@@ -838,9 +896,8 @@ object SassNumber {
   )
 
   /** A map from units to the other units they're known to be compatible with. */
-  private[value] val knownCompatibilitiesByUnit: Map[String, Set[String]] = {
+  private[value] val knownCompatibilitiesByUnit: Map[String, Set[String]] =
     knownCompatibilities.flatMap { set =>
       set.map(unit => unit -> set)
     }.toMap
-  }
 }

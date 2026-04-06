@@ -16,34 +16,31 @@ package ssg
 package sass
 package extend
 
-import ssg.sass.{Nullable, SassException}
+import ssg.sass.{ Nullable, SassException }
 import ssg.sass.Nullable.*
 import ssg.sass.ast.css.CssMediaQuery
-import ssg.sass.ast.selector.{ComplexSelector, SimpleSelector}
+import ssg.sass.ast.selector.{ ComplexSelector, SimpleSelector }
 import ssg.sass.util.FileSpan
 
 /** The state of an extension for a given extender.
- *
- * The target of the extension is represented externally, in the map that
- * contains this extender.
- */
+  *
+  * The target of the extension is represented externally, in the map that contains this extender.
+  */
 class Extension(
-    /** The extender (such as `A` in `A {@extend B}`). */
-    val extender: Extender,
-    /** The selector that's being extended. */
-    val target: SimpleSelector,
-    /** The span for an `@extend` rule that defined this extension.
-     *
-     * If any extend rule for this is extension is mandatory, this is guaranteed
-     * to be a span for a mandatory rule.
-     */
-    val span: FileSpan,
-    /** The media query context to which this extension is restricted, or
-     * `Nullable.empty` if it can apply within any context.
-     */
-    val mediaContext: Nullable[List[CssMediaQuery]],
-    /** Whether this extension is optional. */
-    val isOptional: Boolean
+  /** The extender (such as `A` in `A {@extend B}`). */
+  val extender: Extender,
+  /** The selector that's being extended. */
+  val target: SimpleSelector,
+  /** The span for an `@extend` rule that defined this extension.
+    *
+    * If any extend rule for this is extension is mandatory, this is guaranteed to be a span for a mandatory rule.
+    */
+  val span: FileSpan,
+  /** The media query context to which this extension is restricted, or `Nullable.empty` if it can apply within any context.
+    */
+  val mediaContext: Nullable[List[CssMediaQuery]],
+  /** Whether this extension is optional. */
+  val isOptional: Boolean
 ) {
 
   def withExtender(newExtender: ComplexSelector): Extension =
@@ -54,58 +51,55 @@ class Extension(
 }
 
 object Extension {
+
   /** Creates a new extension. */
   def apply(
-      extender: ComplexSelector,
-      target: SimpleSelector,
-      span: FileSpan,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty,
-      optional: Boolean = false
+    extender:     ComplexSelector,
+    target:       SimpleSelector,
+    span:         FileSpan,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty,
+    optional:     Boolean = false
   ): Extension = {
-    val ext = new Extender(extender)
+    val ext       = new Extender(extender)
     val extension = new Extension(ext, target, span, mediaContext, optional)
     ext._extension = Nullable(extension)
     extension
   }
 }
 
-/** A selector that's extending another selector, such as `A` in
- * `A {@extend B}`.
- */
+/** A selector that's extending another selector, such as `A` in `A {@extend B}`.
+  */
 final class Extender(
-    /** The selector in which the `@extend` appeared. */
-    val selector: ComplexSelector,
-    specificityOpt: Nullable[Int] = Nullable.empty,
-    /** Whether this extender represents a selector that was originally in the
-     * document, rather than one defined with `@extend`.
-     */
-    val isOriginal: Boolean = false
+  /** The selector in which the `@extend` appeared. */
+  val selector:   ComplexSelector,
+  specificityOpt: Nullable[Int] = Nullable.empty,
+  /** Whether this extender represents a selector that was originally in the document, rather than one defined with `@extend`.
+    */
+  val isOriginal: Boolean = false
 ) {
-  /** The minimum specificity required for any selector generated from this
-   * extender.
-   */
+
+  /** The minimum specificity required for any selector generated from this extender.
+    */
   val specificity: Int = specificityOpt.getOrElse(selector.specificity)
 
   /** The extension that created this [Extender].
-   *
-   * Not all [Extender]s are created by extensions. Some simply represent the
-   * original selectors that exist in the document.
-   */
+    *
+    * Not all [Extender]s are created by extensions. Some simply represent the original selectors that exist in the document.
+    */
   private[extend] var _extension: Nullable[Extension] = Nullable.empty
 
-  /** Asserts that the [mediaContext] for a selector is compatible with the
-   * query context for this extender.
-   */
-  def assertCompatibleMediaContext(mediaContext: Nullable[List[CssMediaQuery]]): Unit = {
+  /** Asserts that the [mediaContext] for a selector is compatible with the query context for this extender.
+    */
+  def assertCompatibleMediaContext(mediaContext: Nullable[List[CssMediaQuery]]): Unit =
     _extension.toOption match {
-      case None => ()
+      case None            => ()
       case Some(extension) =>
         extension.mediaContext.toOption match {
-          case None => ()
+          case None           => ()
           case Some(expected) =>
             mediaContext.toOption match {
               case Some(actual) if expected == actual => ()
-              case _ =>
+              case _                                  =>
                 throw new SassException(
                   "You may not @extend selectors across media queries.",
                   extension.span
@@ -113,30 +107,26 @@ final class Extender(
             }
         }
     }
-  }
 
   override def toString: String = selector.toString
 }
 
-/** An [Extension] created by merging two [Extension]s with the same extender
- * and target.
- *
- * This is used when multiple mandatory extensions exist to ensure that both of
- * them are marked as resolved.
- */
+/** An [Extension] created by merging two [Extension]s with the same extender and target.
+  *
+  * This is used when multiple mandatory extensions exist to ensure that both of them are marked as resolved.
+  */
 final class MergedExtension private (
-    /** One of the merged extensions. */
-    val left: Extension,
-    /** The other merged extension. */
-    val right: Extension
+  /** One of the merged extensions. */
+  val left: Extension,
+  /** The other merged extension. */
+  val right: Extension
 ) extends Extension(
       new Extender(left.extender.selector),
       left.target,
       left.span,
-      mediaContext = {
+      mediaContext =
         if (left.mediaContext.toOption.isDefined) left.mediaContext
-        else right.mediaContext
-      },
+        else right.mediaContext,
       isOptional = true
     ) {
 
@@ -155,14 +145,13 @@ final class MergedExtension private (
 }
 
 object MergedExtension {
+
   /** Returns an extension that combines [left] and [right].
-   *
-   * Throws a [SassException] if [left] and [right] have incompatible media
-   * contexts.
-   *
-   * Throws an [IllegalArgumentException] if [left] and [right] don't have the
-   * same extender and target.
-   */
+    *
+    * Throws a [SassException] if [left] and [right] have incompatible media contexts.
+    *
+    * Throws an [IllegalArgumentException] if [left] and [right] don't have the same extender and target.
+    */
   def merge(left: Extension, right: Extension): Extension = {
     if (left.extender.selector != right.extender.selector || left.target != right.target) {
       throw new IllegalArgumentException(s"$left and $right aren't the same extension.")

@@ -19,18 +19,17 @@ import ssg.sass.ast.selector.*
 
 /** A visitor that recursively traverses each selector in a Sass selector AST.
   *
-  * The default implementations of compound, complex, list, and pseudo
-  * selectors recurse into their components; simple selectors are no-ops.
+  * The default implementations of compound, complex, list, and pseudo selectors recurse into their components; simple selectors are no-ops.
   */
 trait RecursiveSelectorVisitor extends SelectorVisitor[Unit] {
 
-  def visitAttributeSelector(attribute: AttributeSelector): Unit = ()
-  def visitClassSelector(klass: ClassSelector): Unit = ()
-  def visitIDSelector(id: IDSelector): Unit = ()
-  def visitParentSelector(parent: ParentSelector): Unit = ()
+  def visitAttributeSelector(attribute:     AttributeSelector):   Unit = ()
+  def visitClassSelector(klass:             ClassSelector):       Unit = ()
+  def visitIDSelector(id:                   IDSelector):          Unit = ()
+  def visitParentSelector(parent:           ParentSelector):      Unit = ()
   def visitPlaceholderSelector(placeholder: PlaceholderSelector): Unit = ()
-  def visitTypeSelector(tpe: TypeSelector): Unit = ()
-  def visitUniversalSelector(universal: UniversalSelector): Unit = ()
+  def visitTypeSelector(tpe:                TypeSelector):        Unit = ()
+  def visitUniversalSelector(universal:     UniversalSelector):   Unit = ()
 
   def visitComplexSelector(complex: ComplexSelector): Unit =
     complex.components.foreach(c => visitCompoundSelector(c.selector))

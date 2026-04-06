@@ -16,7 +16,7 @@ package sass
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.util.{CharCode, FileSpan, Frame}
+import ssg.sass.util.{ CharCode, FileSpan, Frame }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
@@ -35,9 +35,9 @@ object Utils {
   /** Returns string with every line indented by indentation spaces. */
   def indent(string: String, indentation: Int): String = {
     val prefix = " " * indentation
-    val lines = string.split("\n")
-    val sb = new StringBuilder()
-    var i = 0
+    val lines  = string.split("\n")
+    val sb     = new StringBuilder()
+    var i      = 0
     while (i < lines.length) {
       if (i > 0) sb.append("\n")
       sb.append(prefix)
@@ -48,10 +48,9 @@ object Utils {
   }
 
   /** Returns name if number is 1, or the plural otherwise. */
-  def pluralize(name: String, number: Int, plural: Nullable[String] = Nullable.Null): String = {
+  def pluralize(name: String, number: Int, plural: Nullable[String] = Nullable.Null): String =
     if (number == 1) name
     else plural.getOrElse(name + "s")
-  }
 
   /** Returns "a word" or "an word" depending on whether word starts with a vowel. */
   def a(word: String): String = {
@@ -63,7 +62,7 @@ object Utils {
   /** Returns the number of times codeUnit appears in string. */
   def countOccurrences(string: String, codeUnit: Int): Int = {
     var count = 0
-    var i = 0
+    var i     = 0
     while (i < string.length) {
       if (string.charAt(i).toInt == codeUnit) count += 1
       i += 1
@@ -168,14 +167,17 @@ object Utils {
 
   /** Returns the longest common subsequence between list1 and list2. */
   def longestCommonSubsequence[T](
-    list1: List[T],
-    list2: List[T],
+    list1:  List[T],
+    list2:  List[T],
     select: (T, T) => Nullable[T] = (a: T, b: T) => if (a == b) Nullable(a) else Nullable.Null
   ): List[T] = {
-    val lengths = Array.ofDim[Int](list1.length + 1, list2.length + 1)
+    val lengths    = Array.ofDim[Int](list1.length + 1, list2.length + 1)
     val selections = Array.ofDim[Any](list1.length, list2.length)
 
-    for (i <- list1.indices; j <- list2.indices) {
+    for {
+      i <- list1.indices
+      j <- list2.indices
+    } {
       val selection = select(list1(i), list2(j))
       selections(i)(j) = if (selection.isDefined) selection.get else null // null in internal array only
       lengths(i + 1)(j + 1) =
@@ -183,7 +185,7 @@ object Utils {
         else math.max(lengths(i + 1)(j), lengths(i)(j + 1))
     }
 
-    def backtrack(i: Int, j: Int): List[T] = {
+    def backtrack(i: Int, j: Int): List[T] =
       if (i < 0 || j < 0) Nil
       else {
         val sel = selections(i)(j)
@@ -191,7 +193,6 @@ object Utils {
         else if (lengths(i + 1)(j) > lengths(i)(j + 1)) backtrack(i, j - 1)
         else backtrack(i - 1, j)
       }
-    }
 
     backtrack(list1.length - 1, list2.length - 1)
   }
@@ -212,25 +213,23 @@ object Utils {
   /** Like Map.addAll, but for two-layer maps. */
   def mapAddAll2[K1, K2, V](
     destination: scala.collection.mutable.Map[K1, scala.collection.mutable.Map[K2, V]],
-    source: scala.collection.mutable.Map[K1, scala.collection.mutable.Map[K2, V]]
-  ): Unit = {
+    source:      scala.collection.mutable.Map[K1, scala.collection.mutable.Map[K2, V]]
+  ): Unit =
     source.foreach { case (key, inner) =>
       destination.get(key) match {
         case Some(innerDest) => innerDest ++= inner
-        case None => destination(key) = inner
+        case None            => destination(key) = inner
       }
     }
-  }
 
   /** Sets all keys in map to value. */
-  def setAll[K, V](map: scala.collection.mutable.Map[K, V], keys: Iterable[K], value: V): Unit = {
+  def setAll[K, V](map: scala.collection.mutable.Map[K, V], keys: Iterable[K], value: V): Unit =
     for (key <- keys) map(key) = value
-  }
 
   /** Rotates elements in list from start (inclusive) to end (exclusive) one index higher. */
   def rotateSlice(list: ArrayBuffer[Any], start: Int, end: Int): Unit = {
     var element = list(end - 1)
-    var i = start
+    var i       = start
     while (i < end) {
       val next = list(i)
       list(i) = element
@@ -244,14 +243,13 @@ object Utils {
     val queues = iterable.map(inner => scala.collection.mutable.Queue.from(inner)).toList
     if (queues.size == 1) queues.head.toList
     else {
-      val result = ArrayBuffer.empty[T]
+      val result    = ArrayBuffer.empty[T]
       var remaining = queues.toBuffer
-      while (remaining.nonEmpty) {
+      while (remaining.nonEmpty)
         remaining = remaining.filter { queue =>
           result += queue.dequeue()
           queue.nonEmpty
         }
-      }
       result.toList
     }
   }
@@ -263,7 +261,7 @@ object Utils {
   /** Converts a codepoint index to a code unit index in string. */
   def codepointIndexToCodeUnitIndex(string: String, codepointIndex: Int): Int = {
     var codeUnitIndex = 0
-    var i = 0
+    var i             = 0
     while (i < codepointIndex) {
       if (CharCode.isHighSurrogate(string.charAt(codeUnitIndex).toInt)) codeUnitIndex += 1
       codeUnitIndex += 1
@@ -275,7 +273,7 @@ object Utils {
   /** Converts a code unit index to a codepoint index in string. */
   def codeUnitIndexToCodepointIndex(string: String, codeUnitIndex: Int): Int = {
     var codepointIndex = 0
-    var i = 0
+    var i              = 0
     while (i < codeUnitIndex) {
       codepointIndex += 1
       if (CharCode.isHighSurrogate(string.charAt(i).toInt)) i += 1

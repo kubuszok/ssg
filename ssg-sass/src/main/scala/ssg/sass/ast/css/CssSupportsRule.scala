@@ -28,8 +28,9 @@ trait CssSupportsRule extends CssParentNode {
 /** A modifiable version of CssSupportsRule for use in the evaluation step. */
 final class ModifiableCssSupportsRule(
   val condition: CssValue[String],
-  val span: FileSpan
-) extends ModifiableCssParentNode with CssSupportsRule {
+  val span:      FileSpan
+) extends ModifiableCssParentNode
+    with CssSupportsRule {
 
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssSupportsRule(this)

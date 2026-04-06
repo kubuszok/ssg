@@ -31,8 +31,9 @@ trait CssKeyframeBlock extends CssParentNode {
 /** A modifiable version of CssKeyframeBlock for use in the evaluation step. */
 final class ModifiableCssKeyframeBlock(
   val selector: CssValue[List[String]],
-  val span: FileSpan
-) extends ModifiableCssParentNode with CssKeyframeBlock {
+  val span:     FileSpan
+) extends ModifiableCssParentNode
+    with CssKeyframeBlock {
 
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssKeyframeBlock(this)

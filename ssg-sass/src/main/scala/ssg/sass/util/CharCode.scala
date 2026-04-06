@@ -13,11 +13,11 @@ package util
 object CharCode {
 
   // Whitespace
-  final val $tab: Int = 0x09
-  final val $lf: Int = 0x0A
-  final val $vt: Int = 0x0B
-  final val $ff: Int = 0x0C
-  final val $cr: Int = 0x0D
+  final val $tab:   Int = 0x09
+  final val $lf:    Int = 0x0a
+  final val $vt:    Int = 0x0b
+  final val $ff:    Int = 0x0c
+  final val $cr:    Int = 0x0d
   final val $space: Int = 0x20
 
   // Digits
@@ -42,12 +42,12 @@ object CharCode {
   final val $G: Int = 0x47
   final val $H: Int = 0x48
   final val $I: Int = 0x49
-  final val $J: Int = 0x4A
-  final val $K: Int = 0x4B
-  final val $L: Int = 0x4C
-  final val $M: Int = 0x4D
-  final val $N: Int = 0x4E
-  final val $O: Int = 0x4F
+  final val $J: Int = 0x4a
+  final val $K: Int = 0x4b
+  final val $L: Int = 0x4c
+  final val $M: Int = 0x4d
+  final val $N: Int = 0x4e
+  final val $O: Int = 0x4f
   final val $P: Int = 0x50
   final val $Q: Int = 0x51
   final val $R: Int = 0x52
@@ -58,7 +58,7 @@ object CharCode {
   final val $W: Int = 0x57
   final val $X: Int = 0x58
   final val $Y: Int = 0x59
-  final val $Z: Int = 0x5A
+  final val $Z: Int = 0x5a
 
   // Lowercase letters
   final val $a: Int = 0x61
@@ -70,12 +70,12 @@ object CharCode {
   final val $g: Int = 0x67
   final val $h: Int = 0x68
   final val $i: Int = 0x69
-  final val $j: Int = 0x6A
-  final val $k: Int = 0x6B
-  final val $l: Int = 0x6C
-  final val $m: Int = 0x6D
-  final val $n: Int = 0x6E
-  final val $o: Int = 0x6F
+  final val $j: Int = 0x6a
+  final val $k: Int = 0x6b
+  final val $l: Int = 0x6c
+  final val $m: Int = 0x6d
+  final val $n: Int = 0x6e
+  final val $o: Int = 0x6f
   final val $p: Int = 0x70
   final val $q: Int = 0x71
   final val $r: Int = 0x72
@@ -86,44 +86,44 @@ object CharCode {
   final val $w: Int = 0x77
   final val $x: Int = 0x78
   final val $y: Int = 0x79
-  final val $z: Int = 0x7A
+  final val $z: Int = 0x7a
 
   // Symbols & punctuation
-  final val $exclamation: Int = 0x21
+  final val $exclamation:  Int = 0x21
   final val $double_quote: Int = 0x22
-  final val $hash: Int = 0x23
-  final val $dollar: Int = 0x24
-  final val $percent: Int = 0x25
-  final val $ampersand: Int = 0x26
+  final val $hash:         Int = 0x23
+  final val $dollar:       Int = 0x24
+  final val $percent:      Int = 0x25
+  final val $ampersand:    Int = 0x26
   final val $single_quote: Int = 0x27
-  final val $lparen: Int = 0x28
-  final val $rparen: Int = 0x29
-  final val $asterisk: Int = 0x2A
-  final val $plus: Int = 0x2B
-  final val $comma: Int = 0x2C
-  final val $minus: Int = 0x2D
-  final val $dot: Int = 0x2E
-  final val $slash: Int = 0x2F
-  final val $colon: Int = 0x3A
-  final val $semicolon: Int = 0x3B
-  final val $lt: Int = 0x3C
-  final val $equal: Int = 0x3D
-  final val $gt: Int = 0x3E
-  final val $question: Int = 0x3F
-  final val $at: Int = 0x40
-  final val $lbracket: Int = 0x5B
-  final val $backslash: Int = 0x5C
-  final val $rbracket: Int = 0x5D
-  final val $circumflex: Int = 0x5E
-  final val $underscore: Int = 0x5F
-  final val $backtick: Int = 0x60
-  final val $lbrace: Int = 0x7B
-  final val $pipe: Int = 0x7C
-  final val $rbrace: Int = 0x7D
-  final val $tilde: Int = 0x7E
+  final val $lparen:       Int = 0x28
+  final val $rparen:       Int = 0x29
+  final val $asterisk:     Int = 0x2a
+  final val $plus:         Int = 0x2b
+  final val $comma:        Int = 0x2c
+  final val $minus:        Int = 0x2d
+  final val $dot:          Int = 0x2e
+  final val $slash:        Int = 0x2f
+  final val $colon:        Int = 0x3a
+  final val $semicolon:    Int = 0x3b
+  final val $lt:           Int = 0x3c
+  final val $equal:        Int = 0x3d
+  final val $gt:           Int = 0x3e
+  final val $question:     Int = 0x3f
+  final val $at:           Int = 0x40
+  final val $lbracket:     Int = 0x5b
+  final val $backslash:    Int = 0x5c
+  final val $rbracket:     Int = 0x5d
+  final val $circumflex:   Int = 0x5e
+  final val $underscore:   Int = 0x5f
+  final val $backtick:     Int = 0x60
+  final val $lbrace:       Int = 0x7b
+  final val $pipe:         Int = 0x7c
+  final val $rbrace:       Int = 0x7d
+  final val $tilde:        Int = 0x7e
 
   /** Highest allowed Unicode code point in CSS. */
-  final val maxAllowedCharacter: Int = 0x10FFFF
+  final val maxAllowedCharacter: Int = 0x10ffff
 
   // --- Classification methods ---
 
@@ -165,54 +165,51 @@ object CharCode {
 
   /** Whether [c] is a UTF-16 high surrogate. */
   def isHighSurrogate(c: Int): Boolean =
-    c >= 0xD800 && c <= 0xDBFF
+    c >= 0xd800 && c <= 0xdbff
 
   /** Whether [c] is a UTF-16 low surrogate. */
   def isLowSurrogate(c: Int): Boolean =
-    c >= 0xDC00 && c <= 0xDFFF
+    c >= 0xdc00 && c <= 0xdfff
 
   /** Whether [c] is a private-use character in the BMP. */
   def isPrivateUseBMP(c: Int): Boolean =
-    c >= 0xE000 && c <= 0xF8FF
+    c >= 0xe000 && c <= 0xf8ff
 
   /** Whether [c] is a high surrogate for a supplementary private-use code point. */
   def isPrivateUseHighSurrogate(c: Int): Boolean =
-    c >= 0xDB80 && c <= 0xDBFF
+    c >= 0xdb80 && c <= 0xdbff
 
   // --- Conversion utilities ---
 
   /** Converts a hexadecimal digit character to its integer value (0-15). */
-  def asHex(c: Int): Int = {
+  def asHex(c: Int): Int =
     if (c >= $0 && c <= $9) c - $0
     else if (c >= $a && c <= $f) 10 + c - $a
     else if (c >= $A && c <= $F) 10 + c - $A
     else throw new IllegalArgumentException(s"Not a hex digit: ${c.toChar}")
-  }
 
   /** Converts a value 0-15 to a lowercase hex digit character code. */
-  def hexCharFor(number: Int): Int = {
+  def hexCharFor(number: Int): Int =
     if (number < 10) $0 + number
     else $a - 10 + number
-  }
 
   /** Converts a decimal digit character to its integer value (0-9). */
-  def asDecimal(c: Int): Int = {
+  def asDecimal(c: Int): Int =
     if (c >= $0 && c <= $9) c - $0
     else throw new IllegalArgumentException(s"Not a digit: ${c.toChar}")
-  }
 
   /** Converts a value 0-9 to a digit character code. */
   def decimalCharFor(number: Int): Int = $0 + number
 
   /** Returns the closing bracket for an opening bracket, and vice versa. */
   def opposite(c: Int): Int = c match {
-    case `$lparen` => $rparen
-    case `$rparen` => $lparen
+    case `$lparen`   => $rparen
+    case `$rparen`   => $lparen
     case `$lbracket` => $rbracket
     case `$rbracket` => $lbracket
-    case `$lbrace` => $rbrace
-    case `$rbrace` => $lbrace
-    case _ => throw new IllegalArgumentException(s"Not a bracket: ${c.toChar}")
+    case `$lbrace`   => $rbrace
+    case `$rbrace`   => $lbrace
+    case _           => throw new IllegalArgumentException(s"Not a bracket: ${c.toChar}")
   }
 
   /** Converts an ASCII character to uppercase. */
@@ -227,16 +224,14 @@ object CharCode {
   def characterEqualsIgnoreCase(c1: Int, c2: Int): Boolean =
     c1 == c2 || toLowerCase(c1) == toLowerCase(c2)
 
-  /**
-   * Optimized case-insensitive comparison when [letter] is known to be
-   * a lowercase ASCII letter.
-   */
+  /** Optimized case-insensitive comparison when [letter] is known to be a lowercase ASCII letter.
+    */
   def equalsLetterIgnoreCase(letter: Int, actual: Int): Boolean =
     actual == letter || actual == letter - 0x20
 
   /** Combines a UTF-16 surrogate pair into a single code point. */
   def combineSurrogates(high: Int, low: Int): Int =
-    0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00)
+    0x10000 + ((high - 0xd800) << 10) + (low - 0xdc00)
 
   /** Whether [identifier] starts with `-` or `_` (a Sass private member). */
   def isPrivate(identifier: String): Boolean =

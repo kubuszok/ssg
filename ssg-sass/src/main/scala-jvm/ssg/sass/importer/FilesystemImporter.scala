@@ -16,7 +16,7 @@ package ssg
 package sass
 package importer
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{ Files, Path, Paths }
 
 import ssg.sass.Nullable.*
 
@@ -37,9 +37,9 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
 
   /** Candidate file names to try for the given import target. */
   private def candidates(relative: String): List[Path] = {
-    val target = Paths.get(relative)
+    val target   = Paths.get(relative)
     val fileName = target.getFileName.toString
-    val parent = Option(target.getParent).getOrElse(Paths.get(""))
+    val parent   = Option(target.getParent).getOrElse(Paths.get(""))
 
     val hasExtension = fileName.indexOf('.') >= 0
     val basenames: List[String] =
@@ -63,24 +63,26 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
     // Also try index files if the relative path is a directory
     val indexCandidates: List[Path] =
       if (hasExtension) Nil
-      else List(
-        target.resolve("_index.scss"),
-        target.resolve("index.scss"),
-        target.resolve("_index.sass"),
-        target.resolve("index.sass")
-      )
+      else
+        List(
+          target.resolve("_index.scss"),
+          target.resolve("index.scss"),
+          target.resolve("_index.sass"),
+          target.resolve("index.sass")
+        )
 
     (directCandidates ++ indexCandidates).map((p: Path) => rootPath.resolve(p).normalize())
   }
 
   def canonicalize(url: String): Nullable[String] = {
     val cleaned = if (url.startsWith("file:")) url.stripPrefix("file:") else url
-    val cands = candidates(cleaned)
+    val cands   = candidates(cleaned)
     var result: Nullable[String] = Nullable.empty
     var i = 0
     while (result.isEmpty && i < cands.length) {
-      val c = cands(i)
-      val exists = try Files.exists(c) && Files.isRegularFile(c)
+      val c      = cands(i)
+      val exists =
+        try Files.exists(c) && Files.isRegularFile(c)
         catch { case _: Throwable => false }
       if (exists) {
         result = Nullable(c.toUri.toString)
@@ -90,7 +92,7 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
     result
   }
 
-  def load(url: String): Nullable[ImporterResult] = {
+  def load(url: String): Nullable[ImporterResult] =
     try {
       val path: Path = {
         val uri = java.net.URI.create(url)
@@ -100,7 +102,7 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
         Nullable.empty
       } else {
         val contents = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8)
-        val syntax =
+        val syntax   =
           if (path.toString.endsWith(".sass")) Syntax.Sass
           else if (path.toString.endsWith(".css")) Syntax.Css
           else Syntax.Scss
@@ -109,7 +111,6 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
     } catch {
       case _: Throwable => Nullable.empty
     }
-  }
 
   override def toString: String = loadPath
 }

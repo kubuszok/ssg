@@ -86,17 +86,17 @@ object ColorSpaceUtils {
 
   /** Converts a Lab or OKLab color to LCH or OKLCH, respectively. */
   def labToLch(
-    dest: ColorSpace,
-    lightness: Nullable[Double],
-    a: Nullable[Double],
-    b: Nullable[Double],
-    alpha: Nullable[Double],
+    dest:          ColorSpace,
+    lightness:     Nullable[Double],
+    a:             Nullable[Double],
+    b:             Nullable[Double],
+    alpha:         Nullable[Double],
     missingChroma: Boolean = false,
-    missingHue: Boolean = false
+    missingHue:    Boolean = false
   ): SassColor = {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
-    val aVal = a.getOrElse(0.0)
-    val bVal = b.getOrElse(0.0)
+    val aVal   = a.getOrElse(0.0)
+    val bVal   = b.getOrElse(0.0)
     val chroma = math.sqrt(math.pow(aVal, 2) + math.pow(bVal, 2))
     val hue: Nullable[Double] =
       if (missingHue || fuzzyEquals(chroma, 0)) Nullable.Null

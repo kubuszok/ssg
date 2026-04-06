@@ -28,14 +28,13 @@ import scala.language.implicitConversions
 
 /** A complex selector.
   *
-  * A complex selector is composed of [[CompoundSelector]]s separated by
-  * [[Combinator]]s. It selects elements based on their parent selectors.
+  * A complex selector is composed of [[CompoundSelector]]s separated by [[Combinator]]s. It selects elements based on their parent selectors.
   */
 final class ComplexSelector(
   val leadingCombinators: List[CssValue[Combinator]],
-  val components: List[ComplexSelectorComponent],
-  span: FileSpan,
-  val lineBreak: Boolean = false
+  val components:         List[ComplexSelectorComponent],
+  span:                   FileSpan,
+  val lineBreak:          Boolean = false
 ) extends Selector(span) {
 
   require(
@@ -45,50 +44,44 @@ final class ComplexSelector(
 
   /** This selector's specificity.
     *
-    * Specificity is represented in base 1000. The spec says this should be
-    * "sufficiently high"; it's extremely unlikely that any single selector
-    * sequence will contain 1000 simple selectors.
+    * Specificity is represented in base 1000. The spec says this should be "sufficiently high"; it's extremely unlikely that any single selector sequence will contain 1000 simple selectors.
     */
   lazy val specificity: Int =
     components.foldLeft(0)((sum, component) => sum + component.selector.specificity)
 
-  /** If this complex selector is composed of a single compound selector with
-    * no combinators, returns it. Otherwise, returns `Nullable.Null`.
+  /** If this complex selector is composed of a single compound selector with no combinators, returns it. Otherwise, returns `Nullable.Null`.
     */
-  def singleCompound: Nullable[CompoundSelector] = {
+  def singleCompound: Nullable[CompoundSelector] =
     if (leadingCombinators.nonEmpty) Nullable.Null
-    else components match {
-      case List(component) if component.combinators.isEmpty =>
-        Nullable(component.selector)
-      case _ => Nullable.Null
-    }
-  }
+    else
+      components match {
+        case List(component) if component.combinators.isEmpty =>
+          Nullable(component.selector)
+        case _ => Nullable.Null
+      }
 
   override def accept[T](visitor: SelectorVisitor[T]): T =
     visitor.visitComplexSelector(this)
 
   /** Whether this is a superselector of `other`.
     *
-    * That is, whether this matches every element that `other` matches, as well
-    * as possibly matching more.
+    * That is, whether this matches every element that `other` matches, as well as possibly matching more.
     *
-    * Note: The full implementation delegates to `complexIsSuperselector` in
-    * the extend functions module, which will be ported separately.
+    * Note: The full implementation delegates to `complexIsSuperselector` in the extend functions module, which will be ported separately.
     */
   def isSuperselector(other: ComplexSelector): Boolean =
     leadingCombinators.isEmpty &&
-    other.leadingCombinators.isEmpty &&
-    complexIsSuperselector(components, other.components)
+      other.leadingCombinators.isEmpty &&
+      complexIsSuperselector(components, other.components)
 
   /** Stub for complex superselector logic.
     *
-    * The real implementation will be in the extend functions module.
-    * This provides a basic approximation.
+    * The real implementation will be in the extend functions module. This provides a basic approximation.
     */
   private def complexIsSuperselector(
     superComponents: List[ComplexSelectorComponent],
-    subComponents: List[ComplexSelectorComponent]
-  ): Boolean = {
+    subComponents:   List[ComplexSelectorComponent]
+  ): Boolean =
     // Basic stub: delegates to compound-level comparison
     if (superComponents.isEmpty) true
     else if (subComponents.isEmpty) false
@@ -99,47 +92,43 @@ final class ComplexSelector(
         }
       }
     }
-  }
 
-  /** Returns a copy of `this` with `combinators` added to the end of the final
-    * component in [[components]].
+  /** Returns a copy of `this` with `combinators` added to the end of the final component in [[components]].
     *
-    * If `forceLineBreak` is `true`, this will mark the new complex selector as
-    * having a line break.
+    * If `forceLineBreak` is `true`, this will mark the new complex selector as having a line break.
     */
   def withAdditionalCombinators(
-    combinators: List[CssValue[Combinator]],
+    combinators:    List[CssValue[Combinator]],
     forceLineBreak: Boolean = false
-  ): ComplexSelector = {
+  ): ComplexSelector =
     if (combinators.isEmpty) this
-    else (components: @unchecked) match {
-      case init :+ last =>
-        ComplexSelector(
-          leadingCombinators,
-          init :+ last.withAdditionalCombinators(combinators),
-          span,
-          lineBreak = lineBreak || forceLineBreak
-        )
-      case Nil =>
-        ComplexSelector(
-          leadingCombinators ++ combinators,
-          Nil,
-          span,
-          lineBreak = lineBreak || forceLineBreak
-        )
-    }
-  }
+    else
+      (components: @unchecked) match {
+        case init :+ last =>
+          ComplexSelector(
+            leadingCombinators,
+            init :+ last.withAdditionalCombinators(combinators),
+            span,
+            lineBreak = lineBreak || forceLineBreak
+          )
+        case Nil =>
+          ComplexSelector(
+            leadingCombinators ++ combinators,
+            Nil,
+            span,
+            lineBreak = lineBreak || forceLineBreak
+          )
+      }
 
   /** Returns a copy of `this` with an additional `component` added to the end.
     *
-    * If `forceLineBreak` is `true`, this will mark the new complex selector as
-    * having a line break.
+    * If `forceLineBreak` is `true`, this will mark the new complex selector as having a line break.
     *
     * The `newSpan` is used for the new selector.
     */
   def withAdditionalComponent(
-    component: ComplexSelectorComponent,
-    newSpan: FileSpan,
+    component:      ComplexSelectorComponent,
+    newSpan:        FileSpan,
     forceLineBreak: Boolean = false
   ): ComplexSelector =
     ComplexSelector(
@@ -151,19 +140,17 @@ final class ComplexSelector(
 
   /** Returns a copy of `this` with `child`'s combinators added to the end.
     *
-    * If `child` has [[leadingCombinators]], they're appended to `this`'s last
-    * combinator. This does _not_ resolve parent selectors.
+    * If `child` has [[leadingCombinators]], they're appended to `this`'s last combinator. This does _not_ resolve parent selectors.
     *
     * The `newSpan` is used for the new selector.
     *
-    * If `forceLineBreak` is `true`, this will mark the new complex selector as
-    * having a line break.
+    * If `forceLineBreak` is `true`, this will mark the new complex selector as having a line break.
     */
   def concatenate(
-    child: ComplexSelector,
-    newSpan: FileSpan,
+    child:          ComplexSelector,
+    newSpan:        FileSpan,
     forceLineBreak: Boolean = false
-  ): ComplexSelector = {
+  ): ComplexSelector =
     if (child.leadingCombinators.isEmpty) {
       ComplexSelector(
         leadingCombinators,
@@ -189,7 +176,6 @@ final class ComplexSelector(
           )
       }
     }
-  }
 
   override def hashCode(): Int =
     Utils.iterableHash(leadingCombinators) ^ Utils.iterableHash(components)
@@ -207,20 +193,18 @@ final class ComplexSelector(
   * This is a [[CompoundSelector]] with zero or more trailing [[Combinator]]s.
   */
 final class ComplexSelectorComponent(
-  val selector: CompoundSelector,
+  val selector:    CompoundSelector,
   val combinators: List[CssValue[Combinator]],
-  val span: FileSpan
+  val span:        FileSpan
 ) {
 
-  /** Returns a copy of `this` with `additionalCombinators` added to the end of
-    * [[combinators]].
+  /** Returns a copy of `this` with `additionalCombinators` added to the end of [[combinators]].
     */
   def withAdditionalCombinators(
     additionalCombinators: List[CssValue[Combinator]]
-  ): ComplexSelectorComponent = {
+  ): ComplexSelectorComponent =
     if (additionalCombinators.isEmpty) this
     else ComplexSelectorComponent(selector, combinators ++ additionalCombinators, span)
-  }
 
   override def hashCode(): Int =
     selector.hashCode() ^ Utils.iterableHash(combinators)

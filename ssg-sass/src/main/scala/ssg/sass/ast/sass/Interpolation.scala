@@ -22,16 +22,17 @@ import ssg.sass.util.FileSpan
 
 /** Plain text interpolated with Sass expressions.
   *
-  * @param contents the contents of this interpolation: [String]s and [Expression]s,
-  *                 never containing two adjacent [String]s
-  * @param spans    source spans for each [Expression] in [contents]; must be the
-  *                 same length as [contents]
-  * @param span     the source span covering the entire interpolation
+  * @param contents
+  *   the contents of this interpolation: [String]s and [Expression]s, never containing two adjacent [String]s
+  * @param spans
+  *   source spans for each [Expression] in [contents]; must be the same length as [contents]
+  * @param span
+  *   the source span covering the entire interpolation
   */
 final class Interpolation(
-  val contents: List[Any /* String | Expression */],
-  val spans: List[Nullable[FileSpan]],
-  val span: FileSpan
+  val contents: List[Any /* String | Expression */ ],
+  val spans:    List[Nullable[FileSpan]],
+  val span:     FileSpan
 ) extends SassNode {
 
   require(
@@ -43,7 +44,7 @@ final class Interpolation(
   {
     var i = 0
     while (i < contents.length) {
-      val v = contents(i)
+      val v        = contents(i)
       val isString = v.isInstanceOf[String]
       if (!isString && !v.isInstanceOf[Expression]) {
         throw new IllegalArgumentException(
@@ -63,13 +64,12 @@ final class Interpolation(
   /** Returns whether this contains no interpolated expressions. */
   def isPlain: Boolean = asPlain.isDefined
 
-  /** If this contains no interpolated expressions, returns its text contents.
-    * Otherwise, returns empty.
+  /** If this contains no interpolated expressions, returns its text contents. Otherwise, returns empty.
     */
   def asPlain: Nullable[String] = contents match {
-    case Nil                    => Nullable("")
-    case (s: String) :: Nil     => Nullable(s)
-    case _                      => Nullable.empty
+    case Nil                => Nullable("")
+    case (s: String) :: Nil => Nullable(s)
+    case _                  => Nullable.empty
   }
 
   /** Returns the plain text before the interpolation, or the empty string. */
@@ -93,12 +93,10 @@ final class Interpolation(
   }
 
   override def toString: String =
-    contents
-      .map {
-        case s: String => s
-        case e         => s"#{$e}"
-      }
-      .mkString
+    contents.map {
+      case s: String => s
+      case e => s"#{$e}"
+    }.mkString
 }
 
 object Interpolation {

@@ -34,8 +34,8 @@ final class SourceSpanSuite extends munit.FunSuite {
   }
 
   test("FileSpan.trim removes whitespace") {
-    val file = SourceFile("test.scss", "  hello  ")
-    val span = file.span(0, 9)
+    val file    = SourceFile("test.scss", "  hello  ")
+    val span    = file.span(0, 9)
     val trimmed = span.trim()
     assertEquals(trimmed.text, "hello")
     assertEquals(trimmed.start.offset, 2)
@@ -45,28 +45,28 @@ final class SourceSpanSuite extends munit.FunSuite {
   test("FileSpan.subspan creates sub-range") {
     val file = SourceFile("test.scss", "hello world")
     val span = file.span(0, 11)
-    val sub = span.subspan(6, 11)
+    val sub  = span.subspan(6, 11)
     assertEquals(sub.text, "world")
   }
 
   test("FileSpan.expand merges two spans") {
-    val file = SourceFile("test.scss", "hello world")
-    val span1 = file.span(0, 5)
-    val span2 = file.span(6, 11)
+    val file   = SourceFile("test.scss", "hello world")
+    val span1  = file.span(0, 5)
+    val span2  = file.span(6, 11)
     val merged = span1.expand(span2)
     assertEquals(merged.text, "hello world")
   }
 
   test("FileSpan.between returns span between two spans") {
-    val file = SourceFile("test.scss", "hello world")
-    val span1 = file.span(0, 5)
-    val span2 = file.span(6, 11)
+    val file    = SourceFile("test.scss", "hello world")
+    val span1   = file.span(0, 5)
+    val span2   = file.span(6, 11)
     val between = span1.between(span2)
     assertEquals(between.text, " ")
   }
 
   test("FileSpan.contains checks containment") {
-    val file = SourceFile("test.scss", "hello world")
+    val file  = SourceFile("test.scss", "hello world")
     val outer = file.span(0, 11)
     val inner = file.span(3, 8)
     assert(outer.contains(inner))
@@ -74,8 +74,8 @@ final class SourceSpanSuite extends munit.FunSuite {
   }
 
   test("FileSpan.pointSpan creates zero-width span") {
-    val file = SourceFile("test.scss", "hello")
-    val span = file.span(2, 5)
+    val file  = SourceFile("test.scss", "hello")
+    val span  = file.span(2, 5)
     val point = span.pointSpan()
     assertEquals(point.length, 0)
     assertEquals(point.start.offset, 2)
@@ -89,14 +89,14 @@ final class SourceSpanSuite extends munit.FunSuite {
 
   test("FileLocation toString includes 1-based line/column") {
     val file = SourceFile("test.scss", "abc\ndef")
-    val loc = file.location(4) // 'd' on line 1, col 0
+    val loc  = file.location(4) // 'd' on line 1, col 0
     assertEquals(loc.toString, "test.scss:2:1")
   }
 
   test("FileSpan.message formats error with context") {
     val file = SourceFile("test.scss", "abc\ndef")
     val span = file.span(4, 7) // "def"
-    val msg = span.message("test error")
+    val msg  = span.message("test error")
     assert(msg.contains("test.scss:2:1"))
     assert(msg.contains("test error"))
   }

@@ -23,23 +23,23 @@ import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.Utils
 import ssg.sass.util.NumberUtil.*
-import ssg.sass.value.{Value, SassNumber}
+import ssg.sass.value.{ SassNumber, Value }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
 /** A specialized subclass of SassNumber for numbers that have exactly one numerator unit. */
 final class SingleUnitSassNumber private (
-  value: Double,
+  value:             Double,
   private val _unit: String,
-  asSlash: Nullable[(SassNumber, SassNumber)] = Nullable.Null
+  asSlash:           Nullable[(SassNumber, SassNumber)] = Nullable.Null
 ) extends SassNumber(value, asSlash) {
 
   def numeratorUnits: List[String] = List(_unit)
 
   def denominatorUnits: List[String] = Nil
 
-  def hasUnits: Boolean = true
+  def hasUnits:        Boolean = true
   def hasComplexUnits: Boolean = false
 
   /** Returns the single unit of this number. Exposed for subclass access. */
@@ -64,7 +64,7 @@ final class SingleUnitSassNumber private (
         case Some(compatSet) =>
           val otherUnit = s._unit.toLowerCase
           compatSet.contains(otherUnit) ||
-            !SassNumber.knownCompatibilitiesByUnit.contains(otherUnit)
+          !SassNumber.knownCompatibilitiesByUnit.contains(otherUnit)
         case scala.None => true
       }
     case _ => false
@@ -74,8 +74,8 @@ final class SingleUnitSassNumber private (
     SassNumber.conversionFactor(_unit, unit).isDefined
 
   override def coerceToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): SassNumber = {
     val result = other match {
@@ -90,8 +90,8 @@ final class SingleUnitSassNumber private (
   }
 
   override def coerceValueToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): Double = {
     val result = other match {
@@ -115,8 +115,8 @@ final class SingleUnitSassNumber private (
   }
 
   override def convertToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): SassNumber = {
     val result = other match {
@@ -131,8 +131,8 @@ final class SingleUnitSassNumber private (
   }
 
   override def convertValueToMatch(
-    other: SassNumber,
-    name: Nullable[String],
+    other:     SassNumber,
+    name:      Nullable[String],
     otherName: Nullable[String]
   ): Double = {
     val result = other match {
@@ -147,9 +147,9 @@ final class SingleUnitSassNumber private (
   }
 
   override def coerce(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String]
+    name:            Nullable[String]
   ): SassNumber = {
     val result =
       if (newNumerators.length == 1 && newDenominators.isEmpty) coerceToUnit(newNumerators.head)
@@ -162,9 +162,9 @@ final class SingleUnitSassNumber private (
   }
 
   override def coerceValue(
-    newNumerators: List[String],
+    newNumerators:   List[String],
     newDenominators: List[String],
-    name: Nullable[String]
+    name:            Nullable[String]
   ): Double = {
     val result =
       if (newNumerators.length == 1 && newDenominators.isEmpty) coerceValueToUnitInternal(newNumerators.head)
@@ -185,29 +185,26 @@ final class SingleUnitSassNumber private (
     }
   }
 
-  /** A shorthand for coerce with only one numerator unit, except that it
-    * returns Nullable.Null if coercion fails.
+  /** A shorthand for coerce with only one numerator unit, except that it returns Nullable.Null if coercion fails.
     */
-  private def coerceToUnit(unit: String): Nullable[SassNumber] = {
+  private def coerceToUnit(unit: String): Nullable[SassNumber] =
     if (_unit == unit) Nullable(this)
     else {
       val factor = SassNumber.conversionFactor(unit, _unit)
       factor.map(f => SingleUnitSassNumber(value * f, unit))
     }
-  }
 
   /** Like coerceValueToUnit, except that it returns Nullable.Null if coercion fails. */
-  private def coerceValueToUnitInternal(unit: String): Nullable[Double] = {
+  private def coerceValueToUnitInternal(unit: String): Nullable[Double] =
     SassNumber.conversionFactor(unit, _unit).map(factor => value * factor)
-  }
 
   override protected def multiplyUnits(
-    value: Double,
-    otherNumerators: List[String],
+    value:             Double,
+    otherNumerators:   List[String],
     otherDenominators: List[String]
   ): SassNumber = {
-    var mutableValue = value
-    val newNumerators = ArrayBuffer.from(otherNumerators)
+    var mutableValue             = value
+    val newNumerators            = ArrayBuffer.from(otherNumerators)
     val mutableOtherDenominators = ArrayBuffer.from(otherDenominators)
     Utils.removeFirstWhere[String](
       mutableOtherDenominators,
@@ -219,9 +216,7 @@ final class SingleUnitSassNumber private (
           true
         }
       },
-      orElse = () => {
-        newNumerators.prepend(_unit)
-      }
+      orElse = () => newNumerators.prepend(_unit)
     )
 
     SassNumber.withUnits(
@@ -253,8 +248,8 @@ object SingleUnitSassNumber {
     new SingleUnitSassNumber(value, unit)
 
   def apply(
-    value: Double,
-    unit: String,
+    value:   Double,
+    unit:    String,
     asSlash: Nullable[(SassNumber, SassNumber)]
   ): SingleUnitSassNumber =
     new SingleUnitSassNumber(value, unit, asSlash)

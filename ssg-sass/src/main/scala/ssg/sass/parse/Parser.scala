@@ -15,8 +15,8 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.util.{CharCode, FileSpan, LineScannerState, SpanScanner, StringScannerException}
-import ssg.sass.{InterpolationMap, Nullable, SassFormatException}
+import ssg.sass.util.{ CharCode, FileSpan, LineScannerState, SpanScanner, StringScannerException }
+import ssg.sass.{ InterpolationMap, Nullable, SassFormatException }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -25,13 +25,11 @@ import scala.util.boundary.break
 
 /** The abstract base class for all parsers.
   *
-  * Provides utility methods and common token parsing. Unless specified
-  * otherwise, a parse method throws a [[SassFormatException]] if it fails
-  * to parse.
+  * Provides utility methods and common token parsing. Unless specified otherwise, a parse method throws a [[SassFormatException]] if it fails to parse.
   */
 abstract class Parser protected (
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:                       String,
+  url:                            Nullable[String] = Nullable.Null,
   protected val interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) {
 
@@ -42,9 +40,7 @@ abstract class Parser protected (
 
   /** Consumes whitespace, including any comments.
     *
-    * If [consumeNewlines] is true, the indented syntax will consume newlines
-    * as whitespace. It should only be set to true in positions when a
-    * statement can't end.
+    * If [consumeNewlines] is true, the indented syntax will consume newlines as whitespace. It should only be set to true in positions when a statement can't end.
     */
   protected def whitespace(consumeNewlines: Boolean): Unit = {
     var continue = true
@@ -55,7 +51,7 @@ abstract class Parser protected (
   }
 
   /** Consumes whitespace, but not comments. */
-  protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit = {
+  protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit =
     while (!scanner.isDone) {
       val c = scanner.peekChar()
       if (c < 0) return
@@ -67,16 +63,14 @@ abstract class Parser protected (
         else return
       }
     }
-  }
 
   /** Consumes spaces and tabs (never newlines). */
-  protected def spaces(): Unit = {
+  protected def spaces(): Unit =
     while (!scanner.isDone) {
       val c = scanner.peekChar()
       if (c < 0 || !CharCode.isSpaceOrTab(c)) return
       scanner.readChar()
     }
-  }
 
   /** Consumes and ignores a comment if possible. Returns true if consumed. */
   protected def scanComment(): Boolean = {
@@ -109,9 +103,8 @@ abstract class Parser protected (
     while (!done) {
       var next = scanner.readChar()
       if (next == CharCode.$asterisk) {
-        while (next == CharCode.$asterisk) {
+        while (next == CharCode.$asterisk)
           next = scanner.readChar()
-        }
         if (next == CharCode.$slash) done = true
       }
     }
@@ -120,7 +113,7 @@ abstract class Parser protected (
   /** Consumes whitespace and errors if none was found. */
   protected def expectWhitespace(consumeNewlines: Boolean = false): Unit = {
     if (scanner.isDone) scanner.error("Expected whitespace.")
-    val c = scanner.peekChar()
+    val c     = scanner.peekChar()
     val hasWs = if (consumeNewlines) CharCode.isWhitespace(c) else CharCode.isSpaceOrTab(c)
     if (!hasWs && !scanComment()) {
       scanner.error("Expected whitespace.")
@@ -130,8 +123,7 @@ abstract class Parser protected (
 
   /** Consumes a plain CSS identifier and returns it.
     *
-    * If [normalize] is true, converts underscores into hyphens.
-    * If [unit] is true, doesn't parse a `-` followed by a digit.
+    * If [normalize] is true, converts underscores into hyphens. If [unit] is true, doesn't parse a `-` followed by a digit.
     */
   protected def identifier(normalize: Boolean = false, unit: Boolean = false): String = {
     val buf = new StringBuilder()
@@ -172,7 +164,7 @@ abstract class Parser protected (
   }
 
   /** Parses the identifier body into the given buffer. */
-  private def identifierBody(buf: StringBuilder, normalize: Boolean, unit: Boolean): Unit = {
+  private def identifierBody(buf: StringBuilder, normalize: Boolean, unit: Boolean): Unit =
     boundary {
       while (true) {
         val c = scanner.peekChar()
@@ -194,7 +186,6 @@ abstract class Parser protected (
         }
       }
     }
-  }
 
   /** Consumes an escape sequence and returns the text that defines it. */
   protected def escape(identifierStart: Boolean = false): String = {
@@ -206,7 +197,7 @@ abstract class Parser protected (
       scanner.error("Expected escape sequence.")
     } else if (CharCode.isHex(first)) {
       var value = 0
-      var i = 0
+      var i     = 0
       while (i < 6 && CharCode.isHex(scanner.peekChar())) {
         value = (value << 4) | CharCode.asHex(scanner.readChar())
         i += 1
@@ -214,7 +205,7 @@ abstract class Parser protected (
       val peek = scanner.peekChar()
       if (peek >= 0 && CharCode.isWhitespace(peek)) scanner.readChar()
 
-      if (value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value > 0x10FFFF) {
+      if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff) {
         "\uFFFD"
       } else {
         // Convert codepoint to string
@@ -247,13 +238,14 @@ abstract class Parser protected (
   /** Consumes an identifier and returns whether it matches [text]. */
   protected def scanIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
     if (!lookingAtIdentifier()) return false
-    val start = scanner.state
-    var i = 0
+    val start   = scanner.state
+    var i       = 0
     var matched = true
     while (matched && i < text.length) {
       val expected = text.charAt(i).toInt
-      val actual = scanner.peekChar()
-      val match_ = if (caseSensitive) actual == expected
+      val actual   = scanner.peekChar()
+      val match_   =
+        if (caseSensitive) actual == expected
         else CharCode.characterEqualsIgnoreCase(actual, expected)
       if (match_) {
         scanner.readChar()
@@ -271,12 +263,11 @@ abstract class Parser protected (
   }
 
   /** Consumes an identifier and throws if it doesn't match [text]. */
-  protected def expectIdentifier(text: String, name: Nullable[String] = Nullable.Null): Unit = {
+  protected def expectIdentifier(text: String, name: Nullable[String] = Nullable.Null): Unit =
     if (!scanIdentifier(text)) {
       val label = name.getOrElse(s"\"$text\"")
       scanner.error(s"Expected $label.")
     }
-  }
 
   /** Consumes a quoted CSS string and returns its contents. */
   protected def string(): String = {
@@ -319,14 +310,14 @@ abstract class Parser protected (
     if (CharCode.isNewline(first)) scanner.error("Expected escape sequence.")
     if (CharCode.isHex(first)) {
       var value = 0
-      var i = 0
+      var i     = 0
       while (i < 6 && CharCode.isHex(scanner.peekChar())) {
         value = (value << 4) | CharCode.asHex(scanner.readChar())
         i += 1
       }
       val peek = scanner.peekChar()
       if (peek >= 0 && CharCode.isWhitespace(peek)) scanner.readChar()
-      if (value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value > 0x10FFFF) 0xFFFD
+      if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff) 0xfffd
       else value
     } else {
       scanner.readChar()
@@ -340,18 +331,16 @@ abstract class Parser protected (
       scanner.error("Expected digit.", scanner.position - 1, 0)
     }
     var number = CharCode.asDecimal(first).toDouble
-    while (!scanner.isDone && CharCode.isDigit(scanner.peekChar())) {
+    while (!scanner.isDone && CharCode.isDigit(scanner.peekChar()))
       number = number * 10 + CharCode.asDecimal(scanner.readChar())
-    }
     number
   }
 
-  /** Consumes tokens until it reaches a top-level `;`, `)`, `]`, or `}`
-    * and returns the collected text.
+  /** Consumes tokens until it reaches a top-level `;`, `)`, `]`, or `}` and returns the collected text.
     */
   protected def declarationValue(allowEmpty: Boolean = false): String = {
-    val buf = new StringBuilder()
-    val brackets = scala.collection.mutable.ArrayBuffer.empty[Int]
+    val buf          = new StringBuilder()
+    val brackets     = scala.collection.mutable.ArrayBuffer.empty[Int]
     var wroteNewline = false
 
     boundary {
@@ -430,19 +419,18 @@ abstract class Parser protected (
     throw new SassFormatException(message, span)
 
   /** Wraps [body] in a handler that rethrows scanner errors as [[SassFormatException]]. */
-  protected def wrapSpanFormatException[T](body: () => T): T = {
+  protected def wrapSpanFormatException[T](body: () => T): T =
     try body()
     catch {
       case e: StringScannerException =>
         throw new SassFormatException(e.getMessage, e.span)
     }
-  }
 }
 
 object Parser {
 
   /** A minimal concrete parser for static entry points. */
-  private final class StaticParser(text: String) extends Parser(text, Nullable.Null)
+  final private class StaticParser(text: String) extends Parser(text, Nullable.Null)
 
   /** Parses [text] as a CSS identifier and returns the result. */
   def parseIdentifier(text: String): String = {

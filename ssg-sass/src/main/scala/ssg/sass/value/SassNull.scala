@@ -36,7 +36,7 @@ object SassNull extends Value {
 
   override def equals(other: Any): Boolean = other match {
     case SassNull => true
-    case _ => false
+    case _        => false
   }
 
   override def toString: String = "null"

@@ -18,13 +18,13 @@ package sass
 package value
 package color
 
-import ssg.sass.{SassScriptException, Nullable}
+import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
 
 /** A color space whose channel names and semantics Sass knows. */
 abstract class ColorSpace(
   /** The CSS name of the color space. */
-  val name: String,
+  val name:              String,
   private val _channels: List[ColorChannel]
 ) {
 
@@ -42,92 +42,113 @@ abstract class ColorSpace(
 
   /** Converts a color with the given channels from this color space to [dest].
     *
-    * By default, this uses this color space's toLinear and transformationMatrix
-    * as well as dest's fromLinear.
+    * By default, this uses this color space's toLinear and transformationMatrix as well as dest's fromLinear.
     */
   def convert(
-    dest: ColorSpace,
+    dest:     ColorSpace,
     channel0: Nullable[Double],
     channel1: Nullable[Double],
     channel2: Nullable[Double],
-    alpha: Nullable[Double]
-  ): SassColor = {
+    alpha:    Nullable[Double]
+  ): SassColor =
     convertLinear(dest, channel0, channel1, channel2, alpha)
-  }
 
-  /** The default implementation of convert, which always starts with a linear
-    * transformation from RGB or XYZ channels to a linear destination space.
+  /** The default implementation of convert, which always starts with a linear transformation from RGB or XYZ channels to a linear destination space.
     */
-  protected final def convertLinear(
-    dest: ColorSpace,
-    red: Nullable[Double],
-    green: Nullable[Double],
-    blue: Nullable[Double],
-    alpha: Nullable[Double],
+  final protected def convertLinear(
+    dest:             ColorSpace,
+    red:              Nullable[Double],
+    green:            Nullable[Double],
+    blue:             Nullable[Double],
+    alpha:            Nullable[Double],
     missingLightness: Boolean = false,
-    missingChroma: Boolean = false,
-    missingHue: Boolean = false,
-    missingA: Boolean = false,
-    missingB: Boolean = false
+    missingChroma:    Boolean = false,
+    missingHue:       Boolean = false,
+    missingA:         Boolean = false,
+    missingB:         Boolean = false
   ): SassColor = {
     val linearDest: ColorSpace = dest match {
-      case ColorSpace.hsl | ColorSpace.hwb => ColorSpace.srgb
-      case ColorSpace.lab | ColorSpace.lch => ColorSpace.xyzD50
+      case ColorSpace.hsl | ColorSpace.hwb     => ColorSpace.srgb
+      case ColorSpace.lab | ColorSpace.lch     => ColorSpace.xyzD50
       case ColorSpace.oklab | ColorSpace.oklch => ColorSpace.lms
-      case other => other
+      case other                               => other
     }
 
-    var transformedRed: Nullable[Double] = Nullable.Null
+    var transformedRed:   Nullable[Double] = Nullable.Null
     var transformedGreen: Nullable[Double] = Nullable.Null
-    var transformedBlue: Nullable[Double] = Nullable.Null
+    var transformedBlue:  Nullable[Double] = Nullable.Null
 
     if (linearDest eq this) {
       transformedRed = red
       transformedGreen = green
       transformedBlue = blue
     } else {
-      val linearRed = toLinear(red.getOrElse(0.0))
+      val linearRed   = toLinear(red.getOrElse(0.0))
       val linearGreen = toLinear(green.getOrElse(0.0))
-      val linearBlue = toLinear(blue.getOrElse(0.0))
-      val matrix = transformationMatrix(linearDest)
+      val linearBlue  = toLinear(blue.getOrElse(0.0))
+      val matrix      = transformationMatrix(linearDest)
 
-      transformedRed = Nullable(linearDest.fromLinear(
-        matrix(0) * linearRed + matrix(1) * linearGreen + matrix(2) * linearBlue
-      ))
-      transformedGreen = Nullable(linearDest.fromLinear(
-        matrix(3) * linearRed + matrix(4) * linearGreen + matrix(5) * linearBlue
-      ))
-      transformedBlue = Nullable(linearDest.fromLinear(
-        matrix(6) * linearRed + matrix(7) * linearGreen + matrix(8) * linearBlue
-      ))
+      transformedRed = Nullable(
+        linearDest.fromLinear(
+          matrix(0) * linearRed + matrix(1) * linearGreen + matrix(2) * linearBlue
+        )
+      )
+      transformedGreen = Nullable(
+        linearDest.fromLinear(
+          matrix(3) * linearRed + matrix(4) * linearGreen + matrix(5) * linearBlue
+        )
+      )
+      transformedBlue = Nullable(
+        linearDest.fromLinear(
+          matrix(6) * linearRed + matrix(7) * linearGreen + matrix(8) * linearBlue
+        )
+      )
     }
 
     dest match {
       case ColorSpace.hsl | ColorSpace.hwb =>
-        ColorSpace.srgb.asInstanceOf[SrgbColorSpace].convertWithMissing(
-          dest, transformedRed, transformedGreen, transformedBlue, alpha,
-          missingLightness = missingLightness,
-          missingChroma = missingChroma,
-          missingHue = missingHue
-        )
+        ColorSpace.srgb
+          .asInstanceOf[SrgbColorSpace]
+          .convertWithMissing(
+            dest,
+            transformedRed,
+            transformedGreen,
+            transformedBlue,
+            alpha,
+            missingLightness = missingLightness,
+            missingChroma = missingChroma,
+            missingHue = missingHue
+          )
       case ColorSpace.lab | ColorSpace.lch =>
-        ColorSpace.xyzD50.asInstanceOf[XyzD50ColorSpace].convertWithMissing(
-          dest, transformedRed, transformedGreen, transformedBlue, alpha,
-          missingLightness = missingLightness,
-          missingChroma = missingChroma,
-          missingHue = missingHue,
-          missingA = missingA,
-          missingB = missingB
-        )
+        ColorSpace.xyzD50
+          .asInstanceOf[XyzD50ColorSpace]
+          .convertWithMissing(
+            dest,
+            transformedRed,
+            transformedGreen,
+            transformedBlue,
+            alpha,
+            missingLightness = missingLightness,
+            missingChroma = missingChroma,
+            missingHue = missingHue,
+            missingA = missingA,
+            missingB = missingB
+          )
       case ColorSpace.oklab | ColorSpace.oklch =>
-        ColorSpace.lms.asInstanceOf[LmsColorSpace].convertWithMissing(
-          dest, transformedRed, transformedGreen, transformedBlue, alpha,
-          missingLightness = missingLightness,
-          missingChroma = missingChroma,
-          missingHue = missingHue,
-          missingA = missingA,
-          missingB = missingB
-        )
+        ColorSpace.lms
+          .asInstanceOf[LmsColorSpace]
+          .convertWithMissing(
+            dest,
+            transformedRed,
+            transformedGreen,
+            transformedBlue,
+            alpha,
+            missingLightness = missingLightness,
+            missingChroma = missingChroma,
+            missingHue = missingHue,
+            missingA = missingA,
+            missingB = missingB
+          )
       case _ =>
         SassColor.forSpaceInternal(
           dest,
@@ -161,6 +182,7 @@ abstract class ColorSpace(
 }
 
 object ColorSpace {
+
   /** The legacy RGB color space. */
   val rgb: ColorSpace = RgbColorSpace()
 
@@ -212,29 +234,27 @@ object ColorSpace {
   /** The Oklch color space. */
   val oklch: ColorSpace = OklchColorSpace()
 
-  /** Given a color space name, returns the known color space with that name
-    * or throws a SassScriptException if there is none.
+  /** Given a color space name, returns the known color space with that name or throws a SassScriptException if there is none.
     */
-  def fromName(name: String, argumentName: Option[String] = None): ColorSpace = {
+  def fromName(name: String, argumentName: Option[String] = None): ColorSpace =
     name.toLowerCase match {
-      case "rgb" => rgb
-      case "hwb" => hwb
-      case "hsl" => hsl
-      case "srgb" => srgb
-      case "srgb-linear" => srgbLinear
-      case "display-p3" => displayP3
+      case "rgb"               => rgb
+      case "hwb"               => hwb
+      case "hsl"               => hsl
+      case "srgb"              => srgb
+      case "srgb-linear"       => srgbLinear
+      case "display-p3"        => displayP3
       case "display-p3-linear" => displayP3Linear
-      case "a98-rgb" => a98Rgb
-      case "prophoto-rgb" => prophotoRgb
-      case "rec2020" => rec2020
-      case "xyz" | "xyz-d65" => xyzD65
-      case "xyz-d50" => xyzD50
-      case "lab" => lab
-      case "lch" => lch
-      case "oklab" => oklab
-      case "oklch" => oklch
-      case _ =>
+      case "a98-rgb"           => a98Rgb
+      case "prophoto-rgb"      => prophotoRgb
+      case "rec2020"           => rec2020
+      case "xyz" | "xyz-d65"   => xyzD65
+      case "xyz-d50"           => xyzD50
+      case "lab"               => lab
+      case "lch"               => lch
+      case "oklab"             => oklab
+      case "oklch"             => oklch
+      case _                   =>
         throw SassScriptException(s"Unknown color space \"$name\".", argumentName)
     }
-  }
 }

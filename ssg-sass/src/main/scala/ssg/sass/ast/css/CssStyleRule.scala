@@ -18,14 +18,12 @@ package css
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.util.{Box, FileSpan}
+import ssg.sass.util.{ Box, FileSpan }
 import ssg.sass.visitor.CssVisitor
 
 /** A plain CSS style rule.
   *
-  * This applies style declarations to elements that match a given selector.
-  * Note that this isn't strictly plain CSS, since the selector may still
-  * contain placeholder selectors.
+  * This applies style declarations to elements that match a given selector. Note that this isn't strictly plain CSS, since the selector may still contain placeholder selectors.
   *
   * SelectorList is represented as Any until the selector AST is ported.
   */
@@ -44,10 +42,11 @@ trait CssStyleRule extends CssParentNode {
 /** A modifiable version of CssStyleRule for use in the evaluation step. */
 final class ModifiableCssStyleRule(
   private val _selector: Box[Any], /* Box[SelectorList] */
-  val span: FileSpan,
-  originalSel: Nullable[Any] = Nullable.empty, /* Nullable[SelectorList] */
-  val fromPlainCss: Boolean = false
-) extends ModifiableCssParentNode with CssStyleRule {
+  val span:              FileSpan,
+  originalSel:           Nullable[Any] = Nullable.empty, /* Nullable[SelectorList] */
+  val fromPlainCss:      Boolean = false
+) extends ModifiableCssParentNode
+    with CssStyleRule {
 
   /** The selector, possibly updated by the extension store. */
   def selector: Any = _selector.value

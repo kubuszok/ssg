@@ -21,34 +21,32 @@ import ssg.sass.value.Value
 
 /** The lexical environment in which Sass code is evaluated.
   *
-  * Tracks variables, functions, mixins, modules and their scopes.
-  * TODO: full scope chain, module imports, configuration, forwards.
+  * Tracks variables, functions, mixins, modules and their scopes. TODO: full scope chain, module imports, configuration, forwards.
   */
 final class Environment() {
 
-  private val variables: mutable.Map[String, Value] = mutable.Map.empty
-  private val variableNodes: mutable.Map[String, AstNode] = mutable.Map.empty
-  private val functions: mutable.Map[String, Callable] = mutable.Map.empty
-  private val mixins: mutable.Map[String, Callable] = mutable.Map.empty
-  private val scopes: mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
-  private val namespaces: mutable.Map[String, Environment] = mutable.Map.empty
+  private val variables:     mutable.Map[String, Value]                = mutable.Map.empty
+  private val variableNodes: mutable.Map[String, AstNode]              = mutable.Map.empty
+  private val functions:     mutable.Map[String, Callable]             = mutable.Map.empty
+  private val mixins:        mutable.Map[String, Callable]             = mutable.Map.empty
+  private val scopes:        mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
+  private val namespaces:    mutable.Map[String, Environment]          = mutable.Map.empty
 
   /** Registers a namespaced module environment under [name]. */
-  def addNamespace(name: String, module: Environment): Unit = {
+  def addNamespace(name: String, module: Environment): Unit =
     namespaces(name) = module
-  }
 
   /** Looks up a variable in a namespaced module, or `Nullable.empty`. */
   def getNamespacedVariable(namespace: String, name: String): Nullable[Value] =
     namespaces.get(namespace) match {
-      case Some(env) => env.getVariable(name)
+      case Some(env)  => env.getVariable(name)
       case scala.None => Nullable.empty
     }
 
   /** Looks up a function in a namespaced module, or `Nullable.empty`. */
   def getNamespacedFunction(namespace: String, name: String): Nullable[Callable] =
     namespaces.get(namespace) match {
-      case Some(env) => env.getFunction(name)
+      case Some(env)  => env.getFunction(name)
       case scala.None => Nullable.empty
     }
 
@@ -61,12 +59,11 @@ final class Environment() {
   /** Iterates over all mixin callables in this environment. */
   def mixinValues: Iterator[Callable] = mixins.valuesIterator
 
-  /** Returns the value of the variable named [name], or `Nullable.empty` if
-    * none exists.
+  /** Returns the value of the variable named [name], or `Nullable.empty` if none exists.
     */
   def getVariable(name: String): Nullable[Value] =
     variables.get(name) match {
-      case Some(v) => v
+      case Some(v)    => v
       case scala.None => Nullable.empty
     }
 
@@ -82,26 +79,24 @@ final class Environment() {
   /** Returns the function callable with the given [name], or `Nullable.empty`. */
   def getFunction(name: String): Nullable[Callable] =
     functions.get(name) match {
-      case Some(c) => c
+      case Some(c)    => c
       case scala.None => Nullable.empty
     }
 
   /** Sets a function in this environment. */
-  def setFunction(callable: Callable): Unit = {
+  def setFunction(callable: Callable): Unit =
     functions(callable.name) = callable
-  }
 
   /** Returns the mixin callable with the given [name], or `Nullable.empty`. */
   def getMixin(name: String): Nullable[Callable] =
     mixins.get(name) match {
-      case Some(c) => c
+      case Some(c)    => c
       case scala.None => Nullable.empty
     }
 
   /** Sets a mixin in this environment. */
-  def setMixin(callable: Callable): Unit = {
+  def setMixin(callable: Callable): Unit =
     mixins(callable.name) = callable
-  }
 
   /** Runs [callback] within a new lexical scope. */
   def withinScope[T](callback: () => T): T = {
@@ -110,15 +105,14 @@ final class Environment() {
     finally { val _ = scopes.pop() }
   }
 
-  /** Runs [body] in a fully isolated scope: saves a snapshot of variables,
-    * functions, and mixins, runs the body, then restores. Used when invoking
-    * user-defined callables where parameter bindings must not leak out.
+  /** Runs [body] in a fully isolated scope: saves a snapshot of variables, functions, and mixins, runs the body, then restores. Used when invoking user-defined callables where parameter bindings must
+    * not leak out.
     */
   def withSnapshot[T](body: => T): T = {
-    val savedVars = variables.clone()
-    val savedNodes = variableNodes.clone()
-    val savedFns = functions.clone()
-    val savedMix = mixins.clone()
+    val savedVars    = variables.clone()
+    val savedNodes   = variableNodes.clone()
+    val savedFns     = functions.clone()
+    val savedMix     = mixins.clone()
     val savedContent = _content
     try body
     finally {
@@ -138,13 +132,10 @@ final class Environment() {
   def content: Nullable[ContentBlock] = _content
 
   /** Sets the currently-active `@content` block. */
-  def content_=(block: Nullable[ContentBlock]): Unit = {
+  def content_=(block: Nullable[ContentBlock]): Unit =
     _content = block
-  }
 
-  /** Creates a closure — a snapshot of the current environment that can be
-    * used to evaluate callbacks later.
-    * TODO: actually snapshot scopes.
+  /** Creates a closure — a snapshot of the current environment that can be used to evaluate callbacks later. TODO: actually snapshot scopes.
     */
   def closure(): Environment = this
 
@@ -156,14 +147,12 @@ object Environment {
 
   def apply(): Environment = new Environment()
 
-  /** Creates a new environment pre-populated with all global built-in
-    * functions (math, string, list, map, meta).
+  /** Creates a new environment pre-populated with all global built-in functions (math, string, list, map, meta).
     */
   def withBuiltins(): Environment = {
     val env = new Environment()
-    for (fn <- ssg.sass.functions.Functions.global) {
+    for (fn <- ssg.sass.functions.Functions.global)
       env.setFunction(fn)
-    }
     env
   }
 }

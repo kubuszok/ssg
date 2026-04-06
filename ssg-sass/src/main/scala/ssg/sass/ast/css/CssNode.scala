@@ -34,8 +34,7 @@ abstract class CssNode extends AstNode {
   /** The node that contains this, or null for the root CssStylesheet node. */
   def parent: Nullable[CssParentNode]
 
-  /** Whether this was generated from the last node in a nested Sass tree that
-    * got flattened during evaluation.
+  /** Whether this was generated from the last node in a nested Sass tree that got flattened during evaluation.
     */
   def isGroupEnd: Boolean
 
@@ -44,15 +43,13 @@ abstract class CssNode extends AstNode {
 
   /** Whether this is invisible and won't be emitted to the compiled stylesheet.
     *
-    * Note that this doesn't consider nodes that contain loud comments to be
-    * invisible even though they're omitted in compressed mode.
+    * Note that this doesn't consider nodes that contain loud comments to be invisible even though they're omitted in compressed mode.
     *
     * Default implementation returns false; overridden via visitor in Phase 5.
     */
   def isInvisible: Boolean = false
 
-  /** Whether this node would be invisible even if style rule selectors within
-    * it didn't have bogus combinators.
+  /** Whether this node would be invisible even if style rule selectors within it didn't have bogus combinators.
     */
   def isInvisibleOtherThanBogusCombinators: Boolean = false
 
@@ -66,11 +63,9 @@ trait CssParentNode extends CssNode {
   /** The child statements of this node. */
   def children: List[CssNode]
 
-  /** Whether the rule has no children and should be emitted without curly
-    * braces.
+  /** Whether the rule has no children and should be emitted without curly braces.
     *
-    * This implies `children.isEmpty`, but the reverse is not true -- for a rule
-    * like `@foo {}`, children is empty but isChildless is false.
+    * This implies `children.isEmpty`, but the reverse is not true -- for a rule like `@foo {}`, children is empty but isChildless is false.
     */
   def isChildless: Boolean
 }
@@ -81,22 +76,19 @@ trait CssParentNode extends CssNode {
 
 /** A modifiable version of CssNode.
   *
-  * Almost all CSS nodes are the modifiable classes under the covers. However,
-  * modification should only be done within the evaluation step, so the
-  * unmodifiable types are used elsewhere to enforce that constraint.
+  * Almost all CSS nodes are the modifiable classes under the covers. However, modification should only be done within the evaluation step, so the unmodifiable types are used elsewhere to enforce that
+  * constraint.
   */
 abstract class ModifiableCssNode extends CssNode {
 
   /** The parent of this node, set when added to a parent's children. */
   private var _parent: Nullable[ModifiableCssParentNode] = Nullable.empty
 
-  /** The index of this node in parent.children.
-    * This makes remove() more efficient.
+  /** The index of this node in parent.children. This makes remove() more efficient.
     */
   private var _indexInParent: Nullable[Int] = Nullable.empty
 
-  /** Whether this was generated from the last node in a nested Sass tree
-    * that got flattened during evaluation.
+  /** Whether this was generated from the last node in a nested Sass tree that got flattened during evaluation.
     */
   var isGroupEnd: Boolean = false
 
@@ -107,13 +99,14 @@ abstract class ModifiableCssNode extends CssNode {
   def modifiableParent: Nullable[ModifiableCssParentNode] = _parent
 
   /** Whether this node has a visible sibling after it. */
-  def hasFollowingSibling: Boolean = {
-    _parent.flatMap { p =>
-      _indexInParent.map { idx =>
-        p.children.drop(idx + 1).exists(sibling => !sibling.isInvisible)
+  def hasFollowingSibling: Boolean =
+    _parent
+      .flatMap { p =>
+        _indexInParent.map { idx =>
+          p.children.drop(idx + 1).exists(sibling => !sibling.isInvisible)
+        }
       }
-    }.getOrElse(false)
-  }
+      .getOrElse(false)
 
   /** Removes this node from parent's child list.
     *
@@ -131,25 +124,22 @@ abstract class ModifiableCssNode extends CssNode {
   }
 
   // Package-private setters used by ModifiableCssParentNode
-  private[css] def _setParent(p: ModifiableCssParentNode): Unit = {
+  private[css] def _setParent(p: ModifiableCssParentNode): Unit =
     _parent = Nullable(p)
-  }
 
   private[css] def _clearParent(): Unit = {
     _parent = Nullable.empty
     _indexInParent = Nullable.empty
   }
 
-  private[css] def _setIndexInParent(i: Int): Unit = {
+  private[css] def _setIndexInParent(i: Int): Unit =
     _indexInParent = Nullable(i)
-  }
 
   private[css] def _getIndexInParent: Nullable[Int] = _indexInParent
 }
 
 /** A modifiable version of CssParentNode for use in the evaluation step. */
-abstract class ModifiableCssParentNode extends ModifiableCssNode
-    with CssParentNode {
+abstract class ModifiableCssParentNode extends ModifiableCssNode with CssParentNode {
 
   /** The internal mutable children list. */
   private val _children: ArrayBuffer[ModifiableCssNode] = ArrayBuffer.empty
@@ -167,8 +157,7 @@ abstract class ModifiableCssParentNode extends ModifiableCssNode
 
   /** Returns a copy of this node with an empty children list.
     *
-    * This is not a deep copy. If other parts of this node are modifiable,
-    * they are shared between the new and old nodes.
+    * This is not a deep copy. If other parts of this node are modifiable, they are shared between the new and old nodes.
     */
   def copyWithoutChildren(): ModifiableCssParentNode
 
@@ -181,14 +170,12 @@ abstract class ModifiableCssParentNode extends ModifiableCssNode
 
   /** Destructively removes all elements from children. */
   def clearChildren(): Unit = {
-    for (child <- _children) {
+    for (child <- _children)
       child._clearParent()
-    }
     _children.clear()
   }
 
-  /** Package-private: removes the child at the given index and updates
-    * subsequent indices.
+  /** Package-private: removes the child at the given index and updates subsequent indices.
     */
   private[css] def _removeChildAt(index: Int): Unit = {
     _children.remove(index)

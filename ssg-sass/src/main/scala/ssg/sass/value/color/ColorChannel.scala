@@ -35,19 +35,20 @@ class ColorChannel(
     * See: https://www.w3.org/TR/css-color-4/#interpolation-missing
     */
   def isAnalogous(other: ColorChannel): Boolean = (name, other.name) match {
-    case ("red" | "x", "red" | "x") => true
-    case ("green" | "y", "green" | "y") => true
-    case ("blue" | "z", "blue" | "z") => true
+    case ("red" | "x", "red" | "x")                         => true
+    case ("green" | "y", "green" | "y")                     => true
+    case ("blue" | "z", "blue" | "z")                       => true
     case ("chroma" | "saturation", "chroma" | "saturation") => true
-    case ("lightness", "lightness") => true
-    case ("hue", "hue") => true
-    case _ => false
+    case ("lightness", "lightness")                         => true
+    case ("hue", "hue")                                     => true
+    case _                                                  => false
   }
 
   override def toString: String = name
 }
 
 object ColorChannel {
+
   /** The alpha channel shared across all colors. */
   val alpha: LinearChannel = LinearChannel("alpha", 0, 1)
 }
@@ -64,13 +65,13 @@ final class LinearChannel(
   /** Whether the lower bound is clamped when created via global function syntax. */
   val lowerClamped: Boolean = false,
   /** Whether the upper bound is clamped when created via global function syntax. */
-  val upperClamped: Boolean = false,
+  val upperClamped:      Boolean = false,
   conventionallyPercent: Nullable[Boolean] = Nullable.Null
 ) extends ColorChannel(
-  name,
-  isPolarAngle = false,
-  associatedUnit = {
-    val isPercent = conventionallyPercent.getOrElse(min == 0 && max == 100)
-    if (isPercent) Nullable("%") else Nullable.Null
-  }
-)
+      name,
+      isPolarAngle = false,
+      associatedUnit = {
+        val isPercent = conventionallyPercent.getOrElse(min == 0 && max == 100)
+        if (isPercent) Nullable("%") else Nullable.Null
+      }
+    )

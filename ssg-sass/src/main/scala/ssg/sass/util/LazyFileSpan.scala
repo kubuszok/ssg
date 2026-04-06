@@ -16,29 +16,28 @@ package util
 
 import ssg.sass.Nullable
 
-/**
- * A wrapper for FileSpan that defers creation until the span is needed.
- */
+/** A wrapper for FileSpan that defers creation until the span is needed.
+  */
 final class LazyFileSpan(builder: () => FileSpan) {
 
   lazy val span: FileSpan = builder()
 
-  def file: SourceFile = span.file
-  def start: FileLocation = span.start
-  def end: FileLocation = span.end
-  def text: String = span.text
-  def sourceUrl: Nullable[String] = span.sourceUrl
-  def length: Int = span.length
-  def message(msg: String): String = span.message(msg)
-  def highlight(): String = span.highlight()
-  def expand(other: FileSpan): FileSpan = span.expand(other)
-  def subspan(startOffset: Int, endOffset: Int = -1): FileSpan = span.subspan(startOffset, endOffset)
-  def trim(): FileSpan = span.trim()
-  def pointSpan(): FileSpan = span.pointSpan()
-  def between(other: FileSpan): FileSpan = span.between(other)
-  def before(inner: FileSpan): FileSpan = span.before(inner)
-  def after(inner: FileSpan): FileSpan = span.after(inner)
-  def contains(target: FileSpan): Boolean = span.contains(target)
+  def file:                                           SourceFile       = span.file
+  def start:                                          FileLocation     = span.start
+  def end:                                            FileLocation     = span.end
+  def text:                                           String           = span.text
+  def sourceUrl:                                      Nullable[String] = span.sourceUrl
+  def length:                                         Int              = span.length
+  def message(msg:         String):                   String           = span.message(msg)
+  def highlight():                                    String           = span.highlight()
+  def expand(other:        FileSpan):                 FileSpan         = span.expand(other)
+  def subspan(startOffset: Int, endOffset: Int = -1): FileSpan         = span.subspan(startOffset, endOffset)
+  def trim():                                         FileSpan         = span.trim()
+  def pointSpan():                                    FileSpan         = span.pointSpan()
+  def between(other:       FileSpan):                 FileSpan         = span.between(other)
+  def before(inner:        FileSpan):                 FileSpan         = span.before(inner)
+  def after(inner:         FileSpan):                 FileSpan         = span.after(inner)
+  def contains(target:     FileSpan):                 Boolean          = span.contains(target)
 
   override def toString: String = span.toString
 }

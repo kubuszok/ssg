@@ -18,8 +18,7 @@ import scala.language.implicitConversions
 import ssg.sass.ast.sass.Stylesheet
 import ssg.sass.importer.Importer
 
-/** A graph of the import/use/forward dependencies between stylesheets, used
-  * to determine whether a stylesheet needs to be re-evaluated.
+/** A graph of the import/use/forward dependencies between stylesheets, used to determine whether a stylesheet needs to be re-evaluated.
   */
 final class StylesheetGraph(val importCache: ImportCache) {
 
@@ -32,15 +31,15 @@ final class StylesheetGraph(val importCache: ImportCache) {
   /** Returns the node for [canonicalUrl], if any. */
   def nodeFor(canonicalUrl: String): Nullable[StylesheetNode] =
     nodes.get(canonicalUrl) match {
-      case Some(n) => n
+      case Some(n)    => n
       case scala.None => Nullable.empty
     }
 }
 
 /** A single node in a [[StylesheetGraph]]. */
 final class StylesheetNode(
-  val stylesheet: Stylesheet,
-  val importer: Importer,
+  val stylesheet:   Stylesheet,
+  val importer:     Importer,
   val canonicalUrl: String
 ) {
 

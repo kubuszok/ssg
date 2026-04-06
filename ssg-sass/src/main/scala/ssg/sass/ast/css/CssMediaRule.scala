@@ -31,8 +31,9 @@ trait CssMediaRule extends CssParentNode {
 /** A modifiable version of CssMediaRule for use in the evaluation step. */
 final class ModifiableCssMediaRule(
   queriesIterable: Iterable[CssMediaQuery],
-  val span: FileSpan
-) extends ModifiableCssParentNode with CssMediaRule {
+  val span:        FileSpan
+) extends ModifiableCssParentNode
+    with CssMediaRule {
 
   val queries: List[CssMediaQuery] = {
     val qs = queriesIterable.toList

@@ -17,12 +17,11 @@ package sass
 import ssg.sass.ast.sass.Interpolation
 import ssg.sass.util.FileSpan
 
-/** A map from locations in a string generated from an [Interpolation] to the
-  * original source code in the interpolation.
+/** A map from locations in a string generated from an [Interpolation] to the original source code in the interpolation.
   */
 final class InterpolationMap(
   val interpolation: Interpolation,
-  targetOffsets: Iterable[Int]
+  targetOffsets:     Iterable[Int]
 ) {
 
   /** Location offsets in the generated string. */

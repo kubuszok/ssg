@@ -15,13 +15,12 @@ package ssg
 package sass
 package importer
 
-/** The result of importing a Sass stylesheet, as returned by
-  * [[Importer.load]].
+/** The result of importing a Sass stylesheet, as returned by [[Importer.load]].
   */
 final class ImporterResult(
-  val contents: String,
+  val contents:     String,
   val sourceMapUrl: Nullable[String],
-  val syntax: Syntax
+  val syntax:       Syntax
 ) {
 
   override def toString: String = s"ImporterResult(syntax=$syntax, ${contents.length} chars)"
@@ -30,17 +29,15 @@ final class ImporterResult(
 object ImporterResult {
 
   def apply(
-    contents: String,
-    syntax: Syntax = Syntax.Scss,
+    contents:     String,
+    syntax:       Syntax = Syntax.Scss,
     sourceMapUrl: Nullable[String] = Nullable.empty
   ): ImporterResult = new ImporterResult(contents, sourceMapUrl, syntax)
 }
 
-/** The context passed to [[Importer.canonicalize]] about the URL being
-  * resolved — the containing URL and whether it's being imported from an
-  * `@import` rule.
+/** The context passed to [[Importer.canonicalize]] about the URL being resolved — the containing URL and whether it's being imported from an `@import` rule.
   */
 final class CanonicalizeContext(
   val containingUrl: Nullable[String],
-  val fromImport: Boolean
+  val fromImport:    Boolean
 )

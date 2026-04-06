@@ -14,12 +14,12 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.{InterpolationMap, Nullable}
+import ssg.sass.{ InterpolationMap, Nullable }
 
 /** A parser for `@keyframes` block selectors. */
 class KeyframeSelectorParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:         String,
+  url:              Nullable[String] = Nullable.Null,
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 

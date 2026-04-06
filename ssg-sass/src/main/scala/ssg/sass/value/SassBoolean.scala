@@ -40,7 +40,7 @@ final class SassBoolean private (val value: Boolean) extends Value {
 }
 
 object SassBoolean {
-  val sassTrue: SassBoolean = new SassBoolean(true)
+  val sassTrue:  SassBoolean = new SassBoolean(true)
   val sassFalse: SassBoolean = new SassBoolean(false)
 
   def apply(value: Boolean): SassBoolean =

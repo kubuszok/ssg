@@ -17,7 +17,7 @@ package parse
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.ast.sass.{Interpolation, Statement}
+import ssg.sass.ast.sass.{ Interpolation, Statement }
 import ssg.sass.util.CharCode
 
 import scala.collection.mutable
@@ -27,22 +27,21 @@ import scala.util.boundary.break
 
 /** A parser for the CSS-superset SCSS syntax. */
 class ScssParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:       String,
+  url:            Nullable[String] = Nullable.Null,
   parseSelectors: Boolean = false
 ) extends StylesheetParser(contents, url, parseSelectors) {
 
-  override def indented: Boolean = false
-  override def currentIndentation: Int = 0
+  override def indented:           Boolean = false
+  override def currentIndentation: Int     = 0
 
   /** Consumes a selector interpolation until `{`.
     *
-    * Simplified: collects raw text as plain interpolation. Proper interpolation
-    * parsing (with `#{...}` expressions) is a TODO.
+    * Simplified: collects raw text as plain interpolation. Proper interpolation parsing (with `#{...}` expressions) is a TODO.
     */
   override protected def styleRuleSelector(): Interpolation = {
-    val start = scanner.state
-    val buf = new StringBuilder()
+    val start    = scanner.state
+    val buf      = new StringBuilder()
     var brackets = 0
 
     boundary {

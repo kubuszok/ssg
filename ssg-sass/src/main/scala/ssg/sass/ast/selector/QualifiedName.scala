@@ -23,14 +23,14 @@ import scala.language.implicitConversions
 
 /** A [qualified name](https://www.w3.org/TR/css3-namespace/#css-qnames).
   *
-  * @param name      the identifier name
-  * @param namespace the namespace name. If empty, `name` belongs to the default
-  *                  namespace. If it's the empty string, `name` belongs to no
-  *                  namespace. If it's `*`, `name` belongs to any namespace.
-  *                  Otherwise, `name` belongs to the given namespace.
+  * @param name
+  *   the identifier name
+  * @param namespace
+  *   the namespace name. If empty, `name` belongs to the default namespace. If it's the empty string, `name` belongs to no namespace. If it's `*`, `name` belongs to any namespace. Otherwise, `name`
+  *   belongs to the given namespace.
   */
 final case class QualifiedName(
-  name: String,
+  name:      String,
   namespace: Nullable[String] = Nullable.Null
 ) {
 

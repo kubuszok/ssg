@@ -20,17 +20,18 @@ import ssg.sass.util.FileSpan
 
 /** A value in a plain CSS tree.
   *
-  * This is used to associate a span with a value that doesn't otherwise track
-  * its span. It has value equality semantics based solely on the wrapped value.
+  * This is used to associate a span with a value that doesn't otherwise track its span. It has value equality semantics based solely on the wrapped value.
   *
-  * @param value the wrapped value
-  * @param span  the span associated with the value
+  * @param value
+  *   the wrapped value
+  * @param span
+  *   the span associated with the value
   */
 final class CssValue[T](val value: T, val span: FileSpan) extends AstNode {
 
   override def equals(other: Any): Boolean = other match {
     case that: CssValue[_] => this.value == that.value
-    case _                 => false
+    case _ => false
   }
 
   override def hashCode(): Int = value.hashCode()

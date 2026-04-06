@@ -32,8 +32,8 @@ import ssg.sass.ast.sass.{
   ConfiguredVariable,
   Declaration,
   DynamicImport,
-  ExtendRule,
   Expression,
+  ExtendRule,
   ForwardRule,
   FunctionExpression,
   FunctionRule,
@@ -62,7 +62,7 @@ import ssg.sass.ast.sass.{
   VariableExpression
 }
 import ssg.sass.value.ListSeparator
-import ssg.sass.util.{CharCode, FileSpan}
+import ssg.sass.util.{ CharCode, FileSpan }
 import ssg.sass.value.SassNumber
 
 import scala.collection.mutable
@@ -72,8 +72,8 @@ import scala.util.boundary.break
 
 /** The base class for both the SCSS and indented syntax parsers. */
 abstract class StylesheetParser protected (
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:                     String,
+  url:                          Nullable[String] = Nullable.Null,
   protected val parseSelectors: Boolean = false
 ) extends Parser(contents, url) {
 
@@ -97,7 +97,7 @@ abstract class StylesheetParser protected (
   def parse(): Stylesheet = wrapSpanFormatException { () =>
     val start = scanner.state
     // Skip BOM
-    if (scanner.peekChar() == 0xFEFF) scanner.readChar()
+    if (scanner.peekChar() == 0xfeff) scanner.readChar()
 
     val stmts = statements(() => _topLevelStatement())
     scanner.expectDone()
@@ -151,11 +151,7 @@ abstract class StylesheetParser protected (
               val segs = url.split('/')
               if (segs.isEmpty) url else segs(segs.length - 1)
             }
-            val stripped = lastSeg
-              .stripSuffix(".scss")
-              .stripSuffix(".sass")
-              .stripSuffix(".css")
-              .stripPrefix("_")
+            val stripped = lastSeg.stripSuffix(".scss").stripSuffix(".sass").stripSuffix(".css").stripPrefix("_")
             if (stripped.isEmpty) Nullable.empty[String]
             else Nullable(stripped)
           }
@@ -196,7 +192,7 @@ abstract class StylesheetParser protected (
           scanner.expectChar(CharCode.$rparen)
         }
         whitespace(consumeNewlines = false)
-        val _ = scanner.scanChar(CharCode.$semicolon)
+        val _   = scanner.scanChar(CharCode.$semicolon)
         val uri = java.net.URI.create(url)
         Nullable(new UseRule(uri, namespace, spanFrom(start), configBuf.toList))
       case "forward" =>
@@ -218,18 +214,18 @@ abstract class StylesheetParser protected (
         } else {
           val url = urlOpt.get
           whitespace(consumeNewlines = true)
-          var prefix: Nullable[String] = Nullable.empty
-          var shownVars: Nullable[Set[String]] = Nullable.empty
-          var shownNames: Nullable[Set[String]] = Nullable.empty
-          var hiddenVars: Nullable[Set[String]] = Nullable.empty
+          var prefix:      Nullable[String]      = Nullable.empty
+          var shownVars:   Nullable[Set[String]] = Nullable.empty
+          var shownNames:  Nullable[Set[String]] = Nullable.empty
+          var hiddenVars:  Nullable[Set[String]] = Nullable.empty
           var hiddenNames: Nullable[Set[String]] = Nullable.empty
           var skip = false
           // Parse optional show/hide list, then optional `as prefix-*`.
           // Member list: comma-separated identifiers and $variables.
           def parseMembers(): (Set[String], Set[String]) = {
             val names = scala.collection.mutable.Set.empty[String]
-            val vars = scala.collection.mutable.Set.empty[String]
-            var more = true
+            val vars  = scala.collection.mutable.Set.empty[String]
+            var more  = true
             while (more) {
               whitespace(consumeNewlines = true)
               if (scanner.peekChar() == CharCode.$dollar) {
@@ -261,13 +257,14 @@ abstract class StylesheetParser protected (
           if (!skip && scanIdentifier("as")) {
             whitespace(consumeNewlines = true)
             val pBuf = new StringBuilder()
-            while (!scanner.isDone && scanner.peekChar() != CharCode.$asterisk &&
-                   scanner.peekChar() != CharCode.$semicolon &&
-                   scanner.peekChar() != CharCode.$space &&
-                   scanner.peekChar() != CharCode.$tab &&
-                   scanner.peekChar() != CharCode.$lf) {
+            while (
+              !scanner.isDone && scanner.peekChar() != CharCode.$asterisk &&
+              scanner.peekChar() != CharCode.$semicolon &&
+              scanner.peekChar() != CharCode.$space &&
+              scanner.peekChar() != CharCode.$tab &&
+              scanner.peekChar() != CharCode.$lf
+            )
               pBuf.append(scanner.readChar().toChar)
-            }
             if (scanner.peekChar() == CharCode.$asterisk) {
               val _ = scanner.readChar()
               prefix = Nullable(pBuf.toString)
@@ -284,25 +281,27 @@ abstract class StylesheetParser protected (
             Nullable.empty[Statement]
           } else {
             val uri = java.net.URI.create(url)
-            Nullable(new ForwardRule(
-              url = uri,
-              span = spanFrom(start),
-              prefix = prefix,
-              shownMixinsAndFunctions = shownNames,
-              shownVariables = shownVars,
-              hiddenMixinsAndFunctions = hiddenNames,
-              hiddenVariables = hiddenVars
-            ))
+            Nullable(
+              new ForwardRule(
+                url = uri,
+                span = spanFrom(start),
+                prefix = prefix,
+                shownMixinsAndFunctions = shownNames,
+                shownVariables = shownVars,
+                hiddenMixinsAndFunctions = hiddenNames,
+                hiddenVariables = hiddenVars
+              )
+            )
           }
         }
       case "import" =>
         // @import "url" [, "url2"] ;
         val imports = scala.collection.mutable.ListBuffer.empty[Import]
-        var more = true
+        var more    = true
         while (more) {
           whitespace(consumeNewlines = true)
           val importStart = scanner.state
-          val c = scanner.peekChar()
+          val c           = scanner.peekChar()
           if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
             val url = string()
             // Dynamic import (Sass-style) if URL doesn't look like CSS import
@@ -311,7 +310,7 @@ abstract class StylesheetParser protected (
             // that the evaluator will try to resolve via the importer, and
             // fall back to StaticImport semantics if not found.
             val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
-                             url.startsWith("https://") || url.startsWith("//")
+              url.startsWith("https://") || url.startsWith("//")
             if (isPlainCss) {
               val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
               imports += StaticImport(urlInterp, spanFrom(importStart))
@@ -342,14 +341,14 @@ abstract class StylesheetParser protected (
             }
           }
         }
-        val rawText = selBuf.toString().trim
+        val rawText    = selBuf.toString().trim
         var isOptional = false
-        val selText =
+        val selText    =
           if (rawText.endsWith("!optional")) {
             isOptional = true
             rawText.stripSuffix("!optional").trim
           } else rawText
-        val span = spanFrom(start)
+        val span      = spanFrom(start)
         val selInterp = Interpolation.plain(selText, span)
         if (scanner.peekChar() == CharCode.$semicolon) {
           val _ = scanner.readChar()
@@ -392,29 +391,33 @@ abstract class StylesheetParser protected (
         while (!scanner.isDone) {
           val c = scanner.peekChar()
           if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
-            val valueText = valueBuf.toString().trim
-            val nameSpan = spanFrom(start)
+            val valueText  = valueBuf.toString().trim
+            val nameSpan   = spanFrom(start)
             val nameInterp = Interpolation.plain(name, nameSpan)
 
             if (c == CharCode.$lbrace) {
               // _children() expects to consume the opening `{` itself.
-              val kids = _children()
+              val kids        = _children()
               val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, nameSpan)) else Nullable.empty
-              return Nullable(new AtRule(
-                name = nameInterp,
-                span = spanFrom(start),
-                value = valueInterp,
-                childStatements = Nullable(kids)
-              ))
+              return Nullable(
+                new AtRule(
+                  name = nameInterp,
+                  span = spanFrom(start),
+                  value = valueInterp,
+                  childStatements = Nullable(kids)
+                )
+              )
             } else if (c == CharCode.$semicolon) {
               scanner.readChar()
               val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, nameSpan)) else Nullable.empty
-              return Nullable(new AtRule(
-                name = nameInterp,
-                span = spanFrom(start),
-                value = valueInterp,
-                childStatements = Nullable.empty
-              ))
+              return Nullable(
+                new AtRule(
+                  name = nameInterp,
+                  span = spanFrom(start),
+                  value = valueInterp,
+                  childStatements = Nullable.empty
+                )
+              )
             } else {
               return Nullable(new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty))
             }
@@ -427,74 +430,96 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** Parses a parenthesized parameter list for a `@mixin` or `@function`
-    * declaration. If the next character is not `(`, returns an empty
-    * parameter list (`@mixin foo { }`). Supports rest parameters
-    * (`$args...`) and defaults (`$p: expr`). Does not yet support
-    * keyword-rest.
+  /** Parses a parenthesized parameter list for a `@mixin` or `@function` declaration. If the next character is not `(`, returns an empty parameter list (`@mixin foo { }`). Supports rest parameters
+    * (`$args...`) and defaults (`$p: expr`). Does not yet support keyword-rest.
     */
-  private def _parseParameterList(startState: ssg.sass.util.LineScannerState): ParameterList = {
+  private def _parseParameterList(startState: ssg.sass.util.LineScannerState): ParameterList =
     if (scanner.peekChar() != CharCode.$lparen) {
       ParameterList.empty(spanFrom(startState))
     } else {
-    scanner.expectChar(CharCode.$lparen)
-    whitespace(consumeNewlines = true)
-    val params = scala.collection.mutable.ListBuffer.empty[Parameter]
-    var restParam: Nullable[String] = Nullable.empty
-    var more = scanner.peekChar() != CharCode.$rparen
-    while (more) {
+      scanner.expectChar(CharCode.$lparen)
       whitespace(consumeNewlines = true)
-      val paramStart = scanner.state
-      val pname = variableName()
-      whitespace(consumeNewlines = true)
-      if (scanner.peekChar() == CharCode.$dot &&
+      val params = scala.collection.mutable.ListBuffer.empty[Parameter]
+      var restParam: Nullable[String] = Nullable.empty
+      var more = scanner.peekChar() != CharCode.$rparen
+      while (more) {
+        whitespace(consumeNewlines = true)
+        val paramStart = scanner.state
+        val pname      = variableName()
+        whitespace(consumeNewlines = true)
+        if (
+          scanner.peekChar() == CharCode.$dot &&
           scanner.peekChar(1) == CharCode.$dot &&
-          scanner.peekChar(2) == CharCode.$dot) {
-        val _ = scanner.readChar()
-        val _ = scanner.readChar()
-        val _ = scanner.readChar()
-        restParam = Nullable(pname)
-        whitespace(consumeNewlines = true)
-        more = false
-      } else if (scanner.peekChar() == CharCode.$colon) {
-        val _ = scanner.readChar()
-        whitespace(consumeNewlines = true)
-        val defaultExpr = _expression()
-        params += new Parameter(pname, spanFrom(paramStart), Nullable(defaultExpr))
-        whitespace(consumeNewlines = true)
-        if (scanner.scanChar(CharCode.$comma)) {
+          scanner.peekChar(2) == CharCode.$dot
+        ) {
+          val _ = scanner.readChar()
+          val _ = scanner.readChar()
+          val _ = scanner.readChar()
+          restParam = Nullable(pname)
           whitespace(consumeNewlines = true)
-          more = scanner.peekChar() != CharCode.$rparen
-        } else more = false
-      } else {
-        params += new Parameter(pname, spanFrom(paramStart))
-        whitespace(consumeNewlines = true)
-        if (scanner.scanChar(CharCode.$comma)) {
+          more = false
+        } else if (scanner.peekChar() == CharCode.$colon) {
+          val _ = scanner.readChar()
           whitespace(consumeNewlines = true)
-          more = scanner.peekChar() != CharCode.$rparen
-        } else more = false
+          val defaultExpr = _expression()
+          params += new Parameter(pname, spanFrom(paramStart), Nullable(defaultExpr))
+          whitespace(consumeNewlines = true)
+          if (scanner.scanChar(CharCode.$comma)) {
+            whitespace(consumeNewlines = true)
+            more = scanner.peekChar() != CharCode.$rparen
+          } else more = false
+        } else {
+          params += new Parameter(pname, spanFrom(paramStart))
+          whitespace(consumeNewlines = true)
+          if (scanner.scanChar(CharCode.$comma)) {
+            whitespace(consumeNewlines = true)
+            more = scanner.peekChar() != CharCode.$rparen
+          } else more = false
+        }
       }
+      whitespace(consumeNewlines = true)
+      scanner.expectChar(CharCode.$rparen)
+      new ParameterList(params.toList, spanFrom(startState), restParam)
     }
-    whitespace(consumeNewlines = true)
-    scanner.expectChar(CharCode.$rparen)
-    new ParameterList(params.toList, spanFrom(startState), restParam)
-    }
-  }
 
-  /** Parses a parenthesized argument list for a `@include` invocation.
-    * Supports positional arguments and a trailing rest argument
-    * (`$list...`, or any expression followed by `...`).
+  /** Parses a parenthesized argument list for a `@include` invocation. Supports positional arguments, named arguments (`$name: value`), and a trailing rest argument (`$list...`, or any expression
+    * followed by `...`). Mixed positional + named is allowed; named args may appear after any positional args.
     */
   private def _parseArgumentList(startState: ssg.sass.util.LineScannerState): ArgumentList = {
     scanner.expectChar(CharCode.$lparen)
     whitespace(consumeNewlines = true)
     val positional = scala.collection.mutable.ListBuffer.empty[Expression]
+    val named      = scala.collection.mutable.LinkedHashMap.empty[String, Expression]
     var rest: Nullable[Expression] = Nullable.empty
     var more = scanner.peekChar() != CharCode.$rparen
     while (more) {
       whitespace(consumeNewlines = true)
       val exprStart = scanner.state
-      val buf = new StringBuilder()
+      // Detect a named argument: `$name: value`. We look ahead through a
+      // potential `$ident` followed by optional whitespace and a single `:`
+      // (not `::`). On match, consume the name and colon; otherwise leave
+      // the scanner where it was and fall through to positional parsing.
+      var namedKey: Nullable[String] = Nullable.empty
+      if (scanner.peekChar() == CharCode.$dollar) {
+        val saved   = scanner.state
+        val _       = scanner.readChar() // consume '$'
+        val nameBuf = new StringBuilder()
+        while (!scanner.isDone && CharCode.isName(scanner.peekChar()))
+          nameBuf.append(scanner.readChar().toChar)
+        val candidate = nameBuf.toString()
+        whitespace(consumeNewlines = true)
+        if (
+          candidate.nonEmpty && scanner.peekChar() == CharCode.$colon &&
+          scanner.peekChar(1) != CharCode.$colon
+        ) {
+          val _ = scanner.readChar() // consume ':'
+          whitespace(consumeNewlines = true)
+          namedKey = Nullable(candidate.replace('_', '-'))
+        } else {
+          scanner.state = saved
+        }
+      }
+      val buf   = new StringBuilder()
       var depth = 0
       var inQuote: Int = 0
       boundary {
@@ -521,9 +546,11 @@ abstract class StylesheetParser protected (
             buf.append(scanner.readChar().toChar)
           } else if (depth == 0 && ch == CharCode.$comma) {
             break(())
-          } else if (depth == 0 && ch == CharCode.$dot &&
-                     scanner.peekChar(1) == CharCode.$dot &&
-                     scanner.peekChar(2) == CharCode.$dot) {
+          } else if (
+            depth == 0 && ch == CharCode.$dot &&
+            scanner.peekChar(1) == CharCode.$dot &&
+            scanner.peekChar(2) == CharCode.$dot
+          ) {
             break(())
           } else {
             buf.append(scanner.readChar().toChar)
@@ -534,9 +561,11 @@ abstract class StylesheetParser protected (
       if (raw.isEmpty) scanner.error("Expected expression.")
       val expr = _parseSimpleExpression(raw, spanFrom(exprStart))
       whitespace(consumeNewlines = true)
-      if (scanner.peekChar() == CharCode.$dot &&
-          scanner.peekChar(1) == CharCode.$dot &&
-          scanner.peekChar(2) == CharCode.$dot) {
+      if (
+        scanner.peekChar() == CharCode.$dot &&
+        scanner.peekChar(1) == CharCode.$dot &&
+        scanner.peekChar(2) == CharCode.$dot
+      ) {
         val _ = scanner.readChar()
         val _ = scanner.readChar()
         val _ = scanner.readChar()
@@ -544,7 +573,11 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         more = false
       } else {
-        positional += expr
+        namedKey.fold {
+          positional += expr
+        } { k =>
+          named.update(k, expr)
+        }
         whitespace(consumeNewlines = true)
         if (scanner.scanChar(CharCode.$comma)) {
           whitespace(consumeNewlines = true)
@@ -554,13 +587,13 @@ abstract class StylesheetParser protected (
     }
     whitespace(consumeNewlines = true)
     scanner.expectChar(CharCode.$rparen)
-    new ArgumentList(positional.toList, Map.empty, Map.empty, spanFrom(startState), rest)
+    new ArgumentList(positional.toList, named.toMap, Map.empty, spanFrom(startState), rest)
   }
 
   /** Parses a variable declaration: `$name: value;` */
   private def _variableDeclaration(): VariableDeclaration = {
     val start = scanner.state
-    val name = variableName()
+    val name  = variableName()
     whitespace(consumeNewlines = true)
     scanner.expectChar(CharCode.$colon)
     whitespace(consumeNewlines = true)
@@ -570,7 +603,7 @@ abstract class StylesheetParser protected (
 
     // Handle !default / !global flags (simplified)
     var isGuarded = false
-    var isGlobal = false
+    var isGlobal  = false
     while (scanner.scanChar(CharCode.$exclamation)) {
       val flag = identifier()
       flag match {
@@ -586,14 +619,13 @@ abstract class StylesheetParser protected (
 
   /** Parses a style rule: `selector { children }`. */
   private def _styleRule(): StyleRule = {
-    val start = scanner.state
+    val start          = scanner.state
     val selectorInterp = styleRuleSelector()
-    val kids = _children()
+    val kids           = _children()
     StyleRule(selectorInterp, kids, spanFrom(start))
   }
 
-  /** Parses a block of children: `{ stmt; stmt; }`. Called after the `{`
-    * has NOT yet been consumed.
+  /** Parses a block of children: `{ stmt; stmt; }`. Called after the `{` has NOT yet been consumed.
     */
   private def _children(): List[Statement] = {
     scanner.expectChar(CharCode.$lbrace)
@@ -609,11 +641,11 @@ abstract class StylesheetParser protected (
   }
 
   /** Parses a child statement inside a block. Could be:
-    * - a nested style rule
-    * - a declaration (name: value;)
-    * - a variable declaration
-    * - a comment
-    * - an at-rule
+    *   - a nested style rule
+    *   - a declaration (name: value;)
+    *   - a variable declaration
+    *   - a comment
+    *   - an at-rule
     */
   private def _childStatement(): Nullable[Statement] = {
     val c = scanner.peekChar()
@@ -631,17 +663,68 @@ abstract class StylesheetParser protected (
   /** Tries to parse a declaration; if that fails, falls back to a style rule. */
   private def _declarationOrStyleRule(): Nullable[Statement] = {
     val start = scanner.state
+    // A property name may begin with `#{...}` interpolation, e.g.
+    // `#{$prefix}-color: red`. In that case we read a mixed name
+    // (identifier chunks + interpolation segments) into an Interpolation
+    // and parse the rest as a declaration directly.
+    if (scanner.peekChar() == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+      val savedState = scanner.state
+      val nameInterp = _readInterpolatedName()
+      whitespace(consumeNewlines = false)
+      if (scanner.peekChar() != CharCode.$colon) {
+        scanner.state = savedState
+        return Nullable(_styleRule())
+      }
+      val _ = scanner.readChar() // ':'
+      whitespace(consumeNewlines = true)
+      val expression = _expression()
+      whitespace(consumeNewlines = false)
+      scanner.scanChar(CharCode.$semicolon)
+      return Nullable(Declaration(nameInterp, expression, spanFrom(start)))
+    }
     // Try to read an identifier followed by `:` to detect a declaration.
     if (!lookingAtIdentifier()) {
       // Selector starts with something other than identifier; treat as style rule
       return Nullable(_styleRule())
     }
     val savedState = scanner.state
-    val name = try identifier() catch {
-      case _: Exception =>
-        scanner.state = savedState
-        return Nullable(_styleRule())
-    }
+      // Peek for an interpolated-in-the-middle name like `border-#{$x}`.
+      // We scan the raw source until whitespace/`:`/`;`/`{` to see if a
+      // `#{` occurs — if so, use the interpolated-name reader.
+      {
+        val src       = scanner.string
+        val pos0      = savedState.position
+        var k         = pos0
+        var hasInterp = false
+        var done      = false
+        while (k < src.length && !done) {
+          val ch = src.charAt(k)
+          if (ch == ':' || ch == ';' || ch == '{' || ch == '}' || ch == '\n' || ch == '\r') done = true
+          else if (ch == '#' && k + 1 < src.length && src.charAt(k + 1) == '{') { hasInterp = true; done = true }
+          else k += 1
+        }
+        if (hasInterp) {
+          val nameInterp = _readInterpolatedName()
+          whitespace(consumeNewlines = false)
+          if (scanner.peekChar() != CharCode.$colon) {
+            scanner.state = savedState
+            return Nullable(_styleRule())
+          }
+          val _ = scanner.readChar() // ':'
+          whitespace(consumeNewlines = true)
+          val expression = _expression()
+          whitespace(consumeNewlines = false)
+          scanner.scanChar(CharCode.$semicolon)
+          return Nullable(Declaration(nameInterp, expression, spanFrom(start)))
+        }
+      }
+    val name =
+      try identifier()
+      catch {
+        case _: Exception =>
+          scanner.state = savedState
+          return Nullable(_styleRule())
+      }
     whitespace(consumeNewlines = false)
 
     if (scanner.peekChar() == CharCode.$colon) {
@@ -654,9 +737,11 @@ abstract class StylesheetParser protected (
       }
       // Heuristic: if next char is ':' (pseudo-element like `::before`) or
       // looks like an identifier start with no space, it's a selector.
-      if (afterColon == CharCode.$colon || (CharCode.isNameStart(afterColon) && !scanner.isDone &&
+      if (
+        afterColon == CharCode.$colon || (CharCode.isNameStart(afterColon) && !scanner.isDone &&
           scanner.string.substring(savedState.position).takeWhile(c => c != '{' && c != ';' && c != '}').contains('{') &&
-          !scanner.string.substring(savedState.position).takeWhile(c => c != '{' && c != ';' && c != '}').contains(';'))) {
+          !scanner.string.substring(savedState.position).takeWhile(c => c != '{' && c != ';' && c != '}').contains(';'))
+      ) {
         // Looks like a selector — rewind and parse as style rule
         scanner.state = savedState
         return Nullable(_styleRule())
@@ -665,8 +750,8 @@ abstract class StylesheetParser protected (
       // Parse as declaration
       whitespace(consumeNewlines = true)
       val nameSpan = {
-        val s = savedState
-        val endLoc = scanner.sourceFile.location(s.position + name.length)
+        val s        = savedState
+        val endLoc   = scanner.sourceFile.location(s.position + name.length)
         val startLoc = scanner.sourceFile.location(s.position)
         scanner.sourceFile.span(startLoc.offset, endLoc.offset)
       }
@@ -696,26 +781,25 @@ abstract class StylesheetParser protected (
   private def _loudComment(): Nullable[Statement] = {
     val start = scanner.state
     loudComment()
-    val text = scanner.substring(start.position)
+    val text   = scanner.substring(start.position)
     val interp = Interpolation.plain(text, spanFrom(start))
     Nullable(new LoudComment(interp))
   }
 
-  /** Parses a single expression. Minimal: handles numbers, strings, identifiers, variables.
-    * Multi-value expressions (space-separated lists, comma-separated lists, math operators)
-    * are handled as a best effort by collecting raw text as an unquoted string.
+  /** Parses a single expression. Minimal: handles numbers, strings, identifiers, variables. Multi-value expressions (space-separated lists, comma-separated lists, math operators) are handled as a
+    * best effort by collecting raw text as an unquoted string.
     */
   private def _expression(): Expression = {
     val start = scanner.state
-    val c = scanner.peekChar()
+    val c     = scanner.peekChar()
     if (c < 0) scanner.error("Expected expression.")
 
     // Collect until end-of-statement markers. Respects quoted strings and
     // `#{...}` interpolation so braces inside them don't terminate collection.
-    val buf = new StringBuilder()
+    val buf      = new StringBuilder()
     var brackets = 0
-    var inQuote: Int = 0       // 0 = not in string, else the opening quote char
-    var interpDepth: Int = 0   // brace depth inside #{...}
+    var inQuote:     Int = 0 // 0 = not in string, else the opening quote char
+    var interpDepth: Int = 0 // brace depth inside #{...}
     boundary {
       while (!scanner.isDone) {
         val ch = scanner.peekChar()
@@ -768,7 +852,7 @@ abstract class StylesheetParser protected (
       }
     }
 
-    val raw = buf.toString().trim
+    val raw  = buf.toString().trim
     val span = spanFrom(start)
 
     if (raw.isEmpty) scanner.error("Expected expression.", start.position, 0)
@@ -777,9 +861,8 @@ abstract class StylesheetParser protected (
     _parseSimpleExpression(raw, span)
   }
 
-  /** Best-effort parsing of a simple expression string into an Expression node.
-    * Handles: bare identifiers, variables, numbers with units, quoted strings,
-    * booleans (true/false/null). Falls back to unquoted StringExpression.
+  /** Best-effort parsing of a simple expression string into an Expression node. Handles: bare identifiers, variables, numbers with units, quoted strings, booleans (true/false/null). Falls back to
+    * unquoted StringExpression.
     */
   private def _parseSimpleExpression(raw: String, span: FileSpan): Expression = {
     val trimmed = raw.trim
@@ -791,28 +874,42 @@ abstract class StylesheetParser protected (
     if (trimmed == "null") return new NullExpression(span)
 
     // Quoted string
-    if ((trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) ||
-        (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2)) {
+    if (
+      (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2)
+    ) {
       val inner = trimmed.substring(1, trimmed.length - 1)
       return StringExpression(_parseInterpolatedString(inner, span), hasQuotes = true)
     }
 
+    // Unquoted interpolation: `#{expr}`, possibly with surrounding literal
+    // text (e.g. `#{$base * 2}px` or `prefix-#{$x}`). Parse via the shared
+    // interpolated-string helper so embedded `#{...}` regions are evaluated
+    // as expressions.
+    if (trimmed.contains("#{")) {
+      return StringExpression(_parseInterpolatedString(trimmed, span), hasQuotes = false)
+    }
+
     // Variable reference (possibly namespaced: `ns.$var`)
     if (trimmed.startsWith("$")) {
-      val name = trimmed.substring(1)
-      if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
-        return VariableExpression(name.replace('_', '-'), span)
+      {
+        val name = trimmed.substring(1)
+        if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
+          return VariableExpression(name.replace('_', '-'), span)
+        }
       }
-    }
-    // Namespaced variable: `ns.$var`
-    {
-      val dollarIdx = trimmed.indexOf(".$")
-      if (dollarIdx > 0) {
-        val ns = trimmed.substring(0, dollarIdx)
-        val name = trimmed.substring(dollarIdx + 2)
-        if (_allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
-            name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
-          return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
+      // Namespaced variable: `ns.$var`
+      {
+        val dollarIdx = trimmed.indexOf(".$")
+        if (dollarIdx > 0) {
+          val ns   = trimmed.substring(0, dollarIdx)
+          val name = trimmed.substring(dollarIdx + 2)
+          if (
+            _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+            name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))
+          ) {
+            return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
+          }
         }
       }
     }
@@ -869,13 +966,12 @@ abstract class StylesheetParser protected (
     StringExpression(Interpolation.plain(trimmed, span), hasQuotes = false)
   }
 
-  /** Splits [s] at top-level occurrences of [sep] (ignoring separators inside
-    * matched parens/brackets/quotes).
+  /** Splits [s] at top-level occurrences of [sep] (ignoring separators inside matched parens/brackets/quotes).
     */
   private def _splitTopLevel(s: String, sep: Char): List[String] = {
     val result = scala.collection.mutable.ListBuffer.empty[String]
-    val buf = new StringBuilder()
-    var depth = 0
+    val buf    = new StringBuilder()
+    var depth  = 0
     var inQuote: Char = 0
     var i = 0
     while (i < s.length) {
@@ -910,148 +1006,142 @@ abstract class StylesheetParser protected (
     result.toList
   }
 
-  /** Tokenizes [s] into operator-aware tokens. Recognizes numbers with
-    * optional unit, identifiers (with embedded hyphens), variables
-    * (`$name`), quoted strings, bracketed groups (`(...)` / `[...]`), and
-    * the operators `+ - * / %`. A `-` is treated as part of a numeric
-    * literal when it appears at the start of the expression or directly
-    * after another operator; otherwise it is a binary operator token.
-    * Returns an empty list if tokenization fails (e.g. unmatched
-    * brackets / unknown characters).
+  /** Tokenizes [s] into operator-aware tokens. Recognizes numbers with optional unit, identifiers (with embedded hyphens), variables (`$name`), quoted strings, bracketed groups (`(...)` / `[...]`),
+    * and the operators `+ - * / %`. A `-` is treated as part of a numeric literal when it appears at the start of the expression or directly after another operator; otherwise it is a binary operator
+    * token. Returns an empty list if tokenization fails (e.g. unmatched brackets / unknown characters).
     */
   private def _tokenizeArithmetic(s: String): List[String] = {
     boundary[List[String]] {
-    val tokens = scala.collection.mutable.ListBuffer.empty[String]
-    var i = 0
-    val n = s.length
-    def lastIsOperator: Boolean = tokens.isEmpty || _isOperatorToken(tokens.last)
-    while (i < n) {
-      val c = s.charAt(i)
-      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-        i += 1
-      } else if (c == '+' || c == '*' || c == '/' || c == '%') {
-        tokens += c.toString
-        i += 1
-      } else if (c == '-') {
-        // Binary `-` unless we're at the start or the previous token is
-        // itself an operator (meaning this `-` starts a new operand).
-        if (lastIsOperator) {
-          // Fall through to operand reading with the `-` included.
+      val tokens = scala.collection.mutable.ListBuffer.empty[String]
+      var i      = 0
+      val n      = s.length
+      def lastIsOperator: Boolean = tokens.isEmpty || _isOperatorToken(tokens.last)
+      while (i < n) {
+        val c = s.charAt(i)
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+          i += 1
+        } else if (c == '+' || c == '*' || c == '/' || c == '%') {
+          tokens += c.toString
+          i += 1
+        } else if (c == '-') {
+          // Binary `-` unless we're at the start or the previous token is
+          // itself an operator (meaning this `-` starts a new operand).
+          if (lastIsOperator) {
+            // Fall through to operand reading with the `-` included.
+            val start = i
+            i += 1
+            if (i < n && (CharCode.isDigit(s.charAt(i).toInt) || s.charAt(i) == '.')) {
+              // Negative number literal.
+              while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
+              if (i < n && s.charAt(i) == '.') {
+                i += 1
+                while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
+              }
+              // Optional unit / `%`.
+              if (i < n && s.charAt(i) == '%') {
+                i += 1
+              } else {
+                while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
+              }
+              tokens += s.substring(start, i)
+            } else if (i < n && s.charAt(i) == '$') {
+              // Negative variable reference: emit unary token verbatim.
+              i += 1
+              while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
+              tokens += s.substring(start, i)
+            } else {
+              // Bare `-` at start with no operand — give up.
+              break(Nil)
+            }
+          } else {
+            tokens += "-"
+            i += 1
+          }
+        } else if (CharCode.isDigit(c.toInt) || c == '.') {
+          val start = i
+          while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
+          if (i < n && s.charAt(i) == '.') {
+            i += 1
+            while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
+          }
+          // Optional unit / percent. Units are letters only — a `-` after
+          // a numeric literal is always a binary operator.
+          if (i < n && s.charAt(i) == '%') {
+            i += 1
+          } else {
+            while (i < n && s.charAt(i).isLetter) i += 1
+          }
+          if (i == start) break(Nil)
+          tokens += s.substring(start, i)
+        } else if (c == '$') {
           val start = i
           i += 1
-          if (i < n && (CharCode.isDigit(s.charAt(i).toInt) || s.charAt(i) == '.')) {
-            // Negative number literal.
-            while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
-            if (i < n && s.charAt(i) == '.') {
+          while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
+          tokens += s.substring(start, i)
+        } else if (CharCode.isNameStart(c.toInt)) {
+          // Identifier — may be a function call `name(...)`, a namespaced
+          // variable `ns.$x`, or a namespaced function call. Consume the
+          // identifier then any bracket group that immediately follows.
+          val start = i
+          while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
+          // Namespaced `ns.$x` or `ns.name(...)`.
+          if (i < n && s.charAt(i) == '.') {
+            i += 1
+            if (i < n && s.charAt(i) == '$') {
               i += 1
-              while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
-            }
-            // Optional unit / `%`.
-            if (i < n && s.charAt(i) == '%') {
-              i += 1
+              while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
             } else {
               while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
             }
-            tokens += s.substring(start, i)
-          } else if (i < n && s.charAt(i) == '$') {
-            // Negative variable reference: emit unary token verbatim.
-            i += 1
-            while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
-            tokens += s.substring(start, i)
-          } else {
-            // Bare `-` at start with no operand — give up.
-            break(Nil)
           }
-        } else {
-          tokens += "-"
-          i += 1
-        }
-      } else if (CharCode.isDigit(c.toInt) || c == '.') {
-        val start = i
-        while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
-        if (i < n && s.charAt(i) == '.') {
-          i += 1
-          while (i < n && CharCode.isDigit(s.charAt(i).toInt)) i += 1
-        }
-        // Optional unit / percent. Units are letters only — a `-` after
-        // a numeric literal is always a binary operator.
-        if (i < n && s.charAt(i) == '%') {
-          i += 1
-        } else {
-          while (i < n && s.charAt(i).isLetter) i += 1
-        }
-        if (i == start) break(Nil)
-        tokens += s.substring(start, i)
-      } else if (c == '$') {
-        val start = i
-        i += 1
-        while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
-        tokens += s.substring(start, i)
-      } else if (CharCode.isNameStart(c.toInt)) {
-        // Identifier — may be a function call `name(...)`, a namespaced
-        // variable `ns.$x`, or a namespaced function call. Consume the
-        // identifier then any bracket group that immediately follows.
-        val start = i
-        while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
-        // Namespaced `ns.$x` or `ns.name(...)`.
-        if (i < n && s.charAt(i) == '.') {
-          i += 1
-          if (i < n && s.charAt(i) == '$') {
-            i += 1
-            while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
-          } else {
-            while (i < n && CharCode.isName(s.charAt(i).toInt)) i += 1
+          if (i < n && s.charAt(i) == '(') {
+            var depth = 0
+            var done  = false
+            while (i < n && !done) {
+              val cc = s.charAt(i)
+              if (cc == '(') depth += 1
+              else if (cc == ')') {
+                depth -= 1
+                if (depth == 0) { i += 1; done = true }
+              }
+              if (!done) i += 1
+            }
+            if (!done) break(Nil)
           }
-        }
-        if (i < n && s.charAt(i) == '(') {
+          tokens += s.substring(start, i)
+        } else if (c == '(' || c == '[') {
+          val open  = c
+          val close = if (open == '(') ')' else ']'
+          val start = i
           var depth = 0
-          var done = false
+          var done  = false
           while (i < n && !done) {
             val cc = s.charAt(i)
-            if (cc == '(') depth += 1
-            else if (cc == ')') {
+            if (cc == open) depth += 1
+            else if (cc == close) {
               depth -= 1
               if (depth == 0) { i += 1; done = true }
             }
             if (!done) i += 1
           }
           if (!done) break(Nil)
+          tokens += s.substring(start, i)
+        } else if (c == '"' || c == '\'') {
+          val quote = c
+          val start = i
+          i += 1
+          while (i < n && s.charAt(i) != quote)
+            if (s.charAt(i) == '\\' && i + 1 < n) i += 2
+            else i += 1
+          if (i >= n) break(Nil)
+          i += 1 // closing quote
+          tokens += s.substring(start, i)
+        } else {
+          // Unrecognized character — bail out.
+          break(Nil)
         }
-        tokens += s.substring(start, i)
-      } else if (c == '(' || c == '[') {
-        val open = c
-        val close = if (open == '(') ')' else ']'
-        val start = i
-        var depth = 0
-        var done = false
-        while (i < n && !done) {
-          val cc = s.charAt(i)
-          if (cc == open) depth += 1
-          else if (cc == close) {
-            depth -= 1
-            if (depth == 0) { i += 1; done = true }
-          }
-          if (!done) i += 1
-        }
-        if (!done) break(Nil)
-        tokens += s.substring(start, i)
-      } else if (c == '"' || c == '\'') {
-        val quote = c
-        val start = i
-        i += 1
-        while (i < n && s.charAt(i) != quote) {
-          if (s.charAt(i) == '\\' && i + 1 < n) i += 2
-          else i += 1
-        }
-        if (i >= n) break(Nil)
-        i += 1 // closing quote
-        tokens += s.substring(start, i)
-      } else {
-        // Unrecognized character — bail out.
-        break(Nil)
       }
-    }
-    tokens.toList
+      tokens.toList
     }
   }
 
@@ -1065,9 +1155,11 @@ abstract class StylesheetParser protected (
     val (namespace, name): (Nullable[String], String) =
       if (dotIdx > 0 && dotIdx < head.length - 1) {
         val ns = head.substring(0, dotIdx)
-        val n = head.substring(dotIdx + 1)
-        if (_allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
-            _allChars(n, (c: Char) => CharCode.isName(c.toInt))) {
+        val n  = head.substring(dotIdx + 1)
+        if (
+          _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+          _allChars(n, (c: Char) => CharCode.isName(c.toInt))
+        ) {
           (Nullable(ns), n)
         } else {
           return None
@@ -1079,22 +1171,33 @@ abstract class StylesheetParser protected (
     // Special-case: url() — passes through as an unquoted string. Skip for now.
     if (namespace.isEmpty && name == "url") return None
 
-    val argsText = raw.substring(parenIdx + 1, raw.length - 1).trim
-    val argExprs = if (argsText.isEmpty) Nil
-      else _splitTopLevel(argsText, ',').map(a => _parseSimpleExpression(a, span))
-
-    // Detect named arguments: `$name: value`
-    val (positional, named) = argExprs.foldLeft(
-      (List.empty[Expression], Map.empty[String, Expression])
-    ) { case ((pos, nam), expr) =>
-      expr match {
-        case _ =>
-          // Simplified: no named arguments for now (would need re-parsing `$name: value`)
-          (pos :+ expr, nam)
+    val argsText   = raw.substring(parenIdx + 1, raw.length - 1).trim
+    val rawArgs    = if (argsText.isEmpty) Nil else _splitTopLevel(argsText, ',')
+    val positional = scala.collection.mutable.ListBuffer.empty[Expression]
+    val named      = scala.collection.mutable.LinkedHashMap.empty[String, Expression]
+    for (a <- rawArgs) {
+      // Detect a named argument `$name: value`. We match `$` + identifier
+      // + `:` (but not `::`, which would be a pseudo-element).
+      val trimmed = a.trim
+      var keyName:   String = ""
+      var valueText: String = trimmed
+      if (trimmed.startsWith("$")) {
+        var k = 1
+        while (k < trimmed.length && CharCode.isName(trimmed.charAt(k).toInt)) k += 1
+        if (
+          k > 1 && k < trimmed.length && trimmed.charAt(k) == ':' &&
+          (k + 1 >= trimmed.length || trimmed.charAt(k + 1) != ':')
+        ) {
+          keyName = trimmed.substring(1, k).replace('_', '-')
+          valueText = trimmed.substring(k + 1).trim
+        }
       }
+      val valueExpr = _parseSimpleExpression(valueText, span)
+      if (keyName.nonEmpty) named.update(keyName, valueExpr)
+      else positional += valueExpr
     }
 
-    val arguments = new ArgumentList(positional, named, Map.empty, span)
+    val arguments = new ArgumentList(positional.toList, named.toMap, Map.empty, span)
     Some(FunctionExpression(name, arguments, span, namespace))
   }
 
@@ -1113,7 +1216,8 @@ abstract class StylesheetParser protected (
     if (i == digitStart) return None
 
     val numStr = raw.substring(0, i)
-    val value = try numStr.toDouble
+    val value  =
+      try numStr.toDouble
       catch { case _: NumberFormatException => return None }
 
     val unit = raw.substring(i).trim
@@ -1123,18 +1227,79 @@ abstract class StylesheetParser protected (
     else None
   }
 
-  /** Parses [raw] into an [[Interpolation]], detecting `#{...}` segments and
-    * treating the content of each as an expression (recursively parsed via
-    * [[_parseSimpleExpression]]). Literal text segments become [String]
-    * elements; interpolated regions become [Expression] elements. Matching
-    * braces inside `#{...}` are balanced.
+  /** Reads an interpolated property name from the scanner: a sequence of identifier characters and `#{...}` segments, stopping at the first character that ends the name (whitespace, `:`, `;`, `{`,
+    * `}`). The resulting [[Interpolation]] preserves literal chunks and evaluates each interpolation via [[_parseSimpleExpression]] on its contents.
+    */
+  private def _readInterpolatedName(): Interpolation = {
+    val start    = scanner.state
+    val contents = scala.collection.mutable.ListBuffer.empty[Any]
+    val spans    = scala.collection.mutable.ListBuffer.empty[Nullable[FileSpan]]
+    val literal  = new StringBuilder()
+    boundary {
+      while (!scanner.isDone) {
+        val ch = scanner.peekChar()
+        if (ch < 0) break(())
+        if (
+          ch == CharCode.$colon || ch == CharCode.$semicolon ||
+          ch == CharCode.$lbrace || ch == CharCode.$rbrace ||
+          ch == CharCode.$space || ch == CharCode.$tab ||
+          ch == CharCode.$lf || ch == CharCode.$cr
+        ) {
+          break(())
+        } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          if (literal.nonEmpty) {
+            contents += literal.toString()
+            spans += Nullable.empty
+            literal.clear()
+          }
+          val _       = scanner.readChar() // '#'
+          val _       = scanner.readChar() // '{'
+          val exprBuf = new StringBuilder()
+          var depth   = 1
+          boundary {
+            while (!scanner.isDone) {
+              val cc = scanner.peekChar()
+              if (cc < 0) break(())
+              if (cc == CharCode.$lbrace) depth += 1
+              else if (cc == CharCode.$rbrace) {
+                depth -= 1
+                if (depth == 0) {
+                  val _ = scanner.readChar()
+                  break(())
+                }
+              }
+              exprBuf.append(scanner.readChar().toChar)
+            }
+          }
+          val exprText = exprBuf.toString().trim
+          val exprSpan = spanFrom(start)
+          if (exprText.isEmpty) {
+            contents += StringExpression(Interpolation.plain("", exprSpan), hasQuotes = false)
+          } else {
+            contents += _parseSimpleExpression(exprText, exprSpan)
+          }
+          spans += Nullable(exprSpan)
+        } else {
+          literal.append(scanner.readChar().toChar)
+        }
+      }
+    }
+    if (literal.nonEmpty || contents.isEmpty) {
+      contents += literal.toString()
+      spans += Nullable.empty
+    }
+    new Interpolation(contents.toList, spans.toList, spanFrom(start))
+  }
+
+  /** Parses [raw] into an [[Interpolation]], detecting `#{...}` segments and treating the content of each as an expression (recursively parsed via [[_parseSimpleExpression]]). Literal text segments
+    * become [String] elements; interpolated regions become [Expression] elements. Matching braces inside `#{...}` are balanced.
     */
   protected def _parseInterpolatedString(raw: String, span: FileSpan): Interpolation = {
     val contents = scala.collection.mutable.ListBuffer.empty[Any]
-    val spans = scala.collection.mutable.ListBuffer.empty[Nullable[FileSpan]]
-    val literal = new StringBuilder()
-    var i = 0
-    val n = raw.length
+    val spans    = scala.collection.mutable.ListBuffer.empty[Nullable[FileSpan]]
+    val literal  = new StringBuilder()
+    var i        = 0
+    val n        = raw.length
     while (i < n) {
       val c = raw.charAt(i)
       if (c == '#' && i + 1 < n && raw.charAt(i + 1) == '{') {
@@ -1147,7 +1312,7 @@ abstract class StylesheetParser protected (
           literal.clear()
         }
         // Find matching closing brace, balancing nested braces.
-        var j = i + 2
+        var j     = i + 2
         var depth = 1
         boundary {
           while (j < n) {
@@ -1197,10 +1362,8 @@ abstract class StylesheetParser protected (
     case _   => None
   }
 
-  /** Parses a sequence of whitespace-separated tokens as a left-associative
-    * binary expression using operator precedence. Returns `None` if the
-    * tokens don't form a valid operator expression (e.g. two operands in a
-    * row with no operator between).
+  /** Parses a sequence of whitespace-separated tokens as a left-associative binary expression using operator precedence. Returns `None` if the tokens don't form a valid operator expression (e.g. two
+    * operands in a row with no operator between).
     */
   private def _parseBinaryOps(tokens: List[String], span: FileSpan): Option[Expression] =
     boundary[Option[Expression]] {
@@ -1210,18 +1373,18 @@ abstract class StylesheetParser protected (
       if (_isOperatorToken(tokens.last)) break(None)
       var i = 0
       while (i < tokens.length) {
-        val expectOperator = (i % 2 == 1)
-        val tok = tokens(i)
+        val expectOperator = i % 2 == 1
+        val tok            = tokens(i)
         if (expectOperator != _isOperatorToken(tok)) break(None)
         i += 1
       }
 
       // Shunting-yard: build left-associative tree honoring precedence.
       val output = scala.collection.mutable.ArrayBuffer.empty[Expression]
-      val ops = scala.collection.mutable.ArrayBuffer.empty[BinaryOperator]
+      val ops    = scala.collection.mutable.ArrayBuffer.empty[BinaryOperator]
       def reduce(): Unit = {
-        val r = output.remove(output.length - 1)
-        val l = output.remove(output.length - 1)
+        val r  = output.remove(output.length - 1)
+        val l  = output.remove(output.length - 1)
         val op = ops.remove(ops.length - 1)
         output += BinaryOperationExpression(op, l, r)
       }
@@ -1229,8 +1392,8 @@ abstract class StylesheetParser protected (
       var j = 1
       while (j + 1 < tokens.length) {
         val opTok = tokens(j)
-        val rhs = tokens(j + 1)
-        val op = _binaryOpFor(opTok) match {
+        val rhs   = tokens(j + 1)
+        val op    = _binaryOpFor(opTok) match {
           case Some(o) => o
           case None    => break(None)
         }
@@ -1243,8 +1406,7 @@ abstract class StylesheetParser protected (
       if (output.length == 1) Some(output.head) else None
     }
 
-  /** Helper: returns true if every character of [s] satisfies [p]. Explicit
-    * loop to avoid Nullable implicit conversion hijacking String.forall.
+  /** Helper: returns true if every character of [s] satisfies [p]. Explicit loop to avoid Nullable implicit conversion hijacking String.forall.
     */
   private def _allChars(s: String, p: Char => Boolean): Boolean = {
     var i = 0
@@ -1255,8 +1417,7 @@ abstract class StylesheetParser protected (
     true
   }
 
-  /** Parses the contents as a single expression, returning the expression
-    * and any warnings encountered.
+  /** Parses the contents as a single expression, returning the expression and any warnings encountered.
     */
   def parseExpression(): (Expression, List[ParseTimeWarning]) = wrapSpanFormatException { () =>
     whitespace(consumeNewlines = true)
@@ -1269,14 +1430,12 @@ abstract class StylesheetParser protected (
   /** Parses the contents as a single number literal. */
   def parseNumber(): SassNumber = wrapSpanFormatException { () =>
     whitespace(consumeNewlines = true)
-    val start = scanner.state
+    val start   = scanner.state
     val numExpr = {
       val buf = new StringBuilder()
-      while (!scanner.isDone && !CharCode.isWhitespace(scanner.peekChar())) {
+      while (!scanner.isDone && !CharCode.isWhitespace(scanner.peekChar()))
         buf.append(scanner.readChar().toChar)
-      }
-      _tryParseNumber(buf.toString(), spanFrom(start))
-        .getOrElse(scanner.error("Expected number."))
+      _tryParseNumber(buf.toString(), spanFrom(start)).getOrElse(scanner.error("Expected number."))
     }
     whitespace(consumeNewlines = true)
     scanner.expectDone()
@@ -1299,8 +1458,7 @@ abstract class StylesheetParser protected (
       "StylesheetParser.parseUseRule: UseRule construction not yet supported"
     )
 
-  /** Parses a function signature of the format allowed by Node Sass's
-    * functions option and returns its name and parameter list.
+  /** Parses a function signature of the format allowed by Node Sass's functions option and returns its name and parameter list.
     */
   def parseSignature(requireParens: Boolean = true): (String, Any) =
     throw new UnsupportedOperationException(

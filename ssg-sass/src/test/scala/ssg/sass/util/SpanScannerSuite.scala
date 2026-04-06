@@ -90,7 +90,7 @@ final class SpanScannerSuite extends munit.FunSuite {
 
   test("spanFrom creates span with correct positions") {
     val scanner = SpanScanner("hello world", "test.scss")
-    val start = scanner.state
+    val start   = scanner.state
     scanner.scan("hello")
     val span = scanner.spanFrom(start)
     assertEquals(span.text, "hello")

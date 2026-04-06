@@ -16,22 +16,19 @@ package util
 
 import scala.collection.mutable
 
-/**
- * A view of a map with string keys that strips a prefix from keys.
- * Keys without the prefix are hidden. Remove is supported for @use with.
- */
+/** A view of a map with string keys that strips a prefix from keys. Keys without the prefix are hidden. Remove is supported for @use with.
+  */
 final class UnprefixedMapView[V](
-  private val map: mutable.Map[String, V],
+  private val map:    mutable.Map[String, V],
   private val prefix: String
 ) extends scala.collection.immutable.AbstractMap[String, V] {
 
   override def get(key: String): Option[V] = map.get(prefix + key)
 
-  override def iterator: Iterator[(String, V)] = {
+  override def iterator: Iterator[(String, V)] =
     map.iterator.collect {
       case (k, v) if k.startsWith(prefix) => (k.substring(prefix.length), v)
     }
-  }
 
   override def removed(key: String): Map[String, V] =
     iterator.toMap.removed(key)

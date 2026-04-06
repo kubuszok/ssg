@@ -15,8 +15,7 @@ package sass
 
 import ssg.sass.ast.AstNode
 
-/** An interface accessed by SassScript functions to get the context of the
-  * current evaluation.
+/** An interface accessed by SassScript functions to get the context of the current evaluation.
   */
 trait EvaluationContext {
 
@@ -29,8 +28,7 @@ trait EvaluationContext {
 
 object EvaluationContext {
 
-  /** Returns the current [[EvaluationContext]], or throws if none is active.
-    * TODO: implement zone-style context propagation.
+  /** Returns the current [[EvaluationContext]], or throws if none is active. TODO: implement zone-style context propagation.
     */
   def current: Nullable[EvaluationContext] = Nullable.empty
 

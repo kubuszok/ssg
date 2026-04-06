@@ -14,10 +14,8 @@ package ssg
 package sass
 package util
 
-/**
- * An unmodifiable reference to a value that may be mutated elsewhere.
- * Uses reference equality based on the underlying ModifiableBox.
- */
+/** An unmodifiable reference to a value that may be mutated elsewhere. Uses reference equality based on the underlying ModifiableBox.
+  */
 final class Box[T] private[util] (private val inner: ModifiableBox[T]) {
   def value: T = inner.value
 
@@ -31,10 +29,8 @@ final class Box[T] private[util] (private val inner: ModifiableBox[T]) {
   override def toString: String = s"<box: $value>"
 }
 
-/**
- * A mutable reference to a (presumably immutable) value.
- * Always uses reference equality.
- */
+/** A mutable reference to a (presumably immutable) value. Always uses reference equality.
+  */
 final class ModifiableBox[T](var value: T) {
 
   /** Returns an unmodifiable reference to this box. */

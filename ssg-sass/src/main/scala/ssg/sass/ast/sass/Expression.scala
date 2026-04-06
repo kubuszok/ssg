@@ -38,8 +38,8 @@ package sass
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.util.{FileSpan, initialIdentifier, withoutNamespace}
-import ssg.sass.value.{ListSeparator, SassColor, SassNumber, Value}
+import ssg.sass.util.{ FileSpan, initialIdentifier, withoutNamespace }
+import ssg.sass.value.{ ListSeparator, SassColor, SassNumber, Value }
 
 import scala.util.boundary
 import scala.util.boundary.break
@@ -50,24 +50,24 @@ import scala.util.boundary.break
 
 /** Visitor interface for [Expression] nodes. */
 trait ExpressionVisitor[T] {
-  def visitBinaryOperationExpression(node: BinaryOperationExpression): T
-  def visitBooleanExpression(node: BooleanExpression): T
-  def visitColorExpression(node: ColorExpression): T
-  def visitFunctionExpression(node: FunctionExpression): T
-  def visitIfExpression(node: IfExpression): T
+  def visitBinaryOperationExpression(node:      BinaryOperationExpression):      T
+  def visitBooleanExpression(node:              BooleanExpression):              T
+  def visitColorExpression(node:                ColorExpression):                T
+  def visitFunctionExpression(node:             FunctionExpression):             T
+  def visitIfExpression(node:                   IfExpression):                   T
   def visitInterpolatedFunctionExpression(node: InterpolatedFunctionExpression): T
-  def visitLegacyIfExpression(node: LegacyIfExpression): T
-  def visitListExpression(node: ListExpression): T
-  def visitMapExpression(node: MapExpression): T
-  def visitNullExpression(node: NullExpression): T
-  def visitNumberExpression(node: NumberExpression): T
-  def visitParenthesizedExpression(node: ParenthesizedExpression): T
-  def visitSelectorExpression(node: SelectorExpression): T
-  def visitStringExpression(node: StringExpression): T
-  def visitSupportsExpression(node: SupportsExpression): T
-  def visitUnaryOperationExpression(node: UnaryOperationExpression): T
-  def visitValueExpression(node: ValueExpression): T
-  def visitVariableExpression(node: VariableExpression): T
+  def visitLegacyIfExpression(node:             LegacyIfExpression):             T
+  def visitListExpression(node:                 ListExpression):                 T
+  def visitMapExpression(node:                  MapExpression):                  T
+  def visitNullExpression(node:                 NullExpression):                 T
+  def visitNumberExpression(node:               NumberExpression):               T
+  def visitParenthesizedExpression(node:        ParenthesizedExpression):        T
+  def visitSelectorExpression(node:             SelectorExpression):             T
+  def visitStringExpression(node:               StringExpression):               T
+  def visitSupportsExpression(node:             SupportsExpression):             T
+  def visitUnaryOperationExpression(node:       UnaryOperationExpression):       T
+  def visitValueExpression(node:                ValueExpression):                T
+  def visitVariableExpression(node:             VariableExpression):             T
 }
 
 // ===========================================================================
@@ -77,11 +77,11 @@ trait ExpressionVisitor[T] {
 /** Visitor interface for [IfConditionExpression] nodes. */
 trait IfConditionExpressionVisitor[T] {
   def visitIfConditionParenthesized(node: IfConditionParenthesized): T
-  def visitIfConditionNegation(node: IfConditionNegation): T
-  def visitIfConditionOperation(node: IfConditionOperation): T
-  def visitIfConditionFunction(node: IfConditionFunction): T
-  def visitIfConditionSass(node: IfConditionSass): T
-  def visitIfConditionRaw(node: IfConditionRaw): T
+  def visitIfConditionNegation(node:      IfConditionNegation):      T
+  def visitIfConditionOperation(node:     IfConditionOperation):     T
+  def visitIfConditionFunction(node:      IfConditionFunction):      T
+  def visitIfConditionSass(node:          IfConditionSass):          T
+  def visitIfConditionRaw(node:           IfConditionRaw):           T
 }
 
 // ===========================================================================
@@ -101,9 +101,9 @@ abstract class Expression extends SassNode {
 
 /** A binary operator constant. */
 enum BinaryOperator(
-  val displayName: String,
-  val operator: String,
-  val precedence: Int,
+  val displayName:   String,
+  val operator:      String,
+  val precedence:    Int,
   val isAssociative: Boolean = false
 ) extends java.lang.Enum[BinaryOperator] {
 
@@ -159,7 +159,7 @@ enum BinaryOperator(
 /** A unary operator constant. */
 enum UnaryOperator(
   val displayName: String,
-  val operator: String
+  val operator:    String
 ) extends java.lang.Enum[UnaryOperator] {
 
   /** The numeric identity operator, `+`. */
@@ -183,43 +183,43 @@ enum UnaryOperator(
 
 /** A binary operator, as in `1 + 2` or `$this and $other`.
   *
-  * @param operator   the operator being invoked
-  * @param left       the left-hand operand
-  * @param right      the right-hand operand
-  * @param allowsSlash whether this is a [BinaryOperator.DividedBy] operation that
-  *                    may be interpreted as slash-separated numbers
+  * @param operator
+  *   the operator being invoked
+  * @param left
+  *   the left-hand operand
+  * @param right
+  *   the right-hand operand
+  * @param allowsSlash
+  *   whether this is a [BinaryOperator.DividedBy] operation that may be interpreted as slash-separated numbers
   */
 final case class BinaryOperationExpression(
-  operator: BinaryOperator,
-  left: Expression,
-  right: Expression,
+  operator:    BinaryOperator,
+  left:        Expression,
+  right:       Expression,
   allowsSlash: Boolean = false
 ) extends Expression {
 
   def span: FileSpan = {
     // Move to the left- and right-most non-binary expressions
     var l = left
-    while (l.isInstanceOf[BinaryOperationExpression]) {
+    while (l.isInstanceOf[BinaryOperationExpression])
       l = l.asInstanceOf[BinaryOperationExpression].left
-    }
     var r = right
-    while (r.isInstanceOf[BinaryOperationExpression]) {
+    while (r.isInstanceOf[BinaryOperationExpression])
       r = r.asInstanceOf[BinaryOperationExpression].right
-    }
     l.span.expand(r.span)
   }
 
   /** Returns the span that covers only the operator. */
-  def operatorSpan: FileSpan = {
-    if (left.span.file == right.span.file &&
-        left.span.end.offset < right.span.start.offset) {
-      left.span.file
-        .span(left.span.end.offset, right.span.start.offset)
-        .trim()
+  def operatorSpan: FileSpan =
+    if (
+      left.span.file == right.span.file &&
+      left.span.end.offset < right.span.start.offset
+    ) {
+      left.span.file.span(left.span.end.offset, right.span.start.offset).trim()
     } else {
       span
     }
-  }
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitBinaryOperationExpression(this)
@@ -242,11 +242,11 @@ final case class BinaryOperationExpression(
     buffer.append(operator.operator)
     buffer.append(' ')
 
-    val r = right
+    val r                = right
     val rightNeedsParens = r match {
       case b: BinaryOperationExpression =>
         b.operator.precedence <= operator.precedence &&
-          !(b.operator == operator && operator.isAssociative)
+        !(b.operator == operator && operator.isAssociative)
       case l: ListExpression if !l.hasBrackets && l.contents.length >= 2 =>
         true
       case _ => false
@@ -261,8 +261,7 @@ final case class BinaryOperationExpression(
 
 object BinaryOperationExpression {
 
-  /** Creates a [BinaryOperator.DividedBy] operation that may be interpreted as
-    * slash-separated numbers.
+  /** Creates a [BinaryOperator.DividedBy] operation that may be interpreted as slash-separated numbers.
     */
   def slash(left: Expression, right: Expression): BinaryOperationExpression =
     BinaryOperationExpression(BinaryOperator.DividedBy, left, right, allowsSlash = true)
@@ -274,12 +273,14 @@ object BinaryOperationExpression {
 
 /** A boolean literal, `true` or `false`.
   *
-  * @param value the value of this expression
-  * @param span  the source span
+  * @param value
+  *   the value of this expression
+  * @param span
+  *   the source span
   */
 final case class BooleanExpression(
   value: Boolean,
-  span: FileSpan
+  span:  FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -294,12 +295,14 @@ final case class BooleanExpression(
 
 /** A color literal.
   *
-  * @param value the value of this color
-  * @param span  the source span
+  * @param value
+  *   the value of this color
+  * @param span
+  *   the source span
   */
 final case class ColorExpression(
   value: SassColor,
-  span: FileSpan
+  span:  FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -312,20 +315,25 @@ final case class ColorExpression(
 // FunctionExpression
 // ===========================================================================
 
-/** A function invocation. This may be a plain CSS function or a Sass function,
-  * but may not include interpolation.
+/** A function invocation. This may be a plain CSS function or a Sass function, but may not include interpolation.
   *
-  * @param originalName the name of the function being invoked (original underscores)
-  * @param arguments    the arguments to pass to the function
-  * @param span         the source span
-  * @param namespace    the namespace of the function, or empty
+  * @param originalName
+  *   the name of the function being invoked (original underscores)
+  * @param arguments
+  *   the arguments to pass to the function
+  * @param span
+  *   the source span
+  * @param namespace
+  *   the namespace of the function, or empty
   */
 final case class FunctionExpression(
   originalName: String,
-  arguments: ArgumentList,
-  span: FileSpan,
-  namespace: Nullable[String] = Nullable.empty
-) extends Expression with CallableInvocation with SassReference {
+  arguments:    ArgumentList,
+  span:         FileSpan,
+  namespace:    Nullable[String] = Nullable.empty
+) extends Expression
+    with CallableInvocation
+    with SassReference {
 
   /** The name with underscores converted to hyphens. */
   val name: String = originalName.replace('_', '-')
@@ -366,7 +374,7 @@ sealed trait IfConditionExpression extends SassNode {
 /** A parenthesized condition. */
 final case class IfConditionParenthesized(
   expression: IfConditionExpression,
-  span: FileSpan
+  span:       FileSpan
 ) extends IfConditionExpression {
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
@@ -378,7 +386,7 @@ final case class IfConditionParenthesized(
 /** A negated condition. */
 final case class IfConditionNegation(
   expression: IfConditionExpression,
-  span: FileSpan
+  span:       FileSpan
 ) extends IfConditionExpression {
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
@@ -390,7 +398,7 @@ final case class IfConditionNegation(
 /** A sequence of `and`s or `or`s. */
 final case class IfConditionOperation(
   expressions: List[IfConditionExpression],
-  op: BooleanOperator
+  op:          BooleanOperator
 ) extends IfConditionExpression {
   require(expressions.length >= 2, "expressions must have length >= 2")
 
@@ -405,9 +413,9 @@ final case class IfConditionOperation(
 
 /** A plain-CSS function-style condition. */
 final case class IfConditionFunction(
-  name: Interpolation,
+  name:      Interpolation,
   arguments: Interpolation,
-  span: FileSpan
+  span:      FileSpan
 ) extends IfConditionExpression {
 
   override def isArbitrarySubstitution: Boolean = name.asPlain match {
@@ -426,7 +434,7 @@ final case class IfConditionFunction(
 /** A Sass condition that will evaluate to true or false at compile time. */
 final case class IfConditionSass(
   expression: Expression,
-  span: FileSpan
+  span:       FileSpan
 ) extends IfConditionExpression {
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
@@ -452,13 +460,14 @@ final case class IfConditionRaw(
 
 /** A CSS `if()` expression.
   *
-  * @param branches the conditional branches; a None condition indicates an
-  *                 `else` branch
-  * @param span     the source span
+  * @param branches
+  *   the conditional branches; a None condition indicates an `else` branch
+  * @param span
+  *   the source span
   */
 final case class IfExpression(
   branches: List[(Nullable[IfConditionExpression], Expression)],
-  span: FileSpan
+  span:     FileSpan
 ) extends Expression {
   require(branches.nonEmpty, "branches may not be empty")
 
@@ -467,7 +476,7 @@ final case class IfExpression(
 
   override def toString: String = {
     val buffer = new StringBuilder("if(")
-    var first = true
+    var first  = true
     for ((condition, expression) <- branches) {
       if (first) { first = false }
       else { buffer.append("; ") }
@@ -486,15 +495,19 @@ final case class IfExpression(
 
 /** An interpolated function invocation. This is always a plain CSS function.
   *
-  * @param name      the name of the function being invoked
-  * @param arguments the arguments to pass to the function
-  * @param span      the source span
+  * @param name
+  *   the name of the function being invoked
+  * @param arguments
+  *   the arguments to pass to the function
+  * @param span
+  *   the source span
   */
 final case class InterpolatedFunctionExpression(
-  name: Interpolation,
+  name:      Interpolation,
   arguments: ArgumentList,
-  span: FileSpan
-) extends Expression with CallableInvocation {
+  span:      FileSpan
+) extends Expression
+    with CallableInvocation {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitInterpolatedFunctionExpression(this)
@@ -506,17 +519,18 @@ final case class InterpolatedFunctionExpression(
 // LegacyIfExpression
 // ===========================================================================
 
-/** A ternary expression. Defined as a separate syntactic construct rather than
-  * a normal function because only one of the `$if-true` and `$if-false`
-  * arguments are evaluated.
+/** A ternary expression. Defined as a separate syntactic construct rather than a normal function because only one of the `$if-true` and `$if-false` arguments are evaluated.
   *
-  * @param arguments the arguments passed to `if()`
-  * @param span      the source span
+  * @param arguments
+  *   the arguments passed to `if()`
+  * @param span
+  *   the source span
   */
 final case class LegacyIfExpression(
   arguments: ArgumentList,
-  span: FileSpan
-) extends Expression with CallableInvocation {
+  span:      FileSpan
+) extends Expression
+    with CallableInvocation {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitLegacyIfExpression(this)
@@ -530,15 +544,19 @@ final case class LegacyIfExpression(
 
 /** A list literal.
   *
-  * @param contents   the elements of this list
-  * @param separator  which separator this list uses
-  * @param span       the source span
-  * @param hasBrackets whether the list has square brackets
+  * @param contents
+  *   the elements of this list
+  * @param separator
+  *   which separator this list uses
+  * @param span
+  *   the source span
+  * @param hasBrackets
+  *   whether the list has square brackets
   */
 final case class ListExpression(
-  contents: List[Expression],
-  separator: ListSeparator,
-  span: FileSpan,
+  contents:    List[Expression],
+  separator:   ListSeparator,
+  span:        FileSpan,
   hasBrackets: Boolean = false
 ) extends Expression {
 
@@ -549,17 +567,21 @@ final case class ListExpression(
     val buffer = new StringBuilder()
     if (hasBrackets) {
       buffer.append('[')
-    } else if (contents.isEmpty ||
-               (contents.length == 1 && separator == ListSeparator.Comma)) {
+    } else if (
+      contents.isEmpty ||
+      (contents.length == 1 && separator == ListSeparator.Comma)
+    ) {
       buffer.append('(')
     }
 
     val sep = if (separator == ListSeparator.Comma) ", " else " "
     buffer.append(
-      contents.map { element =>
-        if (_elementNeedsParens(element)) s"($element)"
-        else element.toString
-      }.mkString(sep)
+      contents
+        .map { element =>
+          if (_elementNeedsParens(element)) s"($element)"
+          else element.toString
+        }
+        .mkString(sep)
     )
 
     if (hasBrackets) {
@@ -576,12 +598,10 @@ final case class ListExpression(
   /** Returns whether [expression] needs parentheses when printed. */
   private def _elementNeedsParens(expression: Expression): Boolean =
     expression match {
-      case l: ListExpression
-        if l.contents.length >= 2 && !l.hasBrackets =>
+      case l: ListExpression if l.contents.length >= 2 && !l.hasBrackets =>
         if (separator == ListSeparator.Comma) l.separator == ListSeparator.Comma
         else l.separator != ListSeparator.Undecided
-      case _: UnaryOperationExpression
-        if separator == ListSeparator.Space =>
+      case _: UnaryOperationExpression if separator == ListSeparator.Space =>
         val u = expression.asInstanceOf[UnaryOperationExpression]
         u.operator == UnaryOperator.Plus || u.operator == UnaryOperator.Minus
       case _ => false
@@ -594,12 +614,14 @@ final case class ListExpression(
 
 /** A map literal.
   *
-  * @param pairs the pairs in this map (list, not map, because keys may repeat)
-  * @param span  the source span
+  * @param pairs
+  *   the pairs in this map (list, not map, because keys may repeat)
+  * @param span
+  *   the source span
   */
 final case class MapExpression(
   pairs: List[(Expression, Expression)],
-  span: FileSpan
+  span:  FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -615,7 +637,8 @@ final case class MapExpression(
 
 /** A null literal.
   *
-  * @param span the source span
+  * @param span
+  *   the source span
   */
 final case class NullExpression(
   span: FileSpan
@@ -633,14 +656,17 @@ final case class NullExpression(
 
 /** A number literal.
   *
-  * @param value the numeric value
-  * @param span  the source span
-  * @param unit  the number's unit, or empty
+  * @param value
+  *   the numeric value
+  * @param span
+  *   the source span
+  * @param unit
+  *   the number's unit, or empty
   */
 final case class NumberExpression(
   value: Double,
-  span: FileSpan,
-  unit: Nullable[String] = Nullable.empty
+  span:  FileSpan,
+  unit:  Nullable[String] = Nullable.empty
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -656,12 +682,14 @@ final case class NumberExpression(
 
 /** An expression wrapped in parentheses.
   *
-  * @param expression the internal expression
-  * @param span       the source span
+  * @param expression
+  *   the internal expression
+  * @param span
+  *   the source span
   */
 final case class ParenthesizedExpression(
   expression: Expression,
-  span: FileSpan
+  span:       FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -676,7 +704,8 @@ final case class ParenthesizedExpression(
 
 /** A parent selector reference, `&`.
   *
-  * @param span the source span
+  * @param span
+  *   the source span
   */
 final case class SelectorExpression(
   span: FileSpan
@@ -694,11 +723,13 @@ final case class SelectorExpression(
 
 /** A string literal.
   *
-  * @param text      interpolation that, when evaluated, produces the contents
-  * @param hasQuotes whether this has quotes
+  * @param text
+  *   interpolation that, when evaluated, produces the contents
+  * @param hasQuotes
+  *   whether this has quotes
   */
 final case class StringExpression(
-  text: Interpolation,
+  text:      Interpolation,
   hasQuotes: Boolean = false
 ) extends Expression {
 
@@ -707,19 +738,17 @@ final case class StringExpression(
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitStringExpression(this)
 
-  override def toString: String = {
+  override def toString: String =
     if (!hasQuotes) text.toString
     else s"\"$text\""
-  }
 }
 
 object StringExpression {
 
-  /** Returns Sass source for a quoted string that, when evaluated, will have
-    * [text] as its contents.
+  /** Returns Sass source for a quoted string that, when evaluated, will have [text] as its contents.
     */
   def quoteText(text: String): String = {
-    val quote = _bestQuote(List(text))
+    val quote  = _bestQuote(List(text))
     val buffer = new StringBuilder()
     buffer.append(quote)
     _quoteInnerText(text, quote, buffer)
@@ -755,7 +784,10 @@ object StringExpression {
 
   private def _bestQuote(strings: List[String]): Char = boundary {
     var containsDoubleQuote = false
-    for (value <- strings; i <- 0 until value.length) {
+    for {
+      value <- strings
+      i <- 0 until value.length
+    } {
       val c = value.charAt(i)
       if (c == '\'') {
         break('"')
@@ -773,10 +805,10 @@ object StringExpression {
 // SupportsExpression
 // ===========================================================================
 
-/** An expression-level `@supports` condition. This appears only in the
-  * modifiers that come after a plain-CSS `@import`.
+/** An expression-level `@supports` condition. This appears only in the modifiers that come after a plain-CSS `@import`.
   *
-  * @param condition the condition itself
+  * @param condition
+  *   the condition itself
   */
 final case class SupportsExpression(
   condition: SupportsCondition
@@ -796,14 +828,17 @@ final case class SupportsExpression(
 
 /** A unary operator, as in `+$var` or `not fn()`.
   *
-  * @param operator the operator being invoked
-  * @param operand  the operand
-  * @param span     the source span
+  * @param operator
+  *   the operator being invoked
+  * @param operand
+  *   the operand
+  * @param span
+  *   the source span
   */
 final case class UnaryOperationExpression(
   operator: UnaryOperator,
-  operand: Expression,
-  span: FileSpan
+  operand:  Expression,
+  span:     FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -813,8 +848,8 @@ final case class UnaryOperationExpression(
     val buffer = new StringBuilder(operator.operator)
     if (operator == UnaryOperator.Not) buffer.append(' ')
     val needsParens = operand match {
-      case _: BinaryOperationExpression => true
-      case _: UnaryOperationExpression  => true
+      case _: BinaryOperationExpression                                  => true
+      case _: UnaryOperationExpression                                   => true
       case l: ListExpression if !l.hasBrackets && l.contents.length >= 2 => true
       case _ => false
     }
@@ -829,15 +864,16 @@ final case class UnaryOperationExpression(
 // ValueExpression
 // ===========================================================================
 
-/** An expression that directly embeds a [Value]. Never constructed by the
-  * parser; only used when ASTs are constructed dynamically.
+/** An expression that directly embeds a [Value]. Never constructed by the parser; only used when ASTs are constructed dynamically.
   *
-  * @param value the embedded value
-  * @param span  the source span
+  * @param value
+  *   the embedded value
+  * @param span
+  *   the source span
   */
 final case class ValueExpression(
   value: Value,
-  span: FileSpan
+  span:  FileSpan
 ) extends Expression {
 
   def accept[T](visitor: ExpressionVisitor[T]): T =
@@ -852,15 +888,19 @@ final case class ValueExpression(
 
 /** A Sass variable.
   *
-  * @param name      the name of this variable, with underscores converted to hyphens
-  * @param span      the source span
-  * @param namespace the namespace of the variable, or empty
+  * @param name
+  *   the name of this variable, with underscores converted to hyphens
+  * @param span
+  *   the source span
+  * @param namespace
+  *   the namespace of the variable, or empty
   */
 final case class VariableExpression(
-  name: String,
-  span: FileSpan,
+  name:      String,
+  span:      FileSpan,
   namespace: Nullable[String] = Nullable.empty
-) extends Expression with SassReference {
+) extends Expression
+    with SassReference {
 
   def nameSpan: FileSpan =
     if (namespace.isEmpty) span

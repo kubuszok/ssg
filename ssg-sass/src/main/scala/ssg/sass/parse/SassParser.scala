@@ -15,17 +15,17 @@ package sass
 package parse
 
 import ssg.sass.Nullable
-import ssg.sass.ast.sass.{Interpolation, Statement}
+import ssg.sass.ast.sass.{ Interpolation, Statement }
 
 /** A parser for the whitespace-sensitive indented Sass syntax. */
 class SassParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:       String,
+  url:            Nullable[String] = Nullable.Null,
   parseSelectors: Boolean = false
 ) extends StylesheetParser(contents, url, parseSelectors) {
 
-  override def indented: Boolean = true
-  override def currentIndentation: Int = 0
+  override def indented:           Boolean = true
+  override def currentIndentation: Int     = 0
 
   override protected def styleRuleSelector(): Interpolation =
     throw new UnsupportedOperationException("SassParser.styleRuleSelector: not yet implemented in skeleton")

@@ -14,19 +14,16 @@ package ssg
 package sass
 package util
 
-/**
- * An unmodifiable view of a map with string keys that presents keys
- * with an additional prefix.
- */
+/** An unmodifiable view of a map with string keys that presents keys with an additional prefix.
+  */
 final class PrefixedMapView[V](
-  private val map: Map[String, V],
+  private val map:    Map[String, V],
   private val prefix: String
 ) extends scala.collection.immutable.AbstractMap[String, V] {
 
-  override def get(key: String): Option[V] = {
+  override def get(key: String): Option[V] =
     if (key.startsWith(prefix)) map.get(key.substring(prefix.length))
     else None
-  }
 
   override def iterator: Iterator[(String, V)] =
     map.iterator.map { case (k, v) => (prefix + k, v) }

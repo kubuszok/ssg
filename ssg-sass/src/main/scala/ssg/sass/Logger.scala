@@ -16,19 +16,18 @@ package sass
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.util.{FileSpan, Trace => SassTrace}
+import ssg.sass.util.{ FileSpan, Trace => SassTrace }
 
 import scala.language.implicitConversions
-
 
 /** Interface for loggers that print messages produced by Sass stylesheets. */
 trait Logger {
 
   /** Emits a warning with the given message. */
   def warn(
-    message: String,
-    span: Nullable[FileSpan] = Nullable.Null,
-    trace: Nullable[SassTrace] = Nullable.Null,
+    message:     String,
+    span:        Nullable[FileSpan] = Nullable.Null,
+    trace:       Nullable[SassTrace] = Nullable.Null,
     deprecation: Nullable[Deprecation] = Nullable.Null
   ): Unit
 
@@ -38,16 +37,16 @@ trait Logger {
   /** Emits a deprecation warning. */
   def warnForDeprecation(
     deprecation: Deprecation,
-    message: String,
-    span: Nullable[FileSpan] = Nullable.Null,
-    trace: Nullable[SassTrace] = Nullable.Null
-  ): Unit = {
+    message:     String,
+    span:        Nullable[FileSpan] = Nullable.Null,
+    trace:       Nullable[SassTrace] = Nullable.Null
+  ): Unit =
     if (deprecation.isFuture) ()
     else warn(message, span, trace, deprecation = deprecation)
-  }
 }
 
 object Logger {
+
   /** A logger that silently ignores all messages. */
   val quiet: Logger = QuietLogger
 
@@ -58,9 +57,9 @@ object Logger {
 /** A logger that emits no messages. */
 private object QuietLogger extends Logger {
   override def warn(
-    message: String,
-    span: Nullable[FileSpan],
-    trace: Nullable[SassTrace],
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace],
     deprecation: Nullable[Deprecation]
   ): Unit = ()
 
@@ -71,12 +70,12 @@ private object QuietLogger extends Logger {
 final class StderrLogger(val color: Boolean = false) extends Logger {
 
   override def warn(
-    message: String,
-    span: Nullable[FileSpan],
-    trace: Nullable[SassTrace],
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace],
     deprecation: Nullable[Deprecation]
   ): Unit = {
-    val sb = new StringBuilder()
+    val sb              = new StringBuilder()
     val showDeprecation = deprecation.isDefined && !deprecation.contains(Deprecation.UserAuthored)
 
     if (color) {
@@ -100,8 +99,8 @@ final class StderrLogger(val color: Boolean = false) extends Logger {
 
     trace.foreach { t =>
       val traceLines = t.toString.stripTrailing().split("\n")
-      val buf = new StringBuilder()
-      var i = 0
+      val buf        = new StringBuilder()
+      var i          = 0
       while (i < traceLines.length) {
         if (i > 0) buf.append("\n")
         buf.append("    ")
@@ -116,7 +115,7 @@ final class StderrLogger(val color: Boolean = false) extends Logger {
   }
 
   override def debug(message: String, span: FileSpan): Unit = {
-    val url = span.sourceUrl.getOrElse("-")
+    val url    = span.sourceUrl.getOrElse("-")
     val prefix = if (color) "\u001b[1mDebug\u001b[0m" else "DEBUG"
     System.err.println(s"$url:${span.start.line + 1} $prefix: $message")
   }
@@ -126,12 +125,12 @@ final class StderrLogger(val color: Boolean = false) extends Logger {
 final class TrackingLogger(private val inner: Logger) extends Logger {
 
   var emittedWarning: Boolean = false
-  var emittedDebug: Boolean = false
+  var emittedDebug:   Boolean = false
 
   override def warn(
-    message: String,
-    span: Nullable[FileSpan],
-    trace: Nullable[SassTrace],
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace],
     deprecation: Nullable[Deprecation]
   ): Unit = {
     emittedWarning = true
@@ -146,20 +145,20 @@ final class TrackingLogger(private val inner: Logger) extends Logger {
 
 /** A logger that handles deprecation processing (silencing, fatal, limits). */
 final class DeprecationProcessingLogger(
-  private val inner: Logger,
+  private val inner:       Logger,
   val silenceDeprecations: Set[Deprecation] = Set.empty,
-  val fatalDeprecations: Set[Deprecation] = Set.empty,
-  val futureDeprecations: Set[Deprecation] = Set.empty,
-  val limitRepetition: Boolean = true
+  val fatalDeprecations:   Set[Deprecation] = Set.empty,
+  val futureDeprecations:  Set[Deprecation] = Set.empty,
+  val limitRepetition:     Boolean = true
 ) extends Logger {
 
   private val maxRepetitions = 5
-  private val warningCounts = scala.collection.mutable.HashMap.empty[Deprecation, Int]
+  private val warningCounts  = scala.collection.mutable.HashMap.empty[Deprecation, Int]
 
   override def warn(
-    message: String,
-    span: Nullable[FileSpan],
-    trace: Nullable[SassTrace],
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace],
     deprecation: Nullable[Deprecation]
   ): Unit = {
     deprecation.foreach { dep =>
@@ -192,10 +191,9 @@ final class DeprecationProcessingLogger(
 
   override def warnForDeprecation(
     deprecation: Deprecation,
-    message: String,
-    span: Nullable[FileSpan],
-    trace: Nullable[SassTrace]
-  ): Unit = {
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace]
+  ): Unit =
     warn(message, span, trace, deprecation = deprecation)
-  }
 }

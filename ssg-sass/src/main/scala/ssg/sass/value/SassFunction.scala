@@ -14,7 +14,7 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{Callable, Nullable}
+import ssg.sass.{ Callable, Nullable }
 import ssg.sass.visitor.ValueVisitor
 
 /** A SassScript function reference. */

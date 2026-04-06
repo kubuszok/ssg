@@ -19,18 +19,16 @@ import ssg.sass.ast.css.*
 
 /** A visitor that produces a deep copy of a CSS AST tree.
   *
-  * Skeleton — concrete clone logic will be added alongside the modifiable
-  * CSS tree implementation. For now this trait is a no-op base that returns
-  * the input nodes unchanged.
+  * Skeleton — concrete clone logic will be added alongside the modifiable CSS tree implementation. For now this trait is a no-op base that returns the input nodes unchanged.
   */
 trait CloneCssVisitor extends CssVisitor[CssNode] {
-  def visitCssAtRule(node: CssAtRule): CssNode             = node
-  def visitCssComment(node: CssComment): CssNode           = node
-  def visitCssDeclaration(node: CssDeclaration): CssNode   = node
-  def visitCssImport(node: CssImport): CssNode             = node
+  def visitCssAtRule(node:        CssAtRule):        CssNode = node
+  def visitCssComment(node:       CssComment):       CssNode = node
+  def visitCssDeclaration(node:   CssDeclaration):   CssNode = node
+  def visitCssImport(node:        CssImport):        CssNode = node
   def visitCssKeyframeBlock(node: CssKeyframeBlock): CssNode = node
-  def visitCssMediaRule(node: CssMediaRule): CssNode       = node
-  def visitCssStyleRule(node: CssStyleRule): CssNode       = node
-  def visitCssStylesheet(node: CssStylesheet): CssNode     = node
-  def visitCssSupportsRule(node: CssSupportsRule): CssNode = node
+  def visitCssMediaRule(node:     CssMediaRule):     CssNode = node
+  def visitCssStyleRule(node:     CssStyleRule):     CssNode = node
+  def visitCssStylesheet(node:    CssStylesheet):    CssNode = node
+  def visitCssSupportsRule(node:  CssSupportsRule):  CssNode = node
 }

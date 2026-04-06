@@ -18,14 +18,14 @@ import ssg.sass.value.*
 
 /** Visitor interface for SassScript value types. */
 trait ValueVisitor[T] {
-  def visitBoolean(value: SassBoolean): T
+  def visitBoolean(value:     SassBoolean):     T
   def visitCalculation(value: SassCalculation): T
-  def visitColor(value: SassColor): T
-  def visitFunction(value: SassFunction): T
-  def visitList(value: SassList): T
-  def visitMap(value: SassMap): T
-  def visitMixin(value: SassMixin): T
-  def visitNull(): T
-  def visitNumber(value: SassNumber): T
-  def visitString(value: SassString): T
+  def visitColor(value:       SassColor):       T
+  def visitFunction(value:    SassFunction):    T
+  def visitList(value:        SassList):        T
+  def visitMap(value:         SassMap):         T
+  def visitMixin(value:       SassMixin):       T
+  def visitNull():                              T
+  def visitNumber(value:      SassNumber):      T
+  def visitString(value:      SassString):      T
 }

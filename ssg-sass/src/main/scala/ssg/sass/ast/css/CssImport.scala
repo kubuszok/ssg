@@ -35,10 +35,11 @@ trait CssImport extends CssNode {
 
 /** A modifiable version of CssImport for use in the evaluation step. */
 final class ModifiableCssImport(
-  val url: CssValue[String],
-  val span: FileSpan,
+  val url:       CssValue[String],
+  val span:      FileSpan,
   val modifiers: Nullable[CssValue[String]] = Nullable.empty
-) extends ModifiableCssNode with CssImport {
+) extends ModifiableCssNode
+    with CssImport {
 
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssImport(this)

@@ -15,11 +15,10 @@
 package ssg
 package sass
 
-import ssg.sass.ast.sass.{CallableDeclaration, ParameterList, Statement}
+import ssg.sass.ast.sass.{ CallableDeclaration, ParameterList, Statement }
 import ssg.sass.value.Value
 
-/** An interface for functions and mixins that can be invoked from Sass by
-  * passing in arguments.
+/** An interface for functions and mixins that can be invoked from Sass by passing in arguments.
   */
 trait Callable {
 
@@ -29,8 +28,7 @@ trait Callable {
 
 object Callable {
 
-  /** Creates a function [[Callable]] with the given name, arguments signature
-    * and callback. TODO: parse arguments into a [[ParameterList]].
+  /** Creates a function [[Callable]] with the given name, arguments signature and callback. TODO: parse arguments into a [[ParameterList]].
     */
   def function(name: String, arguments: String, callback: List[Value] => Value): Callable =
     BuiltInCallable.function(name, arguments, callback)
@@ -38,9 +36,9 @@ object Callable {
 
 /** A callable defined in Dart/Scala code, wrapping a native function. */
 final class BuiltInCallable(
-  val name: String,
-  val parameters: Nullable[ParameterList],
-  val callback: List[Value] => Value,
+  val name:           String,
+  val parameters:     Nullable[ParameterList],
+  val callback:       List[Value] => Value,
   val acceptsContent: Boolean = false
 ) extends Callable {
 
@@ -54,16 +52,16 @@ object BuiltInCallable {
     BuiltInCallable(name, Nullable.empty, callback)
 
   def mixin(
-    name: String,
-    arguments: String,
-    callback: List[Value] => Value,
+    name:           String,
+    arguments:      String,
+    callback:       List[Value] => Value,
     acceptsContent: Boolean = false
   ): BuiltInCallable =
     // TODO: parse `arguments` into a ParameterList
     BuiltInCallable(name, Nullable.empty, callback, acceptsContent)
 
   def overloadedFunction(
-    name: String,
+    name:      String,
     overloads: Map[String, List[Value] => Value]
   ): BuiltInCallable =
     // TODO: overload dispatch
@@ -85,8 +83,8 @@ final class PlainCssCallable(val name: String) extends Callable {
 
 /** A callable defined in user Sass source via `@function` or `@mixin`. */
 final class UserDefinedCallable[E](
-  val declaration: Statement, // The Sass AST node (FunctionRule or MixinRule)
-  val environment: E,
+  val declaration:  Statement, // The Sass AST node (FunctionRule or MixinRule)
+  val environment:  E,
   val inDependency: Boolean = false
 ) extends Callable {
 
@@ -102,9 +100,8 @@ final class UserDefinedCallable[E](
 object UserDefinedCallable {
 
   def apply[E](
-    declaration: Statement,
-    environment: E,
+    declaration:  Statement,
+    environment:  E,
     inDependency: Boolean = false
   ): UserDefinedCallable[E] = new UserDefinedCallable(declaration, environment, inDependency)
 }
-

@@ -15,7 +15,7 @@
 package ssg
 package sass
 
-import ssg.sass.ast.sass.{Expression, Interpolation}
+import ssg.sass.ast.sass.{ Expression, Interpolation }
 import ssg.sass.util.FileSpan
 import ssg.sass.Nullable
 
@@ -23,8 +23,7 @@ import scala.collection.mutable
 
 /** A buffer that iteratively builds up an [[Interpolation]].
   *
-  * Add text using [[write]] and related methods, and [[Expression]]s using
-  * [[add]]. Once that's done, call [[interpolation]] to build the result.
+  * Add text using [[write]] and related methods, and [[Expression]]s using [[add]]. Once that's done, call [[interpolation]] to build the result.
   */
 final class InterpolationBuffer {
 
@@ -75,7 +74,7 @@ final class InterpolationBuffer {
   /** Adds another [[Interpolation]]'s contents to this buffer. */
   def addInterpolation(interpolation: Interpolation): Unit = {
     var first = true
-    var i = 0
+    var i     = 0
     while (i < interpolation.contents.length) {
       val element = interpolation.contents(i)
       element match {
@@ -99,10 +98,9 @@ final class InterpolationBuffer {
     new Interpolation(contents.toList, spans.toList, span)
   }
 
-  private def _flushText(): Unit = {
+  private def _flushText(): Unit =
     if (text.nonEmpty) {
       contents += text.toString
       text.clear()
     }
-  }
 }

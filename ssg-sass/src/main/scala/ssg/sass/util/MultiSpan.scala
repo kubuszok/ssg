@@ -16,20 +16,19 @@ package util
 
 import ssg.sass.Nullable
 
-/**
- * A FileSpan wrapper with secondary spans for multi-location error messages.
- */
+/** A FileSpan wrapper with secondary spans for multi-location error messages.
+  */
 final class MultiSpan(
   private val primary: FileSpan,
-  val primaryLabel: String,
-  val secondarySpans: Map[FileSpan, String]
+  val primaryLabel:    String,
+  val secondarySpans:  Map[FileSpan, String]
 ) {
 
-  def start: FileLocation = primary.start
-  def end: FileLocation = primary.end
-  def text: String = primary.text
-  def file: SourceFile = primary.file
-  def length: Int = primary.length
+  def start:     FileLocation     = primary.start
+  def end:       FileLocation     = primary.end
+  def text:      String           = primary.text
+  def file:      SourceFile       = primary.file
+  def length:    Int              = primary.length
   def sourceUrl: Nullable[String] = primary.sourceUrl
 
   def expand(other: FileSpan): MultiSpan =

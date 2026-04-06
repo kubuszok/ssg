@@ -14,25 +14,20 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.{InterpolationMap, Nullable}
-import ssg.sass.ast.selector.{
-  ComplexSelector,
-  CompoundSelector,
-  SelectorList,
-  SimpleSelector
-}
+import ssg.sass.{ InterpolationMap, Nullable }
+import ssg.sass.ast.selector.{ ComplexSelector, CompoundSelector, SelectorList, SimpleSelector }
 
 /** A parser for CSS/Sass selectors. */
 class SelectorParser(
-  contents: String,
-  url: Nullable[String] = Nullable.Null,
+  contents:         String,
+  url:              Nullable[String] = Nullable.Null,
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null,
-  allowParent: Boolean = true,
-  plainCss: Boolean = false
+  allowParent:      Boolean = true,
+  plainCss:         Boolean = false
 ) extends Parser(contents, url, interpolationMap) {
 
   protected val _allowParent: Boolean = allowParent
-  protected val _plainCss: Boolean = plainCss
+  protected val _plainCss:    Boolean = plainCss
 
   def parse(): SelectorList =
     throw new UnsupportedOperationException("SelectorParser.parse: not yet implemented in skeleton")

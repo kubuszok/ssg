@@ -23,18 +23,15 @@ import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.css.CssMediaQuery
 import ssg.sass.ast.sass.ExtendRule
-import ssg.sass.ast.selector.{SelectorList, SimpleSelector}
-import ssg.sass.util.{Box, ModifiableBox}
+import ssg.sass.ast.selector.{ SelectorList, SimpleSelector }
+import ssg.sass.util.{ Box, ModifiableBox }
 
 import scala.collection.mutable
 
-/** Tracks style rules and extensions, computing the final selectors after
- * `@extend` rules are applied.
- *
- * This is the public API surface of the extend subsystem. The full extend
- * algorithm (selector unification, second law of extend) is deferred to
- * Phase 10 alongside the evaluator.
- */
+/** Tracks style rules and extensions, computing the final selectors after `@extend` rules are applied.
+  *
+  * This is the public API surface of the extend subsystem. The full extend algorithm (selector unification, second law of extend) is deferred to Phase 10 alongside the evaluator.
+  */
 trait ExtensionStore {
 
   /** Whether there are any extensions. */
@@ -47,33 +44,30 @@ trait ExtensionStore {
   def extensionsWhereTarget(callback: SimpleSelector => Boolean): Iterable[Extension]
 
   /** Adds [selector] to this store.
-   *
-   * Extends [selector] using any registered extensions, then returns a
-   * modifiable [Box] containing the resulting list.
-   */
+    *
+    * Extends [selector] using any registered extensions, then returns a modifiable [Box] containing the resulting list.
+    */
   def addSelector(
-      selector: SelectorList,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    selector:     SelectorList,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Box[SelectorList]
 
   /** Adds an extension to this store.
-   *
-   * `extender` is the selector for the style rule in which the extension
-   * is defined, and `target` is the selector passed to `@extend`.
-   */
+    *
+    * `extender` is the selector for the style rule in which the extension is defined, and `target` is the selector passed to `@extend`.
+    */
   def addExtension(
-      extender: SelectorList,
-      target: SimpleSelector,
-      extend: ExtendRule,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    extender:     SelectorList,
+    target:       SimpleSelector,
+    extend:       ExtendRule,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Unit
 
   /** Adds existing extensions from [extenders] into this store. */
   def addExtensions(extenders: Iterable[ExtensionStore]): Unit
 
-  /** Returns a copy of this extension store paired with a map from the
-   * selectors in the old store to their copies in the new one.
-   */
+  /** Returns a copy of this extension store paired with a map from the selectors in the old store to their copies in the new one.
+    */
   def cloneStore(): (ExtensionStore, Map[SelectorList, Box[SelectorList]])
 
   /** All the extensions this store contains, indexed by extender. */
@@ -81,43 +75,42 @@ trait ExtensionStore {
 }
 
 object ExtensionStore {
+
   /** Returns a new empty, mutable extension store. */
   def apply(): ExtensionStore = new MutableExtensionStore(ExtendMode.Normal)
 
-  /** Returns a new empty, mutable extension store with a specific extend
-   * mode (used by `selector-extend()`, `selector-replace()`).
-   */
+  /** Returns a new empty, mutable extension store with a specific extend mode (used by `selector-extend()`, `selector-replace()`).
+    */
   def apply(mode: ExtendMode): ExtensionStore = new MutableExtensionStore(mode)
 
   /** The singleton empty extension store. */
   val empty: ExtensionStore = EmptyExtensionStore
 }
 
-/** An [ExtensionStore] that contains no extensions and can have no
- * extensions added.
- */
+/** An [ExtensionStore] that contains no extensions and can have no extensions added.
+  */
 object EmptyExtensionStore extends ExtensionStore {
   override def isEmpty: Boolean = true
 
   override def simpleSelectors: Set[SimpleSelector] = Set.empty
 
   override def extensionsWhereTarget(
-      callback: SimpleSelector => Boolean
+    callback: SimpleSelector => Boolean
   ): Iterable[Extension] = Nil
 
   override def addSelector(
-      selector: SelectorList,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    selector:     SelectorList,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Box[SelectorList] =
     throw new UnsupportedOperationException(
       "addSelector() can't be called for a const ExtensionStore."
     )
 
   override def addExtension(
-      extender: SelectorList,
-      target: SimpleSelector,
-      extend: ExtendRule,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    extender:     SelectorList,
+    target:       SimpleSelector,
+    extend:       ExtendRule,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Unit =
     throw new UnsupportedOperationException(
       "addExtension() can't be called for a const ExtensionStore."
@@ -135,27 +128,23 @@ object EmptyExtensionStore extends ExtensionStore {
 }
 
 /** Default mutable [ExtensionStore] implementation.
- *
- * Phase 7 ships only the public API surface; all selector-rewriting logic
- * is TODO: Phase 10.
- */
+  *
+  * Phase 7 ships only the public API surface; all selector-rewriting logic is TODO: Phase 10.
+  */
 final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
-  /** A map from all simple selectors in the stylesheet to the selector lists
-   * that contain them.
-   */
+  /** A map from all simple selectors in the stylesheet to the selector lists that contain them.
+    */
   private val selectors: mutable.Map[SimpleSelector, mutable.Set[ModifiableBox[SelectorList]]] =
     mutable.Map.empty
 
-  /** A map from all extended simple selectors to the sources of those
-   * extensions.
-   */
+  /** A map from all extended simple selectors to the sources of those extensions.
+    */
   private val extensions: mutable.Map[SimpleSelector, mutable.Map[SelectorList, Extension]] =
     mutable.Map.empty
 
-  /** A map from all simple selectors in extenders to the extensions that
-   * those extenders define.
-   */
+  /** A map from all simple selectors in extenders to the extensions that those extenders define.
+    */
   private val extensionsByExtenderMut: mutable.Map[SimpleSelector, mutable.ListBuffer[Extension]] =
     mutable.Map.empty
 
@@ -171,19 +160,18 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extensionsByExtenderMut.view.mapValues(_.toList).toMap
 
   override def extensionsWhereTarget(
-      callback: SimpleSelector => Boolean
-  ): Iterable[Extension] = {
+    callback: SimpleSelector => Boolean
+  ): Iterable[Extension] =
     // TODO: Phase 10 — flatten MergedExtensions via unmerge()
     for {
       (target, sources) <- extensions
       if callback(target)
       extension <- sources.values
     } yield extension
-  }
 
   override def addSelector(
-      selector: SelectorList,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    selector:     SelectorList,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Box[SelectorList] = {
     // TODO: Phase 10 — run the selector through existing extensions
     //   (currently stored verbatim; selector unification deferred to
@@ -195,10 +183,10 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   }
 
   override def addExtension(
-      extender: SelectorList,
-      target: SimpleSelector,
-      extend: ExtendRule,
-      mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
+    extender:     SelectorList,
+    target:       SimpleSelector,
+    extend:       ExtendRule,
+    mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Unit = {
     // TODO: Phase 10 — apply the new extension to any already-registered
     //   selectors and re-index the extension graph.
@@ -217,12 +205,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     (newStore, Map.empty)
   }
 
-  /** Registers every simple selector in [list] against the given modifiable
-   * box so that later extensions can rewrite it.
-   */
+  /** Registers every simple selector in [list] against the given modifiable box so that later extensions can rewrite it.
+    */
   private def registerSelector(
-      list: SelectorList,
-      box: ModifiableBox[SelectorList]
+    list: SelectorList,
+    box:  ModifiableBox[SelectorList]
   ): Unit = {
     // TODO: Phase 10 — recursively walk compound/complex selectors and index
     //   each simple selector. For now, just store the top-level list so that

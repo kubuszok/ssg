@@ -16,25 +16,21 @@ package util
 
 import scala.collection.mutable
 
-/**
- * A mostly-unmodifiable view of a map that only allows certain keys.
- * Unmodifiable except for remove(), used for @use with configuration.
- */
+/** A mostly-unmodifiable view of a map that only allows certain keys. Unmodifiable except for remove(), used for @use with configuration.
+  */
 final class LimitedMapView[K, V] private (
-  private val map: mutable.Map[K, V],
+  private val map:         mutable.Map[K, V],
   private val allowedKeys: mutable.Set[K]
 ) extends scala.collection.immutable.AbstractMap[K, V] {
 
-  override def get(key: K): Option[V] = {
+  override def get(key: K): Option[V] =
     if (allowedKeys.contains(key)) map.get(key)
     else None
-  }
 
-  override def iterator: Iterator[(K, V)] = {
+  override def iterator: Iterator[(K, V)] =
     allowedKeys.iterator.flatMap { k =>
       map.get(k).map(v => (k, v))
     }
-  }
 
   override def removed(key: K): Map[K, V] =
     iterator.toMap.removed(key)
@@ -45,14 +41,13 @@ final class LimitedMapView[K, V] private (
   override def size: Int = allowedKeys.size
 
   /** Removes key from the underlying map if it's in the allowed set. */
-  def remove(key: K): Option[V] = {
+  def remove(key: K): Option[V] =
     if (allowedKeys.contains(key)) {
       allowedKeys -= key
       map.remove(key)
     } else {
       None
     }
-  }
 }
 
 object LimitedMapView {

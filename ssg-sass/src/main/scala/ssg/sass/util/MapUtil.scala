@@ -22,7 +22,7 @@ object MapUtil {
   extension [K, V](map: mutable.Map[K, V]) {
 
     /** If map doesn't contain key, sets it to value and returns it. Otherwise, merges with existing. */
-    def putOrMerge(key: K, value: V, merge: (V, V) => V): V = {
+    def putOrMerge(key: K, value: V, merge: (V, V) => V): V =
       map.get(key) match {
         case Some(existing) =>
           val merged = merge(existing, value)
@@ -32,13 +32,10 @@ object MapUtil {
           map(key) = value
           value
       }
-    }
   }
 
   /** Sets all keys in map to value. */
-  def setAll[K, V](map: mutable.Map[K, V], keys: Iterable[K], value: V): Unit = {
-    for (key <- keys) {
+  def setAll[K, V](map: mutable.Map[K, V], keys: Iterable[K], value: V): Unit =
+    for (key <- keys)
       map(key) = value
-    }
-  }
 }

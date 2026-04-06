@@ -18,7 +18,7 @@ package sass
 package value
 package color
 
-import ssg.sass.{SassScriptException, Nullable}
+import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
 
 /** The method by which two colors are interpolated to find a color in the middle.
@@ -50,6 +50,7 @@ final case class InterpolationMethod(
 }
 
 object InterpolationMethod {
+
   /** Creates an InterpolationMethod, defaulting hue to Shorter for polar spaces. */
   def apply(space: ColorSpace, hue: Nullable[HueInterpolationMethod]): InterpolationMethod = {
     val resolvedHue: Nullable[HueInterpolationMethod] =
@@ -70,6 +71,7 @@ object InterpolationMethod {
 
 /** The method by which two hues are adjusted when interpolating between colors. */
 enum HueInterpolationMethod extends java.lang.Enum[HueInterpolationMethod] {
+
   /** Angles are adjusted so that theta2 - theta1 is in [-180, 180]. */
   case Shorter
 
@@ -84,15 +86,15 @@ enum HueInterpolationMethod extends java.lang.Enum[HueInterpolationMethod] {
 }
 
 object HueInterpolationMethod {
+
   /** Parses a HueInterpolationMethod from its CSS name. */
-  def fromName(name: String, argumentName: Option[String] = None): HueInterpolationMethod = {
+  def fromName(name: String, argumentName: Option[String] = None): HueInterpolationMethod =
     name.toLowerCase match {
-      case "shorter" => HueInterpolationMethod.Shorter
-      case "longer" => HueInterpolationMethod.Longer
+      case "shorter"    => HueInterpolationMethod.Shorter
+      case "longer"     => HueInterpolationMethod.Longer
       case "increasing" => HueInterpolationMethod.Increasing
       case "decreasing" => HueInterpolationMethod.Decreasing
-      case _ =>
+      case _            =>
         throw SassScriptException(s"Unknown hue interpolation method $name.", argumentName)
     }
-  }
 }

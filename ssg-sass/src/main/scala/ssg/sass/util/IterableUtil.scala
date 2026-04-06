@@ -26,7 +26,7 @@ object IterableUtil {
   extension [E](iterable: Iterable[E]) {
 
     /** Returns the first non-null result of callback for an element, or Nullable.Null. */
-    def search[T](callback: E => Nullable[T]): Nullable[T] = {
+    def search[T](callback: E => Nullable[T]): Nullable[T] =
       boundary {
         val iter = iterable.iterator
         while (iter.hasNext) {
@@ -35,7 +35,6 @@ object IterableUtil {
         }
         Nullable.Null
       }
-    }
 
     /** Returns all elements except the last. Throws if empty. */
     def exceptLast: Iterable[E] = {

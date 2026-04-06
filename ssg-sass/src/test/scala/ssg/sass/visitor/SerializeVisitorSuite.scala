@@ -6,17 +6,9 @@ package ssg
 package sass
 package visitor
 
-import ssg.sass.ast.css.{
-  CssValue,
-  ModifiableCssAtRule,
-  ModifiableCssComment,
-  ModifiableCssDeclaration,
-  ModifiableCssNode,
-  ModifiableCssStyleRule,
-  ModifiableCssStylesheet
-}
-import ssg.sass.util.{FileSpan, ModifiableBox}
-import ssg.sass.value.{SassString, Value}
+import ssg.sass.ast.css.{ CssValue, ModifiableCssAtRule, ModifiableCssComment, ModifiableCssDeclaration, ModifiableCssNode, ModifiableCssStyleRule, ModifiableCssStylesheet }
+import ssg.sass.util.{ FileSpan, ModifiableBox }
+import ssg.sass.value.{ SassString, Value }
 import ssg.sass.Nullable
 
 final class SerializeVisitorSuite extends munit.FunSuite {
@@ -53,15 +45,15 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   // --- Tests ---
 
   test("serialize empty stylesheet") {
-    val s = stylesheet(Nil)
+    val s      = stylesheet(Nil)
     val result = SerializeVisitor.serialize(s)
     assertEquals(result.css, "")
   }
 
   test("serialize single declaration in style rule") {
-    val decl = declaration("color", "red")
-    val rule = styleRule("a", List(decl))
-    val s = stylesheet(List(rule))
+    val decl   = declaration("color", "red")
+    val rule   = styleRule("a", List(decl))
+    val s      = stylesheet(List(rule))
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("a"))
     assert(result.css.contains("color: red;"))
@@ -73,8 +65,8 @@ final class SerializeVisitorSuite extends munit.FunSuite {
       declaration("font-size", "14px"),
       declaration("margin", "10px")
     )
-    val rule = styleRule(".button", decls)
-    val s = stylesheet(List(rule))
+    val rule   = styleRule(".button", decls)
+    val s      = stylesheet(List(rule))
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("color: red;"))
     assert(result.css.contains("font-size: 14px;"))
@@ -82,49 +74,49 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   }
 
   test("serialize multiple style rules") {
-    val rule1 = styleRule("a", List(declaration("color", "red")))
-    val rule2 = styleRule("b", List(declaration("color", "blue")))
-    val s = stylesheet(List(rule1, rule2))
+    val rule1  = styleRule("a", List(declaration("color", "red")))
+    val rule2  = styleRule("b", List(declaration("color", "blue")))
+    val s      = stylesheet(List(rule1, rule2))
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("a {"))
     assert(result.css.contains("b {"))
   }
 
   test("serialize expanded style has indentation and newlines") {
-    val decl = declaration("color", "red")
-    val rule = styleRule("a", List(decl))
-    val s = stylesheet(List(rule))
+    val decl   = declaration("color", "red")
+    val rule   = styleRule("a", List(decl))
+    val s      = stylesheet(List(rule))
     val result = new SerializeVisitor(style = OutputStyle.Expanded).serialize(s)
     assert(result.css.contains('\n'))
     assert(result.css.contains("  color")) // indented
   }
 
   test("serialize compressed style has no whitespace") {
-    val decl = declaration("color", "red")
-    val rule = styleRule("a", List(decl))
-    val s = stylesheet(List(rule))
+    val decl   = declaration("color", "red")
+    val rule   = styleRule("a", List(decl))
+    val s      = stylesheet(List(rule))
     val result = new SerializeVisitor(style = OutputStyle.Compressed).serialize(s)
     assertEquals(result.css, "a{color:red;}")
   }
 
   test("serialize preserves /* comments */") {
     val comment = new ModifiableCssComment("/* hello */", span)
-    val s = stylesheet(List(comment))
-    val result = SerializeVisitor.serialize(s)
+    val s       = stylesheet(List(comment))
+    val result  = SerializeVisitor.serialize(s)
     assert(result.css.contains("/* hello */"))
   }
 
   test("serialize skips non-preserved comments in compressed mode") {
     val comment = new ModifiableCssComment("/* hello */", span)
-    val s = stylesheet(List(comment))
-    val result = SerializeVisitor.serializeCompressed(s)
+    val s       = stylesheet(List(comment))
+    val result  = SerializeVisitor.serializeCompressed(s)
     assert(!result.css.contains("hello"))
   }
 
   test("serialize preserves /*! comments in compressed mode") {
     val comment = new ModifiableCssComment("/*! keep */", span)
-    val s = stylesheet(List(comment))
-    val result = SerializeVisitor.serializeCompressed(s)
+    val s       = stylesheet(List(comment))
+    val result  = SerializeVisitor.serializeCompressed(s)
     assert(result.css.contains("keep"))
   }
 
@@ -135,20 +127,20 @@ final class SerializeVisitorSuite extends munit.FunSuite {
       childless = true,
       value = Nullable(str("\"UTF-8\""))
     )
-    val s = stylesheet(List(atRule))
+    val s      = stylesheet(List(atRule))
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("@charset \"UTF-8\";"))
   }
 
   test("serialize at-rule with block") {
-    val inner = styleRule("from", List(declaration("color", "red")))
+    val inner  = styleRule("from", List(declaration("color", "red")))
     val atRule = new ModifiableCssAtRule(
       str("keyframes"),
       span,
       value = Nullable(str("fade"))
     )
     atRule.addChild(inner)
-    val s = stylesheet(List(atRule))
+    val s      = stylesheet(List(atRule))
     val result = SerializeVisitor.serialize(s)
     assert(result.css.contains("@keyframes fade"))
   }

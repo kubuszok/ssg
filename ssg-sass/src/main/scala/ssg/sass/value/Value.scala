@@ -15,7 +15,7 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{SassScriptException, Nullable}
+import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
 import ssg.sass.visitor.ValueVisitor
 
@@ -109,16 +109,15 @@ abstract class Value {
 
   /** Creates a new SassList with the same separator and brackets but different contents. */
   def withListContents(
-    contents: Iterable[Value],
+    contents:  Iterable[Value],
     separator: Nullable[ListSeparator] = Nullable.Null,
-    brackets: Nullable[Boolean] = Nullable.Null
-  ): SassList = {
+    brackets:  Nullable[Boolean] = Nullable.Null
+  ): SassList =
     SassList(
       contents.toList,
       separator.getOrElse(this.separator),
       brackets = brackets.getOrElse(this.hasBrackets)
     )
-  }
 
   /** SassScript = operator (not ==). Returns unquoted string "left=right". */
   def singleEquals(other: Value): Value =
@@ -172,8 +171,7 @@ abstract class Value {
   def withoutSlash: Value = this
 
   /** Returns the CSS string representation. */
-  def toCssString(quote: Boolean = true): String = {
+  def toCssString(quote: Boolean = true): String =
     // Default: use the serializer. For now, use toString as fallback.
     toString
-  }
 }

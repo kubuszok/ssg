@@ -6,17 +6,7 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.ast.sass.{
-  AtRule,
-  BooleanExpression,
-  Declaration,
-  NullExpression,
-  NumberExpression,
-  StringExpression,
-  StyleRule,
-  VariableDeclaration,
-  VariableExpression
-}
+import ssg.sass.ast.sass.{ AtRule, BooleanExpression, Declaration, NullExpression, NumberExpression, StringExpression, StyleRule, VariableDeclaration, VariableExpression }
 
 final class StylesheetParserSuite extends munit.FunSuite {
 
@@ -35,37 +25,37 @@ final class StylesheetParserSuite extends munit.FunSuite {
 
   test("parses variable with unit") {
     val sheet = parse("$width: 100px;")
-    val v = sheet.children.get.head.asInstanceOf[VariableDeclaration]
-    val num = v.expression.asInstanceOf[NumberExpression]
+    val v     = sheet.children.get.head.asInstanceOf[VariableDeclaration]
+    val num   = v.expression.asInstanceOf[NumberExpression]
     assertEquals(num.value, 100.0)
     assertEquals(num.unit.get, "px")
   }
 
   test("parses variable with string value") {
     val sheet = parse("""$name: "hello";""")
-    val v = sheet.children.get.head.asInstanceOf[VariableDeclaration]
-    val str = v.expression.asInstanceOf[StringExpression]
+    val v     = sheet.children.get.head.asInstanceOf[VariableDeclaration]
+    val str   = v.expression.asInstanceOf[StringExpression]
     assert(str.hasQuotes)
     assertEquals(str.text.asPlain.get, "hello")
   }
 
   test("parses variable referencing another variable") {
     val sheet = parse("$a: $b;")
-    val v = sheet.children.get.head.asInstanceOf[VariableDeclaration]
-    val ref = v.expression.asInstanceOf[VariableExpression]
+    val v     = sheet.children.get.head.asInstanceOf[VariableDeclaration]
+    val ref   = v.expression.asInstanceOf[VariableExpression]
     assertEquals(ref.name, "b")
   }
 
   test("parses variable with boolean value") {
     val sheet = parse("$flag: true;")
-    val v = sheet.children.get.head.asInstanceOf[VariableDeclaration]
-    val b = v.expression.asInstanceOf[BooleanExpression]
+    val v     = sheet.children.get.head.asInstanceOf[VariableDeclaration]
+    val b     = v.expression.asInstanceOf[BooleanExpression]
     assert(b.value)
   }
 
   test("parses variable with !default flag") {
     val sheet = parse("$color: red !default;")
-    val v = sheet.children.get.head.asInstanceOf[VariableDeclaration]
+    val v     = sheet.children.get.head.asInstanceOf[VariableDeclaration]
     assert(v.isGuarded)
   }
 
@@ -73,7 +63,7 @@ final class StylesheetParserSuite extends munit.FunSuite {
 
   test("parses a simple style rule with declarations") {
     val sheet = parse("a { color: red; }")
-    val rule = sheet.children.get.head.asInstanceOf[StyleRule]
+    val rule  = sheet.children.get.head.asInstanceOf[StyleRule]
     assertEquals(rule.selector.get.asPlain.get, "a")
     assertEquals(rule.children.get.size, 1)
     val decl = rule.children.get.head.asInstanceOf[Declaration]
@@ -102,7 +92,7 @@ final class StylesheetParserSuite extends munit.FunSuite {
 
   test("parses rule with no declarations") {
     val sheet = parse("a { }")
-    val rule = sheet.children.get.head.asInstanceOf[StyleRule]
+    val rule  = sheet.children.get.head.asInstanceOf[StyleRule]
     assertEquals(rule.children.get.size, 0)
   }
 
@@ -122,7 +112,8 @@ final class StylesheetParserSuite extends munit.FunSuite {
   // --- Mixed ---
 
   test("parses complex multi-rule stylesheet") {
-    val sheet = parse("""
+    val sheet = parse(
+      """
       $primary: #3498db;
       $padding: 10px;
 
@@ -135,13 +126,14 @@ final class StylesheetParserSuite extends munit.FunSuite {
         background: white;
         border: 1px solid gray;
       }
-    """)
+    """
+    )
     // 2 variables + 2 style rules = 4 top-level statements
     assertEquals(sheet.children.get.size, 4)
   }
 
   test("parses generic @-rules") {
-    val sheet = parse("""@charset "UTF-8";""")
+    val sheet  = parse("""@charset "UTF-8";""")
     val atRule = sheet.children.get.head.asInstanceOf[AtRule]
     assertEquals(atRule.name.asPlain.get, "charset")
   }
@@ -150,14 +142,14 @@ final class StylesheetParserSuite extends munit.FunSuite {
 
   test("parseExpression handles number literals") {
     val (expr, _) = new ScssParser("42px").parseExpression()
-    val num = expr.asInstanceOf[NumberExpression]
+    val num       = expr.asInstanceOf[NumberExpression]
     assertEquals(num.value, 42.0)
     assertEquals(num.unit.get, "px")
   }
 
   test("parseExpression handles strings") {
     val (expr, _) = new ScssParser("\"hello\"").parseExpression()
-    val str = expr.asInstanceOf[StringExpression]
+    val str       = expr.asInstanceOf[StringExpression]
     assert(str.hasQuotes)
   }
 

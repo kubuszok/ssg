@@ -17,7 +17,7 @@ package ast
 package css
 
 import ssg.sass.Nullable
-import ssg.sass.util.{FileSpan, SourceFile}
+import ssg.sass.util.{ FileSpan, SourceFile }
 import ssg.sass.visitor.CssVisitor
 
 /** A plain CSS stylesheet.
@@ -39,10 +39,11 @@ object CssStylesheet {
   }
 
   /** Concrete unmodifiable implementation of CssStylesheet. */
-  private final class UnmodifiableCssStylesheet(
+  final private class UnmodifiableCssStylesheet(
     childNodes: Iterable[CssNode],
-    val span: FileSpan
-  ) extends CssNode with CssStylesheet {
+    val span:   FileSpan
+  ) extends CssNode
+      with CssStylesheet {
 
     def parent: Nullable[CssParentNode] = Nullable.empty
 
@@ -58,8 +59,7 @@ object CssStylesheet {
 }
 
 /** A modifiable version of CssStylesheet for use in the evaluation step. */
-final class ModifiableCssStylesheet(val span: FileSpan)
-    extends ModifiableCssParentNode with CssStylesheet {
+final class ModifiableCssStylesheet(val span: FileSpan) extends ModifiableCssParentNode with CssStylesheet {
 
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssStylesheet(this)

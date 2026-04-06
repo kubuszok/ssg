@@ -19,9 +19,7 @@ import ssg.sass.ast.sass.*
 
 /** A visitor that recursively traverses each statement in a Sass AST.
   *
-  * In addition to the methods from [[StatementVisitor]], this has more general
-  * methods that can be overridden to add behavior for a wide variety of AST
-  * nodes:
+  * In addition to the methods from [[StatementVisitor]], this has more general methods that can be overridden to add behavior for a wide variety of AST nodes:
   *
   *   - [[visitCallableDeclaration]]
   *   - [[visitChildren]]
@@ -60,15 +58,12 @@ trait RecursiveStatementVisitor extends StatementVisitor[Unit] {
     visitCallableDeclaration(node)
 
   def visitIfRule(node: IfRule): Unit = {
-    for (clause <- node.clauses) {
-      for (child <- clause.children) {
+    for (clause <- node.clauses)
+      for (child <- clause.children)
         child.accept(this)
-      }
-    }
     node.lastClause.foreach { lastClause =>
-      for (child <- lastClause.children) {
+      for (child <- lastClause.children)
         child.accept(this)
-      }
     }
   }
 
@@ -109,20 +104,16 @@ trait RecursiveStatementVisitor extends StatementVisitor[Unit] {
 
   /** Visits each of [[node]]'s children.
     *
-    * The default implementations of [[visitFunctionRule]] and
-    * [[visitMixinRule]] call this.
+    * The default implementations of [[visitFunctionRule]] and [[visitMixinRule]] call this.
     */
   protected def visitCallableDeclaration(node: CallableDeclaration): Unit =
     visitChildren(node.childrenList)
 
   /** Visits each child in [[children]].
     *
-    * The default implementation of the visit methods for all `ParentStatement`s
-    * call this.
+    * The default implementation of the visit methods for all `ParentStatement`s call this.
     */
-  protected def visitChildren(children: List[Statement]): Unit = {
-    for (child <- children) {
+  protected def visitChildren(children: List[Statement]): Unit =
+    for (child <- children)
       child.accept(this)
-    }
-  }
 }

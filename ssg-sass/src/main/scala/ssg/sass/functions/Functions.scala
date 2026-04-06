@@ -14,7 +14,7 @@ package ssg
 package sass
 package functions
 
-import ssg.sass.{BuiltInCallable, Callable}
+import ssg.sass.{ BuiltInCallable, Callable }
 
 /** Aggregator for all built-in Sass functions. */
 object Functions {
@@ -30,11 +30,10 @@ object Functions {
       StringFunctions.global
 
   /** Looks up a global built-in by name. */
-  def lookupGlobal(name: String): Option[BuiltInCallable] = {
+  def lookupGlobal(name: String): Option[BuiltInCallable] =
     global.collectFirst {
       case b: BuiltInCallable if b.name == name => b
     }
-  }
 
   /** Per-module callables, keyed by `sass:` module name. */
   def modules: Map[String, List[Callable]] = Map(

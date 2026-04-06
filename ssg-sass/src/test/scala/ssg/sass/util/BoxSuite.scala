@@ -16,7 +16,7 @@ final class BoxSuite extends munit.FunSuite {
   }
 
   test("Box reflects mutations in underlying ModifiableBox") {
-    val mbox = ModifiableBox("hello")
+    val mbox    = ModifiableBox("hello")
     val sealed1 = mbox.seal()
     assertEquals(sealed1.value, "hello")
     mbox.value = "world"
@@ -28,7 +28,7 @@ final class BoxSuite extends munit.FunSuite {
     val mbox2 = ModifiableBox(1)
     val box1a = mbox1.seal()
     val box1b = mbox1.seal()
-    val box2 = mbox2.seal()
+    val box2  = mbox2.seal()
 
     assertEquals(box1a, box1b)
     assertNotEquals(box1a, box2)

@@ -21,15 +21,13 @@ import ssg.sass.util.FileSpan
 
 /** A node in the abstract syntax tree for a selector.
   *
-  * This selector tree is mostly plain CSS, but also may contain a
-  * [[ParentSelector]] or a [[PlaceholderSelector]].
+  * This selector tree is mostly plain CSS, but also may contain a [[ParentSelector]] or a [[PlaceholderSelector]].
   *
   * Selectors have structural equality semantics.
   */
 abstract class Selector(val span: FileSpan) extends AstNode {
 
-  /** Whether this selector, and complex selectors containing it, should not be
-    * emitted.
+  /** Whether this selector, and complex selectors containing it, should not be emitted.
     */
   def isInvisible: Boolean =
     accept(Selector.IsInvisibleVisitor(includeBogus = true))
@@ -38,17 +36,15 @@ abstract class Selector(val span: FileSpan) extends AstNode {
   def containsParentSelector: Boolean =
     accept(Selector.ContainsParentSelectorVisitor)
 
-  /** Whether this selector would be invisible even if it didn't have bogus
-    * combinators.
+  /** Whether this selector would be invisible even if it didn't have bogus combinators.
     */
   def isInvisibleOtherThanBogusCombinators: Boolean =
     accept(Selector.IsInvisibleVisitor(includeBogus = false))
 
   /** Whether this selector is not valid CSS.
     *
-    * This includes both selectors that are useful exclusively for build-time
-    * nesting (`> .foo`) and selectors with invalid combinators that are still
-    * supported for backwards-compatibility reasons (`.foo + ~ .bar`).
+    * This includes both selectors that are useful exclusively for build-time nesting (`> .foo`) and selectors with invalid combinators that are still supported for backwards-compatibility reasons
+    * (`.foo + ~ .bar`).
     */
   def isBogus: Boolean =
     accept(Selector.IsBogusVisitor(includeLeadingCombinator = true))
@@ -57,8 +53,7 @@ abstract class Selector(val span: FileSpan) extends AstNode {
   def isBogusOtherThanLeadingCombinator: Boolean =
     accept(Selector.IsBogusVisitor(includeLeadingCombinator = false))
 
-  /** Whether this is a useless selector (that is, it's bogus _and_ it can't be
-    * transformed into valid CSS by `@extend` or nesting).
+  /** Whether this is a useless selector (that is, it's bogus _and_ it can't be transformed into valid CSS by `@extend` or nesting).
     */
   def isUseless: Boolean =
     accept(Selector.IsUselessVisitor)
@@ -72,7 +67,7 @@ abstract class Selector(val span: FileSpan) extends AstNode {
 object Selector {
 
   /** Visitor that checks whether a selector is invisible. */
-  private final class IsInvisibleVisitor(val includeBogus: Boolean) extends AnySelectorVisitor {
+  final private class IsInvisibleVisitor(val includeBogus: Boolean) extends AnySelectorVisitor {
 
     override def visitSelectorList(list: SelectorList): Boolean =
       list.components.forall(visitComplexSelector)
@@ -100,23 +95,22 @@ object Selector {
   }
 
   /** Visitor that checks whether a selector is bogus. */
-  private final class IsBogusVisitor(val includeLeadingCombinator: Boolean) extends AnySelectorVisitor {
+  final private class IsBogusVisitor(val includeLeadingCombinator: Boolean) extends AnySelectorVisitor {
 
-    override def visitComplexSelector(complex: ComplexSelector): Boolean = {
+    override def visitComplexSelector(complex: ComplexSelector): Boolean =
       if (complex.components.isEmpty) {
         complex.leadingCombinators.nonEmpty
       } else {
         complex.leadingCombinators.length >
           (if (includeLeadingCombinator) 0 else 1) ||
-        complex.components.last.combinators.nonEmpty ||
-        complex.components.exists { component =>
-          component.combinators.length > 1 ||
-          component.selector.accept(this)
-        }
+          complex.components.last.combinators.nonEmpty ||
+          complex.components.exists { component =>
+            component.combinators.length > 1 ||
+            component.selector.accept(this)
+          }
       }
-    }
 
-    override def visitPseudoSelector(pseudo: PseudoSelector): Boolean = {
+    override def visitPseudoSelector(pseudo: PseudoSelector): Boolean =
       if (pseudo.selector.isEmpty) false
       else {
         val sel = pseudo.selector.get
@@ -124,7 +118,6 @@ object Selector {
         if (pseudo.name == "has") sel.isBogusOtherThanLeadingCombinator
         else sel.isBogus
       }
-    }
   }
 
   /** Visitor that checks whether a selector is useless. */
@@ -132,9 +125,9 @@ object Selector {
 
     override def visitComplexSelector(complex: ComplexSelector): Boolean =
       complex.leadingCombinators.length > 1 ||
-      complex.components.exists { component =>
-        component.combinators.length > 1 || component.selector.accept(this)
-      }
+        complex.components.exists { component =>
+          component.combinators.length > 1 || component.selector.accept(this)
+        }
 
     override def visitPseudoSelector(pseudo: PseudoSelector): Boolean = pseudo.isBogus
   }
@@ -144,8 +137,7 @@ object Selector {
     override def visitParentSelector(parent: ParentSelector): Boolean = true
   }
 
-  /** Simple toString visitor that produces debug output.
-    * This is a placeholder; the real serializer lives in the visitor package.
+  /** Simple toString visitor that produces debug output. This is a placeholder; the real serializer lives in the visitor package.
     */
   private object ToStringVisitor extends SelectorVisitor[String] {
     def visitAttributeSelector(attribute: AttributeSelector): String = {
@@ -172,7 +164,7 @@ object Selector {
         sb.append(" ")
       }
       val parts = complex.components.map { component =>
-        val sel = component.selector.accept(this)
+        val sel   = component.selector.accept(this)
         val combs = component.combinators.map(c => s" ${c.value.text}").mkString
         s"$sel$combs"
       }
@@ -216,23 +208,19 @@ object Selector {
   }
 }
 
-/** A combinator that defines the relationship between selectors in a
-  * [[ComplexSelector]].
+/** A combinator that defines the relationship between selectors in a [[ComplexSelector]].
   */
 enum Combinator(val text: String) extends java.lang.Enum[Combinator] {
 
-  /** Matches the right-hand selector if it's immediately adjacent to the
-    * left-hand selector in the DOM tree.
+  /** Matches the right-hand selector if it's immediately adjacent to the left-hand selector in the DOM tree.
     */
   case NextSibling extends Combinator("+")
 
-  /** Matches the right-hand selector if it's a direct child of the left-hand
-    * selector in the DOM tree.
+  /** Matches the right-hand selector if it's a direct child of the left-hand selector in the DOM tree.
     */
   case Child extends Combinator(">")
 
-  /** Matches the right-hand selector if it comes after the left-hand selector
-    * in the DOM tree.
+  /** Matches the right-hand selector if it comes after the left-hand selector in the DOM tree.
     */
   case FollowingSibling extends Combinator("~")
 
@@ -241,33 +229,29 @@ enum Combinator(val text: String) extends java.lang.Enum[Combinator] {
 
 /** Forward-declaration trait for selector visitors.
   *
-  * The full visitor hierarchy (AnySelectorVisitor, SelectorSearchVisitor, etc.)
-  * will be ported separately; this trait defines the interface needed by the
-  * AST nodes themselves.
+  * The full visitor hierarchy (AnySelectorVisitor, SelectorSearchVisitor, etc.) will be ported separately; this trait defines the interface needed by the AST nodes themselves.
   */
 trait SelectorVisitor[T] {
-  def visitAttributeSelector(attribute: AttributeSelector): T
-  def visitClassSelector(klass: ClassSelector): T
-  def visitComplexSelector(complex: ComplexSelector): T
-  def visitCompoundSelector(compound: CompoundSelector): T
-  def visitIDSelector(id: IDSelector): T
-  def visitParentSelector(parent: ParentSelector): T
+  def visitAttributeSelector(attribute:     AttributeSelector):   T
+  def visitClassSelector(klass:             ClassSelector):       T
+  def visitComplexSelector(complex:         ComplexSelector):     T
+  def visitCompoundSelector(compound:       CompoundSelector):    T
+  def visitIDSelector(id:                   IDSelector):          T
+  def visitParentSelector(parent:           ParentSelector):      T
   def visitPlaceholderSelector(placeholder: PlaceholderSelector): T
-  def visitPseudoSelector(pseudo: PseudoSelector): T
-  def visitSelectorList(list: SelectorList): T
-  def visitTypeSelector(tpe: TypeSelector): T
-  def visitUniversalSelector(universal: UniversalSelector): T
+  def visitPseudoSelector(pseudo:           PseudoSelector):      T
+  def visitSelectorList(list:               SelectorList):        T
+  def visitTypeSelector(tpe:                TypeSelector):        T
+  def visitUniversalSelector(universal:     UniversalSelector):   T
 }
 
 /** A mixin-style base for selector visitors that returns false by default.
   *
-  * Concrete visitors override specific methods to return true for matching
-  * selectors. The default implementations traverse into compound/complex
-  * selectors so that any nested match is found.
+  * Concrete visitors override specific methods to return true for matching selectors. The default implementations traverse into compound/complex selectors so that any nested match is found.
   */
 trait AnySelectorVisitor extends SelectorVisitor[Boolean] {
   def visitAttributeSelector(attribute: AttributeSelector): Boolean = false
-  def visitClassSelector(klass: ClassSelector): Boolean = false
+  def visitClassSelector(klass:         ClassSelector):     Boolean = false
 
   def visitComplexSelector(complex: ComplexSelector): Boolean =
     complex.components.exists(_.selector.accept(this))
@@ -275,8 +259,8 @@ trait AnySelectorVisitor extends SelectorVisitor[Boolean] {
   def visitCompoundSelector(compound: CompoundSelector): Boolean =
     compound.components.exists(_.accept(this))
 
-  def visitIDSelector(id: IDSelector): Boolean = false
-  def visitParentSelector(parent: ParentSelector): Boolean = false
+  def visitIDSelector(id:                   IDSelector):          Boolean = false
+  def visitParentSelector(parent:           ParentSelector):      Boolean = false
   def visitPlaceholderSelector(placeholder: PlaceholderSelector): Boolean = false
 
   def visitPseudoSelector(pseudo: PseudoSelector): Boolean =
@@ -285,6 +269,6 @@ trait AnySelectorVisitor extends SelectorVisitor[Boolean] {
   def visitSelectorList(list: SelectorList): Boolean =
     list.components.exists(_.accept(this))
 
-  def visitTypeSelector(tpe: TypeSelector): Boolean = false
+  def visitTypeSelector(tpe:            TypeSelector):      Boolean = false
   def visitUniversalSelector(universal: UniversalSelector): Boolean = false
 }

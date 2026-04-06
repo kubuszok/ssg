@@ -15,6 +15,7 @@ package sass
 
 /** An enum of syntaxes that Sass can parse. */
 enum Syntax(val displayName: String) extends java.lang.Enum[Syntax] {
+
   /** The CSS-superset SCSS syntax. */
   case Scss extends Syntax("SCSS")
 
@@ -28,10 +29,10 @@ enum Syntax(val displayName: String) extends java.lang.Enum[Syntax] {
 }
 
 object Syntax {
+
   /** Returns the default syntax for a file loaded from the given path. */
-  def forPath(path: String): Syntax = {
+  def forPath(path: String): Syntax =
     if (path.endsWith(".sass")) Syntax.Sass
     else if (path.endsWith(".css")) Syntax.Css
     else Syntax.Scss
-  }
 }

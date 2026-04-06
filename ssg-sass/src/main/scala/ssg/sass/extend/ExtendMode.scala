@@ -16,24 +16,23 @@ package extend
 
 /** Different modes in which extension can run. */
 enum ExtendMode(val modeName: String) extends java.lang.Enum[ExtendMode] {
+
   /** Normal mode, used with the `@extend` rule.
-   *
-   * This preserves existing selectors and extends each target individually.
-   */
+    *
+    * This preserves existing selectors and extends each target individually.
+    */
   case Normal extends ExtendMode("normal")
 
   /** Replace mode, used by the `selector-replace()` function.
-   *
-   * This replaces existing selectors and requires every target to match to
-   * extend a given compound selector.
-   */
+    *
+    * This replaces existing selectors and requires every target to match to extend a given compound selector.
+    */
   case Replace extends ExtendMode("replace")
 
   /** All-targets mode, used by the `selector-extend()` function.
-   *
-   * This preserves existing selectors but requires every target to match to
-   * extend a given compound selector.
-   */
+    *
+    * This preserves existing selectors but requires every target to match to extend a given compound selector.
+    */
   case AllTargets extends ExtendMode("allTargets")
 
   override def toString: String = name

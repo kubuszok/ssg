@@ -25,11 +25,10 @@ final class SassMap(val contents: ListMap[Value, Value]) extends Value {
   override def separator: ListSeparator =
     if (contents.isEmpty) ListSeparator.Undecided else ListSeparator.Comma
 
-  override def asList: List[Value] = {
+  override def asList: List[Value] =
     contents.map { case (k, v) =>
       SassList(List(k, v), ListSeparator.Space)
     }.toList
-  }
 
   override def lengthAsList: Int = contents.size
 
@@ -39,13 +38,12 @@ final class SassMap(val contents: ListMap[Value, Value]) extends Value {
 
   override def tryMap(): Option[SassMap] = Some(this)
 
-  override def hashCode(): Int = {
+  override def hashCode(): Int =
     if (contents.isEmpty) SassList.emptySpace.hashCode()
     else contents.hashCode()
-  }
 
   override def equals(other: Any): Boolean = other match {
-    case that: SassMap => this.contents == that.contents
+    case that: SassMap  => this.contents == that.contents
     case that: SassList => contents.isEmpty && that.asList.isEmpty
     case _ => false
   }

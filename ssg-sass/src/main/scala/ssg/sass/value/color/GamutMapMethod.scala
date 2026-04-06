@@ -19,23 +19,21 @@ package sass
 package value
 package color
 
-import ssg.sass.{SassScriptException, Nullable}
+import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
 import ssg.sass.util.NumberUtil.*
 
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Different algorithms that can be used to map an out-of-gamut Sass color
-  * into the gamut for its color space.
+/** Different algorithms that can be used to map an out-of-gamut Sass color into the gamut for its color space.
   */
 abstract class GamutMapMethod(
   /** The Sass name of the gamut-mapping algorithm. */
   val name: String
 ) {
 
-  /** Maps color to its gamut using this method's algorithm.
-    * Callers should use SassColor.toGamut instead.
+  /** Maps color to its gamut using this method's algorithm. Callers should use SassColor.toGamut instead.
     */
   def map(color: SassColor): SassColor
 
@@ -43,6 +41,7 @@ abstract class GamutMapMethod(
 }
 
 object GamutMapMethod {
+
   /** Clamp each color channel to the minimum or maximum value. */
   val clip: GamutMapMethod = ClipGamutMap
 
@@ -50,14 +49,13 @@ object GamutMapMethod {
   val localMinde: GamutMapMethod = LocalMindeGamutMap
 
   /** Parses a GamutMapMethod from its Sass name. */
-  def fromName(name: String, argumentName: Option[String] = None): GamutMapMethod = {
+  def fromName(name: String, argumentName: Option[String] = None): GamutMapMethod =
     name match {
-      case "clip" => clip
+      case "clip"        => clip
       case "local-minde" => localMinde
-      case _ =>
+      case _             =>
         throw SassScriptException(s"Unknown gamut map method \"$name\".", argumentName)
     }
-  }
 }
 
 // ---- Clip ----
@@ -65,7 +63,7 @@ object GamutMapMethod {
 /** Gamut mapping by clipping individual channels. */
 private object ClipGamutMap extends GamutMapMethod("clip") {
 
-  override def map(color: SassColor): SassColor = {
+  override def map(color: SassColor): SassColor =
     SassColor.forSpaceInternal(
       color.space,
       _clampChannel(color.channel0OrNull, color.space.channels(0)),
@@ -73,10 +71,9 @@ private object ClipGamutMap extends GamutMapMethod("clip") {
       _clampChannel(color.channel2OrNull, color.space.channels(2)),
       color.alphaOrNull
     )
-  }
 
   /** Clamps the channel value within the bounds given by channel. */
-  private def _clampChannel(value: Nullable[Double], channel: ColorChannel): Nullable[Double] = {
+  private def _clampChannel(value: Nullable[Double], channel: ColorChannel): Nullable[Double] =
     if (value.isEmpty) Nullable.Null
     else {
       channel match {
@@ -84,7 +81,6 @@ private object ClipGamutMap extends GamutMapMethod("clip") {
         case _ => value
       }
     }
-  }
 }
 
 // ---- Local MINDE ----
@@ -103,13 +99,12 @@ private object LocalMindeGamutMap extends GamutMapMethod("local-minde") {
     val originOklch = color.toSpace(ColorSpace.oklch)
 
     val lightness = originOklch.channel0OrNull
-    val hue = originOklch.channel2OrNull
-    val alpha = originOklch.alphaOrNull
+    val hue       = originOklch.channel2OrNull
+    val alpha     = originOklch.alphaOrNull
 
     if (fuzzyGreaterThanOrEquals(lightness.getOrElse(0.0), 1)) {
       if (color.isLegacy) {
-        break(SassColor.rgb(Nullable(255.0), Nullable(255.0), Nullable(255.0), color.alphaOrNull)
-          .toSpace(color.space))
+        break(SassColor.rgb(Nullable(255.0), Nullable(255.0), Nullable(255.0), color.alphaOrNull).toSpace(color.space))
       } else {
         break(SassColor.forSpaceInternal(color.space, Nullable(1.0), Nullable(1.0), Nullable(1.0), color.alphaOrNull))
       }
@@ -123,8 +118,8 @@ private object LocalMindeGamutMap extends GamutMapMethod("local-minde") {
       break(clipped)
     }
 
-    var min = 0.0
-    var max = originOklch.channel1
+    var min        = 0.0
+    var max        = originOklch.channel1
     var minInGamut = true
     while (max - min > _epsilon) {
       val chroma = (min + max) / 2

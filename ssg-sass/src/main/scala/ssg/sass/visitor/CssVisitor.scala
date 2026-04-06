@@ -22,15 +22,15 @@ import ssg.sass.ast.css.*
   * This is a forward declaration. The full visitor will be refined in Phase 5.
   */
 trait CssVisitor[T] {
-  def visitCssAtRule(node: CssAtRule): T
-  def visitCssComment(node: CssComment): T
-  def visitCssDeclaration(node: CssDeclaration): T
-  def visitCssImport(node: CssImport): T
+  def visitCssAtRule(node:        CssAtRule):        T
+  def visitCssComment(node:       CssComment):       T
+  def visitCssDeclaration(node:   CssDeclaration):   T
+  def visitCssImport(node:        CssImport):        T
   def visitCssKeyframeBlock(node: CssKeyframeBlock): T
-  def visitCssMediaRule(node: CssMediaRule): T
-  def visitCssStyleRule(node: CssStyleRule): T
-  def visitCssStylesheet(node: CssStylesheet): T
-  def visitCssSupportsRule(node: CssSupportsRule): T
+  def visitCssMediaRule(node:     CssMediaRule):     T
+  def visitCssStyleRule(node:     CssStyleRule):     T
+  def visitCssStylesheet(node:    CssStylesheet):    T
+  def visitCssSupportsRule(node:  CssSupportsRule):  T
 }
 
 /** Visitor interface for modifiable CSS AST nodes used during evaluation. */

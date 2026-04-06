@@ -17,24 +17,12 @@ package ssg
 package sass
 package visitor
 
-import ssg.sass.ast.css.{
-  CssAtRule,
-  CssComment,
-  CssDeclaration,
-  CssImport,
-  CssKeyframeBlock,
-  CssMediaRule,
-  CssNode,
-  CssStyleRule,
-  CssStylesheet,
-  CssSupportsRule
-}
+import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 
-/** Output style for serialization: "expanded" (default, multi-line) or
-  * "compressed" (single-line, no whitespace).
+/** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
   */
 object OutputStyle {
-  val Expanded: String = "expanded"
+  val Expanded:   String = "expanded"
   val Compressed: String = "compressed"
 }
 
@@ -43,7 +31,7 @@ final case class SerializeResult(css: String, sourceMap: Option[String] = None)
 
 /** A visitor that converts a CSS AST into CSS text. */
 final class SerializeVisitor(
-  val style: String = OutputStyle.Expanded,
+  val style:   String = OutputStyle.Expanded,
   val inspect: Boolean = false
 ) extends CssVisitor[Unit] {
 
@@ -64,7 +52,7 @@ final class SerializeVisitor(
   // Formatting helpers
   // ---------------------------------------------------------------------------
 
-  private def writeIndent(): Unit = {
+  private def writeIndent(): Unit =
     if (!isCompressed) {
       var i = 0
       while (i < indentLevel) {
@@ -72,15 +60,12 @@ final class SerializeVisitor(
         i += 1
       }
     }
-  }
 
-  private def writeLine(): Unit = {
+  private def writeLine(): Unit =
     if (!isCompressed) buffer.append('\n')
-  }
 
-  private def writeSpace(): Unit = {
+  private def writeSpace(): Unit =
     if (!isCompressed) buffer.append(' ')
-  }
 
   private def writeChildren(children: List[CssNode]): Unit = {
     buffer.append('{')
