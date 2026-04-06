@@ -1374,9 +1374,9 @@ dart-sass	lib/src/callable/async_built_in.dart		ported	ssg-sass	2026-04-06	Phase
 dart-sass	lib/src/callable/built_in.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
 dart-sass	lib/src/callable/plain_css.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
 dart-sass	lib/src/callable/user_defined.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
-dart-sass	lib/src/color_names.dart		not_started	ssg-sass	2026-04-05	Depends on SassColor (Phase 3c complete) — can port now but deferred to when serializer needs it		2026-03-30
-dart-sass	lib/src/compile.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/compile_result.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/color_names.dart	ssg-sass/src/main/scala/ssg/sass/ColorNames.scala	ported	ssg-sass	2026-04-06	Full data port — 148 named colors		2026-03-30
+dart-sass	lib/src/compile.dart	ssg-sass/src/main/scala/ssg/sass/Compile.scala	ported	ssg-sass	2026-04-06			2026-03-30
+dart-sass	lib/src/compile_result.dart	ssg-sass/src/main/scala/ssg/sass/Compile.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/configuration.dart	ssg-sass/src/main/scala/ssg/sass/Configuration.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/configured_value.dart	ssg-sass/src/main/scala/ssg/sass/Configuration.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/deprecation.dart	ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	ported	ssg-sass	2026-04-05			2026-03-30
@@ -1412,14 +1412,14 @@ dart-sass	lib/src/extend/extension_store.dart		ported	ssg-sass	2026-04-06	Phase 
 dart-sass	lib/src/extend/functions.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
 dart-sass	lib/src/extend/merged_extension.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
 dart-sass	lib/src/extend/mode.dart		ported	ssg-sass	2026-04-06	Phase 7 skeletons		2026-03-30
-dart-sass	lib/src/functions.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/color.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/list.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/map.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/math.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/meta.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/selector.dart		not_started	ssg-sass	2026-03-30			2026-03-30
-dart-sass	lib/src/functions/string.dart		not_started	ssg-sass	2026-03-30			2026-03-30
+dart-sass	lib/src/functions.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/color.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/list.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/map.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/math.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/meta.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/selector.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
+dart-sass	lib/src/functions/string.dart		ported	ssg-sass	2026-04-06	Phase 9 skeletons		2026-03-30
 dart-sass	lib/src/import_cache.dart	ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/importer.dart	ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	ported	ssg-sass	2026-04-06			2026-03-30
 dart-sass	lib/src/importer/async.dart		ported	ssg-sass	2026-04-06	Phase 8 skeletons		2026-03-30
@@ -1583,7 +1583,7 @@ dart-sass	lib/src/visitor/any_selector.dart		ported	ssg-sass	2026-04-06	Phase 5:
 dart-sass	lib/src/visitor/ast_search.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/async_evaluate.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/clone_css.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
-dart-sass	lib/src/visitor/evaluate.dart		not_started	ssg-sass	2026-04-06	Phase 10 — Evaluator (deferred)		2026-03-30
+dart-sass	lib/src/visitor/evaluate.dart	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	ported	ssg-sass	2026-04-06	Phase 10 skeleton		2026-03-30
 dart-sass	lib/src/visitor/every_css.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/expression_to_calc.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/find_dependencies.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
@@ -1602,7 +1602,7 @@ dart-sass	lib/src/visitor/recursive_selector.dart		ported	ssg-sass	2026-04-06	Ph
 dart-sass	lib/src/visitor/recursive_statement.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/replace_expression.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/selector_search.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
-dart-sass	lib/src/visitor/serialize.dart		not_started	ssg-sass	2026-04-06	Phase 11 — Serializer (deferred)		2026-03-30
+dart-sass	lib/src/visitor/serialize.dart	ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	ported	ssg-sass	2026-04-06	Phase 11 skeleton		2026-03-30
 dart-sass	lib/src/visitor/source_interpolation.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	lib/src/visitor/statement_search.dart		ported	ssg-sass	2026-04-06	Phase 5: All visitors ported (utility visitors are skeletons; full impls in Phase 10/11)		2026-03-30
 dart-sass	pkg/sass_api/lib/sass_api.dart		skipped	ssg-sass	2026-04-05	Package tooling — not library code		2026-03-30
