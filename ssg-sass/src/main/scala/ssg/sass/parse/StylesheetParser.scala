@@ -24,11 +24,14 @@ package parse
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.sass.{
+  ArgumentList,
   AtRule,
   BooleanExpression,
   Declaration,
   Expression,
+  FunctionExpression,
   Interpolation,
+  ListExpression,
   LoudComment,
   NullExpression,
   NumberExpression,
@@ -42,6 +45,7 @@ import ssg.sass.ast.sass.{
   VariableDeclaration,
   VariableExpression
 }
+import ssg.sass.value.ListSeparator
 import ssg.sass.util.{CharCode, FileSpan}
 import ssg.sass.value.SassNumber
 
@@ -385,8 +389,91 @@ abstract class StylesheetParser protected (
       case None      =>
     }
 
+    // Function call: identifier followed by (...) with matching closing paren at end
+    _tryParseFunctionCall(trimmed, span) match {
+      case Some(fn) => return fn
+      case None     =>
+    }
+
+    // Space-separated list (simple case: multiple tokens separated by whitespace)
+    val spaceSplit = _splitTopLevel(trimmed, ' ')
+    if (spaceSplit.length >= 2) {
+      val parts = spaceSplit.map(p => _parseSimpleExpression(p, span))
+      return ListExpression(parts, ListSeparator.Space, span, hasBrackets = false)
+    }
+
     // Fallback: unquoted string expression
     StringExpression(Interpolation.plain(trimmed, span), hasQuotes = false)
+  }
+
+  /** Splits [s] at top-level occurrences of [sep] (ignoring separators inside
+    * matched parens/brackets/quotes).
+    */
+  private def _splitTopLevel(s: String, sep: Char): List[String] = {
+    val result = scala.collection.mutable.ListBuffer.empty[String]
+    val buf = new StringBuilder()
+    var depth = 0
+    var inQuote: Char = 0
+    var i = 0
+    while (i < s.length) {
+      val c = s.charAt(i)
+      if (inQuote != 0) {
+        buf.append(c)
+        if (c == inQuote) inQuote = 0
+        else if (c == '\\' && i + 1 < s.length) {
+          i += 1
+          buf.append(s.charAt(i))
+        }
+      } else if (c == '"' || c == '\'') {
+        inQuote = c
+        buf.append(c)
+      } else if (c == '(' || c == '[') {
+        depth += 1
+        buf.append(c)
+      } else if (c == ')' || c == ']') {
+        depth -= 1
+        buf.append(c)
+      } else if (depth == 0 && c == sep) {
+        val chunk = buf.toString().trim
+        if (chunk.nonEmpty) result += chunk
+        buf.clear()
+      } else {
+        buf.append(c)
+      }
+      i += 1
+    }
+    val last = buf.toString().trim
+    if (last.nonEmpty) result += last
+    result.toList
+  }
+
+  /** Attempts to parse a function call `name(args)`. */
+  private def _tryParseFunctionCall(raw: String, span: FileSpan): Option[FunctionExpression] = {
+    val parenIdx = raw.indexOf('(')
+    if (parenIdx <= 0 || !raw.endsWith(")")) return None
+    val name = raw.substring(0, parenIdx)
+    // Name must be a valid identifier
+    if (!_allChars(name, (c: Char) => CharCode.isName(c.toInt))) return None
+    // Special-case: url() — passes through as an unquoted string. Skip for now.
+    if (name == "url") return None
+
+    val argsText = raw.substring(parenIdx + 1, raw.length - 1).trim
+    val argExprs = if (argsText.isEmpty) Nil
+      else _splitTopLevel(argsText, ',').map(a => _parseSimpleExpression(a, span))
+
+    // Detect named arguments: `$name: value`
+    val (positional, named) = argExprs.foldLeft(
+      (List.empty[Expression], Map.empty[String, Expression])
+    ) { case ((pos, nam), expr) =>
+      expr match {
+        case _ =>
+          // Simplified: no named arguments for now (would need re-parsing `$name: value`)
+          (pos :+ expr, nam)
+      }
+    }
+
+    val arguments = new ArgumentList(positional, named, Map.empty, span)
+    Some(FunctionExpression(name, arguments, span))
   }
 
   /** Attempts to parse a number literal with optional unit. */

@@ -153,9 +153,9 @@ final class EvaluateVisitor(
   // ---------------------------------------------------------------------------
 
   /** The current lexical environment. Variables and (eventually) functions
-    * and mixins live here.
+    * and mixins live here. Pre-populated with all global built-in functions.
     */
-  private var _environment: Environment = Environment()
+  private var _environment: Environment = Environment.withBuiltins()
 
   /** Whether we're currently evaluating a `@supports` declaration. When true,
     * calculations are not simplified.
@@ -349,10 +349,16 @@ final class EvaluateVisitor(
   override def visitParenthesizedExpression(node: ParenthesizedExpression): Value =
     node.expression.accept(this)
 
-  override def visitSelectorExpression(node: SelectorExpression): Value =
-    // No active style rule yet — full implementation needs the modifiable CSS
-    // tree from Phase 19.
-    SassNull
+  override def visitSelectorExpression(node: SelectorExpression): Value = {
+    // Returns the current enclosing style rule's selector text as an
+    // unquoted SassString, or SassNull when not inside any style rule.
+    // Full SelectorList value type is deferred — text suffices for `&`
+    // SassScript references in the current text-based selector model.
+    val _ = node
+    _styleRule.fold[Value](SassNull) { rule =>
+      new SassString(rule.selector.toString, hasQuotes = false)
+    }
+  }
 
   override def visitStringExpression(node: StringExpression): Value = {
     // Don't use _performInterpolation here because we need the raw text from
@@ -541,26 +547,100 @@ final class EvaluateVisitor(
     // Evaluate the selector interpolation. Full selector parsing and
     // normalisation is deferred — we currently store the raw text as
     // an `Any` placeholder matching the ModifiableCssStyleRule contract.
-    val selectorText: Any = node.selector.fold(
-      node.parsedSelector.fold[Any]("")(ps => ps.toString: Any)
-    )(interpolation => _performInterpolation(interpolation): Any)
+    val childSelectorText: String = node.selector.fold(
+      node.parsedSelector.fold("")(ps => ps.toString)
+    )(interpolation => _performInterpolation(interpolation))
 
-    val selectorBox = new ModifiableBox[Any](selectorText).seal()
+    // Text-based parent (`&`) expansion. When nested inside another style
+    // rule, combine the child selector with the parent's selector text:
+    // for each comma-separated child piece, replace `&` with each parent
+    // piece, or prepend the parent piece + space if `&` is absent. Cross
+    // multiple parent and child commas to flatten the result.
+    val parentSelector: Nullable[String] = _styleRule.fold[Nullable[String]](Nullable.empty) { p =>
+      Nullable(p.selector.toString)
+    }
+    val expandedSelector: String = _expandSelector(childSelectorText, parentSelector)
+
+    val selectorBox = new ModifiableBox[Any](expandedSelector: Any).seal()
     val rule = new ModifiableCssStyleRule(selectorBox, node.span)
 
-    _withParent(rule) {
-      _withStyleRule(rule) {
-        _withScope {
-          node.children.foreach { kids =>
-            for (statement <- kids) {
-              val _ = statement.accept(this)
+    // Nested style rules in CSS output must be FLAT — they should be
+    // emitted as siblings of the outer style rule rather than children.
+    // Walk up `_parent` to the nearest non-CssStyleRule ancestor and add
+    // the new rule there, then evaluate children with that as the parent.
+    val savedParent = _parent
+    val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
+    _parent = Nullable(nearestNonStyle)
+    try {
+      _withParent(rule) {
+        _withStyleRule(rule) {
+          _withScope {
+            node.children.foreach { kids =>
+              for (statement <- kids) {
+                val _ = statement.accept(this)
+              }
             }
           }
         }
       }
-    }
+    } finally _parent = savedParent
     SassNull
   }
+
+  /** Walks `_parent` up until it finds a parent node that is not a
+    * [[ModifiableCssStyleRule]]. Falls back to `_root` (or the current
+    * parent if `_root` is unset). Used to keep nested style rules flat.
+    */
+  private def _nearestNonStyleRuleParent(): ModifiableCssParentNode = {
+    var cur: Nullable[ModifiableCssParentNode] = _parent
+    var found: Nullable[ModifiableCssParentNode] = Nullable.empty
+    import scala.util.boundary, boundary.break
+    boundary {
+      while (cur.isDefined) {
+        val node = cur.get
+        node match {
+          case _: ModifiableCssStyleRule =>
+            // Climb to that node's parent in the CSS tree.
+            val nextParent = node.parent
+            cur = nextParent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) { pn =>
+              pn match {
+                case mp: ModifiableCssParentNode => Nullable(mp)
+                case _                            => Nullable.empty
+              }
+            }
+          case other =>
+            found = Nullable(other)
+            break(())
+        }
+      }
+    }
+    found.getOrElse {
+      _root.fold[ModifiableCssParentNode](
+        _parent.getOrElse(
+          throw new IllegalStateException("EvaluateVisitor has no active parent node.")
+        )
+      )(r => r: ModifiableCssParentNode)
+    }
+  }
+
+  /** Text-based parent selector (`&`) expansion. For each comma-separated
+    * child piece, substitute `&` with each comma-separated parent piece, or
+    * prepend the parent piece + space when `&` is absent. With no parent,
+    * the child selector is returned unchanged.
+    */
+  private def _expandSelector(childSel: String, parentSel: Nullable[String]): String =
+    parentSel.fold(childSel) { parent =>
+      val parentParts = parent.split(",").map((s: String) => s.trim)
+      val childParts = childSel.split(",").map((s: String) => s.trim)
+      val expanded = for {
+        p <- parentParts
+        c <- childParts
+      } yield {
+        if (c.contains("&")) c.replace("&", p)
+        else s"$p $c"
+      }
+      expanded.mkString(", ")
+    }
 
   override def visitDeclaration(node: Declaration): Value = {
     val nameText = _performInterpolation(node.name)

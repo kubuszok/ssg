@@ -5,6 +5,5 @@
 package ssg
 package sass
 
-// Placeholder — debug suite was used to diagnose SassNumber toString formatting.
-// Kept as an empty suite to avoid breaking the build if external tools reference it.
+// Placeholder — kept as empty suite to avoid tooling references breaking.
 final class CompileDebugSuite extends munit.FunSuite

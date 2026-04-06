@@ -8,22 +8,18 @@
  *
  * Migration notes:
  *   Renames: functions.dart -> Functions.scala (barrel)
- *   Convention: Phase 9 skeleton — aggregates per-category function lists.
+ *   Convention: Phase 9 — aggregates per-category function lists.
  */
 package ssg
 package sass
 package functions
 
-import ssg.sass.Callable
+import ssg.sass.{BuiltInCallable, Callable}
 
-/** Aggregator for all built-in Sass functions.
-  *
-  * Skeleton — see source `lib/src/functions.dart` for the global registration
-  * pattern. Concrete callables will be implemented in a future phase.
-  */
+/** Aggregator for all built-in Sass functions. */
 object Functions {
 
-  /** All globally available built-in callables (currently empty). */
+  /** All globally available built-in callables. */
   def global: List[Callable] =
     ColorFunctions.global :::
       ListFunctions.global :::
@@ -32,6 +28,13 @@ object Functions {
       MetaFunctions.global :::
       SelectorFunctions.global :::
       StringFunctions.global
+
+  /** Looks up a global built-in by name. */
+  def lookupGlobal(name: String): Option[BuiltInCallable] = {
+    global.collectFirst {
+      case b: BuiltInCallable if b.name == name => b
+    }
+  }
 
   /** Per-module callables, keyed by `sass:` module name. */
   def modules: Map[String, List[Callable]] = Map(

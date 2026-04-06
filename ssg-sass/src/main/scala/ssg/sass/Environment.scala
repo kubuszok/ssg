@@ -126,4 +126,15 @@ final class Environment() {
 object Environment {
 
   def apply(): Environment = new Environment()
+
+  /** Creates a new environment pre-populated with all global built-in
+    * functions (math, string, list, map, meta).
+    */
+  def withBuiltins(): Environment = {
+    val env = new Environment()
+    for (fn <- ssg.sass.functions.Functions.global) {
+      env.setFunction(fn)
+    }
+    env
+  }
 }

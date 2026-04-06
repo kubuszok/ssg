@@ -130,4 +130,70 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("10px"))
     assert(!result.css.contains("10.0px"))
   }
+
+  test("nested style rule expands as descendant selector") {
+    val result = Compile.compileString("a { color: red; b { color: blue; } }")
+    assert(result.css.contains("a b"))
+    assert(result.css.contains("color: blue"))
+    assert(result.css.contains("color: red"))
+    // Nested rule should be a sibling, not inside `a { ... }`.
+    assert(!result.css.contains("a b {".reverse))
+  }
+
+  test("parent selector & expands to parent") {
+    val result = Compile.compileString(".card { &:hover { color: blue; } }")
+    assert(result.css.contains(".card:hover"))
+    assert(result.css.contains("color: blue"))
+  }
+
+  test("parent selector & with comma-separated parents") {
+    val result = Compile.compileString(".a, .b { &:hover { color: red; } }")
+    assert(result.css.contains(".a:hover"))
+    assert(result.css.contains(".b:hover"))
+  }
+
+  // --- Built-in functions ---
+
+  test("calls abs() function") {
+    val result = Compile.compileString(".box { margin: abs(-5px); }")
+    assert(result.css.contains("margin: 5px"))
+  }
+
+  test("calls ceil() function") {
+    val result = Compile.compileString(".box { width: ceil(4.2); }")
+    assert(result.css.contains("width: 5"))
+  }
+
+  test("calls floor() function") {
+    val result = Compile.compileString(".box { width: floor(4.9); }")
+    assert(result.css.contains("width: 4"))
+  }
+
+  test("calls percentage() function") {
+    val result = Compile.compileString(".box { width: percentage(0.5); }")
+    assert(result.css.contains("width: 50%"))
+  }
+
+  test("calls unitless() function") {
+    val result = Compile.compileString(".box { x: unitless(5); y: unitless(5px); }")
+    assert(result.css.contains("x: true"))
+    assert(result.css.contains("y: false"))
+  }
+
+  test("calls to-upper-case() function") {
+    val result = Compile.compileString(""".box { content: to-upper-case("hello"); }""")
+    assert(result.css.contains("HELLO"))
+  }
+
+  test("calls length() function on list") {
+    val result = Compile.compileString(""".box { x: length(1 2 3); }""")
+    assert(result.css.contains("x: 3"))
+  }
+
+  test("calls type-of() function") {
+    val result = Compile.compileString(""".box { x: type-of(42); y: type-of("hi"); z: type-of(true); }""")
+    assert(result.css.contains("x: number"))
+    assert(result.css.contains("y: string"))
+    assert(result.css.contains("z: bool"))
+  }
 }
