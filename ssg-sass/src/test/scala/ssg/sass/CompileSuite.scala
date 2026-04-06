@@ -90,4 +90,44 @@ final class CompileSuite extends munit.FunSuite {
     assert(!result.css.contains("\n"))
     assert(!result.css.contains("  "))
   }
+
+  test("compiles @media rule") {
+    val result = Compile.compileString("""
+      @media (min-width: 768px) {
+        a { color: red; }
+      }
+    """)
+    assert(result.css.contains("@media"))
+    assert(result.css.contains("min-width"))
+    assert(result.css.contains("color: red"))
+  }
+
+  test("compiles @supports rule") {
+    val result = Compile.compileString("""
+      @supports (display: grid) {
+        .grid { display: grid; }
+      }
+    """)
+    assert(result.css.contains("@supports"))
+    assert(result.css.contains("display: grid"))
+  }
+
+  test("compiles variable with integer value") {
+    val result = Compile.compileString("""
+      $size: 100;
+      .box { width: $size; }
+    """)
+    // Should NOT have trailing .0
+    assert(result.css.contains("width: 100"))
+    assert(!result.css.contains("100.0"))
+  }
+
+  test("compiles pixel variable without trailing decimal") {
+    val result = Compile.compileString("""
+      $w: 10px;
+      .box { width: $w; }
+    """)
+    assert(result.css.contains("10px"))
+    assert(!result.css.contains("10.0px"))
+  }
 }

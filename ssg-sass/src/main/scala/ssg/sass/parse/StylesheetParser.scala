@@ -139,7 +139,7 @@ abstract class StylesheetParser protected (
             val nameInterp = Interpolation.plain(name, nameSpan)
 
             if (c == CharCode.$lbrace) {
-              scanner.readChar()
+              // _children() expects to consume the opening `{` itself.
               val kids = _children()
               val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, nameSpan)) else Nullable.empty
               return Nullable(new AtRule(

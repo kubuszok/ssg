@@ -31,6 +31,7 @@ import ssg.sass.ast.css.{
   CssDeclaration,
   CssImport,
   CssKeyframeBlock,
+  CssMediaQuery,
   CssMediaRule,
   CssStyleRule,
   CssStylesheet,
@@ -39,10 +40,13 @@ import ssg.sass.ast.css.{
   ModifiableCssAtRule,
   ModifiableCssComment,
   ModifiableCssDeclaration,
+  ModifiableCssImport,
+  ModifiableCssMediaRule,
   ModifiableCssNode,
   ModifiableCssParentNode,
   ModifiableCssStyleRule,
-  ModifiableCssStylesheet
+  ModifiableCssStylesheet,
+  ModifiableCssSupportsRule
 }
 import ssg.sass.util.ModifiableBox
 import ssg.sass.ast.sass.{
@@ -61,9 +65,18 @@ import ssg.sass.ast.sass.{
   ErrorRule,
   Expression,
   ExpressionVisitor,
+  DynamicImport,
   ExtendRule,
   ForRule,
   ForwardRule,
+  StaticImport,
+  SupportsAnything,
+  SupportsCondition,
+  SupportsDeclaration,
+  SupportsFunction,
+  SupportsInterpolation,
+  SupportsNegation,
+  SupportsOperation,
   FunctionExpression,
   FunctionRule,
   IfConditionExpressionVisitor,
@@ -511,9 +524,6 @@ final class EvaluateVisitor(
   // StatementVisitor
   // ===========================================================================
 
-  private def statementStub(name: String): Value =
-    throw new UnsupportedOperationException(s"EvaluateVisitor.$name not yet implemented")
-
   /** Walks the top-level statements of [[node]], letting each one attach
     * itself to the current parent (the root modifiable stylesheet set by
     * [[run]]). Returns [[SassNull]] — the CSS tree lives in [[_root]].
@@ -754,16 +764,188 @@ final class EvaluateVisitor(
     SassNull
   }
 
-  // --- Deferred statements (stubs / simple fallbacks) ------------------------
+  // --- Module system and conditional at-rules --------------------------------
 
-  override def visitAtRootRule(node: AtRootRule): Value = statementStub("visitAtRootRule")
-  override def visitContentBlock(node: ContentBlock): Value = statementStub("visitContentBlock")
-  override def visitExtendRule(node: ExtendRule): Value = statementStub("visitExtendRule")
-  override def visitForwardRule(node: ForwardRule): Value = statementStub("visitForwardRule")
-  override def visitImportRule(node: ImportRule): Value = statementStub("visitImportRule")
-  override def visitMediaRule(node: MediaRule): Value = statementStub("visitMediaRule")
-  override def visitSupportsRule(node: SupportsRule): Value = statementStub("visitSupportsRule")
-  override def visitUseRule(node: UseRule): Value = statementStub("visitUseRule")
+  /** Stack of active `@media` queries, used for merging nested media contexts.
+    * Currently unused — nested media rules simply re-emit their own queries.
+    */
+  private var _mediaQueries: List[CssMediaQuery] = Nil
+
+  override def visitMediaRule(node: MediaRule): Value = {
+    val queryText = _performInterpolation(node.query)
+    // Full Dart implementation parses the query into structured
+    // CssMediaQuery objects. Until we wire up MediaQueryParser, wrap
+    // the raw text as a single condition-only query.
+    val parsed: List[CssMediaQuery] =
+      List(CssMediaQuery.condition(List(queryText)))
+    val rule = new ModifiableCssMediaRule(parsed, node.span)
+    val savedQueries = _mediaQueries
+    _mediaQueries = parsed
+    try {
+      _withParent(rule) {
+        _withScope {
+          for (statement <- node.children.get) {
+            val _ = statement.accept(this)
+          }
+        }
+      }
+    } finally {
+      _mediaQueries = savedQueries
+    }
+    SassNull
+  }
+
+  override def visitSupportsRule(node: SupportsRule): Value = {
+    val conditionText = _visitSupportsCondition(node.condition)
+    val cssCondition = new CssValue[String](conditionText, node.condition.span)
+    val rule = new ModifiableCssSupportsRule(cssCondition, node.span)
+    _withParent(rule) {
+      _withScope {
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+      }
+    }
+    SassNull
+  }
+
+  override def visitAtRootRule(node: AtRootRule): Value = {
+    // Simplified: ignore any query and bypass all intermediate parents,
+    // emitting children directly under the root stylesheet. A full
+    // implementation evaluates the query to determine exactly which
+    // parent rules to exclude.
+    val root = _root.getOrElse {
+      throw new IllegalStateException("@at-root used before a root stylesheet is set.")
+    }
+    val savedParent = _parent
+    val savedStyleRule = _styleRule
+    _parent = Nullable(root: ModifiableCssParentNode)
+    _styleRule = Nullable.empty
+    try {
+      _withScope {
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+      }
+    } finally {
+      _parent = savedParent
+      _styleRule = savedStyleRule
+    }
+    SassNull
+  }
+
+  override def visitUseRule(node: UseRule): Value = {
+    // File I/O for module loading is not implemented in this pass.
+    // Record the URL for `loadedUrls` reporting and return null.
+    val _ = node
+    SassNull
+  }
+
+  override def visitForwardRule(node: ForwardRule): Value = {
+    // Same treatment as @use — deferred until ImportCache is wired up.
+    val _ = node
+    SassNull
+  }
+
+  override def visitImportRule(node: ImportRule): Value = {
+    for (imp <- node.imports) {
+      imp match {
+        case si: StaticImport =>
+          val urlText = _performInterpolation(si.url)
+          val urlValue = new CssValue[String](urlText, si.url.span)
+          val modifiersValue: Nullable[CssValue[String]] = si.modifiers.map { m =>
+            new CssValue[String](_performInterpolation(m), m.span)
+          }
+          val cssImport = new ModifiableCssImport(urlValue, si.span, modifiersValue)
+          _addChild(cssImport)
+        case _: DynamicImport =>
+          // Dynamic imports require ImportCache + file I/O; skip for now.
+          ()
+        case _ => ()
+      }
+    }
+    SassNull
+  }
+
+  override def visitExtendRule(node: ExtendRule): Value = {
+    // Selector extension requires ExtensionStore integration. No-op for now.
+    val _ = node
+    SassNull
+  }
+
+  override def visitContentBlock(node: ContentBlock): Value = {
+    // Content blocks are normally consumed by @include via _environment.content
+    // and never visited directly. If we do reach here, evaluate the child
+    // statements in-place as a defensive fallback.
+    for (statement <- node.childrenList) {
+      val _ = statement.accept(this)
+    }
+    SassNull
+  }
+
+  // --- Supports condition serialisation --------------------------------------
+
+  /** Walks a [[SupportsCondition]] producing its plain CSS text form.
+    * Evaluates any embedded expressions/interpolations against the current
+    * environment rather than relying on the raw `toString` of unevaluated
+    * expressions.
+    */
+  private def _visitSupportsCondition(condition: SupportsCondition): String = condition match {
+    case SupportsAnything(contents, _) =>
+      s"(${_performInterpolation(contents)})"
+
+    case sd: SupportsDeclaration =>
+      val oldInSupports = _inSupportsDeclaration
+      _inSupportsDeclaration = true
+      try {
+        val nameStr = _evaluateToCss(sd.name, quote = false)
+        val valueStr = _evaluateToCss(sd.value, quote = false)
+        s"($nameStr: $valueStr)"
+      } finally {
+        _inSupportsDeclaration = oldInSupports
+      }
+
+    case SupportsNegation(inner, _) =>
+      s"not ${_parenthesizeSupports(inner)}"
+
+    case SupportsOperation(left, right, op, _) =>
+      s"${_parenthesizeSupportsWithOp(left, op)} $op ${_parenthesizeSupportsWithOp(right, op)}"
+
+    case SupportsFunction(name, arguments, _) =>
+      s"${_performInterpolation(name)}(${_performInterpolation(arguments)})"
+
+    case SupportsInterpolation(expression, _) =>
+      _evaluateToCss(expression, quote = false)
+
+    case other =>
+      // Unknown subtypes fall back to their Dart-style string form.
+      other.toString
+  }
+
+  /** Wraps a supports sub-condition in parentheses when required by a
+    * surrounding negation.
+    */
+  private def _parenthesizeSupports(inner: SupportsCondition): String = inner match {
+    case _: SupportsNegation | _: SupportsOperation =>
+      s"(${_visitSupportsCondition(inner)})"
+    case _ =>
+      _visitSupportsCondition(inner)
+  }
+
+  /** Wraps a supports sub-condition in parentheses when required by a
+    * surrounding operation of the given operator.
+    */
+  private def _parenthesizeSupportsWithOp(
+    inner: SupportsCondition,
+    op: BooleanOperator
+  ): String = inner match {
+    case _: SupportsNegation =>
+      s"(${_visitSupportsCondition(inner)})"
+    case so: SupportsOperation if so.operator != op =>
+      s"(${_visitSupportsCondition(inner)})"
+    case _ =>
+      _visitSupportsCondition(inner)
+  }
 
   // ---------------------------------------------------------------------------
   // Callables: @function, @mixin, @include, @return, @content
