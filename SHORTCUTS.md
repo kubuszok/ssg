@@ -4,6 +4,33 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### CSS Color Module 4 introspection API (sass:color)
+
+- `ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala` —
+  added nine module-only entries exposed under `sass:color`: `channel`,
+  `space`, `is-legacy`, `is-in-gamut`, `is-powerless`, `is-missing`,
+  `to-space`, `to-gamut`, `same`. All take a `$space: null` kwarg where
+  applicable (channel/is-in-gamut/is-powerless/to-gamut). `to-gamut`
+  accepts `$method: null` and defaults to `local-minde` (delegates to
+  `GamutMapMethod.localMinde`/`clip` which were already ported).
+  `same` compares after normalizing both colors to `xyz-d65` via
+  `fuzzyEquals`. Registered only under the module list
+  (`ColorFunctions.module = global ::: moduleOnly`), not as globals,
+  matching dart-sass.
+- `SassColor.scala` already had `space`, `isLegacy`, `isInGamut`,
+  `isChannelMissing`, `isChannelPowerless`, `toSpace`, `toGamut(method)`,
+  and `channel(name)` — no changes needed in the value layer.
+- `ssg-sass/src/test/scala/ssg/sass/ColorModule4Suite.scala` — new
+  cross-platform suite, 14 cases covering every required example plus
+  `is-missing(red, red)` and `same(red, blue)` as a negative case.
+- Resolves ISS-008 (to-gamut API wiring), ISS-009 (powerless/missing
+  exposure), ISS-011 (sass:color Module 4 API).
+- JVM: ColorModule4Suite 14/14 green. JS/Native currently blocked from
+  running by unrelated pre-existing compile errors in
+  `parse/CssParser.scala` (`_checkInterpolation` arity mismatch) and
+  an unused-import warning in `Compile.scala`, both in the parallel
+  "do not touch" zone.
+
 ### SassNumber compound unit algebra test coverage (ISS-002 resolved)
 
 - `ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala` already

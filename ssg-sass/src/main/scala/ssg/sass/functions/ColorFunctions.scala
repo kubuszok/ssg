@@ -20,9 +20,9 @@ package sass
 package functions
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
-import ssg.sass.value.{ SassColor, SassNull, SassNumber, SassString, Value }
-import ssg.sass.value.color.{ ColorSpace, HueInterpolationMethod, InterpolationMethod }
-import ssg.sass.util.NumberUtil.fuzzyRound
+import ssg.sass.value.{ SassBoolean, SassColor, SassNull, SassNumber, SassString, Value }
+import ssg.sass.value.color.{ ColorSpace, GamutMapMethod, HueInterpolationMethod, InterpolationMethod }
+import ssg.sass.util.NumberUtil.{ fuzzyEquals, fuzzyRound }
 
 /** Built-in color functions: rgb, rgba, hsl, hsla, and legacy accessors / manipulation functions (red, green, blue, hue, saturation, lightness, alpha, mix, lighten, darken, saturate, desaturate,
   * opacify, transparentize, adjust-hue, invert, grayscale, complement).
@@ -372,11 +372,19 @@ object ColorFunctions {
     else newColor.toSpace(color.space)
   }
 
+  /** Emit the `color-functions` deprecation for a legacy global color-manipulation function call. */
+  private def warnLegacyColorFunction(name: String, modernHint: String): Unit =
+    EvaluationContext.warnForDeprecation(
+      Deprecation.ColorFunctions,
+      s"$name() is deprecated. Suggestion: $modernHint."
+    )
+
   private val lightenFn: BuiltInCallable =
     BuiltInCallable.function(
       "lighten",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("lighten", "color.adjust($color, $lightness: +$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, lDelta = amt)
@@ -388,6 +396,7 @@ object ColorFunctions {
       "darken",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("darken", "color.adjust($color, $lightness: -$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, lDelta = -amt)
@@ -399,6 +408,7 @@ object ColorFunctions {
       "saturate",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, sDelta = amt)
@@ -410,6 +420,7 @@ object ColorFunctions {
       "desaturate",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("desaturate", "color.adjust($color, $saturation: -$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, sDelta = -amt)
@@ -484,6 +495,7 @@ object ColorFunctions {
       "opacify",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("opacify", "color.adjust($color, $alpha: +$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber())
         c.changeAlpha(clamp(c.alpha + amt, 0, 1))
@@ -495,6 +507,7 @@ object ColorFunctions {
       "transparentize",
       "$color, $amount",
       { args =>
+        warnLegacyColorFunction("transparentize", "color.adjust($color, $alpha: -$amount)")
         val c   = args(0).assertColor()
         val amt = scalar(args(1).assertNumber())
         c.changeAlpha(clamp(c.alpha - amt, 0, 1))
@@ -660,6 +673,169 @@ object ColorFunctions {
       }
     )
 
+  // --- Color Module 4 introspection API ---
+
+  /** Parse a `$space` argument as a color-space name, or None for SassNull / omitted. */
+  private def optSpace(v: Value): Option[ColorSpace] =
+    if (v eq SassNull) None
+    else
+      v match {
+        case s: SassString => Some(ColorSpace.fromName(s.text))
+        case other         => Some(ColorSpace.fromName(other.assertString().text))
+      }
+
+  /** Parse a string argument (for channel / space / method names). Unquoted SassString
+    * is the canonical representation; quoted strings are also accepted.
+    */
+  private def strArg(v: Value): String = v match {
+    case s: SassString => s.text
+    case other         => other.assertString().text
+  }
+
+  /** Build a SassNumber for a channel value, attaching the channel's associated unit
+    * (e.g. "deg" for hue, "%" for hsl saturation/lightness when not normalized).
+    */
+  private def channelNumber(value: Double, channel: ssg.sass.value.color.ColorChannel): SassNumber = {
+    val unit = channel.associatedUnit
+    if (unit.isEmpty) SassNumber(value) else SassNumber(value, unit.get)
+  }
+
+  /** color.channel($color, $channel, $space: null) */
+  private val channelFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "channel",
+      "$color, $channel, $space: null",
+      { args =>
+        val color       = args(0).assertColor()
+        val channelName = strArg(args(1))
+        val spaceOpt    = if (args.length >= 3) optSpace(args(2)) else None
+        val viewed      = spaceOpt.fold(color)(sp => color.toSpace(sp))
+        if (channelName == "alpha") SassNumber(viewed.alpha)
+        else {
+          val chs = viewed.space.channels
+          val idx =
+            if (channelName == chs(0).name) 0
+            else if (channelName == chs(1).name) 1
+            else if (channelName == chs(2).name) 2
+            else
+              throw SassScriptException(
+                s"Color $viewed doesn't have a channel named \"$channelName\"."
+              )
+          channelNumber(viewed.channel(channelName), chs(idx))
+        }
+      }
+    )
+
+  /** color.space($color) */
+  private val spaceFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "space",
+      "$color",
+      args => SassString(args(0).assertColor().space.name, hasQuotes = false)
+    )
+
+  /** color.is-legacy($color) */
+  private val isLegacyFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "is-legacy",
+      "$color",
+      args => SassBoolean(args(0).assertColor().isLegacy)
+    )
+
+  /** color.is-in-gamut($color, $space: null) */
+  private val isInGamutFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "is-in-gamut",
+      "$color, $space: null",
+      { args =>
+        val color    = args(0).assertColor()
+        val spaceOpt = if (args.length >= 2) optSpace(args(1)) else None
+        val viewed   = spaceOpt.fold(color)(sp => color.toSpace(sp))
+        SassBoolean(viewed.isInGamut)
+      }
+    )
+
+  /** color.is-powerless($color, $channel, $space: null) */
+  private val isPowerlessFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "is-powerless",
+      "$color, $channel, $space: null",
+      { args =>
+        val color       = args(0).assertColor()
+        val channelName = strArg(args(1))
+        val spaceOpt    = if (args.length >= 3) optSpace(args(2)) else None
+        val viewed      = spaceOpt.fold(color)(sp => color.toSpace(sp))
+        SassBoolean(viewed.isChannelPowerless(channelName))
+      }
+    )
+
+  /** color.is-missing($color, $channel) */
+  private val isMissingFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "is-missing",
+      "$color, $channel",
+      { args =>
+        val color       = args(0).assertColor()
+        val channelName = strArg(args(1))
+        SassBoolean(color.isChannelMissing(channelName))
+      }
+    )
+
+  /** color.to-space($color, $space) */
+  private val toSpaceFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "to-space",
+      "$color, $space",
+      { args =>
+        val color = args(0).assertColor()
+        val sp    = ColorSpace.fromName(strArg(args(1)))
+        color.toSpace(sp)
+      }
+    )
+
+  /** color.to-gamut($color, $space: null, $method: null) */
+  private val toGamutFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "to-gamut",
+      "$color, $space: null, $method: null",
+      { args =>
+        val color    = args(0).assertColor()
+        val spaceOpt = if (args.length >= 2) optSpace(args(1)) else None
+        val methodOpt: Option[GamutMapMethod] =
+          if (args.length >= 3 && !(args(2) eq SassNull))
+            Some(GamutMapMethod.fromName(strArg(args(2))))
+          else None
+        val method = methodOpt.getOrElse(GamutMapMethod.localMinde)
+        spaceOpt match {
+          case None     => color.toGamut(method)
+          case Some(sp) =>
+            val inSp   = color.toSpace(sp)
+            val mapped = inSp.toGamut(method)
+            if (color.space eq sp) mapped else mapped.toSpace(color.space)
+        }
+      }
+    )
+
+  /** color.same($color1, $color2) — true if both normalize to the same xyz-d65 value. */
+  private val sameFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "same",
+      "$color1, $color2",
+      { args =>
+        val a      = args(0).assertColor()
+        val b      = args(1).assertColor()
+        val target = ColorSpace.xyzD65
+        val aa     = a.toSpace(target)
+        val bb     = b.toSpace(target)
+        val equal  =
+          fuzzyEquals(aa.channel0, bb.channel0) &&
+            fuzzyEquals(aa.channel1, bb.channel1) &&
+            fuzzyEquals(aa.channel2, bb.channel2) &&
+            fuzzyEquals(aa.alpha, bb.alpha)
+        SassBoolean(equal)
+      }
+    )
+
   // --- Registration ---
 
   val global: List[Callable] = List(
@@ -699,7 +875,22 @@ object ColorFunctions {
     scaleColorFn
   )
 
-  def module: List[Callable] = global
+  /** Color Module 4 introspection entry points — only registered under the
+    * `sass:color` module (not as globals).
+    */
+  private val moduleOnly: List[Callable] = List(
+    channelFn,
+    spaceFn,
+    isLegacyFn,
+    isInGamutFn,
+    isPowerlessFn,
+    isMissingFn,
+    toSpaceFn,
+    toGamutFn,
+    sameFn
+  )
+
+  def module: List[Callable] = global ::: moduleOnly
 
   /** Stub for any direct color function dispatch. */
   def stub(name: String, args: List[Value]): Value =
