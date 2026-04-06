@@ -88,8 +88,13 @@ or serializer.
 - ❌ `run(stylesheet)` — **large (1000+ lines)** — orchestrates entire pipeline
 - ❌ `runExpression(stylesheet, expression)` — large
 
-### `visitor/SerializeVisitor.scala`
-- ❌ `serialize(node)` — large (500-800 lines)
+### `visitor/SerializeVisitor.scala` ✅ MVP IMPLEMENTED
+- ✅ `serialize(node)` — expanded + compressed output styles
+- ✅ All 9 visit methods (stylesheet, style rule, declaration, comment,
+  at-rule, media rule, supports rule, import, keyframe block)
+- ⚠️ Source map generation not implemented (returns None)
+- ⚠️ Value formatting uses `Value.toCssString` default — needs per-type
+  custom formatting (trailing zeros, color shorthand, etc.)
 
 ---
 
