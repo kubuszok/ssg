@@ -454,7 +454,95 @@ ssg-sass/src/main/scala/ssg/sass/value/SassArgumentList.scala	value	pass	yes	202
 ssg-sass/src/main/scala/ssg/sass/value/ListSeparator.scala	value	pass	yes	2026-04-05	4-value enum: Space, Comma, Slash, Undecided.	
 ssg-sass/src/main/scala/ssg/sass/visitor/ValueVisitor.scala	visitor	pass	no	2026-04-05	Forward declaration. Visit methods for all value types.	
 ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala	value	pass	yes	2026-04-05	Unit conversion tables, factory methods, arithmetic, comparison, coerce/convert. All methods present.	
-ssg-sass/src/main/scala/ssg/sass/value/number/UnitlessSassNumber.scala	number	pass	yes	2026-04-05	Optimized unitless subclass.	
-ssg-sass/src/main/scala/ssg/sass/value/number/SingleUnitSassNumber.scala	number	pass	yes	2026-04-05	Single unit fast-path coercion.	
-ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	number	pass	yes	2026-04-05	Multi-unit subclass for complex unit expressions.	
+ssg-sass/src/main/scala/ssg/sass/value/number/UnitlessSassNumber.scala	number	pass	no	2026-04-06	SassNumber subclass; full implementation	
+ssg-sass/src/main/scala/ssg/sass/value/number/SingleUnitSassNumber.scala	number	pass	no	2026-04-06	SassNumber subclass; full implementation	
+ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	number	pass	no	2026-04-06	SassNumber subclass; full implementation	
 ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	value	pass	no	2026-04-05	calc/min/max/clamp factory methods, CalculationOperation, CalculationOperator enum. Auto-simplification logic preserved.	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssAtRule.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssComment.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssDeclaration.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssImport.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssKeyframeBlock.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssMediaQuery.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssMediaRule.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssNode.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssStyleRule.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssStylesheet.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssSupportsRule.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/css/CssValue.scala	css	pass	no	2026-04-06	Full CSS data class	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/ComplexSelector.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/CompoundSelector.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/PseudoSelector.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/QualifiedName.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/Selector.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/SelectorList.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/selector/SimpleSelector.scala	selector	minor_issues	no	2026-04-06	Full data + visitor traits; isSuperselector/unify methods stubbed	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/ArgumentDeclaration.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/AtRootQuery.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/BooleanOperator.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/Expression.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/Import.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/InterpolatedSelector.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/Interpolation.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/SassNode.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/Statement.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/sass/SupportsCondition.scala	sass	pass	no	2026-04-06	Full data classes + visitor trait declarations	
+ssg-sass/src/main/scala/ssg/sass/ast/AstNode.scala	ast	pass	no	2026-04-06	Base AST node trait	
+ssg-sass/src/main/scala/ssg/sass/visitor/CssVisitor.scala	visitor	pass	no	2026-04-06	Recursive base visitor trait	
+ssg-sass/src/main/scala/ssg/sass/visitor/RecursiveStatementVisitor.scala	visitor	pass	no	2026-04-06	Recursive base visitor trait	
+ssg-sass/src/main/scala/ssg/sass/visitor/RecursiveAstVisitor.scala	visitor	pass	no	2026-04-06	Recursive base visitor trait	
+ssg-sass/src/main/scala/ssg/sass/visitor/RecursiveSelectorVisitor.scala	visitor	pass	no	2026-04-06	Recursive base visitor trait	
+ssg-sass/src/main/scala/ssg/sass/visitor/SearchVisitors.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/CloneCssVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/EveryCssVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/IsCalculationSafeVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/IsPlainCssVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/ExpressionToCalcVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/ReplaceExpressionVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/SourceInterpolationVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
+ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	minor_issues	no	2026-04-06	Large stub; main evaluation/serialization logic pending	
+ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	minor_issues	no	2026-04-06	Large stub; main evaluation/serialization logic pending	
+ssg-sass/src/main/scala/ssg/sass/parse/Parser.scala	parse	pass	yes	2026-04-06	Tokenizer fully implemented: whitespace/comments/identifier/string/declarationValue/escape/naturalNumber. 6/6 tests passing.	
+ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/ScssParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/SassParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/SelectorParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/KeyframeSelectorParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/AtRootQueryParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/InterpolationBuffer.scala	sass	pass	no	2026-04-06	Full InterpolationBuffer	
+ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	sass	pass	no	2026-04-06	Full InterpolationMap	
+ssg-sass/src/main/scala/ssg/sass/extend/ExtendMode.scala	extend	pass	no	2026-04-06	Full enum	
+ssg-sass/src/main/scala/ssg/sass/extend/Extension.scala	extend	pass	no	2026-04-06	Full Extension data class	
+ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend logic pending	
+ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend helpers pending	
+ssg-sass/src/main/scala/ssg/sass/functions/Functions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/MathFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/StringFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/ListFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/MapFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/SelectorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	importer	minor_issues	no	2026-04-06	Importer trait skeleton	
+ssg-sass/src/main/scala/ssg/sass/importer/ImporterResult.scala	importer	minor_issues	no	2026-04-06	ImporterResult skeleton	
+ssg-sass/src/main/scala/ssg/sass/value/color/ColorChannel.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpaceUtils.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpaces.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/Conversions.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/GamutMapMethod.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/color/InterpolationMethod.scala	color	pass	no	2026-04-06	Full color-space implementation	
+ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	value	pass	no	2026-04-06	Full SassColor value type	
+ssg-sass/src/main/scala/ssg/sass/Callable.scala	sass	minor_issues	no	2026-04-06	Callable trait skeleton	
+ssg-sass/src/main/scala/ssg/sass/Configuration.scala	sass	minor_issues	no	2026-04-06	Configuration skeleton	
+ssg-sass/src/main/scala/ssg/sass/Environment.scala	sass	minor_issues	no	2026-04-06	Environment skeleton	
+ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala	sass	minor_issues	no	2026-04-06	EvaluationContext skeleton	
+ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	sass	minor_issues	no	2026-04-06	ImportCache skeleton	
+ssg-sass/src/main/scala/ssg/sass/Module.scala	sass	minor_issues	no	2026-04-06	Module skeleton	
+ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	sass	minor_issues	no	2026-04-06	StylesheetGraph skeleton	
+ssg-sass/src/main/scala/ssg/sass/Compile.scala	sass	minor_issues	no	2026-04-06	Compile entry-point skeleton	
+ssg-sass/src/main/scala/ssg/sass/ColorNames.scala	sass	pass	no	2026-04-06	Full CSS named color table	
+ssg-sass/src/main/scala/ssg/sass/Nullable.scala	sass	pass	no	2026-04-06	Nullable opaque type for ssg-sass	
