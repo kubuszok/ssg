@@ -51,10 +51,18 @@ or serializer.
 - ❌ `parseSignature(requireParens)` — medium
 - ⚠️  Expression parsing is TEXT-BASED — collects raw text then pattern-matches.
   Whitespace-separated arithmetic operators `+ - * / %` and unary minus on
-  variables/function calls are now recognized and produce real
+  variables/function calls are recognized and produce real
   `BinaryOperationExpression` / `UnaryOperationExpression` nodes (with operator
-  precedence). A proper tokenizer for tight-binding operators (`10px+5px`),
-  function calls, interpolation `#{...}`, and space-separated lists is still TODO.
+  precedence). Tight-binding operators (`10px+5px`, `$a*2`, `10px-5px`) are
+  now handled via a small arithmetic tokenizer that splits operand/operator
+  boundaries even without surrounding spaces. Identifier hyphens (`border-color`,
+  `a-b`) are preserved. A proper tokenizer for function calls, interpolation
+  `#{...}`, and space-separated lists is still TODO.
+- ✅ `@mixin` / `@function` / `@include` — parsed with positional parameters,
+  default values, and a trailing rest parameter (`$args...`). `@include` call
+  sites accept a trailing rest argument (`$list...`) that is splatted into
+  positional parameters when the value is a `SassList`. Keyword arguments and
+  `$kwargs...` are not yet supported.
 - ⚠️  Style rule selectors stored as plain Interpolation (no interpolation parsing yet).
 
 ### `parse/ScssParser.scala` ✅ IMPLEMENTED

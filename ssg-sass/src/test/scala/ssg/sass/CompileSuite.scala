@@ -421,4 +421,69 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains(".btn:hover{color:blue;}"), result.css)
     assert(!result.css.contains("&"), result.css)
   }
+
+  // --- Tight-binding arithmetic ---
+
+  test("tight-binding: 10px+5px without spaces") {
+    val result = Compile.compileString(".box { width: 10px+5px; }")
+    assert(result.css.contains("width: 15px"), result.css)
+  }
+
+  test("tight-binding: 10px-5px without spaces") {
+    val result = Compile.compileString(".box { width: 10px-5px; }")
+    assert(result.css.contains("width: 5px"), result.css)
+  }
+
+  test("tight-binding: variable*scalar without spaces") {
+    val result = Compile.compileString("""
+      $base: 8px;
+      .box { padding: $base*2; }
+    """)
+    assert(result.css.contains("padding: 16px"), result.css)
+  }
+
+  test("tight-binding: identifier with hyphen is not subtraction") {
+    // `solid` and `red` are plain CSS idents; `border-color`-style values
+    // should not be mangled by the arithmetic tokenizer.
+    val result = Compile.compileString(".box { border-style: solid; }")
+    assert(result.css.contains("solid"), result.css)
+  }
+
+  // --- @mixin / @include / rest args ---
+
+  test("@mixin without params expands on @include") {
+    val result = Compile.compileString("""
+      @mixin reset { margin: 0; padding: 0; }
+      .box { @include reset; }
+    """)
+    assert(result.css.contains("margin: 0"), result.css)
+    assert(result.css.contains("padding: 0"), result.css)
+  }
+
+  test("@mixin with positional params binds arguments") {
+    val result = Compile.compileString("""
+      @mixin box($w, $h) { width: $w; height: $h; }
+      .card { @include box(10px, 20px); }
+    """)
+    assert(result.css.contains("width: 10px"), result.css)
+    assert(result.css.contains("height: 20px"), result.css)
+  }
+
+  test("@mixin with rest param collects extras as list") {
+    val result = Compile.compileString("""
+      @mixin many($args...) { x: length($args); }
+      .a { @include many(1px, 2px, 3px); }
+    """)
+    assert(result.css.contains("x: 3"), result.css)
+  }
+
+  test("@include splats list rest argument into positional params") {
+    val result = Compile.compileString("""
+      @mixin pair($a, $b) { x: $a; y: $b; }
+      $vals: 5px, 7px;
+      .a { @include pair($vals...); }
+    """)
+    assert(result.css.contains("x: 5px"), result.css)
+    assert(result.css.contains("y: 7px"), result.css)
+  }
 }

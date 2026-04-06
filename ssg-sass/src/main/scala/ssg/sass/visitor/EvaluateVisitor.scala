@@ -1401,6 +1401,19 @@ final class EvaluateVisitor(
       _environment.setVariable(param.name, value)
       i += 1
     }
+    // Bind any remaining positional arguments to the rest parameter as
+    // a comma-separated SassList. Parameters declared with `$name...`
+    // always bind, even when no extras were supplied (empty list).
+    declared.restParameter.foreach { restName =>
+      val extras = if (positional.length > params.length)
+        positional.drop(params.length)
+      else Nil
+      val restList = ssg.sass.value.SassList(
+        extras,
+        ssg.sass.value.ListSeparator.Comma
+      )
+      _environment.setVariable(restName, restList)
+    }
   }
 
   /** Evaluates the positional and named expressions in [[args]] against the
@@ -1410,12 +1423,26 @@ final class EvaluateVisitor(
   private def _evaluateArguments(
     args: ssg.sass.ast.sass.ArgumentList
   ): (List[Value], ListMap[String, Value]) = {
-    val positional = args.positional.map(_.accept(this))
+    val positionalBuf = scala.collection.mutable.ListBuffer.empty[Value]
+    for (expr <- args.positional) {
+      positionalBuf += expr.accept(this)
+    }
+    // Splat a trailing rest argument (`$list...`). If the rest expression
+    // evaluates to a SassList, its elements are appended individually;
+    // any other value is appended as a single positional argument.
+    args.rest.foreach { restExpr =>
+      restExpr.accept(this) match {
+        case list: ssg.sass.value.SassList =>
+          for (v <- list.asList) positionalBuf += v
+        case other =>
+          positionalBuf += other
+      }
+    }
     var named: ListMap[String, Value] = ListMap.empty
     for ((k, v) <- args.named) {
       named = named.updated(k, v.accept(this))
     }
-    (positional, named)
+    (positionalBuf.toList, named)
   }
 
   // ===========================================================================
