@@ -154,7 +154,7 @@ final class EvaluateVisitor(
 
   override def currentCallableNode: ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode]
 
-  override def warn(message: String, deprecation: Boolean = false): Unit = {
+  override def warn(message: String, deprecation: Boolean = false): Unit =
     if (deprecation) {
       _warnings += s"DEPRECATION WARNING: $message"
       _logger.warn(message, deprecation = Nullable(Deprecation.UserAuthored))
@@ -162,7 +162,6 @@ final class EvaluateVisitor(
       _warnings += s"WARNING: $message"
       _logger.warn(message)
     }
-  }
 
   override def warnForDeprecation(deprecation: Deprecation, message: String): Unit = {
     _warnings += s"DEPRECATION WARNING [${deprecation.id}]: $message"
@@ -288,24 +287,25 @@ final class EvaluateVisitor(
     val savedMixinInv = ssg.sass.CurrentMixinInvoker.set(
       Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeMixinCallable(c, pos, named, Nullable.empty))
     )
-    try ssg.sass.EvaluationContext.withContext(this) {
-      // Forward any warnings discovered during parsing into the evaluator's
-      // warning buffer so they surface on CompileResult.warnings.
-      for (ptw <- stylesheet.parseTimeWarnings) {
-        ptw.deprecation.fold(_warnings += s"WARNING: ${ptw.message}") { d =>
-          _warnings += s"DEPRECATION WARNING [${d.id}]: ${ptw.message}"
-        }
+    try
+      ssg.sass.EvaluationContext.withContext(this) {
+        // Forward any warnings discovered during parsing into the evaluator's
+        // warning buffer so they surface on CompileResult.warnings.
+        for (ptw <- stylesheet.parseTimeWarnings)
+          ptw.deprecation.fold(_warnings += s"WARNING: ${ptw.message}") { d =>
+            _warnings += s"DEPRECATION WARNING [${d.id}]: ${ptw.message}"
+          }
+        visitStylesheet(stylesheet)
+        // Apply basic `@extend` rewrites before serialising.
+        _applyExtends(root)
+        // Read back the current root (usually the same instance) to build the
+        // unmodifiable wrapper; also read `_endOfImports` for future ordering.
+        val finalRoot = _root.getOrElse(root)
+        val _         = _endOfImports
+        val out       = CssStylesheet(finalRoot.children, stylesheet.span)
+        EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
       }
-      visitStylesheet(stylesheet)
-      // Apply basic `@extend` rewrites before serialising.
-      _applyExtends(root)
-      // Read back the current root (usually the same instance) to build the
-      // unmodifiable wrapper; also read `_endOfImports` for future ordering.
-      val finalRoot = _root.getOrElse(root)
-      val _         = _endOfImports
-      val out       = CssStylesheet(finalRoot.children, stylesheet.span)
-      EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
-    } finally {
+    finally {
       val _ = ssg.sass.CurrentEnvironment.set(savedCur)
       val _ = ssg.sass.CurrentCallableInvoker.set(savedInv)
       val _ = ssg.sass.CurrentMixinInvoker.set(savedMixinInv)
@@ -377,9 +377,12 @@ final class EvaluateVisitor(
       case BinaryOperator.DividedBy           =>
         val rightVal = node.right.accept(this)
         if (left.isInstanceOf[SassNumber] && rightVal.isInstanceOf[SassNumber])
-          warnForDeprecation(Deprecation.SlashDiv, "Using / for division is deprecated and will be removed in Dart Sass 2.0.0. Recommendation: math.div($left, $right) or calc($left / $right).")
+          warnForDeprecation(
+            Deprecation.SlashDiv,
+            "Using / for division is deprecated and will be removed in Dart Sass 2.0.0. Recommendation: math.div($left, $right) or calc($left / $right)."
+          )
         left.dividedBy(rightVal)
-      case BinaryOperator.Modulo              => left.modulo(node.right.accept(this))
+      case BinaryOperator.Modulo => left.modulo(node.right.accept(this))
     }
   } catch {
     case e: SassScriptException => throw e.withSpan(node.span)
@@ -684,18 +687,21 @@ final class EvaluateVisitor(
           SassCalculation.clamp(converted(0), Nullable(converted(1)), Nullable(converted(2)))
         case "clamp" if converted.length >= 1 && converted.length <= 3 =>
           SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
-        case "hypot"                          => SassCalculation.hypot(converted)
-        case "sqrt" if converted.length == 1  => SassCalculation.sqrt(converted.head)
-        case "sin" if converted.length == 1   => SassCalculation.sin(converted.head)
-        case "cos" if converted.length == 1   => SassCalculation.cos(converted.head)
-        case "tan" if converted.length == 1   => SassCalculation.tan(converted.head)
-        case "asin" if converted.length == 1  => SassCalculation.asin(converted.head)
-        case "acos" if converted.length == 1  => SassCalculation.acos(converted.head)
-        case "atan" if converted.length == 1  => SassCalculation.atan(converted.head)
-        case "abs" if converted.length == 1   =>
+        case "hypot"                         => SassCalculation.hypot(converted)
+        case "sqrt" if converted.length == 1 => SassCalculation.sqrt(converted.head)
+        case "sin" if converted.length == 1  => SassCalculation.sin(converted.head)
+        case "cos" if converted.length == 1  => SassCalculation.cos(converted.head)
+        case "tan" if converted.length == 1  => SassCalculation.tan(converted.head)
+        case "asin" if converted.length == 1 => SassCalculation.asin(converted.head)
+        case "acos" if converted.length == 1 => SassCalculation.acos(converted.head)
+        case "atan" if converted.length == 1 => SassCalculation.atan(converted.head)
+        case "abs" if converted.length == 1  =>
           converted.head match {
             case n: SassNumber if n.hasUnit("%") =>
-              warnForDeprecation(Deprecation.AbsPercent, "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module).")
+              warnForDeprecation(
+                Deprecation.AbsPercent,
+                "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module)."
+              )
             case _ => ()
           }
           SassCalculation.abs(converted.head)

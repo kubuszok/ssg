@@ -5,9 +5,7 @@
 package ssg
 package sass
 
-/** Covers the deprecation warnings emitted by the parser and evaluator.
-  * Each case compiles a tiny SCSS snippet and asserts the corresponding
-  * deprecation id appears in `CompileResult.warnings`.
+/** Covers the deprecation warnings emitted by the parser and evaluator. Each case compiles a tiny SCSS snippet and asserts the corresponding deprecation id appears in `CompileResult.warnings`.
   */
 final class DeprecationSuite extends munit.FunSuite {
 

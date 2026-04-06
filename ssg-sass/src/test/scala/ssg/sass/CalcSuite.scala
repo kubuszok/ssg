@@ -7,12 +7,9 @@ package sass
 
 import ssg.sass.visitor.OutputStyle
 
-/** First-class CSS Math 3 calculation functions: round / mod / rem / abs / sign /
-  * sin / cos / tan / asin / acos / atan / atan2 / sqrt / exp / pow / log / hypot.
+/** First-class CSS Math 3 calculation functions: round / mod / rem / abs / sign / sin / cos / tan / asin / acos / atan / atan2 / sqrt / exp / pow / log / hypot.
   *
-  * All values should either collapse to a SassNumber when all arguments are
-  * known numbers, or round-trip to a CSS calc-level function call when any
-  * argument defers (unquoted-string var(), etc.).
+  * All values should either collapse to a SassNumber when all arguments are known numbers, or round-trip to a CSS calc-level function call when any argument defers (unquoted-string var(), etc.).
   */
 final class CalcSuite extends munit.FunSuite {
 
