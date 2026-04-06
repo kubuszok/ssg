@@ -9,7 +9,8 @@
  * Migration notes:
  *   Renames: import_cache.dart -> ImportCache.scala
  *   Convention: In-memory cache of canonicalization + parsed stylesheets
- *   Idiom: URIs modeled as Strings; parses via ScssParser
+ *   Idiom: URIs modeled as Strings; parses via ScssParser/CssParser based
+ *     on the importer's declared syntax (or the canonical URL's extension)
  */
 package ssg
 package sass
@@ -18,7 +19,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import ssg.sass.ast.sass.Stylesheet
 import ssg.sass.importer.{ Importer, ImporterResult }
-import ssg.sass.parse.ScssParser
+import ssg.sass.parse.{ CssParser, ScssParser, StylesheetParser }
 
 /** An in-memory cache of parsed stylesheets, used by the evaluator to dedupe parses across multiple `@use`/`@forward`/`@import` of the same URL.
   */
@@ -76,7 +77,25 @@ final class ImportCache(
         val loaded = importer.load(canonicalUrl)
         loaded.fold[Nullable[Stylesheet]](Nullable.empty) { result =>
           resultsCache.update(canonicalUrl, result)
-          val sheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+          // Pick the parser based on the importer's declared syntax
+          // (falling back to the canonical URL's extension when the
+          // importer returned the SCSS default). A `.css` import goes
+          // through the strict `CssParser`, so Sass-only syntax in a
+          // plain-CSS file raises a `SassFormatException` instead of
+          // being silently evaluated.
+          val effectiveSyntax: Syntax =
+            if (result.syntax == Syntax.Scss) Syntax.forPath(canonicalUrl)
+            else result.syntax
+          val parser: StylesheetParser = effectiveSyntax match {
+            case Syntax.Css  => new CssParser(result.contents, Nullable(canonicalUrl))
+            case Syntax.Sass =>
+              // The indented-syntax parser isn't currently wired through
+              // the import cache — fall back to SCSS so existing tests
+              // are unaffected.
+              new ScssParser(result.contents, Nullable(canonicalUrl))
+            case Syntax.Scss => new ScssParser(result.contents, Nullable(canonicalUrl))
+          }
+          val sheet = parser.parse()
           importCache.update(canonicalUrl, sheet)
           Nullable(sheet)
         }

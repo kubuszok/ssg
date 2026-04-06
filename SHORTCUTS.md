@@ -4,6 +4,42 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Strict `CssParser` for plain CSS (ISS-019)
+
+- `ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala` — previously a
+  no-op skeleton (`plainCss = true` only). Now overrides `parse()` to
+  delegate to `ScssParser.parse()` and then walk the AST, rejecting any
+  Sass-only node with a `SassFormatException`. Blocked: variable
+  declarations, `@mixin`, `@include`, `@function`, `@return`,
+  `@if` / `@else`, `@each`, `@for`, `@while`, `@debug`, `@warn`, `@error`,
+  `@extend`, `@at-root`, `@use`, `@forward`, silent (`//`) comments,
+  `#{...}` interpolation anywhere (selectors, declaration names, media
+  queries, import URLs, at-rule names), nested style rules, and the
+  parent selector `&`. Dedicated AST nodes are blocked via pattern
+  match; Sass keywords that land in a generic `AtRule` (e.g. `@if`,
+  `@while`) are blocked via an `_forbiddenAtRuleNames` blocklist.
+  Custom properties (`--var: value`), `@media`, `@supports`, and
+  standard vendor at-rules pass through unchanged.
+- `ssg-sass/src/main/scala/ssg/sass/Compile.scala` — `compileString(...,
+  syntax = Syntax.Css)` now instantiates `CssParser` instead of falling
+  back to `ScssParser`.
+- `ssg-sass/src/main/scala/ssg/sass/ImportCache.scala` —
+  `importCanonical` picks the parser by effective syntax: it honors
+  `ImporterResult.syntax` when set, otherwise falls back to
+  `Syntax.forPath(canonicalUrl)`. A `.css` import routes through
+  `CssParser`, a `.scss` import through `ScssParser`.
+- `ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala` —
+  `MapImporter.load` now returns
+  `ImporterResult(src, Syntax.forPath(url))` so file extension drives
+  parser selection for the in-memory importer.
+- `ssg-sass/src/test/scala/ssg/sass/CssParserSuite.scala` — new
+  cross-platform suite, 12 cases covering the allow/reject matrix plus
+  `@use "foo.css"` routing through `CssParser` via `ImportCache` and
+  `@use "foo.scss"` still routing through `ScssParser`.
+
+All 3 platforms: JVM 580, JS 580 (+1 ignored), Native 580 (+1 ignored),
+green (+12 per platform). Resolves ISS-019.
+
 ### First-class CSS Math 3 calculation functions (ISS-005 / ISS-006)
 
 - `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —

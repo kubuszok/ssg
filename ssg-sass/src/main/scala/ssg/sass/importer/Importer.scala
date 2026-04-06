@@ -154,7 +154,7 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
 
   def load(url: String): Nullable[ImporterResult] =
     sources.get(url) match {
-      case Some(src)  => Nullable(ImporterResult(src, Syntax.Scss))
+      case Some(src)  => Nullable(ImporterResult(src, Syntax.forPath(url)))
       case scala.None => Nullable.empty
     }
 

@@ -15,7 +15,7 @@ package ssg
 package sass
 
 import ssg.sass.importer.Importer
-import ssg.sass.parse.{ SassParser, ScssParser, StylesheetParser }
+import ssg.sass.parse.{ CssParser, SassParser, ScssParser, StylesheetParser }
 import ssg.sass.visitor.{ EvaluateVisitor, OutputStyle, SerializeVisitor }
 
 import scala.language.implicitConversions
@@ -50,10 +50,12 @@ object Compile {
     syntax:    Syntax = Syntax.Scss
   ): CompileResult = {
     // 1. Parse source to Sass AST. Pick the parser by syntax: indented
-    //    Sass uses SassParser; SCSS (and CSS, for now) use ScssParser.
+    //    Sass uses SassParser; plain CSS uses the strict CssParser which
+    //    rejects Sass-only syntax; SCSS falls through to ScssParser.
     val parser: StylesheetParser = syntax match {
       case Syntax.Sass => new SassParser(source)
-      case _           => new ScssParser(source)
+      case Syntax.Css  => new CssParser(source)
+      case Syntax.Scss => new ScssParser(source)
     }
     val sassAst = parser.parse()
 
