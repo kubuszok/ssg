@@ -8,7 +8,8 @@
  *
  * Migration notes:
  *   Renames: import_cache.dart -> ImportCache.scala
- *   Convention: Skeleton — caches empty, public API surface only
+ *   Convention: In-memory cache of canonicalization + parsed stylesheets
+ *   Idiom: URIs modeled as Strings; parses via ScssParser
  */
 package ssg
 package sass
@@ -17,8 +18,10 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import ssg.sass.ast.sass.Stylesheet
 import ssg.sass.importer.{ Importer, ImporterResult }
+import ssg.sass.parse.ScssParser
 
-/** An in-memory cache of parsed stylesheets, used by the evaluator. */
+/** An in-memory cache of parsed stylesheets, used by the evaluator to dedupe parses across multiple `@use`/`@forward`/`@import` of the same URL.
+  */
 final class ImportCache(
   val importers: List[Importer] = Nil,
   val loadPaths: List[String] = Nil,
@@ -29,22 +32,61 @@ final class ImportCache(
   private val importCache:        mutable.Map[String, Stylesheet]         = mutable.Map.empty
   private val resultsCache:       mutable.Map[String, ImporterResult]     = mutable.Map.empty
 
-  /** Canonicalizes [url] against all importers and load paths. TODO. */
+  /** Canonicalizes [url] by walking [importers] and returning the first one that resolves it. Returns the resolving importer and the canonical URL.
+    */
   def canonicalize(
     url:          String,
     baseImporter: Nullable[Importer] = Nullable.empty,
     baseUrl:      Nullable[String] = Nullable.empty,
     forImport:    Boolean = false
-  ): Nullable[(Importer, String, String)] = Nullable.empty
+  ): Nullable[(Importer, String, String)] = {
+    val _        = (baseUrl, forImport)
+    val cacheKey = url
+    canonicalizedCache.get(cacheKey) match {
+      case Some((imp, canonical)) =>
+        Nullable((imp, canonical, url))
+      case scala.None =>
+        val all:   List[Importer]                       = baseImporter.toOption.toList ++ importers
+        var found: Nullable[(Importer, String, String)] = Nullable.empty
+        val it = all.iterator
+        while (it.hasNext && found.isEmpty) {
+          val imp       = it.next()
+          val canonical = imp.canonicalize(url)
+          canonical.foreach { c =>
+            canonicalizedCache.update(cacheKey, (imp, c))
+            found = Nullable((imp, c, url))
+          }
+        }
+        found
+    }
+  }
 
-  /** Imports the stylesheet at [canonicalUrl] through [importer]. TODO. */
+  /** Imports the stylesheet at [canonicalUrl] through [importer], parsing and caching the result. Subsequent calls for the same canonical URL return the cached [[Stylesheet]] without re-parsing or
+    * re-invoking the importer.
+    */
   def importCanonical(
     importer:     Importer,
     canonicalUrl: String,
     originalUrl:  Nullable[String] = Nullable.empty
-  ): Nullable[Stylesheet] =
+  ): Nullable[Stylesheet] = {
+    val _ = originalUrl
     importCache.get(canonicalUrl) match {
-      case Some(s)    => s
+      case Some(s)    => Nullable(s)
+      case scala.None =>
+        val loaded = importer.load(canonicalUrl)
+        loaded.fold[Nullable[Stylesheet]](Nullable.empty) { result =>
+          resultsCache.update(canonicalUrl, result)
+          val sheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+          importCache.update(canonicalUrl, sheet)
+          Nullable(sheet)
+        }
+    }
+  }
+
+  /** Returns the cached [[ImporterResult]] for [canonicalUrl], if any. */
+  def resultFor(canonicalUrl: String): Nullable[ImporterResult] =
+    resultsCache.get(canonicalUrl) match {
+      case Some(r)    => Nullable(r)
       case scala.None => Nullable.empty
     }
 

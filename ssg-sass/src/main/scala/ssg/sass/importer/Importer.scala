@@ -58,11 +58,42 @@ final class NoOpImporter extends Importer {
 
 // FilesystemImporter is JVM-only and lives in src/main/scala-jvm/
 
-/** An importer resolving `package:` URLs. TODO. */
-final class PackageImporter(val packageConfig: String) extends Importer {
+/** An importer resolving `pkg:` URLs via a map of package name -> root path.
+  *
+  * A URL of the form `pkg:name/rest/of/path` is rewritten to `<root>/rest/of/path` (where `<root>` is looked up in [[packages]]) and delegated to [[delegate]] for actual canonicalization and loading.
+  *
+  * This is a simple stub that lets callers wire in package-style imports without requiring a real `node_modules` traversal (that job belongs to [[NodePackageImporter]]).
+  */
+final class PackageImporter(
+  val packages: Map[String, String],
+  val delegate: Importer = Importer.noOp
+) extends Importer {
 
-  def canonicalize(url: String): Nullable[String]         = Nullable.empty
-  def load(url:         String): Nullable[ImporterResult] = Nullable.empty
+  private val Prefix = "pkg:"
+
+  /** Rewrites a `pkg:name/rest` URL into a delegate URL, or empty if either the prefix is missing or the package name isn't registered.
+    */
+  private def rewrite(url: String): Nullable[String] =
+    if (!url.startsWith(Prefix)) Nullable.empty
+    else {
+      val rest           = url.substring(Prefix.length)
+      val slashIdx       = rest.indexOf('/')
+      val (name, suffix) =
+        if (slashIdx < 0) (rest, "")
+        else (rest.substring(0, slashIdx), rest.substring(slashIdx + 1))
+      packages.get(name) match {
+        case Some(root) =>
+          val sep = if (root.endsWith("/") || suffix.isEmpty) "" else "/"
+          Nullable(root + sep + suffix)
+        case scala.None => Nullable.empty
+      }
+    }
+
+  def canonicalize(url: String): Nullable[String] =
+    rewrite(url).flatMap(delegate.canonicalize)
+
+  def load(url: String): Nullable[ImporterResult] =
+    delegate.load(url)
 }
 
 /** An importer resolving Node-style `pkg:` URLs. TODO. */
