@@ -1467,4 +1467,63 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString("$c: blue; a { color: $c !important; }", OutputStyle.Compressed).css
     assertEquals(css, "a{color:blue!important;}")
   }
+
+  // ISS-093: plain-CSS function preservation
+  test("var() is preserved verbatim as a plain-CSS function") {
+    val css = Compile.compileString("a { width: var(--foo); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{width:var(--foo);}")
+  }
+
+  test("linear-gradient() is preserved verbatim as a plain-CSS function") {
+    val css = Compile.compileString("a { background: linear-gradient(red, blue); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{background:linear-gradient(red, blue);}")
+  }
+
+  test("polygon() is preserved verbatim as a plain-CSS function") {
+    val css = Compile.compileString("a { clip-path: polygon(0 0, 100% 0, 50% 100%); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{clip-path:polygon(0 0, 100% 0, 50% 100%);}")
+  }
+
+  // ISS-014: sass:meta gap fills
+  test("meta.calc-name(calc(...)) returns 'calc'") {
+    val src =
+      """@use "sass:meta";
+        |a { name: meta.calc-name(calc(100% + 2px)); }""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{name:calc;}")
+  }
+
+  test("meta.calc-name(min(...)) returns 'min'") {
+    val src =
+      """@use "sass:meta";
+        |a { name: meta.calc-name(min(100%, 2px)); }""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{name:min;}")
+  }
+
+  test("meta.calc-args returns the operand list of a calc") {
+    val src =
+      """@use "sass:meta";
+        |a { args: meta.calc-args(min(100%, 2px)); }""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{args:100%, 2px;}")
+  }
+
+  test("meta.accepts-content returns true for a mixin with @content") {
+    val src =
+      """@use "sass:meta";
+        |@mixin foo { @content; }
+        |a { result: meta.accepts-content(meta.get-mixin("foo")); }""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{result:true;}")
+  }
+
+  test("meta.accepts-content returns false for a mixin without @content") {
+    val src =
+      """@use "sass:meta";
+        |@mixin foo { color: red; }
+        |a { result: meta.accepts-content(meta.get-mixin("foo")); }""".stripMargin
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{result:false;}")
+  }
 }

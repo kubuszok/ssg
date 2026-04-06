@@ -14,8 +14,10 @@ package ssg
 package sass
 package functions
 
-import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, SassScriptException }
-import ssg.sass.value.{ SassArgumentList, SassBoolean, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
+import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, SassScriptException, UserDefinedCallable }
+import ssg.sass.ast.sass.MixinRule
+import ssg.sass.value.{ SassArgumentList, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
+import ssg.sass.value.ListSeparator
 
 import scala.collection.immutable.ListMap
 
@@ -146,9 +148,61 @@ object MetaFunctions {
     BuiltInCallable.function(
       "content-exists",
       "",
-      _ =>
-        // TODO: requires mixin call stack tracking; deferred.
-        SassBoolean.sassFalse
+      _ => SassBoolean(CurrentEnvironment.get.fold(false)(_.content.isDefined))
+    )
+
+  private val calcNameFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "calc-name",
+      "$calc",
+      args =>
+        args.head match {
+          case c: SassCalculation => SassString(c.name, hasQuotes = false)
+          case other =>
+            throw SassScriptException(s"$$calc: $other is not a calculation.")
+        }
+    )
+
+  private val calcArgsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "calc-args",
+      "$calc",
+      args =>
+        args.head match {
+          case c: SassCalculation =>
+            val items: List[Value] = c.arguments.map {
+              case n:  SassNumber      => n:  Value
+              case sc: SassCalculation => sc: Value
+              case other =>
+                // CalculationOperation / SassString / other -> render as unquoted string.
+                SassString(SassCalculation.argumentToCss(other), hasQuotes = false): Value
+            }
+            SassList(items, ListSeparator.Comma)
+          case other =>
+            throw SassScriptException(s"$$calc: $other is not a calculation.")
+        }
+    )
+
+  private val acceptsContentFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "accepts-content",
+      "$mixin",
+      args =>
+        args.head match {
+          case m: SassMixin =>
+            val accepts = m.callable match {
+              case bic: BuiltInCallable        => bic.acceptsContent
+              case ud:  UserDefinedCallable[?] =>
+                ud.declaration match {
+                  case mr: MixinRule => mr.hasContent
+                  case _ => false
+                }
+              case _ => false
+            }
+            SassBoolean(accepts)
+          case other =>
+            throw SassScriptException(s"$$mixin: $other is not a mixin.")
+        }
     )
 
   private val moduleVariablesFn: BuiltInCallable =
@@ -362,5 +416,12 @@ object MetaFunctions {
     callFn
   )
 
-  def module: List[Callable] = global
+  /** Functions exposed only under `sass:meta` (not as globals). */
+  val moduleOnly: List[Callable] = List(
+    calcNameFn,
+    calcArgsFn,
+    acceptsContentFn
+  )
+
+  def module: List[Callable] = global ::: moduleOnly
 }

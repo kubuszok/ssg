@@ -4,6 +4,41 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Plain-CSS function preservation + sass:meta gap fills (ISS-093, ISS-014)
+
+- `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
+  `visitFunctionExpression` already rendered unknown callables as plain
+  CSS `name(args)`; verified `var()`, `linear-gradient()`, `polygon()`
+  now pass through via new regression tests.
+- `ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala` —
+  - `content-exists()` now reads
+    `CurrentEnvironment.get.flatMap(_.content).isDefined` instead of
+    always returning false. The existing environment mechanic (set in
+    `_invokeMixinCallable`) already stacks the current content block on
+    mixin entry and restores it on exit.
+  - New `calc-name($calc)` / `calc-args($calc)` module-only functions:
+    `calc-name` returns the `SassCalculation.name` as an unquoted
+    `SassString`; `calc-args` returns a comma-separated `SassList` of
+    operands — `SassNumber` / nested `SassCalculation` pass through as
+    values, other arg types (`CalculationOperation`, `SassString`) are
+    rendered via `SassCalculation.argumentToCss` and wrapped in an
+    unquoted `SassString`.
+  - New `accepts-content($mixin)`: unwraps the `SassMixin.callable`,
+    reads `BuiltInCallable.acceptsContent` for built-ins or
+    `MixinRule.hasContent` for user-defined mixins.
+  - `MetaFunctions.module` is now `global ::: moduleOnly`, so the three
+    new entries live only under `sass:meta` (not as globals), matching
+    dart-sass.
+- `ssg-sass/src/test/scala/ssg/sass/CompileSuite.scala` — 7 new cases:
+  `var(--foo)`, `linear-gradient(red, blue)`, `polygon(0 0, 100% 0, 50%
+  100%)`, `meta.calc-name(calc(100% + 2px))`, `meta.calc-name(min(100%,
+  2px))`, `meta.calc-args(min(100%, 2px))`, `meta.accepts-content` for
+  a mixin with / without `@content`.
+- Resolved ISS-093 and ISS-014.
+
+All 3 platforms: 610/610 (+1 ignored) green on JVM, JS, Native (+7 per
+platform).
+
 ### SerializeVisitor: skip invisible parent nodes (sass-spec parity)
 
 - `ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala` — added a
