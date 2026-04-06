@@ -4,6 +4,33 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### SassNumber compound unit algebra test coverage (ISS-002 resolved)
+
+- `ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala` already
+  contains the full dart-sass compound unit algebra: three subclasses
+  (`UnitlessSassNumber`, `SingleUnitSassNumber`, `ComplexSassNumber`
+  under `value/number/`), `numeratorUnits` / `denominatorUnits` lists,
+  `multiplyUnits`, `coerceOrConvertValue`, `coerceValueToUnit`,
+  `convertToMatch`, automatic cancellation in `SassNumber.withUnits`,
+  and the full conversion table (length in/cm/pc/mm/q/pt/px, angle
+  deg/grad/rad/turn, time s/ms, frequency Hz/kHz, resolution
+  dpi/dpcm/dppx). No source changes were required for ISS-002.
+- `ssg-sass/src/test/scala/ssg/sass/SassNumberSuite.scala` — new
+  cross-platform suite, 18 cases covering: subclass dispatch from
+  `withUnits`, compound `*` unioning numerators, compound `/` splitting
+  numerator/denominator, mid-expression cancellation (`10px*s / 1px`),
+  full cancellation to unitless (`10px * 1/1px`), compound cross-type
+  multiplication (`1px*s * 1pt/1ms`), `+`/`-` with cross-unit coercion
+  (`10px + 1pt`, `1in - 1cm`), incompatible-unit `SassScriptException`
+  on `10px + 1s`, `coerceValueToUnit` across length/angle/time/
+  frequency/resolution, round-trips, modulo with coercion, and the
+  numerator+denominator cross-type simplification done by
+  `withUnits` (`px*s / pt*ms` collapses to unitless).
+- ISS-002 resolved via `ssg-dev db issues resolve ISS-002`.
+
+All 3 platforms: 529/529 (+1 ignored) green on JVM, JS, Native
+(+18 per platform).
+
 ### Modern CSS color space support (lab / lch / oklab / oklch / hwb / color())
 
 - `ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala` —
