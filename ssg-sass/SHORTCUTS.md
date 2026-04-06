@@ -116,7 +116,14 @@ or serializer.
 - ⚠️  @forward — text-based MVP: load + merge into current env, with `show`/`hide` filtering and `as prefix-*` rename for variables/functions/mixins. No `with (...)` config; no module-level isolation; built-in callables not re-forwarded.
 - ⚠️  @extend — no-op (needs ExtensionStore integration)
 - ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
-- ⚠️  Parameter binding: basic; rest/keyword-rest args deferred
+- ⚠️  Parameter binding: basic; rest/keyword-rest args deferred. Built-in
+  callables resolve named arguments against their declared parameter names
+  (parsed from the textual signature on `BuiltInCallable`).
+- ✅  `@return` inside `@function` bodies — parsed by StylesheetParser and
+  propagated via a ReturnSignal caught by `_runUserDefinedFunction`.
+- ✅  `@function`/`@mixin` parameter defaults — default expressions are
+  parsed with a raw-text collector that stops at the next top-level `,` or
+  `)`, so `($a: 1, $b: 2)` no longer over-consumes.
 - ✅ Selector parent expansion (`&`) — text-based: `visitSelectorExpression` returns the active style rule's selector as an unquoted SassString, and nested style rules substitute `&` against the parent selector via `_expandSelector`. Full SelectorList value type still deferred.
 
 ### `visitor/SerializeVisitor.scala` ✅ MVP IMPLEMENTED
