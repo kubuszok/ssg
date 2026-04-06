@@ -96,9 +96,4 @@ final class PackageImporter(
     delegate.load(url)
 }
 
-/** An importer resolving Node-style `pkg:` URLs. TODO. */
-final class NodePackageImporter(val entryPoint: String) extends Importer {
-
-  def canonicalize(url: String): Nullable[String]         = Nullable.empty
-  def load(url:         String): Nullable[ImporterResult] = Nullable.empty
-}
+// NodePackageImporter is JVM-only and lives in src/main/scala-jvm/

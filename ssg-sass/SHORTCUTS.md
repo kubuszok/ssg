@@ -290,8 +290,8 @@ edge-case helpers.
 ### `importer/Importer.scala` + `src/main/scala-jvm/.../FilesystemImporter.scala`
 - ✅ `FilesystemImporter.canonicalize(url)` — partials, extensions, index files (JVM-only)
 - ✅ `FilesystemImporter.load(url)` — file I/O via `java.nio.file` (JVM-only)
-- ❌ `PackageImporter` — stub (package config parsing)
-- ❌ `NodePackageImporter` — stub (node_modules traversal)
+- ✅ `PackageImporter` — rewrites `pkg:name/rest` URLs through a packages map and delegates to a wrapped importer
+- ✅ `NodePackageImporter` (JVM-only, `src/main/scala-jvm/.../NodePackageImporter.scala`) — walks upward from the entry point to find `node_modules/<pkg>` (including scoped `@scope/name`), reads `package.json` for `sass`/`style`/`main` entry points via a tiny hand-written string-field scanner, and resolves the loaded path through `FilesystemImporter` so partials, extensions, and `_index.scss` all work. Returns `Nullable.empty` for unknown packages or non-`pkg:` URLs. Wires straight into `Compile.compileString(..., importer = NodePackageImporter(rootDir))` via the existing `Importer` trait.
 
 ### `StylesheetGraph.scala`
 - ⚠️ `addCanonical(...)` — medium (circular dep detection)
