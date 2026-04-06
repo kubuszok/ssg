@@ -69,6 +69,22 @@ final class SassCalculation private (
   }
 
   override def hashCode(): Int = name.hashCode ^ arguments.hashCode()
+
+  override def toCssString(quote: Boolean = true): String = {
+    val sb = new StringBuilder()
+    sb.append(name)
+    sb.append('(')
+    var first = true
+    for (a <- arguments) {
+      if (!first) sb.append(", ")
+      first = false
+      sb.append(SassCalculation.argumentToCss(a))
+    }
+    sb.append(')')
+    sb.toString()
+  }
+
+  override def toString: String = toCssString()
 }
 
 object SassCalculation {
@@ -77,6 +93,29 @@ object SassCalculation {
     */
   def unsimplified(name: String, arguments: Iterable[Any]): SassCalculation =
     new SassCalculation(name, arguments.toList)
+
+  /** Renders a calculation argument (SassNumber, CalculationOperation, SassString, or SassCalculation) as its CSS source form. */
+  def argumentToCss(arg: Any): String = arg match {
+    case n:  SassNumber           => n.toCssString()
+    case c:  SassCalculation      => c.toCssString()
+    case s:  SassString           => s.toCssString(quote = false)
+    case op: CalculationOperation =>
+      val l = argumentToCssParenthesized(op.left, op.operator, isLeft = true)
+      val r = argumentToCssParenthesized(op.right, op.operator, isLeft = false)
+      s"$l ${op.operator.operator} $r"
+    case v: Value => v.toCssString(quote = false)
+    case other => other.toString
+  }
+
+  /** Wraps a CalculationOperation child in parens when its precedence is lower than the parent operator. */
+  private def argumentToCssParenthesized(arg: Any, parentOp: CalculationOperator, isLeft: Boolean): String = arg match {
+    case op: CalculationOperation
+        if op.operator.precedence < parentOp.precedence ||
+          (!isLeft && op.operator.precedence == parentOp.precedence &&
+            (parentOp == CalculationOperator.Minus || parentOp == CalculationOperator.DividedBy)) =>
+      s"(${argumentToCss(op)})"
+    case _ => argumentToCss(arg)
+  }
 
   /** Creates a `calc()` calculation with the given argument.
     *

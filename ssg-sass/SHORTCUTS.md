@@ -220,6 +220,16 @@ edge-case helpers.
 - ⚠️  @forward — text-based MVP: load + merge into current env, with `show`/`hide` filtering, `as prefix-*` rename for variables/functions/mixins, and `with (...)` configuration that pre-sets variables in the loaded module's environment so `!default` declarations honor overrides. No module-level isolation; built-in callables are not re-forwarded.
 - ⚠️  @extend — no-op (needs ExtensionStore integration)
 - ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
+- ✅  First-class CSS calc/min/max/clamp — `visitFunctionExpression` intercepts
+  the four names (when no namespace), walks the argument expressions translating
+  `BinaryOperationExpression` Plus/Minus/Times/DividedBy nodes into
+  `CalculationOperation`s and evaluating leaves through the normal expression
+  visitor, then dispatches to `SassCalculation.calc/min/max/clamp` which
+  simplifies. Compatible numeric operands collapse (`calc(10px + 5px)` → `15px`,
+  `max(10px, 20px)` → `20px`); incompatible/variable operands round-trip as a
+  `SassCalculation` value whose new `toCssString` override emits
+  `name(arg1, arg2)` form with operator precedence-aware parenthesization.
+  Falls back to the previous plain-CSS rendering on any conversion failure.
 - ⚠️  Parameter binding: basic; rest/keyword-rest args deferred. Built-in
   callables resolve named arguments against their declared parameter names
   (parsed from the textual signature on `BuiltInCallable`).

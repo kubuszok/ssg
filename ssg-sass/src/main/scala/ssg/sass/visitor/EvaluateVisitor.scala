@@ -259,6 +259,9 @@ final class EvaluateVisitor(
     _parent = Nullable(root: ModifiableCssParentNode)
     _endOfImports = 0
     val savedCur = ssg.sass.CurrentEnvironment.set(Nullable(_environment))
+    val savedInv = ssg.sass.CurrentCallableInvoker.set(
+      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeCallable(c, pos, named))
+    )
     try {
       visitStylesheet(stylesheet)
       // Apply basic `@extend` rewrites before serialising.
@@ -271,8 +274,30 @@ final class EvaluateVisitor(
       EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
     } finally {
       val _ = ssg.sass.CurrentEnvironment.set(savedCur)
+      val _ = ssg.sass.CurrentCallableInvoker.set(savedInv)
     }
   }
+
+  /** Invokes a [[Callable]] (built-in or user-defined function) with the given arguments. Used by `meta.call` to dispatch a `SassFunction`'s underlying callable. Mixin invocation is not supported
+    * here.
+    */
+  private def _invokeCallable(callable: Callable, positional: List[Value], named: ListMap[String, Value]): Value =
+    callable match {
+      case bic: BuiltInCallable =>
+        val merged =
+          if (named.isEmpty) positional
+          else _mergeBuiltInNamedArgs(bic, positional, named)
+        bic.callback(merged)
+      case ud: UserDefinedCallable[?] =>
+        ud.declaration match {
+          case fr: ssg.sass.ast.sass.FunctionRule =>
+            _runUserDefinedFunction(fr, positional, named)
+          case _ =>
+            throw SassScriptException(s"Callable ${callable.name} is not a function.")
+        }
+      case _ =>
+        throw SassScriptException(s"Callable type not supported by meta.call: $callable")
+    }
 
   /** Switches the active environment, keeping [[CurrentEnvironment]] in sync so built-in callables (e.g. `mixin-exists`) introspect the right scope.
     */
@@ -325,7 +350,17 @@ final class EvaluateVisitor(
 
   override def visitColorExpression(node: ColorExpression): Value = node.value
 
-  override def visitFunctionExpression(node: FunctionExpression): Value = {
+  override def visitFunctionExpression(node: FunctionExpression): Value = scala.util.boundary[Value] {
+    // First-class CSS calc()/min()/max()/clamp() — produce a SassCalculation
+    // (or a simplified SassNumber) instead of falling through to plain text.
+    if (node.namespace.isEmpty) {
+      node.name match {
+        case "calc" | "min" | "max" | "clamp" =>
+          val calcResult = _evaluateCalculation(node)
+          if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
+        case _ => ()
+      }
+    }
     // Look up the callable in the current environment. If not found, fall
     // through to a "plain CSS function" rendering. Full dispatch (built-in
     // calculations, namespaces, plain CSS calls) is deferred to Phase 20.
@@ -553,6 +588,46 @@ final class EvaluateVisitor(
   // ===========================================================================
   // Helpers
   // ===========================================================================
+
+  /** First-class evaluation of `calc()`, `min()`, `max()`, `clamp()`. Walks the argument expressions, treating arithmetic operators as [[ssg.sass.value.CalculationOperation]]s and leaf expressions as
+    * normally-evaluated values. Returns a [[ssg.sass.value.SassCalculation]] (or a simplified [[ssg.sass.value.SassNumber]]) on success, or Nullable.empty if the calculation can't be built — in which
+    * case the caller falls through to the existing plain-CSS rendering path.
+    */
+  private def _evaluateCalculation(node: FunctionExpression): Nullable[Value] = {
+    import ssg.sass.value.{ CalculationOperator, SassCalculation }
+    val args = node.arguments.positional
+    if (args.isEmpty || node.arguments.named.nonEmpty) return Nullable.empty
+    try {
+      def toArg(expr: Expression): Any = expr match {
+        case ParenthesizedExpression(inner, _)      => toArg(inner)
+        case BinaryOperationExpression(op, l, r, _) =>
+          val co: Nullable[CalculationOperator] = op match {
+            case BinaryOperator.Plus      => Nullable(CalculationOperator.Plus)
+            case BinaryOperator.Minus     => Nullable(CalculationOperator.Minus)
+            case BinaryOperator.Times     => Nullable(CalculationOperator.Times)
+            case BinaryOperator.DividedBy => Nullable(CalculationOperator.DividedBy)
+            case _                        => Nullable.empty[CalculationOperator]
+          }
+          if (co.isEmpty) expr.accept(this)
+          else SassCalculation.operate(co.get, toArg(l), toArg(r))
+        case _ => expr.accept(this)
+      }
+      val converted = args.map(toArg)
+      val result: Value = node.name match {
+        case "calc" if converted.length == 1 =>
+          SassCalculation.calc(converted.head)
+        case "min"                            => SassCalculation.min(converted)
+        case "max"                            => SassCalculation.max(converted)
+        case "clamp" if converted.length == 3 =>
+          SassCalculation.clamp(converted(0), Nullable(converted(1)), Nullable(converted(2)))
+        case _ => return Nullable.empty
+      }
+      Nullable(result)
+    } catch {
+      case _: SassScriptException      => Nullable.empty
+      case _: IllegalArgumentException => Nullable.empty
+    }
+  }
 
   /** Evaluate an [[Interpolation]] to its plain string form, evaluating any embedded expressions and serializing them to CSS.
     */

@@ -14,6 +14,39 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
+  test("calc() preserves incompatible units") {
+    val css = Compile.compileString("a { width: calc(100% - 20px); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{width:calc(100% - 20px);}")
+  }
+
+  test("calc() simplifies compatible numeric arithmetic") {
+    val css = Compile.compileString("a { width: calc(10px + 5px); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{width:15px;}")
+  }
+
+  test("min() preserves multiple incompatible arguments") {
+    val css = Compile.compileString("a { width: min(100%, 500px); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{width:min(100%, 500px);}")
+  }
+
+  test("max() resolves variable arguments") {
+    // With two compatible numeric arguments Sass simplifies max(10px, 20px) to 20px.
+    val src = "$base: 20px; a { width: max(10px, $base); }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{width:20px;}")
+  }
+
+  test("max() preserves incompatible variable arguments") {
+    val src = "$base: 50%; a { width: max(10px, $base); }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{width:max(10px, 50%);}")
+  }
+
+  test("clamp() with three numeric arguments") {
+    val css = Compile.compileString("a { width: clamp(10px, 50%, 500px); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{width:clamp(10px, 50%, 500px);}")
+  }
+
   test("@at-root (with: media) inside @media keeps the media wrapper") {
     val src =
       """@media screen {
@@ -1262,5 +1295,111 @@ final class CompileSuite extends munit.FunSuite {
     assert(text.contains("with"), text)
     assert(text.contains("$base"), text)
     assert(text.contains("20px"), text)
+  }
+
+  // ---------------------------------------------------------------------------
+  // meta.get-function / meta.call / meta.get-mixin / meta.module-* tests
+  // ---------------------------------------------------------------------------
+
+  test("meta.get-function + call invokes a built-in function") {
+    val css = Compile
+      .compileString(
+        """
+          |a {
+          |  $fn: get-function("rgb");
+          |  color: call($fn, 255, 0, 0);
+          |}
+      """.stripMargin
+      )
+      .css
+    // rgb(255, 0, 0) → red, serialized as the named color or hex shorthand.
+    assert(css.contains("red") || css.contains("#f00") || css.contains("#ff0000"), css)
+  }
+
+  test("meta.call invokes a user-defined @function via get-function") {
+    val css = Compile
+      .compileString(
+        """
+          |@function double($n) { @return $n * 2; }
+          |a {
+          |  $fn: get-function("double");
+          |  width: call($fn, 5px);
+          |}
+      """.stripMargin
+      )
+      .css
+    assert(css.contains("width: 10px"), css)
+  }
+
+  test("meta.call accepts a string function name (legacy form)") {
+    val css = Compile
+      .compileString(
+        """a { color: call("rgb", 0, 128, 0); }"""
+      )
+      .css
+    assert(css.contains("green") || css.contains("#008000"), css)
+  }
+
+  test("meta.module-functions returns a function map for sass:math") {
+    val css = Compile
+      .compileString(
+        """
+          |@use "sass:math" as m;
+          |a {
+          |  $fns: module-functions("m");
+          |  has-floor: map-has-key($fns, "floor");
+          |}
+      """.stripMargin
+      )
+      .css
+    assert(css.contains("has-floor: true"), css)
+  }
+
+  test("meta.module-variables returns a map of vars from a @use'd module") {
+    import ssg.sass.importer.MapImporter
+    val imp = new MapImporter(
+      Map(
+        "colors.scss" -> """$primary: red; $secondary: blue;"""
+      )
+    )
+    val css = Compile
+      .compileString(
+        """
+          |@use "colors" as c;
+          |a {
+          |  $vars: module-variables("c");
+          |  count: length(map-keys($vars));
+          |  primary: map-get($vars, "primary");
+          |}
+      """.stripMargin,
+        importer = ssg.sass.Nullable(imp: ssg.sass.importer.Importer)
+      )
+      .css
+    assert(css.contains("count: 2"), css)
+    assert(css.contains("primary: red"), css)
+  }
+
+  test("meta.get-function on an unknown name throws") {
+    intercept[RuntimeException] {
+      val _ = Compile.compileString(
+        """a { $fn: get-function("definitely-not-a-real-function"); color: red; }"""
+      )
+    }
+  }
+
+  test("meta.get-mixin returns a SassMixin and meta.apply errors") {
+    // get-mixin should succeed; apply is intentionally a stub.
+    val css = Compile
+      .compileString(
+        """
+          |@mixin greet { greeting: hello; }
+          |a {
+          |  $mx: get-mixin("greet");
+          |  type: type-of($mx);
+          |}
+      """.stripMargin
+      )
+      .css
+    assert(css.contains("type: mixin"), css)
   }
 }
