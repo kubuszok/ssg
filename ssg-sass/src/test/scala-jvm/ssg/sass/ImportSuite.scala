@@ -176,6 +176,39 @@ final class ImportSuite extends munit.FunSuite {
     assert(result.css.contains("green"), result.css)
   }
 
+  tempDir.test("@use with config overrides !default variable") { dir =>
+    writeFile(dir, "_theme.scss", "$primary: red !default; .a { color: $primary; }")
+    val source = """
+      @use "theme" with ($primary: blue);
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    assert(!result.css.contains("red"), result.css)
+  }
+
+  tempDir.test("@use with config overrides multiple !default variables") { dir =>
+    writeFile(dir, "_theme.scss",
+      "$primary: red !default; $secondary: green !default; .a { c1: $primary; c2: $secondary; }")
+    val source = """
+      @use "theme" with ($primary: blue, $secondary: yellow);
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+    assert(result.css.contains("yellow"), result.css)
+  }
+
+  tempDir.test("@use without config uses !default value") { dir =>
+    writeFile(dir, "_theme.scss", "$primary: red !default; .a { color: $primary; }")
+    val source = """
+      @use "theme";
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("red"), result.css)
+  }
+
   tempDir.test("CompileFile.compile reads file from path") { dir =>
     writeFile(dir, "main.scss", "a { color: red; }")
     val path = dir.resolve("main.scss").toString

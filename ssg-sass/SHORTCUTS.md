@@ -181,7 +181,8 @@ or serializer.
 - ✅ Flat merge (`@use "vars" as *`) copies variables/functions/mixins
 - ✅ `namespace.$var` and `namespace.fn()` parsing in StylesheetParser
 - ✅ `Environment.namespaces` + `getNamespacedVariable` / `getNamespacedFunction`
-- ⚠️ No `with (...)` configuration support
+- ✅ `with ($var: value, ...)` configuration — pre-sets variables in the module
+  environment so `!default` declarations honor overrides
 
 ---
 

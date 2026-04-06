@@ -29,6 +29,7 @@ import ssg.sass.ast.sass.{
   BinaryOperationExpression,
   BinaryOperator,
   BooleanExpression,
+  ConfiguredVariable,
   Declaration,
   DynamicImport,
   ExtendRule,
@@ -154,16 +155,45 @@ abstract class StylesheetParser protected (
             else Nullable(stripped)
           }
         whitespace(consumeNewlines = true)
-        // Optional `with (...)` — skipped in v1.
+        // Optional `with ($name: expr [!default], ...)`.
+        val configBuf = mutable.ListBuffer.empty[ConfiguredVariable]
         if (scanIdentifier("with")) {
-          while (!scanner.isDone && scanner.peekChar() != CharCode.$semicolon) {
-            val _ = scanner.readChar()
+          whitespace(consumeNewlines = true)
+          scanner.expectChar(CharCode.$lparen)
+          whitespace(consumeNewlines = true)
+          var more = true
+          while (more) {
+            whitespace(consumeNewlines = true)
+            val cvStart = scanner.state
+            val varName = variableName()
+            whitespace(consumeNewlines = true)
+            scanner.expectChar(CharCode.$colon)
+            whitespace(consumeNewlines = true)
+            val expr = _expression()
+            whitespace(consumeNewlines = true)
+            var guarded = false
+            if (scanner.scanChar(CharCode.$exclamation)) {
+              val flag = identifier()
+              if (flag == "default") guarded = true
+              else scanner.error(s"Unknown flag !$flag.")
+              whitespace(consumeNewlines = true)
+            }
+            configBuf += ConfiguredVariable(varName, expr, spanFrom(cvStart), guarded)
+            whitespace(consumeNewlines = true)
+            if (scanner.scanChar(CharCode.$comma)) {
+              whitespace(consumeNewlines = true)
+              // Allow trailing comma before `)`.
+              if (scanner.peekChar() == CharCode.$rparen) more = false
+              else more = true
+            } else more = false
           }
+          whitespace(consumeNewlines = true)
+          scanner.expectChar(CharCode.$rparen)
         }
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         val uri = java.net.URI.create(url)
-        Nullable(new UseRule(uri, namespace, spanFrom(start)))
+        Nullable(new UseRule(uri, namespace, spanFrom(start), configBuf.toList))
       case "forward" =>
         // Minimal @forward parsing: @forward "url" [show ...|hide ...] [as prefix-*];
         // On any unsupported / malformed clause, swallow to ';' and skip the rule.

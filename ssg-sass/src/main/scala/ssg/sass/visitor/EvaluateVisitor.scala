@@ -969,6 +969,12 @@ final class EvaluateVisitor(
             // Evaluate the module in a fresh environment, then register its
             // members either as a namespace or by merging them flat (`as *`).
             val moduleEnv = Environment.withBuiltins()
+            // Apply `with (...)` configuration before evaluating the module
+            // so that `!default` declarations honor the override.
+            for (cv <- node.configuration) {
+              val cvValue = cv.expression.accept(this)
+              moduleEnv.setVariable(cv.name, cvValue)
+            }
             val savedEnv = _environment
             _environment = moduleEnv
             try {
