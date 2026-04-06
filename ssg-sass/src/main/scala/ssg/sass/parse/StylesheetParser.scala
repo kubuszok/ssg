@@ -936,26 +936,24 @@ abstract class StylesheetParser protected (
       return StringExpression(_parseInterpolatedString(trimmed, span), hasQuotes = false)
     }
 
-    // Variable reference (possibly namespaced: `ns.$var`)
+    // Variable reference: plain `$var`
     if (trimmed.startsWith("$")) {
-      {
-        val name = trimmed.substring(1)
-        if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
-          return VariableExpression(name.replace('_', '-'), span)
-        }
+      val name = trimmed.substring(1)
+      if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
+        return VariableExpression(name.replace('_', '-'), span)
       }
-      // Namespaced variable: `ns.$var`
-      {
-        val dollarIdx = trimmed.indexOf(".$")
-        if (dollarIdx > 0) {
-          val ns   = trimmed.substring(0, dollarIdx)
-          val name = trimmed.substring(dollarIdx + 2)
-          if (
-            _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
-            name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))
-          ) {
-            return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
-          }
+    }
+    // Namespaced variable: `ns.$var`
+    {
+      val dollarIdx = trimmed.indexOf(".$")
+      if (dollarIdx > 0) {
+        val ns   = trimmed.substring(0, dollarIdx)
+        val name = trimmed.substring(dollarIdx + 2)
+        if (
+          _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+          name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))
+        ) {
+          return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
         }
       }
     }
