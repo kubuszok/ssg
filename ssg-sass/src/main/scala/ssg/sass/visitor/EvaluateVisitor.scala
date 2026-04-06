@@ -271,8 +271,11 @@ final class EvaluateVisitor(
       // Built-in callable dispatch — minimal: evaluate positional args and call.
       c match {
         case bic: ssg.sass.BuiltInCallable =>
-          val argValues = node.arguments.positional.map(_.accept(this))
-          bic.callback(argValues)
+          val (positional, named) = _evaluateArguments(node.arguments)
+          val merged =
+            if (named.isEmpty) positional
+            else _mergeBuiltInNamedArgs(bic, positional, named)
+          bic.callback(merged)
         case ud: UserDefinedCallable[?] =>
           ud.declaration match {
             case fr: FunctionRule =>
@@ -1338,6 +1341,44 @@ final class EvaluateVisitor(
         ssg.sass.value.ListSeparator.Comma
       )
       _environment.setVariable(restName, restList)
+    }
+  }
+
+  /** Merges named arguments into the positional list for a built-in function call. Resolves each name against the callable's declared parameter signature (see [[BuiltInCallable.parameterNames]]),
+    * filling any gaps with [[SassNull]]. Names that don't correspond to a declared parameter raise a [[SassScriptException]]. When the callable declares no parameter names (rest-only signatures like
+    * `"$args..."`), named arguments are ignored and the positional list is returned unchanged.
+    */
+  private def _mergeBuiltInNamedArgs(
+    bic:        BuiltInCallable,
+    positional: List[Value],
+    named:      ListMap[String, Value]
+  ): List[Value] = {
+    val names = bic.parameterNames
+    if (names.isEmpty) positional
+    else {
+      // Validate: every named key must be a declared parameter.
+      for ((k, _) <- named)
+        if (!names.contains(k))
+          throw SassScriptException(s"No parameter named $$$k in ${bic.name}().")
+      // Determine the highest index that is explicitly supplied (positional
+      // or named) so we don't append trailing nulls for unsupplied tail
+      // parameters with defaults.
+      val namedIndices = named.keys.map(names.indexOf).filter(_ >= 0)
+      val maxIdx       =
+        (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+      val buf = scala.collection.mutable.ListBuffer.empty[Value]
+      var i   = 0
+      while (i <= maxIdx && i < names.length) {
+        val pname = names(i)
+        if (i < positional.length) buf += positional(i)
+        else
+          named.get(pname) match {
+            case Some(v) => buf += v
+            case _       => buf += SassNull
+          }
+        i += 1
+      }
+      buf.toList
     }
   }
 

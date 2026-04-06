@@ -49,6 +49,7 @@ import ssg.sass.ast.sass.{
   Parameter,
   ParameterList,
   ParseTimeWarning,
+  ReturnRule,
   SilentComment,
   Statement,
   StaticImport,
@@ -372,6 +373,13 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val kids = _children()
         Nullable(new FunctionRule(fnName, params, kids, spanFrom(start)))
+      case "return" =>
+        // @return <expression> ;
+        whitespace(consumeNewlines = true)
+        val retExpr = _expression()
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        Nullable(new ReturnRule(retExpr, spanFrom(start)))
       case "include" =>
         // @include name [(args)] ;
         whitespace(consumeNewlines = true)
@@ -461,7 +469,45 @@ abstract class StylesheetParser protected (
         } else if (scanner.peekChar() == CharCode.$colon) {
           val _ = scanner.readChar()
           whitespace(consumeNewlines = true)
-          val defaultExpr = _expression()
+          // Collect raw expression text up to the next top-level `,` or `)`,
+          // respecting nesting (parens/brackets) and string quoting. This
+          // avoids `_expression()` over-consuming past the parameter boundary.
+          val defStart = scanner.state
+          val defBuf   = new StringBuilder()
+          var depth    = 0
+          var dQuote:  Int = 0
+          boundary {
+            while (!scanner.isDone) {
+              val dch = scanner.peekChar()
+              if (dch < 0) break(())
+              if (dQuote > 0) {
+                if (dch == CharCode.$backslash) {
+                  defBuf.append(scanner.readChar().toChar)
+                  if (!scanner.isDone) defBuf.append(scanner.readChar().toChar)
+                } else {
+                  if (dch == dQuote) dQuote = 0
+                  defBuf.append(scanner.readChar().toChar)
+                }
+              } else if (dch == CharCode.$double_quote || dch == CharCode.$single_quote) {
+                dQuote = dch
+                defBuf.append(scanner.readChar().toChar)
+              } else if (dch == CharCode.$lparen || dch == CharCode.$lbracket) {
+                depth += 1
+                defBuf.append(scanner.readChar().toChar)
+              } else if (dch == CharCode.$rparen || dch == CharCode.$rbracket) {
+                if (depth == 0) break(())
+                depth -= 1
+                defBuf.append(scanner.readChar().toChar)
+              } else if (depth == 0 && dch == CharCode.$comma) {
+                break(())
+              } else {
+                defBuf.append(scanner.readChar().toChar)
+              }
+            }
+          }
+          val defRaw  = defBuf.toString().trim
+          if (defRaw.isEmpty) scanner.error("Expected expression.")
+          val defaultExpr = _parseSimpleExpression(defRaw, spanFrom(defStart))
           params += new Parameter(pname, spanFrom(paramStart), Nullable(defaultExpr))
           whitespace(consumeNewlines = true)
           if (scanner.scanChar(CharCode.$comma)) {

@@ -88,7 +88,7 @@ object ColorFunctions {
   private val rgbFn: BuiltInCallable =
     BuiltInCallable.function(
       "rgb",
-      "$args...",
+      "$red, $green, $blue, $alpha",
       args =>
         args.length match {
           case 3 =>
@@ -114,12 +114,12 @@ object ColorFunctions {
     )
 
   private val rgbaFn: BuiltInCallable =
-    BuiltInCallable.function("rgba", "$args...", rgbFn.callback)
+    BuiltInCallable.function("rgba", "$red, $green, $blue, $alpha", rgbFn.callback)
 
   private val hslFn: BuiltInCallable =
     BuiltInCallable.function(
       "hsl",
-      "$args...",
+      "$hue, $saturation, $lightness, $alpha",
       args =>
         args.length match {
           case 3 =>
@@ -141,7 +141,7 @@ object ColorFunctions {
     )
 
   private val hslaFn: BuiltInCallable =
-    BuiltInCallable.function("hsla", "$args...", hslFn.callback)
+    BuiltInCallable.function("hsla", "$hue, $saturation, $lightness, $alpha", hslFn.callback)
 
   // --- Accessors ---
 

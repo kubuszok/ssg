@@ -550,6 +550,36 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("my-fn"), result.css)
   }
 
+  test("@function with @return returns a value to the caller") {
+    val result = Compile.compileString("""
+      @function double($x) { @return $x * 2; }
+      .box { width: double(10px); }
+    """)
+    assert(result.css.contains("width: 20px"), result.css)
+  }
+
+  test("@function parameter default is not consumed past next comma") {
+    val result = Compile.compileString("""
+      @function pick($a: 1, $b: 2) { @return $a + $b; }
+      .box { x: pick(); }
+    """)
+    assert(result.css.contains("x: 3"), result.css)
+  }
+
+  test("built-in rgb() accepts named arguments") {
+    val result = Compile.compileString(
+      ".box { r: red(rgb($red: 255, $green: 0, $blue: 0)); }"
+    )
+    assert(result.css.contains("r: 255"), result.css)
+  }
+
+  test("built-in hsl() accepts named arguments") {
+    val result = Compile.compileString(
+      ".box { x: lightness(hsl($hue: 0, $saturation: 100%, $lightness: 50%)); }"
+    )
+    assert(result.css.contains("x: 50%"), result.css)
+  }
+
   test("@include splats list rest argument into positional params") {
     val result = Compile.compileString("""
       @mixin pair($a, $b) { x: $a; y: $b; }

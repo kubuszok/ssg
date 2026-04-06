@@ -39,8 +39,49 @@ final class BuiltInCallable(
   val name:           String,
   val parameters:     Nullable[ParameterList],
   val callback:       List[Value] => Value,
-  val acceptsContent: Boolean = false
+  val acceptsContent: Boolean = false,
+  val signature:      String = ""
 ) extends Callable {
+
+  /** Positional parameter names derived from the textual [[signature]] (e.g.
+    * `"$color, $amount"` → `List("color", "amount")`). Underscores are
+    * normalized to hyphens to match Sass name conventions. Rest parameters
+    * (`$args...`) and trailing defaults are ignored — only the leading name
+    * is extracted. Returns an empty list when the signature is a rest-only
+    * form such as `"$args..."`.
+    */
+  lazy val parameterNames: List[String] = {
+    val trimmed = signature.trim
+    if (trimmed.isEmpty) Nil
+    else {
+      val parts = scala.collection.mutable.ListBuffer.empty[String]
+      val buf   = new StringBuilder()
+      var depth = 0
+      var i     = 0
+      while (i < trimmed.length) {
+        val c = trimmed.charAt(i)
+        if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+        else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+        else if (c == ',' && depth == 0) {
+          parts += buf.toString().trim
+          buf.setLength(0)
+        } else buf.append(c)
+        i += 1
+      }
+      if (buf.nonEmpty) parts += buf.toString().trim
+      parts.toList.flatMap { raw =>
+        // Strip default value: `$x: expr`
+        val noDefault = raw.indexOf(':') match {
+          case -1  => raw
+          case idx => raw.substring(0, idx).trim
+        }
+        // Skip rest parameters `$args...` — they don't bind a fixed name.
+        if (noDefault.endsWith("...")) None
+        else if (noDefault.startsWith("$")) Some(noDefault.substring(1).replace('_', '-'))
+        else None
+      }
+    }
+  }
 
   override def toString: String = s"BuiltInCallable($name)"
 }
@@ -48,8 +89,7 @@ final class BuiltInCallable(
 object BuiltInCallable {
 
   def function(name: String, arguments: String, callback: List[Value] => Value): BuiltInCallable =
-    // TODO: parse `arguments` into a ParameterList
-    BuiltInCallable(name, Nullable.empty, callback)
+    BuiltInCallable(name, Nullable.empty, callback, signature = arguments)
 
   def mixin(
     name:           String,
@@ -57,8 +97,7 @@ object BuiltInCallable {
     callback:       List[Value] => Value,
     acceptsContent: Boolean = false
   ): BuiltInCallable =
-    // TODO: parse `arguments` into a ParameterList
-    BuiltInCallable(name, Nullable.empty, callback, acceptsContent)
+    BuiltInCallable(name, Nullable.empty, callback, acceptsContent, signature = arguments)
 
   def overloadedFunction(
     name:      String,
