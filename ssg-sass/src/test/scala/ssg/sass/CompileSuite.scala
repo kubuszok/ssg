@@ -79,6 +79,72 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("@charset"))
   }
 
+  test("compiles @at-root bare block at stylesheet root") {
+    val result = Compile.compileString("""
+      .parent {
+        color: red;
+        @at-root {
+          .child { color: blue; }
+        }
+      }
+    """)
+    // .child should be at root, not nested under .parent
+    assert(result.css.contains(".child"))
+    assert(result.css.contains("color: blue"))
+    assert(!result.css.contains(".parent .child"))
+  }
+
+  test("compiles @at-root with selector") {
+    val result = Compile.compileString("""
+      .parent {
+        color: red;
+        @at-root .sibling { color: green; }
+      }
+    """)
+    assert(result.css.contains(".sibling"))
+    assert(result.css.contains("color: green"))
+    assert(!result.css.contains(".parent .sibling"))
+  }
+
+  test("compiles @each over a list") {
+    val result = Compile.compileString("""
+      @each $c in red, green, blue {
+        .x-#{$c} { color: $c; }
+      }
+    """)
+    assert(result.css.contains(".x-red"))
+    assert(result.css.contains(".x-green"))
+    assert(result.css.contains(".x-blue"))
+    assert(result.css.contains("color: red"))
+    assert(result.css.contains("color: green"))
+    assert(result.css.contains("color: blue"))
+  }
+
+  test("compiles @each destructuring over list of lists") {
+    val result = Compile.compileString("""
+      @each $name, $size in (small 10px, big 20px) {
+        .#{$name} { width: $size; }
+      }
+    """)
+    assert(result.css.contains(".small"))
+    assert(result.css.contains("width: 10px"))
+    assert(result.css.contains(".big"))
+    assert(result.css.contains("width: 20px"))
+  }
+
+  test("compiles @each over a map with key/value destructuring") {
+    val result = Compile.compileString("""
+      $sizes: (small: 10px, big: 20px);
+      @each $name, $size in $sizes {
+        .#{$name} { width: $size; }
+      }
+    """)
+    assert(result.css.contains(".small"))
+    assert(result.css.contains("width: 10px"))
+    assert(result.css.contains(".big"))
+    assert(result.css.contains("width: 20px"))
+  }
+
   test("compressed output has no whitespace") {
     val result = Compile.compileString(
       """
@@ -808,5 +874,60 @@ final class CompileSuite extends munit.FunSuite {
     )
     assert(result.css.contains("@keyframes pulse"), result.css)
     assert(result.css.contains("0%, 100%"), result.css)
+  }
+
+  // ---------------------------------------------------------------------------
+  // New built-in functions (math / string / list / meta / map)
+  // ---------------------------------------------------------------------------
+
+  test("calls sqrt() function") {
+    val result = Compile.compileString(".box { x: sqrt(16); }")
+    assert(result.css.contains("x: 4"), result.css)
+  }
+
+  test("calls pow() function") {
+    val result = Compile.compileString(".box { x: pow(2, 10); }")
+    assert(result.css.contains("x: 1024"), result.css)
+  }
+
+  test("calls clamp() function") {
+    val result = Compile.compileString(".box { x: clamp(1px, 5px, 10px); y: clamp(1px, 20px, 10px); }")
+    assert(result.css.contains("x: 5px"), result.css)
+    assert(result.css.contains("y: 10px"), result.css)
+  }
+
+  test("calls hypot() function") {
+    val result = Compile.compileString(".box { x: hypot(3, 4); }")
+    assert(result.css.contains("x: 5"), result.css)
+  }
+
+  test("calls log() function of e is 1") {
+    val result = Compile.compileString(".box { x: log(1); }")
+    assert(result.css.contains("x: 0"), result.css)
+  }
+
+  test("calls unique-id() returns unquoted string") {
+    val result = Compile.compileString(".a { x: unique-id(); } .b { x: unique-id(); }")
+    assert(result.css.contains("x: u"), result.css)
+  }
+
+  test("calls mixin-exists() placeholder returns false") {
+    val result = Compile.compileString(""".box { x: mixin-exists("foo"); }""")
+    assert(result.css.contains("x: false"), result.css)
+  }
+
+  test("calls content-exists() placeholder returns false") {
+    val result = Compile.compileString(""".box { x: content-exists(); }""")
+    assert(result.css.contains("x: false"), result.css)
+  }
+
+  test("nth() supports negative indices") {
+    val result = Compile.compileString(".box { x: nth(1px 2px 3px, -1); }")
+    assert(result.css.contains("x: 3px"), result.css)
+  }
+
+  test("calls global-variable-exists() placeholder returns false") {
+    val result = Compile.compileString(""".box { x: global-variable-exists("foo"); }""")
+    assert(result.css.contains("x: false"), result.css)
   }
 }

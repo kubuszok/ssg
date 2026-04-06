@@ -25,6 +25,7 @@ import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.sass.{
   ArgumentList,
+  AtRootRule,
   AtRule,
   BinaryOperationExpression,
   BinaryOperator,
@@ -32,6 +33,7 @@ import ssg.sass.ast.sass.{
   ConfiguredVariable,
   Declaration,
   DynamicImport,
+  EachRule,
   Expression,
   ExtendRule,
   ForwardRule,
@@ -43,6 +45,7 @@ import ssg.sass.ast.sass.{
   Interpolation,
   ListExpression,
   LoudComment,
+  MapExpression,
   MediaRule,
   MixinRule,
   NullExpression,
@@ -620,6 +623,111 @@ abstract class StylesheetParser protected (
             childStatements = Nullable(kfBlocks.toList)
           )
         )
+      case "each" =>
+        // @each $var[, $var, ...] in <expression> { body }
+        whitespace(consumeNewlines = true)
+        val vars = mutable.ListBuffer.empty[String]
+        // First variable is required.
+        if (scanner.peekChar() != CharCode.$dollar) scanner.error("Expected variable.")
+        val _ = scanner.readChar()
+        vars += identifier()
+        whitespace(consumeNewlines = true)
+        // Additional comma-separated variables.
+        while (scanner.peekChar() == CharCode.$comma) {
+          val _ = scanner.readChar()
+          whitespace(consumeNewlines = true)
+          if (scanner.peekChar() != CharCode.$dollar) scanner.error("Expected variable.")
+          val _ = scanner.readChar()
+          vars += identifier()
+          whitespace(consumeNewlines = true)
+        }
+        if (!scanIdentifier("in")) scanner.error("Expected \"in\".")
+        whitespace(consumeNewlines = true)
+        // Collect the list expression text up to the opening `{`, respecting
+        // balanced brackets/parens, quoted strings, and `#{...}`.
+        val eStart = scanner.state
+        val eBuf   = new StringBuilder()
+        var eDepth = 0
+        var eQuote: Int = 0
+        boundary {
+          while (!scanner.isDone) {
+            val ch = scanner.peekChar()
+            if (ch < 0) break(())
+            if (eQuote > 0) {
+              if (ch == CharCode.$backslash) {
+                eBuf.append(scanner.readChar().toChar)
+                if (!scanner.isDone) eBuf.append(scanner.readChar().toChar)
+              } else {
+                if (ch == eQuote) eQuote = 0
+                eBuf.append(scanner.readChar().toChar)
+              }
+            } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+              eQuote = ch
+              eBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$lparen || ch == CharCode.$lbracket) {
+              eDepth += 1
+              eBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
+              if (eDepth > 0) eDepth -= 1
+              eBuf.append(scanner.readChar().toChar)
+            } else if (eDepth == 0 && ch == CharCode.$lbrace) {
+              break(())
+            } else {
+              eBuf.append(scanner.readChar().toChar)
+            }
+          }
+        }
+        val listRaw  = eBuf.toString().trim
+        val listExpr = _parseSimpleExpression(listRaw, spanFrom(eStart))
+        whitespace(consumeNewlines = true)
+        val eachKids = _children()
+        Nullable(new EachRule(vars.toList, listExpr, eachKids, spanFrom(start)))
+      case "at-root" =>
+        // @at-root [<selector>] { body }
+        // If a selector precedes the `{`, wrap the body in a StyleRule so
+        // that children are re-parented under a fresh top-level rule.
+        whitespace(consumeNewlines = true)
+        val selBuf    = new StringBuilder()
+        var arDepth   = 0
+        var arQuote: Int = 0
+        boundary {
+          while (!scanner.isDone) {
+            val ch = scanner.peekChar()
+            if (ch < 0) break(())
+            if (arQuote > 0) {
+              if (ch == CharCode.$backslash) {
+                selBuf.append(scanner.readChar().toChar)
+                if (!scanner.isDone) selBuf.append(scanner.readChar().toChar)
+              } else {
+                if (ch == arQuote) arQuote = 0
+                selBuf.append(scanner.readChar().toChar)
+              }
+            } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+              arQuote = ch
+              selBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$lparen || ch == CharCode.$lbracket) {
+              arDepth += 1
+              selBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
+              if (arDepth > 0) arDepth -= 1
+              selBuf.append(scanner.readChar().toChar)
+            } else if (arDepth == 0 && ch == CharCode.$lbrace) {
+              break(())
+            } else {
+              selBuf.append(scanner.readChar().toChar)
+            }
+          }
+        }
+        val selText = selBuf.toString().trim
+        val arKids  = _children()
+        val wrapped: List[Statement] =
+          if (selText.isEmpty) arKids
+          else {
+            val selSpan   = spanFrom(start)
+            val selInterp = Interpolation.plain(selText, selSpan)
+            List(StyleRule(selInterp, arKids, selSpan))
+          }
+        Nullable(new AtRootRule(wrapped, spanFrom(start)))
       case _ =>
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()
@@ -1181,6 +1289,54 @@ abstract class StylesheetParser protected (
         nsName.nonEmpty && _allChars(nsName, (c: Char) => CharCode.isName(c.toInt))
       ) {
         return VariableExpression(nsName.replace('_', '-'), span, Nullable(ns))
+      }
+    }
+
+    // Parenthesized comma-separated list or map literal:
+    //   `(a, b, c)`      → comma ListExpression
+    //   `(k: v, k2: v2)` → MapExpression (if top-level `:` per element)
+    //   `(1 2, 3 4)`     → comma list of space-lists
+    // A single parenthesized element like `(a)` just recurses on the inner.
+    if (trimmed.length >= 2 && trimmed.charAt(0) == '(' && trimmed.charAt(trimmed.length - 1) == ')') {
+      // Confirm the outer parens are balanced as a single group.
+      var pd            = 0
+      var outerBalanced = true
+      var i             = 0
+      while (i < trimmed.length && outerBalanced) {
+        val ch = trimmed.charAt(i)
+        if (ch == '(') pd += 1
+        else if (ch == ')') {
+          pd -= 1
+          if (pd == 0 && i != trimmed.length - 1) outerBalanced = false
+        }
+        i += 1
+      }
+      if (outerBalanced) {
+        val inner = trimmed.substring(1, trimmed.length - 1).trim
+        if (inner.isEmpty) {
+          return ListExpression(Nil, ListSeparator.Undecided, span, hasBrackets = false)
+        }
+        val parts = _splitTopLevel(inner, ',').map(_.trim).filter(_.nonEmpty)
+        // Detect a map literal: every top-level element must contain a top-level `:`.
+        val isMap = parts.nonEmpty && parts.forall { p =>
+          val colonSplit = _splitTopLevel(p, ':')
+          colonSplit.length == 2
+        }
+        if (isMap) {
+          val pairs = parts.map { p =>
+            val kv = _splitTopLevel(p, ':')
+            val k  = _parseSimpleExpression(kv(0).trim, span)
+            val v  = _parseSimpleExpression(kv(1).trim, span)
+            (k, v)
+          }
+          return MapExpression(pairs, span)
+        }
+        if (parts.length >= 2) {
+          val elts = parts.map(p => _parseSimpleExpression(p, span))
+          return ListExpression(elts, ListSeparator.Comma, span, hasBrackets = false)
+        }
+        // Single element: just recurse on the inner.
+        return _parseSimpleExpression(inner, span)
       }
     }
 

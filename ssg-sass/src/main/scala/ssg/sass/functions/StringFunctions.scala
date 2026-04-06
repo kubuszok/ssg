@@ -15,7 +15,7 @@ package sass
 package functions
 
 import ssg.sass.{ BuiltInCallable, Callable, SassScriptException }
-import ssg.sass.value.{ SassNull, SassNumber, SassString }
+import ssg.sass.value.{ ListSeparator, SassList, SassNull, SassNumber, SassString }
 
 /** Built-in string functions. */
 object StringFunctions {
@@ -138,6 +138,73 @@ object StringFunctions {
       }
     )
 
+  private val splitFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "split",
+      "$string, $separator, $limit: null",
+      { args =>
+        val s   = args.head.assertString()
+        val sep = args(1).assertString()
+        val limit = args(2) match {
+          case SassNull => -1
+          case other    =>
+            val n = other.assertNumber()
+            n.assertNoUnits()
+            val i = n.assertInt()
+            if (i < 1) throw SassScriptException(s"$$limit: Must be greater than 0, was $i.")
+            i
+        }
+        val parts: List[String] =
+          if (sep.text.isEmpty) {
+            // Split into individual characters.
+            s.text.toList.map(_.toString)
+          } else if (limit <= 0) {
+            // Full split.
+            val out = List.newBuilder[String]
+            var i   = 0
+            var found = s.text.indexOf(sep.text)
+            while (found >= 0) {
+              out += s.text.substring(i, found)
+              i = found + sep.text.length
+              found = s.text.indexOf(sep.text, i)
+            }
+            out += s.text.substring(i)
+            out.result()
+          } else {
+            val out   = List.newBuilder[String]
+            var i     = 0
+            var count = 0
+            var found = s.text.indexOf(sep.text)
+            while (found >= 0 && count < limit) {
+              out += s.text.substring(i, found)
+              i = found + sep.text.length
+              count += 1
+              found = s.text.indexOf(sep.text, i)
+            }
+            out += s.text.substring(i)
+            out.result()
+          }
+        SassList(
+          parts.map(p => SassString(p, hasQuotes = true)),
+          ListSeparator.Comma,
+          brackets = true
+        )
+      }
+    )
+
+  private var uniqueIdCounter: Long = 0L
+
+  private val uniqueIdFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "unique-id",
+      "",
+      { _ =>
+        // Emit a CSS-identifier-safe unique id (letter prefix).
+        uniqueIdCounter += 1L
+        SassString("u" + java.lang.Long.toString(uniqueIdCounter, 36), hasQuotes = false)
+      }
+    )
+
   val global: List[Callable] = List(
     unquoteFn,
     quoteFn,
@@ -146,8 +213,9 @@ object StringFunctions {
     toLowerCaseFn,
     strInsertFn,
     strIndexFn,
-    strSliceFn
+    strSliceFn,
+    uniqueIdFn
   )
 
-  def module: List[Callable] = global
+  def module: List[Callable] = global :+ splitFn
 }

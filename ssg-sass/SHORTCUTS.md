@@ -95,6 +95,28 @@ or serializer.
   when nested inside a style rule, the supports rule attaches to the
   nearest non-style parent and a clone of the enclosing style rule
   is placed inside it.
+- ✅ `@at-root` — parsed in `_atRule`. Supports the bare form
+  `@at-root { ... }` and the selector form `@at-root .sel { ... }`.
+  In the selector form the body is wrapped in a fresh `StyleRule`
+  inside the `AtRootRule`, so the evaluator's existing
+  `visitAtRootRule` (which reparents to the stylesheet root and clears
+  `_styleRule`) emits the children at the top level regardless of how
+  deeply the `@at-root` is nested. `@at-root (with/without: ...)`
+  queries are still ignored.
+- ✅ `@each` — parsed in `_atRule`. The variable list accepts
+  one or more comma-separated `$name`s followed by `in <expression>`,
+  producing an `EachRule` with `variables: List[String]`. The iterable
+  expression is parsed via `_parseSimpleExpression`, which now also
+  recognizes parenthesized comma lists and map literals
+  (`(a, b, c)`, `(k: v, k2: v2)`, `(1 2, 3 4)`) as `ListExpression` /
+  `MapExpression`. `visitEachRule` destructures each element against
+  the declared variables: iterating a `SassMap` yields `(key, value)`
+  pairs via `SassMap.asList`, and iterating a list of lists binds each
+  sub-list's elements positionally (missing slots become `null`).
+- ✅ `@charset "UTF-8";` — handled by the generic at-rule path and
+  round-tripped verbatim. (dart-sass strips `@charset` and emits a BOM
+  in compressed mode for non-ascii output; we currently preserve it
+  as-is.)
 - ✅ `@keyframes <name> { <block>* }` (plus `-webkit-`/`-moz-`/`-o-`/
   `-ms-` prefixed variants) — parsed in `_atRule`. The body is a
   sequence of keyframe blocks where each block is a comma-separated
