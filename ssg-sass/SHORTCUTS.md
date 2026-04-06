@@ -135,9 +135,6 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Still stubbed / partial
 
-- **`meta.apply($mixin, …)`** — throws
-  `"meta.apply is not yet supported"`. Needs a fresh statement-visitor
-  entry point to invoke a mixin from a built-in.
 - **`content-exists`** — placeholder pending mixin-call-stack tracking.
 - **`@extend` second-law edge cases** — the "second law of extend"
   trailing-sibling-combinator merging matrix (the
@@ -148,13 +145,12 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
   interleavings fall back to plain concatenation.
 - **`CssParser` strict mode** — skeleton only. Plain CSS is currently
   parsed through `ScssParser` / `StylesheetParser`.
-- **Cross-media `@extend` warnings** —
-  `EvaluateResult.warnings` / `CompileResult.warnings` channel exists but
-  no message is emitted when an extend is isolated by media scoping.
 - **Error-span synthetic placeholders** — some evaluator error paths build
   `FileSpan` values from synthesized sources rather than the original
   input; error messages point at the right token text but may carry a
-  placeholder file URL.
+  placeholder file URL. Binary/unary/function-call and undefined-variable
+  paths now carry real spans; remaining synthetic spans live in the
+  selector / media / at-root sub-parsers.
 - **`SassParser` override hooks** (`styleRuleSelector`,
   `expectStatementSeparator`, `atEndOfStatement`, `lookingAtChildren`,
   `scanElse`, `children`, `statements`) throw
@@ -170,15 +166,12 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Next steps (priority order)
 
-1. **`meta.apply`** — add a statement-visitor entry point that can run a
-   `UserDefinedCallable[MixinRule]` from a built-in.
-2. **StylesheetParser proper expression lexer** — replace the text-based
+1. **StylesheetParser proper expression lexer** — replace the text-based
    collector with a tokenizer covering space-separated lists, function
    calls, interpolation, and unary forms uniformly.
-3. **Full v3 source maps** — per-token mappings, `sourcesContent`,
+2. **Full v3 source maps** — per-token mappings, `sourcesContent`,
    `sourceRoot`, `file`, and propagation through `@import` boundaries.
-4. **CssParser strict mode** — for the (rare) consumers who need to
+3. **CssParser strict mode** — for the (rare) consumers who need to
    reject Sass-only syntax.
-5. **Error-span fidelity** — propagate the original `FileSpan` through
-   all synthesized expressions so error messages never point at a
-   placeholder URL.
+4. **Error-span fidelity (remaining)** — selector / media / at-root
+   sub-parsers still build `FileSpan.synthetic` placeholders.

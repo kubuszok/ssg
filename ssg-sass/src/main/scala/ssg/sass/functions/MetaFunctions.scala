@@ -14,7 +14,7 @@ package ssg
 package sass
 package functions
 
-import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, Environment, Nullable, SassScriptException }
+import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, SassScriptException }
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 
 import scala.collection.immutable.ListMap
@@ -300,12 +300,43 @@ object MetaFunctions {
     BuiltInCallable.function(
       "apply",
       "$mixin, $args...",
-      _ =>
-        // TODO: invoking a mixin from a built-in is non-trivial — mixins emit
-        // statements rather than returning a value, so they need a fresh
-        // statement-visitor entry point. Deferred until needed.
-        throw SassScriptException("meta.apply is not yet supported")
+      { args =>
+        if (args.isEmpty)
+          throw SassScriptException("apply() requires a mixin argument.")
+        // First argument is the mixin: a SassMixin or — for legacy Sass — a
+        // plain string mixin name resolved against the active env.
+        val callable: Callable = args.head match {
+          case m: SassMixin  => m.callable
+          case s: SassString =>
+            lookupMixin(s.text, SassNull).getOrElse {
+              throw SassScriptException(s"Mixin not found: ${s.text}")
+            }
+          case other =>
+            throw SassScriptException(s"apply() expected a mixin, got: $other")
+        }
+        // Remaining args: splat a single trailing SassArgumentList, same as
+        // meta.call does for functions.
+        val rest                = args.tail
+        val (positional, named) = rest match {
+          case (al: SassArgumentList) :: Nil =>
+            (al.asList, ListMap.from(al.keywords))
+          case (sl: SassList) :: Nil =>
+            (sl.asList, ListMap.empty[String, Value])
+          case other => (other, ListMap.empty[String, Value])
+        }
+        CurrentMixinInvoker.get.fold[Value] {
+          throw SassScriptException("meta.apply requires an active evaluation context.")
+        } { invoker =>
+          invoker(callable, positional, named)
+          // Mixins emit statements; meta.apply itself returns null.
+          SassNull
+        }
+      }
     )
+
+  /** Built-in mixins exposed by `sass:meta`. These are registered in the mixin slot of the namespace env rather than the function slot so that `@include meta.apply(...)` resolves.
+    */
+  val moduleMixins: List[Callable] = List(applyFn)
 
   val global: List[Callable] = List(
     ifFn,
@@ -322,8 +353,7 @@ object MetaFunctions {
     moduleFunctionsFn,
     getFunctionFn,
     getMixinFn,
-    callFn,
-    applyFn
+    callFn
   )
 
   def module: List[Callable] = global

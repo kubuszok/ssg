@@ -263,6 +263,9 @@ final class EvaluateVisitor(
     val savedInv = ssg.sass.CurrentCallableInvoker.set(
       Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeCallable(c, pos, named))
     )
+    val savedMixinInv = ssg.sass.CurrentMixinInvoker.set(
+      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeMixinCallable(c, pos, named, Nullable.empty))
+    )
     try {
       visitStylesheet(stylesheet)
       // Apply basic `@extend` rewrites before serialising.
@@ -276,6 +279,7 @@ final class EvaluateVisitor(
     } finally {
       val _ = ssg.sass.CurrentEnvironment.set(savedCur)
       val _ = ssg.sass.CurrentCallableInvoker.set(savedInv)
+      val _ = ssg.sass.CurrentMixinInvoker.set(savedMixinInv)
     }
   }
 
@@ -326,7 +330,7 @@ final class EvaluateVisitor(
   // ExpressionVisitor
   // ===========================================================================
 
-  override def visitBinaryOperationExpression(node: BinaryOperationExpression): Value = {
+  override def visitBinaryOperationExpression(node: BinaryOperationExpression): Value = try {
     val left = node.left.accept(this)
     node.operator match {
       case BinaryOperator.SingleEquals        => left.singleEquals(node.right.accept(this))
@@ -344,6 +348,8 @@ final class EvaluateVisitor(
       case BinaryOperator.DividedBy           => left.dividedBy(node.right.accept(this))
       case BinaryOperator.Modulo              => left.modulo(node.right.accept(this))
     }
+  } catch {
+    case e: SassScriptException => throw e.withSpan(node.span)
   }
 
   override def visitBooleanExpression(node: BooleanExpression): Value =
@@ -351,53 +357,57 @@ final class EvaluateVisitor(
 
   override def visitColorExpression(node: ColorExpression): Value = node.value
 
-  override def visitFunctionExpression(node: FunctionExpression): Value = scala.util.boundary[Value] {
-    // First-class CSS calc()/min()/max()/clamp() — produce a SassCalculation
-    // (or a simplified SassNumber) instead of falling through to plain text.
-    if (node.namespace.isEmpty) {
-      node.name match {
-        case "calc" | "min" | "max" | "clamp" =>
-          val calcResult = _evaluateCalculation(node)
-          if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
-        case _ => ()
-      }
-    }
-    // Look up the callable in the current environment. If not found, fall
-    // through to a "plain CSS function" rendering. Full dispatch (built-in
-    // calculations, namespaces, plain CSS calls) is deferred to Phase 20.
-    val callable: Nullable[Callable] =
-      if (node.namespace.isDefined) {
-        node.namespace.fold(Nullable.empty[Callable]) { ns =>
-          _environment.getNamespacedFunction(ns, node.name)
+  override def visitFunctionExpression(node: FunctionExpression): Value = try
+    scala.util.boundary[Value] {
+      // First-class CSS calc()/min()/max()/clamp() — produce a SassCalculation
+      // (or a simplified SassNumber) instead of falling through to plain text.
+      if (node.namespace.isEmpty) {
+        node.name match {
+          case "calc" | "min" | "max" | "clamp" =>
+            val calcResult = _evaluateCalculation(node)
+            if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
+          case _ => ()
         }
-      } else {
-        _environment.getFunction(node.name)
       }
-    callable.fold[Value] {
-      // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
-      val args = node.arguments.positional.map(a => _evaluateToCss(a))
-      new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
-    } { c =>
-      // Built-in callable dispatch — minimal: evaluate positional args and call.
-      c match {
-        case bic: ssg.sass.BuiltInCallable =>
-          val (positional, named) = _evaluateArguments(node.arguments)
-          val merged              =
-            if (named.isEmpty) positional
-            else _mergeBuiltInNamedArgs(bic, positional, named)
-          bic.callback(merged)
-        case ud: UserDefinedCallable[?] =>
-          ud.declaration match {
-            case fr: FunctionRule =>
-              val (positional, named) = _evaluateArguments(node.arguments)
-              _runUserDefinedFunction(fr, positional, named)
-            case _ =>
-              throw SassScriptException(s"Callable ${node.name} is not a function.")
+      // Look up the callable in the current environment. If not found, fall
+      // through to a "plain CSS function" rendering. Full dispatch (built-in
+      // calculations, namespaces, plain CSS calls) is deferred to Phase 20.
+      val callable: Nullable[Callable] =
+        if (node.namespace.isDefined) {
+          node.namespace.fold(Nullable.empty[Callable]) { ns =>
+            _environment.getNamespacedFunction(ns, node.name)
           }
-        case _ =>
-          throw SassScriptException(s"Callable type not yet supported: $c")
+        } else {
+          _environment.getFunction(node.name)
+        }
+      callable.fold[Value] {
+        // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
+        val args = node.arguments.positional.map(a => _evaluateToCss(a))
+        new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
+      } { c =>
+        // Built-in callable dispatch — minimal: evaluate positional args and call.
+        c match {
+          case bic: ssg.sass.BuiltInCallable =>
+            val (positional, named) = _evaluateArguments(node.arguments)
+            val merged              =
+              if (named.isEmpty) positional
+              else _mergeBuiltInNamedArgs(bic, positional, named)
+            bic.callback(merged)
+          case ud: UserDefinedCallable[?] =>
+            ud.declaration match {
+              case fr: FunctionRule =>
+                val (positional, named) = _evaluateArguments(node.arguments)
+                _runUserDefinedFunction(fr, positional, named)
+              case _ =>
+                throw SassScriptException(s"Callable ${node.name} is not a function.")
+            }
+          case _ =>
+            throw SassScriptException(s"Callable type not yet supported: $c")
+        }
       }
     }
+  catch {
+    case e: SassScriptException => throw e.withSpan(node.span)
   }
 
   override def visitIfExpression(node: IfExpression): Value = {
@@ -512,7 +522,7 @@ final class EvaluateVisitor(
     // as an unquoted string from its toString form.
     new SassString(node.condition.toString, hasQuotes = false)
 
-  override def visitUnaryOperationExpression(node: UnaryOperationExpression): Value = {
+  override def visitUnaryOperationExpression(node: UnaryOperationExpression): Value = try {
     val operand = node.operand.accept(this)
     node.operator match {
       case UnaryOperator.Plus   => operand.unaryPlus()
@@ -520,6 +530,8 @@ final class EvaluateVisitor(
       case UnaryOperator.Divide => operand.unaryDivide()
       case UnaryOperator.Not    => operand.unaryNot()
     }
+  } catch {
+    case e: SassScriptException => throw e.withSpan(node.span)
   }
 
   override def visitValueExpression(node: ValueExpression): Value = node.value
@@ -535,7 +547,7 @@ final class EvaluateVisitor(
       }
     result.getOrElse {
       val qualified = node.namespace.fold(s"$$${node.name}")(ns => s"$ns.$$${node.name}")
-      throw SassScriptException(s"Undefined variable: $qualified.")
+      throw SassException(s"Undefined variable: $qualified.", node.span)
     }
   }
 
@@ -1206,6 +1218,12 @@ final class EvaluateVisitor(
           case bic: BuiltInCallable => moduleEnv.setFunction(bic)
           case _ => ()
         }
+        // `sass:meta` additionally exposes `apply` as a mixin so that
+        // `@include meta.apply(...)` resolves.
+        if (moduleName == "meta") {
+          for (m <- ssg.sass.functions.MetaFunctions.moduleMixins)
+            moduleEnv.setMixin(m)
+        }
         // Use the explicit namespace only when it differs from the raw URL
         // (e.g. `@use "sass:color" as c`); otherwise default to the bare
         // module name so `color.red(...)` resolves regardless of how the
@@ -1504,8 +1522,21 @@ final class EvaluateVisitor(
     */
   private def _applyExtends(node: ModifiableCssParentNode): Unit = {
     _applyExtendsIn(node, null)
-    // Emit any buffered cross-media warnings first, then enforce the
-    // non-optional target-not-found check.
+    // Detect media-scoped extends whose target exists at another scope
+    // (most commonly at top-level): dart-sass emits a warning that the
+    // extend has no effect in the media context. We check the set of
+    // targets encountered during the walk.
+    for (pending <- _pendingExtends)
+      if (!pending.found && pending.mediaKey != null) {
+        val tgt = pending.targetText
+        if (_allExtendableTargets.contains(tgt)) {
+          _warnings +=
+            s"Extending $tgt in @media context has no effect since $tgt is not in the same @media context"
+          // Mark as found so the hard error below doesn't also fire.
+          pending.found = true
+        }
+      }
+    // Enforce the non-optional target-not-found check.
     for (pending <- _pendingExtends)
       if (!pending.found && !pending.isOptional) {
         throw new SassException(
@@ -1515,6 +1546,11 @@ final class EvaluateVisitor(
         )
       }
   }
+
+  /** Every simple-selector textual form encountered under any style rule during extend application. Used to diagnose cross-media extends whose target exists in a different scope.
+    */
+  private val _allExtendableTargets: scala.collection.mutable.Set[String] =
+    scala.collection.mutable.Set.empty
 
   /** Walks the modifiable CSS tree under `node`, rewriting every style rule's selectors to include any extensions declared in the same media scope (`mediaKey`). A new `ModifiableCssMediaRule`
     * encountered as a child switches the active `mediaKey`, so that extensions inside `@media` blocks only apply to rules in the same block.
@@ -1538,6 +1574,11 @@ final class EvaluateVisitor(
         var removed = false
         _selectorBoxes.get(rule).foreach { box =>
           val currentSelector = box.value.toString
+          // Record each comma-separated piece as a potential extend target.
+          for (part <- currentSelector.split(',')) {
+            val t = part.trim
+            if (t.nonEmpty) _allExtendableTargets += t
+          }
           val parsed: Nullable[SelectorList] = box.value match {
             case sl: SelectorList => Nullable(sl)
             case _ => SelectorParser.tryParse(currentSelector)
@@ -1708,21 +1749,44 @@ final class EvaluateVisitor(
   }
 
   override def visitIncludeRule(node: IncludeRule): Value = {
-    val lookup: Nullable[Callable] = _environment.getMixin(node.name)
+    val lookup: Nullable[Callable] =
+      if (node.namespace.isDefined) {
+        node.namespace.flatMap(ns => _environment.getNamespace(ns)).flatMap(_.getMixin(node.name))
+      } else {
+        _environment.getMixin(node.name)
+      }
     val mixin = lookup.getOrElse {
       throw SassException(s"Undefined mixin: ${node.name}.", node.span)
     }
-    mixin match {
+    val (positional, named) = _evaluateArguments(node.arguments)
+    _invokeMixinCallable(
+      mixin,
+      positional,
+      named,
+      node.content.asInstanceOf[Nullable[ContentBlock]]
+    )
+    SassNull
+  }
+
+  /** Runs a mixin [[Callable]] against the current parent node, emitting its statements in place. Shared between `@include` (via [[visitIncludeRule]]) and `meta.apply` (via [[CurrentMixinInvoker]]).
+    *
+    * For a [[UserDefinedCallable]] backed by a [[MixinRule]], binds parameters in a fresh environment snapshot and runs the body. For a content-accepting [[BuiltInCallable]], invokes its callback
+    * with the positional args. Any other callable shape raises a [[SassScriptException]].
+    */
+  private def _invokeMixinCallable(
+    callable:   Callable,
+    positional: List[Value],
+    named:      ListMap[String, Value],
+    content:    Nullable[ContentBlock]
+  ): Unit =
+    callable match {
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case mr: MixinRule =>
-            // Evaluate arguments against the current environment.
-            val (positional, named) = _evaluateArguments(node.arguments)
             _environment.withSnapshot {
               _bindParameters(mr.parameters, positional, named)
-              // Install the content block (if any) so @content can find it.
               val savedContent = _environment.content
-              _environment.content = node.content.asInstanceOf[Nullable[ContentBlock]]
+              _environment.content = content
               try
                 for (statement <- mr.childrenList) {
                   val _ = statement.accept(this)
@@ -1731,19 +1795,15 @@ final class EvaluateVisitor(
                 _environment.content = savedContent
             }
           case other =>
-            throw SassException(
-              s"Mixin ${node.name} is not backed by a MixinRule (got $other).",
-              node.span
+            throw SassScriptException(
+              s"Mixin ${callable.name} is not backed by a MixinRule (got $other)."
             )
         }
       case bic: BuiltInCallable =>
-        val (positional, _) = _evaluateArguments(node.arguments)
-        val _               = bic.callback(positional)
+        val _ = bic.callback(positional)
       case other =>
-        throw SassException(s"Unsupported mixin callable: $other", node.span)
+        throw SassScriptException(s"Unsupported mixin callable: $other")
     }
-    SassNull
-  }
 
   /** Evaluates a function call by invoking a UserDefinedCallable whose declaration is a [[FunctionRule]]. Runs the function body in a fresh scope with parameters bound, catching [[ReturnSignal]] to
     * capture the result.

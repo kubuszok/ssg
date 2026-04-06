@@ -91,3 +91,22 @@ object CurrentCallableInvoker {
     prev
   }
 }
+
+/** Holds a callback for invoking a mixin [[Callable]] from outside the [[ssg.sass.visitor.EvaluateVisitor]]. Set by the visitor on entry so built-in `meta.apply` can run a mixin body against the
+  * current statement-visitor parent node. Same single-`var` rationale as [[CurrentEnvironment]].
+  */
+object CurrentMixinInvoker {
+
+  /** A function that invokes a mixin [[Callable]] with positional + named args. */
+  type Invoker = (Callable, List[ssg.sass.value.Value], scala.collection.immutable.ListMap[String, ssg.sass.value.Value]) => Unit
+
+  private var _invoker: Nullable[Invoker] = Nullable.empty
+
+  def get: Nullable[Invoker] = _invoker
+
+  def set(inv: Nullable[Invoker]): Nullable[Invoker] = {
+    val prev = _invoker
+    _invoker = inv
+    prev
+  }
+}

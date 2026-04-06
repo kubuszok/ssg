@@ -1661,7 +1661,7 @@ abstract class StylesheetParser protected (
     if (len != 3 && len != 4 && len != 6 && len != 8) return None
     var i = 0
     while (i < len) {
-      val c = hex.charAt(i)
+      val c  = hex.charAt(i)
       val ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
       if (!ok) return None
       i += 1
