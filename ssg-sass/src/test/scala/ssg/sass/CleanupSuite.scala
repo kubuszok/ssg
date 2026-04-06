@@ -58,7 +58,7 @@ final class CleanupSuite extends munit.FunSuite {
     val cfg = Configuration(
       Map(
         "primary" -> ConfiguredValue.explicit(SassNumber(1.0)),
-        "accent"  -> ConfiguredValue.explicit(SassNumber(2.0))
+        "accent" -> ConfiguredValue.explicit(SassNumber(2.0))
       )
     )
     intercept[SassException](cfg.throwErrorForUnknownVariables())

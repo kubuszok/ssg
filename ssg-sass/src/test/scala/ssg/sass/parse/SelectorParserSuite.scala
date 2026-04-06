@@ -63,8 +63,7 @@ final class SelectorParserSuite extends munit.FunSuite {
 
   test("parses pseudo-class with raw argument") {
     val list   = parse(":nth-child(2n+1)")
-    val pseudo = list.components.head.components.head.selector.components.head
-      .asInstanceOf[PseudoSelector]
+    val pseudo = list.components.head.components.head.selector.components.head.asInstanceOf[PseudoSelector]
     assertEquals(pseudo.name, "nth-child")
     assert(pseudo.argument.isDefined)
     assertEquals(pseudo.argument.get, "2n+1")
@@ -73,24 +72,21 @@ final class SelectorParserSuite extends munit.FunSuite {
 
   test("parses pseudo-element with double colon") {
     val list   = parse("::before")
-    val pseudo = list.components.head.components.head.selector.components.head
-      .asInstanceOf[PseudoSelector]
+    val pseudo = list.components.head.components.head.selector.components.head.asInstanceOf[PseudoSelector]
     assertEquals(pseudo.name, "before")
     assert(pseudo.isElement)
   }
 
   test("parses :not(...) as a selector pseudo with parsed argument") {
     val list   = parse(":not(.foo)")
-    val pseudo = list.components.head.components.head.selector.components.head
-      .asInstanceOf[PseudoSelector]
+    val pseudo = list.components.head.components.head.selector.components.head.asInstanceOf[PseudoSelector]
     assertEquals(pseudo.name, "not")
     assert(pseudo.selector.isDefined)
   }
 
   test("parses attribute selector with operator and value") {
     val list = parse("""[name="value"]""")
-    val attr = list.components.head.components.head.selector.components.head
-      .asInstanceOf[AttributeSelector]
+    val attr = list.components.head.components.head.selector.components.head.asInstanceOf[AttributeSelector]
     assertEquals(attr.name.name, "name")
     assert(attr.op.isDefined)
     assertEquals(attr.value.get, "value")
@@ -98,8 +94,7 @@ final class SelectorParserSuite extends munit.FunSuite {
 
   test("parses bare attribute selector") {
     val list = parse("[disabled]")
-    val attr = list.components.head.components.head.selector.components.head
-      .asInstanceOf[AttributeSelector]
+    val attr = list.components.head.components.head.selector.components.head.asInstanceOf[AttributeSelector]
     assertEquals(attr.name.name, "disabled")
     assert(attr.op.isEmpty)
   }

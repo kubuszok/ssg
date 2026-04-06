@@ -354,7 +354,7 @@ object SelectorList {
   ): Nullable[CompoundSelector] =
     boundary[Nullable[CompoundSelector]] {
       var current: List[SimpleSelector] = left.components
-      val it                            = right.components.iterator
+      val it = right.components.iterator
       while (it.hasNext) {
         val next   = it.next()
         val merged = next.unify(current)
