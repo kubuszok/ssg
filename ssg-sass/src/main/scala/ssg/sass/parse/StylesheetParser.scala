@@ -33,6 +33,7 @@ import ssg.sass.ast.sass.{
   DynamicImport,
   ExtendRule,
   Expression,
+  ForwardRule,
   FunctionExpression,
   Import,
   ImportRule,
@@ -163,6 +164,102 @@ abstract class StylesheetParser protected (
         val _ = scanner.scanChar(CharCode.$semicolon)
         val uri = java.net.URI.create(url)
         Nullable(new UseRule(uri, namespace, spanFrom(start)))
+      case "forward" =>
+        // Minimal @forward parsing: @forward "url" [show ...|hide ...] [as prefix-*];
+        // On any unsupported / malformed clause, swallow to ';' and skip the rule.
+        whitespace(consumeNewlines = true)
+        val urlOpt: Nullable[String] = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
+          Nullable(string())
+        } else {
+          // Skip to ; and emit no rule
+          while (!scanner.isDone && scanner.peekChar() != CharCode.$semicolon) {
+            val _ = scanner.readChar()
+          }
+          val _ = scanner.scanChar(CharCode.$semicolon)
+          Nullable.empty[String]
+        }
+        if (urlOpt.isEmpty) {
+          Nullable.empty[Statement]
+        } else {
+          val url = urlOpt.get
+          whitespace(consumeNewlines = true)
+          var prefix: Nullable[String] = Nullable.empty
+          var shownVars: Nullable[Set[String]] = Nullable.empty
+          var shownNames: Nullable[Set[String]] = Nullable.empty
+          var hiddenVars: Nullable[Set[String]] = Nullable.empty
+          var hiddenNames: Nullable[Set[String]] = Nullable.empty
+          var skip = false
+          // Parse optional show/hide list, then optional `as prefix-*`.
+          // Member list: comma-separated identifiers and $variables.
+          def parseMembers(): (Set[String], Set[String]) = {
+            val names = scala.collection.mutable.Set.empty[String]
+            val vars = scala.collection.mutable.Set.empty[String]
+            var more = true
+            while (more) {
+              whitespace(consumeNewlines = true)
+              if (scanner.peekChar() == CharCode.$dollar) {
+                val _ = scanner.readChar()
+                vars += identifier()
+              } else if (CharCode.isNameStart(scanner.peekChar()) || scanner.peekChar() == CharCode.$minus) {
+                names += identifier()
+              } else {
+                more = false
+              }
+              whitespace(consumeNewlines = true)
+              if (scanner.peekChar() == CharCode.$comma) {
+                val _ = scanner.readChar()
+                more = true
+              } else more = false
+            }
+            (names.toSet, vars.toSet)
+          }
+          if (scanIdentifier("show")) {
+            val (names, vars) = parseMembers()
+            shownNames = Nullable(names)
+            shownVars = Nullable(vars)
+          } else if (scanIdentifier("hide")) {
+            val (names, vars) = parseMembers()
+            hiddenNames = Nullable(names)
+            hiddenVars = Nullable(vars)
+          }
+          whitespace(consumeNewlines = true)
+          if (!skip && scanIdentifier("as")) {
+            whitespace(consumeNewlines = true)
+            val pBuf = new StringBuilder()
+            while (!scanner.isDone && scanner.peekChar() != CharCode.$asterisk &&
+                   scanner.peekChar() != CharCode.$semicolon &&
+                   scanner.peekChar() != CharCode.$space &&
+                   scanner.peekChar() != CharCode.$tab &&
+                   scanner.peekChar() != CharCode.$lf) {
+              pBuf.append(scanner.readChar().toChar)
+            }
+            if (scanner.peekChar() == CharCode.$asterisk) {
+              val _ = scanner.readChar()
+              prefix = Nullable(pBuf.toString)
+            } else {
+              skip = true
+            }
+          }
+          // Swallow remaining content up to ;
+          while (!scanner.isDone && scanner.peekChar() != CharCode.$semicolon) {
+            val _ = scanner.readChar()
+          }
+          val _ = scanner.scanChar(CharCode.$semicolon)
+          if (skip) {
+            Nullable.empty[Statement]
+          } else {
+            val uri = java.net.URI.create(url)
+            Nullable(new ForwardRule(
+              url = uri,
+              span = spanFrom(start),
+              prefix = prefix,
+              shownMixinsAndFunctions = shownNames,
+              shownVariables = shownVars,
+              hiddenMixinsAndFunctions = hiddenNames,
+              hiddenVariables = hiddenVars
+            ))
+          }
+        }
       case "import" =>
         // @import "url" [, "url2"] ;
         val imports = scala.collection.mutable.ListBuffer.empty[Import]

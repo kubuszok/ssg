@@ -9,7 +9,6 @@ package sass
 
 import ssg.sass.importer.{FilesystemImporter, Importer}
 import ssg.sass.visitor.OutputStyle
-import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
 

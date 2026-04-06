@@ -40,8 +40,8 @@ val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
 // ssg-sass needs JVM-only source directories for FilesystemImporter
 // (requires java.nio.file which isn't available on Scala.js).
 val sassJvmSettings: Seq[Setting[?]] = SsgSettings.jvmSettings ++ Seq(
-  Compile / unmanagedSourceDirectories += baseDirectory.value / "src" / "main" / "scala-jvm",
-  Test    / unmanagedSourceDirectories += baseDirectory.value / "src" / "test" / "scala-jvm"
+  Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-sass" / "src" / "main" / "scala-jvm",
+  Test    / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-sass" / "src" / "test" / "scala-jvm"
 )
 
 val `ssg-sass` = (projectMatrix in file("ssg-sass"))

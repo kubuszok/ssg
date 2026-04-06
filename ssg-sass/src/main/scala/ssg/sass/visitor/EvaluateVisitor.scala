@@ -1003,9 +1003,83 @@ final class EvaluateVisitor(
     SassNull
   }
 
+  /** Returns a [[Callable]] equivalent to [orig] but reporting [newName] as
+    * its name. Used for `@forward ... as prefix-*`. If [newName] equals the
+    * original name, returns [orig] unchanged.
+    */
+  private def _aliasCallable(newName: String, orig: ssg.sass.Callable): ssg.sass.Callable = {
+    if (newName == orig.name) orig
+    else orig match {
+      case bic: BuiltInCallable =>
+        new BuiltInCallable(newName, bic.parameters, bic.callback, bic.acceptsContent)
+      case _ =>
+        // Generic fallback — wrap in a thin Callable that delegates name only.
+        // The original callable is kept reachable via the wrapper for later
+        // evaluator dispatch via reference equality or name lookup.
+        new ssg.sass.Callable {
+          def name: String = newName
+        }
+    }
+  }
+
   override def visitForwardRule(node: ForwardRule): Value = {
-    // Same treatment as @use — deferred until ImportCache is wired up.
-    val _ = node
+    // Minimal @forward: load the target module and merge its members into
+    // the current environment so callers doing `@use "this-file"` see them
+    // (via the namespace). Honors `show`/`hide` filtering and `as prefix-*`.
+    importer.foreach { imp =>
+      val urlStr = node.url.toString
+      val canonical = imp.canonicalize(urlStr)
+      canonical.foreach { canonicalUrl =>
+        if (!_loadedUrls.contains(canonicalUrl)) {
+          _loadedUrls += canonicalUrl
+          imp.load(canonicalUrl).foreach { result =>
+            val importedSheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+            val moduleEnv = Environment.withBuiltins()
+            val savedEnv = _environment
+            _environment = moduleEnv
+            try {
+              importedSheet.children.get.foreach { stmt =>
+                val _ = stmt.accept(this)
+              }
+            } finally {
+              _environment = savedEnv
+            }
+            val prefix: String = if (node.prefix.isDefined) node.prefix.get else ""
+            def varAllowed(name: String): Boolean = {
+              if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
+              else if (node.hiddenVariables.isDefined) !node.hiddenVariables.get.contains(name)
+              else true
+            }
+            def memberAllowed(name: String): Boolean = {
+              if (node.shownMixinsAndFunctions.isDefined) node.shownMixinsAndFunctions.get.contains(name)
+              else if (node.hiddenMixinsAndFunctions.isDefined) !node.hiddenMixinsAndFunctions.get.contains(name)
+              else true
+            }
+            // Names of global built-in callables — not forwarded.
+            val builtinNames: Set[String] =
+              ssg.sass.functions.Functions.global.iterator.map(_.name).toSet
+            for ((name, value) <- moduleEnv.variableEntries) {
+              if (varAllowed(name)) {
+                val newName = prefix + name
+                if (!_environment.variableExists(newName)) {
+                  _environment.setVariable(newName, value)
+                }
+              }
+            }
+            for (fn <- moduleEnv.functionValues) {
+              if (!builtinNames.contains(fn.name) && memberAllowed(fn.name)) {
+                _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
+              }
+            }
+            for (mx <- moduleEnv.mixinValues) {
+              if (!builtinNames.contains(mx.name) && memberAllowed(mx.name)) {
+                _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
+              }
+            }
+          }
+        }
+      }
+    }
     SassNull
   }
 

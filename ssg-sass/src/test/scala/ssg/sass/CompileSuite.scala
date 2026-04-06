@@ -360,4 +360,29 @@ final class CompileSuite extends munit.FunSuite {
     assert(buttonHeader.contains(".button"))
     assert(buttonHeader.contains(".primary"))
   }
+
+  // --- Selector functions (text-based) ---
+
+  test("selector-append concatenates without space") {
+    val result = Compile.compileString(""".x { y: selector-append(".a", ".b"); }""")
+    assert(result.css.contains(".a.b"), result.css)
+  }
+
+  test("selector-nest joins with space") {
+    val result = Compile.compileString(""".x { y: selector-nest(".a", ".b", ".c"); }""")
+    assert(result.css.contains(".a .b .c"), result.css)
+  }
+
+  test("selector-extend does textual replace") {
+    val result = Compile.compileString(
+      """.x { y: selector-extend(".btn .icon", ".icon", ".big"); }"""
+    )
+    assert(result.css.contains(".icon, .big"), result.css)
+  }
+
+  test("selector-unify returns null stub") {
+    // Should not error; null values are typically dropped from output.
+    val result = Compile.compileString(""".x { y: selector-unify(".a", ".b"); }""")
+    assert(!result.css.contains("error"), result.css)
+  }
 }

@@ -128,6 +128,54 @@ final class ImportSuite extends munit.FunSuite {
     assert(result.css.contains("#abcdef"))
   }
 
+  tempDir.test("@forward re-exports variables to caller of @use") { dir =>
+    writeFile(dir, "_inner.scss", "$primary: #abcdef;")
+    writeFile(dir, "_mid.scss", """@forward "inner";""")
+    val source = """
+      @use "mid";
+      a { color: mid.$primary; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("#abcdef"), result.css)
+  }
+
+  tempDir.test("@forward with show only re-exports listed names") { dir =>
+    writeFile(dir, "_inner.scss", "$a: red; $b: blue;")
+    writeFile(dir, "_mid.scss", """@forward "inner" show $a;""")
+    val source = """
+      @use "mid";
+      a { x: mid.$a; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("red"), result.css)
+  }
+
+  tempDir.test("@forward with hide skips listed names") { dir =>
+    writeFile(dir, "_inner.scss", "$a: red; $b: blue;")
+    writeFile(dir, "_mid.scss", """@forward "inner" hide $a;""")
+    val source = """
+      @use "mid";
+      a { x: mid.$b; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("blue"), result.css)
+  }
+
+  tempDir.test("@forward with `as prefix-*` adds prefix to forwarded variables") { dir =>
+    writeFile(dir, "_inner.scss", "$color: green;")
+    writeFile(dir, "_mid.scss", """@forward "inner" as ix-*;""")
+    val source = """
+      @use "mid";
+      a { x: mid.$ix-color; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("green"), result.css)
+  }
+
   tempDir.test("CompileFile.compile reads file from path") { dir =>
     writeFile(dir, "main.scss", "a { color: red; }")
     val path = dir.resolve("main.scss").toString

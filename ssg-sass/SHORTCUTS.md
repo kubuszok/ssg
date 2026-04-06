@@ -95,7 +95,8 @@ or serializer.
 - ✅ Callables: @function/@mixin/@include/@return/@content with UserDefinedCallable dispatch
 - ✅ @media/@supports/@at-root rules building ModifiableCssMediaRule/SupportsRule
 - ✅ @import (static)
-- ⚠️  @use/@forward — recorded but no module loading (needs ImportCache)
+- ✅ @use — module loading via importer (see `@use module loading` below)
+- ⚠️  @forward — text-based MVP: load + merge into current env, with `show`/`hide` filtering and `as prefix-*` rename for variables/functions/mixins. No `with (...)` config; no module-level isolation; built-in callables not re-forwarded.
 - ⚠️  @extend — no-op (needs ExtensionStore integration)
 - ⚠️  Function call dispatch: built-in functions not registered; unknown functions fall back to plain CSS
 - ⚠️  Parameter binding: basic; rest/keyword-rest args deferred
@@ -193,7 +194,7 @@ or serializer.
 - ✅ `ListFunctions` — length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed
 - ✅ `MapFunctions` — map-get/map-merge/map-remove/map-keys/map-values/map-has-key
 - ✅ `MetaFunctions` — type-of/inspect/feature-exists/variable-exists/function-exists
-- ❌ `SelectorFunctions` — **still stub** (needs selector parser)
+- ⚠️  `SelectorFunctions` — text-based MVP: `selector-append`, `selector-nest`, `selector-extend` (string replace), `selector-unify` (returns null stub). String args only; lists/non-strings return null. No selector AST.
 - ✅ `Functions.scala` (barrel) — aggregates modules, `lookupGlobal(name)`
 - ✅ `Environment.withBuiltins()` — pre-populates environment with global callables
 - ✅ StylesheetParser recognizes `name(args)` as `FunctionExpression`
