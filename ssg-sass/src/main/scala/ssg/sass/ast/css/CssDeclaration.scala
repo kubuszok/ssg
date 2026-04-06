@@ -39,6 +39,9 @@ trait CssDeclaration extends CssNode {
   /** Returns whether this is a CSS Custom Property declaration. */
   def isCustomProperty: Boolean
 
+  /** Whether this declaration was declared with `!important`. */
+  def isImportant: Boolean
+
   /** Whether this property's value was originally parsed as SassScript, as opposed to a custom property which is parsed as an interpolated sequence of tokens.
     *
     * If this is false, value will contain an unquoted SassString. isCustomProperty will usually be true, but there are other properties that may not be parsed as SassScript, like `return` in a plain
@@ -53,6 +56,7 @@ final class ModifiableCssDeclaration(
   val value:              CssValue[Value],
   val span:               FileSpan,
   val parsedAsSassScript: Boolean,
+  val isImportant:        Boolean = false,
   valueSpanForMapOpt:     Option[FileSpan] = None
 ) extends ModifiableCssNode
     with CssDeclaration {
@@ -73,5 +77,6 @@ final class ModifiableCssDeclaration(
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssDeclaration(this)
 
-  override def toString: String = s"$name: $value;"
+  override def toString: String =
+    if (isImportant) s"$name: $value !important;" else s"$name: $value;"
 }

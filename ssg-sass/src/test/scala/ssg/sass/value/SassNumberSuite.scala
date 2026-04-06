@@ -148,4 +148,58 @@ final class SassNumberSuite extends munit.FunSuite {
     assert(!n.hasUnits)
     assertEquals(n.value, 10.0)
   }
+
+  import ssg.sass.util.NumberUtil.fuzzyEquals
+
+  test("SassNumber unit conversion: px to pt (1px = 0.75pt)") {
+    assert(fuzzyEquals(SassNumber(16.0, "px").convertValueToUnit("pt"), 12.0))
+    assert(fuzzyEquals(SassNumber(72.0, "pt").convertValueToUnit("px"), 96.0))
+  }
+
+  test("SassNumber unit conversion: in, cm, mm, Q, pc are all mutually convertible") {
+    assert(fuzzyEquals(SassNumber(1.0, "in").convertValueToUnit("cm"), 2.54))
+    assert(fuzzyEquals(SassNumber(1.0, "in").convertValueToUnit("mm"), 25.4))
+    assert(fuzzyEquals(SassNumber(1.0, "in").convertValueToUnit("q"), 101.6))
+    assert(fuzzyEquals(SassNumber(1.0, "in").convertValueToUnit("pc"), 6.0))
+    assert(fuzzyEquals(SassNumber(1.0, "pc").convertValueToUnit("pt"), 12.0))
+  }
+
+  test("SassNumber unit conversion: s to ms and back") {
+    assert(fuzzyEquals(SassNumber(2.0, "s").convertValueToUnit("ms"), 2000.0))
+    assert(fuzzyEquals(SassNumber(500.0, "ms").convertValueToUnit("s"), 0.5))
+  }
+
+  test("SassNumber unit conversion: deg, rad, grad, turn") {
+    assert(fuzzyEquals(SassNumber(180.0, "deg").convertValueToUnit("rad"), math.Pi))
+    assert(fuzzyEquals(SassNumber(1.0, "turn").convertValueToUnit("deg"), 360.0))
+    assert(fuzzyEquals(SassNumber(400.0, "grad").convertValueToUnit("turn"), 1.0))
+  }
+
+  test("SassNumber unit conversion: Hz and kHz") {
+    assert(fuzzyEquals(SassNumber(1.0, "kHz").convertValueToUnit("Hz"), 1000.0))
+    assert(fuzzyEquals(SassNumber(500.0, "Hz").convertValueToUnit("kHz"), 0.5))
+  }
+
+  test("SassNumber unit conversion: dpi, dpcm, dppx resolution units") {
+    assert(fuzzyEquals(SassNumber(96.0, "dpi").convertValueToUnit("dppx"), 1.0))
+    assert(fuzzyEquals(SassNumber(1.0, "dppx").convertValueToUnit("dpi"), 96.0))
+    assert(fuzzyEquals(SassNumber(1.0, "dpcm").convertValueToUnit("dpi"), 2.54))
+  }
+
+  test("SassNumber arithmetic converts compatible units to left operand's unit") {
+    // 10px + 1pt = 10px + (4/3)px = 11.333...px
+    val sum = SassNumber(10.0, "px").plus(SassNumber(1.0, "pt")).asInstanceOf[SassNumber]
+    assertEquals(sum.numeratorUnits, List("px"))
+    assert(fuzzyEquals(sum.value, 10.0 + 4.0 / 3.0))
+
+    val diff = SassNumber(1.0, "s").minus(SassNumber(250.0, "ms")).asInstanceOf[SassNumber]
+    assertEquals(diff.numeratorUnits, List("s"))
+    assert(fuzzyEquals(diff.value, 0.75))
+  }
+
+  test("SassNumber arithmetic rejects incompatible units") {
+    intercept[SassScriptException] {
+      SassNumber(10.0, "px").plus(SassNumber(1.0, "s"))
+    }
+  }
 }

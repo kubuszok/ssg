@@ -5,7 +5,7 @@ created compiling skeletons for the entire dart-sass codebase; this document
 catalogs what still needs real implementation.
 
 **Status:** Parser, evaluator, serializer, and most built-in function modules
-are working end-to-end. Tests pass (478 JVM / 457 JS / 457 Native) and
+are working end-to-end. Tests pass (497 JVM / 477 JS / 477 Native) and
 exercise the full Compile → AST → Evaluate → Serialize pipeline including
 @import/@use/@forward (with `with (...)` config), @mixin/@function/@include
 (positional + named + `$args...` + `$kwargs...` rest), control flow,
@@ -277,6 +277,17 @@ edge-case helpers.
   from the style rule's own span (not yet from a parsed selector AST);
   there is no `sourcesContent`, `sourceRoot`, or `file` field. Source
   files without a known URL fall back to the literal name `"stdin"`.
+- ✅ `!important` flag on declarations — parsed by `_declarationOrStyleRule`
+  via the new `_tryScanImportant()` helper (accepts whitespace between `!`
+  and `important`), stored as `Declaration.isImportant`, threaded through
+  `ModifiableCssDeclaration.isImportant`, and serialized as
+  ` !important` in expanded mode / `!important` in compressed mode.
+- ✅ Full unit conversion table on `SassNumber` — the `conversions` map
+  covers absolute lengths (`px`/`pt`/`pc`/`in`/`cm`/`mm`/`q`), time
+  (`s`/`ms`), angle (`deg`/`grad`/`rad`/`turn`), frequency (`Hz`/`kHz`),
+  and resolution (`dpi`/`dpcm`/`dppx`). Arithmetic over compatible units
+  converts the right operand to the left operand's unit via
+  `coerceUnits`/`coerceValueToMatch`.
 - ✅ Value formatting: SassColor (rgb space) emits `#fff`/`#abc` shorthand,
   named colors when shorter (`#ff0000` → `red`), full 6-digit hex otherwise.
   SassNumber strips trailing zeros (`1.50px` → `1.5px`, `3.0` → `3`) via

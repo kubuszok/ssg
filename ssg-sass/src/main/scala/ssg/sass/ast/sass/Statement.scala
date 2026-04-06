@@ -319,6 +319,7 @@ final class Declaration private (
   val span:               FileSpan,
   val value:              Nullable[Expression],
   val parsedAsSassScript: Boolean,
+  val isImportant:        Boolean,
   childStatements:        Nullable[List[Statement]]
 ) extends ParentStatement(childStatements) {
 
@@ -333,6 +334,7 @@ final class Declaration private (
       if (parsedAsSassScript) buffer.append(' ')
       buffer.append(v)
     }
+    if (isImportant) buffer.append(" !important")
     children.fold {
       buffer.append(";")
     } { kids =>
@@ -345,12 +347,17 @@ final class Declaration private (
 object Declaration {
 
   /** Creates a declaration with no children. */
-  def apply(name: Interpolation, value: Expression, span: FileSpan): Declaration =
-    new Declaration(name, span, Nullable(value), parsedAsSassScript = true, Nullable.empty)
+  def apply(
+    name:        Interpolation,
+    value:       Expression,
+    span:        FileSpan,
+    isImportant: Boolean = false
+  ): Declaration =
+    new Declaration(name, span, Nullable(value), parsedAsSassScript = true, isImportant, Nullable.empty)
 
   /** Creates a declaration with no children whose value is not parsed as SassScript. */
   def notSassScript(name: Interpolation, value: StringExpression, span: FileSpan): Declaration =
-    new Declaration(name, span, Nullable(value), parsedAsSassScript = false, Nullable.empty)
+    new Declaration(name, span, Nullable(value), parsedAsSassScript = false, isImportant = false, Nullable.empty)
 
   /** Creates a declaration with children. */
   def nested(
@@ -359,7 +366,7 @@ object Declaration {
     span:     FileSpan,
     value:    Nullable[Expression] = Nullable.empty
   ): Declaration =
-    new Declaration(name, span, value, parsedAsSassScript = true, Nullable(children))
+    new Declaration(name, span, value, parsedAsSassScript = true, isImportant = false, Nullable(children))
 }
 
 // ---------------------------------------------------------------------------

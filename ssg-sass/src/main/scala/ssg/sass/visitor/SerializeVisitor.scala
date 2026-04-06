@@ -313,6 +313,9 @@ final class SerializeVisitor(
     writeSpace()
     recordMapping(node.span)
     buffer.append(formatValue(node.value.value))
+    if (node.isImportant) {
+      if (isCompressed) buffer.append("!important") else buffer.append(" !important")
+    }
     buffer.append(';')
   }
 

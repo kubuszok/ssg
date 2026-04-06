@@ -824,7 +824,8 @@ final class EvaluateVisitor(
         nameValue,
         valueWrapper,
         node.span,
-        parsedAsSassScript = node.parsedAsSassScript
+        parsedAsSassScript = node.parsedAsSassScript,
+        isImportant = node.isImportant
       )
       _addChild(decl)
     }
