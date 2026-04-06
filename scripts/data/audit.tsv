@@ -500,32 +500,32 @@ ssg-sass/src/main/scala/ssg/sass/visitor/IsPlainCssVisitor.scala	visitor	minor_i
 ssg-sass/src/main/scala/ssg/sass/visitor/ExpressionToCalcVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
 ssg-sass/src/main/scala/ssg/sass/visitor/ReplaceExpressionVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
 ssg-sass/src/main/scala/ssg/sass/visitor/SourceInterpolationVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
-ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
-ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	minor_issues	yes	2026-04-06	MVP: all expressions, statements, callables, modules (no file I/O), control flow. Full extend/function-dispatch/parent-selector TODO.	
-ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	minor_issues	yes	2026-04-06	MVP implementation: expanded/compressed styles, all 9 visit methods. 11/11 tests. Source maps and custom value formatting TODO.	
+ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala	visitor	minor_issues	no	2026-04-06	Handles meta.load-css with literal strings; dynamic load-css TODO.	
+ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	visitor	pass	yes	2026-04-06	Full expression/statement/callable dispatch, @use/@forward with config, @media/@supports bubbling, @at-root, @each destructuring, @debug/@warn/@error, @extend with media scoping + !optional, first-class calc/min/max/clamp, CSS custom properties, parent selector (&), built-in function dispatch, source maps via SerializeVisitor. Remaining: meta.apply stub, no selector AST unification inside extend beyond textual rewrite.	
+ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	pass	yes	2026-04-06	Expanded + compressed output, all 9 visit methods, !important, shorthand hex/named color formatting, SassNumber trailing-zero stripping with compressed .5 form, rgba legacy colors, full SassCalculation rendering with precedence-aware parens. Minimal v3 source-map output (per-rule/declaration, base64 VLQ). Limitations: no sourcesContent/sourceRoot, mapping granularity per-node not per-token.	
 ssg-sass/src/main/scala/ssg/sass/parse/Parser.scala	parse	pass	yes	2026-04-06	Tokenizer fully implemented: whitespace/comments/identifier/string/declarationValue/escape/naturalNumber. 6/6 tests passing.	
-ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	yes	2026-04-06	Minimum viable: parses style rules, variables, declarations, comments, generic @-rules. 18/18 tests. Expression parser is text-based; proper tokenizer TODO.	
+ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parse	minor_issues	yes	2026-04-06	MVP text-based expression parser — fully working for typical SCSS. Parses variables !default/!global, @mixin/@function/@include with positional+named+rest+kwargs, @content with args and using clauses, @if/@for/@each (with destructuring)/@while, @media/@supports (including selector() form) with nesting bubble, @at-root, @keyframes (+ prefixed), @debug/@warn/@error, @charset, CSS custom properties --foo, #{} interpolation, @use/@forward with config/show/hide/as-prefix, @import dynamic, @extend !optional, !important flag. Arithmetic tokenizer handles tight-binding operators. Known limits: selectors stored as raw interpolation; no tokenizer for function calls and space-separated lists; CssParser strict mode not implemented.	
 ssg-sass/src/main/scala/ssg/sass/parse/ScssParser.scala	parse	pass	yes	2026-04-06	All abstract hooks implemented. Sequences statements, handles blocks, scanElse, statement separators.	
-ssg-sass/src/main/scala/ssg/sass/parse/SassParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/SelectorParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/KeyframeSelectorParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
-ssg-sass/src/main/scala/ssg/sass/parse/AtRootQueryParser.scala	parse	minor_issues	no	2026-04-06	Parser skeleton; grammar rules stubbed	
+ssg-sass/src/main/scala/ssg/sass/parse/SassParser.scala	parse	minor_issues	yes	2026-04-06	Indented-syntax MVP via indentedToScss preprocessor + ScssParser delegation. Handles variables, declarations, nested rules, simple @-rules, //-comments. Override hooks still stubs because statement loop is skipped. Multi-line selector continuations and edge cases of indented syntax not supported.	
+ssg-sass/src/main/scala/ssg/sass/parse/CssParser.scala	parse	minor_issues	no	2026-04-06	Skeleton. ssg-sass parses plain CSS through ScssParser/StylesheetParser; dedicated strict CssParser still stubbed.	
+ssg-sass/src/main/scala/ssg/sass/parse/SelectorParser.scala	parse	pass	yes	2026-04-06	Real recursive-descent parser producing SelectorList AST — complex/compound/simple, pseudo-classes, attribute selectors, combinators. Backed by SelectorList.unify and AST-backed selector functions.	
+ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala	parse	pass	yes	2026-04-06	Implemented and wired into EvaluateVisitor for @media query evaluation.	
+ssg-sass/src/main/scala/ssg/sass/parse/KeyframeSelectorParser.scala	parse	pass	yes	2026-04-06	Implemented.	
+ssg-sass/src/main/scala/ssg/sass/parse/AtRootQueryParser.scala	parse	pass	yes	2026-04-06	Implemented and wired into EvaluateVisitor.	
 ssg-sass/src/main/scala/ssg/sass/InterpolationBuffer.scala	sass	pass	no	2026-04-06	Full InterpolationBuffer	
 ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	sass	pass	no	2026-04-06	Full InterpolationMap	
 ssg-sass/src/main/scala/ssg/sass/extend/ExtendMode.scala	extend	pass	no	2026-04-06	Full enum	
 ssg-sass/src/main/scala/ssg/sass/extend/Extension.scala	extend	pass	no	2026-04-06	Full Extension data class	
-ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend logic pending	
-ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	extend	minor_issues	no	2026-04-06	Skeleton; extend helpers pending	
+ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	extend	minor_issues	yes	2026-04-06	AST-backed store API wired into @extend evaluator (placeholder stripping, compound extend target error, multiple extenders, media scoping, !optional). Still textual rewrite — no full selector unification (unifyComplex/weave/paths from ExtendFunctions).	
+ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	extend	minor_issues	no	2026-04-06	unifyComplex/unifyCompound/weave/paths still stubbed. @extend works via textual rewrite only.	
 ssg-sass/src/main/scala/ssg/sass/functions/Functions.scala	functions	pass	yes	2026-04-06	Barrel aggregating all module callables with lookupGlobal(name).	
-ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala	functions	pass	yes	2026-04-06	rgb/rgba/hsl/hsla + accessors + lighten/darken/saturate/desaturate/mix/invert/grayscale/complement/opacify/transparentize/adjust-hue/change-color/adjust-color/scale-color. Module-namespaced via @use sass:color.	
 ssg-sass/src/main/scala/ssg/sass/functions/MathFunctions.scala	functions	pass	yes	2026-04-06	11 math functions: abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable.	
 ssg-sass/src/main/scala/ssg/sass/functions/StringFunctions.scala	functions	pass	yes	2026-04-06	8 string functions: unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice.	
 ssg-sass/src/main/scala/ssg/sass/functions/ListFunctions.scala	functions	pass	yes	2026-04-06	9 list functions: length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed.	
 ssg-sass/src/main/scala/ssg/sass/functions/MapFunctions.scala	functions	pass	yes	2026-04-06	6 map functions: map-get/merge/remove/keys/values/has-key.	
-ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	functions	pass	yes	2026-04-06	5 meta functions: type-of/inspect/feature-exists/variable-exists/function-exists.	
-ssg-sass/src/main/scala/ssg/sass/functions/SelectorFunctions.scala	functions	minor_issues	no	2026-04-06	Function list empty; implementations pending	
+ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	functions	minor_issues	yes	2026-04-06	type-of/inspect/feature-exists, *-exists family via CurrentEnvironment, keywords, module-variables/functions, get-function/get-mixin returning first-class SassFunction/SassMixin, call dispatching through CurrentCallableInvoker. apply() is a stub (mixin invocation from built-in deferred); content-exists is a placeholder.	
+ssg-sass/src/main/scala/ssg/sass/functions/SelectorFunctions.scala	functions	pass	yes	2026-04-06	AST-backed: selector-append/nest/extend/unify/parse/replace/is-superselector operating on real SelectorList values.	
 ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	importer	minor_issues	no	2026-04-06	Trait + NoOp impl. FilesystemImporter moved to src/main/scala-jvm/. Package/NodePackage importers still stubs.	
 ssg-sass/src/main/scala/ssg/sass/importer/ImporterResult.scala	importer	minor_issues	no	2026-04-06	ImporterResult skeleton	
 ssg-sass/src/main/scala/ssg/sass/value/color/ColorChannel.scala	color	pass	no	2026-04-06	Full color-space implementation	
@@ -536,13 +536,13 @@ ssg-sass/src/main/scala/ssg/sass/value/color/Conversions.scala	color	pass	no	202
 ssg-sass/src/main/scala/ssg/sass/value/color/GamutMapMethod.scala	color	pass	no	2026-04-06	Full color-space implementation	
 ssg-sass/src/main/scala/ssg/sass/value/color/InterpolationMethod.scala	color	pass	no	2026-04-06	Full color-space implementation	
 ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	value	pass	no	2026-04-06	Full SassColor value type	
-ssg-sass/src/main/scala/ssg/sass/Callable.scala	sass	minor_issues	no	2026-04-06	Callable trait skeleton	
-ssg-sass/src/main/scala/ssg/sass/Configuration.scala	sass	minor_issues	no	2026-04-06	Configuration skeleton	
-ssg-sass/src/main/scala/ssg/sass/Environment.scala	sass	minor_issues	yes	2026-04-06	setVariable/getVariable/setFunction/getFunction/setMixin/getMixin/withSnapshot/content all working. Closure semantics simplified.	
-ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala	sass	minor_issues	no	2026-04-06	EvaluationContext skeleton	
-ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	sass	minor_issues	no	2026-04-06	ImportCache skeleton	
-ssg-sass/src/main/scala/ssg/sass/Module.scala	sass	minor_issues	no	2026-04-06	Module skeleton	
-ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	sass	minor_issues	no	2026-04-06	StylesheetGraph skeleton	
+ssg-sass/src/main/scala/ssg/sass/Callable.scala	sass	pass	yes	2026-04-06	BuiltInCallable parses textual signatures; UserDefinedCallable wraps function/mixin rules; overloadedFunction supports multiple arity overloads.	
+ssg-sass/src/main/scala/ssg/sass/Configuration.scala	sass	pass	yes	2026-04-06	Configuration for @use/@forward with (...) — throwErrorForUnknownVariables and implicitConfig in place.	
+ssg-sass/src/main/scala/ssg/sass/Environment.scala	sass	pass	yes	2026-04-06	Closure semantics, namespaces (for @use), withBuiltins, getNamespacedVariable/Function/Mixin; CurrentEnvironment holder for meta.* introspection.	
+ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala	sass	pass	no	2026-04-06	Context zone propagation for error spans.	
+ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	sass	pass	yes	2026-04-06	Wired with cycle detection and PackageImporter support.	
+ssg-sass/src/main/scala/ssg/sass/Module.scala	sass	pass	yes	2026-04-06	BuiltInModule/ForwardedView/ShadowedView functioning for @use/@forward with show/hide/as-prefix filtering.	
+ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	sass	pass	no	2026-04-06	addCanonical with circular dep detection.	
 ssg-sass/src/main/scala/ssg/sass/Compile.scala	sass	pass	yes	2026-04-06	Wires Parser->Evaluator->Serializer. 14 integration tests passing. compile(path) requires file I/O (Phase 8).	
 ssg-sass/src/main/scala/ssg/sass/ColorNames.scala	sass	pass	no	2026-04-06	Full CSS named color table	
 ssg-sass/src/main/scala/ssg/sass/Nullable.scala	sass	pass	no	2026-04-06	Nullable opaque type for ssg-sass	
