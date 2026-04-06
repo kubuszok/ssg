@@ -95,12 +95,68 @@ object BuiltInCallable {
   ): BuiltInCallable =
     BuiltInCallable(name, Nullable.empty, callback, acceptsContent, signature = arguments)
 
+  /** Builds a built-in callable that dispatches by arity.
+    *
+    * Each entry of `overloads` maps a textual signature (e.g. `"$color"`, `"$color, $amount"`, `"$args..."`) to its callback. At call time the overload whose signature accepts the runtime argument
+    * count is selected:
+    *
+    *   - First, an exact match (positional count == declared parameter count) wins.
+    *   - Otherwise, an overload that has more declared parameters (the rest are assumed to have defaults) wins.
+    *   - Otherwise, the rest-parameter overload (`$args...`) wins.
+    *   - If nothing matches, an `IllegalArgumentException` is thrown.
+    */
   def overloadedFunction(
     name:      String,
     overloads: Map[String, List[Value] => Value]
-  ): BuiltInCallable =
-    // TODO: overload dispatch
-    BuiltInCallable(name, Nullable.empty, args => overloads.head._2(args))
+  ): BuiltInCallable = {
+    // Pre-compute (declaredCount, hasRest, callback) for each overload.
+    final case class _Entry(arity: Int, hasRest: Boolean, callback: List[Value] => Value)
+    val entries: List[_Entry] = overloads.toList.map { case (signature, cb) =>
+      val trimmed = signature.trim
+      val parts   =
+        if (trimmed.isEmpty) Nil
+        else {
+          val buf     = scala.collection.mutable.ListBuffer.empty[String]
+          val current = new StringBuilder()
+          var depth   = 0
+          var i       = 0
+          while (i < trimmed.length) {
+            val c = trimmed.charAt(i)
+            if (c == '(' || c == '[') { depth += 1; current.append(c) }
+            else if (c == ')' || c == ']') { depth -= 1; current.append(c) }
+            else if (c == ',' && depth == 0) {
+              buf += current.toString().trim
+              current.setLength(0)
+            } else current.append(c)
+            i += 1
+          }
+          if (current.nonEmpty) buf += current.toString().trim
+          buf.toList
+        }
+      val hasRest = parts.lastOption.exists(_.endsWith("..."))
+      val arity   = if (hasRest) parts.length - 1 else parts.length
+      _Entry(arity, hasRest, cb)
+    }
+
+    val dispatch: List[Value] => Value = args => {
+      val n = args.length
+      // 1. Exact arity match (non-rest preferred).
+      val exact = entries.find(e => !e.hasRest && e.arity == n)
+      // 2. Non-rest overload with more params (defaulted tail).
+      val widened = exact.orElse(entries.filter(e => !e.hasRest && e.arity > n).sortBy(_.arity).headOption)
+      // 3. Rest-parameter overload accepting at least `n` positional args.
+      val resty = widened.orElse(entries.find(e => e.hasRest && e.arity <= n))
+      resty match {
+        case Some(e) => e.callback(args)
+        case None    =>
+          throw new IllegalArgumentException(
+            s"No overload of $name matches ${args.length} argument(s)"
+          )
+      }
+    }
+
+    BuiltInCallable(name, Nullable.empty, dispatch)
+  }
 }
 
 /** A callable that emits a plain-CSS function call. */

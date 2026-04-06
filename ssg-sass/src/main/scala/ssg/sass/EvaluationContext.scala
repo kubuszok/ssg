@@ -28,9 +28,26 @@ trait EvaluationContext {
 
 object EvaluationContext {
 
-  /** Returns the current [[EvaluationContext]], or throws if none is active. TODO: implement zone-style context propagation.
+  /** Stack of active contexts. The top of the stack is the most recently entered.
+    *
+    * NOTE: this is a single shared `var` rather than a `ThreadLocal`/`DynamicVariable` because Sass evaluation is single-threaded and ssg-js / ssg-native runtimes don't have working ThreadLocals
+    * across all platforms. If multi-threaded evaluation is ever needed, swap this for a `DynamicVariable[List[EvaluationContext]]`.
     */
-  def current: Nullable[EvaluationContext] = Nullable.empty
+  private var _stack: List[EvaluationContext] = Nil
+
+  /** Returns the current [[EvaluationContext]], or empty if none is active. */
+  def current: Nullable[EvaluationContext] = _stack match {
+    case head :: _ => Nullable(head)
+    case Nil       => Nullable.empty
+  }
+
+  /** Pushes [[ctx]] as the current context, runs `body`, and restores the previous context — even on exception.
+    */
+  def withContext[A](ctx: EvaluationContext)(body: => A): A = {
+    _stack = ctx :: _stack
+    try body
+    finally _stack = _stack.tail
+  }
 
   /** Emits a warning via the current context, if any. */
   def warn(message: String, deprecation: Boolean = false): Unit =

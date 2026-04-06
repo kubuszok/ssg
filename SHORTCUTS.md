@@ -4,6 +4,44 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Module / EvaluationContext / Callable / FindDependencies polish
+
+- `ssg-sass/src/main/scala/ssg/sass/Module.scala` —
+  - `BuiltInModule.css` now returns `CssStylesheet.empty(url)` instead of
+    throwing (built-in modules genuinely have no CSS to emit).
+  - `ForwardedView` now implements show/hide/prefix filtering. New
+    constructor params: `prefix`, `shownVariables`,
+    `shownMixinsAndFunctions`, `hiddenVariables`,
+    `hiddenMixinsAndFunctions`. `variables`/`functions`/`mixins` filter
+    the underlying maps and prepend the prefix; `setVariable` strips the
+    prefix and rejects names that aren't visible.
+    `ForwardedView.apply(inner, rule: ForwardRule)` builds a view from a
+    parsed `@forward` rule.
+  - `ShadowedView` now takes `shadowedVars` / `shadowedMixins` /
+    `shadowedFunctions` blocklists; `setVariable` rejects shadowed names.
+- `ssg-sass/src/main/scala/ssg/sass/EvaluationContext.scala` —
+  `EvaluationContext.current` now reads from a real stack;
+  `withContext(ctx) { body }` pushes, runs, pops in `try/finally`.
+  Single shared stack (Sass evaluation is single-threaded; ssg-js /
+  ssg-native lack working ThreadLocals across all platforms).
+- `ssg-sass/src/main/scala/ssg/sass/Callable.scala` —
+  `BuiltInCallable.overloadedFunction` now does real arity dispatch:
+  exact match wins, then non-rest with more declared params (defaulted
+  tail), then rest-parameter overload (`$args...`); throws
+  `IllegalArgumentException` if nothing matches.
+- `ssg-sass/src/main/scala/ssg/sass/visitor/FindDependenciesVisitor.scala`
+  — `visitIncludeRule` now recognises `meta.load-css("literal")` (single
+  positional `StringExpression` with a plain interpolation) and records
+  the URL in `_metaLoadCss`; non-literal arguments are ignored.
+- Tests: `ssg-sass/src/test/scala/ssg/sass/ModuleInfraSuite.scala`
+  (10 cases) covers the empty BuiltIn css, all three ForwardedView
+  filtering modes (show/hide/prefix), ShadowedView blocklist,
+  EvaluationContext push/pop and exception unwinding,
+  `overloadedFunction` arity dispatch, and the new FindDependencies
+  meta.load-css literal/dynamic branches.
+
+All 3 platforms: 418/418 (+2 ignored) green on JVM, JS, Native.
+
 ### Media / Keyframe / AtRoot query parsers (Phase 11)
 
 - `ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala` — full

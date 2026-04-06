@@ -74,12 +74,21 @@ final class FindDependenciesVisitor extends RecursiveStatementVisitor {
       }
 
   override def visitIncludeRule(node: IncludeRule): Unit =
-    // TODO(ssg-sass): handle meta.load-css() with static string arguments.
-    // Requires inspecting node.arguments.positional for a single
-    // StringExpression(text = Interpolation(asPlain = url)).
     if (node.name == "load-css" && _metaNamespaces.contains(node.namespace)) {
-      // Skeleton — full positional-arg inspection deferred.
-      ()
+      // Inspect a single positional StringExpression with a plain interpolation.
+      // Anything dynamic (variable, computed string, named-only args) is ignored
+      // because we cannot statically resolve the URL.
+      val args = node.arguments
+      if (args.named.isEmpty && args.rest.isEmpty && args.positional.length == 1) {
+        args.positional.head match {
+          case se: StringExpression =>
+            se.text.asPlain.foreach { url =>
+              try _metaLoadCss += new URI(url)
+              catch { case _: java.net.URISyntaxException => () }
+            }
+          case _ => ()
+        }
+      }
     }
 }
 
