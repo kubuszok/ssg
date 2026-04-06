@@ -72,3 +72,22 @@ object CurrentEnvironment {
     prev
   }
 }
+
+/** Holds a callback for invoking a [[Callable]] from outside the [[ssg.sass.visitor.EvaluateVisitor]]. Set by the visitor on entry so built-in `meta.call` / `meta.apply` functions can dispatch
+  * arbitrary callables (built-in or user-defined) without an explicit visitor reference. Same single-`var` rationale as [[CurrentEnvironment]].
+  */
+object CurrentCallableInvoker {
+
+  /** A function that invokes a [[Callable]] with positional + named args. */
+  type Invoker = (Callable, List[ssg.sass.value.Value], scala.collection.immutable.ListMap[String, ssg.sass.value.Value]) => ssg.sass.value.Value
+
+  private var _invoker: Nullable[Invoker] = Nullable.empty
+
+  def get: Nullable[Invoker] = _invoker
+
+  def set(inv: Nullable[Invoker]): Nullable[Invoker] = {
+    val prev = _invoker
+    _invoker = inv
+    prev
+  }
+}

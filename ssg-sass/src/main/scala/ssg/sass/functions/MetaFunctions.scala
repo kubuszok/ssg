@@ -14,7 +14,7 @@ package ssg
 package sass
 package functions
 
-import ssg.sass.{ BuiltInCallable, Callable, CurrentEnvironment, Environment, Nullable }
+import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, Environment, Nullable, SassScriptException }
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 
 import scala.collection.immutable.ListMap
@@ -176,7 +176,7 @@ object MetaFunctions {
         val nsEntries = CurrentEnvironment.get.flatMap(_.getNamespace(name)).fold(List.empty[(Value, Value)]) { env =>
           env.functionValues.map { fn =>
             (SassString(fn.name, hasQuotes = true): Value) ->
-              (SassString(fn.name, hasQuotes = true): Value)
+              (new SassFunction(fn): Value)
           }.toList
         }
         val entries =
@@ -185,11 +185,126 @@ object MetaFunctions {
             Functions.modules.get(name).fold(List.empty[(Value, Value)]) { fns =>
               fns.collect { case b: BuiltInCallable =>
                 (SassString(b.name, hasQuotes = true): Value) ->
-                  (SassString(b.name, hasQuotes = true): Value)
+                  (new SassFunction(b): Value)
               }
             }
         SassMap(ListMap.from(entries))
       }
+    )
+
+  /** Helper: looks up a function callable by name, optionally in a namespaced module. Falls back to the global built-in registry when no module is specified. Returns `Nullable.empty` if not found.
+    */
+  private def lookupFunction(name: String, moduleArg: Value): Nullable[Callable] =
+    moduleArg match {
+      case SassNull =>
+        CurrentEnvironment.get.flatMap(_.getFunction(name)) match {
+          case n if n.isDefined => n
+          case _                =>
+            Functions.lookupGlobal(name) match {
+              case Some(b) => Nullable(b: Callable)
+              case None    => Nullable.empty
+            }
+        }
+      case other =>
+        val ns = argName(other)
+        CurrentEnvironment.get.flatMap(_.getNamespacedFunction(ns, name)) match {
+          case n if n.isDefined => n
+          case _                =>
+            // Fall back to the static built-in module table for `sass:` modules
+            // even when no `@use` is in scope.
+            Functions.modules.get(ns).flatMap { fns =>
+              fns.collectFirst { case b: BuiltInCallable if b.name == name => b: Callable }
+            } match {
+              case Some(c) => Nullable(c)
+              case None    => Nullable.empty
+            }
+        }
+    }
+
+  /** Helper: looks up a mixin callable by name, optionally in a namespaced module. */
+  private def lookupMixin(name: String, moduleArg: Value): Nullable[Callable] =
+    moduleArg match {
+      case SassNull => CurrentEnvironment.get.flatMap(_.getMixin(name))
+      case other    =>
+        val ns = argName(other)
+        CurrentEnvironment.get.flatMap(env => env.getNamespace(ns)).flatMap(_.getMixin(name))
+    }
+
+  private val getFunctionFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "get-function",
+      "$name, $css: false, $module: null",
+      { args =>
+        val name      = argName(args.head)
+        val moduleArg = if (args.length > 2) args(2) else SassNull
+        lookupFunction(name, moduleArg).fold[Value] {
+          throw SassScriptException(s"Function not found: $name")
+        }(c => new SassFunction(c))
+      }
+    )
+
+  private val getMixinFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "get-mixin",
+      "$name, $module: null",
+      { args =>
+        val name      = argName(args.head)
+        val moduleArg = if (args.length > 1) args(1) else SassNull
+        lookupMixin(name, moduleArg).fold[Value] {
+          throw SassScriptException(s"Mixin not found: $name")
+        }(c => new SassMixin(c))
+      }
+    )
+
+  private val callFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "call",
+      "$function, $args...",
+      { args =>
+        if (args.isEmpty)
+          throw SassScriptException("call() requires a function argument.")
+        // First argument is the function: a SassFunction or — for legacy
+        // Sass — a plain string function name resolved against the active env.
+        val callable: Callable = args.head match {
+          case f: SassFunction => f.callable
+          case s: SassString   =>
+            lookupFunction(s.text, SassNull).getOrElse {
+              throw SassScriptException(s"Function not found: ${s.text}")
+            }
+          case other =>
+            throw SassScriptException(s"call() expected a function, got: $other")
+        }
+        // Remaining args: if a single SassArgumentList was passed (the
+        // common `$args...` rest case), splat its positional + keyword
+        // entries; otherwise treat as plain positional list.
+        val rest                = args.tail
+        val (positional, named) = rest match {
+          case (al: SassArgumentList) :: Nil =>
+            (al.asList, ListMap.from(al.keywords))
+          case (sl: SassList) :: Nil =>
+            (sl.asList, ListMap.empty[String, Value])
+          case other => (other, ListMap.empty[String, Value])
+        }
+        CurrentCallableInvoker.get.fold[Value] {
+          // No active visitor — only built-in callables can be invoked
+          // through their callback directly.
+          callable match {
+            case bic: BuiltInCallable => bic.callback(positional)
+            case _ => throw SassScriptException("meta.call requires an active evaluation context.")
+          }
+        }(invoker => invoker(callable, positional, named))
+      }
+    )
+
+  private val applyFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "apply",
+      "$mixin, $args...",
+      _ =>
+        // TODO: invoking a mixin from a built-in is non-trivial — mixins emit
+        // statements rather than returning a value, so they need a fresh
+        // statement-visitor entry point. Deferred until needed.
+        throw SassScriptException("meta.apply is not yet supported")
     )
 
   val global: List[Callable] = List(
@@ -204,7 +319,11 @@ object MetaFunctions {
     globalVariableExistsFn,
     contentExistsFn,
     moduleVariablesFn,
-    moduleFunctionsFn
+    moduleFunctionsFn,
+    getFunctionFn,
+    getMixinFn,
+    callFn,
+    applyFn
   )
 
   def module: List[Callable] = global
