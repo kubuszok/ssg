@@ -13,3 +13,6 @@
 [submodule "original-src/terser"]
 	path = original-src/terser
 	url = https://github.com/terser/terser.git
+[submodule "original-src/sass-spec"]
+	path = original-src/sass-spec
+	url = https://github.com/sass/sass-spec.git
