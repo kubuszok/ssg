@@ -129,6 +129,8 @@ import ssg.sass.value.{
   Value
 }
 import ssg.sass.{BuiltInCallable, Callable, Environment, ImportCache, Logger, Nullable, SassException, SassScriptException, UserDefinedCallable}
+import ssg.sass.importer.Importer
+import ssg.sass.parse.ScssParser
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs
   * that were loaded during evaluation.
@@ -142,7 +144,8 @@ final case class EvaluateResult(stylesheet: CssStylesheet, loadedUrls: Set[Strin
   */
 final class EvaluateVisitor(
   val importCache: Nullable[ImportCache] = Nullable.Null,
-  val logger: Nullable[Logger] = Nullable.Null
+  val logger: Nullable[Logger] = Nullable.Null,
+  val importer: Nullable[Importer] = Nullable.Null
 ) extends StatementVisitor[Value]
     with ExpressionVisitor[Value]
     with IfConditionExpressionVisitor[Any]
@@ -938,13 +941,42 @@ final class EvaluateVisitor(
           }
           val cssImport = new ModifiableCssImport(urlValue, si.span, modifiersValue)
           _addChild(cssImport)
-        case _: DynamicImport =>
-          // Dynamic imports require ImportCache + file I/O; skip for now.
-          ()
+        case di: DynamicImport =>
+          _loadDynamicImport(di.urlString)
         case _ => ()
       }
     }
     SassNull
+  }
+
+  /** Loads a dynamic `@import` via the configured importer, parses the
+    * contents, and evaluates the resulting stylesheet in the current scope.
+    * Silently skips if no importer is configured or the URL can't be resolved.
+    */
+  private def _loadDynamicImport(url: String): Unit = {
+    importer.foreach { imp =>
+      val canonical = imp.canonicalize(url)
+      canonical.foreach { canonicalUrl =>
+        if (!_loadedUrls.contains(canonicalUrl)) {
+          _loadedUrls += canonicalUrl
+          imp.load(canonicalUrl).foreach { result =>
+            val importedSheet = result.syntax match {
+              case Syntax.Scss | Syntax.Css =>
+                new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+              case Syntax.Sass =>
+                // Indented syntax not yet supported — fall back to SCSS parser
+                new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+            }
+            // Evaluate the imported stylesheet's children as if they were
+            // written inline at the @import point. No new scope — imports
+            // share the enclosing environment.
+            importedSheet.children.get.foreach { stmt =>
+              val _ = stmt.accept(this)
+            }
+          }
+        }
+      }
+    }
   }
 
   override def visitExtendRule(node: ExtendRule): Value = {

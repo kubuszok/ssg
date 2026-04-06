@@ -10,7 +10,10 @@
  *
  * Migration notes:
  *   Renames: importer.dart -> Importer.scala (merged family)
- *   Convention: Skeleton — Uri modeled as String
+ *   Convention: Uri modeled as String
+ *   Idiom: FilesystemImporter is in src/main/scala-jvm (JVM only) since it
+ *          requires java.nio.file. Cross-platform code should use NoOpImporter
+ *          or construct their own implementation.
  */
 package ssg
 package sass
@@ -56,14 +59,7 @@ final class NoOpImporter extends Importer {
   override def toString: String = "(unknown)"
 }
 
-/** A filesystem importer rooted at a load path. TODO: full resolution. */
-final class FilesystemImporter(val loadPath: String) extends Importer {
-
-  def canonicalize(url: String): Nullable[String] = Nullable.empty
-  def load(url: String): Nullable[ImporterResult] = Nullable.empty
-
-  override def toString: String = loadPath
-}
+// FilesystemImporter is JVM-only and lives in src/main/scala-jvm/
 
 /** An importer resolving `package:` URLs. TODO. */
 final class PackageImporter(val packageConfig: String) extends Importer {

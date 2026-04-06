@@ -28,8 +28,11 @@ import ssg.sass.ast.sass.{
   AtRule,
   BooleanExpression,
   Declaration,
+  DynamicImport,
   Expression,
   FunctionExpression,
+  Import,
+  ImportRule,
   Interpolation,
   ListExpression,
   LoudComment,
@@ -38,6 +41,7 @@ import ssg.sass.ast.sass.{
   ParseTimeWarning,
   SilentComment,
   Statement,
+  StaticImport,
   StringExpression,
   StyleRule,
   Stylesheet,
@@ -132,6 +136,38 @@ abstract class StylesheetParser protected (
           value = Nullable(valueInterp),
           childStatements = Nullable.empty
         ))
+      case "import" =>
+        // @import "url" [, "url2"] ;
+        val imports = scala.collection.mutable.ListBuffer.empty[Import]
+        var more = true
+        while (more) {
+          whitespace(consumeNewlines = true)
+          val importStart = scanner.state
+          val c = scanner.peekChar()
+          if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+            val url = string()
+            // Dynamic import (Sass-style) if URL doesn't look like CSS import
+            // (e.g. has `.css` suffix, or `http://`, or is `url(...)`).
+            // For now, treat all @import with quoted URLs as dynamic imports
+            // that the evaluator will try to resolve via the importer, and
+            // fall back to StaticImport semantics if not found.
+            val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
+                             url.startsWith("https://") || url.startsWith("//")
+            if (isPlainCss) {
+              val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
+              imports += StaticImport(urlInterp, spanFrom(importStart))
+            } else {
+              imports += DynamicImport(url, spanFrom(importStart))
+            }
+          } else {
+            scanner.error("Expected string URL.")
+          }
+          whitespace(consumeNewlines = true)
+          if (scanner.scanChar(CharCode.$comma)) more = true
+          else more = false
+        }
+        scanner.scanChar(CharCode.$semicolon)
+        Nullable(new ImportRule(imports.toList, spanFrom(start)))
       case _ =>
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()

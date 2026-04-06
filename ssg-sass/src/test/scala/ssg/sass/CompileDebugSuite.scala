@@ -5,5 +5,5 @@
 package ssg
 package sass
 
-// Placeholder — kept as empty suite to avoid tooling references breaking.
+// Placeholder — kept as empty suite.
 final class CompileDebugSuite extends munit.FunSuite
