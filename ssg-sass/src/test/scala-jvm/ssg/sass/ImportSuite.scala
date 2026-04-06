@@ -95,6 +95,39 @@ final class ImportSuite extends munit.FunSuite {
     assert(result.loadedUrls.nonEmpty)
   }
 
+  tempDir.test("@use loads module with default namespace") { dir =>
+    writeFile(dir, "_colors.scss", "$primary: #3498db;")
+    val source = """
+      @use "colors";
+      a { color: colors.$primary; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("#3498db"))
+  }
+
+  tempDir.test("@use with `as *` merges members flat") { dir =>
+    writeFile(dir, "_vars.scss", "$size: 7px;")
+    val source = """
+      @use "vars" as *;
+      .box { width: $size; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("7px"))
+  }
+
+  tempDir.test("@use with explicit namespace") { dir =>
+    writeFile(dir, "_t.scss", "$c: #abcdef;")
+    val source = """
+      @use "t" as th;
+      a { color: th.$c; }
+    """
+    val importer = new FilesystemImporter(dir.toString)
+    val result = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("#abcdef"))
+  }
+
   tempDir.test("CompileFile.compile reads file from path") { dir =>
     writeFile(dir, "main.scss", "a { color: red; }")
     val path = dir.resolve("main.scss").toString

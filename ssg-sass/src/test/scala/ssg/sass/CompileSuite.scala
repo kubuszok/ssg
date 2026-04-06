@@ -287,4 +287,21 @@ final class CompileSuite extends munit.FunSuite {
     """)
     assert(result.css.contains(".button"))
   }
+
+  test("@extend appends extender to target's selector list") {
+    val result = Compile.compileString("""
+      .button { color: red; }
+      .primary { @extend .button; background: blue; }
+    """)
+    // The .button rule should now match both .button AND .primary
+    assert(result.css.contains(".button"))
+    assert(result.css.contains(".primary"))
+    // The rule that originally declared `color: red` should now list both
+    // `.button` and `.primary` in its selector.
+    val redIdx = result.css.indexOf("color: red")
+    assert(redIdx >= 0)
+    val buttonHeader = result.css.substring(0, redIdx)
+    assert(buttonHeader.contains(".button"))
+    assert(buttonHeader.contains(".primary"))
+  }
 }

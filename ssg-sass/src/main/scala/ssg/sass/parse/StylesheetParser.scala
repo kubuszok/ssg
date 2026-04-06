@@ -29,6 +29,7 @@ import ssg.sass.ast.sass.{
   BooleanExpression,
   Declaration,
   DynamicImport,
+  ExtendRule,
   Expression,
   FunctionExpression,
   Import,
@@ -117,7 +118,7 @@ abstract class StylesheetParser protected (
 
     name match {
       case "use" =>
-        // Minimal @use parsing: @use "url";
+        // Minimal @use parsing: @use "url" [as namespace|*] [with (...)];
         whitespace(consumeNewlines = true)
         val url = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
           string()
@@ -125,17 +126,39 @@ abstract class StylesheetParser protected (
           scanner.error("Expected string URL.")
         }
         whitespace(consumeNewlines = true)
-        scanner.scanChar(CharCode.$semicolon)
-        // Placeholder: we don't have a UseRule factory for just URL yet.
-        // Fall back to generic AtRule.
-        val nameInterp = Interpolation.plain("use", spanFrom(start))
-        val valueInterp = Interpolation.plain(s"\"$url\"", spanFrom(start))
-        Nullable(new AtRule(
-          name = nameInterp,
-          span = spanFrom(start),
-          value = Nullable(valueInterp),
-          childStatements = Nullable.empty
-        ))
+        val namespace: Nullable[String] =
+          if (scanIdentifier("as")) {
+            whitespace(consumeNewlines = true)
+            if (scanner.scanChar(CharCode.$asterisk)) {
+              Nullable.empty[String] // flat: no namespace
+            } else {
+              Nullable(identifier())
+            }
+          } else {
+            // Default namespace: last path segment without extension/underscore.
+            val lastSeg = {
+              val segs = url.split('/')
+              if (segs.isEmpty) url else segs(segs.length - 1)
+            }
+            val stripped = lastSeg
+              .stripSuffix(".scss")
+              .stripSuffix(".sass")
+              .stripSuffix(".css")
+              .stripPrefix("_")
+            if (stripped.isEmpty) Nullable.empty[String]
+            else Nullable(stripped)
+          }
+        whitespace(consumeNewlines = true)
+        // Optional `with (...)` — skipped in v1.
+        if (scanIdentifier("with")) {
+          while (!scanner.isDone && scanner.peekChar() != CharCode.$semicolon) {
+            val _ = scanner.readChar()
+          }
+        }
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        val uri = java.net.URI.create(url)
+        Nullable(new UseRule(uri, namespace, spanFrom(start)))
       case "import" =>
         // @import "url" [, "url2"] ;
         val imports = scala.collection.mutable.ListBuffer.empty[Import]
@@ -168,6 +191,34 @@ abstract class StylesheetParser protected (
         }
         scanner.scanChar(CharCode.$semicolon)
         Nullable(new ImportRule(imports.toList, spanFrom(start)))
+      case "extend" =>
+        // @extend <selector> [!optional] ;
+        whitespace(consumeNewlines = true)
+        val selBuf = new StringBuilder()
+        import scala.util.boundary, boundary.break
+        boundary {
+          while (!scanner.isDone) {
+            val c = scanner.peekChar()
+            if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
+              break(())
+            } else {
+              selBuf.append(scanner.readChar().toChar)
+            }
+          }
+        }
+        val rawText = selBuf.toString().trim
+        var isOptional = false
+        val selText =
+          if (rawText.endsWith("!optional")) {
+            isOptional = true
+            rawText.stripSuffix("!optional").trim
+          } else rawText
+        val span = spanFrom(start)
+        val selInterp = Interpolation.plain(selText, span)
+        if (scanner.peekChar() == CharCode.$semicolon) {
+          val _ = scanner.readChar()
+        }
+        Nullable(new ExtendRule(selInterp, span, isOptional))
       case _ =>
         // Generic at-rule: just skip to ; or {
         val valueBuf = new StringBuilder()
@@ -449,11 +500,23 @@ abstract class StylesheetParser protected (
       return StringExpression(_parseInterpolatedString(inner, span), hasQuotes = true)
     }
 
-    // Variable reference
+    // Variable reference (possibly namespaced: `ns.$var`)
     if (trimmed.startsWith("$")) {
       val name = trimmed.substring(1)
       if (name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
         return VariableExpression(name.replace('_', '-'), span)
+      }
+    }
+    // Namespaced variable: `ns.$var`
+    {
+      val dollarIdx = trimmed.indexOf(".$")
+      if (dollarIdx > 0) {
+        val ns = trimmed.substring(0, dollarIdx)
+        val name = trimmed.substring(dollarIdx + 2)
+        if (_allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+            name.nonEmpty && _allChars(name, (c: Char) => CharCode.isName(c.toInt))) {
+          return VariableExpression(name.replace('_', '-'), span, Nullable(ns))
+        }
       }
     }
 
@@ -525,11 +588,25 @@ abstract class StylesheetParser protected (
   private def _tryParseFunctionCall(raw: String, span: FileSpan): Option[FunctionExpression] = {
     val parenIdx = raw.indexOf('(')
     if (parenIdx <= 0 || !raw.endsWith(")")) return None
-    val name = raw.substring(0, parenIdx)
-    // Name must be a valid identifier
-    if (!_allChars(name, (c: Char) => CharCode.isName(c.toInt))) return None
+    val head = raw.substring(0, parenIdx)
+    // Head is either `name` or `namespace.name`
+    val dotIdx = head.indexOf('.')
+    val (namespace, name): (Nullable[String], String) =
+      if (dotIdx > 0 && dotIdx < head.length - 1) {
+        val ns = head.substring(0, dotIdx)
+        val n = head.substring(dotIdx + 1)
+        if (_allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
+            _allChars(n, (c: Char) => CharCode.isName(c.toInt))) {
+          (Nullable(ns), n)
+        } else {
+          return None
+        }
+      } else {
+        if (!_allChars(head, (c: Char) => CharCode.isName(c.toInt))) return None
+        (Nullable.empty[String], head)
+      }
     // Special-case: url() — passes through as an unquoted string. Skip for now.
-    if (name == "url") return None
+    if (namespace.isEmpty && name == "url") return None
 
     val argsText = raw.substring(parenIdx + 1, raw.length - 1).trim
     val argExprs = if (argsText.isEmpty) Nil
@@ -547,7 +624,7 @@ abstract class StylesheetParser protected (
     }
 
     val arguments = new ArgumentList(positional, named, Map.empty, span)
-    Some(FunctionExpression(name, arguments, span))
+    Some(FunctionExpression(name, arguments, span, namespace))
   }
 
   /** Attempts to parse a number literal with optional unit. */

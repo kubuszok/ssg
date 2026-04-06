@@ -31,6 +31,35 @@ final class Environment() {
   private val functions: mutable.Map[String, Callable] = mutable.Map.empty
   private val mixins: mutable.Map[String, Callable] = mutable.Map.empty
   private val scopes: mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
+  private val namespaces: mutable.Map[String, Environment] = mutable.Map.empty
+
+  /** Registers a namespaced module environment under [name]. */
+  def addNamespace(name: String, module: Environment): Unit = {
+    namespaces(name) = module
+  }
+
+  /** Looks up a variable in a namespaced module, or `Nullable.empty`. */
+  def getNamespacedVariable(namespace: String, name: String): Nullable[Value] =
+    namespaces.get(namespace) match {
+      case Some(env) => env.getVariable(name)
+      case scala.None => Nullable.empty
+    }
+
+  /** Looks up a function in a namespaced module, or `Nullable.empty`. */
+  def getNamespacedFunction(namespace: String, name: String): Nullable[Callable] =
+    namespaces.get(namespace) match {
+      case Some(env) => env.getFunction(name)
+      case scala.None => Nullable.empty
+    }
+
+  /** Iterates over all variable name/value pairs in this environment. */
+  def variableEntries: Iterator[(String, Value)] = variables.iterator
+
+  /** Iterates over all function callables in this environment. */
+  def functionValues: Iterator[Callable] = functions.valuesIterator
+
+  /** Iterates over all mixin callables in this environment. */
+  def mixinValues: Iterator[Callable] = mixins.valuesIterator
 
   /** Returns the value of the variable named [name], or `Nullable.empty` if
     * none exists.

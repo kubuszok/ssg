@@ -189,6 +189,25 @@ final class EvaluateVisitor(
     */
   private var _endOfImports: Int = 0
 
+  /** Map from target selector text to the list of extender selector texts
+    * that should be appended to any rule whose selector matches the target.
+    * Populated by `visitExtendRule` and applied by `_applyExtends` after
+    * the stylesheet has been fully evaluated.
+    */
+  private val _extends: scala.collection.mutable.LinkedHashMap[
+    String,
+    scala.collection.mutable.ListBuffer[String]
+  ] = scala.collection.mutable.LinkedHashMap.empty
+
+  /** Side map from a style rule to the underlying ModifiableBox that holds
+    * its selector. Used by `_applyExtends` to mutate selectors in place,
+    * since Box itself is unmodifiable.
+    */
+  private val _selectorBoxes: scala.collection.mutable.LinkedHashMap[
+    ModifiableCssStyleRule,
+    ModifiableBox[Any]
+  ] = scala.collection.mutable.LinkedHashMap.empty
+
   // ---------------------------------------------------------------------------
   // Public entry points
   // ---------------------------------------------------------------------------
@@ -202,6 +221,8 @@ final class EvaluateVisitor(
     _parent = Nullable(root: ModifiableCssParentNode)
     _endOfImports = 0
     visitStylesheet(stylesheet)
+    // Apply basic `@extend` rewrites before serialising.
+    _applyExtends(root)
     // Read back the current root (usually the same instance) to build the
     // unmodifiable wrapper; also read `_endOfImports` for future ordering.
     val finalRoot = _root.getOrElse(root)
@@ -257,7 +278,14 @@ final class EvaluateVisitor(
     // Look up the callable in the current environment. If not found, fall
     // through to a "plain CSS function" rendering. Full dispatch (built-in
     // calculations, namespaces, plain CSS calls) is deferred to Phase 20.
-    val callable: Nullable[Callable] = _environment.getFunction(node.name)
+    val callable: Nullable[Callable] =
+      if (node.namespace.isDefined) {
+        node.namespace.fold(Nullable.empty[Callable]) { ns =>
+          _environment.getNamespacedFunction(ns, node.name)
+        }
+      } else {
+        _environment.getFunction(node.name)
+      }
     callable.fold[Value] {
       // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
       val args = node.arguments.positional.map(a => _evaluateToCss(a))
@@ -408,8 +436,18 @@ final class EvaluateVisitor(
   override def visitValueExpression(node: ValueExpression): Value = node.value
 
   override def visitVariableExpression(node: VariableExpression): Value = {
-    val result: Nullable[Value] = _environment.getVariable(node.name)
-    result.getOrElse(throw SassScriptException(s"Undefined variable: $$${node.name}."))
+    val result: Nullable[Value] =
+      if (node.namespace.isDefined) {
+        node.namespace.fold(Nullable.empty[Value]) { ns =>
+          _environment.getNamespacedVariable(ns, node.name)
+        }
+      } else {
+        _environment.getVariable(node.name)
+      }
+    result.getOrElse {
+      val qualified = node.namespace.fold(s"$$${node.name}") { ns => s"$ns.$$${node.name}" }
+      throw SassScriptException(s"Undefined variable: $qualified.")
+    }
   }
 
   // ===========================================================================
@@ -564,8 +602,10 @@ final class EvaluateVisitor(
     }
     val expandedSelector: String = _expandSelector(childSelectorText, parentSelector)
 
-    val selectorBox = new ModifiableBox[Any](expandedSelector: Any).seal()
+    val modifiableSelectorBox = new ModifiableBox[Any](expandedSelector: Any)
+    val selectorBox = modifiableSelectorBox.seal()
     val rule = new ModifiableCssStyleRule(selectorBox, node.span)
+    _selectorBoxes(rule) = modifiableSelectorBox
 
     // Nested style rules in CSS output must be FLAT — they should be
     // emitted as siblings of the outer style rule rather than children.
@@ -918,9 +958,48 @@ final class EvaluateVisitor(
   }
 
   override def visitUseRule(node: UseRule): Value = {
-    // File I/O for module loading is not implemented in this pass.
-    // Record the URL for `loadedUrls` reporting and return null.
-    val _ = node
+    importer.foreach { imp =>
+      val urlStr = node.url.toString
+      val canonical = imp.canonicalize(urlStr)
+      canonical.foreach { canonicalUrl =>
+        if (!_loadedUrls.contains(canonicalUrl)) {
+          _loadedUrls += canonicalUrl
+          imp.load(canonicalUrl).foreach { result =>
+            val importedSheet = new ScssParser(result.contents, Nullable(canonicalUrl)).parse()
+            // Evaluate the module in a fresh environment, then register its
+            // members either as a namespace or by merging them flat (`as *`).
+            val moduleEnv = Environment.withBuiltins()
+            val savedEnv = _environment
+            _environment = moduleEnv
+            try {
+              importedSheet.children.get.foreach { stmt =>
+                val _ = stmt.accept(this)
+              }
+            } finally {
+              _environment = savedEnv
+            }
+            if (node.namespace.isDefined) {
+              node.namespace.foreach { ns =>
+                _environment.addNamespace(ns, moduleEnv)
+              }
+            } else {
+              // Flat (`as *`) — merge members into the current environment.
+              for ((name, value) <- moduleEnv.variableEntries) {
+                if (!_environment.variableExists(name)) {
+                  _environment.setVariable(name, value)
+                }
+              }
+              for (fn <- moduleEnv.functionValues) {
+                _environment.setFunction(fn)
+              }
+              for (mx <- moduleEnv.mixinValues) {
+                _environment.setMixin(mx)
+              }
+            }
+          }
+        }
+      }
+    }
     SassNull
   }
 
@@ -980,9 +1059,59 @@ final class EvaluateVisitor(
   }
 
   override def visitExtendRule(node: ExtendRule): Value = {
-    // Selector extension requires ExtensionStore integration. No-op for now.
-    val _ = node
+    // Basic `@extend` support: record the mapping from target selector to
+    // the enclosing style rule's selector. Actual selector rewriting happens
+    // in `_applyExtends` once the stylesheet has been fully evaluated.
+    // This skips the full "second law of extend" unification used by the
+    // Dart ExtensionStore.
+    _styleRule.foreach { rule =>
+      val extenderText = rule.selector.toString
+      val targetText = _performInterpolation(node.selector)
+      for (target <- targetText.split(',').map((s: String) => s.trim)) {
+        if (target.nonEmpty) {
+          _extends
+            .getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
+        }
+      }
+    }
     SassNull
+  }
+
+  /** Walks the modifiable CSS tree and, for every style rule whose
+    * comma-separated selector list contains an `@extend` target, appends a
+    * new comma-separated entry derived from the matching extender. This is
+    * a deliberately simple textual rewrite — no selector AST unification.
+    */
+  private def _applyExtends(node: ModifiableCssParentNode): Unit = {
+    if (_extends.isEmpty) {
+      ()
+    } else {
+      for (child <- node.modifiableChildren) {
+        child match {
+          case rule: ModifiableCssStyleRule =>
+            _selectorBoxes.get(rule).foreach { box =>
+              val currentSelector = box.value.toString
+              val parts = currentSelector.split(',').map((s: String) => s.trim).toList
+              val augmented = scala.collection.mutable.ListBuffer[String]()
+              augmented ++= parts
+              for (part <- parts) {
+                for ((target, extenders) <- _extends) {
+                  if (part == target || part.contains(target)) {
+                    for (extender <- extenders) {
+                      augmented += part.replace(target, extender)
+                    }
+                  }
+                }
+              }
+              val newSelector = augmented.distinct.mkString(", ")
+              box.value = newSelector
+            }
+            _applyExtends(rule)
+          case parent: ModifiableCssParentNode => _applyExtends(parent)
+          case _ => ()
+        }
+      }
+    }
   }
 
   override def visitContentBlock(node: ContentBlock): Value = {
