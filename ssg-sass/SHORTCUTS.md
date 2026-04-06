@@ -131,8 +131,12 @@ or serializer.
 - ✅ All 9 visit methods (stylesheet, style rule, declaration, comment,
   at-rule, media rule, supports rule, import, keyframe block)
 - ⚠️ Source map generation not implemented (returns None)
-- ⚠️ Value formatting uses `Value.toCssString` default — needs per-type
-  custom formatting (trailing zeros, color shorthand, etc.)
+- ✅ Value formatting: SassColor (rgb space) emits `#fff`/`#abc` shorthand,
+  named colors when shorter (`#ff0000` → `red`), full 6-digit hex otherwise.
+  SassNumber strips trailing zeros (`1.50px` → `1.5px`, `3.0` → `3`) via
+  `SassNumber.formatNumber`, and compressed mode strips the leading `0` from
+  fractional values (`0.5` → `.5`). Non-opaque colors and other value types
+  fall back to `Value.toCssString`.
 
 ---
 

@@ -589,4 +589,123 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("x: 5px"), result.css)
     assert(result.css.contains("y: 7px"), result.css)
   }
+
+  // --- Value formatting (color shorthand, named colors, number tweaks) ---
+
+  test("rgb(255,255,255) emits #fff (named is shorter -> white)") {
+    // #ffffff -> #fff (3 chars after #), white is 5 chars; #fff wins.
+    val result = Compile.compileString(".box { color: rgb(255, 255, 255); }")
+    assert(result.css.contains("color: #fff"), result.css)
+  }
+
+  test("rgb(255,0,0) emits red (name shorter than #f00)") {
+    // #f00 (4 chars) vs red (3 chars). red wins in expanded mode.
+    val result = Compile.compileString(".box { color: rgb(255, 0, 0); }")
+    assert(result.css.contains("color: red"), result.css)
+  }
+
+  test("rgb(170,187,204) emits #abc shorthand") {
+    val result = Compile.compileString(".box { color: rgb(170, 187, 204); }")
+    assert(result.css.contains("color: #abc"), result.css)
+  }
+
+  test("rgb(18,52,86) emits full 6-digit hex (no shorthand possible)") {
+    val result = Compile.compileString(".box { color: rgb(18, 52, 86); }")
+    assert(result.css.contains("color: #123456"), result.css)
+  }
+
+  test("compressed mode: rgb(255,255,255) emits #fff") {
+    val result = Compile.compileString(
+      ".box { color: rgb(255, 255, 255); }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("#fff"), result.css)
+  }
+
+  test("compressed mode strips leading zero from 0.5px") {
+    val result = Compile.compileString(
+      ".box { width: 0.5px; }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains(".5px"), result.css)
+    assert(!result.css.contains("0.5px"), result.css)
+  }
+
+  test("expanded mode keeps leading zero on 0.5px") {
+    val result = Compile.compileString(".box { width: 0.5px; }")
+    assert(result.css.contains("0.5px"), result.css)
+  }
+
+  test("number trailing zero is stripped: 1.50px -> 1.5px") {
+    val result = Compile.compileString(".box { width: 1.50px; }")
+    assert(result.css.contains("1.5px"), result.css)
+    assert(!result.css.contains("1.50px"), result.css)
+  }
+
+  test("number trailing zero is stripped: 3.0 -> 3") {
+    val result = Compile.compileString(".box { z-index: 3.0; }")
+    assert(result.css.contains("z-index: 3;"), result.css)
+  }
+
+  // --- @media query parsing ---
+
+  test("@media with condition-only query emits @media block") {
+    val result = Compile.compileString(
+      "@media (max-width: 600px) { .a { color: red; } }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("@media with type and condition preserves both") {
+    val result = Compile.compileString(
+      "@media screen and (min-width: 768px) { .a { color: red; } }",
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@media screen and (min-width: 768px)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("@media supports #{...} interpolation in query") {
+    val result = Compile.compileString(
+      """
+        $bp: 600px;
+        @media (max-width: #{$bp}) { .a { color: red; } }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
+
+  test("nested @media inside style rule bubbles out") {
+    val result = Compile.compileString(
+      ".a { @media (max-width: 600px) { color: red; } }",
+      OutputStyle.Compressed
+    )
+    // Expected bubbling: `@media (max-width: 600px) { .a { color: red; } }`.
+    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+    // The @media must appear before the inner `.a` selector.
+    val mediaIdx = result.css.indexOf("@media")
+    val ruleIdx  = result.css.indexOf(".a{color:red;}")
+    assert(mediaIdx >= 0 && ruleIdx > mediaIdx, result.css)
+  }
+
+  test("nested @media inside nested @media") {
+    val result = Compile.compileString(
+      """
+        @media screen {
+          @media (max-width: 600px) {
+            .a { color: red; }
+          }
+        }
+      """,
+      OutputStyle.Compressed
+    )
+    assert(result.css.contains("@media screen"), result.css)
+    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    assert(result.css.contains(".a{color:red;}"), result.css)
+  }
 }

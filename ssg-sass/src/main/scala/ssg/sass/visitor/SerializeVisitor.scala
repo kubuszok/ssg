@@ -17,7 +17,10 @@ package ssg
 package sass
 package visitor
 
+import ssg.sass.ColorNames
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssStyleRule, CssStylesheet, CssSupportsRule }
+import ssg.sass.value.{ SassColor, SassNumber, Value }
+import ssg.sass.value.color.ColorSpace
 
 /** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
   */
@@ -88,6 +91,61 @@ final class SerializeVisitor(
   // Visitor methods
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Value formatting (color shorthand, named colors, number tweaks)
+  // ---------------------------------------------------------------------------
+
+  /** Formats a value for emission in a declaration. Applies per-type customizations (color shorthand, named-color preference, compressed-mode number tweaks).
+    */
+  private def formatValue(v: Value): String = v match {
+    case c: SassColor if c.space eq ColorSpace.rgb => formatColor(c)
+    case n: SassNumber                             => formatSassNumber(n)
+    case _ => v.toCssString()
+  }
+
+  /** Formats a SassNumber: in compressed mode strips a leading `0` from values like `0.5px` -> `.5px` (and `-0.5` -> `-.5`). Trailing-zero stripping is already handled by `SassNumber.formatNumber`.
+    */
+  private def formatSassNumber(n: SassNumber): String = {
+    val s = n.toCssString()
+    if (!isCompressed) s
+    else if (s.startsWith("0.")) s.substring(1)
+    else if (s.startsWith("-0.")) "-" + s.substring(2)
+    else s
+  }
+
+  /** Formats a SassColor in the rgb space as `#hex` / `#abc` shorthand or a named color when shorter. Falls back to rgba(...) when alpha < 1.
+    */
+  private def formatColor(c: SassColor): String = {
+    val a = c.alphaOrNull.getOrElse(1.0)
+    val r = math.round(c.channel0).toInt
+    val g = math.round(c.channel1).toInt
+    val b = math.round(c.channel2).toInt
+    if (a < 1.0) {
+      // Defer to default rendering for non-opaque colors.
+      c.toCssString()
+    } else if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      c.toCssString()
+    } else {
+      val hex   = "#%02x%02x%02x".format(r, g, b)
+      val short =
+        if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6))
+          "#" + hex.charAt(1) + hex.charAt(3) + hex.charAt(5)
+        else hex
+      val name = ColorNames.namesByColor.get(c)
+      if (isCompressed) {
+        // Pick the shortest of: short hex, full hex (only if no shorthand), name
+        val candidates = List(short) ++ name.toList
+        candidates.minBy(_.length)
+      } else {
+        // Expanded mode: use shorthand when available, prefer name only if strictly shorter than short.
+        name match {
+          case Some(n) if n.length < short.length => n
+          case _                                  => short
+        }
+      }
+    }
+  }
+
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
     var first = true
     for (child <- node.children) {
@@ -109,7 +167,7 @@ final class SerializeVisitor(
     buffer.append(node.name.value)
     buffer.append(':')
     writeSpace()
-    buffer.append(node.value.value.toCssString())
+    buffer.append(formatValue(node.value.value))
     buffer.append(';')
   }
 
