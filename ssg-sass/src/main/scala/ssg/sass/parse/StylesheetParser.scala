@@ -26,6 +26,8 @@ import ssg.sass.Nullable.*
 import ssg.sass.ast.sass.{
   ArgumentList,
   AtRule,
+  BinaryOperationExpression,
+  BinaryOperator,
   BooleanExpression,
   Declaration,
   DynamicImport,
@@ -46,6 +48,8 @@ import ssg.sass.ast.sass.{
   StringExpression,
   StyleRule,
   Stylesheet,
+  UnaryOperationExpression,
+  UnaryOperator,
   UseRule,
   VariableDeclaration,
   VariableExpression
@@ -532,8 +536,25 @@ abstract class StylesheetParser protected (
       case None     =>
     }
 
-    // Space-separated list (simple case: multiple tokens separated by whitespace)
+    // Unary minus on a variable or function call: `-$x`, `-fn(...)`.
+    // (Numbers like `-5px` are already handled by _tryParseNumber.)
+    if (trimmed.length >= 2 && trimmed.charAt(0) == '-') {
+      val rest = trimmed.substring(1).trim
+      if (rest.startsWith("$") || _tryParseFunctionCall(rest, span).isDefined) {
+        val operand = _parseSimpleExpression(rest, span)
+        return UnaryOperationExpression(UnaryOperator.Minus, operand, span)
+      }
+    }
+
+    // Space-separated tokens. If any top-level token is a bare arithmetic
+    // operator (`+`, `-`, `*`, `/`, `%`), parse as a binary expression.
     val spaceSplit = _splitTopLevel(trimmed, ' ')
+    if (spaceSplit.exists(t => _isOperatorToken(t))) {
+      _parseBinaryOps(spaceSplit, span) match {
+        case Some(expr) => return expr
+        case None       =>
+      }
+    }
     if (spaceSplit.length >= 2) {
       val parts = spaceSplit.map(p => _parseSimpleExpression(p, span))
       return ListExpression(parts, ListSeparator.Space, span, hasBrackets = false)
@@ -711,6 +732,66 @@ abstract class StylesheetParser protected (
     }
     new Interpolation(contents.toList, spans.toList, span)
   }
+
+  /** Returns true if [t] is a bare arithmetic operator token. */
+  private def _isOperatorToken(t: String): Boolean =
+    t == "+" || t == "-" || t == "*" || t == "/" || t == "%"
+
+  /** Returns the [BinaryOperator] for an operator token, or `None`. */
+  private def _binaryOpFor(t: String): Option[BinaryOperator] = t match {
+    case "+" => Some(BinaryOperator.Plus)
+    case "-" => Some(BinaryOperator.Minus)
+    case "*" => Some(BinaryOperator.Times)
+    case "/" => Some(BinaryOperator.DividedBy)
+    case "%" => Some(BinaryOperator.Modulo)
+    case _   => None
+  }
+
+  /** Parses a sequence of whitespace-separated tokens as a left-associative
+    * binary expression using operator precedence. Returns `None` if the
+    * tokens don't form a valid operator expression (e.g. two operands in a
+    * row with no operator between).
+    */
+  private def _parseBinaryOps(tokens: List[String], span: FileSpan): Option[Expression] =
+    boundary[Option[Expression]] {
+      // Validate alternating operand/operator/operand/.../operand pattern.
+      if (tokens.isEmpty) break(None)
+      if (_isOperatorToken(tokens.head)) break(None)
+      if (_isOperatorToken(tokens.last)) break(None)
+      var i = 0
+      while (i < tokens.length) {
+        val expectOperator = (i % 2 == 1)
+        val tok = tokens(i)
+        if (expectOperator != _isOperatorToken(tok)) break(None)
+        i += 1
+      }
+
+      // Shunting-yard: build left-associative tree honoring precedence.
+      val output = scala.collection.mutable.ArrayBuffer.empty[Expression]
+      val ops = scala.collection.mutable.ArrayBuffer.empty[BinaryOperator]
+      def reduce(): Unit = {
+        val r = output.remove(output.length - 1)
+        val l = output.remove(output.length - 1)
+        val op = ops.remove(ops.length - 1)
+        output += BinaryOperationExpression(op, l, r)
+      }
+      output += _parseSimpleExpression(tokens.head, span)
+      var j = 1
+      while (j + 1 < tokens.length) {
+        val opTok = tokens(j)
+        val rhs = tokens(j + 1)
+        val op = _binaryOpFor(opTok) match {
+          case Some(o) => o
+          case None    => break(None)
+        }
+        while (ops.nonEmpty && ops.last.precedence >= op.precedence) reduce()
+        ops += op
+        output += _parseSimpleExpression(rhs, span)
+        j += 2
+      }
+      while (ops.nonEmpty) reduce()
+      if (output.length == 1) Some(output.head) else None
+    }
 
   /** Helper: returns true if every character of [s] satisfies [p]. Explicit
     * loop to avoid Nullable implicit conversion hijacking String.forall.

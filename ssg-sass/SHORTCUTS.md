@@ -50,8 +50,11 @@ or serializer.
 - ❌ `parseUseRule()` — still throws (UseRule factory incomplete)
 - ❌ `parseSignature(requireParens)` — medium
 - ⚠️  Expression parsing is TEXT-BASED — collects raw text then pattern-matches.
-  A proper tokenizer for operators (+/-/*), function calls, interpolation `#{...}`,
-  and space-separated lists is still TODO.
+  Whitespace-separated arithmetic operators `+ - * / %` and unary minus on
+  variables/function calls are now recognized and produce real
+  `BinaryOperationExpression` / `UnaryOperationExpression` nodes (with operator
+  precedence). A proper tokenizer for tight-binding operators (`10px+5px`),
+  function calls, interpolation `#{...}`, and space-separated lists is still TODO.
 - ⚠️  Style rule selectors stored as plain Interpolation (no interpolation parsing yet).
 
 ### `parse/ScssParser.scala` ✅ IMPLEMENTED
