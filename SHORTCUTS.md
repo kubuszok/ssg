@@ -4,6 +4,28 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### PseudoSelector per-name specificity specialization (ISS-040)
+
+- `ssg-sass/src/main/scala/ssg/sass/ast/selector/PseudoSelector.scala` —
+  added three companion sets that document the per-pseudo-name
+  specialization already encoded in `PseudoSelector.specificity`:
+  `selectorPseudoClasses` (not, is, matches, current, any, has, host,
+  host-context), `selectorPseudoElements` (slotted), and
+  `rootishPseudoClasses` (host, host-context). The specificity logic
+  itself already matched dart-sass (`:where` -> 0, `:is/:not/:has/:matches`
+  -> max of components, `:nth-child/:nth-last-child` -> base + max of
+  components, default -> class).
+- `ssg-sass/src/test/scala/ssg/sass/SelectorSpecificitySuite.scala` —
+  new cross-platform suite, 11 cases covering `:where(.a, .b)` = (0,0,0),
+  `:is(.a, #b)` = (1,0,0), `:not(.a, .b, .c)` = (0,1,0), `.a:where(.b.c)`
+  = (0,1,0), `:has(:not(.x))` = (0,1,0), plain `:hover` = (0,1,0),
+  `::before` / `:before` = (0,0,1), `#a.b.c` = (1,2,0), plus a sanity
+  check on the new companion sets. Specificity is decoded from dart-sass's
+  base-1000 int representation (ID = 1_000_000, class = 1_000, type = 1),
+  which is order-isomorphic to the (id, class, type) triple.
+
+11/11 green on JVM, JS, Native.
+
 ### CSS Color Module 4 introspection API (sass:color)
 
 - `ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala` —
