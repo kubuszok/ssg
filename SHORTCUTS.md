@@ -4,6 +4,27 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Cross-platform MapImporter + ImportMapSuite
+
+- `ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala` — new
+  `MapImporter(sources: Map[String, String])` — a cross-platform
+  in-memory importer. Mirrors `FilesystemImporter`'s candidate order
+  (exact, `_partial.scss`, `name/_index.scss`, `name/index.scss`) but
+  using plain string keys, no `java.nio.file`. Keys are the canonical
+  form (e.g. `_colors.scss`, `vars.scss`); `load` returns
+  `ImporterResult(src, Syntax.Scss)`.
+- `ssg-sass/src/test/scala/ssg/sass/ImportMapSuite.scala` — new
+  cross-platform suite, 10 cases ported from the JVM-only `ImportSuite`
+  covering basic `@import`, explicit `.scss`, missing imports, `@use`
+  with default / explicit namespace, `@use as *`, `@forward` re-export,
+  `@use with (...)` config override, `@use` without config falling back
+  on `!default`, and `loadedUrls` tracking.
+- JVM-only `ImportSuite` is untouched (still exercises real
+  `java.nio.file` I/O) — this is additional coverage.
+
+All 3 platforms: JVM 449, JS 428 (+2 ignored), Native 428 (+2 ignored), green
+(+10 per platform).
+
 ### Module / EvaluationContext / Callable / FindDependencies polish
 
 - `ssg-sass/src/main/scala/ssg/sass/Module.scala` —

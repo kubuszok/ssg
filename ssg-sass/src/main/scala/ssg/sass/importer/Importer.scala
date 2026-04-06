@@ -97,3 +97,69 @@ final class PackageImporter(
 }
 
 // NodePackageImporter is JVM-only and lives in src/main/scala-jvm/
+
+/** A cross-platform, in-memory importer backed by a map of URL -> SCSS source.
+  *
+  * Useful for tests and any environment without a filesystem. Resolves imports
+  * using the same order as [[FilesystemImporter]]:
+  *   1. exact `basename.scss`
+  *   2. `_basename.scss` (partial)
+  *   3. `basename/_index.scss` / `basename/index.scss`
+  *
+  * Keys in [[sources]] should be the canonical form (what [[canonicalize]]
+  * returns) — typically the resolved file name including extension, e.g.
+  * `_colors.scss` or `vars.scss`.
+  */
+final class MapImporter(val sources: Map[String, String]) extends Importer {
+
+  private def candidates(relative: String): List[String] = {
+    val slashIdx = relative.lastIndexOf('/')
+    val parent   = if (slashIdx < 0) "" else relative.substring(0, slashIdx + 1)
+    val fileName = if (slashIdx < 0) relative else relative.substring(slashIdx + 1)
+
+    val hasExtension = fileName.indexOf('.') >= 0
+    val basenames: List[String] =
+      if (hasExtension) List(fileName, s"_$fileName").distinct
+      else
+        List(
+          s"$fileName.scss",
+          s"_$fileName.scss"
+        )
+
+    val direct = basenames.map(parent + _)
+
+    val index: List[String] =
+      if (hasExtension) Nil
+      else
+        List(
+          s"$parent$fileName/_index.scss",
+          s"$parent$fileName/index.scss"
+        )
+
+    direct ++ index
+  }
+
+  def canonicalize(url: String): Nullable[String] = {
+    val cleaned = if (url.startsWith("file:")) url.stripPrefix("file:") else url
+    if (sources.contains(cleaned)) Nullable(cleaned)
+    else {
+      val cands = candidates(cleaned)
+      var result: Nullable[String] = Nullable.empty
+      var i = 0
+      while (result.isEmpty && i < cands.length) {
+        val c = cands(i)
+        if (sources.contains(c)) result = Nullable(c)
+        i += 1
+      }
+      result
+    }
+  }
+
+  def load(url: String): Nullable[ImporterResult] =
+    sources.get(url) match {
+      case Some(src) => Nullable(ImporterResult(src, Syntax.Scss))
+      case scala.None => Nullable.empty
+    }
+
+  override def toString: String = "(map)"
+}
