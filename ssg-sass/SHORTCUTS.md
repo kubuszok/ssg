@@ -108,31 +108,20 @@ or serializer.
 
 ---
 
-## HIGH — Selector Unification & Extend (10 items)
+## HIGH — Selector Unification & Extend
 
-### `extend/ExtendFunctions.scala`
-- ⚠️ `unifyComplex(complexes, span)` — large (~150 lines)
-- ⚠️ `unifyCompound(compound1, compound2)` — medium (~80 lines)
-- ⚠️ `weave(complexes, span)` — large (~150 lines, second law of extend)
-- ⚠️ `paths(choices)` — small (~30 lines)
+### Basic @extend ✅ WORKING
+- ✅ `visitExtendRule` records target/extender pairs
+- ✅ `_applyExtends` walks the CSS tree after evaluation and textually
+  rewrites style rule selectors to add extender-replaced variants
+- ✅ `@extend .button` appends `.primary` to matching selectors
+- ⚠️ **Textual rewrite only** — no selector AST unification
 
-### `extend/ExtensionStore.scala`
-- ⚠️ `extensionsWhereTarget` — small (MergedExtensions unwrap)
-- ⚠️ `addSelector` — medium (selector rewriting)
-- ⚠️ `addExtension` — medium (apply to existing)
-- ⚠️ `addExtensions` — medium (merge stores)
-- ⚠️ `cloneStore` — small
-- ⚠️ `registerSelector` — small
-
-### `ast/selector/SelectorList.scala`
-- ⚠️ `unify(other)` — small (delegates to ExtendFunctions)
-
-### `ast/selector/ComplexSelector.scala`
-- ⚠️ `isSuperselector(other)` — medium (basic approximation only)
-- ⚠️ `complexIsSuperselector` — medium
-
-### `ast/selector/CompoundSelector.scala`
-- ⚠️ `isSuperselector(other)` — small
+### Still stubbed (not needed for basic use)
+- ⚠️ `extend/ExtendFunctions.scala` — `unifyComplex`, `unifyCompound`, `weave`, `paths`
+- ⚠️ `extend/ExtensionStore.scala` — full store-based extend with media context
+- ⚠️ `ast/selector/*.scala` — `isSuperselector`, `unify` methods
+- ⚠️ "Second law of extend" (specificity-based trimming)
 
 ---
 
@@ -180,6 +169,15 @@ or serializer.
 - ✅ `_loadDynamicImport(url)` — resolves via importer, parses, evaluates inline
 - ✅ Cycle prevention via `_loadedUrls`
 - ✅ Variables/functions/mixins propagate across @import boundary
+
+### EvaluateVisitor `@use` module loading ✅ IMPLEMENTED
+- ✅ `visitUseRule` loads module via importer, evaluates in fresh environment
+- ✅ Default namespace from URL basename (`@use "colors"` → `colors.*`)
+- ✅ Explicit namespace (`@use "t" as th` → `th.*`)
+- ✅ Flat merge (`@use "vars" as *`) copies variables/functions/mixins
+- ✅ `namespace.$var` and `namespace.fn()` parsing in StylesheetParser
+- ✅ `Environment.namespaces` + `getNamespacedVariable` / `getNamespacedFunction`
+- ⚠️ No `with (...)` configuration support
 
 ---
 
