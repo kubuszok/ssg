@@ -190,8 +190,7 @@ object PseudoSelector {
 
   /** Pseudo-class names that take a selector list as their argument.
     *
-    * These participate in per-name specialization for specificity,
-    * unification, and superselector logic.
+    * These participate in per-name specialization for specificity, unification, and superselector logic.
     */
   val selectorPseudoClasses: Set[String] =
     Set("not", "is", "matches", "current", "any", "has", "host", "host-context")
@@ -199,8 +198,7 @@ object PseudoSelector {
   /** Pseudo-element names that take a selector list as their argument. */
   val selectorPseudoElements: Set[String] = Set("slotted")
 
-  /** Pseudo-class names that are "rootish" — they affect how parent-rule
-    * combinators are handled (`:host` / `:host-context`).
+  /** Pseudo-class names that are "rootish" — they affect how parent-rule combinators are handled (`:host` / `:host-context`).
     */
   val rootishPseudoClasses: Set[String] = Set("host", "host-context")
 

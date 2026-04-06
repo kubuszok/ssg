@@ -45,15 +45,15 @@ final class SassSpecRunner extends munit.FunSuite {
     println(s"sass-spec: collected ${cases.size} self-contained test cases")
     val results = cases.map(runCase)
 
-    val total    = results.size
-    val passing  = results.count(_.outcome == Outcome.Pass)
-    val mismatch = results.count(_.outcome == Outcome.Mismatch)
-    val errored  = results.count(_.outcome == Outcome.Error)
-    val missing  = results.count(_.outcome == Outcome.MissingExpected)
-    val expectedErrorOk = results.count(_.outcome == Outcome.ExpectedErrorOk)
+    val total               = results.size
+    val passing             = results.count(_.outcome == Outcome.Pass)
+    val mismatch            = results.count(_.outcome == Outcome.Mismatch)
+    val errored             = results.count(_.outcome == Outcome.Error)
+    val missing             = results.count(_.outcome == Outcome.MissingExpected)
+    val expectedErrorOk     = results.count(_.outcome == Outcome.ExpectedErrorOk)
     val expectedErrorMissed = results.count(_.outcome == Outcome.ExpectedErrorMissed)
 
-    val pct = if (total == 0) 0.0 else (passing + expectedErrorOk).toDouble * 100.0 / total.toDouble
+    val pct     = if (total == 0) 0.0 else (passing + expectedErrorOk).toDouble * 100.0 / total.toDouble
     val summary =
       f"""|sass-spec: Total=$total%d  Passing=${passing + expectedErrorOk}%d (${pct}%.1f%%)
           |  exact-output-pass = $passing
@@ -126,9 +126,7 @@ object SassSpecRunner {
     candidates.find(Files.isDirectory(_))
   }
 
-  /** A single test case — source, optional expected output, optional
-    * expected error. `origin` is a human-readable location (file path
-    * or "archive.hrx!sub/path").
+  /** A single test case — source, optional expected output, optional expected error. `origin` is a human-readable location (file path or "archive.hrx!sub/path").
     */
   final case class TestCase(
     origin:        String,
@@ -138,9 +136,9 @@ object SassSpecRunner {
   )
 
   def collectCases(root: Path): List[TestCase] = {
-    val buf = scala.collection.mutable.ListBuffer.empty[TestCase]
+    val buf    = scala.collection.mutable.ListBuffer.empty[TestCase]
     val stream = Files.walk(root)
-    try {
+    try
       stream.iterator().asScala.foreach { p =>
         if (Files.isRegularFile(p)) {
           val name = p.getFileName.toString
@@ -151,84 +149,82 @@ object SassSpecRunner {
           }
         }
       }
-    } finally stream.close()
+    finally stream.close()
     buf.toList
   }
 
   private def loadLooseCase(root: Path, input: Path): Option[TestCase] = {
-    val dir        = input.getParent
-    val rel        = root.toAbsolutePath.relativize(input.toAbsolutePath).toString
-    val outFile    = dir.resolve("output.css")
-    val errFile    = dir.resolve("error")
-    val source     = Try(new String(Files.readAllBytes(input), StandardCharsets.UTF_8)).toOption
-    val expectedO  = if (Files.isRegularFile(outFile)) Try(new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8)).toOption else None
-    val expectedE  = if (Files.isRegularFile(errFile)) Try(new String(Files.readAllBytes(errFile), StandardCharsets.UTF_8)).toOption else None
+    val dir       = input.getParent
+    val rel       = root.toAbsolutePath.relativize(input.toAbsolutePath).toString
+    val outFile   = dir.resolve("output.css")
+    val errFile   = dir.resolve("error")
+    val source    = Try(new String(Files.readAllBytes(input), StandardCharsets.UTF_8)).toOption
+    val expectedO = if (Files.isRegularFile(outFile)) Try(new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8)).toOption else None
+    val expectedE = if (Files.isRegularFile(errFile)) Try(new String(Files.readAllBytes(errFile), StandardCharsets.UTF_8)).toOption else None
     source.map(s => TestCase(rel, s, expectedO, expectedE))
   }
 
-  /** Parse an HRX archive into test cases. Only emits self-contained
-    * cases: one `.../input.scss` where the only sibling `.scss`/`.sass`
-    * file in the same directory is that input. This avoids requiring
+  /** Parse an HRX archive into test cases. Only emits self-contained cases: one `.../input.scss` where the only sibling `.scss`/`.sass` file in the same directory is that input. This avoids requiring
     * an in-memory importer for cross-file tests.
     */
   def loadHrxCases(root: Path, archive: Path): List[TestCase] = {
     val raw = Try(new String(Files.readAllBytes(archive), StandardCharsets.UTF_8)).toOption.getOrElse("")
     if (raw.isEmpty) Nil
     else {
-    val entries = parseHrx(raw)
-    // group entries by their parent directory inside the archive
-    val byDir: Map[String, Map[String, String]] =
-      entries.groupBy { case (p, _) =>
-        val i = p.lastIndexOf('/')
-        if (i < 0) "" else p.substring(0, i)
-      }.view.mapValues(_.map { case (p, c) =>
-        val i = p.lastIndexOf('/')
-        (if (i < 0) p else p.substring(i + 1)) -> c
-      }.toMap).toMap
+      val entries = parseHrx(raw)
+      // group entries by their parent directory inside the archive
+      val byDir: Map[String, Map[String, String]] =
+        entries
+          .groupBy { case (p, _) =>
+            val i = p.lastIndexOf('/')
+            if (i < 0) "" else p.substring(0, i)
+          }
+          .view
+          .mapValues(_.map { case (p, c) =>
+            val i = p.lastIndexOf('/')
+            (if (i < 0) p else p.substring(i + 1)) -> c
+          }.toMap)
+          .toMap
 
-    val archiveRel = root.toAbsolutePath.relativize(archive.toAbsolutePath).toString
-    byDir.iterator.flatMap { case (dir, files) =>
-      files.get("input.scss") match {
-        case Some(src) =>
-          // only consider self-contained: no other .scss/.sass siblings
-          val otherSass = files.keysIterator.exists { n =>
-            n != "input.scss" && (n.endsWith(".scss") || n.endsWith(".sass"))
-          }
-          // also require: no @use/@forward/@import referencing non-builtin modules
-          val hasExternalImport = ExternalImportRegex.findFirstIn(src).isDefined
-          if (otherSass || hasExternalImport) Iterator.empty
-          else {
-            val out = files.get("output.css")
-            val err = files.get("error")
-            val origin = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
-            Iterator.single(TestCase(origin, src, out, err))
-          }
-        case None => Iterator.empty
-      }
-    }.toList
+      val archiveRel = root.toAbsolutePath.relativize(archive.toAbsolutePath).toString
+      byDir.iterator.flatMap { case (dir, files) =>
+        files.get("input.scss") match {
+          case Some(src) =>
+            // only consider self-contained: no other .scss/.sass siblings
+            val otherSass = files.keysIterator.exists { n =>
+              n != "input.scss" && (n.endsWith(".scss") || n.endsWith(".sass"))
+            }
+            // also require: no @use/@forward/@import referencing non-builtin modules
+            val hasExternalImport = ExternalImportRegex.findFirstIn(src).isDefined
+            if (otherSass || hasExternalImport) Iterator.empty
+            else {
+              val out    = files.get("output.css")
+              val err    = files.get("error")
+              val origin = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
+              Iterator.single(TestCase(origin, src, out, err))
+            }
+          case None => Iterator.empty
+        }
+      }.toList
     }
   }
 
-  /** Matches `@use`/`@forward`/`@import` of a non-sass: URL, e.g.
-    * `@use 'foo'` or `@import "bar/baz";`. Built-in `sass:*` modules
-    * are fine.
+  /** Matches `@use`/`@forward`/`@import` of a non-sass: URL, e.g. `@use 'foo'` or `@import "bar/baz";`. Built-in `sass:*` modules are fine.
     */
   private val ExternalImportRegex =
     """@(?:use|forward|import)\s+["']((?!sass:)[^"']+)["']""".r
 
-  /** Parse HRX archive. HRX uses `<===> path` as a section header and
-    * `<===>` alone as a section terminator. We split into (path,
-    * content) pairs.
+  /** Parse HRX archive. HRX uses `<===> path` as a section header and `<===>` alone as a section terminator. We split into (path, content) pairs.
     */
   def parseHrx(raw: String): List[(String, String)] = {
-    val buf = scala.collection.mutable.ListBuffer.empty[(String, String)]
+    val buf   = scala.collection.mutable.ListBuffer.empty[(String, String)]
     val lines = raw.split("\n", -1)
-    var i = 0
+    var i     = 0
     var currentPath: Option[String] = None
     val body = new StringBuilder
     def flush(): Unit = {
       currentPath.foreach { path =>
-        val s = body.toString
+        val s       = body.toString
         val trimmed = if (s.endsWith("\n")) s.dropRight(1) else s
         buf += (path -> trimmed)
       }

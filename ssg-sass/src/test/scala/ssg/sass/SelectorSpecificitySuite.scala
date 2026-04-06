@@ -10,12 +10,8 @@ import ssg.sass.parse.SelectorParser
 
 /** Tests for per-pseudo-name specificity specialization.
   *
-  * Specificity is stored as a single integer in base-1000, matching
-  * dart-sass. For assertion clarity we decode it back into an
-  * `(id, class, tpe)` triple using the same base-1000 convention:
-  *   id    = total / 1_000_000
-  *   class = (total / 1_000) % 1_000
-  *   type  = total % 1_000
+  * Specificity is stored as a single integer in base-1000, matching dart-sass. For assertion clarity we decode it back into an `(id, class, tpe)` triple using the same base-1000 convention: id =
+  * total / 1_000_000 class = (total / 1_000) % 1_000 type = total % 1_000
   */
 final class SelectorSpecificitySuite extends munit.FunSuite {
 

@@ -9,19 +9,20 @@ import ssg.sass.functions.ColorFunctions
 import ssg.sass.value.{ SassBoolean, SassColor, SassNumber, SassString, Value }
 import ssg.sass.value.color.ColorSpace
 
-/** Tests for the CSS Color Module 4 introspection API registered under
-  * the `sass:color` module: color.channel, color.space, color.is-legacy,
-  * color.is-in-gamut, color.is-powerless, color.is-missing, color.to-space,
-  * color.to-gamut, color.same.
+/** Tests for the CSS Color Module 4 introspection API registered under the `sass:color` module: color.channel, color.space, color.is-legacy, color.is-in-gamut, color.is-powerless, color.is-missing,
+  * color.to-space, color.to-gamut, color.same.
   */
 final class ColorModule4Suite extends munit.FunSuite {
 
   // Resolve a color built-in by name from the module list (which includes
   // globals plus the new module-only Color-4 entries).
   private def fn(name: String): List[Value] => Value = {
-    val cb = ColorFunctions.module.collect {
-      case b: BuiltInCallable if b.name == name => b
-    }.headOption.getOrElse(fail(s"Could not find color function '$name'"))
+    val cb = ColorFunctions.module
+      .collect {
+        case b: BuiltInCallable if b.name == name => b
+      }
+      .headOption
+      .getOrElse(fail(s"Could not find color function '$name'"))
     cb.callback
   }
 
@@ -103,7 +104,7 @@ final class ColorModule4Suite extends munit.FunSuite {
       Nullable(0.0),
       Nullable(0.0)
     )
-    val mapped = fn("to-gamut")(List(oog, str("srgb"))).asInstanceOf[SassColor]
+    val mapped  = fn("to-gamut")(List(oog, str("srgb"))).asInstanceOf[SassColor]
     val inGamut = fn("is-in-gamut")(List(mapped, str("srgb"))).asInstanceOf[SassBoolean]
     assertEquals(inGamut.value, true)
   }
