@@ -80,14 +80,16 @@ final class CompileSuite extends munit.FunSuite {
   }
 
   test("compiles @at-root bare block at stylesheet root") {
-    val result = Compile.compileString("""
+    val result = Compile.compileString(
+      """
       .parent {
         color: red;
         @at-root {
           .child { color: blue; }
         }
       }
-    """)
+    """
+    )
     // .child should be at root, not nested under .parent
     assert(result.css.contains(".child"))
     assert(result.css.contains("color: blue"))
@@ -133,12 +135,14 @@ final class CompileSuite extends munit.FunSuite {
   }
 
   test("compiles @each over a map with key/value destructuring") {
-    val result = Compile.compileString("""
+    val result = Compile.compileString(
+      """
       $sizes: (small: 10px, big: 20px);
       @each $name, $size in $sizes {
         .#{$name} { width: $size; }
       }
-    """)
+    """
+    )
     assert(result.css.contains(".small"))
     assert(result.css.contains("width: 10px"))
     assert(result.css.contains(".big"))

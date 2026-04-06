@@ -84,6 +84,67 @@ object MapFunctions {
                              }
     )
 
+  private val mapSetFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "set",
+      "$map, $key, $value",
+      { args =>
+        val map = args.head.assertMap()
+        SassMap(map.contents.updated(args(1), args(2)))
+      }
+    )
+
+  private def deepMerge(a: SassMap, b: SassMap): SassMap = {
+    var merged = a.contents
+    for ((k, v) <- b.contents) {
+      val existing = merged.get(k)
+      (existing, v) match {
+        case (Some(em: SassMap), vm: SassMap) =>
+          merged = merged.updated(k, deepMerge(em, vm))
+        case _ =>
+          merged = merged.updated(k, v)
+      }
+    }
+    SassMap(merged)
+  }
+
+  private val mapDeepMergeFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "deep-merge",
+      "$map1, $map2",
+      { args =>
+        val m1 = args.head.assertMap()
+        val m2 = args(1).assertMap()
+        deepMerge(m1, m2)
+      }
+    )
+
+  private def deepRemove(map: SassMap, keys: List[Value]): SassMap =
+    keys match {
+      case Nil      => map
+      case k :: Nil =>
+        SassMap(map.contents.removed(k))
+      case k :: rest =>
+        map.contents.get(k) match {
+          case Some(inner: SassMap) =>
+            SassMap(map.contents.updated(k, deepRemove(inner, rest)))
+          case _ => map
+        }
+    }
+
+  private val mapDeepRemoveFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "deep-remove",
+      "$map, $key, $keys...",
+      { args =>
+        val map   = args.head.assertMap()
+        val first = args(1)
+        val rest: List[Value] =
+          if (args.length >= 3) args(2).asList else Nil
+        deepRemove(map, first :: rest)
+      }
+    )
+
   val global: List[Callable] = List(
     mapGetFn,
     mapMergeFn,
@@ -93,5 +154,5 @@ object MapFunctions {
     mapHasKeyFn
   )
 
-  def module: List[Callable] = global
+  def module: List[Callable] = global ::: List(mapSetFn, mapDeepMergeFn, mapDeepRemoveFn)
 }

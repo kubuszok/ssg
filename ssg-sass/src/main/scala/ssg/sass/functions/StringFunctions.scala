@@ -143,8 +143,8 @@ object StringFunctions {
       "split",
       "$string, $separator, $limit: null",
       { args =>
-        val s   = args.head.assertString()
-        val sep = args(1).assertString()
+        val s     = args.head.assertString()
+        val sep   = args(1).assertString()
         val limit = args(2) match {
           case SassNull => -1
           case other    =>
@@ -160,8 +160,8 @@ object StringFunctions {
             s.text.toList.map(_.toString)
           } else if (limit <= 0) {
             // Full split.
-            val out = List.newBuilder[String]
-            var i   = 0
+            val out   = List.newBuilder[String]
+            var i     = 0
             var found = s.text.indexOf(sep.text)
             while (found >= 0) {
               out += s.text.substring(i, found)

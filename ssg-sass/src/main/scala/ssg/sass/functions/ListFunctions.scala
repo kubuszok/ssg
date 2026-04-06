@@ -155,6 +155,18 @@ object ListFunctions {
   private val isBracketedFn: BuiltInCallable =
     BuiltInCallable.function("is-bracketed", "$list", args => SassBoolean(args.head.hasBrackets))
 
+  private val slashFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "slash",
+      "$elements...",
+      { args =>
+        val raw = if (args.length == 1) args.head.asList else args
+        if (raw.length < 2)
+          throw SassScriptException("At least two elements are required.")
+        SassList(raw, ListSeparator.Slash)
+      }
+    )
+
   val global: List[Callable] = List(
     lengthFn,
     nthFn,
@@ -167,5 +179,5 @@ object ListFunctions {
     isBracketedFn
   )
 
-  def module: List[Callable] = global
+  def module: List[Callable] = global :+ slashFn
 }

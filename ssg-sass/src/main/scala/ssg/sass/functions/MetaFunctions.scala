@@ -17,6 +17,8 @@ package functions
 import ssg.sass.{ BuiltInCallable, Callable }
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString }
 
+import scala.collection.immutable.ListMap
+
 /** Built-in meta functions. */
 object MetaFunctions {
 
@@ -70,12 +72,84 @@ object MetaFunctions {
       }
     )
 
+  private val keywordsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "keywords",
+      "$args",
+      _ =>
+        // Placeholder: the keyword-argument map is not yet tracked on SassArgumentList.
+        SassMap.empty
+    )
+
+  private val mixinExistsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "mixin-exists",
+      "$name, $module: null",
+      _ =>
+        // TODO: requires Environment access; deferred.
+        SassBoolean.sassFalse
+    )
+
+  private val globalVariableExistsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "global-variable-exists",
+      "$name, $module: null",
+      _ =>
+        // TODO: requires Environment access; deferred.
+        SassBoolean.sassFalse
+    )
+
+  private val contentExistsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "content-exists",
+      "",
+      _ =>
+        // TODO: requires mixin call stack tracking; deferred.
+        SassBoolean.sassFalse
+    )
+
+  private val moduleVariablesFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "module-variables",
+      "$module",
+      _ =>
+        // TODO: requires module introspection; returns empty map for now.
+        SassMap(ListMap.empty)
+    )
+
+  private val moduleFunctionsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "module-functions",
+      "$module",
+      { args =>
+        val name = args.head match {
+          case s: SassString => s.text
+          case other => other.toString
+        }
+        // Placeholder: surface built-in module function names as string-keyed map values.
+        Functions.modules.get(name) match {
+          case Some(fns) =>
+            val entries = fns.collect { case b: BuiltInCallable =>
+              SassString(b.name, hasQuotes = true) -> (SassString(b.name, hasQuotes = true): ssg.sass.value.Value)
+            }
+            SassMap(ListMap.from(entries))
+          case None => SassMap(ListMap.empty)
+        }
+      }
+    )
+
   val global: List[Callable] = List(
     typeOfFn,
     inspectFn,
     featureExistsFn,
     variableExistsFn,
-    functionExistsFn
+    functionExistsFn,
+    keywordsFn,
+    mixinExistsFn,
+    globalVariableExistsFn,
+    contentExistsFn,
+    moduleVariablesFn,
+    moduleFunctionsFn
   )
 
   def module: List[Callable] = global

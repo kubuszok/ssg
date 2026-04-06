@@ -285,11 +285,11 @@ or serializer.
 
 ### `functions/*.scala`
 - ✅ `ColorFunctions` — rgb/rgba/hsl/hsla, accessors (red/green/blue/hue/saturation/lightness/alpha), manipulations (lighten/darken/saturate/desaturate/mix/invert/grayscale/complement)
-- ✅ `MathFunctions` — abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable
-- ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice
-- ✅ `ListFunctions` — length/nth/set-nth/join/append/zip/index/list-separator/is-bracketed
-- ✅ `MapFunctions` — map-get/map-merge/map-remove/map-keys/map-values/map-has-key
-- ✅ `MetaFunctions` — type-of/inspect/feature-exists/variable-exists/function-exists
+- ✅ `MathFunctions` — abs/ceil/floor/round/max/min/percentage/div/unit/unitless/comparable/random/sqrt/pow/sin/cos/tan/asin/acos/atan/log/clamp/hypot
+- ✅ `StringFunctions` — unquote/quote/str-length/to-upper-case/to-lower-case/str-insert/str-index/str-slice/unique-id, `string.split` (module-only)
+- ✅ `ListFunctions` — length/nth (supports negative indices)/set-nth/join/append/zip/index/list-separator/is-bracketed, `list.slash` (module-only)
+- ✅ `MapFunctions` — map-get/map-merge/map-remove/map-keys/map-values/map-has-key, `map.set`/`map.deep-merge`/`map.deep-remove` (module-only)
+- ⚠️  `MetaFunctions` — type-of/inspect/feature-exists/variable-exists/function-exists/mixin-exists/global-variable-exists/content-exists/keywords/module-variables/module-functions (most of the `-exists`/`module-*`/`keywords` are placeholders returning false/empty — need Environment access)
 - ⚠️  `SelectorFunctions` — text-based MVP: `selector-append`, `selector-nest`, `selector-extend` (string replace), `selector-unify` (returns null stub). String args only; lists/non-strings return null. No selector AST.
 - ✅ `Functions.scala` (barrel) — aggregates modules, `lookupGlobal(name)`
 - ✅ `Environment.withBuiltins()` — pre-populates environment with global callables

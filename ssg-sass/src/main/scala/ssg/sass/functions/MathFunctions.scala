@@ -17,6 +17,8 @@ package functions
 import ssg.sass.{ BuiltInCallable, Callable, SassScriptException }
 import ssg.sass.value.{ SassBoolean, SassNumber, SassString, Value }
 
+import scala.util.Random
+
 /** Built-in math functions: abs, ceil, floor, round, max, min, percentage, div, unit, unitless, comparable.
   */
 object MathFunctions {
@@ -112,6 +114,108 @@ object MathFunctions {
       }
     )
 
+  private val rng = new Random()
+
+  private val randomFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "random",
+      "$limit: null",
+      args =>
+        args.head match {
+          case ssg.sass.value.SassNull =>
+            SassNumber(rng.nextDouble())
+          case other =>
+            val n = other.assertNumber()
+            n.assertNoUnits()
+            val limit = n.assertInt()
+            if (limit < 1)
+              throw SassScriptException(s"$$limit: Must be greater than 0, was $limit.")
+            SassNumber((rng.nextInt(limit) + 1).toDouble)
+        }
+    )
+
+  private val sqrtFn: BuiltInCallable =
+    BuiltInCallable.function("sqrt",
+                             "$number",
+                             { args =>
+                               val n = args.head.assertNumber()
+                               n.assertNoUnits()
+                               SassNumber(math.sqrt(n.value))
+                             }
+    )
+
+  private val powFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "pow",
+      "$base, $exponent",
+      { args =>
+        val base = args.head.assertNumber()
+        val exp  = args(1).assertNumber()
+        base.assertNoUnits()
+        exp.assertNoUnits()
+        SassNumber(math.pow(base.value, exp.value))
+      }
+    )
+
+  private def trigFn(name: String, op: Double => Double): BuiltInCallable =
+    BuiltInCallable.function(name,
+                             "$number",
+                             { args =>
+                               val n = args.head.assertNumber()
+                               n.assertNoUnits()
+                               SassNumber(op(n.value))
+                             }
+    )
+
+  private val sinFn:  BuiltInCallable = trigFn("sin", math.sin)
+  private val cosFn:  BuiltInCallable = trigFn("cos", math.cos)
+  private val tanFn:  BuiltInCallable = trigFn("tan", math.tan)
+  private val asinFn: BuiltInCallable = trigFn("asin", math.asin)
+  private val acosFn: BuiltInCallable = trigFn("acos", math.acos)
+  private val atanFn: BuiltInCallable = trigFn("atan", math.atan)
+
+  private val logFn: BuiltInCallable =
+    BuiltInCallable.function("log",
+                             "$number",
+                             { args =>
+                               val n = args.head.assertNumber()
+                               n.assertNoUnits()
+                               SassNumber(math.log(n.value))
+                             }
+    )
+
+  private val clampFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "clamp",
+      "$min, $number, $max",
+      { args =>
+        val minV = args.head.assertNumber()
+        val valV = args(1).assertNumber()
+        val maxV = args(2).assertNumber()
+        val v    = valV.value
+        val lo   = minV.value
+        val hi   = maxV.value
+        val r    = if (v < lo) lo else if (v > hi) hi else v
+        SassNumber.withUnits(r, valV.numeratorUnits, valV.denominatorUnits)
+      }
+    )
+
+  private val hypotFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "hypot",
+      "$numbers...",
+      { args =>
+        val numbers = collectNumbers(args)
+        if (numbers.isEmpty) throw SassScriptException("At least one argument must be passed.")
+        var sum = 0.0
+        for (n <- numbers) {
+          n.assertNoUnits()
+          sum += n.value * n.value
+        }
+        SassNumber(math.sqrt(sum))
+      }
+    )
+
   val global: List[Callable] = List(
     absFn,
     ceilFn,
@@ -123,7 +227,19 @@ object MathFunctions {
     divFn,
     unitFn,
     unitlessFn,
-    comparableFn
+    comparableFn,
+    randomFn,
+    sqrtFn,
+    powFn,
+    sinFn,
+    cosFn,
+    tanFn,
+    asinFn,
+    acosFn,
+    atanFn,
+    logFn,
+    clampFn,
+    hypotFn
   )
 
   def module: List[Callable] = global
