@@ -53,7 +53,10 @@ Do **not** use ssg-sass when:
 
 ## Current state
 
-- **Tests**: 532 JVM / 511 JS / 511 Native (last recorded)
+- **Tests**: 654 JVM / 632 JS / 632 Native (last recorded)
+- **Strictness fixes** (2026-04): ISS-026 mixed-decls, ISS-027 @at-root
+  (with/without) query, ISS-028 slash-div, ISS-033 private-var module
+  config rejection are now wired in the evaluator/parser.
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
 - **sass-spec**: **not run**. Conformance is currently unknown.
@@ -214,14 +217,8 @@ case), **L** low (cosmetic). Detailed entries live in
 - **L** `@charset` + UTF-8 BOM on compressed output. (ISS-025)
 
 ### Evaluator (`ssg-sass/visitor/EvaluateVisitor.scala`)
-- **H** `mixed-decls` ordering: declarations after nested rules are not
-  diagnosed. (ISS-026)
-- **H** `@at-root (with:/without:)` query coverage needs verification
-  including the `rule` / `all` pseudo-at-rules. (ISS-027)
 - **H** `@forward` cross-namespace isolation (no function↔mixin
   cross-leak) needs verification. (ISS-066)
-- **H** `with-private` (configuring `$_foo` in @use/@forward) not
-  enforced. (ISS-033)
 - **H** Plain-CSS function preservation for `env()`, `var()`, unknown
   functions (must be emitted verbatim, not evaluated). (ISS-093)
 - **H** Nested `@use` / deep `@forward` chains with `as *` re-export

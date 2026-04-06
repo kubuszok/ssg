@@ -866,14 +866,21 @@ abstract class StylesheetParser protected (
         }
         val selText = selBuf.toString().trim
         val arKids  = _children()
-        val wrapped: List[Statement] =
-          if (selText.isEmpty) arKids
-          else {
+        // ISS-027: distinguish `@at-root (with: ...)` / `(without: ...)`
+        // query form from `@at-root <selector> { ... }`. A leading `(` is
+        // the query form and is stored on the AtRootRule itself; anything
+        // else is a selector and gets wrapped in a synthetic StyleRule.
+        val (wrapped, queryInterp): (List[Statement], Nullable[Interpolation]) =
+          if (selText.isEmpty) (arKids, Nullable.empty[Interpolation])
+          else if (selText.startsWith("(")) {
+            val qSpan = spanFrom(start)
+            (arKids, Nullable(Interpolation.plain(selText, qSpan)))
+          } else {
             val selSpan   = spanFrom(start)
             val selInterp = Interpolation.plain(selText, selSpan)
-            List(StyleRule(selInterp, arKids, selSpan))
+            (List[Statement](StyleRule(selInterp, arKids, selSpan)), Nullable.empty[Interpolation])
           }
-        Nullable(new AtRootRule(wrapped, spanFrom(start)))
+        Nullable(new AtRootRule(wrapped, spanFrom(start), queryInterp))
       case _ =>
         // Deprecation detection for at-rules we don't specially handle.
         name match {

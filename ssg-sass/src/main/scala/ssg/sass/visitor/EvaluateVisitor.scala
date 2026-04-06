@@ -180,6 +180,12 @@ final class EvaluateVisitor(
     */
   private var _inSupportsDeclaration: Boolean = false
 
+  /** The pending configuration map pushed in by an enclosing `@use "mid" with (...)`. `visitForwardRule` — and the recursive `@use` of the target inside a module that is itself being loaded — consult
+    * this map so that configured variables flow through `@forward` chains. Keys are unprefixed variable names. Entries are evaluated expressions (not the raw AST) because the outer `with` clause must
+    * be evaluated in the *caller's* environment, not the forwarded module's.
+    */
+  private var _pendingConfig: Map[String, ssg.sass.value.Value] = Map.empty
+
   /** Set of URLs loaded during evaluation. Currently always empty until `@use`/`@import` are wired up.
     */
   private val _loadedUrls = scala.collection.mutable.LinkedHashSet.empty[String]
@@ -376,7 +382,11 @@ final class EvaluateVisitor(
       case BinaryOperator.Times               => left.times(node.right.accept(this))
       case BinaryOperator.DividedBy           =>
         val rightVal = node.right.accept(this)
-        if (left.isInstanceOf[SassNumber] && rightVal.isInstanceOf[SassNumber])
+        // ISS-028: slash-div deprecation. Only warn when both sides are numbers
+        // and the parser did NOT mark this as a CSS-style slash separator
+        // (allowsSlash=true is e.g. the result of `list.slash()` or parsed
+        // list slash context like `font: 16px/1.4 sans-serif`).
+        if (!node.allowsSlash && left.isInstanceOf[SassNumber] && rightVal.isInstanceOf[SassNumber])
           warnForDeprecation(
             Deprecation.SlashDiv,
             "Using / for division is deprecated and will be removed in Dart Sass 2.0.0. Recommendation: math.div($left, $right) or calc($left / $right)."
@@ -751,6 +761,19 @@ final class EvaluateVisitor(
     }
   }
 
+  /** ISS-033: rejects configuring a module member whose variable name begins with `-` or `_`, matching dart-sass `_validateConfiguration` in `lib/src/visitor/evaluate.dart`. Private members are
+    * considered internal to the defining module and may not be overridden via `@use ... with (...)` or `@forward ... with (...)`.
+    */
+  private def _checkPrivateConfig(cv: ssg.sass.ast.sass.ConfiguredVariable): Unit = {
+    val n = cv.name
+    if (n.nonEmpty && (n.charAt(0) == '-' || n.charAt(0) == '_')) {
+      throw SassException(
+        "Private members can't be configured by their importers.",
+        cv.span
+      )
+    }
+  }
+
   /** Adds [[child]] as a child of the current parent node. Throws if no parent is currently set (which should never happen during normal statement evaluation).
     */
   private def _addChild(child: ModifiableCssNode): Unit = {
@@ -856,10 +879,26 @@ final class EvaluateVisitor(
       _withParent(rule) {
         _withStyleRule(rule) {
           _withScope {
-            node.children.foreach { kids =>
-              for (statement <- kids) {
-                val _ = statement.accept(this)
+            // ISS-026: track whether a nested style rule has been seen in
+            // the current source block so visitDeclaration can emit the
+            // `mixed-decls` deprecation for declarations written after it.
+            _sawNestedRuleStack.push(false)
+            try
+              node.children.foreach { kids =>
+                for (statement <- kids) {
+                  val _ = statement.accept(this)
+                  statement match {
+                    case _: StyleRule =>
+                      if (_sawNestedRuleStack.nonEmpty) {
+                        val _ = _sawNestedRuleStack.pop()
+                        _sawNestedRuleStack.push(true)
+                      }
+                    case _ => ()
+                  }
+                }
               }
+            finally {
+              val _ = _sawNestedRuleStack.pop()
             }
           }
         }
@@ -867,6 +906,12 @@ final class EvaluateVisitor(
     finally _parent = savedParent
     SassNull
   }
+
+  /** ISS-026: per-source-block "did we already visit a nested style rule?" flag stack. Pushed on entering a style rule body and popped on exit. `visitDeclaration` consults the top-of-stack to decide
+    * whether the current declaration is a mixed-decl case.
+    */
+  private val _sawNestedRuleStack: scala.collection.mutable.Stack[Boolean] =
+    scala.collection.mutable.Stack.empty[Boolean]
 
   /** Walks `_parent` up until it finds a parent node that is not a [[ModifiableCssStyleRule]]. Falls back to `_root` (or the current parent if `_root` is unset). Used to keep nested style rules flat.
     */
@@ -919,6 +964,17 @@ final class EvaluateVisitor(
     }
 
   override def visitDeclaration(node: Declaration): Value = {
+    // ISS-026: mixed-decls deprecation. If a nested style rule has already
+    // been visited in the current enclosing style-rule body, emit the
+    // `mixed-decls` warning. Mirrors dart-sass `_warnForRule` in
+    // `lib/src/visitor/evaluate.dart`.
+    if (_sawNestedRuleStack.nonEmpty && _sawNestedRuleStack.top) {
+      warnForDeprecation(
+        Deprecation.MixedDecls,
+        "Sass's behavior for declarations that appear after nested rules will be changing to match the behavior specified by CSS in an upcoming version. To keep the existing behavior, move the declaration above the nested rule. To opt into the new behavior, wrap the declaration in `& { ... }`."
+      )
+    }
+
     val nameText  = _performInterpolation(node.name)
     val nameValue = new CssValue[String](nameText, node.name.span)
 
@@ -1268,23 +1324,62 @@ final class EvaluateVisitor(
       }
     }
 
-    // Find the deepest non-excluded ancestor — that's the new parent.
-    // If none qualify, attach to the root stylesheet.
+    // ISS-027: find the OUTERMOST excluded ancestor; the at-root target
+    // is the ancestor just above it. If no ancestor is excluded, stay at
+    // the current parent. This correctly handles
+    // `@media { .a { @at-root (without: media) { ... } } }` where the
+    // style rule `.a` is innermost but the media wrapper must be stripped.
+    var lastExcludedIdx = -1
+    var i               = 0
+    while (i < ancestors.length) {
+      if (excludes(ancestors(i))) lastExcludedIdx = i
+      i += 1
+    }
     val newParent: ModifiableCssParentNode =
-      ancestors.find(a => !excludes(a)).getOrElse(root: ModifiableCssParentNode)
+      if (lastExcludedIdx < 0) {
+        _parent.getOrElse(root: ModifiableCssParentNode)
+      } else if (lastExcludedIdx + 1 < ancestors.length) {
+        ancestors(lastExcludedIdx + 1)
+      } else {
+        root: ModifiableCssParentNode
+      }
 
     val savedParent    = _parent
     val savedStyleRule = _styleRule
     _parent = Nullable(newParent)
     // Clear the active style rule if it's no longer in the kept chain.
     if (query.excludesStyleRules) _styleRule = Nullable.empty
-    try
-      _withScope {
-        for (statement <- node.children.get) {
-          val _ = statement.accept(this)
+    try {
+      // ISS-027: if an enclosing style rule survived the query (e.g.
+      // `@media { .a { @at-root (without: media) { ... } } }`), re-wrap
+      // the body in a fresh copy of that style rule at the new parent
+      // so bare declarations retain their selector context.
+      val needStyleRuleWrapper =
+        !query.excludesStyleRules &&
+          savedStyleRule.isDefined &&
+          (newParent match {
+            case _: ModifiableCssStyleRule => false
+            case _ => true
+          })
+      if (needStyleRuleWrapper) {
+        val wrapper = savedStyleRule.get.copyWithoutChildren().asInstanceOf[ModifiableCssStyleRule]
+        _withParent(wrapper) {
+          _withStyleRule(wrapper) {
+            _withScope {
+              for (statement <- node.children.get) {
+                val _ = statement.accept(this)
+              }
+            }
+          }
+        }
+      } else {
+        _withScope {
+          for (statement <- node.children.get) {
+            val _ = statement.accept(this)
+          }
         }
       }
-    finally {
+    } finally {
       _parent = savedParent
       _styleRule = savedStyleRule
     }
@@ -1340,28 +1435,49 @@ final class EvaluateVisitor(
               val moduleEnv = Environment.withBuiltins()
               // Apply `with (...)` configuration before evaluating the module
               // so that `!default` declarations honor the override.
+              // ISS-033: reject configuring private (`_foo`/`-foo`) vars.
+              // Explicit `with` is evaluated in the *caller's* environment,
+              // then seeded into moduleEnv. Both the local config and any
+              // inherited `_pendingConfig` from an enclosing `@use`-with
+              // flow through `@forward` chains (local wins on overlap).
+              val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
+                _checkPrivateConfig(cv)
                 val cvValue = cv.expression.accept(this)
+                localConfig(cv.name) = cvValue
                 moduleEnv.setVariable(cv.name, cvValue)
               }
-              _withEnvironment(moduleEnv) {
-                importedSheet.children.get.foreach { stmt =>
-                  val _ = stmt.accept(this)
+              for ((cn, cv) <- _pendingConfig)
+                if (!localConfig.contains(cn)) moduleEnv.setVariable(cn, cv)
+              val savedPending1 = _pendingConfig
+              _pendingConfig = _pendingConfig ++ localConfig.toMap
+              try
+                _withEnvironment(moduleEnv) {
+                  importedSheet.children.get.foreach { stmt =>
+                    val _ = stmt.accept(this)
+                  }
                 }
-              }
+              finally _pendingConfig = savedPending1
+              // Build a public-facing view that hides private (`-foo`/`_foo`)
+              // members before exposing the module to the caller. This
+              // applies uniformly to both namespaced `@use` and `as *` flat
+              // merge — dart-sass never exposes private members across a
+              // module boundary.
+              val publicEnv = moduleEnv.publicView()
               if (node.namespace.isDefined) {
                 node.namespace.foreach { ns =>
-                  _environment.addNamespace(ns, moduleEnv)
+                  _environment.addNamespace(ns, publicEnv)
                 }
               } else {
-                // Flat (`as *`) — merge members into the current environment.
-                for ((name, value) <- moduleEnv.variableEntries)
+                // Flat (`as *`) — merge public members into the current
+                // environment. Private members stay inside `moduleEnv`.
+                for ((name, value) <- publicEnv.variableEntries)
                   if (!_environment.variableExists(name)) {
                     _environment.setVariable(name, value)
                   }
-                for (fn <- moduleEnv.functionValues)
+                for (fn <- publicEnv.functionValues)
                   _environment.setFunction(fn)
-                for (mx <- moduleEnv.mixinValues)
+                for (mx <- publicEnv.mixinValues)
                   _environment.setMixin(mx)
               }
             }
@@ -1407,15 +1523,29 @@ final class EvaluateVisitor(
               val moduleEnv = Environment.withBuiltins()
               // Apply `with (...)` configuration before evaluating the module
               // so that `!default` declarations honor the override (mirrors @use).
+              // ISS-033: reject configuring private (`_foo`/`-foo`) vars.
+              // Config flows in from both the local `@forward ... with (...)`
+              // and from an enclosing `@use`-with via `_pendingConfig`; the
+              // local clause wins on overlap, and the combined map is pushed
+              // so a further `@forward` inside the target propagates again.
+              val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
+                _checkPrivateConfig(cv)
                 val cvValue = cv.expression.accept(this)
+                localConfig(cv.name) = cvValue
                 moduleEnv.setVariable(cv.name, cvValue)
               }
-              _withEnvironment(moduleEnv) {
-                importedSheet.children.get.foreach { stmt =>
-                  val _ = stmt.accept(this)
+              for ((cn, cv) <- _pendingConfig)
+                if (!localConfig.contains(cn)) moduleEnv.setVariable(cn, cv)
+              val savedPending2 = _pendingConfig
+              _pendingConfig = _pendingConfig ++ localConfig.toMap
+              try
+                _withEnvironment(moduleEnv) {
+                  importedSheet.children.get.foreach { stmt =>
+                    val _ = stmt.accept(this)
+                  }
                 }
-              }
+              finally _pendingConfig = savedPending2
               val prefix:                   String  = if (node.prefix.isDefined) node.prefix.get else ""
               def varAllowed(name: String): Boolean =
                 if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
@@ -1428,19 +1558,32 @@ final class EvaluateVisitor(
               // Names of global built-in callables — not forwarded.
               val builtinNames: Set[String] =
                 ssg.sass.functions.Functions.global.iterator.map(_.name).toSet
+              // `@forward` only re-exports public members (a leading `-`
+              // or `_` marks a member private to its defining module).
+              // show/hide filters are applied per-kind so e.g. `show $bar`
+              // only scopes the variable namespace, not a mixin named
+              // `bar`.
               for ((name, value) <- moduleEnv.variableEntries)
-                if (varAllowed(name)) {
+                if (!Environment.isPrivate(name) && varAllowed(name)) {
                   val newName = prefix + name
                   if (!_environment.variableExists(newName)) {
                     _environment.setVariable(newName, value)
                   }
                 }
               for (fn <- moduleEnv.functionValues)
-                if (!builtinNames.contains(fn.name) && memberAllowed(fn.name)) {
+                if (
+                  !Environment.isPrivate(fn.name)
+                  && !builtinNames.contains(fn.name)
+                  && memberAllowed(fn.name)
+                ) {
                   _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
                 }
               for (mx <- moduleEnv.mixinValues)
-                if (!builtinNames.contains(mx.name) && memberAllowed(mx.name)) {
+                if (
+                  !Environment.isPrivate(mx.name)
+                  && !builtinNames.contains(mx.name)
+                  && memberAllowed(mx.name)
+                ) {
                   _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
                 }
             }
