@@ -85,6 +85,15 @@ edge-case helpers.
   parameter form is supported: leftover positional args become a
   `SassArgumentList` (carrying any unmatched named args as keywords),
   while `$kwargs...` is bound to a `SassMap` of leftover named args.
+- ✅ `@content` block argument passing — `@content($a, $b, ...)` parses as
+  a `ContentRule` with an `ArgumentList`, and `@include foo(args) using
+  ($p1, $p2) { body }` parses the `using` clause into a `ContentBlock`
+  whose `ParameterList` carries the declared content-block parameters
+  (with default-value support). `visitContentRule` evaluates the argument
+  expressions in the mixin's environment and binds them to the content
+  block's parameters via `_bindParameters` before evaluating the body in
+  a fresh scope. Bare `@content;` (no args) and bare `@include foo { ... }`
+  (no `using`) continue to work unchanged.
 - ✅ `#{expr}` interpolation in expression values — declaration values like
   `width: #{$base * 2}px`, property names like `#{$prefix}-color: red` (and
   mid-name `margin-#{$side}: ...`), and string concatenation

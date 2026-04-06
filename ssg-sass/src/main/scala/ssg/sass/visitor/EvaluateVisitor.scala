@@ -201,10 +201,8 @@ final class EvaluateVisitor(
     */
   private var _endOfImports: Int = 0
 
-  /** AST-level extension store keyed by media context. The `null` key holds
-    * extensions declared outside any `@media` block. Each media rule gets its
-    * own store so extensions declared inside `@media` only apply to rules in
-    * the same media block.
+  /** AST-level extension store keyed by media context. The `null` key holds extensions declared outside any `@media` block. Each media rule gets its own store so extensions declared inside `@media`
+    * only apply to rules in the same media block.
     */
   private val _mediaExtensionStores: scala.collection.mutable.LinkedHashMap[
     ModifiableCssMediaRule | Null,
@@ -215,17 +213,15 @@ final class EvaluateVisitor(
     m
   }
 
-  /** Legacy textual extend map, keyed by the same media-scope identity used
-    * by `_mediaExtensionStores`.
+  /** Legacy textual extend map, keyed by the same media-scope identity used by `_mediaExtensionStores`.
     */
   private val _mediaLegacyExtends: scala.collection.mutable.LinkedHashMap[
     ModifiableCssMediaRule | Null,
     scala.collection.mutable.LinkedHashMap[String, scala.collection.mutable.ListBuffer[String]]
   ] = scala.collection.mutable.LinkedHashMap.empty
 
-  /** A pending `@extend` whose target must be matched somewhere in the same
-    * media scope, unless it is marked `!optional`. Populated by
-    * [[visitExtendRule]] and validated at the end of [[_applyExtends]].
+  /** A pending `@extend` whose target must be matched somewhere in the same media scope, unless it is marked `!optional`. Populated by [[visitExtendRule]] and validated at the end of
+    * [[_applyExtends]].
     */
   final private case class PendingExtend(
     targetText: String,
@@ -239,8 +235,7 @@ final class EvaluateVisitor(
   private val _pendingExtends: scala.collection.mutable.ListBuffer[PendingExtend] =
     scala.collection.mutable.ListBuffer.empty
 
-  /** Warnings produced during evaluation. Currently populated by the extend
-    * subsystem and surfaced through [[EvaluateResult.warnings]].
+  /** Warnings produced during evaluation. Currently populated by the extend subsystem and surfaced through [[EvaluateResult.warnings]].
     */
   private val _warnings: scala.collection.mutable.ListBuffer[String] =
     scala.collection.mutable.ListBuffer.empty
@@ -1306,12 +1301,11 @@ final class EvaluateVisitor(
       }
     }
 
-  /** Returns the nearest enclosing `@media` rule in the current CSS parent
-    * chain, or `null` if this `@extend` is declared outside any media block.
+  /** Returns the nearest enclosing `@media` rule in the current CSS parent chain, or `null` if this `@extend` is declared outside any media block.
     */
   private def _enclosingMediaRule(): ModifiableCssMediaRule | Null = {
     var cur: Nullable[ModifiableCssParentNode] = _parent
-    var out: ModifiableCssMediaRule | Null = null
+    var out: ModifiableCssMediaRule | Null     = null
     import scala.util.boundary, boundary.break
     boundary {
       while (cur.isDefined) {
@@ -1324,7 +1318,7 @@ final class EvaluateVisitor(
             cur = node.parent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) { pn =>
               pn match {
                 case mp: ModifiableCssParentNode => Nullable(mp)
-                case _                           => Nullable.empty
+                case _ => Nullable.empty
               }
             }
         }
@@ -1365,7 +1359,7 @@ final class EvaluateVisitor(
       }
 
       val mediaKey: ModifiableCssMediaRule | Null = _enclosingMediaRule()
-      val store    = _mediaExtensionStores.getOrElseUpdate(
+      val store = _mediaExtensionStores.getOrElseUpdate(
         mediaKey,
         new MutableExtensionStore(ExtendMode.Normal)
       )
@@ -1377,11 +1371,11 @@ final class EvaluateVisitor(
             store.addExtensionAst(extender, target, node.isOptional)
           _pendingExtends += PendingExtend(
             targetText = targetComplex.toString,
-            target     = Nullable(target),
+            target = Nullable(target),
             isOptional = node.isOptional,
-            span       = node.span,
-            mediaKey   = mediaKey,
-            found      = false
+            span = node.span,
+            mediaKey = mediaKey,
+            found = false
           )
         }
         true
@@ -1397,11 +1391,11 @@ final class EvaluateVisitor(
             legacy.getOrElseUpdate(target, scala.collection.mutable.ListBuffer.empty) += extenderText
             _pendingExtends += PendingExtend(
               targetText = target,
-              target     = Nullable.empty,
+              target = Nullable.empty,
               isOptional = node.isOptional,
-              span       = node.span,
-              mediaKey   = mediaKey,
-              found      = false
+              span = node.span,
+              mediaKey = mediaKey,
+              found = false
             )
           }
       }
@@ -1409,8 +1403,7 @@ final class EvaluateVisitor(
     SassNull
   }
 
-  /** Entry point: walk the root with no active media scope, then validate
-    * any non-optional `@extend`s whose targets were never matched.
+  /** Entry point: walk the root with no active media scope, then validate any non-optional `@extend`s whose targets were never matched.
     */
   private def _applyExtends(node: ModifiableCssParentNode): Unit = {
     _applyExtendsIn(node, null)
@@ -1426,15 +1419,10 @@ final class EvaluateVisitor(
       }
   }
 
-  /** Walks the modifiable CSS tree under `node`, rewriting every style
-    * rule's selectors to include any extensions declared in the same
-    * media scope (`mediaKey`). A new `ModifiableCssMediaRule` encountered
-    * as a child switches the active `mediaKey`, so that extensions inside
-    * `@media` blocks only apply to rules in the same block.
+  /** Walks the modifiable CSS tree under `node`, rewriting every style rule's selectors to include any extensions declared in the same media scope (`mediaKey`). A new `ModifiableCssMediaRule`
+    * encountered as a child switches the active `mediaKey`, so that extensions inside `@media` blocks only apply to rules in the same block.
     *
-    * This is still a textual rewrite over the parsed `SelectorList` AST:
-    * no unification, no "second law of extend" beyond what
-    * `ExtensionStore.extendList` provides. The per-media scope and
+    * This is still a textual rewrite over the parsed `SelectorList` AST: no unification, no "second law of extend" beyond what `ExtensionStore.extendList` provides. The per-media scope and
     * pending-check tracking are the parts that make `!optional` work.
     */
   private def _applyExtendsIn(
@@ -1501,9 +1489,9 @@ final class EvaluateVisitor(
           }
         }
         if (!removed) _applyExtendsIn(rule, mediaKey)
-      case mr: ModifiableCssMediaRule      => _applyExtendsIn(mr, mr)
+      case mr:     ModifiableCssMediaRule  => _applyExtendsIn(mr, mr)
       case parent: ModifiableCssParentNode => _applyExtendsIn(parent, mediaKey)
-      case _                               => ()
+      case _ => ()
     }
   }
 
@@ -1602,10 +1590,15 @@ final class EvaluateVisitor(
     throw new ReturnSignal(node.expression.accept(this))
 
   override def visitContentRule(node: ContentRule): Value = {
-    val _ = node
     val block: Nullable[ContentBlock] = _environment.content
     block.foreach { cb =>
+      // Evaluate `@content(arg1, arg2, ...)` arguments in the current
+      // (mixin) environment, then bind them to the content block's
+      // declared parameters (`@include foo using ($p1, $p2)`) before
+      // running the block body in a fresh scope.
+      val (positional, named) = _evaluateArguments(node.arguments)
       _withScope {
+        _bindParameters(cb.parameters, positional, named)
         for (statement <- cb.childrenList) {
           val _ = statement.accept(this)
         }

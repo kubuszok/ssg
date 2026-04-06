@@ -1182,6 +1182,75 @@ final class CompileSuite extends munit.FunSuite {
     assert(header.contains(".b"), result.css)
   }
 
+  // ---------------------------------------------------------------------------
+  // @content block argument passing (`@content(...)` + `@include ... using`)
+  // ---------------------------------------------------------------------------
+
+  test("@content with no args still works (regression)") {
+    val result = Compile.compileString("""
+      @mixin wrap { .x { @content; } }
+      @include wrap { color: red; }
+    """)
+    assert(result.css.contains(".x"), result.css)
+    assert(result.css.contains("color: red"), result.css)
+  }
+
+  test("@content passes one arg to content block via `using`") {
+    val result = Compile.compileString(
+      """
+      @mixin media($bp) {
+        .wrap { @content($bp); }
+      }
+      @include media(768px) using ($size) {
+        width: $size;
+      }
+    """
+    )
+    assert(result.css.contains("width: 768px"), result.css)
+  }
+
+  test("@content passes multiple args to content block via `using`") {
+    val result = Compile.compileString(
+      """
+      @mixin pair($a, $b) {
+        .p { @content($a, $b); }
+      }
+      @include pair(10px, 20px) using ($x, $y) {
+        left: $x;
+        top: $y;
+      }
+    """
+    )
+    assert(result.css.contains("left: 10px"), result.css)
+    assert(result.css.contains("top: 20px"), result.css)
+  }
+
+  test("@content `using` parameter default value applies when no @content args") {
+    val result = Compile.compileString(
+      """
+      @mixin wrap { .w { @content; } }
+      @include wrap using ($size: 42px) {
+        width: $size;
+      }
+    """
+    )
+    assert(result.css.contains("width: 42px"), result.css)
+  }
+
+  test("@content arg shadows caller's variable in content block") {
+    val result = Compile.compileString(
+      """
+      @mixin media($bp) {
+        .m { @content($bp); }
+      }
+      @include media(600px) using ($bp) {
+        max-width: $bp;
+      }
+    """
+    )
+    assert(result.css.contains("max-width: 600px"), result.css)
+  }
+
   test("@forward with (...) configures !default vars in the loaded module") {
     // Without an importer the forward target is silently skipped, so we
     // exercise parser + AST round-trip via `toString` to confirm the

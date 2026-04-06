@@ -428,8 +428,17 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ReturnRule(retExpr, spanFrom(start)))
+      case "content" =>
+        // @content [(args)] ;
+        whitespace(consumeNewlines = true)
+        val cArgs =
+          if (scanner.peekChar() == CharCode.$lparen) _parseArgumentList(start)
+          else ArgumentList.empty(spanFrom(start))
+        whitespace(consumeNewlines = false)
+        val _ = scanner.scanChar(CharCode.$semicolon)
+        Nullable(new ContentRule(cArgs, spanFrom(start)))
       case "include" =>
-        // @include name [(args)] ;
+        // @include name [(args)] [using ($params)] [{ body } | ;]
         whitespace(consumeNewlines = true)
         val mixName = identifier()
         whitespace(consumeNewlines = true)
@@ -438,9 +447,33 @@ abstract class StylesheetParser protected (
         } else {
           ArgumentList.empty(spanFrom(start))
         }
+        whitespace(consumeNewlines = true)
+        // Optional `using ($p1, $p2, ...)` clause declares parameters for
+        // the trailing content block.
+        var contentParams: ParameterList = ParameterList.empty(spanFrom(start))
+        var hasUsing = false
+        if (scanIdentifier("using")) {
+          hasUsing = true
+          whitespace(consumeNewlines = true)
+          contentParams = _parseParameterList(start)
+          whitespace(consumeNewlines = true)
+        }
+        // Optional trailing content block: `{ body }`. Required if `using`
+        // was present.
+        val contentBlock: Nullable[ContentBlock] =
+          if (scanner.peekChar() == CharCode.$lbrace) {
+            val cbStart = scanner.state
+            val kids    = _children()
+            Nullable(new ContentBlock(contentParams, kids, spanFrom(cbStart)))
+          } else {
+            if (hasUsing) scanner.error("Expected content block.")
+            Nullable.empty
+          }
         whitespace(consumeNewlines = false)
-        val _ = scanner.scanChar(CharCode.$semicolon)
-        Nullable(new IncludeRule(mixName, argList, spanFrom(start)))
+        if (contentBlock.isEmpty) {
+          val _ = scanner.scanChar(CharCode.$semicolon)
+        }
+        Nullable(new IncludeRule(mixName, argList, spanFrom(start), Nullable.empty, contentBlock))
       case "media" =>
         // @media <query> { body }
         // Collect the raw query text up to the opening `{`, respecting
