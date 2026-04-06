@@ -30,6 +30,7 @@ import ssg.sass.ast.sass.{
   BinaryOperationExpression,
   BinaryOperator,
   BooleanExpression,
+  ColorExpression,
   ConfiguredVariable,
   ContentBlock,
   ContentRule,
@@ -79,6 +80,8 @@ import ssg.sass.ast.sass.{
 import ssg.sass.value.ListSeparator
 import ssg.sass.util.{ CharCode, FileSpan }
 import ssg.sass.value.SassNumber
+import ssg.sass.value.SassColor
+import ssg.sass.ColorNames
 
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -185,7 +188,7 @@ abstract class StylesheetParser protected (
             whitespace(consumeNewlines = true)
             scanner.expectChar(CharCode.$colon)
             whitespace(consumeNewlines = true)
-            val expr = _expression()
+            val expr = _expression(stopAtComma = true)
             whitespace(consumeNewlines = true)
             var guarded = false
             if (scanner.scanChar(CharCode.$exclamation)) {
@@ -302,7 +305,7 @@ abstract class StylesheetParser protected (
               whitespace(consumeNewlines = true)
               scanner.expectChar(CharCode.$colon)
               whitespace(consumeNewlines = true)
-              val expr = _expression()
+              val expr = _expression(stopAtComma = true)
               whitespace(consumeNewlines = true)
               var guarded = false
               if (scanner.scanChar(CharCode.$exclamation)) {
@@ -440,9 +443,15 @@ abstract class StylesheetParser protected (
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ContentRule(cArgs, spanFrom(start)))
       case "include" =>
-        // @include name [(args)] [using ($params)] [{ body } | ;]
+        // @include [namespace.]name [(args)] [using ($params)] [{ body } | ;]
         whitespace(consumeNewlines = true)
-        val mixName = identifier()
+        var mixName = identifier()
+        var mixNamespace: Nullable[String] = Nullable.empty
+        if (!scanner.isDone && scanner.peekChar() == CharCode.$dot) {
+          val _ = scanner.readChar()
+          mixNamespace = Nullable(mixName)
+          mixName = identifier()
+        }
         whitespace(consumeNewlines = true)
         val argList = if (scanner.peekChar() == CharCode.$lparen) {
           _parseArgumentList(start)
@@ -475,7 +484,7 @@ abstract class StylesheetParser protected (
         if (contentBlock.isEmpty) {
           val _ = scanner.scanChar(CharCode.$semicolon)
         }
-        Nullable(new IncludeRule(mixName, argList, spanFrom(start), Nullable.empty, contentBlock))
+        Nullable(new IncludeRule(mixName, argList, spanFrom(start), mixNamespace, contentBlock))
       case "media" =>
         // @media <query> { body }
         // Collect the raw query text up to the opening `{`, respecting
@@ -1355,7 +1364,7 @@ abstract class StylesheetParser protected (
   /** Parses a single expression. Minimal: handles numbers, strings, identifiers, variables. Multi-value expressions (space-separated lists, comma-separated lists, math operators) are handled as a
     * best effort by collecting raw text as an unquoted string.
     */
-  private def _expression(): Expression = {
+  private def _expression(stopAtComma: Boolean = false): Expression = {
     val start = scanner.state
     val c     = scanner.peekChar()
     if (c < 0) scanner.error("Expected expression.")
@@ -1398,6 +1407,7 @@ abstract class StylesheetParser protected (
           if (brackets == 0) {
             if (ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace) break(())
             if (ch == CharCode.$exclamation) break(()) // start of flag like !default
+            if (stopAtComma && ch == CharCode.$comma) break(())
           }
           if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
             inQuote = ch
@@ -1465,6 +1475,16 @@ abstract class StylesheetParser protected (
     ) {
       val inner = trimmed.substring(1, trimmed.length - 1)
       return StringExpression(_parseInterpolatedString(inner, span), hasQuotes = true)
+    }
+
+    // Hex color literal: `#RRGGBB`, `#RGB`, `#RRGGBBAA`, `#RGBA`.
+    // Must NOT match `#{...}` interpolation — require hex digit after `#`.
+    if (
+      trimmed.length >= 4 && trimmed.charAt(0) == '#' &&
+      trimmed.charAt(1) != '{' &&
+      _tryParseHexColor(trimmed, span).isDefined
+    ) {
+      return _tryParseHexColor(trimmed, span).get
     }
 
     // Unquoted interpolation: `#{expr}`, possibly with surrounding literal
@@ -1603,8 +1623,74 @@ abstract class StylesheetParser protected (
       return ListExpression(parts, ListSeparator.Space, span, hasBrackets = false)
     }
 
+    // Named color keyword: bare identifier matching a CSS named color.
+    // Only resolved when the token is a pure identifier (no hyphens that
+    // could collide with other unquoted-string usages are special-cased
+    // by the map itself — `transparent`, `red`, etc. are all valid CSS
+    // color keywords and Sass resolves them to SassColor at parse time).
+    if (_isPlainIdentifier(trimmed)) {
+      ColorNames.colorsByName.get(trimmed.toLowerCase) match {
+        case Some(color) => return ColorExpression(color, span)
+        case None        =>
+      }
+    }
+
     // Fallback: unquoted string expression
     StringExpression(Interpolation.plain(trimmed, span), hasQuotes = false)
+  }
+
+  /** True if [s] is a plain CSS identifier: starts with a letter or `-`, contains only name chars, no dots/parens. */
+  private def _isPlainIdentifier(s: String): Boolean = {
+    if (s.isEmpty) return false
+    val c0 = s.charAt(0)
+    if (!(c0.isLetter || c0 == '-' || c0 == '_')) return false
+    var i = 0
+    while (i < s.length) {
+      val c = s.charAt(i)
+      if (!(c.isLetterOrDigit || c == '-' || c == '_')) return false
+      i += 1
+    }
+    true
+  }
+
+  /** Tries to parse [s] as a hex color literal (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`). */
+  private def _tryParseHexColor(s: String, span: FileSpan): Option[ColorExpression] = {
+    if (s.isEmpty || s.charAt(0) != '#') return None
+    val hex = s.substring(1)
+    val len = hex.length
+    if (len != 3 && len != 4 && len != 6 && len != 8) return None
+    var i = 0
+    while (i < len) {
+      val c = hex.charAt(i)
+      val ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+      if (!ok) return None
+      i += 1
+    }
+    def h2(a: Char, b: Char): Int = Integer.parseInt(s"$a$b", 16)
+    val (r, g, b, aOpt) = len match {
+      case 3 => (h2(hex.charAt(0), hex.charAt(0)), h2(hex.charAt(1), hex.charAt(1)), h2(hex.charAt(2), hex.charAt(2)), None)
+      case 4 =>
+        (
+          h2(hex.charAt(0), hex.charAt(0)),
+          h2(hex.charAt(1), hex.charAt(1)),
+          h2(hex.charAt(2), hex.charAt(2)),
+          Some(h2(hex.charAt(3), hex.charAt(3)) / 255.0)
+        )
+      case 6 => (h2(hex.charAt(0), hex.charAt(1)), h2(hex.charAt(2), hex.charAt(3)), h2(hex.charAt(4), hex.charAt(5)), None)
+      case 8 =>
+        (
+          h2(hex.charAt(0), hex.charAt(1)),
+          h2(hex.charAt(2), hex.charAt(3)),
+          h2(hex.charAt(4), hex.charAt(5)),
+          Some(h2(hex.charAt(6), hex.charAt(7)) / 255.0)
+        )
+    }
+    val alpha: Nullable[Double] = aOpt match {
+      case Some(a) => Nullable(a)
+      case None    => Nullable(1.0)
+    }
+    val color = SassColor.rgb(Nullable(r.toDouble), Nullable(g.toDouble), Nullable(b.toDouble), alpha)
+    Some(ColorExpression(color, span))
   }
 
   /** Splits [s] at top-level occurrences of [sep] (ignoring separators inside matched parens/brackets/quotes).

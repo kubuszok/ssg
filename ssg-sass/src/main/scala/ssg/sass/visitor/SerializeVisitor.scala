@@ -273,14 +273,15 @@ final class SerializeVisitor(
         else hex
       val name = ColorNames.namesByColor.get(c)
       if (isCompressed) {
-        // Pick the shortest of: short hex, full hex (only if no shorthand), name
-        val candidates = List(short) ++ name.toList
+        // Pick the shortest of: short hex, full hex (only if no shorthand), name.
+        // Prefer name on tie to match dart-sass.
+        val candidates = name.toList ++ List(short)
         candidates.minBy(_.length)
       } else {
         // Expanded mode: use shorthand when available, prefer name only if strictly shorter than short.
         name match {
-          case Some(n) if n.length < short.length => n
-          case _                                  => short
+          case Some(n) if n.length <= short.length => n
+          case _                                   => short
         }
       }
     }

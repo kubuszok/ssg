@@ -270,13 +270,38 @@ final class SassColor private (
       else s" / ${fmt(alphaOrNull.get)}"
     space match {
       case ColorSpace.rgb =>
-        // Minimal fallback: rgba(...) / rgb(...). `SerializeVisitor` usually
-        // intercepts legacy rgb before this is called.
-        val r = fmt(channel0)
-        val g = fmt(channel1)
-        val b = fmt(channel2)
-        if (alphaOrNull.isDefined && fuzzyEquals(alphaOrNull.get, 1.0)) s"rgb($r, $g, $b)"
-        else s"rgba($r, $g, $b, ${fmt(alpha)})"
+        // Legacy rgb: emit the shortest of name / short hex / full hex when
+        // opaque and in-gamut, falling back to `rgba(...)` for alpha != 1 or
+        // out-of-range channels. `SerializeVisitor` has its own copy of this
+        // logic for the declaration-value case; this branch covers
+        // interpolation (`#{$color}`) and any other path that goes through
+        // `toCssString` directly.
+        val ri = math.round(channel0).toInt
+        val gi = math.round(channel1).toInt
+        val bi = math.round(channel2).toInt
+        val opaque = alphaOrNull.isDefined && fuzzyEquals(alphaOrNull.get, 1.0)
+        if (!opaque) {
+          val r = fmt(channel0)
+          val g = fmt(channel1)
+          val b = fmt(channel2)
+          s"rgba($r, $g, $b, ${fmt(alpha)})"
+        } else if (ri < 0 || ri > 255 || gi < 0 || gi > 255 || bi < 0 || bi > 255) {
+          val r = fmt(channel0)
+          val g = fmt(channel1)
+          val b = fmt(channel2)
+          s"rgb($r, $g, $b)"
+        } else {
+          val hex = "#%02x%02x%02x".format(ri, gi, bi)
+          val short =
+            if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6))
+              "#" + hex.charAt(1) + hex.charAt(3) + hex.charAt(5)
+            else hex
+          val name = ssg.sass.ColorNames.namesByColor.get(this)
+          name match {
+            case Some(n) if n.length <= short.length => n
+            case _                                   => short
+          }
+        }
       case ColorSpace.hsl =>
         s"hsl(${ch(channel0OrNull)}, ${ch(channel1OrNull)}%, ${ch(channel2OrNull)}%${alphaSuffix.replace(" / ", ", ")})"
       case ColorSpace.hwb =>

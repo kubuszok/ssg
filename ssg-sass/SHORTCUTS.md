@@ -6,7 +6,7 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 ## Current state
 
-- **Tests**: 526 JVM / 505 JS / 505 Native (last recorded)
+- **Tests**: 532 JVM / 511 JS / 511 Native (last recorded)
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
 - **Feature-complete for typical SCSS workloads.** The compiler drives the
@@ -40,6 +40,13 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
   - Arithmetic tokenizer for tight-binding operators (`10px+5px`, `$a*2`)
   - Comparison / logical operators with correct precedence
   - First-class `if($cond, $t, $f)` short-circuit via `LegacyIfExpression`
+  - **Hex color literals** (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`) and
+    CSS **named color keywords** (`red`, `blue`, `transparent`, …) resolve
+    to a `ColorExpression` / `SassColor` at parse time, so
+    `color.mix(#ff0000, #0000ff, $space: oklch)` and `lighten(red, 10%)`
+    work as expected. `SassColor.toCssString` and `SerializeVisitor` both
+    collapse legacy-rgb opaque colors to the shortest of name / short hex
+    / full hex, matching dart-sass.
 - `SelectorParser` — real recursive-descent parser producing a
   `SelectorList` AST (complex / compound / simple, pseudo-classes,
   attribute selectors, combinators)
@@ -165,21 +172,13 @@ Living status of the dart-sass → Scala 3 port. For per-file audit detail see
 
 1. **`meta.apply`** — add a statement-visitor entry point that can run a
    `UserDefinedCallable[MixinRule]` from a built-in.
-2. **Hex color literals (`#ff0000`) in StylesheetParser** — today a bare
-   `#RRGGBB` token in an expression context is parsed as an unquoted
-   string rather than a `ColorExpression`, so calls like
-   `color.mix(#ff0000, #0000ff, $space: oklch)` fail with "is not a
-   color". The tokenizer already recognizes `#` for interpolation; add
-   a hex-literal branch before falling through to unquoted strings. The
-   named-color keyword resolution (`red` / `blue` → color) is subject to
-   the same gap.
-3. **StylesheetParser proper expression lexer** — replace the text-based
+2. **StylesheetParser proper expression lexer** — replace the text-based
    collector with a tokenizer covering space-separated lists, function
    calls, interpolation, and unary forms uniformly.
-4. **Full v3 source maps** — per-token mappings, `sourcesContent`,
+3. **Full v3 source maps** — per-token mappings, `sourcesContent`,
    `sourceRoot`, `file`, and propagation through `@import` boundaries.
-5. **CssParser strict mode** — for the (rare) consumers who need to
+4. **CssParser strict mode** — for the (rare) consumers who need to
    reject Sass-only syntax.
-6. **Error-span fidelity** — propagate the original `FileSpan` through
+5. **Error-span fidelity** — propagate the original `FileSpan` through
    all synthesized expressions so error messages never point at a
    placeholder URL.
