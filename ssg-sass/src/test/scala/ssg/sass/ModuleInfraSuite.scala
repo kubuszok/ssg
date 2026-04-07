@@ -178,6 +178,33 @@ final class ModuleInfraSuite extends munit.FunSuite {
     )
   }
 
+  test("BuiltInOverloadDispatch selects by named-key set") {
+    // Two overloads share the name but are disambiguated by named keys:
+    //   rgb($color, $alpha)       -> picks when named = {color, alpha}
+    //   rgb($red, $green, $blue)  -> picks when named = {red, green, blue}
+    val one   = SassNumber(1.0)
+    val picked = scala.collection.mutable.Buffer.empty[String]
+    val cb1: (List[Value], Map[String, Value]) => Value = (_, _) => { picked += "color-alpha"; one }
+    val cb2: (List[Value], Map[String, Value]) => Value = (_, _) => { picked += "rgb-triple"; one }
+    val overloads = Seq(
+      "$color, $alpha"     -> cb1,
+      "$red, $green, $blue" -> cb2
+    )
+    BuiltInOverloadDispatch.select(
+      "rgb",
+      overloads,
+      positional = Nil,
+      named      = Map("color" -> one, "alpha" -> one)
+    )
+    BuiltInOverloadDispatch.select(
+      "rgb",
+      overloads,
+      positional = Nil,
+      named      = Map("red" -> one, "green" -> one, "blue" -> one)
+    )
+    assertEquals(picked.toList, List("color-alpha", "rgb-triple"))
+  }
+
   // ---------------------------------------------------------------------------
   // FindDependenciesVisitor
   // ---------------------------------------------------------------------------

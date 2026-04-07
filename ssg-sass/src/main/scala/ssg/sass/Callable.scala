@@ -166,6 +166,81 @@ object BuiltInCallable {
   }
 }
 
+/** Name-aware overload dispatch. Port of dart-sass `BuiltInCallable.callbackFor` in `lib/src/callable/built_in.dart`.
+  *
+  * Each overload is declared with its textual signature (e.g. `"$color, $amount"`) and a callback. At call time the dispatcher picks the overload whose declared positional parameter set is a
+  * superset of the caller's positional count AND whose parameter names are a superset of the caller's named keys. This lets a single function name back signatures like `rgb($red, $green, $blue)`
+  * vs `rgb($color, $alpha)` where the split is purely by the shape of the caller's arguments.
+  */
+object BuiltInOverloadDispatch {
+
+  final case class Overload(
+    parameterNames: List[String],
+    hasRest:        Boolean,
+    callback:       (List[Value], Map[String, Value]) => Value
+  )
+
+  private def parseSignature(signature: String): Overload = {
+    val trimmed = signature.trim
+    if (trimmed.isEmpty) return Overload(Nil, hasRest = false, (_, _) => throw new IllegalStateException("empty overload invoked"))
+    val parts  = scala.collection.mutable.ListBuffer.empty[String]
+    val buf    = new StringBuilder()
+    var depth  = 0
+    var i      = 0
+    while (i < trimmed.length) {
+      val c = trimmed.charAt(i)
+      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+      else buf.append(c)
+      i += 1
+    }
+    if (buf.nonEmpty) parts += buf.toString().trim
+    val partList = parts.toList
+    val hasRest  = partList.lastOption.exists(_.endsWith("..."))
+    val effective =
+      (if (hasRest) partList.init else partList).flatMap { raw =>
+        val withoutDefault = raw.indexOf(':') match {
+          case -1  => raw
+          case idx => raw.substring(0, idx).trim
+        }
+        if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
+        else None
+      }
+    Overload(effective, hasRest, (_, _) => throw new IllegalStateException("overload has no callback attached"))
+  }
+
+  /** Given [raw] overload signatures paired with callbacks, select the overload for a call site with [positional] positional arguments and [named] named keys. Matches dart-sass semantics: the
+    * chosen overload's parameter-name set must be a superset of [named], and its arity (plus optional rest) must accept [positional].length.
+    */
+  def select(
+    name:      String,
+    overloads: Seq[(String, (List[Value], Map[String, Value]) => Value)],
+    positional: List[Value],
+    named:      Map[String, Value]
+  ): Value = {
+    val parsed = overloads.toList.map { case (sig, cb) =>
+      val o = parseSignature(sig)
+      o.copy(callback = cb)
+    }
+    val nameKeys = named.keySet
+    val n        = positional.length
+    // Exact arity, named keys subset of declared names.
+    val exact = parsed.find { o =>
+      !o.hasRest && o.parameterNames.length >= n && nameKeys.subsetOf(o.parameterNames.toSet)
+    }
+    val resty = exact.orElse(parsed.find { o =>
+      o.hasRest && nameKeys.subsetOf(o.parameterNames.toSet)
+    })
+    resty match {
+      case Some(o) => o.callback(positional, named)
+      case None    => throw new IllegalArgumentException(
+        s"No overload of $name matches ${positional.length} positional and named ${nameKeys.mkString("{", ",", "}")}"
+      )
+    }
+  }
+}
+
 /** A callable that emits a plain-CSS function call. */
 final class PlainCssCallable(val name: String) extends Callable {
 
