@@ -15,6 +15,7 @@
 package ssg
 package sass
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.language.implicitConversions
 import ssg.sass.ast.AstNode
@@ -40,6 +41,19 @@ final class Environment private (
   private var _content:           Nullable[ContentBlock],
   private var _inSemiGlobalScope: Boolean
 ) {
+
+  // --- Stage 4A: module-system storage fields (unused until 4B–4E) ----------
+  // Mirror dart-sass `Environment` field layout. Initialized empty; legacy
+  // `namespaces: Map[String, Environment]` continues to back lookups for now.
+  @nowarn("msg=unused private member") private val _modules:                mutable.Map[String, EnvironmentModule]  = mutable.Map.empty
+  @nowarn("msg=unused private member") private val _namespaceNodes:         mutable.Map[String, AstNode]            = mutable.Map.empty
+  @nowarn("msg=unused private member") private val _globalModules:          mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  @nowarn("msg=unused private member") private val _importedModules:        mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  @nowarn("msg=unused private member") private val _forwardedModules:       mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  @nowarn("msg=unused private member") private val _nestedForwardedModules: mutable.ArrayBuffer[mutable.ArrayBuffer[EnvironmentModule]] = mutable.ArrayBuffer.empty
+  @nowarn("msg=unused private member") private val _allModules:             mutable.ArrayBuffer[EnvironmentModule]  = mutable.ArrayBuffer.empty
+  @nowarn("msg=unused private member") private val _configurableVariables:  mutable.Set[String]                     = mutable.Set.empty
+
 
   def this() = this(
     _variables = mutable.ArrayBuffer(mutable.Map.empty[String, Value]),
