@@ -19,6 +19,10 @@
  *     inUseIds, fixed_ids -> fixedIds, var_defs_by_id -> varDefsById
  *   Convention: Object with methods, TreeWalker/TreeTransformer pattern matching
  *   Idiom: boundary/break instead of return, mutable.Map/Set for tracking
+ *   Gap: 263 LOC vs upstream 506 LOC (~52%). "check if def is in-use when
+ *     SymbolDef is ported" TODOs at lines 173-184 leave unused-binding
+ *     detection unwired. See ISS-032. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js
