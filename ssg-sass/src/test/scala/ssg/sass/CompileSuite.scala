@@ -1547,12 +1547,17 @@ final class CompileSuite extends munit.FunSuite {
   }
 
   // ISS-014: sass:meta gap fills
+  //
+  // meta.calc-name returns a QUOTED string (dart-sass `SassString(name)`
+  // defaults to `quotes: true`). The original tests here expected the
+  // old ssg-sass incorrect unquoted form; updated to match dart-sass
+  // spec during the T005 sass:meta port.
   test("meta.calc-name(calc(...)) returns 'calc'") {
     val src =
       """@use "sass:meta";
         |a { name: meta.calc-name(calc(100% + 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{name:calc}")
+    assertEquals(css, """a{name:"calc"}""")
   }
 
   test("meta.calc-name(min(...)) returns 'min'") {
@@ -1560,7 +1565,7 @@ final class CompileSuite extends munit.FunSuite {
       """@use "sass:meta";
         |a { name: meta.calc-name(min(100%, 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{name:min}")
+    assertEquals(css, """a{name:"min"}""")
   }
 
   test("meta.calc-args returns the operand list of a calc") {

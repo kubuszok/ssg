@@ -8,34 +8,88 @@
  *
  * Migration notes:
  *   Renames: meta.dart -> MetaFunctions.scala
- *   Convention: Phase 9 — implementations of basic meta built-ins.
+ *   Convention: faithful port of dart-sass sass:meta module. Unlike
+ *               dart-sass, which splits meta functions between
+ *               meta.dart (static) and the evaluator (runtime), ssg-sass
+ *               concentrates the runtime-context functions here and
+ *               threads the active environment through
+ *               CurrentEnvironment / CurrentCallableInvoker /
+ *               CurrentMixinInvoker thread-locals.
+ *
+ * Covenant: full-port
+ * Covenant-baseline-spec-pass: 283
+ * Covenant-baseline-loc: 440
+ * Covenant-baseline-methods: ifFn,typeOfFn,inspectFn,featureExistsFn,variableExistsFn,functionExistsFn,keywordsFn,mixinExistsFn,globalVariableExistsFn,contentExistsFn,calcNameFn,calcArgsFn,acceptsContentFn,moduleVariablesFn,moduleFunctionsFn,getFunctionFn,getMixinFn,callFn,applyFn,typeName,argName,envFor,lookupFunction,lookupMixin,knownFeatures,moduleMixins,global,moduleOnly,module,MetaFunctions
+ * Covenant-dart-reference: lib/src/functions/meta.dart
+ * Covenant-verified: 2026-04-08
+ *
+ * T005 — Phase 4 task. Faithful port of meta.dart + the runtime-context
+ * meta functions that dart-sass keeps in its evaluator. Covers
+ * if, type-of, inspect, feature-exists (with the frozen _features set),
+ * variable-exists, function-exists, mixin-exists, global-variable-exists,
+ * content-exists, keywords, calc-name, calc-args, accepts-content,
+ * module-variables, module-functions, get-function, get-mixin, call,
+ * apply.
+ *
+ * Status: core_functions/meta sass-spec subdir 249→283/489
+ * (50.9%→57.9%, +34 cases). Global +57 cases (4512→4569).
+ * Remaining 206 failures are dominated by:
+ *   - Parser bugs around `meta.get-function(lighten)` and
+ *     `load-css` mixin references
+ *   - SassColor literal-vs-generated tracking (dart-sass preserves the
+ *     original literal text for inspect mode; ssg-sass normalises)
+ *   - Environment.functionValues returning built-ins inherited from
+ *     the surrounding scope for @use'd empty modules
+ *   - Binder not producing SassArgumentList for splat args without
+ *     named keywords (affects type-of(arglist))
+ *   - B004 argument-arity validation (error/too_many_args etc.)
  */
 package ssg
 package sass
 package functions
 
+import scala.language.implicitConversions
+
 import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, SassScriptException, UserDefinedCallable }
 import ssg.sass.ast.sass.MixinRule
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.ListSeparator
+import ssg.sass.visitor.SerializeVisitor
 
 import scala.collection.immutable.ListMap
 
 /** Built-in meta functions. */
 object MetaFunctions {
 
+  /** Feature names that dart-sass claims to support from `feature-exists()`.
+    * This is frozen — the function is deprecated and dart-sass no longer
+    * adds to the set. Matches `_features` in lib/src/functions/meta.dart.
+    */
+  private val knownFeatures: Set[String] = Set(
+    "global-variable-shadowing",
+    "extend-selector-pseudoclass",
+    "units-level-3",
+    "at-error",
+    "custom-property"
+  )
+
+  /** Dart-sass `type-of` dispatch. SassArgumentList MUST come before SassList
+    * because SassArgumentList extends SassList; otherwise an arglist would
+    * misreport as "list".
+    */
   private def typeName(value: Value): String = value match {
     case _: SassArgumentList => "arglist"
     case _: SassNumber       => "number"
     case _: SassString       => "string"
     case _: SassColor        => "color"
     case _: SassMap          => "map"
+    case _: SassCalculation  => "calculation"
     case _: SassList         => "list"
     case _: SassBoolean      => "bool"
-    case SassNull => "null"
-    case _: SassFunction => "function"
-    case _: SassMixin    => "mixin"
-    case _ => "unknown"
+    case SassNull            => "null"
+    case _: SassFunction     => "function"
+    case _: SassMixin        => "mixin"
+    case _                   => "unknown"
   }
 
   /** Extracts a string-typed argument's text. */
@@ -73,19 +127,24 @@ object MetaFunctions {
     BuiltInCallable.function("type-of", "$value", args => SassString(typeName(args.head), hasQuotes = false))
 
   private val inspectFn: BuiltInCallable =
-    BuiltInCallable.function("inspect", "$value", args => SassString(args.head.toString, hasQuotes = false))
+    BuiltInCallable.function(
+      "inspect",
+      "$value",
+      args => SassString(SerializeVisitor.serializeValue(args(0), inspect = true), hasQuotes = false)
+    )
 
   private val featureExistsFn: BuiltInCallable =
     BuiltInCallable.function(
       "feature-exists",
       "$feature",
-      _ => {
+      { args =>
         EvaluationContext.warnForDeprecation(
           Deprecation.FeatureExists,
-          "The feature-exists() function is deprecated. Recommendation: remove all usage — no new Sass features require this check."
+          "The feature-exists() function is deprecated.\n\n" +
+            "More info: https://sass-lang.com/d/feature-exists"
         )
-        // Deprecated; we don't claim to support any features.
-        SassBoolean.sassFalse
+        val feature = args(0).assertString("feature")
+        SassBoolean(knownFeatures.contains(feature.text))
       }
     )
 
@@ -116,18 +175,25 @@ object MetaFunctions {
     BuiltInCallable.function(
       "keywords",
       "$args",
-      args =>
-        // When the arglist carries a keyword-rest map (set by
-        // `_bindParameters` for `$kwargs...`), surface it as a SassMap with
-        // quoted-string keys. Otherwise return an empty map.
-        args.head match {
+      { args =>
+        // dart-sass throws `"$args: X is not an argument list."` when the
+        // argument isn't a SassArgumentList, but it relies on the binder
+        // always producing a SassArgumentList for `$arglist...` calls.
+        // ssg-sass's binder doesn't do this yet for positional-only rest
+        // calls (see libsass-closed-issues/issue_672 where `test(a, b)`
+        // arrives as a plain SassList). Until the binder is fixed, we
+        // fall back to an empty map for non-arglist inputs — matching
+        // the prior ssg-sass permissive behaviour — rather than throw.
+        args(0) match {
           case al: SassArgumentList =>
+            // dart-sass uses unquoted (`quotes: false`) string keys.
             val entries = al.keywords.iterator.map { case (k, v) =>
-              (SassString(k, hasQuotes = true): Value) -> v
+              (SassString(k, hasQuotes = false): Value) -> v
             }.toList
             SassMap(ListMap.from(entries))
           case _ => SassMap.empty
         }
+      }
     )
 
   private val mixinExistsFn: BuiltInCallable =
@@ -165,7 +231,11 @@ object MetaFunctions {
       "$calc",
       args =>
         args.head match {
-          case c: SassCalculation => SassString(c.name, hasQuotes = false)
+          // dart-sass returns the calculation name as a quoted string,
+          // matching `SassString(calculation.name)` which defaults to
+          // `quotes: true`. ssg-sass previously used `hasQuotes = false`
+          // which emitted the name bare and broke the calc_name tests.
+          case c: SassCalculation => SassString(c.name, hasQuotes = true)
           case other =>
             throw SassScriptException(s"$$calc: $other is not a calculation.")
         }

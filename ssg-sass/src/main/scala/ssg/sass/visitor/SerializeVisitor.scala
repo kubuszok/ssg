@@ -25,7 +25,7 @@ import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
-import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassNumber, SassString, Value }
+import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.color.ColorSpace
 
 /** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
@@ -315,8 +315,18 @@ final class SerializeVisitor(
     case s: SassString => formatString(s)
     case l: SassList   => formatList(l)
     case m: SassMap    => formatMap(m)
+    // dart-sass renders `null` as `"null"` in inspect mode (used by
+    // `meta.inspect()`) and as an empty string in normal output, since
+    // null values are filtered from declaration-value serialization.
+    case SassNull      => if (inspect) "null" else ""
     case _             => v.toCssString()
   }
+
+  /** Public forwarder so the companion-object `serializeValue` entry
+    * point can reach the private formatter without exposing it to
+    * unrelated consumers.
+    */
+  private[visitor] def formatValuePublic(v: Value): String = formatValue(v)
 
   // ---------------------------------------------------------------------------
   // Stage 2: modern color space dispatch
@@ -471,26 +481,110 @@ final class SerializeVisitor(
   // in `[...]`. Maps render as `(k1: v1, k2: v2)`.
   // ---------------------------------------------------------------------------
   private def formatList(l: SassList): String = {
+    // Port of dart-sass `_writeList` in lib/src/visitor/serialize.dart.
+    //
+    // Handles:
+    //   - `[]` for an empty bracketed list
+    //   - `()` for an empty unbracketed list in inspect mode (throws
+    //     outside inspect because an empty list isn't a valid CSS value)
+    //   - `(x,)` for a single-element comma list in inspect mode
+    //   - `(x/)` for a single-element slash list in inspect mode
+    //   - `[x,]` for a single-element bracketed comma list
+    //   - parentheses around nested sub-lists whose separator would be
+    //     ambiguous with the outer separator (see elementNeedsParens)
+    if (l.hasBrackets && l.asList.isEmpty) return "[]"
+    if (!l.hasBrackets && l.asList.isEmpty) {
+      if (inspect) return "()"
+      else return "" // non-inspect: caller decides (property path emits blank)
+    }
+
+    val singleton =
+      inspect && l.asList.length == 1 &&
+        (l.separator == ListSeparator.Comma || l.separator == ListSeparator.Slash)
+
+    val sb = new StringBuilder()
+    if (singleton && !l.hasBrackets) sb.append('(')
+    if (l.hasBrackets) sb.append('[')
+
+    // In CSS output mode we drop blank elements (null, empty lists, etc.)
+    // from non-comma/non-bracketed separators to avoid producing invalid
+    // CSS. In inspect mode, blank elements are meaningful (they represent
+    // the actual structure of the list), so we keep them all.
     val elems =
-      if (l.separator == ListSeparator.Comma || l.hasBrackets) l.asList
+      if (inspect || l.separator == ListSeparator.Comma || l.hasBrackets) l.asList
       else l.asList.filterNot(_.isBlank)
+
     val sepStr = l.separator match {
       case ListSeparator.Comma     => if (isCompressed) "," else ", "
       case ListSeparator.Space     => " "
       case ListSeparator.Slash     => if (isCompressed) "/" else " / "
       case ListSeparator.Undecided => " "
     }
-    val inner = elems.map(formatValue).mkString(sepStr)
-    val body  =
-      if (l.asList.length == 1 && l.separator == ListSeparator.Comma) s"($inner,)"
-      else inner
-    if (l.hasBrackets) s"[$body]"
-    else body
+
+    var first = true
+    for (elem <- elems) {
+      if (first) first = false
+      else sb.append(sepStr)
+      // dart-sass only wraps nested-list elements in parentheses during
+      // inspect mode; CSS-output mode flattens them because the slash/
+      // space/comma separators are visually unambiguous in CSS even
+      // when nested.
+      if (inspect && elementNeedsParens(l.separator, elem)) {
+        sb.append('(')
+        sb.append(formatValue(elem))
+        sb.append(')')
+      } else {
+        sb.append(formatValue(elem))
+      }
+    }
+
+    if (singleton) {
+      if (l.separator == ListSeparator.Comma) sb.append(',')
+      else sb.append('/')
+    }
+
+    if (l.hasBrackets) sb.append(']')
+    if (singleton && !l.hasBrackets) sb.append(')')
+
+    sb.toString()
+  }
+
+  /** Whether a nested list element needs to be wrapped in parentheses to
+    * disambiguate it from the outer list's separator. Port of dart-sass
+    * `_elementNeedsParens` in serialize.dart.
+    */
+  private def elementNeedsParens(separator: ListSeparator, value: Value): Boolean = value match {
+    case l: SassList =>
+      if (l.asList.length < 2) false
+      else if (l.hasBrackets) false
+      else
+        separator match {
+          case ListSeparator.Comma =>
+            l.separator == ListSeparator.Comma
+          case ListSeparator.Slash =>
+            l.separator == ListSeparator.Comma || l.separator == ListSeparator.Slash
+          case _ =>
+            l.separator != ListSeparator.Undecided
+        }
+    case _ => false
   }
 
   private def formatMap(m: SassMap): String = {
-    val sep     = if (isCompressed) "," else ", "
-    val entries = m.contents.map { case (k, v) => s"${formatValue(k)}:${if (isCompressed) "" else " "}${formatValue(v)}" }.mkString(sep)
+    val sep       = if (isCompressed) "," else ", "
+    val kvSpacing = if (isCompressed) "" else " "
+    // In inspect mode, wrap key/value sub-lists whose separator would
+    // be ambiguous with the outer comma-separated map layout (e.g.
+    // `((1, 2): 3)` vs `(1, 2: 3)`). Port of dart-sass's
+    // `_visitMap` wrapping rule.
+    def formatEntryPart(v: Value): String = v match {
+      case l: SassList if inspect && l.asList.length >= 2 && !l.hasBrackets &&
+            (l.separator == ListSeparator.Comma || l.separator == ListSeparator.Slash) =>
+        s"(${formatValue(l)})"
+      case _ => formatValue(v)
+    }
+    val entries = m.contents.map { case (k, v) =>
+      s"${formatEntryPart(k)}:$kvSpacing${formatEntryPart(v)}"
+    }.mkString(sep)
     s"($entries)"
   }
 
@@ -1084,6 +1178,22 @@ object SerializeVisitor {
   /** Serialize compressed (minified). */
   def serializeCompressed(node: CssStylesheet): SerializeResult =
     new SerializeVisitor(style = OutputStyle.Compressed).serialize(node)
+
+  /** Convert a [[Value]] to its CSS text form using the same formatting
+    * rules the full stylesheet serializer uses for declarations.
+    *
+    * When `inspect = true`, matches dart-sass's `serializeValue(v,
+    * inspect: true)` entry point used by `meta.inspect()`: nested lists
+    * get their separator-preserving parentheses, empty lists render as
+    * `()`, single-element comma lists as `(x,)`, colors use inspect
+    * representation, etc.
+    *
+    * Ported from dart-sass `serializeValue` in serialize.dart.
+    */
+  def serializeValue(value: Value, inspect: Boolean = false): String = {
+    val visitor = new SerializeVisitor(inspect = inspect)
+    visitor.formatValuePublic(value)
+  }
 
   /** Renders `number` in the way dart-sass does before [[removeExponent]] runs.
     *

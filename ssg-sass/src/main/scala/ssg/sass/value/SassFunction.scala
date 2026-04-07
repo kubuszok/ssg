@@ -33,5 +33,5 @@ final class SassFunction(
     case _ => false
   }
 
-  override def toString: String = s"get-function(\"$callable\")"
+  override def toString: String = s"""get-function("${callable.name}")"""
 }

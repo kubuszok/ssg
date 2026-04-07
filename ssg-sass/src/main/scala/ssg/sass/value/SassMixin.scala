@@ -33,5 +33,5 @@ final class SassMixin(
     case _ => false
   }
 
-  override def toString: String = s"get-mixin(\"$callable\")"
+  override def toString: String = s"""get-mixin("${callable.name}")"""
 }
