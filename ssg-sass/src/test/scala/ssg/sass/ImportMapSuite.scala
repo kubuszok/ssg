@@ -38,6 +38,21 @@ final class ImportMapSuite extends munit.FunSuite {
     assert(result.css.contains("42px"))
   }
 
+  test("@import of .css URL passes through as a plain CSS @import") {
+    // dart-sass: @import "foo.css" is never loaded as Sass. It is always
+    // emitted verbatim as a plain CSS `@import url(foo.css)` so that the
+    // browser handles the fetch at runtime.
+    val importer = importerOf("foo.css" -> "/* should not be loaded */")
+    val source   = """
+      @import "foo.css";
+      a { color: red; }
+    """
+    val result   = Compile.compileString(source, importer = Nullable(importer))
+    assert(result.css.contains("@import"), s"missing @import passthrough in: ${result.css}")
+    assert(result.css.contains("foo.css"), s"missing foo.css in: ${result.css}")
+    assert(!result.css.contains("should not be loaded"), s"file was evaluated in: ${result.css}")
+  }
+
   test("unresolved @import is silently skipped") {
     val importer = importerOf()
     val source   = """

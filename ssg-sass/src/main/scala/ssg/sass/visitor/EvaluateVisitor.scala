@@ -1754,7 +1754,17 @@ final class EvaluateVisitor(
           val cssImport = new ModifiableCssImport(urlValue, si.span, modifiersValue)
           _addChild(cssImport)
         case di: DynamicImport =>
-          _loadDynamicImport(di.urlString)
+          // dart-sass: @import of a *.css URL is treated as a static
+          // plain-CSS import even when parsed as dynamic — it's passed
+          // through to the output verbatim, never loaded as Sass.
+          val url = di.urlString
+          if (url.endsWith(".css")) {
+            val urlValue = new CssValue[String](url, di.span)
+            val cssImport = new ModifiableCssImport(urlValue, di.span, Nullable.empty)
+            _addChild(cssImport)
+          } else {
+            _loadDynamicImport(url)
+          }
         case _ => ()
       }
     SassNull
