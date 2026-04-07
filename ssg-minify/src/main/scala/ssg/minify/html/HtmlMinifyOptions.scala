@@ -11,6 +11,9 @@
  * Migration notes:
  *   Renames: htmlcompressor gem → ssg.minify.html.HtmlMinifier
  *   Convention: Immutable case class matching all original config options
+ *   Gap: preserveLineBreaks field is dead — declared but never consumed by
+ *     HtmlMinifier.doMinify. See ISS-038.
+ *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
 package minify
