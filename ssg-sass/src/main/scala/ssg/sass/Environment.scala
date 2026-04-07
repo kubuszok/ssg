@@ -45,13 +45,13 @@ final class Environment private (
   // --- Stage 4A: module-system storage fields (unused until 4B–4E) ----------
   // Mirror dart-sass `Environment` field layout. Initialized empty; legacy
   // `namespaces: Map[String, Environment]` continues to back lookups for now.
-  @nowarn("msg=unused private member") private val _modules:                mutable.Map[String, EnvironmentModule]  = mutable.Map.empty
-  @nowarn("msg=unused private member") private val _namespaceNodes:         mutable.Map[String, AstNode]            = mutable.Map.empty
-  @nowarn("msg=unused private member") private val _globalModules:          mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  private val _modules:                mutable.Map[String, EnvironmentModule]  = mutable.Map.empty
+  private val _namespaceNodes:         mutable.Map[String, AstNode]            = mutable.Map.empty
+  private val _globalModules:          mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
   @nowarn("msg=unused private member") private val _importedModules:        mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
   @nowarn("msg=unused private member") private val _forwardedModules:       mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
   @nowarn("msg=unused private member") private val _nestedForwardedModules: mutable.ArrayBuffer[mutable.ArrayBuffer[EnvironmentModule]] = mutable.ArrayBuffer.empty
-  @nowarn("msg=unused private member") private val _allModules:             mutable.ArrayBuffer[EnvironmentModule]  = mutable.ArrayBuffer.empty
+  private val _allModules:             mutable.ArrayBuffer[EnvironmentModule]  = mutable.ArrayBuffer.empty
   @nowarn("msg=unused private member") private val _configurableVariables:  mutable.Set[String]                     = mutable.Set.empty
 
 
@@ -72,19 +72,64 @@ final class Environment private (
 
   // --- Namespace shims (deferred module port) --------------------------------
 
-  def addNamespace(name: String, module: Environment): Unit =
+  def addNamespace(name: String, module: Environment): Unit = {
+    assertNoConflicts(name)
     namespaces(name) = module
+    _modules(name) = EnvironmentModule(module)
+    _allModules += _modules(name)
+  }
+
+  /** Registers [module] under [namespace]. If [namespace] is empty, the module becomes a global (unnamespaced) import visible to all member lookups.
+    *
+    * Port of dart-sass `Environment.addModule`. Currently accepts already-wrapped [[EnvironmentModule]]s for integration with Stage 4E.
+    */
+  def addModule(module: EnvironmentModule, nodeWithSpan: AstNode, namespace: Nullable[String] = Nullable.empty): Unit = {
+    namespace.toOption match {
+      case Some(ns) =>
+        assertNoConflicts(ns)
+        _modules(ns) = module
+        _namespaceNodes(ns) = nodeWithSpan
+        namespaces(ns) = module.env
+      case None =>
+        _globalModules(module) = nodeWithSpan
+    }
+    _allModules += module
+  }
+
+  /** Looks up a module registered under [namespace], checking both the new `_modules` map and the legacy `namespaces` map. */
+  private def _getModule(namespace: String): Nullable[EnvironmentModule] =
+    _modules.get(namespace) match {
+      case Some(m) => Nullable(m)
+      case None    =>
+        namespaces.get(namespace) match {
+          case Some(env) => Nullable(EnvironmentModule(env))
+          case None      => Nullable.empty
+        }
+    }
+
+  /** Raises a clean error if [namespace] is already in use. */
+  private def assertNoConflicts(namespace: String): Unit = {
+    if (_modules.contains(namespace) || namespaces.contains(namespace)) {
+      throw new IllegalStateException(s"There's already a module with namespace \"$namespace\".")
+    }
+  }
 
   def getNamespacedVariable(namespace: String, name: String): Nullable[Value] =
-    namespaces.get(namespace) match {
-      case Some(env)  => env.getVariable(name)
-      case scala.None => Nullable.empty
+    _getModule(namespace).toOption match {
+      case Some(m) => m.env.getVariable(name)
+      case None    => Nullable.empty
     }
 
   def getNamespacedFunction(namespace: String, name: String): Nullable[Callable] =
-    namespaces.get(namespace) match {
-      case Some(env)  => env.getFunction(name)
-      case scala.None => Nullable.empty
+    _getModule(namespace).toOption match {
+      case Some(m) => m.env.getFunction(name)
+      case None    => Nullable.empty
+    }
+
+  def getNamespacedMixin(namespace: String, name: String): Nullable[Callable] =
+    _getModule(namespace).toOption match {
+      case Some(m) => m.env.getMixin(name)
+      case None    => Nullable.empty
     }
 
   def getNamespace(name: String): Nullable[Environment] =
