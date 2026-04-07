@@ -48,8 +48,8 @@ final class Environment private (
   private val _modules:                mutable.Map[String, EnvironmentModule]  = mutable.Map.empty
   private val _namespaceNodes:         mutable.Map[String, AstNode]            = mutable.Map.empty
   private val _globalModules:          mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
-  @nowarn("msg=unused private member") private val _importedModules:        mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
-  @nowarn("msg=unused private member") private val _forwardedModules:       mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  private val _importedModules:        mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
+  private val _forwardedModules:       mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
   @nowarn("msg=unused private member") private val _nestedForwardedModules: mutable.ArrayBuffer[mutable.ArrayBuffer[EnvironmentModule]] = mutable.ArrayBuffer.empty
   private val _allModules:             mutable.ArrayBuffer[EnvironmentModule]  = mutable.ArrayBuffer.empty
   @nowarn("msg=unused private member") private val _configurableVariables:  mutable.Set[String]                     = mutable.Set.empty
@@ -132,6 +132,42 @@ final class Environment private (
       case None    => Nullable.empty
     }
 
+  /** Registers [module] as a forwarded module. Its public members become visible to any downstream `@use`/`@import` of the current module.
+    *
+    * Port of dart-sass `Environment.forwardModule`. For now members are hoisted into this environment's own functions/mixins/global variables so the legacy lookup path still works.
+    */
+  def forwardModule(module: EnvironmentModule, nodeWithSpan: AstNode): Unit = {
+    _forwardedModules(module) = nodeWithSpan
+    _allModules += module
+    for ((n, v) <- module.variables if !Environment.isPrivate(n) && !_variables(0).contains(n))
+      _variables(0)(n) = v
+    for ((n, c) <- module.functions if !Environment.isPrivate(n) && !functions.contains(n))
+      functions(n) = c
+    for ((n, c) <- module.mixins if !Environment.isPrivate(n) && !mixins.contains(n))
+      mixins(n) = c
+  }
+
+  /** Hoists [module]'s forwarded members into this environment as if it were imported. Port of dart-sass `Environment.importForwards`. */
+  def importForwards(module: EnvironmentModule): Unit = {
+    _importedModules(module) = null.asInstanceOf[AstNode]
+    for ((n, v) <- module.variables if !Environment.isPrivate(n))
+      _variables(0)(n) = v
+    for ((n, c) <- module.functions if !Environment.isPrivate(n))
+      functions(n) = c
+    for ((n, c) <- module.mixins if !Environment.isPrivate(n))
+      mixins(n) = c
+  }
+
+  /** Looks up [name] across registered global (unnamespaced) modules. Returns the first match or `Nullable.empty`. */
+  private def _variableFromGlobalModules(name: String): Nullable[Value] =
+    scala.util.boundary {
+      for (m <- _globalModules.keysIterator) {
+        val v = m.env.getVariable(name)
+        if (v.isDefined) scala.util.boundary.break(v)
+      }
+      Nullable.empty
+    }
+
   def getNamespace(name: String): Nullable[Environment] =
     namespaces.get(name) match {
       case Some(env)  => Nullable(env)
@@ -180,11 +216,11 @@ final class Environment private (
         if (found >= 0) _variableIndices(name) = found
         found
     }
-    if (idx < 0) Nullable.empty
+    if (idx < 0) _variableFromGlobalModules(name)
     else
       _variables(idx).get(name) match {
         case Some(v) => v
-        case None    => Nullable.empty
+        case None    => _variableFromGlobalModules(name)
       }
   }
 
