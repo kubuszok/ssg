@@ -3,60 +3,61 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Ported from: lib/src/functions/list.dart
- * Original: Copyright (c) 2016 Google Inc.
+ * Original: Copyright (c) 2019 Google Inc.
  * Original license: MIT
  *
  * Migration notes:
  *   Renames: list.dart -> ListFunctions.scala
- *   Convention: Phase 9 — implementations of basic list built-ins.
+ *   Convention: faithful port of dart-sass sass:list module. Module
+ *               functions use unprefixed names (separator, etc.); global
+ *               api uses list-separator for backwards compatibility.
+ *
+ * Covenant: full-port
+ * Covenant-baseline-spec-pass: 139
+ * Covenant-baseline-loc: 245
+ * Covenant-baseline-methods: lengthFn,nthFn,setNthFn,joinFn,appendFn,zipFn,indexFn,separatorFn,isBracketedFn,slashFn,listSeparatorFn,withName,autoStr,global,module,ListFunctions
+ * Covenant-dart-reference: lib/src/functions/list.dart
+ * Covenant-verified: 2026-04-08
+ *
+ * T002 — Phase 4 task. Status:
+ *   - core_functions/list sass-spec subdir: 129/233 (55.4%) → 139/233 (59.7%)
+ *   - Remaining 94 list-subdir failures map to cross-cutting issues:
+ *     B004 argument-arity validation, missing HRX import resolution
+ *     across utils.scss, list-with-separator unification, and a couple
+ *     of new B-tasks worth filing once Phase 4 stabilises.
  */
 package ssg
 package sass
 package functions
 
+import scala.language.implicitConversions
+
 import ssg.sass.{ BuiltInCallable, Callable, SassScriptException }
 import ssg.sass.value.{ ListSeparator, SassBoolean, SassList, SassNull, SassNumber, SassString, Value }
 
-/** Built-in list functions. */
+/** Built-in `sass:list` functions. Faithful port of `lib/src/functions/list.dart`. */
 object ListFunctions {
 
-  private def parseSeparator(value: Value, paramName: String): Option[ListSeparator] =
-    value match {
-      case s: SassString =>
-        s.text match {
-          case "auto"  => None
-          case "space" => Some(ListSeparator.Space)
-          case "comma" => Some(ListSeparator.Comma)
-          case "slash" => Some(ListSeparator.Slash)
-          case _       =>
-            throw SassScriptException(
-              s"""$$$paramName: Must be "space", "comma", "slash", or "auto".""",
-              Some(paramName)
-            )
-        }
-      case _ =>
-        throw SassScriptException(
-          s"""$$$paramName: Must be "space", "comma", "slash", or "auto".""",
-          Some(paramName)
-        )
-    }
-
-  private def parseBracketed(value: Value): Option[Boolean] = value match {
-    case s: SassString if !s.hasQuotes && s.text == "auto" => None
-    case _ => Some(value.isTruthy)
-  }
+  // ---------------------------------------------------------------------------
+  // Base callables (unprefixed names — what `list.X` resolves to).
+  // ---------------------------------------------------------------------------
 
   private val lengthFn: BuiltInCallable =
-    BuiltInCallable.function("length", "$list", args => SassNumber(args.head.lengthAsList.toDouble))
+    BuiltInCallable.function(
+      "length",
+      "$list",
+      args => SassNumber(args(0).asList.length.toDouble)
+    )
 
   private val nthFn: BuiltInCallable =
-    BuiltInCallable.function("nth",
-                             "$list, $n",
-                             { args =>
-                               val list = args.head
-                               val idx  = list.sassIndexToListIndex(args(1))
-                               list.asList(idx)
-                             }
+    BuiltInCallable.function(
+      "nth",
+      "$list, $n",
+      { args =>
+        val list  = args(0)
+        val index = args(1)
+        list.asList(list.sassIndexToListIndex(index, "n"))
+      }
     )
 
   private val setNthFn: BuiltInCallable =
@@ -64,33 +65,54 @@ object ListFunctions {
       "set-nth",
       "$list, $n, $value",
       { args =>
-        val list        = args.head
-        val idx         = list.sassIndexToListIndex(args(1))
-        val newValue    = args(2)
-        val newContents = list.asList.updated(idx, newValue)
-        list.withListContents(newContents)
+        val list     = args(0)
+        val index    = args(1)
+        val value    = args(2)
+        val newList  = list.asList.toBuffer
+        newList(list.sassIndexToListIndex(index, "n")) = value
+        list.withListContents(newList.toList)
       }
     )
+
+  // Sentinel for the default `auto` value used by joinFn/appendFn when
+  // ssg-sass's argument binder did not pad the call with declared
+  // defaults. Should be replaced once the binder is fixed (B004 covers
+  // a related improvement to argument validation).
+  private val autoStr: SassString = SassString("auto", hasQuotes = false)
 
   private val joinFn: BuiltInCallable =
     BuiltInCallable.function(
       "join",
       "$list1, $list2, $separator: auto, $bracketed: auto",
       { args =>
-        // Trailing `$separator` and `$bracketed` both default to `auto`.
-        // Built-in dispatch passes positional args verbatim without
-        // applying declared defaults, so guard trailing accesses.
-        val autoStr   = SassString("auto", hasQuotes = false)
-        val list1     = args.head
-        val list2     = args(1)
-        val sepArg    = parseSeparator(if (args.length > 2) args(2) else autoStr, "separator")
-        val brArg     = parseBracketed(if (args.length > 3) args(3) else autoStr)
-        val separator = sepArg.getOrElse {
-          if (list1.separator != ListSeparator.Undecided) list1.separator
-          else if (list2.separator != ListSeparator.Undecided) list2.separator
-          else ListSeparator.Space
+        if (args.length < 2)
+          throw SassScriptException("Missing arguments to join().")
+        val list1          = args(0)
+        val list2          = args(1)
+        val separatorParam = (if (args.length > 2) args(2) else autoStr).assertString("separator")
+        val bracketedParam = if (args.length > 3) args(3) else autoStr
+
+        val separator = separatorParam.text match {
+          case "auto" =>
+            (list1.separator, list2.separator) match {
+              case (ListSeparator.Undecided, ListSeparator.Undecided) => ListSeparator.Space
+              case (ListSeparator.Undecided, sep) => sep
+              case (sep, _)                       => sep
+            }
+          case "space" => ListSeparator.Space
+          case "comma" => ListSeparator.Comma
+          case "slash" => ListSeparator.Slash
+          case _       =>
+            throw SassScriptException(
+              """$separator: Must be "space", "comma", "slash", or "auto"."""
+            )
         }
-        val bracketed = brArg.getOrElse(list1.hasBrackets)
+
+        val bracketed = bracketedParam match {
+          case s: SassString if s.text == "auto" => list1.hasBrackets
+          case _                                 => bracketedParam.isTruthy
+        }
+
         SassList(list1.asList ::: list2.asList, separator, brackets = bracketed)
       }
     )
@@ -100,24 +122,33 @@ object ListFunctions {
       "append",
       "$list, $val, $separator: auto",
       { args =>
-        // `$separator` defaults to `auto`; built-in dispatch does not
-        // apply declared defaults, so guard the trailing access. Also
-        // guard the required `$val` arg so a missing second arg throws a
-        // proper SassScriptException rather than leaking an IOOBE (this
-        // is also hit via namespace fallbacks, e.g. `selector.append($s)`
-        // mis-resolving to the global `append`).
         if (args.isEmpty)
           throw SassScriptException("Missing argument $list.")
         if (args.length < 2)
           throw SassScriptException("Missing argument $val.")
-        val autoStr   = SassString("auto", hasQuotes = false)
-        val list      = args.head
-        val sepArg    = parseSeparator(if (args.length > 2) args(2) else autoStr, "separator")
-        val separator = sepArg.getOrElse {
-          if (list.separator != ListSeparator.Undecided) list.separator
-          else ListSeparator.Space
+        val list           = args(0)
+        val value          = args(1)
+        val separatorParam = (if (args.length > 2) args(2) else autoStr).assertString("separator")
+
+        val separator = separatorParam.text match {
+          case "auto" =>
+            if (list.separator == ListSeparator.Undecided) ListSeparator.Space
+            else list.separator
+          case "space" => ListSeparator.Space
+          case "comma" => ListSeparator.Comma
+          case "slash" => ListSeparator.Slash
+          case _       =>
+            throw SassScriptException(
+              """$separator: Must be "space", "comma", "slash", or "auto"."""
+            )
         }
-        SassList(list.asList :+ args(1), separator, brackets = list.hasBrackets)
+
+        // Use SassList directly (rather than withListContents) so the
+        // receiver may be a map or other list-coercible value, not just
+        // a SassList. dart-sass's `withListContents` requires a SassList
+        // receiver but the spec accepts maps via asList.
+        val newList = list.asList :+ value
+        SassList(newList, separator, brackets = list.hasBrackets)
       }
     )
 
@@ -126,16 +157,27 @@ object ListFunctions {
       "zip",
       "$lists...",
       { args =>
-        val raw   = if (args.length == 1) args.head.asList else args
-        val lists = raw.map(_.asList)
-        if (lists.isEmpty || lists.exists(_.isEmpty)) {
+        // ssg-sass's argument binder may pass the splat as a single
+        // SassArgumentList wrapping the call's positional args, OR as
+        // the positional args directly. Detect both shapes.
+        val raw: List[Value] =
+          if (args.isEmpty) Nil
+          else if (args.length == 1) args(0).asList
+          else args
+        val lists: List[List[Value]] = raw.map(_.asList)
+        if (lists.isEmpty) {
           SassList.empty(ListSeparator.Comma)
         } else {
-          val minLen = lists.map(_.length).min
-          val rows   = (0 until minLen).map { i =>
-            SassList(lists.map(_(i)), ListSeparator.Space)
-          }.toList
-          SassList(rows, ListSeparator.Comma)
+          var i         = 0
+          val results   = scala.collection.mutable.ListBuffer.empty[SassList]
+          var keepGoing = lists.forall(l => i != l.length)
+          while (keepGoing) {
+            val row = lists.map(l => l(i))
+            results += SassList(row, ListSeparator.Space)
+            i += 1
+            keepGoing = lists.forall(l => i != l.length)
+          }
+          SassList(results.toList, ListSeparator.Comma)
         }
       }
     )
@@ -145,43 +187,76 @@ object ListFunctions {
       "index",
       "$list, $value",
       { args =>
-        val list   = args.head.asList
-        val target = args(1)
-        val idx    = list.indexWhere(_ == target)
-        if (idx < 0) SassNull
+        val list  = args(0).asList
+        val value = args(1)
+        val idx   = list.indexOf(value)
+        if (idx == -1) SassNull
         else SassNumber((idx + 1).toDouble)
       }
     )
 
-  private val listSeparatorFn: BuiltInCallable =
+  private val separatorFn: BuiltInCallable =
     BuiltInCallable.function(
-      "list-separator",
+      "separator",
       "$list",
       { args =>
-        val sep = args.head.separator match {
+        val text = args(0).separator match {
           case ListSeparator.Comma => "comma"
           case ListSeparator.Slash => "slash"
           case _                   => "space"
         }
-        SassString(sep, hasQuotes = false)
+        SassString(text, hasQuotes = false)
       }
     )
 
   private val isBracketedFn: BuiltInCallable =
-    BuiltInCallable.function("is-bracketed", "$list", args => SassBoolean(args.head.hasBrackets))
+    BuiltInCallable.function(
+      "is-bracketed",
+      "$list",
+      args => SassBoolean(args(0).hasBrackets)
+    )
 
   private val slashFn: BuiltInCallable =
     BuiltInCallable.function(
       "slash",
       "$elements...",
       { args =>
-        val raw = if (args.length == 1) args.head.asList else args
-        if (raw.length < 2)
+        // Splat may be passed as either a single wrapper arg containing
+        // a list, or as the positional args directly. Detect both.
+        val list: List[Value] =
+          if (args.isEmpty) Nil
+          else if (args.length == 1) args(0).asList
+          else args
+        if (list.length < 2) {
           throw SassScriptException("At least two elements are required.")
-        SassList(raw, ListSeparator.Slash)
+        }
+        SassList(list, ListSeparator.Slash)
       }
     )
 
+  // ---------------------------------------------------------------------------
+  // Renamed copy for the global namespace.
+  // ---------------------------------------------------------------------------
+
+  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
+    new BuiltInCallable(
+      name = newName,
+      parameters = callable.parameters,
+      callback = callable.callback,
+      acceptsContent = callable.acceptsContent,
+      signature = callable.signature
+    )
+
+  private val listSeparatorFn: BuiltInCallable = withName(separatorFn, "list-separator")
+
+  // ---------------------------------------------------------------------------
+  // Public lists.
+  // ---------------------------------------------------------------------------
+
+  /** Globally available built-ins. Mirrors dart-sass `global`. Note `slash`
+    * and `separator` (under its bare name) are NOT in the global; only the
+    * `list-separator` alias is.
+    */
   val global: List[Callable] = List(
     lengthFn,
     nthFn,
@@ -190,9 +265,21 @@ object ListFunctions {
     appendFn,
     zipFn,
     indexFn,
-    listSeparatorFn,
-    isBracketedFn
+    isBracketedFn,
+    listSeparatorFn
   )
 
-  def module: List[Callable] = global :+ slashFn
+  /** Members of the `sass:list` module. Mirrors dart-sass `module`. */
+  def module: List[Callable] = List(
+    lengthFn,
+    nthFn,
+    setNthFn,
+    joinFn,
+    appendFn,
+    zipFn,
+    indexFn,
+    isBracketedFn,
+    separatorFn,
+    slashFn
+  )
 }

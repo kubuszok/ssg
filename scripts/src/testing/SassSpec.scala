@@ -30,20 +30,21 @@ object SassSpec {
     runSbt(Map("ssg.sass.spec.snapshot" -> "1"))
 
   /** Shared driver: runs sbt --client with the runner. System properties
-    * are passed via `set ThisBuild / Test / javaOptions += ...; testOnly`
-    * — `JAVA_TOOL_OPTIONS` does not work because the sbt server inherits
-    * its environment from when it was first started, not from each
-    * client invocation.
+    * are passed via `set ThisBuild / Test / javaOptions := List(...)` so
+    * each invocation REPLACES the prior set rather than accumulating it
+    * (using `+=` caused state from one ssg-dev invocation to leak into
+    * the next via the persistent sbt server). The ThisBuild scope only
+    * overrides at the build level; project-level javaOptions from
+    * build.sbt are unaffected.
     *
     * Multiple commands are joined with `;` so a single sbt --client call
     * sets the property and then runs the test.
     */
   private def runSbt(props: Map[String, String]): Outcome = {
-    val sets = props.toList.map { case (k, v) =>
-      s"""set ThisBuild / Test / javaOptions += "-D$k=$v""""
-    }
+    val propList = props.toList.map { case (k, v) => s"""\"-D$k=$v\"""" }.mkString(", ")
+    val setCmd = s"set ThisBuild / Test / javaOptions := List($propList)"
     val testCmd = "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    val cmd = (sets :+ testCmd).mkString("; ")
+    val cmd = s"$setCmd; $testCmd"
     val args = List("--client", cmd)
     val result = Proc.run("sbt", args, cwd = Some(Paths.projectRoot))
     val out = result.stdout + "\n" + result.stderr

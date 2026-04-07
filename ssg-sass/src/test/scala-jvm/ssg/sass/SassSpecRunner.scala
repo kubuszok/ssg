@@ -153,7 +153,18 @@ final class SassSpecRunner extends munit.FunSuite {
     // without asserting.  Used by `ssg-dev port snapshot`. Default target
     // is the tracked scripts/data/sass-spec-baseline.tsv (same path as
     // the regression-mode default), so the baseline lives in git.
+    //
+    // Snapshot is incompatible with --subdir: a partial run would
+    // overwrite the full-coverage baseline. Refuse the combination
+    // explicitly so a stale persistent property cannot corrupt the
+    // baseline file.
     if (snapshotMode) {
+      if (subdirFilter.isDefined)
+        fail(
+          s"sass-spec: --snapshot is not compatible with --subdir " +
+            s"(subdir filter is '${subdirFilter.get}'). " +
+            "Run snapshot without a subdir filter to capture the full pass set."
+        )
       val tracked = repoRoot.resolve("scripts").resolve("data").resolve("sass-spec-baseline.tsv")
       val target = baselinePath.map(Paths.get(_)).getOrElse(tracked)
       writeBaseline(target, results)
