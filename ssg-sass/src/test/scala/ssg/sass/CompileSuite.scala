@@ -1541,4 +1541,72 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString(src, OutputStyle.Compressed).css
     assertEquals(css, "a{color:red;}")
   }
+
+  // ---------------------------------------------------------------------------
+  // @for bounds validation (mirrors dart-sass visitForRule checks)
+  // ---------------------------------------------------------------------------
+
+  test("@for rejects a non-integer `from` bound") {
+    val src = "@for $i from 1.5 to 5 { a { x: $i; } }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("is not an int"),
+      s"expected 'is not an int' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@for rejects a non-integer `to` bound") {
+    val src = "@for $i from 1 to 5.5 { a { x: $i; } }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("is not an int"),
+      s"expected 'is not an int' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@for rejects incompatible units between `from` and `to`") {
+    val src = "@for $i from 1px to 5em { a { x: $i; } }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("incompatible units"),
+      s"expected 'incompatible units' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@for with matching px bounds succeeds and loop var carries the unit") {
+    val src = "@for $i from 1px to 3px { a { x: $i; } }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assert(css.contains("x:1px"), css)
+    assert(css.contains("x:2px"), css)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Special CSS functions (pass-through, not evaluated as Sass expressions)
+  // Mirrors dart-sass `_trySpecialFunction` in lib/src/parse/stylesheet.dart.
+  // ---------------------------------------------------------------------------
+
+  test("url() with an unquoted path is preserved verbatim") {
+    val css = Compile.compileString("a { background: url(/path/to/file.png); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{background:url(/path/to/file.png);}")
+  }
+
+  test("url() with a quoted argument is preserved verbatim") {
+    val css = Compile.compileString("""a { background: url("foo.png"); }""", OutputStyle.Compressed).css
+    assertEquals(css, """a{background:url("foo.png");}""")
+  }
+
+  test("element() is preserved verbatim as a special CSS function") {
+    val css = Compile.compileString("a { background: element(#mySelector); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{background:element(#mySelector);}")
+  }
+
+  test("-ms-element() is preserved verbatim as a vendor-prefixed special function") {
+    val css = Compile.compileString("a { background: -ms-element(#mySelector); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{background:-ms-element(#mySelector);}")
+  }
+
+  test("-webkit-image-set() with nested url() is preserved verbatim") {
+    val css = Compile.compileString("""a { cursor: -webkit-image-set(url("a.png") 1x); }""", OutputStyle.Compressed).css
+    assertEquals(css, """a{cursor:-webkit-image-set(url("a.png") 1x);}""")
+  }
 }

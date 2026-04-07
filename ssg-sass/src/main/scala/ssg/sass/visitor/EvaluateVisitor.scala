@@ -1056,25 +1056,27 @@ final class EvaluateVisitor(
     // must be integers, and must have compatible units. Unit mismatches are
     // detected by coercing `to` into `from`'s units and catching the
     // SassScriptException raised by `coerceValueToMatch`.
+    val fromName: Nullable[String] = Nullable("from")
+    val toName:   Nullable[String] = Nullable("to")
     val fromValue =
-      try node.from.accept(this).assertNumber("from")
+      try node.from.accept(this).assertNumber(fromName)
       catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
     val toValue   =
-      try node.to.accept(this).assertNumber("to")
+      try node.to.accept(this).assertNumber(toName)
       catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     val fromInt =
-      try fromValue.assertInt("from")
+      try fromValue.assertInt(fromName)
       catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
     val toInt   =
-      try toValue.assertInt("to")
+      try toValue.assertInt(toName)
       catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     // Check unit compatibility by coercing `to` to `from`'s units. This
     // throws a "have incompatible units" SassScriptException when they
     // don't match (unless one side is unitless, which is allowed).
     try {
-      val _ = toValue.coerceValueToMatch(fromValue, "to", "from")
+      val _ = toValue.coerceValueToMatch(fromValue, toName, fromName)
     } catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     val direction = if (fromInt > toInt) -1 else 1
