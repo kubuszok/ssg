@@ -106,12 +106,8 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
     case _ => false
   }
 
-  /** CSS representation of this string. For unquoted strings this is just the
-    * raw text. For quoted strings dart-sass prefers double quotes, falling
-    * back to single quotes when the text contains a double quote and no
-    * single quote (see `_visitQuotedString` in `serialize.dart`). Control
-    * characters are escaped with `\hh ` hex form; `\`, and the active quote
-    * char are backslash-escaped.
+  /** CSS representation of this string. For unquoted strings this is just the raw text. For quoted strings dart-sass prefers double quotes, falling back to single quotes when the text contains a
+    * double quote and no single quote (see `_visitQuotedString` in `serialize.dart`). Control characters are escaped with `\hh ` hex form; `\`, and the active quote char are backslash-escaped.
     */
   override def toCssString(quote: Boolean = true): String =
     if (!hasQuotes || !quote) text
@@ -125,15 +121,15 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
         else if (c == '\'') hasSingle = true
         i += 1
       }
-      val q = if (hasDouble && !hasSingle) '\'' else '"'
+      val q  = if (hasDouble && !hasSingle) '\'' else '"'
       val sb = new StringBuilder()
       sb.append(q)
       i = 0
       while (i < text.length) {
         val c = text.charAt(i)
         c match {
-          case '\\' => sb.append("\\\\")
-          case _ if c == q => sb.append('\\'); sb.append(c)
+          case '\\'                       => sb.append("\\\\")
+          case _ if c == q                => sb.append('\\'); sb.append(c)
           case _ if c < 0x20 || c == 0x7f =>
             // Hex escape with trailing space terminator (dart-sass uses
             // lowercase hex and a single trailing space to disambiguate

@@ -290,7 +290,12 @@ object SassSpecRunner {
   private def classifyError(e: Throwable): String = {
     val cls = e.getClass.getSimpleName
     val msg = Option(e.getMessage).getOrElse("")
-    if (cls.contains("SassException")) {
+    // SassFormatException / MultiSpanSassFormatException are parser errors with
+    // real spans and dart-sass-style messages — not leaks.
+    if (cls.contains("SassFormatException")) "parse-error"
+    else if (cls.contains("SassRuntimeException")) "evaluator-error"
+    else if (cls.contains("SassScriptException")) "script-error"
+    else if (e.isInstanceOf[SassException] || cls.contains("SassException")) {
       if (msg.contains("parse") || msg.contains("Parse") || msg.contains("expected")) "parse-error"
       else "evaluator-error"
     } else if (cls.contains("StackOverflow")) "stack-overflow"

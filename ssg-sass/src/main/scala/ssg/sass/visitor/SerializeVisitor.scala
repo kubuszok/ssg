@@ -309,8 +309,8 @@ final class SerializeVisitor(
     // dart-sass separates top-level siblings with a blank line in expanded mode
     // (i.e. the closing `}` of one rule is followed by `\n\n` before the next
     // rule starts). In compressed mode nothing is written between siblings.
-    val visible = node.children.filter(c => !isNodeInvisible(c))
-    var first   = true
+    val visible        = node.children.filter(c => !isNodeInvisible(c))
+    var first          = true
     var prevWasComment = false
     for (child <- visible) {
       if (!first) {

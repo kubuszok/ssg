@@ -62,13 +62,10 @@ class SassList(
   /** CSS representation of this list.
     *
     * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`):
-    *   - space-separated lists drop `null`/blank elements (matching
-    *     `_elementNeedsParens == false` + `isBlank` filter)
-    *   - comma-separated lists keep all elements; a single-element comma list
-    *     is rendered as `(x,)` to disambiguate from a paren-wrapped value
+    *   - space-separated lists drop `null`/blank elements (matching `_elementNeedsParens == false` + `isBlank` filter)
+    *   - comma-separated lists keep all elements; a single-element comma list is rendered as `(x,)` to disambiguate from a paren-wrapped value
     *   - bracketed lists wrap the content in `[...]`
-    *   - elements are emitted via `toCssString`, not `toString`, so nested
-    *     colors/strings/etc. round-trip correctly.
+    *   - elements are emitted via `toCssString`, not `toString`, so nested colors/strings/etc. round-trip correctly.
     */
   override def toCssString(quote: Boolean = true): String = {
     val elems =

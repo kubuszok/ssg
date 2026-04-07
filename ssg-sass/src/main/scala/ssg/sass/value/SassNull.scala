@@ -36,10 +36,8 @@ object SassNull extends Value {
 
   override def equals(other: Any): Boolean = other.asInstanceOf[AnyRef] eq this
 
-  /** dart-sass renders null as an empty string in `toCssString` (rendering is
-    * normally suppressed upstream but list/map serializers call this on
-    * elements). Scala's default `toString` for this singleton is "null" which
-    * leaks into CSS output via list serialization.
+  /** dart-sass renders null as an empty string in `toCssString` (rendering is normally suppressed upstream but list/map serializers call this on elements). Scala's default `toString` for this
+    * singleton is "null" which leaks into CSS output via list serialization.
     */
   override def toCssString(quote: Boolean = true): String = ""
 
