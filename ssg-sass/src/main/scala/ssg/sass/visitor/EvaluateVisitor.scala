@@ -1616,7 +1616,7 @@ final class EvaluateVisitor(
               val publicEnv = moduleEnv.publicView()
               if (node.namespace.isDefined) {
                 node.namespace.foreach { ns =>
-                  _environment.addNamespace(ns, publicEnv)
+                  _environment.addModule(EnvironmentModule(publicEnv), node, Nullable(ns))
                 }
               } else {
                 // Flat (`as *`) — route the module through the new
