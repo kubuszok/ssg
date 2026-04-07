@@ -35,6 +35,8 @@ object Main {
         testing.TestCmd.run(rest)
       case "compare" :: rest =>
         compare.CompareCmd.run(rest)
+      case "port" :: rest =>
+        port.PortCmd.run(rest)
       case "proc" :: rest =>
         proc.ProcCmd.run(rest)
       case unknown :: _ =>
@@ -57,6 +59,7 @@ object Main {
                |  quality    Quality scans (grep, count, scalafix)
                |  test       Test orchestration (unit, verify)
                |  compare    Original/SSG file comparison
+               |  port       Covenant verification + skip policy (anti-cheat gate)
                |  proc       Process listing and killing (project-scoped)
                |
                |Options:
