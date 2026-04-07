@@ -887,6 +887,17 @@ abstract class StylesheetParser protected (
                 buf.append(scanner.readChar().toChar)
               } else if (dep == 0 && ch == CharCode.$lbrace) {
                 break(())
+              } else if (ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+                // /* loud comment */ — skip without buffering.
+                scanner.readChar(); scanner.readChar()
+                while (
+                  !scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash)
+                ) { scanner.readChar() }
+                if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
+              } else if (ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+                // // silent comment — skip to end of line.
+                while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
+                  scanner.readChar()
               } else if (
                 dep == 0 && CharCode.isAlphabetic(ch) &&
                 (buf.isEmpty || !CharCode.isName(buf.charAt(buf.length - 1).toInt))
