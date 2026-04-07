@@ -23,6 +23,7 @@ object CompareCmd {
       case "find" :: rest => find(Cli.parse(rest))
       case "status" :: rest => status(Cli.parse(rest))
       case "next-batch" :: rest => nextBatch(Cli.parse(rest))
+      case "strict" :: rest => strict(Cli.parse(rest))
       case other :: _ =>
         Term.err(s"Unknown compare command: $other")
         sys.exit(1)
@@ -39,6 +40,54 @@ object CompareCmd {
       println(s"  Module: ${libToModule.getOrElse(lib, "?")}")
     } else {
       Term.err(s"File not found: $fullPath")
+    }
+  }
+
+  /** Cross-source method/constructor comparison.
+    *
+    * `ssg-dev compare strict --ssg <ssg-file> --source <original-file>`
+    *
+    * Runs Methods.strictCompare and reports:
+    *   - missing methods (present in source, absent from Scala)
+    *   - shortBody methods (Scala body < 70% of source AST node count)
+    *   - droppedCtorArgs (constructor params present in source, absent from Scala)
+    *
+    * Exits non-zero if any of the three buckets is non-empty.
+    */
+  private def strict(args: Cli.Args): Unit = {
+    val ssgFile = args.flag("ssg").getOrElse {
+      Term.err("Usage: ssg-dev compare strict --ssg <ssg-file> --source <original-file>")
+      sys.exit(1)
+    }
+    val sourceFile = args.flag("source").getOrElse {
+      Term.err("Usage: ssg-dev compare strict --ssg <ssg-file> --source <original-file>")
+      sys.exit(1)
+    }
+    val absSsg = if (ssgFile.startsWith("/")) ssgFile else s"${Paths.projectRoot}/$ssgFile"
+    val absSrc = if (sourceFile.startsWith("/")) sourceFile else s"${Paths.projectRoot}/$sourceFile"
+    if (!new File(absSsg).exists()) { Term.err(s"SSG file not found: $absSsg"); sys.exit(1) }
+    if (!new File(absSrc).exists()) { Term.err(s"Source file not found: $absSrc"); sys.exit(1) }
+
+    val gap = Methods.strictCompare(absSsg, absSrc)
+    println(s"SSG:    $ssgFile")
+    println(s"Source: $sourceFile\n")
+    if (gap.missing.nonEmpty) {
+      println(s"=== Missing methods (${gap.missing.size}) ===")
+      gap.missing.foreach(m => println(s"  $m"))
+    }
+    if (gap.shortBody.nonEmpty) {
+      println(s"\n=== shortBody methods — Scala body < 70% of source (${gap.shortBody.size}) ===")
+      gap.shortBody.foreach(m => println(s"  $m"))
+    }
+    if (gap.droppedCtorArgs.nonEmpty) {
+      println(s"\n=== Dropped constructor args (${gap.droppedCtorArgs.size}) ===")
+      gap.droppedCtorArgs.foreach { case (cls, p) => println(s"  $cls.$p") }
+    }
+    if (gap.missing.isEmpty && gap.shortBody.isEmpty && gap.droppedCtorArgs.isEmpty) {
+      println("OK — no method, body, or constructor gaps")
+    } else {
+      println(s"\nFAIL — ${gap.missing.size} missing, ${gap.shortBody.size} short bodies, ${gap.droppedCtorArgs.size} dropped ctor args")
+      sys.exit(1)
     }
   }
 
@@ -177,6 +226,10 @@ object CompareCmd {
               |  find <pattern> [--lib L]      Find files in source trees
               |  status [--lib L] [--module M] Porting status from migration db
               |  next-batch [-n N] [--lib L]   Suggest next files to port
+              |  strict --ssg <ssg-file> --source <original-file>
+              |    Phase 2 strict gap check: missing methods, shortBody (Scala
+              |    body < 70% of original AST node count), and dropped constructor
+              |    args. Exits non-zero on any gap.
               |
               |Libraries: flexmark, liqp, dart-sass, jekyll-minifier""".stripMargin)
   }

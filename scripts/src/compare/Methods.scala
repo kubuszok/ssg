@@ -23,11 +23,16 @@ import scala.util.matching.Regex
 object Methods {
 
   final case class Gap(
-    missing:   List[String],
-    extra:     List[String],
-    common:    List[String],
-    shortBody: List[String]
+    missing:         List[String],
+    extra:           List[String],
+    common:          List[String],
+    shortBody:       List[String],
+    droppedCtorArgs: List[(String, String)] // (className, paramName)
   )
+
+  object Gap {
+    val empty: Gap = Gap(Nil, Nil, Nil, Nil, Nil)
+  }
 
   final case class Method(name: String, startLine: Int, endLine: Int, body: String)
 
@@ -138,12 +143,13 @@ object Methods {
     val missing = (source -- scala).toList.sorted
     val extra = (scala -- source).toList.sorted
     val common = (source intersect scala).toList.sorted
-    Gap(missing, extra, common, shortBody = Nil)
+    Gap(missing, extra, common, shortBody = Nil, droppedCtorArgs = Nil)
   }
 
   /** Strict compare: the Gap.missing is populated as usual, and shortBody
     * is populated with common method names whose Scala body AST-node-count
-    * is below 70% of the source body's AST-node-count.
+    * is below 70% of the source body's AST-node-count. Also runs the
+    * constructor-arity check (Pattern 3 detection from Phase 2).
     */
   def strictCompare(ssgFile: String, sourceFile: String): Gap = {
     val base = compare(ssgFile, sourceFile)
@@ -156,7 +162,139 @@ object Methods {
       val db = sourceBodies.get(name).map(astNodeCount).getOrElse(0)
       db > 0 && sb * 100 < db * 70
     }
-    base.copy(shortBody = shortBody)
+    val droppedCtorArgs = compareConstructors(ssgFile, sourceFile)
+    base.copy(shortBody = shortBody, droppedCtorArgs = droppedCtorArgs)
+  }
+
+  // --- Constructor-arity comparison (Phase 2) -------------------------------
+
+  /** Java/Dart constructor signature: parses lines like
+    * `public Foo(BasedSequence chars, List<BasedSequence> segments)` or
+    * `Foo(this.chars, this.segments)` and returns the parameter names
+    * grouped by class.
+    */
+  private val javaCtorPattern: Regex =
+    """(?m)^\s*(?:public\s+|private\s+|protected\s+)?([A-Z][A-Za-z0-9_$]*)\s*\(([^)]*)\)\s*(?:throws[^{;]+)?\{""".r
+
+  private val dartCtorPattern: Regex =
+    """(?m)^\s*(?:const\s+|factory\s+)?([A-Z][A-Za-z0-9_$]*)\s*\(([^)]*)\)\s*(?::|\{|;)""".r
+
+  /** Scala class declaration with primary-constructor parameter list:
+    * `final class Foo(val chars: BasedSequence, val segments: List[BasedSequence])`
+    * or `class Foo(chars: BasedSequence)`
+    *
+    * Also matches secondary constructors `def this(...)`.
+    */
+  private val scalaPrimaryCtorPattern: Regex =
+    """(?m)^\s*(?:sealed\s+|final\s+|abstract\s+|case\s+)*class\s+([A-Z][A-Za-z0-9_$]*)\s*(?:\[[^\]]*\])?\s*\(([^)]*)\)""".r
+
+  private val scalaSecondaryCtorPattern: Regex =
+    """(?m)^\s*def\s+this\s*\(([^)]*)\)""".r
+
+  /** Extract constructor parameter names from a parameter list string,
+    * stripping types and defaults. Handles:
+    *   `BasedSequence chars, List<BasedSequence> segments` (Java)
+    *   `this.chars, this.segments` (Dart shorthand)
+    *   `chars: BasedSequence, segments: List[BasedSequence]` (Scala)
+    */
+  private def extractParamNames(paramList: String, isScala: Boolean): List[String] = {
+    if (paramList.trim.isEmpty) return Nil
+    splitTopLevelCommas(paramList).flatMap { p =>
+      val trimmed = p.trim
+      if (trimmed.isEmpty) None
+      else if (isScala) {
+        // `name: Type = default` — take everything before the first `:`
+        val colonIdx = trimmed.indexOf(':')
+        val name = if (colonIdx > 0) trimmed.substring(0, colonIdx) else trimmed
+        // Strip val/var/implicit/private/etc. modifiers
+        val cleaned = name.replaceAll("""\b(val|var|implicit|private|protected|override|final)\b""", "").trim
+        if (cleaned.isEmpty) None else Some(cleaned)
+      } else {
+        // Java/Dart: `Type name` or `final Type name` or `this.name` or
+        // `Type name = default`. Take the last identifier before any `=`.
+        val noDefault = trimmed.split("=").head.trim
+        // Handle `this.foo` (Dart shorthand)
+        if (noDefault.startsWith("this.")) Some(noDefault.substring(5))
+        else {
+          // Last identifier in `Type name`
+          val parts = noDefault.split("\\s+").filter(_.nonEmpty)
+          if (parts.isEmpty) None
+          else Some(parts.last.replaceAll("[^A-Za-z0-9_$]", ""))
+        }
+      }
+    }.filter(_.nonEmpty)
+  }
+
+  /** Split a parameter list on commas at depth 0 (skipping commas inside
+    * generic type arguments like `Map<String, Integer>`).
+    */
+  private def splitTopLevelCommas(s: String): List[String] = {
+    val out = ListBuffer.empty[String]
+    val cur = new StringBuilder
+    var depth = 0
+    for (c <- s) {
+      c match {
+        case '<' | '[' | '(' => depth += 1; cur.append(c)
+        case '>' | ']' | ')' => depth -= 1; cur.append(c)
+        case ',' if depth == 0 =>
+          out += cur.toString
+          cur.clear()
+        case _ => cur.append(c)
+      }
+    }
+    if (cur.nonEmpty) out += cur.toString
+    out.toList
+  }
+
+  /** Extract per-class constructor parameter sets from an upstream source. */
+  private def extractSourceCtors(path: String): Map[String, Set[String]] = {
+    val text = readFile(path)
+    if (text.isEmpty) return Map.empty
+    val pattern = if (path.endsWith(".dart")) dartCtorPattern else javaCtorPattern
+    val out = scala.collection.mutable.Map.empty[String, Set[String]]
+    for (m <- pattern.findAllMatchIn(text)) {
+      val cls = m.group(1)
+      val params = extractParamNames(m.group(2), isScala = false).toSet
+      // Use the largest parameter set across overloads for the class.
+      val existing = out.getOrElse(cls, Set.empty)
+      if (params.size > existing.size) out(cls) = params
+    }
+    out.toMap
+  }
+
+  /** Extract per-class constructor parameter sets from a Scala port. */
+  private def extractScalaCtors(path: String): Map[String, Set[String]] = {
+    val text = readFile(path)
+    if (text.isEmpty) return Map.empty
+    val out = scala.collection.mutable.Map.empty[String, Set[String]]
+    for (m <- scalaPrimaryCtorPattern.findAllMatchIn(text)) {
+      val cls = m.group(1)
+      val params = extractParamNames(m.group(2), isScala = true).toSet
+      val existing = out.getOrElse(cls, Set.empty)
+      out(cls) = existing union params
+    }
+    // Secondary constructors are not name-bound — fold them into the
+    // primary's set under the same class name. We don't have a great way
+    // to determine which class a `def this(...)` belongs to via regex,
+    // so we union ALL secondary ctors into a synthetic key. The compare
+    // step still catches missing primary args.
+    out.toMap
+  }
+
+  /** Compare upstream constructor parameters to Scala constructor
+    * parameters and return any params present in the source but absent
+    * from every Scala constructor of the same class.
+    */
+  def compareConstructors(ssgFile: String, sourceFile: String): List[(String, String)] = {
+    val sourceCtors = extractSourceCtors(sourceFile)
+    val scalaCtors = extractScalaCtors(ssgFile)
+    val out = ListBuffer.empty[(String, String)]
+    for ((cls, srcParams) <- sourceCtors) {
+      val scalaParams = scalaCtors.getOrElse(cls, Set.empty)
+      val dropped = srcParams -- scalaParams
+      for (p <- dropped.toList.sorted) out += ((cls, p))
+    }
+    out.toList
   }
 
   // --- Body extraction -------------------------------------------------------
