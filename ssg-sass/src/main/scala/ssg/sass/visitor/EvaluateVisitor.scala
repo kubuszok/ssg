@@ -2100,8 +2100,8 @@ final class EvaluateVisitor(
       }
     }
 
-  /** Binds the supplied positional and named argument values to the declared parameters, applying defaults for any missing trailing parameters. Does not yet handle rest parameters, keyword rest, or
-    * error reporting for extras.
+  /** Binds the supplied positional and named argument values to the declared parameters, applying defaults for any missing trailing parameters. Validates argument counts and names against
+    * the declaration, mirroring dart-sass `ParameterList.verify` in `lib/src/ast/sass/parameter_list.dart`.
     */
   private def _bindParameters(
     declared:   ssg.sass.ast.sass.ParameterList,
@@ -2109,7 +2109,51 @@ final class EvaluateVisitor(
     named:      ListMap[String, Value]
   ): Unit = {
     val params = declared.parameters
-    var i      = 0
+    // --- Validation (port of dart-sass ParameterList.verify) ------------
+    // 1. For each parameter consumed positionally, reject an overlap with
+    //    a named argument of the same name.
+    // 2. For each parameter not consumed positionally, either it's named,
+    //    or it has a default value — otherwise "Missing argument $foo".
+    // 3. If there's no rest parameter and positional > params.length,
+    //    "Only N [positional] arguments allowed, but M [was|were] passed."
+    // 4. If there's no kwargs-rest parameter and any named arg doesn't
+    //    correspond to a declared parameter, "No parameter named $foo."
+    var namedUsed = 0
+    var i0        = 0
+    while (i0 < params.length) {
+      val parameter = params(i0)
+      if (i0 < positional.length) {
+        if (named.contains(parameter.name))
+          throw SassScriptException(
+            s"Argument $$${parameter.name} was passed both by position and by name."
+          )
+      } else if (named.contains(parameter.name)) {
+        namedUsed += 1
+      } else if (parameter.defaultValue.isEmpty) {
+        throw SassScriptException(s"Missing argument $$${parameter.name}.")
+      }
+      i0 += 1
+    }
+    if (declared.restParameter.isEmpty) {
+      if (positional.length > params.length) {
+        val nParams = params.length
+        val nPass   = positional.length
+        val argWord = if (nParams == 1) "argument" else "arguments"
+        val posWord = if (named.isEmpty) "" else "positional "
+        val wasWord = if (nPass == 1) "was" else "were"
+        throw SassScriptException(
+          s"Only $nParams $posWord${argWord} allowed, but $nPass $wasWord passed."
+        )
+      }
+      if (declared.keywordRestParameter.isEmpty && namedUsed < named.size) {
+        val declaredNames = params.iterator.map(_.name).toSet
+        val unknown       = named.keysIterator.filter(k => !declaredNames.contains(k)).toList
+        val word          = if (unknown.length == 1) "parameter" else "parameters"
+        val list          = unknown.map(n => s"$$$n").mkString(" or ")
+        throw SassScriptException(s"No $word named $list.")
+      }
+    }
+    var i = 0
     while (i < params.length) {
       val param = params(i)
       val value: Value =
@@ -2119,8 +2163,7 @@ final class EvaluateVisitor(
             case Some(v)    => v
             case scala.None =>
               param.defaultValue.fold[Value] {
-                // Missing argument — bind to null for now. A full port would
-                // throw a "Missing argument" SassScriptException here.
+                // Validation above guarantees a default exists here.
                 SassNull
               }(_.accept(this))
           }

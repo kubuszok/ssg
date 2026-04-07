@@ -1693,6 +1693,64 @@ final class CompileSuite extends munit.FunSuite {
     assert(css.contains("d:1 2 3 4") || css.contains("d:1, 2, 3, 4"), css)
   }
 
+  // ---------------------------------------------------------------------------
+  // _bindParameters validation (port of dart-sass ParameterList.verify)
+  // ---------------------------------------------------------------------------
+
+  test("@function with extra positional arguments throws Only N arguments allowed") {
+    val src = "@function f($a, $b) { @return $a + $b; } a { x: f(1, 2, 3); }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("Only 2") && e.getMessage.contains("arguments allowed"),
+      s"expected 'Only 2 arguments allowed' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@function with unknown named argument throws No parameter named $foo") {
+    val src = "@function f($a) { @return $a; } a { x: f(1, $bogus: 2); }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("No parameter named $bogus"),
+      s"expected 'No parameter named $$bogus' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@function argument passed both by position and by name throws") {
+    val src = "@function f($a) { @return $a; } a { x: f(1, $a: 2); }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("was passed both by position and by name"),
+      s"expected 'passed both by position and by name' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@function with missing required argument throws Missing argument") {
+    val src = "@function f($a, $b) { @return $a; } a { x: f(1); }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("Missing argument $b"),
+      s"expected 'Missing argument $$b' error, got: ${e.getMessage}"
+    )
+  }
+
+  test("kwargs-rest with non-map argument throws") {
+    // Splatting a non-map as `$kwargs...` is a Sass error: kwargs must be a map.
+    val src = "@function f($a) { @return $a; } a { x: f((1, 2, 3)...); }"
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.nonEmpty,
+      s"expected an error for kwargs-rest non-map, got: ${e.getMessage}"
+    )
+  }
+
+  test("rest splat of non-list non-arglist passes through as single positional arg") {
+    // dart-sass treats bare scalars splatted as a single-positional arg.
+    // With rigorous validation: `f(...)` expects 1 positional; passing 1 scalar is fine.
+    val src = "@function f($a) { @return $a; } a { x: f(42...); }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assert(css.contains("x:42"), css)
+  }
+
   test("rest splat followed by kwargs-rest map does not throw") {
     // Regression for sass-spec values/numbers/divide/slash_free/argument.hrx
     // !function/rest/kwargs — previously raised IndexOutOfBoundsException when
