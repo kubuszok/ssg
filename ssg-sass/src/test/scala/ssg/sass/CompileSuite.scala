@@ -1529,7 +1529,7 @@ final class CompileSuite extends munit.FunSuite {
       """@use "sass:meta";
         |a { args: meta.calc-args(min(100%, 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{args:100%, 2px;}")
+    assertEquals(css, "a{args:100%,2px;}")
   }
 
   test("meta.accepts-content returns true for a mixin with @content") {
