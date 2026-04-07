@@ -327,7 +327,7 @@ final class EvaluateVisitor(
         val merged =
           if (named.isEmpty) positional
           else _mergeBuiltInNamedArgs(bic, positional, named)
-        bic.callback(merged)
+        bic.callback(_padBuiltInPositional(bic, merged))
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case fr: ssg.sass.ast.sass.FunctionRule =>
@@ -438,7 +438,7 @@ final class EvaluateVisitor(
             val merged              =
               if (named.isEmpty) positional
               else _mergeBuiltInNamedArgs(bic, positional, named)
-            bic.callback(merged)
+            bic.callback(_padBuiltInPositional(bic, merged))
           case ud: UserDefinedCallable[?] =>
             ud.declaration match {
               case fr: FunctionRule =>
@@ -2151,6 +2151,35 @@ final class EvaluateVisitor(
         (ssg.sass.value.SassString(k, hasQuotes = false): ssg.sass.value.Value) -> v
       }.toList
       _environment.setVariable(kwName, ssg.sass.value.SassMap(ListMap.from(entries)))
+    }
+  }
+
+  /** Pads the positional argument list for a [[BuiltInCallable]] with defaults parsed from its declared signature. For each declared parameter beyond `positional.size`, looks up the raw default
+    * expression text, parses it via [[ssg.sass.parse.ScssParser]] and evaluates it in the current environment. Stops at the first parameter without a default (which becomes a required arg whose
+    * absence is surfaced by the callback itself). Eliminates a large class of index-out-of-bounds bugs in hand-written built-ins that declare defaults like `"$start-at, $end-at: -1"`.
+    */
+  private def _padBuiltInPositional(bic: BuiltInCallable, positional: List[Value]): List[Value] = {
+    val defaults = bic.parameterDefaults
+    if (defaults.isEmpty || positional.length >= defaults.length) positional
+    else {
+      val buf = scala.collection.mutable.ListBuffer.from(positional)
+      var i   = positional.length
+      scala.util.boundary[Unit] {
+        while (i < defaults.length) {
+          defaults(i) match {
+            case Some(text) =>
+              try {
+                val (expr, _) = new ssg.sass.parse.ScssParser(text).parseExpression()
+                buf += expr.accept(this)
+              } catch {
+                case _: Throwable => scala.util.boundary.break(())
+              }
+            case scala.None => scala.util.boundary.break(())
+          }
+          i += 1
+        }
+      }
+      buf.toList
     }
   }
 

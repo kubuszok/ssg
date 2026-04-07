@@ -1661,4 +1661,12 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString("@function my-fn() { @return 1; } a { x: my-fn(); }", OutputStyle.Compressed).css
     assertEquals(css, "a{x:1;}")
   }
+
+  test("built-in with signature default is padded when positional args are short") {
+    // Regression: `str-slice` declares `$string, $start-at, $end-at: -1`.
+    // Calling with only two positional args must apply the default expression
+    // `-1` from the signature instead of reading past the end of `args`.
+    val css = Compile.compileString("a { x: str-slice(\"hello\", 2); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{x:\"ello\";}")
+  }
 }

@@ -43,10 +43,11 @@ final class BuiltInCallable(
   val signature:      String = ""
 ) extends Callable {
 
-  /** Positional parameter names derived from the textual [[signature]] (e.g. `"$color, $amount"` → `List("color", "amount")`). Underscores are normalized to hyphens to match Sass name conventions.
-    * Rest parameters (`$args...`) and trailing defaults are ignored — only the leading name is extracted. Returns an empty list when the signature is a rest-only form such as `"$args..."`.
+  /** Positional parameter names and their optional default-expression text, derived from the textual [[signature]] (e.g. `"$color, $amount: 1"` → `List(("color", None), ("amount", Some("1")))`).
+    * Underscores are normalized to hyphens to match Sass name conventions. Rest parameters (`$args...`) are ignored here. Returns an empty list when the signature is a rest-only form such as
+    * `"$args..."`.
     */
-  lazy val parameterNames: List[String] = {
+  lazy val parameterEntries: List[(String, Option[String])] = {
     val trimmed = signature.trim
     if (trimmed.isEmpty) Nil
     else {
@@ -66,18 +67,24 @@ final class BuiltInCallable(
       }
       if (buf.nonEmpty) parts += buf.toString().trim
       parts.toList.flatMap { raw =>
-        // Strip default value: `$x: expr`
-        val noDefault = raw.indexOf(':') match {
-          case -1  => raw
-          case idx => raw.substring(0, idx).trim
+        // Split default value: `$x: expr`
+        val (nameRaw, defaultOpt) = raw.indexOf(':') match {
+          case -1  => (raw, None)
+          case idx => (raw.substring(0, idx).trim, Some(raw.substring(idx + 1).trim))
         }
         // Skip rest parameters `$args...` — they don't bind a fixed name.
-        if (noDefault.endsWith("...")) None
-        else if (noDefault.startsWith("$")) Some(noDefault.substring(1).replace('_', '-'))
+        if (nameRaw.endsWith("...")) None
+        else if (nameRaw.startsWith("$")) Some((nameRaw.substring(1).replace('_', '-'), defaultOpt))
         else None
       }
     }
   }
+
+  /** Positional parameter names. */
+  lazy val parameterNames: List[String] = parameterEntries.map(_._1)
+
+  /** Raw default-expression text for each declared parameter (None if required). */
+  lazy val parameterDefaults: List[Option[String]] = parameterEntries.map(_._2)
 
   override def toString: String = s"BuiltInCallable($name)"
 }
