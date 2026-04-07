@@ -7,8 +7,7 @@ package sass
 
 import ssg.sass.value.{ SassNumber, SassString, Value }
 
-/** Exercises the [[EnvironmentModule]] adapter wrapping an [[Environment]]
-  * as a [[Module]] `[Callable]`.
+/** Exercises the [[EnvironmentModule]] adapter wrapping an [[Environment]] as a [[Module]] `[Callable]`.
   */
 final class EnvironmentModuleSuite extends munit.FunSuite {
 
@@ -33,7 +32,7 @@ final class EnvironmentModuleSuite extends munit.FunSuite {
     env.setMixin(mx)
     val mod = EnvironmentModule(env)
     assertEquals(mod.functions("f"), fn: Callable)
-    assertEquals(mod.mixins("m"), mx: Callable)
+    assertEquals(mod.mixins("m"), mx:    Callable)
     assert(mod.functionIdentities.contains("f"))
     assert(mod.mixinIdentities.contains("m"))
   }

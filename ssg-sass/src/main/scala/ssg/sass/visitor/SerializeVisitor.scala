@@ -340,20 +340,15 @@ final class SerializeVisitor(
   }
 
   private def formatMap(m: SassMap): String = {
-    val sep = if (isCompressed) "," else ", "
-    val entries = m.contents
-      .map { case (k, v) => s"${formatValue(k)}:${if (isCompressed) "" else " "}${formatValue(v)}" }
-      .mkString(sep)
+    val sep     = if (isCompressed) "," else ", "
+    val entries = m.contents.map { case (k, v) => s"${formatValue(k)}:${if (isCompressed) "" else " "}${formatValue(v)}" }.mkString(sep)
     s"($entries)"
   }
 
   /** Formats a SassNumber for CSS output.
     *
-    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart):
-    * the numeric portion is written via [[writeNumberTo]] (the faithful port
-    * of `_writeNumber`), then the single numerator unit — if any — is
-    * appended. Complex units and non-finite values fall back to the existing
-    * `SassNumber.toCssString()` which wraps them in `calc(...)`.
+    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart): the numeric portion is written via [[writeNumberTo]] (the faithful port of `_writeNumber`), then the single numerator unit
+    * — if any — is appended. Complex units and non-finite values fall back to the existing `SassNumber.toCssString()` which wraps them in `calc(...)`.
     */
   private def formatSassNumber(n: SassNumber): String = {
     if (!n.value.isFinite) return n.toCssString()
@@ -364,14 +359,10 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes `number` to `sb` without exponent notation and with at most
-    * `SassNumber.precision` digits after the decimal point.
+  /** Writes `number` to `sb` without exponent notation and with at most `SassNumber.precision` digits after the decimal point.
     *
-    * Ported from dart-sass `_writeNumber` / `_removeExponent` / `_writeRounded`
-    * in lib/src/visitor/serialize.dart. In compressed mode, strips the leading
-    * `0` from values like `0.5` -> `.5` (and `-0.5` -> `-.5`). Emits integers
-    * without a trailing `.0`. Suppresses the minus sign when a negative value
-    * rounds to exactly zero.
+    * Ported from dart-sass `_writeNumber` / `_removeExponent` / `_writeRounded` in lib/src/visitor/serialize.dart. In compressed mode, strips the leading `0` from values like `0.5` -> `.5` (and
+    * `-0.5` -> `-.5`). Emits integers without a trailing `.0`. Suppresses the minus sign when a negative value rounds to exactly zero.
     */
   private[visitor] def writeNumberTo(sb: StringBuilder, number: Double): Unit = {
     // Clamp doubles that are fuzzy-equal to an integer to their integer value.
@@ -402,9 +393,7 @@ final class SerializeVisitor(
     writeRounded(sb, text)
   }
 
-  /** Rounds `text` (a number written without exponent notation) to
-    * [[SassNumber.precision]] digits after the decimal point and writes the
-    * result to `sb`. Direct port of dart-sass `_writeRounded`.
+  /** Rounds `text` (a number written without exponent notation) to [[SassNumber.precision]] digits after the decimal point and writes the result to `sb`. Direct port of dart-sass `_writeRounded`.
     */
   private def writeRounded(sb: StringBuilder, text: String): Unit = {
     // Dart serializes doubles with a trailing `.0` for integer values; since
@@ -589,7 +578,7 @@ final class SerializeVisitor(
   // complex selectors are joined with a bare `,`.
   // ---------------------------------------------------------------------------
   private def formatSelectorList(list: SelectorList): String = {
-    val sb = new StringBuilder()
+    val sb    = new StringBuilder()
     var first = true
     for (complex <- list.components) {
       if (!first) {
@@ -636,13 +625,12 @@ final class SerializeVisitor(
     while (compIdx < comps.length) {
       val component = comps(compIdx)
       sb.append(component.selector.toString)
-      for (comb <- component.combinators) {
+      for (comb <- component.combinators)
         if (isCompressed) sb.append(comb.value.text)
         else {
           sb.append(' ')
           sb.append(comb.value.text)
         }
-      }
       if (compIdx < comps.length - 1) {
         // Descendant combinator (implicit) or space after an explicit
         // combinator emitted above. In expanded mode we always want a
@@ -737,10 +725,8 @@ object SerializeVisitor {
 
   /** Renders `number` in the way dart-sass does before [[removeExponent]] runs.
     *
-    * Dart's `double.toString` yields `1.0`, `-3.14`, `1e+21`, etc. JVM/JS/Native
-    * `Double.toString` is very close but varies slightly on each platform — we
-    * normalise to the format the port expects (lowercase `e`, trailing `.0`
-    * stripped for integer-valued doubles so [[removeExponent]] can round-trip).
+    * Dart's `double.toString` yields `1.0`, `-3.14`, `1e+21`, etc. JVM/JS/Native `Double.toString` is very close but varies slightly on each platform — we normalise to the format the port expects
+    * (lowercase `e`, trailing `.0` stripped for integer-valued doubles so [[removeExponent]] can round-trip).
     */
   def doubleToString(number: Double): String = {
     val raw = java.lang.Double.toString(number)
@@ -758,8 +744,7 @@ object SerializeVisitor {
     s
   }
 
-  /** If `text` uses exponent notation, returns an equivalent non-exponent
-    * representation. Otherwise returns `text`.
+  /** If `text` uses exponent notation, returns an equivalent non-exponent representation. Otherwise returns `text`.
     *
     * Port of dart-sass `_removeExponent` in serialize.dart.
     */
@@ -794,7 +779,7 @@ object SerializeVisitor {
     if (exponent > 0) {
       // Append `exponent - (significantDigitsAfterFirst)` zeros.
       val additionalZeroes = exponent - (digits.length - 1 - (if (negative) 1 else 0))
-      var k = 0
+      var k                = 0
       while (k < additionalZeroes) { digits.append('0'); k += 1 }
       digits.toString()
     } else {

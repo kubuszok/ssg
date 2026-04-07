@@ -149,13 +149,13 @@ final class SerializeVisitorSuite extends munit.FunSuite {
       span,
       parsedAsSassScript = true
     )
-    val rule = styleRule("a", List(decl))
+    val rule  = styleRule("a", List(decl))
     val sheet = stylesheet(List(rule))
-    val css = v.serialize(sheet).css
+    val css   = v.serialize(sheet).css
     // Extract between "x:" and ";"
     val start = css.indexOf("x:") + 2
-    val end = css.indexOf(';', start)
-    val raw = css.substring(start, end).trim
+    val end   = css.indexOf(';', start)
+    val raw   = css.substring(start, end).trim
     raw
   }
 

@@ -23,14 +23,13 @@ import ssg.sass.value.Value
 
 /** A [[Module]] backed by an [[Environment]].
   *
-  * Delegates variable/function/mixin lookups to the wrapped [[Environment]],
-  * so modifications flow through to the underlying environment.
+  * Delegates variable/function/mixin lookups to the wrapped [[Environment]], so modifications flow through to the underlying environment.
   */
 final class EnvironmentModule(
-  val env:             Environment,
-  val url:             Nullable[String],
-  val css:             CssStylesheet,
-  val extensionStore:  ExtensionStore,
+  val env:                            Environment,
+  val url:                            Nullable[String],
+  val css:                            CssStylesheet,
+  val extensionStore:                 ExtensionStore,
   val transitivelyContainsCss:        Boolean = false,
   val transitivelyContainsExtensions: Boolean = false
 ) extends Module[Callable] {
@@ -64,10 +63,10 @@ object EnvironmentModule {
     extensionStore: Nullable[ExtensionStore] = Nullable.empty
   ): EnvironmentModule =
     new EnvironmentModule(
-      env             = env,
-      url             = url,
-      css             = css.getOrElse(CssStylesheet.empty(url)),
-      extensionStore  = extensionStore.getOrElse(ExtensionStore.empty)
+      env = env,
+      url = url,
+      css = css.getOrElse(CssStylesheet.empty(url)),
+      extensionStore = extensionStore.getOrElse(ExtensionStore.empty)
     )
 
   /** Creates an empty module backed by a fresh built-in [[Environment]]. */

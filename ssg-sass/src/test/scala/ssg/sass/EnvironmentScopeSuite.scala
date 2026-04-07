@@ -5,11 +5,10 @@
 package ssg
 package sass
 
-import ssg.sass.value.{SassNumber, Value}
+import ssg.sass.value.{ SassNumber, Value }
 import ssg.sass.visitor.OutputStyle
 
-/** Exercises the scope chain, closures, `!global`, and semi-global
-  * tracking ported into [[Environment]] from dart-sass.
+/** Exercises the scope chain, closures, `!global`, and semi-global tracking ported into [[Environment]] from dart-sass.
   */
 final class EnvironmentScopeSuite extends munit.FunSuite {
 
@@ -84,13 +83,15 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
   // --- Through the evaluator -------------------------------------------------
 
   test("@if body updates outer variable (semi-global)") {
-    val css = Compile.compileString(
-      """|$x: 1;
-         |@if true { $x: 2; }
-         |a { b: $x; }
-         |""".stripMargin,
-      OutputStyle.Compressed
-    ).css
+    val css = Compile
+      .compileString(
+        """|$x: 1;
+           |@if true { $x: 2; }
+           |a { b: $x; }
+           |""".stripMargin,
+        OutputStyle.Compressed
+      )
+      .css
     assertEquals(css, "a{b:2;}")
   }
 
@@ -99,37 +100,43 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
     // out. We don't depend on $i arithmetic because iterator binding
     // has a separate pre-existing issue in EachRule that's out of
     // scope for this port.
-    val css = Compile.compileString(
-      """|$last: 0;
-         |@each $i in 1, 2, 3 { $last: 7; }
-         |a { b: $last; }
-         |""".stripMargin,
-      OutputStyle.Compressed
-    ).css
+    val css = Compile
+      .compileString(
+        """|$last: 0;
+           |@each $i in 1, 2, 3 { $last: 7; }
+           |a { b: $last; }
+           |""".stripMargin,
+        OutputStyle.Compressed
+      )
+      .css
     assertEquals(css, "a{b:7;}")
   }
 
   test("@for body updates outer variable (semi-global)") {
-    val css = Compile.compileString(
-      """|$n: 0;
-         |@for $i from 1 through 3 { $n: $n + 1; }
-         |a { b: $n; }
-         |""".stripMargin,
-      OutputStyle.Compressed
-    ).css
+    val css = Compile
+      .compileString(
+        """|$n: 0;
+           |@for $i from 1 through 3 { $n: $n + 1; }
+           |a { b: $n; }
+           |""".stripMargin,
+        OutputStyle.Compressed
+      )
+      .css
     assertEquals(css, "a{b:3;}")
   }
 
   test("!global from nested scope writes outer") {
-    val css = Compile.compileString(
-      """|$x: 1;
-         |@if true {
-         |  @if true { $x: 9 !global; }
-         |}
-         |a { b: $x; }
-         |""".stripMargin,
-      OutputStyle.Compressed
-    ).css
+    val css = Compile
+      .compileString(
+        """|$x: 1;
+           |@if true {
+           |  @if true { $x: 9 !global; }
+           |}
+           |a { b: $x; }
+           |""".stripMargin,
+        OutputStyle.Compressed
+      )
+      .css
     assertEquals(css, "a{b:9;}")
   }
 }

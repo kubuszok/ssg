@@ -31,7 +31,7 @@ import ssg.sass.value.ListSeparator
 final class RecursiveDescentExpressionSuite extends munit.FunSuite {
 
   /** Bridge class that exposes the protected `_rd*` methods on ScssParser. */
-  private final class TestParser(source: String) extends ScssParser(source) {
+  final private class TestParser(source: String) extends ScssParser(source) {
     def rdParse(): Expression = {
       whitespace(consumeNewlines = true)
       _rdExpression()

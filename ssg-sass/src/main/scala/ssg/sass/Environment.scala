@@ -23,34 +23,33 @@ import ssg.sass.value.Value
 
 /** The lexical environment in which Sass code is evaluated.
   *
-  * Tracks variables via a scope chain (innermost scope at the tail of the list,
-  * global scope at the head — matching dart-sass `_variables[0]` is global).
-  * Functions and mixins are stored flat for now; only variables use the chain.
+  * Tracks variables via a scope chain (innermost scope at the tail of the list, global scope at the head — matching dart-sass `_variables[0]` is global). Functions and mixins are stored flat for now;
+  * only variables use the chain.
   */
 final class Environment private (
-    // variables[0] is global; last element is innermost/local scope.
-    private val _variables:     mutable.ArrayBuffer[mutable.Map[String, Value]],
-    private val _variableNodes: mutable.ArrayBuffer[mutable.Map[String, AstNode]],
-    private val _variableIndices: mutable.Map[String, Int],
-    // Flat function / mixin tables (module machinery deferred).
-    private val functions:  mutable.Map[String, Callable],
-    private val mixins:     mutable.Map[String, Callable],
-    private val namespaces: mutable.Map[String, Environment],
-    // Names declared with `!global`, used by `global()` snapshots.
-    private val globalVarNames: mutable.Set[String],
-    private var _content:         Nullable[ContentBlock],
-    private var _inSemiGlobalScope: Boolean
+  // variables[0] is global; last element is innermost/local scope.
+  private val _variables:       mutable.ArrayBuffer[mutable.Map[String, Value]],
+  private val _variableNodes:   mutable.ArrayBuffer[mutable.Map[String, AstNode]],
+  private val _variableIndices: mutable.Map[String, Int],
+  // Flat function / mixin tables (module machinery deferred).
+  private val functions:  mutable.Map[String, Callable],
+  private val mixins:     mutable.Map[String, Callable],
+  private val namespaces: mutable.Map[String, Environment],
+  // Names declared with `!global`, used by `global()` snapshots.
+  private val globalVarNames:     mutable.Set[String],
+  private var _content:           Nullable[ContentBlock],
+  private var _inSemiGlobalScope: Boolean
 ) {
 
   def this() = this(
-    _variables         = mutable.ArrayBuffer(mutable.Map.empty[String, Value]),
-    _variableNodes     = mutable.ArrayBuffer(mutable.Map.empty[String, AstNode]),
-    _variableIndices   = mutable.Map.empty[String, Int],
-    functions          = mutable.Map.empty[String, Callable],
-    mixins             = mutable.Map.empty[String, Callable],
-    namespaces         = mutable.Map.empty[String, Environment],
-    globalVarNames     = mutable.Set.empty[String],
-    _content           = Nullable.empty,
+    _variables = mutable.ArrayBuffer(mutable.Map.empty[String, Value]),
+    _variableNodes = mutable.ArrayBuffer(mutable.Map.empty[String, AstNode]),
+    _variableIndices = mutable.Map.empty[String, Int],
+    functions = mutable.Map.empty[String, Callable],
+    mixins = mutable.Map.empty[String, Callable],
+    namespaces = mutable.Map.empty[String, Environment],
+    globalVarNames = mutable.Set.empty[String],
+    _content = Nullable.empty,
     _inSemiGlobalScope = true
   )
 
@@ -115,9 +114,9 @@ final class Environment private (
   /** Returns the value of the variable named [name], walking scopes innermost-out. */
   def getVariable(name: String): Nullable[Value] = {
     val cached = _variableIndices.get(name)
-    val idx = cached match {
+    val idx    = cached match {
       case Some(i) if i < _variables.length && _variables(i).contains(name) => i
-      case _ =>
+      case _                                                                =>
         val found = _variableIndex(name)
         if (found >= 0) _variableIndices(name) = found
         found
@@ -132,17 +131,14 @@ final class Environment private (
 
   /** Sets the variable named [name] to [value].
     *
-    * When `global` is true, writes to the global scope (index 0). Otherwise,
-    * if a scope already holds `name`, overwrites that scope (dart-sass semantics:
-    * assignments in a non-semi-global scope to a variable that only exists at
-    * the global scope create a new local binding instead). If no scope holds
-    * it, writes to the innermost scope.
+    * When `global` is true, writes to the global scope (index 0). Otherwise, if a scope already holds `name`, overwrites that scope (dart-sass semantics: assignments in a non-semi-global scope to a
+    * variable that only exists at the global scope create a new local binding instead). If no scope holds it, writes to the innermost scope.
     */
   def setVariable(
-      name: String,
-      value: Value,
-      nodeWithSpan: Nullable[AstNode] = Nullable.empty,
-      global:       Boolean = false
+    name:         String,
+    value:        Value,
+    nodeWithSpan: Nullable[AstNode] = Nullable.empty,
+    global:       Boolean = false
   ): Unit = {
     if (global || atRoot) {
       _variables(0)(name) = value
@@ -153,7 +149,7 @@ final class Environment private (
     var index =
       if (_variableIndices.contains(name)) _variableIndices(name)
       else {
-        val found = _variableIndex(name)
+        val found    = _variableIndex(name)
         val resolved = if (found < 0) _variables.length - 1 else found
         _variableIndices(name) = resolved
         resolved
@@ -189,7 +185,7 @@ final class Environment private (
   // --- Functions / mixins (flat, module-free) --------------------------------
 
   def functionExists(name: String): Boolean = functions.contains(name)
-  def mixinExists(name: String):    Boolean = mixins.contains(name)
+  def mixinExists(name:    String): Boolean = mixins.contains(name)
 
   def getFunction(name: String): Nullable[Callable] =
     functions.get(name) match {
@@ -211,9 +207,8 @@ final class Environment private (
 
   // --- Scope management ------------------------------------------------------
 
-  /** Runs [body] in a new lexical scope. If [semiGlobal] is true and we're
-    * already in a semi-global scope, the new scope can assign to globals
-    * without `!global`. Matches dart-sass `scope()` propagation.
+  /** Runs [body] in a new lexical scope. If [semiGlobal] is true and we're already in a semi-global scope, the new scope can assign to globals without `!global`. Matches dart-sass `scope()`
+    * propagation.
     */
   def withinScope[T](semiGlobal: Boolean)(body: => T): T = {
     val effective = semiGlobal && _inSemiGlobalScope
@@ -238,15 +233,13 @@ final class Environment private (
   /** Shorthand for a semi-global scope (e.g. `@if`/`@for`/`@each`/`@while`). */
   def withinSemiGlobalScope[T](body: => T): T = withinScope(semiGlobal = true)(body)
 
-  /** Runs [body] in a fully isolated scope: saves a snapshot of variables,
-    * functions, and mixins, runs the body, then restores.
+  /** Runs [body] in a fully isolated scope: saves a snapshot of variables, functions, and mixins, runs the body, then restores.
     *
-    * Kept for callers that invoke user-defined callables and need to prevent
-    * parameter bindings from leaking.
+    * Kept for callers that invoke user-defined callables and need to prevent parameter bindings from leaking.
     */
   def withSnapshot[T](body: => T): T = {
-    val savedVars = _variables.map(_.clone()).toBuffer
-    val savedNodes = _variableNodes.map(_.clone()).toBuffer
+    val savedVars    = _variables.map(_.clone()).toBuffer
+    val savedNodes   = _variableNodes.map(_.clone()).toBuffer
     val savedIndices = _variableIndices.clone()
     val savedFns     = functions.clone()
     val savedMix     = mixins.clone()
@@ -264,34 +257,31 @@ final class Environment private (
 
   // --- Content block ---------------------------------------------------------
 
-  def content: Nullable[ContentBlock] = _content
-  def content_=(block: Nullable[ContentBlock]): Unit = _content = block
+  def content:                                  Nullable[ContentBlock] = _content
+  def content_=(block: Nullable[ContentBlock]): Unit                   = _content = block
 
   // --- Closures --------------------------------------------------------------
 
-  /** Creates a closure: a new Environment whose scope chain is a shallow copy
-    * of the current scope chain. Subsequent scope pushes/pops in this
-    * Environment won't affect the closure, but existing visible scopes remain
-    * shared so later assignments within them are observed.
+  /** Creates a closure: a new Environment whose scope chain is a shallow copy of the current scope chain. Subsequent scope pushes/pops in this Environment won't affect the closure, but existing
+    * visible scopes remain shared so later assignments within them are observed.
     *
     * Matches dart-sass semantics for `closure()`.
     */
   def closure(): Environment = new Environment(
-    _variables         = _variables.clone(),
-    _variableNodes     = _variableNodes.clone(),
-    _variableIndices   = mutable.Map.empty,
-    functions          = functions,
-    mixins             = mixins,
-    namespaces         = namespaces,
-    globalVarNames     = globalVarNames,
-    _content           = _content,
+    _variables = _variables.clone(),
+    _variableNodes = _variableNodes.clone(),
+    _variableIndices = mutable.Map.empty,
+    functions = functions,
+    mixins = mixins,
+    namespaces = namespaces,
+    globalVarNames = globalVarNames,
+    _content = _content,
     _inSemiGlobalScope = false
   )
 
   /** Creates a public-facing copy of this environment that hides private members.
     *
-    * A member whose name starts with `-` or `_` is considered private to the
-    * defining module and is omitted. This only considers the global scope.
+    * A member whose name starts with `-` or `_` is considered private to the defining module and is omitted. This only considers the global scope.
     */
   def publicView(): Environment = {
     val out = new Environment()
@@ -308,8 +298,7 @@ final class Environment private (
     out
   }
 
-  /** Creates a new global-only environment containing the built-in functions
-    * and any variables that were declared with `!global` in this environment.
+  /** Creates a new global-only environment containing the built-in functions and any variables that were declared with `!global` in this environment.
     */
   def global(): Environment = {
     val g = Environment.withBuiltins()
