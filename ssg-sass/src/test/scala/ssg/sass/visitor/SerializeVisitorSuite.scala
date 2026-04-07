@@ -427,7 +427,8 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     new CompoundSelector(List(new ClassSelector(name, span)), span)
 
   private def complex(
-    parts: List[(String, Nullable[Combinator])]
+    parts:     List[(String, Nullable[Combinator])],
+    lineBreak: Boolean = false
   ): ComplexSelector = {
     val comps = parts.map { case (name, combOpt) =>
       val combinators =
@@ -435,7 +436,7 @@ final class SerializeVisitorSuite extends munit.FunSuite {
         else Nil
       new ComplexSelectorComponent(cls(name), combinators, span)
     }
-    new ComplexSelector(Nil, comps, span)
+    new ComplexSelector(Nil, comps, span, lineBreak = lineBreak)
   }
 
   private def selList(cs: ComplexSelector*): SelectorList =
@@ -500,11 +501,29 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     assertEquals(fmtSelector(sel, compressed = true), ".a .b")
   }
 
-  test("writeSelector: multiple complex selectors join with `,\\n` expanded and `,` compressed") {
+  test("writeSelector: multiple complex selectors without lineBreak join with `, ` expanded and `,` compressed") {
+    // dart-sass `visitSelectorList`: if the complex selector isn't marked
+    // with `lineBreak`, the separator is a single optional space — matching
+    // `_writeOptionalSpace`. This is the common case for authored one-line
+    // selector lists like `.a, .b, .c { ... }`.
     val sel = selList(
       complex(List(("a", Nullable.empty))),
       complex(List(("b", Nullable.empty))),
       complex(List(("c", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a, .b, .c")
+    assertEquals(fmtSelector(sel, compressed = true), ".a,.b,.c")
+  }
+
+  test("writeSelector: complex selectors marked lineBreak split with `,\\n` expanded") {
+    // When `complex.lineBreak` is true, dart-sass emits `,\n<indent>`
+    // instead of `, `. `lineBreak` is propagated through `@extend` and
+    // nested-selector resolution when the source selectors were on
+    // separate lines.
+    val sel = selList(
+      complex(List(("a", Nullable.empty))),
+      complex(List(("b", Nullable.empty)), lineBreak = true),
+      complex(List(("c", Nullable.empty)), lineBreak = true)
     )
     assertEquals(fmtSelector(sel), ".a,\n.b,\n.c")
     assertEquals(fmtSelector(sel, compressed = true), ".a,.b,.c")

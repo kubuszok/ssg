@@ -595,11 +595,21 @@ final class SerializeVisitor(
       if (!first) {
         sb.append(',')
         if (!isCompressed) {
-          sb.append('\n')
-          var i = 0
-          while (i < indentLevel) {
-            sb.append("  ")
-            i += 1
+          // dart-sass `visitSelectorList`: if the complex selector is marked
+          // with `lineBreak`, break the line and re-indent; otherwise emit a
+          // single separating space (`_writeOptionalSpace`). The current
+          // evaluator pipeline doesn't propagate `lineBreak` yet, so in
+          // practice we take the space branch — matching the authored
+          // selector in the common case.
+          if (complex.lineBreak) {
+            sb.append('\n')
+            var i = 0
+            while (i < indentLevel) {
+              sb.append("  ")
+              i += 1
+            }
+          } else {
+            sb.append(' ')
           }
         }
       }

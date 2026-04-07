@@ -14,6 +14,45 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
+  // --------------------------------------------------------------------------
+  // Regression tests: selector-list separator (stage A.4 follow-up).
+  //
+  // dart-sass `visitSelectorList` emits `,\n<indent>` only when the complex
+  // selector has `lineBreak = true`; otherwise it emits a single space via
+  // `_writeOptionalSpace`. Stage A.4 initially hard-coded `,\n`, which caused
+  // ~37 sass-spec cases to regress because authored one-line selector lists
+  // like `a, d { ... }` round-tripped to `a,\nd { ... }`. These tests lock
+  // in the corrected behavior.
+  // --------------------------------------------------------------------------
+
+  test("expanded mode: two-selector comma list stays on one line when not broken") {
+    val css = Compile.compileString("a, d { b: c; }").css
+    assertEquals(css, "a, d {\n  b: c;\n}\n")
+  }
+
+  test("expanded mode: three-selector comma list stays on one line when not broken") {
+    val css = Compile.compileString(".x, .y, .z { p: 1; }").css
+    assertEquals(css, ".x, .y, .z {\n  p: 1;\n}\n")
+  }
+
+  test("compressed mode: comma list joined with bare comma") {
+    val css = Compile.compileString("a, d { b: c; }", OutputStyle.Compressed).css
+    assertEquals(css, "a,d{b:c;}")
+  }
+
+  test("expanded mode: leading combinator with comma list preserves space separator") {
+    // Bogus-but-parsed: `a, > d` — the second complex has a leading combinator
+    // but we still expect a single space after the comma in expanded mode
+    // since neither complex is marked lineBreak.
+    val css = Compile.compileString("a, > d { b: c; }").css
+    assertEquals(css, "a, > d {\n  b: c;\n}\n")
+  }
+
+  test("expanded mode: nested rule with comma list keeps space separator") {
+    val css = Compile.compileString(".wrap { a, b { c: d; } }").css
+    assertEquals(css, ".wrap a, .wrap b {\n  c: d;\n}\n")
+  }
+
   test("@if with escaped directive name is recognized") {
     // From sass-spec: spec/directives/if/escaped.hrx (if_only).
     // `@\69 f` is the escape sequence for `@if`; after normalization
