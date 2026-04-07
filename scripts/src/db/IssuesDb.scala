@@ -48,26 +48,28 @@ object IssuesDb {
     val severity = args.requirePositional(2, "severity")
     val description = args.requirePositional(3, "description")
 
-    var table = load()
-    val nextId = {
-      val existing = table.rows.flatMap(_.get("id")).filter(_.startsWith("ISS-"))
-      if (existing.isEmpty) 1
-      else existing.map(_.stripPrefix("ISS-").toIntOption.getOrElse(0)).max + 1
+    var assignedId: String = ""
+    Tsv.modify(Paths.issuesTsv) { loaded =>
+      val table = if (loaded.headers.isEmpty) Tsv.Table(headers, Nil, List("# SSG Issues Database")) else loaded
+      val nextId = {
+        val existing = table.rows.flatMap(_.get("id")).filter(_.startsWith("ISS-"))
+        if (existing.isEmpty) 1
+        else existing.map(_.stripPrefix("ISS-").toIntOption.getOrElse(0)).max + 1
+      }
+      assignedId = f"ISS-$nextId%03d"
+      val row = Map(
+        "id" -> assignedId,
+        "file_path" -> filePath,
+        "category" -> category,
+        "status" -> "open",
+        "severity" -> severity,
+        "description" -> description,
+        "last_updated" -> LocalDate.now().toString,
+        "source" -> "manual"
+      )
+      table.addRow(row)
     }
-    val id = f"ISS-$nextId%03d"
-    val row = Map(
-      "id" -> id,
-      "file_path" -> filePath,
-      "category" -> category,
-      "status" -> "open",
-      "severity" -> severity,
-      "description" -> description,
-      "last_updated" -> LocalDate.now().toString,
-      "source" -> "manual"
-    )
-    table = table.addRow(row)
-    save(table)
-    Term.ok(s"Added: $id — $description")
+    Term.ok(s"Added: $assignedId — $description")
   }
 
   def resolve(args: Cli.Args): Unit = {
@@ -77,15 +79,22 @@ object IssuesDb {
       "last_updated" -> LocalDate.now().toString
     )
     args.flag("notes").foreach(n => updates("description") = updates.getOrElse("description", "") + " — " + n)
+    val updatesMap = updates.toMap
 
-    var table = load()
-    val found = table.rows.exists(_.getOrElse("id", "") == id)
-    if (!found) {
+    var notFound = false
+    Tsv.modify(Paths.issuesTsv) { table =>
+      val found = table.rows.exists(_.getOrElse("id", "") == id)
+      if (!found) {
+        notFound = true
+        table
+      } else {
+        table.updateRow(_.getOrElse("id", "") == id, updatesMap)
+      }
+    }
+    if (notFound) {
       Term.err(s"Not found: $id")
       sys.exit(1)
     }
-    table = table.updateRow(_.getOrElse("id", "") == id, updates.toMap)
-    save(table)
     Term.ok(s"Resolved: $id")
   }
 

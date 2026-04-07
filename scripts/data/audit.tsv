@@ -1,6 +1,6 @@
 # SSG Audit Database
 # file_path	package	status	tested	last_audited	notes	source
-ssg-md/src/main/scala/ssg/md/util/misc/Utils.scala	misc	pass	yes	2026-03-31	All 60+ methods present. No stubs/TODOs. Minor: uses java.lang.Double.compare, scala.collection.mutable.Map instead of java.util.Map	
+ssg-md/src/main/scala/ssg/md/util/misc/Utils.scala	misc	pass	yes	2026-04-07	post-fix-v2 race 9	
 ssg-md/src/main/scala/ssg/md/util/misc/BitField.scala	misc	pass	yes	2026-03-31	Complete 1:1 port. getBits() -> def bits. All methods present.	
 ssg-md/src/main/scala/ssg/md/util/misc/BitFieldSet.scala	misc	pass	yes	2026-03-31	Complete port. All instance/static methods, iterators, serialization proxy, factory methods present. Varargs renamed to named variants (addAll/removeAll/anyOf/allOf/noneOf).	
 ssg-md/src/main/scala/ssg/md/util/misc/CharPredicate.scala	misc	pass	yes	2026-03-31	Complete port. All constants, and/or/negate, standardOrAnyOf overloads, anyOf(char*), anyOf(CharSequence), indexOf all present. Deprecated aliases preserved.	
@@ -80,7 +80,7 @@ ssg-md/src/main/scala/ssg/md/util/sequence/builder/ISequenceBuilder.scala	builde
 ssg-md/src/main/scala/ssg/md/util/sequence/BasedSequenceImpl.scala	sequence	pass	yes	2026-03-31	Abstract class implementing BasedSequence. All methods present: emptyArray, nullSequence, sequenceOf, getBuilder, addSegments, getSegmentTree, toMapped, baseSubSequence, safeCharAt, safeBaseCharAt, isBaseCharAt, getEmptyPrefix/Suffix, toStringOrNull, unescape/unescapeNoEntities, normalizeEOL/EndWithEOL, isContinuedBy/ContinuationOf, spliceAtEnd, containsAllOf/SomeOf, intersect, containsSomeIn/NotIn/OnlyIn/OnlyNotIn, extendByAny/AnyNot/ToEndOfLine/ToStartOfLine, prefixWith, prefixWithIndent, prefixOf/suffixOf, base line/column helpers. Uses boundary/break, no return.	
 ssg-md/src/main/scala/ssg/md/util/sequence/builder/ISegmentBuilder.scala	builder	pass	yes	2026-03-31	Complete port. Enum, constants, abstract methods all match original. Uses BitFieldSet.intMask correctly.	
 ssg-md/src/main/scala/ssg/md/util/sequence/builder/IBasedSegmentBuilder.scala	builder	pass	yes	2026-03-31	Complete port. All abstract methods match original interface.	
-ssg-md/src/main/scala/ssg/md/util/sequence/Escaping.scala	sequence	minor_issues	yes	2026-03-31	520 lines. String-based methods complete: escapeHtml, unescapeString (both overloads), unescapeHtml, normalizeEOL/EndWithEOL, percentEncodeUrl/DecodeUrl, normalizeReference/ReferenceChars, collapseWhitespace, obfuscate. BasedSequence+ReplacedTextMapper unescape() method IS implemented. BUT: unescapeHtml(BasedSequence, List[Range], ReplacedTextMapper), unescapeHtml(BasedSequence, ReplacedTextMapper), removeAll(BasedSequence, ..., ReplacedTextMapper), normalizeEOL(BasedSequence, ReplacedTextMapper), normalizeEndWithEOL(BasedSequence, ReplacedTextMapper) throw UnsupportedOperationException stubs (5 methods).	
+ssg-md/src/main/scala/ssg/md/util/sequence/Escaping.scala	sequence	major_issues	yes	2026-04-07	Simplified: ReplacedTextMapper variants throw UOE (L576,L581); Html5Entities-backed decoding stubbed (L79,L102,L137). ISS-005.	
 ssg-md/src/main/scala/ssg/md/util/sequence/builder/SegmentStats.scala	builder	pass	yes	2026-03-31	Complete port. All methods (add, remove, commitText, addText x3, removeText, isEmpty, isValid, clear, committedCopy, toString) match original. Constants moved to companion object.	
 ssg-md/src/main/scala/ssg/md/util/sequence/LineAppendableImpl.scala	sequence	pass	yes	2026-03-31	Complex line-based text builder. Proper license header. Uses Nullable, boundary/break. Fields for preFormatted nesting, lines list, prefix/indent stacks, option stack all present. Constructors with Nullable[Appendable] and formatOptions.	
 ssg-md/src/main/scala/ssg/md/util/sequence/builder/SegmentedSequenceStats.scala	builder	pass	yes	2026-03-31	Complete port. StatsEntry inner class, AGGR_STEPS, all methods present. Uses boundary/break for while-loop control. Null bucket placeholders properly annotated.	
@@ -285,7 +285,7 @@ ssg-md/src/main/scala/ssg/md/html/renderer/NodeRendererContext.scala	renderer	pa
 ssg-md/src/main/scala/ssg/md/html/renderer/ResolvedLink.scala	renderer	pass	yes	2026-03-31	Complete port with correct withUrl, withTitle, withStatus, getNonNullAttributes.	
 ssg-md/src/main/scala/ssg/md/html/renderer/LinkType.scala	renderer	pass	yes	2026-03-31	Complete. LINK, IMAGE, LINK_REF, IMAGE_REF all present.	
 ssg-md/src/main/scala/ssg/md/html/renderer/LinkStatus.scala	renderer	pass	yes	2026-03-31	Complete. UNKNOWN, VALID, INVALID, UNCHECKED, NOT_FOUND all present.	
-ssg-md/src/main/scala/ssg/md/ast/Heading.scala	ast	minor_issues	yes	2026-03-31	anchorRefText hardcodes trimLeadingSpaces=true, trimTrailingSpaces=true instead of reading from HtmlRenderer DataKeys. Matches defaults but won't reflect custom settings.	
+ssg-md/src/main/scala/ssg/md/ast/Heading.scala	ast	minor_issues	yes	2026-04-07	Heading trim options not ported, defaults applied (L55).	
 ssg-md/src/main/scala/ssg/md/ast/FencedCodeBlock.scala	ast	pass	yes	2026-03-31	Complete port. All fields, constructors, infoDelimitedByAny match original.	
 ssg-md/src/main/scala/ssg/md/ast/Paragraph.scala	ast	pass	yes	2026-03-31	Complete port. setContent overloads, lineIndents, collectText, collectEndText all match original.	
 ssg-md/src/main/scala/ssg/md/ast/Reference.scala	ast	pass	yes	2026-03-31	Complete port. segments, segmentsForChars, compareTo, referencingNode all match original.	
@@ -300,14 +300,14 @@ ssg-md/src/main/scala/ssg/md/formatter/FormatterUtils.scala	formatter	pass	yes	2
 ssg-md/src/main/scala/ssg/md/ast/util/Parsing.scala	util	pass	yes	2026-03-31	Thorough port of all regex patterns. IDI-dependent fields, dynamic cached patterns, PatternTypeFlags, HTML tag patterns all match original.	
 ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	liquid	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/Insertions.scala	liquid	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/LValue.scala	liquid	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/LValue.scala	liquid	minor_issues	no	2026-04-07	Date/temporal coercion fragile; asFormattedNumber trailing-zero divergence. ISS-020, ISS-021, gap-analysis §4.2.	
 ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	liquid	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/PlainBigDecimal.scala	liquid	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/RenderTransformer.scala	liquid	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/RenderTransformerDefaultImpl.scala	liquid	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/Template.scala	liquid	minor_issues	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/Template.scala	liquid	major_issues	no	2026-04-07	14% size ratio. Missing render-time guard, max-template-size, errors() accessor, multiple render overloads, REGISTRY_ROOT_FOLDER (include_relative broken), env-map configurator. EAGER vs LAZY identical. ISS-007..ISS-011, gap-analysis §4.3.	
 ssg-liquid/src/main/scala/ssg/liquid/TemplateContext.scala	liquid	minor_issues	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/TemplateParser.scala	liquid	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/TemplateParser.scala	liquid	major_issues	no	2026-04-07	Builder missing 7 setters; parse() only String overload; default flavor LIQP→JEKYLL. ISS-012..ISS-014, ISS-030, gap-analysis §4.1.	
 ssg-liquid/src/main/scala/ssg/liquid/antlr/LocalFSNameResolver.scala	antlr	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/antlr/NameResolver.scala	antlr	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/blocks/Block.scala	blocks	pass	no	2026-04-04		
@@ -334,7 +334,7 @@ ssg-liquid/src/main/scala/ssg/liquid/filters/Capitalize.scala	filters	pass	no	20
 ssg-liquid/src/main/scala/ssg/liquid/filters/Ceil.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Compact.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Concat.scala	filters	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/filters/Date.scala	filters	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/filters/Date.scala	filters	major_issues	no	2026-04-07	ISO-8601-only parsing; ~15 strftime directives missing; filters/date/* (5 files) skipped. ISS-017, ISS-018, ISS-027, gap-analysis §4.10.	
 ssg-liquid/src/main/scala/ssg/liquid/filters/Default.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Divided_By.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Downcase.scala	filters	pass	no	2026-04-04		
@@ -346,7 +346,7 @@ ssg-liquid/src/main/scala/ssg/liquid/filters/First.scala	filters	pass	no	2026-04
 ssg-liquid/src/main/scala/ssg/liquid/filters/Floor.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/H.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Join.scala	filters	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/filters/Json.scala	filters	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/filters/Json.scala	filters	minor_issues	no	2026-04-07	Hand-rolled vs Jackson: no cycles, no TemporalAccessor, no Inspectable, NaN/Infinity invalid. ISS-019, gap-analysis §4.12.	
 ssg-liquid/src/main/scala/ssg/liquid/filters/Last.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Lstrip.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/MapFilter.scala	filters	pass	no	2026-04-04		
@@ -383,7 +383,7 @@ ssg-liquid/src/main/scala/ssg/liquid/filters/Unshift.scala	filters	pass	no	2026-
 ssg-liquid/src/main/scala/ssg/liquid/filters/Upcase.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Url_Decode.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/filters/Url_Encode.scala	filters	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/filters/Where.scala	filters	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/filters/Where.scala	filters	major_issues	no	2026-04-07	Inline rewrite missing dotted paths, POJO support, nil/empty/blank, collection-property, numeric coercion. filters/where/* (5 files) skipped. ISS-016, ISS-028, gap-analysis §4.11.	
 ssg-liquid/src/main/scala/ssg/liquid/filters/Where_Exp.scala	filters	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/nodes/AndNode.scala	nodes	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/nodes/AtomNode.scala	nodes	pass	no	2026-04-04		
@@ -408,14 +408,33 @@ ssg-liquid/src/main/scala/ssg/liquid/package.scala	liquid	pass	no	2026-04-04
 ssg-liquid/src/main/scala/ssg/liquid/parser/Flavor.scala	parser	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/parser/Inspectable.scala	parser	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/parser/LiquidLexer.scala	parser	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/parser/LiquidParser.scala	parser	pass	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/parser/LiquidSupport.scala	parser	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/parser/LiquidParser.scala	parser	minor_issues	no	2026-04-07	Error recovery silently skips unexpected tokens; grammar coverage not verified. ISS-024, ISS-025, gap-analysis §4.14.	
+ssg-liquid/src/main/scala/ssg/liquid/parser/LiquidSupport.scala	parser	major_issues	no	2026-04-07	Self-declared stub (line 14: Phase 4). Inspectable POJOs silently dropped. ISS-015, gap-analysis §4.18.	
 ssg-liquid/src/main/scala/ssg/liquid/parser/Token.scala	parser	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Assign.scala	tags	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Break.scala	tags	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Continue.scala	tags	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Decrement.scala	tags	minor_issues	no	2026-04-04		
-ssg-liquid/src/main/scala/ssg/liquid/tags/Include.scala	tags	pass	no	2026-04-04		
+ssg-liquid/src/main/scala/ssg/liquid/tags/Include.scala	tags	minor_issues	no	2026-04-07	Jekyll branch silently drops non-Map parameters. ISS-022, gap-analysis §4.9.	
 ssg-liquid/src/main/scala/ssg/liquid/tags/IncludeRelative.scala	tags	pass	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Increment.scala	tags	minor_issues	no	2026-04-04		
 ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	tags	pass	no	2026-04-04		
+ssg-md/src/main/scala/ssg/md/ext/attributes/internal/AttributesNodeFormatter.scala	internal	major_issues	no	2026-04-07	Stub: full attribute formatter not ported (TODO L21,L36). LOC ratio 0.62. ISS-003.	
+ssg-md/src/main/scala/ssg/md/ext/toc/internal/SimTocNodeFormatter.scala	internal	major_issues	no	2026-04-07	Stub: SimToc formatting not ported (TODO L21,L34). ISS-004.	
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeRenderer.scala	internal	major_issues	no	2026-04-07	Stub: rendering incomplete (// stub: will be used when rendering is completed).	
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceParagraphPreProcessor.scala	internal	major_issues	no	2026-04-07	Stub: paragraph pre-processing incomplete.	
+ssg-md/src/main/scala/ssg/md/formatter/MarkdownWriter.scala	formatter	minor_issues	no	2026-04-07	Nested block-quote prefix handling simplified (L79-84). ISS-006.	
+ssg-md/src/main/scala/ssg/md/ext/jekyll/tag/internal/IncludeNodePostProcessor.scala	internal	minor_issues	no	2026-04-07	FileUriContentResolver not ported (L54).	
+ssg-md/src/main/scala/ssg/md/ext/emoji/internal/EmojiNodeFormatter.scala	internal	minor_issues	no	2026-04-07	appendNonTranslating not ported, using append (L35).	
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeFormatter.scala	internal	minor_issues	no	2026-04-07	appendNonTranslating not ported, using append (L41).	
+ssg-js/src/main/scala/ssg/js/compress/Compressor.scala	compress	major_issues	no	2026-04-07	26% LOC of upstream. Multi-pass loop hangs (disabled in tests). ISS-031, ISS-032.	
+ssg-js/src/main/scala/ssg/js/compress/ReduceVars.scala	compress	major_issues	no	2026-04-07	45% LOC. SymbolDef tracking incomplete. ISS-032.	
+ssg-js/src/main/scala/ssg/js/compress/DropUnused.scala	compress	major_issues	no	2026-04-07	52% LOC. SymbolDef in-use checks stubbed. ISS-032.	
+ssg-js/src/main/scala/ssg/js/compress/Inline.scala	compress	major_issues	no	2026-04-07	36% LOC. Inlining stubbed at 4 sites. ISS-032.	
+ssg-js/src/main/scala/ssg/js/compress/TightenBody.scala	compress	major_issues	no	2026-04-07	35% LOC. Scope-dep optimizations stubbed. collapse-vars missing. ISS-032, ISS-035.	
+ssg-js/src/main/scala/ssg/js/compress/Inference.scala	compress	minor_issues	no	2026-04-07	72% LOC. Predicates present; 7 scope-dep branches conservatively bail. ISS-032.	
+ssg-js/src/main/scala/ssg/js/Terser.scala	js	major_issues	no	2026-04-07	23% LOC. Happy-path only; missing ecma normalization, mangle cache, source maps, error shape. ISS-033, ISS-034.	
+ssg-minify/src/main/scala/ssg/minify/html/HtmlMinifier.scala	html	minor_issues	no	2026-04-07	preserveLineBreaks dead, conservative quote-stripping, no SSI/JSP/CDATA presets. ISS-038, ISS-039, ISS-040.	
+ssg-minify/src/main/scala/ssg/minify/html/HtmlMinifyOptions.scala	html	minor_issues	no	2026-04-07	preserveLineBreaks field declared but unconsumed. ISS-038.	
+ssg-minify/src/main/scala/ssg/minify/css/CssMinifier.scala	css	minor_issues	no	2026-04-07	Core complete. No color folding, shorthand collapsing, vendor-prefix culling, source maps. ISS-041.	
+ssg-minify/src/main/scala/ssg/minify/js/JsMinifier.scala	js	minor_issues	no	2026-04-07	Intentional stopgap. Real minification via TerserJsCompressor SPI (currently parse+re-emit pending ISS-031/032).	

@@ -60,24 +60,26 @@ object AuditDb {
     args.flag("tested").foreach(t => updates("tested") = t)
     args.flag("notes").foreach(n => updates("notes") = n)
     updates("last_audited") = LocalDate.now().toString
+    val updatesMap = updates.toMap
 
-    var table = load()
-    val found = table.rows.exists(_.getOrElse("file_path", "") == path)
-    if (found) {
-      table = table.updateRow(_.getOrElse("file_path", "") == path, updates.toMap)
-    } else {
-      val pkg = path.split("/").dropRight(1).lastOption.getOrElse("")
-      val row = Map(
-        "file_path" -> path,
-        "package" -> pkg,
-        "status" -> updates.getOrElse("status", "pass"),
-        "tested" -> updates.getOrElse("tested", "no"),
-        "last_audited" -> updates.getOrElse("last_audited", LocalDate.now().toString),
-        "notes" -> updates.getOrElse("notes", "")
-      )
-      table = table.addRow(row)
+    Tsv.modify(Paths.auditTsv) { loaded =>
+      val table = if (loaded.headers.isEmpty) Tsv.Table(headers, Nil, List("# SSG Audit Database")) else loaded
+      val found = table.rows.exists(_.getOrElse("file_path", "") == path)
+      if (found) {
+        table.updateRow(_.getOrElse("file_path", "") == path, updatesMap)
+      } else {
+        val pkg = path.split("/").dropRight(1).lastOption.getOrElse("")
+        val row = Map(
+          "file_path" -> path,
+          "package" -> pkg,
+          "status" -> updatesMap.getOrElse("status", "pass"),
+          "tested" -> updatesMap.getOrElse("tested", "no"),
+          "last_audited" -> updatesMap.getOrElse("last_audited", LocalDate.now().toString),
+          "notes" -> updatesMap.getOrElse("notes", "")
+        )
+        table.addRow(row)
+      }
     }
-    save(table)
     Term.ok(s"Updated: $path")
   }
 

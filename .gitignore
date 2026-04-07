@@ -30,6 +30,7 @@ target/
 scripts/bin/
 scripts/.metals-pid
 scripts/.metals.log
+scripts/data/*.lock
 .scala-build/
 
 ## OS-Specific

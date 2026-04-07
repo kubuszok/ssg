@@ -1,6 +1,7 @@
 package ssgdev
 
-import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
+import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter, RandomAccessFile}
+import java.nio.file.{Files, Paths => JPaths, StandardCopyOption}
 import scala.collection.mutable.ListBuffer
 
 /** TSV reader/writer with typed headers and comment support. */
@@ -46,24 +47,17 @@ object Tsv {
       var line = reader.readLine()
       while (line != null) {
         if (!headerFound && line.startsWith("# ") && line.contains("\t")) {
-          headers = line.drop(2).split("\t", -1).map(_.trim).toList
+          // Header comment line: "# col1\tcol2\t..."
+          headers = splitFields(line.drop(2))
           headerFound = true
         } else if (line.startsWith("#")) {
           comments += line
-        } else if (line.trim.nonEmpty) {
+        } else if (line.nonEmpty) {
           if (!headerFound) {
-            val fields = line.split("\t", -1).toList
-            if (fields.forall(f => f.nonEmpty && !f.exists(_.isDigit))) {
-              headers = fields.map(_.trim)
-              headerFound = true
-            } else {
-              headers = fields.indices.map(i => s"col$i").toList
-              headerFound = true
-              dataRows += fields.map(unquote)
-            }
-          } else {
-            dataRows += line.split("\t", -1).map(unquote).toList
+            // Strict: data before any "# col\tcol" header is an error.
+            throw new RuntimeException(s"TSV $path: data row before header line: $line")
           }
+          dataRows += splitFields(line)
         }
         line = reader.readLine()
       }
@@ -76,8 +70,43 @@ object Tsv {
     }
   }
 
+  /** CSV-aware tab splitter: respects "..." wrapping that contains tabs/newlines/quotes. */
+  private[ssgdev] def splitFields(line: String): List[String] = {
+    val out = ListBuffer.empty[String]
+    val cur = new StringBuilder
+    var i = 0
+    var inQuotes = false
+    val n = line.length
+    while (i < n) {
+      val c = line.charAt(i)
+      if (inQuotes) {
+        if (c == '"') {
+          if (i + 1 < n && line.charAt(i + 1) == '"') {
+            cur.append('"'); i += 2
+          } else {
+            inQuotes = false; i += 1
+          }
+        } else {
+          cur.append(c); i += 1
+        }
+      } else {
+        if (c == '"' && cur.isEmpty) {
+          inQuotes = true; i += 1
+        } else if (c == '\t') {
+          out += cur.toString; cur.clear(); i += 1
+        } else {
+          cur.append(c); i += 1
+        }
+      }
+    }
+    out += cur.toString
+    out.toList
+  }
+
+  /** Atomic write: write to <path>.tmp then atomically move into place. */
   def write(path: String, table: Table): Unit = {
-    val writer = new BufferedWriter(new FileWriter(path))
+    val tmp = path + ".tmp"
+    val writer = new BufferedWriter(new FileWriter(tmp))
     try {
       table.comments.foreach { c =>
         writer.write(c)
@@ -90,8 +119,62 @@ object Tsv {
         writer.write(line)
         writer.newLine()
       }
+      writer.flush()
     } finally {
       writer.close()
+    }
+    try {
+      Files.move(JPaths.get(tmp), JPaths.get(path), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+    } catch {
+      case _: Throwable =>
+        // ATOMIC_MOVE may not be supported on all FS; fall back to plain replace.
+        Files.move(JPaths.get(tmp), JPaths.get(path), StandardCopyOption.REPLACE_EXISTING)
+    }
+  }
+
+  /** Cross-process locked load+mutate+save. Acquires an exclusive file lock on
+    * `<path>.lock`, runs `fn` on the loaded table, writes the result atomically.
+    * Retries lock acquisition with backoff for up to ~10s.
+    */
+  def modify(path: String)(fn: Table => Table): Table = {
+    val lockPath = path + ".lock"
+    // Ensure lock file exists.
+    val lockFile = new java.io.File(lockPath)
+    if (!lockFile.exists()) lockFile.createNewFile()
+
+    val raf = new RandomAccessFile(lockFile, "rw")
+    val channel = raf.getChannel
+    try {
+      var lock: java.nio.channels.FileLock = null
+      var attempts = 0
+      val maxAttempts = 600 // ~30s @ 50ms backoff
+      while (lock == null && attempts < maxAttempts) {
+        try {
+          lock = channel.tryLock()
+        } catch {
+          // Scala Native throws IOException when held; JVM returns null. Treat both as "retry".
+          case _: java.nio.channels.OverlappingFileLockException => // same JVM
+          case _: java.io.IOException                            => // SN: lock held by another process
+        }
+        if (lock == null) {
+          Thread.sleep(50)
+          attempts += 1
+        }
+      }
+      if (lock == null) {
+        throw new RuntimeException(s"Tsv.modify: could not acquire lock on $lockPath after $maxAttempts attempts")
+      }
+      try {
+        val table = if (new java.io.File(path).exists()) read(path) else Table(Nil, Nil)
+        val updated = fn(table)
+        write(path, updated)
+        updated
+      } finally {
+        lock.release()
+      }
+    } finally {
+      channel.close()
+      raf.close()
     }
   }
 
@@ -100,15 +183,6 @@ object Tsv {
       "\"" + value.replace("\"", "\"\"") + "\""
     } else {
       value
-    }
-  }
-
-  private def unquote(value: String): String = {
-    val trimmed = value.trim
-    if (trimmed.startsWith("\"") && trimmed.endsWith("\"") && trimmed.length >= 2) {
-      trimmed.substring(1, trimmed.length - 1).replace("\"\"", "\"")
-    } else {
-      trimmed
     }
   }
 }

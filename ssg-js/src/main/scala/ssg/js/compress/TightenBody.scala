@@ -26,6 +26,10 @@
  *     collapse -> collapseVars
  *   Convention: Object with methods, mutable ArrayBuffer manipulation
  *   Idiom: boundary/break instead of return, var CHANGED for iteration
+ *   Gap: 540 LOC vs upstream 1532 LOC (~35%). Scope-dependent optimizations
+ *     stubbed at lines 96, 248, 257, 492. collapse-vars not implemented.
+ *     See ISS-032, ISS-035. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js

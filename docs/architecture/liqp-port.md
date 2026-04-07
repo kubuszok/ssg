@@ -98,3 +98,18 @@ filter sets, tag sets, and behavior flags.
 ## Test Coverage
 
 280 tests across 12 munit suites, all passing on JVM, JS, and Native.
+
+## Gap Analysis (TODO — apply methodology from `flexmark-port.md`)
+
+Procedure (same as ssg-md):
+
+1. **LOC ratio** — `original-src/liqp/src/main/java/**/*.java` vs `ssg-liquid/src/main/scala/ssg/liquid/**/*.scala`. Expected scala/java ratio ≈ 0.85–1.0 (matches ssg-md baseline).
+2. **Stub sweep** over `ssg-liquid/src/main/scala`.
+3. **Spec coverage** — liqp ships its own test fixtures plus the Shopify Liquid spec. Verify every fixture is loaded by an ssg-liquid runner. The Shopify Liquid reference test suite should become the conformance target.
+4. **Audit DB** — `ssg-dev db audit set ... --status minor_issues|major_issues` for each gap; major gaps → `ssg-dev db issues add`.
+
+### Definition of done
+
+- Full Shopify Liquid spec + liqp test corpus pass.
+- All flavors (Jekyll default, plus the extensible flavor system noted in design memos) supported with no production stubs.
+- LOC ratio per package within the expected band, or deviations explained.
