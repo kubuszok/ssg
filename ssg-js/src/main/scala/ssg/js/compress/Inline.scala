@@ -22,6 +22,11 @@
  *     dont_inline_lambda_in_loop -> dontInlineLambdaInLoop
  *   Convention: Object with methods, pattern matching instead of instanceof chains
  *   Idiom: boundary/break instead of return
+ *   Gap: 246 LOC vs upstream 684 LOC (~36%). Inlining logic stubbed at
+ *     lines 74, 86, 138, 175 (SymbolDef + safety predicates). Function-call
+ *     inlining is the highest-impact pass after constant folding; currently
+ *     a no-op for most cases. See ISS-032. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js

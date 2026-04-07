@@ -22,6 +22,11 @@
  *     is_undefined -> isUndefined, is_nullish_shortcircuited -> isNullishShortcircuited
  *   Convention: Object with methods, pattern matching instead of DEFMETHOD
  *   Idiom: boundary/break instead of return, Set instead of makePredicate
+ *   Gap: 813 LOC vs upstream 1132 LOC (~72%). Predicates exist but ~7
+ *     scope-dependent branches stubbed at lines 69, 263, 331, 373, 595, 652,
+ *     709 — they conservatively bail because SymbolDef fixed-value lookup is
+ *     unwired. See ISS-032. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
 package js
