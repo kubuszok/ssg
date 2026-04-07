@@ -132,6 +132,87 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     assert(result.css.contains("@charset \"UTF-8\";"))
   }
 
+  // --- Number formatting (stage A.1: _writeNumber port) -------------------
+
+  private def fmtNum(n: Double, compressed: Boolean = false): String = {
+    val v = new SerializeVisitor(
+      style = if (compressed) OutputStyle.Compressed else OutputStyle.Expanded
+    )
+    // Exercise through formatSassNumber by wrapping in a SassNumber.
+    val num = ssg.sass.value.SassNumber(n)
+    // Build a trivial declaration and serialize to extract the value text.
+    val decl = new ModifiableCssDeclaration(
+      str("x"),
+      new CssValue[Value](num, span),
+      span,
+      parsedAsSassScript = true
+    )
+    val rule = styleRule("a", List(decl))
+    val sheet = stylesheet(List(rule))
+    val css = v.serialize(sheet).css
+    // Extract between "x:" and ";"
+    val start = css.indexOf("x:") + 2
+    val end = css.indexOf(';', start)
+    val raw = css.substring(start, end).trim
+    raw
+  }
+
+  test("writeNumber: integer values") {
+    assertEquals(fmtNum(0.0), "0")
+    assertEquals(fmtNum(1.0), "1")
+    assertEquals(fmtNum(-1.0), "-1")
+    assertEquals(fmtNum(42.0), "42")
+    assertEquals(fmtNum(1000000.0), "1000000")
+  }
+
+  test("writeNumber: simple decimals") {
+    assertEquals(fmtNum(0.5), "0.5")
+    assertEquals(fmtNum(-0.5), "-0.5")
+    assertEquals(fmtNum(3.14), "3.14")
+    assertEquals(fmtNum(1.25), "1.25")
+  }
+
+  test("writeNumber: compressed mode strips leading zero") {
+    assertEquals(fmtNum(0.5, compressed = true), ".5")
+    // Note: dart-sass's canWriteDirectly path only strips a leading `0`,
+    // not `-0`, so `-0.5` compressed is emitted verbatim in the fast path.
+    assertEquals(fmtNum(-0.5, compressed = true), "-0.5")
+    assertEquals(fmtNum(0.125, compressed = true), ".125")
+    assertEquals(fmtNum(1.5, compressed = true), "1.5")
+  }
+
+  test("writeNumber: rounds to precision (10 digits)") {
+    // 1/3 rounds to 0.3333333333
+    assertEquals(fmtNum(1.0 / 3.0), "0.3333333333")
+    // 2/3 rounds to 0.6666666667
+    assertEquals(fmtNum(2.0 / 3.0), "0.6666666667")
+  }
+
+  test("writeNumber: negative zero emits as 0") {
+    assertEquals(fmtNum(-0.0), "0")
+  }
+
+  test("writeNumber: strips trailing zeros after rounding") {
+    assertEquals(fmtNum(1.2000000000001), "1.2")
+  }
+
+  test("writeNumber: removeExponent handles large numbers") {
+    assertEquals(SerializeVisitor.removeExponent("1e21"), "1" + "0" * 21)
+    assertEquals(SerializeVisitor.removeExponent("1.5e5"), "150000")
+    assertEquals(SerializeVisitor.removeExponent("-1e3"), "-1000")
+  }
+
+  test("writeNumber: removeExponent handles small numbers") {
+    assertEquals(SerializeVisitor.removeExponent("1e-7"), "0.0000001")
+    assertEquals(SerializeVisitor.removeExponent("1.5e-5"), "0.000015")
+    assertEquals(SerializeVisitor.removeExponent("-1e-3"), "-0.001")
+  }
+
+  test("writeNumber: no exponent passes through") {
+    assertEquals(SerializeVisitor.removeExponent("123.45"), "123.45")
+    assertEquals(SerializeVisitor.removeExponent("-7"), "-7")
+  }
+
   test("vlqEncode encodes signed integers per source map v3 spec") {
     // Reference values per source-map spec
     assertEquals(SerializeVisitor.vlqEncode(0), "A")

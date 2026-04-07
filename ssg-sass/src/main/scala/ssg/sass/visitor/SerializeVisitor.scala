@@ -23,6 +23,7 @@ package visitor
 import ssg.sass.ColorNames
 import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
+import ssg.sass.util.NumberUtil
 import ssg.sass.value.{ SassColor, SassNumber, Value }
 import ssg.sass.value.color.ColorSpace
 
@@ -254,14 +255,157 @@ final class SerializeVisitor(
     case _ => v.toCssString()
   }
 
-  /** Formats a SassNumber: in compressed mode strips a leading `0` from values like `0.5px` -> `.5px` (and `-0.5` -> `-.5`). Trailing-zero stripping is already handled by `SassNumber.formatNumber`.
+  /** Formats a SassNumber for CSS output.
+    *
+    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart):
+    * the numeric portion is written via [[writeNumberTo]] (the faithful port
+    * of `_writeNumber`), then the single numerator unit — if any — is
+    * appended. Complex units and non-finite values fall back to the existing
+    * `SassNumber.toCssString()` which wraps them in `calc(...)`.
     */
   private def formatSassNumber(n: SassNumber): String = {
-    val s = n.toCssString()
-    if (!isCompressed) s
-    else if (s.startsWith("0.")) s.substring(1)
-    else if (s.startsWith("-0.")) "-" + s.substring(2)
-    else s
+    if (!n.value.isFinite) return n.toCssString()
+    if (n.hasComplexUnits) return n.toCssString()
+    val sb = new StringBuilder()
+    writeNumberTo(sb, n.value)
+    if (n.numeratorUnits.nonEmpty) sb.append(n.numeratorUnits.head)
+    sb.toString()
+  }
+
+  /** Writes `number` to `sb` without exponent notation and with at most
+    * `SassNumber.precision` digits after the decimal point.
+    *
+    * Ported from dart-sass `_writeNumber` / `_removeExponent` / `_writeRounded`
+    * in lib/src/visitor/serialize.dart. In compressed mode, strips the leading
+    * `0` from values like `0.5` -> `.5` (and `-0.5` -> `-.5`). Emits integers
+    * without a trailing `.0`. Suppresses the minus sign when a negative value
+    * rounds to exactly zero.
+    */
+  private[visitor] def writeNumberTo(sb: StringBuilder, number: Double): Unit = {
+    // Clamp doubles that are fuzzy-equal to an integer to their integer value.
+    // In inspect mode only clamp on exact equality so full precision is shown.
+    val asInt = NumberUtil.fuzzyAsInt(number)
+    if (asInt.isDefined && (!inspect || number == asInt.get.toDouble)) {
+      sb.append(SerializeVisitor.removeExponent(asInt.get.toString))
+      return
+    }
+
+    var text = SerializeVisitor.removeExponent(SerializeVisitor.doubleToString(number))
+
+    if (inspect) {
+      sb.append(text)
+      return
+    }
+
+    // Any double that's less than `SassNumber.precision + 2` characters long
+    // is guaranteed to be safe to emit directly, since it'll contain at most
+    // `0.` followed by `precision` digits.
+    val canWriteDirectly = text.length < SassNumber.precision + 2
+    if (canWriteDirectly) {
+      if (isCompressed && text.charAt(0) == '0') text = text.substring(1)
+      sb.append(text)
+      return
+    }
+
+    writeRounded(sb, text)
+  }
+
+  /** Rounds `text` (a number written without exponent notation) to
+    * [[SassNumber.precision]] digits after the decimal point and writes the
+    * result to `sb`. Direct port of dart-sass `_writeRounded`.
+    */
+  private def writeRounded(sb: StringBuilder, text: String): Unit = {
+    // Dart serializes doubles with a trailing `.0` for integer values; since
+    // our `doubleToString` strips that, guard here anyway.
+    if (text.endsWith(".0")) {
+      sb.append(text, 0, text.length - 2)
+      return
+    }
+
+    val digits      = new Array[Int](text.length + 1)
+    var digitsIndex = 1
+
+    var textIndex = 0
+    val negative  = text.charAt(0) == '-'
+    if (negative) textIndex += 1
+
+    // Write the digits before the decimal to `digits`. If there's no decimal,
+    // the number needs no rounding and can be written as-is.
+    var sawDot = false
+    while (!sawDot && textIndex < text.length) {
+      val c = text.charAt(textIndex)
+      textIndex += 1
+      if (c == '.') sawDot = true
+      else {
+        digits(digitsIndex) = c - '0'
+        digitsIndex += 1
+      }
+    }
+    if (!sawDot) {
+      sb.append(text)
+      return
+    }
+    val firstFractionalDigit = digitsIndex
+
+    val indexAfterPrecision = textIndex + SassNumber.precision
+    if (indexAfterPrecision >= text.length) {
+      sb.append(text)
+      return
+    }
+
+    while (textIndex < indexAfterPrecision) {
+      digits(digitsIndex) = text.charAt(textIndex) - '0'
+      digitsIndex += 1
+      textIndex += 1
+    }
+
+    // Round up if needed.
+    if (text.charAt(textIndex) - '0' >= 5) {
+      var done = false
+      while (!done) {
+        digits(digitsIndex - 1) += 1
+        if (digits(digitsIndex - 1) != 10) done = true
+        else digitsIndex -= 1
+      }
+    }
+
+    // Zero any carried-over digits past the decimal.
+    var i = digitsIndex
+    while (i < firstFractionalDigit) {
+      digits(i) = 0
+      i += 1
+    }
+    while (digitsIndex > firstFractionalDigit && digits(digitsIndex - 1) == 0)
+      digitsIndex -= 1
+
+    // If rounded to exactly zero, emit a single `0` (no minus sign).
+    if (digitsIndex == 2 && digits(0) == 0 && digits(1) == 0) {
+      sb.append('0')
+      return
+    }
+
+    if (negative) sb.append('-')
+
+    // Write the digits before the decimal. Omit the leading `0` placeholder
+    // added for rounding headroom; in compressed mode also omit the `0`
+    // before the decimal point.
+    var writtenIndex = 0
+    if (digits(0) == 0) {
+      writtenIndex += 1
+      if (isCompressed && digits(1) == 0) writtenIndex += 1
+    }
+    while (writtenIndex < firstFractionalDigit) {
+      sb.append(('0' + digits(writtenIndex)).toChar)
+      writtenIndex += 1
+    }
+
+    if (digitsIndex > firstFractionalDigit) {
+      sb.append('.')
+      while (writtenIndex < digitsIndex) {
+        sb.append(('0' + digits(writtenIndex)).toChar)
+        writtenIndex += 1
+      }
+    }
   }
 
   /** Formats a SassColor in the rgb space as `#hex` / `#abc` shorthand or a named color when shorter. Falls back to rgba(...) when alpha < 1.
@@ -413,6 +557,80 @@ object SerializeVisitor {
   /** Serialize compressed (minified). */
   def serializeCompressed(node: CssStylesheet): SerializeResult =
     new SerializeVisitor(style = OutputStyle.Compressed).serialize(node)
+
+  /** Renders `number` in the way dart-sass does before [[removeExponent]] runs.
+    *
+    * Dart's `double.toString` yields `1.0`, `-3.14`, `1e+21`, etc. JVM/JS/Native
+    * `Double.toString` is very close but varies slightly on each platform — we
+    * normalise to the format the port expects (lowercase `e`, trailing `.0`
+    * stripped for integer-valued doubles so [[removeExponent]] can round-trip).
+    */
+  def doubleToString(number: Double): String = {
+    val raw = java.lang.Double.toString(number)
+    // Java uses uppercase `E` for exponents; dart uses lowercase `e`.
+    var s = if (raw.indexOf('E') >= 0) raw.replace('E', 'e') else raw
+    // Java always writes a `.0` for integer-valued doubles (`1.0`, `1.0e21`).
+    // Dart's `_removeExponent` was written assuming dart's output format,
+    // which drops the redundant `.0` before the exponent (`1e21`) but keeps
+    // it for non-exponential integers (`1.0`). Strip the `.0` just before
+    // `e` so the algorithm round-trips correctly.
+    val eIdx = s.indexOf('e')
+    if (eIdx >= 2 && s.charAt(eIdx - 2) == '.' && s.charAt(eIdx - 1) == '0') {
+      s = s.substring(0, eIdx - 2) + s.substring(eIdx)
+    }
+    s
+  }
+
+  /** If `text` uses exponent notation, returns an equivalent non-exponent
+    * representation. Otherwise returns `text`.
+    *
+    * Port of dart-sass `_removeExponent` in serialize.dart.
+    */
+  def removeExponent(text: String): String = {
+    var eIdx = -1
+    var i    = 0
+    while (eIdx < 0 && i < text.length) {
+      if (text.charAt(i) == 'e') eIdx = i
+      i += 1
+    }
+    if (eIdx < 0) return text
+
+    val negative = text.charAt(0) == '-'
+
+    // Parse the exponent after `e`, tolerating an optional leading `+`.
+    var expStart = eIdx + 1
+    if (expStart < text.length && text.charAt(expStart) == '+') expStart += 1
+    val exponent = text.substring(expStart).toInt
+
+    // `digits` collects the significant digits (including the leading sign).
+    // Dart's algorithm writes char 0, skips char 1 (which is `.` if there's
+    // more than one significant digit), then writes the rest up to `e`.
+    val digits = new StringBuilder()
+    digits.append(text.charAt(0))
+    if (negative) {
+      if (eIdx > 1) digits.append(text.charAt(1))
+      if (eIdx > 3) digits.append(text.substring(3, eIdx))
+    } else {
+      if (eIdx > 2) digits.append(text.substring(2, eIdx))
+    }
+
+    if (exponent > 0) {
+      // Append `exponent - (significantDigitsAfterFirst)` zeros.
+      val additionalZeroes = exponent - (digits.length - 1 - (if (negative) 1 else 0))
+      var k = 0
+      while (k < additionalZeroes) { digits.append('0'); k += 1 }
+      digits.toString()
+    } else {
+      val result = new StringBuilder()
+      if (negative) result.append('-')
+      result.append("0.")
+      var k = -1
+      while (k > exponent) { result.append('0'); k -= 1 }
+      if (negative) result.append(digits.toString().substring(1))
+      else result.append(digits.toString())
+      result.toString()
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // VLQ base64 encoding (source map v3 mapping segments)
