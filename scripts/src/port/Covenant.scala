@@ -96,8 +96,17 @@ object Covenant {
     if (header.covenant != "full-port") {
       return Right(()) // only full-port covenants are enforced
     }
-    val currentMethods = compare.Methods.extractScalaMethods(filePath).toSet
-    val missing = header.baselineMethods -- currentMethods
+    // Normalize both sides through `Methods.normalizeName` so the
+    // dart-private-underscore convention and the Scala `Fn` suffix
+    // align with the baseline (which is also stored in normalized
+    // form).
+    val currentMethods = compare.Methods.extractScalaMethods(filePath).iterator
+      .map(compare.Methods.normalizeName)
+      .toSet
+    val baselineNormalized = header.baselineMethods.iterator
+      .map(compare.Methods.normalizeName)
+      .toSet
+    val missing = baselineNormalized -- currentMethods
     if (missing.nonEmpty)
       return Left(s"methods removed since baseline: ${missing.toList.sorted.take(5).mkString(", ")}")
     val hits = quality.Shortcuts.scanFile(filePath)

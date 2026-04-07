@@ -289,10 +289,11 @@ object MetaFunctions {
       "$module",
       { args =>
         val name = argName(args.head)
-        // First try a built-in `sass:` module — none of those expose
-        // variables today, so this is effectively the user-defined path.
-        CurrentEnvironment.get.flatMap(_.getNamespace(name)).fold(SassMap.empty) { env =>
-          val entries = env.variableEntries.map { case (k, v) =>
+        // Walk the module's PUBLIC variable surface (`Module.variables`)
+        // which includes any members `@forward`ed from upstream modules
+        // — not the inner Environment's local scope chain.
+        CurrentEnvironment.get.flatMap(_.findNamespacedModule(name)).fold(SassMap.empty) { m =>
+          val entries = m.variables.iterator.map { case (k, v) =>
             (SassString(k, hasQuotes = true): Value) -> v
           }.toList
           SassMap(ListMap.from(entries))
@@ -307,13 +308,12 @@ object MetaFunctions {
       { args =>
         val name = argName(args.head)
         // Surface the namespace's function members as a name->name map.
-        // First try the active env (covers `@use "vars" as v` and
-        // `@use "sass:color"` since both register namespaces). Fall back
-        // to the static built-in module table for `sass:` modules even
-        // when no `@use` is in scope.
-        val nsEntries = CurrentEnvironment.get.flatMap(_.getNamespace(name)).fold(List.empty[(Value, Value)]) { env =>
-          env.functionValues.map { fn =>
-            (SassString(fn.name, hasQuotes = true): Value) ->
+        // Use the module's PUBLIC functions surface, which includes
+        // forwarded members. Falls back to the static built-in module
+        // table for `sass:` modules when no `@use` is in scope.
+        val nsEntries = CurrentEnvironment.get.flatMap(_.findNamespacedModule(name)).fold(List.empty[(Value, Value)]) { m =>
+          m.functions.iterator.map { case (fnName, fn) =>
+            (SassString(fnName, hasQuotes = true): Value) ->
               (new SassFunction(fn): Value)
           }.toList
         }

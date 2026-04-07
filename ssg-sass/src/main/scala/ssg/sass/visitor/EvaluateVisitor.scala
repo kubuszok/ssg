@@ -331,7 +331,20 @@ final class EvaluateVisitor(
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case fr: ssg.sass.ast.sass.FunctionRule =>
-            _runUserDefinedFunction(fr, positional, named)
+            // dart-sass _runUserDefinedCallable: switch to a fresh closure of
+            // the callable's captured environment, then push a new scope inside
+            // it. The fresh closure isolates the body's mutations from the
+            // captured env; the scope() push gives parameters and local
+            // variables somewhere to live without bleeding into the caller's
+            // global scope.
+            ud.environment match {
+              case env: Environment =>
+                _withEnvironment(env.closure()) {
+                  _runUserDefinedFunction(fr, positional, named)
+                }
+              case _ =>
+                _runUserDefinedFunction(fr, positional, named)
+            }
           case _ =>
             throw SassScriptException(s"Callable ${callable.name} is not a function.")
         }
@@ -446,7 +459,22 @@ final class EvaluateVisitor(
             ud.declaration match {
               case fr: FunctionRule =>
                 val (positional, named) = _evaluateArguments(node.arguments)
-                _runUserDefinedFunction(fr, positional, named)
+                // dart-sass _runUserDefinedCallable: switch to a fresh closure
+                // of the function's captured environment, then push a scope
+                // inside it. The fresh closure isolates the body's mutations
+                // from the captured env so concurrent invocations don't see
+                // each other's locals; the scope() (inside _runUserDefinedFunction)
+                // gives parameters and locals their own buffer level, so
+                // `$var: ...` redirects from the global level to the local
+                // level instead of writing to the actual shared global map.
+                ud.environment match {
+                  case env: Environment =>
+                    _withEnvironment(env.closure()) {
+                      _runUserDefinedFunction(fr, positional, named)
+                    }
+                  case _ =>
+                    _runUserDefinedFunction(fr, positional, named)
+                }
               case _ =>
                 throw SassScriptException(s"Callable ${node.name} is not a function.")
             }
@@ -1026,17 +1054,36 @@ final class EvaluateVisitor(
   }
 
   override def visitVariableDeclaration(node: VariableDeclaration): Value = {
-    val skip =
-      if (node.isGuarded) {
-        val existing = _environment.getVariable(node.name)
-        existing.isDefined && existing.get != SassNull
+    // dart-sass: a `!default` declaration at the root of a module first
+    // consults the pending Configuration. If the configuration has an
+    // override (and it isn't `null`), the declaration takes that value
+    // and the entry is consumed (removed from the pending map). This
+    // is what makes `@use "foo" with ($x: y)` flow into `$x: 0 !default`
+    // in foo without pre-seeding $x into foo's local scope (which would
+    // pollute foo's public surface even when foo never declared $x).
+    val configHit: Boolean =
+      if (node.isGuarded && node.namespace.isEmpty && _environment.atRoot) {
+        _pendingConfig.get(node.name) match {
+          case Some(v) if v != SassNull =>
+            _pendingConfig = _pendingConfig - node.name
+            _environment.setVariable(node.name, v, global = true)
+            true
+          case _ => false
+        }
       } else false
-    if (!skip) {
-      val value = node.expression.accept(this)
-      if (node.isGlobal) {
-        _environment.setGlobalVariable(node.name, value)
-      } else {
-        _environment.setVariable(node.name, value)
+    if (!configHit) {
+      val skip =
+        if (node.isGuarded) {
+          val existing = _environment.getVariable(node.name)
+          existing.isDefined && existing.get != SassNull
+        } else false
+      if (!skip) {
+        val value = node.expression.accept(this)
+        if (node.isGlobal) {
+          _environment.setGlobalVariable(node.name, value)
+        } else {
+          _environment.setVariable(node.name, value)
+        }
       }
     }
     SassNull
@@ -1592,22 +1639,25 @@ final class EvaluateVisitor(
               // Evaluate the module in a fresh environment, then register its
               // members either as a namespace or by merging them flat (`as *`).
               val moduleEnv = Environment.withBuiltins()
-              // Apply `with (...)` configuration before evaluating the module
-              // so that `!default` declarations honor the override.
+              // Apply `with (...)` configuration. The local clause is
+              // evaluated in the *caller's* environment, then merged with
+              // any inherited `_pendingConfig` from an enclosing `@use`-with
+              // (local wins on overlap). The combined map is set as the
+              // active `_pendingConfig` while the module body runs;
+              // `visitVariableDeclaration` consumes entries on `!default`
+              // declarations at the module root. We do NOT pre-seed the
+              // configured names into `moduleEnv._variables(0)` directly
+              // — doing so would pollute the module's public variable
+              // surface with names the module itself never declared,
+              // causing spurious `Two forwarded modules both define $x`
+              // conflicts when a sibling forward shares an upstream.
               // ISS-033: reject configuring private (`_foo`/`-foo`) vars.
-              // Explicit `with` is evaluated in the *caller's* environment,
-              // then seeded into moduleEnv. Both the local config and any
-              // inherited `_pendingConfig` from an enclosing `@use`-with
-              // flow through `@forward` chains (local wins on overlap).
               val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
                 _checkPrivateConfig(cv)
                 val cvValue = cv.expression.accept(this)
                 localConfig(cv.name) = cvValue
-                moduleEnv.setVariable(cv.name, cvValue)
               }
-              for ((cn, cv) <- _pendingConfig)
-                if (!localConfig.contains(cn)) moduleEnv.setVariable(cn, cv)
               val savedPending1 = _pendingConfig
               _pendingConfig = _pendingConfig ++ localConfig.toMap
               try
@@ -1622,19 +1672,16 @@ final class EvaluateVisitor(
               // applies uniformly to both namespaced `@use` and `as *` flat
               // merge — dart-sass never exposes private members across a
               // module boundary.
-              val publicEnv = moduleEnv.publicView()
-              if (node.namespace.isDefined) {
-                node.namespace.foreach { ns =>
-                  _environment.addModule(EnvironmentModule(publicEnv), node, Nullable(ns))
-                }
-              } else {
-                // Flat (`as *`) — route the module through the new
-                // Environment module API (Stage 4E). `forwardModule` hoists
-                // non-private members into the caller's global scope and
-                // function/mixin tables, and also registers the module in
-                // `_allModules` so future Stage-4 bookkeeping observes it.
-                _environment.forwardModule(EnvironmentModule(publicEnv), node)
-              }
+              // Seal the evaluated module and register it with the
+              // caller's environment. `addModule` handles both cases:
+              // `@use "x" as ns` goes into `_modules[ns]`, and
+              // `@use "x" as *` lands in `_globalModules` for flat
+              // member merge via `_fromOneModule` lookups.
+              val sealedModule = moduleEnv.toModule(
+                CssStylesheet.empty(Nullable.empty),
+                ssg.sass.extend.ExtensionStore.empty
+              )
+              _environment.addModule(sealedModule, node, node.namespace)
             }
           finally {
             val _ = _activeImports.remove(canonicalUrl)
@@ -1643,15 +1690,18 @@ final class EvaluateVisitor(
       }
     }
 
-  /** Returns a [[Callable]] equivalent to [orig] but reporting [newName] as its name. Used for `@forward ... as prefix-*`. If [newName] equals the original name, returns [orig] unchanged.
-    */
-  private def _aliasCallable(newName: String, orig: ssg.sass.Callable): ssg.sass.Callable =
-    ssg.sass.AliasedCallable(newName, orig)
-
   override def visitForwardRule(node: ForwardRule): Value = {
-    // Minimal @forward: load the target module and merge its members into
-    // the current environment so callers doing `@use "this-file"` see them
-    // (via the namespace). Honors `show`/`hide` filtering and `as prefix-*`.
+    // dart-sass visitForwardRule: load the upstream module via _loadModule,
+    // seal it as an EnvironmentModuleImpl, then call
+    // `_environment.forwardModule(module, node)` which registers the upstream
+    // as a *forwarded* module on the current environment. The forwarded
+    // module's members appear in the current env's sealed surface (via
+    // `EnvironmentModuleImpl.memberMap`) so downstream `@use` consumers see
+    // them through the namespace; the forwarded module ALSO becomes part of
+    // the lookup chain when this env is later imported into a caller via
+    // `importForwards`, which is what makes `@import` of a file containing
+    // `@forward upstream` expose upstream's members directly to the
+    // importing scope.
     importer.foreach { imp =>
       val urlStr    = node.url.toString
       val canonical = imp.canonicalize(urlStr)
@@ -1664,22 +1714,20 @@ final class EvaluateVisitor(
           try
             _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
               val moduleEnv = Environment.withBuiltins()
-              // Apply `with (...)` configuration before evaluating the module
-              // so that `!default` declarations honor the override (mirrors @use).
-              // ISS-033: reject configuring private (`_foo`/`-foo`) vars.
-              // Config flows in from both the local `@forward ... with (...)`
-              // and from an enclosing `@use`-with via `_pendingConfig`; the
-              // local clause wins on overlap, and the combined map is pushed
-              // so a further `@forward` inside the target propagates again.
+              // Apply `with (...)` configuration. Same model as @use:
+              // merge the local @forward `with (...)` clause with any
+              // inherited `_pendingConfig` from an enclosing
+              // `@use`-with, then run the module body with the combined
+              // map active. `visitVariableDeclaration` consumes entries
+              // on `!default` root declarations. No pre-seeding into the
+              // module's local scope. ISS-033: reject configuring
+              // private (`_foo`/`-foo`) vars.
               val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
                 _checkPrivateConfig(cv)
                 val cvValue = cv.expression.accept(this)
                 localConfig(cv.name) = cvValue
-                moduleEnv.setVariable(cv.name, cvValue)
               }
-              for ((cn, cv) <- _pendingConfig)
-                if (!localConfig.contains(cn)) moduleEnv.setVariable(cn, cv)
               val savedPending2 = _pendingConfig
               _pendingConfig = _pendingConfig ++ localConfig.toMap
               try
@@ -1689,48 +1737,16 @@ final class EvaluateVisitor(
                   }
                 }
               finally _pendingConfig = savedPending2
-              val prefix:                   String  = if (node.prefix.isDefined) node.prefix.get else ""
-              def varAllowed(name: String): Boolean =
-                if (node.shownVariables.isDefined) node.shownVariables.get.contains(name)
-                else if (node.hiddenVariables.isDefined) !node.hiddenVariables.get.contains(name)
-                else true
-              def memberAllowed(name: String): Boolean =
-                if (node.shownMixinsAndFunctions.isDefined) node.shownMixinsAndFunctions.get.contains(name)
-                else if (node.hiddenMixinsAndFunctions.isDefined) !node.hiddenMixinsAndFunctions.get.contains(name)
-                else true
-              // Names of global built-in callables — not forwarded.
-              val builtinNames: Set[String] =
-                ssg.sass.functions.Functions.global.iterator.map(_.name).toSet
-              // `@forward` only re-exports public members (a leading `-`
-              // or `_` marks a member private to its defining module).
-              // show/hide filters are applied per-kind so e.g. `show $bar`
-              // only scopes the variable namespace, not a mixin named
-              // `bar`. Per the Sass spec the show/hide names match the
-              // PREFIXED names, not the underlying originals — so we
-              // check allowance against `prefix + name`.
-              for ((name, value) <- moduleEnv.variableEntries)
-                if (!Environment.isPrivate(name) && varAllowed(prefix + name)) {
-                  val newName = prefix + name
-                  if (!_environment.variableExists(newName)) {
-                    _environment.setVariable(newName, value)
-                  }
-                }
-              for (fn <- moduleEnv.functionValues)
-                if (
-                  !Environment.isPrivate(fn.name)
-                  && !builtinNames.contains(fn.name)
-                  && memberAllowed(prefix + fn.name)
-                ) {
-                  _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
-                }
-              for (mx <- moduleEnv.mixinValues)
-                if (
-                  !Environment.isPrivate(mx.name)
-                  && !builtinNames.contains(mx.name)
-                  && memberAllowed(prefix + mx.name)
-                ) {
-                  _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
-                }
+
+              // Seal the upstream env into a Module and register it as a
+              // forwarded module on the current env. ForwardRule's prefix /
+              // show / hide filters are applied lazily by the
+              // `ForwardedView` wrapper that `forwardModule` constructs.
+              val upstreamModule = moduleEnv.toModule(
+                CssStylesheet.empty(Nullable.empty),
+                ssg.sass.extend.ExtensionStore.empty
+              )
+              _environment.forwardModule(upstreamModule, node)
             }
           finally {
             val _ = _activeImports.remove(canonicalUrl)
@@ -1774,8 +1790,25 @@ final class EvaluateVisitor(
     SassNull
   }
 
-  /** Loads a dynamic `@import` via the configured importer, parses the contents, and evaluates the resulting stylesheet in the current scope. Silently skips if no importer is configured or the URL
-    * can't be resolved.
+  /** Loads a dynamic `@import` via the configured importer, parses the
+    * contents, and evaluates the resulting stylesheet.
+    *
+    * dart-sass `_visitDynamicImport` model:
+    *   - If the imported file uses no `@use` or `@forward`, evaluate its
+    *     children directly in the current environment. Variable / function /
+    *     mixin definitions land in the importing env's scopes via the
+    *     normal evaluator code paths.
+    *   - If the imported file does have `@use` or `@forward`, evaluate it
+    *     in a `forImport()` environment that shares variable / function /
+    *     mixin storage with the caller but has its own `_modules` /
+    *     `_globalModules` / `_forwardedModules`. After the body has run,
+    *     seal the forImport env as a dummy module and call
+    *     `_environment.importForwards(dummyModule)` on the outer env. This
+    *     hoists the imported file's `@forward`ed modules into the outer
+    *     env's `_importedModules` (at root) or `_nestedForwardedModules`
+    *     (below root) so the importing scope can resolve them via
+    *     `_fromOneModule` AND so variable assignments find the right
+    *     backing storage in the upstream module.
     */
   private def _loadDynamicImport(url: String): Unit =
     importer.foreach { imp =>
@@ -1788,11 +1821,34 @@ final class EvaluateVisitor(
           _activeImports += canonicalUrl
           try
             _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
-              // Evaluate the imported stylesheet's children as if they were
-              // written inline at the @import point. No new scope — imports
-              // share the enclosing environment.
-              importedSheet.children.get.foreach { stmt =>
-                val _ = stmt.accept(this)
+              val children = importedSheet.children.get
+              val hasUseOrForward = children.exists {
+                case _: ssg.sass.ast.sass.UseRule     => true
+                case _: ssg.sass.ast.sass.ForwardRule => true
+                case _                                => false
+              }
+              if (!hasUseOrForward) {
+                // Simple inline path: no module-system directives, so the
+                // imported file can run against the caller's environment
+                // without any `forImport`/`importForwards` plumbing.
+                children.foreach { stmt =>
+                  val _ = stmt.accept(this)
+                }
+              } else {
+                // dart-sass `forImport` path: evaluate in an isolated
+                // `_modules`/`_globalModules`/`_forwardedModules` shell that
+                // still shares the variable / function / mixin scope chain
+                // with the caller, then `importForwards` the resulting
+                // dummy module so the caller's lookup chain can reach
+                // anything the imported file `@forward`ed.
+                val forImportEnv = _environment.forImport()
+                _withEnvironment(forImportEnv) {
+                  children.foreach { stmt =>
+                    val _ = stmt.accept(this)
+                  }
+                }
+                val dummyModule = forImportEnv.toDummyModule()
+                _environment.importForwards(dummyModule)
               }
             }
           finally {
@@ -2150,7 +2206,13 @@ final class EvaluateVisitor(
   override def visitIncludeRule(node: IncludeRule): Value = {
     val lookup: Nullable[Callable] =
       if (node.namespace.isDefined) {
-        node.namespace.flatMap(ns => _environment.getNamespace(ns)).flatMap(_.getMixin(node.name))
+        // Look up via the module's public mixin map (which includes
+        // forwarded modules), not via the inner Environment's local
+        // mixins. dart-sass goes through `_environment.getMixin(name,
+        // namespace: ns)` which routes through `_getModule(ns).mixins`.
+        node.namespace.fold(Nullable.empty[Callable]) { ns =>
+          _environment.getNamespacedMixin(ns, node.name)
+        }
       } else {
         _environment.getMixin(node.name)
       }
@@ -2189,16 +2251,29 @@ final class EvaluateVisitor(
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case mr: MixinRule =>
-            _environment.withSnapshot {
-              _bindParameters(mr.parameters, positional, named)
-              val savedContent = _environment.content
-              _environment.content = content
-              try
-                for (statement <- mr.childrenList) {
-                  val _ = statement.accept(this)
-                }
-              finally
-                _environment.content = savedContent
+            // dart-sass _runUserDefinedCallable: switch to a fresh closure of
+            // the mixin's captured environment, then push a scope inside it.
+            // The fresh closure isolates the body's mutations from the
+            // captured env so concurrent invocations don't see each other's
+            // locals; the scope() push gives parameters and locals their own
+            // buffer level so `$var: ...` redirects from the global level to
+            // the local level instead of writing to the actual shared global
+            // map.
+            val runBody: () => Unit = () =>
+              _environment.scope() {
+                _bindParameters(mr.parameters, positional, named)
+                val savedContent = _environment.content
+                _environment.content = content
+                try
+                  for (statement <- mr.childrenList) {
+                    val _ = statement.accept(this)
+                  }
+                finally
+                  _environment.content = savedContent
+              }
+            ud.environment match {
+              case env: Environment => _withEnvironment(env.closure())(runBody())
+              case _                => runBody()
             }
           case other =>
             throw SassScriptException(
@@ -2219,7 +2294,12 @@ final class EvaluateVisitor(
     positional: List[Value],
     named:      ListMap[String, Value]
   ): Value =
-    _environment.withSnapshot {
+    // dart-sass _runUserDefinedCallable: push a scope (semiGlobal=false), bind
+    // parameters as locals, run the body. The scope() push is what redirects
+    // `$var: x` writes from the captured env's global map to a private local
+    // map so concurrent invocations and the surrounding global state are
+    // shielded from the body's mutations.
+    _environment.scope() {
       _bindParameters(fr.parameters, positional, named)
       try {
         for (statement <- fr.childrenList) {

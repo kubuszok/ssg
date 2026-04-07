@@ -46,6 +46,29 @@ trait Module[T <: Callable] {
 
   /** Sets a variable's value in this module. */
   def setVariable(name: String, value: Value): Unit
+
+  /** Returns an opaque identity token for the variable named [name] — used
+    * by dart-sass's `_assertNoConflicts` to deduplicate variables that
+    * are re-exported from a common upstream module under the same name.
+    *
+    * The default implementation uses the module itself as the identity,
+    * which causes every variable in an unrelated module to compare
+    * unequal. Forwarded/shadowed views override this to delegate to the
+    * underlying module so that two forward chains pointing at the same
+    * source collapse to a single identity.
+    */
+  def variableIdentity(name: String): AnyRef = this
+
+  /** Whether this module (or any module it transitively forwards) could
+    * have declared a `!default` variable with any of the given [[names]]
+    * as its name. Used by dart-sass to detect configuration-arrives-
+    * too-late errors when `@forward ... with (...)` configures a module
+    * that was already loaded elsewhere.
+    *
+    * The default implementation returns `false`, matching a module that
+    * has no configurable variables. `_EnvironmentModule` overrides this.
+    */
+  def couldHaveBeenConfigured(names: Set[String]): Boolean = false
 }
 
 /** A module defined in Dart/Scala code (e.g. `sass:math`). */
@@ -77,12 +100,12 @@ final class BuiltInModule[T <: Callable](
 
 /** A view of a [[Module]] that only exposes members matching a forward rule (`@forward ... show`/`hide`).
   *
-  * Members can additionally be exposed under a `prefix` (`@forward ... as prefix-*`). Filtering rules:
-  *   - When `shownVariables`/`shownMixinsAndFunctions` are defined, only the listed names are visible.
-  *   - When `hiddenVariables`/`hiddenMixinsAndFunctions` are defined, the listed names are dropped.
-  *   - The `prefix`, when present, is prepended to every visible member's name.
-  *
-  * The show/hide check is performed against the *unprefixed* underlying name.
+  * Members can additionally be exposed under a `prefix` (`@forward ... as prefix-*`). Filtering order
+  * mirrors dart-sass's `_forwardedMap`:
+  *   1. The inner module's keys are wrapped through the `prefix` (so `a` becomes `prefix-a`).
+  *   2. show/hide filters are applied against the *prefixed* keys — i.e. `hide a` paired with
+  *      `as b-*` does NOT hide the upstream `a` (its prefixed form is `b-a`, which doesn't match
+  *      the hide name `a`).
   */
 final class ForwardedView[T <: Callable](
   val inner:                    Module[T],
@@ -96,15 +119,17 @@ final class ForwardedView[T <: Callable](
   private def _prefixed(name: String): String =
     prefix.fold(name)(p => p + name)
 
-  private def _isVarVisible(name: String): Boolean = {
-    val shown  = shownVariables.fold(true)(_.contains(name))
-    val hidden = hiddenVariables.fold(false)(_.contains(name))
+  /** Visibility check against the *prefixed* key. */
+  private def _isVarVisible(prefixedName: String): Boolean = {
+    val shown  = shownVariables.fold(true)(_.contains(prefixedName))
+    val hidden = hiddenVariables.fold(false)(_.contains(prefixedName))
     shown && !hidden
   }
 
-  private def _isCallableVisible(name: String): Boolean = {
-    val shown  = shownMixinsAndFunctions.fold(true)(_.contains(name))
-    val hidden = hiddenMixinsAndFunctions.fold(false)(_.contains(name))
+  /** Visibility check against the *prefixed* key. */
+  private def _isCallableVisible(prefixedName: String): Boolean = {
+    val shown  = shownMixinsAndFunctions.fold(true)(_.contains(prefixedName))
+    val hidden = hiddenMixinsAndFunctions.fold(false)(_.contains(prefixedName))
     shown && !hidden
   }
 
@@ -119,17 +144,17 @@ final class ForwardedView[T <: Callable](
 
   def variables: Map[String, Value] =
     inner.variables.collect {
-      case (n, v) if _isVarVisible(n) => _prefixed(n) -> v
+      case (n, v) if _isVarVisible(_prefixed(n)) => _prefixed(n) -> v
     }
 
   def functions: Map[String, T] =
     inner.functions.collect {
-      case (n, f) if _isCallableVisible(n) => _prefixed(n) -> f
+      case (n, f) if _isCallableVisible(_prefixed(n)) => _prefixed(n) -> f
     }
 
   def mixins: Map[String, T] =
     inner.mixins.collect {
-      case (n, m) if _isCallableVisible(n) => _prefixed(n) -> m
+      case (n, m) if _isCallableVisible(_prefixed(n)) => _prefixed(n) -> m
     }
 
   def css:                            CssStylesheet = inner.css
@@ -137,11 +162,24 @@ final class ForwardedView[T <: Callable](
   def transitivelyContainsExtensions: Boolean       = inner.transitivelyContainsExtensions
 
   def setVariable(name: String, value: Value): Unit =
-    _unprefix(name).fold(throw new IllegalArgumentException(s"Undefined variable: $$$name")) { underlying =>
-      if (!_isVarVisible(underlying))
-        throw new IllegalArgumentException(s"Undefined variable: $$$name")
-      inner.setVariable(underlying, value)
-    }
+    // The incoming `name` is the prefixed key (caller-side). Visibility
+    // is checked against that key, then the prefix is stripped before
+    // delegating to the inner module's storage.
+    if (!_isVarVisible(name))
+      throw new IllegalArgumentException(s"Undefined variable: $$$name")
+    else
+      _unprefix(name).fold(throw new IllegalArgumentException(s"Undefined variable: $$$name")) { underlying =>
+        inner.setVariable(underlying, value)
+      }
+
+  override def variableIdentity(name: String): AnyRef = {
+    val underlying = _unprefix(name)
+    if (underlying.isEmpty) this
+    else inner.variableIdentity(underlying.get)
+  }
+
+  override def couldHaveBeenConfigured(names: Set[String]): Boolean =
+    inner.couldHaveBeenConfigured(names)
 }
 
 object ForwardedView {
@@ -186,4 +224,9 @@ final class ShadowedView[T <: Callable](
     if (shadowedVars.contains(name))
       throw new IllegalArgumentException(s"Undefined variable: $$$name")
     else inner.setVariable(name, value)
+
+  override def variableIdentity(name: String): AnyRef = inner.variableIdentity(name)
+
+  override def couldHaveBeenConfigured(names: Set[String]): Boolean =
+    inner.couldHaveBeenConfigured(names)
 }
