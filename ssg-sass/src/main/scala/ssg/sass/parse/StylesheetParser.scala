@@ -62,6 +62,7 @@ import ssg.sass.ast.sass.{
   NumberExpression,
   Parameter,
   ParameterList,
+  ParenthesizedExpression,
   ParseTimeWarning,
   ReturnRule,
   SilentComment,
@@ -434,7 +435,16 @@ abstract class StylesheetParser protected (
         // Reject CSS reserved special function names. Matches dart-sass
         // `_functionRule` in lib/src/parse/stylesheet.dart.
         val reservedFunctionNames = Set(
-          "calc", "element", "expression", "url", "and", "or", "not", "var", "attr", "env",
+          "calc",
+          "element",
+          "expression",
+          "url",
+          "and",
+          "or",
+          "not",
+          "var",
+          "attr",
+          "env",
           "progid:dximagetransform.microsoft.gradient"
         )
         if (reservedFunctionNames.contains(fnName.toLowerCase) || fnName.startsWith("--")) {
@@ -977,7 +987,7 @@ abstract class StylesheetParser protected (
           if (scanIdentifier("if")) {
             whitespace(consumeNewlines = true)
             val (elseCondRaw, elseCondStart) = _collectCondition()
-            val elseCondExpr = _parseSimpleExpression(elseCondRaw, spanFrom(elseCondStart))
+            val elseCondExpr                 = _parseSimpleExpression(elseCondRaw, spanFrom(elseCondStart))
             whitespace(consumeNewlines = true)
             val elseIfKids = _children()
             clauses += new IfClause(elseCondExpr, elseIfKids)
@@ -2116,15 +2126,15 @@ abstract class StylesheetParser protected (
     val parenIdx = raw.indexOf('(')
     if (parenIdx <= 0) return None
     // Verify the opening `(` at parenIdx matches the final `)`.
-    var depth    = 0
-    var i        = parenIdx
-    var matched  = false
+    var depth   = 0
+    var i       = parenIdx
+    var matched = false
     while (i < raw.length && !matched) {
       val c = raw.charAt(i)
       if (c == '(') depth += 1
       else if (c == ')') {
         depth -= 1
-        if (depth == 0) matched = (i == raw.length - 1)
+        if (depth == 0) matched = i == raw.length - 1
       }
       i += 1
     }
@@ -2201,8 +2211,8 @@ abstract class StylesheetParser protected (
     // which by Sass rules must follow immediately after [[rest]]).
     var restExpr:        Nullable[Expression] = Nullable.empty
     var keywordRestExpr: Nullable[Expression] = Nullable.empty
-    val n                                     = rawArgs.length
-    var idx                                   = 0
+    val n   = rawArgs.length
+    var idx = 0
     for (a <- rawArgs) {
       // Detect a named argument `$name: value`. We match `$` + identifier
       // + `:` (but not `::`, which would be a pseudo-element).
@@ -2637,4 +2647,584 @@ abstract class StylesheetParser protected (
 
   /** Consumes a sequence of statements. */
   protected def statements(statement: () => Nullable[Statement]): List[Statement]
+
+  // ===========================================================================
+  // Recursive-descent expression parser (stage 1 scaffold)
+  // ===========================================================================
+  //
+  // These `_rd*` methods are a new, true recursive-descent port of the
+  // dart-sass `_expression` / `_singleExpression` machinery in
+  // `lib/src/parse/stylesheet.dart` (around lines 1971-2712). They consume
+  // directly from `scanner` rather than pre-collecting raw text like the
+  // existing `_expression` + `_parseSimpleExpression` pipeline.
+  //
+  // Stage 1 goals:
+  //   - Port the control-flow skeleton: `_expression` loop with comma/space
+  //     list accumulation, operator precedence climbing via an operator
+  //     stack, unary +/-/not, parenthesized expressions, numbers, variables,
+  //     identifier/function calls with namespace.
+  //   - Keep the AST sane on simple inputs (numbers, identifiers, variables,
+  //     strings, function calls, arithmetic, comparison, lists).
+  //   - NOT wired from any call site yet. Live alongside the text-based
+  //     parser. Call sites will be migrated one at a time in stage 2+.
+  //
+  // Stage 1 limitations (intentional stubs / text fallbacks):
+  //   - `#{...}` interpolation inside expressions is handled by capturing
+  //     the raw text and delegating to `_parseInterpolatedString`.
+  //   - Quoted strings do NOT yet support embedded interpolation; the
+  //     raw text between quotes becomes an `Interpolation.plain`.
+  //   - `@supports` / calc-style parsing and special CSS functions are not
+  //     yet ported — `_rdFunctionCall` produces a generic FunctionExpression.
+  //   - Bracketed lists `[a b, c]`, maps, the slash-separator nuance,
+  //     `!important`, unicode ranges, and the Microsoft `=` operator are
+  //     NOT yet handled.
+  //   - Hex color literals are parsed as function-ish identifiers only
+  //     when they lex as such; `#abc` lexing is stubbed.
+
+  /** Discards a value (for readChar() calls whose result is unused). */
+  private inline def _rdConsume[A](a: A): Unit = { val _ = a }
+
+  /** dart-sass: `_isSlashOperand`. */
+  private def _rdIsSlashOperand(e: Expression): Boolean = e match {
+    case _: NumberExpression                           => true
+    case _: FunctionExpression                         => true
+    case b: BinaryOperationExpression if b.allowsSlash => true
+    case _ => false
+  }
+
+  /** dart-sass: `_expression` (port). Consumes a full expression from the scanner, handling comma and space-separated lists as well as binary operator precedence.
+    */
+  protected def _rdExpression(
+    stopAtComma:     Boolean = false,
+    consumeNewlines: Boolean = false
+  ): Expression = {
+    val start = scanner.state
+
+    // Accumulators matching the dart-sass locals. We use `null` sentinels
+    // via Option to avoid Nullable implicit collisions.
+    var commaExpressions: Option[mutable.ListBuffer[Expression]]     = None
+    var spaceExpressions: Option[mutable.ListBuffer[Expression]]     = None
+    var operators:        Option[mutable.ListBuffer[BinaryOperator]] = None
+    var operands:         Option[mutable.ListBuffer[Expression]]     = None
+    var allowSlash = true
+
+    var singleExpression: Option[Expression] = Some(_rdSingleExpression())
+
+    def resolveOneOperation(): Unit = {
+      val opsBuf   = operators.get
+      val operator = opsBuf.remove(opsBuf.length - 1)
+      val opdBuf   = operands.get
+      val left     = opdBuf.remove(opdBuf.length - 1)
+      val right    = singleExpression.getOrElse(scanner.error("Expected expression."))
+      val slashish =
+        allowSlash && operator == BinaryOperator.DividedBy &&
+          _rdIsSlashOperand(left) && _rdIsSlashOperand(right)
+      singleExpression = Some(
+        if (slashish) BinaryOperationExpression(operator, left, right, allowsSlash = true)
+        else {
+          allowSlash = false
+          BinaryOperationExpression(operator, left, right)
+        }
+      )
+    }
+
+    def resolveOperations(): Unit = operators match {
+      case Some(buf) => while (buf.nonEmpty) resolveOneOperation()
+      case None      => ()
+    }
+
+    def addSingleExpression(expr: Expression): Unit = {
+      if (singleExpression.isDefined) {
+        val sp = spaceExpressions.getOrElse {
+          val b = mutable.ListBuffer.empty[Expression]
+          spaceExpressions = Some(b)
+          b
+        }
+        resolveOperations()
+        sp += singleExpression.get
+        allowSlash = true
+      }
+      singleExpression = Some(expr)
+    }
+
+    def addOperator(operator: BinaryOperator): Unit = {
+      allowSlash = allowSlash && operator == BinaryOperator.DividedBy
+      val ops = operators.getOrElse {
+        val b = mutable.ListBuffer.empty[BinaryOperator]
+        operators = Some(b)
+        b
+      }
+      val opd = operands.getOrElse {
+        val b = mutable.ListBuffer.empty[Expression]
+        operands = Some(b)
+        b
+      }
+      while (ops.nonEmpty && ops.last.precedence >= operator.precedence)
+        resolveOneOperation()
+      val se = singleExpression.getOrElse(scanner.error("Expected expression."))
+      whitespace(consumeNewlines = consumeNewlines)
+      ops += operator
+      opd += se
+      singleExpression = Some(_rdSingleExpression())
+    }
+
+    def resolveSpaceExpressions(): Unit = {
+      resolveOperations()
+      spaceExpressions match {
+        case Some(sp) =>
+          val se = singleExpression.getOrElse(scanner.error("Expected expression."))
+          sp += se
+          singleExpression = Some(
+            ListExpression(
+              sp.toList,
+              ListSeparator.Space,
+              spanFrom(start),
+              hasBrackets = false
+            )
+          )
+          spaceExpressions = None
+        case None => ()
+      }
+    }
+
+    boundary {
+      while (true) {
+        whitespace(consumeNewlines = consumeNewlines)
+        val c = scanner.peekChar()
+        if (c < 0) break(())
+        if (stopAtComma && c == CharCode.$comma) break(())
+        c match {
+          case CharCode.`$lparen` =>
+            addSingleExpression(_rdParenthesizedExpression())
+          case CharCode.`$dollar` =>
+            addSingleExpression(_rdVariable())
+          case CharCode.`$double_quote` | CharCode.`$single_quote` =>
+            addSingleExpression(_rdString())
+          case CharCode.`$asterisk` =>
+            val _ = scanner.readChar()
+            addOperator(BinaryOperator.Times)
+          case CharCode.`$plus` =>
+            if (singleExpression.isEmpty) addSingleExpression(_rdUnaryOperation())
+            else {
+              val _ = scanner.readChar()
+              addOperator(BinaryOperator.Plus)
+            }
+          case CharCode.`$minus` =>
+            val n1 = scanner.peekChar(1)
+            if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) {
+              if (singleExpression.isEmpty) addSingleExpression(_rdNumber())
+              else if (lookingAtIdentifier()) addSingleExpression(_rdIdentifierLike())
+              else {
+                val _ = scanner.readChar()
+                addOperator(BinaryOperator.Minus)
+              }
+            } else if (lookingAtIdentifier()) addSingleExpression(_rdIdentifierLike())
+            else if (singleExpression.isEmpty) addSingleExpression(_rdUnaryOperation())
+            else {
+              val _ = scanner.readChar()
+              addOperator(BinaryOperator.Minus)
+            }
+          case CharCode.`$slash` =>
+            if (singleExpression.isEmpty) addSingleExpression(_rdUnaryOperation())
+            else {
+              val _ = scanner.readChar()
+              addOperator(BinaryOperator.DividedBy)
+            }
+          case CharCode.`$percent` =>
+            val _ = scanner.readChar()
+            addOperator(BinaryOperator.Modulo)
+          case CharCode.`$equal` =>
+            val _ = scanner.readChar()
+            scanner.expectChar(CharCode.$equal)
+            addOperator(BinaryOperator.Equals)
+          case CharCode.`$exclamation` =>
+            val n1 = scanner.peekChar(1)
+            if (n1 == CharCode.$equal) {
+              _rdConsume(scanner.readChar())
+              _rdConsume(scanner.readChar())
+              addOperator(BinaryOperator.NotEquals)
+            } else break(())
+          case CharCode.`$lt` =>
+            val _ = scanner.readChar()
+            if (scanner.scanChar(CharCode.$equal)) addOperator(BinaryOperator.LessThanOrEquals)
+            else addOperator(BinaryOperator.LessThan)
+          case CharCode.`$gt` =>
+            val _ = scanner.readChar()
+            if (scanner.scanChar(CharCode.$equal))
+              addOperator(BinaryOperator.GreaterThanOrEquals)
+            else addOperator(BinaryOperator.GreaterThan)
+          case CharCode.`$dot` =>
+            addSingleExpression(_rdNumber())
+          case _ if c >= CharCode.$0 && c <= CharCode.$9 =>
+            addSingleExpression(_rdNumber())
+          case _ if CharCode.isNameStart(c) || c == CharCode.$backslash =>
+            // `and`/`or` keyword operators.
+            if (c == 'a'.toInt && scanIdentifier("and")) addOperator(BinaryOperator.And)
+            else if (c == 'o'.toInt && scanIdentifier("or")) addOperator(BinaryOperator.Or)
+            else addSingleExpression(_rdIdentifierLike())
+          case CharCode.`$comma` =>
+            val ce = commaExpressions.getOrElse {
+              val b = mutable.ListBuffer.empty[Expression]
+              commaExpressions = Some(b)
+              b
+            }
+            if (singleExpression.isEmpty) scanner.error("Expected expression.")
+            resolveSpaceExpressions()
+            ce += singleExpression.get
+            val _ = scanner.readChar()
+            allowSlash = true
+            singleExpression = None
+          case _ =>
+            break(())
+        }
+        if (stopAtComma && scanner.peekChar() == CharCode.$comma) break(())
+      }
+    }
+
+    commaExpressions match {
+      case Some(ce) =>
+        resolveSpaceExpressions()
+        singleExpression.foreach(ce += _)
+        ListExpression(ce.toList, ListSeparator.Comma, spanFrom(start), hasBrackets = false)
+      case None =>
+        resolveSpaceExpressions()
+        singleExpression.getOrElse(scanner.error("Expected expression."))
+    }
+  }
+
+  /** dart-sass: `_singleExpression` (port). Dispatches on the next character. */
+  protected def _rdSingleExpression(): Expression = {
+    val c = scanner.peekChar()
+    if (c < 0) scanner.error("Expected expression.")
+    c match {
+      case CharCode.`$lparen`                                  => _rdParenthesizedExpression()
+      case CharCode.`$slash`                                   => _rdUnaryOperation()
+      case CharCode.`$dot`                                     => _rdNumber()
+      case CharCode.`$dollar`                                  => _rdVariable()
+      case CharCode.`$double_quote` | CharCode.`$single_quote` => _rdString()
+      case CharCode.`$plus` | CharCode.`$minus`                =>
+        val n1 = scanner.peekChar(1)
+        if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) _rdNumber()
+        else _rdUnaryOperation()
+      case _ if c >= CharCode.$0 && c <= CharCode.$9                => _rdNumber()
+      case _ if CharCode.isNameStart(c) || c == CharCode.$backslash =>
+        _rdIdentifierLike()
+      case _ => scanner.error("Expected expression.")
+    }
+  }
+
+  /** dart-sass: `parentheses`. */
+  protected def _rdParenthesizedExpression(): Expression = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$lparen)
+    whitespace(consumeNewlines = true)
+    if (scanner.scanChar(CharCode.$rparen)) {
+      return ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = false)
+    }
+    val first = _rdExpression(stopAtComma = true, consumeNewlines = true)
+    if (scanner.scanChar(CharCode.$colon)) {
+      whitespace(consumeNewlines = true)
+      // Map literal. Port of `_map` — minimal.
+      val pairs = mutable.ListBuffer.empty[(Expression, Expression)]
+      val v     = _rdExpression(stopAtComma = true, consumeNewlines = true)
+      pairs += ((first, v))
+      while (scanner.scanChar(CharCode.$comma)) {
+        whitespace(consumeNewlines = true)
+        if (scanner.peekChar() == CharCode.$rparen) { /* trailing comma */ }
+        else {
+          val k = _rdExpression(stopAtComma = true, consumeNewlines = true)
+          scanner.expectChar(CharCode.$colon)
+          whitespace(consumeNewlines = true)
+          val vv = _rdExpression(stopAtComma = true, consumeNewlines = true)
+          pairs += ((k, vv))
+        }
+      }
+      scanner.expectChar(CharCode.$rparen)
+      return MapExpression(pairs.toList, spanFrom(start))
+    }
+    if (!scanner.scanChar(CharCode.$comma)) {
+      scanner.expectChar(CharCode.$rparen)
+      return ParenthesizedExpression(first, spanFrom(start))
+    }
+    whitespace(consumeNewlines = true)
+    val elts = mutable.ListBuffer.empty[Expression]
+    elts += first
+    var more = scanner.peekChar() != CharCode.$rparen
+    while (more) {
+      elts += _rdExpression(stopAtComma = true, consumeNewlines = true)
+      if (!scanner.scanChar(CharCode.$comma)) more = false
+      else whitespace(consumeNewlines = true)
+      if (scanner.peekChar() == CharCode.$rparen) more = false
+    }
+    scanner.expectChar(CharCode.$rparen)
+    ParenthesizedExpression(
+      ListExpression(elts.toList, ListSeparator.Comma, spanFrom(start), hasBrackets = false),
+      spanFrom(start)
+    )
+  }
+
+  /** dart-sass: `_number`. Minimum viable: consumes sign, digits, decimal, exponent, and optional unit identifier.
+    */
+  protected def _rdNumber(): NumberExpression = {
+    val start = scanner.state
+    val first = scanner.peekChar()
+    if (first == CharCode.$plus || first == CharCode.$minus) {
+      val _ = scanner.readChar()
+    }
+    // natural number
+    if (scanner.peekChar() != CharCode.$dot) {
+      if (!(scanner.peekChar() >= 0 && CharCode.isDigit(scanner.peekChar())))
+        scanner.error("Expected digit.")
+      while (scanner.peekChar() >= 0 && CharCode.isDigit(scanner.peekChar())) {
+        val _ = scanner.readChar()
+      }
+    }
+    // decimal
+    if (scanner.peekChar() == CharCode.$dot) {
+      val n1 = scanner.peekChar(1)
+      if (n1 >= 0 && CharCode.isDigit(n1)) {
+        val _ = scanner.readChar()
+        while (scanner.peekChar() >= 0 && CharCode.isDigit(scanner.peekChar())) {
+          val _ = scanner.readChar()
+        }
+      }
+    }
+    // exponent (e.g. 1e10, 1.5e-3)
+    val eCh = scanner.peekChar()
+    if (eCh == 'e'.toInt || eCh == 'E'.toInt) {
+      val n1 = scanner.peekChar(1)
+      if (
+        (n1 >= 0 && CharCode.isDigit(n1)) ||
+        n1 == CharCode.$plus || n1 == CharCode.$minus
+      ) {
+        val _ = scanner.readChar()
+        if (n1 == CharCode.$plus || n1 == CharCode.$minus) {
+          val _ = scanner.readChar()
+        }
+        while (scanner.peekChar() >= 0 && CharCode.isDigit(scanner.peekChar())) {
+          val _ = scanner.readChar()
+        }
+      }
+    }
+    val span        = spanFrom(start)
+    val text        = span.text
+    val numericText =
+      if (text.length > 0 && (text.charAt(0) == '+' || text.charAt(0) == '-'))
+        text
+      else text
+    val number = numericText.toDouble
+    // Unit
+    val unit: Nullable[String] =
+      if (scanner.scanChar(CharCode.$percent)) Nullable("%")
+      else if (lookingAtIdentifier()) Nullable(identifier(unit = true))
+      else Nullable.empty
+    NumberExpression(number, spanFrom(start), unit)
+  }
+
+  /** dart-sass: `_variable` (port). */
+  protected def _rdVariable(): VariableExpression = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$dollar)
+    val name = identifier()
+    VariableExpression(name.replace('_', '-'), spanFrom(start))
+  }
+
+  /** dart-sass: `interpolatedString` (minimum viable port). Does not yet handle `#{...}` embedded in the string — treats the contents verbatim.
+    */
+  protected def _rdString(): StringExpression = {
+    val start = scanner.state
+    val quote = scanner.readChar()
+    val buf   = new StringBuilder()
+    boundary {
+      while (!scanner.isDone) {
+        val ch = scanner.peekChar()
+        if (ch < 0) break(())
+        if (ch == quote) {
+          val _ = scanner.readChar()
+          break(())
+        } else if (ch == CharCode.$backslash) {
+          buf.append(scanner.readChar().toChar)
+          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+        } else {
+          buf.append(scanner.readChar().toChar)
+        }
+      }
+    }
+    StringExpression(Interpolation.plain(buf.toString(), spanFrom(start)), hasQuotes = true)
+  }
+
+  /** dart-sass: `_unaryOperation`. */
+  protected def _rdUnaryOperation(): UnaryOperationExpression = {
+    val start = scanner.state
+    val ch    = scanner.readChar()
+    val op    = ch match {
+      case CharCode.`$plus`  => UnaryOperator.Plus
+      case CharCode.`$minus` => UnaryOperator.Minus
+      case CharCode.`$slash` => UnaryOperator.Divide
+      case _                 => scanner.error("Expected unary operator.")
+    }
+    whitespace(consumeNewlines = true)
+    val operand = _rdSingleExpression()
+    UnaryOperationExpression(op, operand, spanFrom(start))
+  }
+
+  /** dart-sass: `identifierLike` (minimum viable port). Parses an identifier and — if it's followed by `(` — treats it as a function call, or, if followed by `.` and an identifier, as a namespaced
+    * reference.
+    */
+  protected def _rdIdentifierLike(): Expression = {
+    val start = scanner.state
+    val name  = identifier()
+    // Namespaced: `ns.foo` or `ns.$var`
+    if (scanner.peekChar() == CharCode.$dot) {
+      val _ = scanner.readChar()
+      if (scanner.peekChar() == CharCode.$dollar) {
+        _rdConsume(scanner.readChar())
+        val vn = identifier()
+        return VariableExpression(vn.replace('_', '-'), spanFrom(start), Nullable(name))
+      }
+      val member = identifier()
+      if (scanner.peekChar() == CharCode.$lparen) {
+        val args = _rdArgumentInvocation(start)
+        return FunctionExpression(member, args, spanFrom(start), Nullable(name))
+      }
+      // Namespaced identifier access as function-call-less reference — rare.
+      // Fall back to unquoted string.
+      return StringExpression(
+        Interpolation.plain(s"$name.$member", spanFrom(start)),
+        hasQuotes = false
+      )
+    }
+    if (scanner.peekChar() == CharCode.$lparen) {
+      val args = _rdArgumentInvocation(start)
+      return FunctionExpression(name, args, spanFrom(start))
+    }
+    // Bare identifier → keyword or unquoted string.
+    name match {
+      case "true"  => BooleanExpression(value = true, spanFrom(start))
+      case "false" => BooleanExpression(value = false, spanFrom(start))
+      case "null"  => new NullExpression(spanFrom(start))
+      case _       =>
+        ColorNames.colorsByName.get(name.toLowerCase) match {
+          case Some(color) => ColorExpression(color, spanFrom(start))
+          case None        =>
+            StringExpression(Interpolation.plain(name, spanFrom(start)), hasQuotes = false)
+        }
+    }
+  }
+
+  /** dart-sass: `_functionCall` convenience wrapper — given that the scanner is positioned at `name(`, parses the argument list.
+    */
+  protected def _rdFunctionCall(name: String, start: ssg.sass.util.LineScannerState): FunctionExpression = {
+    val args = _rdArgumentInvocation(start)
+    FunctionExpression(name, args, spanFrom(start))
+  }
+
+  /** dart-sass: `_namespacedExpression` — stub; namespaced handling is inlined in `_rdIdentifierLike` for now. Kept here so stage-2 wiring can target a dedicated entry point.
+    */
+  protected def _rdNamespacedExpression(
+    namespace: String,
+    start:     ssg.sass.util.LineScannerState
+  ): Expression =
+    if (scanner.peekChar() == CharCode.$dollar) {
+      val _ = scanner.readChar()
+      val n = identifier()
+      VariableExpression(n.replace('_', '-'), spanFrom(start), Nullable(namespace))
+    } else {
+      val member = identifier()
+      if (scanner.peekChar() == CharCode.$lparen) {
+        val args = _rdArgumentInvocation(start)
+        FunctionExpression(member, args, spanFrom(start), Nullable(namespace))
+      } else {
+        StringExpression(
+          Interpolation.plain(s"$namespace.$member", spanFrom(start)),
+          hasQuotes = false
+        )
+      }
+    }
+
+  /** dart-sass: `_argumentInvocation`. Parses `(a, b, $c: d, ...)`. */
+  protected def _rdArgumentInvocation(start: ssg.sass.util.LineScannerState): ArgumentList = {
+    scanner.expectChar(CharCode.$lparen)
+    whitespace(consumeNewlines = true)
+    val positional = mutable.ListBuffer.empty[Expression]
+    val named      = mutable.LinkedHashMap.empty[String, Expression]
+    val namedSpans = mutable.LinkedHashMap.empty[String, FileSpan]
+    var rest:   Nullable[Expression] = Nullable.empty
+    var kwRest: Nullable[Expression] = Nullable.empty
+
+    var more = scanner.peekChar() != CharCode.$rparen
+    boundary {
+      while (more) {
+        // Named arg: `$name: value`
+        val savedState = scanner.state
+        if (scanner.peekChar() == CharCode.$dollar) {
+          val _ = scanner.readChar()
+          if (lookingAtIdentifier()) {
+            val nStart = savedState
+            val nm     = identifier()
+            whitespace(consumeNewlines = true)
+            if (scanner.scanChar(CharCode.$colon)) {
+              whitespace(consumeNewlines = true)
+              val v = _rdExpression(stopAtComma = true, consumeNewlines = true)
+              named.put(nm.replace('_', '-'), v)
+              namedSpans.put(nm.replace('_', '-'), spanFrom(nStart))
+            } else {
+              // Positional `$name` with no colon — rewind and parse full expr.
+              scanner.state = savedState
+              val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
+              positional += expr
+            }
+          } else {
+            scanner.state = savedState
+            val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
+            positional += expr
+          }
+        } else {
+          val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
+          // Rest `...`
+          if (
+            scanner.peekChar() == CharCode.$dot &&
+            scanner.peekChar(1) == CharCode.$dot &&
+            scanner.peekChar(2) == CharCode.$dot
+          ) {
+            _rdConsume(scanner.readChar())
+            _rdConsume(scanner.readChar())
+            _rdConsume(scanner.readChar())
+            if (rest.isEmpty) rest = Nullable(expr)
+            else kwRest = Nullable(expr)
+            whitespace(consumeNewlines = true)
+            if (scanner.peekChar() != CharCode.$comma) break(())
+          } else positional += expr
+        }
+        whitespace(consumeNewlines = true)
+        if (!scanner.scanChar(CharCode.$comma)) more = false
+        else {
+          whitespace(consumeNewlines = true)
+          if (scanner.peekChar() == CharCode.$rparen) more = false
+        }
+      }
+    }
+    scanner.expectChar(CharCode.$rparen)
+    new ArgumentList(
+      positional.toList,
+      named.toMap,
+      namedSpans.toMap,
+      spanFrom(start),
+      rest,
+      kwRest
+    )
+  }
+
+  /** dart-sass: `_callableArguments` — alias for `_argumentInvocation`, kept as a separate entry point to mirror the dart naming.
+    */
+  protected def _rdCallableArguments(start: ssg.sass.util.LineScannerState): ArgumentList =
+    _rdArgumentInvocation(start)
+
+  /** dart-sass: `_unaryOperatorFor` — kept for potential stage-2 use. */
+  protected def _rdUnaryOperatorFor(ch: Int): Option[UnaryOperator] = ch match {
+    case CharCode.`$plus`  => Some(UnaryOperator.Plus)
+    case CharCode.`$minus` => Some(UnaryOperator.Minus)
+    case CharCode.`$slash` => Some(UnaryOperator.Divide)
+    case _                 => None
+  }
 }
