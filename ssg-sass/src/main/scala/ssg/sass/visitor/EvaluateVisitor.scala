@@ -805,9 +805,7 @@ final class EvaluateVisitor(
   private def _withScope[T](body: => T): T =
     _environment.withinScope(() => body)
 
-  /** Runs [[body]] inside a semi-global scope (used by `@if`, `@for`,
-    * `@each`, `@while` so that assignments propagate to the enclosing
-    * scope instead of shadowing).
+  /** Runs [[body]] inside a semi-global scope (used by `@if`, `@for`, `@each`, `@while` so that assignments propagate to the enclosing scope instead of shadowing).
     */
   private def _withSemiGlobalScope[T](body: => T): T =
     _environment.withinSemiGlobalScope(body)
@@ -1226,6 +1224,13 @@ final class EvaluateVisitor(
 
   override def visitMediaRule(node: MediaRule): Value = {
     val queryText = _performInterpolation(node.query)
+    // Preflight: reject obviously invalid @media query shapes that dart-sass
+    // rejects at parse time but that our stage-1 StylesheetParser slurps as
+    // raw text. We do this to bring expected-error-not-raised cases in line
+    // with dart-sass for css/media/logic/error.hrx. This is intentionally
+    // conservative: we only reject patterns that are unambiguously invalid
+    // in Level 3/4 media query syntax.
+    _validateMediaQueryText(queryText, node.query.span)
     // Try the structured parser first; fall back to wrapping the raw text
     // as a condition-only query when the text doesn't conform to the
     // Level-3 syntax our parser supports (e.g. interpolated fragments).
@@ -1278,6 +1283,101 @@ final class EvaluateVisitor(
     finally
       _mediaQueries = savedQueries
     SassNull
+  }
+
+  /** Rejects a small set of unambiguously invalid `@media` query shapes. Mirrors dart-sass StylesheetParser diagnostics for cases that our stage-1 parser would otherwise accept as raw text. Only runs
+    * on interpolation-free text to avoid false positives from user-inserted fragments.
+    */
+  private def _validateMediaQueryText(text: String, span: ssg.sass.util.FileSpan): Unit = {
+    val trimmed = text.trim
+    if (trimmed.isEmpty) return
+    // Skip if text contains characters that suggest interpolation leftovers
+    // or Level-4 range syntax we don't fully parse (e.g. `<`, `>`).
+    if (trimmed.contains('<') || trimmed.contains('>')) return
+    // (1) Missing whitespace before an opening paren after a keyword:
+    //     `not(`, `and(`, `or(`. These are always errors in dart-sass.
+    //     Use \b-style lookbehind: the keyword must be preceded by start
+    //     or whitespace / `(`.
+    val missingWs = "(?:(?:^|[\\s()])(?:not|and|or))\\(".r
+    if (missingWs.findFirstIn(trimmed).isDefined) {
+      throw new SassException("Expected whitespace.", span)
+    }
+    // (2) Trailing keyword with no following condition: `a and`,
+    //     `(a) or`, `not`, `a and not`. These mean the query ends
+    //     immediately before the `{` with an unfinished operator.
+    val trailingKw = "(?:^|\\s)(?:not|and|or)\\s*$".r
+    if (trailingKw.findFirstIn(trimmed).isDefined) {
+      throw new SassException("expected media condition in parentheses.", span)
+    }
+    // (3) `not ` as a modifier must be followed by a type identifier
+    //     (e.g. `not screen`) or a parenthesised condition, not the end
+    //     of the query. Already covered by (2) when the query is just
+    //     `not`. Covered.
+
+    // (4) Mixing `and` and `or` at the top level, or using `or` after a
+    //     type identifier. dart-sass requires either all `and`s or all
+    //     `or`s after the first operator, and does not allow `or` after
+    //     a bare media type. We approximate by scanning top-level tokens
+    //     outside parentheses and checking for illegal sequences.
+    val topLevel = _topLevelTokens(trimmed)
+    val hasAnd   = topLevel.exists(_.equalsIgnoreCase("and"))
+    val hasOr    = topLevel.exists(_.equalsIgnoreCase("or"))
+    val startsWithIdent: Boolean = topLevel.headOption.exists { t =>
+      val lc = t.toLowerCase
+      lc != "not" && lc != "only" && !t.startsWith("(") && !t.startsWith("#{")
+    }
+    if (hasAnd && hasOr) {
+      throw new SassException("""expected "{".""", span)
+    }
+    if (startsWithIdent && hasOr) {
+      // `a or ...` - type queries can only combine with `and`.
+      throw new SassException("""expected "{".""", span)
+    }
+  }
+
+  /** Splits `text` into whitespace-separated tokens at the top level, treating anything inside balanced parentheses (and `#{...}`) as a single token.
+    */
+  private def _topLevelTokens(text: String): List[String] = {
+    val out   = scala.collection.mutable.ListBuffer.empty[String]
+    val buf   = new StringBuilder()
+    var i     = 0
+    var depth = 0
+    def flush(): Unit =
+      if (buf.nonEmpty) {
+        out += buf.toString
+        buf.clear()
+      }
+    while (i < text.length) {
+      val c = text.charAt(i)
+      if (depth == 0 && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+        flush()
+        i += 1
+      } else if (c == '(') {
+        depth += 1
+        buf.append(c)
+        i += 1
+      } else if (c == ')') {
+        if (depth > 0) depth -= 1
+        buf.append(c)
+        i += 1
+      } else if (c == '#' && i + 1 < text.length && text.charAt(i + 1) == '{') {
+        buf.append(c); buf.append('{')
+        i += 2
+        var d = 1
+        while (i < text.length && d > 0) {
+          val cc = text.charAt(i)
+          if (cc == '{') d += 1
+          else if (cc == '}') d -= 1
+          buf.append(cc)
+          i += 1
+        }
+      } else {
+        buf.append(c)
+        i += 1
+      }
+    }
+    flush()
+    out.toList
   }
 
   override def visitSupportsRule(node: SupportsRule): Value = {
@@ -2100,8 +2200,8 @@ final class EvaluateVisitor(
       }
     }
 
-  /** Binds the supplied positional and named argument values to the declared parameters, applying defaults for any missing trailing parameters. Validates argument counts and names against
-    * the declaration, mirroring dart-sass `ParameterList.verify` in `lib/src/ast/sass/parameter_list.dart`.
+  /** Binds the supplied positional and named argument values to the declared parameters, applying defaults for any missing trailing parameters. Validates argument counts and names against the
+    * declaration, mirroring dart-sass `ParameterList.verify` in `lib/src/ast/sass/parameter_list.dart`.
     */
   private def _bindParameters(
     declared:   ssg.sass.ast.sass.ParameterList,

@@ -1801,4 +1801,46 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString(src, OutputStyle.Compressed).css
     assert(css.nonEmpty, css)
   }
+
+  // --------------------------------------------------------------------------
+  // @media query error-parity regressions. dart-sass rejects these at parse
+  // time; ssg-sass used to silently fall through to a raw-text media rule.
+  // See visitMediaRule / _validateMediaQueryText in EvaluateVisitor.
+  // --------------------------------------------------------------------------
+
+  test("@media: `not(` without whitespace is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media not(a) {x {y: z}}")
+    }
+  }
+
+  test("@media: `and(` without whitespace is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media (a) and(b) {x {y: z}}")
+    }
+  }
+
+  test("@media: trailing `and` with nothing after is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media a and {x {y: z}}")
+    }
+  }
+
+  test("@media: trailing `or` with nothing after is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media (a) or {x {y: z}}")
+    }
+  }
+
+  test("@media: mixing `and` and `or` at top level is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media (a) or (b) and (c) {x {y: z}}")
+    }
+  }
+
+  test("@media: `or` after a bare type identifier is rejected") {
+    intercept[SassException] {
+      Compile.compileString("@media a or (b) {x {y: z}}")
+    }
+  }
 }
