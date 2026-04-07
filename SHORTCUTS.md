@@ -4,6 +4,58 @@ Scratchpad for cross-agent coordination on the `sass-port` branch.
 
 ## Recent work
 
+### Environment scope chain + closures + !global + semi-global (partial port)
+
+- `ssg-sass/src/main/scala/ssg/sass/Environment.scala` — replaced the
+  single-map variable store with a real dart-sass scope chain:
+  `_variables` / `_variableNodes` are `ArrayBuffer[Map]` with `[0]`
+  as the global scope, plus a lazily-populated `_variableIndices`
+  cache. `setVariable(name, value, nodeWithSpan, global = false)` now
+  walks the chain and (matching dart-sass `setVariable`) assigns
+  through to the existing scope when `_inSemiGlobalScope` is true,
+  or shadows locally otherwise. `getVariable` walks innermost→outer
+  and seeds the indices cache. `variableExists` / `globalVariableExists`
+  follow suit. `setLocalVariable` shadows unconditionally in the
+  innermost scope. `setGlobalVariable` always writes to scope 0
+  and records the name in `globalVarNames` for `global()`.
+- `withinScope(semiGlobal: Boolean)(body)` pushes a new scope,
+  propagates `_inSemiGlobalScope = semiGlobal && wasSemi`, and
+  cleans up the indices cache on pop. A legacy
+  `withinScope(callback: () => T)` shim keeps existing call sites
+  compiling, and `withinSemiGlobalScope(body)` is the shorthand.
+- `closure()` now matches dart-sass semantics: a new `Environment`
+  with a shallow-copied scope chain list (the inner scope maps are
+  shared, so later assignments to visible scopes are observed, but
+  new scopes pushed after capture are invisible). Functions, mixins,
+  namespaces, and the content block are shared by reference.
+  `withSnapshot` was updated to snapshot/restore the entire scope
+  stack so mixin/function invocation semantics are unchanged.
+- `ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala` —
+  `_withSemiGlobalScope` helper; `visitIfRule`, `visitForRule`,
+  `visitEachRule`, `visitWhileRule` now route through it so
+  assignments inside control-flow propagate to the enclosing scope.
+  `visitVariableDeclaration` threads `VariableDeclaration.isGlobal`
+  into `setGlobalVariable`, so `$x: … !global` finally works from
+  arbitrary nesting.
+- `ssg-sass/src/test/scala/ssg/sass/EnvironmentScopeSuite.scala` —
+  new suite, 10 cases: inner-scope shadowing, semi-global
+  propagation, non-semi-global isolation, `!global` from nested
+  scope, closure capture of scope chain, `setLocalVariable`
+  shadowing, plus 4 end-to-end evaluator cases (`@if`/`@each`/
+  `@for` body updates outer, `!global` through nested `@if`).
+- `ssg-sass/src/test/scala/ssg/sass/CleanupSuite.scala` — the two
+  closure isolation tests were updated to reflect dart-sass
+  semantics (closure shares the captured scope chain, so mutations
+  leak in; only scopes pushed after capture are invisible).
+
+Module / namespace / forward machinery in `Environment` is still a
+flat shim — the `_modules` / `_globalModules` / `_importedModules`
+/ `_forwardedModules` / `_nestedForwardedModules` / `_allModules`
+tables and `addModule`/`forwardModule`/`importForwards` logic are
+the deferred ~40% follow-up.
+
+All 3 platforms: JVM, JS, Native 684/684 (+10 per platform) green.
+
 ### Module system tightening: private hiding + transitive forwards (ISS-034, ISS-066, ISS-063)
 
 - `ssg-sass/src/main/scala/ssg/sass/Environment.scala` — new
