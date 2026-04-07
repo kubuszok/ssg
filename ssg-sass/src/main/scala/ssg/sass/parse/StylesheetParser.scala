@@ -3203,7 +3203,7 @@ abstract class StylesheetParser protected (
     }
     if (scanner.peekChar() == CharCode.$lparen) {
       val args = _rdArgumentInvocation(start)
-      return FunctionExpression(name, args, spanFrom(start))
+      return FunctionExpression(name, _rdMaybeUnpackColorArgs(name, args), spanFrom(start))
     }
     // Bare identifier → keyword or unquoted string.
     name match {
@@ -3346,6 +3346,30 @@ abstract class StylesheetParser protected (
     */
   protected def _rdCallableArguments(start: ssg.sass.util.LineScannerState): ArgumentList =
     _rdArgumentInvocation(start)
+
+  /** Modern CSS color-function argument form: `lab(50% 20 -30)` is parsed as a single space-separated list argument by the generic argument invocation path, but the underlying color built-in
+    * expects three (or four, with trailing alpha) positional arguments. For the color-function allowlist, if the call has exactly one positional argument and it's a space-separated ListExpression,
+    * unpack its elements into positional arguments. Mirrors `_tryParseFunctionCall`'s `isColorFn` handling in the text-based path.
+    */
+  private def _rdMaybeUnpackColorArgs(name: String, args: ArgumentList): ArgumentList = {
+    val isColorFn =
+      name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" ||
+        name == "hwb" || name == "lab" || name == "lch" || name == "oklab" ||
+        name == "oklch" || name == "color"
+    if (!isColorFn || args.positional.length != 1 || args.named.nonEmpty) return args
+    args.positional.head match {
+      case list: ListExpression if list.separator == ListSeparator.Space && !list.hasBrackets =>
+        new ArgumentList(
+          list.contents,
+          args.named,
+          args.namedSpans,
+          args.span,
+          args.rest,
+          args.keywordRest
+        )
+      case _ => args
+    }
+  }
 
   /** dart-sass: `_unaryOperatorFor` — kept for potential stage-2 use. */
   protected def _rdUnaryOperatorFor(ch: Int): Option[UnaryOperator] = ch match {
