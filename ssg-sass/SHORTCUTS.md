@@ -53,18 +53,20 @@ Do **not** use ssg-sass when:
 
 ## Current state
 
-- **Tests**: 654 JVM / 632 JS / 632 Native (last recorded)
+- **Tests**: 778 JVM / 778 JS / 778 Native (2026-04-07, all green)
 - **Strictness fixes** (2026-04): ISS-026 mixed-decls, ISS-027 @at-root
   (with/without) query, ISS-028 slash-div, ISS-033 private-var module
   config rejection are now wired in the evaluator/parser.
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
-- **sass-spec**: 3,567 / 11,797 passing (**30.2%**). Last measured
-  2026-04-07 after wiring `@for` into the StylesheetParser (previously
-  bucketed as a generic at-rule so `$i` in the body was unresolved) and
-  after teaching `rgb()`/`rgba()` to preserve calls whose arguments are
-  CSS special values (`var(--x)`, `attr(...)`, `calc(...)`, etc.) as
-  unquoted plain-CSS function strings instead of throwing.
+- **sass-spec**: 3,768 / 11,797 passing (**31.9%**). Measured 2026-04-07
+  after landing the structural Stage-1–4 ports (SerializeVisitor sibling
+  spacing + modern-color dispatch + custom-property folded/reindented
+  values; Environment full module-system port 4A–4E) plus targeted gap
+  fixes (reserved-name casing on `url`/`element`/`expression`, silent-
+  comment stripping in `@for`/`@each`/`@if` bounds and in
+  `_parseSimpleExpression`, scientific-notation number literals, media
+  feature-condition spacing).
 - **Gap catalog**: ~100 tracked issues in `scripts/data/issues.tsv`.
 - The compiler drives the Compile → Parse → Evaluate → Serialize pipeline
   with @use/@forward, @extend, control flow, built-in modules, calc(),
@@ -320,7 +322,17 @@ case), **L** low (cosmetic). Detailed entries live in
 - **M** `bogus-combinators` deprecation during extend resolution.
   (ISS-039)
 
-### Modules (`ssg-sass/Module.scala`, `Configuration.scala`)
+### Modules (`ssg-sass/Module.scala`, `Configuration.scala`, `Environment.scala`)
+- **Stage 4 complete (2026-04-07)**: `Environment` now carries the full
+  dart-sass module storage (`_modules`, `_globalModules`,
+  `_forwardedModules`, `_importedModules`, `_nestedForwardedModules`,
+  `_allModules`, `_namespaceNodes`, `_configurableVariables`) and
+  implements `addModule` / `forwardModule` / `importForwards` /
+  `_variableFromGlobalModules` / `toModule` / `forImport` /
+  `markVariableConfigurable` / `toImplicitConfiguration`. Both namespaced
+  and flat (`as *`) `@use` now flow through `Environment.addModule` and
+  `Environment.forwardModule`, replacing the legacy `addNamespace` copy
+  loop in `_visitFileUseRule`.
 - **H** Lazy member views vs eager merge — may mask re-export edge
   cases. (ISS-063)
 - **M** "Unused configuration" errors for `@use ... with (...)` keys
