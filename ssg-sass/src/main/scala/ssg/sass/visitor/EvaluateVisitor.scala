@@ -2229,20 +2229,56 @@ final class EvaluateVisitor(
     val positionalBuf = scala.collection.mutable.ListBuffer.empty[Value]
     for (expr <- args.positional)
       positionalBuf += expr.accept(this)
-    // Splat a trailing rest argument (`$list...`). If the rest expression
-    // evaluates to a SassList, its elements are appended individually;
-    // any other value is appended as a single positional argument.
+    var named: ListMap[String, Value] = ListMap.empty
+    for ((k, v) <- args.named)
+      named = named.updated(k, v.accept(this))
+    // Splat the trailing rest argument (`$list...`).
+    //   • SassArgumentList → splat its positional contents AND merge its
+    //     captured keywords into the named-arg map (dart-sass parity).
+    //   • SassMap          → splat into keyword arguments only; every key
+    //     must be a SassString. This is the `list.join((...)...)` form.
+    //   • SassList         → splat as positional args.
+    //   • anything else    → single positional arg.
     args.rest.foreach { restExpr =>
       restExpr.accept(this) match {
+        case al: ssg.sass.value.SassArgumentList =>
+          for (v <- al.asList) positionalBuf += v
+          for ((k, v) <- al.keywords)
+            named = named.updated(k, v)
+        case map: ssg.sass.value.SassMap =>
+          for ((k, v) <- map.contents) k match {
+            case s: ssg.sass.value.SassString =>
+              named = named.updated(s.text, v)
+            case other =>
+              throw SassScriptException(
+                s"Variable keyword argument map must have string keys. $other is not a string in ${map.toString}."
+              )
+          }
         case list: ssg.sass.value.SassList =>
           for (v <- list.asList) positionalBuf += v
         case other =>
           positionalBuf += other
       }
     }
-    var named: ListMap[String, Value] = ListMap.empty
-    for ((k, v) <- args.named)
-      named = named.updated(k, v.accept(this))
+    // Splat an optional keyword-rest argument (`..., $kwargs...`). Must
+    // be a SassMap keyed by SassStrings; each entry becomes a named arg.
+    args.keywordRest.foreach { kwExpr =>
+      kwExpr.accept(this) match {
+        case map: ssg.sass.value.SassMap =>
+          for ((k, v) <- map.contents) k match {
+            case s: ssg.sass.value.SassString =>
+              named = named.updated(s.text, v)
+            case other =>
+              throw SassScriptException(
+                s"Variable keyword argument map must have string keys. $other is not a string in ${map.toString}."
+              )
+          }
+        case other =>
+          throw SassScriptException(
+            s"Variable keyword arguments must be a map (was $other)."
+          )
+      }
+    }
     (positionalBuf.toList, named)
   }
 

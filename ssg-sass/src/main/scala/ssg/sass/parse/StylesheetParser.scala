@@ -2194,6 +2194,15 @@ abstract class StylesheetParser protected (
       }
     val positional = scala.collection.mutable.ListBuffer.empty[Expression]
     val named      = scala.collection.mutable.LinkedHashMap.empty[String, Expression]
+    // Rest (`$list...`) and keyword-rest (`$kwargs...`) arguments are detected
+    // by a trailing `...` on the last (or second-to-last) raw arg text. Any
+    // argument that ends with `...` strips the marker and becomes either
+    // [[rest]] (first such occurrence) or [[keywordRest]] (second occurrence,
+    // which by Sass rules must follow immediately after [[rest]]).
+    var restExpr:        Nullable[Expression] = Nullable.empty
+    var keywordRestExpr: Nullable[Expression] = Nullable.empty
+    val n                                     = rawArgs.length
+    var idx                                   = 0
     for (a <- rawArgs) {
       // Detect a named argument `$name: value`. We match `$` + identifier
       // + `:` (but not `::`, which would be a pseudo-element).
@@ -2211,12 +2220,29 @@ abstract class StylesheetParser protected (
           valueText = trimmed.substring(k + 1).trim
         }
       }
-      val valueExpr = _parseSimpleExpression(valueText, span)
-      if (keyName.nonEmpty) named.update(keyName, valueExpr)
-      else positional += valueExpr
+      val isLastTwo = idx >= n - 2
+      val isRest    = isLastTwo && keyName.isEmpty && valueText.endsWith("...")
+      if (isRest) {
+        val stripped = valueText.substring(0, valueText.length - 3).trim
+        val expr     = _parseSimpleExpression(stripped, span)
+        if (restExpr.isEmpty) restExpr = Nullable(expr)
+        else keywordRestExpr = Nullable(expr)
+      } else {
+        val valueExpr = _parseSimpleExpression(valueText, span)
+        if (keyName.nonEmpty) named.update(keyName, valueExpr)
+        else positional += valueExpr
+      }
+      idx += 1
     }
 
-    val arguments = new ArgumentList(positional.toList, named.toMap, Map.empty, span)
+    val arguments = new ArgumentList(
+      positional.toList,
+      named.toMap,
+      Map.empty,
+      span,
+      restExpr,
+      keywordRestExpr
+    )
     // Lazy `if($cond, $t, $f)` — only the chosen branch is evaluated.
     if (namespace.isEmpty && name == "if" && positional.length == 3 && named.isEmpty) {
       Some(LegacyIfExpression(arguments, span))
