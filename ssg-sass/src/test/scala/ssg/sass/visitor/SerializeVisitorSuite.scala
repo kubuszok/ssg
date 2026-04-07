@@ -7,6 +7,7 @@ package sass
 package visitor
 
 import ssg.sass.ast.css.{ CssValue, ModifiableCssAtRule, ModifiableCssComment, ModifiableCssDeclaration, ModifiableCssNode, ModifiableCssStyleRule, ModifiableCssStylesheet }
+import ssg.sass.ast.selector.{ ClassSelector, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, SelectorList }
 import ssg.sass.util.{ FileSpan, ModifiableBox }
 import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassString, Value }
 import ssg.sass.Nullable
@@ -418,6 +419,95 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   test("writeMap: renders as (k: v, k2: v2) expanded") {
     val m = new SassMap(ListMap[Value, Value](u("a") -> u("1"), u("b") -> u("2")))
     assertEquals(fmtValue(m), "(a: 1, b: 2)")
+  }
+
+  // --- Stage A.4: selector formatting --------------------------------------
+
+  private def cls(name: String): CompoundSelector =
+    new CompoundSelector(List(new ClassSelector(name, span)), span)
+
+  private def complex(
+    parts: List[(String, Nullable[Combinator])]
+  ): ComplexSelector = {
+    val comps = parts.map { case (name, combOpt) =>
+      val combinators =
+        if (combOpt.isDefined) List(new CssValue[Combinator](combOpt.get, span))
+        else Nil
+      new ComplexSelectorComponent(cls(name), combinators, span)
+    }
+    new ComplexSelector(Nil, comps, span)
+  }
+
+  private def selList(cs: ComplexSelector*): SelectorList =
+    new SelectorList(cs.toList, span)
+
+  private def styleRuleSel(selector: SelectorList, children: List[ModifiableCssNode]): ModifiableCssStyleRule = {
+    val rule = new ModifiableCssStyleRule(
+      new ModifiableBox[Any](selector).seal(),
+      span
+    )
+    for (c <- children) rule.addChild(c)
+    rule
+  }
+
+  private def fmtSelector(sel: SelectorList, compressed: Boolean = false): String = {
+    val vis = new SerializeVisitor(
+      style = if (compressed) OutputStyle.Compressed else OutputStyle.Expanded
+    )
+    val rule  = styleRuleSel(sel, List(declaration("color", "red")))
+    val sheet = stylesheet(List(rule))
+    val css   = vis.serialize(sheet).css
+    // Extract text before the first `{` (trim trailing space/newline).
+    val braceIdx = css.indexOf('{')
+    css.substring(0, braceIdx).replaceAll("\\s+$", "")
+  }
+
+  test("writeSelector: child combinator expanded uses surrounding spaces") {
+    val sel = selList(
+      complex(List(("a", Nullable(Combinator.Child)), ("b", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a > .b")
+  }
+
+  test("writeSelector: child combinator compressed has no spaces") {
+    val sel = selList(
+      complex(List(("a", Nullable(Combinator.Child)), ("b", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel, compressed = true), ".a>.b")
+  }
+
+  test("writeSelector: next-sibling combinator expanded vs compressed") {
+    val sel = selList(
+      complex(List(("a", Nullable(Combinator.NextSibling)), ("b", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a + .b")
+    assertEquals(fmtSelector(sel, compressed = true), ".a+.b")
+  }
+
+  test("writeSelector: following-sibling combinator expanded vs compressed") {
+    val sel = selList(
+      complex(List(("a", Nullable(Combinator.FollowingSibling)), ("b", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a ~ .b")
+    assertEquals(fmtSelector(sel, compressed = true), ".a~.b")
+  }
+
+  test("writeSelector: descendant combinator uses space in both modes") {
+    val sel = selList(
+      complex(List(("a", Nullable.empty), ("b", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a .b")
+    assertEquals(fmtSelector(sel, compressed = true), ".a .b")
+  }
+
+  test("writeSelector: multiple complex selectors join with `,\\n` expanded and `,` compressed") {
+    val sel = selList(
+      complex(List(("a", Nullable.empty))),
+      complex(List(("b", Nullable.empty))),
+      complex(List(("c", Nullable.empty)))
+    )
+    assertEquals(fmtSelector(sel), ".a,\n.b,\n.c")
+    assertEquals(fmtSelector(sel, compressed = true), ".a,.b,.c")
   }
 
   test("compressed: rule with only a non-preserved comment is skipped") {

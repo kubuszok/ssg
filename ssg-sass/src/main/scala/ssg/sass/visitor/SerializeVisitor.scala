@@ -23,6 +23,7 @@ package visitor
 import ssg.sass.ColorNames
 import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
+import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
 import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassNumber, SassString, Value }
 import ssg.sass.value.color.ColorSpace
@@ -565,11 +566,86 @@ final class SerializeVisitor(
   }
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {
-    // Selector is stored as Any (placeholder until selector AST is wired)
+    // Selector is stored as Any (either a SelectorList once the selector AST
+    // is wired, or a String text fallback used by the current evaluator).
     recordMapping(node.span)
-    buffer.append(node.selector.toString)
+    node.selector match {
+      case list: SelectorList => buffer.append(formatSelectorList(list))
+      case s:    String       => buffer.append(s)
+      case other => buffer.append(other.toString)
+    }
     writeSpace()
     writeChildren(node.children)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stage A.4: selector list formatting
+  // Ported from dart-sass `_visitComplexSelector` / `visitSelectorList` /
+  // `visitCompoundSelector` in lib/src/visitor/serialize.dart. In expanded
+  // mode, complex selectors are joined with `,\n<indent>`, components with
+  // the combinator surrounded by spaces, and the descendant combinator is a
+  // single space. In compressed mode, only the descendant combinator retains
+  // its single space; `>`, `+`, and `~` have no surrounding whitespace, and
+  // complex selectors are joined with a bare `,`.
+  // ---------------------------------------------------------------------------
+  private def formatSelectorList(list: SelectorList): String = {
+    val sb = new StringBuilder()
+    var first = true
+    for (complex <- list.components) {
+      if (!first) {
+        sb.append(',')
+        if (!isCompressed) {
+          sb.append('\n')
+          var i = 0
+          while (i < indentLevel) {
+            sb.append("  ")
+            i += 1
+          }
+        }
+      }
+      first = false
+      writeComplexSelectorTo(sb, complex)
+    }
+    sb.toString()
+  }
+
+  private def writeComplexSelectorTo(sb: StringBuilder, complex: ComplexSelector): Unit = {
+    // Leading combinators (rare; bogus-but-parsed selectors like `> .a`).
+    var leadingFirst = true
+    for (c <- complex.leadingCombinators) {
+      if (!leadingFirst && !isCompressed) sb.append(' ')
+      leadingFirst = false
+      sb.append(c.value.text)
+    }
+    if (complex.leadingCombinators.nonEmpty && complex.components.nonEmpty && !isCompressed) {
+      sb.append(' ')
+    }
+
+    var compIdx = 0
+    val comps   = complex.components
+    while (compIdx < comps.length) {
+      val component = comps(compIdx)
+      sb.append(component.selector.toString)
+      for (comb <- component.combinators) {
+        if (isCompressed) sb.append(comb.value.text)
+        else {
+          sb.append(' ')
+          sb.append(comb.value.text)
+        }
+      }
+      if (compIdx < comps.length - 1) {
+        // Descendant combinator (implicit) or space after an explicit
+        // combinator emitted above. In expanded mode we always want a
+        // separating space; in compressed mode only when the previous
+        // component had no explicit combinator (descendant).
+        if (isCompressed) {
+          if (component.combinators.isEmpty) sb.append(' ')
+        } else {
+          sb.append(' ')
+        }
+      }
+      compIdx += 1
+    }
   }
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
