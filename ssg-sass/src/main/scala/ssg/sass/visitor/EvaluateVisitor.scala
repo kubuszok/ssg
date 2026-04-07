@@ -1619,16 +1619,12 @@ final class EvaluateVisitor(
                   _environment.addNamespace(ns, publicEnv)
                 }
               } else {
-                // Flat (`as *`) — merge public members into the current
-                // environment. Private members stay inside `moduleEnv`.
-                for ((name, value) <- publicEnv.variableEntries)
-                  if (!_environment.variableExists(name)) {
-                    _environment.setVariable(name, value)
-                  }
-                for (fn <- publicEnv.functionValues)
-                  _environment.setFunction(fn)
-                for (mx <- publicEnv.mixinValues)
-                  _environment.setMixin(mx)
+                // Flat (`as *`) — route the module through the new
+                // Environment module API (Stage 4E). `forwardModule` hoists
+                // non-private members into the caller's global scope and
+                // function/mixin tables, and also registers the module in
+                // `_allModules` so future Stage-4 bookkeeping observes it.
+                _environment.forwardModule(EnvironmentModule(publicEnv), node)
               }
             }
           finally {
