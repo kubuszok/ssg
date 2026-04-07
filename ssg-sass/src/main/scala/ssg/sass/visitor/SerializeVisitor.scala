@@ -820,11 +820,195 @@ final class SerializeVisitor(
     recordMapping(node.span)
     buffer.append(node.name.value)
     buffer.append(':')
-    writeSpace()
-    recordMapping(node.span)
-    buffer.append(formatValue(node.value.value))
+    // Stage 3: custom property formatting.
+    // dart-sass `visitCssDeclaration`: when `parsedAsSassScript == false`
+    // (a CSS custom property whose value was preserved as raw text), the
+    // value is emitted via `_writeFoldedValue` (compressed) or
+    // `_writeReindentedValue` (expanded) — NOT via the SassScript value
+    // formatter. Custom properties have no leading space; their raw text
+    // already includes the right whitespace.
+    if (!node.parsedAsSassScript) {
+      // ssg-sass's parser strips the leading whitespace after `:` before
+      // capturing the raw custom-property value, while dart-sass preserves
+      // it as part of the value text. Add a single space here in expanded
+      // mode to keep `--foo: value` round-tripping correctly. In compressed
+      // mode, dart-sass also drops the space (the folded value's leading
+      // newline collapses to nothing if no content precedes it).
+      val raw = node.value.value match {
+        case s: SassString => s.text
+        case other         => other.toCssString()
+      }
+      if (isCompressed) writeFoldedCustomPropertyValue(raw)
+      else {
+        // Re-prepend the missing leading space so the output matches the
+        // canonical `--foo: value` form. The reindented helper assumes the
+        // first line is emitted verbatim; that's still correct because we
+        // append the space first.
+        writeSpace()
+        writeReindentedCustomPropertyValue(raw, node.name.span)
+      }
+    } else {
+      writeSpace()
+      recordMapping(node.span)
+      buffer.append(formatValue(node.value.value))
+    }
     if (node.isImportant) {
       if (isCompressed) buffer.append("!important") else buffer.append(" !important")
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stage 3: custom property folded/reindented value emission
+  // Ported from dart-sass `_writeFoldedValue` / `_writeReindentedValue` /
+  // `_minimumIndentation` / `_writeWithIndent` in lib/src/visitor/serialize.dart.
+  // Custom properties (`--var`) preserve raw whitespace and newlines from the
+  // source. In compressed mode, every newline + following whitespace collapses
+  // to a single space. In expanded mode, the value is re-indented relative
+  // to the current indentation, dedenting the source's minimum indentation.
+  // ---------------------------------------------------------------------------
+
+  /** Folded custom-property value: every `\n` followed by whitespace becomes a single space. */
+  private def writeFoldedCustomPropertyValue(text: String): Unit = {
+    var i   = 0
+    val len = text.length
+    while (i < len) {
+      val c = text.charAt(i)
+      if (c != '\n') {
+        buffer.append(c)
+        i += 1
+      } else {
+        buffer.append(' ')
+        i += 1
+        // Skip following whitespace.
+        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r')) {
+          i += 1
+        }
+      }
+    }
+  }
+
+  /** Re-indented custom-property value (expanded mode). Dedents the source's minimum indentation and re-indents to the current declaration column. */
+  private def writeReindentedCustomPropertyValue(text: String, nameSpan: ssg.sass.util.FileSpan | Null): Unit = {
+    val minIndent = minimumIndentation(text)
+    if (minIndent == Int.MaxValue) {
+      // No newlines: emit verbatim.
+      buffer.append(text)
+    } else if (minIndent < 0) {
+      // Has newlines but no non-empty indented line: trim trailing space.
+      buffer.append(trimRight(text))
+      buffer.append(' ')
+    } else {
+      val nameCol = if (nameSpan != null) nameSpan.start.column else 0
+      writeWithIndent(text, math.min(minIndent, nameCol))
+    }
+  }
+
+  /** Returns the minimum indentation level among non-empty lines after the first newline.
+    *
+    *   - Returns `Int.MaxValue` if [text] has no newlines.
+    *   - Returns `-1` if [text] has newlines but no indented non-empty line.
+    *   - Otherwise returns the smallest leading-whitespace count.
+    */
+  private def minimumIndentation(text: String): Int = {
+    var i   = 0
+    val len = text.length
+    // Skip first line.
+    while (i < len && text.charAt(i) != '\n') i += 1
+    if (i >= len) return Int.MaxValue // No newlines.
+    var min   = Int.MaxValue
+    var saw   = false
+    var atEol = true
+    while (i < len) {
+      if (atEol) {
+        // After a newline: count leading whitespace.
+        i += 1 // skip the '\n'
+        if (i >= len) {
+          // Trailing newline.
+          if (!saw) return -1
+          return if (min == Int.MaxValue) -1 else min
+        }
+        var col = 0
+        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) {
+          col += 1
+          i += 1
+        }
+        if (i < len && text.charAt(i) != '\n') {
+          if (col < min) min = col
+          saw = true
+        }
+        atEol = false
+      } else {
+        // Scan to next newline.
+        while (i < len && text.charAt(i) != '\n') i += 1
+        atEol = true
+      }
+    }
+    if (!saw) -1 else min
+  }
+
+  private def trimRight(s: String): String = {
+    var end = s.length
+    while (end > 0 && {
+      val c = s.charAt(end - 1)
+      c == ' ' || c == '\t' || c == '\n' || c == '\r'
+    }) end -= 1
+    s.substring(0, end)
+  }
+
+  /** Writes [text] to the buffer, replacing [minIndent] leading whitespace on each non-first line with the current indentation. Compresses trailing empty lines into a single trailing space. */
+  private def writeWithIndent(text: String, minIndent: Int): Unit = {
+    var i   = 0
+    val len = text.length
+    // Write the first line as-is.
+    while (i < len) {
+      val c = text.charAt(i)
+      i += 1
+      if (c == '\n') {
+        // First newline: switch to indented-line mode (loop body returns
+        // when we hit EOF).
+        while (true) {
+          // Scan forward to next non-whitespace or EOF.
+          var lineStart = i
+          var newlines  = 1
+          var inner     = true
+          while (inner) {
+            if (i >= len) {
+              // Trailing whitespace: emit a single space and stop.
+              buffer.append(' ')
+              return
+            }
+            val ch = text.charAt(i)
+            if (ch == ' ' || ch == '\t') {
+              i += 1
+            } else if (ch == '\n') {
+              i += 1
+              lineStart = i
+              newlines += 1
+            } else {
+              inner = false
+            }
+          }
+          // Emit `newlines` line feeds, then current indent, then the
+          // remainder of the line (skipping `minIndent` of leading ws).
+          var n = 0
+          while (n < newlines) {
+            buffer.append('\n')
+            n += 1
+          }
+          writeIndent()
+          val skipFrom = lineStart + math.min(minIndent, i - lineStart)
+          // Append from skipFrom to (and including) the next newline or EOF.
+          var j = skipFrom
+          while (j < len && text.charAt(j) != '\n') {
+            buffer.append(text.charAt(j))
+            j += 1
+          }
+          if (j >= len) return
+          i = j + 1 // skip the '\n'
+        }
+      } else {
+        buffer.append(c)
+      }
     }
   }
 
