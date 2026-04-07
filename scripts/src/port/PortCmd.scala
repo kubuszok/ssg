@@ -33,6 +33,7 @@ object PortCmd {
       case "skip" :: "list" :: rest          => skipList(Cli.parse(rest))
       case "skip" :: "add" :: rest           => skipAdd(rest)
       case "skip" :: "verify" :: _           => skipVerify()
+      case "stale-stubs" :: rest             => staleStubsCmd(Cli.parse(rest))
       case other :: _ =>
         Term.err(s"Unknown port command: ${other}")
         printUsage()
@@ -101,6 +102,60 @@ object PortCmd {
         case None    => ()
       }
     }
+  }
+
+  // --- stale-stubs cross-reference (Phase 3) --------------------------------
+
+  /** `ssg-dev port stale-stubs [--module M | --file F]`
+    *
+    * For each suspect "not yet ported" / "would be used here" / "TODO"
+    * comment in scope, extract the candidate identifiers and check whether
+    * any of them is now defined in the SSG codebase. If so, the stub is
+    * stale and the file should be re-wired to the now-available dependency.
+    *
+    * The index of "now defined" identifiers is built from every Scala file
+    * across all SSG modules. Cross-module references are detected: a stub
+    * in `ssg-md` referencing `Parser.REFERENCES` is caught even though
+    * `Parser.REFERENCES` lives in a different package.
+    */
+  private def staleStubsCmd(args: Cli.Args): Unit = {
+    val moduleFlag = args.flag("module")
+    val fileFlag   = args.flag("file")
+
+    Term.info("Building identifier index from all SSG modules...")
+    val srcDirs = Paths.allSsgSrcDirs.filter(d => new File(d).exists())
+    val index = StaleStubs.buildIndex(srcDirs)
+    Term.info(s"Index built: ${index.size} unique identifiers")
+
+    val targets: List[String] = (fileFlag, moduleFlag) match {
+      case (Some(f), _) =>
+        val abs = if (f.startsWith("/")) f else s"${Paths.projectRoot}/$f"
+        List(abs)
+      case (None, Some(m)) => List(Paths.moduleSrc(m))
+      case (None, None)    => srcDirs
+    }
+
+    val hits = scala.collection.mutable.ListBuffer.empty[StaleStubs.StaleHit]
+    for (t <- targets) {
+      val f = new File(t)
+      if (f.isFile) hits ++= StaleStubs.scanFile(t, index)
+      else if (f.isDirectory) hits ++= StaleStubs.scanDir(t, index)
+    }
+
+    if (hits.isEmpty) {
+      println("No stale stubs found")
+      return
+    }
+    val byFile = hits.groupBy(_.file).toList.sortBy(-_._2.size)
+    for ((f, fileHits) <- byFile) {
+      val rel = f.stripPrefix(Paths.projectRoot + "/")
+      println(s"$rel  (${fileHits.size} stale)")
+      fileHits.sortBy(_.line).foreach { h =>
+        println(f"  ${h.line}%5d  ${h.identifier}%-40s  ${h.comment}")
+      }
+    }
+    println(s"\nTotal: ${hits.size} stale stub(s) in ${byFile.size} files")
+    sys.exit(1)
   }
 
   // --- skip policy -----------------------------------------------------------
@@ -207,6 +262,13 @@ object PortCmd {
               |  skip list [--library L] [--category C]
               |  skip add <original-path> <category> <justification>
               |  skip verify                  Every skip row must have justification + category
+              |
+              |Stale stubs (Phase 3):
+              |  stale-stubs [--module M | --file F]
+              |    For each "not yet ported"/"would be used here"/"TODO" comment,
+              |    cross-reference any mentioned identifiers against the current
+              |    SSG codebase. If the identifier is now defined, the stub is
+              |    stale and should be re-wired. Exits non-zero on any stale stub.
               |
               |Each `verify` runs Covenant.verify, which composes:
               |  - method-set check (every baseline method must still exist)
