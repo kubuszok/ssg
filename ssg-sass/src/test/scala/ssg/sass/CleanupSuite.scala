@@ -16,27 +16,28 @@ import ssg.sass.value.SassNumber
   */
 final class CleanupSuite extends munit.FunSuite {
 
-  test("Environment.closure snapshots variables — later mutations don't leak") {
+  test("Environment.closure sees later assignments in captured scopes (dart-sass semantics)") {
+    // dart-sass closure() shares the existing scope chain (shallow-copied
+    // list of maps), so mutations to scopes visible when the closure was
+    // created are reflected. Only new scopes pushed after capture are
+    // invisible.
     val env = Environment()
     env.setVariable("a", SassNumber(1.0))
     val closure = env.closure()
-    // Mutate the original after capturing the closure.
     env.setVariable("a", SassNumber(99.0))
     env.setVariable("b", SassNumber(2.0))
-    // Closure should still see the original `a` and not see `b` at all.
-    val a = closure.getVariable("a")
-    assert(a.isDefined)
-    assertEquals(a.get.toCssString(), "1")
-    assert(closure.getVariable("b").isEmpty)
+    assertEquals(closure.getVariable("a").get.toCssString(), "99")
+    assertEquals(closure.getVariable("b").get.toCssString(), "2")
   }
 
-  test("Environment.closure also isolates functions") {
+  test("Environment.closure does not see scopes pushed after capture") {
     val env = Environment()
-    env.setFunction(Callable.function("orig", "$x", args => args.head))
+    env.setVariable("a", SassNumber(1.0))
     val closure = env.closure()
-    env.setFunction(Callable.function("added-later", "$x", args => args.head))
-    assert(closure.getFunction("orig").isDefined)
-    assert(closure.getFunction("added-later").isEmpty)
+    env.withinScope(semiGlobal = false) {
+      env.setLocalVariable("inner", SassNumber(7.0))
+    }
+    assert(closure.getVariable("inner").isEmpty)
   }
 
   test("Environment.global returns a fresh environment with builtins and !global vars") {

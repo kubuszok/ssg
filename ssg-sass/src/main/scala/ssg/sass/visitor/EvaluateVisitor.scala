@@ -805,6 +805,13 @@ final class EvaluateVisitor(
   private def _withScope[T](body: => T): T =
     _environment.withinScope(() => body)
 
+  /** Runs [[body]] inside a semi-global scope (used by `@if`, `@for`,
+    * `@each`, `@while` so that assignments propagate to the enclosing
+    * scope instead of shadowing).
+    */
+  private def _withSemiGlobalScope[T](body: => T): T =
+    _environment.withinSemiGlobalScope(body)
+
   /** Resolves the active logger, falling back to [[Logger.quiet]] when no explicit logger is provided.
     */
   private def _logger: Logger = logger.getOrElse(Logger.quiet)
@@ -1022,7 +1029,11 @@ final class EvaluateVisitor(
       } else false
     if (!skip) {
       val value = node.expression.accept(this)
-      _environment.setVariable(node.name, value)
+      if (node.isGlobal) {
+        _environment.setGlobalVariable(node.name, value)
+      } else {
+        _environment.setVariable(node.name, value)
+      }
     }
     SassNull
   }
@@ -1032,7 +1043,7 @@ final class EvaluateVisitor(
     boundary {
       for (clause <- node.clauses)
         if (clause.expression.accept(this).isTruthy) {
-          _withScope {
+          _withSemiGlobalScope {
             for (statement <- clause.children) {
               val _ = statement.accept(this)
             }
@@ -1040,7 +1051,7 @@ final class EvaluateVisitor(
           break(SassNull)
         }
       node.lastClause.foreach { elseClause =>
-        _withScope {
+        _withSemiGlobalScope {
           for (statement <- elseClause.children) {
             val _ = statement.accept(this)
           }
@@ -1061,14 +1072,14 @@ final class EvaluateVisitor(
     val fromValue =
       try node.from.accept(this).assertNumber(fromName)
       catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
-    val toValue   =
+    val toValue =
       try node.to.accept(this).assertNumber(toName)
       catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     val fromInt =
       try fromValue.assertInt(fromName)
       catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
-    val toInt   =
+    val toInt =
       try toValue.assertInt(toName)
       catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
@@ -1084,7 +1095,7 @@ final class EvaluateVisitor(
       if (node.isExclusive) toInt
       else toInt + direction
 
-    _withScope {
+    _withSemiGlobalScope {
       var i = fromInt
       while (i != end) {
         _environment.setVariable(
@@ -1106,7 +1117,7 @@ final class EvaluateVisitor(
 
   override def visitEachRule(node: EachRule): Value = {
     val listValue = node.list.accept(this)
-    _withScope {
+    _withSemiGlobalScope {
       for (element <- listValue.asList) {
         if (node.variables.length == 1) {
           _environment.setVariable(node.variables.head, element)
@@ -1129,7 +1140,7 @@ final class EvaluateVisitor(
   }
 
   override def visitWhileRule(node: WhileRule): Value = {
-    _withScope {
+    _withSemiGlobalScope {
       while (node.condition.accept(this).isTruthy)
         for (statement <- node.children.get) {
           val _ = statement.accept(this)
