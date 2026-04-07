@@ -8,7 +8,8 @@ package visitor
 
 import ssg.sass.ast.css.{ CssValue, ModifiableCssAtRule, ModifiableCssComment, ModifiableCssDeclaration, ModifiableCssNode, ModifiableCssStyleRule, ModifiableCssStylesheet }
 import ssg.sass.util.{ FileSpan, ModifiableBox }
-import ssg.sass.value.{ SassString, Value }
+import ssg.sass.value.{ ListSeparator, SassList, SassMap, SassString, Value }
+import scala.collection.immutable.ListMap
 import ssg.sass.Nullable
 
 final class SerializeVisitorSuite extends munit.FunSuite {
@@ -312,6 +313,84 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     val empty = styleRule("a", Nil)
     val s     = stylesheet(List(empty))
     assertEquals(SerializeVisitor.serializeCompressed(s).css, "")
+  }
+
+  // --- Stage A.2: string formatting ----------------------------------------
+
+  private def fmtValue(v: Value, compressed: Boolean = false): String = {
+    val vis = new SerializeVisitor(
+      style = if (compressed) OutputStyle.Compressed else OutputStyle.Expanded
+    )
+    val decl = new ModifiableCssDeclaration(
+      str("x"),
+      new CssValue[Value](v, span),
+      span,
+      parsedAsSassScript = true
+    )
+    val rule  = styleRule("a", List(decl))
+    val sheet = stylesheet(List(rule))
+    val css   = vis.serialize(sheet).css
+    val start = css.indexOf("x:") + 2
+    val end   = css.indexOf(';', start)
+    css.substring(start, end).trim
+  }
+
+  test("writeString: unquoted string emits raw text") {
+    assertEquals(fmtValue(new SassString("red", hasQuotes = false)), "red")
+  }
+
+  test("writeString: quoted string prefers double quotes") {
+    assertEquals(fmtValue(new SassString("hi", hasQuotes = true)), "\"hi\"")
+  }
+
+  test("writeString: uses single quotes when text has double and no single") {
+    assertEquals(fmtValue(new SassString("a\"b", hasQuotes = true)), "'a\"b'")
+  }
+
+  test("writeString: escapes double quote when both present") {
+    assertEquals(fmtValue(new SassString("a\"'b", hasQuotes = true)), "\"a\\\"'b\"")
+  }
+
+  test("writeString: escapes backslash") {
+    assertEquals(fmtValue(new SassString("a\\b", hasQuotes = true)), "\"a\\\\b\"")
+  }
+
+  test("writeString: hex-escapes control chars with trailing space") {
+    assertEquals(fmtValue(new SassString("a\u0001b", hasQuotes = true)), "\"a\\1 b\"")
+  }
+
+  // --- Stage A.3: list and map formatting ----------------------------------
+
+  private def u(s: String): Value = new SassString(s, hasQuotes = false)
+
+  test("writeList: comma-separated expanded uses ', '") {
+    val l = SassList(List(u("a"), u("b"), u("c")), ListSeparator.Comma)
+    assertEquals(fmtValue(l), "a, b, c")
+  }
+
+  test("writeList: comma-separated compressed uses ','") {
+    val l = SassList(List(u("a"), u("b"), u("c")), ListSeparator.Comma)
+    assertEquals(fmtValue(l, compressed = true), "a,b,c")
+  }
+
+  test("writeList: space-separated uses single space") {
+    val l = SassList(List(u("1px"), u("2px"), u("3px")), ListSeparator.Space)
+    assertEquals(fmtValue(l), "1px 2px 3px")
+  }
+
+  test("writeList: slash-separated expanded uses ' / '") {
+    val l = SassList(List(u("1"), u("2")), ListSeparator.Slash)
+    assertEquals(fmtValue(l), "1 / 2")
+  }
+
+  test("writeList: slash-separated compressed uses '/'") {
+    val l = SassList(List(u("1"), u("2")), ListSeparator.Slash)
+    assertEquals(fmtValue(l, compressed = true), "1/2")
+  }
+
+  test("writeMap: renders as (k: v, k2: v2) expanded") {
+    val m = new SassMap(ListMap[Value, Value](u("a") -> u("1"), u("b") -> u("2")))
+    assertEquals(fmtValue(m), "(a: 1, b: 2)")
   }
 
   test("compressed: rule with only a non-preserved comment is skipped") {

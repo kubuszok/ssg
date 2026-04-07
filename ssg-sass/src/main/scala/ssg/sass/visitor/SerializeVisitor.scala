@@ -24,7 +24,7 @@ import ssg.sass.ColorNames
 import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.util.NumberUtil
-import ssg.sass.value.{ SassColor, SassNumber, Value }
+import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassNumber, SassString, Value }
 import ssg.sass.value.color.ColorSpace
 
 /** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
@@ -252,7 +252,98 @@ final class SerializeVisitor(
   private def formatValue(v: Value): String = v match {
     case c: SassColor if c.space eq ColorSpace.rgb => formatColor(c)
     case n: SassNumber                             => formatSassNumber(n)
+    case s: SassString                             => formatString(s)
+    case l: SassList                               => formatList(l)
+    case m: SassMap                                => formatMap(m)
     case _ => v.toCssString()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stage A.2: quoted/unquoted string formatting
+  // Ported from dart-sass `_visitQuotedString` / `_visitUnquotedString` in
+  // lib/src/visitor/serialize.dart. Unquoted strings emit raw text (newlines
+  // replaced with spaces to keep the declaration on one line). Quoted strings
+  // prefer `"` unless the text contains `"` and no `'`, in which case `'` is
+  // used; backslash and the active quote are escaped, and control chars use
+  // `\hh ` hex form.
+  // ---------------------------------------------------------------------------
+  private def formatString(s: SassString): String =
+    if (!s.hasQuotes) {
+      // Fold newlines to a single space to avoid breaking declarations.
+      val sb = new StringBuilder()
+      var i  = 0
+      while (i < s.text.length) {
+        val c = s.text.charAt(i)
+        if (c == '\n') sb.append(' ')
+        else sb.append(c)
+        i += 1
+      }
+      sb.toString()
+    } else {
+      var hasDouble = false
+      var hasSingle = false
+      var i         = 0
+      while (i < s.text.length) {
+        val c = s.text.charAt(i)
+        if (c == '"') hasDouble = true
+        else if (c == '\'') hasSingle = true
+        i += 1
+      }
+      val q  = if (hasDouble && !hasSingle) '\'' else '"'
+      val sb = new StringBuilder()
+      sb.append(q)
+      i = 0
+      while (i < s.text.length) {
+        val c = s.text.charAt(i)
+        c match {
+          case '\\'                       => sb.append("\\\\")
+          case _ if c == q                => sb.append('\\'); sb.append(c)
+          case _ if c < 0x20 || c == 0x7f =>
+            sb.append('\\')
+            sb.append(Integer.toHexString(c.toInt))
+            sb.append(' ')
+          case _ => sb.append(c)
+        }
+        i += 1
+      }
+      sb.append(q)
+      sb.toString()
+    }
+
+  // ---------------------------------------------------------------------------
+  // Stage A.3: list and map formatting
+  // Ported from dart-sass `_writeList` / `visitMap` in
+  // lib/src/visitor/serialize.dart. Comma-separated lists use `, ` expanded /
+  // `,` compressed; space-separated use a single space; slash-separated use
+  // ` / ` expanded / `/` compressed. Blank elements are dropped for
+  // non-comma separators (matching `_elementNeedsParens`/`isBlank` filter).
+  // A single-element comma list is rendered as `(x,)`. Bracketed lists wrap
+  // in `[...]`. Maps render as `(k1: v1, k2: v2)`.
+  // ---------------------------------------------------------------------------
+  private def formatList(l: SassList): String = {
+    val elems =
+      if (l.separator == ListSeparator.Comma || l.hasBrackets) l.asList
+      else l.asList.filterNot(_.isBlank)
+    val sepStr = l.separator match {
+      case ListSeparator.Comma     => if (isCompressed) "," else ", "
+      case ListSeparator.Space     => " "
+      case ListSeparator.Slash     => if (isCompressed) "/" else " / "
+      case ListSeparator.Undecided => " "
+    }
+    val inner = elems.map(formatValue).mkString(sepStr)
+    val body  =
+      if (l.asList.length == 1 && l.separator == ListSeparator.Comma) s"($inner,)"
+      else inner
+    if (l.hasBrackets) s"[$body]"
+    else body
+  }
+
+  private def formatMap(m: SassMap): String = {
+    val sep = if (isCompressed) "," else ", "
+    val entries = m.contents
+      .map { case (k, v) => s"${formatValue(k)}:${if (isCompressed) "" else " "}${formatValue(v)}" }
+      .mkString(sep)
+    s"($entries)"
   }
 
   /** Formats a SassNumber for CSS output.
