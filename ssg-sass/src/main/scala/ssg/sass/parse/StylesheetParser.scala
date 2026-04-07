@@ -1662,8 +1662,35 @@ abstract class StylesheetParser protected (
   /** Best-effort parsing of a simple expression string into an Expression node. Handles: bare identifiers, variables, numbers with units, quoted strings, booleans (true/false/null). Falls back to
     * unquoted StringExpression.
     */
+  /** Removes `/*…*/` and `//…<eol>` comments from a raw expression text, leaving the contents of quoted strings alone. */
+  private def _stripCommentsRespectingStrings(raw: String): String = {
+    val sb = new StringBuilder(raw.length)
+    var i  = 0
+    var q: Char = 0
+    while (i < raw.length) {
+      val c = raw.charAt(i)
+      if (q != 0) {
+        sb.append(c)
+        if (c == '\\' && i + 1 < raw.length) { sb.append(raw.charAt(i + 1)); i += 2 }
+        else { if (c == q) q = 0; i += 1 }
+      } else if (c == '"' || c == '\'') {
+        q = c; sb.append(c); i += 1
+      } else if (c == '/' && i + 1 < raw.length && raw.charAt(i + 1) == '*') {
+        i += 2
+        while (i + 1 < raw.length && !(raw.charAt(i) == '*' && raw.charAt(i + 1) == '/')) i += 1
+        i += 2
+      } else if (c == '/' && i + 1 < raw.length && raw.charAt(i + 1) == '/') {
+        i += 2
+        while (i < raw.length && raw.charAt(i) != '\n' && raw.charAt(i) != '\r') i += 1
+      } else {
+        sb.append(c); i += 1
+      }
+    }
+    sb.toString()
+  }
+
   private def _parseSimpleExpression(raw: String, span: FileSpan): Expression = {
-    val trimmed = raw.trim
+    val trimmed = _stripCommentsRespectingStrings(raw).trim
     if (trimmed.isEmpty) return new NullExpression(span)
 
     // Boolean / null literals
