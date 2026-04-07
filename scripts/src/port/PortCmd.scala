@@ -92,21 +92,12 @@ object PortCmd {
     table.find(_.getOrElse("id", "") == id) match {
       case Some(task) =>
         Term.info(s"Recording baseline for task $id")
-        // Step 1: run sass-spec snapshot to capture current baseline
         Term.info("Running sass-spec snapshot to refresh baseline TSV...")
-        val exit = Proc.exec(
-          "sbt",
-          List(
-            "--client",
-            "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-            "set ThisBuild / javaOptions += \"-Dssg.sass.spec.snapshot=1\"",
-            "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-          ),
-          cwd = Some(Paths.projectRoot)
-        )
-        if (exit != 0) {
-          Term.err(s"Failed to capture sass-spec baseline (exit $exit)")
-          sys.exit(exit)
+        val outcome = ssgdev.testing.SassSpec.runSnapshot()
+        if (!outcome.ok) {
+          Term.err("Failed to capture sass-spec baseline")
+          outcome.details.foreach(d => println(s"  $d"))
+          sys.exit(1)
         }
         // Step 2: capture method set of the target file
         val file = task.getOrElse("file", "")
@@ -230,17 +221,11 @@ object PortCmd {
 
   private def snapshot(): Unit = {
     Term.info("Refreshing sass-spec baseline snapshot...")
-    val exit = Proc.exec(
-      "sbt",
-      List(
-        "--client",
-        "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-        "set ThisBuild / javaOptions += \"-Dssg.sass.spec.snapshot=1\"",
-        "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-      ),
-      cwd = Some(Paths.projectRoot)
-    )
-    if (exit != 0) sys.exit(exit)
+    val outcome = ssgdev.testing.SassSpec.runSnapshot()
+    if (!outcome.ok) {
+      outcome.details.foreach(d => println(s"  $d"))
+      sys.exit(1)
+    }
     Term.ok(s"Baseline refreshed at ${Paths.dataDir}/sass-spec-baseline.tsv")
   }
 

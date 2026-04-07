@@ -14,52 +14,37 @@ object SassSpec {
   final case class Outcome(ok: Boolean, details: List[String], passCount: Int, total: Int)
 
   /** Run the sass-spec runner with a subdir filter. */
-  def runSubdir(subdir: String): Outcome = {
-    val args = List(
-      "--client",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-      s"set ThisBuild / javaOptions += \"-Dssg.sass.spec.subdir=$subdir\"",
-      "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    )
-    runSbt(args)
-  }
+  def runSubdir(subdir: String): Outcome =
+    runSbt(Map("ssg.sass.spec.subdir" -> subdir))
 
   /** Run the sass-spec runner in default (regression) mode. */
-  def runRegression(): Outcome = {
-    val args = List(
-      "--client",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-      "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    )
-    runSbt(args)
-  }
+  def runRegression(): Outcome =
+    runSbt(Map.empty)
 
   /** Run the sass-spec runner in strict mode (leak categories fail). */
-  def runStrict(): Outcome = {
-    val args = List(
-      "--client",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec.strict=1\"",
-      "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    )
-    runSbt(args)
-  }
+  def runStrict(): Outcome =
+    runSbt(Map("ssg.sass.spec.strict" -> "1"))
 
   /** Run the sass-spec runner in snapshot mode (rewrites the baseline TSV). */
-  def runSnapshot(): Outcome = {
-    val args = List(
-      "--client",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec=1\"",
-      "set ThisBuild / javaOptions += \"-Dssg.sass.spec.snapshot=1\"",
-      "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    )
-    runSbt(args)
-  }
+  def runSnapshot(): Outcome =
+    runSbt(Map("ssg.sass.spec.snapshot" -> "1"))
 
-  /** Shared driver: runs sbt --client with the given args, parses the
-    * output for sass-spec summary lines, and returns an Outcome.
+  /** Shared driver: runs sbt --client with the runner. System properties
+    * are passed via `set ThisBuild / Test / javaOptions += ...; testOnly`
+    * — `JAVA_TOOL_OPTIONS` does not work because the sbt server inherits
+    * its environment from when it was first started, not from each
+    * client invocation.
+    *
+    * Multiple commands are joined with `;` so a single sbt --client call
+    * sets the property and then runs the test.
     */
-  private def runSbt(args: List[String]): Outcome = {
+  private def runSbt(props: Map[String, String]): Outcome = {
+    val sets = props.toList.map { case (k, v) =>
+      s"""set ThisBuild / Test / javaOptions += "-D$k=$v""""
+    }
+    val testCmd = "ssg-sass/testOnly ssg.sass.SassSpecRunner"
+    val cmd = (sets :+ testCmd).mkString("; ")
+    val args = List("--client", cmd)
     val result = Proc.run("sbt", args, cwd = Some(Paths.projectRoot))
     val out = result.stdout + "\n" + result.stderr
 

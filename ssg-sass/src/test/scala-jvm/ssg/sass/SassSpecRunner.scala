@@ -150,10 +150,12 @@ final class SassSpecRunner extends munit.FunSuite {
     byCategory.foreach { case (cat, n) => println(f"  $n%6d  $cat") }
 
     // Phase 0.4: snapshot mode — rewrite the baseline TSV, then return
-    // without asserting.  Used by `ssg-dev port snapshot`.
+    // without asserting.  Used by `ssg-dev port snapshot`. Default target
+    // is the tracked scripts/data/sass-spec-baseline.tsv (same path as
+    // the regression-mode default), so the baseline lives in git.
     if (snapshotMode) {
-      val defaultBaseline = outDir.resolve("sass-spec-baseline.tsv")
-      val target = baselinePath.map(Paths.get(_)).getOrElse(defaultBaseline)
+      val tracked = repoRoot.resolve("scripts").resolve("data").resolve("sass-spec-baseline.tsv")
+      val target = baselinePath.map(Paths.get(_)).getOrElse(tracked)
       writeBaseline(target, results)
       println(s"Wrote baseline: $target (${results.size} cases)")
       return
