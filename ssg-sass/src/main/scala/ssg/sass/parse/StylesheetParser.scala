@@ -411,7 +411,10 @@ abstract class StylesheetParser protected (
             isOptional = true
             rawText.stripSuffix("!optional").trim
           } else rawText
-        val span      = spanFrom(start)
+        val span = spanFrom(start)
+        if (selText.isEmpty) {
+          error("Expected selector.", span)
+        }
         val selInterp = Interpolation.plain(selText, span)
         if (scanner.peekChar() == CharCode.$semicolon) {
           val _ = scanner.readChar()
@@ -433,23 +436,28 @@ abstract class StylesheetParser protected (
         val fnName    = identifier()
         val nameSpan  = scanner.spanFrom(nameStart)
         // Reject CSS reserved special function names. Matches dart-sass
-        // `_functionRule` in lib/src/parse/stylesheet.dart.
-        val reservedFunctionNames = Set(
-          "calc",
-          "element",
-          "expression",
-          "url",
-          "and",
-          "or",
-          "not",
-          "var",
-          "attr",
-          "env",
-          "progid:dximagetransform.microsoft.gradient"
-        )
-        if (reservedFunctionNames.contains(fnName.toLowerCase) || fnName.startsWith("--")) {
-          error(s"'$fnName' isn't a valid function name.", nameSpan)
+        // `_functionRule` in lib/src/parse/stylesheet.dart. Note that the
+        // `--` prefix (custom-property-like) is also treated as an unknown
+        // at-rule in dart-sass — we reject it outright here.
+        if (fnName.startsWith("--")) {
+          error("Invalid function name.", nameSpan)
         }
+        // `type` is reserved for a plain-CSS function, case-insensitive.
+        if (fnName.equalsIgnoreCase("type")) {
+          error("This name is reserved for the plain-CSS function.", nameSpan)
+        }
+        // Case-sensitive (lowercase-only) hard errors: `expression`, `url`,
+        // `and`, `or`, `not`, plus anything whose unvendored form is
+        // `element`.
+        val fnUnvendor   = ssg.sass.Utils.unvendor(fnName)
+        val hardReserved = Set("expression", "url", "and", "or", "not")
+        if (hardReserved.contains(fnName) || fnUnvendor == "element") {
+          error("Invalid function name.", nameSpan)
+        }
+        // Case-insensitive forms are a deprecation warning in dart-sass; we
+        // silently accept them for now (matches sass-spec's expected output
+        // which only checks warnings against a separate stream).
+        val _ = fnUnvendor
         whitespace(consumeNewlines = true)
         val params = _parseParameterList(start)
         whitespace(consumeNewlines = true)
@@ -479,7 +487,13 @@ abstract class StylesheetParser protected (
         if (!scanner.isDone && scanner.peekChar() == CharCode.$dot) {
           val _ = scanner.readChar()
           mixNamespace = Nullable(mixName)
+          val memberStart = scanner.state
           mixName = identifier()
+          if (_isPrivateMember(mixName))
+            error(
+              "Private members can't be accessed from outside their modules.",
+              spanFrom(memberStart)
+            )
         }
         whitespace(consumeNewlines = true)
         val argList = if (scanner.peekChar() == CharCode.$lparen) {
@@ -1709,6 +1723,11 @@ abstract class StylesheetParser protected (
         _allChars(ns, (c: Char) => CharCode.isName(c.toInt)) &&
         nsName.nonEmpty && _allChars(nsName, (c: Char) => CharCode.isName(c.toInt))
       ) {
+        if (_isPrivateMember(nsName))
+          error(
+            "Private members can't be accessed from outside their modules.",
+            span
+          )
         return VariableExpression(nsName.replace('_', '-'), span, Nullable(ns))
       }
     }
@@ -2171,6 +2190,21 @@ abstract class StylesheetParser protected (
       }
     // Special-case: url() — passes through as an unquoted string. Skip for now.
     if (namespace.isEmpty && name == "url") return None
+    // Namespaced private member access is a hard syntax error. Matches
+    // dart-sass `_assertPublic` in `lib/src/parse/stylesheet.dart`.
+    if (namespace.isDefined && _isPrivateMember(name)) {
+      error(
+        "Private members can't be accessed from outside their modules.",
+        span
+      )
+    }
+    // Custom-ident function calls (`--name(...)`) are preserved verbatim as
+    // plain CSS rather than evaluated, matching dart-sass's handling of
+    // CSS custom functions. See sass-spec
+    // `directives/function/name.hrx!custom_ident/call`.
+    if (namespace.isEmpty && name.startsWith("--")) {
+      return Some(StringExpression(Interpolation.plain(raw, span), hasQuotes = false))
+    }
 
     val argsText = raw.substring(parenIdx + 1, raw.length - 1).trim
     // Modern CSS color-function syntax: `rgb/rgba/hsl/hsla/hwb/lab/lch/oklab/
@@ -3078,11 +3112,23 @@ abstract class StylesheetParser protected (
     if (scanner.peekChar() == CharCode.$dot) {
       val _ = scanner.readChar()
       if (scanner.peekChar() == CharCode.$dollar) {
+        val memberStart = scanner.state
         _rdConsume(scanner.readChar())
         val vn = identifier()
-        return VariableExpression(vn.replace('_', '-'), spanFrom(start), Nullable(name))
+        if (_isPrivateMember(vn))
+          error(
+            "Private members can't be accessed from outside their modules.",
+            spanFrom(start)
+          )
+        return VariableExpression(vn.replace('_', '-'), spanFrom(memberStart), Nullable(name))
       }
-      val member = identifier()
+      val memberStart = scanner.state
+      val member      = identifier()
+      if (_isPrivateMember(member))
+        error(
+          "Private members can't be accessed from outside their modules.",
+          spanFrom(memberStart)
+        )
       if (scanner.peekChar() == CharCode.$lparen) {
         val args = _rdArgumentInvocation(start)
         return FunctionExpression(member, args, spanFrom(start), Nullable(name))
@@ -3128,9 +3174,20 @@ abstract class StylesheetParser protected (
     if (scanner.peekChar() == CharCode.$dollar) {
       val _ = scanner.readChar()
       val n = identifier()
+      if (_isPrivateMember(n))
+        error(
+          "Private members can't be accessed from outside their modules.",
+          spanFrom(start)
+        )
       VariableExpression(n.replace('_', '-'), spanFrom(start), Nullable(namespace))
     } else {
-      val member = identifier()
+      val memberStart = scanner.state
+      val member      = identifier()
+      if (_isPrivateMember(member))
+        error(
+          "Private members can't be accessed from outside their modules.",
+          spanFrom(memberStart)
+        )
       if (scanner.peekChar() == CharCode.$lparen) {
         val args = _rdArgumentInvocation(start)
         FunctionExpression(member, args, spanFrom(start), Nullable(namespace))
@@ -3140,6 +3197,15 @@ abstract class StylesheetParser protected (
           hasQuotes = false
         )
       }
+    }
+
+  /** True if [name] is a module-private member identifier (starts with `_` or `-`). Matches dart-sass `isPrivate` in `lib/src/util/character.dart`.
+    */
+  private def _isPrivateMember(name: String): Boolean =
+    if (name.isEmpty) false
+    else {
+      val c = name.charAt(0)
+      c == '_' || c == '-'
     }
 
   /** dart-sass: `_argumentInvocation`. Parses `(a, b, $c: d, ...)`. */

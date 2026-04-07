@@ -1690,10 +1690,12 @@ final class CompileSuite extends munit.FunSuite {
     }
   }
 
-  test("@function calc() is rejected as a reserved CSS function name") {
-    intercept[SassFormatException] {
-      val _ = Compile.compileString("@function calc() { @return 1; }")
-    }
+  test("@function calc() is accepted and callable (dart-sass allows shadowing plain calc)") {
+    // sass-spec: directives/function/name.hrx!special/calc. `calc` is not
+    // in dart-sass's case-sensitive reserved set — user functions may
+    // shadow the plain-CSS name.
+    val css = Compile.compileString("@function calc() {@return 1} a {b: calc()}").css
+    assertEquals(css, "a {\n  b: 1;\n}\n")
   }
 
   test("@function my-fn() is accepted (not a reserved name)") {
@@ -1890,5 +1892,91 @@ final class CompileSuite extends munit.FunSuite {
       Compile.compileString("""a {b: rgb(1, 2, 3, (0/0))}""")
     }
     assert(ex.getMessage.toLowerCase.contains("alpha") || ex.getMessage.toLowerCase.contains("nan"))
+  }
+
+  // --------------------------------------------------------------------------
+  // Regression tests: @function reserved names and related parser checks.
+  // Source: sass-spec `directives/function/name.hrx`,
+  // `directives/extend/error.hrx`, `directives/use/error/syntax/member.hrx`.
+  // --------------------------------------------------------------------------
+
+  test("@function type is reserved for the plain-CSS function") {
+    val ex = intercept[SassException] {
+      Compile.compileString("@function type() {@return 1}")
+    }
+    assert(ex.getMessage.contains("reserved for the plain-CSS function"))
+  }
+
+  test("@function TYPE (uppercase) is reserved for the plain-CSS function") {
+    val ex = intercept[SassException] {
+      Compile.compileString("@function TYPE() {@return 1}")
+    }
+    assert(ex.getMessage.contains("reserved for the plain-CSS function"))
+  }
+
+  test("@function element is rejected as invalid function name") {
+    val ex = intercept[SassException] {
+      Compile.compileString("@function element() {@return 1}")
+    }
+    assert(ex.getMessage.contains("Invalid function name"))
+  }
+
+  test("@function vendor-prefixed element is rejected (unvendored)") {
+    val ex = intercept[SassException] {
+      Compile.compileString("@function -a-element() {@return 1}")
+    }
+    assert(ex.getMessage.contains("Invalid function name"))
+  }
+
+  test("@function CALC (uppercase) is allowed") {
+    // `calc` is not in dart-sass's case-sensitive reserved set, so CALC
+    // is parsed and returns 1 when called.
+    val css = Compile.compileString("@function CALC() {@return 1} a {b: CALC()}").css
+    assertEquals(css, "a {\n  b: 1;\n}\n")
+  }
+
+  test("@function NOT (uppercase) is allowed") {
+    val css = Compile.compileString("@function NOT() {@return 1} a {b: NOT()}").css
+    assertEquals(css, "a {\n  b: 1;\n}\n")
+  }
+
+  test("@function -- prefix is rejected") {
+    val ex = intercept[SassException] {
+      Compile.compileString("@function --a() {@return 1}")
+    }
+    assert(ex.getMessage.contains("Invalid function name"))
+  }
+
+  test("--a() custom-ident call is preserved as plain CSS, not evaluated") {
+    val css = Compile.compileString("b {c: --a()}").css
+    assertEquals(css, "b {\n  c: --a();\n}\n")
+  }
+
+  test("@extend with no selector raises an error") {
+    val ex = intercept[SassException] {
+      Compile.compileString("a {@extend;}")
+    }
+    assert(ex.getMessage.contains("Expected selector"))
+  }
+
+  test("@use private function call ns._member() is rejected") {
+    val ex = intercept[SassException] {
+      Compile.compileString("a {a: namespace._member()}")
+    }
+    assert(ex.getMessage.contains("Private members"))
+  }
+
+  test("@use private variable ns.\\$_member is rejected") {
+    val ex = intercept[SassException] {
+      Compile.compileString("a {a: namespace.$_member}")
+    }
+    assert(ex.getMessage.contains("Private members"))
+  }
+
+  test("@include on private mixin ns._member is rejected") {
+    val ex = intercept[SassException] {
+      Compile.compileString("a {@include namespace._member}")
+    }
+    assert(ex.getMessage.contains("Private members"))
   }
 }
