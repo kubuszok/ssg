@@ -2,6 +2,12 @@
 //> using platform scala-native
 //> using options -deprecation -feature -no-indent -Werror
 //> using dep io.github.cquiroz::scala-java-time::2.6.0
+// ssg-dev is a single-shot CLI: do one operation, exit. We don't need GC.
+// Using `none` eliminates the Immix marker entirely — heap grows linearly per
+// invocation (well under 100 MB for any TSV op) and the OS reclaims it on
+// exit. Avoids a class of hangs where Marker_markLockWords spins forever
+// scanning the reserved heap region (observed: 48 GB / 17 min, 34 GB / 1.5 min).
+//> using nativeGc none
 
 package ssgdev
 
