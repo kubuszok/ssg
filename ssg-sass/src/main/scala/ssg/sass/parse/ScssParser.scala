@@ -99,8 +99,19 @@ class ScssParser(
     whitespace(consumeNewlines = true)
     val start = scanner.state
     if (scanner.scanChar(CharCode.$at)) {
-      if (scanIdentifier("else")) true
-      else {
+      // Use `identifier()` rather than `scanIdentifier("else")` so that
+      // Unicode escape sequences in the directive name are normalized
+      // before comparison — e.g. `@\65lse` must be recognized as `@else`.
+      if (lookingAtIdentifier()) {
+        val saved = scanner.state
+        val name  = identifier()
+        if (name == "else") true
+        else {
+          scanner.state = saved
+          scanner.state = start
+          false
+        }
+      } else {
         scanner.state = start
         false
       }

@@ -38,6 +38,7 @@ import ssg.sass.ast.sass.{
   Declaration,
   DynamicImport,
   EachRule,
+  ElseClause,
   ErrorRule,
   Expression,
   ExtendRule,
@@ -45,6 +46,8 @@ import ssg.sass.ast.sass.{
   ForwardRule,
   FunctionExpression,
   FunctionRule,
+  IfClause,
+  IfRule,
   Import,
   ImportRule,
   IncludeRule,
@@ -919,6 +922,72 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ErrorRule(eExpr, spanFrom(start)))
+      case "if" =>
+        // @if <expression> { body } [@else if <expression> { body }]* [@else { body }]
+        // Collect the condition text up to the opening `{`, respecting
+        // balanced parens/brackets, quoted strings, and `#{...}`.
+        def _collectCondition(): (String, ssg.sass.util.LineScannerState) = {
+          val st  = scanner.state
+          val buf = new StringBuilder()
+          var dep = 0
+          var q: Int = 0
+          boundary {
+            while (!scanner.isDone) {
+              val ch = scanner.peekChar()
+              if (ch < 0) break(())
+              if (q > 0) {
+                if (ch == CharCode.$backslash) {
+                  buf.append(scanner.readChar().toChar)
+                  if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+                } else {
+                  if (ch == q) q = 0
+                  buf.append(scanner.readChar().toChar)
+                }
+              } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+                q = ch
+                buf.append(scanner.readChar().toChar)
+              } else if (ch == CharCode.$lparen || ch == CharCode.$lbracket) {
+                dep += 1
+                buf.append(scanner.readChar().toChar)
+              } else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
+                if (dep > 0) dep -= 1
+                buf.append(scanner.readChar().toChar)
+              } else if (dep == 0 && ch == CharCode.$lbrace) {
+                break(())
+              } else {
+                buf.append(scanner.readChar().toChar)
+              }
+            }
+          }
+          (buf.toString().trim, st)
+        }
+        whitespace(consumeNewlines = true)
+        val (condRaw, condStart) = _collectCondition()
+        val condExpr             = _parseSimpleExpression(condRaw, spanFrom(condStart))
+        whitespace(consumeNewlines = true)
+        val ifKids  = _children()
+        val clauses = mutable.ListBuffer.empty[IfClause]
+        clauses += new IfClause(condExpr, ifKids)
+        var lastClause: Nullable[ElseClause] = Nullable.empty
+        var more = true
+        while (more && scanElse(0)) {
+          // We just consumed `@else`. Check for trailing `if` for an
+          // `@else if` clause; otherwise this is the terminal `@else`.
+          whitespace(consumeNewlines = true)
+          if (scanIdentifier("if")) {
+            whitespace(consumeNewlines = true)
+            val (elseCondRaw, elseCondStart) = _collectCondition()
+            val elseCondExpr = _parseSimpleExpression(elseCondRaw, spanFrom(elseCondStart))
+            whitespace(consumeNewlines = true)
+            val elseIfKids = _children()
+            clauses += new IfClause(elseCondExpr, elseIfKids)
+          } else {
+            val elseKids = _children()
+            lastClause = Nullable(new ElseClause(elseKids))
+            more = false
+          }
+        }
+        Nullable(new IfRule(clauses.toList, spanFrom(start), lastClause))
       case "at-root" =>
         // @at-root [<selector>] { body }
         // If a selector precedes the `{`, wrap the body in a StyleRule so

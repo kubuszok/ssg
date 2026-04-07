@@ -14,6 +14,29 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
+  test("@if with escaped directive name is recognized") {
+    // From sass-spec: spec/directives/if/escaped.hrx (if_only).
+    // `@\69 f` is the escape sequence for `@if`; after normalization
+    // the directive must be parsed as a real @if rule, not a generic
+    // unknown at-rule.
+    val css = Compile.compileString("@\\69 f true {a {b: c}}\n", OutputStyle.Compressed).css
+    assertEquals(css, "a{b:c;}")
+  }
+
+  test("@else with escaped directive name attaches to preceding @if") {
+    // From sass-spec: spec/directives/if/escaped.hrx (with_else).
+    // `@\65lse` is the escape sequence for `@else`; after normalization
+    // it must attach to the preceding `@if` as an else clause.
+    val css = Compile.compileString("@if false {}\n@\\65lse {a {b: c}}\n", OutputStyle.Compressed).css
+    assertEquals(css, "a{b:c;}")
+  }
+
+  test("@if / @else if / @else chain evaluates the right branch") {
+    val src = "@if false { a { x: 1; } } @else if true { a { x: 2; } } @else { a { x: 3; } }"
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{x:2;}")
+  }
+
   test("calc() preserves incompatible units") {
     val css = Compile.compileString("a { width: calc(100% - 20px); }", OutputStyle.Compressed).css
     assertEquals(css, "a{width:calc(100% - 20px);}")
