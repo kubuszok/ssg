@@ -32,6 +32,9 @@ scripts/.metals-pid
 scripts/.metals.log
 .scala-build/
 
+## Claude Code worktrees
+.claude/worktrees/
+
 ## OS-Specific
 .DS_Store
 Thumbs.db
