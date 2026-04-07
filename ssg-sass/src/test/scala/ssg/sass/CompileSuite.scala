@@ -556,11 +556,15 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains(".a .b .c"), result.css)
   }
 
-  test("selector-extend does textual replace") {
+  test("selector-extend does AST-based extend") {
+    // dart-sass semantics: `.btn .icon` extended with `.big` against target
+    // `.icon` produces `.btn .icon, .btn .big` — the descendant combinator
+    // is preserved on both copies. The old ssg-sass textual replace
+    // (which returned `.btn .icon, .big`) was incorrect.
     val result = Compile.compileString(
       """.x { y: selector-extend(".btn .icon", ".icon", ".big"); }"""
     )
-    assert(result.css.contains(".icon, .big"), result.css)
+    assert(result.css.contains(".btn .icon, .btn .big"), result.css)
   }
 
   test("selector-unify returns null stub") {

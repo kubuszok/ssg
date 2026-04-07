@@ -366,14 +366,14 @@ object SelectorList {
     }
 
   /** Returns whether `selector` recursively contains a parent selector. */
-  private[selector] def containsParentSelector(selector: Selector): Boolean =
+  private[sass] def containsParentSelector(selector: Selector): Boolean =
     findParentSelector(selector).isDefined
 
   /** A visitor for finding the first [[ParentSelector]] in a given selector.
     *
     * Returns `Nullable.Null` if no parent selector is found.
     */
-  private[selector] def findParentSelector(selector: Selector): Nullable[ParentSelector] =
+  private[sass] def findParentSelector(selector: Selector): Nullable[ParentSelector] =
     selector.accept(FindParentSelectorVisitor)
 
   /** Visitor that searches for a [[ParentSelector]]. */
