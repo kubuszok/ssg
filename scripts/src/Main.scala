@@ -31,6 +31,8 @@ object Main {
         compare.CompareCmd.run(rest)
       case "proc" :: rest =>
         proc.ProcCmd.run(rest)
+      case "port" :: rest =>
+        port.PortCmd.run(rest)
       case unknown :: _ =>
         Term.err(s"Unknown command: $unknown")
         printUsage()
@@ -52,6 +54,7 @@ object Main {
                |  test       Test orchestration (unit, verify)
                |  compare    Original/SSG file comparison
                |  proc       Process listing and killing (project-scoped)
+               |  port       Porting task registry + verification (Phase 1+)
                |
                |Options:
                |  --help     Show this help

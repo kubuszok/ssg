@@ -1,0 +1,14 @@
+# port-tasks.tsv — dart-sass to ssg-sass porting task registry
+# id	file	method_or_range	dart_ref_file	dart_ref_start	dart_ref_end	spec_subdir	spec_delta_floor	loc_cap	status	assignee	baseline_pass	baseline_methods	baseline_loc	blocker	notes	last_updated
+T001	ssg-sass/src/main/scala/ssg/sass/functions/StringFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/string.dart	1	500	spec/core_functions/string	5	600	pending	unassigned					Phase 2 forcing-function reference	2026-04-07T14:48:19.359Z
+T002	ssg-sass/src/main/scala/ssg/sass/functions/ListFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/list.dart	1	500	spec/core_functions/list	5	600	pending	unassigned						
+T003	ssg-sass/src/main/scala/ssg/sass/functions/MapFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/map.dart	1	500	spec/core_functions/map	5	600	pending	unassigned						
+T004	ssg-sass/src/main/scala/ssg/sass/functions/MathFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/math.dart	1	700	spec/core_functions/math	5	600	pending	unassigned						
+T005	ssg-sass/src/main/scala/ssg/sass/functions/MetaFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/meta.dart	1	500	spec/core_functions/meta	5	600	pending	unassigned						
+T006	ssg-sass/src/main/scala/ssg/sass/functions/SelectorFunctions.scala	full-module-port	original-src/dart-sass/lib/src/functions/selector.dart	1	500	spec/core_functions/selector	5	600	pending	unassigned						
+T007	ssg-sass/src/main/scala/ssg/sass/Environment.scala	full-module-port	original-src/dart-sass/lib/src/environment.dart	1	1153	spec/directives/forward	20	800	pending	unassigned						
+T008	ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	full-module-port	original-src/dart-sass/lib/src/extend/extension_store.dart	1	1138	spec/directives/extend	20	800	pending	unassigned						
+T009	ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala	full-module-port	original-src/dart-sass/lib/src/stylesheet_graph.dart	1	520	spec	0	600	pending	unassigned						
+T010	ssg-sass/src/main/scala/ssg/sass/ImportCache.scala	full-module-port	original-src/dart-sass/lib/src/import_cache.dart	1	412	spec/directives/import	10	600	pending	unassigned						
+T011	ssg-sass/src/main/scala/ssg/sass/Deprecation.scala	full-module-port	original-src/dart-sass/lib/src/deprecation.dart	1	243	spec	0	400	pending	unassigned						
+T012	ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	full-module-port	original-src/dart-sass/lib/src/interpolation_map.dart	1	221	spec	0	400	pending	unassigned						

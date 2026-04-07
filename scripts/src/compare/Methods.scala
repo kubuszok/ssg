@@ -1,0 +1,371 @@
+package ssgdev
+package compare
+
+import java.io.{ BufferedReader, File, FileReader }
+import scala.collection.mutable.ListBuffer
+import scala.util.matching.Regex
+
+/** Method-signature extractor and strict cross-language comparison.
+  *
+  * Extracts method names from Scala and Dart files using regex-based parsing
+  * (sufficient for 95% of dart-sass) and computes a "gap report":
+  *
+  *   - missing: methods present in dart but not in Scala
+  *   - extra:   methods present in Scala but not in dart (informational)
+  *   - common:  methods present in both
+  *   - shortBody: common methods whose Scala body has fewer than 70% of
+  *                the dart body's AST-node-count (a cheap proxy: count of
+  *                identifier + operator + control-flow tokens)
+  *
+  * This is the gate that prevents "method exists but is a one-line shim"
+  * from passing verification.
+  */
+object Methods {
+
+  final case class Gap(
+    missing:   List[String],
+    extra:     List[String],
+    common:    List[String],
+    shortBody: List[String]
+  )
+
+  final case class Method(name: String, startLine: Int, endLine: Int, body: String)
+
+  // Scala def at top-level or class/object body indentation. Only matches
+  // `def name`, not `val name` — locals inside method bodies are noise.
+  private val scalaDef: Regex =
+    """(?m)^[ \t]*(?:override\s+|final\s+|private(?:\[[^\]]+\])?\s+|protected(?:\[[^\]]+\])?\s+|implicit\s+|lazy\s+|inline\s+|transparent\s+)*def\s+(?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_$]*))""".r
+
+  private val scalaType: Regex =
+    """(?m)^[ \t]*(?:sealed\s+|final\s+|abstract\s+|private(?:\[[^\]]+\])?\s+|protected(?:\[[^\]]+\])?\s+|open\s+|case\s+)*(?:class|trait|object|enum)\s+([A-Za-z_][A-Za-z0-9_$]*)""".r
+
+  // Dart method definition: must have a parameter list (`(...)`) directly
+  // after the name. This filters out field accesses and simple values.
+  // Getters are matched separately so we don't miss `bool get isEmpty => ...`.
+  private val dartTopDef: Regex =
+    """(?m)^[ \t]+(?:static\s+|const\s+|final\s+|late\s+|external\s+|abstract\s+|factory\s+)*(?:[A-Za-z_][A-Za-z0-9_<>?, \t]*[\s>?])?([a-zA-Z_][A-Za-z0-9_]*)\s*\(""".r
+
+  private val dartGetter: Regex =
+    """(?m)^[ \t]+(?:static\s+|const\s+|final\s+|late\s+|external\s+)*[A-Za-z_][A-Za-z0-9_<>?, \t]*\s+get\s+([a-zA-Z_][A-Za-z0-9_]*)\b""".r
+
+  private val dartTypeDef: Regex =
+    """(?m)^[ \t]*(?:abstract\s+|sealed\s+|final\s+|base\s+|interface\s+|mixin\s+)*(?:class|mixin|enum|extension)\s+([A-Za-z_][A-Za-z0-9_]*)""".r
+
+  /** Return the set of top-level/method names defined in a Scala file.
+    * Constructor params (`class Foo(val x: Int)`) are skipped because they
+    * are not independent definitions.
+    */
+  def extractScalaMethods(path: String): List[String] = {
+    val text = readFile(path)
+    val names = ListBuffer.empty[String]
+    scalaType.findAllMatchIn(text).foreach(m => names += m.group(1))
+    scalaDef.findAllMatchIn(text).foreach { m =>
+      val name = Option(m.group(1)).getOrElse(m.group(2))
+      if (name != null && !name.startsWith("_")) names += name
+      else if (name != null) names += name  // include _leading too (dart analogue)
+    }
+    names.distinct.toList.sorted
+  }
+
+  /** Return the set of top-level/method names defined in a Dart file.
+    * Heuristics only — extension members may be missed; class members
+    * that span multiple lines in the return type may need the regex
+    * broadened later.
+    */
+  def extractDartMethods(path: String): List[String] = {
+    val text = readFile(path)
+    val names = ListBuffer.empty[String]
+    dartTypeDef.findAllMatchIn(text).foreach(m => names += m.group(1))
+    val exclude = Set(
+      "if", "else", "for", "while", "do", "return", "throw", "assert",
+      "new", "const", "final", "var", "this", "super", "in", "is", "as",
+      "switch", "case", "default", "break", "continue", "try", "catch",
+      "finally", "yield", "async", "await", "rethrow", "import", "export",
+      "library", "part", "hide", "show", "on", "typedef", "covariant",
+      "required", "deferred", "abstract", "external", "factory", "operator",
+      "print", "assert", "when"
+    )
+    dartTopDef.findAllMatchIn(text).foreach { m =>
+      val name = m.group(1)
+      if (name != null && !exclude.contains(name)) names += name
+    }
+    dartGetter.findAllMatchIn(text).foreach { m =>
+      val name = m.group(1)
+      if (name != null && !exclude.contains(name)) names += name
+    }
+    names.distinct.toList.sorted
+  }
+
+  /** Compute the gap between an SSG file and its dart reference.
+    * Does NOT enforce the short-body check unless called via strictCompare.
+    */
+  def compare(ssgFile: String, dartFile: String): Gap = {
+    val scala = extractScalaMethods(ssgFile).toSet
+    val dart = extractDartMethods(dartFile).toSet
+    val missing = (dart -- scala).toList.sorted
+    val extra = (scala -- dart).toList.sorted
+    val common = (dart intersect scala).toList.sorted
+    Gap(missing, extra, common, shortBody = Nil)
+  }
+
+  /** Strict compare: the Gap.missing is populated as usual, and shortBody
+    * is populated with common method names whose Scala body AST-node-count
+    * is below 70% of the dart body's AST-node-count.
+    *
+    * "AST node count" is a regex-based token count: identifiers, keywords,
+    * operators, and delimiters. Not a real parser. It is enough to catch
+    * one-line delegates and empty bodies.
+    */
+  def strictCompare(ssgFile: String, dartFile: String): Gap = {
+    val base = compare(ssgFile, dartFile)
+    val scalaBodies = extractScalaBodies(ssgFile)
+    val dartBodies = extractDartBodies(dartFile)
+    val shortBody = base.common.filter { name =>
+      val sb = scalaBodies.get(name).map(astNodeCount).getOrElse(0)
+      val db = dartBodies.get(name).map(astNodeCount).getOrElse(0)
+      db > 0 && sb * 100 < db * 70
+    }
+    base.copy(shortBody = shortBody)
+  }
+
+  // --- Body extraction -------------------------------------------------------
+
+  /** Extract method bodies from a Scala file. Key is the method name; value
+    * is the text between the `=` (or `{`) and the matching close.
+    *
+    * This is not a real parser — it uses brace-balancing with awareness of
+    * string literals and line comments. It handles `def f(...) = { ... }`,
+    * `def f(...) = expr`, `val x: T = expr`, and `object Foo { ... }`.
+    */
+  def extractScalaBodies(path: String): Map[String, String] = {
+    val text = readFile(path)
+    val out = scala.collection.mutable.Map.empty[String, String]
+    // Find every `def X`/`val X`/`var X` and extract the following body.
+    val matches = scalaDef.findAllMatchIn(text).toList
+    for (m <- matches) {
+      val name = Option(m.group(1)).getOrElse(m.group(2))
+      if (name != null) {
+        val start = m.end
+        val body = extractBodyFromScala(text, start)
+        out(name) = body
+      }
+    }
+    // Also body of class/trait/object/enum blocks.
+    val typeMatches = scalaType.findAllMatchIn(text).toList
+    for (m <- typeMatches) {
+      val name = m.group(1)
+      if (name != null) {
+        val body = extractBodyFromScala(text, m.end)
+        if (body.nonEmpty) out(name) = body
+      }
+    }
+    out.toMap
+  }
+
+  def extractDartBodies(path: String): Map[String, String] = {
+    val text = readFile(path)
+    val out = scala.collection.mutable.Map.empty[String, String]
+    val matches = dartTopDef.findAllMatchIn(text).toList
+    for (m <- matches) {
+      val name = m.group(1)
+      if (name != null) {
+        // The regex leaves us positioned right before the `(`. Back up
+        // one so extractBodyFromDart can see it.
+        val body = extractBodyFromDart(text, m.end - 1)
+        out(name) = body
+      }
+    }
+    val getterMatches = dartGetter.findAllMatchIn(text).toList
+    for (m <- getterMatches) {
+      val name = m.group(1)
+      if (name != null) {
+        val body = extractBodyFromDart(text, m.end)
+        if (body.nonEmpty) out(name) = body
+      }
+    }
+    val typeMatches = dartTypeDef.findAllMatchIn(text).toList
+    for (m <- typeMatches) {
+      val name = m.group(1)
+      if (name != null) {
+        val body = extractBodyFromDart(text, m.end)
+        if (body.nonEmpty) out(name) = body
+      }
+    }
+    out.toMap
+  }
+
+  /** Read the text from `start` in `text` up to the end of the enclosing
+    * brace-block or the end of the line (for one-liner `= expr` forms).
+    *
+    * Returns an empty string if the body cannot be located (e.g., abstract
+    * method with no `=` / `{`).
+    */
+  private def extractBodyFromScala(text: String, start: Int): String = {
+    // Skip to the first `{`, `=`, or end-of-file.
+    var i = start
+    val n = text.length
+    while (i < n && text.charAt(i) != '{' && text.charAt(i) != '=' && text.charAt(i) != '\n') i += 1
+    if (i >= n) return ""
+    if (text.charAt(i) == '{') {
+      return readBalancedBraces(text, i)
+    }
+    if (text.charAt(i) == '=') {
+      // Skip `=` and any whitespace, then read the next brace-block OR the
+      // next full expression up to a semicolon or end-of-line.
+      i += 1
+      while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '>'))
+        i += 1
+      if (i < n && text.charAt(i) == '{') return readBalancedBraces(text, i)
+      // one-line body: read until end of logical line
+      val buf = new StringBuilder
+      while (i < n && text.charAt(i) != '\n') { buf.append(text.charAt(i)); i += 1 }
+      return buf.toString
+    }
+    ""
+  }
+
+  /** Same idea as extractBodyFromScala but for Dart syntax. Dart function
+    * definitions use `(...) { ... }`, `(...) => expr;`, or `(...)`.
+    */
+  private def extractBodyFromDart(text: String, start: Int): String = {
+    var i = start
+    val n = text.length
+    // Skip past the parameter list.
+    if (i < n && text.charAt(i) == '(') {
+      var depth = 1
+      i += 1
+      while (i < n && depth > 0) {
+        val c = text.charAt(i)
+        if (c == '(') depth += 1
+        else if (c == ')') depth -= 1
+        i += 1
+      }
+    }
+    // Optional initializer list (for constructors): `: super()...`
+    while (i < n && text.charAt(i) != '{' && text.charAt(i) != '=' && text.charAt(i) != ';' && text.charAt(i) != '\n')
+      i += 1
+    if (i >= n) return ""
+    if (text.charAt(i) == '{') return readBalancedBraces(text, i)
+    if (text.charAt(i) == '=' && i + 1 < n && text.charAt(i + 1) == '>') {
+      // Arrow function: read until next `;`.
+      i += 2
+      val buf = new StringBuilder
+      while (i < n && text.charAt(i) != ';') { buf.append(text.charAt(i)); i += 1 }
+      return buf.toString
+    }
+    if (text.charAt(i) == '=') {
+      i += 1
+      val buf = new StringBuilder
+      while (i < n && text.charAt(i) != ';') { buf.append(text.charAt(i)); i += 1 }
+      return buf.toString
+    }
+    ""
+  }
+
+  /** Given that `text(i) == '{'`, read until the matching `}` with awareness
+    * of string literals and line comments. Return the inner body text
+    * (without the outer braces). Returns an empty string on unbalanced input.
+    */
+  private def readBalancedBraces(text: String, i0: Int): String = {
+    val n = text.length
+    var i = i0 + 1
+    var depth = 1
+    val start = i
+    while (i < n && depth > 0) {
+      val c = text.charAt(i)
+      c match {
+        case '/' if i + 1 < n && text.charAt(i + 1) == '/' =>
+          // line comment
+          while (i < n && text.charAt(i) != '\n') i += 1
+        case '/' if i + 1 < n && text.charAt(i + 1) == '*' =>
+          // block comment
+          i += 2
+          while (i + 1 < n && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/')) i += 1
+          if (i + 1 < n) i += 2
+        case '"' =>
+          i += 1
+          while (i < n && text.charAt(i) != '"') {
+            if (text.charAt(i) == '\\' && i + 1 < n) i += 2
+            else i += 1
+          }
+          if (i < n) i += 1
+        case '\'' =>
+          i += 1
+          while (i < n && text.charAt(i) != '\'') {
+            if (text.charAt(i) == '\\' && i + 1 < n) i += 2
+            else i += 1
+          }
+          if (i < n) i += 1
+        case '{' =>
+          depth += 1
+          i += 1
+        case '}' =>
+          depth -= 1
+          i += 1
+        case _ =>
+          i += 1
+      }
+    }
+    if (depth == 0) text.substring(start, i - 1) else ""
+  }
+
+  /** Cheap AST-node-count proxy: number of identifier + operator tokens
+    * in the body. Comments and string literals are stripped first.
+    */
+  def astNodeCount(body: String): Int = {
+    val stripped = stripCommentsAndStrings(body)
+    val tokenRegex = """[A-Za-z_][A-Za-z0-9_]*|[+\-*/%<>=!&|^~?:.;,(){}\[\]]""".r
+    tokenRegex.findAllIn(stripped).size
+  }
+
+  private def stripCommentsAndStrings(s: String): String = {
+    val n = s.length
+    val out = new StringBuilder
+    var i = 0
+    while (i < n) {
+      val c = s.charAt(i)
+      if (c == '/' && i + 1 < n && s.charAt(i + 1) == '/') {
+        while (i < n && s.charAt(i) != '\n') i += 1
+      } else if (c == '/' && i + 1 < n && s.charAt(i + 1) == '*') {
+        i += 2
+        while (i + 1 < n && !(s.charAt(i) == '*' && s.charAt(i + 1) == '/')) i += 1
+        if (i + 1 < n) i += 2
+      } else if (c == '"') {
+        i += 1
+        while (i < n && s.charAt(i) != '"') {
+          if (s.charAt(i) == '\\' && i + 1 < n) i += 2
+          else i += 1
+        }
+        if (i < n) i += 1
+      } else if (c == '\'') {
+        i += 1
+        while (i < n && s.charAt(i) != '\'') {
+          if (s.charAt(i) == '\\' && i + 1 < n) i += 2
+          else i += 1
+        }
+        if (i < n) i += 1
+      } else {
+        out.append(c)
+        i += 1
+      }
+    }
+    out.toString
+  }
+
+  // --- File IO ---------------------------------------------------------------
+
+  private def readFile(path: String): String = {
+    val f = new File(path)
+    if (!f.exists()) return ""
+    val reader = new BufferedReader(new FileReader(f))
+    try {
+      val buf = new StringBuilder
+      var line = reader.readLine()
+      while (line != null) {
+        buf.append(line).append('\n')
+        line = reader.readLine()
+      }
+      buf.toString
+    } finally reader.close()
+  }
+}

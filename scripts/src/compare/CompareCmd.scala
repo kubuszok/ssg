@@ -23,11 +23,149 @@ object CompareCmd {
       case "find" :: rest => find(Cli.parse(rest))
       case "status" :: rest => status(Cli.parse(rest))
       case "next-batch" :: rest => nextBatch(Cli.parse(rest))
+      case "methods" :: rest => methodsCmd(rest)
+      case "loc" :: rest => locCmd(Cli.parse(rest))
       case other :: _ =>
         Term.err(s"Unknown compare command: $other")
         sys.exit(1)
     }
   }
+
+  /** Phase 1 enforcement: method-set diff between a Scala file and its
+    * dart reference. `--strict` additionally requires every common
+    * method's Scala body AST-node-count to be at least 70% of the dart
+    * body's, catching one-line shim ports.
+    */
+  private def methodsCmd(rawArgs: List[String]): Unit = {
+    val args = Cli.parse(rawArgs)
+    val strict = args.hasFlag("strict")
+    // Two positionals: ssg-file dart-file. But we also accept the ssg file
+    // alone and auto-resolve the dart reference from the migration DB.
+    val positional = args.positional
+    if (positional.isEmpty) {
+      Term.err("Usage: ssg-dev compare methods <ssg-file> [<dart-file>] [--strict]")
+      sys.exit(1)
+    }
+    val ssgFile = resolveFile(positional.head)
+    val dartFile = positional.lift(1).map(resolveFile).orElse(resolveDartRef(ssgFile))
+    dartFile match {
+      case None =>
+        Term.err(s"Dart reference not found for $ssgFile (pass explicitly or add to migration DB)")
+        sys.exit(1)
+      case Some(ref) =>
+        val gap = if (strict) Methods.strictCompare(ssgFile, ref) else Methods.compare(ssgFile, ref)
+        println(s"Scala: ${ssgFile.stripPrefix(Paths.projectRoot + "/")}")
+        println(s"Dart:  ${ref.stripPrefix(Paths.projectRoot + "/")}")
+        println(s"  common:  ${gap.common.size}")
+        println(s"  missing: ${gap.missing.size}")
+        println(s"  extra:   ${gap.extra.size}")
+        if (strict) println(s"  short:   ${gap.shortBody.size}")
+        if (gap.missing.nonEmpty) {
+          println("\nMissing from Scala:")
+          gap.missing.foreach(m => println(s"  $m"))
+        }
+        if (strict && gap.shortBody.nonEmpty) {
+          println("\nShort body (< 70% AST nodes):")
+          gap.shortBody.foreach(m => println(s"  $m"))
+        }
+        if (gap.extra.nonEmpty) {
+          println("\nExtra in Scala (informational):")
+          gap.extra.take(20).foreach(m => println(s"  $m"))
+          if (gap.extra.size > 20) println(s"  ... (${gap.extra.size - 20} more)")
+        }
+        if (gap.missing.nonEmpty || (strict && gap.shortBody.nonEmpty)) sys.exit(1)
+    }
+  }
+
+  /** Phase 1 triage: report LoC ratio per file vs dart reference, ranked. */
+  private def locCmd(args: Cli.Args): Unit = {
+    val module = args.flagOrDefault("module", "ssg-sass")
+    val moduleDir = Paths.moduleSrc(module)
+    if (!new File(moduleDir).exists()) {
+      Term.err(s"Module not found: $module")
+      sys.exit(1)
+    }
+    // Walk ssg-<module> scala files; for each, find the dart counterpart
+    // under original-src/dart-sass/lib/src/ and compute the LoC ratio.
+    val rows = scala.collection.mutable.ListBuffer.empty[(String, Int, Int, Double)]
+    walkFiles(new File(moduleDir)).foreach { scalaFile =>
+      if (scalaFile.getName.endsWith(".scala")) {
+        val scalaLoc = countLines(scalaFile)
+        val dartPath = guessDartPath(scalaFile.getAbsolutePath, module)
+        dartPath.foreach { dp =>
+          val f = new File(dp)
+          if (f.exists()) {
+            val dartLoc = countLines(f)
+            val ratio = if (dartLoc == 0) 0.0 else scalaLoc.toDouble * 100 / dartLoc.toDouble
+            rows += ((scalaFile.getAbsolutePath.stripPrefix(Paths.projectRoot + "/"), scalaLoc, dartLoc, ratio))
+          }
+        }
+      }
+    }
+    val sorted = rows.sortBy(_._4)
+    println(f"${"file"}%-55s ${"scala"}%6s ${"dart"}%6s ${"ratio"}%8s")
+    println("-" * 80)
+    sorted.foreach { case (f, s, d, r) =>
+      val flag = if (r < 50) "!" else if (r < 70) "?" else " "
+      println(f"$flag $f%-53s $s%6d $d%6d ${r}%7.1f%%")
+    }
+  }
+
+  // --- helpers for methods / loc ---------------------------------------------
+
+  private def resolveFile(p: String): String =
+    if (p.startsWith("/")) p else s"${Paths.projectRoot}/$p"
+
+  private def resolveDartRef(scalaFile: String): Option[String] = {
+    // Heuristic: map ssg-sass/.../sass/X/Y.scala to original-src/dart-sass/lib/src/X/Y.dart
+    val marker = "ssg-sass/src/main/scala/ssg/sass/"
+    val idx = scalaFile.indexOf(marker)
+    if (idx < 0) return None
+    val rel = scalaFile.substring(idx + marker.length)
+    // Convert ClassName.scala to class_name.dart using a snake-case transform.
+    val parts = rel.split("/").toList
+    val dartName = parts.last.stripSuffix(".scala")
+    val snake = camelToSnake(dartName)
+    val dartParts = parts.init :+ s"$snake.dart"
+    val candidates = List(
+      s"${Paths.dartSassSrc}/lib/src/${dartParts.mkString("/")}",
+      s"${Paths.dartSassSrc}/lib/src/${parts.init.mkString("/")}/${dartName.toLowerCase}.dart"
+    )
+    candidates.find(p => new File(p).exists())
+  }
+
+  private def camelToSnake(name: String): String = {
+    val sb = new StringBuilder
+    for ((c, i) <- name.zipWithIndex)
+      if (i > 0 && c.isUpper) sb.append('_').append(c.toLower)
+      else sb.append(c.toLower)
+    sb.toString
+  }
+
+  private def walkFiles(root: File): List[File] = {
+    val buf = scala.collection.mutable.ListBuffer.empty[File]
+    def rec(f: File): Unit = {
+      if (f.isDirectory) {
+        val kids = f.listFiles()
+        if (kids != null) kids.foreach(rec)
+      } else buf += f
+    }
+    rec(root)
+    buf.toList
+  }
+
+  private def countLines(f: File): Int = {
+    val reader = new java.io.BufferedReader(new java.io.FileReader(f))
+    try {
+      var c = 0
+      var line = reader.readLine()
+      while (line != null) { c += 1; line = reader.readLine() }
+      c
+    } finally reader.close()
+  }
+
+  private def guessDartPath(scalaFile: String, module: String): Option[String] =
+    if (module == "ssg-sass") resolveDartRef(scalaFile) else None
 
   private def file(args: Cli.Args): Unit = {
     val path = args.requirePositional(0, "path")
@@ -177,6 +315,10 @@ object CompareCmd {
               |  find <pattern> [--lib L]      Find files in source trees
               |  status [--lib L] [--module M] Porting status from migration db
               |  next-batch [-n N] [--lib L]   Suggest next files to port
+              |  methods <ssg> [<dart>] [--strict]
+              |                                Method-set diff (Phase 1 enforcement)
+              |                                --strict: 70% AST-node-count body floor
+              |  loc [--module M]              LoC ratio per file vs dart reference
               |
               |Libraries: flexmark, liqp, dart-sass, jekyll-minifier""".stripMargin)
   }
