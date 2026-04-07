@@ -25,10 +25,10 @@ previously marked clean**.
 | Module | Files on disk | In audit DB | Re-verified this pass |
 |---|---:|---:|---|
 | `ssg-md` | 770 | 768 | full (parser/html/formatter/ast + util + all ext/*) |
-| `ssg-liquid` | 121 | 121 | **partial** — 11 root files only; filters/blocks/tags/nodes/exceptions/antlr re-dispatch in progress |
+| `ssg-liquid` | 121 | 121 | full (root files + filters/blocks/tags/nodes/exceptions/antlr via two-pass re-audit) |
 | `ssg-minify` | 13 | 13 | full |
 | `ssg-js` | 40 | 40 | full |
-| **Total** | **944** | **942** | 2 files still missing in DB (ISS-001 ArrayUtils; ISS-dummy cleaned) |
+| **Total** | **944** | **942** | 2 files missing in DB (ISS-001 ArrayUtils intentionally absent; 1 unidentified) |
 
 **Test coverage (audit DB `tested:` flag):** 636 yes / 276 no / 30 partial.
 Files without tests are concentrated in ssg-liquid filters, ssg-md ext/ helper
@@ -40,19 +40,27 @@ classes, and all of ssg-js/compress.
 
 | | ssg-md | ssg-liquid | ssg-minify | ssg-js | **Total** |
 |---|---:|---:|---:|---:|---:|
-| pass | 677 | 97 | 3 | 26 | **803** |
-| minor_issues | 72 | 19 | 10 | 5 | **106** |
-| major_issues | 19 | 5 | 0 | 9 | **33** |
-| **Total** | **768** | **121** | **13** | **40** | **942** |
-| % pass | 88.2% | 80.2% | 23.1% | 65.0% | 85.2% |
-| % major | 2.5% | 4.1% | 0% | 22.5% | 3.5% |
+| pass | 677 | 101 | 3 | 26 | **807** |
+| minor_issues | 72 | 18 | 10 | 5 | **105**¹ |
+| major_issues | 19 | 7 | 0 | 9 | **35** |
+| **Total** | **768** | **121**² | **13** | **40** | **942** |
+| % pass | 88.2% | 83.5% | 23.1% | 65.0% | 85.7% |
+| % major | 2.5% | 5.8% | 0% | 22.5% | 3.7% |
 
-**Issues DB: 98 open issues** (ISS-001..ISS-097, renumbered IDs).
-Severity after normalization¹: 47 high, 27 medium, 24 low.
+¹ *The liquid re-audit upgraded 5 previously minor_issues files to pass after
+confirming they were clean (FilterNode, BlockNode, InsertionNode, OutputNode,
+KeyValueNode), which is why ssg-liquid minor went from 19 to 18 even while
+adding 3 new minor issues.*
 
-¹ *A few agents used non-canonical `major`/`minor` severity labels instead of
-`high`/`low`. 17 rows have `severity=major`, 9 have `severity=minor`. These will
-be normalized in a follow-up pass.*
+² *The second ssg-liquid re-audit agent added 2 new major issues (ISS-102
+IncludeRelative — aspirational comment, the feature is entirely
+unimplemented; ISS-099 Relative_Url oversimplified).*
+
+**Issues DB: 102 open issues** (ISS-001..ISS-102).
+Severity after normalization: **49 high, 28 medium, 25 low.**
+Severity labels were normalized: 17 rows previously labelled `major` → `high`,
+9 rows labelled `minor` → `low`, 5 rows with module-name categories
+(`filters`/`tags`) → `bug`.
 
 ---
 
@@ -81,11 +89,25 @@ be normalized in a follow-up pass.*
   partial ports (ISS-007..030, from earlier gap analysis).
 - **Root files** (LValue, Insertions, etc.) re-verified this pass — mostly OK,
   one cross-platform PlainBigDecimal edge case noted.
-- **Filters / blocks / tags / nodes / exceptions / antlr packages**: the
-  initial re-audit agent was rate-limited after ~11 files. A narrower
-  re-dispatch is in progress. Until it reports, the ~97 `pass` rows in these
-  packages should be treated as **unverified** — the earlier audit was
-  lenient and similar problems to ssg-md are likely.
+- **Filters / blocks / tags / nodes / exceptions / antlr packages** re-verified
+  in a second pass (~94 files). **Surprising finding**: `blocks/`, `tags/` (with
+  one exception), `nodes/` packages are **clean on the Pattern 1 front** —
+  `boundary`/`break` is used correctly throughout `If`, `Unless`, `Case`,
+  `For`, `BlockNode`, `LookupNode`, `ComparingExpressionNode`. None of the 8
+  systematic bug markers triggered. **The Pattern 1 return/break migration bug
+  is confined to ssg-md, not a codebase-wide issue.**
+- **New high-severity findings**:
+  - **ISS-102** `tags/IncludeRelative.scala` — the feature is **entirely
+    unimplemented**. The `detectSource` override calls the parent `Include`
+    resolver identically. An aspirational comment claims to resolve relative
+    to the source file, but the code does nothing different.
+  - **ISS-099** `filters/Relative_Url.scala` — simplified to string-prefix
+    matching; drops URI normalization, query/anchor split, `toASCIIString`,
+    Inspectable LiquidSupport dispatch, STRICT-mode error reporting.
+- **Cluster observation**: URL-related filters and tags (Absolute_Url,
+  Relative_Url, IncludeRelative) all reimplement via simplified string-prefix
+  logic instead of delegating to URI-like parsing. This is a coherent cluster
+  of gaps that should be fixed together.
 
 ### ssg-minify (jekyll-minifier port)
 
@@ -321,11 +343,12 @@ a ~1-day port of the corresponding flexmark fixture.
 
 ## Known blind spots
 
-1. **ssg-liquid re-audit is partial**. Only 11 of ~110 `pass`-marked files in
-   filters/blocks/tags/nodes/exceptions/antlr were re-read this pass. A
-   narrower re-dispatch is in progress. Until it reports, those files should
-   be treated as "believed pass but unverified". Given the systematic Pattern 1
-   / Pattern 2 bugs found elsewhere, expect 5–10 more major findings there.
+1. ~~**ssg-liquid re-audit is partial**~~. **Resolved.** The second-pass agent
+   read all 94 remaining files. Final ssg-liquid status: 101 pass / 18 minor /
+   7 major. Two new high-severity gaps surfaced (IncludeRelative, Relative_Url).
+   Importantly, the systematic Pattern 1 bugs (`break`/`return` not migrated)
+   **do not appear in ssg-liquid** — `blocks/`, `tags/`, and `nodes/` all use
+   `boundary`/`break` correctly. Pattern 1 is confined to ssg-md.
 
 2. **ssg-sass is entirely out of scope** for this audit. It has its own gap
    analysis doc (`sass-port.md` skeleton) and should be audited separately.
@@ -348,12 +371,13 @@ a ~1-day port of the corresponding flexmark fixture.
    port-introduced bugs, not upstream-inherited ones. Need a policy decision
    on whether to fix upstream bugs or file them upstream.
 
-5. **Severity labels are inconsistent**. Some agents used
-   `major`/`minor`/`correctness`/`completeness`/`porting`/`nullable`/
-   `behavior`/`logic-bug` where the canonical vocabulary is
-   `high`/`medium`/`low` plus a small category set. 17 rows have
-   `severity=major`, 9 have `severity=minor`. Needs normalization in a
-   follow-up.
+5. ~~**Severity labels are inconsistent**~~. **Resolved.** 17 `major` → `high`,
+   9 `minor` → `low`, 5 module-name categories (`filters`/`tags`) → `bug`.
+   Category labels remain a mix of canonical (`bug`, `missing-feature`,
+   `incomplete-port`, `missing-file`, `test-gap`, `missing-coverage`,
+   `missing-tests`) and agent-introduced (`correctness`, `behavior`,
+   `completeness`, `logic-bug`, `porting`, `nullable`, `null`, `type-loss`).
+   The agent-introduced categories are more informative; keeping them for now.
 
 6. **Audit DB has two files missing** (942 rows vs 944 files on disk). One is
    the known ISS-001 `ArrayUtils.scala` (intentionally skipped but migration
