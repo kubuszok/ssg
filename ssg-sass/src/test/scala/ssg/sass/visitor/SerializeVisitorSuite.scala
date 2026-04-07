@@ -8,9 +8,9 @@ package visitor
 
 import ssg.sass.ast.css.{ CssValue, ModifiableCssAtRule, ModifiableCssComment, ModifiableCssDeclaration, ModifiableCssNode, ModifiableCssStyleRule, ModifiableCssStylesheet }
 import ssg.sass.util.{ FileSpan, ModifiableBox }
-import ssg.sass.value.{ ListSeparator, SassList, SassMap, SassString, Value }
-import scala.collection.immutable.ListMap
+import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassString, Value }
 import ssg.sass.Nullable
+import scala.collection.immutable.ListMap
 
 final class SerializeVisitorSuite extends munit.FunSuite {
 
@@ -386,6 +386,33 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   test("writeList: slash-separated compressed uses '/'") {
     val l = SassList(List(u("1"), u("2")), ListSeparator.Slash)
     assertEquals(fmtValue(l, compressed = true), "1/2")
+  }
+
+  // --- Stage A.5: color formatting -----------------------------------------
+
+  private def rgb(r: Int, g: Int, b: Int, a: Double = 1.0): SassColor =
+    SassColor.rgb(Nullable(r.toDouble), Nullable(g.toDouble), Nullable(b.toDouble), Nullable(a))
+
+  test("writeColor: opaque rgb uses hex shorthand") {
+    assertEquals(fmtValue(rgb(0xff, 0xff, 0xff)), "#fff")
+    assertEquals(fmtValue(rgb(0xaa, 0xbb, 0xcc)), "#abc")
+  }
+
+  test("writeColor: opaque rgb falls back to full hex when no shorthand") {
+    assertEquals(fmtValue(rgb(0xab, 0xcd, 0xef)), "#abcdef")
+  }
+
+  test("writeColor: named color preferred when strictly shorter") {
+    // red = #f00 (4 chars) vs "red" (3) -> red
+    assertEquals(fmtValue(rgb(0xff, 0x00, 0x00)), "red")
+  }
+
+  test("writeColor: non-opaque emits rgba(...)") {
+    assertEquals(fmtValue(rgb(10, 20, 30, 0.5)), "rgba(10, 20, 30, 0.5)")
+  }
+
+  test("writeColor: compressed rgba drops spaces") {
+    assertEquals(fmtValue(rgb(10, 20, 30, 0.5), compressed = true), "rgba(10,20,30,0.5)")
   }
 
   test("writeMap: renders as (k: v, k2: v2) expanded") {
