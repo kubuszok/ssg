@@ -8,7 +8,9 @@
  *
  * Migration notes:
  *   Renames: environment.dart -> Environment.scala
- *   Convention: Skeleton — public API surface only, TODOs for scope logic
+ *   Convention: Scope chain + closures + !global + semi-global tracking ported
+ *               from dart-sass. Module/forward/namespace machinery remains a
+ *               simplified shim (the deferred 40%).
  */
 package ssg
 package sass
@@ -21,125 +23,239 @@ import ssg.sass.value.Value
 
 /** The lexical environment in which Sass code is evaluated.
   *
-  * Tracks variables, functions, mixins, modules and their scopes. TODO: full scope chain, module imports, configuration, forwards.
+  * Tracks variables via a scope chain (innermost scope at the tail of the list,
+  * global scope at the head — matching dart-sass `_variables[0]` is global).
+  * Functions and mixins are stored flat for now; only variables use the chain.
   */
-final class Environment() {
+final class Environment private (
+    // variables[0] is global; last element is innermost/local scope.
+    private val _variables:     mutable.ArrayBuffer[mutable.Map[String, Value]],
+    private val _variableNodes: mutable.ArrayBuffer[mutable.Map[String, AstNode]],
+    private val _variableIndices: mutable.Map[String, Int],
+    // Flat function / mixin tables (module machinery deferred).
+    private val functions:  mutable.Map[String, Callable],
+    private val mixins:     mutable.Map[String, Callable],
+    private val namespaces: mutable.Map[String, Environment],
+    // Names declared with `!global`, used by `global()` snapshots.
+    private val globalVarNames: mutable.Set[String],
+    private var _content:         Nullable[ContentBlock],
+    private var _inSemiGlobalScope: Boolean
+) {
 
-  private val variables:     mutable.Map[String, Value]                = mutable.Map.empty
-  private val variableNodes: mutable.Map[String, AstNode]              = mutable.Map.empty
-  private val functions:     mutable.Map[String, Callable]             = mutable.Map.empty
-  private val mixins:        mutable.Map[String, Callable]             = mutable.Map.empty
-  private val scopes:        mutable.Stack[mutable.Map[String, Value]] = mutable.Stack.empty
-  private val namespaces:    mutable.Map[String, Environment]          = mutable.Map.empty
-  // Names of variables declared with `!global` (used by `global()`).
-  private val globalVarNames: mutable.Set[String] = mutable.Set.empty
+  def this() = this(
+    _variables         = mutable.ArrayBuffer(mutable.Map.empty[String, Value]),
+    _variableNodes     = mutable.ArrayBuffer(mutable.Map.empty[String, AstNode]),
+    _variableIndices   = mutable.Map.empty[String, Int],
+    functions          = mutable.Map.empty[String, Callable],
+    mixins             = mutable.Map.empty[String, Callable],
+    namespaces         = mutable.Map.empty[String, Environment],
+    globalVarNames     = mutable.Set.empty[String],
+    _content           = Nullable.empty,
+    _inSemiGlobalScope = true
+  )
 
-  /** Registers a namespaced module environment under [name]. */
+  /** True when this environment is at the root (only the global scope exists). */
+  def atRoot: Boolean = _variables.length == 1
+
+  // --- Namespace shims (deferred module port) --------------------------------
+
   def addNamespace(name: String, module: Environment): Unit =
     namespaces(name) = module
 
-  /** Looks up a variable in a namespaced module, or `Nullable.empty`. */
   def getNamespacedVariable(namespace: String, name: String): Nullable[Value] =
     namespaces.get(namespace) match {
       case Some(env)  => env.getVariable(name)
       case scala.None => Nullable.empty
     }
 
-  /** Looks up a function in a namespaced module, or `Nullable.empty`. */
   def getNamespacedFunction(namespace: String, name: String): Nullable[Callable] =
     namespaces.get(namespace) match {
       case Some(env)  => env.getFunction(name)
       case scala.None => Nullable.empty
     }
 
-  /** Iterates over all variable name/value pairs in this environment. */
-  def variableEntries: Iterator[(String, Value)] = variables.iterator
-
-  /** Iterates over all function callables in this environment. */
-  def functionValues: Iterator[Callable] = functions.valuesIterator
-
-  /** Iterates over all mixin callables in this environment. */
-  def mixinValues: Iterator[Callable] = mixins.valuesIterator
-
-  /** Returns the value of the variable named [name], or `Nullable.empty` if none exists.
-    */
-  def getVariable(name: String): Nullable[Value] =
-    variables.get(name) match {
-      case Some(v)    => v
-      case scala.None => Nullable.empty
-    }
-
-  /** Sets the variable named [name] to [value]. */
-  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
-    variables(name) = value
-    nodeWithSpan.foreach(n => variableNodes(name) = n)
-  }
-
-  /** Sets the variable named [name] to [value] and marks it as `!global` so it survives `global()` snapshots.
-    */
-  def setGlobalVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
-    setVariable(name, value, nodeWithSpan)
-    val _ = globalVarNames.add(name)
-  }
-
-  /** Returns whether a variable named [name] exists. */
-  def variableExists(name: String): Boolean = variables.contains(name)
-
-  /** Returns whether a function named [name] exists in this environment. */
-  def functionExists(name: String): Boolean = functions.contains(name)
-
-  /** Returns whether a mixin named [name] exists in this environment. */
-  def mixinExists(name: String): Boolean = mixins.contains(name)
-
-  /** Returns the namespaced module environment registered under [name], if any. */
   def getNamespace(name: String): Nullable[Environment] =
     namespaces.get(name) match {
       case Some(env)  => Nullable(env)
       case scala.None => Nullable.empty
     }
 
-  /** Returns the function callable with the given [name], or `Nullable.empty`. */
+  // --- Iteration helpers -----------------------------------------------------
+
+  /** Iterates over all variable name/value pairs across all scopes (innermost wins on duplicates). */
+  def variableEntries: Iterator[(String, Value)] = {
+    val seen = mutable.Set.empty[String]
+    val buf  = mutable.ArrayBuffer.empty[(String, Value)]
+    var i    = _variables.length - 1
+    while (i >= 0) {
+      for ((n, v) <- _variables(i) if !seen.contains(n)) {
+        seen.add(n)
+        buf += ((n, v))
+      }
+      i -= 1
+    }
+    buf.iterator
+  }
+
+  def functionValues: Iterator[Callable] = functions.valuesIterator
+  def mixinValues:    Iterator[Callable] = mixins.valuesIterator
+
+  // --- Variable lookup -------------------------------------------------------
+
+  /** Returns the index of the innermost scope containing [name], or -1. */
+  private def _variableIndex(name: String): Int = {
+    var i = _variables.length - 1
+    while (i >= 0) {
+      if (_variables(i).contains(name)) return i
+      i -= 1
+    }
+    -1
+  }
+
+  /** Returns the value of the variable named [name], walking scopes innermost-out. */
+  def getVariable(name: String): Nullable[Value] = {
+    val cached = _variableIndices.get(name)
+    val idx = cached match {
+      case Some(i) if i < _variables.length && _variables(i).contains(name) => i
+      case _ =>
+        val found = _variableIndex(name)
+        if (found >= 0) _variableIndices(name) = found
+        found
+    }
+    if (idx < 0) Nullable.empty
+    else
+      _variables(idx).get(name) match {
+        case Some(v) => v
+        case None    => Nullable.empty
+      }
+  }
+
+  /** Sets the variable named [name] to [value].
+    *
+    * When `global` is true, writes to the global scope (index 0). Otherwise,
+    * if a scope already holds `name`, overwrites that scope (dart-sass semantics:
+    * assignments in a non-semi-global scope to a variable that only exists at
+    * the global scope create a new local binding instead). If no scope holds
+    * it, writes to the innermost scope.
+    */
+  def setVariable(
+      name: String,
+      value: Value,
+      nodeWithSpan: Nullable[AstNode] = Nullable.empty,
+      global:       Boolean = false
+  ): Unit = {
+    if (global || atRoot) {
+      _variables(0)(name) = value
+      nodeWithSpan.foreach(n => _variableNodes(0)(name) = n)
+      _variableIndices.getOrElseUpdate(name, 0)
+      return
+    }
+    var index =
+      if (_variableIndices.contains(name)) _variableIndices(name)
+      else {
+        val found = _variableIndex(name)
+        val resolved = if (found < 0) _variables.length - 1 else found
+        _variableIndices(name) = resolved
+        resolved
+      }
+    // If we only have it at the global scope and we're not in a semi-global
+    // scope, shadow it locally instead of writing through.
+    if (!_inSemiGlobalScope && index == 0 && !atRoot) {
+      index = _variables.length - 1
+      _variableIndices(name) = index
+    }
+    _variables(index)(name) = value
+    nodeWithSpan.foreach(n => _variableNodes(index)(name) = n)
+  }
+
+  /** Convenience for the common `!global` assignment path. */
+  def setGlobalVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
+    setVariable(name, value, nodeWithSpan, global = true)
+    val _ = globalVarNames.add(name)
+  }
+
+  /** Writes to the innermost scope unconditionally, shadowing any outer binding. */
+  def setLocalVariable(name: String, value: Value, nodeWithSpan: Nullable[AstNode] = Nullable.empty): Unit = {
+    val index = _variables.length - 1
+    _variables(index)(name) = value
+    nodeWithSpan.foreach(n => _variableNodes(index)(name) = n)
+    _variableIndices(name) = index
+  }
+
+  def variableExists(name: String): Boolean = _variableIndex(name) >= 0
+
+  def globalVariableExists(name: String): Boolean = _variables(0).contains(name)
+
+  // --- Functions / mixins (flat, module-free) --------------------------------
+
+  def functionExists(name: String): Boolean = functions.contains(name)
+  def mixinExists(name: String):    Boolean = mixins.contains(name)
+
   def getFunction(name: String): Nullable[Callable] =
     functions.get(name) match {
       case Some(c)    => c
       case scala.None => Nullable.empty
     }
 
-  /** Sets a function in this environment. */
   def setFunction(callable: Callable): Unit =
     functions(callable.name) = callable
 
-  /** Returns the mixin callable with the given [name], or `Nullable.empty`. */
   def getMixin(name: String): Nullable[Callable] =
     mixins.get(name) match {
       case Some(c)    => c
       case scala.None => Nullable.empty
     }
 
-  /** Sets a mixin in this environment. */
   def setMixin(callable: Callable): Unit =
     mixins(callable.name) = callable
 
-  /** Runs [callback] within a new lexical scope. */
-  def withinScope[T](callback: () => T): T = {
-    scopes.push(mutable.Map.empty)
-    try callback()
-    finally { val _ = scopes.pop() }
+  // --- Scope management ------------------------------------------------------
+
+  /** Runs [body] in a new lexical scope. If [semiGlobal] is true and we're
+    * already in a semi-global scope, the new scope can assign to globals
+    * without `!global`. Matches dart-sass `scope()` propagation.
+    */
+  def withinScope[T](semiGlobal: Boolean)(body: => T): T = {
+    val effective = semiGlobal && _inSemiGlobalScope
+    val wasSemi   = _inSemiGlobalScope
+    _inSemiGlobalScope = effective
+    _variables += mutable.Map.empty
+    _variableNodes += mutable.Map.empty
+    try body
+    finally {
+      _inSemiGlobalScope = wasSemi
+      val popped = _variables.remove(_variables.length - 1)
+      val _      = _variableNodes.remove(_variableNodes.length - 1)
+      for (name <- popped.keys) {
+        val _ = _variableIndices.remove(name)
+      }
+    }
   }
 
-  /** Runs [body] in a fully isolated scope: saves a snapshot of variables, functions, and mixins, runs the body, then restores. Used when invoking user-defined callables where parameter bindings must
-    * not leak out.
+  /** Legacy shim: pre-port API — non-semi-global nested scope. */
+  def withinScope[T](callback: () => T): T = withinScope(semiGlobal = false)(callback())
+
+  /** Shorthand for a semi-global scope (e.g. `@if`/`@for`/`@each`/`@while`). */
+  def withinSemiGlobalScope[T](body: => T): T = withinScope(semiGlobal = true)(body)
+
+  /** Runs [body] in a fully isolated scope: saves a snapshot of variables,
+    * functions, and mixins, runs the body, then restores.
+    *
+    * Kept for callers that invoke user-defined callables and need to prevent
+    * parameter bindings from leaking.
     */
   def withSnapshot[T](body: => T): T = {
-    val savedVars    = variables.clone()
-    val savedNodes   = variableNodes.clone()
+    val savedVars = _variables.map(_.clone()).toBuffer
+    val savedNodes = _variableNodes.map(_.clone()).toBuffer
+    val savedIndices = _variableIndices.clone()
     val savedFns     = functions.clone()
     val savedMix     = mixins.clone()
     val savedContent = _content
     try body
     finally {
-      variables.clear(); variables ++= savedVars
-      variableNodes.clear(); variableNodes ++= savedNodes
+      _variables.clear(); _variables ++= savedVars
+      _variableNodes.clear(); _variableNodes ++= savedNodes
+      _variableIndices.clear(); _variableIndices ++= savedIndices
       functions.clear(); functions ++= savedFns
       mixins.clear(); mixins ++= savedMix
       _content = savedContent
@@ -148,44 +264,40 @@ final class Environment() {
 
   // --- Content block ---------------------------------------------------------
 
-  private var _content: Nullable[ContentBlock] = Nullable.empty
-
-  /** The currently-active `@content` block, if any. */
   def content: Nullable[ContentBlock] = _content
+  def content_=(block: Nullable[ContentBlock]): Unit = _content = block
 
-  /** Sets the currently-active `@content` block. */
-  def content_=(block: Nullable[ContentBlock]): Unit =
-    _content = block
+  // --- Closures --------------------------------------------------------------
 
-  /** Creates a closure — a snapshot of the current environment that can be used to evaluate callbacks later.
+  /** Creates a closure: a new Environment whose scope chain is a shallow copy
+    * of the current scope chain. Subsequent scope pushes/pops in this
+    * Environment won't affect the closure, but existing visible scopes remain
+    * shared so later assignments within them are observed.
     *
-    * Variables, functions, and mixins are cloned so subsequent mutations to this environment don't leak into the closure (and vice versa).
+    * Matches dart-sass semantics for `closure()`.
     */
-  def closure(): Environment = {
-    val snap = new Environment()
-    snap.variables ++= variables
-    snap.variableNodes ++= variableNodes
-    snap.functions ++= functions
-    snap.mixins ++= mixins
-    snap.namespaces ++= namespaces
-    snap.globalVarNames ++= globalVarNames
-    snap._content = _content
-    snap
-  }
+  def closure(): Environment = new Environment(
+    _variables         = _variables.clone(),
+    _variableNodes     = _variableNodes.clone(),
+    _variableIndices   = mutable.Map.empty,
+    functions          = functions,
+    mixins             = mixins,
+    namespaces         = namespaces,
+    globalVarNames     = globalVarNames,
+    _content           = _content,
+    _inSemiGlobalScope = false
+  )
 
   /** Creates a public-facing copy of this environment that hides private members.
     *
-    * Per the Sass convention, any variable / function / mixin whose name starts with `-` or `_` is considered private to the module that defines it and must not be visible to importers (either
-    * through a namespace or via `@use ... as *` flat merge). Namespaces and non-private members are copied over; built-in global functions carried in via `Environment.withBuiltins()` are
-    * re-initialised.
-    *
-    * Note: a leading `-`/`_` is the only trigger — embedded dashes like `$theme-color` do not mark a member as private.
+    * A member whose name starts with `-` or `_` is considered private to the
+    * defining module and is omitted. This only considers the global scope.
     */
   def publicView(): Environment = {
     val out = new Environment()
-    for ((n, v) <- variables if !Environment.isPrivate(n)) {
-      out.variables(n) = v
-      variableNodes.get(n).foreach(node => out.variableNodes(n) = node)
+    for ((n, v) <- _variables(0) if !Environment.isPrivate(n)) {
+      out._variables(0)(n) = v
+      _variableNodes(0).get(n).foreach(node => out._variableNodes(0)(n) = node)
     }
     for ((n, c) <- functions if !Environment.isPrivate(n))
       out.functions(n) = c
@@ -196,12 +308,13 @@ final class Environment() {
     out
   }
 
-  /** Creates a new global-only environment containing the built-in functions and any variables that were declared with `!global` in this environment.
+  /** Creates a new global-only environment containing the built-in functions
+    * and any variables that were declared with `!global` in this environment.
     */
   def global(): Environment = {
     val g = Environment.withBuiltins()
     for (name <- globalVarNames)
-      variables.get(name).foreach(v => g.setGlobalVariable(name, v))
+      _variables(0).get(name).foreach(v => g.setGlobalVariable(name, v))
     g
   }
 }
@@ -210,12 +323,11 @@ object Environment {
 
   def apply(): Environment = new Environment()
 
-  /** Whether [name] is a Sass-private member name (leading `-` or `_`). Per the Sass convention only a leading dash/underscore marks privacy; embedded dashes (e.g. `theme-color`) do not. */
+  /** Whether [name] is a Sass-private member name (leading `-` or `_`). */
   def isPrivate(name: String): Boolean =
     name.nonEmpty && { val c = name.charAt(0); c == '-' || c == '_' }
 
-  /** Creates a new environment pre-populated with all global built-in functions (math, string, list, map, meta).
-    */
+  /** Creates a new environment pre-populated with all global built-in functions. */
   def withBuiltins(): Environment = {
     val env = new Environment()
     for (fn <- ssg.sass.functions.Functions.global)
