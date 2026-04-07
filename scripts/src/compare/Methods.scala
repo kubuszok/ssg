@@ -31,10 +31,19 @@ object Methods {
 
   final case class Method(name: String, startLine: Int, endLine: Int, body: String)
 
-  // Scala def at top-level or class/object body indentation. Only matches
-  // `def name`, not `val name` — locals inside method bodies are noise.
+  // Scala def at top-level or class/object body indentation. Matches
+  // `def name`. Locals inside method bodies are also matched because
+  // ssg-sass uses `def helper(...)` patterns; the resulting noise is
+  // filtered out at compare time by checking against the dart side.
   private val scalaDef: Regex =
     """(?m)^[ \t]*(?:override\s+|final\s+|private(?:\[[^\]]+\])?\s+|protected(?:\[[^\]]+\])?\s+|implicit\s+|lazy\s+|inline\s+|transparent\s+)*def\s+(?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_$]*))""".r
+
+  // Top-level val/var at object/class body level. Matches the patterns
+  // ssg-sass uses for built-in callable definitions like
+  // `private val unquoteFn: BuiltInCallable = …`. Restricted to indent
+  // levels 0-4 spaces to skip locals inside deeply-nested method bodies.
+  private val scalaVal: Regex =
+    """(?m)^[ \t]{0,4}(?:override\s+|final\s+|private(?:\[[^\]]+\])?\s+|protected(?:\[[^\]]+\])?\s+|implicit\s+|lazy\s+|inline\s+)*(?:val|var)\s+([A-Za-z_][A-Za-z0-9_$]*)""".r
 
   private val scalaType: Regex =
     """(?m)^[ \t]*(?:sealed\s+|final\s+|abstract\s+|private(?:\[[^\]]+\])?\s+|protected(?:\[[^\]]+\])?\s+|open\s+|case\s+)*(?:class|trait|object|enum)\s+([A-Za-z_][A-Za-z0-9_$]*)""".r
@@ -61,8 +70,11 @@ object Methods {
     scalaType.findAllMatchIn(text).foreach(m => names += m.group(1))
     scalaDef.findAllMatchIn(text).foreach { m =>
       val name = Option(m.group(1)).getOrElse(m.group(2))
-      if (name != null && !name.startsWith("_")) names += name
-      else if (name != null) names += name  // include _leading too (dart analogue)
+      if (name != null) names += name
+    }
+    scalaVal.findAllMatchIn(text).foreach { m =>
+      val name = m.group(1)
+      if (name != null) names += name
     }
     names.distinct.toList.sorted
   }
