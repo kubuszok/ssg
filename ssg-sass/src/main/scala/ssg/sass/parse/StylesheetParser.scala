@@ -2311,6 +2311,14 @@ abstract class StylesheetParser protected (
       while (i < raw.length && CharCode.isDigit(raw.charAt(i).toInt)) i += 1
     }
     if (i == digitStart) return None
+    // Scientific exponent: e|E [+|-] digits
+    if (i < raw.length && (raw.charAt(i) == 'e' || raw.charAt(i) == 'E')) {
+      var j = i + 1
+      if (j < raw.length && (raw.charAt(j) == '+' || raw.charAt(j) == '-')) j += 1
+      val expDigitStart = j
+      while (j < raw.length && CharCode.isDigit(raw.charAt(j).toInt)) j += 1
+      if (j > expDigitStart) i = j
+    }
 
     val numStr = raw.substring(0, i)
     val value  =
