@@ -316,6 +316,18 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     target:         SimpleSelector,
     extender:       ComplexSelector
   ): List[ComplexSelector] = {
+    // Bogus extenders like `+ {@extend a}` parse to a ComplexSelector with
+    // only leading combinators and no components — drop them rather than NSE.
+    if (extender.components.isEmpty) Nil
+    else weaveExtensionNonEmpty(complex, componentIndex, target, extender)
+  }
+
+  private def weaveExtensionNonEmpty(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    target:         SimpleSelector,
+    extender:       ComplexSelector
+  ): List[ComplexSelector] = {
     val origComponent     = complex.components(componentIndex)
     val origCompound      = origComponent.selector
     val extLast           = extender.components.last
@@ -385,6 +397,17 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   /** Wraps [substituteInComplex] with a compound-unification check so that incompatible merges (e.g. two IDs in one compound) gracefully drop the generated selector rather than emitting invalid CSS.
     */
   private def substituteInComplexUnified(
+    complex:        ComplexSelector,
+    componentIndex: Int,
+    target:         SimpleSelector,
+    extender:       ComplexSelector
+  ): List[ComplexSelector] =
+    // Bogus extenders like `+ {@extend a}` parse to a ComplexSelector with
+    // only leading combinators and no components — drop them rather than NSE.
+    if (extender.components.isEmpty) Nil
+    else substituteInComplexUnifiedNonEmpty(complex, componentIndex, target, extender)
+
+  private def substituteInComplexUnifiedNonEmpty(
     complex:        ComplexSelector,
     componentIndex: Int,
     target:         SimpleSelector,

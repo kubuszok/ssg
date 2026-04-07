@@ -83,6 +83,23 @@ final class ExtendSuite extends munit.FunSuite {
     )
   }
 
+  test("bogus leading-combinator-only extender does not NSE (directives/extend/bogus.hrx!only)") {
+    // Regression: `+ {@extend a}` is a single-component complex selector whose
+    // sole component has an empty compound ("+") — previously `components.last`
+    // in the extend pipeline would NSE. Should either emit `a { b: c; }` or
+    // raise a clean SassException, never a NoSuchElementException.
+    val src =
+      """a {b: c}
+        |+ {@extend a}
+        |""".stripMargin
+    try {
+      val r = Compile.compileString(src, OutputStyle.Compressed)
+      assert(r.css.contains("a{b:c"), s"expected base rule to survive, got: ${r.css}")
+    } catch {
+      case _: SassException => () // clean error is acceptable
+    }
+  }
+
   test("CompileResult exposes an empty warnings list by default") {
     val result = Compile.compileString(".a { color: red; }")
     assertEquals(result.warnings, Nil)

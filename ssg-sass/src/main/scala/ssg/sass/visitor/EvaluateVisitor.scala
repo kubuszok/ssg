@@ -1051,10 +1051,31 @@ final class EvaluateVisitor(
   }
 
   override def visitForRule(node: ForRule): Value = {
-    val fromValue = node.from.accept(this).assertNumber()
-    val toValue   = node.to.accept(this).assertNumber()
-    val fromInt   = fromValue.assertInt()
-    val toInt     = toValue.assertInt()
+    // Evaluate and validate bounds. Mirrors dart-sass `visitForRule` in
+    // `pkg/sass/lib/src/visitor/evaluate.dart`: both bounds must be numbers,
+    // must be integers, and must have compatible units. Unit mismatches are
+    // detected by coercing `to` into `from`'s units and catching the
+    // SassScriptException raised by `coerceValueToMatch`.
+    val fromValue =
+      try node.from.accept(this).assertNumber("from")
+      catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
+    val toValue   =
+      try node.to.accept(this).assertNumber("to")
+      catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
+
+    val fromInt =
+      try fromValue.assertInt("from")
+      catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
+    val toInt   =
+      try toValue.assertInt("to")
+      catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
+
+    // Check unit compatibility by coercing `to` to `from`'s units. This
+    // throws a "have incompatible units" SassScriptException when they
+    // don't match (unless one side is unitless, which is allowed).
+    try {
+      val _ = toValue.coerceValueToMatch(fromValue, "to", "from")
+    } catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     val direction = if (fromInt > toInt) -1 else 1
     val end       =
@@ -1064,7 +1085,14 @@ final class EvaluateVisitor(
     _withScope {
       var i = fromInt
       while (i != end) {
-        _environment.setVariable(node.variable, SassNumber(i.toDouble))
+        _environment.setVariable(
+          node.variable,
+          SassNumber.withUnits(
+            i.toDouble,
+            numeratorUnits = fromValue.numeratorUnits,
+            denominatorUnits = fromValue.denominatorUnits
+          )
+        )
         for (statement <- node.children.get) {
           val _ = statement.accept(this)
         }
@@ -1389,6 +1417,12 @@ final class EvaluateVisitor(
   override def visitUseRule(node: UseRule): Value = {
     val urlStr0 = node.url.toString
     if (urlStr0.startsWith("sass:")) {
+      // Core (`sass:*`) modules are not configurable — reject any `with` clause.
+      if (node.configuration.nonEmpty)
+        throw new SassException(
+          "Built-in modules can't be configured.",
+          node.span
+        )
       val moduleName = urlStr0.substring("sass:".length)
       ssg.sass.functions.Functions.modules.get(moduleName).foreach { callables =>
         val moduleEnv = Environment.withBuiltins()

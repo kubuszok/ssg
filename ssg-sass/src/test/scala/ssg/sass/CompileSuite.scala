@@ -1526,4 +1526,19 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString(src, OutputStyle.Compressed).css
     assertEquals(css, "a{result:false;}")
   }
+
+  test("@use sass:color with (...) throws — built-in modules can't be configured") {
+    val src = """@use "sass:color" with ($foo: 1); a { color: red; }"""
+    val e   = intercept[SassException](Compile.compileString(src, OutputStyle.Compressed))
+    assert(
+      e.getMessage.contains("Built-in modules can't be configured."),
+      s"expected built-in-configure error, got: ${e.getMessage}"
+    )
+  }
+
+  test("@use sass:color without a `with` clause still compiles") {
+    val src = """@use "sass:color"; a { color: red; }"""
+    val css = Compile.compileString(src, OutputStyle.Compressed).css
+    assertEquals(css, "a{color:red;}")
+  }
 }
