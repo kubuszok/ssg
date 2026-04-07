@@ -53,6 +53,14 @@ final class ImportMapSuite extends munit.FunSuite {
     assert(!result.css.contains("should not be loaded"), s"file was evaluated in: ${result.css}")
   }
 
+  test("@import of http(s):// URL passes through as plain CSS") {
+    val importer = importerOf()
+    val src1     = """@import "https://fonts.googleapis.com/css?family=Roboto"; a { color: red; }"""
+    val r1       = Compile.compileString(src1, importer = Nullable(importer))
+    assert(r1.css.contains("@import"), s"missing @import in: ${r1.css}")
+    assert(r1.css.contains("fonts.googleapis.com"), s"missing host in: ${r1.css}")
+  }
+
   test("unresolved @import is silently skipped") {
     val importer = importerOf()
     val source   = """
