@@ -1609,4 +1609,33 @@ final class CompileSuite extends munit.FunSuite {
     val css = Compile.compileString("""a { cursor: -webkit-image-set(url("a.png") 1x); }""", OutputStyle.Compressed).css
     assertEquals(css, """a{cursor:-webkit-image-set(url("a.png") 1x);}""")
   }
+
+  test("@function url() is rejected as a reserved CSS function name") {
+    intercept[SassFormatException] {
+      val _ = Compile.compileString("@function url() { @return 1; }")
+    }
+  }
+
+  test("@function element() is rejected as a reserved CSS function name") {
+    intercept[SassFormatException] {
+      val _ = Compile.compileString("@function element() { @return 1; }")
+    }
+  }
+
+  test("@function and() is rejected as a reserved CSS function name") {
+    intercept[SassFormatException] {
+      val _ = Compile.compileString("@function and($a, $b) { @return 1; }")
+    }
+  }
+
+  test("@function calc() is rejected as a reserved CSS function name") {
+    intercept[SassFormatException] {
+      val _ = Compile.compileString("@function calc() { @return 1; }")
+    }
+  }
+
+  test("@function my-fn() is accepted (not a reserved name)") {
+    val css = Compile.compileString("@function my-fn() { @return 1; } a { x: my-fn(); }", OutputStyle.Compressed).css
+    assertEquals(css, "a{x:1;}")
+  }
 }

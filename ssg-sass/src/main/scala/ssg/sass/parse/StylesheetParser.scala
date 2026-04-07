@@ -425,7 +425,18 @@ abstract class StylesheetParser protected (
       case "function" =>
         // @function name(params) { body }
         whitespace(consumeNewlines = true)
-        val fnName = identifier()
+        val nameStart = scanner.state
+        val fnName    = identifier()
+        val nameSpan  = scanner.spanFrom(nameStart)
+        // Reject CSS reserved special function names. Matches dart-sass
+        // `_functionRule` in lib/src/parse/stylesheet.dart.
+        val reservedFunctionNames = Set(
+          "calc", "element", "expression", "url", "and", "or", "not", "var", "attr", "env",
+          "progid:dximagetransform.microsoft.gradient"
+        )
+        if (reservedFunctionNames.contains(fnName.toLowerCase) || fnName.startsWith("--")) {
+          error(s"'$fnName' isn't a valid function name.", nameSpan)
+        }
         whitespace(consumeNewlines = true)
         val params = _parseParameterList(start)
         whitespace(consumeNewlines = true)
