@@ -83,6 +83,16 @@ object Methods {
     * Heuristics only — extension members may be missed; class members
     * that span multiple lines in the return type may need the regex
     * broadened later.
+    *
+    * Filters applied:
+    *   - Dart keywords (return, throw, etc.) are excluded.
+    *   - Names starting with an uppercase letter are excluded from the
+    *     topDef extraction. `dartTopDef` matches `<type> name(` at
+    *     indented lines, which falsely captures `return SassBoolean(`
+    *     as "SassBoolean". Filtering upper-camel from the method set
+    *     is safe because dart methods are lowerCamelCase by convention.
+    *     Class-level names are collected separately via `dartTypeDef`,
+    *     which is narrower and does not misfire.
     */
   def extractDartMethods(path: String): List[String] = {
     val text = readFile(path)
@@ -95,11 +105,20 @@ object Methods {
       "finally", "yield", "async", "await", "rethrow", "import", "export",
       "library", "part", "hide", "show", "on", "typedef", "covariant",
       "required", "deferred", "abstract", "external", "factory", "operator",
-      "print", "assert", "when"
+      "print", "assert", "when",
+      // Common parameter names that the dartTopDef regex catches when a
+      // multi-line function-typed parameter is declared on its own line
+      // (e.g. `Value callback(List<Value> args),` in `_function` or
+      // `Value modify(Value old),` in `_modify`'s signature). The dart-
+      // sass codebase doesn't define top-level functions with these
+      // names, so excluding them is safe.
+      "callback", "modify"
     )
+    def startsUpper(s: String): Boolean =
+      s.nonEmpty && s.charAt(0).isUpper
     dartTopDef.findAllMatchIn(text).foreach { m =>
       val name = m.group(1)
-      if (name != null && !exclude.contains(name)) names += name
+      if (name != null && !exclude.contains(name) && !startsUpper(name)) names += name
     }
     dartGetter.findAllMatchIn(text).foreach { m =>
       val name = m.group(1)
@@ -108,12 +127,32 @@ object Methods {
     names.distinct.toList.sorted
   }
 
+  /** Normalize a name for cross-language comparison. Dart private-member
+    * convention prefixes an underscore; Scala's ssg-sass port prefixes
+    * `Fn` to avoid shadowing built-in value names. Strip both so a
+    * Dart `_unquote` matches a Scala `unquoteFn`.
+    *
+    * This is the minimum normalization that matches the current port
+    * convention. If the convention changes, extend this function.
+    */
+  def normalizeName(name: String): String = {
+    var n = name
+    if (n.startsWith("_")) n = n.substring(1)
+    if (n.endsWith("Fn") && n.length > 2) n = n.substring(0, n.length - 2)
+    n
+  }
+
   /** Compute the gap between an SSG file and its dart reference.
     * Does NOT enforce the short-body check unless called via strictCompare.
+    *
+    * Both sides are passed through `normalizeName` so the underscore-
+    * prefix dart convention and the `Fn`-suffix Scala convention align.
     */
   def compare(ssgFile: String, dartFile: String): Gap = {
-    val scala = extractScalaMethods(ssgFile).toSet
-    val dart = extractDartMethods(dartFile).toSet
+    val scalaRaw = extractScalaMethods(ssgFile)
+    val dartRaw = extractDartMethods(dartFile)
+    val scala = scalaRaw.map(normalizeName).toSet
+    val dart = dartRaw.map(normalizeName).toSet
     val missing = (dart -- scala).toList.sorted
     val extra = (scala -- dart).toList.sorted
     val common = (dart intersect scala).toList.sorted
@@ -130,8 +169,10 @@ object Methods {
     */
   def strictCompare(ssgFile: String, dartFile: String): Gap = {
     val base = compare(ssgFile, dartFile)
-    val scalaBodies = extractScalaBodies(ssgFile)
-    val dartBodies = extractDartBodies(dartFile)
+    // Index bodies by their NORMALIZED name so the body lookup matches
+    // the same convention as the method-set comparison.
+    val scalaBodies = extractScalaBodies(ssgFile).map { case (k, v) => normalizeName(k) -> v }
+    val dartBodies = extractDartBodies(dartFile).map { case (k, v) => normalizeName(k) -> v }
     val shortBody = base.common.filter { name =>
       val sb = scalaBodies.get(name).map(astNodeCount).getOrElse(0)
       val db = dartBodies.get(name).map(astNodeCount).getOrElse(0)
@@ -211,24 +252,64 @@ object Methods {
     *
     * Returns an empty string if the body cannot be located (e.g., abstract
     * method with no `=` / `{`).
+    *
+    * The cursor at `start` may be positioned right after the method name
+    * but before the parameter list. We skip a balanced `(...)` if present
+    * (for multi-line signatures), then optionally skip a `: ReturnType`
+    * declaration before searching for `{` / `=` / end-of-line.
     */
   private def extractBodyFromScala(text: String, start: Int): String = {
-    // Skip to the first `{`, `=`, or end-of-file.
     var i = start
     val n = text.length
-    while (i < n && text.charAt(i) != '{' && text.charAt(i) != '=' && text.charAt(i) != '\n') i += 1
-    if (i >= n) return ""
-    if (text.charAt(i) == '{') {
-      return readBalancedBraces(text, i)
+    // Skip leading whitespace.
+    while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) i += 1
+    // Skip parameter lists (possibly multiple, e.g. curried forms or
+    // multi-line shape `def foo(\n  x: Int,\n  y: Int\n): Result = ...`).
+    while (i < n && text.charAt(i) == '(') {
+      var depth = 1
+      i += 1
+      while (i < n && depth > 0) {
+        val c = text.charAt(i)
+        if (c == '(') depth += 1
+        else if (c == ')') depth -= 1
+        i += 1
+      }
+      // Skip whitespace between curried parameter lists.
+      while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n')) i += 1
     }
+    // Skip optional return-type ascription `: Type` (which may itself
+    // contain `[A, B]`, `(A, B)`, or wrap across lines).
+    if (i < n && text.charAt(i) == ':') {
+      i += 1
+      var bracket = 0
+      while (i < n) {
+        val c = text.charAt(i)
+        if (c == '[' || c == '(') { bracket += 1; i += 1 }
+        else if (c == ']' || c == ')') { bracket -= 1; i += 1 }
+        else if (bracket == 0 && (c == '{' || c == '=' || c == '\n')) return readBodyAt(text, i)
+        else i += 1
+      }
+      return ""
+    }
+    readBodyAt(text, i)
+  }
+
+  /** Helper for the post-signature body read. `i` should point at the
+    * `{`, `=`, or `\n` that terminates the signature.
+    */
+  private def readBodyAt(text: String, start: Int): String = {
+    var i = start
+    val n = text.length
+    // Skip whitespace before the body marker.
+    while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) i += 1
+    if (i >= n) return ""
+    if (text.charAt(i) == '\n') return ""
+    if (text.charAt(i) == '{') return readBalancedBraces(text, i)
     if (text.charAt(i) == '=') {
-      // Skip `=` and any whitespace, then read the next brace-block OR the
-      // next full expression up to a semicolon or end-of-line.
       i += 1
       while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '>'))
         i += 1
       if (i < n && text.charAt(i) == '{') return readBalancedBraces(text, i)
-      // one-line body: read until end of logical line
       val buf = new StringBuilder
       while (i < n && text.charAt(i) != '\n') { buf.append(text.charAt(i)); i += 1 }
       return buf.toString

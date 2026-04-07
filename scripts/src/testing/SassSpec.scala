@@ -1,13 +1,20 @@
 package ssgdev
 package testing
 
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.{ Files, Paths => NioPaths }
+
 /** Wraps the hardened SassSpecRunner via sbt invocation.
   *
-  * `runRegression` runs the default (baseline regression) mode.
-  * `runSubdir` runs with `-Dssg.sass.spec.subdir=<prefix>` and requires 100%
-  * strict pass within the filtered set.
-  * `runStrict` runs with `-Dssg.sass.spec.strict=1` and fails on any leak
-  * category.
+  * Mode keys are passed through a one-shot file at
+  * `ssg-sass/target/sass-spec-mode.tsv` (key=value per line) which the
+  * runner reads on entry and deletes on exit. Earlier versions of this
+  * wrapper used `set ThisBuild / Test / javaOptions := List(...)` to pass
+  * mode flags as -D system properties; that approach was abandoned
+  * because the persistent sbt server occasionally leaked stale snapshot
+  * mode from a prior `runSnapshot` into the next `runRegression`,
+  * silently overwriting the baseline.
   */
 object SassSpec {
 
@@ -15,7 +22,7 @@ object SassSpec {
 
   /** Run the sass-spec runner with a subdir filter. */
   def runSubdir(subdir: String): Outcome =
-    runSbt(Map("ssg.sass.spec.subdir" -> subdir))
+    runSbt(Map("subdir" -> subdir))
 
   /** Run the sass-spec runner in default (regression) mode. */
   def runRegression(): Outcome =
@@ -23,28 +30,22 @@ object SassSpec {
 
   /** Run the sass-spec runner in strict mode (leak categories fail). */
   def runStrict(): Outcome =
-    runSbt(Map("ssg.sass.spec.strict" -> "1"))
+    runSbt(Map("strict" -> "1"))
 
   /** Run the sass-spec runner in snapshot mode (rewrites the baseline TSV). */
   def runSnapshot(): Outcome =
-    runSbt(Map("ssg.sass.spec.snapshot" -> "1"))
+    runSbt(Map("snapshot" -> "1"))
 
-  /** Shared driver: runs sbt --client with the runner. System properties
-    * are passed via `set ThisBuild / Test / javaOptions := List(...)` so
-    * each invocation REPLACES the prior set rather than accumulating it
-    * (using `+=` caused state from one ssg-dev invocation to leak into
-    * the next via the persistent sbt server). The ThisBuild scope only
-    * overrides at the build level; project-level javaOptions from
-    * build.sbt are unaffected.
-    *
-    * Multiple commands are joined with `;` so a single sbt --client call
-    * sets the property and then runs the test.
+  /** Shared driver: writes the mode file, runs the test, and lets the
+    * runner clean the mode file up on exit. We never delete the mode
+    * file from the wrapper because if the wrapper crashes between
+    * write and delete, the next invocation would inherit stale state.
+    * The runner cleans up in a `finally` block, which is the only
+    * place that knows the mode file is no longer needed.
     */
   private def runSbt(props: Map[String, String]): Outcome = {
-    val propList = props.toList.map { case (k, v) => s"""\"-D$k=$v\"""" }.mkString(", ")
-    val setCmd = s"set ThisBuild / Test / javaOptions := List($propList)"
-    val testCmd = "ssg-sass/testOnly ssg.sass.SassSpecRunner"
-    val cmd = s"$setCmd; $testCmd"
+    writeModeFile(props)
+    val cmd = "ssg-sass/testOnly ssg.sass.SassSpecRunner"
     val args = List("--client", cmd)
     val result = Proc.run("sbt", args, cwd = Some(Paths.projectRoot))
     val out = result.stdout + "\n" + result.stderr
@@ -71,5 +72,22 @@ object SassSpec {
         total = total
       )
     }
+  }
+
+  /** Write the mode file consumed by SassSpecRunner. The runner deletes
+    * it on exit so we don't need to clean up here. If the previous
+    * runner crashed and left a stale mode file, this overwrite is the
+    * only correct behavior — never accumulate.
+    */
+  private def writeModeFile(props: Map[String, String]): Unit = {
+    val targetDir = new File(s"${Paths.projectRoot}/ssg-sass/target")
+    targetDir.mkdirs()
+    val path = NioPaths.get(targetDir.getAbsolutePath, "sass-spec-mode.tsv")
+    val sb = new StringBuilder
+    sb.append("# sass-spec runner mode (key=value, one per line)\n")
+    props.toList.sortBy(_._1).foreach { case (k, v) =>
+      sb.append(k).append('=').append(v).append('\n')
+    }
+    Files.write(path, sb.toString.getBytes(StandardCharsets.UTF_8))
   }
 }

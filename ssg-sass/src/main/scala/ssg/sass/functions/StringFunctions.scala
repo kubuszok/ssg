@@ -244,10 +244,16 @@ object StringFunctions {
           // Empty separator -> split into individual codepoints (preserving
           // surrogate pairs). Each element preserves the input string's
           // hasQuotes flag.
-          val cps  = s.text.codePoints().toArray
-          val parts = cps.map { cp =>
-            val element = new String(Character.toChars(cp))
-            SassString(element, hasQuotes = s.hasQuotes): Value
+          // Iterate codepoints manually because `String.codePoints()`
+          // returns a `java.util.stream.IntStream`, which Scala.js does
+          // not implement. The manual loop is portable across JVM, JS,
+          // and Native.
+          val parts = scala.collection.mutable.ListBuffer.empty[Value]
+          var i     = 0
+          while (i < s.text.length) {
+            val cp = s.text.codePointAt(i)
+            parts += SassString(new String(Character.toChars(cp)), hasQuotes = s.hasQuotes)
+            i += Character.charCount(cp)
           }
           SassList(parts.toList, ListSeparator.Comma, brackets = true)
         } else {

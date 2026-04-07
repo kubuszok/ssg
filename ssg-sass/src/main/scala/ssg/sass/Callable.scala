@@ -111,6 +111,11 @@ object BuiltInCallable {
     *   - Otherwise, an overload that has more declared parameters (the rest are assumed to have defaults) wins.
     *   - Otherwise, the rest-parameter overload (`$args...`) wins.
     *   - If nothing matches, an `IllegalArgumentException` is thrown.
+    *
+    * The resulting callable's textual `signature` is taken from the
+    * first non-rest overload (or the first overload if all are rest),
+    * so named-argument binding still works for the common case of a
+    * direct call against the canonical positional shape.
     */
   def overloadedFunction(
     name:      String,
@@ -162,7 +167,28 @@ object BuiltInCallable {
       }
     }
 
-    BuiltInCallable(name, Nullable.empty, dispatch)
+    // Pick the canonical signature for named-arg binding. We want the
+    // signature with the MOST individually-named parameter slots so a
+    // call like `fn($a: x, $b: y)` can bind every name. Both rest-shaped
+    // (`$map, $key, $keys...`) and non-rest (`$map`) signatures are
+    // candidates — for rest-shaped, only the slots BEFORE the splat
+    // count, since `$keys...` doesn't declare a unique name. The
+    // signature with the most named slots wins; ties are broken by
+    // preferring non-rest (which is also the more constrained shape).
+    def namedSlotCount(sig: String): Int = {
+      val parts = sig.split(',').map(_.trim)
+      parts.count(p => p.startsWith("$") && !p.endsWith("..."))
+    }
+    val candidates = overloads.keys.toList
+    val canonicalSig: String =
+      if (candidates.isEmpty) ""
+      else
+        candidates
+          .map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1))
+          .sortBy(t => (-t._2, -t._3))
+          .head
+          ._1
+    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig)
   }
 }
 

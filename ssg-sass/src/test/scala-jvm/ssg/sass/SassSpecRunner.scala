@@ -60,15 +60,34 @@ final class SassSpecRunner extends munit.FunSuite {
     scala.concurrent.duration.Duration(30, "minutes")
 
   test("sass-spec compliance measurement".tag(SassSpecTag)) {
-    runSpecSuite()
+    try runSpecSuite()
+    finally deleteModeFile()
   }
 
   private def runSpecSuite(): Unit = {
-    // Mode flags — the test's behavior depends on which are set.
-    val strictMode:   Boolean        = sys.props.get("ssg.sass.spec.strict").exists(truthy)
-    val subdirFilter: Option[String] = sys.props.get("ssg.sass.spec.subdir").filter(_.nonEmpty)
-    val baselinePath: Option[String] = sys.props.get("ssg.sass.spec.baseline").filter(_.nonEmpty)
-    val snapshotMode: Boolean        = sys.props.get("ssg.sass.spec.snapshot").exists(truthy)
+    // Mode is read from a one-shot file at `ssg-sass/target/sass-spec-mode.tsv`
+    // (key=value per line). The file is written by `ssg-dev port`/`ssg-dev test
+    // sass-spec` immediately before invoking the runner and DELETED at the end
+    // of `runSpecSuite()`. This sidesteps a class of bugs where sbt's persistent
+    // session state caused stale `set ThisBuild / Test / javaOptions` from a
+    // prior `--snapshot` invocation to leak into a regression run, silently
+    // overwriting the baseline. Falling back to system properties keeps direct
+    // `sbt testOnly` invocations working for developers.
+    // The mode file (if present) is AUTHORITATIVE — system properties
+    // are only consulted as a fallback for developers running the test
+    // suite directly via `sbt testOnly`. This separation closes the
+    // bug where stale `set ThisBuild / Test / javaOptions` from a
+    // prior `runSnapshot` invocation would silently flip a regression
+    // run into a snapshot run.
+    val maybeFile = readModeFile()
+    val modeProps: Map[String, String] =
+      if (maybeFile.nonEmpty) maybeFile
+      else if (modeFileExists()) maybeFile // file present but empty == regression mode
+      else readSysPropsMode()
+    val strictMode:   Boolean        = modeProps.get("strict").exists(truthy)
+    val subdirFilter: Option[String] = modeProps.get("subdir").filter(_.nonEmpty)
+    val baselinePath: Option[String] = modeProps.get("baseline").filter(_.nonEmpty)
+    val snapshotMode: Boolean        = modeProps.get("snapshot").exists(truthy)
 
     // Phase 0.1: replace silent `assume` with an explicit branch.
     // A missing submodule still suppresses the test in non-strict mode
@@ -250,6 +269,76 @@ final class SassSpecRunner extends munit.FunSuite {
     //    measurement produced a non-empty result. An all-zero run
     //    almost always means the submodule or walker broke silently.
     if (total == 0) fail("sass-spec: no cases collected — spec walker returned empty")
+  }
+
+  /** Read mode keys from `ssg-sass/target/sass-spec-mode.tsv`. The file is
+    * one `key=value` per line; recognized keys are `strict`, `subdir`,
+    * `baseline`, `snapshot`. Returns an empty map if the file is absent
+    * (the runner falls back to system properties for direct sbt-testOnly
+    * invocations).
+    */
+  private def modeFileExists(): Boolean = {
+    val path = modeFilePath()
+    path.exists(p => Files.isRegularFile(p))
+  }
+
+  private def readModeFile(): Map[String, String] = {
+    val path = modeFilePath()
+    if (path.isEmpty || !Files.isRegularFile(path.get)) Map.empty
+    else {
+      val out   = scala.collection.mutable.Map.empty[String, String]
+      val lines = scala.util.Try(
+        Files.readAllLines(path.get, StandardCharsets.UTF_8).asScala.toList
+      ).getOrElse(Nil)
+      lines.foreach { line =>
+        if (line.nonEmpty && !line.startsWith("#")) {
+          val eq = line.indexOf('=')
+          if (eq > 0) out(line.substring(0, eq).trim) = line.substring(eq + 1).trim
+        }
+      }
+      out.toMap
+    }
+  }
+
+  private def readSysPropsMode(): Map[String, String] = {
+    val out = scala.collection.mutable.Map.empty[String, String]
+    sys.props.get("ssg.sass.spec.strict").foreach(v => out("strict") = v)
+    sys.props.get("ssg.sass.spec.subdir").foreach(v => out("subdir") = v)
+    sys.props.get("ssg.sass.spec.baseline").foreach(v => out("baseline") = v)
+    sys.props.get("ssg.sass.spec.snapshot").foreach(v => out("snapshot") = v)
+    out.toMap
+  }
+
+  private def deleteModeFile(): Unit = {
+    val path = modeFilePath()
+    path.foreach { p =>
+      if (Files.isRegularFile(p))
+        scala.util.Try(Files.delete(p))
+    }
+  }
+
+  /** Resolve the mode file path via the spec-root-derived repo root.
+    * Falls back to a few cwd-relative candidates so direct invocations
+    * (e.g. raw `sbt testOnly` from the repo root) still work.
+    *
+    * The forked test JVM under sbt has cwd `.sbt/matrix/ssg-sass/`, so
+    * relative paths alone are unreliable. We compute the same repo root
+    * the regression-baseline reader uses so the location is consistent.
+    */
+  private def modeFilePath(): Option[Path] = {
+    val viaSpecRoot: Option[Path] = locateSpecRoot().map { specRoot =>
+      val repoRoot = specRoot.toAbsolutePath.getParent.getParent.getParent
+      repoRoot.resolve("ssg-sass").resolve("target").resolve("sass-spec-mode.tsv")
+    }
+    val cwdRelative = List(
+      Paths.get("ssg-sass", "target", "sass-spec-mode.tsv"),
+      Paths.get("..", "ssg-sass", "target", "sass-spec-mode.tsv"),
+      Paths.get("target", "sass-spec-mode.tsv")
+    )
+    val all = viaSpecRoot.toList ++ cwdRelative
+    all.find(p => Files.isRegularFile(p))
+      .orElse(viaSpecRoot)
+      .orElse(all.find(p => Files.isDirectory(p.toAbsolutePath.getParent)))
   }
 }
 
