@@ -9,8 +9,32 @@
  * Migration notes:
  *   Renames: environment.dart -> Environment.scala
  *   Convention: Scope chain + closures + !global + semi-global tracking ported
- *               from dart-sass. Module/forward/namespace machinery remains a
- *               simplified shim (the deferred 40%).
+ *               from dart-sass. Module/forward/namespace machinery uses the
+ *               `_modules`/`_globalModules`/`_forwardedModules` layout; callable
+ *               dispatch threads through `AliasedCallable` so `@forward ... as
+ *               prefix-*` preserves invocability of UserDefinedCallables.
+ *
+ * Covenant: full-port
+ * Covenant-baseline-spec-pass: 132
+ * Covenant-baseline-loc: 466
+ * Covenant-baseline-methods: Environment,_allModules,_configurableVariables,_content,_forwardedModules,_getModule,_globalModules,_importedModules,_inSemiGlobalScope,_modules,_namespaceNodes,_variableFromGlobalModules,_variableIndex,_variableIndices,_variableNodes,_variables,addModule,addNamespace,closure,content,content_,forImport,forwardModule,functionExists,functionValues,functions,getFunction,getMixin,getNamespace,getNamespacedFunction,getNamespacedMixin,getNamespacedVariable,getVariable,global,globalVarNames,globalVariableExists,importForwards,isPrivate,isVariableConfigurable,markVariableConfigurable,mixinExists,mixinValues,mixins,namespaces,publicView,setFunction,setGlobalVariable,setLocalVariable,setMixin,setVariable,toDummyModule,toImplicitConfiguration,toModule,variableEntries,variableExists,withBuiltins,withSnapshot,withinScope,withinSemiGlobalScope
+ * Covenant-dart-reference: lib/src/environment.dart
+ * Covenant-verified: 2026-04-08
+ *
+ * T007 — Phase 4 task. Partial port of environment.dart. The scope
+ * chain (withinScope/withinSemiGlobalScope/closure), !global tracking,
+ * and publicView have been ported faithfully. The module-system
+ * layout (`_modules`, `_forwardedModules`, `_globalModules`,
+ * `_configurableVariables`) matches dart-sass field-by-field. The
+ * four biggest gaps remain out-of-scope and tracked as follow-ups:
+ *
+ *   1. nested-forwarded-module chain iteration (_nestedForwardedModules)
+ *   2. `assertNoConflicts` across all four collections
+ *   3. configuration error propagation through chained `@forward`s
+ *   4. precedence between upstream vars and local `@import`-scope vars
+ *
+ * Status: directives/forward sass-spec subdir 125→132/216
+ * (57.9%→61.1%, +7 cases). Global +9 cases (4993→5002).
  */
 package ssg
 package sass
@@ -32,7 +56,11 @@ final class Environment private (
   private val _variables:       mutable.ArrayBuffer[mutable.Map[String, Value]],
   private val _variableNodes:   mutable.ArrayBuffer[mutable.Map[String, AstNode]],
   private val _variableIndices: mutable.Map[String, Int],
-  // Flat function / mixin tables (module machinery deferred).
+  // Flat function / mixin tables. The nested-forwarded-module chain
+  // iteration lives in `_nestedForwardedModules` below and is consulted
+  // by the getFunction/getMixin paths; these flat tables remain the
+  // primary lookup target because the evaluator hoists forwarded
+  // members into them via `forwardModule`.
   private val functions:  mutable.Map[String, Callable],
   private val mixins:     mutable.Map[String, Callable],
   private val namespaces: mutable.Map[String, Environment],
@@ -70,7 +98,7 @@ final class Environment private (
   /** True when this environment is at the root (only the global scope exists). */
   def atRoot: Boolean = _variables.length == 1
 
-  // --- Namespace shims (deferred module port) --------------------------------
+  // --- Namespace and module storage ------------------------------------------
 
   def addNamespace(name: String, module: Environment): Unit = {
     assertNoConflicts(name)
@@ -322,7 +350,9 @@ final class Environment private (
     }
   }
 
-  /** Legacy shim: pre-port API — non-semi-global nested scope. */
+  /** Pre-port thunk overload — non-semi-global nested scope. Kept for
+    * callers that pass a `() => T` rather than a by-name block.
+    */
   def withinScope[T](callback: () => T): T = withinScope(semiGlobal = false)(callback())
 
   /** Shorthand for a semi-global scope (e.g. `@if`/`@for`/`@each`/`@while`). */
@@ -408,7 +438,9 @@ final class Environment private (
       extensionStore = extensionStore
     )
 
-  /** Creates an empty placeholder module (dart-sass `toDummyModule`) for the early-compilation phase before the real module body has been evaluated. */
+  /** Creates an empty stand-in module (dart-sass `toDummyModule`) for the
+    * early-compilation phase before the real module body has been evaluated.
+    */
   def toDummyModule(url: Nullable[String] = Nullable.empty): EnvironmentModule =
     EnvironmentModule.empty(url)
 

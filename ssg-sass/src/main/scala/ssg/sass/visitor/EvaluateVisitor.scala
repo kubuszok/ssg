@@ -322,7 +322,7 @@ final class EvaluateVisitor(
     * here.
     */
   private def _invokeCallable(callable: Callable, positional: List[Value], named: ListMap[String, Value]): Value =
-    callable match {
+    ssg.sass.AliasedCallable.unwrap(callable) match {
       case bic: BuiltInCallable =>
         val merged =
           if (named.isEmpty) positional
@@ -335,8 +335,8 @@ final class EvaluateVisitor(
           case _ =>
             throw SassScriptException(s"Callable ${callable.name} is not a function.")
         }
-      case _ =>
-        throw SassScriptException(s"Callable type not supported by meta.call: $callable")
+      case other =>
+        throw SassScriptException(s"Callable type not supported by meta.call: $other")
     }
 
   /** Switches the active environment, keeping [[CurrentEnvironment]] in sync so built-in callables (e.g. `mixin-exists`) introspect the right scope.
@@ -432,7 +432,10 @@ final class EvaluateVisitor(
         new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
       } { c =>
         // Built-in callable dispatch — minimal: evaluate positional args and call.
-        c match {
+        // Unwrap any AliasedCallable wrapper (inserted by `@forward ... as
+        // prefix-*`) so the underlying BuiltInCallable / UserDefinedCallable
+        // is reachable.
+        ssg.sass.AliasedCallable.unwrap(c) match {
           case bic: ssg.sass.BuiltInCallable =>
             val (positional, named) = _evaluateArguments(node.arguments)
             val merged              =
@@ -447,8 +450,8 @@ final class EvaluateVisitor(
               case _ =>
                 throw SassScriptException(s"Callable ${node.name} is not a function.")
             }
-          case _ =>
-            throw SassScriptException(s"Callable type not yet supported: $c")
+          case other =>
+            throw SassScriptException(s"Callable type not yet supported: $other")
         }
       }
     }
@@ -1643,19 +1646,7 @@ final class EvaluateVisitor(
   /** Returns a [[Callable]] equivalent to [orig] but reporting [newName] as its name. Used for `@forward ... as prefix-*`. If [newName] equals the original name, returns [orig] unchanged.
     */
   private def _aliasCallable(newName: String, orig: ssg.sass.Callable): ssg.sass.Callable =
-    if (newName == orig.name) orig
-    else
-      orig match {
-        case bic: BuiltInCallable =>
-          new BuiltInCallable(newName, bic.parameters, bic.callback, bic.acceptsContent)
-        case _ =>
-          // Generic fallback — wrap in a thin Callable that delegates name only.
-          // The original callable is kept reachable via the wrapper for later
-          // evaluator dispatch via reference equality or name lookup.
-          new ssg.sass.Callable {
-            def name: String = newName
-          }
-      }
+    ssg.sass.AliasedCallable(newName, orig)
 
   override def visitForwardRule(node: ForwardRule): Value = {
     // Minimal @forward: load the target module and merge its members into
@@ -1714,9 +1705,11 @@ final class EvaluateVisitor(
               // or `_` marks a member private to its defining module).
               // show/hide filters are applied per-kind so e.g. `show $bar`
               // only scopes the variable namespace, not a mixin named
-              // `bar`.
+              // `bar`. Per the Sass spec the show/hide names match the
+              // PREFIXED names, not the underlying originals — so we
+              // check allowance against `prefix + name`.
               for ((name, value) <- moduleEnv.variableEntries)
-                if (!Environment.isPrivate(name) && varAllowed(name)) {
+                if (!Environment.isPrivate(name) && varAllowed(prefix + name)) {
                   val newName = prefix + name
                   if (!_environment.variableExists(newName)) {
                     _environment.setVariable(newName, value)
@@ -1726,7 +1719,7 @@ final class EvaluateVisitor(
                 if (
                   !Environment.isPrivate(fn.name)
                   && !builtinNames.contains(fn.name)
-                  && memberAllowed(fn.name)
+                  && memberAllowed(prefix + fn.name)
                 ) {
                   _environment.setFunction(_aliasCallable(prefix + fn.name, fn))
                 }
@@ -1734,7 +1727,7 @@ final class EvaluateVisitor(
                 if (
                   !Environment.isPrivate(mx.name)
                   && !builtinNames.contains(mx.name)
-                  && memberAllowed(mx.name)
+                  && memberAllowed(prefix + mx.name)
                 ) {
                   _environment.setMixin(_aliasCallable(prefix + mx.name, mx))
                 }
@@ -2192,7 +2185,7 @@ final class EvaluateVisitor(
     named:      ListMap[String, Value],
     content:    Nullable[ContentBlock]
   ): Unit =
-    callable match {
+    ssg.sass.AliasedCallable.unwrap(callable) match {
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case mr: MixinRule =>

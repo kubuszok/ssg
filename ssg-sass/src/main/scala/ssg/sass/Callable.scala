@@ -267,6 +267,63 @@ object BuiltInOverloadDispatch {
   }
 }
 
+/** A callable that delegates to another callable but reports a different
+  * name. Used by `@forward ... as prefix-*` to expose an existing function
+  * or mixin under a prefixed name without losing the original's body.
+  *
+  * The evaluator's mixin/function dispatchers unwrap [[AliasedCallable]]
+  * via `underlying` before inspecting the callable kind, so an aliased
+  * [[UserDefinedCallable]] remains invocable and an aliased
+  * [[BuiltInCallable]] still routes to its native callback.
+  */
+final class AliasedCallable(
+  override val name: String,
+  val underlying:    Callable
+) extends Callable {
+
+  override def toString: String = s"AliasedCallable($name -> $underlying)"
+
+  override def equals(other: Any): Boolean = other match {
+    case that: AliasedCallable => this.name == that.name && this.underlying == that.underlying
+    case _                     => false
+  }
+
+  override def hashCode(): Int = name.hashCode ^ underlying.hashCode()
+}
+
+object AliasedCallable {
+
+  /** Returns [callable] unchanged if its name already matches [newName];
+    * otherwise wraps it in an [[AliasedCallable]].
+    */
+  def apply(newName: String, callable: Callable): Callable =
+    if (newName == callable.name) callable
+    else
+      callable match {
+        case bic: BuiltInCallable =>
+          // BuiltInCallable has a name-independent callback so we can
+          // clone it with the new name directly and avoid a wrapper
+          // class. This keeps `match { case bic: BuiltInCallable => ...}`
+          // dispatches working without requiring unwrapping.
+          new BuiltInCallable(newName, bic.parameters, bic.callback, bic.acceptsContent, bic.signature)
+        case already: AliasedCallable =>
+          // Alias-of-alias collapses to a single wrapper pointing at the
+          // innermost underlying callable.
+          new AliasedCallable(newName, already.underlying)
+        case other =>
+          new AliasedCallable(newName, other)
+      }
+
+  /** Peels all [[AliasedCallable]] layers off of [callable], returning the
+    * innermost underlying callable. Returns the argument unchanged when
+    * [callable] isn't aliased.
+    */
+  def unwrap(callable: Callable): Callable = callable match {
+    case alias: AliasedCallable => unwrap(alias.underlying)
+    case other                  => other
+  }
+}
+
 /** A callable that emits a plain-CSS function call. */
 final class PlainCssCallable(val name: String) extends Callable {
 

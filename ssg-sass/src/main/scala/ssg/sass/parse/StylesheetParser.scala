@@ -271,16 +271,11 @@ abstract class StylesheetParser protected (
             }
             (names.toSet, vars.toSet)
           }
-          if (scanIdentifier("show")) {
-            val (names, vars) = parseMembers()
-            shownNames = Nullable(names)
-            shownVars = Nullable(vars)
-          } else if (scanIdentifier("hide")) {
-            val (names, vars) = parseMembers()
-            hiddenNames = Nullable(names)
-            hiddenVars = Nullable(vars)
-          }
-          whitespace(consumeNewlines = true)
+          // Sass syntax order is `@forward <url> [as <prefix>-*] [show
+          // <names> | hide <names>] [with (...)]`. The old parser
+          // accepted `show`/`hide` before `as`, which silently dropped
+          // any `show`/`hide` clause that came after `as` — masking
+          // the inaccessible-member tests. Parse in the canonical order.
           if (!skip && scanIdentifier("as")) {
             whitespace(consumeNewlines = true)
             val pBuf = new StringBuilder()
@@ -298,6 +293,16 @@ abstract class StylesheetParser protected (
             } else {
               skip = true
             }
+            whitespace(consumeNewlines = true)
+          }
+          if (!skip && scanIdentifier("show")) {
+            val (names, vars) = parseMembers()
+            shownNames = Nullable(names)
+            shownVars = Nullable(vars)
+          } else if (!skip && scanIdentifier("hide")) {
+            val (names, vars) = parseMembers()
+            hiddenNames = Nullable(names)
+            hiddenVars = Nullable(vars)
           }
           // Optional `with ($name: expr [!default], ...)` configuration —
           // mirrors @use's parsing.

@@ -7248,7 +7248,7 @@ core_functions/meta/function_exists.hrx!same_module/through_import	Pass
 core_functions/meta/get_function/different_module.hrx!chosen_prefix	Pass
 core_functions/meta/get_function/different_module.hrx!defined	Pass
 core_functions/meta/get_function/different_module.hrx!named	Pass
-core_functions/meta/get_function/different_module.hrx!through_forward/as	Error
+core_functions/meta/get_function/different_module.hrx!through_forward/as	Pass
 core_functions/meta/get_function/different_module.hrx!through_forward/bare	Pass
 core_functions/meta/get_function/different_module.hrx!through_forward/hide	Pass
 core_functions/meta/get_function/different_module.hrx!through_forward/show	Pass
@@ -7297,7 +7297,7 @@ core_functions/meta/get_mixin/content.hrx!scope/redeclare/vars	Mismatch
 core_functions/meta/get_mixin/different_module.hrx!chosen_prefix	Mismatch
 core_functions/meta/get_mixin/different_module.hrx!defined	Mismatch
 core_functions/meta/get_mixin/different_module.hrx!named	Mismatch
-core_functions/meta/get_mixin/different_module.hrx!through_forward/as	Error
+core_functions/meta/get_mixin/different_module.hrx!through_forward/as	Pass
 core_functions/meta/get_mixin/different_module.hrx!through_forward/bare	Pass
 core_functions/meta/get_mixin/different_module.hrx!through_forward/hide	Pass
 core_functions/meta/get_mixin/different_module.hrx!through_forward/show	Pass
@@ -9744,14 +9744,14 @@ directives/forward/extend.hrx!forward_into_import	Pass
 directives/forward/extend.hrx!forward_into_use	Pass
 directives/forward/extend.hrx!upstream	Pass
 directives/forward/member/as.hrx!different_separator	Error
-directives/forward/member/as.hrx!function	Error
-directives/forward/member/as.hrx!hide	Error
-directives/forward/member/as.hrx!mixin	Error
-directives/forward/member/as.hrx!no_conflict/function	Error
-directives/forward/member/as.hrx!no_conflict/mixin	Error
+directives/forward/member/as.hrx!function	Pass
+directives/forward/member/as.hrx!hide	Pass
+directives/forward/member/as.hrx!mixin	Pass
+directives/forward/member/as.hrx!no_conflict/function	Pass
+directives/forward/member/as.hrx!no_conflict/mixin	Pass
 directives/forward/member/as.hrx!no_conflict/variable	Pass
 directives/forward/member/as.hrx!show/different_separator	Error
-directives/forward/member/as.hrx!show/same_separator	Error
+directives/forward/member/as.hrx!show/same_separator	Pass
 directives/forward/member/as.hrx!variable_assignment/nested	Error
 directives/forward/member/as.hrx!variable_assignment/top_level	Error
 directives/forward/member/as.hrx!variable_use	Pass
@@ -9821,7 +9821,7 @@ directives/forward/with/from_variable.hrx!<root>	Pass
 directives/forward/with/multi_load.hrx!already_configred_empty	Pass
 directives/forward/with/multi_load.hrx!forward	Error
 directives/forward/with/multi_load.hrx!through_forward	Pass
-directives/forward/with/multi_load.hrx!transitive	Mismatch
+directives/forward/with/multi_load.hrx!transitive	Pass
 directives/forward/with/multi_load.hrx!use	Error
 directives/forward/with/multiple.hrx!default	Pass
 directives/forward/with/multiple.hrx!non_default	Pass
