@@ -98,7 +98,7 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     val rule   = styleRule("a", List(decl))
     val s      = stylesheet(List(rule))
     val result = new SerializeVisitor(style = OutputStyle.Compressed).serialize(s)
-    assertEquals(result.css, "a{color:red;}")
+    assertEquals(result.css, "a{color:red}")
   }
 
   test("serialize preserves /* comments */") {
@@ -152,10 +152,15 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     val rule  = styleRule("a", List(decl))
     val sheet = stylesheet(List(rule))
     val css   = v.serialize(sheet).css
-    // Extract between "x:" and ";"
+    // Extract between "x:" and the next `}` or `;` (compressed mode does
+    // not emit a trailing `;` for the last declaration).
     val start = css.indexOf("x:") + 2
-    val end   = css.indexOf(';', start)
-    val raw   = css.substring(start, end).trim
+    val sIdx  = css.indexOf(';', start)
+    val bIdx  = css.indexOf('}', start)
+    val end   =
+      if (sIdx >= 0 && (bIdx < 0 || sIdx < bIdx)) sIdx
+      else bIdx
+    val raw = css.substring(start, end).trim
     raw
   }
 
@@ -332,7 +337,11 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     val sheet = stylesheet(List(rule))
     val css   = vis.serialize(sheet).css
     val start = css.indexOf("x:") + 2
-    val end   = css.indexOf(';', start)
+    val sIdx  = css.indexOf(';', start)
+    val bIdx  = css.indexOf('}', start)
+    val end   =
+      if (sIdx >= 0 && (bIdx < 0 || sIdx < bIdx)) sIdx
+      else bIdx
     css.substring(start, end).trim
   }
 

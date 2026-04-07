@@ -28,7 +28,7 @@ final class ExtendSuite extends munit.FunSuite {
   test("@extend of missing target with !optional is silent") {
     val src    = ".a { @extend .missing !optional; color: red; }"
     val result = Compile.compileString(src, OutputStyle.Compressed)
-    assertEquals(result.css, ".a{color:red;}")
+    assertEquals(result.css, ".a{color:red}")
     assertEquals(result.warnings, Nil)
   }
 

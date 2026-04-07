@@ -15,7 +15,7 @@ final class MetaApplySuite extends munit.FunSuite {
         |@mixin greet { color: red; }
         |a { @include meta.apply(meta.get-mixin("greet")); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red;}")
+    assertEquals(css, "a{color:red}")
   }
 
   test("meta.apply passes positional args") {
@@ -24,7 +24,7 @@ final class MetaApplySuite extends munit.FunSuite {
         |@mixin set-color($c) { color: $c; }
         |a { @include meta.apply(meta.get-mixin("set-color"), blue); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{color:blue;}")
+    assertEquals(css, "a{color:blue}")
   }
 
   test("meta.apply with SassMixin captured in a variable") {
@@ -34,7 +34,7 @@ final class MetaApplySuite extends munit.FunSuite {
         |$m: meta.get-mixin("paint");
         |a { @include meta.apply($m, green); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{background:green;}")
+    assertEquals(css, "a{background:green}")
   }
 
   test("meta.apply accepts a legacy string mixin name") {
@@ -43,7 +43,7 @@ final class MetaApplySuite extends munit.FunSuite {
         |@mixin hi { content: "hi"; }
         |a { @include meta.apply("hi"); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, """a{content:"hi";}""")
+    assertEquals(css, """a{content:"hi"}""")
   }
 
   test("cross-media @extend emits a warning when target is at top level") {

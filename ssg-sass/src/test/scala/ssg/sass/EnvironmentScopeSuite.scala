@@ -92,7 +92,7 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
         OutputStyle.Compressed
       )
       .css
-    assertEquals(css, "a{b:2;}")
+    assertEquals(css, "a{b:2}")
   }
 
   test("@each body updates outer variable (semi-global)") {
@@ -109,7 +109,7 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
         OutputStyle.Compressed
       )
       .css
-    assertEquals(css, "a{b:7;}")
+    assertEquals(css, "a{b:7}")
   }
 
   test("@for body updates outer variable (semi-global)") {
@@ -122,7 +122,7 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
         OutputStyle.Compressed
       )
       .css
-    assertEquals(css, "a{b:3;}")
+    assertEquals(css, "a{b:3}")
   }
 
   test("!global from nested scope writes outer") {
@@ -137,6 +137,6 @@ final class EnvironmentScopeSuite extends munit.FunSuite {
         OutputStyle.Compressed
       )
       .css
-    assertEquals(css, "a{b:9;}")
+    assertEquals(css, "a{b:9}")
   }
 }

@@ -222,21 +222,80 @@ final class SerializeVisitor(
   private def writeSpace(): Unit =
     if (!isCompressed) buffer.append(' ')
 
-  private def writeChildren(children: List[CssNode]): Unit = {
-    val visible = children.filter(c => !isNodeInvisible(c))
-    buffer.append('{')
-    writeLine()
-    indentLevel += 1
-    var first = true
-    for (child <- visible) {
-      if (!first && !isCompressed) writeLine()
-      first = false
-      writeIndent()
-      child.accept(this)
+  // ---------------------------------------------------------------------------
+  // Stage 1: sibling spacing & semicolon emission
+  // Ported from dart-sass `_requiresSemicolon` / `_isTrailingComment` /
+  // `_visitChildren` / `visitCssStylesheet` in lib/src/visitor/serialize.dart.
+  // The blank-line-between-siblings rule is conditional: dart-sass emits
+  // exactly one line feed by default, plus a second line feed when the
+  // previous sibling has `isGroupEnd == true` (e.g. closes a media/style
+  // rule). Trailing comments collapse onto the previous line via a space.
+  // ---------------------------------------------------------------------------
+
+  /** Whether [node] requires a semicolon to be written after it. */
+  private def requiresSemicolon(node: CssNode): Boolean = node match {
+    case p: CssParentNode => p.isChildless
+    case _: CssComment    => false
+    case _                => true
+  }
+
+  /** Whether [node] is a trailing comment that should be appended to [previous]'s line. */
+  private def isTrailingComment(node: CssNode, previous: CssNode): Boolean = {
+    if (isCompressed) return false
+    node match {
+      case _: CssComment =>
+        val nodeSpan = node.span
+        val prevSpan = previous.span
+        if (nodeSpan == null || prevSpan == null) false
+        else if (nodeSpan.file.url != prevSpan.file.url) false
+        else if (!prevSpan.contains(nodeSpan)) {
+          nodeSpan.start.line == prevSpan.end.line
+        } else {
+          // Heuristic: if the comment starts on the same line as the parent's
+          // first line (i.e., before the `{`), treat as trailing.
+          nodeSpan.start.line == prevSpan.start.line
+        }
+      case _ => false
     }
-    indentLevel -= 1
-    writeLine()
-    writeIndent()
+  }
+
+  /** Emits a brace block of [children], filtering invisible nodes and applying dart-sass sibling spacing. */
+  private def writeChildrenIn(parent: CssParentNode | Null, children: List[CssNode]): Unit = {
+    buffer.append('{')
+    var prePrevious: CssNode | Null = null
+    var previous:    CssNode | Null = null
+    for (child <- children) {
+      if (!isNodeInvisible(child)) {
+        if (previous != null && requiresSemicolon(previous)) buffer.append(';')
+        val precedent: CssNode | Null = if (previous != null) previous else parent
+        if (precedent != null && isTrailingComment(child, precedent)) {
+          // Trailing comment: append on the same line with a single space.
+          writeSpace()
+          child.accept(this)
+        } else {
+          writeLine()
+          // dart-sass: extra blank line if previous closes a "group" (rule).
+          if (previous != null && previous.isGroupEnd) writeLine()
+          indentLevel += 1
+          writeIndent()
+          child.accept(this)
+          indentLevel -= 1
+        }
+        prePrevious = previous
+        previous = child
+      }
+    }
+    if (previous != null) {
+      if (requiresSemicolon(previous) && !isCompressed) buffer.append(';')
+      // Closing the block: write a line feed + outer indentation, unless
+      // the only child was a same-line trailing comment relative to the parent.
+      if (prePrevious == null && parent != null && isTrailingComment(previous, parent)) {
+        writeSpace()
+      } else {
+        writeLine()
+        writeIndent()
+      }
+    }
     buffer.append('}')
   }
 
@@ -531,27 +590,43 @@ final class SerializeVisitor(
   }
 
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
-    // dart-sass separates top-level siblings with a blank line in expanded mode
-    // (i.e. the closing `}` of one rule is followed by `\n\n` before the next
-    // rule starts). In compressed mode nothing is written between siblings.
-    val visible        = node.children.filter(c => !isNodeInvisible(c))
-    var first          = true
-    var prevWasComment = false
-    for (child <- visible) {
-      if (!first) {
-        if (isCompressed) ()
-        else {
-          // Single newline after a loud/preserved comment, blank line otherwise,
-          // to match dart-sass top-level spacing conventions.
-          buffer.append('\n')
-          if (!prevWasComment) buffer.append('\n')
+    // Top-level siblings: dart-sass `visitCssStylesheet`. Between visible
+    // siblings emit a line feed (or trailing-comment space), and an extra
+    // line feed when the previous sibling has `isGroupEnd == true`.
+    //
+    // Note: ssg-sass's evaluator does not yet propagate `isGroupEnd` from
+    // the original source position (a flag dart-sass sets when nested
+    // blocks are flattened). To preserve the historical output where
+    // top-level rules and at-rules are separated by a blank line in
+    // expanded mode, we conservatively emit the second line feed for any
+    // non-comment-following-non-comment pair. This matches dart-sass's
+    // observable output for typical inputs without requiring AST changes.
+    var previous: CssNode | Null = null
+    for (child <- node.children) {
+      if (!isNodeInvisible(child)) {
+        if (previous != null) {
+          if (requiresSemicolon(previous)) buffer.append(';')
+          if (isTrailingComment(child, previous)) {
+            writeSpace()
+          } else {
+            writeLine()
+            // Emit a blank line between non-comment top-level siblings
+            // (or when the previous node carries the explicit isGroupEnd
+            // marker) to match dart-sass's typical top-level output.
+            if (
+              previous.isGroupEnd ||
+              (!previous.isInstanceOf[CssComment] && !child.isInstanceOf[CssComment])
+            ) writeLine()
+          }
         }
+        previous = child
+        child.accept(this)
       }
-      first = false
-      prevWasComment = child.isInstanceOf[CssComment]
-      child.accept(this)
     }
-    if (!isCompressed && visible.nonEmpty) buffer.append('\n')
+    if (previous != null) {
+      if (requiresSemicolon(previous) && !isCompressed) buffer.append(';')
+      if (!isCompressed) buffer.append('\n')
+    }
   }
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {
@@ -564,7 +639,7 @@ final class SerializeVisitor(
       case other => buffer.append(other.toString)
     }
     writeSpace()
-    writeChildren(node.children)
+    writeChildrenIn(node, node.children)
   }
 
   // ---------------------------------------------------------------------------
@@ -649,6 +724,9 @@ final class SerializeVisitor(
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
     // Record one mapping for the property name and a second for the value
     // so debuggers can highlight either side of the `name: value;` pair.
+    // dart-sass: visitCssDeclaration does NOT emit a trailing `;`. The
+    // separator is emitted by `_visitChildren` via `requiresSemicolon`
+    // before the next sibling, or after the final child if non-compressed.
     recordMapping(node.span)
     buffer.append(node.name.value)
     buffer.append(':')
@@ -658,7 +736,6 @@ final class SerializeVisitor(
     if (node.isImportant) {
       if (isCompressed) buffer.append("!important") else buffer.append(" !important")
     }
-    buffer.append(';')
   }
 
   override def visitCssComment(node: CssComment): Unit = {
@@ -675,10 +752,12 @@ final class SerializeVisitor(
       buffer.append(v.value)
     }
     if (node.isChildless) {
-      buffer.append(';')
+      // Childless at-rules: dart-sass `_visitChildren` is not called, and a
+      // semicolon is emitted by the surrounding context via `requiresSemicolon`.
+      // We don't append `;` here.
     } else {
       writeSpace()
-      writeChildren(node.children)
+      writeChildrenIn(node, node.children)
     }
   }
 
@@ -686,30 +765,31 @@ final class SerializeVisitor(
     buffer.append("@media ")
     buffer.append(node.queries.mkString(", "))
     writeSpace()
-    writeChildren(node.children)
+    writeChildrenIn(node, node.children)
   }
 
   override def visitCssSupportsRule(node: CssSupportsRule): Unit = {
     buffer.append("@supports ")
     buffer.append(node.condition.value)
     writeSpace()
-    writeChildren(node.children)
+    writeChildrenIn(node, node.children)
   }
 
   override def visitCssImport(node: CssImport): Unit = {
+    // dart-sass: visitCssImport does NOT emit a trailing `;`. The separator
+    // is supplied by `_visitChildren` via `requiresSemicolon`.
     buffer.append("@import ")
     buffer.append(node.url.value)
     node.modifiers.foreach { m =>
       buffer.append(' ')
       buffer.append(m.value)
     }
-    buffer.append(';')
   }
 
   override def visitCssKeyframeBlock(node: CssKeyframeBlock): Unit = {
     buffer.append(node.selector.value.mkString(", "))
     writeSpace()
-    writeChildren(node.children)
+    writeChildrenIn(node, node.children)
   }
 }
 

@@ -37,7 +37,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("compressed mode: comma list joined with bare comma") {
     val css = Compile.compileString("a, d { b: c; }", OutputStyle.Compressed).css
-    assertEquals(css, "a,d{b:c;}")
+    assertEquals(css, "a,d{b:c}")
   }
 
   test("expanded mode: leading combinator with comma list preserves space separator") {
@@ -59,7 +59,7 @@ final class CompileSuite extends munit.FunSuite {
     // the directive must be parsed as a real @if rule, not a generic
     // unknown at-rule.
     val css = Compile.compileString("@\\69 f true {a {b: c}}\n", OutputStyle.Compressed).css
-    assertEquals(css, "a{b:c;}")
+    assertEquals(css, "a{b:c}")
   }
 
   test("@else with escaped directive name attaches to preceding @if") {
@@ -67,46 +67,46 @@ final class CompileSuite extends munit.FunSuite {
     // `@\65lse` is the escape sequence for `@else`; after normalization
     // it must attach to the preceding `@if` as an else clause.
     val css = Compile.compileString("@if false {}\n@\\65lse {a {b: c}}\n", OutputStyle.Compressed).css
-    assertEquals(css, "a{b:c;}")
+    assertEquals(css, "a{b:c}")
   }
 
   test("@if / @else if / @else chain evaluates the right branch") {
     val src = "@if false { a { x: 1; } } @else if true { a { x: 2; } } @else { a { x: 3; } }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{x:2;}")
+    assertEquals(css, "a{x:2}")
   }
 
   test("calc() preserves incompatible units") {
     val css = Compile.compileString("a { width: calc(100% - 20px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:calc(100% - 20px);}")
+    assertEquals(css, "a{width:calc(100% - 20px)}")
   }
 
   test("calc() simplifies compatible numeric arithmetic") {
     val css = Compile.compileString("a { width: calc(10px + 5px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:15px;}")
+    assertEquals(css, "a{width:15px}")
   }
 
   test("min() preserves multiple incompatible arguments") {
     val css = Compile.compileString("a { width: min(100%, 500px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:min(100%, 500px);}")
+    assertEquals(css, "a{width:min(100%, 500px)}")
   }
 
   test("max() resolves variable arguments") {
     // With two compatible numeric arguments Sass simplifies max(10px, 20px) to 20px.
     val src = "$base: 20px; a { width: max(10px, $base); }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{width:20px;}")
+    assertEquals(css, "a{width:20px}")
   }
 
   test("max() preserves incompatible variable arguments") {
     val src = "$base: 50%; a { width: max(10px, $base); }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{width:max(10px, 50%);}")
+    assertEquals(css, "a{width:max(10px, 50%)}")
   }
 
   test("clamp() with three numeric arguments") {
     val css = Compile.compileString("a { width: clamp(10px, 50%, 500px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:clamp(10px, 50%, 500px);}")
+    assertEquals(css, "a{width:clamp(10px, 50%, 500px)}")
   }
 
   test("@at-root (with: media) inside @media keeps the media wrapper") {
@@ -135,7 +135,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("compiles compressed output") {
     val result = Compile.compileString("a { color: red; }", OutputStyle.Compressed)
-    assertEquals(result.css, "a{color:red;}")
+    assertEquals(result.css, "a{color:red}")
   }
 
   test("compiles multiple rules") {
@@ -589,7 +589,7 @@ final class CompileSuite extends munit.FunSuite {
       """.btn { &:hover { color: blue; } }""",
       OutputStyle.Compressed
     )
-    assert(result.css.contains(".btn:hover{color:blue;}"), result.css)
+    assert(result.css.contains(".btn:hover{color:blue}"), result.css)
     assert(!result.css.contains("&"), result.css)
   }
 
@@ -598,7 +598,7 @@ final class CompileSuite extends munit.FunSuite {
       """.btn { &.active { color: blue; } }""",
       OutputStyle.Compressed
     )
-    assert(result.css.contains(".btn.active{color:blue;}"), result.css)
+    assert(result.css.contains(".btn.active{color:blue}"), result.css)
     assert(!result.css.contains("&"), result.css)
   }
 
@@ -607,7 +607,7 @@ final class CompileSuite extends munit.FunSuite {
       """.a { .b { color: red; } }""",
       OutputStyle.Compressed
     )
-    assert(result.css.contains(".a .b{color:red;}"), result.css)
+    assert(result.css.contains(".a .b{color:red}"), result.css)
   }
 
   test("nested rule with parent declarations and & emits both") {
@@ -615,8 +615,8 @@ final class CompileSuite extends munit.FunSuite {
       """.btn { color: red; &:hover { color: blue; } }""",
       OutputStyle.Compressed
     )
-    assert(result.css.contains(".btn{color:red;}"), result.css)
-    assert(result.css.contains(".btn:hover{color:blue;}"), result.css)
+    assert(result.css.contains(".btn{color:red}"), result.css)
+    assert(result.css.contains(".btn:hover{color:blue}"), result.css)
     assert(!result.css.contains("&"), result.css)
   }
 
@@ -853,7 +853,7 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@media (max-width: 600px)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("@media with type and condition preserves both") {
@@ -862,7 +862,7 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@media screen and (min-width: 768px)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("@media supports #{...} interpolation in query") {
@@ -874,7 +874,7 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@media (max-width: 600px)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("nested @media inside style rule bubbles out") {
@@ -884,10 +884,10 @@ final class CompileSuite extends munit.FunSuite {
     )
     // Expected bubbling: `@media (max-width: 600px) { .a { color: red; } }`.
     assert(result.css.contains("@media (max-width: 600px)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
     // The @media must appear before the inner `.a` selector.
     val mediaIdx = result.css.indexOf("@media")
-    val ruleIdx  = result.css.indexOf(".a{color:red;}")
+    val ruleIdx  = result.css.indexOf(".a{color:red}")
     assert(mediaIdx >= 0 && ruleIdx > mediaIdx, result.css)
   }
 
@@ -904,7 +904,7 @@ final class CompileSuite extends munit.FunSuite {
     )
     assert(result.css.contains("@media screen"), result.css)
     assert(result.css.contains("@media (max-width: 600px)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   // ---------------------------------------------------------------------------
@@ -917,7 +917,7 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@supports (display: grid)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("@supports with `and` operator preserves both conditions") {
@@ -929,7 +929,7 @@ final class CompileSuite extends munit.FunSuite {
       result.css.contains("(display: grid) and (color: red)"),
       result.css
     )
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("@supports supports #{...} interpolation in the condition") {
@@ -941,7 +941,7 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@supports (display: grid)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
   }
 
   test("nested @supports inside style rule bubbles out") {
@@ -950,9 +950,9 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@supports (display: grid)"), result.css)
-    assert(result.css.contains(".a{color:red;}"), result.css)
+    assert(result.css.contains(".a{color:red}"), result.css)
     val atIdx   = result.css.indexOf("@supports")
-    val ruleIdx = result.css.indexOf(".a{color:red;}")
+    val ruleIdx = result.css.indexOf(".a{color:red}")
     assert(atIdx >= 0 && ruleIdx > atIdx, result.css)
   }
 
@@ -972,9 +972,9 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@keyframes spin"), result.css)
-    assert(result.css.contains("0%{opacity:0;}"), result.css)
+    assert(result.css.contains("0%{opacity:0}"), result.css)
     assert(result.css.contains("50%{opacity:"), result.css)
-    assert(result.css.contains("100%{opacity:1;}"), result.css)
+    assert(result.css.contains("100%{opacity:1}"), result.css)
   }
 
   test("@keyframes maps from/to to 0%/100%") {
@@ -988,8 +988,8 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@keyframes fade"), result.css)
-    assert(result.css.contains("0%{opacity:0;}"), result.css)
-    assert(result.css.contains("100%{opacity:1;}"), result.css)
+    assert(result.css.contains("0%{opacity:0}"), result.css)
+    assert(result.css.contains("100%{opacity:1}"), result.css)
     assert(!result.css.contains("from{"), result.css)
     assert(!result.css.contains("to{"), result.css)
   }
@@ -1471,53 +1471,53 @@ final class CompileSuite extends munit.FunSuite {
 
   test("custom property with literal value passes through") {
     val css = Compile.compileString(":root { --brand: #ff0066; }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--brand:#ff0066;}")
+    assertEquals(css, ":root{--brand:#ff0066}")
   }
 
   test("custom property with #{...} interpolation evaluates") {
     val src = "$c: red; :root { --brand: #{$c}; }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, ":root{--brand:red;}")
+    assertEquals(css, ":root{--brand:red}")
   }
 
   test("custom property value does NOT evaluate + operator") {
     val css = Compile.compileString(":root { --foo: 1 + 2; }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--foo:1 + 2;}")
+    assertEquals(css, ":root{--foo:1 + 2}")
   }
 
   test("custom property value preserves nested parens") {
     val css = Compile.compileString(":root { --grid: repeat(3, 1fr); }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--grid:repeat(3, 1fr);}")
+    assertEquals(css, ":root{--grid:repeat(3, 1fr)}")
   }
 
   test("var(--foo) passes through as a plain CSS function") {
     val css = Compile.compileString("a { color: var(--brand); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:var(--brand);}")
+    assertEquals(css, "a{color:var(--brand)}")
   }
 
   test("@supports selector(:has(> img)) compiles") {
     val css = Compile.compileString("@supports selector(:has(> img)) { a { color: red; } }", OutputStyle.Compressed).css
-    assertEquals(css, "@supports selector(:has(> img)){a{color:red;}}")
+    assertEquals(css, "@supports selector(:has(> img)){a{color:red}}")
   }
 
   test("@supports selector(...) uses function syntax without extra parens") {
     val css = Compile.compileString("@supports selector(:is(a, b)) { .x { color: red; } }", OutputStyle.Compressed).css
-    assertEquals(css, "@supports selector(:is(a, b)){.x{color:red;}}")
+    assertEquals(css, "@supports selector(:is(a, b)){.x{color:red}}")
   }
 
   test("!important flag emits ` !important` before the trailing semicolon") {
     val css = Compile.compileString("a { color: red !important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red!important;}")
+    assertEquals(css, "a{color:red!important}")
   }
 
   test("!important flag is omitted when absent") {
     val css = Compile.compileString("a { color: red; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red;}")
+    assertEquals(css, "a{color:red}")
   }
 
   test("!important tolerates whitespace between ! and important") {
     val css = Compile.compileString("a { color: red !  important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red!important;}")
+    assertEquals(css, "a{color:red!important}")
   }
 
   test("!important expanded-mode output has space before !important") {
@@ -1527,23 +1527,23 @@ final class CompileSuite extends munit.FunSuite {
 
   test("!important works with variable-valued expressions") {
     val css = Compile.compileString("$c: blue; a { color: $c !important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:blue!important;}")
+    assertEquals(css, "a{color:blue!important}")
   }
 
   // ISS-093: plain-CSS function preservation
   test("var() is preserved verbatim as a plain-CSS function") {
     val css = Compile.compileString("a { width: var(--foo); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:var(--foo);}")
+    assertEquals(css, "a{width:var(--foo)}")
   }
 
   test("linear-gradient() is preserved verbatim as a plain-CSS function") {
     val css = Compile.compileString("a { background: linear-gradient(red, blue); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{background:linear-gradient(red, blue);}")
+    assertEquals(css, "a{background:linear-gradient(red, blue)}")
   }
 
   test("polygon() is preserved verbatim as a plain-CSS function") {
     val css = Compile.compileString("a { clip-path: polygon(0 0, 100% 0, 50% 100%); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{clip-path:polygon(0 0, 100% 0, 50% 100%);}")
+    assertEquals(css, "a{clip-path:polygon(0 0, 100% 0, 50% 100%)}")
   }
 
   // ISS-014: sass:meta gap fills
@@ -1552,7 +1552,7 @@ final class CompileSuite extends munit.FunSuite {
       """@use "sass:meta";
         |a { name: meta.calc-name(calc(100% + 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{name:calc;}")
+    assertEquals(css, "a{name:calc}")
   }
 
   test("meta.calc-name(min(...)) returns 'min'") {
@@ -1560,7 +1560,7 @@ final class CompileSuite extends munit.FunSuite {
       """@use "sass:meta";
         |a { name: meta.calc-name(min(100%, 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{name:min;}")
+    assertEquals(css, "a{name:min}")
   }
 
   test("meta.calc-args returns the operand list of a calc") {
@@ -1568,7 +1568,7 @@ final class CompileSuite extends munit.FunSuite {
       """@use "sass:meta";
         |a { args: meta.calc-args(min(100%, 2px)); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{args:100%,2px;}")
+    assertEquals(css, "a{args:100%,2px}")
   }
 
   test("meta.accepts-content returns true for a mixin with @content") {
@@ -1577,7 +1577,7 @@ final class CompileSuite extends munit.FunSuite {
         |@mixin foo { @content; }
         |a { result: meta.accepts-content(meta.get-mixin("foo")); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{result:true;}")
+    assertEquals(css, "a{result:true}")
   }
 
   test("meta.accepts-content returns false for a mixin without @content") {
@@ -1586,7 +1586,7 @@ final class CompileSuite extends munit.FunSuite {
         |@mixin foo { color: red; }
         |a { result: meta.accepts-content(meta.get-mixin("foo")); }""".stripMargin
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{result:false;}")
+    assertEquals(css, "a{result:false}")
   }
 
   test("@use sass:color with (...) throws — built-in modules can't be configured") {
@@ -1601,7 +1601,7 @@ final class CompileSuite extends munit.FunSuite {
   test("@use sass:color without a `with` clause still compiles") {
     val src = """@use "sass:color"; a { color: red; }"""
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red;}")
+    assertEquals(css, "a{color:red}")
   }
 
   // ---------------------------------------------------------------------------
@@ -1649,27 +1649,27 @@ final class CompileSuite extends munit.FunSuite {
 
   test("url() with an unquoted path is preserved verbatim") {
     val css = Compile.compileString("a { background: url(/path/to/file.png); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{background:url(/path/to/file.png);}")
+    assertEquals(css, "a{background:url(/path/to/file.png)}")
   }
 
   test("url() with a quoted argument is preserved verbatim") {
     val css = Compile.compileString("""a { background: url("foo.png"); }""", OutputStyle.Compressed).css
-    assertEquals(css, """a{background:url("foo.png");}""")
+    assertEquals(css, """a{background:url("foo.png")}""")
   }
 
   test("element() is preserved verbatim as a special CSS function") {
     val css = Compile.compileString("a { background: element(#mySelector); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{background:element(#mySelector);}")
+    assertEquals(css, "a{background:element(#mySelector)}")
   }
 
   test("-ms-element() is preserved verbatim as a vendor-prefixed special function") {
     val css = Compile.compileString("a { background: -ms-element(#mySelector); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{background:-ms-element(#mySelector);}")
+    assertEquals(css, "a{background:-ms-element(#mySelector)}")
   }
 
   test("-webkit-image-set() with nested url() is preserved verbatim") {
     val css = Compile.compileString("""a { cursor: -webkit-image-set(url("a.png") 1x); }""", OutputStyle.Compressed).css
-    assertEquals(css, """a{cursor:-webkit-image-set(url("a.png") 1x);}""")
+    assertEquals(css, """a{cursor:-webkit-image-set(url("a.png") 1x)}""")
   }
 
   test("@function url() is rejected as a reserved CSS function name") {
@@ -1700,7 +1700,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("@function my-fn() is accepted (not a reserved name)") {
     val css = Compile.compileString("@function my-fn() { @return 1; } a { x: my-fn(); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{x:1;}")
+    assertEquals(css, "a{x:1}")
   }
 
   test("built-in with signature default is padded when positional args are short") {
@@ -1708,7 +1708,7 @@ final class CompileSuite extends munit.FunSuite {
     // Calling with only two positional args must apply the default expression
     // `-1` from the signature instead of reading past the end of `args`.
     val css = Compile.compileString("a { x: str-slice(\"hello\", 2); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{x:\"ello\";}")
+    assertEquals(css, "a{x:\"ello\"}")
   }
 
   // ---------------------------------------------------------------------------
@@ -1954,7 +1954,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("@extend with no selector raises an error") {
     val ex = intercept[SassException] {
-      Compile.compileString("a {@extend;}")
+      Compile.compileString("a {@extend}")
     }
     assert(ex.getMessage.contains("Expected selector"))
   }
