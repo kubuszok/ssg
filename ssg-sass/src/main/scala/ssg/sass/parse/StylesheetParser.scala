@@ -466,7 +466,16 @@ abstract class StylesheetParser protected (
       case "return" =>
         // @return <expression> ;
         whitespace(consumeNewlines = true)
-        val retExpr = _expression()
+        val retRdState = scanner.state
+        val retExpr =
+          if (_rdLooksLikeSingleFunctionCall()) {
+            try _rdExpression()
+            catch {
+              case _: Throwable =>
+                scanner.state = retRdState
+                _expression()
+            }
+          } else _expression()
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ReturnRule(retExpr, spanFrom(start)))
