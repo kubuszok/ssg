@@ -12,6 +12,11 @@
  *   Renames: htmlcompressor gem → ssg.minify.html.HtmlMinifier
  *   Convention: Pure Scala 3, regex-pipeline based, cross-platform
  *   Idiom: Stateless pure functions, preserved-block extraction pattern
+ *   Gap: preserveLineBreaks option declared but never read by doMinify
+ *     (ISS-038). Quote-stripping over-conservative, only [A-Za-z0-9_-]+ values
+ *     (ISS-039). No built-in SSI/JSP/PHP/CDATA preserve presets (ISS-040).
+ *     See docs/architecture/jekyll-minifier-port.md.
+ *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
 package minify

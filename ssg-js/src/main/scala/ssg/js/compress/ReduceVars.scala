@@ -23,6 +23,11 @@
  *     ref_once -> refOnce, is_immutable -> isImmutable
  *   Convention: ReduceVarsWalker class instead of patching TreeWalker prototype
  *   Idiom: boundary/break instead of return, mutable.Map for safe_ids
+ *   Gap: 388 LOC vs upstream 865 LOC (~45%). SymbolDef tracking incomplete
+ *     (TODOs at lines 288-369). Without proper fixed-value/escape annotations,
+ *     downstream passes (Evaluate, Inline, DropUnused) cannot fire safely.
+ *     See ISS-032. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js

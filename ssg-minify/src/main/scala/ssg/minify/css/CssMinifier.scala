@@ -12,6 +12,11 @@
  *   Renames: cssminify2 gem → ssg.minify.css.CssMinifier
  *   Convention: Pure Scala 3, regex-pipeline based, cross-platform
  *   Idiom: Stateless pure functions, no external dependencies
+ *   Gap: No rgb()/rgba()/named-color → hex folding, no margin/padding/font
+ *     shorthand collapsing, no vendor-prefix culling, no source maps (ISS-041).
+ *     Core whitespace/comment/zero/hex passes are complete.
+ *     See docs/architecture/jekyll-minifier-port.md.
+ *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
 package minify
