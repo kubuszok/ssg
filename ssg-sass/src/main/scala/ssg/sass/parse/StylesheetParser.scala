@@ -1677,6 +1677,17 @@ abstract class StylesheetParser protected (
       case None      =>
     }
 
+    // Special CSS functions (url, element, expression, progid:..., vendor-
+    // prefixed element/expression/image-set, etc.) — pass the entire token
+    // through as an unquoted string so the arguments are not evaluated as
+    // Sass expressions. Must run before _tryParseFunctionCall and before the
+    // unary-minus handler so that `-ms-element(...)` is not mis-parsed as
+    // `-(ms-element(...))`.
+    _trySpecialCssFunction(trimmed, span) match {
+      case Some(s) => return s
+      case None    =>
+    }
+
     // Function call: identifier followed by (...) with matching closing paren at end
     _tryParseFunctionCall(trimmed, span) match {
       case Some(fn) => return fn
@@ -1991,6 +2002,56 @@ abstract class StylesheetParser protected (
       }
       tokens.toList
     }
+  }
+
+  /** True if [name] is a special CSS function whose arguments must be preserved verbatim rather than evaluated as Sass expressions. Mirrors dart-sass `_trySpecialFunction` in
+    * `lib/src/parse/stylesheet.dart`. Covers `url`, `element`, `expression`, legacy IE `progid:...` filters, and vendor-prefixed variants of `element`, `expression`, `calc`, and `image-set`. Note
+    * `calc`/`min`/`max`/`clamp` (unprefixed) are intentionally NOT handled here — they flow through the normal function-call path so dart-sass-style simplification runs.
+    */
+  private def _isSpecialCssFunction(name: String): Boolean = {
+    if (name.isEmpty) return false
+    val lower = name.toLowerCase
+    if (lower == "url" || lower == "element" || lower == "expression") return true
+    if (lower.startsWith("progid:")) return true
+    // Vendor prefix: `-<prefix>-<tail>` where tail is one of the special names.
+    if (lower.length > 1 && lower.charAt(0) == '-') {
+      val rest = lower.substring(1)
+      val dash = rest.indexOf('-')
+      if (dash > 0 && dash < rest.length - 1) {
+        val tail = rest.substring(dash + 1)
+        if (
+          tail == "element" || tail == "expression" ||
+          tail == "calc" || tail == "image-set"
+        ) return true
+      }
+    }
+    false
+  }
+
+  /** Attempts to match [raw] as a special CSS function call and preserve it verbatim as an unquoted string. Returns `None` if [raw] is not of the form `name(...)` (with matching closing paren) or
+    * [name] is not in the special set.
+    */
+  private def _trySpecialCssFunction(raw: String, span: FileSpan): Option[Expression] = {
+    if (!raw.endsWith(")")) return None
+    val parenIdx = raw.indexOf('(')
+    if (parenIdx <= 0) return None
+    // Verify the opening `(` at parenIdx matches the final `)`.
+    var depth    = 0
+    var i        = parenIdx
+    var matched  = false
+    while (i < raw.length && !matched) {
+      val c = raw.charAt(i)
+      if (c == '(') depth += 1
+      else if (c == ')') {
+        depth -= 1
+        if (depth == 0) matched = (i == raw.length - 1)
+      }
+      i += 1
+    }
+    if (!matched) return None
+    val head = raw.substring(0, parenIdx)
+    if (!_isSpecialCssFunction(head)) return None
+    Some(StringExpression(Interpolation.plain(raw, span), hasQuotes = false))
   }
 
   /** Attempts to parse a function call `name(args)`. The bare `if(...)` three-argument call is recognized as a [[LegacyIfExpression]] so that the unchosen branch is never evaluated; everything else
