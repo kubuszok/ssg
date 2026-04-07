@@ -145,25 +145,12 @@ object Tsv {
     val raf = new RandomAccessFile(lockFile, "rw")
     val channel = raf.getChannel
     try {
-      var lock: java.nio.channels.FileLock = null
-      var attempts = 0
-      val maxAttempts = 600 // ~30s @ 50ms backoff
-      while (lock == null && attempts < maxAttempts) {
-        try {
-          lock = channel.tryLock()
-        } catch {
-          // Scala Native throws IOException when held; JVM returns null. Treat both as "retry".
-          case _: java.nio.channels.OverlappingFileLockException => // same JVM
-          case _: java.io.IOException                            => // SN: lock held by another process
-        }
-        if (lock == null) {
-          Thread.sleep(50)
-          attempts += 1
-        }
-      }
-      if (lock == null) {
-        throw new RuntimeException(s"Tsv.modify: could not acquire lock on $lockPath after $maxAttempts attempts")
-      }
+      // Blocking lock — sleeps in kernel (fcntl F_SETLKW) until acquired.
+      // Do NOT use tryLock+retry: on Scala Native tryLock throws IOException
+      // on contention, and a tight catch loop allocates exception objects that
+      // push the Immix collector into a death spiral (observed 48 GB / 17 min
+      // hang in `Marker_markLockWords` with no application progress).
+      val lock = channel.lock()
       try {
         val table = if (new java.io.File(path).exists()) read(path) else Table(Nil, Nil)
         val updated = fn(table)
