@@ -516,10 +516,18 @@ final class SerializeVisitor(
   private[visitor] def writeNumberTo(sb: StringBuilder, number: Double): Unit = {
     // Clamp doubles that are fuzzy-equal to an integer to their integer value.
     // In inspect mode only clamp on exact equality so full precision is shown.
-    val asInt = NumberUtil.fuzzyAsInt(number)
-    if (asInt.isDefined && (!inspect || number == asInt.get.toDouble)) {
-      sb.append(SerializeVisitor.removeExponent(asInt.get.toString))
-      return
+    //
+    // NumberUtil.fuzzyAsInt returns `Nullable[Int]` which silently truncates
+    // values outside the 32-bit range. For emitted CSS we want the full Long
+    // precision so large values like `math.$pi * 1e15` survive intact. We do
+    // the fuzzy-integer test directly against Long here so we pick up values
+    // up to ±9.2e18.
+    if (number.isFinite) {
+      val rounded = math.round(number)
+      if (NumberUtil.fuzzyEquals(number, rounded.toDouble) && (!inspect || number == rounded.toDouble)) {
+        sb.append(SerializeVisitor.removeExponent(rounded.toString))
+        return
+      }
     }
 
     var text = SerializeVisitor.removeExponent(SerializeVisitor.doubleToString(number))

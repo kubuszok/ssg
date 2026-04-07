@@ -1552,6 +1552,12 @@ final class EvaluateVisitor(
           for (m <- ssg.sass.functions.MetaFunctions.moduleMixins)
             moduleEnv.setMixin(m)
         }
+        // Built-in module variables (currently only `sass:math` has any:
+        // $pi, $e, $epsilon, $max-safe-integer, $min-safe-integer,
+        // $max-number, $min-number). These have to be seeded into the
+        // module's Environment so `math.$pi` and friends resolve.
+        for ((varName, varValue) <- ssg.sass.functions.Functions.moduleVariables(moduleName))
+          moduleEnv.setVariable(varName, varValue, global = true)
         // Use the explicit namespace only when it differs from the raw URL
         // (e.g. `@use "sass:color" as c`); otherwise default to the bare
         // module name so `color.red(...)` resolves regardless of how the
