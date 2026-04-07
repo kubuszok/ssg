@@ -2872,7 +2872,9 @@ abstract class StylesheetParser protected (
 
     boundary {
       while (true) {
+        val posBeforeWs = scanner.position
         whitespace(consumeNewlines = consumeNewlines)
+        val hadWhitespace = scanner.position > posBeforeWs
         val c = scanner.peekChar()
         if (c < 0) break(())
         if (stopAtComma && c == CharCode.$comma) break(())
@@ -2894,7 +2896,17 @@ abstract class StylesheetParser protected (
             }
           case CharCode.`$minus` =>
             val n1 = scanner.peekChar(1)
-            if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) {
+            // `a -b` with whitespace before `-` but not after -> unary minus
+            // starting a new space-separated element. This matches dart-sass
+            // semantics and keeps inputs like `lab(50% 20 -30)` parsing as
+            // a three-element space-separated list rather than `20 - 30`.
+            val unaryAfterSpace =
+              singleExpression.isDefined && hadWhitespace &&
+                n1 >= 0 && !CharCode.isWhitespace(n1) &&
+                ((CharCode.isDigit(n1)) || n1 == CharCode.$dot || n1 == CharCode.$dollar || n1 == CharCode.$lparen)
+            if (unaryAfterSpace) {
+              addSingleExpression(_rdUnaryOperation())
+            } else if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) {
               if (singleExpression.isEmpty) addSingleExpression(_rdNumber())
               else if (lookingAtIdentifier()) addSingleExpression(_rdIdentifierLike())
               else {
