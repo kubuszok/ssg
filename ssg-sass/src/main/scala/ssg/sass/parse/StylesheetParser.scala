@@ -41,6 +41,7 @@ import ssg.sass.ast.sass.{
   ErrorRule,
   Expression,
   ExtendRule,
+  ForRule,
   ForwardRule,
   FunctionExpression,
   FunctionRule,
@@ -807,6 +808,85 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val eachKids = _children()
         Nullable(new EachRule(vars.toList, listExpr, eachKids, spanFrom(start)))
+      case "for" =>
+        // @for $var from <expr> (to|through) <expr> { body }
+        whitespace(consumeNewlines = true)
+        if (scanner.peekChar() != CharCode.$dollar) scanner.error("Expected variable.")
+        val _      = scanner.readChar()
+        val forVar = identifier()
+        whitespace(consumeNewlines = true)
+        if (!scanIdentifier("from")) scanner.error("Expected \"from\".")
+        whitespace(consumeNewlines = true)
+        // Collect the `from` expression text up to `to` / `through`, respecting
+        // balanced brackets/parens and quoted strings. We scan character by
+        // character and check for the keyword at each boundary.
+        def _collectForExpr(stopWords: Set[String]): (String, ssg.sass.util.LineScannerState, String) = {
+          val st  = scanner.state
+          val buf = new StringBuilder()
+          var dep = 0
+          var q:       Int    = 0
+          var stopped: String = ""
+          boundary {
+            while (!scanner.isDone) {
+              val ch = scanner.peekChar()
+              if (ch < 0) break(())
+              if (q > 0) {
+                if (ch == CharCode.$backslash) {
+                  buf.append(scanner.readChar().toChar)
+                  if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+                } else {
+                  if (ch == q) q = 0
+                  buf.append(scanner.readChar().toChar)
+                }
+              } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
+                q = ch
+                buf.append(scanner.readChar().toChar)
+              } else if (ch == CharCode.$lparen || ch == CharCode.$lbracket) {
+                dep += 1
+                buf.append(scanner.readChar().toChar)
+              } else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
+                if (dep > 0) dep -= 1
+                buf.append(scanner.readChar().toChar)
+              } else if (dep == 0 && ch == CharCode.$lbrace) {
+                break(())
+              } else if (
+                dep == 0 && CharCode.isAlphabetic(ch) &&
+                (buf.isEmpty || !CharCode.isName(buf.charAt(buf.length - 1).toInt))
+              ) {
+                // Try to match a stop word at this position.
+                val saved = scanner.state
+                val wb    = new StringBuilder()
+                while (!scanner.isDone && CharCode.isName(scanner.peekChar()))
+                  wb.append(scanner.readChar().toChar)
+                val word = wb.toString()
+                if (stopWords.contains(word)) {
+                  stopped = word
+                  break(())
+                } else {
+                  // Not a stop word — preserve text and continue.
+                  buf.append(word)
+                }
+                // whitespace after an identifier is handled by outer loop
+                // but if we didn't break, we've already consumed it; if more
+                // whitespace follows we let the outer loop pick it up.
+                val _ = saved // unused
+              } else {
+                buf.append(scanner.readChar().toChar)
+              }
+            }
+          }
+          (buf.toString().trim, st, stopped)
+        }
+        val (fromRaw, fromStart, stopWord) = _collectForExpr(Set("to", "through"))
+        if (stopWord.isEmpty) scanner.error("Expected \"to\" or \"through\".")
+        val fromExpr = _parseSimpleExpression(fromRaw, spanFrom(fromStart))
+        whitespace(consumeNewlines = true)
+        val (toRaw, toStart, _) = _collectForExpr(Set.empty)
+        val toExpr              = _parseSimpleExpression(toRaw, spanFrom(toStart))
+        whitespace(consumeNewlines = true)
+        val forKids = _children()
+        val isExcl  = stopWord == "to"
+        Nullable(new ForRule(forVar, fromExpr, toExpr, forKids, spanFrom(start), isExcl))
       case "debug" =>
         // @debug <expression> ;
         whitespace(consumeNewlines = true)

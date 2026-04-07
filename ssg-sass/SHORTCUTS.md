@@ -59,7 +59,12 @@ Do **not** use ssg-sass when:
   config rejection are now wired in the evaluator/parser.
 - **Migration** (`dart-sass`): 279 ported, 4 done, 98 skipped — 381 total, 100% triaged
 - **Audit** (all modules): 486 pass, 60 minor_issues, 0 major_issues — 546 files audited
-- **sass-spec**: **not run**. Conformance is currently unknown.
+- **sass-spec**: 3,567 / 11,797 passing (**30.2%**). Last measured
+  2026-04-07 after wiring `@for` into the StylesheetParser (previously
+  bucketed as a generic at-rule so `$i` in the body was unresolved) and
+  after teaching `rgb()`/`rgba()` to preserve calls whose arguments are
+  CSS special values (`var(--x)`, `attr(...)`, `calc(...)`, etc.) as
+  unquoted plain-CSS function strings instead of throwing.
 - **Gap catalog**: ~100 tracked issues in `scripts/data/issues.tsv`.
 - The compiler drives the Compile → Parse → Evaluate → Serialize pipeline
   with @use/@forward, @extend, control flow, built-in modules, calc(),

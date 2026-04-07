@@ -31,6 +31,21 @@ object ColorFunctions {
 
   // --- Helpers ---
 
+  /** Returns true if [v] is a CSS "special" value whose presence in a color constructor argument list forces dart-sass to preserve the call as an unquoted plain-CSS function string rather than
+    * evaluating it. This includes `var(--x)`, `env(--x)`, `attr(...)`, and anything that parses as an unquoted string containing a `(` / CSS function syntax that wouldn't normally reduce to a number.
+    */
+  private def isSpecialCssValue(v: Value): Boolean = v match {
+    case s: SassString if !s.hasQuotes =>
+      val t = s.text
+      val l = t.toLowerCase
+      l.startsWith("var(") || l.startsWith("env(") ||
+      l.startsWith("attr(") || l.startsWith("calc(") ||
+      l.startsWith("min(") || l.startsWith("max(") ||
+      l.startsWith("clamp(") || l.startsWith("element(") ||
+      l.startsWith("expression(")
+    case _ => false
+  }
+
   /** Clamp a value to `[min, max]`. */
   private def clamp(v: Double, min: Double, max: Double): Double =
     if (v < min) min else if (v > max) max else v
@@ -90,37 +105,55 @@ object ColorFunctions {
       "rgb",
       "$red, $green, $blue, $alpha",
       args =>
-        args.length match {
-          case 3 =>
-            val r = scalar(args(0).assertNumber(), 255)
-            val g = scalar(args(1).assertNumber(), 255)
-            val b = scalar(args(2).assertNumber(), 255)
-            rgbFrom(r, g, b)
-          case 4 =>
-            val r = scalar(args(0).assertNumber(), 255)
-            val g = scalar(args(1).assertNumber(), 255)
-            val b = scalar(args(2).assertNumber(), 255)
-            if (args(3) eq SassNull) {
-              EvaluationContext.warnForDeprecation(
-                Deprecation.NullAlpha,
-                "Passing null as the alpha channel to rgb()/rgba() is deprecated. Recommendation: use `none` or omit the alpha argument."
+        // If any argument is a CSS special value (var(--x), attr(...), env(...),
+        // or a calc-like expression that can't be evaluated), dart-sass
+        // preserves the call as an unquoted plain-CSS function string rather
+        // than evaluating it. Detect that here.
+        if (args.exists(isSpecialCssValue)) {
+          val name = if (args.length == 4) "rgba" else "rgb"
+          new SassString(
+            s"$name(${args.map(_.toCssString(quote = false)).mkString(", ")})",
+            hasQuotes = false
+          )
+        } else
+          args.length match {
+            case 1 =>
+              // Single-argument form — e.g. `rgb(var(--c))`. Preserved as an
+              // unquoted plain-CSS function call.
+              new SassString(
+                s"rgb(${args(0).toCssString(quote = false)})",
+                hasQuotes = false
               )
-            }
-            val a = if (args(3) eq SassNull) 1.0 else scalar(args(3).assertNumber())
-            rgbFrom(r, g, b, a)
-          case 2 =>
-            EvaluationContext.warnForDeprecation(
-              Deprecation.ColorModuleCompat,
-              "Passing a color and alpha to the global rgb()/rgba() is deprecated. Recommendation: color.change($color, $alpha: ...)."
-            )
-            val color = args(0).assertColor()
-            val a     = scalar(args(1).assertNumber())
-            color.changeAlpha(clamp(a, 0, 1))
-          case n =>
-            throw SassScriptException(
-              s"Only 2, 3, or 4 arguments allowed for rgb(), was $n."
-            )
-        }
+            case 3 =>
+              val r = scalar(args(0).assertNumber(), 255)
+              val g = scalar(args(1).assertNumber(), 255)
+              val b = scalar(args(2).assertNumber(), 255)
+              rgbFrom(r, g, b)
+            case 4 =>
+              val r = scalar(args(0).assertNumber(), 255)
+              val g = scalar(args(1).assertNumber(), 255)
+              val b = scalar(args(2).assertNumber(), 255)
+              if (args(3) eq SassNull) {
+                EvaluationContext.warnForDeprecation(
+                  Deprecation.NullAlpha,
+                  "Passing null as the alpha channel to rgb()/rgba() is deprecated. Recommendation: use `none` or omit the alpha argument."
+                )
+              }
+              val a = if (args(3) eq SassNull) 1.0 else scalar(args(3).assertNumber())
+              rgbFrom(r, g, b, a)
+            case 2 =>
+              EvaluationContext.warnForDeprecation(
+                Deprecation.ColorModuleCompat,
+                "Passing a color and alpha to the global rgb()/rgba() is deprecated. Recommendation: color.change($color, $alpha: ...)."
+              )
+              val color = args(0).assertColor()
+              val a     = scalar(args(1).assertNumber())
+              color.changeAlpha(clamp(a, 0, 1))
+            case n =>
+              throw SassScriptException(
+                s"Only 2, 3, or 4 arguments allowed for rgb(), was $n."
+              )
+          }
     )
 
   private val rgbaFn: BuiltInCallable =
