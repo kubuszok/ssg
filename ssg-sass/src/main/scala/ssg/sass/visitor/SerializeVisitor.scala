@@ -310,12 +310,102 @@ final class SerializeVisitor(
   /** Formats a value for emission in a declaration. Applies per-type customizations (color shorthand, named-color preference, compressed-mode number tweaks).
     */
   private def formatValue(v: Value): String = v match {
-    case c: SassColor if c.space eq ColorSpace.rgb => formatColor(c)
-    case n: SassNumber                             => formatSassNumber(n)
-    case s: SassString                             => formatString(s)
-    case l: SassList                               => formatList(l)
-    case m: SassMap                                => formatMap(m)
-    case _ => v.toCssString()
+    case c: SassColor  => formatColorDispatch(c)
+    case n: SassNumber => formatSassNumber(n)
+    case s: SassString => formatString(s)
+    case l: SassList   => formatList(l)
+    case m: SassMap    => formatMap(m)
+    case _             => v.toCssString()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stage 2: modern color space dispatch
+  // Ported from dart-sass `visitColor` in lib/src/visitor/serialize.dart.
+  // The dispatch is:
+  //   - Legacy spaces (rgb/hsl/hwb) with no missing channels  → legacy handler
+  //   - rgb with any missing channel                          → modern rgb()
+  //   - hsl/hwb with any missing channel                      → modern hsl()/hwb()
+  //   - lab/lch/oklab/oklch                                   → modern function syntax
+  //   - everything else (xyz, display-p3, ...)                → color() function
+  // The modern-syntax emission for non-legacy spaces is delegated to
+  // `SassColor.toCssString()` which already implements dart-sass's per-space
+  // formatting (channel/none/slash-alpha). This stage adds the dispatch and
+  // the legacy-vs-modern selection.
+  // ---------------------------------------------------------------------------
+  private def formatColorDispatch(c: SassColor): String = {
+    val space      = c.space
+    val anyMissing =
+      c.isChannel0Missing || c.isChannel1Missing || c.isChannel2Missing || c.isAlphaMissing
+    if ((space eq ColorSpace.rgb) && !anyMissing) {
+      // Legacy hex/name emission (#fff / red / rgba(...)) is only valid for
+      // the rgb color space — hsl and hwb fall through to their own modern
+      // function-form serialization via SassColor.toCssString.
+      formatColor(c)
+    } else if ((space eq ColorSpace.rgb) && anyMissing) {
+      formatModernRgb(c)
+    } else {
+      // hsl/hwb/lab/lch/oklab/oklch and color()-function spaces:
+      // SassColor.toCssString() already emits modern syntax with `none`
+      // propagation and `/ alpha`.
+      val raw = c.toCssString()
+      if (isCompressed) compactColorFunction(raw) else raw
+    }
+  }
+
+  /** Emits an `rgb(R G B)` or `rgb(R G B / A)` modern function call. Used when at least one channel is `none`. */
+  private def formatModernRgb(c: SassColor): String = {
+    val sb = new StringBuilder()
+    sb.append("rgb(")
+    sb.append(channelOrNone(c.channel0OrNull))
+    sb.append(' ')
+    sb.append(channelOrNone(c.channel1OrNull))
+    sb.append(' ')
+    sb.append(channelOrNone(c.channel2OrNull))
+    appendSlashAlpha(sb, c)
+    sb.append(')')
+    sb.toString()
+  }
+
+  private def channelOrNone(ch: Nullable[Double]): String = {
+    val sb = new StringBuilder()
+    ch.foreach { v =>
+      writeNumberTo(sb, v)
+    }
+    if (sb.isEmpty) "none" else sb.toString()
+  }
+
+  private def appendSlashAlpha(sb: StringBuilder, c: SassColor): Unit = {
+    val a = c.alphaOrNull
+    if (a.isEmpty) {
+      sb.append(" / none")
+    } else {
+      val v = a.getOrElse(1.0)
+      if (!NumberUtil.fuzzyEquals(v, 1.0)) {
+        if (isCompressed) sb.append("/") else sb.append(" / ")
+        val tmp = new StringBuilder()
+        writeNumberTo(tmp, v)
+        sb.append(tmp.toString())
+      }
+    }
+  }
+
+  /** Drops optional spaces around `/` and after `,` for compressed-mode color-function output. */
+  private def compactColorFunction(s: String): String = {
+    val sb = new StringBuilder(s.length)
+    var i  = 0
+    while (i < s.length) {
+      val c = s.charAt(i)
+      if (c == ' ' && i + 1 < s.length && (s.charAt(i + 1) == '/' || s.charAt(i + 1) == ')')) {
+        // skip space before `/` or `)`
+      } else if (c == '/' && i + 1 < s.length && s.charAt(i + 1) == ' ') {
+        sb.append('/')
+        i += 1 // skip the trailing space too
+      } else {
+        sb.append(c)
+      }
+      i += 1
+    }
+    sb.toString()
   }
 
   // ---------------------------------------------------------------------------
