@@ -199,12 +199,24 @@ final class CssMediaQuery private (
       sb.append(t)
       if (conditions.nonEmpty) sb.append(" and ")
     }
-    sb.append(conditions.mkString(if (conjunction) " and " else " or "))
+    sb.append(conditions.map(CssMediaQuery.normalizeCondition).mkString(if (conjunction) " and " else " or "))
     sb.toString()
   }
 }
 
 object CssMediaQuery {
+
+  /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes alone. */
+  private[css] def normalizeCondition(cond: String): String = {
+    if (!(cond.startsWith("(") && cond.endsWith(")"))) return cond
+    val inner = cond.substring(1, cond.length - 1)
+    val colon = inner.indexOf(':')
+    if (colon < 0) return cond
+    val name  = inner.substring(0, colon).trim
+    val value = inner.substring(colon + 1).trim
+    if (name.isEmpty || value.isEmpty) return cond
+    s"($name: $value)"
+  }
 
   /** Creates a media query that specifies a type and, optionally, conditions.
     *
