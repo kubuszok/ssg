@@ -315,12 +315,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     componentIndex: Int,
     target:         SimpleSelector,
     extender:       ComplexSelector
-  ): List[ComplexSelector] = {
+  ): List[ComplexSelector] =
     // Bogus extenders like `+ {@extend a}` parse to a ComplexSelector with
     // only leading combinators and no components — drop them rather than NSE.
     if (extender.components.isEmpty) Nil
     else weaveExtensionNonEmpty(complex, componentIndex, target, extender)
-  }
 
   private def weaveExtensionNonEmpty(
     complex:        ComplexSelector,
