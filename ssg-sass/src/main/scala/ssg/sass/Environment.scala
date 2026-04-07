@@ -52,7 +52,7 @@ final class Environment private (
   private val _forwardedModules:       mutable.Map[EnvironmentModule, AstNode] = mutable.LinkedHashMap.empty
   @nowarn("msg=unused private member") private val _nestedForwardedModules: mutable.ArrayBuffer[mutable.ArrayBuffer[EnvironmentModule]] = mutable.ArrayBuffer.empty
   private val _allModules:             mutable.ArrayBuffer[EnvironmentModule]  = mutable.ArrayBuffer.empty
-  @nowarn("msg=unused private member") private val _configurableVariables:  mutable.Set[String]                     = mutable.Set.empty
+  private val _configurableVariables:  mutable.Set[String]                     = mutable.Set.empty
 
 
   def this() = this(
@@ -391,6 +391,51 @@ final class Environment private (
     for ((n, e) <- namespaces)
       out.namespaces(n) = e
     out
+  }
+
+  // --- Stage 4D: module sealing / import variants ---------------------------
+
+  /** Seals this environment into an [[EnvironmentModule]] backed by [css] and [extensionStore]. Port of dart-sass `Environment.toModule`. */
+  def toModule(
+    css:            ssg.sass.ast.css.CssStylesheet,
+    extensionStore: ssg.sass.extend.ExtensionStore,
+    url:            Nullable[String] = Nullable.empty
+  ): EnvironmentModule =
+    new EnvironmentModule(
+      env = this,
+      url = url,
+      css = css,
+      extensionStore = extensionStore
+    )
+
+  /** Creates an empty placeholder module (dart-sass `toDummyModule`) for the early-compilation phase before the real module body has been evaluated. */
+  def toDummyModule(url: Nullable[String] = Nullable.empty): EnvironmentModule =
+    EnvironmentModule.empty(url)
+
+  /** Returns an environment suitable for evaluating an imported stylesheet's body. Dart-sass creates a variant whose globals share storage with the caller; ssg-sass's closure() already approximates
+    * that — subsequent module machinery in Stage 4E can tighten this if needed.
+    */
+  def forImport(): Environment = {
+    val c = closure()
+    c._inSemiGlobalScope = true
+    c
+  }
+
+  /** Marks [name] as a configurable `!default` variable in this environment. Port of dart-sass `markVariableConfigurable`. */
+  def markVariableConfigurable(name: String): Unit = {
+    val _ = _configurableVariables.add(name)
+  }
+
+  /** Whether [name] has been marked configurable in this environment. */
+  def isVariableConfigurable(name: String): Boolean = _configurableVariables.contains(name)
+
+  /** Snapshots configurable variables into an implicit configuration (name → value). Port of `Environment.toImplicitConfiguration`. */
+  def toImplicitConfiguration(): Map[String, Value] = {
+    val out = mutable.Map.empty[String, Value]
+    for (name <- _configurableVariables) {
+      _variables(0).get(name).foreach(v => out(name) = v)
+    }
+    out.toMap
   }
 
   /** Creates a new global-only environment containing the built-in functions and any variables that were declared with `!global` in this environment.
