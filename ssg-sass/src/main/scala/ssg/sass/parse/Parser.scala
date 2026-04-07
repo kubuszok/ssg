@@ -356,14 +356,21 @@ abstract class Parser protected (
           buf.append(scanner.substring(start))
           wroteNewline = false
         } else if (next == CharCode.$slash) {
-          if (scanner.peekChar(1) == CharCode.$asterisk) {
+          val p1 = scanner.peekChar(1)
+          if (p1 == CharCode.$asterisk) {
             val start = scanner.position
             loudComment()
             buf.append(scanner.substring(start))
+            wroteNewline = false
+          } else if (p1 == CharCode.$slash) {
+            // Silent comment — consume to end of line without buffering.
+            // dart-sass skips silent comments inside declaration values.
+            while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
+              scanner.readChar()
           } else {
             buf.append(scanner.readChar().toChar)
+            wroteNewline = false
           }
-          wroteNewline = false
         } else if (next == CharCode.$space || next == CharCode.$tab) {
           val peek1 = scanner.peekChar(1)
           if (wroteNewline || peek1 < 0 || !CharCode.isWhitespace(peek1)) {
