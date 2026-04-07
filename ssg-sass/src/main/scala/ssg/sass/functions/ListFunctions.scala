@@ -77,10 +77,14 @@ object ListFunctions {
       "join",
       "$list1, $list2, $separator: auto, $bracketed: auto",
       { args =>
+        // Trailing `$separator` and `$bracketed` both default to `auto`.
+        // Built-in dispatch passes positional args verbatim without
+        // applying declared defaults, so guard trailing accesses.
+        val autoStr   = SassString("auto", hasQuotes = false)
         val list1     = args.head
         val list2     = args(1)
-        val sepArg    = parseSeparator(args(2), "separator")
-        val brArg     = parseBracketed(args(3))
+        val sepArg    = parseSeparator(if (args.length > 2) args(2) else autoStr, "separator")
+        val brArg     = parseBracketed(if (args.length > 3) args(3) else autoStr)
         val separator = sepArg.getOrElse {
           if (list1.separator != ListSeparator.Undecided) list1.separator
           else if (list2.separator != ListSeparator.Undecided) list2.separator
@@ -96,8 +100,11 @@ object ListFunctions {
       "append",
       "$list, $val, $separator: auto",
       { args =>
+        // `$separator` defaults to `auto`; built-in dispatch does not
+        // apply declared defaults, so guard the trailing access.
+        val autoStr   = SassString("auto", hasQuotes = false)
         val list      = args.head
-        val sepArg    = parseSeparator(args(2), "separator")
+        val sepArg    = parseSeparator(if (args.length > 2) args(2) else autoStr, "separator")
         val separator = sepArg.getOrElse {
           if (list.separator != ListSeparator.Undecided) list.separator
           else ListSeparator.Space
