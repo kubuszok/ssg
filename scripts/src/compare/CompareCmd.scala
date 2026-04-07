@@ -25,6 +25,7 @@ object CompareCmd {
       case "next-batch" :: rest => nextBatch(Cli.parse(rest))
       case "methods" :: rest => methodsCmd(rest)
       case "loc" :: rest => locCmd(Cli.parse(rest))
+      case "exception-leaks" :: _ => exceptionLeaks()
       case other :: _ =>
         Term.err(s"Unknown compare command: $other")
         sys.exit(1)
@@ -166,6 +167,81 @@ object CompareCmd {
 
   private def guessDartPath(scalaFile: String, module: String): Option[String] =
     if (module == "ssg-sass") resolveDartRef(scalaFile) else None
+
+  /** Phase 5: scan ssg-sass/target/sass-spec-failures.txt for leak
+    * categories (uncaught-*, null-pointer, index-bounds, match-error,
+    * stack-overflow, no-such-element, illegal-state) and print one
+    * representative reproducer per category. These are always real
+    * ssg-sass bugs, never legitimate spec failures.
+    */
+  private def exceptionLeaks(): Unit = {
+    val path = s"${Paths.projectRoot}/ssg-sass/target/sass-spec-failures.txt"
+    val f = new File(path)
+    if (!f.exists()) {
+      Term.err(s"sass-spec failures file not found at $path")
+      Term.err("Run `ssg-dev test sass-spec` first to generate it.")
+      sys.exit(1)
+    }
+    val leakCats = Set(
+      "stack-overflow",
+      "null-pointer",
+      "index-bounds",
+      "no-such-element",
+      "match-error",
+      "illegal-state",
+      "illegal-argument",
+      "number-format",
+      "script-error"
+    )
+    val byCat = scala.collection.mutable.LinkedHashMap.empty[String, scala.collection.mutable.ListBuffer[(String, String)]]
+    val reader = new java.io.BufferedReader(new java.io.FileReader(f))
+    try {
+      var line = reader.readLine()
+      var currentRel: Option[String] = None
+      var currentCat: Option[String] = None
+      var currentDetail = new StringBuilder
+      def flush(): Unit = {
+        for {
+          rel <- currentRel
+          cat <- currentCat
+          if leakCats.contains(cat) || cat.startsWith("uncaught-")
+        } {
+          val list = byCat.getOrElseUpdate(cat, scala.collection.mutable.ListBuffer.empty)
+          list += ((rel, currentDetail.toString.trim))
+        }
+        currentRel = None
+        currentCat = None
+        currentDetail = new StringBuilder
+      }
+      while (line != null) {
+        if (line.startsWith("## ")) {
+          flush()
+          currentRel = Some(line.drop(3).trim)
+        } else if (line.startsWith("category: ")) {
+          currentCat = Some(line.drop("category: ".length).trim)
+        } else if (line.startsWith("  ") && currentRel.isDefined) {
+          if (currentDetail.nonEmpty) currentDetail.append('\n')
+          currentDetail.append(line.trim)
+        }
+        line = reader.readLine()
+      }
+      flush()
+    } finally reader.close()
+
+    if (byCat.isEmpty) {
+      println("No leak-category failures found in sass-spec-failures.txt")
+      return
+    }
+    println("=== Exception leaks in sass-spec ===")
+    println("(Each category is a real ssg-sass bug — fix as Phase 4 micro-tasks)\n")
+    for ((cat, items) <- byCat.toList.sortBy(-_._2.size)) {
+      println(s"## $cat (${items.size} cases)")
+      val (rel, detail) = items.head
+      println(s"  example: $rel")
+      if (detail.nonEmpty) println(s"  detail:  ${detail.linesIterator.take(2).mkString(" | ")}")
+      println()
+    }
+  }
 
   private def file(args: Cli.Args): Unit = {
     val path = args.requirePositional(0, "path")
@@ -319,6 +395,7 @@ object CompareCmd {
               |                                Method-set diff (Phase 1 enforcement)
               |                                --strict: 70% AST-node-count body floor
               |  loc [--module M]              LoC ratio per file vs dart reference
+              |  exception-leaks               Group sass-spec leaks by category
               |
               |Libraries: flexmark, liqp, dart-sass, jekyll-minifier""".stripMargin)
   }

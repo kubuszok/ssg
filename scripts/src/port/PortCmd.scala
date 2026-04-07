@@ -30,10 +30,88 @@ object PortCmd {
       case "note" :: rest => note(rest)
       case "snapshot" :: _ => snapshot()
       case "covenant" :: "verify" :: rest => covenantVerify(Cli.parse(rest))
+      case "report" :: _ => report()
       case other :: _ =>
         Term.err(s"Unknown port command: $other")
         printUsage()
         sys.exit(1)
+    }
+  }
+
+  /** Phase 5 reporting: summary of port progress + spec pass rate +
+    * covenant file count + blocked task list.
+    */
+  private def report(): Unit = {
+    val tasks = loadTasks()
+    val byStatus = tasks.stats("status")
+
+    println("=== ssg-dev port report ===\n")
+    println("Tasks by status:")
+    byStatus.toList.sortBy(-_._2).foreach { case (s, n) =>
+      val label = if (s.isEmpty) "(unset)" else s
+      println(f"  $label%-15s $n%4d")
+    }
+    println(f"  total           ${tasks.rows.size}%4d\n")
+
+    val blocked = tasks.filter(r => r.getOrElse("status", "") == "blocked")
+    if (blocked.rows.nonEmpty) {
+      println("Blocked tasks:")
+      blocked.rows.foreach { r =>
+        println(s"  ${r.getOrElse("id", "?")} — ${r.getOrElse("blocker", "(no reason)")}")
+      }
+      println()
+    }
+
+    // Read the sass-spec baseline TSV to get the current pass count.
+    val baselinePath = s"${Paths.dataDir}/sass-spec-baseline.tsv"
+    val baselineFile = new File(baselinePath)
+    if (baselineFile.exists()) {
+      val (total, passing) = countBaselineEntries(baselinePath)
+      val pct = if (total == 0) 0.0 else passing.toDouble * 100.0 / total.toDouble
+      println(f"Sass-spec baseline: $passing/$total (${pct}%.1f%%)")
+      println(s"  ($baselinePath)")
+      println()
+    }
+
+    // Walk every covenanted file and tally.
+    val srcRoot = Paths.ssgSassSrc
+    val covenantedFiles = scala.collection.mutable.ListBuffer.empty[String]
+    walkCovenantedFiles(new File(srcRoot), covenantedFiles)
+    println(s"Covenanted files: ${covenantedFiles.size}")
+    covenantedFiles.foreach { f =>
+      val rel = f.stripPrefix(Paths.projectRoot + "/")
+      println(s"  $rel")
+    }
+  }
+
+  private def countBaselineEntries(path: String): (Int, Int) = {
+    val reader = new java.io.BufferedReader(new java.io.FileReader(path))
+    try {
+      var total = 0
+      var passing = 0
+      var line = reader.readLine()
+      while (line != null) {
+        if (!line.startsWith("#") && line.contains("\t")) {
+          total += 1
+          val parts = line.split("\t", -1)
+          if (parts.length >= 2 && (parts(1) == "Pass" || parts(1) == "ExpectedErrorOk"))
+            passing += 1
+        }
+        line = reader.readLine()
+      }
+      (total, passing)
+    } finally reader.close()
+  }
+
+  private def walkCovenantedFiles(f: File, buf: scala.collection.mutable.ListBuffer[String]): Unit = {
+    if (f.isDirectory) {
+      val kids = f.listFiles()
+      if (kids != null) kids.foreach(walkCovenantedFiles(_, buf))
+    } else if (f.getName.endsWith(".scala")) {
+      Covenant.parse(f.getAbsolutePath) match {
+        case Some(h) if h.covenant == "full-port" => buf += f.getAbsolutePath
+        case _ => ()
+      }
     }
   }
 
@@ -431,6 +509,7 @@ object PortCmd {
               |  snapshot                            Refresh sass-spec baseline
               |  covenant verify [--file F | --staged]
               |                                      Re-verify covenanted file(s)
+              |  report                              Phase 5 status summary
               |
               |The single command an executing agent must run is:
               |  ssg-dev port verify <id>
