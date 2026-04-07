@@ -2160,7 +2160,10 @@ abstract class StylesheetParser protected (
     if (!matched) return None
     val head = raw.substring(0, parenIdx)
     if (!_isSpecialCssFunction(head)) return None
-    Some(StringExpression(Interpolation.plain(raw, span), hasQuotes = false))
+    // dart-sass normalizes the reserved function name to lowercase on output
+    // (sass-spec: directives/function/name.hrx!special/*/uppercase).
+    val normalized = head.toLowerCase + raw.substring(parenIdx)
+    Some(StringExpression(Interpolation.plain(normalized, span), hasQuotes = false))
   }
 
   /** Attempts to parse a function call `name(args)`. The bare `if(...)` three-argument call is recognized as a [[LegacyIfExpression]] so that the unchosen branch is never evaluated; everything else
