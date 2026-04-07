@@ -1361,7 +1361,20 @@ abstract class StylesheetParser protected (
     scanner.expectChar(CharCode.$colon)
     whitespace(consumeNewlines = true)
 
-    val expression = _expression()
+    // Stage 7: narrow wire — prefer the recursive-descent expression parser
+    // when the variable value is a single top-level function call starting
+    // with an identifier+`(` (the most common modern-color syntax case).
+    // Otherwise defer to the text-based _expression collector.
+    val rdState = scanner.state
+    val expression: Expression =
+      if (_rdLooksLikeSingleFunctionCall()) {
+        try _rdExpression()
+        catch {
+          case _: Throwable =>
+            scanner.state = rdState
+            _expression()
+        }
+      } else _expression()
     whitespace(consumeNewlines = false)
 
     // Handle !default / !global flags (simplified)
@@ -3351,6 +3364,28 @@ abstract class StylesheetParser protected (
     * expects three (or four, with trailing alpha) positional arguments. For the color-function allowlist, if the call has exactly one positional argument and it's a space-separated ListExpression,
     * unpack its elements into positional arguments. Mirrors `_tryParseFunctionCall`'s `isColorFn` handling in the text-based path.
     */
+  /** Lookahead: returns true if the scanner is positioned at an identifier immediately followed by `(` — i.e. a single top-level function call like `lab(50% 20 -30)`. The scanner is NOT advanced.
+    * Used as the guard for the Stage-7 narrow wire of `_variableDeclaration` into the recursive-descent expression parser.
+    */
+  private def _rdLooksLikeSingleFunctionCall(): Boolean = {
+    val saved = scanner.state
+    try {
+      val c0 = scanner.peekChar()
+      if (c0 < 0) return false
+      if (!CharCode.isNameStart(c0) && c0 != CharCode.$minus && c0 != CharCode.$underscore) return false
+      // Walk an identifier (letters, digits, dashes, underscores).
+      while (
+        !scanner.isDone && {
+          val ch = scanner.peekChar()
+          CharCode.isName(ch) || ch == CharCode.$minus
+        }
+      ) {
+        val _ = scanner.readChar()
+      }
+      scanner.peekChar() == CharCode.$lparen
+    } finally scanner.state = saved
+  }
+
   private def _rdMaybeUnpackColorArgs(name: String, args: ArgumentList): ArgumentList = {
     val isColorFn =
       name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" ||
