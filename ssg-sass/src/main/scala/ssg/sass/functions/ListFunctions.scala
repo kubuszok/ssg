@@ -101,7 +101,15 @@ object ListFunctions {
       "$list, $val, $separator: auto",
       { args =>
         // `$separator` defaults to `auto`; built-in dispatch does not
-        // apply declared defaults, so guard the trailing access.
+        // apply declared defaults, so guard the trailing access. Also
+        // guard the required `$val` arg so a missing second arg throws a
+        // proper SassScriptException rather than leaking an IOOBE (this
+        // is also hit via namespace fallbacks, e.g. `selector.append($s)`
+        // mis-resolving to the global `append`).
+        if (args.isEmpty)
+          throw SassScriptException("Missing argument $list.")
+        if (args.length < 2)
+          throw SassScriptException("Missing argument $val.")
         val autoStr   = SassString("auto", hasQuotes = false)
         val list      = args.head
         val sepArg    = parseSeparator(if (args.length > 2) args(2) else autoStr, "separator")

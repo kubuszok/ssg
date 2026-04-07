@@ -58,7 +58,15 @@ object MetaFunctions {
     BuiltInCallable.function(
       "if",
       "$condition, $if-true, $if-false",
-      args => if (args.head.isTruthy) args(1) else args(2)
+      args => {
+        // Guard against malformed calls (e.g. the Sass-4 `if(cond: ...; else: ...)`
+        // edge-case syntax that our parser currently produces as a 1-arg call).
+        // Without this guard, `args(1)` / `args(2)` leaks as IndexOutOfBoundsException
+        // into the sass-spec runner as a raw Java error.
+        if (args.length < 3)
+          throw SassScriptException("Missing element $if-true or $if-false in if().")
+        if (args.head.isTruthy) args(1) else args(2)
+      }
     )
 
   private val typeOfFn: BuiltInCallable =

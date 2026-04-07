@@ -511,7 +511,10 @@ final class EvaluateVisitor(
       val keyValue   = key.accept(this)
       val valueValue = value.accept(this)
       if (map.contains(keyValue)) {
-        throw SassScriptException("Duplicate key.")
+        // Attach a span so this surfaces as a proper SassException rather
+        // than a bare SassScriptException (which the runner reports as
+        // "script-error" because it lacks a source location).
+        throw SassScriptException("Duplicate key.").withSpan(key.span)
       }
       map = map.updated(keyValue, valueValue)
     }
@@ -2110,13 +2113,26 @@ final class EvaluateVisitor(
       // (mixin) environment, then bind them to the content block's
       // declared parameters (`@include foo using ($p1, $p2)`) before
       // running the block body in a fresh scope.
+      //
+      // Crucially, while running the block we must NOT see the same content
+      // pointer that brought us here: otherwise a nested `@include` whose
+      // own body contains `@content` would recurse into itself forever.
+      // We clear `_environment.content` for the duration of the block
+      // evaluation (dart-sass keeps a per-block closure environment, but
+      // clearing is enough to break the recursion — the correct forwarding
+      // to the caller's content is a separate feature tracked elsewhere).
       val (positional, named) = _evaluateArguments(node.arguments)
-      _withScope {
-        _bindParameters(cb.parameters, positional, named)
-        for (statement <- cb.childrenList) {
-          val _ = statement.accept(this)
+      val savedContent        = _environment.content
+      _environment.content = Nullable.empty
+      try
+        _withScope {
+          _bindParameters(cb.parameters, positional, named)
+          for (statement <- cb.childrenList) {
+            val _ = statement.accept(this)
+          }
         }
-      }
+      finally
+        _environment.content = savedContent
     }
     SassNull
   }
@@ -2132,12 +2148,19 @@ final class EvaluateVisitor(
       throw SassException(s"Undefined mixin: ${node.name}.", node.span)
     }
     val (positional, named) = _evaluateArguments(node.arguments)
-    _invokeMixinCallable(
-      mixin,
-      positional,
-      named,
-      node.content.asInstanceOf[Nullable[ContentBlock]]
-    )
+    try
+      _invokeMixinCallable(
+        mixin,
+        positional,
+        named,
+        node.content.asInstanceOf[Nullable[ContentBlock]]
+      )
+    catch {
+      // Built-in mixins (e.g. `meta.apply`) may raise bare
+      // SassScriptExceptions from inside their callback; attach the include
+      // site so they surface as proper SassExceptions with source location.
+      case e: SassScriptException => throw e.withSpan(node.span)
+    }
     SassNull
   }
 

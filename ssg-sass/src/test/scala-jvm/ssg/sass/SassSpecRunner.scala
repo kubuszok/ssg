@@ -77,7 +77,21 @@ final class SassSpecRunner extends munit.FunSuite {
     sb.append(summary).append('\n')
     sb.append("# Per-failure details (first 2000 failures)\n\n")
     val failures = results.filter(r => r.outcome != Outcome.Pass && r.outcome != Outcome.ExpectedErrorOk)
-    failures.take(2000).foreach { r =>
+    // Leak categories — bring these to the front of the report so raw Java
+    // exception leaks are always visible even when total entry cap is hit.
+    val leakCats = Set(
+      "index-bounds",
+      "script-error",
+      "stack-overflow",
+      "illegal-argument",
+      "no-such-element",
+      "null-pointer",
+      "number-format",
+      "match-error",
+      "illegal-state"
+    )
+    val (leaks, rest) = failures.partition(r => leakCats.contains(r.category) || r.category.startsWith("uncaught-"))
+    (leaks ++ rest).take(2000).foreach { r =>
       sb.append("## ").append(r.relPath).append('\n')
       sb.append("outcome: ").append(r.outcome).append('\n')
       sb.append("category: ").append(r.category).append('\n')

@@ -74,8 +74,13 @@ final class NumberUtilSuite extends munit.FunSuite {
 
   test("fuzzyAssertRange throws on out-of-range") {
     assertEquals(NumberUtil.fuzzyAssertRange(0.5, 0, 1), 0.5)
-    intercept[IllegalArgumentException] {
+    intercept[ssg.sass.SassScriptException] {
       NumberUtil.fuzzyAssertRange(2.0, 0, 1)
+    }
+    // NaN falls through to the error path as a proper SassScriptException
+    // rather than an unchecked Java RuntimeException.
+    intercept[ssg.sass.SassScriptException] {
+      NumberUtil.fuzzyAssertRange(Double.NaN, 0, 1)
     }
   }
 

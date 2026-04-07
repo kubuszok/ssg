@@ -1843,4 +1843,52 @@ final class CompileSuite extends munit.FunSuite {
       Compile.compileString("@media a or (b) {x {y: z}}")
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Leak guards — regression tests for raw Java exception leaks that the
+  // sass-spec runner previously surfaced as `index-bounds`, `script-error`,
+  // `stack-overflow`, and `illegal-argument`.
+  // ---------------------------------------------------------------------------
+
+  test("if() with only one argument raises a proper SassException, not IOOBE") {
+    val ex = intercept[SassException] {
+      Compile.compileString("a {b: if(true)}")
+    }
+    assert(ex.getMessage.contains("if"))
+  }
+
+  test("list.append with only one positional argument raises a proper SassException") {
+    val ex = intercept[SassException] {
+      Compile.compileString("""a {b: append((1 2 3))}""")
+    }
+    assert(ex.getMessage.contains("$val") || ex.getMessage.contains("Missing"))
+  }
+
+  test("map literal with duplicate keys raises a spanned SassException") {
+    val ex = intercept[SassException] {
+      Compile.compileString("""a {b: inspect((k: 1, k: 2))}""")
+    }
+    assert(ex.getMessage.contains("Duplicate key"))
+  }
+
+  test("nested @include with a `@content` body does not stack-overflow") {
+    val src =
+      """@mixin outer { @content; @include inner { @content; } }
+        |@mixin inner { x: 1; @content; }
+        |.a { @include outer { y: 2; } }
+        |""".stripMargin
+    // Just make sure this compiles (or raises a SassException) rather than
+    // crashing with a StackOverflowError.
+    try Compile.compileString(src)
+    catch { case _: SassException => () }
+  }
+
+  test("rgb(..., NaN) alpha raises a SassException, not IllegalArgumentException") {
+    // NaN alpha used to leak as a raw IllegalArgumentException from
+    // NumberUtil.fuzzyAssertRange.
+    val ex = intercept[SassException] {
+      Compile.compileString("""a {b: rgb(1, 2, 3, (0/0))}""")
+    }
+    assert(ex.getMessage.toLowerCase.contains("alpha") || ex.getMessage.toLowerCase.contains("nan"))
+  }
 }

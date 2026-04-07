@@ -97,13 +97,16 @@ object NumberUtil {
     else if (number > min && number < max) Nullable(number)
     else Nullable.Null
 
-  /** Throws a RangeError if number isn't within min and max. Clamps to boundary if fuzzyEquals. */
+  /** Throws a SassScriptException if number isn't within min and max. Clamps to boundary if fuzzyEquals. NaN inputs fall through to the error path.
+    */
   def fuzzyAssertRange(number: Double, min: Int, max: Int, name: Nullable[String] = Nullable.Null): Double = {
-    val result = fuzzyCheckRange(number, min.toDouble, max.toDouble)
+    val result =
+      if (number.isNaN) Nullable.Null
+      else fuzzyCheckRange(number, min.toDouble, max.toDouble)
     if (result.isDefined) result.get
     else {
       val label = name.getOrElse("value")
-      throw new IllegalArgumentException(s"$label: $number must be between $min and $max")
+      throw ssg.sass.SassScriptException(s"$label: $number must be between $min and $max.", name.toOption)
     }
   }
 
