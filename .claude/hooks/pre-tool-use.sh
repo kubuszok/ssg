@@ -1,33 +1,26 @@
 #!/bin/bash
-# PreToolUse hook: delegates to re-scale hook (formerly ssg-dev hook).
+# PreToolUse hook: delegates to `re-scale hook`.
 #
-# re-scale is the cross-project successor to the worktree-local
-# scripts/src/ssg-dev tool. Install with:
+# re-scale is the cross-project successor to the legacy ssg-dev tool.
+# Install once via:
 #
 #   /Users/dev/Workspaces/GitHub/re-scale/scripts/install.sh
 #
-# That copies the binary + wrapper into $HOME/bin/. The wrapper sets
-# SCALANATIVE_MAX_HEAP_SIZE so this hook can never accidentally
-# allocate unbounded memory.
+# That builds the Scala Native binary + wrapper and copies them into
+# $HOME/bin/. The wrapper sets SCALANATIVE_MAX_HEAP_SIZE so this hook
+# can never accidentally allocate unbounded memory. After install,
+# `re-scale --version` from any directory should work.
 #
-# Fallback path: if re-scale isn't on $PATH (e.g. fresh checkout
-# before install.sh has run), fall back to the legacy ssg-dev binary
-# in scripts/bin/ for compatibility. Once re-scale is installed
-# everywhere, the fallback can be removed.
+# If re-scale isn't on $PATH, this hook fails loudly so the user
+# knows to install it — there's no longer a `scripts/src/ssg-dev`
+# fallback to compile from source.
 
 set -euo pipefail
 
-if command -v re-scale >/dev/null 2>&1; then
-  exec re-scale hook
+if ! command -v re-scale >/dev/null 2>&1; then
+  echo "re-scale: not found on \$PATH" 1>&2
+  echo "Install via: /Users/dev/Workspaces/GitHub/re-scale/scripts/install.sh" 1>&2
+  exit 1
 fi
 
-# -- Legacy fallback ---------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-SSG_DEV="$SCRIPT_DIR/scripts/bin/ssg-dev"
-SRC_DIR="$SCRIPT_DIR/scripts/src"
-
-if [ ! -x "$SSG_DEV" ]; then
-  scala-cli package "$SRC_DIR" -o "$SSG_DEV" -f 1>&2
-fi
-
-exec "$SSG_DEV" hook
+exec re-scale hook
