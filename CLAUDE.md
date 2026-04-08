@@ -60,9 +60,9 @@ Scala.js, and Scala Native — without external binary dependencies.
 delegates to `re-scale hook`, which validates every Bash command — if
 denied, use the suggested alternative.
 
-Source repo: `/Users/dev/Workspaces/GitHub/re-scale/`. Install via
-`./scripts/install.sh` from that repo (builds the Scala Native binary
-+ wrapper and copies them into `$HOME/bin/`).
+Source repo: <https://github.com/kubuszok/re-scale>. Install via
+`scripts/install.sh` from a clone of that repo (builds the Scala
+Native binary + wrapper and copies them into `$HOME/bin/`).
 
 | Command | Purpose |
 |---------|---------|

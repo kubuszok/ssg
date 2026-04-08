@@ -2,9 +2,12 @@
 # PreToolUse hook: delegates to `re-scale hook`.
 #
 # re-scale is the cross-project successor to the legacy ssg-dev tool.
+# Source: https://github.com/kubuszok/re-scale
+#
 # Install once via:
 #
-#   /Users/dev/Workspaces/GitHub/re-scale/scripts/install.sh
+#   git clone https://github.com/kubuszok/re-scale.git
+#   cd re-scale && ./scripts/install.sh
 #
 # That builds the Scala Native binary + wrapper and copies them into
 # $HOME/bin/. The wrapper sets SCALANATIVE_MAX_HEAP_SIZE so this hook
@@ -19,7 +22,7 @@ set -euo pipefail
 
 if ! command -v re-scale >/dev/null 2>&1; then
   echo "re-scale: not found on \$PATH" 1>&2
-  echo "Install via: /Users/dev/Workspaces/GitHub/re-scale/scripts/install.sh" 1>&2
+  echo "Install: git clone https://github.com/kubuszok/re-scale.git && cd re-scale && ./scripts/install.sh" 1>&2
   exit 1
 fi
 
