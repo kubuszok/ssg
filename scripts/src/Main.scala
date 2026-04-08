@@ -2,12 +2,27 @@
 //> using platform scala-native
 //> using options -deprecation -feature -no-indent -Werror
 //> using dep io.github.cquiroz::scala-java-time::2.6.0
-// ssg-dev is a single-shot CLI: do one operation, exit. We don't need GC.
-// Using `none` eliminates the Immix marker entirely — heap grows linearly per
-// invocation (well under 100 MB for any TSV op) and the OS reclaims it on
-// exit. Avoids a class of hangs where Marker_markLockWords spins forever
-// scanning the reserved heap region (observed: 48 GB / 17 min, 34 GB / 1.5 min).
-//> using nativeGc none
+// GC selection — see commit history for full context.
+//
+// Earlier we used `nativeGc none` to dodge an Immix marker death spiral
+// triggered by exception allocation in a tight FileChannel.tryLock retry
+// loop (observed: 48 GB / 17 min, 34 GB / 1.5 min in Marker_markLockWords).
+// That root cause was fixed in commit 0f08ac0 by switching Tsv.modify to
+// blocking channel.lock() — no more exception spam.
+//
+// With `none` we then hit the opposite failure mode: codebase scanners
+// like `port stale-stubs` (which walks every Scala file across all four
+// modules and builds a ~7k-identifier index) allocate hundreds of MB
+// that are never reclaimed. The OS killed an instance after it consumed
+// all system memory.
+//
+// Switching back to Immix is now safe because:
+//   1. No tight exception loop in any code path
+//   2. The scanner paths produce normal short-lived allocations that
+//      Immix can reclaim between iterations
+//   3. The DB write path (Tsv.modify) holds a single FileChannel lock —
+//      no allocation churn
+//> using nativeGc immix
 
 package ssgdev
 
