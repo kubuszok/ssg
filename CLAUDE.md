@@ -28,8 +28,8 @@ Scala.js, and Scala Native — without external binary dependencies.
 - **No Java-style getters/setters**: no-logic `getX()`/`setX(v)` → public `var x`; with-logic → `def x: T` + `def x_=(v: T): Unit`
 - **Fix bugs, don't work around them**: when a test reveals a pre-existing bug, fix it in source
 - **All 3 platforms are baseline**: JVM, JS, Native — changes must be non-regressing on all
-- Use `ssg-dev` commands or `sbt --client` — never bare `sbt`
-- **sbt hangs on build.sbt errors**: kill with `ssg-dev proc kill-sbt`, fix, retry
+- Use `re-scale` commands or `sbt --client` — never bare `sbt` (avoids the JVM startup tax on every invocation)
+- **sbt server stuck?** kill with `re-scale proc kill --kind sbt --dir .`, fix the cause, retry
 
 ## Project Structure
 
@@ -41,8 +41,11 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `ssg-minify/` | HTML/JS/CSS/JSON minification (jekyll-minifier port) |
 | `ssg-js/` | JavaScript compiler/minifier (Terser port) |
 | `ssg/` | Aggregator module (depends on all 4 above) |
-| `scripts/` | `ssg-dev` CLI toolkit (Scala CLI, no sbt) |
-| `scripts/data/` | TSV databases (migration, issues, audit) |
+| `.rescale/` | Per-project re-scale config + data |
+| `.rescale/data/` | TSV databases (migration, issues, audit, skip-policy, sass-spec-baseline, port-tasks) |
+| `.rescale/claude-hooks.yaml` | (optional) per-project hook overrides |
+| `.rescale/doctor.yaml` | (optional) dev-environment bootstrap steps |
+| `.rescale/runners.yaml` | (optional) test-runner adapters (e.g. sass-spec) |
 | `original-src/` | Reference sources (git submodules, not compiled) |
 | `original-src/flexmark-java/` | Local flexmark-java reference |
 | `original-src/liqp/` | Local liqp reference |
@@ -51,53 +54,69 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `docs/` | Architecture, conversion guides |
 | `project/` | sbt build configuration |
 
-## CLI Toolkit: `ssg-dev`
+## CLI Toolkit: `re-scale`
 
-**Use `ssg-dev` commands for all development tasks.** The PreToolUse hook validates
-all Bash commands — if denied, use the suggested alternative.
+**Use `re-scale` commands for all development tasks.** The PreToolUse hook
+delegates to `re-scale hook`, which validates every Bash command — if
+denied, use the suggested alternative.
 
-**It's not `./ssg-dev`, your hooks add it to `$PATH`, and it's defined in `scripts/bin/ssg-dev`.**
+Source repo: <https://github.com/kubuszok/re-scale>. Install via
+`scripts/install.sh` from a clone of that repo (builds the Scala
+Native binary + wrapper and copies them into `$HOME/bin/`).
 
 | Command | Purpose |
 |---------|---------|
-| `ssg-dev build compile [--jvm/--js/--native/--all] [--module M]` | Compile |
-| `ssg-dev build compile --errors-only` | Compile showing only errors |
-| `ssg-dev build compile --warnings` | Compile showing warnings + errors |
-| `ssg-dev build compile-fmt` | Compile, format, compile again |
-| `ssg-dev build fmt` | Scalafmt |
-| `ssg-dev build publish-local [--jvm/--js/--native/--all]` | Publish to local Maven |
-| `ssg-dev build kill-sbt` | Kill sbt server |
-| `ssg-dev test unit [--jvm/--js/--native/--all] [--module M] [--only SUITE]` | Unit tests |
-| `ssg-dev test verify` | Full 3-platform verification |
-| `ssg-dev quality scan [--return/--null/--todo/--java-syntax/--all] [--summary]` | Quality scans |
-| `ssg-dev quality grep <pattern> [--count/--files-only]` | Code search |
-| `ssg-dev quality scalafix <rule> [--file PATH]` | Run Scalafix rule |
-| `ssg-dev compare file <path> [--lib L]` | Show original/SSG file paths |
-| `ssg-dev compare package <pkg> [--lib L]` | List files in original package |
-| `ssg-dev compare find <pattern> [--lib L]` | Find files in original source |
-| `ssg-dev compare status [--lib L] [--module M]` | Porting status |
-| `ssg-dev compare next-batch [-n N] [--lib L]` | Suggest next files to port |
-| `ssg-dev git status/diff/log/blame/branch/tags` | Git read-only |
-| `ssg-dev git stage/commit/push` | Git write |
-| `ssg-dev git gh pr list/view/diff/checks` | GitHub PR operations |
-| `ssg-dev git gh issue list/view` | GitHub issues |
-| `ssg-dev db migration stats/list/get/set/sync` | Migration database |
-| `ssg-dev db issues stats/list/add/resolve` | Issues database |
-| `ssg-dev db audit stats/list/get/set` | Audit database |
-| `ssg-dev proc list/kill/kill-sbt` | Process management |
+| `re-scale build compile [--module M] [--jvm/--js/--native/--all] [--errors-only]` | Compile via `sbt --client` |
+| `re-scale build compile-fmt` | Run scalafmt then compile |
+| `re-scale build fmt` | Run `scalafmtAll` |
+| `re-scale build publish-local [--module M] [--jvm/--js/--native/--all]` | Publish to local Maven |
+| `re-scale build kill-sbt` | Shut down the sbt server |
+| `re-scale test unit [--module M] [--jvm/--js/--native/--all] [--only SUITE]` | Run unit tests |
+| `re-scale test verify` | Compile every module on every platform (JVM × JS × Native) |
+| `re-scale enforce shortcuts [--src DIRS] [--file F] [--covenanted]` | Scan for shortcut/stub markers |
+| `re-scale enforce stale-stubs [--src DIRS]` | Two-pass scan for stale "not yet ported" comments |
+| `re-scale enforce verify --file <path> \| --all` | Re-verify covenanted file(s) |
+| `re-scale enforce skip-policy [list \| add <path> <tool>]` | Manage the skip-policy allow list |
+| `re-scale enforce compare --port <scala> --source <java\|dart> [--strict]` | Cross-language method-set + body comparison |
+| `re-scale git status/diff/log/blame/branch/tags` | Git read-only |
+| `re-scale git stage/commit/push` | Git write |
+| `re-scale git gh pr list/view/diff/checks` | GitHub PR operations |
+| `re-scale git gh issue list/view` | GitHub issues |
+| `re-scale db migration list/get/set/stats` | Migration database |
+| `re-scale db issues list/add/resolve/stats` | Issues database |
+| `re-scale db audit list/get/set/stats` | Audit database |
+| `re-scale db merge --target <tsv> --source <tsv> [--strategy ...]` | Cross-branch TSV reconciliation |
+| `re-scale proc list [--kind sbt\|java\|metals] [--dir DIR]` | List sbt/java/metals processes with cwd |
+| `re-scale proc kill --pid N \| --kind ... --dir DIR` | Targeted process termination |
+| `re-scale doctor [--ci]` | Run `.rescale/doctor.yaml` bootstrap steps |
+| `re-scale runner <name> [--mode MODE] [args...]` | Dispatch a runner from `.rescale/runners.yaml` |
 
-Use `ssg-dev db` for all migration/issues/audit queries — never grep TSV files.
+Use `re-scale db` for all migration/issues/audit queries — never read TSVs by hand.
+
+### Sass-port workflow note
+
+The legacy `ssg-dev port list/next/baseline/done/blocker/note/snapshot/report`
+task workflow (driven by `.rescale/data/port-tasks.tsv` and the SassSpec
+runner) is sass-port-specific and **not** in re-scale's core. The TSV
+files have been moved to `.rescale/data/` for consistency, but until
+either (a) a `re-scale tasks` generic task module ships or (b) the
+sass-spec workflow gets wired through `.rescale/runners.yaml`, the
+sass-port branch will need to either work around it manually or build
+its own thin wrapper. See `re-scale/docs/cross-flavor-diff.md` for
+the rationale.
 
 ## Bash Restrictions
 
-**The PreToolUse hook validates ALL Bash commands.** Only `ssg-dev`, `sbt --client`,
-`git`, `cargo`, `npm`, `npx`, and `scala-cli` are allowed directly. All other commands
-are denied or redirected to dedicated tools:
+**The PreToolUse hook validates ALL Bash commands.** Only `re-scale`,
+`sbt --client`, `git`, `cargo`, `npm`, `npx`, and `scala-cli` are allowed
+directly. All other commands are denied or redirected to dedicated tools:
 
 - **Denied**: `python`/`python3`, `kill`/`pkill`, `rm -rf`, `sbt` (without `--client`)
 - **Redirected to tools**: `grep`→Grep, `find`/`ls`→Glob, `cat`/`head`/`tail`→Read, `sed`/`awk`→Edit
-- **Use `ssg-dev`** for builds, tests, git, quality scans, process management, and database queries
+- **Use `re-scale`** for builds, tests, git, process management, enforcement, and database queries
 - **Use dedicated tools** (`Grep`, `Glob`, `Read`, `Edit`) for code search and file operations
+
+Per-project rule overrides live at `.rescale/claude-hooks.yaml`.
 
 ## Skill Dispatch Rules
 
@@ -151,7 +170,7 @@ Per-file audit trail comparing every SSG Scala file against its original source.
 Each audited file gets a `Migration notes:` block in its header comment.
 
 - **Commands**: `/audit-file <path>`, `/audit-package <pkg>`, `/audit-status`
-- **Database**: `ssg-dev db audit stats`, `ssg-dev db audit list --package <pkg>`
+- **Database**: `re-scale db audit stats`, `re-scale db audit list --package <pkg>`
 - **Statuses**: `pass`, `minor_issues`, `major_issues`
 - **In-file notes**: `Renames`, `Convention`, `Idiom`, `Audited` date
 
@@ -161,4 +180,4 @@ Each audited file gets a `Migration notes:` block in its header comment.
 |------|---------|
 | `docs/contributing/` | Conversion guides per language, code style, tooling |
 | `docs/architecture/` | Build structure, cross-platform settings, module design |
-| `scripts/data/` | TSV databases (migration, issues, audit) |
+| `.rescale/data/` | TSV databases (migration, issues, audit, skip-policy, sass-spec-baseline, port-tasks) |
