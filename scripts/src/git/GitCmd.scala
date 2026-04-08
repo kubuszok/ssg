@@ -67,11 +67,56 @@ object GitCmd {
     val args = Cli.parse(rest)
     val message = args.flag("m").orElse(args.flag("message"))
     message match {
-      case Some(msg) => gitPass(List("commit", "-m", msg))
+      case Some(msg) =>
+        // Phase 3 covenant pre-check: every staged file with a
+        // 'Covenant: full-port' header must still satisfy its method-set
+        // and shortcuts contract. Failing files reject the commit.
+        val covenantOk = preCommitCovenantCheck()
+        if (!covenantOk) {
+          Term.err("Covenant verification failed — commit rejected.")
+          Term.err("Run `ssg-dev port covenant verify --staged` for details,")
+          Term.err("or `ssg-dev port covenant verify --file F` to debug a single file.")
+          sys.exit(1)
+        }
+        gitPass(List("commit", "-m", msg))
       case None =>
         Term.err("Commit message required: ssg-dev git commit --m 'message'")
         sys.exit(1)
     }
+  }
+
+  /** Phase 3 hook: walk every staged file. For each one that carries a
+    * 'Covenant: full-port' header, re-extract the method set and the
+    * shortcuts scan, fail on any drift from the recorded baseline.
+    *
+    * Returns true if no covenanted file violates its contract.
+    */
+  private def preCommitCovenantCheck(): Boolean = {
+    val staged = Proc.run("git", List("diff", "--cached", "--name-only"), cwd = Some(Paths.projectRoot))
+    if (!staged.ok) {
+      Term.err(s"git diff --cached failed: ${staged.stderr}")
+      return false
+    }
+    val files = staged.stdout.split("\n").toList.filter(_.nonEmpty)
+    var allOk = true
+    for (rel <- files) {
+      val abs = if (rel.startsWith("/")) rel else s"${Paths.projectRoot}/$rel"
+      val f = new java.io.File(abs)
+      if (f.exists() && abs.endsWith(".scala")) {
+        port.Covenant.parse(abs) match {
+          case Some(h) if h.covenant == "full-port" =>
+            port.Covenant.verify(abs) match {
+              case Right(_) =>
+                Term.ok(s"covenant ok: $rel")
+              case Left(reason) =>
+                Term.err(s"covenant fail: $rel — $reason")
+                allOk = false
+            }
+          case _ => () // not covenanted, no check
+        }
+      }
+    }
+    allOk
   }
 
   private def gh(rest: List[String]): Unit = {
