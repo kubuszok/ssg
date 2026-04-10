@@ -226,6 +226,85 @@ final class TocOptions private (
     isCaseSensitiveTocTag
   )
 
+  /** Sets titleLevel WITHOUT title normalization. */
+  def withRawTitleLevel(v: Int): TocOptions = new TocOptions(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    Math.max(1, Math.min(v, 6)),
+    title,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+
+  /** Sets title WITHOUT title normalization (no hash-prefix parsing). */
+  def withRawTitle(v: String): TocOptions = new TocOptions(
+    levels,
+    isHtml,
+    isTextOnly,
+    isNumbered,
+    titleLevel,
+    v,
+    listType,
+    isAstAddOptions,
+    isBlankLineSpacer,
+    divClass,
+    listClass,
+    isCaseSensitiveTocTag
+  )
+
+  /** Converts a list of heading levels to a bitmask and returns a copy with that level set. */
+  def withLevelList(levelList: java.util.List[Integer]): TocOptions = {
+    var bitmask = 0
+    val it      = levelList.iterator()
+    while (it.hasNext) {
+      val level = it.next().intValue()
+      if (level < 1 || level > 6)
+        throw new IllegalArgumentException("TocOption level out of range [1, 6]")
+      bitmask |= 1 << level
+    }
+    withLevels(bitmask)
+  }
+
+  override def equals(other: Any): Boolean =
+    (other.asInstanceOf[AnyRef] eq this) || (other match {
+      case that: TocOptions =>
+        levels == that.levels &&
+        isTextOnly == that.isTextOnly &&
+        isNumbered == that.isNumbered &&
+        listType == that.listType &&
+        isHtml == that.isHtml &&
+        titleLevel == that.titleLevel &&
+        title == that.title &&
+        divClass == that.divClass &&
+        listClass == that.listClass &&
+        isAstAddOptions == that.isAstAddOptions &&
+        isBlankLineSpacer == that.isBlankLineSpacer &&
+        isCaseSensitiveTocTag == that.isCaseSensitiveTocTag
+      case _ => false
+    })
+
+  override def hashCode: Int = {
+    var result = levels
+    result = 31 * result + (if (isTextOnly) 1 else 0)
+    result = 31 * result + (if (isNumbered) 1 else 0)
+    result = 31 * result + listType.hashCode()
+    result = 31 * result + (if (isHtml) 1 else 0)
+    result = 31 * result + titleLevel
+    result = 31 * result + title.hashCode()
+    result = 31 * result + divClass.hashCode()
+    result = 31 * result + listClass.hashCode()
+    result = 31 * result + (if (isAstAddOptions) 1 else 0)
+    result = 31 * result + (if (isBlankLineSpacer) 1 else 0)
+    result = 31 * result + (if (isCaseSensitiveTocTag) 1 else 0)
+    result
+  }
+
   override def toString: String =
     s"TocOptions { levels=$levels, isHtml=$isHtml, isTextOnly=$isTextOnly, isNumbered=$isNumbered, titleLevel=$titleLevel, title='$title', listType=$listType, divClass='$divClass', listClass='$listClass' }"
 }
