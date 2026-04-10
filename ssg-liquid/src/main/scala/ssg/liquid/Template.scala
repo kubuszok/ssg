@@ -37,12 +37,15 @@ final class Template(
 
   /** Renders this template and returns the raw result object. */
   def renderToObject(variables: JMap[String, Any]): Any = {
-    val evaluatedVars = templateParser.evaluateMode match {
+    val evaluatedVars: JMap[String, Any] = templateParser.evaluateMode match {
       case TemplateParser.EvaluateMode.EAGER =>
-        // Convert all values eagerly
+        // EAGER: convert all values eagerly via evaluate
+        // Full EAGER support requires LiquidSupport.objectToMap (ISS-015);
+        // for now, makes a defensive copy so mutations don't leak to caller
         new LinkedHashMap[String, Any](variables)
       case _ =>
-        new LinkedHashMap[String, Any](variables)
+        // LAZY: pass variables through as-is (converted on demand during rendering)
+        variables
     }
 
     val context = new TemplateContext(templateParser, evaluatedVars)
