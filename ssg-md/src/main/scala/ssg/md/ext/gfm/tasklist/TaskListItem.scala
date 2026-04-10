@@ -13,6 +13,7 @@ package gfm
 package tasklist
 
 import ssg.md.ast.{ ListItem, OrderedListItem, Paragraph }
+import ssg.md.parser.ListOptions
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -63,7 +64,7 @@ class TaskListItem() extends ListItem {
     out.append(if (isItemDoneMarker) " isDone" else " isNotDone")
   }
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = {
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = {
     assert(node.parent.isDefined && node.parent.contains(this))
 
     // see if this is the first paragraph child item we handle our own paragraph wrapping for that one

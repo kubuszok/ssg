@@ -11,6 +11,7 @@ package md
 package ast
 
 import ssg.md.Nullable
+import ssg.md.parser.ListOptions
 import ssg.md.util.ast.BlankLineContainer
 import ssg.md.util.ast.Block
 import ssg.md.util.ast.BlockContent
@@ -112,12 +113,9 @@ abstract class ListItem extends Block, ParagraphItemContainer, BlankLineContaine
     child.contains(node)
   }
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = {
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = {
     assert(node.parent.contains(this))
-    listOptions match {
-      case lo: ssg.md.parser.ListOptions => lo.isInTightListItem(node)
-      case _ => isTight
-    }
+    listOptions.isInTightListItem(node)
   }
 
   def isInTightList: Boolean =
