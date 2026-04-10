@@ -15,8 +15,9 @@ import ssg.md.Nullable
 
 class MutableDataSet(other: Nullable[DataHolder]) extends DataSet(other), MutableDataHolder {
 
-  def this() =
+  def this() = {
     this(Nullable.empty[DataHolder])
+  }
 
   override def set[T](key: DataKey[T], value: T): MutableDataSet =
     setByBase(key, value)

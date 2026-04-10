@@ -24,8 +24,9 @@ import java.util.Locale
 abstract class Insertion(_name: String) extends LValue {
 
   /** Constructor that derives the name from the class's simple name, lowercased. */
-  def this() =
+  def this() = {
     this(null)
+  }
 
   /** The name of this insertion. */
   val name: String = if (_name != null) _name else getClass.getSimpleName.toLowerCase(Locale.ENGLISH)

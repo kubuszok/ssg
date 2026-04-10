@@ -161,7 +161,7 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
         if (startOffset > lastEscaped) {
           val escapedChars = original.subSequence(lastEscaped, startOffset)
           val node1        = new Text(escapedChars)
-          textBase.foreach(_.appendChild(node1))
+          textBase.fold(node.insertBefore(node1))(_.appendChild(node1))
           state.nodeAdded(node1)
         }
 
@@ -180,7 +180,7 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
 
         linkNode.setCharsFromContent()
         linkNode.appendChild(contentNode)
-        textBase.foreach(_.appendChild(linkNode))
+        textBase.fold(node.insertBefore(linkNode))(_.appendChild(linkNode))
         state.nodeAddedWithChildren(linkNode)
 
         lastEscaped = textMapper.originalOffset(link.beginIndex + linkText.length())
@@ -215,7 +215,7 @@ class AutolinkNodePostProcessor(document: Document) extends NodePostProcessor {
       if (lastEscaped < original.length()) {
         val escapedChars = original.subSequence(lastEscaped, original.length())
         val node1        = new Text(escapedChars)
-        textBase.foreach(_.appendChild(node1))
+        textBase.fold(node.insertBefore(node1))(_.appendChild(node1))
         state.nodeAdded(node1)
       }
     }

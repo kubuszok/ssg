@@ -10,6 +10,9 @@
  *   Renames: liqp → ssg.liquid
  *   Convention: Builder pattern preserved
  *   Idiom: Enums as Scala 3 enums extending java.lang.Enum
+ *   Breaking: Default flavor changed from LIQP to JEKYLL — SSG targets
+ *     Jekyll-compatible sites. Users porting from raw liqp who relied on
+ *     LIQP flavor semantics should explicitly set .withFlavor(Flavor.LIQP).
  */
 package ssg
 package liquid
@@ -49,6 +52,30 @@ final class TemplateParser(
 
   def isRenderTimeLimited: Boolean = limitMaxRenderTimeMillis != Long.MaxValue
 
+  /** Parses a Liquid template from a file path. */
+  def parse(path: java.nio.file.Path): Template =
+    parse(new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8))
+
+  /** Parses a Liquid template from a File. */
+  def parse(file: java.io.File): Template =
+    parse(file.toPath)
+
+  /** Parses a Liquid template from an InputStream. */
+  def parse(stream: java.io.InputStream): Template =
+    parse(new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8))
+
+  /** Parses a Liquid template from a Reader. */
+  def parse(reader: java.io.Reader): Template = {
+    val sb = new StringBuilder()
+    val buf = new Array[Char](8192)
+    var n = reader.read(buf)
+    while (n != -1) {
+      sb.appendAll(buf, 0, n)
+      n = reader.read(buf)
+    }
+    parse(sb.toString)
+  }
+
   /** Parses a Liquid template string. */
   def parse(input: String): Template = {
     val lexer = new parser.LiquidLexer(
@@ -68,7 +95,7 @@ final class TemplateParser(
       errorMode
     )
     val root = liquidParser.parse()
-    new Template(this, root)
+    new Template(this, root, input.length.toLong)
   }
 
   /** Evaluates an object, converting Inspectable objects to LiquidSupport. */
@@ -169,6 +196,7 @@ object TemplateParser {
     def withEvaluateInOutputTag(v:       Boolean):           Builder = { _evaluateInOutputTag = v; this }
     def withStrictTypedExpressions(v:    Boolean):           Builder = { _strictTypedExpressions = v; this }
     def withLiquidStyleInclude(v:        Boolean):           Builder = { _liquidStyleInclude = v; this }
+    def withLiquidStyleWhere(v:         Boolean):           Builder = { _liquidStyleWhere = v; this }
     def withStrictVariables(v:           Boolean):           Builder = { _strictVariables = v; this }
     def withShowExceptionsFromInclude(v: Boolean):           Builder = { _showExceptionsFromInclude = v; this }
     def withEvaluateMode(mode:           EvaluateMode):      Builder = { _evaluateMode = mode; this }

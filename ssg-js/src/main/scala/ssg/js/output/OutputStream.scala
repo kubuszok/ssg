@@ -1679,8 +1679,8 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   private def getSymbolName(sym: AstSymbol): String =
     sym.thedef match {
-      case null => sym.name
-      case _    => sym.name // SymbolDef not yet ported — use name directly
+      case sd: ssg.js.scope.SymbolDef if sd.mangledName != null => sd.mangledName.nn
+      case _ => sym.name
     }
 
   private def printClassPrivateProperty(node: AstClassPrivateProperty): Unit = {

@@ -46,10 +46,8 @@ class DefinitionItemBlockParser(options: DataHolder, itemData: DefinitionItemBlo
     val isEmpty    = firstChild.isEmpty
 
     if (state.isBlank) {
-      firstChild.foreach { fc =>
-        if (fc.next.isEmpty) {
-          block.hadBlankAfterItemParagraph_=(true)
-        }
+      if (isEmpty || firstChild.exists(_.next.isEmpty)) {
+        block.hadBlankAfterItemParagraph_=(true)
       }
       hadBlankLine = true
       Nullable(BlockContinue.atIndex(state.nextNonSpaceIndex))

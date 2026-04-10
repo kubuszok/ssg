@@ -14,6 +14,7 @@ package footnotes
 import ssg.md.Nullable
 import ssg.md.ast.{ Paragraph, ParagraphItemContainer }
 import ssg.md.ext.footnotes.internal.FootnoteRepository
+import ssg.md.parser.ListOptions
 import ssg.md.util.ast.{ Block, Node, ReferenceNode }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
@@ -47,7 +48,7 @@ class FootnoteBlock() extends Block, ReferenceNode[FootnoteRepository, FootnoteB
     }
 
   def addFirstReferenceOffset(offset: Int): Unit =
-    if (this.firstReferenceOffset < offset) this.firstReferenceOffset = offset
+    if (this.firstReferenceOffset > offset) this.firstReferenceOffset = offset
 
   def isReferenced: Boolean = this.firstReferenceOffset < Int.MaxValue
 
@@ -64,7 +65,7 @@ class FootnoteBlock() extends Block, ReferenceNode[FootnoteRepository, FootnoteB
   override def isItemParagraph(node: Paragraph): Boolean =
     firstChild.contains(node)
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = false
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = false
 
   override def isParagraphInTightListItem(node: Paragraph): Boolean = false
 }

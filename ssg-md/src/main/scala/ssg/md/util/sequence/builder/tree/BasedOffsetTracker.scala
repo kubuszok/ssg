@@ -25,8 +25,9 @@ class BasedOffsetTracker protected (
 
   private var lastSegment: Nullable[Segment] = Nullable.empty
 
-  protected def this(sequence: BasedSequence, segmentTree: SegmentTree) =
+  protected def this(sequence: BasedSequence, segmentTree: SegmentTree) = {
     this(sequence, segmentTree.getSegmentOffsetTree(sequence.getBaseSequence))
+  }
 
   def size: Int = segmentOffsetTree.size
 

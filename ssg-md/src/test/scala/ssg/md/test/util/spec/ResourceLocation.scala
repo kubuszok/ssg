@@ -23,13 +23,14 @@ final class ResourceLocation private (
   val resolvedResourcePath: String
 ) {
 
-  def this(resourceClass: Class[?], resourcePath: String, fileUrl: String) =
+  def this(resourceClass: Class[?], resourcePath: String, fileUrl: String) = {
     this(
       resourceClass,
       resourcePath,
       fileUrl,
       TestUtils.getResolvedSpecResourcePath(resourceClass.getName, resourcePath)
     )
+  }
 
   def fileDirectoryUrl: String = {
     // Resource paths always use '/' regardless of platform

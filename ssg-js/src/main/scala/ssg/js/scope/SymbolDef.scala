@@ -55,7 +55,7 @@ class SymbolDef(
     */
   var exportFlag: Int = 0
 
-  /** The mangled (shortened) name, or null if not yet mangled. */
+  /** The mangled (shortened) name, or null if unmangled. */
   var mangledName: String | Null = null
 
   /** Whether this symbol is undeclared (referenced but never defined). */

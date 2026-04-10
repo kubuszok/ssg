@@ -14,8 +14,9 @@ package builder
 
 class PlainSegmentBuilder private (options: Int) extends SegmentBuilderBase[PlainSegmentBuilder](options) {
 
-  private def this() =
+  private def this() = {
     this(ISegmentBuilder.F_INCLUDE_ANCHORS)
+  }
 }
 
 object PlainSegmentBuilder {

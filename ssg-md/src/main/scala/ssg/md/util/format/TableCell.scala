@@ -34,7 +34,7 @@ class TableCell(
   val afterDelete:       Boolean
 ) {
 
-  def this(text: CharSequence, rowSpan: Int, columnSpan: Int) =
+  def this(text: CharSequence, rowSpan: Int, columnSpan: Int) = {
     this(
       Nullable(null),
       BasedSequence.NULL,
@@ -49,6 +49,7 @@ class TableCell(
       false,
       false
     )
+  }
 
   def this(
     tableCellNode: Nullable[Node],
@@ -56,7 +57,7 @@ class TableCell(
     rowSpan:       Int,
     columnSpan:    Int,
     alignment:     CellAlignment
-  ) =
+  ) = {
     this(
       tableCellNode,
       BasedSequence.NULL,
@@ -71,6 +72,7 @@ class TableCell(
       false,
       false
     )
+  }
 
   def this(
     tableCellNode: Nullable[Node],
@@ -79,7 +81,7 @@ class TableCell(
     closeMarker:   CharSequence,
     rowSpan:       Int,
     columnSpan:    Int
-  ) =
+  ) = {
     this(
       tableCellNode,
       BasedSequence.of(openMarker),
@@ -94,6 +96,7 @@ class TableCell(
       false,
       false
     )
+  }
 
   def this(
     tableCellNode: Nullable[Node],
@@ -103,7 +106,7 @@ class TableCell(
     rowSpan:       Int,
     columnSpan:    Int,
     alignment:     CellAlignment
-  ) =
+  ) = {
     this(
       tableCellNode,
       BasedSequence.of(openMarker), {
@@ -123,8 +126,9 @@ class TableCell(
       false,
       false
     )
+  }
 
-  def this(other: TableCell, copyNode: Boolean, rowSpan: Int, columnSpan: Int, alignment: CellAlignment) =
+  def this(other: TableCell, copyNode: Boolean, rowSpan: Int, columnSpan: Int, alignment: CellAlignment) = {
     this(
       if (copyNode) other.tableCellNode else Nullable(null),
       other.openMarker, {
@@ -141,6 +145,7 @@ class TableCell(
       other.afterSpace,
       other.afterDelete
     )
+  }
 
   def withColumnSpan(columnSpan: Int): TableCell =
     new TableCell(
