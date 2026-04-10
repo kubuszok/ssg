@@ -40,7 +40,18 @@ final class BuiltInCallable(
   val parameters:     Nullable[ParameterList],
   val callback:       List[Value] => Value,
   val acceptsContent: Boolean = false,
-  val signature:      String = ""
+  val signature:      String = "",
+  /** True when this callable was built via
+    * [[BuiltInCallable.overloadedFunction]] — i.e. the `callback` is
+    * an overload dispatcher that picks between multiple textual
+    * signatures at runtime. The canonical `signature` field on the
+    * callable is just the longest-named one for named-arg binding;
+    * the actual arity constraint lives inside the dispatcher, so
+    * the evaluator's per-call arity check must skip overloaded
+    * callables entirely (the dispatcher will raise its own "no
+    * matching overload" error if needed).
+    */
+  val isOverloaded:   Boolean = false
 ) extends Callable {
 
   /** Positional parameter names and their optional default-expression text, derived from the textual [[signature]] (e.g. `"$color, $amount: 1"` → `List(("color", None), ("amount", Some("1")))`).
@@ -85,6 +96,38 @@ final class BuiltInCallable(
 
   /** Raw default-expression text for each declared parameter (None if required). */
   lazy val parameterDefaults: List[Option[String]] = parameterEntries.map(_._2)
+
+  /** Whether this callable's signature ends in a rest parameter (`$args...`
+    * or `$kwargs...`). Rest callables accept any number of positional
+    * arguments beyond the declared slots, so they are exempt from the
+    * `_checkBuiltInArity` positional-count validation in the evaluator.
+    *
+    * Rest parameters are detected by scanning the raw signature for a
+    * trailing `...` inside a top-level (depth-0) argument. Both the
+    * positional-rest (`$x, $args...`) and the keyword-rest
+    * (`$x, $kwargs...`) forms are treated as rest.
+    */
+  lazy val hasRestParameter: Boolean = {
+    val trimmed = signature.trim
+    if (trimmed.isEmpty) false
+    else {
+      // Quick scan for `...` at depth 0 — avoids a full re-parse.
+      var depth    = 0
+      var i        = 0
+      var sawRest  = false
+      while (!sawRest && i < trimmed.length) {
+        val c = trimmed.charAt(i)
+        if (c == '(' || c == '[') depth += 1
+        else if (c == ')' || c == ']') depth -= 1
+        else if (depth == 0 && c == '.' && i + 2 < trimmed.length
+                 && trimmed.charAt(i + 1) == '.' && trimmed.charAt(i + 2) == '.') {
+          sawRest = true
+        }
+        i += 1
+      }
+      sawRest
+    }
+  }
 
   override def toString: String = s"BuiltInCallable($name)"
 }
@@ -188,7 +231,7 @@ object BuiltInCallable {
           .sortBy(t => (-t._2, -t._3))
           .head
           ._1
-    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig)
+    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig, isOverloaded = true)
   }
 }
 
@@ -305,7 +348,7 @@ object AliasedCallable {
           // clone it with the new name directly and avoid a wrapper
           // class. This keeps `match { case bic: BuiltInCallable => ...}`
           // dispatches working without requiring unwrapping.
-          new BuiltInCallable(newName, bic.parameters, bic.callback, bic.acceptsContent, bic.signature)
+          new BuiltInCallable(newName, bic.parameters, bic.callback, bic.acceptsContent, bic.signature, bic.isOverloaded)
         case already: AliasedCallable =>
           // Alias-of-alias collapses to a single wrapper pointing at the
           // innermost underlying callable.

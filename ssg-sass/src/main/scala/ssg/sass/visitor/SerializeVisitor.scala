@@ -117,7 +117,21 @@ final class SerializeVisitor(
       segmentsByLine(genLine) += ((genCol, idx, span.start.line, span.start.column))
     }
 
-  /** Serialize the given stylesheet to CSS text. */
+  /** Serialize the given stylesheet to CSS text.
+    *
+    * If the output contains any non-ASCII code point, a charset prefix is
+    * prepended: `@charset "UTF-8";\n` in expanded mode, or the UTF-8 BOM
+    * (U+FEFF) in compressed mode. Mirrors dart-sass `serialize()` in
+    * lib/src/visitor/serialize.dart. The prefix is NOT tracked in the
+    * source map — dart-sass forwards a `prefix:` parameter to the
+    * SourceMapBuffer's `buildSourceMap` so the first real segment
+    * remains column-0; we approximate this by keeping the source-map
+    * segment table untouched when the prefix is emitted as expanded,
+    * since the prefix ends in a newline and the first real line is
+    * still line 1 in the emitted output. For compressed mode the BOM
+    * is a single char that does not move the column index in source
+    * maps (browsers treat it as a file-level byte marker).
+    */
   def serialize(node: CssStylesheet): SerializeResult = {
     buffer.clear()
     indentLevel = 0
@@ -128,9 +142,24 @@ final class SerializeVisitor(
     segmentsByLine.clear()
     segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
     visitCssStylesheet(node)
+    val css = buffer.toString()
+    val prefix: String =
+      if (containsNonAscii(css)) {
+        if (isCompressed) "\uFEFF" else "@charset \"UTF-8\";\n"
+      } else ""
     val mapJson: Nullable[String] =
       if (sourceMap) Nullable(buildSourceMapJson()) else Nullable.empty[String]
-    SerializeResult(buffer.toString(), sourceMap = mapJson)
+    SerializeResult(prefix + css, sourceMap = mapJson)
+  }
+
+  /** Returns true if any code point in `s` is outside the ASCII range. */
+  private def containsNonAscii(s: String): Boolean = {
+    var i = 0
+    while (i < s.length) {
+      if (s.charAt(i) > 0x7F) return true
+      i += 1
+    }
+    false
   }
 
   /** Builds a v3 source map JSON object from the recorded segments. */
@@ -590,16 +619,90 @@ final class SerializeVisitor(
 
   /** Formats a SassNumber for CSS output.
     *
-    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart): the numeric portion is written via [[writeNumberTo]] (the faithful port of `_writeNumber`), then the single numerator unit
-    * — if any — is appended. Complex units and non-finite values fall back to the existing `SassNumber.toCssString()` which wraps them in `calc(...)`.
+    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart):
+    * the numeric portion is written via [[writeNumberTo]] (the faithful port
+    * of `_writeNumber`), then the single numerator unit — if any — is
+    * appended. Non-finite values (Infinity/-Infinity/NaN) wrap into
+    * `calc(infinity * 1<unit>)` / `calc(-infinity * 1<unit>)` / `calc(NaN * 1<unit>)`
+    * matching dart-sass `visitCalculation` + `_writeCalculationValue` +
+    * `_writeCalculationUnits`. Complex units (multi-numerator or any
+    * denominator) use the same calc wrapping so the output is a valid
+    * first-class CSS calc() expression.
     */
   private def formatSassNumber(n: SassNumber): String = {
-    if (!n.value.isFinite) return n.toCssString()
-    if (n.hasComplexUnits) return n.toCssString()
+    if (!n.value.isFinite) return formatNonFiniteNumber(n)
+    if (n.hasComplexUnits) return formatComplexUnitNumber(n)
     val sb = new StringBuilder()
     writeNumberTo(sb, n.value)
     if (n.numeratorUnits.nonEmpty) sb.append(n.numeratorUnits.head)
     sb.toString()
+  }
+
+  /** Wraps a non-finite SassNumber (Infinity / -Infinity / NaN) in a CSS
+    * `calc(...)` expression, mirroring dart-sass
+    * `_writeCalculationValue` for the `SassNumber(value: double(isFinite:
+    * false))` branch.
+    *
+    * Examples (expanded mode):
+    *   Infinity unitless   -> `calc(infinity)`
+    *   -Infinity unitless  -> `calc(-infinity)`
+    *   NaN unitless        -> `calc(NaN)`
+    *   Infinity px         -> `calc(infinity * 1px)`
+    *   NaN em / s          -> `calc(NaN * 1em / 1s)`
+    */
+  private def formatNonFiniteNumber(n: SassNumber): String = {
+    val sb = new StringBuilder()
+    sb.append("calc(")
+    val value = n.value
+    if (value == Double.PositiveInfinity) sb.append("infinity")
+    else if (value == Double.NegativeInfinity) sb.append("-infinity")
+    else sb.append("NaN")
+    appendCalculationUnits(sb, n.numeratorUnits, n.denominatorUnits)
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Wraps a finite SassNumber with complex units (multi-numerator or any
+    * denominator) in a `calc(...)` expression. Mirrors dart-sass
+    * `visitCalculation` + `_writeCalculationValue` for the
+    * `SassNumber(hasComplexUnits: true)` branch.
+    */
+  private def formatComplexUnitNumber(n: SassNumber): String = {
+    val sb = new StringBuilder()
+    sb.append("calc(")
+    writeNumberTo(sb, n.value)
+    n.numeratorUnits match {
+      case first :: rest =>
+        sb.append(first)
+        appendCalculationUnits(sb, rest, n.denominatorUnits)
+      case Nil =>
+        appendCalculationUnits(sb, Nil, n.denominatorUnits)
+    }
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>`
+    * factors inside a `calc(...)` expression. Port of dart-sass
+    * `_writeCalculationUnits`.
+    *
+    * In compressed mode the spaces around `*` / `/` are dropped unless the
+    * expression would become ambiguous (dart-sass only drops the space
+    * around `*` for compression; `/` is always surrounded to avoid the
+    * plain CSS division parse).
+    */
+  private def appendCalculationUnits(
+    sb:               StringBuilder,
+    numeratorUnits:   List[String],
+    denominatorUnits: List[String]
+  ): Unit = {
+    val space = if (isCompressed) "" else " "
+    for (unit <- numeratorUnits) {
+      sb.append(space).append('*').append(space).append('1').append(unit)
+    }
+    for (unit <- denominatorUnits) {
+      sb.append(space).append('/').append(space).append('1').append(unit)
+    }
   }
 
   /** Writes `number` to `sb` without exponent notation and with at most `SassNumber.precision` digits after the decimal point.

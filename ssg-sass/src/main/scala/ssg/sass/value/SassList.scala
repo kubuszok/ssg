@@ -61,11 +61,22 @@ class SassList(
 
   /** CSS representation of this list.
     *
-    * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`):
-    *   - space-separated lists drop `null`/blank elements (matching `_elementNeedsParens == false` + `isBlank` filter)
-    *   - comma-separated lists keep all elements; a single-element comma list is rendered as `(x,)` to disambiguate from a paren-wrapped value
+    * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`) in
+    * CSS output mode (i.e. `_inspect = false`):
+    *   - space-separated lists drop `null`/blank elements
+    *   - comma-separated lists keep all elements
+    *   - single-element lists do NOT get `(x,)` / `[x,]` wrapping —
+    *     that wrapping is an inspect-mode-only disambiguation to
+    *     distinguish a one-element Sass list from a parenthesized
+    *     scalar in the source literal. In CSS output, a single-
+    *     element list renders as its only element (or `[a]` when
+    *     bracketed).
     *   - bracketed lists wrap the content in `[...]`
-    *   - elements are emitted via `toCssString`, not `toString`, so nested colors/strings/etc. round-trip correctly.
+    *   - elements are emitted via `toCssString`, not `toString`, so
+    *     nested colors/strings/etc. round-trip correctly.
+    *
+    * The inspect-mode form lives in SerializeVisitor.formatList,
+    * reached through `meta.inspect(...)` and the debug/error paths.
     */
   override def toCssString(quote: Boolean = true): String = {
     val elems =
@@ -78,11 +89,8 @@ class SassList(
       case ListSeparator.Undecided => " "
     }
     val inner = elems.map(_.toCssString()).mkString(sepStr)
-    val body  =
-      if (contents.length == 1 && separator == ListSeparator.Comma) s"($inner,)"
-      else inner
-    if (hasBrackets) s"[$body]"
-    else body
+    if (hasBrackets) s"[$inner]"
+    else inner
   }
 
   override def toString: String = toCssString()

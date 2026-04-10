@@ -1,0 +1,24 @@
+runners:
+
+  sass-spec:
+    description: "dart-sass spec compatibility test harness (ssg.sass.SassSpecRunner)"
+    invoke:
+      command: sbt
+      args: [--client, "ssg-sass/testOnly ssg.sass.SassSpecRunner"]
+    mode-file:
+      path: ssg-sass/target/sass-spec-mode.tsv
+      format: kv
+    output:
+      success:
+        regex: 'sass-spec:\s+Total=(\d+)\s+Passing=(\d+)'
+        capture:
+          total:   1
+          passing: 2
+      failure:
+        keep-lines-matching: ['sass-spec:', 'FAIL', 'regressions']
+        max-lines: 20
+    modes:
+      regression: {}
+      strict:     { strict: "1" }
+      snapshot:   { snapshot: "1" }
+      subdir:     { subdir: "$1" }

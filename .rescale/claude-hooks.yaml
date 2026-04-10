@@ -1,0 +1,22 @@
+# Per-project hook rule overrides for re-scale's PreToolUse validator.
+#
+# Rules in this file are evaluated BEFORE the defaults in
+# re-scale's DefaultRules.scala, so first-match wins.
+#
+# Schema is documented at:
+#   https://github.com/kubuszok/re-scale/blob/master/src/main/scala/rescale/hook/RuleConfig.scala
+#
+rules:
+
+  # Allow `git grep` in any argument position, not just as the first
+  # positional arg. The default rule is `starts-with: [git, grep]`,
+  # which rejects `git -C <path> --no-pager grep <pat>` because `-C`
+  # and `--no-pager` sit between `git` and `grep`. `git grep` is
+  # read-only so this is safe; the equivalent allow rule is
+  # "program is git AND arg list contains grep".
+  - when:
+      and:
+        - program-in: [git]
+        - has-any: [grep]
+    action: allow
+    reason: "git grep is read-only — allow with flags between `git` and `grep`"

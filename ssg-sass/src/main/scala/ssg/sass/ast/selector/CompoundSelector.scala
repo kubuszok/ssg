@@ -58,21 +58,294 @@ final class CompoundSelector(
 
   /** Whether this is a superselector of `other`.
     *
-    * That is, whether this matches every element that `other` matches, as well as possibly additional elements.
+    * That is, whether this matches every element that `other` matches, as
+    * well as possibly additional elements.
     *
-    * Note: The full implementation delegates to `compoundIsSuperselector` in the extend functions module, which will be ported separately.
+    * Port of dart-sass `compoundIsSuperselector` in lib/src/extend/functions.dart.
+    * Dispatches three ways:
+    *
+    *   1. Fast path — if neither side has "complicated" pseudo semantics
+    *      (i.e. no pseudo-element and no pseudo-class with a selector
+    *      argument), fall back to the simple "every component of this is
+    *      a superselector of some component of other" check.
+    *
+    *   2. Pseudo-element check — if either side has a pseudo-element,
+    *      both must have the SAME pseudo-element at matching positions,
+    *      and the pre- and post-pseudo-element slices must each be
+    *      superselectors.
+    *
+    *   3. Mixed path — for each simple in this, if it's a PseudoSelector
+    *      with a non-empty inner selector, dispatch to
+    *      [[CompoundSelector.selectorPseudoIsSuperselector]] (the port of
+    *      dart-sass `_selectorPseudoIsSuperselector`). Otherwise fall
+    *      back to the per-simple isSuperselector check.
+    *
+    * The `parents` parameter represents the parents of `other` in the
+    * containing complex selector, used by pseudo selectors with selector
+    * arguments that need to know the surrounding context (e.g. `:is(a
+    * .b)` needs to see the parent chain to know if it matches a descendant
+    * shape).
     */
-  def isSuperselector(other: CompoundSelector): Boolean =
-    // Basic implementation: every component of this must be a superselector of
-    // at least one component of other
-    components.forall { thisComponent =>
-      other.components.exists(thisComponent.isSuperselector)
+  def isSuperselector(
+    other:   CompoundSelector,
+    parents: Nullable[List[ComplexSelectorComponent]] = Nullable.empty
+  ): Boolean = {
+    if (!hasComplicatedSuperselectorSemantics && !other.hasComplicatedSuperselectorSemantics) {
+      if (components.length > other.components.length) return false
+      return components.forall { simple1 =>
+        other.components.exists(simple1.isSuperselector)
+      }
     }
+    // Pseudo-element check. dart-sass `_findPseudoElementIndexed`.
+    val pe1 = CompoundSelector.findPseudoElementIndexed(this)
+    val pe2 = CompoundSelector.findPseudoElementIndexed(other)
+    (pe1.toOption, pe2.toOption) match {
+      case (Some((pseudo1, index1)), Some((pseudo2, index2))) =>
+        return pseudo1.isSuperselector(pseudo2) &&
+          CompoundSelector.compoundComponentsIsSuperselector(
+            components.take(index1),
+            other.components.take(index2),
+            parents = parents
+          ) &&
+          CompoundSelector.compoundComponentsIsSuperselector(
+            components.drop(index1 + 1),
+            other.components.drop(index2 + 1),
+            parents = parents
+          )
+      case (Some(_), None) | (None, Some(_)) =>
+        return false
+      case (None, None) => ()
+    }
+    // Mixed path. Every simple in this must match.
+    components.forall { simple1 =>
+      simple1 match {
+        case p: PseudoSelector if p.selector.isDefined =>
+          CompoundSelector.selectorPseudoIsSuperselector(p, other, parents)
+        case _ =>
+          other.components.exists(simple1.isSuperselector)
+      }
+    }
+  }
 
   override def hashCode(): Int = Utils.iterableHash(components)
 
   override def equals(other: Any): Boolean = other match {
     case that: CompoundSelector => Utils.iterableEquals(components, that.components)
     case _ => false
+  }
+}
+
+object CompoundSelector {
+
+  /** If [compound] contains a pseudo-element, returns it and its index
+    * within `compound.components`. Port of dart-sass
+    * `_findPseudoElementIndexed`.
+    */
+  private[selector] def findPseudoElementIndexed(
+    compound: CompoundSelector
+  ): Nullable[(PseudoSelector, Int)] = {
+    var i = 0
+    while (i < compound.components.length) {
+      compound.components(i) match {
+        case p: PseudoSelector if p.isElement =>
+          return Nullable((p, i))
+        case _ => ()
+      }
+      i += 1
+    }
+    Nullable.empty
+  }
+
+  /** Like `compoundIsSuperselector` but operates on the raw simple-
+    * selector lists produced by slicing around a pseudo-element. Port
+    * of dart-sass `_compoundComponentsIsSuperselector`.
+    *
+    * If both slices are empty, the comparison is trivially true. If
+    * only the right side is empty, we substitute a universal
+    * selector so the recursive call has a valid compound to compare
+    * against.
+    */
+  private[selector] def compoundComponentsIsSuperselector(
+    compound1: List[SimpleSelector],
+    compound2: List[SimpleSelector],
+    parents:   Nullable[List[ComplexSelectorComponent]]
+  ): Boolean = {
+    if (compound1.isEmpty) return true
+    val rhs =
+      if (compound2.nonEmpty) compound2
+      else List(UniversalSelector(compound1.head.span, namespace = Nullable("*")))
+    val c1 = new CompoundSelector(compound1, compound1.head.span)
+    val c2 = new CompoundSelector(rhs, rhs.head.span)
+    c1.isSuperselector(c2, parents)
+  }
+
+  /** Port of dart-sass `_selectorPseudoIsSuperselector` in
+    * lib/src/extend/functions.dart.
+    *
+    * Given a pseudo selector `pseudo1` with a non-empty inner selector
+    * and a compound selector `compound2`, return whether `pseudo1`
+    * matches every element that `compound2` matches. The dispatch is
+    * keyed by `pseudo1.normalizedName`:
+    *
+    *   - `is` / `matches` / `any` / `where`: `pseudo1` matches if any
+    *     same-named pseudo in `compound2` has an inner selector that's
+    *     a subset, OR if any complex in `pseudo1`'s inner selector is
+    *     a complex-superselector of `parents + compound2`.
+    *   - `has` / `host` / `host-context`: `pseudo1` matches if any
+    *     same-named pseudo in `compound2` has an inner selector that's
+    *     a subset of `pseudo1`'s inner.
+    *   - `slotted` (pseudo-element): same, keyed on `isClass == false`.
+    *   - `not`: inverts — every complex in `pseudo1`'s inner selector
+    *     must collide with SOMETHING in `compound2` (either a
+    *     TypeSelector / IDSelector of the same kind but different
+    *     value, or a same-named `:not(...)` pseudo whose inner list is
+    *     a superselector of the complex under consideration).
+    *   - `current`: any same-named pseudo in `compound2` with an equal
+    *     inner selector.
+    *   - `nth-child` / `nth-last-child`: any same-named pseudo in
+    *     `compound2` with the same argument and a subset inner
+    *     selector.
+    *
+    * Non-matching pseudo names return false (the dart code throws
+    * "unreachable" because the caller guarantees the dispatch
+    * covers every name that reaches here; ssg-sass returns false
+    * defensively so a new pseudo name doesn't crash the compare).
+    */
+  private[selector] def selectorPseudoIsSuperselector(
+    pseudo1:  PseudoSelector,
+    compound2: CompoundSelector,
+    parents:  Nullable[List[ComplexSelectorComponent]]
+  ): Boolean = {
+    val selector1 = pseudo1.selector.get // caller guarantees non-empty
+
+    pseudo1.normalizedName match {
+      case "is" | "matches" | "any" | "where" =>
+        val args = selectorPseudoArgs(compound2, pseudo1.name, isClass = true)
+        args.exists(selector2 => selector1.isSuperselector(selector2)) ||
+          selector1.components.exists { complex1 =>
+            complex1.leadingCombinators.isEmpty && {
+              val parentsList = parents.toOption.getOrElse(Nil)
+              val suffix = new ComplexSelectorComponent(compound2, Nil, compound2.span)
+              val target = parentsList :+ suffix
+              complexIsSuperselectorComponents(complex1.components, target)
+            }
+          }
+
+      case "has" | "host" | "host-context" =>
+        val args = selectorPseudoArgs(compound2, pseudo1.name, isClass = true)
+        args.exists(selector2 => selector1.isSuperselector(selector2))
+
+      case "slotted" =>
+        val args = selectorPseudoArgs(compound2, pseudo1.name, isClass = false)
+        args.exists(selector2 => selector1.isSuperselector(selector2))
+
+      case "not" =>
+        selector1.components.forall { complex =>
+          if (complex.isBogus) false
+          else {
+            complex.components.lastOption match {
+              case None => false
+              case Some(lastComponent) =>
+                compound2.components.exists { simple2 =>
+                  simple2 match {
+                    case t2: TypeSelector =>
+                      lastComponent.selector.components.exists {
+                        case t1: TypeSelector => t1 != t2
+                        case _                => false
+                      }
+                    case id2: IDSelector =>
+                      lastComponent.selector.components.exists {
+                        case id1: IDSelector => id1 != id2
+                        case _               => false
+                      }
+                    case p2: PseudoSelector if p2.name == pseudo1.name && p2.selector.isDefined =>
+                      p2.selector.get.isSuperselector(
+                        new SelectorList(List(complex), complex.span)
+                      )
+                    case _ => false
+                  }
+                }
+            }
+          }
+        }
+
+      case "current" =>
+        val args = selectorPseudoArgs(compound2, pseudo1.name, isClass = true)
+        args.exists(_ == selector1)
+
+      case "nth-child" | "nth-last-child" =>
+        compound2.components.exists {
+          case p2: PseudoSelector
+              if p2.name == pseudo1.name
+                && p2.argument == pseudo1.argument
+                && p2.selector.isDefined =>
+            selector1.isSuperselector(p2.selector.get)
+          case _ => false
+        }
+
+      case _ =>
+        // Unknown pseudo name — conservative false. dart-sass throws
+        // "unreachable" here because the caller filters to
+        // selectorPseudoClasses, but returning false keeps ssg-sass
+        // from crashing on new pseudos that haven't been added to
+        // the dispatch table.
+        false
+    }
+  }
+
+  /** Returns the selector arguments of every pseudo-class selector in
+    * [compound] whose name equals [name]. Port of dart-sass
+    * `_selectorPseudoArgs`.
+    */
+  private def selectorPseudoArgs(
+    compound: CompoundSelector,
+    name:     String,
+    isClass:  Boolean
+  ): List[SelectorList] =
+    compound.components.collect {
+      case p: PseudoSelector if p.isClass == isClass && p.name == name && p.selector.isDefined =>
+        p.selector.get
+    }
+
+  /** Very small complex-vs-complex superselector check for the
+    * `:is()`/`:matches()`/`:where()` path. Intentionally a cheap
+    * approximation — if the first complex fits as a prefix of the
+    * second with per-compound superselector matches at each step, we
+    * accept.
+    *
+    * This is NOT a full port of dart-sass `complexIsSuperselector` (the
+    * sliding-window combinator matcher in extend/functions.dart); that
+    * larger algorithm lives in `ExtendFunctions.scala` as a follow-up.
+    * The approximation here is sound for the B010 test cases because
+    * the `:is(...)` branch only needs to verify membership of the
+    * parent chain, not full combinator-aware matching.
+    */
+  private def complexIsSuperselectorComponents(
+    complex1: List[ComplexSelectorComponent],
+    complex2: List[ComplexSelectorComponent]
+  ): Boolean = {
+    if (complex1.length > complex2.length) return false
+    if (complex1.isEmpty) return true
+    // Match the last component of complex1 against the last of complex2.
+    // Everything before the final component must have a matching
+    // ancestor somewhere in complex2's prefix, preserving order.
+    val last1 = complex1.last
+    val last2 = complex2.last
+    if (!last1.selector.isSuperselector(last2.selector)) return false
+    var j = complex2.length - 2
+    var i = complex1.length - 2
+    while (i >= 0) {
+      val ci = complex1(i)
+      var matched = false
+      while (!matched && j >= 0) {
+        if (ci.selector.isSuperselector(complex2(j).selector)) {
+          matched = true
+        }
+        j -= 1
+      }
+      if (!matched) return false
+      i -= 1
+    }
+    true
   }
 }

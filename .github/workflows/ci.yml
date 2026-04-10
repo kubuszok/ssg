@@ -129,3 +129,96 @@ jobs:
 
       - name: Check formatting
         run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
+
+  # Anti-cheat enforcement: runs re-scale enforce commands to reject
+  # shortcut patterns, stale stubs, and broken covenants before merge.
+  #
+  # The infrastructure (re-scale enforce shortcuts/stale-stubs/verify
+  # plus the Covenant + Methods + StaleStubs tooling) lives in
+  # https://github.com/kubuszok/re-scale. This job checks that repo
+  # out alongside the ssg checkout, builds the re-scale binary via
+  # `sbt stage`, then runs the enforce commands against the ssg
+  # source tree.
+  #
+  # Phase 5 of the anti-cheat plan
+  # (re-scale/docs/cross-flavor-diff.md + anti-cheat-enforcement-resume.md):
+  # this job starts as a skeleton. Until Phase 8 (retroactive covenant
+  # application) lands, `enforce verify --all` finds zero covenanted
+  # files and trivially passes; `enforce shortcuts --covenanted` the
+  # same. The job is still valuable because it (a) tests the pipeline
+  # wiring, (b) catches regressions the moment the first covenanted
+  # file appears in sass-port, and (c) runs `enforce shortcuts` with
+  # NO filter to surface the global hit count — even if no file is
+  # yet covenanted, the baseline number is recorded in the job log
+  # for future comparison.
+  covenant-verify:
+    name: Anti-cheat — covenant + shortcuts + stale-stubs
+    runs-on: ubuntu-latest
+    # Don't block the pipeline while the infrastructure is still
+    # being rolled out; report failures as information until the
+    # baseline comparison in Phase 5b is written.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          path: ssg
+
+      - uses: actions/checkout@v4
+        with:
+          repository: kubuszok/re-scale
+          path: re-scale
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Install LLVM/Clang for Scala Native
+        run: sudo apt-get update && sudo apt-get install -y clang libstdc++-12-dev libgc-dev
+
+      - name: Build re-scale
+        working-directory: re-scale
+        run: sbt stage
+
+      - name: Expose re-scale on PATH
+        run: |
+          echo "${GITHUB_WORKSPACE}/re-scale/target/stage/bin" >> "${GITHUB_PATH}"
+
+      - name: Sanity check — re-scale --version
+        run: re-scale --version
+
+      - name: enforce shortcuts (global, informational)
+        working-directory: ssg
+        run: |
+          echo "=== re-scale enforce shortcuts (all files) ==="
+          re-scale enforce shortcuts > /tmp/shortcuts.log 2>&1 || true
+          tail -20 /tmp/shortcuts.log
+
+      - name: enforce shortcuts --covenanted (hard gate)
+        working-directory: ssg
+        run: |
+          echo "=== re-scale enforce shortcuts --covenanted ==="
+          re-scale enforce shortcuts --covenanted
+
+      - name: enforce verify --all (hard gate)
+        working-directory: ssg
+        run: |
+          echo "=== re-scale enforce verify --all ==="
+          re-scale enforce verify --all
+
+      - name: enforce stale-stubs (informational)
+        working-directory: ssg
+        run: |
+          echo "=== re-scale enforce stale-stubs ==="
+          re-scale enforce stale-stubs > /tmp/stale.log 2>&1 || true
+          tail -30 /tmp/stale.log
+
+      - name: db audit stats (baseline record)
+        working-directory: ssg
+        run: |
+          echo "=== re-scale db audit stats ==="
+          re-scale db audit stats

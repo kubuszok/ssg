@@ -21,7 +21,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 5053
  * Covenant-baseline-loc: 1195
- * Covenant-baseline-methods: Environment,atRoot,inMixin,closure,forImport,addModule,forwardModule,assertNoConflicts,importForwards,getVariable,getVariableFromGlobalModule,variableExists,globalVariableExists,variableIndex,setVariable,setLocalVariable,setGlobalVariable,markVariableConfigurable,isVariableConfigurable,getFunction,getFunctionFromGlobalModule,functionIndex,functionExists,setFunction,getMixin,getMixinFromGlobalModule,mixinIndex,mixinExists,setMixin,content,asMixin,withContent,scope,withinScope,withinSemiGlobalScope,withSnapshot,toImplicitConfiguration,toModule,toDummyModule,getModule,fromOneModule,getNamespace,findNamespacedModule,getNamespacedVariable,getNamespacedFunction,getNamespacedMixin,addNamespace,variableEntries,functionValues,mixinValues,publicView,global,functions,mixins,withBuiltins,isPrivate,EnvironmentModule
+ * Covenant-baseline-methods: Environment,atRoot,inMixin,closure,forImport,addModule,forwardModule,_assertNoConflicts,importForwards,getVariable,_getVariableFromGlobalModule,getVariableNode,_getVariableNodeFromGlobalModule,variableExists,globalVariableExists,_variableIndex,setVariable,setLocalVariable,setGlobalVariable,markVariableConfigurable,isVariableConfigurable,getFunction,_getFunctionFromGlobalModule,_functionIndex,functionExists,setFunction,getMixin,_getMixinFromGlobalModule,_mixinIndex,mixinExists,setMixin,content,asMixin,withContent,scope,withinScope,withinSemiGlobalScope,withSnapshot,toImplicitConfiguration,toModule,toDummyModule,_getModule,_fromOneModule,getNamespace,findNamespacedModule,getNamespacedVariable,getNamespacedFunction,getNamespacedMixin,addNamespace,variableEntries,functionValues,mixinValues,publicView,global,functions,mixins,withBuiltins,isPrivate,EnvironmentModule
  * Covenant-dart-reference: lib/src/environment.dart
  * Covenant-verified: 2026-04-08
  *
@@ -89,10 +89,10 @@ import ssg.sass.value.Value
   */
 final class Environment private (
   private val _modules:          mutable.Map[String, Module[Callable]],
-  private val _namespaceNodes:   mutable.Map[String, AstNode],
-  private val _globalModules:    mutable.LinkedHashMap[Module[Callable], AstNode],
-  private val _importedModules:  mutable.LinkedHashMap[Module[Callable], AstNode],
-  private var _forwardedModules: Nullable[mutable.LinkedHashMap[Module[Callable], AstNode]],
+  private val _namespaceNodes:   mutable.Map[String, Nullable[AstNode]],
+  private val _globalModules:    mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
+  private val _importedModules:  mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
+  private var _forwardedModules: Nullable[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]],
   private var _nestedForwardedModules: Nullable[mutable.ArrayBuffer[mutable.ArrayBuffer[Module[Callable]]]],
   private val _allModules:        mutable.ArrayBuffer[Module[Callable]],
   private val _variables:         mutable.ArrayBuffer[mutable.Map[String, Value]],
@@ -216,9 +216,16 @@ final class Environment private (
     * name; a pre-existing module with the same namespace raises a
     * MultiSpanSassException containing the span of the original `@use`.
     */
-  def addModule(module: Module[Callable], nodeWithSpan: AstNode, namespace: Nullable[String] = Nullable.empty): Unit =
+  def addModule(
+    module:       Module[Callable],
+    nodeWithSpan: Nullable[AstNode] = Nullable.empty,
+    namespace:    Nullable[String]  = Nullable.empty
+  ): Unit =
     namespace.toOption match {
       case None =>
+        // `@use ... as *` or a built-in module registration. The span
+        // is optional — for built-in modules (e.g. `sass:math`) and
+        // synthetic registrations the span is legitimately absent.
         _globalModules(module) = nodeWithSpan
         _allModules += module
         // Collision with an existing global variable of the same name.
@@ -231,8 +238,8 @@ final class Environment private (
         }
       case Some(ns) =>
         if (_modules.contains(ns)) {
-          val priorNode = _namespaceNodes.get(ns)
-          val priorSpan = priorNode.map(_.span.toString).getOrElse("<unknown>")
+          val priorSpan = _namespaceNodes.get(ns).flatMap(_.toOption)
+            .map(_.span.toString).getOrElse("<unknown>")
           throw SassScriptException(
             s"""There's already a module with namespace "$ns" (first loaded at $priorSpan)."""
           )
@@ -251,7 +258,7 @@ final class Environment private (
     */
   def forwardModule(module: Module[Callable], rule: ForwardRule): Unit = {
     val forwarded = _forwardedModules.toOption.getOrElse {
-      val m = mutable.LinkedHashMap.empty[Module[Callable], AstNode]
+      val m = mutable.LinkedHashMap.empty[Module[Callable], Nullable[AstNode]]
       _forwardedModules = Nullable(m)
       m
     }
@@ -318,16 +325,16 @@ final class Environment private (
   def importForwards(module: Module[Callable]): Unit = {
     val fwdOpt = module match {
       case impl: Environment.EnvironmentModule => impl.env._forwardedModules
-      case _                                       => Nullable.empty[mutable.LinkedHashMap[Module[Callable], AstNode]]
+      case _                                   => Nullable.empty[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]]
     }
     if (fwdOpt.isEmpty) return
-    var forwarded: mutable.LinkedHashMap[Module[Callable], AstNode] = fwdOpt.get
+    var forwarded: mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]] = fwdOpt.get
 
     // Omit modules from [forwarded] that are already globally available
     // and forwarded in this module.
     val thisForwarded = _forwardedModules.toOption
     if (thisForwarded.isDefined) {
-      val filtered = mutable.LinkedHashMap.empty[Module[Callable], AstNode]
+      val filtered = mutable.LinkedHashMap.empty[Module[Callable], Nullable[AstNode]]
       for ((m, n) <- forwarded)
         if (!thisForwarded.get.contains(m) || !_globalModules.contains(m))
           filtered(m) = n
@@ -360,7 +367,7 @@ final class Environment private (
         }
       }
       val tforwarded = _forwardedModules.toOption.getOrElse {
-        val m = mutable.LinkedHashMap.empty[Module[Callable], AstNode]
+        val m = mutable.LinkedHashMap.empty[Module[Callable], Nullable[AstNode]]
         _forwardedModules = Nullable(m)
         m
       }
@@ -1056,12 +1063,17 @@ final class Environment private (
     }
 
   /** Legacy Environment-based namespace registration used by
-    * `@use "sass:X"`. Wraps [env] in an EnvironmentModule.
+    * `@use "sass:X"`. Wraps [env] in an EnvironmentModule. The
+    * `nodeWithSpan` is intentionally empty — built-in modules are
+    * registered without a source span because their load site is
+    * synthetic (the `@use "sass:X"` AST node is processed in
+    * EvaluateVisitor, which already carries its own span for
+    * diagnostics).
     */
   def addNamespace(name: String, env: Environment): Unit =
     addModule(
       env.toModule(CssStylesheet.empty(Nullable.empty), ExtensionStore.empty),
-      nodeWithSpan = null.asInstanceOf[AstNode],
+      nodeWithSpan = Nullable.empty,
       namespace = Nullable(name)
     )
 

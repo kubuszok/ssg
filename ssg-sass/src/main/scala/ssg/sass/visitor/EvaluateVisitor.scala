@@ -324,6 +324,7 @@ final class EvaluateVisitor(
   private def _invokeCallable(callable: Callable, positional: List[Value], named: ListMap[String, Value]): Value =
     ssg.sass.AliasedCallable.unwrap(callable) match {
       case bic: BuiltInCallable =>
+        _checkBuiltInArity(bic, positional, named)
         val merged =
           if (named.isEmpty) positional
           else _mergeBuiltInNamedArgs(bic, positional, named)
@@ -451,6 +452,7 @@ final class EvaluateVisitor(
         ssg.sass.AliasedCallable.unwrap(c) match {
           case bic: ssg.sass.BuiltInCallable =>
             val (positional, named) = _evaluateArguments(node.arguments)
+            _checkBuiltInArity(bic, positional, named)
             val merged              =
               if (named.isEmpty) positional
               else _mergeBuiltInNamedArgs(bic, positional, named)
@@ -1681,7 +1683,7 @@ final class EvaluateVisitor(
                 CssStylesheet.empty(Nullable.empty),
                 ssg.sass.extend.ExtensionStore.empty
               )
-              _environment.addModule(sealedModule, node, node.namespace)
+              _environment.addModule(sealedModule, Nullable(node), node.namespace)
             }
           finally {
             val _ = _activeImports.remove(canonicalUrl)
@@ -2447,6 +2449,65 @@ final class EvaluateVisitor(
         }
       }
       buf.toList
+    }
+  }
+
+  /** Validates positional and named argument arity for a [[BuiltInCallable]]
+    * call. Port of dart-sass `ArgumentList.verify` checks for the built-in
+    * dispatch path (`_runBuiltInCallable` in serialize.dart):
+    *
+    *   1. Named args must resolve to a declared parameter name. When the
+    *      callable has no rest parameter, every name must be in
+    *      `parameterNames`. Otherwise a `No parameter named $foo` error is
+    *      raised (mirroring dart-sass's error text).
+    *   2. Positional count must fit the declared parameter slots unless
+    *      the signature has a rest parameter. An overflow raises
+    *      `Only N argument(s) allowed, but M were passed.`
+    *   3. A name that collides with a positional arg (e.g. the 1st
+    *      positional is `$red` and the caller also passes `$red: 10`)
+    *      raises `Argument $foo was passed both by position and by name.`
+    *
+    * Callables whose signature is empty (rest-only forms like
+    * `"$args..."`) skip arity checks entirely. Callables declared via
+    * `BuiltInCallable.overloadedFunction` are also skipped — their
+    * dispatcher picks the right overload before the callback runs, so
+    * any per-overload arity enforcement happens inside the callback.
+    */
+  private def _checkBuiltInArity(
+    bic:        BuiltInCallable,
+    positional: List[Value],
+    named:      ListMap[String, Value]
+  ): Unit = {
+    // Skip overloaded callables entirely — the dispatcher picks the
+    // right overload at runtime and handles arity inside the callback.
+    if (bic.isOverloaded) return
+    val declared = bic.parameterNames
+    if (declared.isEmpty) return // rest-only or unknown signature — skip
+    val declaredSet = declared.toSet
+    // 1. Unknown named args.
+    for ((k, _) <- named)
+      if (!declaredSet.contains(k))
+        throw SassScriptException(s"No parameter named $$$k.")
+    // 2. Positional overflow (only when no rest parameter).
+    if (!bic.hasRestParameter && positional.length > declared.length) {
+      val nParams = declared.length
+      val nPass   = positional.length
+      val argWord = if (nParams == 1) "argument" else "arguments"
+      val posWord = if (named.isEmpty) "" else "positional "
+      val wasWord = if (nPass == 1) "was" else "were"
+      throw SassScriptException(
+        s"Only $nParams $posWord${argWord} allowed, but $nPass $wasWord passed."
+      )
+    }
+    // 3. Positional / named collision. A name supplied both by position
+    //    (at index `i`) and by name (with `declared(i)`) is rejected.
+    val limit = math.min(positional.length, declared.length)
+    var i     = 0
+    while (i < limit) {
+      val pname = declared(i)
+      if (named.contains(pname))
+        throw SassScriptException(s"Argument $$$pname was passed both by position and by name.")
+      i += 1
     }
   }
 

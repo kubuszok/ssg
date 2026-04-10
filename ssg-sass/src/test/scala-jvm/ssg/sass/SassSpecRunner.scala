@@ -66,11 +66,12 @@ final class SassSpecRunner extends munit.FunSuite {
 
   private def runSpecSuite(): Unit = {
     // Mode is read from a one-shot file at `ssg-sass/target/sass-spec-mode.tsv`
-    // (key=value per line). The file is written by `ssg-dev port`/`ssg-dev test
-    // sass-spec` immediately before invoking the runner and DELETED at the end
-    // of `runSpecSuite()`. This sidesteps a class of bugs where sbt's persistent
-    // session state caused stale `set ThisBuild / Test / javaOptions` from a
-    // prior `--snapshot` invocation to leak into a regression run, silently
+    // (key=value per line). The file is written by the `.rescale/runners.yaml`
+    // sass-spec runner (invoked via `re-scale runner sass-spec`) immediately
+    // before invoking the runner and DELETED at the end of `runSpecSuite()`.
+    // This sidesteps a class of bugs where sbt's persistent session state
+    // caused stale `set ThisBuild / Test / javaOptions` from a prior
+    // `--snapshot` invocation to leak into a regression run, silently
     // overwriting the baseline. Falling back to system properties keeps direct
     // `sbt testOnly` invocations working for developers.
     // The mode file (if present) is AUTHORITATIVE — system properties
@@ -169,9 +170,13 @@ final class SassSpecRunner extends munit.FunSuite {
     byCategory.foreach { case (cat, n) => println(f"  $n%6d  $cat") }
 
     // Phase 0.4: snapshot mode — rewrite the baseline TSV, then return
-    // without asserting.  Used by `ssg-dev port snapshot`. Default target
-    // is the tracked scripts/data/sass-spec-baseline.tsv (same path as
-    // the regression-mode default), so the baseline lives in git.
+    // without asserting. Default target is the tracked
+    // `.rescale/data/sass-spec-baseline.tsv` (same path as the
+    // regression-mode default), so the baseline lives in git. Used by
+    // the sass-port workflow in place of the retired `ssg-dev port
+    // snapshot` command, either through a direct sbt `testOnly` with
+    // `-Dssg.sass.spec.snapshot=1` or through the `.rescale/runners.yaml`
+    // sass-spec runner entry.
     //
     // Snapshot is incompatible with --subdir: a partial run would
     // overwrite the full-coverage baseline. Refuse the combination
@@ -184,7 +189,7 @@ final class SassSpecRunner extends munit.FunSuite {
             s"(subdir filter is '${subdirFilter.get}'). " +
             "Run snapshot without a subdir filter to capture the full pass set."
         )
-      val tracked = repoRoot.resolve("scripts").resolve("data").resolve("sass-spec-baseline.tsv")
+      val tracked = repoRoot.resolve(".rescale").resolve("data").resolve("sass-spec-baseline.tsv")
       val target = baselinePath.map(Paths.get(_)).getOrElse(tracked)
       writeBaseline(target, results)
       println(s"Wrote baseline: $target (${results.size} cases)")
@@ -219,10 +224,13 @@ final class SassSpecRunner extends munit.FunSuite {
     // 3) Baseline / regression mode: no previously-passing case may
     //    now fail. New passes are fine; new cases are fine.
     //
-    // The baseline lives under `scripts/data/sass-spec-baseline.tsv`
+    // The baseline lives under `.rescale/data/sass-spec-baseline.tsv`
     // (tracked in git) so every session shares the same floor. The
-    // `target/` variant is not tracked.
-    val defaultBaseline = repoRoot.resolve("scripts").resolve("data").resolve("sass-spec-baseline.tsv")
+    // `target/` variant is not tracked. The file moved from
+    // `scripts/data/` to `.rescale/data/` when the project switched
+    // from the local `ssg-dev` binary to the project-agnostic
+    // `re-scale` tool.
+    val defaultBaseline = repoRoot.resolve(".rescale").resolve("data").resolve("sass-spec-baseline.tsv")
     // Auto-snapshot on first run: when no baseline exists and no
     // explicit --baseline was requested, write the current result set
     // as the new zero point. This converts "first run after Phase 0"
