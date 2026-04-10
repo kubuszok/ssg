@@ -169,6 +169,7 @@ object TemplateParser {
     def withEvaluateInOutputTag(v:       Boolean):           Builder = { _evaluateInOutputTag = v; this }
     def withStrictTypedExpressions(v:    Boolean):           Builder = { _strictTypedExpressions = v; this }
     def withLiquidStyleInclude(v:        Boolean):           Builder = { _liquidStyleInclude = v; this }
+    def withLiquidStyleWhere(v:         Boolean):           Builder = { _liquidStyleWhere = v; this }
     def withStrictVariables(v:           Boolean):           Builder = { _strictVariables = v; this }
     def withShowExceptionsFromInclude(v: Boolean):           Builder = { _showExceptionsFromInclude = v; this }
     def withEvaluateMode(mode:           EvaluateMode):      Builder = { _evaluateMode = mode; this }
