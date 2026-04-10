@@ -47,7 +47,10 @@ object Minifier {
   def minifyJson(input: String): String =
     JsonMinifier.minify(input)
 
-  /** Minify content based on file type. */
+  /** Minify content based on file type.
+    *
+    * Respects file-type toggles (compressCss, compressJs, compressJson) — returns input unchanged if the toggle is off.
+    */
   def minify(
     input:        String,
     fileType:     FileType,
@@ -57,10 +60,26 @@ object Minifier {
     fileType match {
       case FileType.Html => HtmlMinifier.minify(input, options.html, jsCompressor)
       case FileType.Xml  => HtmlMinifier.minify(input, options.html, jsCompressor)
-      case FileType.Css  => CssMinifier.minify(input, options.css)
-      case FileType.Js   => jsCompressor.compress(input)
-      case FileType.Json => JsonMinifier.minify(input)
+      case FileType.Css  => if (options.compressCss) CssMinifier.minify(input, options.css) else input
+      case FileType.Js   => if (options.compressJs) jsCompressor.compress(input) else input
+      case FileType.Json => if (options.compressJson) JsonMinifier.minify(input) else input
     }
+
+  /** Minify content based on file path, respecting exclude patterns and file-type toggles. */
+  def minifyFile(
+    input:        String,
+    filePath:     String,
+    options:      MinifyOptions = MinifyOptions.Defaults,
+    jsCompressor: JsCompressor = BasicJsMinifier
+  ): String = {
+    if (options.exclude.exists(pattern => filePath.contains(pattern))) input
+    else {
+      fileTypeFromPath(filePath) match {
+        case Some(ft) => minify(input, ft, options, jsCompressor)
+        case None     => input
+      }
+    }
+  }
 
   /** Determine file type from a file path extension. */
   def fileTypeFromPath(path: String): Option[FileType] = {

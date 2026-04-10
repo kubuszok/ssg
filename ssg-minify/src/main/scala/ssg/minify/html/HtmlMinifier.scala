@@ -63,8 +63,8 @@ object HtmlMinifier {
     var result = html
     if (options.removeComments) result = removeComments(result)
     if (options.simpleDoctype) result = simplifyDoctype(result)
-    if (options.removeMultiSpaces) result = collapseMultiSpaces(result)
-    if (options.removeIntertagSpaces) result = removeIntertagSpaces(result)
+    if (options.removeMultiSpaces) result = collapseMultiSpaces(result, options.preserveLineBreaks)
+    if (options.removeIntertagSpaces) result = removeIntertagSpaces(result, options.preserveLineBreaks)
     if (options.removeSpacesInsideTags) result = removeSpacesInsideTags(result)
 
     // 3. Restore preserved blocks (so tag-level optimizations can see script/style tags)
@@ -140,16 +140,30 @@ object HtmlMinifier {
 
   // -- Whitespace --
 
-  private val MultiSpace = " {2,}".r
+  private val MultiSpace         = " {2,}".r
+  private val MultiSpaceWithNl   = " *\\n[ \\n]*".r
 
-  private def collapseMultiSpaces(html: String): String =
-    // Collapse runs of spaces (not newlines)
-    MultiSpace.replaceAllIn(html, " ")
+  private def collapseMultiSpaces(html: String, preserveLineBreaks: Boolean): String =
+    if (preserveLineBreaks) {
+      // Collapse runs of spaces but preserve one newline when present
+      val step1 = MultiSpaceWithNl.replaceAllIn(html, "\n")
+      MultiSpace.replaceAllIn(step1, " ")
+    } else {
+      MultiSpace.replaceAllIn(html, " ")
+    }
 
-  private val IntertagSpace = ">\\s+<".r
+  private val IntertagSpace      = ">\\s+<".r
+  private val IntertagSpaceWithNl = ">[ \\t]*\\n[\\s]*<".r
+  private val IntertagSpaceNoNl   = ">[ \\t]+<".r
 
-  private def removeIntertagSpaces(html: String): String =
-    IntertagSpace.replaceAllIn(html, "><")
+  private def removeIntertagSpaces(html: String, preserveLineBreaks: Boolean): String =
+    if (preserveLineBreaks) {
+      // Preserve one newline between tags when the whitespace contains a newline
+      val step1 = IntertagSpaceWithNl.replaceAllIn(html, ">\n<")
+      IntertagSpaceNoNl.replaceAllIn(step1, "><")
+    } else {
+      IntertagSpace.replaceAllIn(html, "><")
+    }
 
   // Remove unnecessary whitespace inside tags: <tag  attr = "val" > → <tag attr="val">
   private val MultiSpaceInTag = "\\s{2,}".r
