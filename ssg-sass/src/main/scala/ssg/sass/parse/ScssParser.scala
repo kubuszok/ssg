@@ -37,7 +37,7 @@ class ScssParser(
 
   /** Consumes a selector interpolation until `{`.
     *
-    * Simplified: collects raw text as plain interpolation. Proper interpolation parsing (with `#{...}` expressions) is a TODO.
+    * Basic: collects raw text as plain interpolation. Proper interpolation parsing (with `#{...}` expressions) is a TODO.
     */
   override protected def styleRuleSelector(): Interpolation = {
     val start    = scanner.state
@@ -62,6 +62,39 @@ class ScssParser(
           }
         } else if (brackets == 0 && c == CharCode.$lbrace) {
           break(())
+        } else if (c == CharCode.$backslash) {
+          // Preserve escape sequences raw (backslash + hex digits + optional
+          // whitespace, or backslash + single char) so they round-trip through
+          // the selector parser correctly.
+          buf.append(scanner.readChar().toChar) // backslash
+          if (!scanner.isDone) {
+            val next = scanner.peekChar()
+            if (CharCode.isHex(next)) {
+              var i = 0
+              while (i < 6 && !scanner.isDone && CharCode.isHex(scanner.peekChar())) {
+                buf.append(scanner.readChar().toChar)
+                i += 1
+              }
+              // Consume optional trailing whitespace and include it
+              if (!scanner.isDone && CharCode.isWhitespace(scanner.peekChar()))
+                buf.append(scanner.readChar().toChar)
+            } else {
+              buf.append(scanner.readChar().toChar)
+            }
+          }
+        } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          // Quoted strings — preserve verbatim including escapes.
+          val q = scanner.readChar()
+          buf.append(q.toChar)
+          while (!scanner.isDone && scanner.peekChar() != q) {
+            if (scanner.peekChar() == CharCode.$backslash) {
+              buf.append(scanner.readChar().toChar) // backslash
+              if (!scanner.isDone) buf.append(scanner.readChar().toChar) // next char
+            } else {
+              buf.append(scanner.readChar().toChar)
+            }
+          }
+          if (!scanner.isDone) buf.append(scanner.readChar().toChar) // closing quote
         } else {
           if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
           else if (c == CharCode.$rparen || c == CharCode.$rbracket) brackets -= 1

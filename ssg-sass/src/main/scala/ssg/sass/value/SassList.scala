@@ -88,7 +88,7 @@ class SassList(
       case ListSeparator.Slash     => " / "
       case ListSeparator.Undecided => " "
     }
-    val inner = elems.map(_.toCssString()).mkString(sepStr)
+    val inner = elems.map(_.toCssString(quote)).mkString(sepStr)
     if (hasBrackets) s"[$inner]"
     else inner
   }

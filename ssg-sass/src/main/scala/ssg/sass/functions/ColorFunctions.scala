@@ -932,7 +932,7 @@ object ColorFunctions {
 
   def module: List[Callable] = global ::: moduleOnly
 
-  /** Stub for any direct color function dispatch. */
+  /** Fallback for unregistered color function names. */
   def stub(name: String, args: List[Value]): Value =
-    throw new UnsupportedOperationException("Phase 9 stub: color." + name)
+    throw new UnsupportedOperationException("Unregistered color function: color." + name)
 }

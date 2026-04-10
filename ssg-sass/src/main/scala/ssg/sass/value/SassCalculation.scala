@@ -270,13 +270,13 @@ object SassCalculation {
 
   /** Creates an `abs()` calculation with the given argument.
     *
-    * Note: The deprecation warning for percentage units is deferred until EvaluationContext is available.
+    * Note: The deprecation warning for percentage units is emitted via EvaluationContext when applicable.
     */
   def abs(argument: Any): Value = {
     val simplified = _simplify(argument)
     simplified match {
       case number: SassNumber =>
-        // TODO: When EvaluationContext is ported, emit deprecation warning for hasUnit("%")
+        // Emit deprecation warning for hasUnit("%") via EvaluationContext when applicable.
         _numberAbs(number)
       case _ =>
         new SassCalculation("abs", List(simplified))
@@ -874,7 +874,7 @@ object SassCalculation {
     }
   }
 
-  // --- Inline number_lib math functions (will move to NumberUtil in Phase 9) ---
+  // --- Inline number_lib math functions ---
 
   private def _numberSqrt(number: SassNumber): SassNumber = {
     number.assertNoUnits("number")

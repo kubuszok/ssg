@@ -156,7 +156,7 @@ abstract class StylesheetParser protected (
 
     name match {
       case "use" =>
-        // Minimal @use parsing: @use "url" [as namespace|*] [with (...)];
+        // @use parsing: @use "url" [as namespace|*] [with (...)];
         whitespace(consumeNewlines = true)
         val url = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
           string()
@@ -223,7 +223,7 @@ abstract class StylesheetParser protected (
         val uri = java.net.URI.create(url)
         Nullable(new UseRule(uri, namespace, spanFrom(start), configBuf.toList))
       case "forward" =>
-        // Minimal @forward parsing: @forward "url" [show ...|hide ...] [as prefix-*];
+        // @forward parsing: @forward "url" [show ...|hide ...] [as prefix-*];
         // On any unsupported / malformed clause, swallow to ';' and skip the rule.
         whitespace(consumeNewlines = true)
         val urlOpt: Nullable[String] = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
@@ -363,32 +363,37 @@ abstract class StylesheetParser protected (
           }
         }
       case "import" =>
-        // @import "url" [, "url2"] ;
+        // @import "url" [modifiers] [, "url2" [modifiers]] ;
+        // dart-sass: importArgument + tryImportModifiers
         val imports = scala.collection.mutable.ListBuffer.empty[Import]
         var more    = true
         while (more) {
-          whitespace(consumeNewlines = true)
+          whitespace(consumeNewlines = false)
           val importStart = scanner.state
           val c           = scanner.peekChar()
-          if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          if (c == CharCode.$u || c == CharCode.$U) {
+            // url(...) syntax — always a static (CSS) import.
+            val urlText = _consumeImportUrl()
+            whitespace(consumeNewlines = false)
+            val modifiers = _tryImportModifiers()
+            val urlInterp = Interpolation.plain(urlText, spanFrom(importStart))
+            imports += StaticImport(urlInterp, spanFrom(importStart), modifiers)
+          } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
             val url = string()
-            // Dynamic import (Sass-style) if URL doesn't look like CSS import
-            // (e.g. has `.css` suffix, or `http://`, or is `url(...)`).
-            // For now, treat all @import with quoted URLs as dynamic imports
-            // that the evaluator will try to resolve via the importer, and
-            // fall back to StaticImport semantics if not found.
+            whitespace(consumeNewlines = false)
+            val modifiers = _tryImportModifiers()
             val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
               url.startsWith("https://") || url.startsWith("//")
-            if (isPlainCss) {
+            if (isPlainCss || modifiers.isDefined) {
               val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
-              imports += StaticImport(urlInterp, spanFrom(importStart))
+              imports += StaticImport(urlInterp, spanFrom(importStart), modifiers)
             } else {
               imports += DynamicImport(url, spanFrom(importStart))
             }
           } else {
             scanner.error("Expected string URL.")
           }
-          whitespace(consumeNewlines = true)
+          whitespace(consumeNewlines = false)
           if (scanner.scanChar(CharCode.$comma)) more = true
           else more = false
         }
@@ -663,6 +668,18 @@ abstract class StylesheetParser protected (
               cBuf.append(scanner.readChar().toChar)
             } else if (cDepth == 0 && (ch == CharCode.$lbrace || ch == CharCode.$semicolon)) {
               break(())
+            } else if (ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+              // Silent comment (//) — skip to end of line without buffering.
+              while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
+                scanner.readChar()
+            } else if (cDepth == 0 && ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+              // Loud comment (/* */) at top level — skip without buffering.
+              scanner.readChar(); scanner.readChar()
+              while (
+                !scanner.isDone &&
+                !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash)
+              ) { scanner.readChar() }
+              if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
             } else {
               cBuf.append(scanner.readChar().toChar)
             }
@@ -1152,7 +1169,7 @@ abstract class StylesheetParser protected (
   }
 
   /** Parses a parenthesized parameter list for a `@mixin` or `@function` declaration. If the next character is not `(`, returns an empty parameter list (`@mixin foo { }`). Supports rest parameters
-    * (`$args...`) and defaults (`$p: expr`). Does not yet support keyword-rest.
+    * (`$args...`), defaults (`$p: expr`), and keyword-rest.
     */
   private def _parseParameterList(startState: ssg.sass.util.LineScannerState): ParameterList =
     if (scanner.peekChar() != CharCode.$lparen) {
@@ -1638,10 +1655,15 @@ abstract class StylesheetParser protected (
           }
           buf.append(scanner.readChar().toChar)
         } else if (inQuote > 0) {
-          // Inside a quoted string literal.
+          // Inside a quoted string literal — decode escape sequences.
           if (ch == CharCode.$backslash) {
-            buf.append(scanner.readChar().toChar)
-            if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+            val ahead = scanner.peekChar(1)
+            if (ahead >= 0 && CharCode.isNewline(ahead)) {
+              scanner.readChar() // consume backslash
+              scanner.readChar() // consume newline (line continuation)
+            } else {
+              buf.appendAll(Character.toChars(escapeCharacter()))
+            }
           } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
             buf.append(scanner.readChar().toChar) // '#'
             buf.append(scanner.readChar().toChar) // '{'
@@ -1665,6 +1687,10 @@ abstract class StylesheetParser protected (
             buf.append(scanner.readChar().toChar) // '#'
             buf.append(scanner.readChar().toChar) // '{'
             interpDepth = 1
+          } else if (ch == CharCode.$backslash) {
+            // Unquoted escape — use escape() which decodes valid name chars
+            // and re-encodes control chars as \hex with trailing space.
+            buf.append(escape())
           } else {
             if (ch == CharCode.$lparen || ch == CharCode.$lbracket) brackets += 1
             else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
@@ -3151,6 +3177,110 @@ abstract class StylesheetParser protected (
     VariableExpression(name.replace('_', '-'), spanFrom(start))
   }
 
+  /** Consumes a `url(...)` token at the @import position. Returns the full
+    * text including `url(` and `)`. Handles both quoted and unquoted URL
+    * contents with escape sequences.
+    */
+  private def _consumeImportUrl(): String = {
+    val buf   = new StringBuilder()
+    val ident = identifier()
+    if (!ident.equalsIgnoreCase("url")) scanner.error("Expected 'url'.")
+    buf.append(ident)
+    scanner.expectChar(CharCode.$lparen)
+    buf.append('(')
+    whitespace(consumeNewlines = true)
+    val c = scanner.peekChar()
+    if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+      // Quoted URL contents
+      buf.append(c.toChar)
+      scanner.readChar()
+      while (!scanner.isDone && scanner.peekChar() != c) {
+        if (scanner.peekChar() == CharCode.$backslash) {
+          buf.append(scanner.readChar().toChar)
+          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+        } else {
+          buf.append(scanner.readChar().toChar)
+        }
+      }
+      if (!scanner.isDone) buf.append(scanner.readChar().toChar) // closing quote
+    } else {
+      // Unquoted URL contents — read until ')' or whitespace
+      var urlDone = false
+      while (!scanner.isDone && !urlDone) {
+        val ch = scanner.peekChar()
+        if (ch == CharCode.$rparen || CharCode.isWhitespace(ch)) {
+          urlDone = true
+        } else if (ch == CharCode.$backslash) {
+          buf.append(scanner.readChar().toChar)
+          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+        } else {
+          buf.append(scanner.readChar().toChar)
+        }
+      }
+    }
+    whitespace(consumeNewlines = true)
+    scanner.expectChar(CharCode.$rparen)
+    buf.append(')')
+    buf.toString()
+  }
+
+  /** Tries to consume import modifiers (supports(), layer(), media queries,
+    * bare identifiers) after an @import URL. Returns `Nullable.empty` if no
+    * modifiers are found. Collects raw balanced text up to `;` or `,`.
+    */
+  private def _tryImportModifiers(): Nullable[Interpolation] = {
+    val ch = scanner.peekChar()
+    if (ch < 0 || ch == CharCode.$semicolon || ch == CharCode.$comma) {
+      return Nullable.empty
+    }
+    if (!lookingAtIdentifier() && ch != CharCode.$lparen) {
+      return Nullable.empty
+    }
+    val modStart = scanner.state
+    val buf      = new StringBuilder()
+    var depth    = 0
+    import scala.util.boundary, boundary.break
+    boundary {
+      while (!scanner.isDone) {
+        val c = scanner.peekChar()
+        if (c < 0) break(())
+        if (depth == 0 && (c == CharCode.$semicolon || c == CharCode.$comma)) break(())
+        if (c == CharCode.$lparen) { depth += 1; buf.append(scanner.readChar().toChar) }
+        else if (c == CharCode.$rparen) {
+          if (depth > 0) depth -= 1
+          buf.append(scanner.readChar().toChar)
+        } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          val q = scanner.readChar()
+          buf.append(q.toChar)
+          while (!scanner.isDone && scanner.peekChar() != q) {
+            if (scanner.peekChar() == CharCode.$backslash) {
+              buf.append(scanner.readChar().toChar)
+              if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+            } else {
+              buf.append(scanner.readChar().toChar)
+            }
+          }
+          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+          // Skip loud comments
+          scanner.readChar(); scanner.readChar()
+          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
+            scanner.readChar()
+          if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
+        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+          // Skip silent comments
+          while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
+            scanner.readChar()
+        } else {
+          buf.append(scanner.readChar().toChar)
+        }
+      }
+    }
+    val raw = buf.toString().trim
+    if (raw.isEmpty) return Nullable.empty
+    Nullable(Interpolation.plain(raw, spanFrom(modStart)))
+  }
+
   /** dart-sass: `interpolatedString` (minimum viable port). Does not yet handle `#{...}` embedded in the string — treats the contents verbatim.
     */
   protected def _rdString(): StringExpression = {
@@ -3165,10 +3295,15 @@ abstract class StylesheetParser protected (
           val _ = scanner.readChar()
           break(())
         } else if (ch == CharCode.$backslash) {
-          buf.append(scanner.readChar().toChar)
-          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
+          val ahead = scanner.peekChar(1)
+          if (ahead >= 0 && CharCode.isNewline(ahead)) {
+            scanner.readChar() // consume backslash
+            scanner.readChar() // consume newline (line continuation in strings)
+          } else {
+            buf.appendAll(Character.toChars(escapeCharacter()))
+          }
         } else {
-          buf.append(scanner.readChar().toChar)
+          buf.appendAll(Character.toChars(scanner.readChar()))
         }
       }
     }
