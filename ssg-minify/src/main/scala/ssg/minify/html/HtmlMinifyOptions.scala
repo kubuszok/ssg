@@ -11,8 +11,6 @@
  * Migration notes:
  *   Renames: htmlcompressor gem → ssg.minify.html.HtmlMinifier
  *   Convention: Immutable case class matching all original config options
- *   Gap: preserveLineBreaks field is dead — declared but never consumed by
- *     HtmlMinifier.doMinify. See ISS-038.
  *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
@@ -40,9 +38,26 @@ final case class HtmlMinifyOptions(
   simpleBooleanAttributes:  Boolean = false,
   compressCssInHtml:        Boolean = true,
   compressJsInHtml:         Boolean = true,
+  preservePhp:              Boolean = false,
+  preserveSsi:              Boolean = false,
   preservePatterns:         List[Regex] = Nil
-)
+) {
+
+  /** Effective preserve patterns, including auto-injected patterns from boolean flags. */
+  def effectivePreservePatterns: List[Regex] = {
+    var patterns = preservePatterns
+    if (preservePhp) patterns = HtmlMinifyOptions.PhpPattern :: patterns
+    if (preserveSsi) patterns = HtmlMinifyOptions.SsiPattern :: patterns
+    patterns
+  }
+}
 
 object HtmlMinifyOptions {
   val Defaults: HtmlMinifyOptions = HtmlMinifyOptions()
+
+  /** Regex to preserve PHP blocks: <?php ... ?> */
+  val PhpPattern: Regex = """<\?php[\s\S]*?\?>""".r
+
+  /** Regex to preserve SSI directives: <!--# ... --> */
+  val SsiPattern: Regex = """<!--#[\s\S]*?-->""".r
 }
