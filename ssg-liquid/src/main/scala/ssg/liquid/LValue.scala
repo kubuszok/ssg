@@ -366,13 +366,23 @@ object LValue {
     c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r'
 
   /** Mimic ruby's BigDecimal.to_f with standard java capabilities. Ensures at least 1 decimal place (e.g., 5.0 not 5).
+    *
+    * Original: bd.setScale(Math.max(1, bd.stripTrailingZeros().scale()), RoundingMode.UNNECESSARY)
+    * We avoid stripTrailingZeros().scale() which is unreliable on Native, and instead
+    * strip trailing zeros from the string representation directly.
     */
   def asFormattedNumber(bd: BigDecimal): BigDecimal = {
-    // Avoid stripTrailingZeros().scale() which is unreliable on Native
     val s = bd.toString
     if (s.contains('.')) {
-      // Already has decimal point — keep as-is but ensure PlainBigDecimal wrapping
-      PlainBigDecimal(s)
+      // Strip trailing zeros from the fractional part, but keep at least one digit after '.'
+      val dotIdx   = s.indexOf('.')
+      val intPart  = s.substring(0, dotIdx)
+      var fracPart = s.substring(dotIdx + 1)
+      // Remove trailing zeros
+      while (fracPart.length > 1 && fracPart.charAt(fracPart.length - 1) == '0') {
+        fracPart = fracPart.substring(0, fracPart.length - 1)
+      }
+      PlainBigDecimal(intPart + "." + fracPart)
     } else {
       // No decimal point — add .0
       PlainBigDecimal(s + ".0")
