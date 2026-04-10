@@ -208,7 +208,7 @@ object HtmlMinifier {
   // -- Attribute optimization --
 
   // Remove quotes on simple attribute values (no spaces, no special chars)
-  private val QuotedSimpleAttr = """(\w+)="([a-zA-Z0-9_\-]+)"""".r
+  private val QuotedSimpleAttr = """(\w+)="([^\s=<>"']+)"""".r
 
   private def removeUnnecessaryQuotes(html: String): String =
     QuotedSimpleAttr.replaceAllIn(html, "$1=$2")
