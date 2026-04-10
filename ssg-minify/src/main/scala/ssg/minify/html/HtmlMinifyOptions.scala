@@ -40,7 +40,8 @@ final case class HtmlMinifyOptions(
   compressJsInHtml:         Boolean = true,
   preservePhp:              Boolean = false,
   preserveSsi:              Boolean = false,
-  preservePatterns:         List[Regex] = Nil
+  preservePatterns:         List[Regex] = Nil,
+  preservedTags:            List[String] = HtmlMinifyOptions.DefaultPreservedTags
 ) {
 
   /** Effective preserve patterns, including auto-injected patterns from boolean flags. */
@@ -53,6 +54,9 @@ final case class HtmlMinifyOptions(
 }
 
 object HtmlMinifyOptions {
+  /** Default tags whose content is preserved during minification. */
+  val DefaultPreservedTags: List[String] = List("pre", "textarea", "script", "style")
+
   val Defaults: HtmlMinifyOptions = HtmlMinifyOptions()
 
   /** Regex to preserve PHP blocks: <?php ... ?> */

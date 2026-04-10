@@ -175,24 +175,68 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     var toplevel = ast
     toplevelNode = Some(toplevel)
 
-    // Single-pass optimization: walk the AST and apply per-node optimizations.
-    // The TreeTransformer-based multi-pass loop (matching Terser's behavior)
-    // is not yet ported — this provides a simpler single-pass approach.
+    // Resolve global definitions (e.g., DEBUG: false → replace all DEBUG refs)
+    toplevel = GlobalDefs.resolveDefs(toplevel, options.globalDefs)
 
-    // Drop console calls if configured
-    if (options.dropConsole != DropConsoleConfig.Disabled) {
-      toplevel = dropConsole(toplevel)
-    }
+    val passes   = options.passes.max(1)
+    var minCount = Int.MaxValue
+    var stopping = false
 
-    // Apply per-node optimizations via a single walk
-    val optimized = optimizeTree(toplevel)
-    toplevel = optimized match {
-      case tl: AstToplevel => tl
-      case _ => toplevel
+    // Create a TreeTransformer that delegates to the Compressor's before() callback
+    val compressor = this
+    val transformer = new TreeTransformer(
+      before = (node, descend) => {
+        compressor.before(node, (n, _) => descend())
+      }
+    )
+
+    var pass = 0
+    while (pass < passes) {
+      // TODO: figure_out_scope(mangle) when scope analysis is fully integrated
+
+      if (pass == 0 && options.dropConsole != DropConsoleConfig.Disabled) {
+        // must be run before reduce_vars and compress pass
+        toplevel = dropConsole(toplevel)
+      }
+
+      if (pass > 0 || optionBool("reduce_vars")) {
+        resetOptFlags(toplevel)
+      }
+
+      // Transform pass — walks the AST, optimizing each node
+      toplevelNode = Some(toplevel)
+      toplevel = toplevel.transform(transformer).asInstanceOf[AstToplevel]
+
+      // Multi-pass convergence: count AST nodes, stop when size stops shrinking
+      if (passes > 1) {
+        var count = 0
+        ssg.js.ast.walk(toplevel, (_, _) => { count += 1; null })
+        if (count < minCount) {
+          minCount = count
+          stopping = false
+        } else if (stopping) {
+          pass = passes // break
+        } else {
+          stopping = true
+        }
+      }
+
+      pass += 1
     }
 
     toplevelNode = None
     toplevel
+  }
+
+  /** Optimize each element of an ArrayBuffer in place. */
+  private def optimizeList(list: ArrayBuffer[AstNode]): Unit = {
+    var i = 0
+    while (i < list.size) {
+      val child = list(i)
+      val opt   = optimizeTree(child)
+      if (!(opt eq child)) list(i) = opt
+      i += 1
+    }
   }
 
   /** Walk the AST bottom-up, applying optimizations to each node. Returns the optimized tree.
@@ -225,44 +269,161 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           i += 1
         }
       case simple: AstSimpleStatement =>
-        val opt = optimizeTree(simple.body)
-        if (!(opt eq simple.body)) {
-          simple.body = opt
-        }
+        if (simple.body != null) simple.body = optimizeTree(simple.body.nn)
       case ifNode: AstIf =>
-        ifNode.condition = optimizeTree(ifNode.condition)
-        ifNode.body = optimizeTree(ifNode.body)
-        if (ifNode.alternative != null) {
-          ifNode.alternative = optimizeTree(ifNode.alternative.nn)
-        }
+        if (ifNode.condition != null) ifNode.condition = optimizeTree(ifNode.condition.nn)
+        if (ifNode.body != null) ifNode.body = optimizeTree(ifNode.body.nn)
+        if (ifNode.alternative != null) ifNode.alternative = optimizeTree(ifNode.alternative.nn)
+
+      // Loops
+      case forNode: AstFor =>
+        if (forNode.init != null) forNode.init = optimizeTree(forNode.init.nn)
+        if (forNode.condition != null) forNode.condition = optimizeTree(forNode.condition.nn)
+        if (forNode.step != null) forNode.step = optimizeTree(forNode.step.nn)
+        if (forNode.body != null) forNode.body = optimizeTree(forNode.body.nn)
+      case forIn: AstForIn =>
+        if (forIn.init != null) forIn.init = optimizeTree(forIn.init.nn)
+        if (forIn.obj != null) forIn.obj = optimizeTree(forIn.obj.nn)
+        if (forIn.body != null) forIn.body = optimizeTree(forIn.body.nn)
+      case whileNode: AstWhile =>
+        if (whileNode.condition != null) whileNode.condition = optimizeTree(whileNode.condition.nn)
+        if (whileNode.body != null) whileNode.body = optimizeTree(whileNode.body.nn)
+      case doNode: AstDo =>
+        if (doNode.body != null) doNode.body = optimizeTree(doNode.body.nn)
+        if (doNode.condition != null) doNode.condition = optimizeTree(doNode.condition.nn)
+
+      // Switch
+      case switchNode: AstSwitch =>
+        if (switchNode.expression != null) switchNode.expression = optimizeTree(switchNode.expression.nn)
+        optimizeList(switchNode.body)
+      case caseNode: AstCase =>
+        if (caseNode.expression != null) caseNode.expression = optimizeTree(caseNode.expression.nn)
+        optimizeList(caseNode.body)
+      case defaultNode: AstDefault =>
+        optimizeList(defaultNode.body)
+
+      // Try/Catch/Finally
+      case tryNode: AstTry =>
+        if (tryNode.body != null) tryNode.body = optimizeTree(tryNode.body.nn).asInstanceOf[AstTryBlock]
+        if (tryNode.bcatch != null) tryNode.bcatch = optimizeTree(tryNode.bcatch.nn).asInstanceOf[AstCatch]
+        if (tryNode.bfinally != null) tryNode.bfinally = optimizeTree(tryNode.bfinally.nn).asInstanceOf[AstFinally]
+      case tryBlock: AstTryBlock =>
+        optimizeList(tryBlock.body)
+      case catchNode: AstCatch =>
+        if (catchNode.argname != null) catchNode.argname = optimizeTree(catchNode.argname.nn)
+        optimizeList(catchNode.body)
+      case finallyNode: AstFinally =>
+        optimizeList(finallyNode.body)
+
+      // Exit statements
       case ret: AstReturn if ret.value != null =>
         ret.value = optimizeTree(ret.value.nn)
+      case throwNode: AstThrow if throwNode.value != null =>
+        throwNode.value = optimizeTree(throwNode.value.nn)
+
+      // Labeled statement
+      case labeled: AstLabeledStatement =>
+        if (labeled.body != null) labeled.body = optimizeTree(labeled.body.nn)
+
+      // With statement
+      case withNode: AstWith =>
+        if (withNode.expression != null) withNode.expression = optimizeTree(withNode.expression.nn)
+        if (withNode.body != null) withNode.body = optimizeTree(withNode.body.nn)
+
+      // Expressions
       case assign: AstAssign =>
-        assign.left = optimizeTree(assign.left)
-        assign.right = optimizeTree(assign.right)
+        if (assign.left != null) assign.left = optimizeTree(assign.left.nn)
+        if (assign.right != null) assign.right = optimizeTree(assign.right.nn)
       case binary: AstBinary =>
-        binary.left = optimizeTree(binary.left)
-        binary.right = optimizeTree(binary.right)
+        if (binary.left != null) binary.left = optimizeTree(binary.left.nn)
+        if (binary.right != null) binary.right = optimizeTree(binary.right.nn)
       case unary: AstUnary =>
-        unary.expression = optimizeTree(unary.expression)
+        if (unary.expression != null) unary.expression = optimizeTree(unary.expression.nn)
       case call: AstCall =>
-        call.expression = optimizeTree(call.expression)
-        var i = 0
-        while (i < call.args.size) {
-          call.args(i) = optimizeTree(call.args(i))
-          i += 1
-        }
+        if (call.expression != null) call.expression = optimizeTree(call.expression.nn)
+        optimizeList(call.args)
       case cond: AstConditional =>
-        cond.condition = optimizeTree(cond.condition)
-        cond.consequent = optimizeTree(cond.consequent)
-        cond.alternative = optimizeTree(cond.alternative)
+        if (cond.condition != null) cond.condition = optimizeTree(cond.condition.nn)
+        if (cond.consequent != null) cond.consequent = optimizeTree(cond.consequent.nn)
+        if (cond.alternative != null) cond.alternative = optimizeTree(cond.alternative.nn)
       case seq: AstSequence if seq.expressions.nonEmpty =>
-        var i = 0
-        while (i < seq.expressions.size) {
-          seq.expressions(i) = optimizeTree(seq.expressions(i))
-          i += 1
-        }
-      case _ => // leaf node or unhandled — skip children
+        optimizeList(seq.expressions)
+
+      // Classes
+      case cls: AstClass =>
+        if (cls.name != null) cls.name = optimizeTree(cls.name.nn)
+        if (cls.superClass != null) cls.superClass = optimizeTree(cls.superClass.nn)
+        optimizeList(cls.properties)
+      case staticBlock: AstClassStaticBlock =>
+        optimizeList(staticBlock.body)
+
+      // Object/Array literals
+      case arr: AstArray =>
+        optimizeList(arr.elements)
+      case obj: AstObject =>
+        optimizeList(obj.properties)
+      case prop: AstObjectProperty =>
+        prop.key match { case k: AstNode => prop.key = optimizeTree(k); case _ => }
+        if (prop.value != null) prop.value = optimizeTree(prop.value.nn)
+
+      // Variable definitions
+      case defs: AstDefinitionsLike =>
+        optimizeList(defs.definitions)
+      case varDef: AstVarDef =>
+        if (varDef.name != null) varDef.name = optimizeTree(varDef.name.nn)
+        if (varDef.value != null) varDef.value = optimizeTree(varDef.value.nn)
+
+      // Lambda (function/arrow/accessor)
+      case lambda: AstLambda =>
+        if (lambda.name != null) lambda.name = optimizeTree(lambda.name.nn)
+        optimizeList(lambda.argnames)
+        optimizeList(lambda.body)
+
+      // Destructuring
+      case dest: AstDestructuring =>
+        optimizeList(dest.names)
+
+      // Expansion (spread)
+      case exp: AstExpansion =>
+        if (exp.expression != null) exp.expression = optimizeTree(exp.expression.nn)
+
+      // Template strings
+      case tmpl: AstTemplateString =>
+        optimizeList(tmpl.segments)
+      case ptmpl: AstPrefixedTemplateString =>
+        if (ptmpl.prefix != null) ptmpl.prefix = optimizeTree(ptmpl.prefix.nn)
+        if (ptmpl.templateString != null) ptmpl.templateString = optimizeTree(ptmpl.templateString.nn).asInstanceOf[AstTemplateString]
+
+      // PropAccess
+      case sub: AstSub =>
+        if (sub.expression != null) sub.expression = optimizeTree(sub.expression.nn)
+        sub.property match { case p: AstNode => sub.property = optimizeTree(p); case _ => }
+      case dot: AstDot =>
+        if (dot.expression != null) dot.expression = optimizeTree(dot.expression.nn)
+      case chain: AstChain =>
+        if (chain.expression != null) chain.expression = optimizeTree(chain.expression.nn)
+
+      // Await/Yield
+      case aw: AstAwait =>
+        if (aw.expression != null) aw.expression = optimizeTree(aw.expression.nn)
+      case yld: AstYield =>
+        if (yld.expression != null) yld.expression = optimizeTree(yld.expression.nn)
+
+      // PrivateIn
+      case pi: AstPrivateIn =>
+        if (pi.key != null) pi.key = optimizeTree(pi.key.nn)
+        if (pi.value != null) pi.value = optimizeTree(pi.value.nn)
+
+      // Import/Export
+      case imp: AstImport =>
+        if (imp.importedName != null) imp.importedName = optimizeTree(imp.importedName.nn)
+        if (imp.moduleName != null) imp.moduleName = optimizeTree(imp.moduleName.nn)
+      case exp: AstExport =>
+        if (exp.exportedDefinition != null) exp.exportedDefinition = optimizeTree(exp.exportedDefinition.nn)
+        if (exp.exportedValue != null) exp.exportedValue = optimizeTree(exp.exportedValue.nn)
+        if (exp.moduleName != null) exp.moduleName = optimizeTree(exp.moduleName.nn)
+
+      case _ => // leaf node — no children to recurse into
     }
 
     // Now optimize this node
@@ -1017,8 +1178,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   // findScope() is inherited from TreeWalker
 
-  /** Reset optimization flags before each pass. TODO: used in multi-pass loop. */
-  @scala.annotation.nowarn("msg=unused private member")
+  /** Reset optimization flags before each pass. */
   private def resetOptFlags(toplevel: AstToplevel): Unit = {
     val tw = new TreeWalker((node, _) => {
       clearFlag(node, CLEAR_BETWEEN_PASSES)
@@ -1031,10 +1191,59 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     toplevel.walk(tw)
   }
 
-  /** Drop console.* calls from the AST. */
-  private def dropConsole(toplevel: AstToplevel): AstToplevel =
-    // TODO: implement console dropping via TreeTransformer
-    toplevel
+  /** Drop console.* calls from the AST.
+    *
+    * Replaces `console.method(...)` calls with `void 0`. When `dropConsole` is `Methods(names)`, only drops calls to those specific methods.
+    */
+  private def dropConsole(toplevel: AstToplevel): AstToplevel = {
+    val methodFilter: Option[Set[String]] = options.dropConsole match {
+      case DropConsoleConfig.Methods(names) => Some(names)
+      case _                               => None
+    }
+
+    val tt = new TreeTransformer(
+      before = (self, _) => {
+        self match {
+          case call: AstCall =>
+            call.expression match {
+              case pa: AstPropAccess =>
+                // Walk up property chains: console.log.bind(console) etc.
+                var nameNode: AstNode = pa.expression.nn
+                var property: String | AstNode = pa.property
+                var keepWalking = true
+                while (keepWalking) {
+                  nameNode match {
+                    case inner: AstPropAccess =>
+                      property = inner.property
+                      nameNode = inner.expression.nn
+                    case _ =>
+                      keepWalking = false
+                  }
+                }
+
+                // Check if filtering by method name
+                val propertyName = property match {
+                  case s: String => s
+                  case _         => null
+                }
+                if (methodFilter.isDefined && propertyName != null && !methodFilter.get.contains(propertyName)) {
+                  null // not a filtered method, keep it
+                } else if (Inference.isUndeclaredRef(nameNode) && nameNode.isInstanceOf[AstSymbolRef] && nameNode.asInstanceOf[AstSymbolRef].name == "console") {
+                  // Replace with void 0
+                  makeVoid0(self)
+                } else {
+                  null // not a console reference
+                }
+
+              case _ => null // not a property access call
+            }
+
+          case _ => null // not a call node
+        }
+      }
+    )
+    toplevel.transform(tt).asInstanceOf[AstToplevel]
+  }
 
   /** Walk a node tree, calling visitor for each node. TODO: used in multi-pass convergence check. */
   @scala.annotation.nowarn("msg=unused private member")

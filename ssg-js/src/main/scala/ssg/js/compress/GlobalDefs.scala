@@ -250,12 +250,7 @@ object GlobalDefs {
           }
         }
       )
-      // Walk all body statements
-      var i = 0
-      while (i < toplevel.body.size) {
-        toplevel.body(i).walk(transformer)
-        i += 1
-      }
-      toplevel
+      // Transform the toplevel — TreeTransformer.before returns replacement nodes
+      toplevel.transform(transformer).asInstanceOf[AstToplevel]
     }
 }

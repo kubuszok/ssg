@@ -48,6 +48,11 @@ class AstCall extends AstNode {
     while ({ i -= 1; i >= 0 }) push(args(i))
     if (expression != null) push(expression.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (expression != null) expression = expression.nn.transform(tw)
+    args = transformList(args, tw)
+  }
 }
 
 /** An object instantiation. Derives from a function call. */
@@ -77,6 +82,11 @@ class AstSequence extends AstNode {
     var i = expressions.size
     while ({ i -= 1; i >= 0 }) push(expressions(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    expressions = transformList(expressions, tw)
+    if (expressions.isEmpty) expressions.addOne(new AstNumber())
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +115,9 @@ class AstDot extends AstNode with AstPropAccess {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 /** A dotted property access to a private property. */
@@ -116,6 +129,9 @@ class AstDotHash extends AstNode with AstPropAccess {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 /** Index-style property access, i.e. `a["foo"]`. */
@@ -145,6 +161,14 @@ class AstSub extends AstNode with AstPropAccess {
     }
     if (expression != null) push(expression.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (expression != null) expression = expression.nn.transform(tw)
+    property match {
+      case p: AstNode => property = p.transform(tw)
+      case _ =>
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +186,9 @@ class AstChain extends AstNode {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -183,6 +210,9 @@ class AstUnaryPrefix extends AstNode with AstUnary {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 /** Unary postfix expression, i.e. `i++`. */
@@ -194,6 +224,9 @@ class AstUnaryPostfix extends AstNode with AstUnary {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +249,11 @@ class AstBinary extends AstNode {
   override def childrenBackwards(push: AstNode => Unit): Unit = {
     if (right != null) push(right.nn)
     if (left != null) push(left.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (left != null) left = left.nn.transform(tw)
+    if (right != null) right = right.nn.transform(tw)
   }
 }
 
@@ -254,6 +292,12 @@ class AstConditional extends AstNode {
     if (consequent != null) push(consequent.nn)
     if (condition != null) push(condition.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (condition != null) condition = condition.nn.transform(tw)
+    if (consequent != null) consequent = consequent.nn.transform(tw)
+    if (alternative != null) alternative = alternative.nn.transform(tw)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +322,9 @@ class AstArray extends AstNode {
     var i = elements.size
     while ({ i -= 1; i >= 0 }) push(elements(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    elements = transformList(elements, tw)
 }
 
 /** An object literal. */
@@ -298,6 +345,9 @@ class AstObject extends AstNode {
     var i = properties.size
     while ({ i -= 1; i >= 0 }) push(properties(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    properties = transformList(properties, tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +365,9 @@ class AstAwait extends AstNode {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 /** A `yield` expression. */
@@ -329,6 +382,9 @@ class AstYield extends AstNode {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +407,11 @@ class AstPrefixedTemplateString extends AstNode {
     if (templateString != null) push(templateString.nn)
     if (prefix != null) push(prefix.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (prefix != null) prefix = prefix.nn.transform(tw)
+    if (templateString != null) templateString = templateString.nn.transform(tw).asInstanceOf[AstTemplateString]
+  }
 }
 
 /** A template string literal. */
@@ -371,6 +432,9 @@ class AstTemplateString extends AstNode {
     var i = segments.size
     while ({ i -= 1; i >= 0 }) push(segments(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    segments = transformList(segments, tw)
 }
 
 /** A segment of a template string literal. */
