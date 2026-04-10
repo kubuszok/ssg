@@ -285,12 +285,12 @@ object HtmlMinifier {
   private def removeJavascriptProtocol(html: String): String =
     JavascriptProtocol.replaceAllIn(html, """href="""")
 
-  private val HttpProtocol = """((?:href|src|action)\s*=\s*["'])http://""".r
+  private val HttpProtocol = """((?:href|src|action|cite|longdesc|manifest|formaction|srcset)\s*=\s*["'])http://""".r
 
   private def removeHttpProtocol(html: String): String =
     HttpProtocol.replaceAllIn(html, "$1//")
 
-  private val HttpsProtocol = """((?:href|src|action)\s*=\s*["'])https://""".r
+  private val HttpsProtocol = """((?:href|src|action|cite|longdesc|manifest|formaction|srcset)\s*=\s*["'])https://""".r
 
   private def removeHttpsProtocol(html: String): String =
     HttpsProtocol.replaceAllIn(html, "$1//")
