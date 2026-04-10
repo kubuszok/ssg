@@ -47,7 +47,7 @@ class TaskListItem() extends ListItem {
   def this(block: ListItem) = {
     this()
     // Replicate what ListItem(ListItem) does: copy fields, take children, set chars
-    this.openingMarker = block.openingMarker
+    this._openingMarker = block.openingMarker
     this.markerSuffix = block.markerSuffix
     this.tight_=(block.isOwnTight)
     this.hadBlankAfterItemParagraph_=(block.isHadBlankAfterItemParagraph)
@@ -73,9 +73,8 @@ class TaskListItem() extends ListItem {
     child.contains(node)
   }
 
-  // NOTE: Original Java threw IllegalStateException from setOpeningMarker() override.
-  // In Scala, var setter from parent class cannot be overridden in a subclass.
-  // TaskListItem.openingMarker is set during construction via the copy constructor.
+  override def openingMarker_=(v: BasedSequence): Unit =
+    throw new IllegalStateException("openingMarker is immutable on TaskListItem — set during construction only")
 
   def isItemDoneMarker: Boolean = !markerSuffix.matches("[ ]")
 
