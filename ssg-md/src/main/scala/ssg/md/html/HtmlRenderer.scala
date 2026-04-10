@@ -44,20 +44,23 @@ class HtmlRenderer private[html] (builder: HtmlRenderer.Builder) extends IRender
   // resolve renderer dependencies
   val nodeRendererFactories: List[DelegatingNodeRendererFactoryWrapper] = {
     val nodeRenderers = mutable.ArrayBuffer[DelegatingNodeRendererFactoryWrapper]()
-    val renderersList = nodeRenderers.toList
 
     var i = builder.nodeRendererFactories.size - 1
     while (i >= 0) {
       val nodeRendererFactory = builder.nodeRendererFactories(i)
-      nodeRenderers += new DelegatingNodeRendererFactoryWrapper(Nullable(renderersList), nodeRendererFactory)
+      nodeRenderers += new DelegatingNodeRendererFactoryWrapper(Nullable.empty, nodeRendererFactory)
       i -= 1
     }
 
     // Add as last. This means clients can override the rendering of core nodes if they want by default
     val coreFactory = new CoreNodeRenderer.Factory()
-    nodeRenderers += new DelegatingNodeRendererFactoryWrapper(Nullable(renderersList), coreFactory)
+    nodeRenderers += new DelegatingNodeRendererFactoryWrapper(Nullable.empty, coreFactory)
 
-    DependencyResolver.resolveFlatDependencies(nodeRenderers.toList, Nullable.empty, Nullable((d: DelegatingNodeRendererFactoryWrapper) => d.factory.getClass))
+    // Set the complete list on all wrappers so beforeDependents can resolve delegates
+    val completeList = nodeRenderers.toList
+    for (wrapper <- completeList) wrapper.nodeRenderers = Nullable(completeList)
+
+    DependencyResolver.resolveFlatDependencies(completeList, Nullable.empty, Nullable((d: DelegatingNodeRendererFactoryWrapper) => d.factory.getClass))
   }
 
   val attributeProviderFactories: List[AttributeProviderFactory] = {
@@ -280,8 +283,9 @@ object HtmlRenderer {
     var linkResolverFactories:      mutable.ArrayBuffer[LinkResolverFactory]                  = mutable.ArrayBuffer.empty
     var htmlIdGeneratorFactory:     Nullable[HeaderIdGeneratorFactory]                        = Nullable.empty
 
-    def this() =
+    def this() = {
       this(Nullable.empty)
+    }
 
     if (options.isDefined) {
       loadExtensions()

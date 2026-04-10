@@ -32,7 +32,7 @@ class AsideBlock() extends Block, BlockQuoteLike, KeepTrailingBlankLineContainer
   def this(chars: BasedSequence, segments: java.util.List[BasedSequence]) = {
     this()
     this.chars = chars
-    // Block constructor with segments
+    this.contentLines = segments
   }
 
   def this(blockContent: BlockContent) = {

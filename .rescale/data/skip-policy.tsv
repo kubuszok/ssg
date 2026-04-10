@@ -1,24 +1,25 @@
 # SSG Skip Policy — every original-src file must be either ported or listed here
 # original_path	library	category	justification	decided_by	review_date	replacement
-flexmark-java/flexmark-osgi	flexmark	binding-adapter	OSGi bundle metadata is irrelevant for Scala/JVM/JS/Native. SSG ships as a single Scala Native binary, not as an OSGi bundle.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-all	flexmark	dev-tooling	Aggregator POM only — no source files to port.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-util-experimental	flexmark	deprecated-upstream	Marked unstable by upstream; not consumed by flexmark core or extensions.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-pdf-converter	flexmark	jvm-only-dep	Depends on OpenHTMLToPDF which is JVM-only and brings its own font/CMap pipeline. Out of scope for cross-platform SSG.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-docx-converter	flexmark	jvm-only-dep	Depends on docx4j which is JVM-only and ~10MB. Out of scope for cross-platform SSG.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-html2md-converter	flexmark	reverse-converter	Reverse-direction converter (HTML→Markdown). SSG only needs Markdown→HTML; reverse conversion is out of scope.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-jira-converter	flexmark	reverse-converter	Markdown→JIRA markup output format. Not needed for SSG (Hugo/Jekyll/MkDocs replacement).	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-youtrack-converter	flexmark	reverse-converter	Markdown→YouTrack markup output format. Not needed for SSG.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-profile-pegdown	flexmark	deprecated-upstream	Backward-compat shim for the deprecated PegDown API. SSG starts fresh with the modern flexmark API.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-ext-zzzzzz	flexmark	dev-tooling	Extension template / placeholder used by upstream as a starting point for new extensions.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-ext-spec-example	flexmark	dev-tooling	flexmark's own spec-test fixture parser; SSG uses its own munit-based test runner.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-ext-xwiki-macros	flexmark	binding-adapter	XWiki-specific markup extension. SSG does not target XWiki.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-tree-iteration	flexmark	dev-tooling	Generic tree-iteration utility not imported by flexmark core or any extension. Replaced by direct ssg.md.util.ast traversal.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark-integration-test	flexmark	dev-tooling	Integration test harness. SSG uses its own per-module test suites under src/test/scala.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark/.../JiraRenderer.java	flexmark	reverse-converter	Per-extension JIRA renderer files (~6). All skipped along with flexmark-jira-converter.	flexmark-port.md	2027-01-01
-flexmark-java/flexmark/.../YouTrackRenderer.java	flexmark	reverse-converter	Per-extension YouTrack renderer files (~6). All skipped along with flexmark-youtrack-converter.	flexmark-port.md	2027-01-01
+flexmark-java/flexmark-osgi	flexmark	binding-adapter	OSGi bundle metadata is irrelevant for Scala/JVM/JS/Native. SSG ships as a single Scala Native binary, not as an OSGi bundle.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-all	flexmark	dev-tooling	Aggregator POM only — no source files to port.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-util-experimental	flexmark	deprecated-upstream	Marked unstable by upstream; not consumed by flexmark core or extensions.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-pdf-converter	flexmark	jvm-only-dep	Depends on OpenHTMLToPDF which is JVM-only and brings its own font/CMap pipeline. Out of scope for cross-platform SSG.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-docx-converter	flexmark	jvm-only-dep	Depends on docx4j which is JVM-only and ~10MB. Out of scope for cross-platform SSG.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-html2md-converter	flexmark	reverse-converter	Reverse-direction converter (HTML→Markdown). SSG only needs Markdown→HTML; reverse conversion is out of scope.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-jira-converter	flexmark	reverse-converter	Markdown→JIRA markup output format. Not needed for SSG (Hugo/Jekyll/MkDocs replacement).	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-youtrack-converter	flexmark	reverse-converter	Markdown→YouTrack markup output format. Not needed for SSG.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-profile-pegdown	flexmark	deprecated-upstream	Backward-compat shim for the deprecated PegDown API. SSG starts fresh with the modern flexmark API.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-ext-zzzzzz	flexmark	dev-tooling	Extension template / placeholder used by upstream as a starting point for new extensions.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-ext-spec-example	flexmark	dev-tooling	flexmark's own spec-test fixture parser; SSG uses its own munit-based test runner.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-ext-xwiki-macros	flexmark	binding-adapter	XWiki-specific markup extension. SSG does not target XWiki.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-tree-iteration	flexmark	dev-tooling	Generic tree-iteration utility not imported by flexmark core or any extension. Replaced by direct ssg.md.util.ast traversal.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark-integration-test	flexmark	dev-tooling	Integration test harness. SSG uses its own per-module test suites under src/test/scala.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark/.../JiraRenderer.java	flexmark	reverse-converter	Per-extension JIRA renderer files (~6). All skipped along with flexmark-jira-converter.	flexmark-port.md	2027-01-01	
+flexmark-java/flexmark/.../YouTrackRenderer.java	flexmark	reverse-converter	Per-extension YouTrack renderer files (~6). All skipped along with flexmark-youtrack-converter.	flexmark-port.md	2027-01-01	
 liqp/spi	liqp	binding-adapter	ServiceLoader-based SPI infrastructure. ServiceLoader is JVM-only; SSG uses Scala 3 given/using typeclasses for the same extensibility. See ISS-026.	liquid-port-gap-analysis.md §4.16	2026-07-01	scripts/src/...
-liqp/filters/where	liqp	not-yet-migrated	5 files (WhereImpl, JekyllWhereImpl, LiquidWhereImpl, PropertyResolverAdapter, PropertyResolverHelper) needed to fix Where filter Jekyll/Liquid mode parity. Tracked as ISS-016, ISS-028.	liquid-port-gap-analysis.md §4.11	2026-07-01
-liqp/filters/date	liqp	not-yet-migrated	5 files (BasicDateParser, Parser, FuzzyDateDateParser, CustomDateFormatRegistry, CustomDateFormatSupport) needed for non-ISO-8601 date filter parsing. Tracked as ISS-017, ISS-027.	liquid-port-gap-analysis.md §4.10	2026-07-01
-terser/lib/sourcemap.js	terser	not-yet-migrated	Source-map output not yet ported. ISS-033. ssg-js OutputStream lacks position tracking.	gap-summary.md	2026-07-01
-terser/lib/mozilla-ast.js	terser	not-yet-migrated	SpiderMonkey AST format adapter (2099 LOC). Public API surface gap; low priority. ISS-037.	gap-summary.md	2026-07-01
-jekyll-minifier/lib/jekyll-minifier.rb	jekyll-minifier	binding-adapter	Jekyll plugin glue (Liquid registration, page hooks). SSG ships its own static-site generator and does not host Jekyll plugins.	jekyll-minifier-port.md	2027-01-01
+liqp/filters/where	liqp	not-yet-migrated	5 files (WhereImpl, JekyllWhereImpl, LiquidWhereImpl, PropertyResolverAdapter, PropertyResolverHelper) needed to fix Where filter Jekyll/Liquid mode parity. Tracked as ISS-016, ISS-028.	liquid-port-gap-analysis.md §4.11	2026-07-01	
+liqp/filters/date	liqp	not-yet-migrated	5 files (BasicDateParser, Parser, FuzzyDateDateParser, CustomDateFormatRegistry, CustomDateFormatSupport) needed for non-ISO-8601 date filter parsing. Tracked as ISS-017, ISS-027.	liquid-port-gap-analysis.md §4.10	2026-07-01	
+terser/lib/sourcemap.js	terser	not-yet-migrated	Source-map output not yet ported. ISS-033. ssg-js OutputStream lacks position tracking.	gap-summary.md	2026-07-01	
+terser/lib/mozilla-ast.js	terser	not-yet-migrated	SpiderMonkey AST format adapter (2099 LOC). Public API surface gap; low priority. ISS-037.	gap-summary.md	2026-07-01	
+jekyll-minifier/lib/jekyll-minifier.rb	jekyll-minifier	binding-adapter	Jekyll plugin glue (Liquid registration, page hooks). SSG ships its own static-site generator and does not host Jekyll plugins.	jekyll-minifier-port.md	2027-01-01	
+						

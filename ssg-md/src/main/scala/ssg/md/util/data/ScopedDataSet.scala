@@ -17,8 +17,9 @@ import java.util.{ Collection, HashMap, HashSet, Map }
 
 class ScopedDataSet(val parent: Nullable[DataHolder], other: Nullable[DataHolder]) extends DataSet(other) {
 
-  def this(parent: Nullable[DataHolder]) =
+  def this(parent: Nullable[DataHolder]) = {
     this(parent, Nullable.empty[DataHolder])
+  }
 
   override def getAll: Map[? <: DataKeyBase[?], AnyRef] =
     if (parent.isDefined) {

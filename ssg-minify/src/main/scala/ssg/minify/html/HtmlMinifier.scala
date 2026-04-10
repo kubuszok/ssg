@@ -57,14 +57,14 @@ object HtmlMinifier {
 
   private def doMinify(input: String, options: HtmlMinifyOptions, jsCompressor: JsCompressor): String = {
     // 1. Extract preserved blocks (pre, textarea, script, style, user patterns)
-    val (html, preserved) = PreservedBlock.extract(input, options.preservePatterns)
+    val (html, preserved) = PreservedBlock.extract(input, options.effectivePreservePatterns)
 
     // 2. Apply whitespace/comment pipeline (operates on text outside preserved blocks)
     var result = html
     if (options.removeComments) result = removeComments(result)
     if (options.simpleDoctype) result = simplifyDoctype(result)
-    if (options.removeMultiSpaces) result = collapseMultiSpaces(result)
-    if (options.removeIntertagSpaces) result = removeIntertagSpaces(result)
+    if (options.removeMultiSpaces) result = collapseMultiSpaces(result, options.preserveLineBreaks)
+    if (options.removeIntertagSpaces) result = removeIntertagSpaces(result, options.preserveLineBreaks)
     if (options.removeSpacesInsideTags) result = removeSpacesInsideTags(result)
 
     // 3. Restore preserved blocks (so tag-level optimizations can see script/style tags)
@@ -140,16 +140,32 @@ object HtmlMinifier {
 
   // -- Whitespace --
 
-  private val MultiSpace = " {2,}".r
+  private val MultiWhitespace    = "\\s{2,}".r
+  private val MultiSpaceOnly     = " {2,}".r
+  private val MultiSpaceWithNl   = " *\\n[ \\n]*".r
 
-  private def collapseMultiSpaces(html: String): String =
-    // Collapse runs of spaces (not newlines)
-    MultiSpace.replaceAllIn(html, " ")
+  private def collapseMultiSpaces(html: String, preserveLineBreaks: Boolean): String =
+    if (preserveLineBreaks) {
+      // Collapse runs of spaces but preserve one newline when present
+      val step1 = MultiSpaceWithNl.replaceAllIn(html, "\n")
+      MultiSpaceOnly.replaceAllIn(step1, " ")
+    } else {
+      // Collapse any whitespace run (\s{2,}) to a single space
+      MultiWhitespace.replaceAllIn(html, " ")
+    }
 
-  private val IntertagSpace = ">\\s+<".r
+  private val IntertagSpace      = ">\\s+<".r
+  private val IntertagSpaceWithNl = ">[ \\t]*\\n[\\s]*<".r
+  private val IntertagSpaceNoNl   = ">[ \\t]+<".r
 
-  private def removeIntertagSpaces(html: String): String =
-    IntertagSpace.replaceAllIn(html, "><")
+  private def removeIntertagSpaces(html: String, preserveLineBreaks: Boolean): String =
+    if (preserveLineBreaks) {
+      // Preserve one newline between tags when the whitespace contains a newline
+      val step1 = IntertagSpaceWithNl.replaceAllIn(html, ">\n<")
+      IntertagSpaceNoNl.replaceAllIn(step1, "><")
+    } else {
+      IntertagSpace.replaceAllIn(html, "><")
+    }
 
   // Remove unnecessary whitespace inside tags: <tag  attr = "val" > → <tag attr="val">
   private val MultiSpaceInTag = "\\s{2,}".r
@@ -192,7 +208,7 @@ object HtmlMinifier {
   // -- Attribute optimization --
 
   // Remove quotes on simple attribute values (no spaces, no special chars)
-  private val QuotedSimpleAttr = """(\w+)="([a-zA-Z0-9_\-]+)"""".r
+  private val QuotedSimpleAttr = """(\w+)="([^\s=<>"']+)"""".r
 
   private def removeUnnecessaryQuotes(html: String): String =
     QuotedSimpleAttr.replaceAllIn(html, "$1=$2")
@@ -269,12 +285,12 @@ object HtmlMinifier {
   private def removeJavascriptProtocol(html: String): String =
     JavascriptProtocol.replaceAllIn(html, """href="""")
 
-  private val HttpProtocol = """((?:href|src|action)\s*=\s*["'])http://""".r
+  private val HttpProtocol = """((?:href|src|action|cite|longdesc|manifest|formaction|srcset)\s*=\s*["'])http://""".r
 
   private def removeHttpProtocol(html: String): String =
     HttpProtocol.replaceAllIn(html, "$1//")
 
-  private val HttpsProtocol = """((?:href|src|action)\s*=\s*["'])https://""".r
+  private val HttpsProtocol = """((?:href|src|action|cite|longdesc|manifest|formaction|srcset)\s*=\s*["'])https://""".r
 
   private def removeHttpsProtocol(html: String): String =
     HttpsProtocol.replaceAllIn(html, "$1//")

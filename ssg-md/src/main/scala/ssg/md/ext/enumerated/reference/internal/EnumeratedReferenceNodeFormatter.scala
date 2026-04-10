@@ -5,6 +5,11 @@
  * Ported from: flexmark-ext-enumerated-reference/src/main/java/com/vladsch/flexmark/ext/enumerated/reference/internal/EnumeratedReferenceNodeFormatter.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Migration notes:
+ *   Renames: com.vladsch.flexmark.ext.enumerated.reference.internal → ssg.md.ext.enumerated.reference.internal
+ *   Convention: Scala 3, Nullable[A], no return
+ *   Idiom: match instead of switch, boundary/break for early exit
  */
 package ssg
 package md
@@ -14,6 +19,7 @@ package reference
 package internal
 
 import ssg.md.Nullable
+import ssg.md.ext.attributes.internal.AttributesNodeFormatter
 import ssg.md.formatter.*
 import ssg.md.util.data.DataHolder
 import ssg.md.util.format.options.{ ElementPlacement, ElementPlacementSort }
@@ -24,8 +30,8 @@ import scala.language.implicitConversions
 class EnumeratedReferenceNodeFormatter(options: DataHolder)
     extends NodeRepositoryFormatter[EnumeratedReferenceRepository, EnumeratedReferenceBlock, EnumeratedReferenceText](
       options,
-      null,
-      null // @nowarn - translation/uniquification maps not needed for enumerated references
+      null, // @nowarn - no attribute translation map needed for enumerated references
+      AttributesNodeFormatter.ATTRIBUTE_UNIQUIFICATION_CATEGORY_MAP
     ) {
 
   private val formatOptions = new EnumeratedReferenceFormatOptions(options)
@@ -38,8 +44,10 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder)
   override def getReferenceSort: ElementPlacementSort = formatOptions.enumeratedReferenceSort
 
   override def renderReferenceBlock(node: EnumeratedReferenceBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
-    // TODO: appendNonTranslating not yet ported - using append for now
-    markdown.blankLine().append("[@").append(node.text).append("]: ")
+    markdown.blankLine()
+    markdown.append("[@")
+    markdown.appendNonTranslating(node.text)
+    markdown.append("]: ")
     markdown.pushPrefix().addPrefix("    ", true)
     context.renderChildren(node)
     markdown.popPrefix()
@@ -67,7 +75,7 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder)
   private def renderText(node: EnumeratedReferenceText, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append("[#")
     if (context.isTransformingText) {
-      renderReferenceText(node.text, context, markdown)
+      EnumeratedReferenceNodeFormatter.renderReferenceText(node.text, context, markdown)
     } else {
       context.renderChildren(node)
     }
@@ -77,28 +85,43 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder)
   private def renderLink(node: EnumeratedReferenceLink, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append("[@")
     if (context.isTransformingText) {
-      renderReferenceText(node.text, context, markdown)
+      EnumeratedReferenceNodeFormatter.renderReferenceText(node.text, context, markdown)
     } else {
       context.renderChildren(node)
     }
     markdown.append("]")
   }
-
-  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
-    if (!text.isEmpty) {
-      val valueChars = text
-      val pos        = valueChars.indexOf(':')
-      @annotation.nowarn("msg=unused local definition") // will be used when AttributesNodeFormatter.getEncodedIdAttribute is ported
-      val category: String = if (pos == -1) text.toString else valueChars.subSequence(0, pos).toString
-      // NOTE: AttributesNodeFormatter.getEncodedIdAttribute not yet fully ported,
-      // falling back to direct category:id output
-      markdown.append(text)
-    }
 }
 
 object EnumeratedReferenceNodeFormatter {
 
+  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+    if (!text.isEmpty) {
+      val valueChars = text
+      val pos = valueChars.indexOf(':')
+      var category: String = null // @nowarn - Java interop: null used for optional category id split
+      var id: String = null       // @nowarn
+      if (pos == -1) {
+        category = text.toString
+      } else {
+        category = valueChars.subSequence(0, pos).toString
+        id = valueChars.subSequence(pos + 1).toString
+      }
+
+      val encoded = AttributesNodeFormatter.getEncodedIdAttribute(category, id, context, markdown)
+      markdown.append(encoded)
+    }
+  }
+
   class Factory extends NodeFormatterFactory {
     override def create(options: DataHolder): NodeFormatter = new EnumeratedReferenceNodeFormatter(options)
+
+    override def afterDependents: Nullable[Set[Class[?]]] = {
+      // run before attributes formatter so categories are uniquified first
+      // renderers are sorted in reverse order for backward compatibility
+      Nullable(Set[Class[?]](classOf[AttributesNodeFormatter.Factory]))
+    }
+
+    override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
   }
 }

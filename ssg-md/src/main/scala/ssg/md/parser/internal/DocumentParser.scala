@@ -640,64 +640,66 @@ class DocumentParser(
 
   private def preProcessParagraph(block: Paragraph, stage: List[ParagraphPreProcessorFactory], processorMap: mutable.HashMap[ParagraphPreProcessorFactory, ParagraphPreProcessor]): Unit = {
     var continue = true
-    while (continue) {
-      var hadChanges = false
+    boundary {
+      while (continue) {
+        var hadChanges = false
 
-      for (factory <- stage) {
-        val processor = processorMap.getOrElseUpdate(factory, factory.apply(this))
-        val pos       = processor.preProcessBlock(block, this)
+        for (factory <- stage) {
+          val processor = processorMap.getOrElseUpdate(factory, factory.apply(this))
+          val pos       = processor.preProcessBlock(block, this)
 
-        if (pos > 0) {
-          hadChanges = true
+          if (pos > 0) {
+            hadChanges = true
 
-          // skip leading blanks
-          val blockChars   = block.chars
-          val contentChars = blockChars.subSequence(pos + blockChars.countLeading(ssg.md.util.misc.CharPredicate.WHITESPACE, pos, blockChars.length()))
+            // skip leading blanks
+            val blockChars   = block.chars
+            val contentChars = blockChars.subSequence(pos + blockChars.countLeading(ssg.md.util.misc.CharPredicate.WHITESPACE, pos, blockChars.length()))
 
-          if (contentChars.isBlank()) {
-            // all used up
-            block.unlink()
-            blockRemoved(block)
-            continue = false // return
-          } else {
-            // skip lines that were removed
-            val iMax = block.lineCount
-            var i    = 0
-            boundary {
-              while (i < iMax) {
-                if (block.lineChars(i).endOffset > contentChars.startOffset) break(())
-                i += 1
-              }
-            }
-
-            if (i >= iMax) {
+            if (contentChars.isBlank()) {
               // all used up
               block.unlink()
               blockRemoved(block)
-              continue = false // return
-            } else if (block.lineChars(i).endOffset == contentChars.startOffset) {
-              // full lines removed
-              block.setContent(block, i, iMax)
+              break(())
             } else {
-              // need to change the first line of the line list
-              val lines = new java.util.ArrayList[BasedSequence](block.contentLines.subList(i, iMax))
-              val start = contentChars.startOffset - lines.get(0).startOffset
-              if (start > 0 && start < lines.get(0).length()) {
-                lines.set(0, lines.get(0).subSequence(start))
+              // skip lines that were removed
+              val iMax = block.lineCount
+              var i    = 0
+              boundary {
+                while (i < iMax) {
+                  if (block.lineChars(i).endOffset > contentChars.startOffset) break(())
+                  i += 1
+                }
               }
 
-              // now we copy the indents
-              val indents = new Array[Int](iMax - i)
-              System.arraycopy(block.lineIndents, i, indents, 0, indents.length)
-              block.contentLines = lines
-              block.lineIndents = indents
-              block.chars = contentChars
+              if (i >= iMax) {
+                // all used up
+                block.unlink()
+                blockRemoved(block)
+                break(())
+              } else if (block.lineChars(i).endOffset == contentChars.startOffset) {
+                // full lines removed
+                block.setContent(block, i, iMax)
+              } else {
+                // need to change the first line of the line list
+                val lines = new java.util.ArrayList[BasedSequence](block.contentLines.subList(i, iMax))
+                val start = contentChars.startOffset - lines.get(0).startOffset
+                if (start > 0 && start < lines.get(0).length()) {
+                  lines.set(0, lines.get(0).subSequence(start))
+                }
+
+                // now we copy the indents
+                val indents = new Array[Int](iMax - i)
+                System.arraycopy(block.lineIndents, i, indents, 0, indents.length)
+                block.contentLines = lines
+                block.lineIndents = indents
+                block.chars = contentChars
+              }
             }
           }
         }
-      }
 
-      if (!hadChanges || stage.size < 2) continue = false
+        if (!hadChanges || stage.size < 2) continue = false
+      }
     }
   }
 

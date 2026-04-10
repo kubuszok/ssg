@@ -20,6 +20,8 @@ import ssg.md.util.data.DataHolder
 
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class DefinitionListBlockPreProcessor(options: DataHolder) extends BlockPreProcessor {
 
@@ -33,19 +35,21 @@ class DefinitionListBlockPreProcessor(options: DataHolder) extends BlockPreProce
         // need to propagate loose/tight
         var isTight = definitionList.isTight
         if (defOptions.autoLoose && isTight) {
-          for (child <- definitionList.children.asScala)
-            child match {
-              case defItem: DefinitionItem =>
-                if (defItem.isLoose) {
-                  isTight = false
-                  if (!blankLinesInAST) {} // would break in Java; in Scala we just continue
-                }
-                if (blankLinesInAST) {
-                  // transfer its trailing blank lines to uppermost level
-                  child.moveTrailingBlankLines()
-                }
-              case _ => ()
-            }
+          boundary {
+            for (child <- definitionList.children.asScala)
+              child match {
+                case defItem: DefinitionItem =>
+                  if (defItem.isLoose) {
+                    isTight = false
+                    if (!blankLinesInAST) break()
+                  }
+                  if (blankLinesInAST) {
+                    // transfer its trailing blank lines to uppermost level
+                    child.moveTrailingBlankLines()
+                  }
+                case _ => ()
+              }
+          }
           definitionList.tight_=(isTight)
         }
 
