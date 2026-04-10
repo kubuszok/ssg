@@ -10,6 +10,9 @@
  *   Renames: liqp → ssg.liquid
  *   Convention: Builder pattern preserved
  *   Idiom: Enums as Scala 3 enums extending java.lang.Enum
+ *   Breaking: Default flavor changed from LIQP to JEKYLL — SSG targets
+ *     Jekyll-compatible sites. Users porting from raw liqp who relied on
+ *     LIQP flavor semantics should explicitly set .withFlavor(Flavor.LIQP).
  */
 package ssg
 package liquid
