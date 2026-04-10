@@ -26,8 +26,9 @@ import java.util.{ HashMap, Map => JMap }
   */
 class Include(_name: String) extends Tag(_name) {
 
-  def this() =
+  def this() = {
     this("include")
+  }
 
   override def render(context: TemplateContext, nodes: Array[LNode]): Any =
     try {
@@ -58,7 +59,8 @@ class Include(_name: String) extends Tag(_name) {
               case map: JMap[?, ?] =>
                 includeMap.putAll(map.asInstanceOf[JMap[String, Any]])
               case _ =>
-              // Non-map parameter — add as positional
+                // Non-map parameter — original Java would ClassCastException
+                throw new ssg.liquid.exceptions.LiquidException("Include parameter must be a key=value pair, got: " + rendered)
             }
             i += 1
           }
