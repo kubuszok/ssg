@@ -61,7 +61,7 @@ object Minifier {
       case FileType.Html => HtmlMinifier.minify(input, options.html, jsCompressor)
       case FileType.Xml  => HtmlMinifier.minify(input, options.html, jsCompressor)
       case FileType.Css  => if (options.compressCss) CssMinifier.minify(input, options.css) else input
-      case FileType.Js   => if (options.compressJs) jsCompressor.compress(input) else input
+      case FileType.Js   => if (options.compressJs) options.jsCompressorOpts.fold(jsCompressor.compress(input))(opts => jsCompressor.compress(input, opts)) else input
       case FileType.Json => if (options.compressJson) JsonMinifier.minify(input) else input
     }
 
