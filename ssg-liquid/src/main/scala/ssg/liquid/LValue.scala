@@ -16,9 +16,9 @@ package ssg
 package liquid
 
 import java.math.BigDecimal
-import java.time.ZonedDateTime
+import java.time.{ Instant, LocalDate, LocalDateTime, LocalTime, OffsetDateTime, ZoneId, ZonedDateTime }
 import java.time.format.DateTimeFormatter
-import java.time.temporal.{ ChronoField, TemporalAccessor }
+import java.time.temporal.{ ChronoField, TemporalAccessor, TemporalQueries }
 import java.util
 import java.util.{ Collection => JCollection, List => JList, Map => JMap }
 
@@ -242,51 +242,108 @@ object LValue {
   def isTemporal(value: Any): Boolean =
     value.isInstanceOf[TemporalAccessor]
 
-  /** Converts a temporal value to a string using Ruby date format. */
+  /** Converts a temporal value to a string using Ruby date format.
+    *
+    * Partial temporals (LocalDate, Instant, etc.) are first converted to
+    * ZonedDateTime so that the Ruby format string can be fully resolved.
+    */
   def temporalToString(value: Any): String =
     value match {
       case zdt: ZonedDateTime    => rubyDateTimeFormat.format(zdt)
       case ta:  TemporalAccessor =>
-        try rubyDateTimeFormat.format(ta)
-        catch { case _: Exception => value.toString }
+        val zdt = toZonedDateTime(ta, ZoneId.systemDefault())
+        if (zdt != null) rubyDateTimeFormat.format(zdt)
+        else value.toString
       case _ => value.toString
     }
 
   // https://apidock.com/ruby/Time/to_a
   // Returns a ten-element array of values for time:
   // [sec, min, hour, day, month, year, wday, yday, isdst, zone]
-  def temporalAsArray(value: Any): Array[Any] =
-    value match {
-      case time: ZonedDateTime =>
-        val sec   = time.get(ChronoField.SECOND_OF_MINUTE)
-        val min   = time.getMinute
-        val hour  = time.getHour
-        val day   = time.getDayOfMonth
-        val month = time.get(ChronoField.MONTH_OF_YEAR)
-        val year  = time.get(ChronoField.YEAR)
-        val wday  = time.getDayOfWeek.getValue
-        val yday  = time.get(ChronoField.DAY_OF_YEAR)
-        val isdst = time.getZone.getRules.isDaylightSavings(time.toInstant)
-        val zone  = time.getZone.getId
-        Array[Any](sec, min, hour, day, month, year, wday, yday, isdst, zone)
-      case _ => Array[Any](value)
+  def temporalAsArray(value: Any): Array[Any] = {
+    val time = toZonedDateTime(value, ZoneId.systemDefault())
+    if (time == null) {
+      Array[Any](value)
+    } else {
+      val sec   = time.get(ChronoField.SECOND_OF_MINUTE)
+      val min   = time.getMinute
+      val hour  = time.getHour
+      val day   = time.getDayOfMonth
+      val month = time.get(ChronoField.MONTH_OF_YEAR)
+      val year  = time.get(ChronoField.YEAR)
+      val wday  = time.getDayOfWeek.getValue
+      val yday  = time.get(ChronoField.DAY_OF_YEAR)
+      val isdst = time.getZone.getRules.isDaylightSavings(time.toInstant)
+      val zone  = time.getZone.getId
+      Array[Any](sec, min, hour, day, month, year, wday, yday, isdst, zone)
     }
+  }
 
   /** Keeps an original temporal type as is. */
   def asTemporal(value: Any, context: TemplateContext): TemporalAccessor =
     value match {
       case ta: TemporalAccessor => ta
-      case _ => ZonedDateTime.now()
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"Cannot convert ${if (value == null) "null" else value.getClass.getName} to TemporalAccessor"
+        )
     }
 
-  /** Ruby has a single date type, and its equivalent is ZonedDateTime. */
-  def asRubyDate(value: Any, context: TemplateContext): ZonedDateTime =
+  /** Ruby has a single date type, and its equivalent is ZonedDateTime.
+    *
+    * Follows Ruby rules: if some datetime part is missing, the default is
+    * taken from `now` with the system default zone.
+    */
+  def asRubyDate(value: Any, context: TemplateContext): ZonedDateTime = {
+    val defaultZone = ZoneId.systemDefault()
     value match {
-      case zdt: ZonedDateTime    => zdt
-      case ta:  TemporalAccessor =>
-        try ZonedDateTime.from(ta)
-        catch { case _: Exception => ZonedDateTime.now() }
-      case _ => ZonedDateTime.now()
+      case ta: TemporalAccessor => toZonedDateTime(ta, defaultZone)
+      case _                    => ZonedDateTime.now(defaultZone)
+    }
+  }
+
+  /** Converts a TemporalAccessor to ZonedDateTime, filling in missing parts
+    * from `now` at the given default zone.
+    *
+    * Ported from: liqp/filters/date/BasicDateParser#getZonedDateTimeFromTemporalAccessor
+    */
+  private def toZonedDateTime(value: Any, defaultZone: ZoneId): ZonedDateTime =
+    value match {
+      case null                   => ZonedDateTime.now(defaultZone)
+      case zdt: ZonedDateTime     => zdt
+      case inst: Instant          => ZonedDateTime.ofInstant(inst, defaultZone)
+      case odt: OffsetDateTime    => odt.toZonedDateTime
+      case ldt: LocalDateTime     => ldt.atZone(defaultZone)
+      case ld: LocalDate          => ld.atStartOfDay(defaultZone)
+      case ta: TemporalAccessor   =>
+        val zoneId = ta.query(TemporalQueries.zone())
+        if (zoneId == null) {
+          val date =
+            if (ta.query(TemporalQueries.localDate()) != null) ta.query(TemporalQueries.localDate())
+            else LocalDate.now(defaultZone)
+          val time =
+            if (ta.query(TemporalQueries.localTime()) != null) ta.query(TemporalQueries.localTime())
+            else LocalTime.now(defaultZone)
+          ZonedDateTime.of(date, time, defaultZone)
+        } else {
+          var now = LocalDateTime.now(zoneId)
+          val fields = Array(
+            ChronoField.YEAR,
+            ChronoField.MONTH_OF_YEAR,
+            ChronoField.DAY_OF_MONTH,
+            ChronoField.HOUR_OF_DAY,
+            ChronoField.MINUTE_OF_HOUR,
+            ChronoField.SECOND_OF_MINUTE,
+            ChronoField.NANO_OF_SECOND
+          )
+          for (tf <- fields) {
+            if (ta.isSupported(tf)) {
+              now = now.`with`(tf, ta.getLong(tf))
+            }
+          }
+          now.atZone(zoneId)
+        }
+      case _ => null
     }
 
   def isBlank(string: String): Boolean =
