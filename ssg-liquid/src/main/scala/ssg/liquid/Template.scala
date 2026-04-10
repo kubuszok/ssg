@@ -24,7 +24,8 @@ import java.util.{ HashMap, LinkedHashMap, Map => JMap }
   */
 final class Template(
   val templateParser: TemplateParser,
-  private val root:   BlockNode
+  private val root:   BlockNode,
+  val templateSize:   Long = 0L
 ) {
 
   /** Renders this template with the given variables and returns the result as a String. */
@@ -37,12 +38,19 @@ final class Template(
 
   /** Renders this template and returns the raw result object. */
   def renderToObject(variables: JMap[String, Any]): Any = {
-    val evaluatedVars = templateParser.evaluateMode match {
+    if (templateSize > templateParser.limitMaxTemplateSizeBytes) {
+      throw new RuntimeException(s"template exceeds the max of ${templateParser.limitMaxTemplateSizeBytes} bytes")
+    }
+
+    val evaluatedVars: JMap[String, Any] = templateParser.evaluateMode match {
       case TemplateParser.EvaluateMode.EAGER =>
-        // Convert all values eagerly
+        // EAGER: convert all values eagerly via evaluate
+        // Full EAGER support requires LiquidSupport.objectToMap (ISS-015);
+        // for now, makes a defensive copy so mutations don't leak to caller
         new LinkedHashMap[String, Any](variables)
       case _ =>
-        new LinkedHashMap[String, Any](variables)
+        // LAZY: pass variables through as-is (converted on demand during rendering)
+        variables
     }
 
     val context = new TemplateContext(templateParser, evaluatedVars)

@@ -76,15 +76,15 @@ object JsMinifier extends JsCompressor {
         }
       } else if (c == '/' && i + 1 < len && input.charAt(i + 1) == '*') {
         // Block comment
-        if (options.removeComments) {
+        if (options.removeComments && !isImportantComment(input, i, len)) {
           i = skipBlockComment(input, i, len)
           // Preserve a space so tokens don't merge
           if (sb.nonEmpty && sb.last != ' ' && sb.last != '\n') {
             sb.append(' ')
           }
         } else {
-          sb.append(c)
-          i += 1
+          // Preserve important comments (/*! ... */ and /* @license ... */) and all comments when removeComments is false
+          i = copyBlockComment(input, i, len, sb)
         }
       } else if (c == '/' && isRegexContext(input, sb)) {
         // Regex literal — copy verbatim
@@ -223,6 +223,11 @@ object JsMinifier extends JsCompressor {
     if (i < len) i + 1 else i
   }
 
+  /** Check if block comment at position is an important/license comment. */
+  private def isImportantComment(input: String, start: Int, len: Int): Boolean =
+    (start + 2 < len && input.charAt(start + 2) == '!') ||
+    (start + 11 < len && input.regionMatches(start + 2, " @license", 0, 9))
+
   /** Skip block comment. Returns index after closing star-slash. */
   private def skipBlockComment(input: String, start: Int, len: Int): Int = {
     var i = start + 2
@@ -232,6 +237,26 @@ object JsMinifier extends JsCompressor {
           i += 2
           break()
         }
+        i += 1
+      }
+    }
+    i
+  }
+
+  /** Copy block comment verbatim to sb. Returns index after closing star-slash. */
+  private def copyBlockComment(input: String, start: Int, len: Int, sb: StringBuilder): Int = {
+    sb.append('/')
+    sb.append('*')
+    var i = start + 2
+    boundary {
+      while (i + 1 < len) {
+        if (input.charAt(i) == '*' && input.charAt(i + 1) == '/') {
+          sb.append('*')
+          sb.append('/')
+          i += 2
+          break()
+        }
+        sb.append(input.charAt(i))
         i += 1
       }
     }

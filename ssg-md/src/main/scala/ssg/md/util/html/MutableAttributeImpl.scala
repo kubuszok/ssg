@@ -26,8 +26,9 @@ class MutableAttributeImpl private (
   private var values:     Nullable[LinkedHashMap[String, String]]
 ) extends MutableAttribute {
 
-  private def this(name: String, value: String, valueListDelimiter: Char, valueNameDelimiter: Char) =
+  private def this(name: String, value: String, valueListDelimiter: Char, valueNameDelimiter: Char) = {
     this(name, valueListDelimiter, valueNameDelimiter, Nullable(if (value == null) "" else value), Nullable.empty)
+  }
 
   override def toImmutable: Attribute =
     AttributeImpl.of(this)

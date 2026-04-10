@@ -23,8 +23,9 @@ class ResolvedLink private (
   private var myAttributes: Nullable[MutableAttributes]
 ) {
 
-  def this(linkType: LinkType, url: CharSequence) =
+  def this(linkType: LinkType, url: CharSequence) = {
     this(linkType, String.valueOf(url), LinkStatus.UNKNOWN, Nullable.empty)
+  }
 
   def this(linkType: LinkType, url: CharSequence, attributes: Nullable[Attributes]) = {
     this(linkType, String.valueOf(url), LinkStatus.UNKNOWN, Nullable.empty)

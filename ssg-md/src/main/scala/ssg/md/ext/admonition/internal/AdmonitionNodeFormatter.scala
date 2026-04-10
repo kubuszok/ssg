@@ -35,9 +35,11 @@ class AdmonitionNodeFormatter(options: DataHolder) extends NodeFormatter {
   private def render(node: AdmonitionBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.blankLine()
     markdown.append(node.openingMarker).append(' ')
-    markdown.append(node.info)
+    markdown.appendNonTranslating(node.info)
     if (node.title.isNotNull) {
-      markdown.append(' ').append('"').append(node.title).append('"')
+      markdown.append(' ').append('"')
+      markdown.appendTranslating(node.title)
+      markdown.append('"')
     }
     markdown.line()
     markdown.pushPrefix().addPrefix(RepeatedSequence.repeatOf(" ", admonitionOptions.contentIndent).toString)

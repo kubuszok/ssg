@@ -27,8 +27,9 @@ final class CharSubSequence private (
 ) extends BasedSequenceImpl(hash) {
 
   // Primary constructor for a root sequence from char array
-  private def this(chars: Array[Char], hash: Int) =
+  private def this(chars: Array[Char], hash: Int) = {
     this(chars, null, 0, chars.length, hash) // @nowarn — null only during construction, replaced immediately
+  }
 
   private val resolvedBase: CharSubSequence = if (base == null) this else base // @nowarn — null check needed for self-referential base
 
