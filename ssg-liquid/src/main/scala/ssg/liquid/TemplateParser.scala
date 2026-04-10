@@ -68,7 +68,7 @@ final class TemplateParser(
       errorMode
     )
     val root = liquidParser.parse()
-    new Template(this, root)
+    new Template(this, root, input.length.toLong)
   }
 
   /** Evaluates an object, converting Inspectable objects to LiquidSupport. */
