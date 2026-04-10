@@ -15,6 +15,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.liquid.filters.date.{ CustomDateFormatRegistry, CustomDateFormatSupport, DateParser }
+
 import java.time.{ Instant, ZonedDateTime }
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAccessor
@@ -24,6 +26,11 @@ import java.time.temporal.TemporalAccessor
   * Cross-platform via scala-java-time polyfill. See: https://shopify.github.io/liquid/filters/date/
   */
 class Date extends Filter("date") {
+
+  def this(typeSupport: CustomDateFormatSupport[?]) = {
+    this()
+    CustomDateFormatRegistry.add(typeSupport)
+  }
 
   override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
     val locale = context.parser.locale
@@ -41,18 +48,11 @@ class Date extends Filter("date") {
         } else if (LValue.isTemporal(effectiveValue)) {
           LValue.asTemporal(effectiveValue, context)
         } else if (isNumber(effectiveValue)) {
-          ZonedDateTime.ofInstant(Instant.ofEpochMilli(asNumber(effectiveValue).longValue() * 1000), java.time.ZoneId.systemDefault())
+          // No need to divide this by 1000, the param is expected to be in seconds already!
+          ZonedDateTime.ofInstant(Instant.ofEpochMilli(asNumber(effectiveValue).longValue() * 1000), context.parser.defaultTimeZone)
         } else {
-          try
-            ZonedDateTime.parse(valAsString)
-          catch {
-            case _: Exception =>
-              try
-                java.time.LocalDate.parse(valAsString).atStartOfDay(java.time.ZoneId.systemDefault())
-              catch {
-                case _: Exception => null
-              }
-          }
+          val parsed = context.getDateParser.parse(valAsString, locale, context.parser.defaultTimeZone)
+          if (parsed.isDefined) parsed.get else null
         }
 
       if (compatibleDate == null) {
@@ -74,6 +74,18 @@ class Date extends Filter("date") {
 }
 
 object Date {
+
+  /** Adds a new Date-pattern to be used when parsing a string to a Date. */
+  def addDatePattern(pattern: String): Unit =
+    DateParser.addDatePattern(pattern)
+
+  /** Removes a Date-pattern from the pattern list. */
+  def removeDatePattern(pattern: String): Unit =
+    DateParser.removeDatePattern(pattern)
+
+  /** Creates a Date filter with a custom date type support. */
+  def withCustomDateType(typeSupport: CustomDateFormatSupport[?]): Filter =
+    new Date(typeSupport)
 
   /** Converts a strftime format string to a Java DateTimeFormatter pattern. */
   private[filters] def strftimeToJava(format: String): String = {
