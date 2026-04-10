@@ -9,11 +9,13 @@
  * Migration notes:
  *   Renames: liqp.tags → ssg.liquid.tags
  *   Convention: Uses NameResolver + Template.parse for template inclusion
+ *   Idiom: detectSource hook for subclass override (IncludeRelative)
  */
 package ssg
 package liquid
 package tags
 
+import ssg.liquid.antlr.NameResolver
 import ssg.liquid.nodes.LNode
 
 import java.util.{ HashMap, Map => JMap }
@@ -34,8 +36,8 @@ class Include(_name: String) extends Tag(_name) {
     try {
       val includeResource = asString(nodes(0).render(context), context)
 
-      // Resolve the template source via NameResolver
-      val source = context.parser.nameResolver.resolve(includeResource)
+      // Resolve the template source (overridable by subclasses like IncludeRelative)
+      val source = detectSource(context, includeResource)
 
       // Parse the included template
       val template = context.parser.parse(source.content)
@@ -77,4 +79,11 @@ class Include(_name: String) extends Tag(_name) {
           ""
         }
     }
+
+  /** Resolves the template source for inclusion.
+    *
+    * Default implementation delegates to the configured NameResolver. Subclasses (e.g., [[IncludeRelative]]) override this to resolve relative to the current file's root folder.
+    */
+  protected def detectSource(context: TemplateContext, includeResource: String): NameResolver.ResolvedSource =
+    context.parser.nameResolver.resolve(includeResource)
 }
