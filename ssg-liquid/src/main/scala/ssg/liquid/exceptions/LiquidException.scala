@@ -26,14 +26,17 @@ class LiquidException(
   cause:                  Throwable
 ) extends RuntimeException(message, cause) {
 
-  def this(message: String, line: Int, charPositionInLine: Int) =
+  def this(message: String, line: Int, charPositionInLine: Int) = {
     this(message, line, charPositionInLine, null)
+  }
 
-  def this(message: String) =
+  def this(message: String) = {
     this(message, -1, -1, null)
+  }
 
-  def this(message: String, cause: Throwable) =
+  def this(message: String, cause: Throwable) = {
     this(message, -1, -1, cause)
+  }
 }
 
 object LiquidException {
