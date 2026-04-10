@@ -74,22 +74,50 @@ final class ComplexSelector(
       other.leadingCombinators.isEmpty &&
       complexIsSuperselector(components, other.components)
 
-  /** Stub for complex superselector logic.
+  /** Partial port of dart-sass `complexIsSuperselector` in
+    * lib/src/extend/functions.dart.
     *
-    * The real implementation will be in the extend functions module. This provides a basic approximation.
+    * Handles two cases:
+    *   1. Single-component super against any-length sub: the single
+    *      super-compound is compared against the LAST compound of sub,
+    *      with parents = the sub's prefix. This matches dart-sass's
+    *      `remaining1 == 1` branch and is the critical path for
+    *      `:not(...)` and `:is(...)` logic, which needs to reason
+    *      about the target element (the last compound) not the first.
+    *   2. Multi-component super: sliding-window match — each
+    *      super-compound must find a later match in sub, preserving
+    *      order. This is NOT the full combinator-aware algorithm;
+    *      the full port lives in `ExtendFunctions.scala` as a
+    *      follow-up (the B010 task targets the pseudo-argument
+    *      dispatch in compoundIsSuperselector, not combinator
+    *      matching in complexIsSuperselector).
     */
   private def complexIsSuperselector(
     superComponents: List[ComplexSelectorComponent],
     subComponents:   List[ComplexSelectorComponent]
   ): Boolean =
-    // Basic stub: delegates to compound-level comparison
     if (superComponents.isEmpty) true
     else if (subComponents.isEmpty) false
-    else {
+    else if (superComponents.length > subComponents.length) false
+    else if (superComponents.length == 1) {
+      val sub1Last = subComponents.last
+      val parentsOpt: Nullable[List[ComplexSelectorComponent]] =
+        if (superComponents.head.selector.hasComplicatedSuperselectorSemantics)
+          Nullable(subComponents.init)
+        else Nullable.empty
+      superComponents.head.selector.isSuperselector(sub1Last.selector, parentsOpt)
+    } else {
+      var j      = 0
+      val subLen = subComponents.length
       superComponents.forall { superComp =>
-        subComponents.exists { subComp =>
-          superComp.selector.isSuperselector(subComp.selector)
+        var found = false
+        while (!found && j < subLen) {
+          if (superComp.selector.isSuperselector(subComponents(j).selector)) {
+            found = true
+          }
+          j += 1
         }
+        found
       }
     }
 

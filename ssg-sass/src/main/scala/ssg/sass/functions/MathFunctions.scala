@@ -547,8 +547,9 @@ object MathFunctions {
 
   /** Built-in constants exposed as module variables under `@use "sass:math"`.
     * Mirrors dart-sass's `variables` map on the math BuiltInModule.
-    * Wiring these through `@use` is tracked as a follow-up; for now
-    * the map is available for the evaluator to consume.
+    * The evaluator consumes this map through `EvaluateVisitor.visitUseRule`
+    * when loading `sass:math`, which seeds these names into the math
+    * module's `Environment` via `Functions.moduleVariables(moduleName)`.
     */
   def moduleVariables: Map[String, Value] = Map(
     "e"                -> SassNumber(math.E),
