@@ -25,6 +25,8 @@ import ssg.md.util.data.DataHolder
 import java.util.{ ArrayList, HashMap, List as JList, Map as JMap }
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 import ssg.md.util.dependency.FirstDependent
 
 class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor {
@@ -79,12 +81,14 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
 
           if (resolvedLink == null) { // @nowarn - Java interop: HashMap.get returns null
             resolvedLink = new ResolvedLink(LinkType.LINK, rawUrl)
-            val iter = linkResolvers.iterator()
-            while (iter.hasNext) {
-              val linkResolver = iter.next()
-              resolvedLink = linkResolver.resolveLink(node, context, resolvedLink)
-              if (resolvedLink.status != LinkStatus.UNKNOWN) {
-                // break equivalent via while guard
+            boundary {
+              val iter = linkResolvers.iterator()
+              while (iter.hasNext) {
+                val linkResolver = iter.next()
+                resolvedLink = linkResolver.resolveLink(node, context, resolvedLink)
+                if (resolvedLink.status != LinkStatus.UNKNOWN) {
+                  break()
+                }
               }
             }
             resolvedLinks.put(rawUrl, resolvedLink)
@@ -92,12 +96,14 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
 
           if (resolvedLink.status == LinkStatus.VALID) {
             var resolvedContent = new ResolvedContent(resolvedLink, LinkStatus.UNKNOWN, Nullable.empty)
-            val iter            = contentResolvers.iterator()
-            while (iter.hasNext) {
-              val contentResolver = iter.next()
-              resolvedContent = contentResolver.resolveContent(node, context, resolvedContent)
-              if (resolvedContent.status != LinkStatus.UNKNOWN) {
-                // break equivalent
+            boundary {
+              val iter = contentResolvers.iterator()
+              while (iter.hasNext) {
+                val contentResolver = iter.next()
+                resolvedContent = contentResolver.resolveContent(node, context, resolvedContent)
+                if (resolvedContent.status != LinkStatus.UNKNOWN) {
+                  break()
+                }
               }
             }
 

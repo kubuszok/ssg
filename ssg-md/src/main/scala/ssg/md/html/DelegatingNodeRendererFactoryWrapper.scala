@@ -20,7 +20,7 @@ import scala.language.implicitConversions
 /** Factory for instantiating new node renderers with dependencies
   */
 private[html] class DelegatingNodeRendererFactoryWrapper(
-  private var nodeRenderers:       Nullable[List[DelegatingNodeRendererFactoryWrapper]],
+  private[html] var nodeRenderers: Nullable[List[DelegatingNodeRendererFactoryWrapper]],
   private val nodeRendererFactory: NodeRendererFactory
 ) extends (DataHolder => NodeRenderer),
       Dependent,
