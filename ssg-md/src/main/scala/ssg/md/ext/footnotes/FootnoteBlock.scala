@@ -47,7 +47,7 @@ class FootnoteBlock() extends Block, ReferenceNode[FootnoteRepository, FootnoteB
     }
 
   def addFirstReferenceOffset(offset: Int): Unit =
-    if (this.firstReferenceOffset < offset) this.firstReferenceOffset = offset
+    if (this.firstReferenceOffset > offset) this.firstReferenceOffset = offset
 
   def isReferenced: Boolean = this.firstReferenceOffset < Int.MaxValue
 
