@@ -419,19 +419,7 @@ final class EvaluateVisitor(
 
   override def visitFunctionExpression(node: FunctionExpression): Value = try
     scala.util.boundary[Value] {
-      // First-class CSS calc()/min()/max()/clamp() — produce a SassCalculation
-      // (or a simplified SassNumber) instead of falling through to plain text.
-      if (node.namespace.isEmpty) {
-        node.name match {
-          case "calc" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
-            val calcResult = _evaluateCalculation(node)
-            if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
-          case _ => ()
-        }
-      }
-      // Look up the callable in the current environment. If not found, fall
-      // through to a "plain CSS function" rendering. Full dispatch (built-in
-      // calculations, namespaces, plain CSS calls) is deferred to Phase 20.
+      // Look up the callable in the current environment.
       val callable: Nullable[Callable] =
         if (node.namespace.isDefined) {
           node.namespace.fold(Nullable.empty[Callable]) { ns =>
@@ -440,12 +428,26 @@ final class EvaluateVisitor(
         } else {
           _environment.getFunction(node.name)
         }
+      // User-defined functions shadow CSS math functions (dart-sass order).
+      // Built-in functions do NOT shadow — CSS calc/min/max/etc. take
+      // precedence over same-named built-ins.
+      val isUserDefined = callable.exists(c =>
+        ssg.sass.AliasedCallable.unwrap(c).isInstanceOf[ssg.sass.UserDefinedCallable[?]]
+      )
+      if (!isUserDefined && node.namespace.isEmpty) {
+        node.name.toLowerCase match {
+          case "calc" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
+            val calcResult = _evaluateCalculation(node)
+            if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
+          case _ => ()
+        }
+      }
       callable.fold[Value] {
         // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
         val args = node.arguments.positional.map(a => _evaluateToCss(a))
         new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
       } { c =>
-        // Built-in callable dispatch — minimal: evaluate positional args and call.
+        // Built-in callable dispatch: evaluate positional args and call.
         // Unwrap any AliasedCallable wrapper (inserted by `@forward ... as
         // prefix-*`) so the underlying BuiltInCallable / UserDefinedCallable
         // is reachable.
@@ -724,7 +726,7 @@ final class EvaluateVisitor(
       val converted = args.map(toArg)
       def nOpt(i: Int): Nullable[Any] =
         if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
-      val result: Value = node.name match {
+      val result: Value = node.name.toLowerCase match {
         case "calc" if converted.length == 1 =>
           SassCalculation.calc(converted.head)
         case "min"                            => SassCalculation.min(converted)
@@ -867,9 +869,8 @@ final class EvaluateVisitor(
   }
 
   override def visitStyleRule(node: StyleRule): Value = {
-    // Evaluate the selector interpolation. Full selector parsing and
-    // normalisation is deferred — we currently store the raw text as
-    // an `Any` placeholder matching the ModifiableCssStyleRule contract.
+    // Evaluate the selector interpolation. The resolved text is parsed
+    // into an AST-based selector matching the ModifiableCssStyleRule contract.
     val childSelectorText: String = node.selector.fold(
       node.parsedSelector.fold("")(ps => ps.toString)
     )(interpolation => _performInterpolation(interpolation))
@@ -2549,7 +2550,7 @@ final class EvaluateVisitor(
     }
   }
 
-  /** Evaluates the positional and named expressions in [[args]] against the current environment, returning a `(positional, named)` pair. Rest and keyword-rest arguments are not yet expanded.
+  /** Evaluates the positional and named expressions in [[args]] against the current environment, returning a `(positional, named)` pair. Rest and keyword-rest arguments are expanded below.
     */
   private def _evaluateArguments(
     args: ssg.sass.ast.sass.ArgumentList

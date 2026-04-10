@@ -21,6 +21,7 @@ package sass
 package parse
 
 import ssg.sass.{ InterpolationMap, Nullable, SassFormatException }
+import ssg.sass.util.CharCode
 import ssg.sass.ast.css.CssValue
 import ssg.sass.ast.selector.{
   AttributeOperator,
@@ -81,8 +82,54 @@ class SelectorParser(
 
   private def readIdentifier(): String = {
     val sb = new StringBuilder()
-    while (!isDone() && isName(peek())) sb.append(read())
+    while (!isDone() && (isName(peek()) || peek() == '\\')) {
+      if (peek() == '\\') sb.append(readEscape(identifierStart = sb.isEmpty))
+      else sb.append(read())
+    }
     sb.toString()
+  }
+
+  /** Consumes a CSS escape sequence and returns the text to emit.
+    * Mirrors `Parser.escape()`: valid name chars are decoded; control
+    * chars and non-name codepoints are re-encoded as `\hex ` or `\char`.
+    */
+  private def readEscape(identifierStart: Boolean = false): String = {
+    pos += 1 // consume backslash
+    if (isDone()) return "\ufffd"
+    val c = peek()
+    var value = 0
+    if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+      var i = 0
+      while (i < 6 && !isDone()) {
+        val h = peek()
+        val digit =
+          if (h >= '0' && h <= '9') h - '0'
+          else if (h >= 'a' && h <= 'f') 10 + h - 'a'
+          else if (h >= 'A' && h <= 'F') 10 + h - 'A'
+          else -1
+        if (digit < 0) { i = 6 }
+        else { value = (value << 4) | digit; pos += 1; i += 1 }
+      }
+      if (!isDone() && isWs(peek())) pos += 1
+      if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff)
+        value = 0xfffd
+    } else {
+      value = src.codePointAt(pos)
+      pos += Character.charCount(value)
+    }
+    // Decide output form (matches dart-sass escape()):
+    if (if (identifierStart) CharCode.isNameStart(value) else CharCode.isName(value)) {
+      new String(Character.toChars(value))
+    } else if (value <= 0x1f || value == 0x7f || (identifierStart && value >= '0' && value <= '9')) {
+      val sb2 = new StringBuilder()
+      sb2.append('\\')
+      if (value > 0xf) sb2.append(Character.forDigit(value >> 4, 16))
+      sb2.append(Character.forDigit(value & 0xf, 16))
+      sb2.append(' ')
+      sb2.toString()
+    } else {
+      "\\" + new String(Character.toChars(value))
+    }
   }
 
   private def fail(msg: String): Nothing =
@@ -188,7 +235,7 @@ class SelectorParser(
 
   private def looksLikeCompoundStart(): Boolean = {
     val c = peek()
-    c >= 0 && (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%')
+    c >= 0 && (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\')
   }
 
   def parseCompoundSelector(): CompoundSelector = {
@@ -197,7 +244,7 @@ class SelectorParser(
     while (continueLoop) {
       val c = peek()
       if (c < 0) continueLoop = false
-      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%') {
+      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\') {
         simples += parseSimpleSelector()
       } else {
         continueLoop = false
@@ -217,7 +264,10 @@ class SelectorParser(
         pos += 1
         // Optional suffix is captured as raw identifier-body characters.
         val sufBuf = new StringBuilder()
-        while (!isDone() && (isName(peek()))) sufBuf.append(read())
+        while (!isDone() && (isName(peek()) || peek() == '\\')) {
+          if (peek() == '\\') sufBuf.append(readEscape())
+          else sufBuf.append(read())
+        }
         val suffix: Nullable[String] =
           if (sufBuf.isEmpty) Nullable.Null else Nullable(sufBuf.toString)
         new ParentSelector(syntheticSp, suffix)
@@ -240,7 +290,7 @@ class SelectorParser(
         parseAttributeSelector()
       case ':' =>
         parsePseudoSelector()
-      case _ if isNameStart(c) =>
+      case _ if isNameStart(c) || c == '\\' =>
         val name = readIdentifier()
         // Namespace handling: `ns|name`. We accept a single `|` separator.
         if (!isDone() && peek() == '|' && peekAt(1) != '=') {

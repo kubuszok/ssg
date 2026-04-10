@@ -65,14 +65,14 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
       throw SassScriptException(s"Expected $this to be unquoted.", name.toOption)
     }
 
-  /** Converts a 1-based Sass index to a 0-based code unit index. Placeholder until SassNumber is ported in Phase 3b.
+  /** Converts a 1-based Sass index to a 0-based code unit index.
     */
   def sassIndexToStringIndex(sassIndex: Value, name: Nullable[String] = Nullable.Null): Int = {
     val codepointIndex = sassIndexToRuneIndex(sassIndex, name)
     ssg.sass.Utils.codepointIndexToCodeUnitIndex(text, codepointIndex)
   }
 
-  /** Converts a 1-based Sass index to a 0-based rune (codepoint) index. Placeholder until SassNumber is ported in Phase 3b.
+  /** Converts a 1-based Sass index to a 0-based rune (codepoint) index.
     */
   def sassIndexToRuneIndex(sassIndex: Value, name: Nullable[String] = Nullable.Null): Int = {
     val index = sassIndex.assertNumber(name).assertInt(name)

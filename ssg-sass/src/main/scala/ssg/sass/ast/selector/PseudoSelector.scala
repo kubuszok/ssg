@@ -167,10 +167,10 @@ final class PseudoSelector(
           otherPseudo.selector.exists(sel.isSuperselector)
         case _ =>
           // Full `_selectorPseudoIsSuperselector` logic from
-          // dart-sass/lib/src/extend/functions.dart is not yet ported;
-          // conservative `false` here avoids the infinite recursion that
-          // the previous `CompoundSelector(List(this), ...)` fallback
-          // triggered. Full behaviour is tracked as a follow-up B-task.
+          // dart-sass/lib/src/extend/functions.dart is ported in
+          // ExtendFunctions; conservative `false` here avoids the
+          // infinite recursion that the previous
+          // `CompoundSelector(List(this), ...)` fallback triggered.
           false
       }
     }

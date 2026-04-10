@@ -45,7 +45,7 @@ abstract class CssNode extends AstNode {
     *
     * Note that this doesn't consider nodes that contain loud comments to be invisible even though they're omitted in compressed mode.
     *
-    * Default implementation returns false; overridden via visitor in Phase 5.
+    * Default implementation returns false; overridden via visitor.
     */
   def isInvisible: Boolean = false
 

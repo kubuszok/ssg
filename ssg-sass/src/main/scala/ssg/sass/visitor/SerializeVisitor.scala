@@ -75,7 +75,18 @@ final class SerializeVisitor(
     case _: CssDeclaration => false
     case _: CssImport      => false
     case c: CssComment     => isCompressed && !c.isPreserved
-    case p: CssParentNode  =>
+    case rule: CssStyleRule =>
+      // A style rule is invisible if its selector is invisible (all complex
+      // selectors contain placeholders or are bogus) OR if all children are
+      // invisible. Matches dart-sass _IsInvisibleVisitor.visitCssStyleRule.
+      val selectorInvisible = rule.selector match {
+        case list: SelectorList => list.isInvisible
+        case _                 => false
+      }
+      selectorInvisible || (
+        !rule.isChildless && rule.children.forall(isNodeInvisible)
+      )
+    case p: CssParentNode =>
       if (p.isChildless) false
       else p.children.forall(isNodeInvisible)
     case _ => false
@@ -950,7 +961,11 @@ final class SerializeVisitor(
   private def formatSelectorList(list: SelectorList): String = {
     val sb    = new StringBuilder()
     var first = true
-    for (complex <- list.components) {
+    // Filter out invisible complex selectors (placeholders, bogus combinators).
+    // Matches dart-sass visitSelectorList which filters with `!complex.isInvisible`.
+    val visible = list.components.filterNot(_.isInvisible)
+    if (visible.isEmpty) return ""
+    for (complex <- visible) {
       if (!first) {
         sb.append(',')
         if (!isCompressed) {

@@ -145,7 +145,16 @@ object Selector {
       sb.append(attribute.name.toString)
       if (attribute.op.isDefined) {
         sb.append(attribute.op.get.text)
-        sb.append(attribute.value.getOrElse(""))
+        val v = attribute.value.getOrElse("")
+        // Quote the value if it's not a valid CSS identifier or starts with
+        // "--" (IE11 compat). Matches dart-sass visitAttributeSelector.
+        if (v.nonEmpty && ssg.sass.parse.Parser.isIdentifier(v) && !v.startsWith("--")) {
+          sb.append(v)
+        } else {
+          sb.append('"')
+          sb.append(v.replace("\\", "\\\\").replace("\"", "\\\""))
+          sb.append('"')
+        }
         attribute.modifier.foreach { m =>
           sb.append(" ")
           sb.append(m)

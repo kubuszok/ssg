@@ -18,8 +18,6 @@ package visitor
 import ssg.sass.ast.css.*
 
 /** Visitor interface for plain CSS AST nodes.
-  *
-  * This is a forward declaration. The full visitor will be refined in Phase 5.
   */
 trait CssVisitor[T] {
   def visitCssAtRule(node:        CssAtRule):        T

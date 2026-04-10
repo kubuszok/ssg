@@ -187,17 +187,25 @@ abstract class Parser protected (
       }
     }
 
-  /** Consumes an escape sequence and returns the text that defines it. */
+  /** Consumes an escape sequence and returns the text that defines it.
+    *
+    * Port of dart-sass `escape`. If the decoded codepoint is a valid CSS
+    * name character (or nameStart when `identifierStart` is true), the
+    * decoded character is returned directly. Control characters
+    * (U+0000–U+001F, U+007F) and leading digits are re-encoded as
+    * `\hex ` with a trailing space. All other non-name codepoints are
+    * returned as `\<char>`.
+    */
   protected def escape(identifierStart: Boolean = false): String = {
     scanner.expectChar(CharCode.$backslash)
     val first = scanner.peekChar()
     if (first < 0) scanner.error("Expected escape sequence.")
 
+    var value = 0
     if (CharCode.isNewline(first)) {
       scanner.error("Expected escape sequence.")
     } else if (CharCode.isHex(first)) {
-      var value = 0
-      var i     = 0
+      var i = 0
       while (i < 6 && CharCode.isHex(scanner.peekChar())) {
         value = (value << 4) | CharCode.asHex(scanner.readChar())
         i += 1
@@ -206,14 +214,24 @@ abstract class Parser protected (
       if (peek >= 0 && CharCode.isWhitespace(peek)) scanner.readChar()
 
       if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff) {
-        "\uFFFD"
-      } else {
-        // Convert codepoint to string
-        new String(Character.toChars(value))
+        value = 0xfffd
       }
     } else {
-      val c = scanner.readChar()
-      new String(Character.toChars(c))
+      value = scanner.readChar()
+    }
+
+    if (if (identifierStart) CharCode.isNameStart(value) else CharCode.isName(value)) {
+      new String(Character.toChars(value))
+    } else if (value <= 0x1f || value == 0x7f || (identifierStart && CharCode.isDigit(value))) {
+      // Re-encode control characters as \hex with trailing space
+      val sb = new StringBuilder()
+      sb.append('\\')
+      if (value > 0xf) sb.append(Character.forDigit(value >> 4, 16))
+      sb.append(Character.forDigit(value & 0xf, 16))
+      sb.append(' ')
+      sb.toString()
+    } else {
+      "\\" + new String(Character.toChars(value))
     }
   }
 

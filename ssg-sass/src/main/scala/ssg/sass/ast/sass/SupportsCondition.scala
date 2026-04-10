@@ -28,7 +28,7 @@ import ssg.sass.util.FileSpan
 /** An abstract class for defining the condition a `@supports` rule selects. */
 trait SupportsCondition extends SassNode {
 
-  /** Converts this condition into an interpolation that produces the same value. Deferred to Phase 5 when InterpolationBuffer is available.
+  /** Converts this condition into an interpolation that produces the same value.
     */
   def toInterpolation(): Interpolation
 

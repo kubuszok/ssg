@@ -100,5 +100,154 @@ ISS-097	ssg-sass/src/main/scala/ssg/sass/Syntax.scala	parser	open	low	Syntax aut
 ISS-098	ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	colors	open	medium	Legacy color accessors on non-legacy colors: dart-sass color.dart throws 'can't get red channel from non-legacy color' when red/green/blue/hue/saturation/lightness is called on lab/oklch. Verify ssg-sass emits the same error (not silent conversion).	2026-04-06	manual
 ISS-099	ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala	colors	open	medium	Color equality legacy vs modern: dart-sass color.dart treats lab(50% 0 0) and a legacy-rgb equivalent as unequal even if they round-trip. Verify ssg-sass equality respects the space boundary.	2026-04-06	manual
 ISS-100	ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	serializer	open	medium	Color serialization per space: dart-sass serialize.dart emits lab(…)/oklch(…)/color(display-p3 …) forms with correct channel clamping rules (percent vs number) and 'none' keyword round-trip. Verify ssg-sass matches on the full ColorSpacesSuite sass-spec cases.	2026-04-06	manual
-ISS-101	ssg-sass/src/main/scala/ssg/sass/util/Character.scala	parser	open	low	Character util / escape parsing: dart-sass util/character.dart + util/string.dart parse CSS escape sequences (\1f, \26\ ) with full hex+whitespace handling. Verify ssg-sass identifier and string lexers agree on edge cases (6-digit escapes followed by whitespace).	2026-04-06	manual
+ISS-101	ssg-sass/src/main/scala/ssg/sass/util/Character.scala	parser	resolved	low	 — Partially fixed in commit 2f4a7a8 (B001, +37 cases). Remaining work tracked as ISS-235.	2026-04-10	manual
 ISS-102	ssg-sass/src/main/scala/ssg/sass/Compiler.scala	evaluator	open	medium	async/sync evaluator split: dart-sass ships both async_evaluate.dart and evaluate.dart generated from a single source via tool/grind/synchronize.dart. ssg-sass is sync-only, which is correct but means the async-importer JS API is unsupported.	2026-04-06	manual
+ISS-103	ssg-js/src/main/scala/ssg/js/ast/AstNode.scala	shortcuts	open	medium	7 shortcut hit(s): scalastyle-ignore-return	2026-04-10	manual
+ISS-104	ssg-js/src/main/scala/ssg/js/ast/AstSize.scala	shortcuts	open	medium	3 shortcut hit(s): simplified-comment, todo	2026-04-10	manual
+ISS-105	ssg-js/src/main/scala/ssg/js/ast/AstSymbols.scala	shortcuts	open	low	1 shortcut hit(s): not-yet-comment	2026-04-10	manual
+ISS-106	ssg-js/src/main/scala/ssg/js/compress/Common.scala	shortcuts	open	medium	4 shortcut hit(s): simplified-comment, todo	2026-04-10	manual
+ISS-107	ssg-js/src/main/scala/ssg/js/compress/Compressor.scala	shortcuts	open	high	49 shortcut hit(s): todo, get-or-else-null, simplified-comment	2026-04-10	manual
+ISS-108	ssg-js/src/main/scala/ssg/js/compress/CompressorFlags.scala	shortcuts	open	low	1 shortcut hit(s): simplified-comment	2026-04-10	manual
+ISS-109	ssg-js/src/main/scala/ssg/js/compress/CompressorLike.scala	shortcuts	open	low	2 shortcut hit(s): minimal-comment, phase-n-comment	2026-04-10	manual
+ISS-110	ssg-js/src/main/scala/ssg/js/compress/DropSideEffectFree.scala	shortcuts	open	medium	6 shortcut hit(s): todo, for-now-comment	2026-04-10	manual
+ISS-111	ssg-js/src/main/scala/ssg/js/compress/DropUnused.scala	shortcuts	open	medium	6 shortcut hit(s): for-now-comment, todo	2026-04-10	manual
+ISS-112	ssg-js/src/main/scala/ssg/js/compress/Evaluate.scala	shortcuts	open	medium	3 shortcut hit(s): todo, for-now-comment	2026-04-10	manual
+ISS-113	ssg-js/src/main/scala/ssg/js/compress/GlobalDefs.scala	shortcuts	open	low	2 shortcut hit(s): for-now-comment, todo	2026-04-10	manual
+ISS-114	ssg-js/src/main/scala/ssg/js/compress/Inference.scala	shortcuts	open	medium	8 shortcut hit(s): todo	2026-04-10	manual
+ISS-115	ssg-js/src/main/scala/ssg/js/compress/Inline.scala	shortcuts	open	medium	7 shortcut hit(s): todo, for-now-comment	2026-04-10	manual
+ISS-116	ssg-js/src/main/scala/ssg/js/compress/ReduceVars.scala	shortcuts	open	medium	6 shortcut hit(s): todo, for-now-comment	2026-04-10	manual
+ISS-117	ssg-js/src/main/scala/ssg/js/compress/TightenBody.scala	shortcuts	open	medium	4 shortcut hit(s): todo	2026-04-10	manual
+ISS-118	ssg-js/src/main/scala/ssg/js/parse/Parser.scala	shortcuts	open	high	13 shortcut hit(s): null-cast, break-comment, simplified-comment	2026-04-10	manual
+ISS-119	ssg-js/src/main/scala/ssg/js/parse/Tokenizer.scala	shortcuts	open	medium	9 shortcut hit(s): null-cast, flag-break-var	2026-04-10	manual
+ISS-120	ssg-js/src/main/scala/ssg/js/scope/Mangler.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-121	ssg-js/src/main/scala/ssg/js/scope/ScopeAnalysis.scala	shortcuts	open	medium	5 shortcut hit(s): null-cast, xxx, hack	2026-04-10	manual
+ISS-122	ssg-js/src/main/scala/ssg/js/scope/SymbolDef.scala	shortcuts	open	low	1 shortcut hit(s): not-yet-comment	2026-04-10	manual
+ISS-123	ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	shortcuts	open	low	1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-124	ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-125	ssg-liquid/src/main/scala/ssg/liquid/antlr/NameResolver.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-126	ssg-liquid/src/main/scala/ssg/liquid/blocks/Block.scala	shortcuts	open	low	1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-127	ssg-liquid/src/main/scala/ssg/liquid/blocks/For.scala	shortcuts	open	low	1 shortcut hit(s): break-comment	2026-04-10	manual
+ISS-128	ssg-liquid/src/main/scala/ssg/liquid/filters/Filter.scala	shortcuts	open	low	1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-129	ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	shortcuts	open	low	1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-130	ssg-md/src/main/scala/ssg/md/Nullable.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-131	ssg-md/src/main/scala/ssg/md/ast/Heading.scala	shortcuts	open	low	2 shortcut hit(s): for-now-comment, not-yet-comment	2026-04-10	manual
+ISS-132	ssg-md/src/main/scala/ssg/md/ast/HtmlEntity.scala	shortcuts	open	low	1 shortcut hit(s): todo	2026-04-10	manual
+ISS-133	ssg-md/src/main/scala/ssg/md/ast/ParagraphItemContainer.scala	shortcuts	open	low	1 shortcut hit(s): for-now-comment	2026-04-10	manual
+ISS-134	ssg-md/src/main/scala/ssg/md/ast/RefNode.scala	shortcuts	open	medium	3 shortcut hit(s): null-cast, not-yet-comment	2026-04-10	manual
+ISS-135	ssg-md/src/main/scala/ssg/md/ext/admonition/internal/AdmonitionBlockParser.scala	shortcuts	open	low	2 shortcut hit(s): scala-unimpl	2026-04-10	manual
+ISS-136	ssg-md/src/main/scala/ssg/md/ext/admonition/internal/AdmonitionNodeRenderer.scala	shortcuts	open	low	2 shortcut hit(s): scala-unimpl	2026-04-10	manual
+ISS-137	ssg-md/src/main/scala/ssg/md/ext/attributes/internal/AttributesNodeFormatter.scala	shortcuts	open	medium	3 shortcut hit(s): todo, pending-comment	2026-04-10	manual
+ISS-138	ssg-md/src/main/scala/ssg/md/ext/autolink/internal/AutolinkNodePostProcessor.scala	shortcuts	open	medium	3 shortcut hit(s): todo, break-comment	2026-04-10	manual
+ISS-139	ssg-md/src/main/scala/ssg/md/ext/definition/internal/DefinitionItemBlockParser.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-140	ssg-md/src/main/scala/ssg/md/ext/emoji/internal/EmojiNodeFormatter.scala	shortcuts	open	medium	3 shortcut hit(s): for-now-comment, todo, not-yet-comment	2026-04-10	manual
+ISS-141	ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/EnumeratedReferenceBase.scala	shortcuts	open	medium	4 shortcut hit(s): get-or-else-null, null-cast	2026-04-10	manual
+ISS-142	ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumRefTextCollectingVisitor.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-143	ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeFormatter.scala	shortcuts	open	medium	4 shortcut hit(s): not-yet-comment, for-now-comment, todo	2026-04-10	manual
+ISS-144	ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeRenderer.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-145	ssg-md/src/main/scala/ssg/md/ext/footnotes/Footnote.scala	shortcuts	open	medium	5 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-146	ssg-md/src/main/scala/ssg/md/ext/gfm/tasklist/internal/TaskListFormatOptions.scala	shortcuts	open	low	1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-147	ssg-md/src/main/scala/ssg/md/ext/jekyll/tag/JekyllTag.scala	shortcuts	open	low	1 shortcut hit(s): return-comment	2026-04-10	manual
+ISS-148	ssg-md/src/main/scala/ssg/md/ext/jekyll/tag/internal/IncludeNodePostProcessor.scala	shortcuts	open	medium	5 shortcut hit(s): todo, break-comment, not-yet-comment	2026-04-10	manual
+ISS-149	ssg-md/src/main/scala/ssg/md/ext/macros/MacroReference.scala	shortcuts	open	medium	5 shortcut hit(s): get-or-else-null, null-cast	2026-04-10	manual
+ISS-150	ssg-md/src/main/scala/ssg/md/ext/macros/internal/MacroDefinitionBlockParser.scala	shortcuts	open	low	2 shortcut hit(s): not-yet-comment	2026-04-10	manual
+ISS-151	ssg-md/src/main/scala/ssg/md/ext/tables/TablesExtension.scala	shortcuts	open	low	1 shortcut hit(s): scala-unimpl	2026-04-10	manual
+ISS-152	ssg-md/src/main/scala/ssg/md/ext/tables/internal/TableNodeFormatter.scala	shortcuts	open	low	1 shortcut hit(s): hack	2026-04-10	manual
+ISS-153	ssg-md/src/main/scala/ssg/md/ext/toc/SimTocBlock.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-154	ssg-md/src/main/scala/ssg/md/ext/toc/TocBlock.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-155	ssg-md/src/main/scala/ssg/md/ext/toc/TocBlockBase.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-156	ssg-md/src/main/scala/ssg/md/ext/toc/internal/SimTocBlockParser.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-157	ssg-md/src/main/scala/ssg/md/ext/toc/internal/SimTocNodeFormatter.scala	shortcuts	open	medium	3 shortcut hit(s): todo, pending-comment	2026-04-10	manual
+ISS-158	ssg-md/src/main/scala/ssg/md/ext/toc/internal/TocBlockParser.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-159	ssg-md/src/main/scala/ssg/md/ext/typographic/TypographicQuotes.scala	shortcuts	open	low	1 shortcut hit(s): return-comment	2026-04-10	manual
+ISS-160	ssg-md/src/main/scala/ssg/md/ext/typographic/internal/QuoteDelimiterProcessorBase.scala	shortcuts	open	low	2 shortcut hit(s): scalastyle-ignore-return	2026-04-10	manual
+ISS-161	ssg-md/src/main/scala/ssg/md/ext/wikilink/WikiNode.scala	shortcuts	open	medium	4 shortcut hit(s): flag-break-var, return-comment	2026-04-10	manual
+ISS-162	ssg-md/src/main/scala/ssg/md/formatter/Formatter.scala	shortcuts	open	low	2 shortcut hit(s): handled-below, would-be-used	2026-04-10	manual
+ISS-163	ssg-md/src/main/scala/ssg/md/formatter/FormatterUtils.scala	shortcuts	open	low	1 shortcut hit(s): get-or-else-null	2026-04-10	manual
+ISS-164	ssg-md/src/main/scala/ssg/md/formatter/MarkdownWriter.scala	shortcuts	open	medium	3 shortcut hit(s): todo, for-now-comment	2026-04-10	manual
+ISS-165	ssg-md/src/main/scala/ssg/md/formatter/TranslationPlaceholderGenerator.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-166	ssg-md/src/main/scala/ssg/md/formatter/internal/CoreNodeFormatter.scala	shortcuts	open	medium	7 shortcut hit(s): get-or-else-null, placeholder-comment, null-cast	2026-04-10	manual
+ISS-167	ssg-md/src/main/scala/ssg/md/formatter/internal/FormatControlProcessor.scala	shortcuts	open	medium	5 shortcut hit(s): get-or-else-null, flag-break-var	2026-04-10	manual
+ISS-168	ssg-md/src/main/scala/ssg/md/formatter/internal/TranslationHandlerImpl.scala	shortcuts	open	low	1 shortcut hit(s): break-comment	2026-04-10	manual
+ISS-169	ssg-md/src/main/scala/ssg/md/html/AttributeProvider.scala	shortcuts	open	low	1 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-170	ssg-md/src/main/scala/ssg/md/html/HtmlRenderer.scala	shortcuts	open	medium	3 shortcut hit(s): flag-break-var, for-now-comment, hack	2026-04-10	manual
+ISS-171	ssg-md/src/main/scala/ssg/md/html/RendererExtension.scala	shortcuts	open	low	1 shortcut hit(s): for-now-comment	2026-04-10	manual
+ISS-172	ssg-md/src/main/scala/ssg/md/html/renderer/CoreNodeRenderer.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-173	ssg-md/src/main/scala/ssg/md/parser/MutableListOptions.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-174	ssg-md/src/main/scala/ssg/md/parser/core/HtmlBlockParser.scala	shortcuts	open	low	1 shortcut hit(s): flag-break-var	2026-04-10	manual
+ISS-175	ssg-md/src/main/scala/ssg/md/parser/core/delimiter/Delimiter.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-176	ssg-md/src/main/scala/ssg/md/parser/internal/DocumentParser.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var, hack	2026-04-10	manual
+ISS-177	ssg-md/src/main/scala/ssg/md/util/ast/Document.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-178	ssg-md/src/main/scala/ssg/md/util/ast/Node.scala	shortcuts	open	medium	3 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-179	ssg-md/src/main/scala/ssg/md/util/ast/NodeIterator.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-180	ssg-md/src/main/scala/ssg/md/util/collection/CopyOnWriteRef.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-181	ssg-md/src/main/scala/ssg/md/util/collection/MapEntry.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-182	ssg-md/src/main/scala/ssg/md/util/collection/OrderedMap.scala	shortcuts	open	low	2 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-183	ssg-md/src/main/scala/ssg/md/util/collection/OrderedMultiMap.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-184	ssg-md/src/main/scala/ssg/md/util/collection/OrderedSet.scala	shortcuts	open	low	2 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-185	ssg-md/src/main/scala/ssg/md/util/data/NullableDataKey.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-186	ssg-md/src/main/scala/ssg/md/util/format/MarkdownParagraph.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var, get-or-else-null	2026-04-10	manual
+ISS-187	ssg-md/src/main/scala/ssg/md/util/format/MarkdownTable.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var, get-or-else-null	2026-04-10	manual
+ISS-188	ssg-md/src/main/scala/ssg/md/util/format/MarkdownWriterBase.scala	shortcuts	open	low	1 shortcut hit(s): get-or-else-null	2026-04-10	manual
+ISS-189	ssg-md/src/main/scala/ssg/md/util/format/TableFormatOptions.scala	shortcuts	open	high	17 shortcut hit(s): get-or-else-null	2026-04-10	manual
+ISS-190	ssg-md/src/main/scala/ssg/md/util/format/TableSection.scala	shortcuts	open	low	1 shortcut hit(s): get-or-else-null	2026-04-10	manual
+ISS-191	ssg-md/src/main/scala/ssg/md/util/misc/BitFieldSet.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var, not-yet-comment	2026-04-10	manual
+ISS-192	ssg-md/src/main/scala/ssg/md/util/misc/Utils.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var, todo	2026-04-10	manual
+ISS-193	ssg-md/src/main/scala/ssg/md/util/sequence/Escaping.scala	shortcuts	open	medium	6 shortcut hit(s): unsupported-op, simplified-comment, not-yet-comment	2026-04-10	manual
+ISS-194	ssg-md/src/main/scala/ssg/md/util/sequence/IRichSequenceBase.scala	shortcuts	open	low	1 shortcut hit(s): minimal-comment	2026-04-10	manual
+ISS-195	ssg-md/src/main/scala/ssg/md/util/sequence/LineAppendable.scala	shortcuts	open	low	2 shortcut hit(s): pending-comment	2026-04-10	manual
+ISS-196	ssg-md/src/main/scala/ssg/md/util/sequence/LineAppendableImpl.scala	shortcuts	open	low	2 shortcut hit(s): pending-comment, hack	2026-04-10	manual
+ISS-197	ssg-md/src/main/scala/ssg/md/util/sequence/PlaceholderReplacer.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-198	ssg-md/src/main/scala/ssg/md/util/sequence/Range.scala	shortcuts	open	low	1 shortcut hit(s): not-yet-comment	2026-04-10	manual
+ISS-199	ssg-md/src/main/scala/ssg/md/util/sequence/SegmentedSequenceFull.scala	shortcuts	open	low	2 shortcut hit(s): minimal-comment, hack	2026-04-10	manual
+ISS-200	ssg-md/src/main/scala/ssg/md/util/sequence/SegmentedSequenceTree.scala	shortcuts	open	low	1 shortcut hit(s): minimal-comment	2026-04-10	manual
+ISS-201	ssg-md/src/main/scala/ssg/md/util/sequence/SequenceUtils.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var	2026-04-10	manual
+ISS-202	ssg-md/src/main/scala/ssg/md/util/sequence/builder/SegmentBuilderBase.scala	shortcuts	open	low	2 shortcut hit(s): return-comment	2026-04-10	manual
+ISS-203	ssg-md/src/main/scala/ssg/md/util/sequence/builder/tree/SegmentTree.scala	shortcuts	open	medium	4 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-204	ssg-minify/src/main/scala/ssg/minify/html/HtmlMinifier.scala	shortcuts	open	low	1 shortcut hit(s): simplified-comment	2026-04-10	manual
+ISS-205	ssg-sass/src/main/scala/ssg/sass/Callable.scala	shortcuts	open	low	1 shortcut hit(s): todo	2026-04-10	manual
+ISS-206	ssg-sass/src/main/scala/ssg/sass/Compile.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-207	ssg-sass/src/main/scala/ssg/sass/InterpolationMap.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-208	ssg-sass/src/main/scala/ssg/sass/Nullable.scala	shortcuts	open	low	1 shortcut hit(s): null-cast	2026-04-10	manual
+ISS-209	ssg-sass/src/main/scala/ssg/sass/ast/css/CssStyleRule.scala	shortcuts	open	low	1 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-210	ssg-sass/src/main/scala/ssg/sass/ast/sass/ArgumentDeclaration.scala	shortcuts	open	low	2 shortcut hit(s): scalastyle-ignore-return	2026-04-10	manual
+ISS-211	ssg-sass/src/main/scala/ssg/sass/ast/sass/InterpolatedSelector.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-212	ssg-sass/src/main/scala/ssg/sass/ast/sass/SupportsCondition.scala	shortcuts	open	medium	5 shortcut hit(s): simplified-comment	2026-04-10	manual
+ISS-213	ssg-sass/src/main/scala/ssg/sass/ast/selector/CompoundSelector.scala	shortcuts	open	low	2 shortcut hit(s): approximation-comment	2026-04-10	manual
+ISS-214	ssg-sass/src/main/scala/ssg/sass/ast/selector/Selector.scala	shortcuts	open	low	1 shortcut hit(s): placeholder-comment	2026-04-10	manual
+ISS-215	ssg-sass/src/main/scala/ssg/sass/ast/selector/SimpleSelector.scala	shortcuts	open	low	2 shortcut hit(s): placeholder-comment, unsupported-op	2026-04-10	manual
+ISS-216	ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	shortcuts	open	low	1 shortcut hit(s): simplified-comment	2026-04-10	manual
+ISS-217	ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	shortcuts	open	medium	4 shortcut hit(s): unsupported-op, placeholder-comment	2026-04-10	manual
+ISS-218	ssg-sass/src/main/scala/ssg/sass/functions/ColorFunctions.scala	shortcuts	open	medium	3 shortcut hit(s): unsupported-op, for-now-comment, not-yet-comment	2026-04-10	manual
+ISS-219	ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala	shortcuts	open	low	1 shortcut hit(s): stub-comment	2026-04-10	manual
+ISS-220	ssg-sass/src/main/scala/ssg/sass/parse/AtRootQueryParser.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var	2026-04-10	manual
+ISS-221	ssg-sass/src/main/scala/ssg/sass/parse/KeyframeSelectorParser.scala	shortcuts	open	low	2 shortcut hit(s): flag-break-var	2026-04-10	manual
+ISS-222	ssg-sass/src/main/scala/ssg/sass/parse/MediaQueryParser.scala	shortcuts	open	medium	3 shortcut hit(s): flag-break-var	2026-04-10	manual
+ISS-223	ssg-sass/src/main/scala/ssg/sass/parse/Parser.scala	shortcuts	open	medium	3 shortcut hit(s): flag-break-var, minimal-comment	2026-04-10	manual
+ISS-224	ssg-sass/src/main/scala/ssg/sass/parse/SassParser.scala	shortcuts	open	medium	7 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-225	ssg-sass/src/main/scala/ssg/sass/parse/ScssParser.scala	shortcuts	open	low	2 shortcut hit(s): todo, simplified-comment	2026-04-10	manual
+ISS-226	ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	shortcuts	open	high	19 shortcut hit(s): for-now-comment, not-yet-comment, flag-break-var	2026-04-10	manual
+ISS-227	ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	shortcuts	open	medium	3 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-228	ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	shortcuts	open	medium	6 shortcut hit(s): simplified-comment, deferred-comment, unsupported-op	2026-04-10	manual
+ISS-229	ssg-sass/src/main/scala/ssg/sass/value/Value.scala	shortcuts	open	low	1 shortcut hit(s): for-now-comment	2026-04-10	manual
+ISS-230	ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	shortcuts	open	medium	3 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-231	ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	shortcuts	open	low	1 shortcut hit(s): unsupported-op	2026-04-10	manual
+ISS-232	ssg-sass/src/main/scala/ssg/sass/visitor/CloneCssVisitor.scala	shortcuts	open	low	1 shortcut hit(s): for-now-comment	2026-04-10	manual
+ISS-233	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	shortcuts	open	high	28 shortcut hit(s): cssStub-fn, pending-comment, simplified-comment	2026-04-10	manual
+ISS-234	ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	shortcuts	open	medium	3 shortcut hit(s): flag-break-var, placeholder-comment, not-yet-comment	2026-04-10	manual
+ISS-235	ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parser	open	high	B001: Escape sequence decoding -- partial fix landed (+37), ~127 remaining cases need _parseInterpolatedString and _expression paths. Port-task B001.	2026-04-10	manual
+ISS-236	ssg-sass/src/main/scala/ssg/sass/value/SassString.scala	parser	open	low	B005: Escape rendering trailing space -- hex escape needs trailing space when followed by hex char. ~2 cases. Port-task B005.	2026-04-10	manual
+ISS-237	ssg-sass/src/main/scala/ssg/sass/value/SassList.scala	functions	open	low	B006: list-separator() returns wrong value for empty lists. ~2 cases. Port-task B006.	2026-04-10	manual
+ISS-238	ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parser	open	low	B007: Quote-flip -- quoted strings with both quote types should flip. ~2 cases. Port-task B007.	2026-04-10	manual
+ISS-239	ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	extend	open	medium	B012: Extend namespace unification -- namespace-qualified selectors (*|a, ns|a) fail @extend. ~25 cases. Port-task B012.	2026-04-10	manual
+ISS-240	ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala	extend	open	medium	B013: Extend superselector trimming -- too many permutations with +/>/~ combinators. ~23 cases. Port-task B013.	2026-04-10	manual
+ISS-241	ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parser	resolved	medium	 — Fixed in commit d9909d2 (+43 cases, 8 validation regressions accepted). url() syntax and modifier parsing added.	2026-04-10	manual
+ISS-242	ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala	evaluator	open	medium	B016: CSS math function validation -- mod/atan2/exp/sqrt/pow/log etc. do not validate argument count, types, or unit compatibility. ~45 cases. Port-task B016.	2026-04-10	manual
+ISS-243	ssg-sass/src/main/scala/ssg/sass/ast/selector/ComplexSelector.scala	selectors	open	medium	B018: Bogus combinator suppression -- leading/trailing combinators (> a, + ~ a) should mark selector as bogus and suppress output. ~23 cases. Port-task B018.	2026-04-10	manual
+ISS-244	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	evaluator	open	medium	B020: Parent selector & inside :is()/:where()/:matches() at top level should be resolved, not emitted literally. ~10 cases. Port-task B020.	2026-04-10	manual
+ISS-245	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	evaluator	open	medium	B021: Placeholder selectors (%foo) inside :is()/:where()/:not() should cause argument/rule removal. ~10 cases. Port-task B021.	2026-04-10	manual
+ISS-246	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	evaluator	resolved	medium	 — Fixed in commit 3a9b196 (+17 cases). User-defined functions now shadow CSS math.	2026-04-10	manual
+ISS-247	ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	serializer	resolved	medium	 — Fixed in commit 72b6bbf (+99 cases)	2026-04-10	manual
+ISS-248	ssg-sass/src/main/scala/ssg/sass/parse/StylesheetParser.scala	parser	resolved	medium	 — Fixed in commit 4c7dd17 (+9 cases)	2026-04-10	manual
+ISS-249	ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	evaluator	resolved	medium	 — Fixed in commit 90ff8ab	2026-04-10	manual
+ISS-250	ssg-sass/src/main/scala/ssg/sass/ast/selector/Selector.scala	selectors	resolved	low	 — Fixed in commit f823aa3 (+7 cases)	2026-04-10	manual
+ISS-251	ssg-sass/src/main/scala/ssg/sass/value/SassList.scala	evaluator	resolved	low	 — Fixed in commit a428b2e (+3 cases)	2026-04-10	manual
