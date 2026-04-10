@@ -24,15 +24,20 @@ object PreservedBlock {
 
   private val PlaceholderPrefix = "\u0000SSG_HTML_"
 
-  /** Tags whose content must be preserved verbatim during minification. */
-  private val PreservedTags = Array("pre", "textarea", "script", "style")
-
   /** Extract all preserved blocks from HTML, replacing them with placeholders.
     *
+    * @param preservePatterns
+    *   user-supplied regex patterns to preserve
+    * @param preservedTags
+    *   HTML tag names whose content is preserved (default: pre, textarea, script, style)
     * @return
     *   (modified HTML with placeholders, array of preserved content strings)
     */
-  def extract(html: String, preservePatterns: List[Regex] = Nil): (String, Array[String]) = {
+  def extract(
+    html:             String,
+    preservePatterns: List[Regex] = Nil,
+    preservedTags:    List[String] = HtmlMinifyOptions.DefaultPreservedTags
+  ): (String, Array[String]) = {
     val preserved = ArrayBuffer[String]()
     var result    = html
 
@@ -41,7 +46,7 @@ object PreservedBlock {
       result = extractPattern(result, pattern, preserved)
 
     // Then extract preserved tag blocks
-    for (tag <- PreservedTags)
+    for (tag <- preservedTags)
       result = extractTag(result, tag, preserved)
 
     (result, preserved.toArray)

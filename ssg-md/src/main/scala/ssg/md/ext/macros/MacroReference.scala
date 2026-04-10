@@ -30,22 +30,22 @@ class MacroReference() extends Node, DelimitedNode, DoNotDecorate, ReferencingNo
 
   override def reference: BasedSequence = text
 
-  override def getReferenceNode(document: Document): MacroDefinitionBlock =
-    if (myMacroDefinitionBlock.isDefined || text.isEmpty) myMacroDefinitionBlock.getOrElse(null).asInstanceOf[MacroDefinitionBlock] // @nowarn - Java interop: may return null
+  override def getReferenceNode(document: Document): MacroDefinitionBlock | Null =
+    if (myMacroDefinitionBlock.isDefined || text.isEmpty) myMacroDefinitionBlock.getOrElse(null)
     else {
       myMacroDefinitionBlock = Nullable(getMacroDefinitionBlock(MacrosExtension.MACRO_DEFINITIONS.get(document)))
-      myMacroDefinitionBlock.getOrElse(null).asInstanceOf[MacroDefinitionBlock] // @nowarn - Java interop: may return null
+      myMacroDefinitionBlock.getOrElse(null)
     }
 
-  override def getReferenceNode(repository: MacroDefinitionRepository): MacroDefinitionBlock =
-    if (myMacroDefinitionBlock.isDefined || text.isEmpty) myMacroDefinitionBlock.getOrElse(null).asInstanceOf[MacroDefinitionBlock] // @nowarn - Java interop: may return null
+  override def getReferenceNode(repository: MacroDefinitionRepository): MacroDefinitionBlock | Null =
+    if (myMacroDefinitionBlock.isDefined || text.isEmpty) myMacroDefinitionBlock.getOrElse(null)
     else {
       myMacroDefinitionBlock = Nullable(getMacroDefinitionBlock(repository))
-      myMacroDefinitionBlock.getOrElse(null).asInstanceOf[MacroDefinitionBlock] // @nowarn - Java interop: may return null
+      myMacroDefinitionBlock.getOrElse(null)
     }
 
-  def getMacroDefinitionBlock(repository: MacroDefinitionRepository): MacroDefinitionBlock =
-    if (text.isEmpty) null.asInstanceOf[MacroDefinitionBlock] // @nowarn - Java interop boundary with NodeRepository.get
+  def getMacroDefinitionBlock(repository: MacroDefinitionRepository): MacroDefinitionBlock | Null =
+    if (text.isEmpty) null
     else repository.get(text.toString)
 
   def macroDefinitionBlock: Nullable[MacroDefinitionBlock] = myMacroDefinitionBlock

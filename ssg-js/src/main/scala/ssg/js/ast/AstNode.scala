@@ -49,6 +49,32 @@ trait AstNode {
 
   /** Push children in reverse order for backwards iteration. */
   def childrenBackwards(push: AstNode => Unit): Unit = {}
+
+  /** Transform this node using a TreeTransformer, allowing node replacement.
+    *
+    * The transformer's `before` callback is called first. If it returns an AstNode, that replaces this node (descend is skipped). Otherwise, children are descended into (calling `transformDescend`),
+    * then the `after` callback is called — if it returns an AstNode, that replaces the result.
+    */
+  def transform(tw: TreeTransformer): AstNode = {
+    var transformed: AstNode = null.asInstanceOf[AstNode]
+    tw.push(this)
+    val ret = tw.before(this, () => transformDescend(tw))
+    if (ret != null && ret.isInstanceOf[AstNode]) {
+      transformed = ret.asInstanceOf[AstNode]
+    } else {
+      transformed = this
+      transformDescend(tw)
+      val afterRet = tw.after(transformed)
+      if (afterRet != null && afterRet.isInstanceOf[AstNode]) {
+        transformed = afterRet.asInstanceOf[AstNode]
+      }
+    }
+    tw.pop()
+    transformed
+  }
+
+  /** Override to descend into and replace children during transform. Default is noop (leaf nodes). */
+  protected def transformDescend(tw: TreeTransformer): Unit = {}
 }
 
 /** Walks nodes in depth-first search fashion using childrenBackwards. Callback can return WalkAbort to stop iteration, or true to skip children.
@@ -78,6 +104,18 @@ def walkBody(body: ArrayBuffer[AstNode], visitor: TreeWalker): Unit = {
     body(i).walk(visitor)
     i += 1
   }
+}
+
+/** Transform each element of a list, returning a new list with the transformed nodes. */
+def transformList(list: ArrayBuffer[AstNode], tw: TreeTransformer): ArrayBuffer[AstNode] = {
+  val result = ArrayBuffer.empty[AstNode]
+  var i = 0
+  while (i < list.size) {
+    val ret = list(i).transform(tw)
+    if (ret != null) result.addOne(ret)
+    i += 1
+  }
+  result
 }
 
 /** Tree walker with ancestry stack and directive tracking. */

@@ -13,6 +13,7 @@ package macros
 package internal
 
 import ssg.md.Nullable
+import ssg.md.ext.gitlab.GitLabBlockQuote
 import ssg.md.parser.InlineParser
 import ssg.md.parser.block.*
 import ssg.md.util.ast.{ Block, BlockContent }
@@ -46,11 +47,23 @@ class MacroDefinitionBlockParser(options: DataHolder, openMarker: BasedSequence,
         Nullable(BlockContinue.atIndex(index))
       } else {
         // if have open gitlab block quote last child then let them handle it
-        // NOTE: GitLab block quote not yet ported; if/when ported, add check here
-        hadClose = true
-        block_.closingMarker = state.line.subSequence(index, index + 3)
-        block_.closingTrailing = state.lineWithEOL.subSequence(matcher.start(1), matcher.end(1))
-        Nullable(BlockContinue.atIndex(state.lineEndIndex))
+        val lastChild = block_.lastChild
+        if (lastChild.exists(_.isInstanceOf[GitLabBlockQuote])) {
+          val blockQuote = lastChild.get.asInstanceOf[GitLabBlockQuote]
+          if (blockQuote.closingMarker.isEmpty) {
+            Nullable(BlockContinue.atIndex(index))
+          } else {
+            hadClose = true
+            block_.closingMarker = state.line.subSequence(index, index + 3)
+            block_.closingTrailing = state.lineWithEOL.subSequence(matcher.start(1), matcher.end(1))
+            Nullable(BlockContinue.atIndex(state.lineEndIndex))
+          }
+        } else {
+          hadClose = true
+          block_.closingMarker = state.line.subSequence(index, index + 3)
+          block_.closingTrailing = state.lineWithEOL.subSequence(matcher.start(1), matcher.end(1))
+          Nullable(BlockContinue.atIndex(state.lineEndIndex))
+        }
       }
     }
 
@@ -87,8 +100,7 @@ object MacroDefinitionBlockParser {
     override def afterDependents: Nullable[Set[Class[?]]] = Nullable.empty
 
     override def beforeDependents: Nullable[Set[Class[?]]] =
-      // NOTE: GitLabBlockQuoteParser.Factory dependency omitted - not yet ported
-      Nullable(Set.empty[Class[?]])
+      Nullable(Set[Class[?]](classOf[ssg.md.ext.gitlab.internal.GitLabBlockQuoteParser.Factory]))
 
     override def affectsGlobalScope: Boolean = false
 

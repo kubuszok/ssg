@@ -50,6 +50,9 @@ class AstSimpleStatement extends AstNode with AstStatement {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (body != null) push(body.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (body != null) body = body.nn.transform(tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -73,6 +76,9 @@ class AstBlockStatement extends AstNode with AstBlock {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 /** The empty statement (empty block or simply a semicolon). */
@@ -104,6 +110,11 @@ class AstLabeledStatement extends AstNode with AstStatementWithBody {
     if (body != null) push(body.nn)
     if (label != null) push(label.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (label != null) label = label.nn.transform(tw).asInstanceOf[AstLabel]
+    if (body != null) body = body.nn.transform(tw)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +144,11 @@ class AstDo extends AstNode with AstDWLoop {
     if (condition != null) push(condition.nn)
     if (body != null) push(body.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (body != null) body = body.nn.transform(tw)
+    if (condition != null) condition = condition.nn.transform(tw)
+  }
 }
 
 /** A `while` statement. */
@@ -147,6 +163,11 @@ class AstWhile extends AstNode with AstDWLoop {
   override def childrenBackwards(push: AstNode => Unit): Unit = {
     if (body != null) push(body.nn)
     if (condition != null) push(condition.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (condition != null) condition = condition.nn.transform(tw)
+    if (body != null) body = body.nn.transform(tw)
   }
 }
 
@@ -171,6 +192,13 @@ class AstFor extends AstNode with AstIterationStatement {
     if (condition != null) push(condition.nn)
     if (init != null) push(init.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (init != null) init = init.nn.transform(tw)
+    if (condition != null) condition = condition.nn.transform(tw)
+    if (step != null) step = step.nn.transform(tw)
+    if (body != null) body = body.nn.transform(tw)
+  }
 }
 
 /** A `for ... in` statement. */
@@ -190,6 +218,12 @@ class AstForIn extends AstNode with AstIterationStatement {
     if (body != null) push(body.nn)
     if (obj != null) push(obj.nn)
     if (init != null) push(init.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    init = init.nn.transform(tw)
+    obj = obj.nn.transform(tw)
+    if (body != null) body = body.nn.transform(tw)
   }
 }
 
@@ -215,6 +249,11 @@ class AstWith extends AstNode with AstStatementWithBody {
     if (body != null) push(body.nn)
     if (expression != null) push(expression.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (expression != null) expression = expression.nn.transform(tw)
+    if (body != null) body = body.nn.transform(tw)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +278,12 @@ class AstIf extends AstNode with AstStatementWithBody {
     if (body != null) push(body.nn)
     if (condition != null) push(condition.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (condition != null) condition = condition.nn.transform(tw)
+    if (body != null) body = body.nn.transform(tw)
+    if (alternative != null) alternative = alternative.nn.transform(tw)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +306,11 @@ class AstSwitch extends AstNode with AstBlock {
     while ({ i -= 1; i >= 0 }) push(body(i))
     if (expression != null) push(expression.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (expression != null) expression = expression.nn.transform(tw)
+    body = transformList(body, tw)
+  }
 }
 
 /** Base class for `switch` branches. */
@@ -277,6 +327,9 @@ class AstDefault extends AstNode with AstSwitchBranch {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 /** A `case` switch branch. */
@@ -294,6 +347,11 @@ class AstCase extends AstNode with AstSwitchBranch {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
     if (expression != null) push(expression.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (expression != null) expression = expression.nn.transform(tw)
+    body = transformList(body, tw)
   }
 }
 
@@ -320,6 +378,12 @@ class AstTry extends AstNode with AstStatement {
     if (bcatch != null) push(bcatch.nn)
     if (body != null) push(body.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (body != null) body = body.nn.transform(tw).asInstanceOf[AstTryBlock]
+    if (bcatch != null) bcatch = bcatch.nn.transform(tw).asInstanceOf[AstCatch]
+    if (bfinally != null) bfinally = bfinally.nn.transform(tw).asInstanceOf[AstFinally]
+  }
 }
 
 /** The `try` block of a try statement. */
@@ -333,6 +397,9 @@ class AstTryBlock extends AstNode with AstBlock {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 /** A `catch` node; only makes sense as part of a `try` statement. */
@@ -351,6 +418,11 @@ class AstCatch extends AstNode with AstBlock {
     while ({ i -= 1; i >= 0 }) push(body(i))
     if (argname != null) push(argname.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (argname != null) argname = argname.nn.transform(tw)
+    body = transformList(body, tw)
+  }
 }
 
 /** A `finally` node; only makes sense as part of a `try` statement. */
@@ -364,6 +436,9 @@ class AstFinally extends AstNode with AstBlock {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -387,6 +462,9 @@ class AstReturn extends AstNode with AstExit {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (value != null) push(value.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (value != null) value = value.nn.transform(tw)
 }
 
 /** A `throw` statement. */
@@ -398,6 +476,9 @@ class AstThrow extends AstNode with AstExit {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (value != null) push(value.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (value != null) value = value.nn.transform(tw)
 }
 
 /** Base class for loop control statements (break and continue). */
@@ -414,6 +495,9 @@ class AstBreak extends AstNode with AstLoopControl {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (label != null) push(label.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (label != null) label = label.nn.transform(tw).asInstanceOf[AstLabelRef]
 }
 
 /** A `continue` statement. */
@@ -425,4 +509,7 @@ class AstContinue extends AstNode with AstLoopControl {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (label != null) push(label.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (label != null) label = label.nn.transform(tw).asInstanceOf[AstLabelRef]
 }

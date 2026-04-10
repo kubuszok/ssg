@@ -42,6 +42,9 @@ private trait AstDefinitionsLikeWalk extends AstDefinitionsLike {
     var i = definitions.size
     while ({ i -= 1; i >= 0 }) push(definitions(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    definitions = transformList(definitions, tw)
 }
 
 /** Base class for `var`, `let`, or `const` nodes. */
@@ -90,6 +93,11 @@ private trait AstVarDefLikeWalk extends AstVarDefLike {
     if (value != null) push(value.nn)
     if (name != null) push(name.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (name != null) name = name.nn.transform(tw)
+    if (value != null) value = value.nn.transform(tw)
+  }
 }
 
 /** A variable declaration; only appears in an AstDefinitions node. */
@@ -121,6 +129,11 @@ class AstNameMapping extends AstNode {
   override def childrenBackwards(push: AstNode => Unit): Unit = {
     if (name != null) push(name.nn)
     if (foreignName != null) push(foreignName.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (foreignName != null) foreignName = foreignName.nn.transform(tw)
+    if (name != null) name = name.nn.transform(tw)
   }
 }
 
@@ -158,6 +171,12 @@ class AstImport extends AstNode with AstStatement {
       while ({ i -= 1; i >= 0 }) push(names.nn(i))
     }
     if (importedName != null) push(importedName.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (importedName != null) importedName = importedName.nn.transform(tw)
+    if (importedNames != null) importedNames = transformList(importedNames.nn, tw)
+    if (moduleName != null) moduleName = moduleName.nn.transform(tw)
   }
 }
 
@@ -204,5 +223,12 @@ class AstExport extends AstNode with AstStatement {
     }
     if (exportedValue != null) push(exportedValue.nn)
     if (exportedDefinition != null) push(exportedDefinition.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (exportedDefinition != null) exportedDefinition = exportedDefinition.nn.transform(tw)
+    if (exportedValue != null) exportedValue = exportedValue.nn.transform(tw)
+    if (exportedNames != null) exportedNames = transformList(exportedNames.nn, tw)
+    if (moduleName != null) moduleName = moduleName.nn.transform(tw)
   }
 }
