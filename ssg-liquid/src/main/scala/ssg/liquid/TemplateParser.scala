@@ -19,9 +19,13 @@ package liquid
 
 import ssg.liquid.antlr.NameResolver
 import ssg.liquid.filters.{ Filter, Filters }
+import ssg.liquid.filters.date.{ BasicDateParser, DateParser }
 import ssg.liquid.parser.{ Flavor, LiquidSupport }
 
+import java.nio.file.Path
+import java.time.ZoneId
 import java.util.{ ArrayList, Locale, Map => JMap }
+import java.util.function.Consumer
 
 /** The main entry point for configuring and creating Liquid templates.
   *
@@ -47,14 +51,19 @@ final class TemplateParser(
   val limitMaxIterations:         Int,
   val limitMaxSizeRenderedString: Int,
   val limitMaxRenderTimeMillis:   Long,
-  val limitMaxTemplateSizeBytes:  Long
+  val limitMaxTemplateSizeBytes:  Long,
+  val defaultTimeZone:            ZoneId,
+  val dateParser:                 BasicDateParser,
+  val environmentMapConfigurator: Consumer[JMap[String, AnyRef]]
 ) {
 
   def isRenderTimeLimited: Boolean = limitMaxRenderTimeMillis != Long.MaxValue
 
-  /** Parses a Liquid template from a file path. */
-  def parse(path: java.nio.file.Path): Template =
-    parse(new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8))
+  /** Parses a Liquid template from a file path, recording sourceLocation for include_relative. */
+  def parse(path: Path): Template = {
+    val input = new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8)
+    parseWithLocation(input, Some(path))
+  }
 
   /** Parses a Liquid template from a File. */
   def parse(file: java.io.File): Template =
@@ -77,7 +86,10 @@ final class TemplateParser(
   }
 
   /** Parses a Liquid template string. */
-  def parse(input: String): Template = {
+  def parse(input: String): Template =
+    parseWithLocation(input, None)
+
+  private def parseWithLocation(input: String, location: Option[Path]): Template = {
     val lexer = new parser.LiquidLexer(
       input,
       stripSpacesAroundTags,
@@ -95,7 +107,7 @@ final class TemplateParser(
       errorMode
     )
     val root = liquidParser.parse()
-    new Template(this, root, input.length.toLong)
+    new Template(this, root, input.length.toLong, location)
   }
 
   /** Evaluates an object, converting Inspectable objects to LiquidSupport. */
@@ -156,6 +168,9 @@ object TemplateParser {
     private var _limitMaxSizeRenderedString: Int                  = Int.MaxValue
     private var _limitMaxRenderTimeMillis:   Long                 = Long.MaxValue
     private var _limitMaxTemplateSizeBytes:  Long                 = Long.MaxValue
+    private var _defaultTimeZone:            ZoneId                       = scala.compiletime.uninitialized
+    private var _dateParser:                 BasicDateParser              = scala.compiletime.uninitialized
+    private var _environmentMapConfigurator: Consumer[JMap[String, AnyRef]] = scala.compiletime.uninitialized
 
     /** Creates a Builder from an existing TemplateParser (copy settings). */
     def this(parser: TemplateParser) = {
@@ -180,6 +195,9 @@ object TemplateParser {
       _liquidStyleWhere = parser.liquidStyleWhere
       _errorMode = parser.errorMode
       _nameResolver = parser.nameResolver
+      _defaultTimeZone = parser.defaultTimeZone
+      _dateParser = parser.dateParser
+      _environmentMapConfigurator = parser.environmentMapConfigurator
     }
 
     def withFlavor(flavor: Flavor):                                    Builder = { _flavor = flavor; this }
@@ -209,6 +227,9 @@ object TemplateParser {
     def withMaxRenderTimeMillis(max:     Long):              Builder = { _limitMaxRenderTimeMillis = max; this }
     def withMaxTemplateSizeBytes(max:    Long):              Builder = { _limitMaxTemplateSizeBytes = max; this }
     def withErrorMode(mode:              ErrorMode):         Builder = { _errorMode = mode; this }
+    def withDefaultTimeZone(tz:          ZoneId):            Builder = { _defaultTimeZone = tz; this }
+    def withDateParser(dp:               BasicDateParser):   Builder = { _dateParser = dp; this }
+    def withEnvironmentMapConfigurator(c: Consumer[JMap[String, AnyRef]]): Builder = { _environmentMapConfigurator = c; this }
 
     def build(): TemplateParser = {
       val fl = if (_flavor != null) _flavor else DEFAULT_FLAVOR
@@ -248,6 +269,14 @@ object TemplateParser {
         if (_renderTransformer != null) _renderTransformer
         else RenderTransformerDefaultImpl
 
+      val defaultTimeZone =
+        if (_defaultTimeZone != null) _defaultTimeZone
+        else ZoneId.systemDefault()
+
+      val dateParser =
+        if (_dateParser != null) _dateParser
+        else new DateParser()
+
       new TemplateParser(
         flavor = fl,
         stripSpacesAroundTags = _stripSpacesAroundTags,
@@ -268,7 +297,10 @@ object TemplateParser {
         limitMaxIterations = _limitMaxIterations,
         limitMaxSizeRenderedString = _limitMaxSizeRenderedString,
         limitMaxRenderTimeMillis = _limitMaxRenderTimeMillis,
-        limitMaxTemplateSizeBytes = _limitMaxTemplateSizeBytes
+        limitMaxTemplateSizeBytes = _limitMaxTemplateSizeBytes,
+        defaultTimeZone = defaultTimeZone,
+        dateParser = dateParser,
+        environmentMapConfigurator = _environmentMapConfigurator
       )
     }
   }

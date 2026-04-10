@@ -151,6 +151,10 @@ class TemplateContext(
     }
   }
 
+  /** Returns the date parser configured on this context's TemplateParser. */
+  def getDateParser: filters.date.BasicDateParser =
+    parser.dateParser
+
   /** Returns the root folder path (for include_relative). */
   def getRootFolder: java.nio.file.Path = {
     val reg: JMap[String, Any] = getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)

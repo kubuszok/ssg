@@ -15,18 +15,35 @@ package ssg
 package liquid
 
 import ssg.liquid.nodes.BlockNode
+import ssg.liquid.parser.Inspectable
 
-import java.util.{ HashMap, LinkedHashMap, Map => JMap }
+import java.nio.file.Path
+import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap }
 
 /** A parsed Liquid template, ready for rendering with variables.
   *
   * Created via `TemplateParser.parse()` or `Template.parse()`.
   */
 final class Template(
-  val templateParser: TemplateParser,
-  private val root:   BlockNode,
-  val templateSize:   Long = 0L
+  val templateParser:  TemplateParser,
+  private val root:    BlockNode,
+  val templateSize:    Long = 0L,
+  val sourceLocation:  Option[Path] = None
 ) {
+
+  private var templateContext: TemplateContext = scala.compiletime.uninitialized
+  private var contextHolder:   Template.ContextHolder = scala.compiletime.uninitialized
+
+  /** Sets a ContextHolder for accessing the rendering context externally. */
+  def withContextHolder(holder: Template.ContextHolder): Template = {
+    this.contextHolder = holder
+    this
+  }
+
+  /** Returns the list of exceptions encountered during the last render. */
+  def errors(): JList[Exception] =
+    if (templateContext == null) new ArrayList[Exception]()
+    else templateContext.errors()
 
   /** Renders this template with the given variables and returns the result as a String. */
   def render(variables: JMap[String, Any]): String =
@@ -35,6 +52,21 @@ final class Template(
   /** Renders this template with no variables. */
   def render(): String =
     render(new HashMap[String, Any]())
+
+  /** Renders this template with an Inspectable object. */
+  def render(obj: Inspectable): String =
+    renderToObject(obj).toString
+
+  /** Renders this template with an Inspectable object, returning the raw result. */
+  def renderToObject(obj: Inspectable): Any = {
+    val evaluated = templateParser.evaluate(obj)
+    val map       = evaluated.toLiquid()
+    renderToObject(map)
+  }
+
+  /** Renders this template with no variables, returning the raw result. */
+  def renderToObject(): Any =
+    renderToObject(new HashMap[String, Any]())
 
   /** Renders this template and returns the raw result object. */
   def renderToObject(variables: JMap[String, Any]): Any = {
@@ -53,19 +85,56 @@ final class Template(
         variables
     }
 
-    val context = new TemplateContext(templateParser, evaluatedVars)
-    root.render(context)
+    this.templateContext = newRootContext(evaluatedVars)
+    setRootFolderRegistry(templateContext, sourceLocation)
+
+    if (this.contextHolder != null) {
+      contextHolder.setContext(templateContext)
+    }
+
+    val rendered = root.render(templateContext)
+    templateParser.renderTransformer.transformObject(templateContext, rendered)
   }
 
   /** Renders with an existing parent context (used by include tags). */
   def renderToObjectUnguarded(variables: JMap[String, Any], parentContext: TemplateContext, isInclude: Boolean): Any = {
     val context = if (isInclude) {
-      val child = parentContext.newChildContext(new LinkedHashMap[String, Any](variables))
-      child
+      parentContext.newChildContext(new LinkedHashMap[String, Any](variables))
     } else {
-      new TemplateContext(templateParser, new LinkedHashMap[String, Any](variables))
+      newRootContext(new LinkedHashMap[String, Any](variables))
     }
+
+    setRootFolderRegistry(context, sourceLocation)
+
+    if (this.contextHolder != null) {
+      contextHolder.setContext(context)
+    }
+
     root.render(context)
+  }
+
+  /** Renders without guards — no size or time checks. */
+  def renderUnguarded(variables: JMap[String, Any]): String =
+    renderToObjectUnguarded(variables).toString
+
+  /** Renders without guards, returning the raw result. */
+  def renderToObjectUnguarded(variables: JMap[String, Any]): Any =
+    renderToObjectUnguarded(variables, null, true)
+
+  private def newRootContext(variables: JMap[String, Any]): TemplateContext = {
+    val context = new TemplateContext(templateParser, variables)
+    val configurator = templateParser.environmentMapConfigurator
+    if (configurator != null) {
+      configurator.accept(context.getEnvironmentMap.asInstanceOf[JMap[String, AnyRef]])
+    }
+    context
+  }
+
+  private def setRootFolderRegistry(context: TemplateContext, location: Option[Path]): Unit = {
+    location.foreach { loc =>
+      val registry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)
+      registry.putIfAbsent(TemplateContext.REGISTRY_ROOT_FOLDER, loc.getParent)
+    }
   }
 }
 
@@ -74,4 +143,16 @@ object Template {
   /** Parses a Liquid template string with the default parser. */
   def parse(input: String): Template =
     TemplateParser.DEFAULT.parse(input)
+
+  /** Sometimes the custom insertions needs to return some extra-data, that is not renderable. Best way to allow this and keeping existing simplicity(when the result is a string) is: provide holder
+    * with container for that data. Best container is current templateContext, and it is set into this holder during creation.
+    */
+  class ContextHolder {
+    private var context: TemplateContext = scala.compiletime.uninitialized
+
+    private[liquid] def setContext(ctx: TemplateContext): Unit =
+      context = ctx
+
+    def getContext: TemplateContext = context
+  }
 }
