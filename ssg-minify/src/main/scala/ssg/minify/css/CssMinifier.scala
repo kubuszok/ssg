@@ -44,7 +44,7 @@ object CssMinifier {
 
   // -- Comment removal --
 
-  /** Remove CSS block comments, preserving content inside strings. */
+  /** Remove CSS block comments, preserving content inside strings and important comments (`/*! ... */`). */
   private def removeComments(css: String): String = {
     val len = css.length
     val sb  = new StringBuilder(len)
@@ -53,11 +53,28 @@ object CssMinifier {
     while (i < len) {
       val c = css.charAt(i)
       if (c == '/' && i + 1 < len && css.charAt(i + 1) == '*') {
-        // Block comment — skip to */
-        i += 2
-        while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/'))
-          i += 1
-        if (i + 1 < len) i += 2
+        val isBangComment = i + 2 < len && css.charAt(i + 2) == '!'
+        if (isBangComment) {
+          // Preserve /*! ... */ important/license comments
+          sb.append('/')
+          sb.append('*')
+          i += 2
+          while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/')) {
+            sb.append(css.charAt(i))
+            i += 1
+          }
+          if (i + 1 < len) {
+            sb.append('*')
+            sb.append('/')
+            i += 2
+          }
+        } else {
+          // Regular block comment — skip to */
+          i += 2
+          while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/'))
+            i += 1
+          if (i + 1 < len) i += 2
+        }
       } else if (c == '\'' || c == '"') {
         i = copyStringLiteral(css, i, len, sb)
       } else {

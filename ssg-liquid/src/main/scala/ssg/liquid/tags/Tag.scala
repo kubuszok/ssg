@@ -16,6 +16,7 @@ package tags
 /** Tags are used for the logic in a template. */
 abstract class Tag(_name: String) extends Insertion(_name) {
 
-  def this() =
+  def this() = {
     this(null)
+  }
 }

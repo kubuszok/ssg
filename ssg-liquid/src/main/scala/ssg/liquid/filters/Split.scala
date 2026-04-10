@@ -27,11 +27,16 @@ class Split extends Filter {
         // Empty delimiter: return the whole string as a single-element array
         Array(original)
       } else {
-        // Split without removing leading empty string (cross-platform, no look-behind)
+        // Split preserving trailing empties (limit = -1), cross-platform (no look-behind)
         val parts = original.split(Pattern.quote(delimiter), -1)
-        // Ruby/Liquid split doesn't produce a leading empty element from position 0
-        // but does preserve trailing empties with -1 limit
-        parts
+        // The original Java used (?<!^) look-behind to avoid splitting at position 0.
+        // Look-behinds aren't supported on Scala Native (re2), so we strip the leading
+        // empty string in post-processing instead.
+        if (parts.length > 0 && parts(0).isEmpty) {
+          java.util.Arrays.copyOfRange(parts, 1, parts.length)
+        } else {
+          parts
+        }
       }
     }
   }

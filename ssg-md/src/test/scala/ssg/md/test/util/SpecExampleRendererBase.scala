@@ -23,8 +23,9 @@ abstract class SpecExampleRendererBase(
   protected val myIncludeExampleInfo: Boolean
 ) extends SpecExampleRenderer {
 
-  def this(example: SpecExample, options: Nullable[DataHolder]) =
+  def this(example: SpecExample, options: Nullable[DataHolder]) = {
     this(example, options, true)
+  }
 
   protected val myOptions:    DataHolder       = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable)
   private var myIsFinalized:  Boolean          = false

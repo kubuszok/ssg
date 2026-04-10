@@ -18,11 +18,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Random
 import java.util.regex.Pattern
 
-/** Character escaping utilities for markdown processing.
-  *
-  * NOTE: Methods that reference BasedSequence, ReplacedTextMapper, PrefixedSubSequence, Html5Entities, and Utils are commented out or omitted since those types are not yet ported. They will be added
-  * when those forward references become available.
-  */
+/** Character escaping utilities for markdown processing. */
 object Escaping {
 
   // pure chars not for pattern
@@ -98,9 +94,6 @@ object Escaping {
       sb.append(" ")
   }
 
-  // NOTE: UNESCAPE_REPLACER, ENTITY_REPLACER, REMOVE_REPLACER require Html5Entities (not yet ported)
-  // They are represented as stubs that will be filled in when Html5Entities is available.
-
   private val URL_ENCODE_REPLACER: StringReplacer = new StringReplacer {
     override def replace(s: String, sb: StringBuilder): Unit =
       if (s.startsWith("%")) {
@@ -133,8 +126,6 @@ object Escaping {
     *   string to un-escape
     * @return
     *   un-escaped string
-    *
-    * NOTE: Full implementation requires Html5Entities. This is a simplified version that handles backslash escapes only.
     */
   def unescapeString(s: CharSequence): String =
     if (BACKSLASH_OR_AMP.matcher(s).find()) {
@@ -451,7 +442,6 @@ object Escaping {
       if (s.charAt(0) == '\\') {
         sb.underlying.append(s: CharSequence, 1, s.length)
       } else {
-        // Html5Entities.entityToString(s)
         sb.append(Html5Entities.entityToString(s))
       }
 
@@ -573,10 +563,62 @@ object Escaping {
   /** Normalize eol: embedded \r and \r\n are converted to \n, tracking replacements via the given [[ReplacedTextMapper]].
     */
   def normalizeEOL(s: BasedSequence, textMapper: ReplacedTextMapper): BasedSequence =
-    throw new UnsupportedOperationException("Escaping.normalizeEOL(BasedSequence, ReplacedTextMapper) not yet ported")
+    normalizeEOL(s, textMapper, endWithEOL = false)
 
   /** Normalize eol and ensure sequence ends with EOL, tracking replacements via the given [[ReplacedTextMapper]].
     */
   def normalizeEndWithEOL(s: BasedSequence, textMapper: ReplacedTextMapper): BasedSequence =
-    throw new UnsupportedOperationException("Escaping.normalizeEndWithEOL(BasedSequence, ReplacedTextMapper) not yet ported")
+    normalizeEOL(s, textMapper, endWithEOL = true)
+
+  /** Normalize eol: embedded \r and \r\n are converted to \n, tracking replacements via the given [[ReplacedTextMapper]].
+    *
+    * @param s
+    *   sequence to convert
+    * @param textMapper
+    *   text mapper to update for the replaced text
+    * @param endWithEOL
+    *   whether an EOL is to be appended to the end of the sequence if it does not already end with one.
+    * @return
+    *   converted sequence
+    */
+  private def normalizeEOL(s: BasedSequence, textMapper: ReplacedTextMapper, endWithEOL: Boolean): BasedSequence = {
+    val iMax    = s.length()
+    var lastPos = 0
+    var hadCR   = false
+    var hadEOL  = false
+
+    if (textMapper.isModified) textMapper.startNestedReplacement(s)
+
+    var i = 0
+    while (i < iMax) {
+      val c = s.charAt(i)
+      if (c == '\r') {
+        hadCR = true
+      } else if (c == '\n') {
+        if (hadCR) {
+          // previous was CR, need to take preceding chars
+          if (lastPos < i - 1) textMapper.addOriginalText(lastPos, i - 1)
+          lastPos = i
+          hadCR = false
+          hadEOL = true
+        }
+      } else {
+        if (hadCR) {
+          if (lastPos < i - 1) textMapper.addOriginalText(lastPos, i + 1)
+          textMapper.addReplacedText(i - 1, i, BasedSequence.EOL)
+          lastPos = i
+          hadCR = false
+          hadEOL = false
+        }
+      }
+      i += 1
+    }
+
+    if (!hadCR) {
+      if (lastPos < iMax) textMapper.addOriginalText(lastPos, iMax)
+      if (!hadEOL && endWithEOL) textMapper.addReplacedText(iMax - 1, iMax, BasedSequence.EOL)
+    }
+
+    textMapper.replacedSequence
+  }
 }

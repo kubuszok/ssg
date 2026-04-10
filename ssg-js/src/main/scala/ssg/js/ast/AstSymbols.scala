@@ -11,7 +11,7 @@
  *
  * Migration notes:
  *   Renames: AST_* -> Ast*
- *   Convention: thedef/scope are Any (SymbolDef not yet ported)
+ *   Convention: thedef/scope are Any (SymbolDef pending port)
  *   Idiom: Mutable var fields for scope analysis
  */
 package ssg
@@ -158,7 +158,7 @@ class AstSymbolImportForeign extends AstNode with AstSymbol {
 class AstLabel extends AstNode with AstSymbol {
   var references: ArrayBuffer[AstNode] = ArrayBuffer.empty
 
-  /** Mangled name for label, or null if not yet mangled. */
+  /** Mangled name for label, or null if unmangled. */
   var mangledName: String | Null = null
 
   def nodeType: String = "Label"

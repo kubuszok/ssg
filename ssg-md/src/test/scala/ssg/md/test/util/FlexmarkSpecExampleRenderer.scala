@@ -27,8 +27,9 @@ class FlexmarkSpecExampleRenderer(
   includeExampleCoord:  Boolean
 ) extends SpecExampleRendererBase(example, exampleOptions, includeExampleCoord) {
 
-  def this(example: SpecExample, options: Nullable[DataHolder], parser: IParse, render: IRender) =
+  def this(example: SpecExample, options: Nullable[DataHolder], parser: IParse, render: IRender) = {
     this(example, options, parser, render, true)
+  }
 
   private var myIncludedDocument: Nullable[Node] = Nullable.empty
   private var myDocument:         Nullable[Node] = Nullable.empty

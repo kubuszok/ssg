@@ -13,6 +13,7 @@ package gfm
 package tasklist
 
 import ssg.md.ast.{ ListItem, OrderedListItem, Paragraph }
+import ssg.md.parser.ListOptions
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
 
@@ -46,7 +47,7 @@ class TaskListItem() extends ListItem {
   def this(block: ListItem) = {
     this()
     // Replicate what ListItem(ListItem) does: copy fields, take children, set chars
-    this.openingMarker = block.openingMarker
+    this._openingMarker = block.openingMarker
     this.markerSuffix = block.markerSuffix
     this.tight_=(block.isOwnTight)
     this.hadBlankAfterItemParagraph_=(block.isHadBlankAfterItemParagraph)
@@ -63,7 +64,7 @@ class TaskListItem() extends ListItem {
     out.append(if (isItemDoneMarker) " isDone" else " isNotDone")
   }
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = {
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = {
     assert(node.parent.isDefined && node.parent.contains(this))
 
     // see if this is the first paragraph child item we handle our own paragraph wrapping for that one
@@ -72,9 +73,8 @@ class TaskListItem() extends ListItem {
     child.contains(node)
   }
 
-  // NOTE: Original Java threw IllegalStateException from setOpeningMarker() override.
-  // In Scala, var setter from parent class cannot be overridden in a subclass.
-  // TaskListItem.openingMarker is set during construction via the copy constructor.
+  override def openingMarker_=(v: BasedSequence): Unit =
+    throw new IllegalStateException("openingMarker is immutable on TaskListItem — set during construction only")
 
   def isItemDoneMarker: Boolean = !markerSuffix.matches("[ ]")
 

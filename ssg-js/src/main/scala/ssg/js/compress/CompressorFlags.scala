@@ -48,7 +48,7 @@ object CompressorFlags {
 
   // -- Per-pass flags (cleared between passes) --
 
-  /** The node has been squeezed (simplified) in this pass. */
+  /** The node has been squeezed (reduced) in this pass. */
   val SQUEEZED: Int = 0x0100 // 0b0000000100000000
 
   /** The node has been optimized in this pass. */
