@@ -915,10 +915,62 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
+      // Empty body + non-empty alternative → negate condition, swap body/alt
+      if (self.body != null && isEmpty(self.body) && self.alternative != null && !isEmpty(self.alternative)) {
+        val neg = new AstUnaryPrefix
+        neg.operator = "!"
+        neg.expression = self.condition.nn
+        neg.start = self.start
+        neg.end = self.end
+        self.condition = neg
+        self.body = self.alternative
+        self.alternative = null
+      }
+
+      // Empty body + empty alternative → just condition as statement
+      if (self.body != null && isEmpty(self.body) && (self.alternative == null || isEmpty(self.alternative))) {
+        val ss = new AstSimpleStatement
+        ss.start = self.start
+        ss.end = self.end
+        ss.body = self.condition
+        return optimizeSimpleStatement(ss) // @nowarn
+      }
+
+      // Both branches are return/throw of same type → merge into single return/throw with ternary
+      if (self.body != null && self.alternative != null) {
+        (self.body.nn, self.alternative.nn) match {
+          case (ret1: AstReturn, ret2: AstReturn) =>
+            val cond = new AstConditional
+            cond.start = self.start
+            cond.end = self.end
+            cond.condition = self.condition.nn
+            cond.consequent = if (ret1.value != null) ret1.value.nn else makeVoid0(ret1)
+            cond.alternative = if (ret2.value != null) ret2.value.nn else makeVoid0(ret2)
+            val ret = new AstReturn
+            ret.start = self.start
+            ret.end = self.end
+            ret.value = cond
+            return ret // @nowarn
+          case (thr1: AstThrow, thr2: AstThrow) if thr1.value != null && thr2.value != null =>
+            val cond = new AstConditional
+            cond.start = self.start
+            cond.end = self.end
+            cond.condition = self.condition.nn
+            cond.consequent = thr1.value.nn
+            cond.alternative = thr2.value.nn
+            val thr = new AstThrow
+            thr.start = self.start
+            thr.end = self.end
+            thr.value = cond
+            return thr // @nowarn
+          case _ =>
+        }
+      }
+
       // Convert if(x) expr; to x && expr; when no alternative
       if (self.alternative == null) {
         self.body match {
-          case ss: AstSimpleStatement if isEmpty(self.alternative) =>
+          case ss: AstSimpleStatement =>
             val binary = new AstBinary
             binary.start = self.start
             binary.end = self.end
@@ -1195,9 +1247,78 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.expression == null) {
       self
     } else {
+      // Resolve SymbolRef via fixedValue when reduce_vars is enabled
+      var fn = self.expression.nn
+      if (optionBool("reduce_vars") && fn.isInstanceOf[AstSymbolRef]) {
+        fn.asInstanceOf[AstSymbolRef].fixedValue() match {
+          case resolved: AstNode => fn = resolved
+          case _                 =>
+        }
+      }
+
       // Try to inline the call (empty body, identity function, etc.)
       val inlined = Inline.inlineIntoCall(self, this)
       if (!(inlined eq self)) return inlined // @nowarn
+
+      // Unsafe built-in constructor simplifications
+      if (optionBool("unsafe") && self.expression.nn.isInstanceOf[AstSymbolRef]) {
+        val ref = self.expression.nn.asInstanceOf[AstSymbolRef]
+        if (isUndeclaredRef(ref)) {
+          ref.name match {
+            case "Array" =>
+              // Array(a, b, c) → [a, b, c] (when more than 1 arg, or 0 args)
+              if (self.args.size != 1) {
+                val arr = new AstArray
+                arr.elements = self.args.clone()
+                arr.start = self.start
+                arr.end = self.end
+                return arr // @nowarn
+              }
+            case "Object" if self.args.isEmpty =>
+              // Object() → {}
+              val obj = new AstObject
+              obj.properties = ArrayBuffer.empty
+              obj.start = self.start
+              obj.end = self.end
+              return obj // @nowarn
+            case "String" if self.args.size == 1 =>
+              // String(x) → "" + x
+              val emptyStr = new AstString
+              emptyStr.value = ""
+              emptyStr.start = self.start
+              emptyStr.end = self.end
+              val bin = new AstBinary
+              bin.operator = "+"
+              bin.left = emptyStr
+              bin.right = self.args(0)
+              bin.start = self.start
+              bin.end = self.end
+              return bin // @nowarn
+            case "Number" if self.args.size == 1 =>
+              // Number(x) → +x
+              val prefix = new AstUnaryPrefix
+              prefix.operator = "+"
+              prefix.expression = self.args(0)
+              prefix.start = self.start
+              prefix.end = self.end
+              return prefix // @nowarn
+            case "Boolean" if self.args.size == 1 =>
+              // Boolean(x) → !!x
+              val inner = new AstUnaryPrefix
+              inner.operator = "!"
+              inner.expression = self.args(0)
+              inner.start = self.start
+              inner.end = self.end
+              val outer = new AstUnaryPrefix
+              outer.operator = "!"
+              outer.expression = inner
+              outer.start = self.start
+              outer.end = self.end
+              return outer // @nowarn
+            case _ =>
+          }
+        }
+      }
 
       // Try to evaluate constant calls
       if (optionBool("evaluate")) {
