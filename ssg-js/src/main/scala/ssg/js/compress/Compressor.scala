@@ -1384,8 +1384,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.expression == null) {
       self
     } else {
+      val exp = self.expression.nn
+      val simpleArgs = !self.args.exists(_.isInstanceOf[AstExpansion])
+
       // Resolve SymbolRef via fixedValue when reduce_vars is enabled
-      var fn = self.expression.nn
+      var fn: AstNode = exp
       if (optionBool("reduce_vars") && fn.isInstanceOf[AstSymbolRef]) {
         fn.asInstanceOf[AstSymbolRef].fixedValue() match {
           case resolved: AstNode => fn = resolved
@@ -1393,115 +1396,173 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
+      val isFunc = fn.isInstanceOf[AstLambda]
+
+      // Pinned functions can't be optimized
+      if (isFunc && fn.asInstanceOf[AstLambda].pinned) return self // @nowarn
+
+      // Trim unused arguments using UNUSED flag
+      if (optionBool("unused") && simpleArgs && isFunc && !fn.asInstanceOf[AstLambda].usesArguments) {
+        val lambda = fn.asInstanceOf[AstLambda]
+        var pos = 0
+        var last = 0
+        var i = 0
+        val len = self.args.size
+        while (i < len) {
+          val trim = i >= lambda.argnames.size
+          val argIsUnused = !trim && hasFlag(lambda.argnames(i), UNUSED)
+          if (trim || argIsUnused) {
+            val dropped = DropSideEffectFree.dropSideEffectFree(self.args(i), this)
+            if (dropped != null) {
+              self.args(pos) = dropped.nn
+              pos += 1
+            } else if (!trim) {
+              // Replace unused arg with 0 to preserve positional args
+              val zero = new AstNumber
+              zero.value = 0.0
+              zero.start = self.args(i).start
+              zero.end = self.args(i).end
+              self.args(pos) = zero
+              pos += 1
+              i += 1
+              last = pos
+              // continue — skip the last = pos below
+              while (false) {} // no-op to match original's continue
+            }
+          } else {
+            self.args(pos) = self.args(i)
+            pos += 1
+          }
+          last = pos
+          i += 1
+        }
+        // Truncate args array to last meaningful position
+        while (self.args.size > last) self.args.remove(self.args.size - 1)
+      }
+
+      // console.assert(truthy) → void 0
+      exp match {
+        case dot: AstDot if dot.expression != null && dot.property == "assert" =>
+          dot.expression.nn match {
+            case ref: AstSymbolRef if ref.name == "console" && ref.definition() != null && ref.definition().nn.undeclared =>
+              if (self.args.nonEmpty) {
+                val condition = self.args(0)
+                val ev = Evaluate.evaluate(condition, this)
+                if (ev == true || ev == 1 || ev == 1.0) {
+                  return makeVoid0(self) // @nowarn
+                }
+              }
+            case _ =>
+          }
+        case _ =>
+      }
+
       // Try to inline the call (empty body, identity function, etc.)
       val inlined = Inline.inlineIntoCall(self, this)
       if (!(inlined eq self)) return inlined // @nowarn
 
       // Unsafe built-in constructor simplifications
-      if (optionBool("unsafe") && self.expression.nn.isInstanceOf[AstSymbolRef]) {
-        val ref = self.expression.nn.asInstanceOf[AstSymbolRef]
-        if (isUndeclaredRef(ref)) {
-          ref.name match {
-            case "Array" =>
-              // Array(a, b, c) → [a, b, c] (when more than 1 arg, or 0 args)
-              if (self.args.size != 1) {
-                val arr = new AstArray
-                arr.elements = self.args.clone()
-                arr.start = self.start
-                arr.end = self.end
-                return arr // @nowarn
-              }
-            case "Object" if self.args.isEmpty =>
-              // Object() → {}
-              val obj = new AstObject
-              obj.properties = ArrayBuffer.empty
-              obj.start = self.start
-              obj.end = self.end
-              return obj // @nowarn
-            case "String" if self.args.size == 1 =>
-              // String(x) → "" + x
-              val emptyStr = new AstString
-              emptyStr.value = ""
-              emptyStr.start = self.start
-              emptyStr.end = self.end
-              val bin = new AstBinary
-              bin.operator = "+"
-              bin.left = emptyStr
-              bin.right = self.args(0)
-              bin.start = self.start
-              bin.end = self.end
-              return bin // @nowarn
-            case "Number" if self.args.size == 1 =>
-              // Number(x) → +x
-              val prefix = new AstUnaryPrefix
-              prefix.operator = "+"
-              prefix.expression = self.args(0)
-              prefix.start = self.start
-              prefix.end = self.end
-              return prefix // @nowarn
-            case "Boolean" if self.args.size == 1 =>
-              // Boolean(x) → !!x
-              val inner = new AstUnaryPrefix
-              inner.operator = "!"
-              inner.expression = self.args(0)
-              inner.start = self.start
-              inner.end = self.end
-              val outer = new AstUnaryPrefix
-              outer.operator = "!"
-              outer.expression = inner
-              outer.start = self.start
-              outer.end = self.end
-              return outer // @nowarn
-            case _ =>
-          }
-        }
-      }
-
-      // Trim unused trailing arguments
-      if (optionBool("unused") && fn.isInstanceOf[AstLambda]) {
-        val lambda = fn.asInstanceOf[AstLambda]
-        // Only trim if the function doesn't use `arguments`
-        if (!lambda.usesArguments) {
-          // Remove trailing side-effect-free arguments past the param count
-          val paramCount = lambda.argnames.size
-          while (self.args.size > paramCount) {
-            val lastArg = self.args.last
-            if (hasSideEffects(lastArg, this)) {
-              // Can't trim — has side effects
-              // break out of while
-              self.args.addOne(lastArg) // undo the pop below
+      if (optionBool("unsafe")) {
+        exp match {
+          case ref: AstSymbolRef if isUndeclaredRef(ref) =>
+            ref.name match {
+              case "Array" =>
+                if (self.args.size != 1) {
+                  val arr = new AstArray
+                  arr.elements = self.args.clone()
+                  arr.start = self.start
+                  arr.end = self.end
+                  return arr // @nowarn
+                } else {
+                  // Array(n) where n is a small number → array of holes
+                  self.args(0) match {
+                    case num: AstNumber if num.value >= 0 && num.value <= 11 && num.value == num.value.toInt.toDouble =>
+                      val elements = ArrayBuffer.empty[AstNode]
+                      var k = 0
+                      while (k < num.value.toInt) {
+                        val hole = new AstHole
+                        hole.start = self.start
+                        hole.end = self.end
+                        elements.addOne(hole)
+                        k += 1
+                      }
+                      val arr = new AstArray
+                      arr.elements = elements
+                      arr.start = self.start
+                      arr.end = self.end
+                      return arr // @nowarn
+                    case _ =>
+                  }
+                }
+              case "Object" if self.args.isEmpty =>
+                val obj = new AstObject
+                obj.properties = ArrayBuffer.empty
+                obj.start = self.start
+                obj.end = self.end
+                return obj // @nowarn
+              case "String" =>
+                if (self.args.isEmpty) {
+                  val s = new AstString
+                  s.value = ""
+                  s.start = self.start
+                  s.end = self.end
+                  return s // @nowarn
+                } else if (self.args.size == 1) {
+                  val bin = new AstBinary
+                  bin.operator = "+"
+                  bin.left = self.args(0)
+                  bin.right = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
+                  bin.start = self.start
+                  bin.end = self.end
+                  return bin // @nowarn
+                }
+              case "Number" =>
+                if (self.args.isEmpty) {
+                  val n = new AstNumber; n.value = 0.0; n.start = self.start; n.end = self.end
+                  return n // @nowarn
+                } else if (self.args.size == 1 && optionBool("unsafe_math")) {
+                  val prefix = new AstUnaryPrefix
+                  prefix.operator = "+"
+                  prefix.expression = self.args(0)
+                  prefix.start = self.start
+                  prefix.end = self.end
+                  return prefix // @nowarn
+                }
+              case "Boolean" =>
+                if (self.args.isEmpty) {
+                  val f = new AstFalse; f.start = self.start; f.end = self.end
+                  return f // @nowarn
+                } else if (self.args.size == 1) {
+                  val inner = new AstUnaryPrefix
+                  inner.operator = "!"
+                  inner.expression = self.args(0)
+                  inner.start = self.start
+                  inner.end = self.end
+                  val outer = new AstUnaryPrefix
+                  outer.operator = "!"
+                  outer.expression = inner
+                  outer.start = self.start
+                  outer.end = self.end
+                  return outer // @nowarn
+                }
+              case _ =>
             }
-            self.args.remove(self.args.size - 1)
-            if (hasSideEffects(lastArg, this)) {
-              // Re-add the arg we just removed since it has side effects
-              self.args.addOne(lastArg)
-              // Stop trimming
-              return self // @nowarn — can't trim further
-            }
-          }
-        }
-      }
 
-      // Method call optimizations: x.toString() → "" + x
-      if (optionBool("unsafe") && self.expression.nn.isInstanceOf[AstDot]) {
-        val dot = self.expression.nn.asInstanceOf[AstDot]
-        if (dot.expression != null) {
-          dot.property match {
-            case "toString" if self.args.isEmpty =>
-              // x.toString() → "" + x
-              val emptyStr = new AstString
-              emptyStr.value = ""
-              emptyStr.start = self.start
-              emptyStr.end = self.end
-              val bin = new AstBinary
-              bin.operator = "+"
-              bin.left = emptyStr
-              bin.right = dot.expression.nn
-              bin.start = self.start
-              bin.end = self.end
-              return bestOfExpression(bin, self) // @nowarn
-            case _ =>
-          }
+          // Method call optimizations
+          case dot: AstDot if dot.expression != null =>
+            dot.property match {
+              case "toString" if self.args.isEmpty && !Inference.mayThrowOnAccess(dot, this) =>
+                val bin = new AstBinary
+                bin.operator = "+"
+                bin.left = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
+                bin.right = dot.expression.nn
+                bin.start = self.start
+                bin.end = self.end
+                return bestOfExpression(bin, self) // @nowarn
+              case _ =>
+            }
+
+          case _ =>
         }
       }
 
