@@ -202,6 +202,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Resolve global definitions (e.g., DEBUG: false → replace all DEBUG refs)
     toplevel = GlobalDefs.resolveDefs(toplevel, options.globalDefs)
 
+    // For bookmarklet mode: wrap simple statements in returns
+    if (optionBool("expression")) {
+      processExpression(toplevel, insert = true)
+    }
+
     val passes   = options.passes.max(1)
     var minCount = Int.MaxValue
     var stopping = false
@@ -251,8 +256,53 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       pass += 1
     }
 
+    // Unwrap returns back to simple statements for bookmarklet mode
+    if (optionBool("expression")) {
+      processExpression(toplevel, insert = false)
+    }
+
     toplevelNode = None
     toplevel
+  }
+
+  /** process_expression: convert SimpleStatement↔Return for bookmarklet mode. */
+  private def processExpression(scope: AstScope, insert: Boolean): Unit = {
+    val self = scope
+    var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
+    tt = new TreeTransformer(before = (node, _) => {
+      if (insert && node.isInstanceOf[AstSimpleStatement]) {
+        val ss = node.asInstanceOf[AstSimpleStatement]
+        val ret = new AstReturn
+        ret.start = ss.start
+        ret.end = ss.end
+        ret.value = ss.body
+        ret
+      } else if (!insert && node.isInstanceOf[AstReturn]) {
+        val ret = node.asInstanceOf[AstReturn]
+        val ss = new AstSimpleStatement
+        ss.start = ret.start
+        ss.end = ret.end
+        ss.body = if (ret.value != null) ret.value.nn else makeVoid0(ret)
+        ss
+      } else if (node.isInstanceOf[AstClass] || (node.isInstanceOf[AstLambda] && !(node eq self))) {
+        node // don't descend into classes/lambdas
+      } else if (node.isInstanceOf[AstBlock]) {
+        val block = node.asInstanceOf[AstBlock]
+        val idx = block.body.size - 1
+        if (idx >= 0) {
+          block.body(idx) = block.body(idx).transform(tt)
+        }
+        node
+      } else if (node.isInstanceOf[AstIf]) {
+        val ifNode = node.asInstanceOf[AstIf]
+        if (ifNode.body != null) ifNode.body = ifNode.body.nn.transform(tt)
+        if (ifNode.alternative != null) ifNode.alternative = ifNode.alternative.nn.transform(tt)
+        node
+      } else {
+        null // continue
+      }
+    })
+    scope.walk(tt)
   }
 
   /** Optimize each element of an ArrayBuffer in place. */
@@ -605,6 +655,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case self: AstArray  => optimizeArray(self)
         case self: AstObject => optimizeObject(self)
         case self: AstRegExp => literalsInBooleanContext(self)
+
+        // ---- Object properties (lift computed keys) ----
+        case self: AstConciseMethod => optimizeConciseMethod(self)
+        case self: AstObjectKeyVal  => optimizeObjectKeyVal(self)
+        case self: AstObjectProperty => liftKey(self)
+
+        // ---- Destructuring (prune unused properties) ----
+        case self: AstDestructuring => optimizeDestructuring(self)
 
         // ---- Class (before Scope/Block since AstClass extends AstScope) ----
         case self: AstClassStaticBlock =>
@@ -1633,6 +1691,28 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
+    // Commutative compound from right side: x = y OP x -> x OP= y (for commutative ops)
+    val commAssignOps = Set("*", "&", "|", "^")
+    if (
+      self.operator == "="
+      && self.left != null && self.right != null
+      && self.left.nn.isInstanceOf[AstSymbolRef]
+      && self.right.nn.isInstanceOf[AstBinary]
+    ) {
+      val leftRef  = self.left.nn.asInstanceOf[AstSymbolRef]
+      val binRight = self.right.nn.asInstanceOf[AstBinary]
+      if (
+        binRight.right != null
+        && binRight.right.nn.isInstanceOf[AstSymbolRef]
+        && binRight.right.nn.asInstanceOf[AstSymbolRef].name == leftRef.name
+        && commAssignOps.contains(binRight.operator)
+      ) {
+        // x = y OP x -> x OP= y
+        self.operator = binRight.operator + "="
+        self.right = binRight.left
+      }
+    }
+
     self
   }
 
@@ -2066,6 +2146,163 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   // -----------------------------------------------------------------------
+  // Object property handlers (lift_key, concise method, keyval, destructuring)
+  // -----------------------------------------------------------------------
+
+  /** lift_key: convert computed prop ["p"]:1 → p:1, [42]:1 → 42:1 */
+  private def liftKey(self: AstObjectProperty): AstNode = {
+    if (!optionBool("computed_props")) return self // @nowarn
+    self.key match {
+      case str: AstString =>
+        val key = str.value
+        if (key == "__proto__") return self // @nowarn
+        if (key == "constructor" && parent(0).isInstanceOf[AstClass]) return self // @nowarn
+        self match {
+          case kv: AstObjectKeyVal =>
+            kv.quote = str.quote
+            kv.key = key
+          case _ =>
+            self.key = {
+              val sym = new AstSymbolMethod
+              sym.name = key
+              sym.start = str.start
+              sym.end = str.end
+              sym
+            }
+        }
+      case num: AstNumber =>
+        val key = num.value.toString
+        if (key == "__proto__") return self // @nowarn
+        self match {
+          case kv: AstObjectKeyVal =>
+            kv.key = key
+          case _ =>
+            self.key = {
+              val sym = new AstSymbolMethod
+              sym.name = key
+              sym.start = num.start
+              sym.end = num.end
+              sym
+            }
+        }
+      case _ =>
+    }
+    self
+  }
+
+  /** Optimize concise method: lift_key + method→arrow conversion. */
+  private def optimizeConciseMethod(self: AstConciseMethod): AstNode = {
+    liftKey(self)
+    // p(){return x;} → p:()=>x (when safe)
+    if (
+      optionBool("arrows")
+      && parent(0).isInstanceOf[AstObject]
+      && self.value != null
+    ) {
+      self.value.nn match {
+        case fn: AstLambda
+            if !fn.isGenerator
+              && !fn.usesArguments
+              && !fn.pinned
+              && fn.body.size == 1
+              && fn.body(0).isInstanceOf[AstReturn]
+              && fn.body(0).asInstanceOf[AstReturn].value != null =>
+          // Check no `this` usage
+          var usesThis = false
+          val tw = new TreeWalker((node, _) => {
+            node match {
+              case _: AstThis  => usesThis = true; true
+              case _: AstScope => true
+              case _           => null
+            }
+          })
+          fn.walk(tw)
+          if (!usesThis) {
+            val arrow = new AstArrow
+            arrow.start = fn.start
+            arrow.end = fn.end
+            arrow.body = fn.body
+            arrow.argnames = fn.argnames
+            arrow.isAsync = fn.isAsync
+            arrow.isGenerator = fn.isGenerator
+            val kv = new AstObjectKeyVal
+            kv.start = self.start
+            kv.end = self.end
+            kv.key = self.key match {
+              case sym: AstSymbolMethod => sym.name
+              case other               => other
+            }
+            kv.value = arrow
+            kv.quote = self.quote
+            return kv // @nowarn
+          }
+        case _ =>
+      }
+    }
+    self
+  }
+
+  /** Optimize object key-value: lift_key + function→concise method. */
+  private def optimizeObjectKeyVal(self: AstObjectKeyVal): AstNode = {
+    liftKey(self)
+    self
+  }
+
+  /** Optimize destructuring: prune unused properties (pure_getters + unused). */
+  private def optimizeDestructuring(self: AstDestructuring): AstNode = {
+    if (
+      optionBool("pure_getters")
+      && optionBool("unused")
+      && !self.isArray
+      && self.names.nonEmpty
+      && !self.names.last.isInstanceOf[AstExpansion]
+    ) {
+      // Check this isn't inside an export declaration
+      val isExportDecl = {
+        var a = 0
+        var p = 0
+        val ancestors = Array("VarDef", "Var", "Export") // simplified pattern
+        var matched = true
+        while (a < ancestors.length && matched) {
+          val par = parent(p)
+          if (par == null) { matched = false }
+          else if (a == 0 && par.nn.nodeType == "Destructuring") { p += 1 }
+          else if (par.nn.nodeType != ancestors(a) && !par.nn.nodeType.matches("Const|Let|Var")) {
+            matched = false
+          } else { a += 1; p += 1 }
+        }
+        matched && a == ancestors.length
+      }
+      if (!isExportDecl) {
+        val kept = self.names.filter {
+          case kv: AstObjectKeyVal =>
+            kv.key match {
+              case _: String =>
+                kv.value match {
+                  case sym: AstSymbolDeclaration =>
+                    val d = sym.definition()
+                    if (d != null) {
+                      val dd = d.nn
+                      // Retain if referenced, or global without toplevel.vars
+                      dd.references.nonEmpty || (dd.global && !toplevel.vars) || topRetain(dd)
+                    } else {
+                      true
+                    }
+                  case _ => true
+                }
+              case _ => true
+            }
+          case _ => true
+        }
+        if (kept.size != self.names.size) {
+          self.names = kept
+        }
+      }
+    }
+    self
+  }
+
+  // -----------------------------------------------------------------------
   // Batch 2: Missing critical handlers
   // -----------------------------------------------------------------------
 
@@ -2371,7 +2608,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** Lift sequences from a binary right operand: x + (a, b) → (a, x + b) when x is side-effect-free. */
-  @annotation.nowarn("msg=unused private member") // used by optimizeBinary expansion (Batch 3)
   private def liftSequencesBinaryRight(self: AstBinary): AstNode = {
     if (optionBool("sequences") && self.right != null && self.left != null && !hasSideEffects(self.left.nn, this)) {
       self.right.nn match {
@@ -2420,7 +2656,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** flatten_object: convert `{a:1, b:2}.a` → `[1, 2][0]` for property access on literal objects. */
-  @annotation.nowarn("msg=unused private member") // used by optimizeDot/Sub expansion (Batch 5)
   private def flattenObject(self: AstPropAccess, key: String): AstNode | Null = {
     if (!optionBool("properties")) return null // @nowarn
     if (key == "__proto__") return null // @nowarn
@@ -2480,7 +2715,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** if_break_in_loop: optimize `for (...) { if (...) break; ... }` patterns. */
-  @annotation.nowarn("msg=unused private member") // used by optimizeFor expansion (Batch 5)
   private def ifBreakInLoop(self: AstFor): AstNode = {
     val first: AstNode | Null = self.body match {
       case block: AstBlockStatement if block.body.nonEmpty => block.body(0)
