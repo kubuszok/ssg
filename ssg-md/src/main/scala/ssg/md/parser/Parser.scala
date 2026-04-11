@@ -485,11 +485,13 @@ object Parser {
 
     loadExtensions()
 
-    def this(opts: DataHolder) =
+    def this(opts: DataHolder) = {
       this(Nullable(opts))
+    }
 
-    def this() =
+    def this() = {
       this(Nullable.empty[DataHolder])
+    }
 
     /** @return the configured [[Parser]] */
     def build(): Parser = Parser(this)
