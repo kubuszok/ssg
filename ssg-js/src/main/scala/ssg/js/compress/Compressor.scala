@@ -706,9 +706,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Optimize simple statement — drop side-effect-free expressions. */
   private def optimizeSimpleStatement(self: AstSimpleStatement): AstNode = {
     if (optionBool("side_effects") && self.body != null) {
-      // TODO: val node = self.body.dropSideEffectFree(this, true)
-      // if (node == null) return AstEmptyStatement
-      // if (node ne self.body) return AstSimpleStatement(node)
+      val node = DropSideEffectFree.dropSideEffectFree(self.body.nn, this, firstInStatement = true)
+      if (node == null) {
+        val empty = new AstEmptyStatement
+        empty.start = self.start
+        empty.end = self.end
+        return empty // @nowarn
+      }
+      if (!(node.nn eq self.body.nn)) {
+        self.body = node.nn
+      }
     }
     self
   }
@@ -732,7 +739,28 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def optimizeDo(self: AstDo): AstNode =
     if (!optionBool("loops")) self
     else {
-      // TODO: evaluate condition, potentially convert to for or block
+      // Evaluate condition
+      if (self.condition != null) {
+        val ev = Evaluate.evaluate(self.condition.nn, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
+          ev match {
+            case false | 0 | 0.0 | "" | null =>
+              // Condition is always false — body runs exactly once
+              if (self.body != null) {
+                val block = new AstBlockStatement
+                block.start = self.start
+                block.end = self.end
+                block.body = self.body.nn match {
+                  case b: AstBlock => b.body
+                  case s           => scala.collection.mutable.ArrayBuffer(s)
+                }
+                return block // @nowarn
+              }
+            case _ =>
+              // Condition is always truthy — keep as do-while (infinite loop)
+          }
+        }
+      }
       self
     }
 
@@ -742,12 +770,33 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     else {
       // Drop side-effect-free init
       if (optionBool("side_effects") && self.init != null) {
-        // TODO: self.init = self.init.dropSideEffectFree(this)
+        self.init = DropSideEffectFree.dropSideEffectFree(self.init.nn, this)
       }
 
       // Evaluate constant condition
       if (self.condition != null) {
-        // TODO: evaluate and handle dead-code
+        val ev = Evaluate.evaluate(self.condition.nn, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
+          ev match {
+            case false | 0 | 0.0 | "" | null =>
+              // Condition is always false — loop never executes
+              // Keep init for side effects, drop the rest
+              val empty = new AstEmptyStatement
+              empty.start = self.start
+              empty.end = self.end
+              if (self.init != null) {
+                val ss = new AstSimpleStatement
+                ss.start = self.start
+                ss.end = self.end
+                ss.body = self.init
+                return optimizeSimpleStatement(ss) // @nowarn
+              }
+              return empty // @nowarn
+            case _ =>
+              // Condition is always truthy — remove it (infinite loop)
+              self.condition = null
+          }
+        }
       }
 
       self
@@ -763,10 +812,61 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (!optionBool("conditionals")) {
       self
     } else {
-      // TODO: Evaluate condition for dead branch elimination
-      // TODO: Convert if/else with simple bodies to ternary
-      // TODO: Merge nested if without alternative: if(a) if(b) x -> if(a&&b) x
-      // TODO: Handle aborts() for branch extraction
+      // Evaluate condition for dead branch elimination
+      if (self.condition != null) {
+        val ev = Evaluate.evaluate(self.condition.nn, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
+          ev match {
+            case false | 0 | 0.0 | "" | null =>
+              // Condition is always false — drop body, keep alternative
+              val block = new AstBlockStatement
+              block.start = self.start
+              block.end = self.end
+              block.body = ArrayBuffer.empty
+              // Preserve condition side effects
+              if (hasSideEffects(self.condition.nn, this)) {
+                val ss = new AstSimpleStatement
+                ss.body = self.condition
+                ss.start = self.start
+                ss.end = self.end
+                block.body.addOne(ss)
+              }
+              if (self.alternative != null) block.body.addOne(self.alternative.nn)
+              return optimizeBlockStatement(block) // @nowarn
+            case _ =>
+              // Condition is always true — drop alternative, keep body
+              val block = new AstBlockStatement
+              block.start = self.start
+              block.end = self.end
+              block.body = ArrayBuffer.empty
+              if (hasSideEffects(self.condition.nn, this)) {
+                val ss = new AstSimpleStatement
+                ss.body = self.condition
+                ss.start = self.start
+                ss.end = self.end
+                block.body.addOne(ss)
+              }
+              if (self.body != null) block.body.addOne(self.body.nn)
+              return optimizeBlockStatement(block) // @nowarn
+          }
+        }
+      }
+
+      // Merge nested if: if(a) if(b) x → if(a&&b) x (when no else on outer)
+      if (self.alternative == null && self.body != null) {
+        self.body.nn match {
+          case innerIf: AstIf if innerIf.alternative == null =>
+            val merged = new AstBinary
+            merged.operator = "&&"
+            merged.left = self.condition.nn
+            merged.right = innerIf.condition.nn
+            merged.start = self.start
+            merged.end = self.end
+            self.condition = merged
+            self.body = innerIf.body
+          case _ =>
+        }
+      }
 
       // Convert if(x) expr; to x && expr; when no alternative
       if (self.alternative == null) {
@@ -823,11 +923,81 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ =>
       }
 
-      // TODO: Evaluate constant condition
-      // TODO: x?x:y -> x||y
-      // TODO: Boolean simplification (c?true:false -> !!c)
-      // TODO: Merge common branches
-      // TODO: x?y:y -> (x,y)
+      // Evaluate constant condition
+      if (self.condition != null) {
+        val ev = Evaluate.evaluate(self.condition.nn, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
+          ev match {
+            case false | 0 | 0.0 | "" | null =>
+              // Condition is falsy — return alternative, keep condition for side effects
+              if (hasSideEffects(self.condition.nn, this)) {
+                return makeSequence(self, ArrayBuffer(self.condition.nn, self.alternative.nn)) // @nowarn
+              }
+              return self.alternative.nn // @nowarn
+            case _ =>
+              // Condition is truthy — return consequent
+              if (hasSideEffects(self.condition.nn, this)) {
+                return makeSequence(self, ArrayBuffer(self.condition.nn, self.consequent.nn)) // @nowarn
+              }
+              return self.consequent.nn // @nowarn
+          }
+        }
+      }
+
+      // Boolean simplification: c ? true : false → !!c, c ? false : true → !c
+      (self.consequent.nn, self.alternative.nn) match {
+        case (_: AstTrue, _: AstFalse) =>
+          // c ? true : false → !!c
+          val inner = new AstUnaryPrefix
+          inner.operator = "!"
+          inner.expression = self.condition.nn
+          inner.start = self.start
+          inner.end = self.end
+          val outer = new AstUnaryPrefix
+          outer.operator = "!"
+          outer.expression = inner
+          outer.start = self.start
+          outer.end = self.end
+          return bestOfExpression(outer, self) // @nowarn
+
+        case (_: AstFalse, _: AstTrue) =>
+          // c ? false : true → !c
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = self.condition.nn
+          neg.start = self.start
+          neg.end = self.end
+          return bestOfExpression(neg, self) // @nowarn
+
+        case _ =>
+      }
+
+      // c ? x : false → c && x
+      self.alternative.nn match {
+        case _: AstFalse if optionBool("booleans") =>
+          val binary = new AstBinary
+          binary.operator = "&&"
+          binary.left = self.condition.nn
+          binary.right = self.consequent.nn
+          binary.start = self.start
+          binary.end = self.end
+          return bestOfExpression(binary, self) // @nowarn
+        case _ =>
+      }
+
+      // c ? true : x → c || x
+      self.consequent.nn match {
+        case _: AstTrue if optionBool("booleans") =>
+          val binary = new AstBinary
+          binary.operator = "||"
+          binary.left = self.condition.nn
+          binary.right = self.alternative.nn
+          binary.start = self.start
+          binary.end = self.end
+          return bestOfExpression(binary, self) // @nowarn
+        case _ =>
+      }
+
       self
     }
 
@@ -898,14 +1068,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.expression == null) {
       self
     } else {
-      // TODO: resolve SymbolRef to fixed value for inlining:
-      // val exp = self.expression.nn
-      // val fn = if (optionBool("reduce_vars") && exp.isInstanceOf[AstSymbolRef])
-      //   exp.asInstanceOf[AstSymbolRef].fixedValue() else exp
+      // Try to inline the call (empty body, identity function, etc.)
+      val inlined = Inline.inlineIntoCall(self, this)
+      if (!(inlined eq self)) return inlined // @nowarn
 
-      // TODO: Trim unused arguments (when UNUSED flag checking is available)
-      // TODO: inlineIntoCall(self, this)
-      // TODO: self.evaluate(this)
+      // Try to evaluate constant calls
+      if (optionBool("evaluate")) {
+        val ev = Evaluate.evaluate(self, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+          val folded = makeNodeFromConstant(ev, self)
+          return bestOfExpression(folded, self) // @nowarn
+        }
+      }
 
       self
     }
@@ -923,8 +1097,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     *   - Associativity flattening (a && (b && c) -> a && b && c)
     */
   private def optimizeBinary(self: AstBinary): AstNode = {
-    // Lift sequences from operands
-    // TODO: self = self.liftSequences(this)
+    // Lift sequences from left operand: (a, b) + c → (a, b + c)
+    if (self.left != null) {
+      self.left.nn match {
+        case seq: AstSequence if seq.expressions.size >= 2 =>
+          val exprs = ArrayBuffer.from(seq.expressions)
+          val lastExpr = exprs.remove(exprs.size - 1)
+          self.left = lastExpr
+          exprs.addOne(self)
+          return makeSequence(self, exprs) // @nowarn
+        case _ =>
+      }
+    }
 
     // Commutative operator: move constant to left
     val commutativeOps = Set("==", "===", "!=", "!==", "*", "&", "|", "^")
@@ -941,28 +1125,39 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
-    // Comparison optimizations
-    if (optionBool("comparisons")) {
+    // Comparison optimizations: relax === to == when both sides are known same type
+    if (optionBool("comparisons") && self.left != null && self.right != null) {
       self.operator match {
-        case "===" | "!==" =>
-        // Strict comparison can be relaxed if both sides are same type
-        // TODO: check is_string, is_number, is_boolean
+        case "===" if sameType(self.left.nn, self.right.nn) =>
+          self.operator = "=="
+        case "!==" if sameType(self.left.nn, self.right.nn) =>
+          self.operator = "!="
         case _ =>
       }
     }
 
     // Constant folding
-    // TODO: val ev = self.evaluate(this)
-    // if (ev ne self) return bestOf(this, makeNodeFromConstant(ev, self), self)
+    if (optionBool("evaluate") && self.left != null && self.right != null) {
+      val ev = Evaluate.evaluate(self, this)
+      if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+        val folded = makeNodeFromConstant(ev, self)
+        return bestOfExpression(folded, self) // @nowarn
+      }
+    }
 
     self
   }
 
+  /** Check if two nodes are known to be the same JS type (for comparison relaxation). */
+  private def sameType(a: AstNode, b: AstNode): Boolean =
+    (isString(a, this) && isString(b, this)) ||
+      (isNumber(a, this) && isNumber(b, this)) ||
+      (isBoolean(a) && isBoolean(b))
+
   /** Optimize assignment expressions. */
   private def optimizeAssign(self: AstAssign): AstNode = {
     if (self.logical) {
-      // TODO: self.liftSequences(this)
-      return self
+      return self // @nowarn
     }
 
     // x = x -> x (self-assignment)
@@ -1005,20 +1200,55 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     self
   }
 
-  /** Optimize property dot access. */
-  private def optimizeDot(self: AstDot): AstNode =
-    // TODO: flatten_object, evaluate
+  /** Optimize property dot access — evaluate property reads on literals. */
+  private def optimizeDot(self: AstDot): AstNode = {
+    if (optionBool("properties") && self.expression != null) {
+      self.property match {
+        case prop: String =>
+          val propNode = new AstString
+          propNode.value = prop
+          val value = readProperty(self.expression.nn, propNode)
+          if (value != null && Evaluate.isConstant(value.nn)) {
+            return bestOfExpression(value.nn, self) // @nowarn
+          }
+        case _ =>
+      }
+    }
     self
+  }
 
-  /** Optimize computed property access (bracket notation). */
-  private def optimizeSub(self: AstSub): AstNode =
-    // TODO: Convert computed access to dot when key is a valid identifier
-    // TODO: flatten_object, evaluate
+  /** Optimize computed property access — convert to dot when key is a valid identifier. */
+  private def optimizeSub(self: AstSub): AstNode = {
+    if (optionBool("properties") && self.property != null) {
+      self.property.nn match {
+        case str: AstString if isValidIdentifier(str.value) && !isReservedWord(str.value) =>
+          // obj["prop"] → obj.prop
+          val dot = new AstDot
+          dot.start = self.start
+          dot.end = self.end
+          dot.expression = self.expression
+          dot.optional = self.optional
+          dot.property = str.value
+          return optimizeDot(dot) // @nowarn
+        case _ =>
+      }
+    }
     self
+  }
+
+  /** Check if a string is a valid JS identifier name. */
+  private def isValidIdentifier(s: String): Boolean =
+    s.nonEmpty && {
+      val c0 = s.charAt(0)
+      (c0.isLetter || c0 == '_' || c0 == '$') && s.forall(c => c.isLetterOrDigit || c == '_' || c == '$')
+    }
+
+  /** Check if a string is a JS reserved word. */
+  private def isReservedWord(s: String): Boolean =
+    ssg.js.parse.Token.ALL_RESERVED_WORDS.contains(s)
 
   /** Optimize optional chain expressions. */
   private def optimizeChain(self: AstChain): AstNode =
-    // TODO: Optimize nullish chains
     self
 
   /** Optimize symbol references — inline or replace with constants. */
@@ -1151,9 +1381,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** Optimize class — remove empty static blocks. */
-  private def optimizeClass(self: AstClass): AstNode =
-    // TODO: remove empty AstClassStaticBlock entries from properties
+  private def optimizeClass(self: AstClass): AstNode = {
+    // Remove empty static blocks from class properties
+    if (self.properties.nonEmpty) {
+      self.properties = self.properties.filterNot {
+        case sb: AstClassStaticBlock => sb.body.forall(isEmpty)
+        case _ => false
+      }
+    }
     self
+  }
 
   // -----------------------------------------------------------------------
   // Shared helpers

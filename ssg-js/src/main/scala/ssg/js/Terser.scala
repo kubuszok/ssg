@@ -44,8 +44,9 @@ object MinifyOptions {
 
 /** Result of a Terser minification. */
 final case class MinifyResult(
-  code: String,
-  ast:  AstToplevel
+  code:      String,
+  ast:       AstToplevel,
+  sourceMap: ssg.js.sourcemap.SourceMapData | Null = null
 )
 
 /** Terser JavaScript minifier — public API. */
@@ -88,7 +89,13 @@ object Terser {
     val out = new OutputStream(options.output)
     out.printNode(ast)
 
-    MinifyResult(out.get(), ast)
+    // 5. Retrieve source map if configured
+    val mapData = options.output.sourceMap match {
+      case sm: ssg.js.sourcemap.SourceMap => sm.getEncoded()
+      case null => null
+    }
+
+    MinifyResult(out.get(), ast, mapData)
   }
 
   /** Minify JavaScript source code, returning just the code string. */

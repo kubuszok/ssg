@@ -114,10 +114,10 @@ object DropSideEffectFree {
 
       // SymbolRef
       case ref: AstSymbolRef =>
-        // Safe-to-access symbols can be dropped; undeclared ones might throw
-        val safeAccess = purePropAccessGlobals.contains(ref.name)
-        // TODO: check is_declared when scope analysis is ported
-        if (safeAccess) null else ref
+        // Declared symbols are safe to drop; undeclared may throw ReferenceError
+        val d = ref.definition()
+        val isDeclared = d != null && !d.nn.undeclared
+        if (isDeclared || purePropAccessGlobals.contains(ref.name)) null else ref
 
       // Object literal
       case obj: AstObject =>
@@ -386,9 +386,9 @@ object DropSideEffectFree {
               case null => current // break the loop
               case expr => expr.nn
             }
-          // TODO: is_constant_expression check
-          // For now, keep the assignment (it's hard to prove safety without scope info)
-          assign
+          // If the target is a constant expression (pure access chain), we can drop
+          if (Evaluate.isConstantExpression(current)) null
+          else assign
         }
       }
     }
