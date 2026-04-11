@@ -172,6 +172,6 @@ abstract class Value {
 
   /** Returns the CSS string representation. */
   def toCssString(quote: Boolean = true): String =
-    // Default: use the serializer. Currently, use toString as fallback.
+    // Default: use the serializer. For now, use toString as fallback.
     toString
 }

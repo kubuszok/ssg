@@ -13,9 +13,8 @@ package sequence
 
 class TagRange(val tag: String, startVal: Int, endVal: Int) extends Range(startVal, endVal) {
 
-  def this(tag: CharSequence, range: Range) = {
+  def this(tag: CharSequence, range: Range) =
     this(String.valueOf(tag), range.start, range.end)
-  }
 
   def withTag(tag: CharSequence): TagRange =
     if (this.tag == String.valueOf(tag)) this

@@ -900,7 +900,7 @@ final class SerializeVisitor(
     // siblings emit a line feed (or trailing-comment space), and an extra
     // line feed when the previous sibling has `isGroupEnd == true`.
     //
-    // Note: ssg-sass's evaluator does not currently propagate `isGroupEnd` from
+    // Note: ssg-sass's evaluator does not yet propagate `isGroupEnd` from
     // the original source position (a flag dart-sass sets when nested
     // blocks are flattened). To preserve the historical output where
     // top-level rules and at-rules are separated by a blank line in
