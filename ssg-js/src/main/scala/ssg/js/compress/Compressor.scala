@@ -1234,6 +1234,118 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         return makeSequence(self, ArrayBuffer(self.condition.nn, self.consequent.nn)) // @nowarn
       }
 
+      // Assign merge: c ? (a = x) : (a = y) → a = c ? x : y
+      (self.consequent.nn, self.alternative.nn) match {
+        case (asgn1: AstAssign, asgn2: AstAssign)
+            if asgn1.operator == asgn2.operator
+              && asgn1.logical == asgn2.logical
+              && asgn1.left != null && asgn2.left != null
+              && AstEquivalent.equivalentTo(asgn1.left.nn, asgn2.left.nn)
+              && (!hasSideEffects(self.condition.nn, this) || asgn1.operator == "=" && !hasSideEffects(asgn1.left.nn, this)) =>
+          val newCond = new AstConditional
+          newCond.condition = self.condition.nn
+          newCond.consequent = asgn1.right.nn
+          newCond.alternative = asgn2.right.nn
+          newCond.start = self.start
+          newCond.end = self.end
+          val result = new AstAssign
+          result.operator = asgn1.operator
+          result.left = asgn1.left
+          result.logical = asgn1.logical
+          result.right = newCond
+          result.start = self.start
+          result.end = self.end
+          return result // @nowarn
+        case _ =>
+      }
+
+      // a ? b : c ? b : d → (a || c) ? b : d
+      self.alternative.nn match {
+        case altCond: AstConditional if AstEquivalent.equivalentTo(self.consequent.nn, altCond.consequent.nn) =>
+          val or = new AstBinary
+          or.operator = "||"
+          or.left = self.condition.nn
+          or.right = altCond.condition.nn
+          or.start = self.start
+          or.end = self.end
+          self.condition = or
+          self.alternative = altCond.alternative
+          return self // @nowarn
+        case _ =>
+      }
+
+      // x ? y ? z : a : a → x && y ? z : a
+      self.consequent.nn match {
+        case consCond: AstConditional if AstEquivalent.equivalentTo(consCond.alternative.nn, self.alternative.nn) =>
+          val and = new AstBinary
+          and.operator = "&&"
+          and.left = self.condition.nn
+          and.right = consCond.condition.nn
+          and.start = self.start
+          and.end = self.end
+          self.condition = and
+          self.consequent = consCond.consequent
+          return self // @nowarn
+        case _ =>
+      }
+
+      // a == null ? b : a → a ?? b (ECMAScript 2020+)
+      if (options.ecma >= 2020 && self.alternative != null && self.condition != null) {
+        if (isNullishCheck(self.condition.nn, self.alternative.nn)) {
+          val nullish = new AstBinary
+          nullish.operator = "??"
+          nullish.left = self.alternative.nn
+          nullish.right = self.consequent.nn
+          nullish.start = self.start
+          nullish.end = self.end
+          return nullish // @nowarn
+        }
+      }
+
+      // x ? y || z : z → x && y || z
+      (self.consequent.nn, self.alternative.nn) match {
+        case (consOr: AstBinary, _)
+            if consOr.operator == "||"
+              && consOr.right != null
+              && AstEquivalent.equivalentTo(consOr.right.nn, self.alternative.nn) =>
+          val and = new AstBinary
+          and.operator = "&&"
+          and.left = self.condition.nn
+          and.right = consOr.left.nn
+          and.start = self.start
+          and.end = self.end
+          val or = new AstBinary
+          or.operator = "||"
+          or.left = and
+          or.right = self.alternative.nn
+          or.start = self.start
+          or.end = self.end
+          return or // @nowarn
+        case _ =>
+      }
+
+      // a ? b : (c && b) → (a || c) && b
+      (self.consequent.nn, self.alternative.nn) match {
+        case (_, altAnd: AstBinary)
+            if altAnd.operator == "&&"
+              && altAnd.right != null
+              && AstEquivalent.equivalentTo(self.consequent.nn, altAnd.right.nn) =>
+          val or = new AstBinary
+          or.operator = "||"
+          or.left = self.condition.nn
+          or.right = altAnd.left.nn
+          or.start = self.start
+          or.end = self.end
+          val and = new AstBinary
+          and.operator = "&&"
+          and.left = or
+          and.right = self.consequent.nn
+          and.start = self.start
+          and.end = self.end
+          return and // @nowarn
+        case _ =>
+      }
+
       self
     }
 
