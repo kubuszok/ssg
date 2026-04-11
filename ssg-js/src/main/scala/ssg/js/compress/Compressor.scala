@@ -126,9 +126,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Returns true if the call is NOT pure (i.e., has side effects)
     options.pureFuncs match {
       case Nil => false // no pure_funcs specified — all calls may have side effects
-      case _   =>
-        // TODO: check call.expression.print_to_string() against pureFuncs
-        true
+      case funcs =>
+        if (call.expression == null) true
+        else {
+          val printed = ssg.js.output.OutputStream.printToString(call.expression.nn)
+          !funcs.contains(printed)
+        }
     }
 
   // -----------------------------------------------------------------------
@@ -461,9 +464,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     } else {
       val current  = node
       val wasScope = current.isInstanceOf[AstScope]
-      // TODO: if scope, hoist properties and declarations
-      // current = current.hoistProperties(this)
-      // current = current.hoistDeclarations(this)
+      // Hoisting (hoist_props/hoist_vars options, default off) — deferred, see ISS-035
 
       // Descend twice for convergence (matches Terser behavior)
       descend(current, this)
@@ -473,7 +474,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       val opt = optimizeNode(current)
 
       if (wasScope && opt.isInstanceOf[AstScope]) {
-        // TODO: opt.dropUnused(this)
+        DropUnused.dropUnused(opt.asInstanceOf[AstScope], this)
         descend(opt, this)
       }
 
@@ -699,8 +700,39 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Optimize a function expression — try to convert to arrow when safe. */
   private def optimizeFunction(self: AstFunction): AstNode = {
     val base = optimizeLambda(self)
-    // TODO: unsafe_arrows conversion to AstArrow
-    base
+    // unsafe_arrows: convert function(){} to ()=>{} when safe
+    if (optionBool("unsafe_arrows") && options.ecma >= 2015) {
+      base match {
+        case fn: AstFunction if !fn.isGenerator && !fn.isAsync && fn.name == null && !fn.pinned =>
+          // Check that function body doesn't use `this` or `arguments`
+          var usesThis = false
+          var usesArguments = false
+          val tw = new TreeWalker((node, _) => {
+            node match {
+              case _: AstThis => usesThis = true; true
+              case ref: AstSymbolRef if ref.name == "arguments" => usesArguments = true; true
+              case _: AstScope => true // don't descend into nested scopes
+              case _ => null
+            }
+          })
+          fn.walk(tw)
+          if (!usesThis && !usesArguments) {
+            val arrow = new AstArrow
+            arrow.start = fn.start
+            arrow.end = fn.end
+            arrow.body = fn.body
+            arrow.argnames = fn.argnames
+            arrow.isAsync = fn.isAsync
+            arrow.isGenerator = fn.isGenerator
+            arrow
+          } else {
+            base
+          }
+        case _ => base
+      }
+    } else {
+      base
+    }
   }
 
   /** Optimize simple statement — drop side-effect-free expressions. */
@@ -1005,9 +1037,89 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def optimizeSwitch(self: AstSwitch): AstNode =
     if (!optionBool("switches")) self
     else {
-      // TODO: Evaluate expression for constant dispatch
-      // TODO: Dead branch elimination
-      // TODO: Branch merging
+      // Remove empty trailing default case
+      if (self.body.nonEmpty) {
+        self.body.last match {
+          case d: AstDefault if d.body.forall(isEmpty) =>
+            self.body.remove(self.body.size - 1)
+          case _ =>
+        }
+      }
+
+      // Merge consecutive cases with empty bodies (fall-through)
+      // e.g. case 1: case 2: x → keep as-is (correct fall-through)
+
+      // Evaluate switch expression for constant dispatch
+      if (self.expression != null && optionBool("dead_code")) {
+        val ev = Evaluate.evaluate(self.expression.nn, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.expression.nn.asInstanceOf[AnyRef])) {
+          // Switch expression is constant — find matching case
+          var matchIdx = -1
+          var i = 0
+          while (i < self.body.size) {
+            self.body(i) match {
+              case _: AstDefault => // track default for future use
+              case cas: AstCase if cas.expression != null =>
+                val caseEv = Evaluate.evaluate(cas.expression.nn, this)
+                if (caseEv != null && (caseEv.asInstanceOf[AnyRef] ne cas.expression.nn.asInstanceOf[AnyRef])) {
+                  // Both switch expr and case expr are constant — compare
+                  if (ev == caseEv) matchIdx = i
+                }
+              case _ =>
+            }
+            i += 1
+          }
+
+          // If we found a constant match, extract that case's body
+          if (matchIdx >= 0) {
+            val matched = self.body(matchIdx)
+            val block = new AstBlockStatement
+            block.start = self.start
+            block.end = self.end
+            block.body = matched.asInstanceOf[AstSwitchBranch].body.clone()
+            return optimizeBlockStatement(block) // @nowarn
+          }
+        }
+      }
+
+      // Single non-default case → convert to if-statement
+      val nonDefaultCases = self.body.count(_.isInstanceOf[AstCase])
+      if (nonDefaultCases == 1 && self.body.size <= 2) {
+        val caseNode = self.body.find(_.isInstanceOf[AstCase])
+        val defaultNode = self.body.find(_.isInstanceOf[AstDefault])
+        caseNode match {
+          case Some(cas: AstCase) if cas.expression != null =>
+            val ifNode = new AstIf
+            ifNode.start = self.start
+            ifNode.end = self.end
+            // condition: switch_expr === case_expr
+            val cmp = new AstBinary
+            cmp.operator = "==="
+            cmp.left = self.expression.nn
+            cmp.right = cas.expression.nn
+            cmp.start = self.start
+            cmp.end = self.end
+            ifNode.condition = cmp
+            val thenBlock = new AstBlockStatement
+            thenBlock.body = cas.body.clone()
+            thenBlock.start = cas.start
+            thenBlock.end = cas.end
+            ifNode.body = thenBlock
+            defaultNode match {
+              case Some(d: AstDefault) if d.body.nonEmpty =>
+                val elseBlock = new AstBlockStatement
+                elseBlock.body = d.body.clone()
+                elseBlock.start = d.start
+                elseBlock.end = d.end
+                ifNode.alternative = elseBlock
+              case _ =>
+                ifNode.alternative = null
+            }
+            return optimizeIf(ifNode) // @nowarn
+          case _ =>
+        }
+      }
+
       self
     }
 
@@ -1358,19 +1470,62 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def optimizeDefaultAssign(self: AstDefaultAssign): AstNode =
     if (!optionBool("evaluate")) self
     else {
-      // TODO: evaluate right side, check for undefined
+      // If the default value is undefined, the assignment is redundant
+      if (self.right != null && isUndefined(self.right.nn, this)) {
+        return self.left.nn // @nowarn — drop `= undefined`
+      }
       self
     }
 
-  /** Optimize array literals in boolean context. */
-  private def optimizeArray(self: AstArray): AstNode =
-    // TODO: inline_array_like_spread
+  /** Optimize array literals — inline spread of array literals, boolean context. */
+  private def optimizeArray(self: AstArray): AstNode = {
+    // Inline array-like spread: [...[a, b, c]] → [a, b, c]
+    if (self.elements.nonEmpty) {
+      val flattened = ArrayBuffer.empty[AstNode]
+      var changed = false
+      for (elem <- self.elements) {
+        elem match {
+          case exp: AstExpansion if exp.expression != null =>
+            exp.expression.nn match {
+              case arr: AstArray =>
+                flattened.addAll(arr.elements)
+                changed = true
+              case _ =>
+                flattened.addOne(elem)
+            }
+          case _ =>
+            flattened.addOne(elem)
+        }
+      }
+      if (changed) self.elements = flattened
+    }
     literalsInBooleanContext(self)
+  }
 
-  /** Optimize object literals in boolean context. */
-  private def optimizeObject(self: AstObject): AstNode =
-    // TODO: inline_object_prop_spread
+  /** Optimize object literals — inline spread of object literals, boolean context. */
+  private def optimizeObject(self: AstObject): AstNode = {
+    // Inline object-prop spread: {...{a: 1, b: 2}} → {a: 1, b: 2}
+    if (self.properties.nonEmpty) {
+      val flattened = ArrayBuffer.empty[AstNode]
+      var changed = false
+      for (prop <- self.properties) {
+        prop match {
+          case exp: AstExpansion if exp.expression != null =>
+            exp.expression.nn match {
+              case obj: AstObject =>
+                flattened.addAll(obj.properties)
+                changed = true
+              case _ =>
+                flattened.addOne(prop)
+            }
+          case _ =>
+            flattened.addOne(prop)
+        }
+      }
+      if (changed) self.properties = flattened
+    }
     literalsInBooleanContext(self)
+  }
 
   /** Optimize yield expressions — remove `yield undefined`. */
   private def optimizeYield(self: AstYield): AstNode = {
@@ -1402,8 +1557,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       val trueNode = new AstTrue
       trueNode.start = self.start
       trueNode.end = self.end
-      makeSequence(self, ArrayBuffer(self, trueNode))
-      // TODO: bestOf(this, self, optimized)
+      val optimized = makeSequence(self, ArrayBuffer(self, trueNode))
+      bestOfExpression(optimized, self)
     } else {
       self
     }
@@ -1429,15 +1584,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Reset optimization flags before each pass. */
   private def resetOptFlags(toplevel: AstToplevel): Unit = {
+    val hasTopRetain = topRetain != null && (topRetain ne ((_: Any) => false))
     val tw = new TreeWalker((node, _) => {
       clearFlag(node, CLEAR_BETWEEN_PASSES)
 
-      // TODO: Set TOP flag for retain_top_func
-      // TODO: Call node.reduceVars() for data-flow analysis
+      // Set TOP flag on retained top-level definitions
+      if (hasTopRetain) {
+        node match {
+          case defun: AstDefun if defun.name != null =>
+            defun.name.nn match {
+              case sym: AstSymbol if sym.thedef != null && topRetain(sym.thedef) =>
+                setFlag(defun, TOP)
+              case _ =>
+            }
+          case _ =>
+        }
+      }
 
       null // continue walking
     })
     toplevel.walk(tw)
+    // Note: reduceVars is called separately in the compress() loop
   }
 
   /** Drop console.* calls from the AST.
@@ -1494,7 +1661,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     toplevel.transform(tt).asInstanceOf[AstToplevel]
   }
 
-  /** Walk a node tree, calling visitor for each node. TODO: used in multi-pass convergence check. */
+  /** Walk a node tree, calling visitor for each node. Used in multi-pass convergence check. */
   @scala.annotation.nowarn("msg=unused private member")
   private def walk(
     node:    AstNode,
