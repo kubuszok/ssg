@@ -95,7 +95,7 @@ final class SassSpecRunner extends munit.FunSuite {
     // (for developers who do not have sass-spec checked out), but the
     // message is printed loudly so it is never silent. Strict mode
     // promotes this to a hard failure.
-    val specRoot = locateSpecRoot() match {
+    specRoot = locateSpecRoot() match {
       case Some(p) => p
       case None    =>
         if (strictMode)
@@ -496,6 +496,9 @@ object SassSpecRunner {
           }.toMap)
           .toMap
 
+      // Also build a flat map of all entries with full paths for subdirectory resolution.
+      val allEntries: Map[String, String] = entries.toMap
+
       val archiveRel = root.toAbsolutePath.relativize(archive.toAbsolutePath).toString
       byDir.iterator.flatMap { case (dir, files) =>
         files.get("input.scss") match {
@@ -503,11 +506,41 @@ object SassSpecRunner {
             val out    = files.get("output.css")
             val err    = files.get("error")
             val origin = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
-            // Sibling files (for the MapImporter): everything except
-            // input.scss and the expected-output fixtures.
-            val siblings = files.filter { case (name, _) =>
+            // Sibling files (for the MapImporter): same-directory files
+            // except input.scss and the expected-output fixtures.
+            val sameDirSiblings = files.filter { case (name, _) =>
               name != "input.scss" && name != "output.css" && name != "error" && name != "warning"
             }
+            // Also include files from ALL archive entries with relative paths.
+            // This lets tests resolve both child dirs (@use "dir" → dir/_index.scss)
+            // and parent dirs (@use "../utils" → ../_utils.scss).
+            val dirPrefix = if (dir.isEmpty) "" else dir + "/"
+            val archiveSiblings = allEntries.iterator.flatMap { case (fullPath, content) =>
+              // Skip the test's own input.scss
+              if (fullPath == dirPrefix + "input.scss") None
+              // Skip fixture files
+              else if (fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
+                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss")) None
+              // Skip top-level fixture files (output.css, error, warning at root)
+              else if (!fullPath.contains('/') && (fullPath == "output.css" || fullPath == "error" || fullPath == "warning")) None
+              else {
+                // Compute relative path from test dir to this entry
+                val relativePath = if (dir.isEmpty) fullPath
+                else {
+                  val dirParts = dir.split("/")
+                  val fileParts = fullPath.split("/")
+                  // Find common prefix length
+                  var common = 0
+                  while (common < dirParts.length && common < fileParts.length && dirParts(common) == fileParts(common)) common += 1
+                  val ups = dirParts.length - common
+                  val rest = fileParts.drop(common).mkString("/")
+                  if (ups == 0) rest
+                  else ("../" * ups) + rest
+                }
+                if (relativePath.nonEmpty) Some(relativePath -> content) else None
+              }
+            }.toMap
+            val siblings = sameDirSiblings ++ archiveSiblings
             Iterator.single(TestCase(origin, src, out, err, siblings))
           case None => Iterator.empty
         }
@@ -549,10 +582,37 @@ object SassSpecRunner {
     buf.filter { case (p, _) => !p.isEmpty }.toList
   }
 
+  /** Composite importer: tries MapImporter first, then falls back to FilesystemImporter.
+    * This allows HRX test cases to resolve both sibling files from the archive
+    * AND utility files on disk (e.g. `@use 'core_functions/color/utils'`).
+    */
+  private final class CompositeImporter(
+    map: MapImporter,
+    fs:  ssg.sass.importer.FilesystemImporter
+  ) extends ssg.sass.importer.Importer {
+    def canonicalize(url: String): Nullable[String] = {
+      val fromMap = map.canonicalize(url)
+      if (fromMap.isDefined) fromMap else fs.canonicalize(url)
+    }
+    def load(url: String): Nullable[ssg.sass.importer.ImporterResult] = {
+      val fromMap = map.load(url)
+      if (fromMap.isDefined) fromMap else fs.load(url)
+    }
+  }
+
+  /** Filesystem importer rooted at the sass-spec `spec/` directory.
+    * Lazily initialized so that test skip logic isn't affected.
+    */
+  private lazy val specFsImporter: ssg.sass.importer.FilesystemImporter =
+    new ssg.sass.importer.FilesystemImporter(specRoot.toString)
+
+  /** Locate the sass-spec spec/ root. Stored as var so runCase can access it. */
+  private var specRoot: java.nio.file.Path = scala.compiletime.uninitialized
+
   def runCase(tc: TestCase): Result = {
     val importer: Nullable[ssg.sass.importer.Importer] =
-      if (tc.siblingFiles.isEmpty) Nullable.empty
-      else Nullable(new MapImporter(tc.siblingFiles))
+      if (tc.siblingFiles.isEmpty) Nullable(specFsImporter)
+      else Nullable(new CompositeImporter(new MapImporter(tc.siblingFiles), specFsImporter))
     val compiled: Try[CompileResult] =
       try
         Success(

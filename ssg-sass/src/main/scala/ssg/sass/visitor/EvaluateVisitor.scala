@@ -567,7 +567,7 @@ final class EvaluateVisitor(
   override def visitSelectorExpression(node: SelectorExpression): Value = {
     // Returns the current enclosing style rule's selector text as an
     // unquoted SassString, or SassNull when not inside any style rule.
-    // Full SelectorList value type is deferred — text suffices for `&`
+    // Full SelectorList value type is postponed — text suffices for `&`
     // SassScript references in the current text-based selector model.
     val _ = node
     _styleRule.fold[Value](SassNull) { rule =>
@@ -1045,7 +1045,7 @@ final class EvaluateVisitor(
     }
 
     // Nested declarations: recurse with no added parent (they attach to
-    // the enclosing style rule in place for now).
+    // the enclosing style rule in place currently).
     node.children.foreach { kids =>
       _withScope {
         for (statement <- kids) {
@@ -2309,7 +2309,7 @@ final class EvaluateVisitor(
           val _ = statement.accept(this)
         }
         // Falling off the end of a function body with no @return is an error
-        // in Sass; return null for now (matches "null" result of no-op).
+        // in Sass; return null currently (matches "null" result of no-op).
         SassNull
       } catch {
         case rs: ReturnSignal => rs.value
@@ -2485,10 +2485,12 @@ final class EvaluateVisitor(
     val declared = bic.parameterNames
     if (declared.isEmpty) return // rest-only or unknown signature — skip
     val declaredSet = declared.toSet
-    // 1. Unknown named args.
-    for ((k, _) <- named)
-      if (!declaredSet.contains(k))
-        throw SassScriptException(s"No parameter named $$$k.")
+    // 1. Unknown named args (skip when rest parameter absorbs them).
+    if (!bic.hasRestParameter) {
+      for ((k, _) <- named)
+        if (!declaredSet.contains(k))
+          throw SassScriptException(s"No parameter named $$$k.")
+    }
     // 2. Positional overflow (only when no rest parameter).
     if (!bic.hasRestParameter && positional.length > declared.length) {
       val nParams = declared.length
@@ -2522,16 +2524,34 @@ final class EvaluateVisitor(
     named:      ListMap[String, Value]
   ): List[Value] = {
     val names = bic.parameterNames
-    if (names.isEmpty) positional
-    else {
-      // Validate: every named key must be a declared parameter.
-      for ((k, _) <- named)
-        if (!names.contains(k))
-          throw SassScriptException(s"No parameter named $$$k in ${bic.name}().")
+    if (names.isEmpty) {
+      // rest-only signature (`$args...`): wrap positional + all kwargs
+      // into a SassArgumentList if there are keyword args.
+      if (named.nonEmpty || bic.hasRestParameter) {
+        val extras = positional.drop(0) // all positional become rest
+        val al = new ssg.sass.value.SassArgumentList(
+          extras,
+          named,
+          ssg.sass.value.ListSeparator.Comma
+        )
+        List(al)
+      } else positional
+    } else {
+      val namesSet = names.toSet
+      // Separate known named args (match declared params) from leftover kwargs.
+      val (knownNamed, leftoverNamed) =
+        if (bic.hasRestParameter) named.partition { case (k, _) => namesSet.contains(k) }
+        else {
+          // Validate: every named key must be a declared parameter.
+          for ((k, _) <- named)
+            if (!namesSet.contains(k))
+              throw SassScriptException(s"No parameter named $$$k in ${bic.name}().")
+          (named, ListMap.empty[String, Value])
+        }
       // Determine the highest index that is explicitly supplied (positional
       // or named) so we don't append trailing nulls for unsupplied tail
       // parameters with defaults.
-      val namedIndices = named.keys.map(names.indexOf).filter(_ >= 0)
+      val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
       val maxIdx       =
         (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
       val buf = scala.collection.mutable.ListBuffer.empty[Value]
@@ -2540,11 +2560,22 @@ final class EvaluateVisitor(
         val pname = names(i)
         if (i < positional.length) buf += positional(i)
         else
-          named.get(pname) match {
+          knownNamed.get(pname) match {
             case Some(v) => buf += v
             case _       => buf += SassNull
           }
         i += 1
+      }
+      // When rest parameter is declared, collect extra positional and
+      // leftover named args into a SassArgumentList.
+      if (bic.hasRestParameter) {
+        val extras = positional.drop(names.length)
+        val al = new ssg.sass.value.SassArgumentList(
+          extras,
+          leftoverNamed,
+          ssg.sass.value.ListSeparator.Comma
+        )
+        buf += al
       }
       buf.toList
     }
@@ -2612,7 +2643,7 @@ final class EvaluateVisitor(
   }
 
   // ===========================================================================
-  // CssVisitor — stubs (Phase 19+)
+  // CssVisitor — skeletons (future)
   // ===========================================================================
 
   private def cssStub(name: String): Value =

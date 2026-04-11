@@ -415,6 +415,25 @@ abstract class StylesheetParser protected (
             val c = scanner.peekChar()
             if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
               break(())
+            } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+              // Block comment — skip to */
+              scanner.readChar(); scanner.readChar()
+              var commentDone = false
+              while (!scanner.isDone && !commentDone) {
+                if (scanner.peekChar() == CharCode.$asterisk &&
+                    !scanner.isDone && scanner.peekChar(1) == CharCode.$slash) {
+                  scanner.readChar(); scanner.readChar()
+                  commentDone = true
+                } else {
+                  scanner.readChar()
+                }
+              }
+            } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+              // Line comment — skip to end of line
+              scanner.readChar(); scanner.readChar()
+              while (!scanner.isDone && scanner.peekChar() != CharCode.$lf) {
+                scanner.readChar()
+              }
             } else {
               selBuf.append(scanner.readChar().toChar)
             }
@@ -2049,7 +2068,12 @@ abstract class StylesheetParser protected (
       case Some(a) => Nullable(a)
       case None    => Nullable(1.0)
     }
-    val color = SassColor.rgb(Nullable(r.toDouble), Nullable(g.toDouble), Nullable(b.toDouble), alpha)
+    // Preserve original hex format for 3- and 6-digit colors (no alpha).
+    // Don't emit 4- or 8-digit hex as hex since not well-supported in browsers.
+    val format: Nullable[ssg.sass.value.ColorFormat] =
+      if (aOpt.isEmpty) Nullable(new ssg.sass.value.SpanColorFormat(s))
+      else Nullable.Null
+    val color = SassColor.rgbInternal(Nullable(r.toDouble), Nullable(g.toDouble), Nullable(b.toDouble), alpha, format)
     Some(ColorExpression(color, span))
   }
 
@@ -3058,8 +3082,18 @@ abstract class StylesheetParser protected (
               addOperator(BinaryOperator.DividedBy)
             }
           case CharCode.`$percent` =>
-            val _ = scanner.readChar()
-            addOperator(BinaryOperator.Modulo)
+            if (singleExpression.isDefined) {
+              val _ = scanner.readChar()
+              addOperator(BinaryOperator.Modulo)
+            } else {
+              // Bare `%` in CSS — treat as an unquoted string token.
+              val pctStart = scanner.state
+              val _ = scanner.readChar()
+              addSingleExpression(StringExpression(
+                Interpolation.plain("%", spanFrom(pctStart)),
+                hasQuotes = false
+              ))
+            }
           case CharCode.`$equal` =>
             val _ = scanner.readChar()
             scanner.expectChar(CharCode.$equal)

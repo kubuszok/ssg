@@ -23,8 +23,9 @@ import java.util.{ Arrays, Locale }
 abstract class Filter(_name: String) extends LValue {
 
   /** Constructor that derives the name from the class's simple name, lowercased. */
-  def this() =
+  def this() = {
     this(null)
+  }
 
   /** The name of this filter. */
   val name: String = if (_name != null) _name else getClass.getSimpleName.toLowerCase(Locale.ENGLISH)

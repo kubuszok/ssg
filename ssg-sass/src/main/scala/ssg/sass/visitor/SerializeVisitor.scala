@@ -25,8 +25,11 @@ import ssg.sass.Nullable
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
-import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassNull, SassNumber, SassString, Value }
-import ssg.sass.value.color.ColorSpace
+import ssg.sass.value.{ ColorFormat, ListSeparator, SassColor, SassList, SassMap, SassNull, SassNumber, SassString, SpanColorFormat, Value }
+import ssg.sass.value.color.{ ColorSpace, LinearChannel }
+
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
   */
@@ -377,86 +380,437 @@ final class SerializeVisitor(
   //   - hsl/hwb with any missing channel                      → modern hsl()/hwb()
   //   - lab/lch/oklab/oklch                                   → modern function syntax
   //   - everything else (xyz, display-p3, ...)                → color() function
-  // The modern-syntax emission for non-legacy spaces is delegated to
-  // `SassColor.toCssString()` which already implements dart-sass's per-space
-  // formatting (channel/none/slash-alpha). This stage adds the dispatch and
-  // the legacy-vs-modern selection.
+  // Ported from dart-sass `visitColor` / `_writeLegacyColor` / `_writeHsl` /
+  // `_writeHwb` / `_writeRgb` / `_writeColorFunction` / `_writeChannel` /
+  // `_maybeWriteSlashAlpha` in lib/src/visitor/serialize.dart (lines 616-991).
   // ---------------------------------------------------------------------------
+
+  private def commaSeparator: String = if (isCompressed) "," else ", "
+
+  /** Main color dispatch — matches dart-sass `visitColor`. */
   private def formatColorDispatch(c: SassColor): String = {
-    val space      = c.space
-    val anyMissing =
-      c.isChannel0Missing || c.isChannel1Missing || c.isChannel2Missing || c.isAlphaMissing
-    if ((space eq ColorSpace.rgb) && !anyMissing) {
-      // Legacy hex/name emission (#fff / red / rgba(...)) is only valid for
-      // the rgb color space — hsl and hwb fall through to their own modern
-      // function-form serialization via SassColor.toCssString.
-      formatColor(c)
-    } else if ((space eq ColorSpace.rgb) && anyMissing) {
-      formatModernRgb(c)
+    val space = c.space
+    val noMissing = !c.isChannel0Missing && !c.isChannel1Missing &&
+      !c.isChannel2Missing && !c.isAlphaMissing
+
+    if (((space eq ColorSpace.rgb) || (space eq ColorSpace.hsl) || (space eq ColorSpace.hwb)) && noMissing) {
+      writeLegacyColor(c)
+    } else if (space eq ColorSpace.rgb) {
+      // RGB with missing channels: modern rgb() with none
+      val sb = new StringBuilder()
+      sb.append("rgb(")
+      writeChannel(sb, c.channel0OrNull)
+      sb.append(' ')
+      writeChannel(sb, c.channel1OrNull)
+      sb.append(' ')
+      writeChannel(sb, c.channel2OrNull)
+      maybeWriteSlashAlpha(sb, c)
+      sb.append(')')
+      sb.toString()
+    } else if ((space eq ColorSpace.hsl) || (space eq ColorSpace.hwb)) {
+      // HSL/HWB with missing channels: modern function syntax with none
+      val sb = new StringBuilder()
+      sb.append(space.toString)
+      sb.append('(')
+      writeChannel(sb, c.channel0OrNull, if (isCompressed) Nullable.Null else Nullable("deg"))
+      sb.append(' ')
+      writeChannel(sb, c.channel1OrNull, Nullable("%"))
+      sb.append(' ')
+      writeChannel(sb, c.channel2OrNull, Nullable("%"))
+      maybeWriteSlashAlpha(sb, c)
+      sb.append(')')
+      sb.toString()
+    } else if ((space eq ColorSpace.lab) || (space eq ColorSpace.lch) ||
+               (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)) {
+      formatLabLchColor(c)
     } else {
-      // hsl/hwb/lab/lch/oklab/oklch and color()-function spaces:
-      // SassColor.toCssString() already emits modern syntax with `none`
-      // propagation and `/ alpha`.
-      val raw = c.toCssString()
-      if (isCompressed) compactColorFunction(raw) else raw
+      writeColorFunction(c)
     }
   }
 
-  /** Emits an `rgb(R G B)` or `rgb(R G B / A)` modern function call. Used when at least one channel is `none`. */
-  private def formatModernRgb(c: SassColor): String = {
+  /** Dispatches lab/lch/oklab/oklch serialization: color-mix() for out-of-gamut,
+    * function syntax for in-gamut. Matches dart-sass visitColor cases 4-7.
+    */
+  private def formatLabLchColor(c: SassColor): String = {
+    val space = c.space
+    val isOk = (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)
+    val lightnessMax = if (isOk) 1.0 else 100.0
+    val polar = space.channels(2).isPolarAngle
+
+    // Out-of-gamut conditions that need color-mix() (only when no missing channels)
+    val lightnessOutOfGamut = !inspect &&
+      !NumberUtil.fuzzyInRange(c.channel0, 0, lightnessMax) &&
+      !c.isChannel1Missing && !c.isChannel2Missing
+
+    val negativeChroma = polar && !inspect &&
+      NumberUtil.fuzzyLessThan(c.channel1, 0) &&
+      !c.isChannel0Missing && !c.isChannel1Missing
+
+    if (lightnessOutOfGamut || negativeChroma) {
+      writeColorMix(c)
+    } else {
+      writeLabLchFunction(c)
+    }
+  }
+
+  /** Writes a legacy color in the shortest compatible format.
+    *
+    * Unlike newer color spaces, the three legacy color spaces are interchangeable.
+    * We choose the shortest representation compatible with all browsers.
+    * Ported from dart-sass `_writeLegacyColor`.
+    */
+  private def writeLegacyColor(color: SassColor): String = boundary[String] {
+    val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
+
+    // Out-of-gamut colors can only be represented accurately as HSL because
+    // only HSL isn't clamped at parse time. Skip when any channel is NaN since
+    // HSL conversion produces meaningless results for NaN.
+    if (!color.isInGamut && !inspect && !hasNaNChannel(color)) {
+      break(writeHsl(color))
+    }
+
+    // In compressed mode, emit in the shortest representation possible.
+    if (isCompressed) {
+      val rgb = color.toSpace(ColorSpace.rgb)
+      if (opaque) {
+        val sb = new StringBuilder()
+        if (tryIntegerRgb(sb, rgb)) {
+          break(sb.toString())
+        }
+      }
+
+      val red = numberToString(rgb.channel0)
+      val green = numberToString(rgb.channel1)
+      val blue = numberToString(rgb.channel2)
+
+      val hsl = color.toSpace(ColorSpace.hsl)
+      val hue = numberToString(hsl.channel0)
+      val saturation = numberToString(hsl.channel1)
+      val lightness = numberToString(hsl.channel2)
+
+      val sb = new StringBuilder()
+      // Add two characters for HSL for the %s on saturation and lightness.
+      if (red.length + green.length + blue.length <=
+          hue.length + saturation.length + lightness.length + 2) {
+        sb.append(if (opaque) "rgb(" else "rgba(")
+        sb.append(red)
+        sb.append(',')
+        sb.append(green)
+        sb.append(',')
+        sb.append(blue)
+      } else {
+        sb.append(if (opaque) "hsl(" else "hsla(")
+        sb.append(hue)
+        sb.append(',')
+        sb.append(saturation)
+        sb.append("%,")
+        sb.append(lightness)
+        sb.append('%')
+      }
+      if (!opaque) {
+        sb.append(',')
+        writeNumberTo(sb, color.alpha)
+      }
+      sb.append(')')
+      break(sb.toString())
+    }
+
+    if (color.space eq ColorSpace.hsl) {
+      break(writeHsl(color))
+    }
+    if (inspect && (color.space eq ColorSpace.hwb)) {
+      break(writeHwb(color))
+    }
+
+    if (color.format.isDefined) {
+      color.format.get match {
+        case ColorFormat.RgbFunction => break(writeRgb(color))
+        case span: SpanColorFormat  => break(span.original)
+      }
+    }
+
+    // Always emit generated transparent colors in rgba format.
+    // This works around an IE bug. See sass/sass#1782.
+    if (opaque) {
+      val rgb = color.toSpace(ColorSpace.rgb)
+      if (canUseHex(rgb)) {
+        val redInt = rgb.channel0.round.toInt
+        val greenInt = rgb.channel1.round.toInt
+        val blueInt = rgb.channel2.round.toInt
+        val shortHex = canUseShortHex(redInt, greenInt, blueInt)
+        val hexLen = if (shortHex) 4 else 7 // "#abc" vs "#aabbcc"
+        val name = ColorNames.namesByColor.get(rgb)
+        name match {
+          case Some(n) if n.length <= hexLen => break(n)
+          case _ =>
+            val sb = new StringBuilder()
+            sb.append('#')
+            if (shortHex) {
+              sb.append(hexCharFor(redInt & 0xF))
+              sb.append(hexCharFor(greenInt & 0xF))
+              sb.append(hexCharFor(blueInt & 0xF))
+            } else {
+              writeHexComponent(sb, redInt)
+              writeHexComponent(sb, greenInt)
+              writeHexComponent(sb, blueInt)
+            }
+            break(sb.toString())
+        }
+      }
+    }
+
+    // If an HWB color can't be represented as hex, write as HSL since
+    // that more clearly captures the author's intent.
+    if (color.space eq ColorSpace.hwb) writeHsl(color) else writeRgb(color)
+  }
+
+  /** Writes color as `hsl(h, s%, l%)` or `hsla(h, s%, l%, a)`.
+    * Ported from dart-sass `_writeHsl`.
+    */
+  private def writeHsl(color: SassColor): String = {
+    val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
+    val hsl = color.toSpace(ColorSpace.hsl)
     val sb = new StringBuilder()
-    sb.append("rgb(")
-    sb.append(channelOrNone(c.channel0OrNull))
-    sb.append(' ')
-    sb.append(channelOrNone(c.channel1OrNull))
-    sb.append(' ')
-    sb.append(channelOrNone(c.channel2OrNull))
-    appendSlashAlpha(sb, c)
+    sb.append(if (opaque) "hsl(" else "hsla(")
+    writeChannel(sb, Nullable(hsl.channel("hue")))
+    sb.append(commaSeparator)
+    writeChannel(sb, Nullable(hsl.channel("saturation")), Nullable("%"))
+    sb.append(commaSeparator)
+    writeChannel(sb, Nullable(hsl.channel("lightness")), Nullable("%"))
+    if (!opaque) {
+      sb.append(commaSeparator)
+      writeNumberTo(sb, color.alpha)
+    }
     sb.append(')')
     sb.toString()
   }
 
-  private def channelOrNone(ch: Nullable[Double]): String = {
+  /** Writes color as `hwb(h w% b%)`. Only used in inspect mode.
+    * Ported from dart-sass `_writeHwb`.
+    */
+  private def writeHwb(color: SassColor): String = {
     val sb = new StringBuilder()
-    ch.foreach { v =>
-      writeNumberTo(sb, v)
+    sb.append("hwb(")
+    val hwb = color.toSpace(ColorSpace.hwb)
+    writeNumberTo(sb, hwb.channel("hue"))
+    sb.append(' ')
+    writeNumberTo(sb, hwb.channel("whiteness"))
+    sb.append('%')
+    sb.append(' ')
+    writeNumberTo(sb, hwb.channel("blackness"))
+    sb.append('%')
+    if (!NumberUtil.fuzzyEquals(color.alpha, 1)) {
+      sb.append(" / ")
+      writeNumberTo(sb, color.alpha)
     }
-    if (sb.isEmpty) "none" else sb.toString()
-  }
-
-  private def appendSlashAlpha(sb: StringBuilder, c: SassColor): Unit = {
-    val a = c.alphaOrNull
-    if (a.isEmpty) {
-      sb.append(" / none")
-    } else {
-      val v = a.getOrElse(1.0)
-      if (!NumberUtil.fuzzyEquals(v, 1.0)) {
-        if (isCompressed) sb.append("/") else sb.append(" / ")
-        val tmp = new StringBuilder()
-        writeNumberTo(tmp, v)
-        sb.append(tmp.toString())
-      }
-    }
-  }
-
-  /** Drops optional spaces around `/` and after `,` for compressed-mode color-function output. */
-  private def compactColorFunction(s: String): String = {
-    val sb = new StringBuilder(s.length)
-    var i  = 0
-    while (i < s.length) {
-      val c = s.charAt(i)
-      if (c == ' ' && i + 1 < s.length && (s.charAt(i + 1) == '/' || s.charAt(i + 1) == ')')) {
-        // skip space before `/` or `)`
-      } else if (c == '/' && i + 1 < s.length && s.charAt(i + 1) == ' ') {
-        sb.append('/')
-        i += 1 // skip the trailing space too
-      } else {
-        sb.append(c)
-      }
-      i += 1
-    }
+    sb.append(')')
     sb.toString()
   }
+
+  /** Writes color as `rgb(r, g, b)` or `rgba(r, g, b, a)`.
+    * Ported from dart-sass `_writeRgb`.
+    */
+  private def writeRgb(color: SassColor): String = {
+    val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
+    val rgb = color.toSpace(ColorSpace.rgb)
+    val sb = new StringBuilder()
+    sb.append(if (opaque) "rgb(" else "rgba(")
+    writeChannel(sb, Nullable(rgb.channel("red")))
+    sb.append(commaSeparator)
+    writeChannel(sb, Nullable(rgb.channel("green")))
+    sb.append(commaSeparator)
+    writeChannel(sb, Nullable(rgb.channel("blue")))
+    if (!opaque) {
+      sb.append(commaSeparator)
+      writeChannel(sb, Nullable(color.alpha))
+    }
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Writes lab/lch/oklab/oklch function syntax with relative color for edge cases.
+    * Ported from dart-sass `visitColor` case 7.
+    */
+  private def writeLabLchFunction(c: SassColor): String = {
+    val sb = new StringBuilder()
+    sb.append(c.space.toString)
+    sb.append('(')
+
+    val polar = c.space.channels(2).isPolarAngle
+
+    // Relative color syntax for out-of-bounds with missing channels
+    // (color-mix can't represent `none`, so we fall back to relative syntax)
+    if (!inspect &&
+        (!NumberUtil.fuzzyInRange(c.channel0, 0, 100) ||
+          (polar && NumberUtil.fuzzyLessThan(c.channel1, 0)))) {
+      sb.append("from ")
+      sb.append(if (isCompressed) "red" else "black")
+      sb.append(' ')
+    }
+
+    // Lightness: write as percentage when not compressed and not missing
+    if (!isCompressed && !c.isChannel0Missing) {
+      val max = c.space.channels(0).asInstanceOf[LinearChannel].max
+      writeNumberTo(sb, c.channel0 * 100 / max)
+      sb.append('%')
+    } else {
+      writeChannel(sb, c.channel0OrNull)
+    }
+    sb.append(' ')
+    writeChannel(sb, c.channel1OrNull)
+    sb.append(' ')
+    writeChannel(sb, c.channel2OrNull, if (polar && !isCompressed) Nullable("deg") else Nullable.Null)
+    maybeWriteSlashAlpha(sb, c)
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Writes `color(space c1 c2 c3 / alpha)` for non-legacy, non-lab/lch spaces.
+    * Ported from dart-sass `_writeColorFunction`.
+    */
+  private def writeColorFunction(color: SassColor): String = {
+    val sb = new StringBuilder()
+    sb.append("color(")
+    sb.append(color.space.toString)
+    sb.append(' ')
+    val chs = color.channelsOrNull
+    writeChannel(sb, chs(0))
+    sb.append(' ')
+    writeChannel(sb, chs(1))
+    sb.append(' ')
+    writeChannel(sb, chs(2))
+    maybeWriteSlashAlpha(sb, color)
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Writes `color-mix(in space, color(xyz-d65 ...) 100%, black)` for out-of-gamut
+    * lab/lch/oklab/oklch colors. Ported from dart-sass visitColor cases 4-6.
+    */
+  private def writeColorMix(c: SassColor): String = {
+    val sb = new StringBuilder()
+    sb.append("color-mix(in ")
+    sb.append(c.space.toString)
+    sb.append(commaSeparator)
+    // The XYZ space has no gamut restrictions, so we use it to represent
+    // the out-of-gamut color before converting into the target space.
+    sb.append(writeColorFunction(c.toSpace(ColorSpace.xyzD65)))
+    writeOptionalSpace(sb)
+    sb.append("100%")
+    sb.append(commaSeparator)
+    sb.append(if (isCompressed) "red" else "black")
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Writes a channel value, or `none` for missing. Ported from dart-sass `_writeChannel`.
+    * Per CSS spec, NaN color channel values are treated as 0.
+    */
+  private def writeChannel(sb: StringBuilder, ch: Nullable[Double], unit: Nullable[String] = Nullable.Null): Unit = {
+    if (ch.isEmpty) {
+      sb.append("none")
+    } else {
+      val v = ch.get
+      if (v.isNaN) {
+        // CSS spec: NaN color channel values resolve to 0.
+        sb.append('0')
+        unit.foreach(u => sb.append(u))
+      } else if (v.isFinite) {
+        writeNumberTo(sb, v)
+        unit.foreach(u => sb.append(u))
+      } else {
+        // Infinity: format via SassNumber path
+        val num = if (unit.isDefined) SassNumber(v, unit.get) else SassNumber(v)
+        sb.append(formatSassNumber(num))
+      }
+    }
+  }
+
+  /** Writes `/ alpha` if alpha is not 1. Ported from dart-sass `_maybeWriteSlashAlpha`. */
+  private def maybeWriteSlashAlpha(sb: StringBuilder, color: SassColor): Unit = {
+    if (!NumberUtil.fuzzyEquals(color.alpha, 1)) {
+      writeOptionalSpace(sb)
+      sb.append('/')
+      writeOptionalSpace(sb)
+      writeChannel(sb, color.alphaOrNull)
+    }
+  }
+
+  /** Appends a space to sb if not in compressed mode. */
+  private def writeOptionalSpace(sb: StringBuilder): Unit =
+    if (!isCompressed) sb.append(' ')
+
+  /** Renders a number as a string using the serializer's formatting rules. */
+  private def numberToString(d: Double): String = {
+    val sb = new StringBuilder()
+    writeNumberTo(sb, d)
+    sb.toString()
+  }
+
+  // --- Hex utilities ---
+
+  /** Whether [rgb] can be represented as a hexadecimal color. */
+  private def canUseHex(rgb: SassColor): Boolean =
+    canUseHexForChannel(rgb.channel0) &&
+    canUseHexForChannel(rgb.channel1) &&
+    canUseHexForChannel(rgb.channel2)
+
+  /** Whether a channel's value can be represented as a two-character hex value. */
+  private def canUseHexForChannel(channel: Double): Boolean =
+    NumberUtil.fuzzyIsInt(channel) &&
+    NumberUtil.fuzzyGreaterThanOrEquals(channel, 0) &&
+    NumberUtil.fuzzyLessThan(channel, 256)
+
+  /** If value can be written as a hex code or color name, writes the shortest
+    * form to sb and returns true. Otherwise writes nothing and returns false.
+    */
+  private def tryIntegerRgb(sb: StringBuilder, rgb: SassColor): Boolean = {
+    if (!canUseHex(rgb)) false
+    else {
+      val redInt = rgb.channel0.round.toInt
+      val greenInt = rgb.channel1.round.toInt
+      val blueInt = rgb.channel2.round.toInt
+      val shortHex = canUseShortHex(redInt, greenInt, blueInt)
+      ColorNames.namesByColor.get(rgb) match {
+        case Some(name) if name.length <= (if (shortHex) 4 else 7) =>
+          sb.append(name)
+        case _ =>
+          if (shortHex) {
+            sb.append('#')
+            sb.append(hexCharFor(redInt & 0xF))
+            sb.append(hexCharFor(greenInt & 0xF))
+            sb.append(hexCharFor(blueInt & 0xF))
+          } else {
+            sb.append('#')
+            writeHexComponent(sb, redInt)
+            writeHexComponent(sb, greenInt)
+            writeHexComponent(sb, blueInt)
+          }
+      }
+      true
+    }
+  }
+
+  /** Whether color can be represented as a short hex (e.g. `#fff`). */
+  private def canUseShortHex(red: Int, green: Int, blue: Int): Boolean =
+    isSymmetricalHex(red) && isSymmetricalHex(green) && isSymmetricalHex(blue)
+
+  /** Whether a hex pair is symmetrical (e.g. `FF`). */
+  private def isSymmetricalHex(color: Int): Boolean = (color & 0xF) == (color >> 4)
+
+  /** Emits a color component as a two-character hex pair. */
+  private def writeHexComponent(sb: StringBuilder, color: Int): Unit = {
+    sb.append(hexCharFor(color >> 4))
+    sb.append(hexCharFor(color & 0xF))
+  }
+
+  /** Converts 0-15 to a hex character. */
+  private def hexCharFor(number: Int): Char =
+    if (number < 10) ('0' + number).toChar else ('a' - 10 + number).toChar
+
+  /** Whether any color channel (or alpha) contains NaN. */
+  private def hasNaNChannel(c: SassColor): Boolean =
+    c.channel0.isNaN || c.channel1.isNaN || c.channel2.isNaN || c.alpha.isNaN
 
   // ---------------------------------------------------------------------------
   // Stage A.2: quoted/unquoted string formatting
@@ -854,53 +1208,12 @@ final class SerializeVisitor(
     }
   }
 
-  /** Formats a SassColor in the rgb space as `#hex` / `#abc` shorthand or a named color when shorter. Falls back to rgba(...) when alpha < 1.
-    */
-  private def formatColor(c: SassColor): String = {
-    val a = c.alphaOrNull.getOrElse(1.0)
-    val r = math.round(c.channel0).toInt
-    val g = math.round(c.channel1).toInt
-    val b = math.round(c.channel2).toInt
-    if (a < 1.0) {
-      // Render non-opaque legacy RGB colors as `rgba(r, g, b, a)`. The alpha
-      // is formatted with trailing zeros stripped (e.g. `0.5` not `0.50`).
-      val alphaStr = {
-        val s = "%s".format(a)
-        if (s.contains('.')) s.replaceAll("0+$", "").replaceAll("\\.$", "")
-        else s
-      }
-      val sep = if (isCompressed) "," else ", "
-      s"rgba($r$sep$g$sep$b$sep$alphaStr)"
-    } else if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-      c.toCssString()
-    } else {
-      val hex   = "#%02x%02x%02x".format(r, g, b)
-      val short =
-        if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6))
-          "#" + hex.charAt(1) + hex.charAt(3) + hex.charAt(5)
-        else hex
-      val name = ColorNames.namesByColor.get(c)
-      if (isCompressed) {
-        // Pick the shortest of: short hex, full hex (only if no shorthand), name.
-        // Prefer name on tie to match dart-sass.
-        val candidates = name.toList ++ List(short)
-        candidates.minBy(_.length)
-      } else {
-        // Expanded mode: use shorthand when available, prefer name only if strictly shorter than short.
-        name match {
-          case Some(n) if n.length <= short.length => n
-          case _                                   => short
-        }
-      }
-    }
-  }
-
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
     // Top-level siblings: dart-sass `visitCssStylesheet`. Between visible
     // siblings emit a line feed (or trailing-comment space), and an extra
     // line feed when the previous sibling has `isGroupEnd == true`.
     //
-    // Note: ssg-sass's evaluator does not yet propagate `isGroupEnd` from
+    // Note: ssg-sass's evaluator does not currently propagate `isGroupEnd` from
     // the original source position (a flag dart-sass sets when nested
     // blocks are flattened). To preserve the historical output where
     // top-level rules and at-rules are separated by a blank line in

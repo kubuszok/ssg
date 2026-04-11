@@ -17,8 +17,9 @@ import scala.collection.mutable.LinkedHashMap
 
 class MutableAttributes(attrs: Attributes) extends Attributes(attrs) {
 
-  def this() =
+  def this() = {
     this(new Attributes())
+  }
 
   override def toMutable: MutableAttributes = this
 
