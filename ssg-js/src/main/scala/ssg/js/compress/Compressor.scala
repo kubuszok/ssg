@@ -793,7 +793,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           ev match {
             case false | 0 | 0.0 | "" | null =>
               // Condition is always false — body runs exactly once
-              if (self.body != null) {
+              // But only if body has no break/continue targeting this loop
+              if (
+                self.body != null
+                && !Common.hasBreakOrContinue(self.asInstanceOf[AstNode & AstIterationStatement], null)
+              ) {
                 val block = new AstBlockStatement
                 block.start = self.start
                 block.end = self.end
@@ -804,7 +808,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 return block // @nowarn
               }
             case _ =>
-              // Condition is always truthy — keep as do-while (infinite loop)
+              // Condition is always truthy — convert to for(;;) { body }
+              val forNode = new AstFor
+              forNode.start = self.start
+              forNode.end = self.end
+              forNode.body = self.body
+              forNode.init = null
+              forNode.step = null
+              forNode.condition = null
+              return forNode // @nowarn
           }
         }
       }
@@ -846,7 +858,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
-      self
+      // if_break_in_loop: optimize for(){ if(c) break; ... } patterns
+      ifBreakInLoop(self)
     }
 
   /** Optimize if-statements: dead branch elimination, ternary conversion, etc. */
@@ -1611,37 +1624,88 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize property dot access — evaluate property reads on literals. */
   private def optimizeDot(self: AstDot): AstNode = {
+    // Don't optimize LHS
+    if (isLhs() != null) return self // @nowarn
+
     if (optionBool("properties") && self.expression != null) {
       self.property match {
         case prop: String =>
+          // Try to read from literal objects
           val propNode = new AstString
           propNode.value = prop
           val value = readProperty(self.expression.nn, propNode)
           if (value != null && Evaluate.isConstant(value.nn)) {
             return bestOfExpression(value.nn, self) // @nowarn
           }
+          // Try flatten_object: {a:1}.a → [1][0]
+          val flat = flattenObject(self, prop)
+          if (flat != null) return flat.nn // @nowarn
         case _ =>
       }
     }
+
+    // Evaluate: obj.prop when obj is a constant
+    if (optionBool("evaluate") && self.expression != null) {
+      val ev = Evaluate.evaluate(self, this)
+      if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+        val folded = makeNodeFromConstant(ev, self)
+        return bestOfExpression(folded, self) // @nowarn
+      }
+    }
+
     self
   }
 
   /** Optimize computed property access — convert to dot when key is a valid identifier. */
   private def optimizeSub(self: AstSub): AstNode = {
     if (optionBool("properties") && self.property != null) {
-      self.property.nn match {
-        case str: AstString if isValidIdentifier(str.value) && !isReservedWord(str.value) =>
-          // obj["prop"] → obj.prop
+      // Evaluate the key
+      val propNode: AstNode | Null = self.property match {
+        case n: AstNode => n
+        case _          => null
+      }
+      val keyEv = if (propNode != null) Evaluate.evaluate(propNode.nn, this) else null
+      val keyStr: String | Null = keyEv match {
+        case s: String => s
+        case d: Double if d == d.toInt.toDouble => d.toInt.toString
+        case _ => null
+      }
+
+      if (keyStr != null) {
+        val ks = keyStr.nn
+        // Convert to dot notation if key is a valid identifier
+        if (isValidIdentifier(ks) && !isReservedWord(ks)) {
           val dot = new AstDot
           dot.start = self.start
           dot.end = self.end
           dot.expression = self.expression
           dot.optional = self.optional
-          dot.property = str.value
+          dot.property = ks
           return optimizeDot(dot) // @nowarn
+        }
+        // Try flatten_object with the evaluated key
+        val flat = flattenObject(self, ks)
+        if (flat != null) return flat.nn // @nowarn
+      }
+
+      // If key wasn't evaluated, try string key directly
+      propNode match {
+        case str: AstString =>
+          val flat = flattenObject(self, str.value)
+          if (flat != null) return flat.nn // @nowarn
         case _ =>
       }
     }
+
+    // Evaluate
+    if (optionBool("evaluate") && self.property != null) {
+      val ev = Evaluate.evaluate(self, this)
+      if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+        val folded = makeNodeFromConstant(ev, self)
+        return bestOfExpression(folded, self) // @nowarn
+      }
+    }
+
     self
   }
 
@@ -1656,27 +1720,50 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def isReservedWord(s: String): Boolean =
     ssg.js.parse.Token.ALL_RESERVED_WORDS.contains(s)
 
-  /** Optimize optional chain expressions. */
-  private def optimizeChain(self: AstChain): AstNode =
+  /** Optimize optional chain expressions — unwrap when receiver is non-nullish. */
+  private def optimizeChain(self: AstChain): AstNode = {
+    if (self.expression == null) return self // @nowarn
+    // If the chain's expression is a PropAccess or Call, pass through to let
+    // the inner optimization handle it
+    self.expression.nn match {
+      case pa: AstPropAccess if pa.optional && pa.expression != null && !isNullish(pa.expression.nn, this) =>
+        // Receiver is non-nullish — optional chain is unnecessary, unwrap
+        pa.optional = false
+        return pa // @nowarn
+      case call: AstCall if call.optional && call.expression != null && !isNullish(call.expression.nn, this) =>
+        call.optional = false
+        return call // @nowarn
+      case _ =>
+    }
     self
+  }
 
   /** Optimize symbol references — inline or replace with constants. */
   private def optimizeSymbolRef(self: AstSymbolRef): AstNode = {
+    // Don't optimize LHS references (assignment targets)
+    if (isLhs() != null) return self // @nowarn
+
+    // Don't optimize inside `with` blocks (all bets are off)
+    if (findParent[AstWith] != null) return self // @nowarn
+
     // Replace undeclared references to well-known globals
     if (isUndeclaredRef(self)) {
       self.name match {
         case "undefined" =>
-          return optimizeUndefined(new AstUndefined)
+          val undef = new AstUndefined
+          undef.start = self.start
+          undef.end = self.end
+          return optimizeUndefined(undef) // @nowarn
         case "NaN" =>
           val nan = new AstNaN
           nan.start = self.start
           nan.end = self.end
-          return optimizeNaN(nan)
+          return optimizeNaN(nan) // @nowarn
         case "Infinity" =>
           val inf = new AstInfinity
           inf.start = self.start
           inf.end = self.end
-          return optimizeInfinity(inf)
+          return optimizeInfinity(inf) // @nowarn
         case _ =>
       }
     }
@@ -1690,11 +1777,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** Optimize `undefined` -> `void 0`. */
-  private def optimizeUndefined(self: AstUndefined): AstNode =
+  private def optimizeUndefined(self: AstUndefined): AstNode = {
+    // Don't optimize LHS (assignment targets)
+    if (isLhs() != null) return self // @nowarn
     makeVoid0(self)
+  }
 
   /** Optimize `Infinity` -> `1/0` (unless keep_infinity). */
-  private def optimizeInfinity(self: AstInfinity): AstNode =
+  private def optimizeInfinity(self: AstInfinity): AstNode = {
+    if (isLhs() != null) return self // @nowarn — don't optimize LHS
     if (optionBool("keep_infinity")) {
       self
     } else {
@@ -1716,9 +1807,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       div.right = zero
       div
     }
+  }
 
   /** Optimize `NaN` -> `0/0`. */
   private def optimizeNaN(self: AstNaN): AstNode = {
+    if (isLhs() != null) return self // @nowarn — don't optimize LHS
     val zero1 = new AstNumber
     zero1.start = self.start
     zero1.end = self.end
@@ -2222,10 +2315,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Alternative is_lhs() that works within .optimize() by reading from the TreeWalker stack. */
   def isLhs(): AstNode | Null = {
-    val selfNode = self()
-    val parentNode = parent(0)
-    if (parentNode == null) null
-    else Inference.isLhs(selfNode, parentNode.nn)
+    try {
+      val selfNode = self()
+      val parentNode = parent(0)
+      if (parentNode == null) null
+      else Inference.isLhs(selfNode, parentNode.nn)
+    } catch {
+      case _: IndexOutOfBoundsException => null // stack empty during initial transform
+    }
   }
 
   /** Lift sequences from a unary expression: !(a, b) → (a, !b) */
