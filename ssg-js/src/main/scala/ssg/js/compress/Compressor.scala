@@ -69,7 +69,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (!optionBool("booleans")) false
     else {
       boundary[Boolean] {
-        var current: AstNode = this.self()
+        var current: AstNode = try { this.self() } catch { case _: IndexOutOfBoundsException => break(false) }
         var i = 0
         var p: AstNode | Null = parent(i)
         while (p != null) {
@@ -1182,6 +1182,58 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ =>
       }
 
+      // c ? false : x → !c && x
+      (self.consequent.nn, self.alternative.nn) match {
+        case (_: AstFalse, _) if optionBool("booleans") =>
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = self.condition.nn
+          neg.start = self.start
+          neg.end = self.end
+          val binary = new AstBinary
+          binary.operator = "&&"
+          binary.left = neg
+          binary.right = self.alternative.nn
+          binary.start = self.start
+          binary.end = self.end
+          return bestOfExpression(binary, self) // @nowarn
+        case _ =>
+      }
+
+      // c ? x : true → !c || x
+      (self.consequent.nn, self.alternative.nn) match {
+        case (_, _: AstTrue) if optionBool("booleans") =>
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = self.condition.nn
+          neg.start = self.start
+          neg.end = self.end
+          val binary = new AstBinary
+          binary.operator = "||"
+          binary.left = neg
+          binary.right = self.consequent.nn
+          binary.start = self.start
+          binary.end = self.end
+          return bestOfExpression(binary, self) // @nowarn
+        case _ =>
+      }
+
+      // x ? x : y → x || y (when condition equals consequent)
+      if (AstEquivalent.equivalentTo(self.condition.nn, self.consequent.nn)) {
+        val binary = new AstBinary
+        binary.operator = "||"
+        binary.left = self.condition.nn
+        binary.right = self.alternative.nn
+        binary.start = self.start
+        binary.end = self.end
+        return binary // @nowarn
+      }
+
+      // x ? y : y → (x, y) (when consequent equals alternative)
+      if (AstEquivalent.equivalentTo(self.consequent.nn, self.alternative.nn)) {
+        return makeSequence(self, ArrayBuffer(self.condition.nn, self.consequent.nn)) // @nowarn
+      }
+
       self
     }
 
@@ -1405,6 +1457,54 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
+      // Trim unused trailing arguments
+      if (optionBool("unused") && fn.isInstanceOf[AstLambda]) {
+        val lambda = fn.asInstanceOf[AstLambda]
+        // Only trim if the function doesn't use `arguments`
+        if (!lambda.usesArguments) {
+          // Remove trailing side-effect-free arguments past the param count
+          val paramCount = lambda.argnames.size
+          while (self.args.size > paramCount) {
+            val lastArg = self.args.last
+            if (hasSideEffects(lastArg, this)) {
+              // Can't trim — has side effects
+              // break out of while
+              self.args.addOne(lastArg) // undo the pop below
+            }
+            self.args.remove(self.args.size - 1)
+            if (hasSideEffects(lastArg, this)) {
+              // Re-add the arg we just removed since it has side effects
+              self.args.addOne(lastArg)
+              // Stop trimming
+              return self // @nowarn — can't trim further
+            }
+          }
+        }
+      }
+
+      // Method call optimizations: x.toString() → "" + x
+      if (optionBool("unsafe") && self.expression.nn.isInstanceOf[AstDot]) {
+        val dot = self.expression.nn.asInstanceOf[AstDot]
+        if (dot.expression != null) {
+          dot.property match {
+            case "toString" if self.args.isEmpty =>
+              // x.toString() → "" + x
+              val emptyStr = new AstString
+              emptyStr.value = ""
+              emptyStr.start = self.start
+              emptyStr.end = self.end
+              val bin = new AstBinary
+              bin.operator = "+"
+              bin.left = emptyStr
+              bin.right = dot.expression.nn
+              bin.start = self.start
+              bin.end = self.end
+              return bestOfExpression(bin, self) // @nowarn
+            case _ =>
+          }
+        }
+      }
+
       // Try to evaluate constant calls
       if (optionBool("evaluate")) {
         val ev = Evaluate.evaluate(self, this)
@@ -1542,6 +1642,79 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           return self.right.nn // @nowarn
         case _ =>
       }
+      // ("" + x) + y → x + y (when y is a string)
+      self.left.nn match {
+        case lBin: AstBinary
+            if lBin.operator == "+"
+              && lBin.left != null && lBin.left.nn.isInstanceOf[AstString]
+              && lBin.left.nn.asInstanceOf[AstString].value == ""
+              && isString(self.right.nn, this) =>
+          self.left = lBin.right
+          return self // @nowarn
+        case _ =>
+      }
+      // a + -b → a - b (when a is numeric)
+      self.right.nn match {
+        case up: AstUnaryPrefix if up.operator == "-" && up.expression != null && isNumber(self.left.nn, this) =>
+          val sub = new AstBinary
+          sub.operator = "-"
+          sub.left = self.left
+          sub.right = up.expression.nn
+          sub.start = self.start
+          sub.end = self.end
+          return sub // @nowarn
+        case _ =>
+      }
+    }
+
+    // + in boolean context: "foo" + x → (x, true) when left evaluates to non-empty string
+    if (self.operator == "+" && inBooleanContext() && self.left != null && self.right != null) {
+      val ll = Evaluate.evaluate(self.left.nn, this)
+      if (ll.isInstanceOf[String] && ll.asInstanceOf[String].nonEmpty) {
+        val trueNode = new AstTrue
+        trueNode.start = self.start
+        trueNode.end = self.end
+        return makeSequence(self, ArrayBuffer(self.right.nn, trueNode)) // @nowarn
+      }
+      val rr = Evaluate.evaluate(self.right.nn, this)
+      if (rr.isInstanceOf[String] && rr.asInstanceOf[String].nonEmpty) {
+        val trueNode = new AstTrue
+        trueNode.start = self.start
+        trueNode.end = self.end
+        return makeSequence(self, ArrayBuffer(self.left.nn, trueNode)) // @nowarn
+      }
+    }
+
+    // Template string concatenation: `foo${bar}` + x → `foo${bar}x` (when x is constant)
+    if (self.operator == "+" && self.left != null && self.right != null) {
+      // template + constant → extend last segment
+      (self.left.nn, self.right.nn) match {
+        case (tmpl: AstTemplateString, _) =>
+          val rr = Evaluate.evaluate(self.right.nn, this)
+          if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef]) && rr.isInstanceOf[String]) {
+            if (tmpl.segments.nonEmpty) {
+              tmpl.segments.last match {
+                case seg: AstTemplateSegment =>
+                  seg.value = seg.value + rr.asInstanceOf[String]
+                  return tmpl // @nowarn
+                case _ =>
+              }
+            }
+          }
+        case (_, tmpl: AstTemplateString) =>
+          val ll = Evaluate.evaluate(self.left.nn, this)
+          if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef]) && ll.isInstanceOf[String]) {
+            if (tmpl.segments.nonEmpty) {
+              tmpl.segments(0) match {
+                case seg: AstTemplateSegment =>
+                  seg.value = ll.asInstanceOf[String] + seg.value
+                  return tmpl // @nowarn
+                case _ =>
+              }
+            }
+          }
+        case _ =>
+      }
     }
 
     // &&/||/?? short-circuit evaluation
@@ -1613,15 +1786,25 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           }
 
         case "??" =>
-          // x ?? y: if x is known non-nullish, just x
-          if (!isNullish(self.left.nn, this)) {
-            val ll = Evaluate.evaluate(self.left.nn, this)
-            if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
-              // Left evaluates to a non-nullish constant
-              ll match {
-                case null => // null is nullish, keep ??
-                case _: Unit => // undefined is nullish, keep ??
-                case _ => return self.left.nn // @nowarn
+          // x ?? y: if x is known nullish, result is y
+          if (isNullish(self.left.nn, this)) {
+            return self.right.nn // @nowarn
+          }
+          // x ?? y: if x evaluates to a known value, dispatch
+          val llN = Evaluate.evaluate(self.left.nn, this)
+          if (llN != null && (llN.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
+            // null or undefined → right; anything else → left
+            if (llN == null || llN.isInstanceOf[Unit]) return self.right.nn // @nowarn
+            else return self.left.nn // @nowarn
+          }
+          // x ?? y in boolean context: if y is falsy, just x
+          if (inBooleanContext()) {
+            val rrN = Evaluate.evaluate(self.right.nn, this)
+            if (rrN != null && (rrN.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
+              rrN match {
+                case false | 0 | 0.0 | "" | null =>
+                  return self.left.nn // @nowarn
+                case _ =>
               }
             }
           }
