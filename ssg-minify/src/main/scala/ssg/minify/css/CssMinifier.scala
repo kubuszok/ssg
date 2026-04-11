@@ -37,7 +37,11 @@ object CssMinifier {
       if (options.collapseWhitespace) result = collapseWhitespace(result)
       if (options.removeTrailingSemicolons) result = removeTrailingSemicolons(result)
       if (options.removeEmptyRules) result = removeEmptyRules(result)
-      if (options.shortenColors) result = shortenColors(result)
+      if (options.shortenColors) {
+        result = shortenColors(result)
+        result = foldRgbToHex(result)
+        result = foldNamedColors(result)
+      }
       if (options.collapseZeros) result = collapseZeros(result)
       result.trim
     }
@@ -150,6 +154,83 @@ object CssMinifier {
         }
       }
     )
+
+  // -- rgb()/rgba() to hex --
+
+  private val RgbPattern  = "rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)".r
+  private val RgbaPattern = "rgba\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*1(?:\\.0*)?\\s*\\)".r
+
+  private def foldRgbToHex(css: String): String = {
+    var result = RgbaPattern.replaceAllIn(css, m => rgbToHex(m.group(1).toInt, m.group(2).toInt, m.group(3).toInt))
+    result = RgbPattern.replaceAllIn(result, m => rgbToHex(m.group(1).toInt, m.group(2).toInt, m.group(3).toInt))
+    result
+  }
+
+  private def rgbToHex(r: Int, g: Int, b: Int): String = {
+    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      s"rgb($r,$g,$b)"
+    } else {
+      val hex = f"#$r%02x$g%02x$b%02x"
+      // Shorten if possible: #aabbcc → #abc
+      if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6)) {
+        s"#${hex.charAt(1)}${hex.charAt(3)}${hex.charAt(5)}"
+      } else {
+        hex
+      }
+    }
+  }
+
+  // -- Named color → hex (shorter alternatives only) --
+
+  private val NamedColorMap: Map[String, String] = Map(
+    "white"                -> "#fff",
+    "black"                -> "#000",
+    "red"                  -> "red", // already 3 chars, #f00 is same length
+    "fuchsia"              -> "#f0f",
+    "magenta"              -> "#f0f",
+    "yellow"               -> "#ff0",
+    "cyan"                 -> "#0ff",
+    "aqua"                 -> "#0ff",
+    "darkblue"             -> "#00008b",
+    "darkgreen"            -> "#006400",
+    "darkred"              -> "#8b0000",
+    "darkcyan"             -> "#008b8b",
+    "darkmagenta"          -> "#8b008b",
+    "cornsilk"             -> "#fff8dc",
+    "bisque"               -> "#ffe4c4",
+    "azure"                -> "#f0ffff",
+    "beige"                -> "#f5f5dc",
+    "coral"                -> "#ff7f50",
+    "ivory"                -> "#fffff0",
+    "khaki"                -> "#f0e68c",
+    "linen"                -> "#faf0e6",
+    "orchid"               -> "#da70d6",
+    "plum"                 -> "#dda0dd",
+    "salmon"               -> "#fa8072",
+    "sienna"               -> "#a0522d",
+    "silver"               -> "#c0c0c0",
+    "tomato"               -> "#ff6347",
+    "violet"               -> "#ee82ee",
+    "wheat"                -> "#f5deb3"
+  )
+
+  private def foldNamedColors(css: String): String = {
+    // Only fold named colors in value positions (after : and before ; or })
+    // Use a simple word-boundary approach
+    var result = css
+    for ((name, hex) <- NamedColorMap) {
+      // Only replace if hex is shorter than name
+      if (hex.length < name.length) {
+        // Case-insensitive replacement in value context
+        val pattern = java.util.regex.Pattern.compile(
+          "(?<=[:\\s,])" + java.util.regex.Pattern.quote(name) + "(?=[;\\s},!])",
+          java.util.regex.Pattern.CASE_INSENSITIVE
+        )
+        result = pattern.matcher(result).replaceAll(hex)
+      }
+    }
+    result
+  }
 
   // -- Zero collapsing --
 
