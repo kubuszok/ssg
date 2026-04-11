@@ -1,0 +1,46 @@
+# re-scale skip-policy
+# path	tool	reason	added	added_by
+ssg-minify/src/main/scala/ssg/minify/html/HtmlMinifier.scala	shortcuts	False positive: 'condensed' describes boolean attribute minimization behavior, not a simplified implementation	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	shortcuts	Java interop: this(null) secondary ctor derives name from class simple-name, matching liqp Insertion.java	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	shortcuts	Java interop: this(null) delegates to Insertion secondary ctor, matching liqp Tag.java	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/filters/Filter.scala	shortcuts	Java interop: this(null) delegates to Insertion secondary ctor, matching liqp Filter.java	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/blocks/Block.scala	shortcuts	Java interop: this(null) delegates to Insertion secondary ctor, matching liqp Block.java	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	shortcuts	By design: null.asInstanceOf[A] IS the implementation of Nullable.empty — the opaque type wraps null	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/antlr/NameResolver.scala	shortcuts	Intentional fail-fast: Default.resolve throws when no NameResolver configured — same semantics as Java FunctionalInterface with no impl	2026-04-10	dev
+ssg-liquid/src/main/scala/ssg/liquid/blocks/For.scala	shortcuts	Accurate control-flow comment: describes boundary/break behavior, not a stub	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/admonition/internal/AdmonitionBlockParser.scala	shortcuts	False positive: string literal '???' is admonition syntax, not Scala unimplemented	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/admonition/internal/AdmonitionNodeRenderer.scala	shortcuts	False positive: string literal '???' is admonition syntax, not Scala unimplemented	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/tables/TablesExtension.scala	shortcuts	False positive: '???' is punctuation in a question comment, not Scala unimplemented	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/Nullable.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/definition/internal/DefinitionItemBlockParser.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/EnumeratedReferenceBase.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/footnotes/Footnote.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/gfm/tasklist/internal/TaskListFormatOptions.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/macros/MacroReference.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/toc/SimTocBlock.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/toc/TocBlock.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/toc/TocBlockBase.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/toc/internal/SimTocBlockParser.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/toc/internal/TocBlockParser.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/formatter/FormatterUtils.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/html/renderer/CoreNodeRenderer.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/parser/MutableListOptions.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/parser/core/delimiter/Delimiter.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/ast/Node.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/ast/NodeIterator.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/collection/CopyOnWriteRef.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/collection/OrderedSet.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/data/NullableDataKey.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/format/MarkdownWriterBase.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/format/TableFormatOptions.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/format/TableSection.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/builder/tree/SegmentTree.scala	shortcuts	Java interop: null.asInstanceOf/getOrElse(null) at flexmark boundary — 1612/1612 tests passing	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/formatter/TranslationPlaceholderGenerator.scala	shortcuts	Domain term: class IS a PlaceholderGenerator — placeholder is the concept it implements	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/PlaceholderReplacer.scala	shortcuts	Domain term: class IS a PlaceholderReplacer — placeholder is the concept it implements	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/LineAppendable.scala	shortcuts	Domain term: pending prefix/text are real API concepts in LineAppendable (buffered-not-yet-flushed)	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/IRichSequenceBase.scala	shortcuts	Domain term: minimal in Scaladoc describes the interface accurately	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/SegmentedSequenceTree.scala	shortcuts	Domain term: minimal construction penalty is a technical description	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/html/AttributeProvider.scala	shortcuts	Domain term: placeholder describes what AttributablePart.NODE IS	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumRefTextCollectingVisitor.scala	shortcuts	Domain term: ordinal placeholder/substitution marker in enumerated references	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeRenderer.scala	shortcuts	Domain term: ordinal placeholder/substitution marker in enumerated references	2026-04-10	dev
+ssg-md/src/main/scala/ssg/md/formatter/internal/CoreNodeFormatter.scala	shortcuts	Domain term: placeholder refers to translation placeholder, plus null at Java interop	2026-04-10	dev

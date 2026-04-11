@@ -24,8 +24,9 @@ class NullableDataKey[T](name: String, dv: T, f: DataValueFactory[T]) extends Da
     * @param factory
     *   data value factory for creating a new default value for the key
     */
-  def this(name: String, factory: DataValueNullableFactory[T]) =
+  def this(name: String, factory: DataValueNullableFactory[T]) = {
     this(name, factory.apply(Nullable.empty[DataHolder]).asInstanceOf[T], factory)
+  }
 
   /** Creates a DataKey with nullable data value and factory not dependent on data holder
     *
@@ -34,13 +35,14 @@ class NullableDataKey[T](name: String, dv: T, f: DataValueFactory[T]) extends Da
     * @param supplier
     *   data value factory for creating a new default value for the key not dependent on dataHolder
     */
-  def this(name: String, supplier: () => T) =
+  def this(name: String, supplier: () => T) = {
     this(name,
          supplier(),
          new DataValueFactory[T] {
            def apply(dataHolder: DataHolder): Nullable[T] = Nullable(supplier())
          }
     )
+  }
 
   /** Creates a NullableDataKey with a dynamic default value taken from a value of another key.
     *
@@ -51,7 +53,7 @@ class NullableDataKey[T](name: String, dv: T, f: DataValueFactory[T]) extends Da
     * @param defaultKey
     *   The DataKeyBase to take the default value from at time of construction.
     */
-  def this(name: String, defaultKey: DataKeyBase[T]) =
+  def this(name: String, defaultKey: DataKeyBase[T]) = {
     this(
       name,
       defaultKey.defaultValue,
@@ -59,19 +61,21 @@ class NullableDataKey[T](name: String, dv: T, f: DataValueFactory[T]) extends Da
         def apply(dataHolder: DataHolder): Nullable[T] = Nullable(defaultKey.get(Nullable(dataHolder)))
       }
     )
+  }
 
   /** Create a NullableDataKey with null default value and factory producing null values
     *
     * @param name
     *   key name
     */
-  def this(name: String) =
+  def this(name: String) = {
     this(name,
          null.asInstanceOf[T],
          new DataValueFactory[T] {
            def apply(dataHolder: DataHolder): Nullable[T] = Nullable.empty[T]
          }
     )
+  }
 
   override def get(holder: Nullable[DataHolder]): T =
     super.get(holder)

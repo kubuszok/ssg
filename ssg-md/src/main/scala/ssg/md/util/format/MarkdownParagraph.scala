@@ -46,14 +46,17 @@ class MarkdownParagraph(
   private var _trackedOffsets:       JList[TrackedOffset]             = MarkdownParagraph.EMPTY_OFFSET_LIST
   private var _trackedOffsetsSorted: Boolean                          = true
 
-  def this(chars: CharSequence) =
+  def this(chars: CharSequence) = {
     this(BasedSequence.of(chars), BasedSequence.of(chars), CharWidthProvider.NULL)
+  }
 
-  def this(chars: BasedSequence) =
+  def this(chars: BasedSequence) = {
     this(chars, chars, CharWidthProvider.NULL)
+  }
 
-  def this(chars: BasedSequence, charWidthProvider: CharWidthProvider) =
+  def this(chars: BasedSequence, charWidthProvider: CharWidthProvider) = {
     this(chars, chars, charWidthProvider)
+  }
 
   def wrapTextNotTracked(): BasedSequence =
     if (getFirstWidth <= 0) {

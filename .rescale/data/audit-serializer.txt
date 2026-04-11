@@ -1,0 +1,192 @@
+===============================================================================
+SERIALIZER PORTING GAP AUDIT
+dart-sass serialize.dart -> ssg-sass SerializeVisitor.scala
+===============================================================================
+
+Source: original-src/dart-sass/lib/src/visitor/serialize.dart (1882 lines)
+Target: ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala (1407 lines)
+
+===============================================================================
+METHOD COUNTS
+===============================================================================
+
+Total methods/functions in dart-sass:  62
+  - Top-level functions:                3  (serialize, serializeValue, serializeSelector)
+  - Constructor:                        1
+  - CSS visitor methods:               10  (stylesheet, comment, atRule, mediaRule, import,
+                                            keyframeBlock, styleRule, supportsRule, declaration,
+                                            + _visitChildren)
+  - Value visitor methods:             10  (boolean, calculation, color, function, mixin,
+                                            list, map, null, number, string)
+  - Selector visitor methods:          10  (attributeSelector, classSelector, complexSelector,
+                                            compoundSelector, idSelector, selectorList,
+                                            parentSelector, placeholderSelector, pseudoSelector,
+                                            typeSelector, universalSelector)
+  - Color helpers:                      9  (_writeLegacyColor, _tryIntegerRgb, _canUseHex,
+                                            _canUseHexForChannel, _writeRgb, _writeHsl,
+                                            _writeHwb, _writeColorFunction, _writeChannel,
+                                            _maybeWriteSlashAlpha, _isSymmetricalHex,
+                                            _canUseShortHex, _writeHexComponent)
+  - Number helpers:                     3  (_writeNumber, _removeExponent, _writeRounded,
+                                            _writeNumberToString)
+  - String helpers:                     4  (_visitQuotedString, _visitUnquotedString,
+                                            _tryPrivateUseCharacter, _writeEscape)
+  - Calculation helpers:                3  (_writeCalculationValue, _writeCalculationUnits,
+                                            _parenthesizeCalculationRhs)
+  - Formatting/utility:                9  (_for, _write, _visitChildren, _requiresSemicolon,
+                                            _isTrailingComment, _writeLineFeed,
+                                            _writeOptionalSpace, _writeIndentation,
+                                            _writeTimes, _writeBetween, _commaSeparator,
+                                            _indent, _withoutIndentation, _isInvisible)
+  - Enums/types:                        3  (OutputStyle, LineFeed, SerializeResult)
+
+===============================================================================
+STATUS BREAKDOWN
+===============================================================================
+
+PORTED (faithful):       25  (40%)
+SIMPLIFIED (partial):    16  (26%)
+MISSING (not present):   21  (34%)
+STUB (placeholder):       0  ( 0%)
+
+===============================================================================
+TOP 10 MISSING/SIMPLIFIED METHODS BY ESTIMATED SPEC IMPACT
+===============================================================================
+
+ #  Method                        Status      Impact  Rationale
+--- ----------------------------- ----------- ------- --------------------------------------------------
+ 1  visitCalculation               MISSING     HIGH    calc(), min(), max(), clamp() are first-class CSS
+                                                       values. Without this, any Sass expression
+                                                       producing a calculation will fail to serialize.
+                                                       ~55 lines in dart-sass.
+
+ 2  _writeCalculationValue         MISSING     HIGH    Core of calculation serialization: handles
+                                                       infinity/NaN, complex units, CalculationOperation
+                                                       with precedence parenthesization. ~50 lines.
+
+ 3  visitColor (full dispatch)     SIMPLIFIED  HIGH    SSG handles legacy RGB and modern rgb() with
+                                                       missing channels, but is missing: hsl/hwb modern
+                                                       syntax with deg/% units, lab/lch/oklab/oklch with
+                                                       out-of-gamut color-mix() fallback, relative color
+                                                       syntax, _writeColorFunction for color() spaces.
+                                                       ~105 lines of missing logic.
+
+ 4  _writeLegacyColor              SIMPLIFIED  HIGH    Missing: ColorFormat respect (SpanColorFormat
+                                                       preserves original authored text), out-of-gamut
+                                                       HSL fallback, compressed-mode shortest-
+                                                       representation comparison (rgb vs hsl char count).
+                                                       ~55 lines of missing logic.
+
+ 5  Selector visitor methods       MISSING     MEDIUM  10 methods (visitAttributeSelector, visitClass-
+    (visitAttributeSelector,                           Selector, visitComplexSelector, visitCompound-
+    visitClassSelector, etc.)                          Selector, visitIDSelector, visitParentSelector,
+                                                       visitPlaceholderSelector, visitPseudoSelector,
+                                                       visitTypeSelector, visitUniversalSelector) are
+                                                       all MISSING as visitor methods. SSG works around
+                                                       this by using toString() on selector objects and
+                                                       a custom writeComplexSelectorTo helper. This
+                                                       means the serializer cannot directly control
+                                                       selector formatting (e.g. compressed-mode
+                                                       combinator spacing, :not(%invisible)->* opt,
+                                                       attribute value quoting). ~130 lines total.
+
+ 6  _visitMediaQuery               MISSING     MEDIUM  Full media query rendering with modifier/type/
+                                                       conditions/conjunction vs disjunction/"not"
+                                                       handling. SSG uses mkString which loses the
+                                                       compressed-mode space optimizations and the
+                                                       "(not X)" unpacking. ~25 lines.
+
+ 7  visitString/_visitQuotedString SIMPLIFIED  MEDIUM  Missing: _quote field (SSG constructor lacks it),
+    /_visitUnquotedString                              forceDoubleQuote restart logic, Private Use Area
+                                                       character escaping via _tryPrivateUseCharacter,
+                                                       afterNewline whitespace collapsing in unquoted
+                                                       strings. ~120 lines of missing logic across 4
+                                                       methods.
+
+ 8  visitNumber (asSlash)          SIMPLIFIED  MEDIUM  Missing: asSlash pair rendering (e.g. font: 12px/
+                                                       1.5 shorthand). When a SassNumber carries an
+                                                       asSlash pair, dart-sass recursively serializes
+                                                       both parts with a / between them. ~8 lines.
+
+ 9  visitCssComment                SIMPLIFIED  LOW     Missing: minimumIndentation-based re-indenting of
+                                                       multi-line comments, sourceMappingURL/sourceURL
+                                                       comment filtering, _for() span association. ~18
+                                                       lines of missing logic.
+
+10  LineFeed enum + constructor    MISSING     LOW     No LineFeed enum (cr/crlf/lf/lfcr). SSG always
+    params (useSpaces, indent-                         uses LF. Constructor also lacks useSpaces,
+    Width, lineFeed, logger)                           indentWidth, logger params. Low impact because
+                                                       most consumers use defaults. ~40 lines.
+
+===============================================================================
+LINES-OF-CODE ESTIMATE FOR FULL FAITHFUL PORT
+===============================================================================
+
+Category                                    Est. LoC to add/modify
+-----------------------------------------   -----------------------
+Calculation serialization (visitCalculation,
+  _writeCalculationValue, _parenthesize-
+  CalculationRhs)                                  ~120 lines
+
+Color serialization (full visitColor
+  dispatch, _writeLegacyColor fixes,
+  _writeHsl, _writeHwb, _writeColorFunction,
+  _writeChannel, color-mix out-of-gamut)           ~180 lines
+
+Selector visitor methods (10 methods +
+  SelectorVisitor interface impl)                  ~150 lines
+
+String PUA escaping (_tryPrivateUseCharacter,
+  _writeEscape, _visitQuotedString fix,
+  _visitUnquotedString afterNewline fix)           ~100 lines
+
+Media query rendering (_visitMediaQuery)            ~30 lines
+
+visitFunction / visitMixin (inspect-mode)           ~20 lines
+
+visitBoolean                                         ~5 lines
+
+visitNumber asSlash support                          ~10 lines
+
+Constructor params (useSpaces, indentWidth,
+  lineFeed, logger) + LineFeed enum                 ~50 lines
+
+Comment re-indentation + URL filtering              ~25 lines
+
+_withoutIndentation + _isInvisible inspect          ~15 lines
+
+_isTrailingComment full brace-search logic          ~15 lines
+
+Misc utilities (_writeTimes, _writeBetween,
+  _for span wrapping, _write)                       ~25 lines
+
+-----------------------------------------   -----------------------
+TOTAL ESTIMATED NEW/MODIFIED CODE:              ~745 lines
+
+===============================================================================
+NOTES
+===============================================================================
+
+1. SSG uses a "format to String then append" pattern (formatValue, formatColor,
+   formatList, etc.) instead of dart-sass's direct-to-buffer visitor pattern.
+   This is a design difference but functionally equivalent for correctness.
+   The buffer approach is more memory-efficient for large stylesheets.
+
+2. SSG's selector serialization bypasses the visitor entirely, relying on
+   CompoundSelector.toString() and a custom writeComplexSelectorTo helper.
+   This works for most cases but cannot implement:
+   - :not(%invisible) -> * optimization
+   - Empty compound -> * fallback
+   - Attribute selector value quoting with identifier detection
+   - PUA escaping in selector strings
+
+3. The SSG source map implementation is simpler (records per-declaration
+   rather than per-span) but produces valid v3 source maps.
+
+4. The _quote field (controlling whether quoted strings emit quotes) is
+   missing from the SSG constructor. This affects the serializeValue entry
+   point when called with quote=false (used by string interpolation).
+
+5. SassCalculation, SassBoolean, SassFunction, and SassMixin value types
+   may not exist yet in SSG. The missing visitor methods for these types
+   will need the corresponding value types to be ported first.

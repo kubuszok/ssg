@@ -55,8 +55,9 @@ class MarkdownTable(
   private val ALL_HEADER_ROWS:  Array[TableSection] = Array(header)
   private val ALL_BODY_ROWS:    Array[TableSection] = Array(body)
 
-  def this(tableChars: CharSequence, options: Nullable[DataHolder]) =
+  def this(tableChars: CharSequence, options: Nullable[DataHolder]) = {
     this(tableChars, new TableFormatOptions(options))
+  }
 
   def getCaptionCell: TableCell =
     if (caption.rows.size() > 0 && caption.rows.get(0).cells.size() > 0) caption.rows.get(0).cells.get(0)

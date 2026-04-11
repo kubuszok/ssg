@@ -29,11 +29,13 @@ abstract class MarkdownWriterBase[T <: MarkdownWriterBase[T, N, C], N, C <: Node
 
   protected var context: C = scala.compiletime.uninitialized
 
-  def this() =
+  def this() = {
     this(Nullable(null), 0)
+  }
 
-  def this(formatOptions: Int) =
+  def this(formatOptions: Int) = {
     this(Nullable(null), formatOptions)
+  }
 
   override def toString: String =
     appendable.toString
