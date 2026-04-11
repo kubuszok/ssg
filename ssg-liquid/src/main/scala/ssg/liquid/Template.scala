@@ -68,7 +68,10 @@ final class Template(
   def renderToObject(): Any =
     renderToObject(new HashMap[String, Any]())
 
-  /** Renders this template and returns the raw result object. */
+  /** Renders this template and returns the raw result object.
+    *
+    * Enforces `limitMaxTemplateSizeBytes` (pre-render) and `limitMaxRenderTimeMillis` (elapsed time after render).
+    */
   def renderToObject(variables: JMap[String, Any]): Any = {
     if (templateSize > templateParser.limitMaxTemplateSizeBytes) {
       throw new RuntimeException(s"template exceeds the max of ${templateParser.limitMaxTemplateSizeBytes} bytes")
@@ -76,10 +79,15 @@ final class Template(
 
     val evaluatedVars: JMap[String, Any] = templateParser.evaluateMode match {
       case TemplateParser.EvaluateMode.EAGER =>
-        // EAGER: convert all values eagerly via evaluate
-        // Full EAGER support requires LiquidSupport.objectToMap (ISS-015);
-        // for now, makes a defensive copy so mutations don't leak to caller
-        new LinkedHashMap[String, Any](variables)
+        val evaluated = new LinkedHashMap[String, Any]()
+        val iter      = variables.entrySet().iterator()
+        while (iter.hasNext) {
+          val entry = iter.next()
+          val value = entry.getValue
+          val ls    = templateParser.evaluate(value)
+          evaluated.put(entry.getKey, ls.toLiquid())
+        }
+        evaluated
       case _ =>
         // LAZY: pass variables through as-is (converted on demand during rendering)
         variables
@@ -92,7 +100,19 @@ final class Template(
       contextHolder.setContext(templateContext)
     }
 
-    val rendered = root.render(templateContext)
+    val startTime = System.currentTimeMillis()
+    val rendered  = root.render(templateContext)
+
+    // Check render time limit (cross-platform: post-hoc elapsed check)
+    if (templateParser.isRenderTimeLimited) {
+      val elapsed = System.currentTimeMillis() - startTime
+      if (elapsed > templateParser.limitMaxRenderTimeMillis) {
+        throw new RuntimeException(
+          s"exceeded the max amount of time (${templateParser.limitMaxRenderTimeMillis} ms.), actual: $elapsed ms."
+        )
+      }
+    }
+
     templateParser.renderTransformer.transformObject(templateContext, rendered)
   }
 

@@ -110,15 +110,14 @@ final class TemplateParser(
     new Template(this, root, input.length.toLong, location)
   }
 
-  /** Evaluates an object, converting Inspectable objects to LiquidSupport. */
+  /** Evaluates an object, converting Inspectable objects to LiquidSupport.
+    *
+    * LiquidSupport objects return their own toLiquid() directly. Inspectable objects (and other objects) are converted via reflection-based field/getter introspection.
+    */
   def evaluate(variable: Any): LiquidSupport =
     variable match {
       case ls: LiquidSupport => ls
-      case _ =>
-        new LiquidSupport {
-          override def toLiquid(): JMap[String, Any] =
-            new java.util.HashMap[String, Any]()
-        }
+      case _                 => new LiquidSupport.LiquidSupportFromInspectable(variable)
     }
 }
 
