@@ -30,6 +30,12 @@ idiomatic Scala 3, preserving ALL original logic.
    methods does the original have? How many did you port? If the numbers
    don't match, you're not done.
 
+6. **Porting is binary — 100% or not done** — there is no such thing as
+   "diminishing returns." Every method, every branch, every edge case
+   must be ported. Never describe missing logic as "low priority" or
+   "not worth the effort." The only question is: what remains to reach
+   100%? A file at 74% is not "mostly done" — it is incomplete.
+
 ## Project conventions (from CLAUDE.md)
 
 - Scala 3.8.2, `-Werror`, `-no-indent`, split packages

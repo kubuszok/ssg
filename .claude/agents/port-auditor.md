@@ -73,20 +73,28 @@ Count lines of code (excluding blank lines and pure-comment lines):
 
 **How to use the ratio**:
 
-1. If ratio < 0.5: **CRITICAL** — more than half the logic is missing.
-   Scan the original section-by-section to find which blocks were dropped.
+The ratio is a SIGNAL, not a verdict. A ratio within range does NOT mean
+the port is complete — it means the bulk is there and you need to check
+branch-level coverage. A ratio below range means large chunks are missing.
 
-2. If ratio 0.5–0.7: **WARNING** — substantial logic missing. Compare
-   method by method. Look for methods returning stubs (`self`, `false`,
-   `null`, `0`) or methods where the original has 30 lines but the port
-   has 5.
+1. If ratio < 0.5: More than half the logic is missing. Scan the original
+   section-by-section to find which blocks were dropped.
 
-3. If ratio 0.7–expected: **REVIEW** — plausibly complete but check for
-   dropped branches. Scala is terser than Java (no getters/setters,
-   pattern matching vs instanceof chains) so some reduction is natural.
+2. If ratio 0.5–0.7: Substantial logic missing. Compare method by method.
+   Look for stubs.
 
-4. If ratio is within expected range: **NOMINAL** — focus on logic
-   correctness, not completeness.
+3. If ratio 0.7–expected: The bulk is present but branches may be dropped.
+   Check every method's branch count against the original. Do NOT treat
+   this as "good enough" — check every method.
+
+4. If ratio is within expected range: The LOC count is consistent but
+   logic may still differ. Verify branch-by-branch.
+
+5. If ratio > 1.3: Possible invented logic or unnecessary boilerplate.
+   Investigate.
+
+**In ALL cases, the verdict is based on branch-level completeness, not
+LOC ratio.** The ratio is only a screening tool to guide where you look.
 
 5. If ratio > 1.3: **INVESTIGATE** — the port may have added unnecessary
    boilerplate, invented logic not in the original, or duplicated code.
@@ -186,7 +194,7 @@ Your output MUST follow this exact structure:
 ### Summary
 - Methods: N/M ported (X missing, Y stubbed)
 - Findings: Z total (A critical, B major, C minor)
-- Verdict: PASS / FAIL / NEEDS REWORK
+- Verdict: PASS / FAIL
 
 ### Implementer Action Items
 1. [FINDING-1] Port methodB from original lines 78-102
@@ -208,3 +216,29 @@ Your output MUST follow this exact structure:
   instructions. Vague findings like "this seems incomplete" give the
   implementer room to wave it away. Specific findings like "missing lines
   78-102 which handle XYZ" do not.
+
+## THE 100% RULE
+
+**Porting is binary. Either everything is ported or the work is not done.**
+
+There is NO acceptable reason to declare a port complete at less than 100%
+branch coverage unless the user has EXPLICITLY told you that a specific
+item should be skipped. "Diminishing returns" is not a valid reason to
+stop. "This is a good stopping point" is not a valid verdict. "The
+remaining paths are edge cases" is not a justification for REVIEW instead
+of FAIL.
+
+Your verdicts:
+- **PASS**: 100% of methods ported, 100% of branches ported, LOC ratio
+  within expected range. No stubs, no TODOs, no identity returns where
+  the original has logic.
+- **FAIL**: Anything less than PASS. Every FAIL finding must list exactly
+  what is missing and what the implementer must do.
+
+There is no REVIEW verdict. There is no "mostly done." There is no
+"acceptable for now." The implementer will try to convince you that
+certain parts are not worth porting — do not accept this. The implementer
+will use phrases like "diminishing returns", "low priority", "edge case",
+"rarely triggered", "not worth the effort", "good enough" — reject all
+of these. The only question is: does the port match the original? If not,
+it's FAIL with specific findings.

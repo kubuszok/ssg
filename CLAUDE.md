@@ -27,6 +27,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 - **Case classes must be `final`**: all `case class` declarations require `final`
 - **No Java-style getters/setters**: no-logic `getX()`/`setX(v)` → public `var x`; with-logic → `def x: T` + `def x_=(v: T): Unit`
 - **Fix bugs, don't work around them**: when a test reveals a pre-existing bug, fix it in source
+- **Porting is binary — 100% or not done**: There is no such thing as "diminishing returns" in porting. Every method, every branch, every edge case in the original must be ported. The question is never "is this worth the effort" — it is always "what remains to reach 100%". A file at 74% coverage is not "mostly done" — it is incomplete. Do not rationalize partial work as acceptable. Do not describe missing logic as "low priority" or "diminishing returns". If the original has it, the port must have it.
 - **All 3 platforms are baseline**: JVM, JS, Native — changes must be non-regressing on all
 - Use `re-scale` commands or `sbt --client` — never bare `sbt` (avoids the JVM startup tax on every invocation)
 - **sbt server stuck?** kill with `re-scale proc kill --kind sbt --dir .`, fix the cause, retry
