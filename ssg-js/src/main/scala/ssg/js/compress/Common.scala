@@ -291,20 +291,10 @@ object Common {
     */
   private def resolveFixedValue(node: AstNode): AstNode =
     node match {
-      case ref: AstSymbolRef if ref.thedef != null =>
-        // SymbolDef.fixed holds the fixed value (an AstNode) when the variable
-        // is assigned exactly once and never reassigned. Use reflection since
-        // SymbolDef is typed as Any.
-        try {
-          val sdClass     = ref.thedef.getClass
-          val fixedMethod = sdClass.getMethod("fixed")
-          val fixed       = fixedMethod.invoke(ref.thedef)
-          fixed match {
-            case n: AstNode => n
-            case _ => node
-          }
-        } catch {
-          case _: Exception => node
+      case ref: AstSymbolRef =>
+        ref.fixedValue() match {
+          case n: AstNode => n
+          case _          => node
         }
       case _ => node
     }

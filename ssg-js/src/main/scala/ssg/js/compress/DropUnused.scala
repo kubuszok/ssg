@@ -333,7 +333,7 @@ object DropUnused {
     )
 
     // Run the transformation
-    scope.walk(tt)
+    scope.transform(tt)
   }
 
   // -----------------------------------------------------------------------

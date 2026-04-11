@@ -46,6 +46,7 @@ import ssg.js.compress.Inference.*
 import ssg.js.compress.TightenBody.{ extractFromUnreachableCode, tightenBody }
 import ssg.js.compress.Inline.inlineIntoSymbolRef
 import ssg.js.ast.AstSize
+import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
 
 /** The main JavaScript compressor.
   *
@@ -760,7 +761,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         val canExtractFromIfBlock = !stmt.isInstanceOf[AstConst] && !stmt.isInstanceOf[AstLet] &&
           !stmt.isInstanceOf[AstClass]
         val parentIsIf = try { parent(0).isInstanceOf[AstIf] } catch { case _: IndexOutOfBoundsException => false }
-        if ((!hasDirective("use strict").isInstanceOf[AstNode] && parentIsIf && canExtractFromIfBlock) || canBeEvictedFromBlock(stmt)) {
+        if ((hasDirective("use strict") == null && parentIsIf && canExtractFromIfBlock) || canBeEvictedFromBlock(stmt)) {
           stmt
         } else {
           self
@@ -2955,59 +2956,127 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     }
   }
 
-  /** Optimize `undefined` -> `void 0`. */
+  /** Walk up the parent stack to find the enclosing scope, then look up the variable `name` in it.
+    *
+    * Port of `find_variable(compressor, name)` from index.js:655-665.
+    */
+  private def findVariable(name: String): SymbolDef | Null = {
+    var i = 0
+    var scope: AstNode | Null = parent(i)
+    while (scope != null) {
+      scope.nn match {
+        case _: AstScope => // found a scope — break out of the loop
+          val sc = scope.nn.asInstanceOf[AstScope]
+          return ScopeAnalysis.findVariable(sc, name) // @nowarn
+        case c: AstCatch if c.argname != null =>
+          c.argname.nn match {
+            case sym: AstSymbol =>
+              val defn = sym.definition()
+              if (defn != null) {
+                scope = defn.nn.scope
+                return ScopeAnalysis.findVariable(scope.nn.asInstanceOf[AstScope], name) // @nowarn
+              }
+            case _ => // argname is not a symbol — continue walking
+          }
+        case _ => // not a scope or catch — keep walking
+      }
+      i += 1
+      scope = parent(i)
+    }
+    null
+  }
+
+  /** Check if `lhs` is "atomic" with respect to `self` — i.e. it's a symbol ref or the same node type.
+    *
+    * Port of `is_atomic(lhs, self)` from index.js:2963-2964.
+    */
+  private def isAtomic(lhs: AstNode, self: AstNode): Boolean =
+    lhs.isInstanceOf[AstSymbolRef] || lhs.nodeType == self.nodeType
+
+  /** Apply the `unsafe_undefined` option: find a variable called `undefined` and turn `self` into a reference to it.
+    *
+    * Port of `unsafe_undefined_ref(self, compressor)` from index.js:2968-2982.
+    */
+  private def unsafeUndefinedRef(self: AstNode): AstNode | Null = {
+    if (optionBool("unsafe_undefined")) {
+      val undef = findVariable("undefined")
+      if (undef != null) {
+        val ref = new AstSymbolRef
+        ref.start = self.start
+        ref.end = self.end
+        ref.name = "undefined"
+        ref.scope = undef.nn.scope
+        ref.thedef = undef
+        setFlag(ref, UNDEFINED)
+        return ref // @nowarn
+      }
+    }
+    null
+  }
+
+  /** Optimize `undefined` -> `void 0` (or unsafe_undefined ref if enabled). */
   private def optimizeUndefined(self: AstUndefined): AstNode = {
-    // Don't optimize LHS (assignment targets)
-    if (isLhs() != null) return self // @nowarn
+    val symbolref = unsafeUndefinedRef(self)
+    if (symbolref != null) return symbolref.nn // @nowarn
+    val lhs = isLhs()
+    if (lhs != null && isAtomic(lhs.nn, self)) return self // @nowarn
     makeVoid0(self)
   }
 
-  /** Optimize `Infinity` -> `1/0` (unless keep_infinity). */
+  /** Optimize `Infinity` -> `1/0` (unless keep_infinity and not shadowed). */
   private def optimizeInfinity(self: AstInfinity): AstNode = {
-    if (isLhs() != null) return self // @nowarn — don't optimize LHS
-    if (optionBool("keep_infinity")) {
-      self
-    } else {
-      val one = new AstNumber
-      one.start = self.start
-      one.end = self.end
-      one.value = 1.0
-
-      val zero = new AstNumber
-      zero.start = self.start
-      zero.end = self.end
-      zero.value = 0.0
-
-      val div = new AstBinary
-      div.start = self.start
-      div.end = self.end
-      div.operator = "/"
-      div.left = one
-      div.right = zero
-      div
+    val lhs = isLhs()
+    if (lhs != null && isAtomic(lhs.nn, self)) return self // @nowarn — don't optimize atomic LHS
+    if (
+      optionBool("keep_infinity")
+      && !(lhs != null && !isAtomic(lhs.nn, self))
+      && findVariable("Infinity") == null
+    ) {
+      return self // @nowarn
     }
-  }
+    val one = new AstNumber
+    one.start = self.start
+    one.end = self.end
+    one.value = 1.0
 
-  /** Optimize `NaN` -> `0/0`. */
-  private def optimizeNaN(self: AstNaN): AstNode = {
-    if (isLhs() != null) return self // @nowarn — don't optimize LHS
-    val zero1 = new AstNumber
-    zero1.start = self.start
-    zero1.end = self.end
-    zero1.value = 0.0
-
-    val zero2 = new AstNumber
-    zero2.start = self.start
-    zero2.end = self.end
-    zero2.value = 0.0
+    val zero = new AstNumber
+    zero.start = self.start
+    zero.end = self.end
+    zero.value = 0.0
 
     val div = new AstBinary
     div.start = self.start
     div.end = self.end
     div.operator = "/"
-    div.left = zero1
-    div.right = zero2
+    div.left = one
+    div.right = zero
     div
+  }
+
+  /** Optimize `NaN` -> `0/0` only when NaN is shadowed or LHS is non-atomic. */
+  private def optimizeNaN(self: AstNaN): AstNode = {
+    val lhs = isLhs()
+    if ((lhs != null && !isAtomic(lhs.nn, self))
+      || findVariable("NaN") != null) {
+      val zero1 = new AstNumber
+      zero1.start = self.start
+      zero1.end = self.end
+      zero1.value = 0.0
+
+      val zero2 = new AstNumber
+      zero2.start = self.start
+      zero2.end = self.end
+      zero2.value = 0.0
+
+      val div = new AstBinary
+      div.start = self.start
+      div.end = self.end
+      div.operator = "/"
+      div.left = zero1
+      div.right = zero2
+      return div // @nowarn
+    }
+    self
   }
 
   /** Optimize boolean literals in boolean context. */
