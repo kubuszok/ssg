@@ -26,9 +26,8 @@ object TemplateUtil {
 
   final class MappedResolver(protected val resolved: mutable.Map[String, String]) extends Resolver {
 
-    def this() = {
+    def this() =
       this(mutable.HashMap.empty[String, String])
-    }
 
     def set(name: String, value: String): MappedResolver = {
       resolved.put(name, value)

@@ -3058,18 +3058,8 @@ abstract class StylesheetParser protected (
               addOperator(BinaryOperator.DividedBy)
             }
           case CharCode.`$percent` =>
-            if (singleExpression.isDefined) {
-              val _ = scanner.readChar()
-              addOperator(BinaryOperator.Modulo)
-            } else {
-              // Bare `%` in CSS — treat as an unquoted string token.
-              val pctStart = scanner.state
-              val _ = scanner.readChar()
-              addSingleExpression(StringExpression(
-                Interpolation.plain("%", spanFrom(pctStart)),
-                hasQuotes = false
-              ))
-            }
+            val _ = scanner.readChar()
+            addOperator(BinaryOperator.Modulo)
           case CharCode.`$equal` =>
             val _ = scanner.readChar()
             scanner.expectChar(CharCode.$equal)

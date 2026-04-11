@@ -19,17 +19,14 @@ class ArrayIterable[T](
   private val isReversedFlag: Boolean
 ) extends ReversibleIterable[T] {
 
-  def this(array: Array[T]) = {
+  def this(array: Array[T]) =
     this(array, 0, array.length, false)
-  }
 
-  def this(array: Array[T], startIndex: Int) = {
+  def this(array: Array[T], startIndex: Int) =
     this(array, startIndex, array.length, false)
-  }
 
-  def this(array: Array[T], startIndex: Int, endIndex: Int) = {
+  def this(array: Array[T], startIndex: Int, endIndex: Int) =
     this(array, startIndex, endIndex, false)
-  }
 
   override def reversed(): ReversibleIterable[T] =
     new ArrayIterable[T](array, startIndex, endIndex, !isReversedFlag)
