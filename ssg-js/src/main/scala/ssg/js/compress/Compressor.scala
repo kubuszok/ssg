@@ -175,11 +175,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     var toplevel = ast
     toplevelNode = Some(toplevel)
 
-    // Single-pass optimization: walk the AST and apply per-node optimizations.
-    // The TreeTransformer-based multi-pass loop (matching Terser's behavior)
-    // is not yet ported — this provides a simpler single-pass approach.
+    // Resolve global definitions (e.g., DEBUG: false → replace all DEBUG refs)
+    toplevel = GlobalDefs.resolveDefs(toplevel, options.globalDefs)
 
-    // Drop console calls if configured
+    // Drop console calls if configured (must be run before reduce_vars and compress pass)
     if (options.dropConsole != DropConsoleConfig.Disabled) {
       toplevel = dropConsole(toplevel)
     }
@@ -1031,10 +1030,59 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     toplevel.walk(tw)
   }
 
-  /** Drop console.* calls from the AST. */
-  private def dropConsole(toplevel: AstToplevel): AstToplevel =
-    // TODO: implement console dropping via TreeTransformer
-    toplevel
+  /** Drop console.* calls from the AST.
+    *
+    * Replaces `console.method(...)` calls with `void 0`. When `dropConsole` is `Methods(names)`, only drops calls to those specific methods.
+    */
+  private def dropConsole(toplevel: AstToplevel): AstToplevel = {
+    val methodFilter: Option[Set[String]] = options.dropConsole match {
+      case DropConsoleConfig.Methods(names) => Some(names)
+      case _                               => None
+    }
+
+    val tt = new TreeTransformer(
+      before = (self, _) => {
+        self match {
+          case call: AstCall =>
+            call.expression match {
+              case pa: AstPropAccess =>
+                // Walk up property chains: console.log.bind(console) etc.
+                var nameNode: AstNode = pa.expression.nn
+                var property: String | AstNode = pa.property
+                var keepWalking = true
+                while (keepWalking) {
+                  nameNode match {
+                    case inner: AstPropAccess =>
+                      property = inner.property
+                      nameNode = inner.expression.nn
+                    case _ =>
+                      keepWalking = false
+                  }
+                }
+
+                // Check if filtering by method name
+                val propertyName = property match {
+                  case s: String => s
+                  case _         => null
+                }
+                if (methodFilter.isDefined && propertyName != null && !methodFilter.get.contains(propertyName)) {
+                  null // not a filtered method, keep it
+                } else if (Inference.isUndeclaredRef(nameNode) && nameNode.isInstanceOf[AstSymbolRef] && nameNode.asInstanceOf[AstSymbolRef].name == "console") {
+                  // Replace with void 0
+                  makeVoid0(self)
+                } else {
+                  null // not a console reference
+                }
+
+              case _ => null // not a property access call
+            }
+
+          case _ => null // not a call node
+        }
+      }
+    )
+    toplevel.transform(tt).asInstanceOf[AstToplevel]
+  }
 
   /** Walk a node tree, calling visitor for each node. TODO: used in multi-pass convergence check. */
   @scala.annotation.nowarn("msg=unused private member")
