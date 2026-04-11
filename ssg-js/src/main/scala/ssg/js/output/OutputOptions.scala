@@ -86,5 +86,6 @@ final case class OutputOptions(
   webkit:              Boolean = false,
   width:               Int = 80,
   wrapIife:            Boolean = false,
-  wrapFuncArgs:        Boolean = false
+  wrapFuncArgs:        Boolean = false,
+  sourceMap:           ssg.js.sourcemap.SourceMap | Null = null
 )
