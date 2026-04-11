@@ -42,8 +42,8 @@ class TypographicQuotes() extends Node, DelimitedNode, DoNotAttributeDecorate, T
     Array(openingMarker, text, closingMarker)
 
   override def astExtra(out: StringBuilder): Unit = {
-    if (openingMarker.isNotNull) out.append(" typographicOpening: ").append(typographicOpening.getOrElse("")).append(" ")
-    if (closingMarker.isNotNull) out.append(" typographicClosing: ").append(typographicClosing.getOrElse("")).append(" ")
+    if (openingMarker.isNotNull) out.append(" typographicOpening: ").append(typographicOpening.getOrElse("null")).append(" ")
+    if (closingMarker.isNotNull) out.append(" typographicClosing: ").append(typographicClosing.getOrElse("null")).append(" ")
     Node.delimitedSegmentSpanChars(out, openingMarker, text, closingMarker, "text")
   }
 }

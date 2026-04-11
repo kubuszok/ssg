@@ -69,28 +69,23 @@ class MarkdownWriter(appendable: Nullable[Appendable], formatOptions: Int) exten
   }
 
   override def lastBlockQuoteChildPrefix(prefix: BasedSequence): BasedSequence = {
-    var node: Nullable[Node] = Nullable(context.getCurrentNode)
+    var result: BasedSequence               = prefix
+    var node:   Nullable[Node] = Nullable(context.getCurrentNode)
     while (node.isDefined && node.get.nextAnyNot(classOf[BlankLine]).isEmpty) {
       val parent = node.get.parent
       if (parent.isEmpty || parent.exists(_.isInstanceOf[Document])) {
-        // reached top
         node = Nullable.empty
-      } else if (parent.exists(_.isInstanceOf[BlockQuoteLike])) {
-        val pos = prefix.lastIndexOfAny(context.getBlockQuoteLikePrefixPredicate)
-        if (pos >= 0) {
-          prefix.replace(pos, pos + 1, " ") // TODO: use replaced value when nested block quotes are handled
-          // keep going up in case there are nested block quotes
-          node = parent
-          // use recursive approach: return replaced as the result
-          // For now, just return replaced
-          // TODO: handle nested block quotes properly
-        } else {
-          node = Nullable.empty
-        }
       } else {
+        if (parent.exists(_.isInstanceOf[BlockQuoteLike])) {
+          val pos = result.lastIndexOfAny(context.getBlockQuoteLikePrefixPredicate)
+          if (pos >= 0) {
+            // Replace the blockquote marker character with a space, accumulating across nesting levels
+            result = result.replace(pos, pos + 1, " ")
+          }
+        }
         node = parent
       }
     }
-    prefix
+    result
   }
 }
