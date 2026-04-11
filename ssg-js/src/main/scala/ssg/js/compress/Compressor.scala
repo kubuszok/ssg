@@ -1263,7 +1263,168 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
-    // Constant folding
+    // Lift sequences from right operand when left has no side effects
+    if (self.left != null && self.right != null) {
+      val lifted = liftSequencesBinaryRight(self)
+      if (!(lifted eq self)) return lifted // @nowarn
+    }
+
+    // typeof comparisons: typeof x === "undefined" → x === void 0 (when x is declared)
+    if (optionBool("typeofs") && self.left != null && self.right != null) {
+      // typeof x === "undefined" → x === void 0
+      if (
+        self.left.nn.isInstanceOf[AstUnaryPrefix]
+        && self.left.nn.asInstanceOf[AstUnaryPrefix].operator == "typeof"
+        && self.right.nn.isInstanceOf[AstString]
+        && self.right.nn.asInstanceOf[AstString].value == "undefined"
+        && (self.operator == "==" || self.operator == "===")
+      ) {
+        val expr = self.left.nn.asInstanceOf[AstUnaryPrefix].expression.nn
+        expr match {
+          case ref: AstSymbolRef if ref.definition() != null && !ref.definition().nn.undeclared =>
+            self.left = expr
+            self.right = makeVoid0(self.right.nn)
+            if (self.operator.length == 2) self.operator += "="
+          case _ =>
+        }
+      }
+      // "undefined" === typeof x → void 0 === x
+      else if (
+        self.right.nn.isInstanceOf[AstUnaryPrefix]
+        && self.right.nn.asInstanceOf[AstUnaryPrefix].operator == "typeof"
+        && self.left.nn.isInstanceOf[AstString]
+        && self.left.nn.asInstanceOf[AstString].value == "undefined"
+        && (self.operator == "==" || self.operator == "===")
+      ) {
+        val expr = self.right.nn.asInstanceOf[AstUnaryPrefix].expression.nn
+        expr match {
+          case ref: AstSymbolRef if ref.definition() != null && !ref.definition().nn.undeclared =>
+            self.right = expr
+            self.left = makeVoid0(self.left.nn)
+            if (self.operator.length == 2) self.operator += "="
+          case _ =>
+        }
+      }
+    }
+
+    // == / != : void 0 == x → null == x (undefined equals null in loose comparison)
+    if (self.left != null && self.right != null && (self.operator == "==" || self.operator == "!=")) {
+      if (isUndefined(self.left.nn, this)) {
+        val nullNode = new AstNull
+        nullNode.start = self.left.nn.start
+        nullNode.end = self.left.nn.end
+        self.left = nullNode
+      } else if (isUndefined(self.right.nn, this)) {
+        val nullNode = new AstNull
+        nullNode.start = self.right.nn.start
+        nullNode.end = self.right.nn.end
+        self.right = nullNode
+      }
+    }
+
+    // String concatenation: x + "" → x (when x is a string), "" + x → x
+    if (self.operator == "+" && self.left != null && self.right != null) {
+      // x + "" → x (when x is already a string)
+      self.right.nn match {
+        case s: AstString if s.value == "" && isString(self.left.nn, this) =>
+          return self.left.nn // @nowarn
+        case _ =>
+      }
+      // "" + x → x (when x is already a string)
+      self.left.nn match {
+        case s: AstString if s.value == "" && isString(self.right.nn, this) =>
+          return self.right.nn // @nowarn
+        case _ =>
+      }
+    }
+
+    // &&/||/?? short-circuit evaluation
+    if (optionBool("evaluate") && self.left != null && self.right != null) {
+      self.operator match {
+        case "&&" =>
+          val ll = Evaluate.evaluate(self.left.nn, this)
+          if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
+            ll match {
+              case false | 0 | 0.0 | "" | null =>
+                // Left is falsy → result is left (short-circuit)
+                return self.left.nn // @nowarn
+              case _ =>
+                // Left is truthy → result is right
+                return makeSequence(self, ArrayBuffer(self.left.nn, self.right.nn)) // @nowarn
+            }
+          }
+          val rr = Evaluate.evaluate(self.right.nn, this)
+          if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
+            rr match {
+              case false | 0 | 0.0 | "" | null =>
+                if (inBooleanContext()) {
+                  val falseNode = new AstFalse
+                  falseNode.start = self.start
+                  falseNode.end = self.end
+                  return makeSequence(self, ArrayBuffer(self.left.nn, falseNode)) // @nowarn
+                } else {
+                  setFlag(self, FALSY)
+                }
+              case _ =>
+                // Right is truthy in && → result depends only on left
+                if (inBooleanContext()) {
+                  return self.left.nn // @nowarn
+                }
+            }
+          }
+
+        case "||" =>
+          val ll = Evaluate.evaluate(self.left.nn, this)
+          if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
+            ll match {
+              case false | 0 | 0.0 | "" | null =>
+                // Left is falsy → result is right
+                return makeSequence(self, ArrayBuffer(self.left.nn, self.right.nn)) // @nowarn
+              case _ =>
+                // Left is truthy → result is left (short-circuit)
+                return self.left.nn // @nowarn
+            }
+          }
+          val rr = Evaluate.evaluate(self.right.nn, this)
+          if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
+            rr match {
+              case false | 0 | 0.0 | "" | null =>
+                // Right is falsy in || → result is left
+                if (inBooleanContext()) {
+                  return self.left.nn // @nowarn
+                }
+              case _ =>
+                // Right is truthy → always truthy
+                if (inBooleanContext()) {
+                  val trueNode = new AstTrue
+                  trueNode.start = self.start
+                  trueNode.end = self.end
+                  return makeSequence(self, ArrayBuffer(self.left.nn, trueNode)) // @nowarn
+                } else {
+                  setFlag(self, TRUTHY)
+                }
+            }
+          }
+
+        case "??" =>
+          // x ?? y: if x is known non-nullish, just x
+          if (!isNullish(self.left.nn, this)) {
+            val ll = Evaluate.evaluate(self.left.nn, this)
+            if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
+              // Left evaluates to a non-nullish constant
+              ll match {
+                case null => // null is nullish, keep ??
+                case _: Unit => // undefined is nullish, keep ??
+                case _ => return self.left.nn // @nowarn
+              }
+            }
+          }
+
+        case _ =>
+      }
+    }
+
+    // Constant folding (after all other optimizations)
     if (optionBool("evaluate") && self.left != null && self.right != null) {
       val ev = Evaluate.evaluate(self, this)
       if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
