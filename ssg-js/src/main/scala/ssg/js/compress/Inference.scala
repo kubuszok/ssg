@@ -22,11 +22,12 @@
  *     is_undefined -> isUndefined, is_nullish_shortcircuited -> isNullishShortcircuited
  *   Convention: Object with methods, pattern matching instead of DEFMETHOD
  *   Idiom: boundary/break instead of return, Set instead of makePredicate
- *   Gap: 813 LOC vs upstream 1132 LOC (~72%). Predicates exist but ~7
- *     scope-dependent branches stubbed at lines 69, 263, 331, 373, 595, 652,
- *     709 — they conservatively bail because SymbolDef fixed-value lookup is
- *     unwired. See ISS-032. docs/architecture/terser-port.md.
- *   Audited: 2026-04-07 (minor_issues)
+ *   Gap: Now includes isCalleePure, isCallPure, bitwiseNegate, isConstantExpression,
+ *     allRefsLocal, containsThis, isRefDeclared, isRefImmutable. Fixed hasSideEffects
+ *     to check isCallPure for Dot expressions, mayThrow to recurse into Lambda bodies,
+ *     mayThrowOnAccess with is_strict mode and additional cases (AstObject, AstExpansion,
+ *     AstDot, enhanced AstSymbolRef), aborts with SwitchBranch/DefClass/ClassStaticBlock/If/Import.
+ *   Audited: 2026-04-12 (pass)
  */
 package ssg
 package js
@@ -39,6 +40,7 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
 import ssg.js.compress.NativeObjects.*
+import ssg.js.scope.ScopeAnalysis
 
 /** Type inference and side-effect analysis predicates.
   *
@@ -61,6 +63,32 @@ object Inference {
   /** Bitwise binary operators. */
   val bitwiseBinop: Set[String] = Set("<<<", ">>", "<<", "&", "|", "^", "~")
 
+  /** Pure global functions (no side effects, no exceptions when called with valid args). */
+  val globalPureFns: Set[String] = Set(
+    "Boolean",
+    "decodeURI",
+    "decodeURIComponent",
+    "Date",
+    "encodeURI",
+    "encodeURIComponent",
+    "Error",
+    "escape",
+    "EvalError",
+    "isFinite",
+    "isNaN",
+    "Number",
+    "Object",
+    "parseFloat",
+    "parseInt",
+    "RangeError",
+    "ReferenceError",
+    "String",
+    "SyntaxError",
+    "TypeError",
+    "unescape",
+    "URIError"
+  )
+
   // -----------------------------------------------------------------------
   // Undeclared reference check
   // -----------------------------------------------------------------------
@@ -69,12 +97,38 @@ object Inference {
   def isUndeclaredRef(node: AstNode): Boolean =
     node match {
       case ref: AstSymbolRef =>
-        ref.thedef match {
-          case null => true // no definition means undeclared
-          case _    => false // TODO: check def.undeclared when SymbolDef is ported
-        }
+        val d = ref.definition()
+        if (d == null) true // no definition means undeclared
+        else d.nn.undeclared
       case _ => false
     }
+
+  /** Global names that are always considered "declared" in unsafe mode. */
+  private val globalNames: Set[String] = Set(
+    "Array", "Boolean", "clearInterval", "clearTimeout", "console", "Date",
+    "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent",
+    "Error", "escape", "eval", "EvalError", "Function", "isFinite", "isNaN",
+    "JSON", "Math", "Number", "parseFloat", "parseInt", "RangeError",
+    "ReferenceError", "RegExp", "Object", "setInterval", "setTimeout",
+    "String", "SyntaxError", "TypeError", "unescape", "URIError"
+  )
+
+  /** Check if a SymbolRef is considered declared. */
+  def isRefDeclared(ref: AstSymbolRef, compressor: CompressorLike): Boolean = {
+    val d = ref.definition()
+    if (d != null && !d.nn.undeclared) true
+    else compressor.optionBool("unsafe") && globalNames.contains(ref.name)
+  }
+
+  /** Check if a SymbolRef refers to an immutable binding (lambda name). */
+  def isRefImmutable(ref: AstSymbolRef): Boolean = {
+    val d = ref.definition()
+    if (d == null) false
+    else {
+      val orig = d.nn.orig
+      orig.size == 1 && orig(0).isInstanceOf[AstSymbolLambda]
+    }
+  }
 
   // -----------------------------------------------------------------------
   // Boolean type predicate
@@ -264,8 +318,16 @@ object Inference {
 
   /** Is this node explicitly null or undefined? */
   private def isNullOrUndefined(node: AstNode, compressor: CompressorLike): Boolean = {
-    node.isInstanceOf[AstNull] || isUndefined(node, compressor)
-    // TODO: check SymbolRef fixed value when scope analysis is ported
+    if (node.isInstanceOf[AstNull] || isUndefined(node, compressor)) return true // @nowarn
+    // Check SymbolRef fixed value
+    node match {
+      case ref: AstSymbolRef =>
+        ref.fixedValue() match {
+          case n: AstNode => isNullOrUndefined(n, compressor)
+          case _          => false
+        }
+      case _ => false
+    }
   }
 
   /** Is this node nullish (null, undefined, or optionally chained from null/undefined)? */
@@ -332,9 +394,18 @@ object Inference {
         anyHasSideEffects(cas.body, compressor)
 
       // Call (not a subtype issue but comes before generic nodes)
-      case _: AstCall =>
-        // TODO: is_callee_pure / is_call_pure checks
-        true
+      case call: AstCall =>
+        if (!isCalleePure(call, compressor)) {
+          // Check if the call expression is a pure method call
+          call.expression match {
+            case dot: AstDot =>
+              if (!isCallPure(dot, compressor) || hasSideEffects(dot, compressor)) true
+              else anyHasSideEffects(call.args, compressor)
+            case _ => true
+          }
+        } else {
+          anyHasSideEffects(call.args, compressor)
+        }
 
       // Try (not AstBlock but has block-like children)
       case tr: AstTry =>
@@ -374,9 +445,10 @@ object Inference {
         (unary.expression != null && hasSideEffects(unary.expression.nn, compressor))
 
       case ref: AstSymbolRef =>
-        // Undeclared refs may throw ReferenceError
-        // TODO: is_declared check when scope analysis is ported
-        !purePropAccessGlobals.contains(ref.name)
+        // Declared refs don't have side effects; undeclared may throw ReferenceError
+        val d = ref.definition()
+        if (d != null && !d.nn.undeclared) false
+        else !purePropAccessGlobals.contains(ref.name)
 
       case obj: AstObject => anyHasSideEffects(obj.properties, compressor)
 
@@ -500,7 +572,15 @@ object Inference {
       case call: AstCall =>
         if (isNullish(call, compressor)) false
         else if (anyMayThrow(call.args, compressor)) true
-        else true // TODO: callee purity checks
+        else if (isCalleePure(call, compressor)) false
+        else if (call.expression != null && mayThrow(call.expression.nn, compressor)) true
+        else {
+          // If callee is a Lambda, check if the body may throw
+          call.expression match {
+            case lambda: AstLambda => anyMayThrow(lambda.body, compressor)
+            case _                 => true
+          }
+        }
 
       // Try
       case tr: AstTry =>
@@ -597,8 +677,10 @@ object Inference {
         chain.expression != null && mayThrow(chain.expression.nn, compressor)
 
       case ref: AstSymbolRef =>
-        // TODO: is_declared check when scope analysis is ported
-        !purePropAccessGlobals.contains(ref.name)
+        // Declared refs don't throw; undeclared may throw ReferenceError
+        val d = ref.definition()
+        if (d != null && !d.nn.undeclared) false
+        else !purePropAccessGlobals.contains(ref.name)
 
       case unary: AstUnary =>
         if (unary.operator == "typeof" && unary.expression.isInstanceOf[AstSymbolRef]) false
@@ -624,6 +706,15 @@ object Inference {
   // May throw on access
   // -----------------------------------------------------------------------
 
+  /** Check if pure_getters option contains "strict". */
+  private def isStrict(compressor: CompressorLike): Boolean = {
+    val pg = compressor.option("pure_getters")
+    pg match {
+      case s: String => s.contains("strict")
+      case _         => false
+    }
+  }
+
   /** May accessing a property on this expression throw?
     *
     * Returns true if the expression might be null, undefined, or contain an accessor (getter/setter).
@@ -638,29 +729,65 @@ object Inference {
       case _:      AstUnaryPostfix   => false
       case _:      AstObjectGetter   => true // must come before AstObjectProperty
       case _:      AstObjectProperty => false
-      case prefix: AstUnaryPrefix    => prefix.operator == "void"
-      case assign: AstAssign         => // must come before AstBinary
+      case obj: AstObject =>
+        if (!isStrict(compressor)) false
+        else {
+          // In strict mode, check if any property may throw (has getter)
+          var i = obj.properties.size
+          while ({ i -= 1; i >= 0 }) {
+            if (dotThrow(obj.properties(i), compressor)) {
+              return true // @nowarn — performance hot path
+            }
+          }
+          false
+        }
+      case exp: AstExpansion =>
+        exp.expression != null && dotThrow(exp.expression.nn, compressor)
+      case prefix: AstUnaryPrefix => prefix.operator == "void"
+      case assign: AstAssign      => // must come before AstBinary
         if (assign.logical) true
-        else assign.operator == "=" && assign.right != null && mayThrowOnAccess(assign.right.nn, compressor)
+        else assign.operator == "=" && assign.right != null && dotThrow(assign.right.nn, compressor)
       case binary: AstBinary =>
         (binary.operator == "&&" || binary.operator == "||" || binary.operator == "??") &&
-        ((binary.left != null && mayThrowOnAccess(binary.left.nn, compressor)) ||
-          (binary.right != null && mayThrowOnAccess(binary.right.nn, compressor)))
+        ((binary.left != null && dotThrow(binary.left.nn, compressor)) ||
+          (binary.right != null && dotThrow(binary.right.nn, compressor)))
       case cond: AstConditional =>
-        (cond.consequent != null && mayThrowOnAccess(cond.consequent.nn, compressor)) ||
-        (cond.alternative != null && mayThrowOnAccess(cond.alternative.nn, compressor))
+        (cond.consequent != null && dotThrow(cond.consequent.nn, compressor)) ||
+        (cond.alternative != null && dotThrow(cond.alternative.nn, compressor))
+      case dot: AstDot =>
+        if (!isStrict(compressor)) false
+        else if (dot.property == "prototype") {
+          // .prototype on Function or Class doesn't throw
+          dot.expression match {
+            case _: AstFunction | _: AstClass => false
+            case _                            => true
+          }
+        } else true
       case seq: AstSequence =>
-        seq.expressions.nonEmpty && mayThrowOnAccess(seq.expressions.last, compressor)
+        seq.expressions.nonEmpty && dotThrow(seq.expressions.last, compressor)
       case chain: AstChain =>
-        chain.expression != null && mayThrowOnAccess(chain.expression.nn, compressor)
+        chain.expression != null && dotThrow(chain.expression.nn, compressor)
       case ref: AstSymbolRef =>
-        if (ref.name == "arguments") false // TODO: check scope is lambda
+        if (ref.name == "arguments" && ref.scope != null && ref.scope.nn.isInstanceOf[AstLambda]) false
         else if (hasFlag(ref, UNDEFINED)) true
-        else false // simplified — full check needs scope analysis
+        else if (!isStrict(compressor)) false
+        else if (isUndeclaredRef(ref) && isRefDeclared(ref, compressor)) false
+        else if (isRefImmutable(ref)) false
+        else {
+          // Check if the fixed value may throw on access
+          ref.fixedValue() match {
+            case n: AstNode => dotThrow(n, compressor)
+            case _          => true // No fixed value in strict mode -> may throw
+          }
+        }
       case _ =>
-        // Default: check pure_getters option
-        !compressor.optionBool("pure_getters")
+        // Default: in strict mode, assume may throw
+        isStrict(compressor)
     }
+
+  /** Internal helper for recursive _dot_throw checks. */
+  private def dotThrow(node: AstNode, compressor: CompressorLike): Boolean =
+    !compressor.optionBool("pure_getters") || mayThrowOnAccess(node, compressor)
 
   // -----------------------------------------------------------------------
   // LHS detection
@@ -710,8 +837,12 @@ object Inference {
           case call: AstCall
               if call.expression != null && (call.expression.nn eq node)
                 && !value.isInstanceOf[AstArrow]
-                && !value.isInstanceOf[AstClass] =>
-            // TODO: full callee purity check
+                && !value.isInstanceOf[AstClass]
+                && !isCalleePure(call, compressor)
+                && (value match {
+                  case fn: AstFunction => !call.isInstanceOf[AstNew] && containsThis(fn)
+                  case _               => true
+                }) =>
             break(true)
           case _ =>
         }
@@ -763,8 +894,17 @@ object Inference {
             case seq: AstSequence =>
               val idx = seq.expressions.indexOf(node.nn)
               if (idx != seq.expressions.size - 1) {
-                // Not the tail — value is unused (unless it's a this-binding sequence)
-                break(false)
+                // Detect (0, x.noThis)() constructs - value IS used in 2-element this-binding sequences
+                val grandparent = tw.parent(p + 2)
+                if (
+                  seq.expressions.size > 2
+                    || seq.expressions.size == 1
+                    || grandparent == null
+                    || !Common.requiresSequenceToMaintainBinding(grandparent.nn, seq, seq.expressions(1))
+                ) {
+                  break(false)
+                }
+                break(true)
               }
               // Is the tail, continue checking parent
               p += 1
@@ -801,7 +941,8 @@ object Inference {
     if (thing == null) null
     else
       thing.nn match {
-        case _:     AstJump           => thing
+        case _: AstJump   => thing
+        case _: AstImport => null
         case block: AstBlockStatement =>
           var i = 0
           while (i < block.body.size) {
@@ -812,6 +953,497 @@ object Inference {
             i += 1
           }
           null
+        case branch: AstSwitchBranch =>
+          var i = 0
+          while (i < branch.body.size) {
+            val a = aborts(branch.body(i))
+            if (a != null) {
+              return a // @nowarn — early exit in loop
+            }
+            i += 1
+          }
+          null
+        case defCls: AstDefClass =>
+          var i = 0
+          while (i < defCls.properties.size) {
+            defCls.properties(i) match {
+              case csb: AstClassStaticBlock =>
+                val a = aborts(csb)
+                if (a != null) {
+                  return a // @nowarn — early exit in loop
+                }
+              case _ =>
+            }
+            i += 1
+          }
+          null
+        case csb: AstClassStaticBlock =>
+          var i = 0
+          while (i < csb.body.size) {
+            val a = aborts(csb.body(i))
+            if (a != null) {
+              return a // @nowarn — early exit in loop
+            }
+            i += 1
+          }
+          null
+        case ifn: AstIf =>
+          // If aborts only if BOTH body and alternative abort
+          if (ifn.alternative != null && aborts(ifn.body) != null && aborts(ifn.alternative) != null) thing
+          else null
         case _ => null
       }
+
+  // -----------------------------------------------------------------------
+  // Callee purity
+  // -----------------------------------------------------------------------
+
+  /** Is this call expression's callee known to be pure?
+    *
+    * Checks:
+    * - unsafe mode: global pure functions, pure native static methods
+    * - AST_New with pure_new option
+    * - @__PURE__ annotation
+    * - pure_funcs compressor option
+    */
+  def isCalleePure(call: AstCall, compressor: CompressorLike): Boolean =
+    boundary[Boolean] {
+      if (compressor.optionBool("unsafe")) {
+        val expr = call.expression
+        // Check for hasOwnProperty call with null/undefined first arg
+        expr match {
+          case dot: AstDot if dot.expression != null =>
+            val dotExpr = dot.expression.nn
+            dotExpr match {
+              case ref: AstSymbolRef if ref.name == "hasOwnProperty" =>
+                if (call.args.nonEmpty) {
+                  val firstArg = call.args(0)
+                  val evaluated = Evaluate.evaluate(firstArg, compressor)
+                  evaluated match {
+                    case null => break(false)
+                    case ref2: AstSymbolRef =>
+                      val d = ref2.definition()
+                      if (d != null && d.nn.undeclared) break(false)
+                    case _ =>
+                  }
+                } else {
+                  break(false)
+                }
+              case _ =>
+            }
+          case _ =>
+        }
+        // Check for global pure function
+        if (isUndeclaredRef(expr.nn) && globalPureFns.contains(expr.nn.asInstanceOf[AstSymbolRef].name)) {
+          break(true)
+        }
+        // Check for pure native static method (e.g., Math.abs)
+        expr match {
+          case dot: AstDot if dot.expression != null && isUndeclaredRef(dot.expression.nn) =>
+            val exprName = dot.expression.nn.asInstanceOf[AstSymbolRef].name
+            dot.property match {
+              case propName: String =>
+                if (isPureNativeFn(exprName, propName)) break(true)
+              case _ =>
+            }
+          case _ =>
+        }
+      }
+      // AST_New with pure_new option
+      if (call.isInstanceOf[AstNew] && compressor.optionBool("pure_new")) {
+        break(true)
+      }
+      // Check @__PURE__ annotation
+      if (compressor.optionBool("side_effects") && (call.flags & Annotations.Pure) != 0) {
+        break(true)
+      }
+      // Check pure_funcs option
+      !compressor.pureFuncs(call)
+    }
+
+  /** Is this dot access calling a pure native method?
+    *
+    * Used for method calls on native objects like Array.prototype.slice, String.prototype.charAt, etc.
+    */
+  def isCallPure(dot: AstDot, compressor: CompressorLike): Boolean =
+    boundary[Boolean] {
+      if (!compressor.optionBool("unsafe")) break(false)
+      val expr = dot.expression
+      if (expr == null) break(false)
+
+      val nativeObj: String | Null = expr.nn match {
+        case _: AstArray  => "Array"
+        case _ if isBoolean(expr.nn) => "Boolean"
+        case _ if isNumber(expr.nn, compressor) => "Number"
+        case _: AstRegExp => "RegExp"
+        case _ if isString(expr.nn, compressor) => "String"
+        case _ if !mayThrowOnAccess(dot, compressor) => "Object"
+        case _ => null
+      }
+
+      if (nativeObj == null) break(false)
+
+      dot.property match {
+        case propName: String => isPureNativeMethod(nativeObj.nn, propName)
+        case _ => false
+      }
+    }
+
+  // -----------------------------------------------------------------------
+  // Bitwise negate
+  // -----------------------------------------------------------------------
+
+  /** Bitwise negation: ~x.
+    *
+    * Folds ~~x -> x when in 32-bit context, constant folds ~N.
+    */
+  def bitwiseNegate(node: AstNode, compressor: CompressorLike, in32BitContext: Boolean = false): AstNode = {
+    def basicBitwiseNegation(exp: AstNode): AstNode = {
+      val neg = new AstUnaryPrefix
+      neg.operator = "~"
+      neg.expression = exp
+      neg.start = exp.start
+      neg.end = exp.end
+      neg
+    }
+
+    node match {
+      case n: AstNumber =>
+        val neg = ~n.value.toLong
+        if (neg.toString.length > n.value.toString.length) {
+          basicBitwiseNegation(n)
+        } else {
+          val result = new AstNumber
+          result.value = neg.toDouble
+          result.start = n.start
+          result.end = n.end
+          result
+        }
+      case up: AstUnaryPrefix if up.operator == "~" =>
+        val useContext = if (in32BitContext) in32BitContext else compressor.in32BitContext()
+        if (up.expression != null && (is32BitInteger(up.expression.nn, compressor) || useContext)) {
+          up.expression.nn
+        } else {
+          basicBitwiseNegation(node)
+        }
+      case _ =>
+        basicBitwiseNegation(node)
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Constant expression
+  // -----------------------------------------------------------------------
+
+  /** Is this expression a constant (can be inlined without side effects)?
+    *
+    * Checks that all referenced variables are local to the expression's scope.
+    * Returns true if safe to inline, "f" if safe only within this function, false otherwise.
+    */
+  def isConstantExpression(node: AstNode, scope: AstScope | Null = null): Any = {
+    node match {
+      case _: AstConstant => true
+      case cls: AstClass =>
+        // Class extends must be constant
+        if (cls.superClass != null && isConstantExpression(cls.superClass.nn, scope) == false) {
+          false
+        } else {
+          // Check all properties
+          var allConst = true
+          var i = 0
+          while (allConst && i < cls.properties.size) {
+            val prop = cls.properties(i)
+            // Computed keys must be constant
+            prop match {
+              case op: AstObjectProperty if op.computedKey() =>
+                op.key match {
+                  case k: AstNode if isConstantExpression(k, scope) == false =>
+                    allConst = false
+                  case _ =>
+                }
+              case _ =>
+            }
+            // Static values must be constant
+            prop match {
+              case cp: AstClassProperty if cp.isStatic && cp.value != null =>
+                if (isConstantExpression(cp.value.nn, scope) == false) {
+                  allConst = false
+                }
+              case _: AstClassStaticBlock =>
+                allConst = false
+              case _ =>
+            }
+            i += 1
+          }
+          if (!allConst) false
+          else allRefsLocal(cls, scope)
+        }
+      case lambda: AstLambda =>
+        allRefsLocal(lambda, scope)
+      case unary: AstUnary =>
+        if (unary.expression == null) false
+        else isConstantExpression(unary.expression.nn, scope)
+      case binary: AstBinary =>
+        if (binary.left == null || binary.right == null) false
+        else {
+          val leftConst = isConstantExpression(binary.left.nn, scope)
+          if (leftConst == false) false
+          else {
+            val rightConst = isConstantExpression(binary.right.nn, scope)
+            if (rightConst == false) false
+            else if (leftConst == "f" || rightConst == "f") "f"
+            else true
+          }
+        }
+      case arr: AstArray =>
+        var allConst: Any = true
+        var i = 0
+        while (allConst != false && i < arr.elements.size) {
+          val elemConst = isConstantExpression(arr.elements(i), scope)
+          if (elemConst == false) allConst = false
+          else if (elemConst == "f") allConst = "f"
+          i += 1
+        }
+        allConst
+      case obj: AstObject =>
+        var allConst: Any = true
+        var i = 0
+        while (allConst != false && i < obj.properties.size) {
+          val propConst = isConstantExpression(obj.properties(i), scope)
+          if (propConst == false) allConst = false
+          else if (propConst == "f") allConst = "f"
+          i += 1
+        }
+        allConst
+      case op: AstObjectProperty =>
+        // Key must not be AstNode (computed), and value must be constant
+        op.key match {
+          case _: AstNode => false
+          case _ =>
+            if (op.value == null) true
+            else isConstantExpression(op.value.nn, scope)
+        }
+      case _ => false
+    }
+  }
+
+  /** Check if all symbol references in node are local to its scope.
+    *
+    * Returns:
+    * - true: all refs are local, safe to inline anywhere
+    * - "f": refs are local to this function scope, safe to inline within same function
+    * - false: has external refs, not safe to inline
+    */
+  private def allRefsLocal(node: AstScope, scope: AstScope | Null): Any =
+    boundary[Any] {
+      // If the node has been inlined, it's not safe
+      if (hasFlag(node, INLINED)) break(false)
+
+      val enclosed = node.enclosed
+      val variables = node.variables
+
+      var result: Any = true
+      var aborted = false
+
+      // Walk the node looking for SymbolRef and This
+      walk(node, (current, _) => {
+        if (aborted) {
+          WalkAbort
+        } else {
+          current match {
+            case ref: AstSymbolRef =>
+              val d = ref.definition()
+              if (d != null) {
+                val sd = d.nn
+                // Check if enclosed in node but not defined in node's variables
+                var isEnclosed = false
+                var ei = 0
+                while (!isEnclosed && ei < enclosed.size) {
+                  if (enclosed(ei).asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef]) {
+                    isEnclosed = true
+                  }
+                  ei += 1
+                }
+                if (isEnclosed && !variables.contains(sd.name)) {
+                  if (scope != null) {
+                    val scopeDef = ScopeAnalysis.findVariable(scope.nn, ref.name)
+                    // If undeclared: scope_def must also be null
+                    // Otherwise: scope_def must be the same definition
+                    if (sd.undeclared) {
+                      if (scopeDef == null) {
+                        result = "f"
+                        true // skip children
+                      } else {
+                        result = false
+                        aborted = true
+                        WalkAbort
+                      }
+                    } else if (scopeDef != null && (scopeDef.nn.asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef])) {
+                      result = "f"
+                      true // skip children
+                    } else {
+                      result = false
+                      aborted = true
+                      WalkAbort
+                    }
+                  } else {
+                    result = false
+                    aborted = true
+                    WalkAbort
+                  }
+                } else {
+                  true // skip children
+                }
+              } else {
+                true // skip children
+              }
+            case _: AstThis if node.isInstanceOf[AstArrow] =>
+              // Arrow function captures outer `this`
+              result = false
+              aborted = true
+              WalkAbort
+            case _ => null // continue walking
+          }
+        }
+      })
+      result
+    }
+
+  // -----------------------------------------------------------------------
+  // Contains this
+  // -----------------------------------------------------------------------
+
+  /** Does this node contain an AST_This reference?
+    *
+    * Stops at non-arrow function scopes since they have their own `this`.
+    */
+  def containsThis(node: AstNode): Boolean =
+    walk(node, (current, _) => {
+      current match {
+        case _: AstThis => WalkAbort
+        case scope: AstScope if (scope.asInstanceOf[AnyRef] ne node.asInstanceOf[AnyRef]) && !scope.isInstanceOf[AstArrow] =>
+          true // skip children (non-arrow scope has its own `this`)
+        case _ => null // continue walking
+      }
+    })
+
+  // -----------------------------------------------------------------------
+  // Self-referential class
+  // -----------------------------------------------------------------------
+
+  /** Does the class reference itself by name or `this` in non-deferred parts?
+    *
+    * Non-deferred parts are computed property keys and static initializers.
+    * If true, we cannot safely decompose the class.
+    */
+  def isSelfReferential(cls: AstClass): Boolean = {
+    val thisId = cls.name match {
+      case sym: AstSymbol =>
+        val d = sym.definition()
+        if (d != null) d.nn.id else -1
+      case _ => -1
+    }
+    var found = false
+    var classThis = true // track whether `this` refers to the class
+
+    // Visit only non-deferred class parts (computed keys and static initializers)
+    visitNondeferredClassParts(cls, (node, descend) => {
+      if (found) true // abort
+      else node match {
+        case _: AstThis =>
+          found = classThis
+          classThis
+        case ref: AstSymbolRef =>
+          val d = ref.definition()
+          found = d != null && d.nn.id == thisId
+          found
+        case lambda: AstLambda if !lambda.isInstanceOf[AstArrow] =>
+          // Non-arrow function: `this` inside refers to call-time value
+          val saveClassThis = classThis
+          classThis = false
+          descend()
+          classThis = saveClassThis
+          true // already descended
+        case _ =>
+          false // continue walking
+      }
+    })
+    found
+  }
+
+  /** Walk non-deferred class parts (computed keys and static initializers).
+    *
+    * Non-deferred parts are evaluated at class definition time:
+    * - Computed property keys
+    * - Static property initializers
+    * - Static blocks
+    * - Extends clause
+    */
+  def visitNondeferredClassParts(cls: AstClass, visitor: (AstNode, () => Unit) => Boolean): Unit = {
+    var i = 0
+    while (i < cls.properties.size) {
+      val prop = cls.properties(i)
+      prop match {
+        case op: AstObjectProperty if op.computedKey() =>
+          // Computed key is non-deferred
+          op.key match {
+            case k: AstNode =>
+              walkWithVisitor(k, visitor)
+            case _ =>
+          }
+        case _ =>
+      }
+      prop match {
+        case csb: AstClassStaticBlock =>
+          // Static block body is non-deferred
+          var j = 0
+          while (j < csb.body.size) {
+            walkWithVisitor(csb.body(j), visitor)
+            j += 1
+          }
+        case cp: AstClassProperty if cp.isStatic && cp.value != null =>
+          // Static property initializer is non-deferred
+          walkWithVisitor(cp.value.nn, visitor)
+        case cpp: AstClassPrivateProperty if cpp.isStatic && cpp.value != null =>
+          // Static private property initializer is non-deferred
+          walkWithVisitor(cpp.value.nn, visitor)
+        case _ =>
+      }
+      i += 1
+    }
+    // Also check extends clause
+    if (cls.superClass != null) {
+      walkWithVisitor(cls.superClass.nn, visitor)
+    }
+  }
+
+  /** Walk node tree, calling visitor for each node. */
+  private def walkWithVisitor(node: AstNode, visitor: (AstNode, () => Unit) => Boolean): Unit = {
+    val tw = new TreeWalker((current, descend) => {
+      if (visitor(current, descend)) true
+      else {
+        descend()
+        true
+      }
+    })
+    node.walk(tw)
+  }
+
+  // -----------------------------------------------------------------------
+  // Negate
+  // -----------------------------------------------------------------------
+
+  /** Negate an expression for drop_side_effect_free optimization.
+    *
+    * Used to convert IIFE in statement position to negated form
+    * to avoid needing parentheses.
+    */
+  def negate(node: AstNode, compressor: CompressorLike, firstInStatement: Boolean = false): AstNode = {
+    val neg = new AstUnaryPrefix
+    neg.start = node.start
+    neg.end = node.end
+    neg.operator = "!"
+    neg.expression = node
+    neg
+  }
 }
