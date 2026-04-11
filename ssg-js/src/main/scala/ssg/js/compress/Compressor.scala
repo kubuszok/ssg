@@ -540,8 +540,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // ---- Yield ----
         case self: AstYield => optimizeYield(self)
 
-        // ---- Calls ----
+        // ---- Calls (New before Call since AstNew extends AstCall) ----
+        case self: AstNew  => optimizeNew(self)
         case self: AstCall => optimizeCall(self)
+
+        // ---- Sequence ----
+        case self: AstSequence => optimizeSequence(self)
+
+        // ---- Unary (Prefix before Postfix) ----
+        case self: AstUnaryPrefix  => optimizeUnaryPrefix(self)
+        case self: AstUnaryPostfix => optimizeUnaryPostfix(self)
 
         // ---- Definitions (VarDef before Definitions) ----
         case self: AstVarDef                                  => optimizeVarDef(self)
@@ -586,7 +594,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case self: AstRegExp => literalsInBooleanContext(self)
 
         // ---- Class (before Scope/Block since AstClass extends AstScope) ----
+        case self: AstClassStaticBlock =>
+          tightenBody(self.body, this)
+          self
         case self: AstClass => optimizeClass(self)
+
+        // ---- Template strings ----
+        case self: AstPrefixedTemplateString => self
+        case self: AstTemplateString         => optimizeTemplateString(self)
 
         // ---- Lambdas (Function/Arrow before Lambda) ----
         // (AstFunction extends AstLambda, AstArrow extends AstLambda)
@@ -1659,6 +1674,557 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     )
     toplevel.transform(tt).asInstanceOf[AstToplevel]
+  }
+
+  // -----------------------------------------------------------------------
+  // Batch 2: Missing critical handlers
+  // -----------------------------------------------------------------------
+
+  /** Optimize unary prefix expressions: !, void, typeof, -, +, ~, delete. */
+  private def optimizeUnaryPrefix(self: AstUnaryPrefix): AstNode = {
+    if (self.expression == null) return self // @nowarn
+
+    val e = self.expression.nn
+
+    // delete on non-ref/non-prop → (expr, true)
+    if (
+      self.operator == "delete"
+      && !e.isInstanceOf[AstSymbolRef]
+      && !e.isInstanceOf[AstPropAccess]
+      && !e.isInstanceOf[AstChain]
+      && !isIdentifierAtom(e)
+    ) {
+      val trueNode = new AstTrue
+      trueNode.start = self.start
+      trueNode.end = self.end
+      return makeSequence(self, ArrayBuffer(e, trueNode)) // @nowarn
+    }
+
+    // void 0 shortcut → return as-is (already minimal)
+    if (self.operator == "void" && e.isInstanceOf[AstNumber] && e.asInstanceOf[AstNumber].value == 0.0) {
+      return self // @nowarn
+    }
+
+    // Lift sequences: !(a, b) → (a, !b)
+    val lifted = liftSequencesUnary(self)
+    if (!(lifted eq self)) return lifted // @nowarn
+
+    // void expr with side_effects → drop pure parts
+    if (optionBool("side_effects") && self.operator == "void") {
+      val dropped = DropSideEffectFree.dropSideEffectFree(e, this)
+      if (dropped == null) {
+        return makeVoid0(self) // @nowarn
+      } else if (!(dropped.nn eq e)) {
+        self.expression = dropped.nn
+        return self // @nowarn
+      }
+    }
+
+    // Boolean context optimizations
+    if (inBooleanContext()) {
+      self.operator match {
+        case "!" =>
+          // !!x in boolean context → x
+          e match {
+            case inner: AstUnaryPrefix if inner.operator == "!" =>
+              return inner.expression.nn // @nowarn
+            case _ =>
+          }
+        case "typeof" =>
+          // typeof always returns a non-empty string → true in boolean context
+          if (e.isInstanceOf[AstSymbolRef]) {
+            val trueNode = new AstTrue
+            trueNode.start = self.start
+            trueNode.end = self.end
+            return trueNode // @nowarn
+          } else {
+            val trueNode = new AstTrue
+            trueNode.start = self.start
+            trueNode.end = self.end
+            return makeSequence(self, ArrayBuffer(e, trueNode)) // @nowarn
+          }
+        case _ =>
+      }
+    }
+
+    // -Infinity handling
+    if (self.operator == "-" && e.isInstanceOf[AstInfinity]) {
+      // let it be handled by evaluate below
+    }
+
+    // Distribute +/- over * / %: -(a * b) → (-a) * b
+    if ((self.operator == "+" || self.operator == "-") && e.isInstanceOf[AstBinary]) {
+      val bin = e.asInstanceOf[AstBinary]
+      if (bin.operator == "*" || bin.operator == "/" || bin.operator == "%") {
+        if (bin.left != null) {
+          val newUnary = new AstUnaryPrefix
+          newUnary.operator = self.operator
+          newUnary.expression = bin.left.nn
+          newUnary.start = bin.left.nn.start
+          newUnary.end = bin.left.nn.end
+          val newBin = new AstBinary
+          newBin.operator = bin.operator
+          newBin.left = newUnary
+          newBin.right = bin.right
+          newBin.start = self.start
+          newBin.end = self.end
+          return newBin // @nowarn
+        }
+      }
+    }
+
+    // Evaluate
+    if (optionBool("evaluate")) {
+      // ~~x in 32-bit context → x
+      if (
+        self.operator == "~"
+        && e.isInstanceOf[AstUnaryPrefix]
+        && e.asInstanceOf[AstUnaryPrefix].operator == "~"
+        && in32BitContext()
+      ) {
+        return e.asInstanceOf[AstUnaryPrefix].expression.nn // @nowarn
+      }
+
+      // General evaluation (skip for -number/-Infinity/-BigInt to avoid infinite recursion)
+      if (
+        self.operator != "-"
+        || !(e.isInstanceOf[AstNumber] || e.isInstanceOf[AstInfinity] || e.isInstanceOf[AstBigInt])
+      ) {
+        val ev = Evaluate.evaluate(self, this)
+        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+          val evNode = makeNodeFromConstant(ev, self)
+          return bestOfExpression(evNode, self) // @nowarn
+        }
+      }
+    }
+
+    self
+  }
+
+  /** Optimize unary postfix (x++, x--): just lift sequences. */
+  private def optimizeUnaryPostfix(self: AstUnaryPostfix): AstNode =
+    liftSequencesUnary(self)
+
+  /** Optimize sequence expressions: remove side-effect-free prefix, trim trailing undefined. */
+  private def optimizeSequence(self: AstSequence): AstNode = {
+    if (self.expressions.isEmpty) return self // @nowarn
+
+    // Filter out side-effect-free expressions (keep last always)
+    if (optionBool("side_effects")) {
+      val exprs = ArrayBuffer.empty[AstNode]
+      var i = 0
+      val last = self.expressions.size - 1
+      while (i < last) {
+        val e = self.expressions(i)
+        val dropped = DropSideEffectFree.dropSideEffectFree(e, this)
+        if (dropped != null) exprs.addOne(dropped.nn)
+        i += 1
+      }
+      exprs.addOne(self.expressions(last))
+      if (exprs.size < self.expressions.size) {
+        self.expressions = exprs
+      }
+    }
+
+    // Flatten nested sequences
+    val flat = ArrayBuffer.empty[AstNode]
+    for (e <- self.expressions) {
+      e match {
+        case seq: AstSequence => flat.addAll(seq.expressions)
+        case _                => flat.addOne(e)
+      }
+    }
+    self.expressions = flat
+
+    // Single expression → unwrap
+    if (self.expressions.size == 1) return self.expressions(0) // @nowarn
+    // Empty → void 0
+    if (self.expressions.isEmpty) return makeVoid0(self) // @nowarn
+
+    self
+  }
+
+  /** Optimize `new` expressions: unsafe constructor replacements. */
+  private def optimizeNew(self: AstNew): AstNode = {
+    if (!optionBool("unsafe") || self.expression == null) return self // @nowarn
+    self.expression.nn match {
+      case ref: AstSymbolRef if isUndeclaredRef(ref) =>
+        ref.name match {
+          case "Object" if self.args.isEmpty =>
+            // new Object() → {}
+            val obj = new AstObject
+            obj.properties = ArrayBuffer.empty
+            obj.start = self.start
+            obj.end = self.end
+            return obj // @nowarn
+          case "RegExp" =>
+            // Could optimize but complex — skip for now
+          case _ =>
+        }
+      case _ =>
+    }
+    // Fall through to call optimization
+    optimizeCall(self)
+  }
+
+  /** Optimize template strings: fold constant segments, unwrap single-segment. */
+  private def optimizeTemplateString(self: AstTemplateString): AstNode = {
+    if (self.segments.isEmpty) return self // @nowarn
+
+    // Fold adjacent constant string segments
+    val folded = ArrayBuffer.empty[AstNode]
+    for (seg <- self.segments) {
+      seg match {
+        case ts: AstTemplateSegment =>
+          // Check if previous is also a template segment — merge
+          if (folded.nonEmpty) {
+            folded.last match {
+              case prev: AstTemplateSegment =>
+                prev.value = prev.value + ts.value
+              case _ =>
+                folded.addOne(ts)
+            }
+          } else {
+            folded.addOne(ts)
+          }
+        case expr =>
+          // Check if expression evaluates to a string constant
+          if (optionBool("evaluate")) {
+            val ev = Evaluate.evaluate(expr, this)
+            ev match {
+              case s: String =>
+                val tsSeg = new AstTemplateSegment
+                tsSeg.value = s
+                tsSeg.start = expr.start
+                tsSeg.end = expr.end
+                // Merge with previous segment if possible
+                if (folded.nonEmpty) {
+                  folded.last match {
+                    case prev: AstTemplateSegment =>
+                      prev.value = prev.value + s
+                    case _ =>
+                      folded.addOne(tsSeg)
+                  }
+                } else {
+                  folded.addOne(tsSeg)
+                }
+              case _ =>
+                folded.addOne(expr)
+            }
+          } else {
+            folded.addOne(expr)
+          }
+      }
+    }
+    self.segments = folded
+
+    // Single constant segment → string literal
+    if (self.segments.size == 1) {
+      self.segments(0) match {
+        case ts: AstTemplateSegment =>
+          val str = new AstString
+          str.value = ts.value
+          str.start = self.start
+          str.end = self.end
+          return str // @nowarn
+        case _ =>
+      }
+    }
+
+    self
+  }
+
+  // -----------------------------------------------------------------------
+  // Infrastructure helpers (used by multiple optimization handlers)
+  // -----------------------------------------------------------------------
+
+  /** Alternative is_lhs() that works within .optimize() by reading from the TreeWalker stack. */
+  def isLhs(): AstNode | Null = {
+    val selfNode = self()
+    val parentNode = parent(0)
+    if (parentNode == null) null
+    else Inference.isLhs(selfNode, parentNode.nn)
+  }
+
+  /** Lift sequences from a unary expression: !(a, b) → (a, !b) */
+  private def liftSequencesUnary(self: AstUnary): AstNode = {
+    if (optionBool("sequences") && self.expression != null) {
+      self.expression.nn match {
+        case seq: AstSequence if seq.expressions.size >= 2 =>
+          val exprs = ArrayBuffer.from(seq.expressions)
+          val lastExpr = exprs.remove(exprs.size - 1)
+          val cloned = self match {
+            case _: AstUnaryPrefix =>
+              val u = new AstUnaryPrefix
+              u.operator = self.operator
+              u.expression = lastExpr
+              u.start = self.start
+              u.end = self.end
+              u
+            case _ =>
+              val u = new AstUnaryPostfix
+              u.operator = self.operator
+              u.expression = lastExpr
+              u.start = self.start
+              u.end = self.end
+              u
+          }
+          exprs.addOne(cloned)
+          return makeSequence(self, exprs) // @nowarn
+        case _ =>
+      }
+    }
+    self
+  }
+
+  /** Lift sequences from a binary right operand: x + (a, b) → (a, x + b) when x is side-effect-free. */
+  @annotation.nowarn("msg=unused private member") // used by optimizeBinary expansion (Batch 3)
+  private def liftSequencesBinaryRight(self: AstBinary): AstNode = {
+    if (optionBool("sequences") && self.right != null && self.left != null && !hasSideEffects(self.left.nn, this)) {
+      self.right.nn match {
+        case seq: AstSequence if seq.expressions.size >= 2 =>
+          val exprs = seq.expressions
+          val last = exprs.size - 1
+          // Check if all expressions before the last are side-effect-free (for non-assignment)
+          val isAssign = self.operator == "=" && self.left.nn.isInstanceOf[AstSymbolRef]
+          var canLift = true
+          var splitAt = 0
+          while (splitAt < last && canLift) {
+            if (!isAssign && hasSideEffects(exprs(splitAt), this)) canLift = false
+            else splitAt += 1
+          }
+          if (splitAt == last) {
+            // Lift all: (a, b, c) → a, b, (x + c)
+            val x = ArrayBuffer.from(exprs.take(last))
+            val cloned = new AstBinary
+            cloned.operator = self.operator
+            cloned.left = self.left
+            cloned.right = exprs(last)
+            cloned.start = self.start
+            cloned.end = self.end
+            x.addOne(cloned)
+            return makeSequence(self, x) // @nowarn
+          } else if (splitAt > 0) {
+            // Partial lift
+            val prefix = ArrayBuffer.from(exprs.take(splitAt))
+            val cloned = new AstBinary
+            cloned.operator = self.operator
+            cloned.left = self.left
+            val newRight = new AstSequence
+            newRight.expressions = ArrayBuffer.from(exprs.drop(splitAt))
+            newRight.start = seq.start
+            newRight.end = seq.end
+            cloned.right = newRight
+            cloned.start = self.start
+            cloned.end = self.end
+            prefix.addOne(cloned)
+            return makeSequence(self, prefix) // @nowarn
+          }
+        case _ =>
+      }
+    }
+    self
+  }
+
+  /** flatten_object: convert `{a:1, b:2}.a` → `[1, 2][0]` for property access on literal objects. */
+  @annotation.nowarn("msg=unused private member") // used by optimizeDot/Sub expansion (Batch 5)
+  private def flattenObject(self: AstPropAccess, key: String): AstNode | Null = {
+    if (!optionBool("properties")) return null // @nowarn
+    if (key == "__proto__") return null // @nowarn
+    if (self.isInstanceOf[AstDotHash]) return null // @nowarn
+
+    self.expression match {
+      case obj: AstObject if obj != null =>
+        val props = obj.properties
+        var matchIdx = -1
+        var i = props.size - 1
+        while (i >= 0 && matchIdx < 0) {
+          props(i) match {
+            case kv: AstObjectKeyVal if !kv.computedKey() =>
+              val propKey = kv.key match {
+                case s: String       => s
+                case sym: AstSymbol  => sym.name
+                case _               => ""
+              }
+              if (propKey == key) matchIdx = i
+            case _ =>
+          }
+          i -= 1
+        }
+        if (matchIdx < 0) return null // @nowarn
+
+        // Check all props are flattenable (no computed keys, no getters/setters)
+        val allFlattenable = props.forall {
+          case kv: AstObjectKeyVal => !kv.computedKey()
+          case _ => false
+        }
+        if (!allFlattenable) return null // @nowarn
+
+        // Build: [v0, v1, ...][matchIdx]
+        val elements = ArrayBuffer.empty[AstNode]
+        for (p <- props) {
+          p match {
+            case kv: AstObjectKeyVal if kv.value != null => elements.addOne(kv.value.nn)
+            case _ =>
+          }
+        }
+        val arr = new AstArray
+        arr.elements = elements
+        arr.start = obj.start
+        arr.end = obj.end
+        val idx = new AstNumber
+        idx.value = matchIdx.toDouble
+        idx.start = self.start
+        idx.end = self.end
+        val sub = new AstSub
+        sub.expression = arr
+        sub.property = idx
+        sub.start = self.start
+        sub.end = self.end
+        sub
+      case _ => null
+    }
+  }
+
+  /** if_break_in_loop: optimize `for (...) { if (...) break; ... }` patterns. */
+  @annotation.nowarn("msg=unused private member") // used by optimizeFor expansion (Batch 5)
+  private def ifBreakInLoop(self: AstFor): AstNode = {
+    val first: AstNode | Null = self.body match {
+      case block: AstBlockStatement if block.body.nonEmpty => block.body(0)
+      case other => other
+    }
+    if (first == null) return self // @nowarn
+
+    // Check if first statement is a plain break targeting this loop
+    def isBreak(node: AstNode): Boolean =
+      node.isInstanceOf[AstBreak] && {
+        val target = loopcontrolTarget(node.asInstanceOf[AstLoopControl])
+        target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
+      }
+
+    // Case 1: `for (...) { break; ... }` → extract init + condition, drop loop
+    if (optionBool("dead_code") && isBreak(first.nn)) {
+      val body = ArrayBuffer.empty[AstNode]
+      if (self.init != null) {
+        self.init.nn match {
+          case s: AstStatement => body.addOne(s)
+          case expr =>
+            val ss = new AstSimpleStatement
+            ss.body = expr
+            ss.start = expr.start
+            ss.end = expr.end
+            body.addOne(ss)
+        }
+      }
+      if (self.condition != null) {
+        val ss = new AstSimpleStatement
+        ss.body = self.condition
+        ss.start = self.condition.nn.start
+        ss.end = self.condition.nn.end
+        body.addOne(ss)
+      }
+      extractFromUnreachableCode(this, self.body.nn, body)
+      val block = new AstBlockStatement
+      block.body = body
+      block.start = self.start
+      block.end = self.end
+      return block // @nowarn
+    }
+
+    // Case 2: `for (...) { if (cond) break; ... }` → fold cond into for-condition
+    first.nn match {
+      case ifNode: AstIf if ifNode.body != null && isBreak(ifNode.body.nn) =>
+        // if (cond) break; → condition &&= !cond
+        if (self.condition != null) {
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = ifNode.condition.nn
+          neg.start = ifNode.start
+          neg.end = ifNode.end
+          val combined = new AstBinary
+          combined.operator = "&&"
+          combined.left = self.condition
+          combined.right = neg
+          combined.start = self.start
+          combined.end = self.end
+          self.condition = combined
+        } else {
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = ifNode.condition.nn
+          neg.start = ifNode.start
+          neg.end = ifNode.end
+          self.condition = neg
+        }
+        // Drop the if statement, keep the rest of the body
+        self.body match {
+          case block: AstBlockStatement =>
+            block.body = ifNode.alternative match {
+              case null => block.body.tail
+              case alt =>
+                val rest = block.body.tail
+                alt.nn match {
+                  case b: AstBlock => ArrayBuffer.from(b.body) ++ rest
+                  case s           => ArrayBuffer(s) ++ rest
+                }
+            }
+          case _ =>
+            if (ifNode.alternative != null) self.body = ifNode.alternative
+            else {
+              val empty = new AstEmptyStatement
+              empty.start = self.start
+              empty.end = self.end
+              self.body = empty
+            }
+        }
+
+      case ifNode: AstIf if ifNode.alternative != null && isBreak(ifNode.alternative.nn) =>
+        // if (cond) {...} else break; → condition &&= cond
+        if (self.condition != null) {
+          val combined = new AstBinary
+          combined.operator = "&&"
+          combined.left = self.condition
+          combined.right = ifNode.condition.nn
+          combined.start = self.start
+          combined.end = self.end
+          self.condition = combined
+        } else {
+          self.condition = ifNode.condition
+        }
+        // Replace the if with its body
+        self.body match {
+          case block: AstBlockStatement =>
+            block.body = ifNode.body.nn match {
+              case b: AstBlock => ArrayBuffer.from(b.body) ++ block.body.tail
+              case s           => ArrayBuffer(s) ++ block.body.tail
+            }
+          case _ =>
+            self.body = ifNode.body
+        }
+
+      case _ =>
+    }
+
+    self
+  }
+
+  /** Check if an expression is a nullish check (== null or equivalent). */
+  @annotation.nowarn("msg=unused private member") // used by optimizeConditional expansion (Batch 4)
+  private def isNullishCheck(check: AstNode, checkSubject: AstNode): Boolean = {
+    check match {
+      case binary: AstBinary if binary.operator == "==" && binary.left != null && binary.right != null =>
+        val leftNullish = isNullish(binary.left.nn, this)
+        val rightNullish = isNullish(binary.right.nn, this)
+        if (leftNullish) {
+          // check.right should be equivalent to checkSubject
+          AstEquivalent.equivalentTo(binary.right.nn, checkSubject)
+        } else if (rightNullish) {
+          AstEquivalent.equivalentTo(binary.left.nn, checkSubject)
+        } else {
+          false
+        }
+      case _ => false
+    }
   }
 
   /** Walk a node tree, calling visitor for each node. Used in multi-pass convergence check. */
