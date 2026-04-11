@@ -98,14 +98,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   override def in32BitContext(): Boolean =
     if (!optionBool("evaluate")) false
     else {
-      val p = parent(0)
-      if (p == null) false
-      else {
-        p.nn match {
-          case bin: AstBinary if bitwiseBinop.contains(bin.operator) => true
-          case up:  AstUnaryPrefix if up.operator == "~"             => true
-          case _ => false
+      boundary[Boolean] {
+        var level = 0
+        var node: AstNode | Null = self()
+        var p: AstNode | Null = parent(level)
+        while (p != null) {
+          p.nn match {
+            case bin: AstBinary if bitwiseBinop.contains(bin.operator) => break(true)
+            case up: AstUnaryPrefix if up.operator == "~" => break(true)
+            // Walk through && / || / ?? right side
+            case bin: AstBinary if (bin.operator == "&&" || bin.operator == "||" || bin.operator == "??") && bin.right != null && (node.nn.asInstanceOf[AnyRef] eq bin.right.nn.asInstanceOf[AnyRef]) =>
+            // Walk through ternary non-condition branches
+            case cond: AstConditional if cond.condition != null && !(node.nn.asInstanceOf[AnyRef] eq cond.condition.nn.asInstanceOf[AnyRef]) =>
+            // Walk through sequence tail
+            case seq: AstSequence if seq.expressions.nonEmpty && (node.nn.asInstanceOf[AnyRef] eq seq.expressions.last.asInstanceOf[AnyRef]) =>
+            case _ => break(false)
+          }
+          node = p
+          level += 1
+          p = parent(level)
         }
+        false
       }
     }
 
@@ -644,9 +657,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     val validDirectives = Set("use asm", "use strict")
     if (
       optionBool("directives")
-      && (!validDirectives.contains(self.value)
-        || hasDirective(self.value) == null
-        || (hasDirective(self.value) ne self))
+      && (!validDirectives.contains(self.value) || {
+        val found = hasDirective(self.value)
+        found != null && (found.nn.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])
+      })
     ) {
       val empty = new AstEmptyStatement
       empty.start = self.start
