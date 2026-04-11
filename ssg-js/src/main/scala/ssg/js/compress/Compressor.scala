@@ -1813,7 +1813,167 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
-    // Constant folding (after all other optimizations)
+    // Associative constant folding for +, *, &, |, ^
+    if (optionBool("evaluate") && self.left != null && self.right != null) {
+      val assocOps = Set("+", "*", "&", "|", "^")
+      if (assocOps.contains(self.operator)) {
+        // (n + 2) + 3 → 5 + n  or  (2 * n) * 3 → 6 * n
+        if (self.right.nn.isInstanceOf[AstConstant] && self.left.nn.isInstanceOf[AstBinary]) {
+          val lBin = self.left.nn.asInstanceOf[AstBinary]
+          if (lBin.operator == self.operator) {
+            if (lBin.left != null && lBin.left.nn.isInstanceOf[AstConstant]) {
+              // (C1 op x) op C2 → (C1 op C2) op x
+              val folded = new AstBinary
+              folded.operator = self.operator
+              folded.left = lBin.left
+              folded.right = self.right
+              folded.start = lBin.left.nn.start
+              folded.end = self.right.nn.end
+              self.left = folded
+              self.right = lBin.right
+            } else if (lBin.right != null && lBin.right.nn.isInstanceOf[AstConstant]) {
+              // (x op C1) op C2 → (C1 op C2) op x
+              val folded = new AstBinary
+              folded.operator = self.operator
+              folded.left = lBin.right
+              folded.right = self.right
+              folded.start = lBin.right.nn.start
+              folded.end = self.right.nn.end
+              self.left = folded
+              self.right = lBin.left
+            }
+          }
+        }
+
+        // a + (b + c) → (a + b) + c  (right-associative to left-associative)
+        if (self.right.nn.isInstanceOf[AstBinary] && self.right.nn.asInstanceOf[AstBinary].operator == self.operator) {
+          val rBin = self.right.nn.asInstanceOf[AstBinary]
+          if (rBin.left != null) {
+            val newLeft = new AstBinary
+            newLeft.operator = self.operator
+            newLeft.left = self.left
+            newLeft.right = rBin.left
+            newLeft.start = self.left.nn.start
+            newLeft.end = rBin.left.nn.end
+            self.left = newLeft
+            self.right = rBin.right
+          }
+        }
+      }
+    }
+
+    // Bitwise optimizations
+    if (self.left != null && self.right != null && bitwiseBinop.contains(self.operator)) {
+      // ~x ^ ~y → x ^ y
+      if (
+        self.operator == "^"
+        && self.left.nn.isInstanceOf[AstUnaryPrefix] && self.left.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
+        && self.right.nn.isInstanceOf[AstUnaryPrefix] && self.right.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
+      ) {
+        val newBin = new AstBinary
+        newBin.operator = "^"
+        newBin.left = self.left.nn.asInstanceOf[AstUnaryPrefix].expression
+        newBin.right = self.right.nn.asInstanceOf[AstUnaryPrefix].expression
+        newBin.start = self.start
+        newBin.end = self.end
+        return newBin // @nowarn
+      }
+
+      // Shifts by 0: x >> 0 → x | 0,  x << 0 → x | 0
+      if (
+        (self.operator == "<<" || self.operator == ">>")
+        && self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0
+      ) {
+        self.operator = "|"
+      }
+
+      // Identity with 0: x | 0 → x (when x is 32-bit), x ^ 0 → x (when x is 32-bit)
+      val zeroSide: AstNode | Null =
+        if (self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0) self.right.nn
+        else if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0.0) self.left.nn
+        else null
+      if (zeroSide != null) {
+        val nonZeroSide = if ((zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef])) self.left.nn else self.right.nn
+        // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
+        if ((self.operator == "|" || self.operator == "^") && in32BitContext()) {
+          return nonZeroSide // @nowarn
+        }
+        // x & 0 → 0 (when x has no side effects and is 32-bit)
+        if (self.operator == "&" && !hasSideEffects(nonZeroSide, this)) {
+          return zeroSide.nn // @nowarn
+        }
+      }
+
+      // Full mask: x & -1 → x (when x is 32-bit or in 32-bit context)
+      def isFullMask(node: AstNode): Boolean =
+        (node.isInstanceOf[AstNumber] && node.asInstanceOf[AstNumber].value == -1.0) ||
+          (node.isInstanceOf[AstUnaryPrefix] && node.asInstanceOf[AstUnaryPrefix].operator == "-" &&
+            node.asInstanceOf[AstUnaryPrefix].expression != null &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.isInstanceOf[AstNumber] &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.asInstanceOf[AstNumber].value == 1.0)
+
+      val fullMask: AstNode | Null =
+        if (isFullMask(self.right.nn)) self.right.nn
+        else if (isFullMask(self.left.nn)) self.left.nn
+        else null
+      if (fullMask != null) {
+        val otherSide = if ((fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef])) self.left.nn else self.right.nn
+        // x & -1 → x
+        if (self.operator == "&" && in32BitContext()) {
+          return otherSide // @nowarn
+        }
+        // x ^ -1 → ~x
+        if (self.operator == "^" && in32BitContext()) {
+          val neg = new AstUnaryPrefix
+          neg.operator = "~"
+          neg.expression = otherSide
+          neg.start = self.start
+          neg.end = self.end
+          return neg // @nowarn
+        }
+      }
+
+      // x | x �� 0 | x, x & x → 0 | x (when equivalent and no side effects, in 32-bit context)
+      if (
+        (self.operator == "|" || self.operator == "&")
+        && AstEquivalent.equivalentTo(self.left.nn, self.right.nn)
+        && !hasSideEffects(self.left.nn, this)
+        && in32BitContext()
+      ) {
+        val zero = new AstNumber
+        zero.value = 0.0
+        zero.start = self.start
+        zero.end = self.end
+        self.left = zero
+        self.operator = "|"
+      }
+    }
+
+    // Associativity flattening: x && (y && z) → x && y && z (also ||, +)
+    if (
+      self.left != null && self.right != null
+      && self.right.nn.isInstanceOf[AstBinary]
+      && self.right.nn.asInstanceOf[AstBinary].operator == self.operator
+    ) {
+      val rBin = self.right.nn.asInstanceOf[AstBinary]
+      val shouldFlatten =
+        Inference.lazyOp.contains(self.operator) ||
+          (self.operator == "+"
+            && rBin.left != null
+            && (isString(rBin.left.nn, this) || (isString(self.left.nn, this) && rBin.right != null && isString(rBin.right.nn, this))))
+      if (shouldFlatten && rBin.left != null) {
+        val newLeft = new AstBinary
+        newLeft.operator = self.operator
+        newLeft.left = self.left
+        newLeft.right = rBin.left
+        newLeft.start = self.left.nn.start
+        newLeft.end = rBin.left.nn.end
+        self.left = newLeft
+        self.right = rBin.right
+      }
+    }
+
+    // Final constant folding (after all other optimizations)
     if (optionBool("evaluate") && self.left != null && self.right != null) {
       val ev = Evaluate.evaluate(self, this)
       if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
