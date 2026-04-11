@@ -162,6 +162,52 @@ Each audited file gets a `Migration notes:` block in its header comment.
 - **Statuses**: `pass`, `minor_issues`, `major_issues`
 - **In-file notes**: `Renames`, `Convention`, `Idiom`, `Audited` date
 
+## Porting Workflow: Implementer + Auditor Loop
+
+All porting work MUST use the **implement → audit → fix → re-audit** loop.
+Never consider porting work "done" after a single implementation pass.
+
+### Agents
+
+| Agent | File | Role | Can edit code? |
+|-------|------|------|---------------|
+| `port-implementer` | `.claude/agents/port-implementer.md` | Ports original code to Scala 3 | Yes |
+| `port-auditor` | `.claude/agents/port-auditor.md` | Compares port against original, finds gaps | No (read-only + issues DB) |
+
+### The loop
+
+```
+1. IMPLEMENTER: Port the file/module
+   → Compile, test, report metrics
+
+2. AUDITOR: Compare original vs port
+   → Produce findings report with specific action items
+   → Create/reopen issues for each discrepancy
+
+3. ORCHESTRATOR (you): Review auditor report
+   → If verdict is PASS: done, commit
+   → If verdict is FAIL/NEEDS REWORK: send findings to implementer
+
+4. IMPLEMENTER: Address each finding (mandatory, not suggestions)
+   → Compile, test, report what changed
+
+5. AUDITOR: Re-audit (verify findings were actually fixed)
+   → Repeat until PASS
+```
+
+### When to use this workflow
+
+- Porting a new file from original source
+- Filling gaps in a partially-ported file
+- Any task where the deliverable is "make the Scala code match the original"
+
+### When NOT to use this workflow
+
+- Bug fixes in already-ported code
+- Adding tests
+- Build/config changes
+- Documentation
+
 ## Documentation
 
 | Path | Content |
