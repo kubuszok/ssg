@@ -567,7 +567,7 @@ final class EvaluateVisitor(
   override def visitSelectorExpression(node: SelectorExpression): Value = {
     // Returns the current enclosing style rule's selector text as an
     // unquoted SassString, or SassNull when not inside any style rule.
-    // Full SelectorList value type is deferred — text suffices for `&`
+    // Full SelectorList value type is postponed — text suffices for `&`
     // SassScript references in the current text-based selector model.
     val _ = node
     _styleRule.fold[Value](SassNull) { rule =>
@@ -1045,7 +1045,7 @@ final class EvaluateVisitor(
     }
 
     // Nested declarations: recurse with no added parent (they attach to
-    // the enclosing style rule in place for now).
+    // the enclosing style rule in place currently).
     node.children.foreach { kids =>
       _withScope {
         for (statement <- kids) {
@@ -2309,7 +2309,7 @@ final class EvaluateVisitor(
           val _ = statement.accept(this)
         }
         // Falling off the end of a function body with no @return is an error
-        // in Sass; return null for now (matches "null" result of no-op).
+        // in Sass; return null currently (matches "null" result of no-op).
         SassNull
       } catch {
         case rs: ReturnSignal => rs.value
@@ -2612,7 +2612,7 @@ final class EvaluateVisitor(
   }
 
   // ===========================================================================
-  // CssVisitor — stubs (Phase 19+)
+  // CssVisitor — skeletons (future)
   // ===========================================================================
 
   private def cssStub(name: String): Value =

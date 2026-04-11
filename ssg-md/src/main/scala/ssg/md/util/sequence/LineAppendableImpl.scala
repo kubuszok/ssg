@@ -70,11 +70,13 @@ class LineAppendableImpl(
   private val optionStack:                 scala.collection.mutable.Stack[Int] = scala.collection.mutable.Stack()
   private[sequence] var modificationCount: Int                                 = 0
 
-  def this(formatOptions: Int) =
+  def this(formatOptions: Int) = {
     this(Nullable.empty[Appendable], LineAppendable.toOptionSet(formatOptions))
+  }
 
-  def this(builder: Nullable[Appendable], formatOptions: Int) =
+  def this(builder: Nullable[Appendable], formatOptions: Int) = {
     this(builder, LineAppendable.toOptionSet(formatOptions))
+  }
 
   override def getEmptyAppendable: LineAppendable =
     new LineAppendableImpl(Nullable(this: Appendable), getOptions)

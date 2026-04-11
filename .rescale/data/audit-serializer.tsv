@@ -1,0 +1,86 @@
+dart_method	dart_line	ssg_method	ssg_line	status	notes
+serialize (top-level fn)	46	SerializeVisitor.serialize	146	PORTED	Faithful: charset prefix, BOM for compressed, source map wiring
+serializeValue (top-level fn)	91	SerializeVisitor.serializeValue (companion)	1311	PORTED	Faithful: inspect + quote params mapped
+serializeSelector (top-level fn)	107	(none)	-	MISSING	No standalone selector serialization entry point; selectors are formatted inline via formatSelectorList
+_SerializeVisitor constructor	153	SerializeVisitor constructor	42	SIMPLIFIED	Missing: useSpaces, indentWidth, lineFeed, logger params; always 2-space indent, LF only
+visitCssStylesheet	173	visitCssStylesheet	898	PORTED	Faithful port of sibling spacing, semicolon, trailing comment, isGroupEnd logic
+visitCssComment	196	visitCssComment	1235	SIMPLIFIED	Missing: minimumIndentation re-indenting of multi-line comments; missing sourceMappingURL/sourceURL filtering; missing _for(node) source-map span association
+visitCssAtRule	220	visitCssAtRule	1241	SIMPLIFIED	Missing: _for(node) source-map span wrapping; works but no span association for source maps
+visitCssMediaRule	239	visitCssMediaRule	1258	SIMPLIFIED	Missing: per-query _visitMediaQuery rendering; uses mkString instead; missing compressed-mode space optimization for "(not " conditions
+visitCssImport	261	visitCssImport	1272	SIMPLIFIED	Missing: _writeImportUrl compressed-mode url() stripping; missing _for() span tracking
+_writeImportUrl	277	(none)	-	MISSING	Compressed-mode import URL optimization (strips url() wrapper, adds quotes if needed)
+visitCssKeyframeBlock	296	visitCssKeyframeBlock	1283	PORTED	Faithful
+_visitMediaQuery	307	(none)	-	MISSING	Full media query rendering with modifier/type/conditions/conjunction/negation logic
+visitCssStyleRule	332	visitCssStyleRule	938	PORTED	Faithful: selector accept + children
+visitCssSupportsRule	340	visitCssSupportsRule	1265	SIMPLIFIED	Missing: compressed-mode space suppression when condition starts with '('
+visitCssDeclaration	357	visitCssDeclaration	1034	PORTED	Faithful: parsedAsSassScript branching, custom property handling, !important
+_writeFoldedValue	403	writeFoldedCustomPropertyValue	1091	PORTED	Faithful port of newline folding for custom properties
+_writeReindentedValue	420	writeReindentedCustomPropertyValue	1111	PORTED	Faithful port with minimumIndentation + writeWithIndent
+_minimumIndentation	442	minimumIndentation	1132	PORTED	Faithful port
+_writeWithIndent	466	writeWithIndent	1179	PORTED	Faithful port
+visitBoolean	518	(none)	-	MISSING	SassBoolean value visitor; no SassBoolean type in SSG yet
+visitCalculation	520	(none)	-	MISSING	SassCalculation visitor: writes calc(), min(), max(), clamp() etc. with full argument serialization
+_writeCalculationValue	527	(none)	-	MISSING	Calculation value writer: handles infinity/NaN, complex units, CalculationOperation with precedence-based parenthesization
+_writeCalculationUnits	580	appendCalculationUnits	705	PORTED	Faithful port; used inline for non-finite/complex-unit number formatting
+_parenthesizeCalculationRhs	605	(none)	-	MISSING	Calculation RHS parenthesization logic for operator precedence
+visitColor	616	formatColorDispatch	385	SIMPLIFIED	SSG dispatches legacy vs modern rgb vs toCssString(); missing: full hsl/hwb modern syntax with deg/% units, lab/lch/oklab/oklch with out-of-gamut color-mix() and relative color syntax, _writeColorFunction for non-legacy spaces
+_writeChannel	724	channelOrNone	419	SIMPLIFIED	SSG only handles null->none; missing: non-finite channel values delegating to visitNumber, unit suffix support
+_writeLegacyColor	740	formatColor	859	SIMPLIFIED	Missing: out-of-gamut HSL fallback, ColorFormat.rgbFunction/SpanColorFormat respect, compressed-mode shortest-representation comparison (rgb vs hsl character count), HWB->HSL fallback
+_tryIntegerRgb	843	(in formatColor)	859	SIMPLIFIED	Partially covered: hex shorthand + named color logic exists but missing canUseShortHex tie-breaking with name length comparison in compressed mode
+_canUseHex	870	(inline)	874	SIMPLIFIED	SSG uses range check r<0||r>255 instead of fuzzy channel validation
+_canUseHexForChannel	879	(none)	-	MISSING	Fuzzy integer + range check for individual channels
+_writeRgb	885	(in formatColor)	873	SIMPLIFIED	SSG uses string interpolation rgba(); missing: separate rgb() path, channel('red') named access, comma separator helper
+_writeHsl	904	(none)	-	MISSING	HSL function serialization with hue/saturation%/lightness% and hsla() for non-opaque
+_writeHwb	925	(none)	-	MISSING	HWB function serialization (inspect-mode only, new color syntax)
+_writeColorFunction	945	(none)	-	MISSING	color() function syntax for display-p3, xyz-d65, etc.
+_isSymmetricalHex	968	(inline)	879	PORTED	Inline equivalent in formatColor
+_canUseShortHex	972	(inline)	879	PORTED	Inline equivalent in formatColor
+_writeHexComponent	978	(inline)	877	PORTED	Uses format string instead of charCode writes
+_maybeWriteSlashAlpha	985	appendSlashAlpha	427	SIMPLIFIED	SSG version works but uses StringBuilder instead of buffer; missing: _writeChannel delegation for non-finite alpha
+visitFunction	993	(none)	-	MISSING	SassFunction inspect-mode serialization: get-function("name")
+visitMixin	1003	(none)	-	MISSING	SassMixin inspect-mode serialization: get-mixin("name")
+visitList	1013	formatList	523	PORTED	Faithful port: brackets, singleton, separator, elementNeedsParens, blank filtering
+_separatorString	1056	(inline in formatList)	557	PORTED	Inline equivalent
+_elementNeedsParens	1068	elementNeedsParens	596	PORTED	Faithful port
+visitMap	1080	formatMap	612	PORTED	Faithful port with inspect-mode wrapping
+_writeMapElement	1094	(inline in formatMap)	619	PORTED	Inline equivalent
+visitNull	1103	(in formatValue)	361	PORTED	Faithful: "null" in inspect, "" otherwise
+visitNumber	1107	formatSassNumber	643	SIMPLIFIED	Missing: asSlash pair rendering (before/after slash); non-finite and complex units delegate to SassCalculation.unsimplified in dart-sass, SSG uses custom formatNonFiniteNumber/formatComplexUnitNumber
+_writeNumberToString	1130	(none)	-	MISSING	Helper that writes a number to a separate buffer and returns the string; used by _writeLegacyColor for length comparison
+_writeNumber	1140	writeNumberTo	724	PORTED	Faithful port: fuzzy integer clamping, removeExponent, compressed leading-zero stripping, writeRounded
+_removeExponent	1181	removeExponent (companion)	1341	PORTED	Faithful port
+_writeRounded	1237	writeRounded	763	PORTED	Faithful port with digit array rounding
+visitString	1347	formatString	470	SIMPLIFIED	Missing: _quote field support (SSG always quotes when hasQuotes=true); missing _tryPrivateUseCharacter for PUA escaping in expanded mode
+_visitQuotedString	1360	(in formatString)	482	SIMPLIFIED	Missing: forceDoubleQuote parameter, restart-on-both-quotes logic, _tryPrivateUseCharacter PUA escaping, _writeEscape for control chars (SSG uses simpler hex escape)
+_visitUnquotedString	1452	(in formatString)	471	SIMPLIFIED	Missing: afterNewline whitespace collapsing logic (SSG just replaces \n with space); missing _tryPrivateUseCharacter
+_tryPrivateUseCharacter	1487	(none)	-	MISSING	Private Use Area character escaping in expanded mode; handles BMP and surrogate pairs
+_writeEscape	1519	(none)	-	MISSING	Hex escape writer with trailing space disambiguation
+visitAttributeSelector	1532	(none)	-	MISSING	Attribute selector [attr=val] serialization with identifier detection and quoting
+visitClassSelector	1554	(none)	-	MISSING	.class selector serialization (SSG uses CompoundSelector.toString instead)
+visitComplexSelector	1559	(none)	-	MISSING	Complex selector visitor (SSG uses writeComplexSelectorTo helper instead, not a visitor method)
+_writeCombinators	1583	(inline in writeComplexSelectorTo)	1013	PORTED	Inline equivalent
+visitCompoundSelector	1586	(none)	-	MISSING	Compound selector visitor with empty-compound-emits-* fallback
+visitIDSelector	1598	(none)	-	MISSING	#id selector serialization (SSG uses CompoundSelector.toString)
+visitSelectorList	1603	formatSelectorList	961	PORTED	Faithful: invisible filtering, lineBreak handling, comma separation
+visitParentSelector	1625	(none)	-	MISSING	& parent selector serialization with suffix
+visitPlaceholderSelector	1630	(none)	-	MISSING	%placeholder selector serialization
+visitPseudoSelector	1635	(none)	-	MISSING	:pseudo selector serialization with :not(%invisible) optimization, argument + nested selector
+visitTypeSelector	1659	(none)	-	MISSING	type selector serialization
+visitUniversalSelector	1663	(none)	-	MISSING	* universal selector with namespace
+_for	1675	recordMapping	117	SIMPLIFIED	SSG records mapping but does not wrap callback in span association
+_write	1678	(inline)	-	SIMPLIFIED	SSG writes CssValue.value directly without span tracking
+_visitChildren	1682	writeChildrenIn	303	PORTED	Faithful: invisible filtering, semicolon, trailing comment, isGroupEnd blank line, indentation
+_requiresSemicolon	1725	requiresSemicolon	276	PORTED	Faithful
+_isTrailingComment	1733	isTrailingComment	283	SIMPLIFIED	SSG uses simpler span comparison; missing: searchFrom/lastIndexOf("{") logic for nested-parent trailing comments
+_writeLineFeed	1764	writeLine	259	SIMPLIFIED	Missing: configurable LineFeed (always \n)
+_writeOptionalSpace	1769	writeSpace	262	PORTED	Faithful
+_writeIndentation	1774	writeIndent	250	SIMPLIFIED	Always 2-space; missing: configurable indentCharacter and indentWidth
+_writeTimes	1780	(none)	-	MISSING	Generic char-repeat writer; SSG uses inline loops
+_writeBetween	1788	(none)	-	MISSING	Generic iterable-join writer; SSG uses inline loops or mkString
+_commaSeparator (getter)	1805	(inline)	-	PORTED	Inline equivalent throughout
+_indent	1808	(inline in writeChildrenIn)	319	PORTED	Inline increment/decrement
+_withoutIndentation	1815	(none)	-	MISSING	Temporarily zeroes indentation for trailing comments; SSG omits this
+_isInvisible	1823	isNodeInvisible	74	SIMPLIFIED	SSG implements manually; missing: _inspect bypass (dart-sass shows invisible nodes in inspect mode), isInvisibleHidingComments distinction
+OutputStyle (enum)	1831	OutputStyle (object)	33	SIMPLIFIED	SSG uses String constants instead of enum
+LineFeed (enum)	1850	(none)	-	MISSING	LineFeed enum (cr, crlf, lf, lfcr) with text property
+SerializeResult (typedef)	1875	SerializeResult (case class)	39	PORTED	Faithful: css + sourceMap

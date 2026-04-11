@@ -96,16 +96,27 @@ abstract class Parser protected (
     }
   }
 
-  /** Consumes and ignores a loud (CSS-style) comment. */
+  /** Consumes and ignores a loud (CSS-style) comment.
+    *
+    * In dart-sass, `scanner.readChar()` throws at EOF, so an
+    * unterminated comment naturally produces "expected more input."
+    * Our `readChar()` returns -1 instead, so we check explicitly.
+    */
   protected def loudComment(): Unit = {
     scanner.expect("/*")
-    var done = false
-    while (!done) {
+    while (true) {
+      if (scanner.isDone) scanner.error("expected more input.")
       var next = scanner.readChar()
-      if (next == CharCode.$asterisk) {
-        while (next == CharCode.$asterisk)
+      if (next != CharCode.$asterisk) { /* continue */ }
+      else {
+        // consume consecutive asterisks
+        if (scanner.isDone) scanner.error("expected more input.")
+        next = scanner.readChar()
+        while (next == CharCode.$asterisk) {
+          if (scanner.isDone) scanner.error("expected more input.")
           next = scanner.readChar()
-        if (next == CharCode.$slash) done = true
+        }
+        if (next == CharCode.$slash) return
       }
     }
   }

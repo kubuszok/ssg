@@ -1,0 +1,7 @@
+# Enforcement scan roots — paths relative to project root.
+# Used by `re-scale enforce shortcuts`, `stale-stubs`, `verify --all`.
+ssg-md/src/main/scala
+ssg-liquid/src/main/scala
+ssg-minify/src/main/scala
+ssg-js/src/main/scala
+ssg-sass/src/main/scala

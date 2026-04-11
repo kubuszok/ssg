@@ -21,8 +21,9 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class BuilderBase[T <: BuilderBase[T]](options: Nullable[DataHolder]) extends MutableDataSet(options) {
 
-  def this() =
+  def this() = {
     this(Nullable.empty[DataHolder])
+  }
 
   // loaded extensions
   private val loadedExtensions: mutable.HashSet[Class[?]] = mutable.HashSet.empty

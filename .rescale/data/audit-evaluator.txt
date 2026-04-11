@@ -1,0 +1,589 @@
+================================================================================
+ EvaluateVisitor PORTING GAP AUDIT
+ dart-sass evaluate.dart  ->  ssg-sass EvaluateVisitor.scala
+ Date: 2026-04-10
+================================================================================
+
+SOURCE STATS
+  dart-sass evaluate.dart:  4938 lines  (+ ~70 lines _ImportedCssVisitor, _EvaluationContext, typedefs)
+  ssg-sass EvaluateVisitor.scala:  2630 lines
+  Coverage ratio (LoC):  ~53%
+
+================================================================================
+ COMPLETE METHOD CATALOG
+================================================================================
+
+Legend:
+  PORTED     = faithful port, logic matches dart-sass
+  SIMPLIFIED = present but with reduced fidelity (missing edge cases, features)
+  MISSING    = not present at all
+  STUB       = throws UnsupportedOperationException or has placeholder body
+
+--- CONSTRUCTOR / INITIALIZATION (dart lines 370-710) -------------------------
+
+  constructor _EvaluateVisitor()           SIMPLIFIED
+    - SSG: constructor takes importCache/logger/importer; sets up Environment.
+    - MISSING: _builtInFunctions map population from globalFunctions
+    - MISSING: _builtInModules map population from coreModules
+    - MISSING: _nodeImporter (Node.js compat — intentionally omitted)
+    - MISSING: _quietDeps, _sourceMap, _compileContext fields
+    - MISSING: meta functions defined in constructor body:
+        global-variable-exists    MISSING (in constructor)
+        variable-exists           MISSING (in constructor)
+        function-exists           MISSING (in constructor)
+        mixin-exists              MISSING (in constructor)
+        content-exists            MISSING (in constructor)
+        module-variables          MISSING (in constructor)
+        module-functions          MISSING (in constructor)
+        module-mixins             MISSING (in constructor)
+        get-function              MISSING (in constructor)
+        get-mixin                 MISSING (in constructor)
+        call                      MISSING (in constructor)
+    - MISSING: meta mixins (load-css, apply) defined in constructor body
+
+--- STATE FIELDS (dart lines 143-366) -----------------------------------------
+
+  _importCache                             PORTED (_effectiveImportCache)
+  _nodeImporter                            MISSING (intentional — no Node.js)
+  _builtInFunctions                        MISSING (functions are in Environment)
+  _builtInModules                          MISSING (handled ad-hoc in visitUseRule)
+  _modules                                 MISSING (no Module<Callable> registry)
+  _moduleConfigurations                    MISSING
+  _moduleNodes                             MISSING
+  _logger                                  PORTED
+  _warningsEmitted                         MISSING (dedup set)
+  _quietDeps                               MISSING
+  _sourceMap                               MISSING
+  _compileContext                           MISSING
+  _environment                             PORTED
+  _styleRuleIgnoringAtRoot                 MISSING (uses _styleRule directly)
+  _mediaQueries                            SIMPLIFIED (List not Nullable)
+  _mediaQuerySources                       MISSING
+  _parent                                  PORTED (Nullable)
+  _declarationName                         MISSING (nested declaration prefix)
+  _member                                  MISSING (stack frame name)
+  _callableNode                            MISSING
+  _importSpan                              MISSING
+  _inFunction                              MISSING
+  _inUnknownAtRule                         MISSING
+  _atRootExcludingStyleRule                MISSING
+  _inKeyframes                             MISSING
+  _inSupportsDeclaration                   PORTED
+  _loadedUrls                              PORTED
+  _activeModules                           SIMPLIFIED (_activeImports)
+  _stack                                   MISSING (call stack for traces)
+  _importer                                PORTED
+  _inDependency                            MISSING
+  _stylesheet                              MISSING
+  _root                                    PORTED
+  _endOfImports                            PORTED
+  _outOfOrderImports                       MISSING
+  _preModuleComments                       MISSING
+  _extensionStore                          SIMPLIFIED (custom media-scoped)
+  _configuration                           SIMPLIFIED (_pendingConfig)
+  _hasCssNesting                           MISSING
+
+--- PUBLIC ENTRY POINTS (dart lines 712-782) ----------------------------------
+
+  run(Importer?, Stylesheet)               SIMPLIFIED -> run(Stylesheet)
+    - MISSING: Importer arg, _activeModules tracking, _addExceptionTrace,
+      withEvaluationContext, _execute call, _combineCss call, loadedUrls on error
+  runExpression(Importer?, Expression)      SIMPLIFIED -> runExpression(Stylesheet, Expression)
+    - MISSING: _withFakeStylesheet, _addExceptionTrace
+  runStatement(Importer?, Statement)        MISSING
+
+--- INFRASTRUCTURE (dart lines 753-1163) --------------------------------------
+
+  _assertInModule                          MISSING
+  _withFakeStylesheet                      MISSING
+  _loadModule                              MISSING (ad-hoc in visitUseRule/visitForwardRule)
+  _execute                                 MISSING (ad-hoc module evaluation)
+  _addOutOfOrderImports                    MISSING
+  _combineCss                              MISSING (no module CSS combination)
+  _extendModules                           MISSING
+  _throwForUnsatisfiedExtension            PORTED (in _applyExtends)
+  _indexAfterImports                       MISSING
+  Evaluator class                          MISSING (outer helper class)
+
+--- STATEMENT VISITORS --------------------------------------------------------
+
+  visitStylesheet                          SIMPLIFIED
+    - MISSING: globalVariables walk to ensure all vars appear in module def
+    - SSG version doesn't call visitVariableDeclaration for unassigned globals
+
+  visitAtRootRule                          SIMPLIFIED
+    - PORTED: query parsing, ancestor walk, re-parenting
+    - MISSING: _trimIncluded, _scopeForAtRoot, _hasCssNesting opt
+    - MISSING: proper AtRootQuery.parse with InterpolationMap
+    - SIMPLIFIED: no _withMediaQueries/keyframes/unknownAtRule layering
+
+  _trimIncluded                            MISSING
+  _scopeForAtRoot                          MISSING
+
+  visitContentBlock                        SIMPLIFIED
+    - dart-sass throws UnsupportedError; SSG evaluates children as fallback
+    - Difference: should throw per dart-sass contract
+
+  visitContentRule                         SIMPLIFIED
+    - PORTED: environment.content lookup, body execution
+    - MISSING: _runUserDefinedCallable arg binding (uses manual _bindParameters)
+    - MISSING: dart-sass withContent/asMixin environment wrapping
+
+  visitDebugRule                           PORTED
+    - Faithful (minor: SSG appends to _warnings list, dart uses _logger only)
+
+  visitDeclaration                         SIMPLIFIED
+    - PORTED: name interpolation, value evaluation, child recursion
+    - MISSING: _declarationName prefix chain
+    - MISSING: _isEmptyList check, custom property empty value check
+    - MISSING: _copyParentAfterSibling call
+    - MISSING: valueSpanForMap (source map)
+    - MISSING: parsedAsSassScript nested declaration guard
+
+  visitEachRule                            PORTED
+    - Faithful destructuring and iteration
+
+  _setMultipleVariables                    PORTED (inline in visitEachRule)
+
+  visitErrorRule                           PORTED
+
+  visitExtendRule                          SIMPLIFIED
+    - PORTED: target validation, compound/complex rejection
+    - PORTED: media-scoped extension stores, pending extend tracking
+    - MISSING: bogus combinator deprecation warnings for extender
+    - MISSING: _performInterpolationWithMap, _extensionStore.addExtension
+    - SIMPLIFIED: uses custom MutableExtensionStore, not dart's ExtensionStore
+
+  visitAtRule                              SIMPLIFIED
+    - PORTED: name interpolation, childless/parent branching
+    - MISSING: _declarationName guard
+    - MISSING: _inKeyframes / _inUnknownAtRule tracking
+    - MISSING: _hasCssNesting opt
+    - MISSING: style rule copy inside at-rule (bubble up)
+    - MISSING: through: (node) => node is CssStyleRule
+
+  visitForRule                             PORTED
+    - Faithful: unit coercion, direction, exclusive bound
+
+  visitForwardRule                         SIMPLIFIED
+    - PORTED: loading upstream module, configuration merging
+    - MISSING: _loadModule infrastructure (uses ad-hoc importer.canonicalize)
+    - MISSING: _addForwardConfiguration (uses _pendingConfig instead)
+    - MISSING: _removeUsedConfiguration
+    - MISSING: _assertConfigurationIsEmpty
+    - MISSING: _registerCommentsForModule
+    - MISSING: Configuration.throughForward
+    - MISSING: isGuarded variable handling in forward configuration
+
+  _addForwardConfiguration                 MISSING
+  _registerCommentsForModule               MISSING
+  _removeUsedConfiguration                 MISSING
+  _assertConfigurationIsEmpty              MISSING
+
+  visitFunctionRule                        PORTED
+
+  visitIfRule                              PORTED
+    - Minor: uses semi-global scope correctly
+
+  visitImportRule                          SIMPLIFIED
+    - PORTED: static import rendering, dynamic import loading
+    - PORTED: forImport/importForwards path for @use/@forward files
+    - MISSING: dart's full _visitDynamicImport (environment save/restore)
+    - MISSING: _loadStylesheet infrastructure
+    - MISSING: _combineCss for imported modules with extensions
+    - MISSING: _ImportedCssVisitor
+
+  _visitDynamicImport                      SIMPLIFIED (as _loadDynamicImport)
+  _loadStylesheet                          MISSING
+  _visitStaticImport                       SIMPLIFIED (inline in visitImportRule)
+  _importLikeNode                          MISSING (Node.js — intentional)
+  _applyMixin                              SIMPLIFIED (_invokeMixinCallable)
+
+  visitIncludeRule                         PORTED
+    - PORTED: namespace lookup, content block creation
+    - MISSING: originalName '--' check for CSS mixin forward-compat
+    - MISSING: AstNode.fake spanWithoutContent
+    - MISSING: _applyMixin's full dispatch with content validation
+
+  visitMixinRule                           PORTED
+
+  visitLoudComment                         SIMPLIFIED
+    - PORTED: interpolation, comment node creation
+    - MISSING: _inFunction check (suppress in function bodies)
+    - MISSING: endOfImports tracking
+
+  visitMediaRule                           SIMPLIFIED
+    - PORTED: query parsing, bubble-up inside style rules
+    - MISSING: _hasCssNesting opt
+    - MISSING: proper _mergeMediaQueries / _mediaQuerySources
+    - MISSING: through: predicate for style rules / merged media
+
+  _visitMediaQueries                       MISSING (uses inline parsing)
+  _mergeMediaQueries                       MISSING
+
+  visitReturnRule                          PORTED
+
+  visitSilentComment                       PORTED
+
+  visitStyleRule                           SIMPLIFIED
+    - PORTED: selector interpolation, parent expansion, nesting
+    - MISSING: _inKeyframes / keyframe block handling
+    - MISSING: _performInterpolationWithMap (source mapping)
+    - MISSING: _extensionStore.addSelector
+    - MISSING: _warnForBogusCombinators
+    - MISSING: _atRootExcludingStyleRule tracking
+    - MISSING: plainCss guard
+    - MISSING: fromPlainCss, isGroupEnd
+    - SIMPLIFIED: uses text-based _expandSelector + fallback SelectorParser
+
+  _warnForBogusCombinators                 MISSING
+
+  visitSupportsRule                        PORTED
+    - Faithful bubble-up logic inside style rules
+
+  _visitSupportsCondition                  PORTED
+    - All 6 condition types handled
+
+  _withSupportsDeclaration                 PORTED (inline in _visitSupportsCondition)
+  _parenthesize                            PORTED (_parenthesizeSupports / _parenthesizeSupportsWithOp)
+
+  visitVariableDeclaration                 SIMPLIFIED
+    - PORTED: !default guard, !global, configuration consumption
+    - MISSING: markVariableConfigurable
+    - MISSING: full _configuration.remove with override.assignmentNode
+    - MISSING: new-global deprecation warning
+
+  visitUseRule                             SIMPLIFIED
+    - PORTED: sass:* built-in module dispatch, file module loading
+    - MISSING: _loadModule infrastructure
+    - MISSING: ExplicitConfiguration creation
+    - MISSING: _assertConfigurationIsEmpty
+    - MISSING: _registerCommentsForModule
+    - SIMPLIFIED: ad-hoc importer loading instead of _execute/_loadModule
+
+  visitWarnRule                            PORTED
+    - Minor: dart version includes _stackTrace in warn call
+
+  visitWhileRule                           PORTED
+
+--- EXPRESSION VISITORS -------------------------------------------------------
+
+  visitBinaryOperationExpression           SIMPLIFIED
+    - PORTED: all operators
+    - MISSING: _addExceptionSpan wrapping
+    - MISSING: _slash helper (slash-div deprecation with recommendation())
+    - MISSING: plainCss guard
+    - SIMPLIFIED: slash-div deprecation warning text differs
+
+  _slash                                   MISSING
+  _operandAllowsSlash                      MISSING
+
+  visitValueExpression                     PORTED
+  visitVariableExpression                  PORTED
+
+  visitUnaryOperationExpression            PORTED
+
+  visitBooleanExpression                   PORTED
+  visitColorExpression                     PORTED
+
+  visitIfExpression                        SIMPLIFIED
+    - PORTED: basic branch evaluation
+    - MISSING: CSS if() with String conditions producing if(cond: val; ...)
+    - MISSING: IfCondition accept returning String|bool union
+
+  visitIfConditionParenthesized            PORTED
+  visitIfConditionNegation                 PORTED
+  visitIfConditionOperation                SIMPLIFIED
+    - MISSING: single-parenthesized strip optimization
+  visitIfConditionFunction                 PORTED
+  visitIfConditionSass                     PORTED
+  visitIfConditionRaw                      PORTED
+
+  visitLegacyIfExpression                  SIMPLIFIED
+    - PORTED: basic 3-arg if()
+    - MISSING: _evaluateMacroArguments (rest arg handling)
+    - MISSING: _verifyArguments call
+    - MISSING: _withoutSlash on result
+
+  visitNullExpression                      PORTED
+  visitNumberExpression                    PORTED
+
+  visitParenthesizedExpression             SIMPLIFIED
+    - PORTED: basic expression evaluation
+    - MISSING: plainCss guard
+
+  visitListExpression                      PORTED
+  visitMapExpression                       SIMPLIFIED
+    - PORTED: duplicate key detection
+    - MISSING: MultiSpanSassRuntimeException with first/second key spans
+
+  visitFunctionExpression                  SIMPLIFIED
+    - PORTED: namespace lookup, user-defined dispatch, calculation dispatch,
+      built-in dispatch, plain CSS fallback
+    - MISSING: full _visitCalculation with _checkCalculationArguments
+    - MISSING: _inFunction flag, _addErrorSpan wrapping
+    - MISSING: PlainCssCallable for unknown functions
+    - MISSING: _runFunctionCallable infrastructure
+    - MISSING: originalName '--' check
+    - MISSING: _builtInFunctions fallback lookup
+    - MISSING: inLegacySassFunction (min/max/round/abs back-compat)
+    - SIMPLIFIED: calculation dispatch is _evaluateCalculation returning Nullable
+
+  _visitCalculation                        SIMPLIFIED -> _evaluateCalculation
+    - PORTED: all calc function names (calc, min, max, clamp, etc.)
+    - MISSING: _checkCalculationArguments (arity validation)
+    - MISSING: _inSupportsDeclaration -> SassCalculation.unsimplified
+    - MISSING: inLegacySassFunction back-compat
+    - MISSING: _callableNode tracking
+    - MISSING: SassCalculation.calcSize
+    - MISSING: _verifyCompatibleNumbers error enrichment
+
+  _checkCalculationArguments               MISSING
+  _verifyCompatibleNumbers                 MISSING
+
+  _visitCalculationExpression              SIMPLIFIED (inline in _evaluateCalculation)
+    - PORTED: parenthesized, binary op, number, variable, function sub-exprs
+    - MISSING: StringExpression calc-safe (pi, e, infinity, nan)
+    - MISSING: _checkWhitespaceAroundCalculationOperator
+    - MISSING: ListExpression with _checkAdjacentCalculationValues
+    - MISSING: isCalculationSafe assertion
+
+  _checkWhitespaceAroundCalculationOperator MISSING
+  _binaryOperatorToCalculationOperator      MISSING (inline in _evaluateCalculation)
+  _checkAdjacentCalculationValues           MISSING
+
+  visitInterpolatedFunctionExpression       SIMPLIFIED
+    - PORTED: name interpolation, plain CSS rendering
+    - MISSING: PlainCssCallable + _runFunctionCallable dispatch
+    - MISSING: _inFunction flag
+
+  visitSelectorExpression                   SIMPLIFIED
+    - SSG returns unquoted SassString of selector text
+    - dart-sass returns _styleRuleIgnoringAtRoot?.originalSelector.asSassList
+    - MISSING: asSassList (proper SassList with nested structure)
+
+  visitStringExpression                     PORTED
+    - Faithful interpolation evaluation
+
+  visitSupportsExpression                   SIMPLIFIED
+    - SSG: condition.toString (raw)
+    - dart: _visitSupportsCondition(expression.condition)
+    - Should use _visitSupportsCondition for evaluated form
+
+--- CALLABLE INFRASTRUCTURE ---------------------------------------------------
+
+  _runUserDefinedCallable                  SIMPLIFIED
+    - PORTED: environment closure, scope push, parameter binding
+    - MISSING: dart's full version with _withStackFrame, _inDependency,
+      _verifyArguments, SassArgumentList/wereKeywordsAccessed check,
+      positionalNodes tracking
+    - SSG uses _bindParameters instead (functionally similar)
+
+  _runFunctionCallable                     MISSING
+    - SSG dispatches inline in visitFunctionExpression/_invokeCallable
+    - dart has unified _runFunctionCallable for BuiltIn/UserDefined/PlainCss
+
+  _runBuiltInCallable                      SIMPLIFIED
+    - SSG uses _checkBuiltInArity + _mergeBuiltInNamedArgs + _padBuiltInPositional
+    - MISSING: callbackFor overload selection
+    - MISSING: SassArgumentList construction for rest params
+    - MISSING: wereKeywordsAccessed check
+
+  _evaluateArguments                       PORTED
+    - Faithful: positional, named, rest, keyword-rest, SassArgumentList
+
+  _evaluateMacroArguments                  MISSING
+
+  _addRestMap                              MISSING (inline in _evaluateArguments)
+
+  _verifyArguments                         SIMPLIFIED (in _bindParameters)
+
+--- PLAIN CSS VISITORS (CssVisitor) -------------------------------------------
+
+  visitCssAtRule                           STUB
+  visitCssComment                          STUB
+  visitCssDeclaration                      STUB
+  visitCssImport                           STUB
+  visitCssKeyframeBlock                    STUB
+  visitCssMediaRule                        STUB
+  visitCssStyleRule                        STUB
+  visitCssStylesheet                       STUB
+  visitCssSupportsRule                     STUB
+
+  _ImportedCssVisitor (inner class)        MISSING
+
+--- UTILITY METHODS -----------------------------------------------------------
+
+  _handleReturn                            MISSING
+  _withEnvironment                         PORTED
+  _interpolationToValue                    MISSING (uses _performInterpolation inline)
+  _performInterpolation                    PORTED
+  _performInterpolationWithMap             MISSING
+  _performInterpolationHelper              MISSING (no source map tracking)
+  _evaluateToCss                           PORTED
+  _serialize                               MISSING (uses value.toCssString inline)
+  _expressionNode                          MISSING
+  _withParent                              SIMPLIFIED
+    - MISSING: through: predicate, scopeWhen
+  _copyParentAfterSibling                  MISSING
+  _addChild                                SIMPLIFIED
+    - MISSING: through: predicate, hasFollowingSibling logic
+  _withStyleRule                           PORTED
+  _withMediaQueries                        MISSING
+  _withStackFrame                          MISSING
+  _withoutSlash                            MISSING (no slash-number tracking)
+  _stackFrame                              MISSING
+  _stackTrace                              MISSING
+  _warn (3-arg with span/deprecation)      MISSING (uses simpler warn/warnForDeprecation)
+  _exception                               MISSING (throws SassException directly)
+  _multiSpanException                      MISSING
+  _addExceptionSpan                        MISSING
+  _addExceptionTrace                       MISSING
+  _addErrorSpan                            MISSING
+  _getErrorMessage                         MISSING
+
+--- _EvaluationContext (inner class) ------------------------------------------
+
+  _EvaluationContext                       SIMPLIFIED
+    - SSG: EvaluateVisitor implements EvaluationContext directly
+    - MISSING: _defaultWarnNodeWithSpan, currentCallableSpan resolution
+
+================================================================================
+ SUMMARY COUNTS
+================================================================================
+
+  Category          | Count
+  ------------------|------
+  PORTED            |  32   (faithful or near-faithful)
+  SIMPLIFIED        |  38   (present but with reduced fidelity)
+  MISSING           |  52   (not present at all)
+  STUB              |   9   (CssVisitor stubs)
+  ------------------|------
+  TOTAL methods     | 131
+
+  Note: "methods" includes both public visitor methods and private helpers.
+  Some dart-sass methods are large multi-hundred-line functions (e.g. _execute,
+  _combineCss, _visitDynamicImport) that each represent substantial porting work.
+
+================================================================================
+ TOP 10 MISSING / SIMPLIFIED METHODS BY SPEC IMPACT
+================================================================================
+
+ 1. _execute (MISSING)  ~100 lines
+    Full module execution with environment save/restore. Required for correct
+    @use/@forward module system. Current ad-hoc version skips save/restore of
+    _root, _parent, _endOfImports, _extensionStore, _stylesheet, _mediaQueries,
+    _declarationName, _inUnknownAtRule, _inKeyframes, _configuration, etc.
+    Impact: modules can pollute each other's state.
+
+ 2. _combineCss (MISSING)  ~60 lines
+    Topological sort and merge of module CSS trees. Required for correct output
+    ordering when multiple modules are loaded. Also applies cross-module extensions.
+    Impact: multi-module output ordering and extension propagation broken.
+
+ 3. _loadModule (MISSING)  ~80 lines
+    Centralised module loading with cycle detection, configuration handling,
+    stack frames. Current ad-hoc code in visitUseRule/visitForwardRule duplicates
+    some logic but misses configuration assertion, module caching, cycle spans.
+    Impact: configuration errors not caught, modules loaded multiple times.
+
+ 4. visitCssStyleRule / all CssVisitor methods (STUB)  ~250 lines total
+    Required for evaluating CSS from @imported modules that themselves contain
+    @use rules. Also used by meta.load-css().
+    Impact: @import of modules with @use/@forward fails at runtime.
+
+ 5. _withParent with through: predicate (SIMPLIFIED)  ~30 lines
+    Dart's _withParent + _addChild use a `through:` predicate to bubble at-rules
+    and media rules past style rules. SSG's version lacks this, causing incorrect
+    nesting of @media, @supports, unknown @-rules inside style rules.
+    Impact: incorrect CSS output structure for nested at-rules.
+
+ 6. _visitCalculation / _visitCalculationExpression (SIMPLIFIED)  ~200 lines
+    Missing: argument arity checks, whitespace around +/- validation, adjacent
+    value checks, inLegacySassFunction back-compat, calc-size, unsimplified
+    output in @supports context.
+    Impact: spec failures for edge-case calculations.
+
+ 7. visitSelectorExpression (SIMPLIFIED)  ~5 lines
+    Returns String instead of SassList. Dart returns the selector as a nested
+    SassList structure suitable for list operations (nth, length, etc.).
+    Impact: `& { }` works for interpolation but fails for list operations on &.
+
+ 8. meta constructor functions: get-function, call, get-mixin, load-css, apply
+    (MISSING)  ~200 lines
+    These are defined in the dart constructor and use closure state. SSG has
+    some in MetaFunctions but the evaluator-dependent ones (get-function with
+    _addExceptionSpan, call with SassFunction dispatch) are missing.
+    Impact: meta.get-function(), meta.call(), meta.load-css() don't work.
+
+ 9. _withStackFrame / _stackTrace / _addExceptionSpan / _addExceptionTrace
+    (MISSING)  ~100 lines
+    Stack trace infrastructure for error reporting. Without this, runtime errors
+    have no stack trace and span information is incomplete.
+    Impact: poor error messages, no @debug/@warn traces.
+
+10. _declarationName / nested declaration prefix (MISSING)  ~15 lines
+    The `_declarationName` field enables `font: { family: sans; }` syntax where
+    `font-family` is synthesized from the outer + inner names.
+    Impact: nested declaration shorthand syntax broken.
+
+================================================================================
+ ESTIMATED LoC FOR FULL FAITHFUL PORT OF MISSING PIECES
+================================================================================
+
+  Area                                           | Est. LoC
+  -----------------------------------------------|--------
+  _execute + module environment save/restore      |   120
+  _combineCss + _extendModules                    |   100
+  _loadModule + _loadStylesheet                   |   120
+  CssVisitor methods (9 stubs)                    |   250
+  _ImportedCssVisitor                             |    80
+  _withParent with through: + _addChild           |    80
+  _visitCalculation full fidelity                 |   180
+  meta constructor functions                      |   200
+  Stack trace infrastructure                      |   100
+  _declarationName                                |    30
+  _slash + _operandAllowsSlash + _withoutSlash    |    60
+  _warnForBogusCombinators                        |    50
+  _mergeMediaQueries + _withMediaQueries          |    50
+  _hasCssNesting                                  |    20
+  _inKeyframes / _inUnknownAtRule / _inFunction   |    30
+  _expressionNode                                 |    20
+  visitSelectorExpression -> asSassList            |    15
+  _evaluateMacroArguments                          |    40
+  _warn (3-arg) / _exception / _stackTrace        |    40
+  Assorted missing guards and checks              |   100
+  -----------------------------------------------|--------
+  TOTAL ESTIMATED                                 | ~1685
+
+  Note: this is net new code on top of the existing 2630 lines. The final
+  file would be approximately 4300 lines, close to dart-sass's 4938.
+
+================================================================================
+ KEY OBSERVATIONS
+================================================================================
+
+ 1. EXPRESSION EVALUATION is mostly complete. All expression visitor methods
+    exist and produce correct results for the common cases. The main gaps are
+    edge-case validation (plainCss guards, calculation arity, whitespace
+    checks) and source-map/span tracking.
+
+ 2. STATEMENT EVALUATION is functionally present for single-file compilation.
+    All statement visitors exist. The gaps are in multi-module orchestration
+    (_execute, _combineCss, _loadModule) and CSS-nesting/bubbling fidelity
+    (through: predicates, _inKeyframes, _declarationName prefix chain).
+
+ 3. MODULE SYSTEM (@use/@forward) works for basic cases but lacks the full
+    Configuration / ExplicitConfiguration / _assertConfigurationIsEmpty
+    machinery. The ad-hoc approach duplicates some logic and misses validation.
+
+ 4. CSS VISITOR is completely stubbed. This blocks @import of modules that
+    themselves use @use/@forward (the _ImportedCssVisitor path).
+
+ 5. ERROR REPORTING lacks stack traces entirely. No _withStackFrame, no
+    _stackTrace, no _addExceptionSpan. Errors get spans but no call stack.
+
+ 6. DEPRECATION WARNINGS are partially wired. Some specific deprecations
+    (slash-div, mixed-decls, abs-percent) are emitted, but the general
+    _warn(message, span, deprecation) 3-arg form with dedup and quietDeps
+    is not implemented.

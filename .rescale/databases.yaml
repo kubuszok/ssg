@@ -1,0 +1,15 @@
+# Custom TSV tables for the ssg project.
+# Accessed via: re-scale db <table-name> <list|get|set|add|delete|stats>
+
+tables:
+  port-tasks:
+    file: port-tasks.tsv
+    key: id
+    headers: [id, file, status, source, module, notes, updated]
+    defaults:
+      status: pending
+
+  sass-spec-baseline:
+    file: sass-spec-baseline.tsv
+    key: test
+    headers: [test, result, timestamp]

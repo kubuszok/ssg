@@ -1,0 +1,115 @@
+================================================================================
+SSG-SASS FULL PORTING GAP SUMMARY
+Date: 2026-04-10
+Branch: sass-port  |  Spec: 5772/13488 (42.8%)
+================================================================================
+
+METHODOLOGY: Four deep audits compared every method in the three largest
+dart-sass subsystems (serializer, parser, evaluator) plus the extend/module/
+import/value subsystems against their ssg-sass counterparts. Classification:
+PORTED (faithful), SIMPLIFIED (exists but cuts corners), MISSING (absent),
+STUB (placeholder/throws).
+
+================================================================================
+SUBSYSTEM SCORECARDS
+================================================================================
+
+Subsystem          | Dart LoC | SSG LoC | Methods | Ported | Simplified | Missing | Stub | Est. LoC to complete
+-------------------|----------|---------|---------|--------|------------|---------|------|--------------------
+Serializer         |    1882  |   1407  |     62  |   25   |     16     |    21   |   0  |   ~745
+Parser             |    5903  |   4233  |    137  |   32   |     43     |    59   |   3  |  ~2205
+Evaluator          |    4938  |   2630  |    131  |   32   |     38     |    52   |   9  |  ~1685
+Extend             |    ~800  |   ~900  |    ~30  |  ~22   |      3     |    ~8   |   0  |   ~200
+Module system      |    ~600  |   ~500  |    ~25  |  ~15   |      5     |    ~8   |   0  |   ~250
+Import system      |    ~890  |   ~300  |    ~30  |   ~8   |      8     |   ~18   |   0  |   ~400
+Value types        |   ~2500  |  ~1800  |   ~100  |  ~60   |     20     |   ~20   |   2  |   ~500
+-------------------|----------|---------|---------|--------|------------|---------|------|--------------------
+TOTAL              |  ~17513  |  ~11770 |   ~515  |  ~194  |    133     |  ~186   |  14  |  ~5985
+
+KEY: 37.7% ported, 25.8% simplified, 36.1% missing, 2.7% stubbed.
+Estimated ~5985 lines of Scala needed for full faithful port.
+
+================================================================================
+TOP 20 MISSING PIECES BY SPEC IMPACT
+================================================================================
+
+Rank | Subsystem   | What's Missing                           | Est. LoC | Impact
+-----|-------------|------------------------------------------|----------|--------
+  1  | Parser      | _expression (full RD port)               |    450   | CRITICAL
+  2  | Evaluator   | _execute (module execution)              |    120   | HIGH
+  3  | Evaluator   | _combineCss (module CSS merge)           |    100   | HIGH
+  4  | Evaluator   | _loadModule (centralized loading)        |    120   | HIGH
+  5  | Parser      | Selector parsing (14 methods)            |    350   | HIGH
+  6  | Evaluator   | CssVisitor methods (9 stubs)             |    250   | HIGH
+  7  | Serializer  | Calculation serialization                |    120   | HIGH
+  8  | Parser      | Media query parsing (6 methods)          |    180   | MEDIUM
+  9  | Parser      | @supports condition parsing (5 methods)  |    150   | MEDIUM
+ 10  | Serializer  | Color serialization (full dispatch)      |    180   | MEDIUM
+ 11  | Serializer  | Selector visitor methods (10 methods)    |    150   | MEDIUM
+ 12  | Evaluator   | _withParent through: predicate           |     80   | MEDIUM
+ 13  | Evaluator   | meta constructor functions               |    200   | MEDIUM
+ 14  | Parser      | interpolatedDeclarationValue             |    120   | MEDIUM
+ 15  | Import      | ImportCache full port                    |    200   | MEDIUM
+ 16  | Evaluator   | Stack trace infrastructure               |    100   | MEDIUM
+ 17  | Parser      | Context flag plumbing (9 flags)          |    200   | MEDIUM
+ 18  | Extend      | weaveParents full LCS-based              |    150   | MEDIUM
+ 19  | Module      | Configuration.throughForward             |     80   | MEDIUM
+ 20  | Serializer  | String PUA escaping                      |    100   | LOW
+
+================================================================================
+SUBSYSTEM PRIORITIES (ordered by spec impact)
+================================================================================
+
+PRIORITY 1: PARSER — Expression parser unification
+  The text-based _expression() fallback is the root cause of hundreds of
+  failures. The partial RD parser (_rdExpression) needs to be completed to
+  handle ALL expression forms and wired as the sole expression parser.
+  This unlocks: bracket lists, unicode ranges, selector expressions,
+  modern if(), proper interpolation, correct operator precedence.
+  Estimated: 450 lines, ~500-800 spec fixes.
+
+PRIORITY 2: EVALUATOR — Module orchestration (_execute, _combineCss, _loadModule)
+  The ad-hoc module loading in visitUseRule/visitForwardRule lacks proper
+  environment save/restore, configuration assertion, module caching, and
+  CSS combination. This causes cross-module state pollution, incorrect
+  output ordering, and missing configuration validation.
+  Estimated: 340 lines, ~100-200 spec fixes.
+
+PRIORITY 3: SERIALIZER — Faithful port of serialize.dart
+  Missing calculation serialization, full color dispatch, selector visitor
+  methods, string escaping, and whitespace/spacing logic (isGroupEnd).
+  Estimated: 745 lines, ~200-400 spec fixes.
+
+PRIORITY 4: PARSER — Selector/media/@supports structured parsing
+  Raw text collection for selectors, media queries, and @supports conditions
+  should be replaced with dart-sass's structured parsing methods.
+  Estimated: 680 lines, ~100-200 spec fixes.
+
+PRIORITY 5: EVALUATOR — CssVisitor + _ImportedCssVisitor
+  Required for @import of modules that use @use/@forward. Currently stubbed
+  with UnsupportedOperationException.
+  Estimated: 330 lines, ~50-100 spec fixes.
+
+PRIORITY 6: EXTEND — weaveParents full LCS + missing helper functions
+  The simplified weaveParents causes incorrect selector output for complex
+  combinator interactions.
+  Estimated: 200 lines, ~30-50 spec fixes.
+
+PRIORITY 7: MODULE — Configuration.throughForward + Module trait gaps
+  Missing fields (upstream, variableNodes, extensionStore, cloneCss) and
+  Configuration.throughForward block proper @forward...with propagation.
+  Estimated: 250 lines, ~30-50 spec fixes.
+
+PRIORITY 8: IMPORT — ImportCache + FilesystemImporter full port
+  Basic functionality works but many resolution paths are simplified.
+  Estimated: 400 lines, ~20-40 spec fixes.
+
+================================================================================
+TOTAL ESTIMATED WORK
+================================================================================
+
+  ~5985 lines of new/replacement Scala code
+  ~1000-2000 additional spec cases expected to pass after full port
+  Target: 55-60%+ spec compliance (from current 42.8%)
+
+================================================================================

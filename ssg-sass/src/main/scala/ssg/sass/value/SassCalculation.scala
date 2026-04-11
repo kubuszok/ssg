@@ -938,7 +938,7 @@ final case class CalculationOperation(
 ) {
 
   override def toString: String =
-    // Simplified toString; full serialization deferred until serializer is ported
+    // Basic toString; full serialization postponed until serializer is ported
     s"$left ${operator.operator} $right"
 }
 

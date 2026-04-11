@@ -1,0 +1,49 @@
+steps:
+  - id: jdk
+    name: "JDK 22+ (required by sbt + Scala Native)"
+    check:
+      command: java
+      args: [-version]
+      success-when:
+        stderr-matches: 'openjdk version "(2[2-9]|[3-9][0-9])\.'
+    install:
+      command: sdk
+      args: [install, java, 25.0.2-zulu]
+      interactive: true
+    hint: "Run: sdk install java 25.0.2-zulu"
+
+  - id: sbt
+    name: "sbt (build tool)"
+    check:
+      command: sbt
+      args: [--version]
+      success-when:
+        stdout-contains: "sbt"
+    hint: "Install via: brew install sbt  OR  cs install sbt"
+
+  - id: node
+    name: "Node.js (for sass-spec runner)"
+    check:
+      command: node
+      args: [--version]
+      success-when:
+        stdout-matches: 'v\d+'
+    hint: "Install via: nvm install --lts"
+
+  - id: clang
+    name: "Clang / LLVM (Scala Native linker)"
+    check:
+      command: clang
+      args: [--version]
+      success-when:
+        stdout-contains: "clang"
+    hint: "Install via: brew install llvm  OR  apt install clang"
+
+  - id: re-scale
+    name: "re-scale CLI"
+    check:
+      command: re-scale
+      args: [--version]
+      success-when:
+        stdout-contains: "re-scale"
+    hint: "Install: git clone https://github.com/kubuszok/re-scale && cd re-scale && ./scripts/install.sh"

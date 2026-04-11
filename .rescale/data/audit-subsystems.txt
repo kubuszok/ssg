@@ -1,0 +1,630 @@
+==============================================================================
+ PORTING GAP AUDIT: dart-sass -> ssg-sass
+ Date: 2026-04-10
+ Subsystems: Extend, Module, Import, Value Types
+==============================================================================
+
+==============================================================================
+ 1. EXTEND SYSTEM
+==============================================================================
+
+SOURCE FILES:
+  original-src/dart-sass/lib/src/extend/extension_store.dart
+  original-src/dart-sass/lib/src/extend/functions.dart
+  original-src/dart-sass/lib/src/extend/extension.dart
+  original-src/dart-sass/lib/src/extend/merged_extension.dart
+  original-src/dart-sass/lib/src/extend/empty_extension_store.dart
+  original-src/dart-sass/lib/src/extend/mode.dart
+  (NOTE: extender.dart does NOT exist in dart-sass; Extender is in extension.dart)
+
+SSG FILES:
+  ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala
+  ssg-sass/src/main/scala/ssg/sass/extend/ExtendFunctions.scala
+  ssg-sass/src/main/scala/ssg/sass/extend/Extension.scala
+  ssg-sass/src/main/scala/ssg/sass/extend/ExtendMode.scala
+
+OVERALL: Fully ported with high fidelity. Audited 2026-04-07.
+
+------------------------------------------------------------------------------
+ 1a. ExtensionStore (extension_store.dart -> ExtensionStore.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - ExtensionStore trait (public API surface):
+    isEmpty, simpleSelectors, extensionsWhereTarget, addSelector,
+    addExtension, addExtensions, cloneStore, extensionsByExtender
+  - EmptyExtensionStore singleton (all methods throw UnsupportedOperationException)
+  - MutableExtensionStore (default mutable impl):
+    All 6 state fields: _selectors, _extensions, _extensionsByExtender,
+    _mediaContexts, _sourceSpecificity, _originals
+  - Static helpers: extend(), replace(), _extendOrReplace()
+  - Public API: addSelector, addExtension, addExtensions, cloneStore
+  - Private pipeline:
+    _registerSelector, _simpleSelectors,
+    _extendExistingExtensions, _extendExistingSelectors,
+    _extendList, _extendComplex, _extendCompound, _extendSimple,
+    _extendPseudo,
+    _extenderForSimple, _extenderForCompound, _sourceSpecificityFor,
+    _unifyExtenders, _trim
+
+SIMPLIFIED:
+  - _trim(): Has a "// Avoid quadratic blowup" guard at >100 selectors,
+    which matches dart-sass. However, ssg-sass skips the `rotateSlice`
+    call for duplicate originals (just doesn't add the duplicate, which
+    is functionally equivalent for correctness but may differ in ordering).
+  - addExtensions(): Uses `asInstanceOf[MutableExtensionStore]` to access
+    internal state of the other store, matching dart-sass's approach but
+    without the safer private constructor pattern.
+
+EXTRA (backward-compat adapters not in dart-sass):
+  - astExtensions map, addExtensionAst(), extendList(), extendComplex(),
+    weaveExtension(), substituteInComplexUnified()
+    These are legacy AST-based extension adapters used by EvaluateVisitor
+    until it is rewired to the dart addExtension+addSelector API.
+    They should eventually be removed.
+
+MISSING: None significant. All core methods are present.
+
+------------------------------------------------------------------------------
+ 1b. ExtendFunctions (functions.dart -> ExtendFunctions.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - RootishPseudoClasses constant
+  - unifyCompound() (delegates to SelectorList.unifyCompounds)
+  - unifyComplex()
+  - weave()
+  - weaveParents()
+  - mergeTrailingCombinators() (full combinator merge matrix)
+  - interleave()
+  - chunks()
+  - paths()
+
+MISSING:
+  - unifyUniversalAndElement() - present in dart-sass functions.dart but
+    NOT in ExtendFunctions.scala. May be on SimpleSelector/SelectorList
+    instead (it's used by selector unification).
+  - _namespaceAndName() - helper for unifyUniversalAndElement
+  - _weaveParents() - dart-sass has a DIFFERENT, more complex version
+    than ssg-sass's weaveParents():
+      * dart-sass uses _mergeLeadingCombinators, _firstIfRootish,
+        _groupSelectors, longestCommonSubsequence (LCS-based interleave)
+      * ssg-sass uses a simpler descendant-combinator interleave path
+        (see "simplified" comment in the file)
+  - _mergeLeadingCombinators() - MISSING
+  - _firstIfRootish() - MISSING
+  - _groupSelectors() - MISSING
+  - _complexIsParentSuperselector() - MISSING
+  - complexIsSuperselector() - MISSING (may be on ComplexSelector itself)
+  - compoundIsSuperselector() - MISSING (may be on CompoundSelector itself)
+  - _compatibleWithPreviousCombinator() - MISSING
+  - _isSupercombinator() - MISSING
+  - _mustUnify() - MISSING
+  - _isUnique() - MISSING
+  - listIsSuperselector() - MISSING (may exist elsewhere)
+
+SIMPLIFIED:
+  - weaveParents(): The comment explicitly states "simplified port" -- it
+    uses a flat interleave rather than the full LCS-based weave with
+    rootish unification and grouped selectors. This handles common cases
+    but will produce incorrect output for complex combinator interactions
+    (e.g., selectors with :root, id-selector unification requirements,
+    grouped parent selectors).
+  - unifyCompound(): Delegates to SelectorList.unifyCompounds instead of
+    faithfully implementing the pseudo-class/pseudo-element ordering
+    logic from dart-sass.
+
+------------------------------------------------------------------------------
+ 1c. Extension / Extender / MergedExtension
+     (extension.dart + merged_extension.dart -> Extension.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Extension class: extender, target, span, mediaContext, isOptional,
+    withExtender(), toString()
+  - Extension companion object: apply() factory
+  - Extender class: selector, specificity, isOriginal, _extension,
+    assertCompatibleMediaContext()
+  - MergedExtension: left, right, unmerge()
+  - MergedExtension.merge() static method
+
+MISSING: None.
+
+------------------------------------------------------------------------------
+ 1d. ExtendMode (mode.dart -> ExtendMode.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Normal, Replace, AllTargets (enum values match dart-sass exactly)
+
+MISSING: None.
+
+
+==============================================================================
+ 2. MODULE SYSTEM
+==============================================================================
+
+SOURCE FILES:
+  original-src/dart-sass/lib/src/module.dart
+  original-src/dart-sass/lib/src/module/forwarded_view.dart
+  original-src/dart-sass/lib/src/module/shadowed_view.dart
+  original-src/dart-sass/lib/src/module/built_in.dart
+  original-src/dart-sass/lib/src/configuration.dart
+  original-src/dart-sass/lib/src/configured_value.dart
+
+SSG FILES:
+  ssg-sass/src/main/scala/ssg/sass/Module.scala
+  ssg-sass/src/main/scala/ssg/sass/Configuration.scala
+  (ConfiguredValue is in Configuration.scala)
+
+OVERALL: Skeleton/simplified port. Core API surface is present but missing
+several dart-sass features. Header says "Skeleton -- public API surface only."
+
+------------------------------------------------------------------------------
+ 2a. Module (module.dart -> Module.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Module trait: url, variables, functions, mixins, css,
+    transitivelyContainsCss, transitivelyContainsExtensions,
+    setVariable, variableIdentity, couldHaveBeenConfigured
+
+MISSING:
+  - upstream: List[Module[T]] - dart-sass has this, ssg-sass does NOT
+  - variableNodes: Map[String, AstNode] - dart-sass has this, ssg-sass does NOT
+  - extensionStore: ExtensionStore - dart-sass has this, ssg-sass does NOT
+  - preModuleComments: Map[Module[T], List[CssComment]] - MISSING
+  - cloneCss(): Module[T] - dart-sass has this, ssg-sass does NOT
+  - setVariable() signature mismatch: dart-sass takes (name, value, nodeWithSpan),
+    ssg-sass takes (name, value) -- missing nodeWithSpan parameter
+
+------------------------------------------------------------------------------
+ 2b. BuiltInModule (built_in.dart -> BuiltInModule in Module.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - name, functions (from list), mixins (from list), variables (mutable map)
+  - url as "sass:$name"
+  - css = empty, transitivelyContainsCss/Extensions = false
+  - setVariable (mutable)
+
+MISSING:
+  - upstream (always const []) - MISSING from trait
+  - variableNodes (always const {}) - MISSING from trait
+  - extensionStore (always ExtensionStore.empty) - MISSING from trait
+  - preModuleComments (always const {}) - MISSING from trait
+  - cloneCss() (returns this) - MISSING from trait
+  - setVariable should throw "Cannot modify built-in variable" for
+    known variables but currently just sets them (dart-sass throws for
+    built-in variables that exist but can't be modified)
+
+------------------------------------------------------------------------------
+ 2c. ForwardedModuleView (forwarded_view.dart -> ForwardedView in Module.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Inner module wrapping with prefix, show/hide for variables and
+    functions/mixins
+  - _prefixed(), _isVarVisible(), _isCallableVisible(), _unprefix()
+  - variables, functions, mixins filtering
+  - setVariable with prefix stripping
+  - variableIdentity delegation
+  - couldHaveBeenConfigured delegation
+  - ForwardedView.apply() factory from ForwardRule
+
+MISSING:
+  - ifNecessary() static method - dart-sass has optimization to return
+    inner module unchanged when no filtering needed
+  - _forwardedMap() static helper - dart-sass uses LimitedMapView and
+    PrefixedMapView for O(1) lookups; ssg-sass uses .collect() which
+    rebuilds the map every time (performance issue for large modules)
+  - upstream, variableNodes, extensionStore, preModuleComments, css
+    delegation - not present because those fields aren't on Module trait
+  - cloneCss() - MISSING
+  - equals/hashCode - MISSING
+
+------------------------------------------------------------------------------
+ 2d. ShadowedModuleView (shadowed_view.dart -> ShadowedView in Module.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Inner module wrapping with shadowed variable/function/mixin sets
+  - variables, functions, mixins filtering via .filterNot
+  - setVariable with shadow check
+  - variableIdentity delegation
+  - couldHaveBeenConfigured delegation
+
+MISSING:
+  - ifNecessary() static method - dart-sass returns null if no blocking needed
+  - isEmpty property - MISSING
+  - _shadowedMap() static helper - uses LimitedMapView.blocklist
+  - _needsBlocklist() static helper
+  - upstream, variableNodes, extensionStore, preModuleComments, css
+    delegation - not present
+  - cloneCss() - MISSING
+  - equals/hashCode - MISSING
+
+------------------------------------------------------------------------------
+ 2e. Configuration (configuration.dart -> Configuration.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - values map, isEmpty, remove()
+  - Configuration.empty singleton
+  - Configuration.apply() factory
+  - implicitConfig() factory
+
+SIMPLIFIED:
+  - throwErrorForUnknownVariables(): Exists but uses a synthetic span
+    (SourceFile("")) instead of a real one from the @use rule node
+  - remove() returns Nullable[ConfiguredValue] instead of allowing
+    mutation of the underlying map (dart-sass mutates _values in place)
+
+MISSING:
+  - ExplicitConfiguration subclass - dart-sass has a separate subclass
+    with nodeWithSpan for error reporting; ssg-sass has isImplicit boolean
+    but no nodeWithSpan
+  - _originalConfiguration / sameOriginal() - dart-sass tracks the
+    original config for detecting duplicate @forward with() chains;
+    ssg-sass has NO equivalent
+  - throughForward(ForwardRule) - dart-sass creates a filtered config
+    through @forward rules (with prefix stripping, show/hide); ssg-sass
+    has NO equivalent
+  - _withValues() - internal copy constructor, not needed in ssg-sass
+    if throughForward is not ported
+
+------------------------------------------------------------------------------
+ 2f. ConfiguredValue (configured_value.dart -> ConfiguredValue in Configuration.scala)
+------------------------------------------------------------------------------
+
+PORTED:
+  - value, configurationSpan, assignmentNode fields
+  - explicit() and implicitValue() factory methods
+
+SIMPLIFIED:
+  - configurationSpan is Nullable[AstNode] instead of Nullable[FileSpan]
+    (dart-sass uses FileSpan)
+  - assignmentNode is Nullable[AstNode] instead of required AstNode
+    (dart-sass always requires it)
+
+
+==============================================================================
+ 3. IMPORT SYSTEM
+==============================================================================
+
+SOURCE FILES:
+  original-src/dart-sass/lib/src/import_cache.dart (~340 lines)
+  original-src/dart-sass/lib/src/importer/filesystem.dart (~118 lines)
+  original-src/dart-sass/lib/src/stylesheet_graph.dart (~430 lines)
+
+SSG FILES:
+  ssg-sass/src/main/scala/ssg/sass/ImportCache.scala
+  ssg-sass/src/main/scala/ssg/sass/importer/Importer.scala (merged family)
+  ssg-sass/src/main/scala/ssg/sass/StylesheetGraph.scala
+
+OVERALL: Simplified/skeleton ports. Basic structure is present but many
+advanced features are missing.
+
+------------------------------------------------------------------------------
+ 3a. ImportCache (import_cache.dart -> ImportCache.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Constructor: importers, loadPaths, logger
+  - canonicalize(): walks importers, returns (Importer, canonicalUrl, originalUrl)
+  - importCanonical(): parses + caches stylesheets by canonical URL
+  - Syntax-based parser selection (Scss, Css, Sass fallback)
+
+SIMPLIFIED:
+  - canonicalize() uses a simple string-keyed cache instead of the
+    dart-sass tuple-keyed cache with (Uri, forImport: bool)
+  - No per-importer cache layer (_perImporterCanonicalizeCache)
+  - No _nonCanonicalRelativeUrls tracking
+  - No cacheability tracking (cacheable flag)
+  - No CanonicalizeContext (containingUrl support)
+  - No relative URL resolution against baseUrl (just passes url through)
+  - URLs modeled as Strings instead of Uri objects
+
+MISSING:
+  - import() method - the top-level import convenience method
+  - importCanonical() - partially ported; dart-sass version has
+    parseSelectors support
+  - clearImport() - for invalidation
+  - clearCanonicalize() - for invalidation
+  - loadTime() - returns when a URL was last loaded
+  - humanize() - converts canonical URL to human-readable form
+  - sourceMapUrl tracking from ImporterResult
+  - _toImporters() static - converts loadPaths to FilesystemImporters
+  - SASS_PATH environment variable handling
+  - PackageConfig/PackageImporter integration
+  - Browser-mode detection
+  - Non-canonical scheme validation
+  - Relative URL deprecation warnings
+
+------------------------------------------------------------------------------
+ 3b. Importer (filesystem.dart -> Importer.scala merged family)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - Importer trait: canonicalize, load, modificationTime,
+    couldCanonicalize, isNonCanonicalScheme
+  - NoOpImporter
+  - PackageImporter (basic pkg: URL rewriting)
+
+MISSING:
+  - FilesystemImporter is stated to be in src/main/scala-jvm/ but the
+    file does NOT exist at the expected path
+    (ssg-sass/src/main/scala/ssg/sass/importer/FilesystemImporter.scala)
+  - resolveImportPath() helper - used by FilesystemImporter
+  - canonicalize(Uri) vs canonicalize(String) - ssg-sass uses String
+  - load() returns Nullable instead of nullable ImporterResult
+  - _loadPath / _loadPathDeprecated fields
+  - cwd deprecated static field
+  - noLoadPath static field
+  - File-scheme URL handling
+  - Syntax.forPath integration
+  - Deprecation warnings for cwd-relative imports
+
+------------------------------------------------------------------------------
+ 3c. StylesheetGraph (stylesheet_graph.dart -> StylesheetGraph.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - nodes map (canonical URL -> StylesheetNode)
+  - addCanonical() - adds a stylesheet to the graph
+  - nodeFor() - looks up a node by canonical URL
+  - addEdge() / wouldCycle() / reaches() - cycle detection
+
+SIMPLIFIED:
+  - The entire graph is simplified to just track edges (adjacency map)
+    and detect cycles. Dart-sass's StylesheetGraph tracks:
+    * upstream/downstream node references
+    * module vs import dependencies separately
+    * transitive modification times
+    * re-canonicalization on add/remove
+
+MISSING:
+  - modifiedSince() - checks if any transitive dependency was modified
+  - _upstreamNodes() - computes module + import dependencies
+  - reload() - re-parses and updates dependencies
+  - reloadAllModified() - batch re-parse of modified files
+  - remove() - removes a node and returns affected downstream
+  - _recanonicalizeImports() - re-runs canonicalization for affected URLs
+  - _recanonicalizeImportsForNode() - per-node re-canonicalization
+  - _nodeFor() - internal add-on-demand
+  - _ignoreErrors() - error-swallowing helper
+  - StylesheetNode is much simpler:
+    * ssg-sass: stylesheet, importer, canonicalUrl, upstream set, downstream set
+    * dart-sass: _stylesheet (mutable), importer, canonicalUrl,
+      upstream (Map<Uri, StylesheetNode?>), upstreamImports (Map),
+      _downstream (Set), _replaceUpstream(), _remove()
+
+
+==============================================================================
+ 4. VALUE TYPES
+==============================================================================
+
+SOURCE FILES:
+  original-src/dart-sass/lib/src/value/number.dart (~800 lines)
+  original-src/dart-sass/lib/src/value/color.dart (~1000 lines)
+  original-src/dart-sass/lib/src/value/calculation.dart (~500 lines)
+  original-src/dart-sass/lib/src/value/string.dart (~230 lines)
+
+SSG FILES:
+  ssg-sass/src/main/scala/ssg/sass/value/SassNumber.scala
+  ssg-sass/src/main/scala/ssg/sass/value/SassColor.scala
+  ssg-sass/src/main/scala/ssg/sass/value/SassCalculation.scala
+  ssg-sass/src/main/scala/ssg/sass/value/SassString.scala
+
+OVERALL: Value types are the most thoroughly ported subsystem.
+All four are audited (2026-04-05 to 2026-04-06).
+
+------------------------------------------------------------------------------
+ 4a. SassNumber (number.dart -> SassNumber.scala)
+------------------------------------------------------------------------------
+Audited: 2026-04-05
+
+PORTED (faithful):
+  - value, hashCache, numeratorUnits, denominatorUnits
+  - hasUnits, hasComplexUnits, isInt, asInt, unitString
+  - valueInRange, valueInRangeWithUnit
+  - hasUnit, hasCompatibleUnits, hasPossiblyCompatibleUnits, compatibleWithUnit
+  - assertUnit, assertNoUnits, assertNumber, assertInt
+  - convert, convertValue, convertValueToUnit
+  - convertToMatch, convertValueToMatch
+  - coerce, coerceValue, coerceValueToUnit
+  - coerceToMatch, coerceValueToMatch
+  - coerceOrConvertValue (with full unit conversion logic)
+  - isComparableTo
+  - greaterThan, greaterThanOrEquals, lessThan, lessThanOrEquals
+  - modulo (moduloLikeSass)
+  - plus, minus, times, dividedBy
+  - unaryPlus, unaryMinus
+  - coerceUnits, multiplyUnits
+  - withValue, withoutSlash, withSlash
+  - Companion object: conversionFactor, conversions map, unitsByType,
+    typesByUnit, unitString, withUnits factory, areAnyConvertible, precision
+  - Subclasses: UnitlessSassNumber, SingleUnitSassNumber, ComplexSassNumber
+
+MISSING:
+  - None identified. Full port.
+
+------------------------------------------------------------------------------
+ 4b. SassColor (color.dart -> SassColor.scala)
+------------------------------------------------------------------------------
+Audited: 2026-04-06
+
+PORTED (faithful):
+  - All channel accessors: channel0/1/2, channel0OrNull/1OrNull/2OrNull
+  - alpha, alphaOrNull, isAlphaMissing
+  - isChannel0/1/2Missing, isChannel0/1/2Powerless
+  - space, channels, channelsOrNull
+  - isLegacy, isInGamut, hasMissingChannel
+  - Legacy accessors (deprecated): red, green, blue, hue, saturation,
+    lightness, whiteness, blackness
+  - channel(name), isChannelMissing(name), isChannelPowerless(name)
+  - toSpace(), toGamut()
+  - changeAlpha(), changeChannels()
+  - interpolate() with full hue interpolation
+  - assertColor, assertLegacy
+  - toCssString with space-specific rendering
+  - ColorSpace, ColorChannel, LinearChannel, HueChannel
+  - GamutMapMethod, InterpolationMethod
+  - ColorFormat, ColorNames integration
+  - Factory methods: rgb, hsl, hwb, forSpaceInternal
+
+MISSING:
+  - Named color space factory methods: srgb, srgbLinear, displayP3,
+    displayP3Linear, a98Rgb, prophotoRgb, rec2020, xyzD50, xyzD65,
+    lab, lch, oklab, oklch
+    (These are convenience constructors in dart-sass; ssg-sass uses
+    forSpaceInternal() for all spaces. Not a functional gap.)
+  - forSpace(ColorSpace, List[double?], alpha) factory - MISSING
+    (ssg-sass uses forSpaceInternal directly)
+
+SIMPLIFIED:
+  - format field: dart-sass uses ColorFormat enum (rgbFunction, hslFunction);
+    ssg-sass has Nullable[ColorFormat] but the ColorFormat definition
+    should be checked for completeness.
+
+------------------------------------------------------------------------------
+ 4c. SassCalculation (calculation.dart -> SassCalculation.scala)
+------------------------------------------------------------------------------
+Audited: 2026-04-06
+
+PORTED (faithful):
+  - name, arguments
+  - isSpecialNumber
+  - accept, assertCalculation
+  - plus, minus, unaryPlus, unaryMinus (all throw)
+  - equals, hashCode
+  - toCssString, argumentToCss, argumentToCssParenthesized
+  - unsimplified() factory
+  - calc(), min(), max()
+  - hypot(), sqrt(), sin(), cos(), tan()
+  - atan(), asin(), acos(), abs(), exp(), sign()
+  - pow(), log(), clamp()
+  - round() (with rounding strategies)
+  - atan2()
+  - _simplify(), _simplifyArguments()
+  - _verifyCompatibleNumbers(), _verifyLength()
+  - CalculationOperation class with left, right, operator
+  - CalculationOperator enum (Plus, Minus, Times, DividedBy)
+  - Number math helpers: _numberSqrt, _numberSin, etc.
+
+MISSING:
+  - CalculationInterpolation: dart-sass deprecated class; ssg-sass
+    header mentions it's "ported as deprecated class" but should be
+    verified
+  - _fuzzyRoundDefault() edge case handling differences (minor)
+
+------------------------------------------------------------------------------
+ 4d. SassString (string.dart -> SassString.scala)
+------------------------------------------------------------------------------
+
+PORTED (faithful):
+  - text, hasQuotes, sassLength
+  - isBlank, isSpecialNumber, isSpecialVariable
+  - accept, assertString
+  - assertQuoted, assertUnquoted
+  - sassIndexToStringIndex, sassIndexToRuneIndex
+  - plus
+  - equals, hashCode
+  - toCssString (with quote character selection and control char escaping)
+  - SassString.empty factory
+
+SIMPLIFIED:
+  - isSpecialNumber: uses toLowerCase() + startsWith() instead of
+    dart-sass's character-by-character case-insensitive matching.
+    Functionally equivalent but less performant.
+  - isSpecialVariable: same simplification as isSpecialNumber.
+    Missing: `if()` detection (dart-sass checks for if( as a special
+    variable)
+
+MISSING: None significant.
+
+
+==============================================================================
+ SUMMARY
+==============================================================================
+
+SUBSYSTEM              STATUS         GAPS
+---------              ------         ----
+Extend System
+  ExtensionStore       PORTED         Minor: rotateSlice in _trim
+  ExtendFunctions      SIMPLIFIED     MAJOR: weaveParents uses flat
+                                      interleave instead of LCS-based
+                                      weave. Missing ~12 helper functions.
+  Extension/Extender   PORTED         None
+  ExtendMode           PORTED         None
+
+Module System
+  Module trait         SKELETON       Missing: upstream, variableNodes,
+                                      extensionStore, preModuleComments,
+                                      cloneCss, nodeWithSpan on setVariable
+  BuiltInModule        PORTED         Missing: fields from Module trait
+  ForwardedView        PORTED         Missing: ifNecessary, equals/hashCode,
+                                      cloneCss; perf issue with .collect()
+  ShadowedView         PORTED         Missing: ifNecessary, isEmpty,
+                                      equals/hashCode, cloneCss
+  Configuration        SIMPLIFIED     Missing: ExplicitConfiguration,
+                                      sameOriginal, throughForward
+  ConfiguredValue      SIMPLIFIED     Minor type differences
+
+Import System
+  ImportCache          SIMPLIFIED     MAJOR: No per-importer cache, no
+                                      relative URL resolution, no
+                                      invalidation (clearImport,
+                                      clearCanonicalize), no import()
+                                      convenience, no SASS_PATH
+  Importer             PORTED         Missing: FilesystemImporter
+                                      (JVM file not found)
+  StylesheetGraph      SIMPLIFIED     MAJOR: No modifiedSince, reload,
+                                      remove, re-canonicalization; only
+                                      cycle detection is ported
+
+Value Types
+  SassNumber           PORTED         Full port, audited
+  SassColor            PORTED         Missing convenience constructors
+                                      (not a functional gap)
+  SassCalculation      PORTED         Full port, audited
+  SassString           PORTED         Minor: isSpecialNumber simplified
+
+==============================================================================
+ TOP PRIORITY GAPS (blocking correct behavior)
+==============================================================================
+
+1. ExtendFunctions.weaveParents() - The simplified interleave approach will
+   produce incorrect output for selectors involving :root, ID selectors
+   requiring unification, and complex combinator groupings. The full LCS-
+   based weave with _groupSelectors, _firstIfRootish, _mustUnify,
+   _complexIsParentSuperselector, and longestCommonSubsequence is needed
+   for spec compliance.
+
+2. Module trait missing fields - upstream, extensionStore, cloneCss are
+   needed by the evaluator for @use/@forward/@import semantics.
+   variableNodes is needed for source-span-aware error messages.
+   preModuleComments is needed for comment ordering in output.
+
+3. Configuration.throughForward() - Required for @forward ... with()
+   to work correctly. Without it, configured variables won't propagate
+   through @forward chains.
+
+4. ImportCache invalidation - clearImport/clearCanonicalize are needed
+   for watch mode. The missing import() convenience method is needed
+   by the evaluator.
+
+5. StylesheetGraph reload/remove - Needed for file-watching / incremental
+   compilation. The simplified graph only does cycle detection.
+
+==============================================================================
+ LOWER PRIORITY GAPS (correctness edge cases / performance)
+==============================================================================
+
+6. ForwardedView/ShadowedView missing equals/hashCode, cloneCss
+7. ForwardedView uses .collect() instead of lazy map views (performance)
+8. ImportCache lacks per-importer caching layer (performance)
+9. FilesystemImporter JVM implementation not found at expected path
+10. SassString.isSpecialVariable missing if() detection
+11. Configuration.ExplicitConfiguration vs isImplicit boolean
+12. Module.setVariable missing nodeWithSpan parameter

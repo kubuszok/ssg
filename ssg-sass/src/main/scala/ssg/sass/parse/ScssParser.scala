@@ -156,8 +156,16 @@ class ScssParser(
     whitespace(consumeNewlines = true)
     val stmts = mutable.ListBuffer.empty[Statement]
     while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+      val scssChildPos = scanner.position
       stmts += child()
       whitespace(consumeNewlines = true)
+      if (scanner.position == scssChildPos) {
+        val ctx = if (scanner.isDone) "<EOF>" else {
+          val end = math.min(scanner.position + 60, scanner.string.length)
+          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+        }
+        throw new Error(s"ScssParser.children() stall at pos ${scanner.position}: ctx=\"$ctx\"")
+      }
     }
     scanner.expectChar(CharCode.$rbrace)
     stmts.toList
@@ -167,9 +175,17 @@ class ScssParser(
     val stmts = mutable.ListBuffer.empty[Statement]
     whitespace(consumeNewlines = true)
     while (!scanner.isDone) {
+      val scssStmtPos = scanner.position
       val s = statement()
       if (s.isDefined) stmts += s.get
       whitespace(consumeNewlines = true)
+      if (scanner.position == scssStmtPos) {
+        val ctx = if (scanner.isDone) "<EOF>" else {
+          val end = math.min(scanner.position + 60, scanner.string.length)
+          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+        }
+        throw new Error(s"ScssParser.statements() stall at pos ${scanner.position}: ctx=\"$ctx\"")
+      }
     }
     stmts.toList
   }

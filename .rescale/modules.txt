@@ -1,0 +1,9 @@
+# SSG modules — one per line.
+# Used by `re-scale build compile` and `re-scale test unit` when
+# no --module flag is passed.
+ssg-md
+ssg-liquid
+ssg-minify
+ssg-js
+ssg-sass
+ssg

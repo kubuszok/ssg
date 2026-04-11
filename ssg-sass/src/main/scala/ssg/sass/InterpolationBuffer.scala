@@ -54,9 +54,11 @@ final class InterpolationBuffer {
     val _ = text.append(s)
   }
 
-  /** Appends a single character [c] to the plain-text portion of the buffer. */
+  /** Appends a single codepoint [c] to the plain-text portion of the buffer.
+    * Handles supplementary codepoints (> U+FFFF) correctly via surrogate pairs.
+    */
   def writeCharCode(c: Int): Unit = {
-    val _ = text.append(c.toChar)
+    val _ = text.appendAll(Character.toChars(c))
   }
 
   /** Appends [c] to the plain-text portion of the buffer. */
@@ -101,6 +103,7 @@ final class InterpolationBuffer {
   private def _flushText(): Unit =
     if (text.nonEmpty) {
       contents += text.toString
+      spans += Nullable.empty
       text.clear()
     }
 }

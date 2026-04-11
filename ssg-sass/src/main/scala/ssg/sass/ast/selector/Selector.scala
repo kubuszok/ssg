@@ -137,7 +137,7 @@ object Selector {
     override def visitParentSelector(parent: ParentSelector): Boolean = true
   }
 
-  /** Simple toString visitor that produces debug output. This is a placeholder; the real serializer lives in the visitor package.
+  /** Simple toString visitor that produces debug output. This is a temporary debug serializer; the real serializer lives in the visitor package.
     */
   private object ToStringVisitor extends SelectorVisitor[String] {
     def visitAttributeSelector(attribute: AttributeSelector): String = {
