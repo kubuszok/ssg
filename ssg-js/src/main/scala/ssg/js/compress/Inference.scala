@@ -69,10 +69,9 @@ object Inference {
   def isUndeclaredRef(node: AstNode): Boolean =
     node match {
       case ref: AstSymbolRef =>
-        ref.thedef match {
-          case null => true // no definition means undeclared
-          case _    => false // TODO: check def.undeclared when SymbolDef is ported
-        }
+        val d = ref.definition()
+        if (d == null) true // no definition means undeclared
+        else d.nn.undeclared
       case _ => false
     }
 
@@ -264,8 +263,16 @@ object Inference {
 
   /** Is this node explicitly null or undefined? */
   private def isNullOrUndefined(node: AstNode, compressor: CompressorLike): Boolean = {
-    node.isInstanceOf[AstNull] || isUndefined(node, compressor)
-    // TODO: check SymbolRef fixed value when scope analysis is ported
+    if (node.isInstanceOf[AstNull] || isUndefined(node, compressor)) return true // @nowarn
+    // Check SymbolRef fixed value
+    node match {
+      case ref: AstSymbolRef =>
+        ref.fixedValue() match {
+          case n: AstNode => isNullOrUndefined(n, compressor)
+          case _          => false
+        }
+      case _ => false
+    }
   }
 
   /** Is this node nullish (null, undefined, or optionally chained from null/undefined)? */
@@ -374,9 +381,10 @@ object Inference {
         (unary.expression != null && hasSideEffects(unary.expression.nn, compressor))
 
       case ref: AstSymbolRef =>
-        // Undeclared refs may throw ReferenceError
-        // TODO: is_declared check when scope analysis is ported
-        !purePropAccessGlobals.contains(ref.name)
+        // Declared refs don't have side effects; undeclared may throw ReferenceError
+        val d = ref.definition()
+        if (d != null && !d.nn.undeclared) false
+        else !purePropAccessGlobals.contains(ref.name)
 
       case obj: AstObject => anyHasSideEffects(obj.properties, compressor)
 
@@ -597,8 +605,10 @@ object Inference {
         chain.expression != null && mayThrow(chain.expression.nn, compressor)
 
       case ref: AstSymbolRef =>
-        // TODO: is_declared check when scope analysis is ported
-        !purePropAccessGlobals.contains(ref.name)
+        // Declared refs don't throw; undeclared may throw ReferenceError
+        val d = ref.definition()
+        if (d != null && !d.nn.undeclared) false
+        else !purePropAccessGlobals.contains(ref.name)
 
       case unary: AstUnary =>
         if (unary.operator == "typeof" && unary.expression.isInstanceOf[AstSymbolRef]) false
@@ -654,9 +664,15 @@ object Inference {
       case chain: AstChain =>
         chain.expression != null && mayThrowOnAccess(chain.expression.nn, compressor)
       case ref: AstSymbolRef =>
-        if (ref.name == "arguments") false // TODO: check scope is lambda
+        if (ref.name == "arguments" && ref.scope != null && ref.scope.nn.isInstanceOf[AstLambda]) false
         else if (hasFlag(ref, UNDEFINED)) true
-        else false // simplified — full check needs scope analysis
+        else {
+          // Check if the fixed value is null/undefined
+          ref.fixedValue() match {
+            case n: AstNode => isNullOrUndefined(n, compressor)
+            case _          => false
+          }
+        }
       case _ =>
         // Default: check pure_getters option
         !compressor.optionBool("pure_getters")

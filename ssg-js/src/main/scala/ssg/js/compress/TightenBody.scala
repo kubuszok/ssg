@@ -258,7 +258,19 @@ object TightenBody {
             n += 1
           } else {
             // Remove label reference if dropping the statement
-            // TODO: remove label.thedef.references when available
+            val lblRef: AstNode | Null = lc match {
+              case brk: AstBreak    => brk.label
+              case cont: AstContinue => cont.label
+              case _                 => null
+            }
+            if (lblRef != null) {
+              lblRef.nn match {
+                case lr: AstLabelRef if lr.thedef != null =>
+                  lr.thedef.asInstanceOf[AstLabel].references =
+                    lr.thedef.asInstanceOf[AstLabel].references.filterNot(r => (r.asInstanceOf[AnyRef] eq lc.asInstanceOf[AnyRef]))
+                case _ =>
+              }
+            }
           }
         case _ =>
           statements(n) = stat

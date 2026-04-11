@@ -109,6 +109,29 @@ object Evaluate {
       case _ => false
     }
 
+  /** Check if a node is a constant expression (safe to inline across scopes).
+    *
+    * A constant expression is a literal value or a pure composition of constants. Lambdas, classes, and `this` are NOT constant expressions since they can close over scope.
+    */
+  def isConstantExpression(node: AstNode): Boolean =
+    node match {
+      case _: AstConstant => true
+      case _: AstLambda | _: AstClass | _: AstThis => false
+      case prefix: AstUnaryPrefix =>
+        prefix.expression != null && isConstantExpression(prefix.expression.nn)
+      case binary: AstBinary =>
+        binary.left != null && binary.right != null &&
+          isConstantExpression(binary.left.nn) && isConstantExpression(binary.right.nn)
+      case seq: AstSequence =>
+        seq.expressions.nonEmpty && seq.expressions.forall(isConstantExpression)
+      case cond: AstConditional =>
+        cond.condition != null && cond.consequent != null && cond.alternative != null &&
+          isConstantExpression(cond.condition.nn) && isConstantExpression(cond.consequent.nn) && isConstantExpression(cond.alternative.nn)
+      case arr: AstArray =>
+        arr.elements.forall(isConstantExpression)
+      case _ => false
+    }
+
   // -----------------------------------------------------------------------
   // Internal evaluation (recursive)
   // -----------------------------------------------------------------------

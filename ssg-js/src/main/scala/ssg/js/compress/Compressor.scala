@@ -109,10 +109,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
-  override def exposed(theDef: Any): Boolean =
-    // TODO: implement when SymbolDef is complete
-    // def.export || (def.global && !toplevel config allows dropping)
-    false
+  override def exposed(theDef: Any): Boolean = {
+    val d = theDef.asInstanceOf[ssg.js.scope.SymbolDef]
+    d.exportFlag != 0 ||
+      (d.undeclared && d.global) ||
+      (d.global && {
+        val dropsFuncs = toplevel.funcs
+        val dropsVars  = toplevel.vars
+        if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolDefun]) !dropsFuncs
+        else if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolVar]) !dropsVars
+        else !dropsFuncs || !dropsVars
+      })
+  }
 
   override def pureFuncs(call: AstCall): Boolean =
     // Returns true if the call is NOT pure (i.e., has side effects)
@@ -192,15 +200,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     var pass = 0
     while (pass < passes) {
-      // TODO: figure_out_scope(mangle) when scope analysis is fully integrated
+      // Run scope analysis before each pass
+      ssg.js.scope.ScopeAnalysis.figureOutScope(toplevel)
 
       if (pass == 0 && options.dropConsole != DropConsoleConfig.Disabled) {
         // must be run before reduce_vars and compress pass
         toplevel = dropConsole(toplevel)
       }
 
-      if (pass > 0 || optionBool("reduce_vars")) {
-        resetOptFlags(toplevel)
+      // Reset per-pass flags and run data-flow analysis
+      resetOptFlags(toplevel)
+      if (optionBool("reduce_vars")) {
+        ReduceVars.reduceVars(toplevel, this)
       }
 
       // Transform pass — walks the AST, optimizing each node
@@ -631,17 +642,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** Optimize labeled statements — remove if label is unused or body is break. */
-  private def optimizeLabeledStatement(self: AstLabeledStatement): AstNode =
-    self.body match {
-      case _: AstBreak =>
-        // `label: break label;` -> ``
-        // TODO: check loopcontrol_target
-        self
-      case _ =>
-        // If label has no references, remove the label wrapper
-        // TODO: check label.references.length == 0
-        self
+  private def optimizeLabeledStatement(self: AstLabeledStatement): AstNode = {
+    // If label has no references, remove the label wrapper
+    if (self.label != null) {
+      self.label.nn match {
+        case lbl: AstLabel if lbl.references.isEmpty =>
+          // Label is unreferenced — just return the body
+          return self.body // @nowarn
+        case _ =>
+      }
     }
+    self
+  }
 
   /** Tighten a generic block. */
   private def optimizeBlock(self: AstBlock): AstNode = {
@@ -963,8 +975,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       val leftRef  = self.left.nn.asInstanceOf[AstSymbolRef]
       val rightRef = self.right.nn.asInstanceOf[AstSymbolRef]
       if (leftRef.name == rightRef.name && leftRef.name != "arguments") {
-        // TODO: check definition().undeclared
-        return self.right.nn
+        val d = leftRef.definition()
+        if (d == null || !d.nn.undeclared) return self.right.nn // @nowarn — safe self-assignment removal
       }
     }
 

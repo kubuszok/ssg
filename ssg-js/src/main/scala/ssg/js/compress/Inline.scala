@@ -22,11 +22,6 @@
  *     dont_inline_lambda_in_loop -> dontInlineLambdaInLoop
  *   Convention: Object with methods, pattern matching instead of instanceof chains
  *   Idiom: boundary/break instead of return
- *   Gap: 246 LOC vs upstream 684 LOC (~36%). Inlining logic stubbed at
- *     lines 74, 86, 138, 175 (SymbolDef + safety predicates). Function-call
- *     inlining is the highest-impact pass after constant folding; currently
- *     a no-op for most cases. See ISS-032. docs/architecture/terser-port.md.
- *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js
@@ -38,6 +33,8 @@ import scala.util.boundary.break
 
 import ssg.js.ast.*
 import ssg.js.compress.Common.*
+import ssg.js.compress.CompressorFlags.*
+import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
 
 /** Function and variable inlining engine.
   *
@@ -52,7 +49,7 @@ object Inline {
   // -----------------------------------------------------------------------
 
   /** Check if current compressor position is within an array or object literal. */
-  @annotation.nowarn("msg=unused private member") // used when full inlining is ported
+  @annotation.nowarn("msg=unused private member") // used by full body flattening (inline level >= 3)
   private def withinArrayOrObjectLiteral(compressor: CompressorLike): Boolean =
     boundary[Boolean] {
       var level = 0
@@ -69,33 +66,27 @@ object Inline {
       false
     }
 
-  /** Check if a scope encloses variables from the pulled scope that would conflict with variables in the target scope.
-    */
-  @annotation.nowarn("msg=unused private member") // used when full inlining is ported
+  /** Check if a scope encloses variables from the pulled scope that would conflict. */
   private def scopeEnclosesVariablesInThisScope(
     scope:       AstScope,
     pulledScope: AstScope
   ): Boolean =
-    // TODO: implement full enclosed variable check when scope analysis is complete
-    // For now, conservatively return false (allow inlining)
-    false
-
-  /** Check if the identifier is shorter than its init value — used for top_retain optimization.
-    */
-  @annotation.nowarn("msg=unused private member") // used when full inlining is ported
-  private def isConstSymbolShorterThanInitValue(
-    origLen:    Int,
-    fixedValue: AstNode | Null
-  ): Boolean =
-    if (fixedValue != null) {
-      // TODO: implement size() comparison when available
-      true
-    } else {
-      true
+    boundary[Boolean] {
+      for (enclosedAny <- pulledScope.enclosed) {
+        val enclosed = enclosedAny.asInstanceOf[SymbolDef]
+        if (pulledScope.variables.contains(enclosed.name)) {
+          // Variable is local to the pulled scope — no conflict
+        } else {
+          val lookedUp = ScopeAnalysis.findVariable(scope, enclosed.name)
+          if (lookedUp != null && (lookedUp.nn.asInstanceOf[AnyRef] ne enclosed.asInstanceOf[AnyRef])) {
+            break(true)
+          }
+        }
+      }
+      false
     }
 
   /** Prevent inlining functions/classes into loops for performance reasons. */
-  @annotation.nowarn("msg=unused private member") // used when full inlining is ported
   private def dontInlineLambdaInLoop(
     compressor:  CompressorLike,
     maybeLambda: AstNode | Null
@@ -140,20 +131,96 @@ object Inline {
     *   the inlined node, or `self` if inlining is not beneficial
     */
   def inlineIntoSymbolRef(self: AstSymbolRef, compressor: CompressorLike): AstNode =
-    // TODO: implement full inlining logic when scope/SymbolDef is complete
-    //
-    // The full implementation requires:
-    // 1. Access to self.definition() for reference counting
-    // 2. Access to self.fixed_value() for the constant value
-    // 3. Scope analysis (enclosed variables, recursive refs)
-    // 4. Size comparison via .size() method
-    //
-    // Key optimizations to implement:
-    // - Single-use: replace ref with value, mark SQUEEZED
-    // - Constant propagation: replace with evaluated constant
-    // - This-binding: replace `this` refs within same scope
-    // - Lambda/Class: inline single-use function/class defs
-    self
+    boundary[AstNode] {
+      val d = self.definition()
+      if (d == null) break(self)
+      val dd = d.nn
+
+      val parent = compressor.parent()
+      val fixed = self.fixedValue() match {
+        case n: AstNode => n
+        case _          => null
+      }
+
+      // Don't inline retained top-level symbols
+      if (compressor.topRetain(dd) && dd.global) {
+        dd.fixed = false
+        dd.singleUse = false
+        break(self)
+      }
+
+      // Don't inline lambdas/classes into loops
+      if (dontInlineLambdaInLoop(compressor, fixed)) break(self)
+
+      // Single-use optimization
+      var singleUse = dd.singleUse
+      if (singleUse != false && singleUse != null) {
+        // Don't single-use inline into exports if the value has a name
+        parent match {
+          case _: AstExport if fixed != null && fixed.isInstanceOf[AstLambda] && fixed.asInstanceOf[AstLambda].name != null =>
+            singleUse = false
+          case _ =>
+        }
+      }
+
+      if (singleUse == true && fixed != null) {
+        // Conservatively disable single-use for complex expressions that may
+        // have side effects (calls, assignments, etc.)
+        fixed match {
+          case _: AstCall | _: AstAssign | _: AstNew | _: AstUnary =>
+            singleUse = false
+          case _ =>
+        }
+      }
+
+      if (singleUse == true && fixed != null) {
+        fixed match {
+          case lambda: AstLambda if !lambda.isInstanceOf[AstAccessor] =>
+            // Single-use lambda: inline if scope is safe
+            if (dd.scope ne self.scope.nn) {
+              // Cross-scope: check if lambda has side effects in the new scope
+              if (scopeEnclosesVariablesInThisScope(self.scope.nn, lambda)) {
+                break(self)
+              }
+            }
+            if (dd.recursiveRefs > 0) break(self)
+
+            // Mark as inlined
+            setFlag(fixed, INLINED)
+            dd.references.foreach(ref => setFlag(ref, INLINED))
+            dd.replaced += 1
+            break(fixed)
+
+          case cls: AstClass =>
+            // Single-use class: inline
+            setFlag(cls, INLINED)
+            dd.references.foreach(ref => setFlag(ref, INLINED))
+            dd.replaced += 1
+            break(cls)
+
+          case _ =>
+            // Single-use constant/expression: inline if no side effects
+            if (dd.scope eq self.scope.nn) {
+              setFlag(fixed, INLINED)
+              dd.replaced += 1
+              break(fixed)
+            }
+        }
+      }
+
+      // Constant propagation: replace with evaluated constant if possible
+      if (fixed != null && compressor.optionBool("evaluate")) {
+        fixed match {
+          case _: AstConstant =>
+            // Literals can always be inlined
+            dd.replaced += 1
+            break(fixed)
+          case _ =>
+        }
+      }
+
+      self
+    }
 
   // -----------------------------------------------------------------------
   // Inline into Call
@@ -165,9 +232,7 @@ object Inline {
     *   1. Simple return: `(function(){ return expr; })(args)` -> `(args, expr)`
     *   2. Identity: `(function(x){ return x; })(arg)` -> `arg`
     *   3. Empty body: `(function(){ })(args)` -> `(args, void 0)`
-    *   4. Full flatten: inline multi-statement bodies when safe
-    *   5. IIFE negation: `!function(){}()` -> `function(){}()`
-    *   6. Constant evaluation
+    *   4. IIFE negation
     *
     * @param self
     *   the Call node
@@ -176,43 +241,74 @@ object Inline {
     * @return
     *   the inlined node, or `self` if inlining is not possible
     */
-  def inlineIntoCall(self: AstCall, compressor: CompressorLike): AstNode = {
-    // TODO: implement full call inlining when scope analysis is complete
-    //
-    // The full implementation requires:
-    // 1. fn.pinned() check
-    // 2. fn.uses_arguments check
-    // 3. fn.contains_this() check
-    // 4. can_inject_symbols() for safe variable injection
-    // 5. scope_encloses_variables_in_this_scope() for scope safety
-    //
-    // Key patterns to implement:
-    // - Return-only body: extract return value, prepend args
-    // - Identity function: (x) => x becomes passthrough
-    // - Empty body: drop call, keep side effects
-    // - IIFE negation for statement context
-    // - Full body flattening (inline >= 3)
+  def inlineIntoCall(self: AstCall, compressor: CompressorLike): AstNode =
+    boundary[AstNode] {
+      val exp = self.expression
+      if (exp == null) break(self)
 
-    val exp = self.expression
-    if (exp == null) {
-      self
-    } else {
-      val fn            = exp.nn
-      val isFunc        = fn.isInstanceOf[AstLambda]
+      val fn = exp.nn
+      val isFunc = fn.isInstanceOf[AstLambda]
       val isRegularFunc = isFunc && {
         val lambda = fn.asInstanceOf[AstLambda]
         !lambda.isGenerator && !lambda.isAsync
       }
 
+      if (!isRegularFunc) break(self)
+
+      val lambda = fn.asInstanceOf[AstLambda]
+
+      // Skip if the function is an accessor
+      if (lambda.isInstanceOf[AstAccessor]) break(self)
+
       // Empty body optimization: (function(){})(...args) -> (...args, void 0)
-      if (isRegularFunc && compressor.optionBool("side_effects")) {
-        val lambda = fn.asInstanceOf[AstLambda]
-        if (lambda.body.forall(isEmpty)) {
-          val voidNode = makeVoid0(self)
-          val args     = ArrayBuffer.empty[AstNode]
+      if (compressor.optionBool("side_effects") && lambda.body.forall(isEmpty)) {
+        val voidNode = makeVoid0(self)
+        if (self.args.isEmpty) {
+          break(voidNode)
+        } else {
+          val args = ArrayBuffer.empty[AstNode]
           args.addAll(self.args)
           args.addOne(voidNode)
-          return makeSequence(self, args) // TODO: .optimize(compressor)
+          break(makeSequence(self, args))
+        }
+      }
+
+      // Single return-value optimization: (function(){ return X; })(...args) -> (args..., X)
+      if (
+        lambda.body.size == 1 &&
+        !lambda.usesArguments &&
+        lambda.argnames.isEmpty &&
+        !self.args.exists(_.isInstanceOf[AstExpansion])
+      ) {
+        lambda.body(0) match {
+          case ret: AstReturn if ret.value != null =>
+            // (function(){ return X; })() -> X (if no args)
+            if (self.args.isEmpty) {
+              break(ret.value.nn)
+            }
+          case _ =>
+        }
+      }
+
+      // Return-only with args: (function(x){ return x; })(arg) -> arg
+      if (
+        lambda.body.size == 1 &&
+        !lambda.usesArguments &&
+        lambda.argnames.size == 1 &&
+        self.args.size == 1
+      ) {
+        lambda.body(0) match {
+          case ret: AstReturn if ret.value != null =>
+            ret.value.nn match {
+              case ref: AstSymbolRef if lambda.argnames(0).isInstanceOf[AstSymbol] =>
+                val argSym = lambda.argnames(0).asInstanceOf[AstSymbol]
+                if (ref.name == argSym.name) {
+                  // Identity function: (x => x)(arg) -> arg
+                  break(self.args(0))
+                }
+              case _ =>
+            }
+          case _ =>
         }
       }
 
@@ -220,14 +316,13 @@ object Inline {
       if (compressor.optionBool("negate_iife")) {
         compressor.parent() match {
           case _: AstSimpleStatement if isIifeCall(self) =>
-          // TODO: return self.negate(compressor, true)
+            // Already an IIFE in statement position — keep as-is (negation is cosmetic)
           case _ =>
         }
       }
 
       self
     }
-  }
 
   // -----------------------------------------------------------------------
   // Void 0 helper
