@@ -57,7 +57,7 @@ object HtmlMinifier {
 
   private def doMinify(input: String, options: HtmlMinifyOptions, jsCompressor: JsCompressor): String = {
     // 1. Extract preserved blocks (pre, textarea, script, style, user patterns)
-    val (html, preserved) = PreservedBlock.extract(input, options.effectivePreservePatterns)
+    val (html, preserved) = PreservedBlock.extract(input, options.effectivePreservePatterns, options.preservedTags)
 
     // 2. Apply whitespace/comment pipeline (operates on text outside preserved blocks)
     var result = html

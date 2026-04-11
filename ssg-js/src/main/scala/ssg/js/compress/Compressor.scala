@@ -178,16 +178,50 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Resolve global definitions (e.g., DEBUG: false → replace all DEBUG refs)
     toplevel = GlobalDefs.resolveDefs(toplevel, options.globalDefs)
 
-    // Drop console calls if configured (must be run before reduce_vars and compress pass)
-    if (options.dropConsole != DropConsoleConfig.Disabled) {
-      toplevel = dropConsole(toplevel)
-    }
+    val passes   = options.passes.max(1)
+    var minCount = Int.MaxValue
+    var stopping = false
 
-    // Apply per-node optimizations via a single walk
-    val optimized = optimizeTree(toplevel)
-    toplevel = optimized match {
-      case tl: AstToplevel => tl
-      case _ => toplevel
+    // Create a TreeTransformer that delegates to the Compressor's before() callback
+    val compressor = this
+    val transformer = new TreeTransformer(
+      before = (node, descend) => {
+        compressor.before(node, (n, _) => descend())
+      }
+    )
+
+    var pass = 0
+    while (pass < passes) {
+      // TODO: figure_out_scope(mangle) when scope analysis is fully integrated
+
+      if (pass == 0 && options.dropConsole != DropConsoleConfig.Disabled) {
+        // must be run before reduce_vars and compress pass
+        toplevel = dropConsole(toplevel)
+      }
+
+      if (pass > 0 || optionBool("reduce_vars")) {
+        resetOptFlags(toplevel)
+      }
+
+      // Transform pass — walks the AST, optimizing each node
+      toplevelNode = Some(toplevel)
+      toplevel = toplevel.transform(transformer).asInstanceOf[AstToplevel]
+
+      // Multi-pass convergence: count AST nodes, stop when size stops shrinking
+      if (passes > 1) {
+        var count = 0
+        ssg.js.ast.walk(toplevel, (_, _) => { count += 1; null })
+        if (count < minCount) {
+          minCount = count
+          stopping = false
+        } else if (stopping) {
+          pass = passes // break
+        } else {
+          stopping = true
+        }
+      }
+
+      pass += 1
     }
 
     toplevelNode = None
@@ -1144,8 +1178,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   // findScope() is inherited from TreeWalker
 
-  /** Reset optimization flags before each pass. TODO: used in multi-pass loop. */
-  @scala.annotation.nowarn("msg=unused private member")
+  /** Reset optimization flags before each pass. */
   private def resetOptFlags(toplevel: AstToplevel): Unit = {
     val tw = new TreeWalker((node, _) => {
       clearFlag(node, CLEAR_BETWEEN_PASSES)
