@@ -40,12 +40,15 @@ class ParsedOption[T](
       (optionResultIn, messagesIn)
     }
 
-  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus) =
+  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus) = {
     this(source, optionParser, optionResult, Nullable.empty, Nullable.empty)
+  }
 
-  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus, message: ParserMessage) =
+  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus, message: ParserMessage) = {
     this(source, optionParser, optionResult, Nullable(List(message)), Nullable.empty)
+  }
 
-  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus, messages: List[ParserMessage]) =
+  def this(source: BasedSequence, optionParser: OptionParser[T], optionResult: ParsedOptionStatus, messages: List[ParserMessage]) = {
     this(source, optionParser, optionResult, Nullable(messages), Nullable.empty)
+  }
 }

@@ -34,7 +34,7 @@ class SequenceBuilder private (
     * NOTE: the builder is always constructed for the base sequence of the base. ie. for the based sequence returned by [[BasedSequence.getBaseSequence]], so any subsequence from a base can be used as
     * argument for the constructor
     */
-  private def this(base: BasedSequence, optimizer: Nullable[SegmentOptimizer]) =
+  private def this(base: BasedSequence, optimizer: Nullable[SegmentOptimizer]) = {
     this(
       base,
       base.getBaseSequence, {
@@ -52,8 +52,9 @@ class SequenceBuilder private (
       },
       new ju.HashMap[BasedSequence, java.lang.Boolean]()
     )
+  }
 
-  private def this(base: BasedSequence, options: Int, optimizer: Nullable[SegmentOptimizer], equivalentBases: ju.HashMap[BasedSequence, java.lang.Boolean]) =
+  private def this(base: BasedSequence, options: Int, optimizer: Nullable[SegmentOptimizer], equivalentBases: ju.HashMap[BasedSequence, java.lang.Boolean]) = {
     this(
       base,
       base.getBaseSequence, {
@@ -70,6 +71,7 @@ class SequenceBuilder private (
       },
       equivalentBases
     )
+  }
 
   def baseSequence: BasedSequence = baseSeq
 

@@ -30,7 +30,7 @@ abstract class DataKeyBase[T](
     * @param defaultKey
     *   The DataKeyBase to take the default value from at time of construction.
     */
-  def this(name: String, defaultKey: DataKeyBase[T]) =
+  def this(name: String, defaultKey: DataKeyBase[T]) = {
     this(
       name,
       defaultKey.defaultValue,
@@ -38,8 +38,9 @@ abstract class DataKeyBase[T](
         def apply(dataHolder: DataHolder): Nullable[T] = defaultKey.get(Nullable(dataHolder))
       }
     )
+  }
 
-  def this(name: String, defaultValue: T) =
+  def this(name: String, defaultValue: T) = {
     this(
       name,
       defaultValue,
@@ -49,6 +50,7 @@ abstract class DataKeyBase[T](
         def apply(dataHolder: DataHolder): Nullable[T] = Nullable(dv)
       }
     )
+  }
 
   @annotation.nowarn("msg=deprecated") // orNull needed — factory returns Nullable opaque type
   def getDefaultValue(holder: DataHolder): T =

@@ -1,0 +1,234 @@
+===============================================================================
+PARSER PORTING GAP AUDIT: dart-sass → ssg-sass
+===============================================================================
+Date: 2026-04-10
+Branch: sass-port
+Files compared:
+  - stylesheet.dart (4886 lines) vs StylesheetParser.scala (3565 lines)
+  - parser.dart     (817 lines)  vs Parser.scala           (492 lines)
+  - scss.dart       (200 lines)  vs ScssParser.scala        (176 lines)
+
+Total source lines: 5903 dart → 4233 scala (72% by LOC)
+
+===============================================================================
+METHOD COUNTS
+===============================================================================
+
+Source file                   Dart methods   Ported   Simplified   Missing   Stub
+---------------------------------------------------------------------------
+stylesheet.dart (StylesheetParser)    97       12        33          50       2
+parser.dart     (Parser)              28       16         5           7       0
+scss.dart       (ScssParser)          12        4         5           2       1*
+---------------------------------------------------------------------------
+TOTAL                                137       32        43          59       2+1*
+
+* ScssParser._silentComment/_loudComment are "missing" from ScssParser.scala
+  but equivalent functionality exists in StylesheetParser.scala.
+
+Percentages:
+  PORTED:      32  (23.4%)   — Faithful or near-faithful ports
+  SIMPLIFIED:  43  (31.4%)   — Exists but cuts corners / misses edge cases
+  MISSING:     59  (43.1%)   — Not present at all
+  STUB:         3  ( 2.2%)   — Throws UnsupportedOperationException
+
+===============================================================================
+ARCHITECTURAL DIFFERENCES
+===============================================================================
+
+1. EXPRESSION PARSER DESIGN
+   dart-sass: Single _expression() method using operator-precedence climbing
+   with closures (addOperator, addSingleExpression, resolveOperations) that
+   consume directly from the scanner. Handles ALL expression forms including
+   interpolation, bracket lists, selectors, unicode ranges, etc.
+
+   ssg-sass: TWO parallel implementations:
+   a) Text-based: _expression() collects raw text, then _parseSimpleExpression()
+      does regex-like string parsing. Used for most contexts.
+   b) Recursive-descent: _rdExpression() is a partial port of dart-sass's
+      _expression(). Currently only wired for @return and variable declarations
+      when the value looks like a single function call.
+
+   Impact: The text-based path cannot handle nested interpolation, bracket
+   lists, unicode ranges, or selector expressions correctly. The RD path
+   lacks many expression forms (hash, selector, important, percent, unicode,
+   modern if()).
+
+2. CONTEXT FLAGS
+   dart-sass tracks 9 parsing context flags:
+   _inMixin, _inContentBlock, _inControlDirective, _inUnknownAtRule,
+   _inPlainCssFunction, _inStyleRule, _inParentheses, _inExpression,
+   _isUseAllowed
+
+   ssg-sass: NONE of these flags are tracked. This means:
+   - @use/@forward are accepted anywhere (should be root-only)
+   - @function/@mixin inside mixin/control directives not rejected
+   - Style rules inside @function not rejected
+   - _inParentheses slash-separation reparse not triggered
+   - plainCss mode has gaps in enforcement
+
+3. INTERPOLATION MODEL
+   dart-sass: InterpolationBuffer builds Interpolation objects with mixed
+   String/Expression contents. singleInterpolation() returns (Expression,
+   FileSpan). Used pervasively for selectors, identifiers, declaration values.
+
+   ssg-sass: _parseInterpolatedString() does post-hoc text-based #{} detection.
+   This misses nested interpolation, escape handling in interpolation context,
+   and correct span tracking.
+
+4. SELECTOR PARSING
+   dart-sass: Full InterpolatedSelector AST with InterpolatedSelectorList,
+   InterpolatedComplexSelector, InterpolatedCompoundSelector, and 10+ simple
+   selector types. Used when _parseSelectors is true.
+
+   ssg-sass: All 14 selector-parsing methods are MISSING. Selectors are
+   raw text collected by styleRuleSelector() in ScssParser.
+
+5. MEDIA QUERY PARSING
+   dart-sass: 6 methods (_mediaQueryList, _mediaQuery, _mediaLogicSequence,
+   _mediaOrInterp, _mediaInParens, _expressionUntilComparison) produce
+   structured Interpolation with comparison operators.
+
+   ssg-sass: All 6 methods MISSING. Media queries collected as raw text.
+
+6. @SUPPORTS CONDITION PARSING
+   dart-sass: 5 methods (_supportsCondition, _supportsConditionInParens,
+   _supportsDeclarationValue, _trySupportsOperation) build structured AST
+   (SupportsNegation, SupportsOperation, SupportsDeclaration, etc.)
+
+   ssg-sass: All 5 methods MISSING. Conditions parsed as text into
+   SupportsAnything or SupportsFunction heuristically.
+
+===============================================================================
+TOP 10 MISSING/SIMPLIFIED METHODS BY ESTIMATED SPEC IMPACT
+===============================================================================
+
+Rank  Method                           Status      Impact
+----  ------                           ------      ------
+ 1    _expression (full port)          SIMPLIFIED  ALL expression parsing flows
+                                                   through this. Text-based
+                                                   approach fundamentally limits
+                                                   what SSG can parse correctly.
+                                                   Bracket lists, unicode ranges,
+                                                   selector exprs, modern if()
+                                                   all broken.
+
+ 2    _interpolatedDeclarationValue    SIMPLIFIED  Used by ~15 callers for
+                                                   collecting balanced declaration
+                                                   values, custom properties,
+                                                   @supports conditions, pseudo
+                                                   selectors, etc. SSG only has
+                                                   custom property case.
+
+ 3    interpolatedIdentifier           SIMPLIFIED  Core building block used by
+                                                   identifierLike, selectors,
+                                                   almostAnyValue, media queries,
+                                                   attribute selectors. SSG has
+                                                   _readInterpolatedName (names
+                                                   only).
+
+ 4    _selectorList/_complexSelector   MISSING     14 selector methods. Required
+      + 12 other selector methods                  for _parseSelectors=true mode,
+                                                   @extend validation, :is()/:has()
+                                                   parsing. ~300 lines.
+
+ 5    _declarationOrBuffer             MISSING     Critical disambiguation for
+                                                   declarations vs selectors with
+                                                   backtracking. SSG heuristic
+                                                   mishandles property hacks,
+                                                   nested declarations, ambiguous
+                                                   selectors.
+
+ 6    _mediaQueryList + 5 helpers      MISSING     Structured media query parsing.
+                                                   Required for correct media
+                                                   query serialization with
+                                                   comparisons and logical ops.
+
+ 7    _supportsCondition + 4 helpers   MISSING     Structured @supports parsing.
+                                                   Current SupportsAnything
+                                                   heuristic fails on complex
+                                                   conditions.
+
+ 8    _tryUrlContents                  MISSING     URL parsing with interpolation
+                                                   and backtracking. Required
+                                                   for correct url() handling
+                                                   in expressions.
+
+ 9    almostAnyValue                   MISSING     Used by @extend, selectors,
+                                                   unknown at-rules. Balanced
+                                                   text collection with proper
+                                                   interpolation and comment
+                                                   handling.
+
+10    _whileRule                       MISSING     @while directive completely
+                                                   unimplemented. Falls through
+                                                   to generic at-rule handler.
+
+===============================================================================
+LINES OF CODE ESTIMATE FOR FULL FAITHFUL PORT
+===============================================================================
+
+Category                          Est. Lines (Scala)   Notes
+--------                          ------------------   -----
+Expression parser (full port)           450            Replace text-based with
+                                                       full RD; unify _expression
+                                                       and _rdExpression
+Selector parsing (14 methods)           350            New code; InterpolatedSelector AST
+Media query parsing (6 methods)         180            New code
+@supports condition (5 methods)         150            New code
+interpolatedDeclarationValue            120            Generalize _readCustomPropertyValue
+almostAnyValue                           80            New code
+interpolatedIdentifier (full)            60            Upgrade _readInterpolatedName
+Context flag plumbing                   200            Add 9 flags + thread through
+                                                       all at-rule/statement handlers
+_declarationOrBuffer (backtracking)     100            Replace heuristic
+@while rule                              25            Trivial
+Missing expression forms                150            Unicode range, bracket list,
+                                                       selector expr, hash expr,
+                                                       important, percent, modern if()
+tryUrlContents/dynamicUrl                80            URL parsing with backtracking
+Import support methods                   60            _importSupportsQuery, etc.
+Deprecation warnings                     80            Thread Deprecation through
+                                                       existing methods
+Parser.dart missing methods              80            scanCharIf, scanIdentChar,
+                                                       expectIdentChar, matchesIdentifier,
+                                                       rawText, withErrorMessage,
+                                                       wrapSpanFormatException (full)
+ScssParser missing methods               40            _silentComment, _loudComment
+                                                       (with interpolation in comments)
+--------------------------------------------------------------
+TOTAL ESTIMATE                        ~2,205 lines     (net new + replacement)
+
+This represents roughly 37% additional Scala code beyond the current 4,233
+lines, bringing the total to approximately 6,400 lines — closer to parity
+with the 5,903 dart source lines (Scala is typically 5-15% more verbose).
+
+===============================================================================
+KEY FINDINGS
+===============================================================================
+
+1. The SSG parser is functional for basic SCSS: variables, declarations,
+   style rules, most at-rules, and simple expressions work. The text-based
+   expression parser handles common cases through string manipulation.
+
+2. The partial RD expression parser (_rdExpression) is a good foundation but
+   is only wired for a narrow case (variable declarations with function-call
+   values). Completing and unifying this is the single highest-impact task.
+
+3. The ENTIRE selector parsing subsystem (14 methods, ~300 lines) is absent.
+   This blocks _parseSelectors=true mode needed for accurate selector
+   manipulation.
+
+4. Context flags are completely absent, meaning the parser does not enforce
+   Sass scoping rules (e.g., no style rules inside @function, @use must be
+   before other rules, etc.). This is a correctness issue but typically only
+   matters for error cases.
+
+5. The @while rule is entirely missing — a simple omission that could be
+   fixed in <30 lines.
+
+6. Modern CSS features (if() expression, bracket lists, unicode ranges) are
+   all unimplemented.
+
+7. The dual expression-parser architecture (text-based + RD) creates
+   maintenance burden. The end goal should be to complete the RD parser
+   and eliminate the text-based path entirely.

@@ -46,6 +46,7 @@ import ssg.sass.ast.sass.{
   ForwardRule,
   FunctionExpression,
   FunctionRule,
+  InterpolatedFunctionExpression,
   IfClause,
   IfRule,
   Import,
@@ -65,6 +66,7 @@ import ssg.sass.ast.sass.{
   ParenthesizedExpression,
   ParseTimeWarning,
   ReturnRule,
+  SelectorExpression,
   SilentComment,
   Statement,
   StaticImport,
@@ -197,7 +199,11 @@ abstract class StylesheetParser protected (
             whitespace(consumeNewlines = true)
             scanner.expectChar(CharCode.$colon)
             whitespace(consumeNewlines = true)
-            val expr = _expression(stopAtComma = true)
+            val cfgSt = scanner.state
+            val expr = try _rdExpression(stopAtComma = true, consumeNewlines = true, until = () => {
+                val ch = scanner.peekChar()
+                ch == CharCode.$rparen || ch == CharCode.$exclamation
+              }) catch { case _: Exception => scanner.state = cfgSt; _expression(stopAtComma = true) }
             whitespace(consumeNewlines = true)
             var guarded = false
             if (scanner.scanChar(CharCode.$exclamation)) {
@@ -478,14 +484,12 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val retRdState = scanner.state
         val retExpr =
-          if (_rdLooksLikeSingleFunctionCall()) {
-            try _rdExpression()
-            catch {
-              case _: Throwable =>
-                scanner.state = retRdState
-                _expression()
-            }
-          } else _expression()
+          try _rdExpression()
+          catch {
+            case _: Exception =>
+              scanner.state = retRdState
+              _expression()
+          }
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ReturnRule(retExpr, spanFrom(start)))
@@ -970,21 +974,24 @@ abstract class StylesheetParser protected (
       case "debug" =>
         // @debug <expression> ;
         whitespace(consumeNewlines = true)
-        val dExpr = _expression()
+        val dState = scanner.state
+        val dExpr = try _rdExpression() catch { case _: Exception => scanner.state = dState; _expression() }
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new DebugRule(dExpr, spanFrom(start)))
       case "warn" =>
         // @warn <expression> ;
         whitespace(consumeNewlines = true)
-        val wExpr = _expression()
+        val wState = scanner.state
+        val wExpr = try _rdExpression() catch { case _: Exception => scanner.state = wState; _expression() }
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new WarnRule(wExpr, spanFrom(start)))
       case "error" =>
         // @error <expression> ;
         whitespace(consumeNewlines = true)
-        val eExpr = _expression()
+        val eState = scanner.state
+        val eExpr = try _rdExpression() catch { case _: Exception => scanner.state = eState; _expression() }
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ErrorRule(eExpr, spanFrom(start)))
@@ -1028,8 +1035,13 @@ abstract class StylesheetParser protected (
           (buf.toString().trim, st)
         }
         whitespace(consumeNewlines = true)
-        val (condRaw, condStart) = _collectCondition()
-        val condExpr             = _parseSimpleExpression(condRaw, spanFrom(condStart))
+        val condIfSt = scanner.state
+        val condExpr = try _rdExpression(consumeNewlines = true, until = () => scanner.peekChar() == CharCode.$lbrace)
+          catch { case _: Exception =>
+            scanner.state = condIfSt
+            val (condRaw, condStart2) = _collectCondition()
+            _parseSimpleExpression(condRaw, spanFrom(condStart2))
+          }
         whitespace(consumeNewlines = true)
         val ifKids  = _children()
         val clauses = mutable.ListBuffer.empty[IfClause]
@@ -1042,8 +1054,13 @@ abstract class StylesheetParser protected (
           whitespace(consumeNewlines = true)
           if (scanIdentifier("if")) {
             whitespace(consumeNewlines = true)
-            val (elseCondRaw, elseCondStart) = _collectCondition()
-            val elseCondExpr                 = _parseSimpleExpression(elseCondRaw, spanFrom(elseCondStart))
+            val elseCondSt = scanner.state
+            val elseCondExpr = try _rdExpression(consumeNewlines = true, until = () => scanner.peekChar() == CharCode.$lbrace)
+              catch { case _: Exception =>
+                scanner.state = elseCondSt
+                val (elseCondRaw2, elseCondStart2) = _collectCondition()
+                _parseSimpleExpression(elseCondRaw2, spanFrom(elseCondStart2))
+              }
             whitespace(consumeNewlines = true)
             val elseIfKids = _children()
             clauses += new IfClause(elseCondExpr, elseIfKids)
@@ -1392,20 +1409,16 @@ abstract class StylesheetParser protected (
     scanner.expectChar(CharCode.$colon)
     whitespace(consumeNewlines = true)
 
-    // Stage 7: narrow wire — prefer the recursive-descent expression parser
-    // when the variable value is a single top-level function call starting
-    // with an identifier+`(` (the most common modern-color syntax case).
-    // Otherwise defer to the text-based _expression collector.
+    // dart-sass: variable value parsed by _expression(). RD parser with
+    // fallback to text-based for expressions not yet fully ported.
     val rdState = scanner.state
     val expression: Expression =
-      if (_rdLooksLikeSingleFunctionCall()) {
-        try _rdExpression()
-        catch {
-          case _: Throwable =>
-            scanner.state = rdState
-            _expression()
-        }
-      } else _expression()
+      try _rdExpression(consumeNewlines = true)
+      catch {
+        case _: Exception =>
+          scanner.state = rdState
+          _expression()
+      }
     whitespace(consumeNewlines = false)
 
     // Handle !default / !global flags (simplified)
@@ -1439,9 +1452,19 @@ abstract class StylesheetParser protected (
     whitespace(consumeNewlines = true)
     val stmts = mutable.ListBuffer.empty[Statement]
     while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+      val childLoopPos = scanner.position
       val stmt = _childStatement()
       if (stmt.isDefined) stmts += stmt.get
       whitespace(consumeNewlines = true)
+      if (scanner.position == childLoopPos) {
+        val ctx = if (scanner.isDone) "<EOF>" else {
+          val end = math.min(scanner.position + 60, scanner.string.length)
+          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+        }
+        throw new Error(
+          s"_children() stall at pos ${scanner.position}: stmt=${stmt.isDefined}, context=\"$ctx\""
+        )
+      }
     }
     scanner.expectChar(CharCode.$rbrace)
     stmts.toList
@@ -1484,7 +1507,10 @@ abstract class StylesheetParser protected (
       }
       val _ = scanner.readChar() // ':'
       whitespace(consumeNewlines = true)
-      val expression = _expression()
+      val expression = _rdExpression(consumeNewlines = false, until = () => {
+        val ch = scanner.peekChar()
+        ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace || ch == CharCode.$exclamation
+      })
       whitespace(consumeNewlines = false)
       val important1 = _tryScanImportant()
       scanner.scanChar(CharCode.$semicolon)
@@ -1520,7 +1546,10 @@ abstract class StylesheetParser protected (
           }
           val _ = scanner.readChar() // ':'
           whitespace(consumeNewlines = true)
-          val expression = _expression()
+          val expression = _rdExpression(consumeNewlines = false, until = () => {
+            val ch = scanner.peekChar()
+            ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace || ch == CharCode.$exclamation
+          })
           whitespace(consumeNewlines = false)
           val important2 = _tryScanImportant()
           scanner.scanChar(CharCode.$semicolon)
@@ -1581,7 +1610,10 @@ abstract class StylesheetParser protected (
 
       // If we're at end of declaration (no value), it's a nested declaration
       // For simplicity, require a value.
-      val expression = _expression()
+      val expression = _rdExpression(consumeNewlines = false, until = () => {
+        val ch = scanner.peekChar()
+        ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace || ch == CharCode.$exclamation
+      })
       whitespace(consumeNewlines = false)
       val important3 = _tryScanImportant()
       scanner.scanChar(CharCode.$semicolon)
@@ -1643,6 +1675,7 @@ abstract class StylesheetParser protected (
     var interpDepth: Int = 0 // brace depth inside #{...}
     boundary {
       while (!scanner.isDone) {
+        val textLoopStart = scanner.position
         val ch = scanner.peekChar()
         if (ch < 0) break(())
 
@@ -1699,6 +1732,15 @@ abstract class StylesheetParser protected (
             }
             buf.append(scanner.readChar().toChar)
           }
+        }
+        if (scanner.position == textLoopStart) {
+          val ctx = if (scanner.isDone) "<EOF>" else {
+            val end = math.min(scanner.position + 40, scanner.string.length)
+            scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+          }
+          throw new Error(
+            s"_expression stall at pos ${scanner.position}: ch=$ch, inQuote=$inQuote, interp=$interpDepth, brackets=$brackets, ctx=\"$ctx\""
+          )
         }
       }
     }
@@ -2820,6 +2862,13 @@ abstract class StylesheetParser protected (
   /** Discards a value (for readChar() calls whose result is unused). */
   private inline def _rdConsume[A](a: A): Unit = { val _ = a }
 
+  /** Recursion depth counter for _rdExpression — crashes at depth > 200. */
+  private var _rdExpressionDepth: Int = 0
+  /** Global iteration counter — crashes at > 100000 total loop iterations
+    * across all _rdExpression calls to catch runaway parsing.
+    */
+  private var _rdTotalIterations: Int = 0
+
   /** dart-sass: `_isSlashOperand`. */
   private def _rdIsSlashOperand(e: Expression): Boolean = e match {
     case _: NumberExpression                           => true
@@ -2832,8 +2881,24 @@ abstract class StylesheetParser protected (
     */
   protected def _rdExpression(
     stopAtComma:     Boolean = false,
-    consumeNewlines: Boolean = false
+    consumeNewlines: Boolean = false,
+    until:           () => Boolean = null
   ): Expression = {
+    _rdExpressionDepth += 1
+    if (_rdExpressionDepth == 1) _rdTotalIterations = 0
+    if (_rdExpressionDepth > 200) {
+      val ctx = if (scanner.isDone) "<EOF>" else {
+        val end = math.min(scanner.position + 60, scanner.string.length)
+        scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+      }
+      _rdExpressionDepth = 0
+      throw new Error(
+        s"_rdExpression recursion depth > 200 at pos ${scanner.position}, " +
+        s"stopAtComma=$stopAtComma, consumeNewlines=$consumeNewlines, " +
+        s"context=\"$ctx\""
+      )
+    }
+    try {
     val start = scanner.state
 
     // Accumulators matching the dart-sass locals. We use `null` sentinels
@@ -2925,12 +2990,26 @@ abstract class StylesheetParser protected (
 
     boundary {
       while (true) {
+        _rdTotalIterations += 1
+        if (_rdTotalIterations > 100000) {
+          val ctx = if (scanner.isDone) "<EOF>" else {
+            val end = math.min(scanner.position + 60, scanner.string.length)
+            scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+          }
+          _rdTotalIterations = 0
+          throw new Error(
+            s"_rdExpression runaway: >100000 total iterations at pos ${scanner.position}, " +
+            s"depth=$_rdExpressionDepth, context=\"$ctx\""
+          )
+        }
+        val loopStartPos = scanner.position
         val posBeforeWs = scanner.position
         whitespace(consumeNewlines = consumeNewlines)
         val hadWhitespace = scanner.position > posBeforeWs
         val c = scanner.peekChar()
         if (c < 0) break(())
         if (stopAtComma && c == CharCode.$comma) break(())
+        if (until != null && until()) break(())
         c match {
           case CharCode.`$lparen` =>
             addSingleExpression(_rdParenthesizedExpression())
@@ -2979,18 +3058,36 @@ abstract class StylesheetParser protected (
               addOperator(BinaryOperator.DividedBy)
             }
           case CharCode.`$percent` =>
-            val _ = scanner.readChar()
-            addOperator(BinaryOperator.Modulo)
+            if (singleExpression.isDefined) {
+              val _ = scanner.readChar()
+              addOperator(BinaryOperator.Modulo)
+            } else {
+              // Bare `%` in CSS — treat as an unquoted string token.
+              val pctStart = scanner.state
+              val _ = scanner.readChar()
+              addSingleExpression(StringExpression(
+                Interpolation.plain("%", spanFrom(pctStart)),
+                hasQuotes = false
+              ))
+            }
           case CharCode.`$equal` =>
             val _ = scanner.readChar()
             scanner.expectChar(CharCode.$equal)
             addOperator(BinaryOperator.Equals)
+          case CharCode.`$hash` =>
+            addSingleExpression(_rdHashExpression())
+          case CharCode.`$ampersand` =>
+            addSingleExpression(_rdSelector())
+          case CharCode.`$lbracket` =>
+            addSingleExpression(_rdBracketList())
           case CharCode.`$exclamation` =>
             val n1 = scanner.peekChar(1)
             if (n1 == CharCode.$equal) {
               _rdConsume(scanner.readChar())
               _rdConsume(scanner.readChar())
               addOperator(BinaryOperator.NotEquals)
+            } else if (singleExpression.isEmpty) {
+              addSingleExpression(_rdImportantExpression())
             } else break(())
           case CharCode.`$lt` =>
             val _ = scanner.readChar()
@@ -3001,7 +3098,7 @@ abstract class StylesheetParser protected (
             if (scanner.scanChar(CharCode.$equal))
               addOperator(BinaryOperator.GreaterThanOrEquals)
             else addOperator(BinaryOperator.GreaterThan)
-          case CharCode.`$dot` =>
+          case CharCode.`$dot` if scanner.peekChar(1) >= 0 && CharCode.isDigit(scanner.peekChar(1)) =>
             addSingleExpression(_rdNumber())
           case _ if c >= CharCode.$0 && c <= CharCode.$9 =>
             addSingleExpression(_rdNumber())
@@ -3026,6 +3123,22 @@ abstract class StylesheetParser protected (
             break(())
         }
         if (stopAtComma && scanner.peekChar() == CharCode.$comma) break(())
+        // NASA-style stall detector: if the scanner hasn't advanced after
+        // processing one full loop iteration, crash with diagnostic info
+        // instead of spinning forever.
+        if (scanner.position == loopStartPos) {
+          val ctx = if (scanner.isDone) "<EOF>"
+            else {
+              val end = math.min(scanner.position + 40, scanner.string.length)
+              scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+            }
+          throw new Error(
+            s"_rdExpression stall detected at position ${scanner.position}: " +
+            s"peekChar=${scanner.peekChar()}, " +
+            s"singleExpr=${singleExpression.isDefined}, " +
+            s"context=\"$ctx\""
+          )
+        }
       }
     }
 
@@ -3038,6 +3151,7 @@ abstract class StylesheetParser protected (
         resolveSpaceExpressions()
         singleExpression.getOrElse(scanner.error("Expected expression."))
     }
+    } finally { _rdExpressionDepth -= 1 }
   }
 
   /** dart-sass: `_singleExpression` (port). Dispatches on the next character. */
@@ -3046,19 +3160,111 @@ abstract class StylesheetParser protected (
     if (c < 0) scanner.error("Expected expression.")
     c match {
       case CharCode.`$lparen`                                  => _rdParenthesizedExpression()
+      case CharCode.`$lbracket`                                => _rdBracketList()
       case CharCode.`$slash`                                   => _rdUnaryOperation()
       case CharCode.`$dot`                                     => _rdNumber()
       case CharCode.`$dollar`                                  => _rdVariable()
+      case CharCode.`$ampersand`                               => _rdSelector()
       case CharCode.`$double_quote` | CharCode.`$single_quote` => _rdString()
+      case CharCode.`$hash`                                    => _rdHashExpression()
       case CharCode.`$plus` | CharCode.`$minus`                =>
         val n1 = scanner.peekChar(1)
         if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) _rdNumber()
         else _rdUnaryOperation()
+      case CharCode.`$exclamation`                             => _rdImportantExpression()
       case _ if c >= CharCode.$0 && c <= CharCode.$9                => _rdNumber()
       case _ if CharCode.isNameStart(c) || c == CharCode.$backslash =>
         _rdIdentifierLike()
       case _ => scanner.error("Expected expression.")
     }
+  }
+
+  /** dart-sass: `_selector`. Parses the `&` parent selector reference. */
+  private def _rdSelector(): SelectorExpression = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$ampersand)
+    // If & is followed by name characters, it's a suffix selector (&-foo)
+    // and the suffix is handled at the selector level, not expression level.
+    SelectorExpression(spanFrom(start))
+  }
+
+  /** dart-sass: `_hashExpression`. Dispatches `#` to hex color or `#{...}` interpolation. */
+  private def _rdHashExpression(): Expression = {
+    val start = scanner.state
+    if (scanner.peekChar(1) == CharCode.$lbrace) {
+      // #{...} interpolation — parse as interpolated identifier
+      val ident = interpolatedIdentifier()
+      if (scanner.peekChar() == CharCode.$lparen) {
+        val args = _rdArgumentInvocation(start)
+        return InterpolatedFunctionExpression(ident, args, spanFrom(start))
+      }
+      return StringExpression(ident, hasQuotes = false)
+    }
+    scanner.expectChar(CharCode.$hash)
+    // Hex color: #rgb / #rgba / #rrggbb / #rrggbbaa
+    val hexStart = scanner.position
+    var hexLen   = 0
+    while (scanner.peekChar() >= 0 && CharCode.isHex(scanner.peekChar()) && hexLen < 8) {
+      scanner.readChar()
+      hexLen += 1
+    }
+    if (hexLen == 3 || hexLen == 4 || hexLen == 6 || hexLen == 8) {
+      val hexStr = scanner.substring(hexStart, scanner.position)
+      val color  = _parseHexColor(hexStr)
+      ColorExpression(color, spanFrom(start))
+    } else {
+      // Not a valid hex color — treat the whole thing as an unquoted string
+      val span = spanFrom(start)
+      StringExpression(Interpolation.plain("#" + scanner.substring(hexStart, scanner.position), span), hasQuotes = false)
+    }
+  }
+
+  /** Parses 3/4/6/8 hex digits into a SassColor. */
+  private def _parseHexColor(hex: String): ssg.sass.value.SassColor = {
+    import ssg.sass.value.SassColor
+    import ssg.sass.Nullable
+    def h(i: Int): Int = CharCode.asHex(hex.charAt(i).toInt)
+    hex.length match {
+      case 3 =>
+        val r = h(0); val g = h(1); val b = h(2)
+        SassColor.rgb(Nullable((r << 4 | r).toDouble), Nullable((g << 4 | g).toDouble), Nullable((b << 4 | b).toDouble))
+      case 4 =>
+        val r = h(0); val g = h(1); val b = h(2); val a = h(3)
+        SassColor.rgb(Nullable((r << 4 | r).toDouble), Nullable((g << 4 | g).toDouble), Nullable((b << 4 | b).toDouble), Nullable(((a << 4 | a).toDouble) / 255.0))
+      case 6 =>
+        SassColor.rgb(Nullable(((h(0) << 4) | h(1)).toDouble), Nullable(((h(2) << 4) | h(3)).toDouble), Nullable(((h(4) << 4) | h(5)).toDouble))
+      case 8 =>
+        SassColor.rgb(Nullable(((h(0) << 4) | h(1)).toDouble), Nullable(((h(2) << 4) | h(3)).toDouble), Nullable(((h(4) << 4) | h(5)).toDouble), Nullable((((h(6) << 4) | h(7)).toDouble) / 255.0))
+      case _ => throw new IllegalArgumentException(s"Invalid hex color: #$hex")
+    }
+  }
+
+  /** dart-sass: `_importantExpression`. Parses `!important`. */
+  private def _rdImportantExpression(): Expression = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$exclamation)
+    whitespace(consumeNewlines = false)
+    expectIdentifier("important")
+    StringExpression(Interpolation.plain("!important", spanFrom(start)), hasQuotes = false)
+  }
+
+  /** dart-sass: `_expression(bracketList: true)`. Parses `[...]` bracket lists. */
+  private def _rdBracketList(): Expression = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$lbracket)
+    whitespace(consumeNewlines = true)
+    if (scanner.scanChar(CharCode.$rbracket)) {
+      return ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = true)
+    }
+    // Parse a full expression, then wrap in a bracketed list
+    val inner = _rdExpression(consumeNewlines = true)
+    scanner.expectChar(CharCode.$rbracket)
+    val (elts, sep) = inner match {
+      case l: ListExpression if !l.hasBrackets =>
+        (l.contents, l.separator)
+      case _ => (List(inner), ListSeparator.Undecided)
+    }
+    ListExpression(elts, sep, spanFrom(start), hasBrackets = true)
   }
 
   /** dart-sass: `parentheses`. */
@@ -3281,34 +3487,158 @@ abstract class StylesheetParser protected (
     Nullable(Interpolation.plain(raw, spanFrom(modStart)))
   }
 
-  /** dart-sass: `interpolatedString` (minimum viable port). Does not yet handle `#{...}` embedded in the string — treats the contents verbatim.
+  // =========================================================================
+  // Interpolation subsystem — faithful ports from dart-sass
+  // stylesheet.dart: singleInterpolation, interpolatedString,
+  // interpolatedIdentifier, _interpolatedIdentifierBodyHelper,
+  // _lookingAtInterpolatedIdentifier, _lookingAtInterpolatedIdentifierBody.
+  // =========================================================================
+
+  /** Consumes `#{...}` interpolation and returns the expression with its span.
+    *
+    * dart-sass: `singleInterpolation` (stylesheet.dart:3887-3900).
     */
-  protected def _rdString(): StringExpression = {
+  protected def singleInterpolation(): (Expression, FileSpan) = {
+    val start = scanner.state
+    scanner.expectChar(CharCode.$hash)
+    scanner.expectChar(CharCode.$lbrace)
+    whitespace(consumeNewlines = true)
+    val contents = _rdExpression(consumeNewlines = true)
+    scanner.expectChar(CharCode.$rbrace)
+    val span = spanFrom(start)
+    (contents, span)
+  }
+
+  /** Parses a quoted string with `#{...}` interpolation support.
+    *
+    * dart-sass: `interpolatedString` (stylesheet.dart:2856-2897).
+    */
+  protected def interpolatedString(): StringExpression = {
     val start = scanner.state
     val quote = scanner.readChar()
-    val buf   = new StringBuilder()
+    if (quote != CharCode.$single_quote && quote != CharCode.$double_quote) {
+      scanner.error("Expected string.", start.position)
+    }
+    val buffer = new InterpolationBuffer()
     boundary {
-      while (!scanner.isDone) {
-        val ch = scanner.peekChar()
-        if (ch < 0) break(())
-        if (ch == quote) {
-          val _ = scanner.readChar()
+      while (true) {
+        val c = scanner.peekChar()
+        if (c < 0 || CharCode.isNewline(c)) {
+          scanner.error(s"Expected ${quote.toChar}.")
+        }
+        if (c == quote) {
+          scanner.readChar()
           break(())
-        } else if (ch == CharCode.$backslash) {
-          val ahead = scanner.peekChar(1)
-          if (ahead >= 0 && CharCode.isNewline(ahead)) {
-            scanner.readChar() // consume backslash
-            scanner.readChar() // consume newline (line continuation in strings)
+        } else if (c == CharCode.$backslash) {
+          val second = scanner.peekChar(1)
+          if (second >= 0 && CharCode.isNewline(second)) {
+            // Line continuation: consume backslash + newline, emit nothing.
+            scanner.readChar()
+            scanner.readChar()
+            if (second == CharCode.$cr) scanner.scanChar(CharCode.$lf)
           } else {
-            buf.appendAll(Character.toChars(escapeCharacter()))
+            buffer.writeCharCode(escapeCharacter())
           }
+        } else if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          val (expression, span) = singleInterpolation()
+          buffer.add(expression, span)
         } else {
-          buf.appendAll(Character.toChars(scanner.readChar()))
+          buffer.writeCharCode(scanner.readChar())
         }
       }
     }
-    StringExpression(Interpolation.plain(buf.toString(), spanFrom(start)), hasQuotes = true)
+    StringExpression(buffer.interpolation(spanFrom(start)), hasQuotes = true)
   }
+
+  /** Parses a CSS identifier that may contain `#{...}` interpolation.
+    *
+    * dart-sass: `interpolatedIdentifier` (stylesheet.dart:3822-3852).
+    */
+  protected def interpolatedIdentifier(): Interpolation = {
+    val start  = scanner.state
+    val buffer = new InterpolationBuffer()
+
+    if (scanner.scanChar(CharCode.$minus)) {
+      buffer.writeCharCode(CharCode.$minus)
+      if (scanner.scanChar(CharCode.$minus)) {
+        buffer.writeCharCode(CharCode.$minus)
+        _interpolatedIdentifierBodyHelper(buffer)
+        return buffer.interpolation(spanFrom(start))
+      }
+    }
+
+    val c = scanner.peekChar()
+    if (c < 0) scanner.error("Expected identifier.")
+    else if (CharCode.isNameStart(c)) {
+      buffer.writeCharCode(scanner.readChar())
+    } else if (c == CharCode.$backslash) {
+      buffer.write(escape(identifierStart = true))
+    } else if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+      val (expression, span) = singleInterpolation()
+      buffer.add(expression, span)
+    } else {
+      scanner.error("Expected identifier.")
+    }
+
+    _interpolatedIdentifierBodyHelper(buffer)
+    buffer.interpolation(spanFrom(start))
+  }
+
+  /** Consumes the body of a possibly-interpolated identifier into [buffer].
+    *
+    * dart-sass: `_interpolatedIdentifierBodyHelper` (stylesheet.dart:3865-3882).
+    */
+  private def _interpolatedIdentifierBodyHelper(buffer: InterpolationBuffer): Unit = {
+    boundary {
+      while (true) {
+        val c = scanner.peekChar()
+        if (c < 0) break(())
+        else if (CharCode.isName(c)) {
+          buffer.writeCharCode(scanner.readChar())
+        } else if (c == CharCode.$backslash) {
+          buffer.write(escape())
+        } else if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          val (expression, span) = singleInterpolation()
+          buffer.add(expression, span)
+        } else {
+          break(())
+        }
+      }
+    }
+  }
+
+  /** Returns whether the scanner is before an interpolated identifier.
+    *
+    * dart-sass: `_lookingAtInterpolatedIdentifier` (stylesheet.dart:4706-4719).
+    */
+  protected def _lookingAtInterpolatedIdentifier(): Boolean = {
+    val c = scanner.peekChar()
+    if (c < 0) false
+    else if (CharCode.isNameStart(c) || c == CharCode.$backslash) true
+    else if (c == CharCode.$hash) scanner.peekChar(1) == CharCode.$lbrace
+    else if (c == CharCode.$minus) {
+      val c1 = scanner.peekChar(1)
+      if (c1 < 0) false
+      else if (c1 == CharCode.$hash) scanner.peekChar(2) == CharCode.$lbrace
+      else CharCode.isNameStart(c1) || c1 == CharCode.$backslash || c1 == CharCode.$minus
+    } else false
+  }
+
+  /** Returns whether the scanner is before a character that could be part of
+    * an interpolated identifier body.
+    *
+    * dart-sass: `_lookingAtInterpolatedIdentifierBody` (stylesheet.dart:4733-4738).
+    */
+  protected def _lookingAtInterpolatedIdentifierBody(): Boolean = {
+    val c = scanner.peekChar()
+    if (c < 0) false
+    else if (CharCode.isName(c) || c == CharCode.$backslash) true
+    else c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace
+  }
+
+  /** dart-sass: `interpolatedString` — delegates to the faithful port above.
+    */
+  protected def _rdString(): StringExpression = interpolatedString()
 
   /** dart-sass: `_unaryOperation`. */
   protected def _rdUnaryOperation(): UnaryOperationExpression = {
@@ -3363,22 +3693,255 @@ abstract class StylesheetParser protected (
         hasQuotes = false
       )
     }
+    // Bare identifier → keyword, unary "not", or unquoted string.
+    val lower = name.toLowerCase
+    if (scanner.peekChar() != CharCode.$lparen && scanner.peekChar() != CharCode.$colon) {
+      name match {
+        case "not" =>
+          // dart-sass: "not" is a unary operator
+          whitespace(consumeNewlines = false)
+          val operand = _rdSingleExpression()
+          return UnaryOperationExpression(UnaryOperator.Not, operand, spanFrom(start))
+        case "true"  => return BooleanExpression(value = true, spanFrom(start))
+        case "false" => return BooleanExpression(value = false, spanFrom(start))
+        case "null"  => return new NullExpression(spanFrom(start))
+        case _ =>
+          ColorNames.colorsByName.get(lower) match {
+            case Some(color) => return ColorExpression(color, spanFrom(start))
+            case None        => ()
+          }
+      }
+    }
+
+    // dart-sass: trySpecialFunction — handles calc(), url(), element(),
+    // expression(), progid: and vendor-prefixed variants.
+    val specialFn = _rdTrySpecialFunction(name, start)
+    if (specialFn.isDefined) return specialFn.get
+
+    // Regular function call.
     if (scanner.peekChar() == CharCode.$lparen) {
       val args = _rdArgumentInvocation(start)
       return FunctionExpression(name, _rdMaybeUnpackColorArgs(name, args), spanFrom(start))
     }
-    // Bare identifier → keyword or unquoted string.
-    name match {
-      case "true"  => BooleanExpression(value = true, spanFrom(start))
-      case "false" => BooleanExpression(value = false, spanFrom(start))
-      case "null"  => new NullExpression(spanFrom(start))
-      case _       =>
-        ColorNames.colorsByName.get(name.toLowerCase) match {
-          case Some(color) => ColorExpression(color, spanFrom(start))
-          case None        =>
-            StringExpression(Interpolation.plain(name, spanFrom(start)), hasQuotes = false)
+
+    StringExpression(Interpolation.plain(name, spanFrom(start)), hasQuotes = false)
+  }
+
+  /** dart-sass: `trySpecialFunction` (stylesheet.dart:3321-3440).
+    *
+    * If [name] is the name of a function with special syntax, consumes it.
+    * Otherwise returns Nullable.empty.
+    */
+  protected def _rdTrySpecialFunction(name: String, start: ssg.sass.util.LineScannerState): Nullable[Expression] = {
+    val normalized = Utils.unvendor(name)
+    val vendored   = normalized != name
+    val lower      = normalized.toLowerCase
+    lower match {
+      case "calc" if vendored && scanner.scanChar(CharCode.$lparen) =>
+        val buffer = new InterpolationBuffer()
+        buffer.write(name)
+        buffer.writeCharCode(CharCode.$lparen)
+        buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
+        scanner.expectChar(CharCode.$rparen)
+        buffer.writeCharCode(CharCode.$rparen)
+        Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+
+      case "expression" if scanner.scanChar(CharCode.$lparen) =>
+        val buffer = new InterpolationBuffer()
+        buffer.write(name)
+        buffer.writeCharCode(CharCode.$lparen)
+        buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
+        scanner.expectChar(CharCode.$rparen)
+        buffer.writeCharCode(CharCode.$rparen)
+        Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+
+      case "element" if scanner.scanChar(CharCode.$lparen) =>
+        val buffer = new InterpolationBuffer()
+        buffer.write(name)
+        buffer.writeCharCode(CharCode.$lparen)
+        buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
+        scanner.expectChar(CharCode.$rparen)
+        buffer.writeCharCode(CharCode.$rparen)
+        Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+
+      case "progid" if scanner.scanChar(CharCode.$colon) =>
+        val buffer = new InterpolationBuffer()
+        buffer.write(name)
+        buffer.writeCharCode(CharCode.$colon)
+        var next = scanner.peekChar()
+        while (next >= 0 && (CharCode.isAlphabetic(next) || next == CharCode.$dot)) {
+          buffer.writeCharCode(scanner.readChar())
+          next = scanner.peekChar()
         }
+        scanner.expectChar(CharCode.$lparen)
+        buffer.writeCharCode(CharCode.$lparen)
+        buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
+        scanner.expectChar(CharCode.$rparen)
+        buffer.writeCharCode(CharCode.$rparen)
+        Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+
+      case "url" =>
+        val contents = _rdTryUrlContents(start, vendored = vendored)
+        if (contents.isDefined)
+          Nullable(StringExpression(contents.get))
+        else
+          Nullable.empty
+
+      case _ => Nullable.empty
     }
+  }
+
+  /** dart-sass: `_tryUrlContents` (stylesheet.dart:3442-3524).
+    *
+    * Like `_urlContents`, but returns Nullable.empty if the URL fails to parse.
+    */
+  protected def _rdTryUrlContents(
+    start: ssg.sass.util.LineScannerState,
+    name: String = "url",
+    vendored: Boolean = false
+  ): Nullable[Interpolation] = {
+    val beginningOfContents = scanner.state
+    if (!scanner.scanChar(CharCode.$lparen)) return Nullable.empty
+
+    whitespaceWithoutComments(consumeNewlines = true)
+
+    // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
+    // backtrack and re-parse as a function expression.
+    val buffer = new InterpolationBuffer()
+    buffer.write(name)
+    buffer.writeCharCode(CharCode.$lparen)
+    boundary {
+      while (true) {
+        val c = scanner.peekChar()
+        if (c < 0) {
+          break(())
+        } else if (c == CharCode.$backslash) {
+          buffer.write(escape())
+        } else if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          val (expr, span) = singleInterpolation()
+          buffer.add(expr, span)
+        } else if (c == CharCode.$rparen) {
+          buffer.writeCharCode(scanner.readChar())
+          return Nullable(buffer.interpolation(spanFrom(start)))
+        } else if (c == CharCode.$exclamation || c == CharCode.$percent ||
+                   c == CharCode.$ampersand || c == CharCode.$hash ||
+                   (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
+                   c >= 0x80) {
+          buffer.writeCharCode(scanner.readChar())
+        } else if (CharCode.isWhitespace(c)) {
+          whitespaceWithoutComments(consumeNewlines = true)
+          if (scanner.peekChar() != CharCode.$rparen) break(())
+        } else {
+          break(())
+        }
+      }
+    }
+    scanner.state = beginningOfContents
+    Nullable.empty
+  }
+
+  /** dart-sass: `_interpolatedDeclarationValue` (stylesheet.dart:3652-3814).
+    *
+    * Consumes tokens until it reaches a top-level `;`, `)`, `]`, or `}`
+    * and returns their contents as an Interpolation.
+    */
+  protected def _rdInterpolatedDeclarationValue(
+    allowEmpty: Boolean = false,
+    allowSemicolon: Boolean = false,
+    allowColon: Boolean = true
+  ): Interpolation = {
+    val start  = scanner.state
+    val buffer = new InterpolationBuffer()
+    val brackets = scala.collection.mutable.ListBuffer.empty[Int]
+    var wroteNewline = false
+
+    boundary {
+      while (true) {
+        val c = scanner.peekChar()
+        if (c < 0) {
+          break(())
+        } else if (c == CharCode.$backslash) {
+          buffer.write(escape(identifierStart = true))
+          wroteNewline = false
+        } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          buffer.addInterpolation(interpolatedString().text)
+          wroteNewline = false
+        } else if (c == CharCode.$slash) {
+          scanner.peekChar(1) match {
+            case CharCode.`$asterisk` =>
+              val beforeComment = scanner.state
+              loudComment()
+              buffer.write(scanner.substring(beforeComment.position))
+            case CharCode.`$slash` =>
+              silentComment()
+              wroteNewline = false
+            case _ =>
+              buffer.writeCharCode(scanner.readChar())
+              wroteNewline = false
+          }
+        } else if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
+          buffer.addInterpolation(interpolatedIdentifier())
+          wroteNewline = false
+        } else if (c == CharCode.$space || c == CharCode.$tab) {
+          if (!wroteNewline && scanner.peekChar(1) >= 0 && CharCode.isWhitespace(scanner.peekChar(1))) {
+            scanner.readChar() // collapse whitespace
+          } else {
+            buffer.writeCharCode(scanner.readChar())
+          }
+        } else if (CharCode.isNewline(c)) {
+          if (!scanner.isDone && scanner.position > 0 && !CharCode.isNewline(scanner.peekChar(-1))) {
+            buffer.write("\n")
+          }
+          scanner.readChar()
+          wroteNewline = true
+        } else if (c == CharCode.$lparen || c == CharCode.$lbrace || c == CharCode.$lbracket) {
+          val bracket = scanner.readChar()
+          buffer.writeCharCode(bracket)
+          brackets += CharCode.opposite(bracket)
+          wroteNewline = false
+        } else if (c == CharCode.$rparen || c == CharCode.$rbrace || c == CharCode.$rbracket) {
+          if (brackets.isEmpty) break(())
+          val expected = brackets.remove(brackets.length - 1)
+          scanner.expectChar(expected)
+          buffer.writeCharCode(expected)
+          wroteNewline = false
+        } else if (c == CharCode.$semicolon) {
+          if (!allowSemicolon && brackets.isEmpty) break(())
+          buffer.writeCharCode(scanner.readChar())
+          wroteNewline = false
+        } else if (c == CharCode.$colon) {
+          if (!allowColon && brackets.isEmpty) break(())
+          buffer.writeCharCode(scanner.readChar())
+          wroteNewline = false
+        } else if (c == CharCode.$u || c == CharCode.$U) {
+          val beforeUrl = scanner.state
+          val ident     = identifier()
+          if (ident != "url" && ident != "url-prefix") {
+            buffer.write(ident)
+            wroteNewline = false
+          } else {
+            val contents = _rdTryUrlContents(beforeUrl, name = ident)
+            if (contents.isDefined) {
+              buffer.addInterpolation(contents.get)
+            } else {
+              scanner.state = beforeUrl
+              buffer.writeCharCode(scanner.readChar())
+            }
+            wroteNewline = false
+          }
+        } else if (lookingAtIdentifier()) {
+          buffer.write(identifier())
+          wroteNewline = false
+        } else {
+          buffer.writeCharCode(scanner.readChar())
+          wroteNewline = false
+        }
+      }
+    }
+
+    if (brackets.nonEmpty) scanner.expectChar(brackets.last)
+    if (!allowEmpty && buffer.isEmpty) scanner.error("Expected token.")
+    buffer.interpolation(spanFrom(start))
   }
 
   /** dart-sass: `_functionCall` convenience wrapper — given that the scanner is positioned at `name(`, parses the argument list.
@@ -3431,65 +3994,105 @@ abstract class StylesheetParser protected (
       c == '_' || c == '-'
     }
 
-  /** dart-sass: `_argumentInvocation`. Parses `(a, b, $c: d, ...)`. */
-  protected def _rdArgumentInvocation(start: ssg.sass.util.LineScannerState): ArgumentList = {
+  /** Returns whether the scanner is immediately before a SassScript expression.
+    *
+    * dart-sass: `_lookingAtExpression` (lines 4741-4764).
+    */
+  protected def _lookingAtExpression(): Boolean = {
+    val c = scanner.peekChar()
+    if (c < 0) return false
+    c match {
+      case CharCode.`$dot` =>
+        scanner.peekChar(1) != CharCode.$dot
+      case CharCode.`$exclamation` =>
+        val c1 = scanner.peekChar(1)
+        c1 < 0 || c1 == 'i'.toInt || c1 == 'I'.toInt || CharCode.isWhitespace(c1)
+      case CharCode.`$lparen` | CharCode.`$slash` | CharCode.`$lbracket` |
+          CharCode.`$single_quote` | CharCode.`$double_quote` |
+          CharCode.`$hash` | CharCode.`$plus` | CharCode.`$minus` |
+          CharCode.`$backslash` | CharCode.`$dollar` | CharCode.`$ampersand` |
+          CharCode.`$percent` =>
+        true
+      case _ =>
+        CharCode.isNameStart(c) || CharCode.isDigit(c)
+    }
+  }
+
+  /** Consumes an expression until a top-level comma.
+    *
+    * dart-sass: `expressionUntilComma` (lines 2409-2415).
+    */
+  protected def expressionUntilComma(singleEquals: Boolean = false): Expression =
+    _rdExpression(stopAtComma = true, consumeNewlines = true)
+
+  /** dart-sass: `_argumentInvocation` (lines 1862-1953). Parses
+    * `(a, b, $c: d, rest..., kwRest...)`.
+    */
+  protected def _rdArgumentInvocation(
+    start: ssg.sass.util.LineScannerState,
+    mixin: Boolean = false,
+    allowEmptySecondArg: Boolean = false
+  ): ArgumentList = {
     scanner.expectChar(CharCode.$lparen)
     whitespace(consumeNewlines = true)
+
     val positional = mutable.ListBuffer.empty[Expression]
     val named      = mutable.LinkedHashMap.empty[String, Expression]
     val namedSpans = mutable.LinkedHashMap.empty[String, FileSpan]
-    var rest:   Nullable[Expression] = Nullable.empty
-    var kwRest: Nullable[Expression] = Nullable.empty
+    var rest:       Nullable[Expression] = Nullable.empty
+    var keywordRest: Nullable[Expression] = Nullable.empty
 
-    var more = scanner.peekChar() != CharCode.$rparen
     boundary {
-      while (more) {
-        // Named arg: `$name: value`
-        val savedState = scanner.state
-        if (scanner.peekChar() == CharCode.$dollar) {
-          val _ = scanner.readChar()
-          if (lookingAtIdentifier()) {
-            val nStart = savedState
-            val nm     = identifier()
-            whitespace(consumeNewlines = true)
-            if (scanner.scanChar(CharCode.$colon)) {
-              whitespace(consumeNewlines = true)
-              val v = _rdExpression(stopAtComma = true, consumeNewlines = true)
-              named.put(nm.replace('_', '-'), v)
-              namedSpans.put(nm.replace('_', '-'), spanFrom(nStart))
-            } else {
-              // Positional `$name` with no colon — rewind and parse full expr.
-              scanner.state = savedState
-              val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
-              positional += expr
-            }
-          } else {
-            scanner.state = savedState
-            val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
-            positional += expr
-          }
-        } else {
-          val expr = _rdExpression(stopAtComma = true, consumeNewlines = true)
-          // Rest `...`
-          if (
-            scanner.peekChar() == CharCode.$dot &&
-            scanner.peekChar(1) == CharCode.$dot &&
-            scanner.peekChar(2) == CharCode.$dot
-          ) {
-            _rdConsume(scanner.readChar())
-            _rdConsume(scanner.readChar())
-            _rdConsume(scanner.readChar())
-            if (rest.isEmpty) rest = Nullable(expr)
-            else kwRest = Nullable(expr)
-            whitespace(consumeNewlines = true)
-            if (scanner.peekChar() != CharCode.$comma) break(())
-          } else positional += expr
-        }
+      while (_lookingAtExpression()) {
+        val expression = expressionUntilComma(singleEquals = !mixin)
         whitespace(consumeNewlines = true)
-        if (!scanner.scanChar(CharCode.$comma)) more = false
-        else {
-          whitespace(consumeNewlines = true)
-          if (scanner.peekChar() == CharCode.$rparen) more = false
+
+        expression match {
+          case ve: VariableExpression if scanner.scanChar(CharCode.$colon) =>
+            // Named argument: `$name: value`
+            whitespace(consumeNewlines = true)
+            if (named.contains(ve.name))
+              error("Duplicate argument.", ve.span)
+            val value = expressionUntilComma(singleEquals = !mixin)
+            named.put(ve.name, value)
+            namedSpans.put(ve.name, ve.span.expand(value.span))
+
+          case _ if scanner.scanChar(CharCode.$dot) =>
+            // Rest argument: `expr...`
+            scanner.expectChar(CharCode.$dot)
+            scanner.expectChar(CharCode.$dot)
+            if (rest.isEmpty) {
+              rest = Nullable(expression)
+            } else {
+              keywordRest = Nullable(expression)
+              whitespace(consumeNewlines = true)
+              if (scanner.scanChar(CharCode.$comma)) whitespace(consumeNewlines = true)
+              break(())
+            }
+
+          case _ if named.nonEmpty =>
+            error(
+              "Positional arguments must come before keyword arguments.",
+              expression.span
+            )
+
+          case _ =>
+            positional += expression
+        }
+
+        whitespace(consumeNewlines = true)
+        if (!scanner.scanChar(CharCode.$comma)) break(())
+        whitespace(consumeNewlines = true)
+
+        if (
+          allowEmptySecondArg &&
+          positional.length == 1 &&
+          named.isEmpty &&
+          rest.isEmpty &&
+          scanner.peekChar() == CharCode.$rparen
+        ) {
+          positional += StringExpression.plain("", scanner.emptySpan)
+          break(())
         }
       }
     }
@@ -3500,7 +4103,7 @@ abstract class StylesheetParser protected (
       namedSpans.toMap,
       spanFrom(start),
       rest,
-      kwRest
+      keywordRest
     )
   }
 
@@ -3513,28 +4116,6 @@ abstract class StylesheetParser protected (
     * expects three (or four, with trailing alpha) positional arguments. For the color-function allowlist, if the call has exactly one positional argument and it's a space-separated ListExpression,
     * unpack its elements into positional arguments. Mirrors `_tryParseFunctionCall`'s `isColorFn` handling in the text-based path.
     */
-  /** Lookahead: returns true if the scanner is positioned at an identifier immediately followed by `(` — i.e. a single top-level function call like `lab(50% 20 -30)`. The scanner is NOT advanced.
-    * Used as the guard for the Stage-7 narrow wire of `_variableDeclaration` into the recursive-descent expression parser.
-    */
-  private def _rdLooksLikeSingleFunctionCall(): Boolean = {
-    val saved = scanner.state
-    try {
-      val c0 = scanner.peekChar()
-      if (c0 < 0) return false
-      if (!CharCode.isNameStart(c0) && c0 != CharCode.$minus && c0 != CharCode.$underscore) return false
-      // Walk an identifier (letters, digits, dashes, underscores).
-      while (
-        !scanner.isDone && {
-          val ch = scanner.peekChar()
-          CharCode.isName(ch) || ch == CharCode.$minus
-        }
-      ) {
-        val _ = scanner.readChar()
-      }
-      scanner.peekChar() == CharCode.$lparen
-    } finally scanner.state = saved
-  }
-
   private def _rdMaybeUnpackColorArgs(name: String, args: ArgumentList): ArgumentList = {
     val isColorFn =
       name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" ||

@@ -20,8 +20,9 @@ import scala.util.boundary.break
 
 class DataSet(other: Nullable[DataHolder]) extends DataHolder {
 
-  def this() =
+  def this() = {
     this(Nullable.empty[DataHolder])
+  }
 
   protected[data] val dataSet: HashMap[DataKeyBase[?], AnyRef] =
     if (other.isEmpty) {
