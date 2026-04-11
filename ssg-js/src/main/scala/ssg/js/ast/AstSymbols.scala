@@ -11,7 +11,7 @@
  *
  * Migration notes:
  *   Renames: AST_* -> Ast*
- *   Convention: thedef/scope are Any (SymbolDef pending port)
+ *   Convention: thedef typed as Any (scope analysis assigns SymbolDef)
  *   Idiom: Mutable var fields for scope analysis
  */
 package ssg
@@ -19,6 +19,7 @@ package js
 package ast
 
 import scala.collection.mutable.ArrayBuffer
+import ssg.js.scope.SymbolDef
 
 // ---------------------------------------------------------------------------
 // Base symbol
@@ -29,8 +30,32 @@ trait AstSymbol extends AstNode {
   var scope: AstScope | Null = null
   var name:  String          = ""
 
-  /** The definition of this symbol (SymbolDef). Typed as Any until SymbolDef is ported. */
+  /** The definition of this symbol (SymbolDef). Typed as Any for assignment compatibility with scope analysis. */
   var thedef: Any | Null = null
+
+  /** Get the SymbolDef for this symbol (typed convenience over thedef). */
+  def definition(): SymbolDef | Null = thedef.asInstanceOf[SymbolDef | Null]
+
+  /** Get the fixed value from this symbol's definition, if any. */
+  def fixedValue(): AstNode | Null | Boolean =
+    definition() match {
+      case d: SymbolDef => d.fixedValue
+      case null         => null
+    }
+
+  /** Check if this symbol is unreferenced (no references and scope not pinned). */
+  def unreferenced(): Boolean =
+    definition() match {
+      case d: SymbolDef => d.references.isEmpty && !d.scope.pinned
+      case null         => false
+    }
+
+  /** Check if this symbol is global. */
+  def isGlobal: Boolean =
+    definition() match {
+      case d: SymbolDef => d.global
+      case null         => false
+    }
 }
 
 /** A reference to new.target. */

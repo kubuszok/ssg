@@ -143,6 +143,8 @@ final case class CompressorOptions(
   hoistProps: Boolean = true,
   /** Hoist `var` declarations to top of scope. */
   hoistVars: Boolean = false,
+  /** Support IE8 quirks (set/get without reserved words, etc.). */
+  ie8: Boolean = false,
   /** Optimize `if/return` and `if/continue`. */
   ifReturn: Boolean = true,
   /** Inline function calls. */
@@ -173,6 +175,8 @@ final case class CompressorOptions(
   pureFuncs: List[String] = Nil,
   /** Assume property access has no side effects. `"strict"` = only on known-safe objects. */
   pureGetters: String = "strict",
+  /** Assume `new X()` always returns a new object (enable for side-effect-free `new`). */
+  pureNew: Boolean = false,
   /** Allow inlining of function bodies. */
   reduceFuncs: Boolean = true,
   /** Data-flow analysis: track variable assignments. */
@@ -210,7 +214,9 @@ final case class CompressorOptions(
   /** Allow referencing `undefined` as a variable. */
   unsafeUndefined: Boolean = false,
   /** Drop unreferenced variables and functions. */
-  unused: Boolean = true
+  unused: Boolean = true,
+  /** Legacy option: emit warnings (no-op in Terser 5+). */
+  warnings: Boolean = false
 ) {
 
   /** Look up an option by its Terser-compatible snake_case name.
@@ -244,6 +250,7 @@ final case class CompressorOptions(
       case "hoist_funs"       => hoistFuns
       case "hoist_props"      => hoistProps
       case "hoist_vars"       => hoistVars
+      case "ie8"              => ie8
       case "if_return"        => ifReturn
       case "inline"           => inline.level
       case "join_vars"        => joinVars
@@ -259,6 +266,7 @@ final case class CompressorOptions(
       case "properties"       => properties
       case "pure_funcs"       => pureFuncs
       case "pure_getters"     => pureGetters
+      case "pure_new"         => pureNew
       case "reduce_funcs"     => reduceFuncs
       case "reduce_vars"      => reduceVars
       case "sequences"        => sequencesLimit > 0
@@ -278,6 +286,7 @@ final case class CompressorOptions(
       case "unsafe_symbols"   => unsafeSymbols
       case "unsafe_undefined" => unsafeUndefined
       case "unused"           => unused
+      case "warnings"         => warnings
       case _                  => false
     }
 }

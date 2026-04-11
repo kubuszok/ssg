@@ -27,6 +27,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 - **Case classes must be `final`**: all `case class` declarations require `final`
 - **No Java-style getters/setters**: no-logic `getX()`/`setX(v)` → public `var x`; with-logic → `def x: T` + `def x_=(v: T): Unit`
 - **Fix bugs, don't work around them**: when a test reveals a pre-existing bug, fix it in source
+- **Porting is binary — 100% or not done**: There is no such thing as "diminishing returns" in porting. Every method, every branch, every edge case in the original must be ported. The question is never "is this worth the effort" — it is always "what remains to reach 100%". A file at 74% coverage is not "mostly done" — it is incomplete. Do not rationalize partial work as acceptable. Do not describe missing logic as "low priority" or "diminishing returns". If the original has it, the port must have it.
 - **All 3 platforms are baseline**: JVM, JS, Native — changes must be non-regressing on all
 - Use `re-scale` commands or `sbt --client` — never bare `sbt` (avoids the JVM startup tax on every invocation)
 - **sbt server stuck?** kill with `re-scale proc kill --kind sbt --dir .`, fix the cause, retry
@@ -161,6 +162,52 @@ Each audited file gets a `Migration notes:` block in its header comment.
 - **Database**: `re-scale db audit stats`, `re-scale db audit list --package <pkg>`
 - **Statuses**: `pass`, `minor_issues`, `major_issues`
 - **In-file notes**: `Renames`, `Convention`, `Idiom`, `Audited` date
+
+## Porting Workflow: Implementer + Auditor Loop
+
+All porting work MUST use the **implement → audit → fix → re-audit** loop.
+Never consider porting work "done" after a single implementation pass.
+
+### Agents
+
+| Agent | File | Role | Can edit code? |
+|-------|------|------|---------------|
+| `port-implementer` | `.claude/agents/port-implementer.md` | Ports original code to Scala 3 | Yes |
+| `port-auditor` | `.claude/agents/port-auditor.md` | Compares port against original, finds gaps | No (read-only + issues DB) |
+
+### The loop
+
+```
+1. IMPLEMENTER: Port the file/module
+   → Compile, test, report metrics
+
+2. AUDITOR: Compare original vs port
+   → Produce findings report with specific action items
+   → Create/reopen issues for each discrepancy
+
+3. ORCHESTRATOR (you): Review auditor report
+   → If verdict is PASS: done, commit
+   → If verdict is FAIL/NEEDS REWORK: send findings to implementer
+
+4. IMPLEMENTER: Address each finding (mandatory, not suggestions)
+   → Compile, test, report what changed
+
+5. AUDITOR: Re-audit (verify findings were actually fixed)
+   → Repeat until PASS
+```
+
+### When to use this workflow
+
+- Porting a new file from original source
+- Filling gaps in a partially-ported file
+- Any task where the deliverable is "make the Scala code match the original"
+
+### When NOT to use this workflow
+
+- Bug fixes in already-ported code
+- Adding tests
+- Build/config changes
+- Documentation
 
 ## Documentation
 
