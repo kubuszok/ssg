@@ -45,6 +45,7 @@ import ssg.js.compress.Common.*
 import ssg.js.compress.Inference.*
 import ssg.js.compress.TightenBody.{ extractFromUnreachableCode, tightenBody }
 import ssg.js.compress.Inline.inlineIntoSymbolRef
+import ssg.js.ast.AstSize
 
 /** The main JavaScript compressor.
   *
@@ -755,9 +756,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     self.body.size match {
       case 1 =>
         val stmt = self.body(0)
-        // Can unwrap if parent is an if-block and content is extractable,
-        // or if the content can be evicted from a block
-        if (canBeEvictedFromBlock(stmt)) {
+        // Can extract from if-block if not a let/const/using/class
+        val canExtractFromIfBlock = !stmt.isInstanceOf[AstConst] && !stmt.isInstanceOf[AstLet] &&
+          !stmt.isInstanceOf[AstClass]
+        val parentIsIf = try { parent(0).isInstanceOf[AstIf] } catch { case _: IndexOutOfBoundsException => false }
+        if ((!hasDirective("use strict").isInstanceOf[AstNode] && parentIsIf && canExtractFromIfBlock) || canBeEvictedFromBlock(stmt)) {
           stmt
         } else {
           self
@@ -941,155 +944,155 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       self.alternative = null
     }
 
-    if (!optionBool("conditionals")) {
-      self
-    } else {
-      // Evaluate condition for dead branch elimination
-      if (self.condition != null) {
-        val ev = Evaluate.evaluate(self.condition.nn, this)
-        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
-          ev match {
-            case false | 0 | 0.0 | "" | null =>
-              // Condition is always false — drop body, keep alternative
-              val block = new AstBlockStatement
-              block.start = self.start
-              block.end = self.end
-              block.body = ArrayBuffer.empty
-              // Preserve condition side effects
-              if (hasSideEffects(self.condition.nn, this)) {
-                val ss = new AstSimpleStatement
-                ss.body = self.condition
-                ss.start = self.start
-                ss.end = self.end
-                block.body.addOne(ss)
-              }
-              if (self.alternative != null) block.body.addOne(self.alternative.nn)
-              return optimizeBlockStatement(block) // @nowarn
-            case _ =>
-              // Condition is always true — drop alternative, keep body
-              val block = new AstBlockStatement
-              block.start = self.start
-              block.end = self.end
-              block.body = ArrayBuffer.empty
-              if (hasSideEffects(self.condition.nn, this)) {
-                val ss = new AstSimpleStatement
-                ss.body = self.condition
-                ss.start = self.start
-                ss.end = self.end
-                block.body.addOne(ss)
-              }
-              if (self.body != null) block.body.addOne(self.body.nn)
-              return optimizeBlockStatement(block) // @nowarn
-          }
-        }
+    if (!optionBool("conditionals")) return self // @nowarn
+
+    // Evaluate condition for dead branch elimination
+    var cond: Any = if (self.condition != null) Evaluate.evaluate(self.condition.nn, this) else self.condition
+
+    // If not dead_code, still replace the condition with a simpler constant form
+    if (!optionBool("dead_code") && cond != null && !cond.isInstanceOf[AstNode]) {
+      val orig = self.condition.nn
+      self.condition = makeNodeFromConstant(cond, orig)
+      self.condition = bestOfExpression(self.condition.nn, orig)
+    }
+
+    if (optionBool("dead_code")) {
+      if (cond != null && cond.isInstanceOf[AstNode]) {
+        cond = Evaluate.evaluate(self.condition.nn, this)
       }
-
-      // Merge nested if: if(a) if(b) x → if(a&&b) x (when no else on outer)
-      if (self.alternative == null && self.body != null) {
-        self.body.nn match {
-          case innerIf: AstIf if innerIf.alternative == null =>
-            val merged = new AstBinary
-            merged.operator = "&&"
-            merged.left = self.condition.nn
-            merged.right = innerIf.condition.nn
-            merged.start = self.start
-            merged.end = self.end
-            self.condition = merged
-            self.body = innerIf.body
-          case _ =>
-        }
+      val isFalsy = cond match {
+        case false | 0 | 0.0 | "" => true
+        case null                  => true
+        case _: AstNode            => false // could not evaluate
+        case _                     => false // truthy
       }
-
-      // Empty body + non-empty alternative → negate condition, swap body/alt
-      if (self.body != null && isEmpty(self.body) && self.alternative != null && !isEmpty(self.alternative)) {
-        val neg = new AstUnaryPrefix
-        neg.operator = "!"
-        neg.expression = self.condition.nn
-        neg.start = self.start
-        neg.end = self.end
-        self.condition = neg
-        self.body = self.alternative
-        self.alternative = null
-      }
-
-      // Empty body + empty alternative → just condition as statement
-      if (self.body != null && isEmpty(self.body) && (self.alternative == null || isEmpty(self.alternative))) {
-        val ss = new AstSimpleStatement
-        ss.start = self.start
-        ss.end = self.end
-        ss.body = self.condition
-        return optimizeSimpleStatement(ss) // @nowarn
-      }
-
-      // Both branches are return/throw of same type → merge into single return/throw with ternary
-      if (self.body != null && self.alternative != null) {
-        (self.body.nn, self.alternative.nn) match {
-          case (ret1: AstReturn, ret2: AstReturn) =>
-            val cond = new AstConditional
-            cond.start = self.start
-            cond.end = self.end
-            cond.condition = self.condition.nn
-            cond.consequent = if (ret1.value != null) ret1.value.nn else makeVoid0(ret1)
-            cond.alternative = if (ret2.value != null) ret2.value.nn else makeVoid0(ret2)
-            val ret = new AstReturn
-            ret.start = self.start
-            ret.end = self.end
-            ret.value = cond
-            return ret // @nowarn
-          case (thr1: AstThrow, thr2: AstThrow) if thr1.value != null && thr2.value != null =>
-            val cond = new AstConditional
-            cond.start = self.start
-            cond.end = self.end
-            cond.condition = self.condition.nn
-            cond.consequent = thr1.value.nn
-            cond.alternative = thr2.value.nn
-            val thr = new AstThrow
-            thr.start = self.start
-            thr.end = self.end
-            thr.value = cond
-            return thr // @nowarn
-          case _ =>
+      if (isFalsy && !cond.isInstanceOf[AstNode]) {
+        // Condition is always false
+        val body = ArrayBuffer.empty[AstNode]
+        extractFromUnreachableCode(this, self.body.nn, body)
+        val condStmt = new AstSimpleStatement; condStmt.body = self.condition; condStmt.start = self.condition.nn.start; condStmt.end = self.condition.nn.end
+        body.addOne(condStmt)
+        if (self.alternative != null) body.addOne(self.alternative.nn)
+        val block = new AstBlockStatement; block.body = body; block.start = self.start; block.end = self.end
+        return optimizeBlockStatement(block) // @nowarn
+      } else if (!cond.isInstanceOf[AstNode]) {
+        // Condition is always truthy
+        val body = ArrayBuffer.empty[AstNode]
+        val condStmt = new AstSimpleStatement; condStmt.body = self.condition; condStmt.start = self.condition.nn.start; condStmt.end = self.condition.nn.end
+        body.addOne(condStmt)
+        body.addOne(self.body.nn)
+        if (self.alternative != null) {
+          extractFromUnreachableCode(this, self.alternative.nn, body)
         }
-      }
-
-      // Convert if(x) expr; to x && expr; when no alternative
-      if (self.alternative == null) {
-        self.body match {
-          case ss: AstSimpleStatement =>
-            val binary = new AstBinary
-            binary.start = self.start
-            binary.end = self.end
-            binary.operator = "&&"
-            binary.left = self.condition.nn
-            binary.right = ss.body.nn
-
-            val result = new AstSimpleStatement
-            result.start = self.start
-            result.end = self.end
-            result.body = binary
-            result
-          case _ => self
-        }
-      } else {
-        // Both branches are simple statements -> ternary
-        (self.body, self.alternative.nn) match {
-          case (thenSS: AstSimpleStatement, elseSS: AstSimpleStatement) =>
-            val cond = new AstConditional
-            cond.start = self.start
-            cond.end = self.end
-            cond.condition = self.condition.nn
-            cond.consequent = thenSS.body.nn
-            cond.alternative = elseSS.body.nn
-
-            val result = new AstSimpleStatement
-            result.start = self.start
-            result.end = self.end
-            result.body = cond
-            result
-          case _ => self
-        }
+        val block = new AstBlockStatement; block.body = body; block.start = self.start; block.end = self.end
+        return optimizeBlockStatement(block) // @nowarn
       }
     }
+
+    // Compute negation and compare sizes
+    val negated = negate(self.condition.nn, false)
+    val selfConditionLength = AstSize.size(self.condition.nn)
+    val negatedLength = AstSize.size(negated)
+    var negatedIsBest = negatedLength < selfConditionLength
+
+    // If there's an alternative and negation is shorter, swap body and alternative
+    if (self.alternative != null && negatedIsBest) {
+      negatedIsBest = false // because we already do the swap
+      self.condition = negated
+      val tmp = self.body
+      self.body = if (self.alternative != null) self.alternative.nn else { val e = new AstEmptyStatement; e.start = self.start; e.end = self.end; e }
+      self.alternative = tmp
+    }
+
+    // Empty body + empty alternative → just the condition as statement
+    if (isEmpty(self.body) && isEmpty(self.alternative)) {
+      val ss = new AstSimpleStatement; ss.body = self.condition; ss.start = self.start; ss.end = self.end
+      return optimizeSimpleStatement(ss) // @nowarn
+    }
+
+    // Both branches are simple statements → ternary
+    if (self.body.isInstanceOf[AstSimpleStatement] && self.alternative != null && self.alternative.nn.isInstanceOf[AstSimpleStatement]) {
+      val cond1 = new AstConditional; cond1.start = self.start; cond1.end = self.end
+      cond1.condition = self.condition.nn
+      cond1.consequent = self.body.asInstanceOf[AstSimpleStatement].body.nn
+      cond1.alternative = self.alternative.nn.asInstanceOf[AstSimpleStatement].body.nn
+      val ss = new AstSimpleStatement; ss.body = cond1; ss.start = self.start; ss.end = self.end
+      return optimizeSimpleStatement(ss) // @nowarn
+    }
+
+    // Empty alternative + simple body → cond && body or !cond || body
+    if (isEmpty(self.alternative) && self.body.isInstanceOf[AstSimpleStatement]) {
+      if (selfConditionLength == negatedLength && !negatedIsBest &&
+        self.condition.nn.isInstanceOf[AstBinary] && self.condition.nn.asInstanceOf[AstBinary].operator == "||") {
+        // negated does not require additional surrounding parentheses
+        negatedIsBest = true
+      }
+      if (negatedIsBest) {
+        val bin = new AstBinary; bin.operator = "||"; bin.left = negated; bin.right = self.body.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
+        val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+        return optimizeSimpleStatement(ss) // @nowarn
+      }
+      val bin = new AstBinary; bin.operator = "&&"; bin.left = self.condition.nn; bin.right = self.body.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
+      val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+      return optimizeSimpleStatement(ss) // @nowarn
+    }
+
+    // Empty body + simple alternative → cond || alt.body
+    if (self.body.isInstanceOf[AstEmptyStatement] && self.alternative != null && self.alternative.nn.isInstanceOf[AstSimpleStatement]) {
+      val bin = new AstBinary; bin.operator = "||"; bin.left = self.condition.nn; bin.right = self.alternative.nn.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
+      val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+      return optimizeSimpleStatement(ss) // @nowarn
+    }
+
+    // Both branches are return/throw of same type → merge into single exit with ternary
+    if (self.body != null && self.alternative != null) {
+      (self.body.nn, self.alternative.nn) match {
+        case (ret1: AstReturn, ret2: AstReturn) =>
+          val tern = new AstConditional; tern.condition = self.condition.nn
+          tern.consequent = if (ret1.value != null) ret1.value.nn else makeVoid0(ret1)
+          tern.alternative = if (ret2.value != null) ret2.value.nn else makeVoid0(ret2)
+          tern.start = self.start; tern.end = self.end
+          val ret = new AstReturn; ret.value = tern; ret.start = self.start; ret.end = self.end
+          return ret // @nowarn
+        case (thr1: AstThrow, thr2: AstThrow) if thr1.value != null && thr2.value != null =>
+          val tern = new AstConditional; tern.condition = self.condition.nn
+          tern.consequent = thr1.value.nn; tern.alternative = thr2.value.nn
+          tern.start = self.start; tern.end = self.end
+          val thr = new AstThrow; thr.value = tern; thr.start = self.start; thr.end = self.end
+          return thr // @nowarn
+        case _ =>
+      }
+    }
+
+    // Merge nested if: if(a) if(b) x → if(a&&b) x (when no else on either)
+    if (self.body.isInstanceOf[AstIf] && !self.body.asInstanceOf[AstIf].alternative.isInstanceOf[AstNode] && self.alternative == null) {
+      val innerIf = self.body.asInstanceOf[AstIf]
+      val merged = new AstBinary; merged.operator = "&&"; merged.left = self.condition.nn; merged.right = innerIf.condition.nn; merged.start = self.start; merged.end = self.end
+      self.condition = merged
+      self.body = innerIf.body
+    }
+
+    // If body always aborts (return/throw/continue/break), hoist alternative after the if
+    if (aborts(self.body) != null) {
+      if (self.alternative != null) {
+        val alt = self.alternative.nn
+        self.alternative = null
+        val block = new AstBlockStatement; block.body = ArrayBuffer(self, alt); block.start = self.start; block.end = self.end
+        return optimizeBlockStatement(block) // @nowarn
+      }
+    }
+
+    // If alternative always aborts, swap body/alternative, negate condition, hoist body after
+    if (aborts(self.alternative) != null) {
+      val bodyNode = self.body.nn
+      self.body = self.alternative
+      self.condition = if (negatedIsBest) negated else negate(self.condition.nn, false)
+      self.alternative = null
+      val block = new AstBlockStatement; block.body = ArrayBuffer(self, bodyNode); block.start = self.start; block.end = self.end
+      return optimizeBlockStatement(block) // @nowarn
+    }
+
+    self
   }
 
   /** Optimize conditional expressions (ternary operator). */
@@ -1350,94 +1353,455 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     }
 
   /** Optimize switch statements — constant case elimination, branch merging. */
-  private def optimizeSwitch(self: AstSwitch): AstNode =
-    if (!optionBool("switches")) self
-    else {
-      // Remove empty trailing default case
-      if (self.body.nonEmpty) {
-        self.body.last match {
-          case d: AstDefault if d.body.forall(isEmpty) =>
-            self.body.remove(self.body.size - 1)
+  private def optimizeSwitch(self: AstSwitch): AstNode = {
+    if (!optionBool("switches")) return self // @nowarn
+
+    // Evaluate and simplify the switch expression
+    var value: Any = self.expression.nn
+    val exprEv = Evaluate.evaluate(self.expression.nn, this)
+    if (exprEv != null && (exprEv.asInstanceOf[AnyRef] ne self.expression.nn.asInstanceOf[AnyRef])) {
+      val orig = self.expression.nn
+      self.expression = makeNodeFromConstant(exprEv, orig)
+      self.expression = bestOfExpression(self.expression.nn, orig)
+      value = exprEv
+    }
+
+    if (!optionBool("dead_code")) return self // @nowarn
+
+    if (value.isInstanceOf[AstNode]) {
+      value = Evaluate.evaluate(self.expression.nn, this)
+      if (value != null && value.isInstanceOf[AstNode]) value = self.expression.nn // keep as-is
+    }
+
+    val decl = ArrayBuffer.empty[AstNode]
+    val body = ArrayBuffer.empty[AstSwitchBranch]
+    var defaultBranch: AstDefault | Null = null
+    var exactMatch: AstSwitchBranch | Null = null
+
+    // Helper: eliminate_branch — merge dead branch body into prev or extract declarations
+    def eliminateBranch(branch: AstSwitchBranch, prev: AstSwitchBranch | Null = null): Unit = {
+      if (prev != null && aborts(prev) == null) {
+        prev.nn.body.addAll(branch.body)
+      } else {
+        extractFromUnreachableCode(this, branch, decl)
+      }
+    }
+
+    // Helper: branches_equivalent — check if two branches have equivalent bodies
+    def branchesEquivalent(branch: AstSwitchBranch, prev: AstSwitchBranch, insertBreak: Boolean): Boolean = {
+      val bbody = ArrayBuffer.from(branch.body)
+      val pbody = prev.body
+      if (insertBreak) {
+        val brk = new AstBreak
+        brk.start = branch.start
+        brk.end = branch.end
+        bbody.addOne(brk)
+      }
+      if (bbody.size != pbody.size) return false // @nowarn
+      val bblock = new AstBlockStatement; bblock.body = bbody; bblock.start = branch.start; bblock.end = branch.end
+      val pblock = new AstBlockStatement; pblock.body = ArrayBuffer.from(pbody); pblock.start = prev.start; pblock.end = prev.end
+      AstEquivalent.equivalentTo(bblock, pblock)
+    }
+
+    // Helper: statement — wrap expression in SimpleStatement
+    def statement(bodyExpr: AstNode): AstSimpleStatement = {
+      val ss = new AstSimpleStatement
+      ss.body = bodyExpr
+      ss.start = bodyExpr.start
+      ss.end = bodyExpr.end
+      ss
+    }
+
+    // Helper: has_nested_break — check if switch has breaks that don't target a case
+    def hasNestedBreak(root: AstSwitch): Boolean = {
+      var hasBreak = false
+      var tw: TreeWalker = null.asInstanceOf[TreeWalker]
+      tw = new TreeWalker((node, _) => {
+        if (hasBreak) true
+        else if (node.isInstanceOf[AstLambda]) true
+        else if (node.isInstanceOf[AstSimpleStatement]) true
+        else if (!isBreakTargetingSelf(node, tw)) null
+        else {
+          val par = tw.parent(0)
+          par match {
+            case sb: AstSwitchBranch if sb.body.nonEmpty && (sb.body.last eq node) =>
+              null // trailing break in a case — not nested
+            case _ =>
+              hasBreak = true
+              null
+          }
+        }
+      })
+      root.walk(tw)
+      hasBreak
+    }
+
+    // Helper: is_break targeting self
+    def isBreakTargetingSelf(node: AstNode, stack: TreeWalker): Boolean =
+      node.isInstanceOf[AstBreak] && {
+        val target = stack.loopcontrolTarget(node.asInstanceOf[AstLoopControl])
+        target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
+      }
+
+    // Helper: is_inert_body — branch does not abort and body has no side effects
+    def isInertBody(branch: AstSwitchBranch): Boolean =
+      aborts(branch) == null && {
+        val block = new AstBlockStatement; block.body = ArrayBuffer.from(branch.body); block.start = branch.start; block.end = branch.end
+        !hasSideEffects(block, this)
+      }
+
+    // - compress self.body into `body`
+    // - find and deduplicate default branch
+    // - find the exact match (`case 1234` inside `switch(1234)`)
+    var i = 0
+    val len = self.body.size
+    while (i < len && exactMatch == null) {
+      val branch = self.body(i).asInstanceOf[AstSwitchBranch]
+      var addToBody = true
+      branch match {
+        case d: AstDefault =>
+          if (defaultBranch == null) {
+            defaultBranch = d
+          } else {
+            eliminateBranch(d, if (body.nonEmpty) body.last else null)
+          }
+        case cas: AstCase if !value.isInstanceOf[AstNode] =>
+          val exp = if (cas.expression != null) Evaluate.evaluate(cas.expression.nn, this) else null
+          if (exp != null && !exp.isInstanceOf[AstNode] && exp != value) {
+            eliminateBranch(cas, if (body.nonEmpty) body.last else null)
+            addToBody = false // continue — skip body.push
+          } else {
+            // Check if expression with no side effects evaluates to match
+            var expDeep = exp
+            if (exp != null && exp.isInstanceOf[AstNode] && cas.expression != null && !hasSideEffects(cas.expression.nn, this)) {
+              expDeep = Evaluate.evaluate(cas.expression.nn, this)
+            }
+            if (expDeep != null && !expDeep.isInstanceOf[AstNode] && expDeep == value) {
+              exactMatch = cas
+              if (defaultBranch != null) {
+                val defaultIndex = body.indexOf(defaultBranch)
+                if (defaultIndex >= 0) {
+                  body.remove(defaultIndex)
+                  eliminateBranch(defaultBranch.nn, if (defaultIndex > 0) body(defaultIndex - 1) else null)
+                  defaultBranch = null
+                }
+              }
+            }
+          }
+        case _ =>
+      }
+      if (addToBody) body.addOne(branch)
+      i += 1
+    }
+    // i < len if we found an exact_match. eliminate the rest
+    while (i < len) {
+      eliminateBranch(self.body(i).asInstanceOf[AstSwitchBranch], if (body.nonEmpty) body.last else null)
+      i += 1
+    }
+    self.body = ArrayBuffer.from(body)
+
+    var defaultOrExact: AstSwitchBranch | Null = if (defaultBranch != null) defaultBranch else exactMatch
+    defaultBranch = null
+    exactMatch = null
+
+    // Group equivalent branches so they will be located next to each other,
+    // that way the next micro-optimization will merge them.
+    // ** bail micro-optimization if not a simple switch case with breaks
+    val allSimple = body.indices.forall { idx =>
+      val branch = body(idx)
+      ((branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef]) || branch.isInstanceOf[AstCase] && branch.asInstanceOf[AstCase].expression != null && branch.asInstanceOf[AstCase].expression.nn.isInstanceOf[AstConstant]) &&
+      (branch.body.isEmpty || aborts(branch) != null || idx == body.size - 1)
+    }
+    if (allSimple) {
+      var gi = 0
+      while (gi < body.size) {
+        val branch = body(gi)
+        var gj = gi + 1
+        while (gj < body.size) {
+          val next = body(gj)
+          if (next.body.isEmpty) { gj += 1 } // skip empty fall-through
+          else {
+            val lastBranch = gj == body.size - 1
+            val equiv = branchesEquivalent(next, branch, false)
+            if (equiv || (lastBranch && branchesEquivalent(next, branch, true))) {
+              if (!equiv && lastBranch) {
+                val brk = new AstBreak; brk.start = next.start; brk.end = next.end
+                next.body.addOne(brk)
+              }
+              // find previous siblings with inert fallthrough
+              var x = gj - 1
+              var fallthroughDepth = 0
+              while (x > gi) {
+                if (isInertBody(body(x))) { fallthroughDepth += 1; x -= 1 }
+                else { x = gi } // break out
+              }
+              val plucked = body.slice(gj - fallthroughDepth, gj + 1)
+              val removeIdx = gj - fallthroughDepth
+              var removeCount = 1 + fallthroughDepth
+              while (removeCount > 0) { body.remove(removeIdx); removeCount -= 1 }
+              // Insert plucked after gi
+              var insertIdx = gi + 1
+              for (p <- plucked) { body.insert(insertIdx, p); insertIdx += 1 }
+              gi += plucked.size
+              gj = gi + 1 // restart inner loop
+            } else {
+              gj += 1
+            }
+          }
+        }
+        gi += 1
+      }
+    }
+
+    // Merge equivalent branches in a row
+    {
+      var mi = 0
+      while (mi < body.size) {
+        val branch = body(mi)
+        if (branch.body.nonEmpty && aborts(branch) != null) {
+          var mj = mi + 1
+          var currentBranch = branch
+          while (mj < body.size) {
+            val next = body(mj)
+            if (next.body.isEmpty) { mi += 1; mj += 1 }
+            else if (
+              branchesEquivalent(next, currentBranch, false) ||
+                (mj == body.size - 1 && branchesEquivalent(next, currentBranch, true))
+            ) {
+              currentBranch.body.clear()
+              currentBranch = next
+              mi += 1; mj += 1
+            } else {
+              mj = body.size // break
+            }
+          }
+        }
+        mi += 1
+      }
+    }
+
+    // Prune any empty branches at the end of the switch statement
+    {
+      var pi = body.size - 1
+      boundary {
+        while (pi >= 0) {
+          val bbody = body(pi).body
+          // Pop trailing breaks targeting self
+          while (bbody.nonEmpty && bbody.last.isInstanceOf[AstBreak] && {
+            val brk = bbody.last.asInstanceOf[AstBreak]
+            val target = loopcontrolTarget(brk)
+            target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
+          }) {
+            bbody.remove(bbody.size - 1)
+          }
+          if (!isInertBody(body(pi))) break(())
+          pi -= 1
+        }
+      }
+      // i now points to the index of a branch that contains a body. By incrementing, it's
+      // pointing to the first branch that's empty.
+      pi += 1
+      if (defaultOrExact == null || body.indexOf(defaultOrExact) >= pi) {
+        // The default behavior is to do nothing. Prune side-effect-free cases.
+        var pj = body.size - 1
+        boundary {
+          while (pj >= pi) {
+            val branch = body(pj)
+            if ((branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef])) {
+              defaultOrExact = null
+              eliminateBranch(body.remove(body.size - 1))
+            } else if (branch.isInstanceOf[AstCase] && !hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)) {
+              eliminateBranch(body.remove(body.size - 1))
+            } else {
+              break(())
+            }
+            pj -= 1
+          }
+        }
+      }
+    }
+
+    // Prune side-effect free branches that fall into default.
+    if (defaultOrExact != null) boundary {
+      val defaultIndex = body.indexOf(defaultOrExact)
+      var defaultBodyIndex = defaultIndex
+      while (defaultBodyIndex < body.size - 1) {
+        if (!isInertBody(body(defaultBodyIndex))) {
+          defaultBodyIndex = body.size // will fail the check below
+        }
+        defaultBodyIndex += 1
+      }
+      // defaultBodyIndex must end at body.size - 1 or beyond
+      if (defaultBodyIndex < body.size - 1) break(()) // bail
+
+      var sideEffectIndex = body.size - 1
+      boundary {
+        while (sideEffectIndex >= 0) {
+          val branch = body(sideEffectIndex)
+          if ((branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef])) {
+            sideEffectIndex -= 1
+          } else if (branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)) {
+            break(()) // found last side-effect branch
+          } else {
+            sideEffectIndex -= 1
+          }
+        }
+      }
+    }
+
+    // See if we can remove the switch entirely if all cases fall into the same case body.
+    if (defaultOrExact != null) boundary {
+      val bi = body.indexWhere(b => !isInertBody(b))
+      var caseBody: AstBlockStatement | Null = null
+      if (bi == body.size - 1) {
+        // All cases fall into the case body
+        val branch = body(bi)
+        if (hasNestedBreak(self)) break(())
+        caseBody = new AstBlockStatement
+        caseBody.nn.body = ArrayBuffer.from(branch.body)
+        caseBody.nn.start = branch.start
+        caseBody.nn.end = branch.end
+        branch.body.clear()
+      } else if (bi != -1) {
+        break(()) // Multiple bodies, cannot optimize
+      }
+
+      val sideEffect = body.find { branch =>
+        !(branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) &&
+          branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)
+      }
+      // If no cases cause a side-effect, we can eliminate the switch entirely.
+      if (sideEffect.isEmpty) {
+        val stmts = ArrayBuffer.empty[AstNode]
+        stmts.addAll(decl)
+        stmts.addOne(statement(self.expression.nn))
+        defaultOrExact.nn match {
+          case c: AstCase if c.expression != null => stmts.addOne(statement(c.expression.nn))
           case _ =>
         }
+        if (caseBody != null) stmts.addOne(caseBody.nn)
+        val block = new AstBlockStatement
+        block.body = stmts
+        block.start = self.start
+        block.end = self.end
+        return optimizeBlockStatement(block) // @nowarn
       }
 
-      // Merge consecutive cases with empty bodies (fall-through)
-      // e.g. case 1: case 2: x → keep as-is (correct fall-through)
+      // Remove default from body — it does nothing
+      val dIdx = body.indexOf(defaultOrExact)
+      if (dIdx >= 0) body.remove(dIdx)
+      defaultOrExact = null
 
-      // Evaluate switch expression for constant dispatch
-      if (self.expression != null && optionBool("dead_code")) {
-        val ev = Evaluate.evaluate(self.expression.nn, this)
-        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.expression.nn.asInstanceOf[AnyRef])) {
-          // Switch expression is constant — find matching case
-          var matchIdx = -1
-          var i = 0
-          while (i < self.body.size) {
-            self.body(i) match {
-              case _: AstDefault => // track default for future use
-              case cas: AstCase if cas.expression != null =>
-                val caseEv = Evaluate.evaluate(cas.expression.nn, this)
-                if (caseEv != null && (caseEv.asInstanceOf[AnyRef] ne cas.expression.nn.asInstanceOf[AnyRef])) {
-                  // Both switch expr and case expr are constant — compare
-                  if (ev == caseEv) matchIdx = i
-                }
-              case _ =>
-            }
-            i += 1
-          }
+      if (caseBody != null) {
+        // Recurse into switch one more time — we've pruned the default case,
+        // so this recursion only happens once.
+        self.body = ArrayBuffer.from(body)
+        val block = new AstBlockStatement
+        block.body = ArrayBuffer.from(decl)
+        block.body.addOne(self)
+        block.body.addOne(caseBody.nn)
+        block.start = self.start
+        block.end = self.end
+        return optimizeBlockStatement(block) // @nowarn
+      }
+    }
 
-          // If we found a constant match, extract that case's body
-          if (matchIdx >= 0) {
-            val matched = self.body(matchIdx)
-            val block = new AstBlockStatement
-            block.start = self.start
-            block.end = self.end
-            block.body = matched.asInstanceOf[AstSwitchBranch].body.clone()
-            return optimizeBlockStatement(block) // @nowarn
+    // Reintegrate `decl` (var statements)
+    if (body.nonEmpty) {
+      body(0).body.insertAll(0, decl)
+    }
+    self.body = ArrayBuffer.from(body)
+
+    if (body.isEmpty) {
+      val block = new AstBlockStatement
+      block.body = ArrayBuffer.from(decl)
+      block.body.addOne(statement(self.expression.nn))
+      block.start = self.start
+      block.end = self.end
+      return optimizeBlockStatement(block) // @nowarn
+    }
+
+    // Single case (no default) → convert to if
+    if (body.size == 1 && !hasNestedBreak(self)) {
+      val branch = body(0)
+      branch match {
+        case cas: AstCase if cas.expression != null =>
+          val cmp = new AstBinary
+          cmp.operator = "==="
+          cmp.left = self.expression.nn
+          cmp.right = cas.expression.nn
+          cmp.start = self.start
+          cmp.end = self.end
+          val ifNode = new AstIf
+          ifNode.condition = cmp
+          val thenBlock = new AstBlockStatement
+          thenBlock.body = ArrayBuffer.from(cas.body)
+          thenBlock.start = cas.start
+          thenBlock.end = cas.end
+          ifNode.body = thenBlock
+          ifNode.alternative = null
+          ifNode.start = self.start
+          ifNode.end = self.end
+          return optimizeIf(ifNode) // @nowarn
+        case _ =>
+      }
+    }
+
+    // Two cases with default → convert to if/else
+    if (body.size == 2 && defaultOrExact != null && !hasNestedBreak(self)) {
+      val branch: AstSwitchBranch = if (body(0).asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) body(1) else body(0)
+      val exactExp: AstSimpleStatement | Null = defaultOrExact.nn match {
+        case c: AstCase if c.expression != null => statement(c.expression.nn)
+        case _ => null
+      }
+      if (aborts(body(0)) != null) {
+        // Only the first branch body could have a break (at the last statement)
+        val first = body(0)
+        if (first.body.nonEmpty && first.body.last.isInstanceOf[AstBreak]) {
+          val brk = first.body.last.asInstanceOf[AstBreak]
+          val target = loopcontrolTarget(brk)
+          if (target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])) {
+            first.body.remove(first.body.size - 1)
           }
         }
-      }
-
-      // Single non-default case → convert to if-statement
-      val nonDefaultCases = self.body.count(_.isInstanceOf[AstCase])
-      if (nonDefaultCases == 1 && self.body.size <= 2) {
-        val caseNode = self.body.find(_.isInstanceOf[AstCase])
-        val defaultNode = self.body.find(_.isInstanceOf[AstDefault])
-        caseNode match {
-          case Some(cas: AstCase) if cas.expression != null =>
-            val ifNode = new AstIf
-            ifNode.start = self.start
-            ifNode.end = self.end
-            // condition: switch_expr === case_expr
-            val cmp = new AstBinary
-            cmp.operator = "==="
-            cmp.left = self.expression.nn
-            cmp.right = cas.expression.nn
-            cmp.start = self.start
-            cmp.end = self.end
-            ifNode.condition = cmp
-            val thenBlock = new AstBlockStatement
-            thenBlock.body = cas.body.clone()
-            thenBlock.start = cas.start
-            thenBlock.end = cas.end
-            ifNode.body = thenBlock
-            defaultNode match {
-              case Some(d: AstDefault) if d.body.nonEmpty =>
-                val elseBlock = new AstBlockStatement
-                elseBlock.body = d.body.clone()
-                elseBlock.start = d.start
-                elseBlock.end = d.end
-                ifNode.alternative = elseBlock
-              case _ =>
-                ifNode.alternative = null
-            }
+        branch match {
+          case cas: AstCase if cas.expression != null =>
+            val cmp = new AstBinary; cmp.operator = "==="; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
+            val thenBlock = new AstBlockStatement; thenBlock.body = ArrayBuffer.from(cas.body); thenBlock.start = cas.start; thenBlock.end = cas.end
+            val elseBody = ArrayBuffer.empty[AstNode]
+            if (exactExp != null) elseBody.addOne(exactExp.nn)
+            elseBody.addAll(defaultOrExact.nn.body)
+            val elseBlock = new AstBlockStatement; elseBlock.body = elseBody; elseBlock.start = defaultOrExact.nn.start; elseBlock.end = defaultOrExact.nn.end
+            val ifNode = new AstIf; ifNode.condition = cmp; ifNode.body = thenBlock; ifNode.alternative = elseBlock; ifNode.start = self.start; ifNode.end = self.end
             return optimizeIf(ifNode) // @nowarn
           case _ =>
         }
       }
-
-      self
+      branch match {
+        case cas: AstCase if cas.expression != null =>
+          var operator = "==="
+          var consequent: AstBlockStatement = { val b = new AstBlockStatement; b.body = ArrayBuffer.from(cas.body); b.start = cas.start; b.end = cas.end; b }
+          val elseBody = ArrayBuffer.empty[AstNode]
+          if (exactExp != null) elseBody.addOne(exactExp.nn)
+          elseBody.addAll(defaultOrExact.nn.body)
+          var always: AstBlockStatement = { val b = new AstBlockStatement; b.body = elseBody; b.start = defaultOrExact.nn.start; b.end = defaultOrExact.nn.end; b }
+          if (body(0).asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) {
+            operator = "!=="
+            val tmp = always; always = consequent; consequent = tmp
+          }
+          val cmp = new AstBinary; cmp.operator = operator; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
+          val ifNode = new AstIf; ifNode.condition = cmp; ifNode.body = consequent; ifNode.alternative = null; ifNode.start = self.start; ifNode.end = self.end
+          val block = new AstBlockStatement
+          block.body = ArrayBuffer(ifNode, always)
+          block.start = self.start
+          block.end = self.end
+          return optimizeBlockStatement(block) // @nowarn
+        case _ =>
+      }
     }
+
+    self
+  }
 
   /** Optimize try-catch-finally. */
   private def optimizeTry(self: AstTry): AstNode = {
@@ -1671,6 +2035,126 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 bin.start = self.start
                 bin.end = self.end
                 return bestOfExpression(bin, self) // @nowarn
+
+              case "join" if dot.expression.nn.isInstanceOf[AstArray] =>
+                // [a, b, c].join(sep) → fold constant segments, concat with +
+                boundary {
+                  val arr = dot.expression.nn.asInstanceOf[AstArray]
+                  var separator: Any = ","
+                  if (self.args.nonEmpty) {
+                    separator = Evaluate.evaluate(self.args(0), this)
+                    if (separator == null || (separator.asInstanceOf[AnyRef] eq self.args(0).asInstanceOf[AnyRef])) break(()) // not a constant
+                  }
+                  val sepStr = separator.toString
+                  val elements = ArrayBuffer.empty[AstNode]
+                  val consts = ArrayBuffer.empty[Any]
+                  var canOpt = true
+                  var ei = 0
+                  while (ei < arr.elements.size && canOpt) {
+                    val el = arr.elements(ei)
+                    if (el.isInstanceOf[AstExpansion]) { canOpt = false }
+                    else {
+                      val v = Evaluate.evaluate(el, this)
+                      if (v != null && !(v.asInstanceOf[AnyRef] eq el.asInstanceOf[AnyRef])) {
+                        consts.addOne(v)
+                      } else {
+                        if (consts.nonEmpty) {
+                          val str = new AstString; str.value = consts.map(_.toString).mkString(sepStr); str.start = self.start; str.end = self.end
+                          elements.addOne(str)
+                          consts.clear()
+                        }
+                        elements.addOne(el)
+                      }
+                    }
+                    ei += 1
+                  }
+                  if (!canOpt) break(())
+                  if (consts.nonEmpty) {
+                    val str = new AstString; str.value = consts.map(_.toString).mkString(sepStr); str.start = self.start; str.end = self.end
+                    elements.addOne(str)
+                  }
+                  if (elements.isEmpty) {
+                    val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end
+                    return s // @nowarn
+                  }
+                  if (elements.size == 1) {
+                    if (isString(elements(0), this)) return elements(0) // @nowarn
+                    val bin = new AstBinary; bin.operator = "+"; bin.start = self.start; bin.end = self.end
+                    bin.left = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
+                    bin.right = elements(0)
+                    return bin // @nowarn
+                  }
+                  if (sepStr == "") {
+                    // Fold into + chain
+                    var first: AstNode = null.asInstanceOf[AstNode]
+                    if (isString(elements(0), this) || (elements.size > 1 && isString(elements(1), this))) {
+                      first = elements.remove(0)
+                    } else {
+                      first = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
+                    }
+                    var result: AstNode = first
+                    for (el <- elements) {
+                      val bin = new AstBinary; bin.operator = "+"; bin.left = result; bin.right = el; bin.start = el.start; bin.end = el.end
+                      result = bin
+                    }
+                    return result // @nowarn
+                  }
+                  // Otherwise, best_of with optimized array
+                  val nodeArr = new AstArray; nodeArr.elements = elements; nodeArr.start = arr.start; nodeArr.end = arr.end
+                  val nodeDot = new AstDot; nodeDot.expression = nodeArr; nodeDot.property = "join"; nodeDot.optional = dot.optional; nodeDot.start = dot.start; nodeDot.end = dot.end
+                  val node = new AstCall; node.expression = nodeDot; node.args = ArrayBuffer.from(self.args); node.start = self.start; node.end = self.end
+                  return bestOfExpression(node, self) // @nowarn
+                }
+
+              case "charAt" if dot.expression.nn != null && isString(dot.expression.nn, this) =>
+                // "str".charAt(n) → "str"[n]
+                val arg = if (self.args.nonEmpty) self.args(0) else null
+                val index: Any = if (arg != null) Evaluate.evaluate(arg.nn, this) else 0
+                if (index != null && !(index.asInstanceOf[AnyRef] eq (if (arg != null) arg.nn.asInstanceOf[AnyRef] else null))) {
+                  val idx = index match {
+                    case d: Double => d.toInt
+                    case i: Int    => i
+                    case _         => 0
+                  }
+                  val sub = new AstSub
+                  sub.expression = dot.expression
+                  sub.property = makeNodeFromConstant(idx, if (arg != null) arg.nn else dot)
+                  sub.start = self.start
+                  sub.end = self.end
+                  return sub // @nowarn
+                }
+
+              case "apply" if self.args.size == 2 && self.args(1).isInstanceOf[AstArray] =>
+                // fn.apply(ctx, [a, b]) → fn.call(ctx, a, b)
+                val spreadArgs = ArrayBuffer.from(self.args(1).asInstanceOf[AstArray].elements)
+                spreadArgs.insert(0, self.args(0))
+                val callDot = new AstDot; callDot.expression = dot.expression; callDot.optional = false; callDot.property = "call"; callDot.start = dot.start; callDot.end = dot.end
+                val callNode = new AstCall; callNode.expression = callDot; callNode.args = spreadArgs; callNode.start = self.start; callNode.end = self.end
+                return callNode // @nowarn
+
+              case "call" =>
+                // fn.call(ctx, a, b) → fn(a, b) when fn doesn't use `this`
+                var func: AstNode | Null = dot.expression
+                if (func != null && func.nn.isInstanceOf[AstSymbolRef]) {
+                  func.nn.asInstanceOf[AstSymbolRef].fixedValue() match {
+                    case fv: AstNode => func = fv
+                    case _           =>
+                  }
+                }
+                if (func != null && func.nn.isInstanceOf[AstLambda] && !containsThis(func.nn)) {
+                  if (self.args.nonEmpty) {
+                    // Drop the `this` argument, call directly
+                    val seq = ArrayBuffer(self.args(0))
+                    val directCall = new AstCall; directCall.expression = dot.expression; directCall.args = ArrayBuffer.from(self.args.drop(1)); directCall.start = self.start; directCall.end = self.end
+                    seq.addOne(directCall)
+                    return makeSequence(self, seq) // @nowarn
+                  } else {
+                    // No args at all: fn.call() → fn()
+                    val directCall = new AstCall; directCall.expression = dot.expression; directCall.args = ArrayBuffer.empty; directCall.start = self.start; directCall.end = self.end
+                    return directCall // @nowarn
+                  }
+                }
+
               case _ =>
             }
 
@@ -1782,6 +2266,83 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             self.left = makeVoid0(self.left.nn)
             if (self.operator.length == 2) self.operator += "="
           case _ =>
+        }
+      }
+    }
+
+    // obj !== obj => false (when same SymbolDef and fixed value is an object)
+    if (self.left != null && self.right != null && (self.operator == "===" || self.operator == "!==")) {
+      (self.left.nn, self.right.nn) match {
+        case (lRef: AstSymbolRef, rRef: AstSymbolRef) if lRef.definition() != null && rRef.definition() != null =>
+          if ((lRef.definition().nn eq rRef.definition().nn) && {
+            val fv = lRef.fixedValue()
+            fv != null && (fv.isInstanceOf[AstArray] || fv.isInstanceOf[AstLambda] || fv.isInstanceOf[AstObject] || fv.isInstanceOf[AstClass])
+          }) {
+            if (self.operator.charAt(0) == '=') {
+              val t = new AstTrue; t.start = self.start; t.end = self.end; return t // @nowarn
+            } else {
+              val f = new AstFalse; f.start = self.start; f.end = self.end; return f // @nowarn
+            }
+          }
+        case _ =>
+      }
+    }
+
+    // 32-bit integer comparison with 0 → booleanify
+    if (self.left != null && self.right != null && (self.operator == "==" || self.operator == "===" || self.operator == "!=" || self.operator == "!==")) {
+      if (Inference.is32BitInteger(self.left.nn, this) && Inference.is32BitInteger(self.right.nn, this)) {
+        def mkNot(n: AstNode): AstNode = {
+          val neg = new AstUnaryPrefix; neg.operator = "!"; neg.expression = n; neg.start = n.start; neg.end = n.end; neg
+        }
+        def booleanify(node: AstNode, truthy: Boolean): AstNode = {
+          if (truthy) { if (inBooleanContext()) node else mkNot(mkNot(node)) }
+          else mkNot(node)
+        }
+        // The only falsy 32-bit integer is 0
+        if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0) {
+          return booleanify(self.right.nn, self.operator.charAt(0) == '!') // @nowarn
+        }
+        if (self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0) {
+          return booleanify(self.left.nn, self.operator.charAt(0) == '!') // @nowarn
+        }
+      }
+    }
+
+    // &&/|| → nullish coalescing when comparing against null/undefined
+    if (self.left != null && self.right != null && (self.operator == "&&" || self.operator == "||")) {
+      var lhs: AstNode = self.left.nn
+      if (lhs.isInstanceOf[AstBinary] && lhs.asInstanceOf[AstBinary].operator == self.operator) {
+        lhs = lhs.asInstanceOf[AstBinary].right.nn
+      }
+      if (lhs.isInstanceOf[AstBinary] && self.right.nn.isInstanceOf[AstBinary]) {
+        val lBin = lhs.asInstanceOf[AstBinary]
+        val rBin = self.right.nn.asInstanceOf[AstBinary]
+        val expectedOp = if (self.operator == "&&") "!==" else "==="
+        if (lBin.operator == expectedOp && rBin.operator == expectedOp && lBin.left != null && rBin.left != null && lBin.right != null && rBin.right != null) {
+          val lIsUndef = isUndefined(lBin.left.nn, this)
+          val rIsNull = rBin.left.nn.isInstanceOf[AstNull]
+          val lIsNull = lBin.left.nn.isInstanceOf[AstNull]
+          val rIsUndef = isUndefined(rBin.left.nn, this)
+          if ((lIsUndef && rIsNull) || (lIsNull && rIsUndef)) {
+            if (!hasSideEffects(lBin.right.nn, this) && AstEquivalent.equivalentTo(lBin.right.nn, rBin.right.nn)) {
+              val combined = new AstBinary
+              combined.operator = expectedOp.substring(0, expectedOp.length - 1)
+              combined.left = new AstNull; combined.left.nn.start = self.start; combined.left.nn.end = self.end
+              combined.right = lBin.right
+              combined.start = self.start
+              combined.end = self.end
+              if (!(lhs.asInstanceOf[AnyRef] eq self.left.nn.asInstanceOf[AnyRef])) {
+                val outer = new AstBinary
+                outer.operator = self.operator
+                outer.left = self.left.nn.asInstanceOf[AstBinary].left
+                outer.right = combined
+                outer.start = self.start
+                outer.end = self.end
+                return outer // @nowarn
+              }
+              return combined // @nowarn
+            }
+          }
         }
       }
     }
@@ -2333,19 +2894,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Optimize optional chain expressions — unwrap when receiver is non-nullish. */
   private def optimizeChain(self: AstChain): AstNode = {
     if (self.expression == null) return self // @nowarn
-    // If the chain's expression is a PropAccess or Call, pass through to let
-    // the inner optimization handle it
-    self.expression.nn match {
-      case pa: AstPropAccess if pa.optional && pa.expression != null && !isNullish(pa.expression.nn, this) =>
-        // Receiver is non-nullish — optional chain is unnecessary, unwrap
-        pa.optional = false
-        return pa // @nowarn
-      case call: AstCall if call.optional && call.expression != null && !isNullish(call.expression.nn, this) =>
-        call.optional = false
-        return call // @nowarn
-      case _ =>
+
+    // If the entire chain expression is nullish, replace with void 0
+    if (isNullish(self.expression.nn, this)) {
+      val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+      // `delete x?.y` → `delete 0` (not `delete undefined` which would be a syntax error)
+      p match {
+        case up: AstUnaryPrefix if up.operator == "delete" =>
+          return makeNodeFromConstant(0, self) // @nowarn
+        case _ =>
+      }
+      return makeVoid0(self) // @nowarn
     }
-    self
+
+    // If expression is PropAccess or Call, keep chain; otherwise unwrap
+    self.expression.nn match {
+      case _: AstPropAccess | _: AstCall =>
+        self
+      case other =>
+        // The child might have swapped itself — keep AST valid
+        other
+    }
   }
 
   /** Optimize symbol references — inline or replace with constants. */
@@ -2442,37 +3011,73 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   /** Optimize boolean literals in boolean context. */
-  private def optimizeBoolean(self: AstBoolean): AstNode =
+  private def optimizeBoolean(self: AstBoolean): AstNode = {
+    val selfValue = if (self.isInstanceOf[AstTrue]) 1.0 else 0.0
     if (inBooleanContext()) {
-      val num = new AstNumber
-      num.start = self.start
-      num.end = self.end
-      num.value = if (self.isInstanceOf[AstTrue]) 1.0 else 0.0
-      num
-    } else if (optionBool("booleans")) {
-      // true -> !0, false -> !1
-      val inner = new AstNumber
-      inner.start = self.start
-      inner.end = self.end
-      inner.value = if (self.isInstanceOf[AstTrue]) 0.0 else 1.0
-
-      val not = new AstUnaryPrefix
-      not.start = self.start
-      not.end = self.end
-      not.operator = "!"
-      not.expression = inner
-      not
-    } else {
-      self
+      val num = new AstNumber; num.start = self.start; num.end = self.end; num.value = selfValue
+      return num // @nowarn
     }
+    val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+    if (optionBool("booleans_as_integers")) {
+      // Relax === to == in parent binary
+      p match {
+        case bin: AstBinary if bin.operator == "===" || bin.operator == "!==" =>
+          bin.operator = bin.operator.substring(0, bin.operator.length - 1)
+        case _ =>
+      }
+      val num = new AstNumber; num.start = self.start; num.end = self.end; num.value = selfValue
+      return num // @nowarn
+    }
+    if (optionBool("booleans")) {
+      // In == / != context, use number directly
+      p match {
+        case bin: AstBinary if bin.operator == "==" || bin.operator == "!=" =>
+          val num = new AstNumber; num.start = self.start; num.end = self.end; num.value = selfValue
+          return num // @nowarn
+        case _ =>
+      }
+      // true -> !0, false -> !1
+      val inner = new AstNumber; inner.start = self.start; inner.end = self.end
+      inner.value = 1.0 - selfValue
+      val not = new AstUnaryPrefix; not.start = self.start; not.end = self.end
+      not.operator = "!"; not.expression = inner
+      return not // @nowarn
+    }
+    self
+  }
 
   /** Optimize default assignment — remove `= undefined`. */
   private def optimizeDefaultAssign(self: AstDefaultAssign): AstNode =
     if (!optionBool("evaluate")) self
     else {
-      // If the default value is undefined, the assignment is redundant
-      if (self.right != null && isUndefined(self.right.nn, this)) {
-        return self.left.nn // @nowarn — drop `= undefined`
+      val evaluateRight = if (self.right != null) Evaluate.evaluate(self.right.nn, this) else null
+
+      // `[x = undefined] = foo` → `[x] = foo`
+      // `(arg = undefined) => ...` → `(arg) => ...` (unless keep_fargs)
+      if (evaluateRight != null && isUndefined(self.right.nn, this)) {
+        // Check keep_fargs context: if parent is a Lambda, only drop when
+        // keep_fargs is false, or parent is an IIFE
+        val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        par match {
+          case lambda: AstLambda =>
+            val keepFargs = optionBool("keep_fargs")
+            if (!keepFargs) {
+              return self.left.nn // @nowarn
+            }
+            // Check if parent's parent is a Call with the lambda as expression (IIFE)
+            val gpar = try { parent(1) } catch { case _: IndexOutOfBoundsException => null }
+            gpar match {
+              case call: AstCall if call.expression != null && (call.expression.nn.asInstanceOf[AnyRef] eq lambda.asInstanceOf[AnyRef]) =>
+                return self.left.nn // @nowarn
+              case _ =>
+            }
+          case _ =>
+            return self.left.nn // @nowarn — not inside a lambda, safe to drop
+        }
+      } else if (evaluateRight != null && (evaluateRight.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
+        // Replace with simpler constant form
+        val evalNode = makeNodeFromConstant(evaluateRight, self.right.nn)
+        self.right = bestOfExpression(evalNode, self.right.nn)
       }
       self
     }
@@ -2576,6 +3181,100 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     prefix.operator = "void"
     prefix.expression = zero
     prefix
+  }
+
+  /** Negate a boolean expression, choosing the shortest representation.
+    *
+    * Ported from inference.js def_negate. For UnaryPrefix("!"), unwraps; for Binary comparisons, flips the operator; for &&/||, applies De Morgan's law recursively.
+    */
+  /** Check if a node contains a `this` reference (stops at non-arrow scope boundaries). */
+  private def containsThis(node: AstNode): Boolean = {
+    var found = false
+    val tw = new TreeWalker((n, _) => {
+      if (found) true
+      else if (n.isInstanceOf[AstThis]) { found = true; true }
+      else if (!(n.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) && n.isInstanceOf[AstScope] && !n.isInstanceOf[AstArrow]) true
+      else null
+    })
+    node.walk(tw)
+    found
+  }
+
+  /** Negate a boolean expression, choosing the shortest representation.
+    *
+    * Ported from inference.js def_negate. For UnaryPrefix("!"), unwraps; for Binary comparisons, flips the operator; for &&/||, applies De Morgan's law recursively.
+    */
+  @annotation.nowarn("msg=unused private member") // used by optimizeIf expansion
+  private def negate(node: AstNode, firstInStatement: Boolean = false): AstNode = {
+    def basicNegation(exp: AstNode): AstNode = {
+      val neg = new AstUnaryPrefix
+      neg.operator = "!"
+      neg.expression = exp
+      neg.start = exp.start
+      neg.end = exp.end
+      neg
+    }
+    def best(orig: AstNode, alt: AstNode, fis: Boolean): AstNode = {
+      val negated = basicNegation(orig)
+      if (fis) {
+        val stat = new AstSimpleStatement; stat.body = alt; stat.start = alt.start; stat.end = alt.end
+        if (bestOfExpression(negated, stat) eq stat) alt else negated
+      } else {
+        bestOfExpression(negated, alt)
+      }
+    }
+    node match {
+      case _: AstStatement =>
+        throw new RuntimeException("Cannot negate a statement")
+      case up: AstUnaryPrefix if up.operator == "!" =>
+        up.expression.nn
+      case seq: AstSequence if seq.expressions.size >= 2 =>
+        val exprs = ArrayBuffer.from(seq.expressions)
+        exprs(exprs.size - 1) = negate(exprs.last, false)
+        makeSequence(seq, exprs)
+      case cond: AstConditional =>
+        val neg = new AstConditional
+        neg.condition = cond.condition
+        neg.consequent = negate(cond.consequent.nn, false)
+        neg.alternative = negate(cond.alternative.nn, false)
+        neg.start = cond.start
+        neg.end = cond.end
+        best(node, neg, firstInStatement)
+      case bin: AstBinary =>
+        val negBin = new AstBinary
+        negBin.start = bin.start
+        negBin.end = bin.end
+        negBin.left = bin.left
+        negBin.right = bin.right
+        if (optionBool("unsafe_comps")) {
+          bin.operator match {
+            case "<=" => negBin.operator = ">"; return negBin // @nowarn
+            case "<"  => negBin.operator = ">="; return negBin // @nowarn
+            case ">=" => negBin.operator = "<"; return negBin // @nowarn
+            case ">"  => negBin.operator = "<="; return negBin // @nowarn
+            case _ =>
+          }
+        }
+        bin.operator match {
+          case "==" => negBin.operator = "!="; negBin
+          case "!=" => negBin.operator = "=="; negBin
+          case "===" => negBin.operator = "!=="; negBin
+          case "!==" => negBin.operator = "==="; negBin
+          case "&&" =>
+            negBin.operator = "||"
+            negBin.left = negate(bin.left.nn, firstInStatement)
+            negBin.right = negate(bin.right.nn, false)
+            best(node, negBin, firstInStatement)
+          case "||" =>
+            negBin.operator = "&&"
+            negBin.left = negate(bin.left.nn, firstInStatement)
+            negBin.right = negate(bin.right.nn, false)
+            best(node, negBin, firstInStatement)
+          case _ => basicNegation(node)
+        }
+      // AST_Function, AST_Class, AST_Arrow — all get basic negation
+      case _ => basicNegation(node)
+    }
   }
 
   // self() is inherited from TreeWalker
