@@ -33,7 +33,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
-import ssg.js.compress.Inference.{ isModified, lazyOp }
+import ssg.js.compress.Inference.{ isConstantExpression, isModified, lazyOp }
 import ssg.js.scope.SymbolDef
 
 /** Data-flow analysis for variable tracking.
@@ -124,7 +124,7 @@ object ReduceVars {
     d.escaped = 0
     d.recursiveRefs = 0
     d.references = ArrayBuffer.empty
-    d.singleUse = false
+    d.singleUse = null // Use null sentinel (original uses undefined)
     d.shouldReplace = null
     if (
       d.scope.pinned
@@ -258,10 +258,10 @@ object ReduceVars {
       if (v.isInstanceOf[AstClassExpression]) return // @nowarn
     }
 
-    // Check if value escapes into an assignment, call, exit, var def, or yield
+    // Check if value escapes into an assignment, call, exit, var def, using def, or yield
     parentNode match {
       case assign: AstAssign if (assign.operator == "=" || assign.logical) && assign.right != null && (node eq assign.right.nn) =>
-        val actualDepth = if (depth > 1 && !(value != null && value.nn.isInstanceOf[AstLambda])) 1 else depth
+        val actualDepth = if (depth > 1 && !(value != null && isConstantExpression(value.nn, scope) != false)) 1 else depth
         if (d.escaped == 0 || d.escaped > actualDepth) d.escaped = actualDepth
         return // @nowarn
       case call: AstCall if (call.expression == null || !(node eq call.expression.nn)) || call.isInstanceOf[AstNew] =>
@@ -272,7 +272,17 @@ object ReduceVars {
         val actualDepth = if (depth > 1) 1 else depth
         if (d.escaped == 0 || d.escaped > actualDepth) d.escaped = actualDepth
         return // @nowarn
+      // AstVarDefLike includes both AstVarDef and AstUsingDef
       case vd: AstVarDef if vd.value != null && (node eq vd.value.nn) =>
+        val actualDepth = if (depth > 1) 1 else depth
+        if (d.escaped == 0 || d.escaped > actualDepth) d.escaped = actualDepth
+        return // @nowarn
+      case ud: AstUsingDef if ud.value != null && (node eq ud.value.nn) =>
+        val actualDepth = if (depth > 1) 1 else depth
+        if (d.escaped == 0 || d.escaped > actualDepth) d.escaped = actualDepth
+        return // @nowarn
+      // Note: Original Terser uses .value but AST_Yield has .expression — using correct field
+      case yld: AstYield if yld.expression != null && (node eq yld.expression.nn) && (scope == null || !sameScopeAsDef(node, d)) =>
         val actualDepth = if (depth > 1) 1 else depth
         if (d.escaped == 0 || d.escaped > actualDepth) d.escaped = actualDepth
         return // @nowarn
@@ -419,6 +429,7 @@ object ReduceVars {
         }
         resetVariables(state, compressor, tl)
         descend()
+        handleDefinedAfterHoist(tl)
         true
 
       // Block (catch-all for remaining AstBlock subtypes)
@@ -626,7 +637,8 @@ object ReduceVars {
                 // Avoid setting fixed when there's more than one origin for a variable value
                 if (dd.orig.size <= 1) {
                   val argIdx = i // capture for closure
-                  if (!lambda.usesArguments || tw.directives.contains("use strict")) {
+                  // Avoid setting fixed when there's already one set (d.fixed === undefined check)
+                  if (dd.fixed == null && (!lambda.usesArguments || tw.directives.contains("use strict"))) {
                     dd.fixed = new Function0[AstNode] {
                       def apply(): AstNode =
                         if (argIdx < iife.args.size) iife.args(argIdx) else {
@@ -656,7 +668,304 @@ object ReduceVars {
 
     descend()
     state.pop()
+
+    handleDefinedAfterHoist(lambda)
+
     true
+  }
+
+  // -----------------------------------------------------------------------
+  // handle_defined_after_hoist: detect when a hoisted function uses a variable
+  // that is written after the call site
+  // -----------------------------------------------------------------------
+
+  /** Info object for walk_parent callback (provides parent access). */
+  private class WalkParentInfo(private val stack: ArrayBuffer[AstNode]) {
+    def parent(n: Int = 0): AstNode | Null = {
+      val idx = stack.size - 1 - n
+      if (idx >= 0) stack(idx) else null
+    }
+  }
+
+  /** Walk a node tree with parent access, similar to original walk_parent.
+    *
+    * Traverses in depth-first order, calling cb for each node with access to the parent stack. If cb returns WalkAbort, the walk is aborted and returns true. If cb returns any other truthy
+    * value, children are skipped. Returns true if aborted, false otherwise.
+    */
+  private def walkParent(node: AstNode, cb: (AstNode, WalkParentInfo) => Any): Boolean = {
+    import scala.util.boundary
+    import scala.util.boundary.break
+
+    val toVisit       = ArrayBuffer[AstNode](node)
+    val push: AstNode => Unit = n => toVisit.addOne(n)
+    val stack         = ArrayBuffer.empty[AstNode]
+    val parentPopIndices = ArrayBuffer.empty[Int]
+
+    val info = new WalkParentInfo(stack)
+
+    boundary[Boolean] {
+      while (toVisit.nonEmpty) {
+        val current = toVisit.remove(toVisit.size - 1)
+
+        // Pop parents that are no longer ancestors
+        while (parentPopIndices.nonEmpty && toVisit.size == parentPopIndices.last) {
+          stack.remove(stack.size - 1)
+          parentPopIndices.remove(parentPopIndices.size - 1)
+        }
+
+        val ret = cb(current, info)
+
+        if (ret != null && ret != false && ret != (())) {
+          if (ret.asInstanceOf[AnyRef] eq WalkAbort) {
+            break(true)
+          }
+          // truthy but not WalkAbort: skip children
+        } else {
+          val visitLength = toVisit.size
+
+          current.childrenBackwards(push)
+
+          // Push to stack only if we're going to traverse children
+          if (toVisit.size > visitLength) {
+            stack.addOne(current)
+            parentPopIndices.addOne(visitLength - 1)
+          }
+        }
+      }
+      false
+    }
+  }
+
+  /** It's possible for a hoisted function to use something that's not defined yet.
+    *
+    * Example:
+    * {{{
+    * hoisted();
+    * var defined_after = true;
+    * function hoisted() {
+    *   // use defined_after
+    * }
+    * }}}
+    *
+    * Or even indirectly:
+    * {{{
+    * B();
+    * var defined_after = true;
+    * function A() {
+    *   // use defined_after
+    * }
+    * function B() {
+    *   A();
+    * }
+    * }}}
+    *
+    * Access a variable before declaration will either throw a ReferenceError (if the variable is declared with `let` or `const`), or get an `undefined` (if the variable is declared with `var`).
+    *
+    * If the variable is inlined into the function, the behavior will change.
+    *
+    * This function is called on the parent to disallow inlining of such variables.
+    */
+  private def handleDefinedAfterHoist(parent: AstScope): Unit = {
+    val defuns = ArrayBuffer.empty[AstDefun]
+
+    // First pass: collect hoisted function definitions
+    walk(parent, (node, _) => {
+      if (node.asInstanceOf[AnyRef] eq parent.asInstanceOf[AnyRef]) {
+        null // continue into children
+      } else {
+        node match {
+          case defun: AstDefun =>
+            defuns.addOne(defun)
+            true // skip children of defun
+          case _: AstScope | _: AstSimpleStatement =>
+            true // skip children
+          case _ =>
+            null // continue
+        }
+      }
+    })
+
+    // `defun` id to array of `defun` ids it uses
+    val defunDependenciesMap = mutable.Map.empty[Int, ArrayBuffer[Int]]
+    // `defun` id to array of enclosing `def` that are used by the function
+    val dependenciesMap = mutable.Map.empty[Int, ArrayBuffer[SymbolDef]]
+    // all symbol ids that will be tracked for read/write
+    val symbolsOfInterest = mutable.Set.empty[Int]
+    val defunsOfInterest  = mutable.Set.empty[Int]
+
+    for (defun <- defuns) {
+      if (defun.name != null) {
+        val fnameDefOpt = defun.name.nn.asInstanceOf[AstSymbol].definition()
+        if (fnameDefOpt != null) {
+          val fnameDef     = fnameDefOpt.nn
+          val enclosingDefs = ArrayBuffer.empty[SymbolDef]
+
+          for (d <- defun.enclosed) {
+            val dd = d.asInstanceOf[SymbolDef]
+            if (
+              dd.fixed != false &&
+              !(dd.asInstanceOf[AnyRef] eq fnameDef.asInstanceOf[AnyRef]) &&
+              dd.scope.getDefunScope == parent
+            ) {
+              symbolsOfInterest.add(dd.id)
+
+              // found a reference to another function
+              if (
+                dd.assignments == 0 &&
+                dd.orig.size == 1 &&
+                dd.orig(0).isInstanceOf[AstSymbolDefun]
+              ) {
+                defunsOfInterest.add(dd.id)
+                symbolsOfInterest.add(dd.id)
+
+                defunsOfInterest.add(fnameDef.id)
+                symbolsOfInterest.add(fnameDef.id)
+
+                if (!defunDependenciesMap.contains(fnameDef.id)) {
+                  defunDependenciesMap(fnameDef.id) = ArrayBuffer.empty
+                }
+                defunDependenciesMap(fnameDef.id).addOne(dd.id)
+              } else {
+                enclosingDefs.addOne(dd)
+              }
+            }
+          }
+
+          if (enclosingDefs.nonEmpty) {
+            dependenciesMap(fnameDef.id) = enclosingDefs
+            defunsOfInterest.add(fnameDef.id)
+            symbolsOfInterest.add(fnameDef.id)
+          }
+        }
+      }
+    }
+
+    // No defuns use outside constants
+    if (dependenciesMap.isEmpty) {
+      return // @nowarn — early exit
+    }
+
+    // Increment to count "symbols of interest" (defuns or defs) that we found.
+    // These are tracked in AST order so we can check which is after which.
+    var symbolIndex = 1
+    // Map a defun ID to its first read (a `symbol_index`)
+    val defunFirstReadMap = mutable.Map.empty[Int, Int]
+    // Map a symbol ID to its last write (a `symbol_index`)
+    val symbolLastWriteMap = mutable.Map.empty[Int, Int]
+
+    walkParent(parent, (node, walkInfo) => {
+      node match {
+        case sym: AstSymbol if sym.thedef != null =>
+          val d  = sym.definition()
+          if (d != null) {
+            val id = d.nn.id
+
+            symbolIndex += 1
+
+            // Track last-writes to symbols
+            if (symbolsOfInterest.contains(id)) {
+              if (sym.isInstanceOf[AstSymbolDeclaration] || Inference.isLhs(sym, walkInfo.parent().nn) != null) {
+                symbolLastWriteMap(id) = symbolIndex
+              }
+            }
+
+            // Track first-reads of defuns (refined later)
+            if (defunsOfInterest.contains(id)) {
+              if (!defunFirstReadMap.contains(id) && !isRecursiveRefByInfo(walkInfo, id)) {
+                defunFirstReadMap(id) = symbolIndex
+              }
+            }
+          }
+        case _ =>
+      }
+      null // continue walking
+    })
+
+    // Refine `defun_first_read_map` to be as high as possible
+    for ((defun, defunFirstRead) <- defunFirstReadMap) {
+      // Update all dependencies of `defun`
+      val queue = mutable.Set.empty[Int]
+      defunDependenciesMap.get(defun).foreach(deps => queue.addAll(deps))
+
+      // Process queue (using iterator + add to simulate JS Set iteration with additions)
+      val processed = mutable.Set.empty[Int]
+      while (queue.nonEmpty) {
+        val enclosedDefun = queue.head
+        queue.remove(enclosedDefun)
+        if (!processed.contains(enclosedDefun)) {
+          processed.add(enclosedDefun)
+
+          val enclosedDefunFirstRead = defunFirstReadMap.get(enclosedDefun)
+          if (enclosedDefunFirstRead.isEmpty || enclosedDefunFirstRead.get >= defunFirstRead) {
+            defunFirstReadMap(enclosedDefun) = defunFirstRead
+
+            defunDependenciesMap.get(enclosedDefun).foreach { enclosedDeps =>
+              for (dep <- enclosedDeps) {
+                if (!processed.contains(dep)) {
+                  queue.add(dep)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Ensure write-then-read order, otherwise clear `fixed`
+    // This is safe because last-writes (found_symbol_writes) are assumed to be as late as possible,
+    // and first-reads (defun_first_read_map) are assumed to be as early as possible.
+    for ((defunId, defs) <- dependenciesMap) {
+      defunFirstReadMap.get(defunId) match {
+        case None =>
+        // defun is never read, skip
+        case Some(defunFirstRead) =>
+          for (d <- defs) {
+            if (d.fixed != false) {
+              val defLastWrite = symbolLastWriteMap.getOrElse(d.id, 0)
+
+              if (defunFirstRead < defLastWrite) {
+                d.fixed = false
+              }
+            }
+          }
+      }
+    }
+  }
+
+  /** Check if a reference is recursive by walking up the parent stack.
+    *
+    * Similar to Common.isRecursiveRef but uses WalkParentInfo instead of TreeWalker.
+    */
+  private def isRecursiveRefByInfo(info: WalkParentInfo, defId: Int): Boolean = {
+    import scala.util.boundary
+    import scala.util.boundary.break
+
+    boundary[Boolean] {
+      var i = 0
+      var node = info.parent(i)
+      while (node != null) {
+        node.nn match {
+          case lambda: AstLambda if lambda.name != null =>
+            lambda.name.nn match {
+              case sym: AstSymbol if sym.thedef != null =>
+                val d = sym.definition()
+                if (d != null && d.nn.id == defId) break(true)
+              case _ =>
+            }
+          case cls: AstClass if cls.name != null =>
+            cls.name.nn match {
+              case sym: AstSymbol if sym.thedef != null =>
+                val d = sym.definition()
+                if (d != null && d.nn.id == defId) break(true)
+              case _ =>
+            }
+          case _ =>
+        }
+        i += 1
+        node = info.parent(i)
+      }
+      false
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -775,7 +1084,9 @@ object ReduceVars {
 
     dd.references.addOne(ref)
 
-    if (dd.references.size == 1 && dd.fixed == false && dd.orig.nonEmpty && dd.orig(0).isInstanceOf[AstSymbolDefun]) {
+    // Check !d.fixed for falsy (false, null, or undefined/null in original JS)
+    // Original JS: !d.fixed — evaluates to true for false, null, undefined
+    if (dd.references.size == 1 && (dd.fixed == false || dd.fixed == null) && dd.orig.nonEmpty && dd.orig(0).isInstanceOf[AstSymbolDefun]) {
       state.loopIds(dd.id) = state.inLoop
     }
 
