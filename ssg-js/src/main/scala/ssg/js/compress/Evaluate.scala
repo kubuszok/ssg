@@ -44,6 +44,22 @@ enum EvalResult {
   case Unevaluated
 }
 
+/** Wrapper for an evaluated function node (used in unsafe mode).
+  *
+  * In the original JS, functions can be evaluated to a function object with properties like `.name` and `.length`. We use this wrapper to enable similar functionality.
+  */
+final case class EvalFunction(node: AstLambda) {
+  /** Get the function's name, or empty string if anonymous. */
+  def name: String = node.name match {
+    case null       => ""
+    case sym: AstSymbol => sym.name
+    case _ => ""
+  }
+
+  /** Get the function's formal parameter count (JavaScript .length semantics). */
+  def length: Int = node.lengthProperty
+}
+
 /** Constant folding engine.
   *
   * Evaluates compile-time-constant expressions and returns either the evaluated value or the original AST node when evaluation is not possible.
@@ -80,6 +96,7 @@ object Evaluate {
         case _ if result.asInstanceOf[AnyRef] eq Nullish => node
         case _: Map[?, ?] => node // object values (Map extends Function1)
         case _: Seq[?]    => node // array values
+        case _: EvalFunction => node // evaluated function (used internally for .name/.length)
         case _: Function0[?] | _: Function1[?, ?] => node // function values
         case s: String =>
           // Evaluated strings can be larger than the original expression.
@@ -158,6 +175,9 @@ object Evaluate {
   ): Any =
     node match {
       // Lambda/Class must come before AstStatement since they extend AstScope extends AstBlock extends AstStatement
+      case fn: AstFunction if compressor.optionBool("unsafe") =>
+        // In unsafe mode, return a wrapper that allows property access (.name, .length)
+        EvalFunction(fn)
       case _: AstLambda => node
       case _: AstClass  => node
 
@@ -272,13 +292,17 @@ object Evaluate {
       // typeof special cases
       if (compressor.optionBool("typeofs") && prefix.operator == "typeof") {
         e.nn match {
-          case _: AstLambda    => break("function")
-          case _: AstSymbolRef =>
-            // Check fixed value
-            // TODO: fixedValue lookup when scope analysis is complete
-            break(prefix)
-          case _: AstObject | _: AstArray =>
-            // hasSideEffects check would go here
+          case _: AstLambda => break("function")
+          case ref: AstSymbolRef =>
+            // Check fixed value for symbol references
+            ref.fixedValue() match {
+              case _: AstLambda          => break("function")
+              case _: AstObject | _: AstArray => break("object")
+              case _ => // continue to evaluate below
+            }
+          case obj: AstObject if !Inference.hasSideEffects(obj, compressor) =>
+            break("object")
+          case arr: AstArray if !Inference.hasSideEffects(arr, compressor) =>
             break("object")
           case _ =>
         }
@@ -366,10 +390,23 @@ object Evaluate {
         break(binary)
       }
 
+      // BigInt guard: do not mix BigInt and Number; don't use >>> on BigInt or divide by 0n
+      val leftIsBigInt  = left.isInstanceOf[BigInt]
+      val rightIsBigInt = right.isInstanceOf[BigInt]
+      if (leftIsBigInt != rightIsBigInt) break(binary) // mixing BigInt and Number
+      if (
+        leftIsBigInt && (
+          binary.operator == ">>>" ||
+          (binary.operator == "/" && right == BigInt(0))
+        )
+      ) {
+        break(binary)
+      }
+
       // Type-safe numeric operations on Doubles
-      (left, right) match {
+      val result: Any = (left, right) match {
         case (l: Double, r: Double) =>
-          val result: Any = binary.operator match {
+          binary.operator match {
             case "&&"         => if (l != 0.0 && !l.isNaN) r else l
             case "||"         => if (l != 0.0 && !l.isNaN) l else r
             case "|"          => (l.toInt | r.toInt).toDouble
@@ -392,7 +429,6 @@ object Evaluate {
             case ">="         => l >= r
             case _            => break(binary)
           }
-          result
 
         case (l: String, r: String) =>
           binary.operator match {
@@ -415,6 +451,31 @@ object Evaluate {
             case _            => break(binary)
           }
 
+        // BigInt operations (already guarded against mixing with Number above)
+        case (l: BigInt, r: BigInt) =>
+          binary.operator match {
+            case "&&" => if (l != BigInt(0)) r else l
+            case "||" => if (l != BigInt(0)) l else r
+            case "|"  => l | r
+            case "&"  => l & r
+            case "^"  => l ^ r
+            case "+"  => l + r
+            case "*"  => l * r
+            case "/"  => l / r // guarded against 0 above
+            case "%"  => l % r
+            case "-"  => l - r
+            case "<<" => l << r.toInt
+            case ">>" => l >> r.toInt
+            // >>> not supported for BigInt (guarded above)
+            case "==" | "===" => l == r
+            case "!=" | "!==" => l != r
+            case "<"          => l < r
+            case "<="         => l <= r
+            case ">"          => l > r
+            case ">="         => l >= r
+            case _            => break(binary)
+          }
+
         // String + non-string (concatenation)
         case (l: String, r) if binary.operator == "+" =>
           l + String.valueOf(r)
@@ -425,7 +486,16 @@ object Evaluate {
         case (l, r) if binary.operator == "??" =>
           if (l != null && !l.isInstanceOf[Unit]) l else r
 
-        case _ => binary
+        case _ => break(binary)
+      }
+
+      // NaN guard: if result is NaN and we're inside a `with` block, don't fold
+      // (because `with` can shadow variables and make NaN comparisons behave oddly)
+      result match {
+        case d: Double if d.isNaN =>
+          if (compressor.findParent[AstWith] != null) break(binary)
+          result
+        case _ => result
       }
     }
 
@@ -465,17 +535,49 @@ object Evaluate {
   // Symbol reference evaluation
   // -----------------------------------------------------------------------
 
+  /** Evaluate a symbol reference by looking up its fixed value.
+    *
+    * This handles:
+    *   - Infinite recursion guard via reentrantRefEval set
+    *   - Fixed value lookup from scope analysis
+    *   - Escape depth check for object values
+    */
   private def evalSymbolRef(
     ref:        AstSymbolRef,
     compressor: CompressorLike,
     depth:      Int
-  ): Any =
-    if (reentrantRefEval.contains(ref)) ref
-    else {
-      // TODO: implement fixed_value() lookup when scope analysis is complete
-      // For now, symbol refs are unevaluable
-      ref
+  ): Any = {
+    // Prevent infinite recursion
+    if (reentrantRefEval.contains(ref)) return ref // @nowarn — early exit
+
+    // Get the fixed value from scope analysis
+    val fixed = ref.fixedValue()
+    fixed match {
+      case false | null => ref // no fixed value
+      case fixedNode: AstNode =>
+        // Mark as being evaluated to prevent infinite recursion
+        reentrantRefEval.add(ref)
+        val value =
+          try evalNode(fixedNode, compressor, depth)
+          finally reentrantRefEval.remove(ref)
+
+        // If evaluation returned the same node, the ref is unevaluable
+        if (value.asInstanceOf[AnyRef] eq fixedNode.asInstanceOf[AnyRef])
+          ref
+        else if (value != null && isObjectLike(value)) {
+          // For object values, check escape depth
+          ref.definition() match {
+            case d: ssg.js.scope.SymbolDef if d.escaped > 0 && depth > d.escaped =>
+              // Value escaped at a shallower depth, don't propagate
+              ref
+            case _ => value
+          }
+        } else {
+          value
+        }
+      case _ => ref // unexpected type
     }
+  }
 
   // -----------------------------------------------------------------------
   // Property access evaluation
@@ -537,11 +639,58 @@ object Evaluate {
 
       // Unsafe property access on evaluated objects
       if (compressor.optionBool("unsafe")) {
+        // Check for undeclared ref to global object (Math.PI, Number.MAX_VALUE, etc.)
+        pa.expression.nn match {
+          case ref: AstSymbolRef if Inference.isUndeclaredRef(ref) =>
+            // Check if this is a pure native value (Math.PI, Number.MAX_VALUE, etc.)
+            if (isPureNativeValue(ref.name, propName)) {
+              // Return the actual value for known constants
+              (ref.name, propName) match {
+                case ("Math", "E")              => break(Math.E)
+                case ("Math", "LN10")           => break(Math.log(10.0))
+                case ("Math", "LN2")            => break(Math.log(2.0))
+                case ("Math", "LOG2E")          => break(1.0 / Math.log(2.0))
+                case ("Math", "LOG10E")         => break(1.0 / Math.log(10.0))
+                case ("Math", "PI")             => break(Math.PI)
+                case ("Math", "SQRT1_2")        => break(Math.sqrt(0.5))
+                case ("Math", "SQRT2")          => break(Math.sqrt(2.0))
+                case ("Number", "MAX_VALUE")    => break(Double.MaxValue)
+                case ("Number", "MIN_VALUE")    => break(Double.MinPositiveValue)
+                case ("Number", "NaN")          => break(Double.NaN)
+                case ("Number", "NEGATIVE_INFINITY") => break(Double.NegativeInfinity)
+                case ("Number", "POSITIVE_INFINITY") => break(Double.PositiveInfinity)
+                case _ => break(pa)
+              }
+            }
+            break(pa)
+          case _ =>
+        }
+
         obj match {
           case s: String =>
             propName match {
               case "length" => break(s.length.toDouble)
               case _        => break(pa)
+            }
+          case rv: RegExpValue =>
+            // RegExp property access
+            propName match {
+              case "source"     => break(rv.source)
+              case "flags"      => break(rv.flags)
+              case "global"     => break(rv.flags.contains('g'))
+              case "ignoreCase" => break(rv.flags.contains('i'))
+              case "multiline"  => break(rv.flags.contains('m'))
+              case "dotAll"     => break(rv.flags.contains('s'))
+              case "unicode"    => break(rv.flags.contains('u'))
+              case "sticky"     => break(rv.flags.contains('y'))
+              case _ => break(pa)
+            }
+          case ef: EvalFunction =>
+            // Function property access (.name, .length)
+            propName match {
+              case "name"   => break(ef.name)
+              case "length" => break(ef.length.toDouble)
+              case _ => break(pa)
             }
           case m: Map[?, ?] =>
             if (m.asInstanceOf[Map[String, Any]].contains(propName))
@@ -592,12 +741,162 @@ object Evaluate {
 
           if (pa.expression == null) break(call)
 
-          // Check for pure native function calls
+          // Check for pure native function calls on global objects
           pa.expression.nn match {
             case ref: AstSymbolRef if Inference.isUndeclaredRef(ref) =>
               if (!isPureNativeFn(ref.name, key)) break(call)
-              // We can't actually execute global functions at compile time
-              break(call)
+
+              // Evaluate arguments for global function calls
+              val globalArgs = mutable.ArrayBuffer.empty[Any]
+              var gi         = 0
+              while (gi < call.args.size) {
+                val arg = call.args(gi)
+                if (arg.isInstanceOf[AstLambda]) break(call)
+                val value = evalNode(arg, compressor, depth)
+                if (value.asInstanceOf[AnyRef] eq arg.asInstanceOf[AnyRef]) break(call)
+                globalArgs.addOne(value)
+                gi += 1
+              }
+
+              // Execute Math methods at compile time
+              if (ref.name == "Math") {
+                try
+                  key match {
+                    case "abs"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.abs(d))
+                      case _ => break(call)
+                    }
+                    case "acos"  => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.acos(d))
+                      case _ => break(call)
+                    }
+                    case "asin"  => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.asin(d))
+                      case _ => break(call)
+                    }
+                    case "atan"  => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.atan(d))
+                      case _ => break(call)
+                    }
+                    case "atan2" =>
+                      if (globalArgs.size >= 2) {
+                        (globalArgs(0), globalArgs(1)) match {
+                          case (y: Double, x: Double) => break(Math.atan2(y, x))
+                          case _ => break(call)
+                        }
+                      } else break(call)
+                    case "ceil"  => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.ceil(d))
+                      case _ => break(call)
+                    }
+                    case "cos"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.cos(d))
+                      case _ => break(call)
+                    }
+                    case "exp"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.exp(d))
+                      case _ => break(call)
+                    }
+                    case "floor" => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.floor(d))
+                      case _ => break(call)
+                    }
+                    case "log"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.log(d))
+                      case _ => break(call)
+                    }
+                    case "max"   =>
+                      val nums = globalArgs.collect { case d: Double => d }
+                      if (nums.size == globalArgs.size && nums.nonEmpty)
+                        break(nums.max)
+                      else break(call)
+                    case "min"   =>
+                      val nums = globalArgs.collect { case d: Double => d }
+                      if (nums.size == globalArgs.size && nums.nonEmpty)
+                        break(nums.min)
+                      else break(call)
+                    case "pow"   =>
+                      if (globalArgs.size >= 2) {
+                        (globalArgs(0), globalArgs(1)) match {
+                          case (base: Double, exp: Double) => break(Math.pow(base, exp))
+                          case _ => break(call)
+                        }
+                      } else break(call)
+                    case "round" => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.round(d).toDouble)
+                      case _ => break(call)
+                    }
+                    case "sin"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.sin(d))
+                      case _ => break(call)
+                    }
+                    case "sqrt"  => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.sqrt(d))
+                      case _ => break(call)
+                    }
+                    case "tan"   => globalArgs.headOption match {
+                      case Some(d: Double) => break(Math.tan(d))
+                      case _ => break(call)
+                    }
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
+              // Execute Number methods at compile time
+              if (ref.name == "Number") {
+                try
+                  key match {
+                    case "isFinite" => globalArgs.headOption match {
+                      case Some(d: Double) => break(d.isFinite)
+                      case _ => break(call)
+                    }
+                    case "isNaN" => globalArgs.headOption match {
+                      case Some(d: Double) => break(d.isNaN)
+                      case _ => break(call)
+                    }
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
+              // Execute Array methods at compile time
+              if (ref.name == "Array") {
+                try
+                  key match {
+                    case "isArray" => globalArgs.headOption match {
+                      case Some(_: Seq[?]) => break(true)
+                      case Some(_)         => break(false)
+                      case None            => break(call)
+                    }
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
+              // Execute String static methods at compile time
+              if (ref.name == "String") {
+                try
+                  key match {
+                    case "fromCharCode" =>
+                      val codes = globalArgs.collect { case d: Double => d.toInt.toChar }
+                      if (codes.size == globalArgs.size)
+                        break(codes.mkString)
+                      else break(call)
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
+              break(call) // Unknown global function
             case _ =>
           }
 
