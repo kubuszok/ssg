@@ -1326,4 +1326,124 @@ object Inference {
         case _ => null // continue walking
       }
     })
+
+  // -----------------------------------------------------------------------
+  // Self-referential class
+  // -----------------------------------------------------------------------
+
+  /** Does the class reference itself by name or `this` in non-deferred parts?
+    *
+    * Non-deferred parts are computed property keys and static initializers.
+    * If true, we cannot safely decompose the class.
+    */
+  def isSelfReferential(cls: AstClass): Boolean = {
+    val thisId = cls.name match {
+      case sym: AstSymbol =>
+        val d = sym.definition()
+        if (d != null) d.nn.id else -1
+      case _ => -1
+    }
+    var found = false
+    var classThis = true // track whether `this` refers to the class
+
+    // Visit only non-deferred class parts (computed keys and static initializers)
+    visitNondeferredClassParts(cls, (node, descend) => {
+      if (found) true // abort
+      else node match {
+        case _: AstThis =>
+          found = classThis
+          classThis
+        case ref: AstSymbolRef =>
+          val d = ref.definition()
+          found = d != null && d.nn.id == thisId
+          found
+        case lambda: AstLambda if !lambda.isInstanceOf[AstArrow] =>
+          // Non-arrow function: `this` inside refers to call-time value
+          val saveClassThis = classThis
+          classThis = false
+          descend()
+          classThis = saveClassThis
+          true // already descended
+        case _ =>
+          false // continue walking
+      }
+    })
+    found
+  }
+
+  /** Walk non-deferred class parts (computed keys and static initializers).
+    *
+    * Non-deferred parts are evaluated at class definition time:
+    * - Computed property keys
+    * - Static property initializers
+    * - Static blocks
+    * - Extends clause
+    */
+  def visitNondeferredClassParts(cls: AstClass, visitor: (AstNode, () => Unit) => Boolean): Unit = {
+    var i = 0
+    while (i < cls.properties.size) {
+      val prop = cls.properties(i)
+      prop match {
+        case op: AstObjectProperty if op.computedKey() =>
+          // Computed key is non-deferred
+          op.key match {
+            case k: AstNode =>
+              walkWithVisitor(k, visitor)
+            case _ =>
+          }
+        case _ =>
+      }
+      prop match {
+        case csb: AstClassStaticBlock =>
+          // Static block body is non-deferred
+          var j = 0
+          while (j < csb.body.size) {
+            walkWithVisitor(csb.body(j), visitor)
+            j += 1
+          }
+        case cp: AstClassProperty if cp.isStatic && cp.value != null =>
+          // Static property initializer is non-deferred
+          walkWithVisitor(cp.value.nn, visitor)
+        case cpp: AstClassPrivateProperty if cpp.isStatic && cpp.value != null =>
+          // Static private property initializer is non-deferred
+          walkWithVisitor(cpp.value.nn, visitor)
+        case _ =>
+      }
+      i += 1
+    }
+    // Also check extends clause
+    if (cls.superClass != null) {
+      walkWithVisitor(cls.superClass.nn, visitor)
+    }
+  }
+
+  /** Walk node tree, calling visitor for each node. */
+  private def walkWithVisitor(node: AstNode, visitor: (AstNode, () => Unit) => Boolean): Unit = {
+    val tw = new TreeWalker((current, descend) => {
+      if (visitor(current, descend)) true
+      else {
+        descend()
+        true
+      }
+    })
+    node.walk(tw)
+  }
+
+  // -----------------------------------------------------------------------
+  // Negate
+  // -----------------------------------------------------------------------
+
+  /** Negate an expression for drop_side_effect_free optimization.
+    *
+    * Used to convert IIFE in statement position to negated form
+    * to avoid needing parentheses.
+    */
+  def negate(node: AstNode, compressor: CompressorLike, firstInStatement: Boolean = false): AstNode = {
+    val neg = new AstUnaryPrefix
+    neg.start = node.start
+    neg.end = node.end
+    neg.operator = "!"
+    neg.expression = node
+    neg
+  }
 }

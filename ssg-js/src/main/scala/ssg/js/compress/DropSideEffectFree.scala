@@ -29,7 +29,8 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
 import ssg.js.compress.Common.makeSequence
-import ssg.js.compress.Inference.{ hasSideEffects, isCalleePure, isNullishShortcircuited, lazyOp, mayThrowOnAccess, unarySideEffects }
+import ssg.js.compress.Common.{ isIifeCall, isFuncExpr }
+import ssg.js.compress.Inference.{ hasSideEffects, isCalleePure, isCallPure, isNullishShortcircuited, isSelfReferential, lazyOp, mayThrowOnAccess, negate, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
 
 /** Side-effect-free expression removal.
@@ -92,9 +93,22 @@ object DropSideEffectFree {
         else value
 
       case cpp: AstClassPrivateProperty =>
-        if (cpp.isStatic && cpp.value != null)
-          dropSideEffectFree(cpp.value.nn, compressor, firstInStatement = false)
-        else null
+        // In the original, both ClassProperty and ClassPrivateProperty share the same handler
+        // Private properties always have computedKey() = false, but we match the original structure
+        val key = if (cpp.computedKey()) {
+          cpp.key match {
+            case n: AstNode => dropSideEffectFree(n, compressor, firstInStatement = false)
+            case _ => null
+          }
+        } else { null }
+        val value =
+          if (cpp.isStatic && cpp.value != null)
+            dropSideEffectFree(cpp.value.nn, compressor, firstInStatement = false)
+          else null
+        if (key != null && value != null)
+          makeSequence(cpp, ArrayBuffer(key.nn, value.nn))
+        else if (key != null) key
+        else value
 
       // Assign must come before Binary (AstAssign extends AstBinary)
       case assign: AstAssign =>
@@ -264,29 +278,107 @@ object DropSideEffectFree {
     if (isNullishShortcircuited(call, compressor)) {
       if (call.expression != null) dropSideEffectFree(call.expression.nn, compressor, firstInStatement)
       else null
-    } else if (isCalleePure(call, compressor)) {
-      // Pure call: drop if args have no side effects
-      val args = call.args
-      val keptArgs = ArrayBuffer.empty[AstNode]
-      var i = 0
-      while (i < args.size) {
-        val trimmed = dropSideEffectFree(args(i), compressor, false)
-        if (trimmed != null) keptArgs.addOne(trimmed.nn)
-        i += 1
-      }
-      if (keptArgs.isEmpty) null
-      else if (keptArgs.size == 1) keptArgs(0)
-      else {
-        val seq = new AstSequence
-        seq.expressions = keptArgs
-        seq.start = call.start
-        seq.end = call.end
-        seq
+    } else if (!isCalleePure(call, compressor)) {
+      // Not a pure callee — check if the call itself is pure (String.prototype.*, etc.)
+      call.expression match {
+        case dot: AstDot if isCallPure(dot, compressor) =>
+          // The call is pure, but we still need to evaluate the receiver and args
+          val exprs = ArrayBuffer.empty[AstNode]
+          if (dot.expression != null) exprs.addOne(dot.expression.nn)
+          var i = 0
+          while (i < call.args.size) {
+            exprs.addOne(call.args(i))
+            i += 1
+          }
+          val trimmed = trim(exprs, compressor, firstInStatement)
+          if (trimmed == null) null
+          else makeSequence(call, trimmed)
+        case expr if isFuncExpr(expr) =>
+          // IIFE: check if we can process expression to drop return value
+          val funcName = expr match {
+            case fn: AstFunction => fn.name
+            case _ => null
+          }
+          val hasRefs = funcName != null && {
+            val d = funcName.nn.asInstanceOf[AstSymbol].definition()
+            d != null && d.nn.references.nonEmpty
+          }
+          if (!hasRefs) {
+            // Process expression in-place to convert returns to statements
+            // Note: this mutates the lambda's body, which is intentional
+            processExpression(expr.asInstanceOf[AstScope], insert = false, compressor)
+            call
+          } else {
+            call
+          }
+        case _ => call
       }
     } else {
-      // Not pure, keep the call
-      call
+      // Pure callee: drop if args have no side effects
+      val args = call.args
+      val keptArgs = trim(args, compressor, firstInStatement)
+      if (keptArgs == null) null
+      else makeSequence(call, keptArgs)
     }
+
+  /** Process the body of a scope to convert returns to statements (when insert=false)
+    * or statements to returns (when insert=true). Used for IIFE optimization.
+    */
+  private def processExpression(scope: AstScope, insert: Boolean, compressor: CompressorLike): Unit = {
+    var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
+    tt = new TreeTransformer(before = (node, _) => {
+      if (insert && node.isInstanceOf[AstSimpleStatement]) {
+        val ss = node.asInstanceOf[AstSimpleStatement]
+        val ret = new AstReturn
+        ret.start = ss.start
+        ret.end = ss.end
+        ret.value = ss.body
+        ret
+      } else if (!insert && node.isInstanceOf[AstReturn]) {
+        val ret = node.asInstanceOf[AstReturn]
+        if (ret.value != null) {
+          val ss = new AstSimpleStatement
+          ss.start = ret.start
+          ss.end = ret.end
+          ss.body = ret.value
+          ss
+        } else {
+          val empty = new AstEmptyStatement
+          empty.start = ret.start
+          empty.end = ret.end
+          empty
+        }
+      } else if (node.isInstanceOf[AstLambda] && (node.asInstanceOf[AnyRef] ne scope.asInstanceOf[AnyRef])) {
+        node // don't descend into nested lambdas
+      } else if (node.isInstanceOf[AstBlock]) {
+        val block = node.asInstanceOf[AstBlock]
+        var i = 0
+        while (i < block.body.size) {
+          block.body(i) = block.body(i).transform(tt)
+          i += 1
+        }
+        node
+      } else if (node.isInstanceOf[AstIf]) {
+        val ifNode = node.asInstanceOf[AstIf]
+        ifNode.body = ifNode.body.transform(tt)
+        if (ifNode.alternative != null) {
+          ifNode.alternative = ifNode.alternative.nn.transform(tt)
+        }
+        node
+      } else if (node.isInstanceOf[AstWith]) {
+        val withNode = node.asInstanceOf[AstWith]
+        withNode.body = withNode.body.transform(tt)
+        node
+      } else {
+        null // continue with default
+      }
+    })
+    var i = 0
+    while (i < scope.body.size) {
+      scope.body(i) = scope.body(i).transform(tt)
+      i += 1
+    }
+  }
 
   // -----------------------------------------------------------------------
   // Class
@@ -299,10 +391,8 @@ object DropSideEffectFree {
     boundary[AstNode | Null] {
       val withEffects = ArrayBuffer.empty[AstNode]
 
-      // Check if class references itself (can't safely decompose)
-      if (hasSideEffects(cls, compressor)) {
-        // TODO: is_self_referential check
-        // For safety, keep the class if it has any side effects
+      // Check if class references itself (can't safely decompose) and has side effects
+      if (isSelfReferential(cls) && hasSideEffects(cls, compressor)) {
         break(cls)
       }
 
@@ -394,8 +484,13 @@ object DropSideEffectFree {
       if (assign.left == null) assign
       else {
         val left = assign.left.nn
-        if (hasSideEffects(left, compressor)) assign
-        else {
+        // Has side effects OR assigning to property on constant in strict mode
+        if (hasSideEffects(left, compressor) ||
+            (compressor.hasDirective("use strict") != null &&
+             left.isInstanceOf[AstPropAccess] &&
+             Evaluate.isConstant(left.asInstanceOf[AstPropAccess].expression.nn))) {
+          assign
+        } else {
           setFlag(assign, WRITE_ONLY)
           // Walk down property access chain
           var current = left
@@ -404,8 +499,10 @@ object DropSideEffectFree {
               case null => current // break the loop
               case expr => expr.nn
             }
-          // If the target is a constant expression (pure access chain), we can drop
-          if (Evaluate.isConstantExpression(current)) null
+          // If the target is a constant expression (pure access chain), we can drop the whole assign
+          // and just evaluate the right side for its effects
+          if (Evaluate.isConstantExpression(current))
+            dropSideEffectFree(assign.right.nn, compressor)
           else assign
         }
       }
@@ -481,9 +578,21 @@ object DropSideEffectFree {
     } else if (unary.operator == "typeof" && unary.expression.isInstanceOf[AstSymbolRef]) {
       null
     } else {
-      if (unary.expression != null)
-        dropSideEffectFree(unary.expression.nn, compressor, firstInStatement)
-      else null
+      val expression =
+        if (unary.expression != null)
+          dropSideEffectFree(unary.expression.nn, compressor, firstInStatement)
+        else null
+      // Handle IIFE in statement position: negate to avoid needing parens
+      if (firstInStatement && expression != null && isIifeCall(expression.nn)) {
+        if ((expression.nn eq unary.expression.nn) && unary.operator == "!") {
+          // Already negated
+          unary
+        } else {
+          negate(expression.nn, compressor, firstInStatement)
+        }
+      } else {
+        expression
+      }
     }
 
   // -----------------------------------------------------------------------

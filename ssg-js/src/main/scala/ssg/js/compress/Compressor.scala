@@ -24,12 +24,13 @@
  *   Convention: Class with CompressorLike trait, pattern matching dispatch
  *   Idiom: boundary/break instead of return, match/case instead of
  *     DEFMETHOD + instanceof chains
- *   Gap: 1067 LOC vs upstream 4129 LOC (~26%). Multi-pass convergence loop
- *     stubbed at lines 1021-1033 — TerserSuite compression tests are disabled
- *     because the loop hangs. Single-pass orchestration only. Pure-call elision
- *     (lines 107, 116) and global hoisting (line 286) gated on SymbolDef
- *     integration. See ISS-031, ISS-032. docs/architecture/terser-port.md.
- *   Audited: 2026-04-07 (major_issues)
+ *   Gap: Multi-pass convergence loop stubbed — TerserSuite compression tests
+ *     are disabled because the loop hangs. Single-pass orchestration only.
+ *     Pure-call elision and global hoisting gated on SymbolDef integration.
+ *     See ISS-031, ISS-032. docs/architecture/terser-port.md.
+ *   Hoisting: hoist_declarations (ISS-129) and hoist_properties (ISS-129)
+ *     ported in Hoisting.scala, wired into before() method.
+ *   Audited: 2026-04-12 (minor_issues)
  */
 package ssg
 package js
@@ -527,9 +528,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (hasFlag(node, SQUEEZED)) {
       node
     } else {
-      val current  = node
+      var current  = node
       val wasScope = current.isInstanceOf[AstScope]
-      // Hoisting (hoist_props/hoist_vars options, default off) — deferred, see ISS-035
+
+      // Hoisting passes for scope nodes (hoist_funs, hoist_vars, hoist_props)
+      if (wasScope) {
+        current = Hoisting.hoistProperties(current.asInstanceOf[AstScope], this)
+        current = Hoisting.hoistDeclarations(current.asInstanceOf[AstScope], this)
+      }
 
       // Descend twice for convergence (matches Terser behavior)
       descend(current, this)

@@ -678,4 +678,21 @@ object Common {
           }
         case _ => false
       })
+
+  // -----------------------------------------------------------------------
+  // Array utilities
+  // -----------------------------------------------------------------------
+
+  /** Remove an element from an ArrayBuffer by reference equality. */
+  def removeFromArrayBuffer[T <: AnyRef](buf: ArrayBuffer[T], elem: T): Boolean = {
+    var i = 0
+    while (i < buf.size) {
+      if (buf(i).asInstanceOf[AnyRef] eq elem.asInstanceOf[AnyRef]) {
+        buf.remove(i)
+        return true // @nowarn
+      }
+      i += 1
+    }
+    false
+  }
 }
