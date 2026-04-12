@@ -29,7 +29,7 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
 import ssg.js.compress.Common.makeSequence
-import ssg.js.compress.Inference.{ hasSideEffects, isNullishShortcircuited, lazyOp, mayThrowOnAccess, unarySideEffects }
+import ssg.js.compress.Inference.{ hasSideEffects, isCalleePure, isNullishShortcircuited, lazyOp, mayThrowOnAccess, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
 
 /** Side-effect-free expression removal.
@@ -264,9 +264,27 @@ object DropSideEffectFree {
     if (isNullishShortcircuited(call, compressor)) {
       if (call.expression != null) dropSideEffectFree(call.expression.nn, compressor, firstInStatement)
       else null
+    } else if (isCalleePure(call, compressor)) {
+      // Pure call: drop if args have no side effects
+      val args = call.args
+      val keptArgs = ArrayBuffer.empty[AstNode]
+      var i = 0
+      while (i < args.size) {
+        val trimmed = dropSideEffectFree(args(i), compressor, false)
+        if (trimmed != null) keptArgs.addOne(trimmed.nn)
+        i += 1
+      }
+      if (keptArgs.isEmpty) null
+      else if (keptArgs.size == 1) keptArgs(0)
+      else {
+        val seq = new AstSequence
+        seq.expressions = keptArgs
+        seq.start = call.start
+        seq.end = call.end
+        seq
+      }
     } else {
-      // TODO: is_callee_pure / is_call_pure checks
-      // For now, assume all calls have side effects
+      // Not pure, keep the call
       call
     }
 
