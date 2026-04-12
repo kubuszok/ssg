@@ -603,7 +603,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
     var first = true
     ExtendFunctions.paths(extendedNotExpanded.toList).flatMap { path =>
-      ExtendFunctions.weave(path, complex.span).map { outputComplex =>
+      ExtendFunctions.weave(path, complex.span, forceLineBreak = complex.lineBreak).map { outputComplex =>
         if (first && _originals.contains(complex))
           _originals += outputComplex
         first = false

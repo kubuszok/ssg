@@ -12,7 +12,7 @@
  *   Convention: Dart final class -> Scala final class
  *   Idiom: CssValue[Combinator] for combinators with spans;
  *          List.unmodifiable -> immutable List;
- *          isSuperselector delegates to extend functions (stub for now)
+ *          isSuperselector delegates to ExtendFunctions.complexIsSuperselector
  */
 package ssg
 package sass
@@ -22,6 +22,7 @@ package selector
 import ssg.sass.Nullable
 import ssg.sass.Utils
 import ssg.sass.ast.css.CssValue
+import ssg.sass.extend.ExtendFunctions
 import ssg.sass.util.FileSpan
 
 import scala.language.implicitConversions
@@ -67,59 +68,21 @@ final class ComplexSelector(
     *
     * That is, whether this matches every element that `other` matches, as well as possibly matching more.
     *
-    * Note: The full implementation delegates to `complexIsSuperselector` in the extend functions module, which will be ported separately.
+    * Delegates to [[ExtendFunctions.complexIsSuperselector]] for the full combinator-aware algorithm.
     */
   def isSuperselector(other: ComplexSelector): Boolean =
     leadingCombinators.isEmpty &&
       other.leadingCombinators.isEmpty &&
       complexIsSuperselector(components, other.components)
 
-  /** Partial port of dart-sass `complexIsSuperselector` in
-    * lib/src/extend/functions.dart.
-    *
-    * Handles two cases:
-    *   1. Single-component super against any-length sub: the single
-    *      super-compound is compared against the LAST compound of sub,
-    *      with parents = the sub's prefix. This matches dart-sass's
-    *      `remaining1 == 1` branch and is the critical path for
-    *      `:not(...)` and `:is(...)` logic, which needs to reason
-    *      about the target element (the last compound) not the first.
-    *   2. Multi-component super: sliding-window match — each
-    *      super-compound must find a later match in sub, preserving
-    *      order. This is NOT the full combinator-aware algorithm;
-    *      the full port lives in `ExtendFunctions.scala` as a
-    *      follow-up (the B010 task targets the pseudo-argument
-    *      dispatch in compoundIsSuperselector, not combinator
-    *      matching in complexIsSuperselector).
+  /** Delegates to the full combinator-aware `complexIsSuperselector` in
+    * [[ExtendFunctions]].
     */
   private def complexIsSuperselector(
     superComponents: List[ComplexSelectorComponent],
     subComponents:   List[ComplexSelectorComponent]
   ): Boolean =
-    if (superComponents.isEmpty) true
-    else if (subComponents.isEmpty) false
-    else if (superComponents.length > subComponents.length) false
-    else if (superComponents.length == 1) {
-      val sub1Last = subComponents.last
-      val parentsOpt: Nullable[List[ComplexSelectorComponent]] =
-        if (superComponents.head.selector.hasComplicatedSuperselectorSemantics)
-          Nullable(subComponents.init)
-        else Nullable.empty
-      superComponents.head.selector.isSuperselector(sub1Last.selector, parentsOpt)
-    } else {
-      var j      = 0
-      val subLen = subComponents.length
-      superComponents.forall { superComp =>
-        var found = false
-        while (!found && j < subLen) {
-          if (superComp.selector.isSuperselector(subComponents(j).selector)) {
-            found = true
-          }
-          j += 1
-        }
-        found
-      }
-    }
+    ExtendFunctions.complexIsSuperselector(superComponents, subComponents)
 
   /** Returns a copy of `this` with `combinators` added to the end of the final component in [[components]].
     *

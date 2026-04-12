@@ -22,6 +22,8 @@ import ssg.sass.Nullable.*
 import ssg.sass.util.{ CharCode, FileSpan }
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A pseudo-class or pseudo-element selector.
   *
@@ -103,49 +105,54 @@ final class PseudoSelector(
   }
 
   override def unify(compound: List[SimpleSelector]): Nullable[List[SimpleSelector]] =
-    if (name == "host" || name == "host-context") {
-      if (
-        !compound.forall {
-          case p: PseudoSelector => p.isHost || p.selector.isDefined
-          case _ => false
-        }
-      ) {
-        Nullable.Null
-      } else {
-        super.unify(compound)
-      }
-    } else {
-      compound match {
-        case List(other: UniversalSelector) =>
-          other.unify(List(this))
-        case List(other: PseudoSelector) if other.isHost || other.isHostContext =>
-          other.unify(List(this))
-        case _ =>
-          if (compound.contains(this)) Nullable(compound)
-          else {
-            val result    = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
-            var addedThis = false
-            for (simple <- compound) {
-              simple match {
-                case p: PseudoSelector if p.isElement =>
-                  // A given compound selector may only contain one pseudo element. If
-                  // compound has a different one than this, unification fails.
-                  if (isElement) Nullable.Null
-                  else {
-                    // Otherwise, this is a pseudo selector and should come before pseudo
-                    // elements.
-                    if (!addedThis) {
-                      result += this
-                      addedThis = true
-                    }
-                  }
-                case _ => ()
-              }
-              result += simple
-            }
-            if (!addedThis) result += this
-            Nullable(result.toList)
+    boundary[Nullable[List[SimpleSelector]]] {
+      // host/host-context validation: return null if any element is not a pseudo with host/selector
+      if (name == "host" || name == "host-context") {
+        if (
+          !compound.forall {
+            case p: PseudoSelector => p.isHost || p.selector.isDefined
+            case _ => false
           }
+        ) {
+          break(Nullable.Null)
+        }
+        // Fall through to common logic below
+      } else {
+        // Single-element special cases
+        compound match {
+          case List(other: UniversalSelector) =>
+            break(other.unify(List(this)))
+          case List(other: PseudoSelector) if other.isHost || other.isHostContext =>
+            break(other.unify(List(this)))
+          case _ => ()
+        }
+      }
+
+      // Common logic for all paths (including host/host-context that passed validation)
+      if (compound.contains(this)) Nullable(compound)
+      else {
+        val result    = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
+        var addedThis = false
+        for (simple <- compound) {
+          simple match {
+            case p: PseudoSelector if p.isElement =>
+              // A given compound selector may only contain one pseudo element. If
+              // compound has a different one than this, unification fails.
+              if (isElement) break(Nullable.Null)
+              else {
+                // Otherwise, this is a pseudo selector and should come before pseudo
+                // elements.
+                if (!addedThis) {
+                  result += this
+                  addedThis = true
+                }
+              }
+            case _ => ()
+          }
+          result += simple
+        }
+        if (!addedThis) result += this
+        Nullable(result.toList)
       }
     }
 

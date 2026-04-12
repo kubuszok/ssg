@@ -119,6 +119,30 @@ abstract class Value {
       brackets = brackets.getOrElse(this.hasBrackets)
     )
 
+  /** Asserts that this value is a space- (or slash-) separated list with no brackets,
+    * throwing a SassScriptException if it isn't.
+    *
+    * Returns the list contents. Ported from dart-sass `Value.assertCommonListStyle`.
+    */
+  def assertCommonListStyle(name: Nullable[String], allowSlash: Boolean): List[Value] = {
+    val invalidSeparator = separator == ListSeparator.Comma ||
+      (!allowSlash && separator == ListSeparator.Slash)
+    if (!invalidSeparator && !hasBrackets) asList
+    else {
+      val buffer = new StringBuilder("Expected")
+      if (hasBrackets) buffer.append(" an unbracketed")
+      if (invalidSeparator) {
+        if (hasBrackets) buffer.append(",") else buffer.append(" a")
+        buffer.append(" space-")
+        if (allowSlash) buffer.append(" or slash-")
+        buffer.append("separated")
+      }
+      buffer.append(" list, was ")
+      buffer.append(this.toString)
+      throw SassScriptException(buffer.toString(), name.toOption)
+    }
+  }
+
   /** SassScript = operator (not ==). Returns unquoted string "left=right". */
   def singleEquals(other: Value): Value =
     SassString(s"${toCssString()}=${other.toCssString()}", hasQuotes = false)

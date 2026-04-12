@@ -10,7 +10,7 @@
  *   Renames: compound.dart -> CompoundSelector.scala
  *   Convention: Dart final class -> Scala final class
  *   Idiom: Nullable singleSimple; lazy specificity/hasComplicatedSuperselectorSemantics;
- *          isSuperselector delegated to extend functions (stub for now)
+ *          isSuperselector delegated to ExtendFunctions
  */
 package ssg
 package sass
@@ -19,6 +19,7 @@ package selector
 
 import ssg.sass.Nullable
 import ssg.sass.Utils
+import ssg.sass.extend.ExtendFunctions
 import ssg.sass.util.FileSpan
 
 import scala.language.implicitConversions
@@ -227,7 +228,7 @@ object CompoundSelector {
               val parentsList = parents.toOption.getOrElse(Nil)
               val suffix = new ComplexSelectorComponent(compound2, Nil, compound2.span)
               val target = parentsList :+ suffix
-              complexIsSuperselectorComponents(complex1.components, target)
+              ExtendFunctions.complexIsSuperselector(complex1.components, target)
             }
           }
 
@@ -307,45 +308,4 @@ object CompoundSelector {
         p.selector.get
     }
 
-  /** Very small complex-vs-complex superselector check for the
-    * `:is()`/`:matches()`/`:where()` path. Intentionally a cheap
-    * approximation — if the first complex fits as a prefix of the
-    * second with per-compound superselector matches at each step, we
-    * accept.
-    *
-    * This is NOT a full port of dart-sass `complexIsSuperselector` (the
-    * sliding-window combinator matcher in extend/functions.dart); that
-    * larger algorithm lives in `ExtendFunctions.scala` as a follow-up.
-    * The approximation here is sound for the B010 test cases because
-    * the `:is(...)` branch only needs to verify membership of the
-    * parent chain, not full combinator-aware matching.
-    */
-  private def complexIsSuperselectorComponents(
-    complex1: List[ComplexSelectorComponent],
-    complex2: List[ComplexSelectorComponent]
-  ): Boolean = {
-    if (complex1.length > complex2.length) return false
-    if (complex1.isEmpty) return true
-    // Match the last component of complex1 against the last of complex2.
-    // Everything before the final component must have a matching
-    // ancestor somewhere in complex2's prefix, preserving order.
-    val last1 = complex1.last
-    val last2 = complex2.last
-    if (!last1.selector.isSuperselector(last2.selector)) return false
-    var j = complex2.length - 2
-    var i = complex1.length - 2
-    while (i >= 0) {
-      val ci = complex1(i)
-      var matched = false
-      while (!matched && j >= 0) {
-        if (ci.selector.isSuperselector(complex2(j).selector)) {
-          matched = true
-        }
-        j -= 1
-      }
-      if (!matched) return false
-      i -= 1
-    }
-    true
-  }
 }

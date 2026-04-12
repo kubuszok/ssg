@@ -27,8 +27,10 @@ final class ExtendUnifySuite extends munit.FunSuite {
   test("cross-combinator weave keeps child combinator") {
     val css = compile(".a > .b { color: red; } .c .d { @extend .b; }")
     // Compressed mode drops whitespace around non-descendant combinators.
+    // dart-sass produces `.c .a>.d` (extender's ancestor first, then the
+    // child-combinator parent + unified target).
     assert(css.contains(".a>.b"), s"missing original in $css")
-    assert(css.contains(".a>.c .d"), s"missing woven .a>.c .d in $css")
+    assert(css.contains(".c .a>.d"), s"missing woven .c .a>.d in $css")
   }
 
   test("pseudo-class is preserved on extender") {

@@ -19,10 +19,12 @@ package ssg
 package sass
 package functions
 
-import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
-import ssg.sass.value.{ ColorFormat, SassBoolean, SassColor, SassNull, SassNumber, SassString, Value }
+import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException, SassFormatException }
+import ssg.sass.Utils.pluralize
+import ssg.sass.value.{ ColorFormat, ListSeparator, SassBoolean, SassColor, SassList, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.color.{ ColorChannel, ColorSpace, GamutMapMethod, HueInterpolationMethod, InterpolationMethod, LinearChannel }
 import ssg.sass.util.NumberUtil.{ fuzzyEquals, fuzzyRound }
+import ssg.sass.parse.ScssParser
 
 /** Built-in color functions: rgb, rgba, hsl, hsla, and legacy accessors / manipulation functions (red, green, blue, hue, saturation, lightness, alpha, mix, lighten, darken, saturate, desaturate,
   * opacify, transparentize, adjust-hue, invert, grayscale, complement).
@@ -108,6 +110,384 @@ object ColorFunctions {
       Nullable(clamp(a, 0, 1))
     )
 
+  /** If a special number string is detected in these color spaces, even if they
+    * were using the one-argument function syntax, we convert it to the three- or
+    * four- argument comma-separated syntax for broader browser compatibility.
+    */
+  private val _specialCommaSpaces: Set[ColorSpace] = Set(ColorSpace.rgb, ColorSpace.hsl)
+
+  /** Returns a string representation of [name] called with [arguments], as though
+    * it were a plain CSS function.
+    * Ported from dart-sass `_functionString`.
+    */
+  private def functionString(name: String, arguments: Iterable[Value]): SassString =
+    SassString(
+      name + "(" + arguments.map(_.toCssString(quote = false)).mkString(", ") + ")",
+      hasQuotes = false
+    )
+
+  /** Parses [number] as a percentage or unitless number and returns the value.
+    * If [number] has units other than '%', throws a SassScriptException.
+    * Ported from dart-sass `_percentageOrUnitless`.
+    */
+  private def percentageOrUnitless(number: SassNumber, max: Double, name: Option[String]): Double = {
+    if (!number.hasUnits) number.value
+    else if (number.hasUnit("%")) max * number.value / 100.0
+    else
+      throw SassScriptException(
+        s"Expected $number to have unit \"%\" or no units.",
+        name
+      )
+  }
+
+  /** Parses [text] as either a Sass number or an unquoted Sass string.
+    * Ported from dart-sass `_parseNumberOrString`.
+    */
+  private def parseNumberOrString(text: String): Value = {
+    try {
+      new ScssParser(text).parseNumber()
+    } catch {
+      case _: SassFormatException =>
+        SassString(text, hasQuotes = false)
+    }
+  }
+
+  /** Parses [input]'s slash-separated third number and alpha value, if one exists.
+    *
+    * Returns a tuple of (components, alpha) where components is the space-separated
+    * list of components, and alpha is the alpha value if one was specified.
+    * Returns None if this channel set couldn't be parsed and should be returned as-is.
+    *
+    * Throws a SassScriptException if [input] is invalid. If [input] came from a
+    * function argument, [name] is the argument name (without the `$`). It's used
+    * for error reporting.
+    *
+    * Ported from dart-sass `_parseSlashChannels`.
+    */
+  private def parseSlashChannels(input: Value, name: Nullable[String]): Option[(Value, Option[Value])] = {
+    val inputList = input.assertCommonListStyle(name, allowSlash = true)
+
+    // Case: slash-separated list with exactly 2 elements
+    if (input.separator == ListSeparator.Slash && inputList.length == 2) {
+      Some((inputList(0), Some(inputList(1))))
+    } else if (input.separator == ListSeparator.Slash) {
+      // Slash-separated list with wrong number of elements
+      throw SassScriptException(
+        s"Only 2 slash-separated elements allowed, but ${inputList.length} " +
+          pluralize("was", inputList.length, Nullable("were")) + " passed.",
+        name.toOption
+      )
+    } else {
+      // Not a slash-separated list — check for trailing string with embedded slash
+      inputList match {
+        case init :+ (lastStr: SassString) if !lastStr.hasQuotes =>
+          val text  = lastStr.text
+          val parts = text.split('/')
+          parts.length match {
+            case 1 =>
+              // No slash in the string
+              Some((input, None))
+            case 2 =>
+              // String contains exactly one slash: split into channel3 and alpha
+              val channel3 = parseNumberOrString(parts(0))
+              val alpha    = parseNumberOrString(parts(1))
+              Some((
+                SassList(init.toList :+ channel3, ListSeparator.Space),
+                Some(alpha)
+              ))
+            case _ =>
+              // Multiple slashes — can't parse
+              None
+          }
+        case init :+ (lastNum: SassNumber) if lastNum.asSlash.isDefined =>
+          // Number with asSlash set (e.g., "10 / 0.5" parsed as a single number)
+          val (before, after) = lastNum.asSlash.get
+          Some((
+            SassList(init.toList :+ before, ListSeparator.Space),
+            Some(after)
+          ))
+        case _ =>
+          Some((input, None))
+      }
+    }
+  }
+
+  /** Parses color components from a space-separated list with optional slash alpha syntax.
+    *
+    * Handles the modern CSS color syntax: `lab(50% 20 -30 / 0.5)` etc.
+    * The `from` keyword for relative color syntax causes a passthrough as CSS function string.
+    * Returns a CSS function string for unresolvable values (calc, var, etc.).
+    *
+    * Ported from dart-sass `_parseChannels`.
+    */
+  private def parseChannels(
+    functionName: String,
+    input:        Value,
+    space:        Option[ColorSpace],
+    name:         Nullable[String]
+  ): Value = {
+    // Special variable like var(--x) — preserve as function string
+    if (input.isSpecialVariable) {
+      functionString(functionName, List(input))
+    } else {
+      parseSlashChannels(input, name) match {
+        case None =>
+          // Couldn't parse slash channels — return as CSS function
+          functionString(functionName, List(input))
+
+        case Some((components, alphaValue)) =>
+          val componentList = components.assertCommonListStyle(name, allowSlash = false)
+
+          componentList match {
+            case Nil =>
+              throw SassScriptException("Color component list may not be empty.", name.toOption)
+
+            case (first: SassString) :: _ if !first.hasQuotes && first.text.toLowerCase == "from" =>
+              // Relative color syntax with `from` keyword — pass through as CSS
+              functionString(functionName, List(input))
+
+            case _ if components.isSpecialVariable =>
+              // Components is a special variable — use it directly as channel list
+              parseChannelsWithList(functionName, input, components, List(components), alphaValue, space, name)
+
+            case first :: rest =>
+              // Parse channels
+              val (resolvedSpace, channels) = space match {
+                case None =>
+                  // No explicit space — first element is the space name
+                  val spaceName = first.assertString(name)
+                  spaceName.assertUnquoted(name)
+                  val sp =
+                    if (spaceName.isSpecialVariable) None
+                    else Some(ColorSpace.fromName(spaceName.text, name.toOption))
+
+                  // Validate that the color() function doesn't use legacy spaces
+                  sp.foreach { s =>
+                    if (s == ColorSpace.rgb || s == ColorSpace.hsl || s == ColorSpace.hwb ||
+                        s == ColorSpace.lab || s == ColorSpace.lch || s == ColorSpace.oklab ||
+                        s == ColorSpace.oklch) {
+                      throw SassScriptException(
+                        s"The color() function doesn't support the color space $s. Use " +
+                          s"the $s() function instead.",
+                        name.toOption
+                      )
+                    }
+                  }
+                  (sp, rest)
+
+                case Some(sp) =>
+                  // Explicit space — all elements are channels
+                  (Some(sp), componentList)
+              }
+
+              // Validate channel values
+              for (i <- channels.indices) {
+                val channel = channels(i)
+                if (!channel.isSpecialNumber && !channel.isInstanceOf[SassNumber] && !isNone(channel)) {
+                  val channelName = resolvedSpace
+                    .flatMap(_.channels.lift(i))
+                    .map(ch => s"${ch.name} channel")
+                    .getOrElse(s"channel ${i + 1}")
+                  throw SassScriptException(
+                    s"Expected $channelName to be a number, was $channel.",
+                    name.toOption
+                  )
+                }
+              }
+
+              parseChannelsWithList(functionName, input, components, channels, alphaValue, resolvedSpace, name)
+          }
+      }
+    }
+  }
+
+  /** Helper for parseChannels to process validated channel list.
+    * Handles alpha parsing and color construction.
+    */
+  private def parseChannelsWithList(
+    functionName: String,
+    input:        Value,
+    components:   Value,
+    channels:     List[Value],
+    alphaValue:   Option[Value],
+    space:        Option[ColorSpace],
+    name:         Nullable[String]
+  ): Value = {
+    // Check if alpha is a special number
+    if (alphaValue.exists(_.isSpecialNumber)) {
+      if (channels.length == 3 && space.exists(_specialCommaSpaces.contains)) {
+        functionString(functionName, channels :+ alphaValue.get)
+      } else {
+        functionString(functionName, List(input))
+      }
+    } else {
+      // Parse alpha value
+      val alpha: Nullable[Double] = alphaValue match {
+        case None                                                             => Nullable(1.0)
+        case Some(s: SassString) if !s.hasQuotes && s.text.toLowerCase == "none" => Nullable.Null
+        case Some(v)                                                          =>
+          Nullable(clampLikeCss(percentageOrUnitless(v.assertNumber(name), 1, Some("alpha")), 0, 1))
+      }
+
+      // `space` will be None if either `components` or `spaceName` is a `var()`.
+      // We check this here rather than returning early in those cases so
+      // that we can verify `alphaValue` even for colors we can't fully parse.
+      space match {
+        case None =>
+          functionString(functionName, List(input))
+
+        case Some(sp) =>
+          // Check if any channel is a special number
+          if (channels.exists(_.isSpecialNumber)) {
+            if (channels.length == 3 && _specialCommaSpaces.contains(sp)) {
+              functionString(functionName, channels ++ alphaValue.toList)
+            } else {
+              functionString(functionName, List(input))
+            }
+          } else if (channels.length != 3) {
+            throw SassScriptException(
+              s"The $sp color space has 3 channels but $input has ${channels.length}.",
+              name.toOption
+            )
+          } else {
+            // Build the color from channels
+            colorFromChannelsModern(
+              sp,
+              channels(0) match { case n: SassNumber => Some(n); case _ => None },
+              channels(1) match { case n: SassNumber => Some(n); case _ => None },
+              channels(2) match { case n: SassNumber => Some(n); case _ => None },
+              alpha,
+              fromRgbFunction = sp == ColorSpace.rgb
+            )
+          }
+      }
+    }
+  }
+
+  /** Creates a SassColor from parsed channel values for modern color syntax.
+    * Ported from dart-sass `_colorFromChannels` but adapted for parseChannels usage.
+    */
+  private def colorFromChannelsModern(
+    space:           ColorSpace,
+    channel0:        Option[SassNumber],
+    channel1:        Option[SassNumber],
+    channel2:        Option[SassNumber],
+    alpha:           Nullable[Double],
+    fromRgbFunction: Boolean
+  ): SassColor = {
+    space match {
+      case ColorSpace.hsl =>
+        SassColor.hsl(
+          channel0.map(n => angleValue(n, "hue")).fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+          channelFromValueModern(space.channels(1), forcePercent(channel1), doClamp = true),
+          channelFromValueModern(space.channels(2), forcePercent(channel2), doClamp = true),
+          alpha
+        )
+
+      case ColorSpace.hwb =>
+        // Assert whiteness and blackness have % unit
+        channel1.foreach(_.assertUnit("%", Nullable("whiteness")))
+        channel2.foreach(_.assertUnit("%", Nullable("blackness")))
+
+        var whiteness = channel1.map(_.value)
+        var blackness = channel2.map(_.value)
+
+        // Normalize whiteness+blackness if they exceed 100
+        (whiteness, blackness) match {
+          case (Some(w), Some(b)) if w + b > 100 =>
+            val oldWhiteness = w
+            whiteness = Some(w / (w + b) * 100)
+            blackness = Some(b / (oldWhiteness + b) * 100)
+          case _ => // no normalization needed
+        }
+
+        SassColor.hwb(
+          channel0.map(n => angleValue(n, "hue")).fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+          whiteness.fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+          blackness.fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+          alpha
+        )
+
+      case ColorSpace.rgb =>
+        val c0 = channelFromValueModern(space.channels(0), channel0, doClamp = true)
+        val c1 = channelFromValueModern(space.channels(1), channel1, doClamp = true)
+        val c2 = channelFromValueModern(space.channels(2), channel2, doClamp = true)
+        if (fromRgbFunction)
+          SassColor.rgbInternal(c0, c1, c2, alpha, Nullable(ColorFormat.RgbFunction))
+        else
+          SassColor.forSpaceInternal(space, c0, c1, c2, alpha)
+
+      case ColorSpace.lab | ColorSpace.oklab =>
+        SassColor.forSpaceInternal(
+          space,
+          channelFromValueModern(space.channels(0), channel0, doClamp = true),
+          channelFromValueModern(space.channels(1), channel1, doClamp = false),
+          channelFromValueModern(space.channels(2), channel2, doClamp = false),
+          alpha
+        )
+
+      case _ =>
+        // Other color spaces (display-p3, a98-rgb, etc.)
+        SassColor.forSpaceInternal(
+          space,
+          channelFromValueModern(space.channels(0), channel0, doClamp = false),
+          channelFromValueModern(space.channels(1), channel1, doClamp = false),
+          channelFromValueModern(space.channels(2), channel2, doClamp = false),
+          alpha
+        )
+    }
+  }
+
+  /** Convert a channel value using percentageOrUnitless.
+    * Returns Nullable.Null for None (missing channel).
+    * Ported from dart-sass `_channelFromValue`.
+    */
+  private def channelFromValueModern(
+    channel: ColorChannel,
+    value:   Option[SassNumber],
+    doClamp: Boolean
+  ): Nullable[Double] = value match {
+    case None => Nullable.Null
+    case Some(n) =>
+      val raw = channel match {
+        case lc: LinearChannel if lc.requiresPercent && !n.hasUnit("%") =>
+          // Channels that require % (e.g., hwb whiteness/blackness) must have % unit
+          throw SassScriptException(
+            s"Expected $n to have unit \"%\".",
+            Some(channel.name)
+          )
+        case lc: LinearChannel =>
+          percentageOrUnitless(n, lc.max, Some(channel.name))
+        case _ if channel.isPolarAngle =>
+          angleValue(n, channel.name) % 360
+        case _ =>
+          n.value
+      }
+      if (doClamp) {
+        channel match {
+          case lc: LinearChannel if lc.lowerClamped && lc.upperClamped =>
+            Nullable(clampLikeCss(raw, lc.min, lc.max))
+          case lc: LinearChannel if lc.lowerClamped =>
+            Nullable(math.max(raw, lc.min))
+          case lc: LinearChannel if lc.upperClamped =>
+            Nullable(math.min(raw, lc.max))
+          case _ =>
+            Nullable(raw)
+        }
+      } else {
+        Nullable(raw)
+      }
+  }
+
+  /** Force a SassNumber to have % unit if it already has a % or is unitless.
+    * Used for HSL saturation/lightness.
+    */
+  private def forcePercent(value: Option[SassNumber]): Option[SassNumber] =
+    value.map { n =>
+      if (n.hasUnit("%") || !n.hasUnits) n
+      else n // Keep as-is if it has other units (will error in channelFromValue)
+    }
+
   // --- Constructors ---
 
   private val rgbFn: BuiltInCallable =
@@ -128,12 +508,9 @@ object ColorFunctions {
         } else
           args.length match {
             case 1 =>
-              // Single-argument form — e.g. `rgb(var(--c))`. Preserved as an
-              // unquoted plain-CSS function call.
-              new SassString(
-                s"rgb(${args(0).toCssString(quote = false)})",
-                hasQuotes = false
-              )
+              // Single-argument form: modern CSS color syntax like `rgb(255 0 0)` or
+              // `rgb(255 0 0 / 0.5)`. Parse using parseChannels.
+              parseChannels("rgb", args(0), Some(ColorSpace.rgb), Nullable("channels"))
             case 3 =>
               val r = scalar(args(0).assertNumber(), 255)
               val g = scalar(args(1).assertNumber(), 255)
@@ -175,6 +552,18 @@ object ColorFunctions {
       "$hue, $saturation, $lightness, $alpha",
       args =>
         args.length match {
+          case 1 =>
+            // Single-argument form: modern CSS color syntax like `hsl(120 50% 50%)` or
+            // `hsl(120 50% 50% / 0.5)`. Parse using parseChannels.
+            parseChannels("hsl", args(0), Some(ColorSpace.hsl), Nullable("channels"))
+          case 2 =>
+            // hsl(123, var(--foo)) is valid CSS because --foo might be `10%, 20%` and
+            // functions are parsed after variable substitution.
+            if (args(0).isSpecialVariable || args(1).isSpecialVariable) {
+              functionString("hsl", args)
+            } else {
+              throw SassScriptException("Missing argument $lightness.")
+            }
           case 3 =>
             val h = hueOf(args(0).assertNumber())
             val s = args(1).assertNumber().value
@@ -188,7 +577,7 @@ object ColorFunctions {
             hslFrom(h, s, l, a)
           case n =>
             throw SassScriptException(
-              s"Only 3 or 4 arguments allowed for hsl(), was $n."
+              s"Only 1, 2, 3, or 4 arguments allowed for hsl(), was $n."
             )
         }
     )
@@ -208,9 +597,11 @@ object ColorFunctions {
     if (n.hasUnit("%")) n.value * percentScale / 100.0
     else n.value
 
-  /** Returns true if [v] is the CSS `none` channel keyword (parsed as an unquoted SassString). */
+  /** Returns true if [v] is the CSS `none` channel keyword (parsed as an unquoted SassString).
+    * Case-insensitive per CSS spec.
+    */
   private def isNone(v: Value): Boolean = v match {
-    case s: SassString => !s.hasQuotes && s.text == "none"
+    case s: SassString => !s.hasQuotes && s.text.toLowerCase == "none"
     case _ => false
   }
 
@@ -239,11 +630,17 @@ object ColorFunctions {
       "lab",
       "$lightness, $a, $b, $alpha: 1",
       { args =>
-        val l     = labChannelOrNone(args(0), 100)
-        val a     = labChannelOrNone(args(1), 125)
-        val b     = labChannelOrNone(args(2), 125)
-        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-        SassColor.lab(l, a, b, alpha)
+        args.length match {
+          case 1 =>
+            // Modern CSS space-separated syntax: lab(50% 20 -30) or lab(50% 20 -30 / 0.5)
+            parseChannels("lab", args(0), Some(ColorSpace.lab), Nullable("channels"))
+          case _ =>
+            val l     = labChannelOrNone(args(0), 100)
+            val a     = labChannelOrNone(args(1), 125)
+            val b     = labChannelOrNone(args(2), 125)
+            val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+            SassColor.lab(l, a, b, alpha)
+        }
       }
     )
 
@@ -252,11 +649,17 @@ object ColorFunctions {
       "lch",
       "$lightness, $chroma, $hue, $alpha: 1",
       { args =>
-        val l     = labChannelOrNone(args(0), 100)
-        val c     = labChannelOrNone(args(1), 150)
-        val h     = hueOrNone(args(2))
-        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-        SassColor.lch(l, c, h, alpha)
+        args.length match {
+          case 1 =>
+            // Modern CSS space-separated syntax: lch(50% 30 120) or lch(50% 30 120 / 0.5)
+            parseChannels("lch", args(0), Some(ColorSpace.lch), Nullable("channels"))
+          case _ =>
+            val l     = labChannelOrNone(args(0), 100)
+            val c     = labChannelOrNone(args(1), 150)
+            val h     = hueOrNone(args(2))
+            val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+            SassColor.lch(l, c, h, alpha)
+        }
       }
     )
 
@@ -265,11 +668,17 @@ object ColorFunctions {
       "oklab",
       "$lightness, $a, $b, $alpha: 1",
       { args =>
-        val l     = labChannelOrNone(args(0), 1)
-        val a     = labChannelOrNone(args(1), 0.4)
-        val b     = labChannelOrNone(args(2), 0.4)
-        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-        SassColor.oklab(l, a, b, alpha)
+        args.length match {
+          case 1 =>
+            // Modern CSS space-separated syntax: oklab(0.5 0.1 -0.1) or oklab(0.5 0.1 -0.1 / 0.5)
+            parseChannels("oklab", args(0), Some(ColorSpace.oklab), Nullable("channels"))
+          case _ =>
+            val l     = labChannelOrNone(args(0), 1)
+            val a     = labChannelOrNone(args(1), 0.4)
+            val b     = labChannelOrNone(args(2), 0.4)
+            val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+            SassColor.oklab(l, a, b, alpha)
+        }
       }
     )
 
@@ -278,11 +687,17 @@ object ColorFunctions {
       "oklch",
       "$lightness, $chroma, $hue, $alpha: 1",
       { args =>
-        val l     = labChannelOrNone(args(0), 1)
-        val c     = labChannelOrNone(args(1), 0.4)
-        val h     = hueOrNone(args(2))
-        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-        SassColor.oklch(l, c, h, alpha)
+        args.length match {
+          case 1 =>
+            // Modern CSS space-separated syntax: oklch(0.5 0.15 120) or oklch(0.5 0.15 120 / 0.5)
+            parseChannels("oklch", args(0), Some(ColorSpace.oklch), Nullable("channels"))
+          case _ =>
+            val l     = labChannelOrNone(args(0), 1)
+            val c     = labChannelOrNone(args(1), 0.4)
+            val h     = hueOrNone(args(2))
+            val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+            SassColor.oklch(l, c, h, alpha)
+        }
       }
     )
 
@@ -291,35 +706,50 @@ object ColorFunctions {
       "hwb",
       "$hue, $whiteness, $blackness, $alpha: 1",
       { args =>
-        val h     = hueOrNone(args(0))
-        val w     = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
-        val b     = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
-        val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-        SassColor.hwb(h, w, b, alpha)
+        args.length match {
+          case 1 =>
+            // Modern CSS space-separated syntax: hwb(120 20% 10%) or hwb(120 20% 10% / 0.5)
+            parseChannels("hwb", args(0), Some(ColorSpace.hwb), Nullable("channels"))
+          case _ =>
+            val h     = hueOrNone(args(0))
+            val w     = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
+            val b     = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
+            val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
+            SassColor.hwb(h, w, b, alpha)
+        }
       }
     )
 
-  /** `color($space, $c1, $c2, $c3, $alpha: 1)` — constructs a color in an explicit non-legacy color space (srgb, display-p3, a98-rgb, etc.).
+  /** `color($description)` or `color($space, $c1, $c2, $c3, $alpha: 1)` — constructs a color in an explicit
+    * non-legacy color space (srgb, display-p3, a98-rgb, etc.). The single-argument form accepts modern CSS
+    * color syntax like `color(display-p3 1 0 0 / 0.5)`.
     */
   private val colorFn: BuiltInCallable =
     BuiltInCallable.function(
       "color",
       "$space, $channel1, $channel2, $channel3, $alpha: 1",
       { args =>
-        if (args.length < 4)
-          throw SassScriptException(
-            s"color() requires at least 4 arguments, was ${args.length}."
-          )
-        val spaceName = args(0) match {
-          case s: SassString => s.text
-          case other => other.assertString().text
+        args.length match {
+          case 1 =>
+            // Modern CSS color() syntax: color(display-p3 1 0 0) or color(display-p3 1 0 0 / 0.5)
+            // The space is parsed from the first component of the space-separated list.
+            parseChannels("color", args(0), None, Nullable("description"))
+          case n if n < 4 =>
+            throw SassScriptException(
+              s"color() requires at least 4 arguments or a single space-separated description, was $n."
+            )
+          case _ =>
+            val spaceName = args(0) match {
+              case s: SassString => s.text
+              case other => other.assertString().text
+            }
+            val space = ColorSpace.fromName(spaceName)
+            val c1    = numberOrNone(args(1))
+            val c2    = numberOrNone(args(2))
+            val c3    = numberOrNone(args(3))
+            val alpha = if (args.length >= 5) alphaOrNone(args(4)) else Nullable(1.0)
+            SassColor.forSpaceInternal(space, c1, c2, c3, alpha)
         }
-        val space = ColorSpace.fromName(spaceName)
-        val c1    = numberOrNone(args(1))
-        val c2    = numberOrNone(args(2))
-        val c3    = numberOrNone(args(3))
-        val alpha = if (args.length >= 5) alphaOrNone(args(4)) else Nullable(1.0)
-        SassColor.forSpaceInternal(space, c1, c2, c3, alpha)
       }
     )
 
@@ -437,8 +867,14 @@ object ColorFunctions {
       "lighten",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("lighten", "color.adjust($color, $lightness: +$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "lighten() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("lighten", "color.adjust($color, $lightness: +$amount)")
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, lDelta = amt)
       }
@@ -449,8 +885,14 @@ object ColorFunctions {
       "darken",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("darken", "color.adjust($color, $lightness: -$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "darken() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("darken", "color.adjust($color, $lightness: -$amount)")
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, lDelta = -amt)
       }
@@ -461,8 +903,14 @@ object ColorFunctions {
       "saturate",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "saturate() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, sDelta = amt)
       }
@@ -473,8 +921,14 @@ object ColorFunctions {
       "desaturate",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("desaturate", "color.adjust($color, $saturation: -$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "desaturate() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("desaturate", "color.adjust($color, $saturation: -$amount)")
         val amt = scalar(args(1).assertNumber(), 100)
         adjustHsl(c, sDelta = -amt)
       }
@@ -486,6 +940,12 @@ object ColorFunctions {
       "$color, $degrees",
       { args =>
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "adjust-hue() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
         val deg = args(1).assertNumber().value
         adjustHsl(c, hDelta = deg)
       }
@@ -523,10 +983,25 @@ object ColorFunctions {
       "grayscale",
       "$color",
       { args =>
-        val c   = args(0).assertColor()
-        val hsl = c.toSpace(ColorSpace.hsl)
-        val out = hslFrom(hsl.channel0, 0, hsl.channel2, c.alpha)
-        if (c.space eq ColorSpace.hsl) out else out.toSpace(c.space)
+        val c = args(0).assertColor()
+        if (c.isLegacy) {
+          val hsl = c.toSpace(ColorSpace.hsl)
+          SassColor.hsl(
+            hsl.channel0OrNull,
+            Nullable(0.0),
+            hsl.channel2OrNull,
+            Nullable(hsl.alpha)
+          ).toSpace(c.space, legacyMissing = false)
+        } else {
+          // For non-legacy colors, convert to oklch and set chroma to 0
+          val oklch = c.toSpace(ColorSpace.oklch)
+          SassColor.oklch(
+            oklch.channel0OrNull,
+            Nullable(0.0),
+            oklch.channel2OrNull,
+            Nullable(oklch.alpha)
+          ).toSpace(c.space)
+        }
       }
     )
 
@@ -655,8 +1130,14 @@ object ColorFunctions {
       "opacify",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("opacify", "color.adjust($color, $alpha: +$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "opacify() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("opacify", "color.adjust($color, $alpha: +$amount)")
         val amt = scalar(args(1).assertNumber())
         c.changeAlpha(clamp(c.alpha + amt, 0, 1))
       }
@@ -667,8 +1148,14 @@ object ColorFunctions {
       "transparentize",
       "$color, $amount",
       { args =>
-        warnLegacyColorFunction("transparentize", "color.adjust($color, $alpha: -$amount)")
         val c   = args(0).assertColor()
+        if (!c.isLegacy) {
+          throw SassScriptException(
+            "transparentize() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+          )
+        }
+        warnLegacyColorFunction("transparentize", "color.adjust($color, $alpha: -$amount)")
         val amt = scalar(args(1).assertNumber())
         c.changeAlpha(clamp(c.alpha - amt, 0, 1))
       }

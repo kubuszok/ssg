@@ -67,8 +67,8 @@ final class SelectorList(
     *
     * Returns `Nullable.Null` if no such list can be produced.
     *
-    * Note: The full implementation requires `unifyComplex` from the extend functions module, which will be ported separately. This implementation handles the common case where every complex selector
-    * is a single compound selector — pairs of compounds are unified via [[SimpleSelector.unify]] and the cross-product results are returned.
+    * This implementation handles the common case where every complex selector is a single compound selector — pairs of compounds are unified via [[SimpleSelector.unify]] and the cross-product results
+    * are returned. See also [[ssg.sass.extend.ExtendFunctions.unifyComplex]] for the full algorithm used by `@extend`.
     */
   def unify(other: SelectorList): Nullable[SelectorList] = {
     val unified = scala.collection.mutable.ListBuffer.empty[ComplexSelector]
@@ -313,7 +313,7 @@ final class SelectorList(
     *
     * That is, whether this matches every element that `other` matches, as well as possibly additional elements.
     *
-    * Note: The full implementation delegates to `listIsSuperselector` in the extend functions module, which will be ported separately.
+    * See also [[ssg.sass.extend.ExtendFunctions.listIsSuperselector]] for the equivalent standalone function.
     */
   def isSuperselector(other: SelectorList): Boolean =
     // Basic implementation: every component of other must be superselectored
