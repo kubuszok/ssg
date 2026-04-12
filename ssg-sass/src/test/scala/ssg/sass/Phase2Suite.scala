@@ -59,6 +59,49 @@ final class Phase2Suite extends munit.FunSuite {
     assertEquals(Deprecation.SlashDiv.toString, "slash-div")
   }
 
+  // --- Version ---
+
+  test("Version.parse parses semver strings") {
+    assertEquals(Version.parse("1.23.0"), Version(1, 23, 0))
+    assertEquals(Version.parse("0.0.0"), Version(0, 0, 0))
+    assertEquals(Version.parse("1.2.3"), Version(1, 2, 3))
+  }
+
+  test("Version comparison is numeric, not lexical") {
+    // This is the key test: 1.10.0 > 1.9.0, not 1.10.0 < 1.9.0
+    assert(Version(1, 10, 0) > Version(1, 9, 0), "1.10.0 should be greater than 1.9.0")
+    assert(Version(1, 9, 0) < Version(1, 10, 0), "1.9.0 should be less than 1.10.0")
+    assert(Version(2, 0, 0) > Version(1, 99, 99), "2.0.0 should be greater than 1.99.99")
+  }
+
+  test("Version.tryParse returns None for invalid strings") {
+    assertEquals(Version.tryParse("invalid"), None)
+    assertEquals(Version.tryParse("1.2.x"), None)
+  }
+
+  test("Deprecation.forVersion returns deprecations up to the given version") {
+    // CallString was deprecated in 0.0.0, should always be included
+    val v1 = Version(1, 0, 0)
+    val deps1 = Deprecation.forVersion(v1)
+    assert(deps1.contains(Deprecation.CallString), "CallString should be in deprecations for v1.0.0")
+
+    // SlashDiv was deprecated in 1.33.0, so it should not be in v1.0.0
+    assert(!deps1.contains(Deprecation.SlashDiv), "SlashDiv should NOT be in deprecations for v1.0.0")
+
+    // SlashDiv should be in 1.33.0 and later
+    val v133 = Version(1, 33, 0)
+    val deps133 = Deprecation.forVersion(v133)
+    assert(deps133.contains(Deprecation.SlashDiv), "SlashDiv should be in deprecations for v1.33.0")
+
+    // MixedDecls is obsolete (has obsoleteIn set), so should NOT be included
+    val v200 = Version(2, 0, 0)
+    val deps200 = Deprecation.forVersion(v200)
+    assert(!deps200.contains(Deprecation.MixedDecls), "MixedDecls is obsolete, should not be included")
+
+    // UserAuthored has no deprecatedIn, should not be included
+    assert(!deps200.contains(Deprecation.UserAuthored), "UserAuthored has no deprecatedIn, should not be included")
+  }
+
   // --- SassException ---
 
   test("SassException stores message and span") {

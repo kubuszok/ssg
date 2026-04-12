@@ -1052,9 +1052,27 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("x: false"), result.css)
   }
 
-  test("calls content-exists() placeholder returns false") {
-    val result = Compile.compileString(""".box { x: content-exists(); }""")
-    assert(result.css.contains("x: false"), result.css)
+  // dart-sass throws when content-exists() is called outside a mixin.
+  test("calls content-exists() outside mixin throws") {
+    intercept[ssg.sass.SassException] {
+      Compile.compileString(""".box { x: content-exists(); }""")
+    }
+  }
+
+  test("calls content-exists() inside mixin returns true/false") {
+    // Inside a mixin with @content block
+    val withContent = Compile.compileString(
+      """@mixin foo { @if content-exists() { @content; } }
+        |.box { @include foo { color: red; } }""".stripMargin
+    )
+    assert(withContent.css.contains("color: red"), withContent.css)
+
+    // Inside a mixin without @content block
+    val withoutContent = Compile.compileString(
+      """@mixin bar { x: content-exists(); }
+        |.box { @include bar; }""".stripMargin
+    )
+    assert(withoutContent.css.contains("x: false"), withoutContent.css)
   }
 
   test("nth() supports negative indices") {

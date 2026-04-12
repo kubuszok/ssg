@@ -436,7 +436,7 @@ final class EvaluateVisitor(
       )
       if (!isUserDefined && node.namespace.isEmpty) {
         node.name.toLowerCase match {
-          case "calc" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
+          case "calc" | "calc-size" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
             val calcResult = _evaluateCalculation(node)
             if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
           case _ => ()
@@ -729,6 +729,8 @@ final class EvaluateVisitor(
       val result: Value = node.name.toLowerCase match {
         case "calc" if converted.length == 1 =>
           SassCalculation.calc(converted.head)
+        case "calc-size" if converted.length == 2 =>
+          SassCalculation.calcSize(converted(0), Nullable(converted(1)))
         case "min"                            => SassCalculation.min(converted)
         case "max"                            => SassCalculation.max(converted)
         case "clamp" if converted.length == 3 =>
@@ -2265,14 +2267,16 @@ final class EvaluateVisitor(
             val runBody: () => Unit = () =>
               _environment.scope() {
                 _bindParameters(mr.parameters, positional, named)
-                val savedContent = _environment.content
-                _environment.content = content
-                try
-                  for (statement <- mr.childrenList) {
-                    val _ = statement.accept(this)
+                // dart-sass: _environment.withContent + _environment.asMixin
+                // wraps the mixin body execution so that content-exists() and
+                // @content work correctly.
+                _environment.withContent(content) {
+                  _environment.asMixin {
+                    for (statement <- mr.childrenList) {
+                      val _ = statement.accept(this)
+                    }
                   }
-                finally
-                  _environment.content = savedContent
+                }
               }
             ud.environment match {
               case env: Environment => _withEnvironment(env.closure())(runBody())
@@ -2284,7 +2288,13 @@ final class EvaluateVisitor(
             )
         }
       case bic: BuiltInCallable =>
-        val _ = bic.callback(positional)
+        // dart-sass: _environment.withContent + _environment.asMixin
+        // wraps built-in mixin execution for content-exists() to work.
+        _environment.withContent(content) {
+          _environment.asMixin {
+            val _ = bic.callback(positional)
+          }
+        }
       case other =>
         throw SassScriptException(s"Unsupported mixin callable: $other")
     }

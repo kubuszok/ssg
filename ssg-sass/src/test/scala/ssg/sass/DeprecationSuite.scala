@@ -92,4 +92,58 @@ final class DeprecationSuite extends munit.FunSuite {
     dp.warnForDeprecation(Deprecation.SlashDiv, "test message")
     assert(!inner.emittedWarning, "silenced deprecation should not reach inner logger")
   }
+
+  test("DeprecationProcessingLogger.validate warns about obsolete deprecations marked fatal") {
+    val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
+    val inner = new Logger {
+      def warn(
+        message:     String,
+        span:        Nullable[ssg.sass.util.FileSpan],
+        trace:       Nullable[ssg.sass.util.Trace],
+        deprecation: Nullable[Deprecation]
+      ): Unit = warnings += message
+      def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
+    }
+    // MixedDecls has obsoleteIn set
+    val dp = new DeprecationProcessingLogger(inner, fatalDeprecations = Set(Deprecation.MixedDecls))
+    dp.validate()
+    assert(warnings.exists(_.contains("obsolete")), s"Expected obsolete warning, got: $warnings")
+  }
+
+  test("DeprecationProcessingLogger.validate warns about silencing user-authored") {
+    val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
+    val inner = new Logger {
+      def warn(
+        message:     String,
+        span:        Nullable[ssg.sass.util.FileSpan],
+        trace:       Nullable[ssg.sass.util.Trace],
+        deprecation: Nullable[Deprecation]
+      ): Unit = warnings += message
+      def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
+    }
+    val dp = new DeprecationProcessingLogger(inner, silenceDeprecations = Set(Deprecation.UserAuthored))
+    dp.validate()
+    assert(warnings.exists(_.contains("User-authored")), s"Expected user-authored warning, got: $warnings")
+  }
+
+  test("DeprecationProcessingLogger.summarize reports omitted warnings") {
+    val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
+    val inner = new Logger {
+      def warn(
+        message:     String,
+        span:        Nullable[ssg.sass.util.FileSpan],
+        trace:       Nullable[ssg.sass.util.Trace],
+        deprecation: Nullable[Deprecation]
+      ): Unit = warnings += message
+      def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
+    }
+    val dp = new DeprecationProcessingLogger(inner)
+    // Emit more than maxRepetitions (5) warnings for the same deprecation
+    for (_ <- 1 to 10)
+      dp.warnForDeprecation(Deprecation.SlashDiv, "test")
+    dp.summarize()
+    // Should report 5 omitted warnings (10 - 5 = 5)
+    assert(warnings.exists(_.contains("5 repetitive deprecation warnings omitted")),
+      s"Expected summary of 5 omitted warnings, got: $warnings")
+  }
 }

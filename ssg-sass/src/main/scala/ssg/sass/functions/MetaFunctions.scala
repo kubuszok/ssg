@@ -19,7 +19,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 283
  * Covenant-baseline-loc: 440
- * Covenant-baseline-methods: ifFn,typeOfFn,inspectFn,featureExistsFn,variableExistsFn,functionExistsFn,keywordsFn,mixinExistsFn,globalVariableExistsFn,contentExistsFn,calcNameFn,calcArgsFn,acceptsContentFn,moduleVariablesFn,moduleFunctionsFn,getFunctionFn,getMixinFn,callFn,applyFn,typeName,argName,envFor,lookupFunction,lookupMixin,knownFeatures,moduleMixins,global,moduleOnly,module,MetaFunctions
+ * Covenant-baseline-methods: ifFn,typeOfFn,inspectFn,featureExistsFn,variableExistsFn,functionExistsFn,keywordsFn,mixinExistsFn,globalVariableExistsFn,contentExistsFn,calcNameFn,calcArgsFn,acceptsContentFn,moduleVariablesFn,moduleFunctionsFn,moduleMixinsFn,getFunctionFn,getMixinFn,callFn,applyFn,typeName,argName,envFor,lookupFunction,lookupMixin,knownFeatures,moduleMixins,global,moduleOnly,module,MetaFunctions
  * Covenant-dart-reference: lib/src/functions/meta.dart
  * Covenant-verified: 2026-04-08
  *
@@ -28,8 +28,8 @@
  * if, type-of, inspect, feature-exists (with the frozen _features set),
  * variable-exists, function-exists, mixin-exists, global-variable-exists,
  * content-exists, keywords, calc-name, calc-args, accepts-content,
- * module-variables, module-functions, get-function, get-mixin, call,
- * apply.
+ * module-variables, module-functions, module-mixins, get-function,
+ * get-mixin, call, apply.
  *
  * Status: core_functions/meta sass-spec subdir 249→283/489
  * (50.9%→57.9%, +34 cases). Global +57 cases (4512→4569).
@@ -50,7 +50,7 @@ package functions
 
 import scala.language.implicitConversions
 
-import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, SassScriptException, UserDefinedCallable }
+import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, PlainCssCallable, SassScriptException, UserDefinedCallable }
 import ssg.sass.ast.sass.MixinRule
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.ListSeparator
@@ -222,7 +222,16 @@ object MetaFunctions {
     BuiltInCallable.function(
       "content-exists",
       "",
-      _ => SassBoolean(CurrentEnvironment.get.fold(false)(_.content.isDefined))
+      { _ =>
+        // dart-sass: evaluate.dart:439-446
+        // content-exists() may only be called within a mixin.
+        CurrentEnvironment.get match {
+          case env if env.isDefined && !env.get.inMixin =>
+            throw SassScriptException("content-exists() may only be called within a mixin.")
+          case env =>
+            SassBoolean(env.fold(false)(_.content.isDefined))
+        }
+      }
     )
 
   private val calcNameFn: BuiltInCallable =
@@ -330,6 +339,30 @@ object MetaFunctions {
       }
     )
 
+  // dart-sass: evaluate.dart:475-487
+  private val moduleMixinsFn: BuiltInCallable =
+    BuiltInCallable.function(
+      "module-mixins",
+      "$module",
+      { args =>
+        val namespace = args.head.assertString("module")
+        val name      = namespace.text
+        // Return a SassMap of all mixins in the namespaced module.
+        // Similar pattern to module-functions above.
+        CurrentEnvironment.get.flatMap(_.findNamespacedModule(name)) match {
+          case mod if mod.isDefined =>
+            val m       = mod.get
+            val entries = m.mixins.iterator.map { case (mixinName, mixin) =>
+              (SassString(mixinName, hasQuotes = true): Value) ->
+                (new SassMixin(mixin): Value)
+            }.toList
+            SassMap(ListMap.from(entries))
+          case _ =>
+            throw SassScriptException(s"There is no module with namespace \"$name\".")
+        }
+      }
+    )
+
   /** Helper: looks up a function callable by name, optionally in a namespaced module. Falls back to the global built-in registry when no module is specified. Returns `Nullable.empty` if not found.
     */
   private def lookupFunction(name: String, moduleArg: Value): Nullable[Callable] =
@@ -368,16 +401,28 @@ object MetaFunctions {
         CurrentEnvironment.get.flatMap(env => env.getNamespace(ns)).flatMap(_.getMixin(name))
     }
 
+  // dart-sass: evaluate.dart:489-520
   private val getFunctionFn: BuiltInCallable =
     BuiltInCallable.function(
       "get-function",
       "$name, $css: false, $module: null",
       { args =>
         val name      = argName(args.head)
+        val css       = if (args.length > 1) args(1).isTruthy else false
         val moduleArg = if (args.length > 2) args(2) else SassNull
-        lookupFunction(name, moduleArg).fold[Value] {
-          throw SassScriptException(s"Function not found: $name")
-        }(c => new SassFunction(c))
+
+        if (css) {
+          // $css and $module may not both be passed at once.
+          if (moduleArg != SassNull) {
+            throw SassScriptException("$css and $module may not both be passed at once.")
+          }
+          // Return a plain CSS callable that emits a plain CSS function call.
+          new SassFunction(new PlainCssCallable(name))
+        } else {
+          lookupFunction(name, moduleArg).fold[Value] {
+            throw SassScriptException(s"Function not found: $name")
+          }(c => new SassFunction(c))
+        }
       }
     )
 
@@ -489,6 +534,7 @@ object MetaFunctions {
     contentExistsFn,
     moduleVariablesFn,
     moduleFunctionsFn,
+    moduleMixinsFn,
     getFunctionFn,
     getMixinFn,
     callFn

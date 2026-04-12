@@ -155,6 +155,69 @@ final class DeprecationProcessingLogger(
   private val maxRepetitions = 5
   private val warningCounts  = scala.collection.mutable.HashMap.empty[Deprecation, Int]
 
+  /** Warns if any of the deprecations options are incompatible or unnecessary. */
+  def validate(): Unit = {
+    for (deprecation <- fatalDeprecations) {
+      if (deprecation.isFuture && !futureDeprecations.contains(deprecation)) {
+        inner.warn(
+          s"Future $deprecation deprecation must be enabled before it can be made fatal."
+        )
+      } else if (deprecation.obsoleteIn.isDefined) {
+        inner.warn(
+          s"$deprecation deprecation is obsolete, so does not need to be made fatal."
+        )
+      } else if (silenceDeprecations.contains(deprecation)) {
+        inner.warn(
+          s"Ignoring setting to silence $deprecation deprecation, since it has also been made fatal."
+        )
+      }
+    }
+
+    for (deprecation <- silenceDeprecations) {
+      if (deprecation == Deprecation.UserAuthored) {
+        inner.warn("User-authored deprecations should not be silenced.")
+      } else if (deprecation.obsoleteIn.isDefined) {
+        inner.warn(
+          s"$deprecation deprecation is obsolete. If you were previously silencing it, your code may now behave in unexpected ways."
+        )
+      } else if (deprecation.isFuture && futureDeprecations.contains(deprecation)) {
+        inner.warn(
+          s"Conflicting options for future $deprecation deprecation cancel each other out."
+        )
+      } else if (deprecation.isFuture) {
+        inner.warn(
+          s"Future $deprecation deprecation is not yet active, so silencing it is unnecessary."
+        )
+      }
+    }
+
+    for (deprecation <- futureDeprecations) {
+      if (!deprecation.isFuture) {
+        inner.warn(
+          s"$deprecation is not a future deprecation, so it does not need to be explicitly enabled."
+        )
+      }
+    }
+  }
+
+  /**
+   * Prints a warning indicating the number of deprecation warnings that were
+   * omitted due to repetition.
+   *
+   * @param js indicates whether this is running in JS mode, in which case
+   *           it doesn't mention "verbose mode" because the JS API doesn't support that.
+   */
+  def summarize(js: Boolean = false): Unit = {
+    val total = warningCounts.values
+      .filter(_ > maxRepetitions)
+      .map(_ - maxRepetitions)
+      .sum
+    if (total > 0) {
+      val verboseHint = if (js) "" else "\nRun in verbose mode to see all warnings."
+      inner.warn(s"$total repetitive deprecation warnings omitted.$verboseHint")
+    }
+  }
+
   override def warn(
     message:     String,
     span:        Nullable[FileSpan],
@@ -162,28 +225,61 @@ final class DeprecationProcessingLogger(
     deprecation: Nullable[Deprecation]
   ): Unit = {
     deprecation.foreach { dep =>
-      if (silenceDeprecations.contains(dep)) ()
-      else if (fatalDeprecations.contains(dep)) {
-        span.fold(
-          throw SassScriptException(message).withSpan(
-            ssg.sass.util.FileSpan.synthetic("")
-          )
-        )(s => throw SassException(message, s))
-      } else if (dep.isFuture && !futureDeprecations.contains(dep)) ()
-      else {
-        if (limitRepetition) {
-          val count = warningCounts.getOrElse(dep, 0)
-          warningCounts(dep) = count + 1
-          if (count >= maxRepetitions) ()
-          else inner.warn(message, span, trace, deprecation)
-        } else {
-          inner.warn(message, span, trace, deprecation)
-        }
-      }
+      handleDeprecation(dep, message, span, trace)
     }
     if (deprecation.isEmpty) {
       inner.warn(message, span, trace, deprecation)
     }
+  }
+
+  /**
+   * Processes a deprecation warning.
+   *
+   * If the deprecation is in fatalDeprecations, this throws an error.
+   *
+   * If it's a future deprecation that hasn't been opted into or it's a
+   * deprecation that's already been warned for maxRepetitions times and
+   * limitRepetition is true, the warning is dropped.
+   *
+   * Otherwise, this is passed on to the inner logger.
+   */
+  private def handleDeprecation(
+    deprecation: Deprecation,
+    message:     String,
+    span:        Nullable[FileSpan],
+    trace:       Nullable[SassTrace]
+  ): Unit = {
+    // Drop future deprecations that haven't been opted into
+    if (deprecation.isFuture && !futureDeprecations.contains(deprecation)) {
+      return
+    }
+
+    if (fatalDeprecations.contains(deprecation)) {
+      val fatalMessage = message +
+        "\n\nThis is only an error because you've set the " +
+        s"$deprecation deprecation to be fatal.\n" +
+        "Remove this setting if you need to keep using this feature."
+
+      (span.toOption, trace.toOption) match {
+        case (Some(s), Some(t)) => throw SassRuntimeException(fatalMessage, s, t)
+        case (Some(s), None)    => throw SassException(fatalMessage, s)
+        case _                  => throw SassScriptException(fatalMessage)
+      }
+    }
+
+    if (silenceDeprecations.contains(deprecation)) {
+      return
+    }
+
+    if (limitRepetition) {
+      val count = warningCounts.getOrElse(deprecation, 0) + 1
+      warningCounts(deprecation) = count
+      if (count > maxRepetitions) {
+        return
+      }
+    }
+
+    inner.warn(message, span, trace, deprecation = deprecation)
   }
 
   override def debug(message: String, span: FileSpan): Unit =

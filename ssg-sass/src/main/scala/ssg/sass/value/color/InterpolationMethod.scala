@@ -9,7 +9,7 @@
  * Migration notes:
  *   Renames: interpolation_method.dart → InterpolationMethod.scala
  *   Convention: Dart class → Scala final case class; Dart enum → Scala enum
- *   Idiom: Dart factory fromValue deferred (requires assertCommonListStyle);
+ *   Idiom: Dart factory fromValue ported;
  *          Dart HueInterpolationMethod? → Nullable[HueInterpolationMethod]
  *   Audited: 2026-04-06
  */
@@ -17,6 +17,9 @@ package ssg
 package sass
 package value
 package color
+
+import scala.util.boundary
+import scala.util.boundary.break
 
 import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
@@ -67,6 +70,56 @@ object InterpolationMethod {
   }
 
   def apply(space: ColorSpace): InterpolationMethod = apply(space, Nullable.Null)
+
+  /** Parses a SassScript value representing an interpolation method, not beginning with "in".
+    *
+    * Throws a SassScriptException if value isn't a valid interpolation method.
+    * If value came from a function argument, name is the argument name (without the `$`).
+    * This is used for error reporting.
+    */
+  def fromValue(value: Value, name: Nullable[String] = Nullable.Null): InterpolationMethod = boundary {
+    val list = value.assertCommonListStyle(name, allowSlash = false)
+    if (list.isEmpty) {
+      throw SassScriptException(
+        "Expected a color interpolation method, got an empty list.",
+        name.toOption
+      )
+    }
+
+    val firstStr = list.head.assertString(name)
+    firstStr.assertUnquoted(name)
+    val space = ColorSpace.fromName(firstStr.text, name.toOption)
+    if (list.length == 1) break(InterpolationMethod(space))
+
+    val hueMethod = HueInterpolationMethod.fromValue(list(1), name)
+    if (list.length == 2) {
+      throw SassScriptException(
+        s"Expected unquoted string \"hue\" after $value.",
+        name.toOption
+      )
+    } else {
+      val thirdStr = list(2).assertString(name)
+      thirdStr.assertUnquoted(name)
+      if (thirdStr.text.toLowerCase != "hue") {
+        throw SassScriptException(
+          s"Expected unquoted string \"hue\" at the end of $value, was ${list(2)}.",
+          name.toOption
+        )
+      } else if (list.length > 3) {
+        throw SassScriptException(
+          s"Expected nothing after \"hue\" in $value.",
+          name.toOption
+        )
+      } else if (!space.isPolar) {
+        throw SassScriptException(
+          s"Hue interpolation method \"$hueMethod hue\" may not be set for rectangular color space $space.",
+          name.toOption
+        )
+      }
+    }
+
+    InterpolationMethod(space, Nullable(hueMethod))
+  }
 }
 
 /** The method by which two hues are adjusted when interpolating between colors. */
@@ -97,4 +150,16 @@ object HueInterpolationMethod {
       case _            =>
         throw SassScriptException(s"Unknown hue interpolation method $name.", argumentName)
     }
+
+  /** Parses a SassScript value representing a hue interpolation method, not ending with "hue".
+    *
+    * Throws a SassScriptException if value isn't a valid hue interpolation method.
+    * If value came from a function argument, name is the argument name (without the `$`).
+    * This is used for error reporting.
+    */
+  private[color] def fromValue(value: Value, name: Nullable[String] = Nullable.Null): HueInterpolationMethod = {
+    val str = value.assertString(name)
+    str.assertUnquoted(name)
+    fromName(str.text, name.toOption)
+  }
 }
