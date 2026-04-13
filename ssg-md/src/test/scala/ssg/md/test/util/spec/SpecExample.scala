@@ -41,9 +41,8 @@ final class SpecExample private (
     html:             String,
     ast:              Nullable[String],
     comment:          Nullable[String]
-  ) = {
+  ) =
     this(resourceLocation, lineNumber, optionsSet, section, exampleNumber, source, html, ast, comment, false)
-  }
 
   def isFullSpecExample: Boolean =
     (this ne SpecExample.NULL) && isNull &&

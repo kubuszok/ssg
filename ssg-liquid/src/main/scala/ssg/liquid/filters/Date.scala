@@ -121,27 +121,27 @@ object Date {
           case 'l'       => sb.append("h")
           case 'I'       => sb.append("hh")
           case 'G'       => sb.append("YYYY") // ISO week-year
-          case 'g'       => sb.append("YY")   // ISO week-year, 2 digits
-          case 'V'       => sb.append("ww")   // ISO week number
+          case 'g'       => sb.append("YY") // ISO week-year, 2 digits
+          case 'V'       => sb.append("ww") // ISO week number
           case 'u'       => sb.append("e")
           case 'w'       => sb.append("e")
-          case 'U'       => sb.append("ww")   // week number (Sunday start, approximate)
-          case 'W'       => sb.append("ww")   // week number (Monday start, approximate)
+          case 'U'       => sb.append("ww") // week number (Sunday start, approximate)
+          case 'W'       => sb.append("ww") // week number (Monday start, approximate)
           case 'n'       => sb.append("\n")
           case 't'       => sb.append("\t")
           case '%'       => sb.append("'%'")
           // Composite patterns
-          case 'D'       => sb.append("MM/dd/yy")     // %m/%d/%y
-          case 'F'       => sb.append("yyyy-MM-dd")    // %Y-%m-%d
-          case 'T'       => sb.append("HH:mm:ss")      // %H:%M:%S
-          case 'R'       => sb.append("HH:mm")          // %H:%M
-          case 'r'       => sb.append("hh:mm:ss a")     // %I:%M:%S %p
-          case 'v'       => sb.append("d-MMM-yyyy")     // %e-%b-%Y
-          case 'c'       => sb.append("EEE MMM d HH:mm:ss yyyy") // locale date/time
-          case 'x'       => sb.append("MM/dd/yy")       // locale date
-          case 'X'       => sb.append("HH:mm:ss")       // locale time
-          case '+'       => sb.append("EEE MMM d HH:mm:ss z yyyy") // date(1) format
-          case 's'       => sb.append("'%s'") // epoch seconds — cannot express as pattern, pass through
+          case 'D' => sb.append("MM/dd/yy") // %m/%d/%y
+          case 'F' => sb.append("yyyy-MM-dd") // %Y-%m-%d
+          case 'T' => sb.append("HH:mm:ss") // %H:%M:%S
+          case 'R' => sb.append("HH:mm") // %H:%M
+          case 'r' => sb.append("hh:mm:ss a") // %I:%M:%S %p
+          case 'v' => sb.append("d-MMM-yyyy") // %e-%b-%Y
+          case 'c' => sb.append("EEE MMM d HH:mm:ss yyyy") // locale date/time
+          case 'x' => sb.append("MM/dd/yy") // locale date
+          case 'X' => sb.append("HH:mm:ss") // locale time
+          case '+' => sb.append("EEE MMM d HH:mm:ss z yyyy") // date(1) format
+          case 's' => sb.append("'%s'") // epoch seconds — cannot express as pattern, pass through
           // Modifier flags: %-X (no-pad), %0X (zero-pad), %_X (space-pad)
           case '-' | '0' | '_' =>
             if (i + 1 < format.length()) {
@@ -165,7 +165,7 @@ object Date {
               i += 1
               if (i + 1 < format.length() && format.charAt(i + 1) == ':') {
                 i += 1
-                if (i + 1 < format.length() && format.charAt(i + 1) == 'z') { i += 1; sb.append("XXX") }    // %:::z minimal tz
+                if (i + 1 < format.length() && format.charAt(i + 1) == 'z') { i += 1; sb.append("XXX") } // %:::z minimal tz
                 else sb.append("'%:::'")
               } else if (i + 1 < format.length() && format.charAt(i + 1) == 'z') { i += 1; sb.append("XXXXX") } // %::z +HH:MM:SS
               else sb.append("'%::'")

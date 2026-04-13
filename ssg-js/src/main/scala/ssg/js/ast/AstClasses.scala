@@ -55,7 +55,7 @@ private trait AstObjectPropertyWalk extends AstObjectProperty {
   override protected def transformDescend(tw: TreeTransformer): Unit = {
     key match {
       case k: AstNode => key = k.transform(tw)
-      case _          =>
+      case _ =>
     }
     if (value != null) value = value.nn.transform(tw)
   }
@@ -173,7 +173,7 @@ class AstClassProperty extends AstNode with AstObjectProperty {
   override protected def transformDescend(tw: TreeTransformer): Unit = {
     key match {
       case k: AstNode => key = k.transform(tw)
-      case _          =>
+      case _ =>
     }
     if (value != null) value = value.nn.transform(tw)
   }

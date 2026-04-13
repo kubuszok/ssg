@@ -36,7 +36,7 @@ class SourceMapConsumer(val mapData: SourceMapData) {
   // Resolve absolute values from deltas
   private val resolved: Array[Array[ResolvedSegment]] = resolveDeltas()
 
-  private final case class ResolvedSegment(
+  final private case class ResolvedSegment(
     genCol:   Int,
     srcIdx:   Int,
     origLine: Int,
@@ -46,16 +46,16 @@ class SourceMapConsumer(val mapData: SourceMapData) {
 
   /** Resolve all VLQ deltas into absolute values. */
   private def resolveDeltas(): Array[Array[ResolvedSegment]] = {
-    val result = ArrayBuffer.empty[Array[ResolvedSegment]]
-    var prevSrcIdx  = 0
+    val result       = ArrayBuffer.empty[Array[ResolvedSegment]]
+    var prevSrcIdx   = 0
     var prevOrigLine = 0
     var prevOrigCol  = 0
     var prevNameIdx  = 0
 
     for (line <- decoded) {
-      val segs = ArrayBuffer.empty[ResolvedSegment]
+      val segs       = ArrayBuffer.empty[ResolvedSegment]
       var prevGenCol = 0
-      for (seg <- line) {
+      for (seg <- line)
         if (seg.length >= 4) {
           val genCol   = prevGenCol + seg(0)
           val srcIdx   = prevSrcIdx + seg(1)
@@ -74,7 +74,6 @@ class SourceMapConsumer(val mapData: SourceMapData) {
           // Segment with only generated column (no original position)
           prevGenCol += seg(0)
         }
-      }
       result.addOne(segs.toArray)
     }
     result.toArray

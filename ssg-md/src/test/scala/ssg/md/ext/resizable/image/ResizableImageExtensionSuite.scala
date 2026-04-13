@@ -46,7 +46,7 @@ class ResizableImageExtensionSuite extends FunSuite {
   import ssg.md.parser.Parser
 
   private def render(markdown: String): String = {
-    val extensions = java.util.List.of(ResizableImageExtension.create())
+    val extensions = java.util.Collections.singletonList(ResizableImageExtension.create())
     val parser     = Parser.builder().extensions(extensions).build()
     val renderer   = HtmlRenderer.builder().extensions(extensions).build()
     val doc        = parser.parse(markdown)

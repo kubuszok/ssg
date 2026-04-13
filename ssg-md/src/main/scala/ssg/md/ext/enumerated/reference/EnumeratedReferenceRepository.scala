@@ -12,7 +12,6 @@ package ext
 package enumerated
 package reference
 
-import ssg.md.Nullable
 import ssg.md.util.ast.{ KeepType, Node, NodeRepository }
 import ssg.md.util.data.{ DataHolder, DataKey }
 

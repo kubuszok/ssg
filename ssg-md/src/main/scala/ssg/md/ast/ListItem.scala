@@ -24,9 +24,9 @@ import scala.language.implicitConversions
 import java.{ util => ju }
 
 abstract class ListItem extends Block, ParagraphItemContainer, BlankLineContainer, ParagraphContainer {
-  protected var _openingMarker:                    BasedSequence = BasedSequence.NULL
-  def openingMarker: BasedSequence = _openingMarker
-  def openingMarker_=(v: BasedSequence): Unit = _openingMarker = v
+  protected var _openingMarker:            BasedSequence = BasedSequence.NULL
+  def openingMarker:                       BasedSequence = _openingMarker
+  def openingMarker_=(v: BasedSequence):   Unit          = _openingMarker = v
   private var _markerSuffix:               BasedSequence = BasedSequence.NULL
   private var _tight:                      Boolean       = true
   private var _hadBlankAfterItemParagraph: Boolean       = false

@@ -71,14 +71,14 @@ class Relative_Url extends Filter() {
           res = anchorParts(0)
         }
         val parts = res.split("\\?", 2)
-        val path =
+        val path  =
           if (parts.length > 1) {
             query = parts(1)
             parts(0)
           } else {
             res
           }
-        val uri = new URI(null, null, null, -1, path, query, anchor) // scalastyle:ignore null
+        val uri           = new URI(null, null, null, -1, path, query, anchor) // scalastyle:ignore null
         var afterDecoding = uri.normalize().toASCIIString
         if (afterDecoding.isEmpty) {
           afterDecoding = "/"
@@ -110,14 +110,13 @@ class Relative_Url extends Filter() {
     }
   }
 
-  protected def isValidAbsoluteUrl(valAsString: String): Boolean = {
+  protected def isValidAbsoluteUrl(valAsString: String): Boolean =
     try {
       val uri = new URI(valAsString)
       uri.getScheme != null
     } catch {
       case _: URISyntaxException => false
     }
-  }
 }
 
 object Relative_Url {

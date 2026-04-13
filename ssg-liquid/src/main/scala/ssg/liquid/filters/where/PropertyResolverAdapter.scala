@@ -26,5 +26,5 @@ package where
   */
 trait PropertyResolverAdapter {
   def getItemProperty(context: TemplateContext, input: Any, property: Any): Any
-  def support(target: Any): Boolean
+  def support(target:          Any):                                        Boolean
 }

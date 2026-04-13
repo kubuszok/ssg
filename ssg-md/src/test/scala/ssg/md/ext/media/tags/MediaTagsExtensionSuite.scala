@@ -61,7 +61,7 @@ class MediaTagsExtensionSuite extends FunSuite {
   import ssg.md.parser.Parser
 
   private def render(markdown: String): String = {
-    val extensions = java.util.List.of(MediaTagsExtension.create())
+    val extensions = java.util.Collections.singletonList(MediaTagsExtension.create())
     val parser     = Parser.builder().extensions(extensions).build()
     val renderer   = HtmlRenderer.builder().extensions(extensions).build()
     val doc        = parser.parse(markdown)

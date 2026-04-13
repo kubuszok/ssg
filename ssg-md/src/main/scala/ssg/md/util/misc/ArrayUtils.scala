@@ -28,7 +28,7 @@ object ArrayUtils {
   def contained[T](value: T, array: Array[T]): Boolean =
     indexOf(value, array) != -1
 
-  def append[T: ClassTag](array: Array[T], values: T*): Array[T] = {
+  def append[T: ClassTag](array: Array[T], values: T*): Array[T] =
     if (values.nonEmpty) {
       val newInstance = new Array[T](array.length + values.length)
       System.arraycopy(array, 0, newInstance, 0, array.length)
@@ -41,7 +41,6 @@ object ArrayUtils {
     } else {
       array
     }
-  }
 
   def contained(value: Int, array: Array[Int]): Boolean = boundary {
     var i = 0

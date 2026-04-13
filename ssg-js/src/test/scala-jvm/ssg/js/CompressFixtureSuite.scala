@@ -22,9 +22,11 @@ final class CompressFixtureSuite extends munit.FunSuite {
       java.nio.file.Paths.get(System.getProperty("user.dir"), "../original-src/terser/test/compress"),
       java.nio.file.Paths.get("/Users/dev/Workspaces/GitHub/ssg/original-src/terser/test/compress")
     )
-    candidates.find(java.nio.file.Files.isDirectory(_)).getOrElse(
-      throw new RuntimeException("Cannot find Terser test/compress directory")
-    )
+    candidates
+      .find(java.nio.file.Files.isDirectory(_))
+      .getOrElse(
+        throw new RuntimeException("Cannot find Terser test/compress directory")
+      )
   }
 
   /** Load and parse a fixture file. */
@@ -38,9 +40,9 @@ final class CompressFixtureSuite extends munit.FunSuite {
   /** Run all fixtures from a file and return (passed, failed, errors, total). */
   private def runFixtureFile(filename: String): (Int, Int, Int, Int) = {
     val fixtures = loadFixtures(filename)
-    var passed = 0
-    var failed = 0
-    var errors = 0
+    var passed   = 0
+    var failed   = 0
+    var errors   = 0
 
     for (fixture <- fixtures) {
       val result = FixtureRunner.run(fixture)
@@ -82,7 +84,7 @@ final class CompressFixtureSuite extends munit.FunSuite {
 
   test("fixture parser handles multiple files") {
     // Verify the parser can handle several fixture files without crashing
-    val files = Seq("debugger.js", "dead-code.js", "loops.js")
+    val files         = Seq("debugger.js", "dead-code.js", "loops.js")
     var totalFixtures = 0
     for (f <- files) {
       val fixtures = loadFixtures(f)

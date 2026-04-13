@@ -95,12 +95,12 @@ class EnumeratedReferenceNodeFormatter(options: DataHolder)
 
 object EnumeratedReferenceNodeFormatter {
 
-  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def renderReferenceText(text: BasedSequence, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (!text.isEmpty) {
       val valueChars = text
-      val pos = valueChars.indexOf(':')
+      val pos        = valueChars.indexOf(':')
       var category: String = null // @nowarn - Java interop: null used for optional category id split
-      var id: String = null       // @nowarn
+      var id:       String = null // @nowarn
       if (pos == -1) {
         category = text.toString
       } else {
@@ -111,16 +111,14 @@ object EnumeratedReferenceNodeFormatter {
       val encoded = AttributesNodeFormatter.getEncodedIdAttribute(category, id, context, markdown)
       markdown.append(encoded)
     }
-  }
 
   class Factory extends NodeFormatterFactory {
     override def create(options: DataHolder): NodeFormatter = new EnumeratedReferenceNodeFormatter(options)
 
-    override def afterDependents: Nullable[Set[Class[?]]] = {
+    override def afterDependents: Nullable[Set[Class[?]]] =
       // run before attributes formatter so categories are uniquified first
       // renderers are sorted in reverse order for backward compatibility
       Nullable(Set[Class[?]](classOf[AttributesNodeFormatter.Factory]))
-    }
 
     override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty
   }
