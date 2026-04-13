@@ -18,6 +18,9 @@
  *   Convention: Object with methods, pattern matching instead of DEFMETHOD
  *   Idiom: boundary/break instead of return, EvalResult ADT instead of
  *     JS union types, Set instead of makePredicate
+ *   Gap: ISS-165 to ISS-175 edge cases fixed (hasSideEffects checks, HOP guard,
+ *     regexp_source_fix, Object.prototype guard, BigInt **, Array/Number methods,
+ *     regexp_is_safe, hasOwnProperty.call edge case)
  */
 package ssg
 package js
@@ -70,6 +73,68 @@ object Evaluate {
   private val nonConvertingUnary:  Set[String] = Set("!", "typeof", "void")
   private val nonConvertingBinary: Set[String] = Set("&&", "||", "??", "===", "!==")
   private val identityComparison:  Set[String] = Set("==", "!=", "===", "!==")
+
+  /** Object.prototype methods that must not be overwritten by user object keys. */
+  private val objectPrototypeFunctions: Set[String] = Set(
+    "toString", "valueOf", "constructor"
+  )
+
+  /** Line terminator escape mappings for regexp_source_fix. */
+  private val lineTerminatorEscape: Map[Char, String] = Map(
+    '\u0000' -> "0",
+    '\n' -> "n",
+    '\r' -> "r",
+    '\u2028' -> "u2028",
+    '\u2029' -> "u2029"
+  )
+
+  /** Subset of regexps that is not going to cause regexp based DDOS.
+    * See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+    * The original JS regex: /^[\\/|\0\s\w\^$.\[\]()]*$/
+    * Note: \0 is the NUL character (U+0000)
+    */
+  private val reSafeRegexp = """^[\\/|\u0000\s\w\^$.\[\]()]*$""".r
+
+  /** Check if the regexp is safe for Terser to create without risking a RegExp DOS. */
+  private def regexpIsSafe(source: String): Boolean =
+    reSafeRegexp.findFirstIn(source).isDefined
+
+  /** Fix regexp source by escaping line terminators (V8 compatibility).
+    * V8 does not escape line terminators in regexp patterns in node 12.
+    * Also removes literal \0.
+    */
+  private def regexpSourceFix(source: String): String = {
+    val sb = new StringBuilder
+    var i  = 0
+    while (i < source.length) {
+      val ch = source.charAt(i)
+      lineTerminatorEscape.get(ch) match {
+        case Some(esc) =>
+          // Check if already escaped
+          val alreadyEscaped =
+            i > 0 && source.charAt(i - 1) == '\\' && {
+              // Count preceding backslashes
+              var j     = i - 1
+              var count = 0
+              while (j >= 0 && source.charAt(j) == '\\') {
+                count += 1
+                j -= 1
+              }
+              count % 2 == 1 // odd count means already escaped
+            }
+          if (!alreadyEscaped) sb.append('\\')
+          sb.append(esc)
+        case None =>
+          sb.append(ch)
+      }
+      i += 1
+    }
+    sb.toString
+  }
+
+  /** Check if an object has its own property (JavaScript HOP equivalent). */
+  private def hasOwnProperty(obj: Map[String, Any], key: String): Boolean =
+    obj.contains(key)
 
   // -----------------------------------------------------------------------
   // Public API
@@ -208,9 +273,15 @@ object Evaluate {
         cached match {
           case Some(v) => if (v == null) node else v
           case None    =>
-            // Store the RegExpValue itself as the evaluated form
-            compressor.evaluatedRegexps(re.value) = re.value
-            re.value
+            // Only evaluate safe regexps (no ReDoS risk)
+            if (regexpIsSafe(re.value.source)) {
+              // Store the RegExpValue itself as the evaluated form
+              compressor.evaluatedRegexps(re.value) = re.value
+              re.value
+            } else {
+              compressor.evaluatedRegexps(re.value) = null.asInstanceOf[RegExpValue] // @nowarn -- cache miss
+              node
+            }
         }
 
       // Template string with single segment
@@ -461,6 +532,7 @@ object Evaluate {
             case "^"  => l ^ r
             case "+"  => l + r
             case "*"  => l * r
+            case "**" => l.pow(r.toInt) // ISS-171: BigInt exponentiation
             case "/"  => l / r // guarded against 0 above
             case "%"  => l % r
             case "-"  => l - r
@@ -622,17 +694,19 @@ object Evaluate {
         }
       }
 
-      // .length on strings
+      // .length on strings and arrays (always safe)
       if (propName == "length") {
         obj match {
           case s:   String   => break(s.length.toDouble)
           case arr: AstArray =>
-            // Check if array has no spreads and no side effects
+            // Check if array has no spreads and all elements have no side effects
             val noSpreads = arr.elements.forall(!_.isInstanceOf[AstExpansion])
-            if (noSpreads) {
-              // In a full implementation we'd also check side effects
+            if (noSpreads && arr.elements.forall(el => !Inference.hasSideEffects(el, compressor))) {
               break(arr.elements.size.toDouble)
             }
+          case seq: Seq[?] =>
+            // Evaluated array from unsafe mode
+            break(seq.size.toDouble)
           case _ =>
         }
       }
@@ -642,6 +716,31 @@ object Evaluate {
         // Check for undeclared ref to global object (Math.PI, Number.MAX_VALUE, etc.)
         pa.expression.nn match {
           case ref: AstSymbolRef if Inference.isUndeclaredRef(ref) =>
+            // Handle hasOwnProperty.call edge case (ISS-167)
+            if (ref.name == "hasOwnProperty" && propName == "call") {
+              // Get the call parent and check first arg
+              val parent = compressor.parent()
+              parent match {
+                case call: AstCall if call.args.nonEmpty =>
+                  val firstArg = evaluate(call.args(0), compressor)
+                  firstArg match {
+                    case dot: AstDot => // first_arg = first_arg instanceof AST_Dot ? first_arg.expression : first_arg
+                      val expr = dot.expression
+                      if (expr == null) break(pa) // unevaluable
+                      val evalExpr = evalNode(expr.nn, compressor, depth)
+                      if (evalExpr == null || (evalExpr.isInstanceOf[AstSymbolRef] &&
+                          evalExpr.asInstanceOf[AstSymbolRef].definition() != null &&
+                          evalExpr.asInstanceOf[AstSymbolRef].definition().nn.undeclared)) {
+                        break(pa) // unevaluable
+                      }
+                    case _ if firstArg == null => break(pa) // unevaluable
+                    case ref2: AstSymbolRef if ref2.definition() != null && ref2.definition().nn.undeclared =>
+                      break(pa) // unevaluable
+                    case _ => // continue
+                  }
+                case _ =>
+              }
+            }
             // Check if this is a pure native value (Math.PI, Number.MAX_VALUE, etc.)
             if (isPureNativeValue(ref.name, propName)) {
               // Return the actual value for known constants
@@ -673,9 +772,9 @@ object Evaluate {
               case _        => break(pa)
             }
           case rv: RegExpValue =>
-            // RegExp property access
+            // RegExp property access (ISS-169: use regexp_source_fix for source)
             propName match {
-              case "source"     => break(rv.source)
+              case "source"     => break(regexpSourceFix(rv.source))
               case "flags"      => break(rv.flags)
               case "global"     => break(rv.flags.contains('g'))
               case "ignoreCase" => break(rv.flags.contains('i'))
@@ -693,10 +792,15 @@ object Evaluate {
               case _ => break(pa)
             }
           case m: Map[?, ?] =>
-            if (m.asInstanceOf[Map[String, Any]].contains(propName))
-              break(m.asInstanceOf[Map[String, Any]](propName))
+            // ISS-168: HOP check - only access if obj has own property
+            val mapObj = m.asInstanceOf[Map[String, Any]]
+            if (hasOwnProperty(mapObj, propName))
+              break(mapObj(propName))
             else break(pa)
           case _ =>
+            // For other evaluated objects, we can't access properties safely
+            // because we don't have HOP check semantics for Scala objects
+            break(pa)
         }
       }
 
@@ -744,6 +848,22 @@ object Evaluate {
           // Check for pure native function calls on global objects
           pa.expression.nn match {
             case ref: AstSymbolRef if Inference.isUndeclaredRef(ref) =>
+              // ISS-172: Handle hasOwnProperty.call edge case
+              if (ref.name == "hasOwnProperty" && key == "call" && call.args.nonEmpty) {
+                var firstArg: Any = evaluate(call.args(0), compressor)
+                // first_arg = first_arg instanceof AST_Dot ? first_arg.expression : first_arg
+                firstArg = firstArg match {
+                  case dot: AstDot => if (dot.expression != null) dot.expression.nn else firstArg
+                  case _           => firstArg
+                }
+                // If first_arg is null or has undeclared thedef, return unevaluable
+                firstArg match {
+                  case null => break(call) // unevaluable
+                  case ref2: AstSymbolRef if ref2.definition() != null && ref2.definition().nn.undeclared =>
+                    break(call) // unevaluable
+                  case _ => // continue
+                }
+              }
               if (!isPureNativeFn(ref.name, key)) break(call)
 
               // Evaluate arguments for global function calls
@@ -917,7 +1037,7 @@ object Evaluate {
             i += 1
           }
 
-          // Execute pure string methods at compile time
+          // Execute pure methods at compile time
           obj match {
             case s: String =>
               if (isPureNativeMethod("String", key)) {
@@ -969,6 +1089,111 @@ object Evaluate {
                   case _: Exception => break(call)
                 }
               }
+
+            // ISS-173: Array instance methods
+            case arr: Seq[?] =>
+              if (isPureNativeMethod("Array", key)) {
+                try
+                  key match {
+                    case "at" =>
+                      args.headOption match {
+                        case Some(d: Double) =>
+                          val idx = d.toInt
+                          val normalizedIdx = if (idx < 0) arr.size + idx else idx
+                          if (normalizedIdx >= 0 && normalizedIdx < arr.size) break(arr(normalizedIdx))
+                          else break(()) // undefined
+                        case _ => break(call)
+                      }
+                    case "flat" =>
+                      // Flatten one level (default depth=1)
+                      val depth = args.headOption.collect { case d: Double => d.toInt }.getOrElse(1)
+                      if (depth == 0) break(arr)
+                      val flattened = arr.flatMap {
+                        case inner: Seq[?] => inner
+                        case other         => Seq(other)
+                      }
+                      break(flattened)
+                    case "includes" =>
+                      args.headOption match {
+                        case Some(searchElement) =>
+                          val fromIndex = if (args.size > 1) args(1).asInstanceOf[Double].toInt else 0
+                          break(arr.drop(fromIndex).contains(searchElement))
+                        case None => break(call)
+                      }
+                    case "indexOf" =>
+                      args.headOption match {
+                        case Some(searchElement) =>
+                          val fromIndex = if (args.size > 1) args(1).asInstanceOf[Double].toInt else 0
+                          val idx = arr.drop(fromIndex).indexOf(searchElement)
+                          break(if (idx >= 0) (idx + fromIndex).toDouble else -1.0)
+                        case None => break(call)
+                      }
+                    case "join" =>
+                      val sep = args.headOption.collect { case s: String => s }.getOrElse(",")
+                      break(arr.map(String.valueOf).mkString(sep))
+                    case "lastIndexOf" =>
+                      args.headOption match {
+                        case Some(searchElement) =>
+                          val fromIndex = if (args.size > 1) args(1).asInstanceOf[Double].toInt else arr.size - 1
+                          val idx = arr.take(fromIndex + 1).lastIndexOf(searchElement)
+                          break(idx.toDouble)
+                        case None => break(call)
+                      }
+                    case "slice" =>
+                      val start = args.headOption.collect { case d: Double => d.toInt }.getOrElse(0)
+                      val end = if (args.size > 1) args(1).asInstanceOf[Double].toInt else arr.size
+                      val normalizedStart = if (start < 0) Math.max(arr.size + start, 0) else start
+                      val normalizedEnd = if (end < 0) Math.max(arr.size + end, 0) else end
+                      break(arr.slice(normalizedStart, normalizedEnd))
+                    case "toString" | "valueOf" =>
+                      break(arr.map(String.valueOf).mkString(","))
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
+            // ISS-174: Number instance methods
+            case d: Double =>
+              if (isPureNativeMethod("Number", key)) {
+                try
+                  key match {
+                    case "toExponential" =>
+                      args.headOption match {
+                        case Some(digits: Double) =>
+                          val fractionDigits = digits.toInt
+                          if (fractionDigits < 0 || fractionDigits > 100) break(call) // RangeError
+                          break(s"%%.${fractionDigits}e".format(d))
+                        case None => break(s"%.6e".format(d)) // default 6 digits
+                        case _    => break(call)
+                      }
+                    case "toFixed" =>
+                      args.headOption match {
+                        case Some(digits: Double) =>
+                          val fractionDigits = digits.toInt
+                          if (fractionDigits < 0 || fractionDigits > 100) break(call) // RangeError
+                          break(s"%%.${fractionDigits}f".format(d))
+                        case None => break(s"%.0f".format(d)) // default 0 digits
+                        case _    => break(call)
+                      }
+                    case "toPrecision" =>
+                      args.headOption match {
+                        case Some(precision: Double) =>
+                          val prec = precision.toInt
+                          if (prec < 1 || prec > 100) break(call) // RangeError
+                          break(s"%%.${prec}g".format(d))
+                        case None => break(d.toString) // no precision = toString
+                        case _    => break(call)
+                      }
+                    case "toString" | "valueOf" => break(d)
+                    case _ => break(call)
+                  }
+                catch {
+                  case _: Exception => break(call)
+                }
+              }
+
             case _ =>
           }
 
@@ -1026,6 +1251,8 @@ object Evaluate {
                   if (k.asInstanceOf[AnyRef] eq n.asInstanceOf[AnyRef]) break(obj)
                   k.toString
               }
+              // ISS-170: Guard against Object.prototype functions (toString, valueOf, constructor)
+              if (objectPrototypeFunctions.contains(key)) break(obj)
               // Skip function values
               kv.value match {
                 case _: AstFunction | null => // skip
