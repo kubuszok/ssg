@@ -32,17 +32,15 @@ final class SettableInstance[T](
   private val myExtractedInstanceSetters: Nullable[ju.Collection[SettableExtractedInstance[T, ?]]]
 ) {
 
-  def this(consumerKey: DataKey[Consumer[T]], extractedInstanceSetters: ju.Collection[SettableExtractedInstance[T, ?]]) = {
+  def this(consumerKey: DataKey[Consumer[T]], extractedInstanceSetters: ju.Collection[SettableExtractedInstance[T, ?]]) =
     this(
       consumerKey,
       if (extractedInstanceSetters.size() == 0) Nullable.empty[ju.Collection[SettableExtractedInstance[T, ?]]]
       else Nullable(extractedInstanceSetters)
     )
-  }
 
-  def this(consumerKey: DataKey[Consumer[T]]) = {
+  def this(consumerKey: DataKey[Consumer[T]]) =
     this(consumerKey, Nullable.empty[ju.Collection[SettableExtractedInstance[T, ?]]])
-  }
 
   def setInstanceData(instance: T, dataHolder: Nullable[DataHolder]): T = {
     dataHolder.foreach { dh =>

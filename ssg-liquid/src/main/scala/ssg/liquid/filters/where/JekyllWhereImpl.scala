@@ -61,7 +61,7 @@ class JekyllWhereImpl(
 
       false
     end
-  */
+   */
 
   // item_property(item, property)
   /*
@@ -80,9 +80,9 @@ class JekyllWhereImpl(
         end
       end
     end
-  */
+   */
 
-  override def apply(input: Any, params: Array[Any]): Any = {
+  override def apply(input: Any, params: Array[Any]): Any =
     if (params.length < 1) {
       input
     } else {
@@ -107,9 +107,8 @@ class JekyllWhereImpl(
         }
       }
     }
-  }
 
-  private def filterInput(input: Any, property: Any, value: Any): Any = {
+  private def filterInput(input: Any, property: Any, value: Any): Any =
     if (input == null) {
       ""
     } else {
@@ -138,9 +137,8 @@ class JekyllWhereImpl(
         res.toArray
       }
     }
-  }
 
-  private def comparePropertyVsTarget(itemProperty: Any, target: Any): Boolean = {
+  private def comparePropertyVsTarget(itemProperty: Any, target: Any): Boolean =
     if (target == null) {
       itemProperty == null
     } else if (AtomNode.isEmpty(target) || AtomNode.isBlank(target)) {
@@ -161,7 +159,6 @@ class JekyllWhereImpl(
         }
       }
     }
-  }
 
   private def joinedArray(itemProperty: Any): String = {
     // version of Array(property).join
@@ -181,17 +178,16 @@ class JekyllWhereImpl(
   }
 
   // return numeric values as numbers for proper sorting
-  private def parseSortInput(property: Any): Any = {
+  private def parseSortInput(property: Any): Any =
     property match {
       case s: String =>
-        try {
+        try
           java.lang.Double.parseDouble(s): Any
-        } catch {
+        catch {
           case _: Exception => property
         }
       case _ => property
     }
-  }
 
   private def arrayToArrayList(array: Array[Any]): ArrayList[Any] = {
     val list = new ArrayList[Any]()

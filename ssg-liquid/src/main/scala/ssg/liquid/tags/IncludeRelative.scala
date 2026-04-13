@@ -16,9 +16,8 @@ package ssg
 package liquid
 package tags
 
+import ssg.commons.io.{ FileOps, FilePath }
 import ssg.liquid.antlr.NameResolver
-
-import java.nio.file.{ Files, Paths }
 
 /** Jekyll-style include_relative tag.
   *
@@ -29,14 +28,16 @@ class IncludeRelative extends Include("include_relative") {
   /** Resolves the include source relative to the current file's root folder.
     *
     * Uses `context.getRootFolder()` to determine the base path. Falls back to the current working directory if the root folder is not set.
+    *
+    * JVM-only: requires file system access via FileOps.
     */
   override protected def detectSource(context: TemplateContext, includeResource: String): NameResolver.ResolvedSource = {
     var rootPath = context.getRootFolder
     if (rootPath == null) {
-      rootPath = Paths.get(".").toAbsolutePath
+      rootPath = FilePath.cwd.toAbsolute
     }
     val includePath = rootPath.resolve(includeResource)
-    val content     = new String(Files.readAllBytes(includePath), java.nio.charset.StandardCharsets.UTF_8)
-    NameResolver.ResolvedSource(content, includePath.toString)
+    val content     = FileOps.readString(includePath)
+    NameResolver.ResolvedSource(content, includePath.pathString)
   }
 }

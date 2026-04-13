@@ -16,6 +16,8 @@ target/
 .cursorrules
 .cursorignore
 .cursorignorerules
+.claude/worktrees
+.claude/settings.local.json
 
 ## IntelliJ
 .idea/

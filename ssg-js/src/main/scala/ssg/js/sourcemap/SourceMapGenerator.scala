@@ -109,13 +109,13 @@ class SourceMapGenerator(
       else a.generatedColumn < b.generatedColumn
     }
 
-    val sb = new StringBuilder
-    var prevGenCol    = 0
-    var prevOrigLine  = 0
-    var prevOrigCol   = 0
-    var prevSource    = 0
-    var prevName      = 0
-    var prevGenLine   = 1
+    val sb           = new StringBuilder
+    var prevGenCol   = 0
+    var prevOrigLine = 0
+    var prevOrigCol  = 0
+    var prevSource   = 0
+    var prevName     = 0
+    var prevGenLine  = 1
 
     for (m <- sorted) {
       // Add semicolons for line breaks

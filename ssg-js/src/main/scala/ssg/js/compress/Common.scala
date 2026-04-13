@@ -360,7 +360,7 @@ object Common {
       case ref: AstSymbolRef =>
         ref.fixedValue() match {
           case n: AstNode => n
-          case _          => node
+          case _ => node
         }
       case _ => node
     }
@@ -484,12 +484,11 @@ object Common {
         else
           boundary[Boolean] {
             val orig = theDef.nn.orig
-            var i = orig.size
-            while ({ i -= 1; i >= 0 }) {
+            var i    = orig.size
+            while ({ i -= 1; i >= 0 })
               if (ct.runtimeClass.isInstance(orig(i))) {
                 break(true)
               }
-            }
             false
           }
       case _ => false
@@ -540,7 +539,7 @@ object Common {
     * children are skipped. Returns true if aborted, false otherwise.
     */
   def walkParent(node: AstNode, cb: (AstNode, WalkParentInfo) => Any): Boolean = {
-    val toVisit          = ArrayBuffer[AstNode](node)
+    val toVisit = ArrayBuffer[AstNode](node)
     val push: AstNode => Unit = n => toVisit.addOne(n)
     val stack            = ArrayBuffer.empty[AstNode]
     val parentPopIndices = ArrayBuffer.empty[Int]

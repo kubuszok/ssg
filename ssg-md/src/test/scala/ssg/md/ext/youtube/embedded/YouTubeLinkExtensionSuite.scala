@@ -34,7 +34,7 @@ class YouTubeLinkExtensionSuite extends FunSuite {
   import ssg.md.parser.Parser
 
   private def render(markdown: String): String = {
-    val extensions = java.util.List.of(YouTubeLinkExtension.create())
+    val extensions = java.util.Collections.singletonList(YouTubeLinkExtension.create())
     val parser     = Parser.builder().extensions(extensions).build()
     val renderer   = HtmlRenderer.builder().extensions(extensions).build()
     val doc        = parser.parse(markdown)
@@ -44,7 +44,10 @@ class YouTubeLinkExtensionSuite extends FunSuite {
   test("e2e: youtu.be short URL renders as iframe with youtube-nocookie.com") {
     val html = render("@[Video](https://youtu.be/abc123)\n")
     assert(html.contains("<iframe"), s"Should render as iframe, got: $html")
-    assert(html.contains("src=\"https://www.youtube-nocookie.com/embed/abc123\""), s"Should rewrite to youtube-nocookie embed URL, got: $html")
+    assert(
+      html.contains("src=\"https://www.youtube-nocookie.com/embed/abc123\""),
+      s"Should rewrite to youtube-nocookie embed URL, got: $html"
+    )
     assert(html.contains("width=\"560\""), s"Should have width 560, got: $html")
     assert(html.contains("height=\"315\""), s"Should have height 315, got: $html")
     assert(html.contains("class=\"youtube-embedded\""), s"Should have youtube-embedded class, got: $html")
@@ -79,6 +82,9 @@ class YouTubeLinkExtensionSuite extends FunSuite {
   test("e2e: youtube link with frameborder and allow attributes") {
     val html = render("@[Demo](https://youtu.be/test456)\n")
     assert(html.contains("frameborder=\"0\""), s"Should have frameborder=0, got: $html")
-    assert(html.contains("allow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\""), s"Should have allow attribute, got: $html")
+    assert(
+      html.contains("allow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\""),
+      s"Should have allow attribute, got: $html"
+    )
   }
 }

@@ -80,7 +80,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (!optionBool("booleans")) false
     else {
       boundary[Boolean] {
-        var current: AstNode = try { this.self() } catch { case _: IndexOutOfBoundsException => break(false) }
+        var current: AstNode =
+          try this.self()
+          catch { case _: IndexOutOfBoundsException => break(false) }
         var i = 0
         var p: AstNode | Null = parent(i)
         while (p != null) {
@@ -112,11 +114,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       boundary[Boolean] {
         var level = 0
         var node: AstNode | Null = self()
-        var p: AstNode | Null = parent(level)
+        var p:    AstNode | Null = parent(level)
         while (p != null) {
           p.nn match {
             case bin: AstBinary if bitwiseBinop.contains(bin.operator) => break(true)
-            case up: AstUnaryPrefix if up.operator == "~" => break(true)
+            case up:  AstUnaryPrefix if up.operator == "~"             => break(true)
             // Walk through && / || / ?? right side
             case bin: AstBinary if (bin.operator == "&&" || bin.operator == "||" || bin.operator == "??") && bin.right != null && (node.nn.asInstanceOf[AnyRef] eq bin.right.nn.asInstanceOf[AnyRef]) =>
             // Walk through ternary non-condition branches
@@ -136,20 +138,20 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   override def exposed(theDef: Any): Boolean = {
     val d = theDef.asInstanceOf[ssg.js.scope.SymbolDef]
     d.exportFlag != 0 ||
-      (d.undeclared && d.global) ||
-      (d.global && {
-        val dropsFuncs = toplevel.funcs
-        val dropsVars  = toplevel.vars
-        if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolDefun]) !dropsFuncs
-        else if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolVar]) !dropsVars
-        else !dropsFuncs || !dropsVars
-      })
+    (d.undeclared && d.global) ||
+    (d.global && {
+      val dropsFuncs = toplevel.funcs
+      val dropsVars  = toplevel.vars
+      if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolDefun]) !dropsFuncs
+      else if (d.orig.nonEmpty && d.orig(0).isInstanceOf[AstSymbolVar]) !dropsVars
+      else !dropsFuncs || !dropsVars
+    })
   }
 
   override def pureFuncs(call: AstCall): Boolean =
     // Returns true if the call is NOT pure (i.e., has side effects)
     options.pureFuncs match {
-      case Nil => false // no pure_funcs specified — all calls may have side effects
+      case Nil   => false // no pure_funcs specified — all calls may have side effects
       case funcs =>
         if (call.expression == null) true
         else {
@@ -223,11 +225,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     var stopping = false
 
     // Create a TreeTransformer that delegates to the Compressor's before() callback
-    val compressor = this
+    val compressor  = this
     val transformer = new TreeTransformer(
-      before = (node, descend) => {
-        compressor.before(node, (n, _) => descend())
-      }
+      before = (node, descend) => compressor.before(node, (n, _) => descend())
     )
 
     var pass = 0
@@ -280,39 +280,40 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def processExpression(scope: AstScope, insert: Boolean): Unit = {
     val self = scope
     var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
-    tt = new TreeTransformer(before = (node, _) => {
-      if (insert && node.isInstanceOf[AstSimpleStatement]) {
-        val ss = node.asInstanceOf[AstSimpleStatement]
-        val ret = new AstReturn
-        ret.start = ss.start
-        ret.end = ss.end
-        ret.value = ss.body
-        ret
-      } else if (!insert && node.isInstanceOf[AstReturn]) {
-        val ret = node.asInstanceOf[AstReturn]
-        val ss = new AstSimpleStatement
-        ss.start = ret.start
-        ss.end = ret.end
-        ss.body = if (ret.value != null) ret.value.nn else makeVoid0(ret)
-        ss
-      } else if (node.isInstanceOf[AstClass] || (node.isInstanceOf[AstLambda] && !(node eq self))) {
-        node // don't descend into classes/lambdas
-      } else if (node.isInstanceOf[AstBlock]) {
-        val block = node.asInstanceOf[AstBlock]
-        val idx = block.body.size - 1
-        if (idx >= 0) {
-          block.body(idx) = block.body(idx).transform(tt)
+    tt = new TreeTransformer(
+      before = (node, _) =>
+        if (insert && node.isInstanceOf[AstSimpleStatement]) {
+          val ss  = node.asInstanceOf[AstSimpleStatement]
+          val ret = new AstReturn
+          ret.start = ss.start
+          ret.end = ss.end
+          ret.value = ss.body
+          ret
+        } else if (!insert && node.isInstanceOf[AstReturn]) {
+          val ret = node.asInstanceOf[AstReturn]
+          val ss  = new AstSimpleStatement
+          ss.start = ret.start
+          ss.end = ret.end
+          ss.body = if (ret.value != null) ret.value.nn else makeVoid0(ret)
+          ss
+        } else if (node.isInstanceOf[AstClass] || (node.isInstanceOf[AstLambda] && !(node eq self))) {
+          node // don't descend into classes/lambdas
+        } else if (node.isInstanceOf[AstBlock]) {
+          val block = node.asInstanceOf[AstBlock]
+          val idx   = block.body.size - 1
+          if (idx >= 0) {
+            block.body(idx) = block.body(idx).transform(tt)
+          }
+          node
+        } else if (node.isInstanceOf[AstIf]) {
+          val ifNode = node.asInstanceOf[AstIf]
+          if (ifNode.body != null) ifNode.body = ifNode.body.nn.transform(tt)
+          if (ifNode.alternative != null) ifNode.alternative = ifNode.alternative.nn.transform(tt)
+          node
+        } else {
+          null // continue
         }
-        node
-      } else if (node.isInstanceOf[AstIf]) {
-        val ifNode = node.asInstanceOf[AstIf]
-        if (ifNode.body != null) ifNode.body = ifNode.body.nn.transform(tt)
-        if (ifNode.alternative != null) ifNode.alternative = ifNode.alternative.nn.transform(tt)
-        node
-      } else {
-        null // continue
-      }
-    })
+    )
     scope.walk(tt)
   }
 
@@ -673,8 +674,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case self: AstRegExp => literalsInBooleanContext(self)
 
         // ---- Object properties (lift computed keys) ----
-        case self: AstConciseMethod => optimizeConciseMethod(self)
-        case self: AstObjectKeyVal  => optimizeObjectKeyVal(self)
+        case self: AstConciseMethod  => optimizeConciseMethod(self)
+        case self: AstObjectKeyVal   => optimizeObjectKeyVal(self)
         case self: AstObjectProperty => liftKey(self)
 
         // ---- Destructuring (prune unused properties) ----
@@ -775,7 +776,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // ISS-144: Add AstUsing check
         val canExtractFromIfBlock = !stmt.isInstanceOf[AstConst] && !stmt.isInstanceOf[AstLet] &&
           !stmt.isInstanceOf[AstUsing] && !stmt.isInstanceOf[AstClass]
-        val parentIsIf = try { parent(0).isInstanceOf[AstIf] } catch { case _: IndexOutOfBoundsException => false }
+        val parentIsIf =
+          try parent(0).isInstanceOf[AstIf]
+          catch { case _: IndexOutOfBoundsException => false }
         if ((hasDirective("use strict") == null && parentIsIf && canExtractFromIfBlock) || canBeEvictedFromBlock(stmt)) {
           stmt
         } else {
@@ -805,8 +808,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize a function expression — try to convert to arrow when safe.
     *
-    * ISS-143 fix: Use fn.usesArguments property directly (set during scope analysis)
-    * instead of walking the tree, matching original Terser behavior.
+    * ISS-143 fix: Use fn.usesArguments property directly (set during scope analysis) instead of walking the tree, matching original Terser behavior.
     */
   private def optimizeFunction(self: AstFunction): AstNode = {
     val base = optimizeLambda(self)
@@ -817,13 +819,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case fn: AstFunction if !fn.isGenerator && fn.name == null && !fn.usesArguments && !fn.pinned =>
           // Check that function body doesn't use `this`
           var usesThis = false
-          val tw = new TreeWalker((node, _) => {
+          val tw       = new TreeWalker((node, _) =>
             node match {
-              case _: AstThis => usesThis = true; true
+              case _: AstThis  => usesThis = true; true
               case _: AstScope => true // don't descend into nested scopes
               case _ => null
             }
-          })
+          )
           fn.walk(tw)
           if (!usesThis) {
             val arrow = new AstArrow
@@ -878,8 +880,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize do-while loops.
     *
-    * ISS-114 fix: When condition is truthy, wrap body + condition statement in
-    * a for-block to preserve condition side effects (matching original).
+    * ISS-114 fix: When condition is truthy, wrap body + condition statement in a for-block to preserve condition side effects (matching original).
     */
   private def optimizeDo(self: AstDo): AstNode =
     if (!optionBool("loops")) self
@@ -896,7 +897,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             case false | 0 | 0.0 | "" | null =>
               // Condition is always false — body runs exactly once
               // But only if body has no break/continue targeting this loop
-              if (!Common.hasBreakOrContinue(self.asInstanceOf[AstNode & AstIterationStatement], try { parent(0) } catch { case _: IndexOutOfBoundsException => null })) {
+              if (
+                !Common.hasBreakOrContinue(self.asInstanceOf[AstNode & AstIterationStatement],
+                                           try parent(0)
+                                           catch { case _: IndexOutOfBoundsException => null }
+                )
+              ) {
                 // Return block with body + condition for side effects
                 val condStmt = new AstSimpleStatement
                 condStmt.body = self.condition
@@ -907,7 +913,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 block.end = self.body.nn.end
                 block.body = self.body.nn match {
                   case b: AstBlock => ArrayBuffer.from(b.body) :+ condStmt
-                  case s           => ArrayBuffer(s, condStmt)
+                  case s => ArrayBuffer(s, condStmt)
                 }
                 return optimizeBlockStatement(block) // @nowarn
               }
@@ -923,7 +929,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               innerBlock.end = self.body.nn.end
               innerBlock.body = self.body.nn match {
                 case b: AstBlock => ArrayBuffer.from(b.body) :+ condStmt
-                case s           => ArrayBuffer(s, condStmt)
+                case s => ArrayBuffer(s, condStmt)
               }
               val forNode = new AstFor
               forNode.start = self.start
@@ -1003,9 +1009,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
       val isFalsy = cond match {
         case false | 0 | 0.0 | "" => true
-        case null                  => true
-        case _: AstNode            => false // could not evaluate
-        case _                     => false // truthy
+        case null                 => true
+        case _: AstNode => false // could not evaluate
+        case _ => false // truthy
       }
       if (isFalsy && !cond.isInstanceOf[AstNode]) {
         // Condition is always false
@@ -1018,7 +1024,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         return optimizeBlockStatement(block) // @nowarn
       } else if (!cond.isInstanceOf[AstNode]) {
         // Condition is always truthy
-        val body = ArrayBuffer.empty[AstNode]
+        val body     = ArrayBuffer.empty[AstNode]
         val condStmt = new AstSimpleStatement; condStmt.body = self.condition; condStmt.start = self.condition.nn.start; condStmt.end = self.condition.nn.end
         body.addOne(condStmt)
         body.addOne(self.body.nn)
@@ -1031,10 +1037,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     }
 
     // Compute negation and compare sizes
-    val negated = negate(self.condition.nn, false)
+    val negated             = negate(self.condition.nn, false)
     val selfConditionLength = AstSize.size(self.condition.nn)
-    val negatedLength = AstSize.size(negated)
-    var negatedIsBest = negatedLength < selfConditionLength
+    val negatedLength       = AstSize.size(negated)
+    var negatedIsBest       = negatedLength < selfConditionLength
 
     // If there's an alternative and negation is shorter, swap body and alternative
     if (self.alternative != null && negatedIsBest) {
@@ -1063,25 +1069,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // Empty alternative + simple body → cond && body or !cond || body
     if (isEmpty(self.alternative) && self.body.isInstanceOf[AstSimpleStatement]) {
-      if (selfConditionLength == negatedLength && !negatedIsBest &&
-        self.condition.nn.isInstanceOf[AstBinary] && self.condition.nn.asInstanceOf[AstBinary].operator == "||") {
+      if (
+        selfConditionLength == negatedLength && !negatedIsBest &&
+        self.condition.nn.isInstanceOf[AstBinary] && self.condition.nn.asInstanceOf[AstBinary].operator == "||"
+      ) {
         // negated does not require additional surrounding parentheses
         negatedIsBest = true
       }
       if (negatedIsBest) {
         val bin = new AstBinary; bin.operator = "||"; bin.left = negated; bin.right = self.body.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
-        val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+        val ss  = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
         return optimizeSimpleStatement(ss) // @nowarn
       }
       val bin = new AstBinary; bin.operator = "&&"; bin.left = self.condition.nn; bin.right = self.body.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
-      val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+      val ss  = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
       return optimizeSimpleStatement(ss) // @nowarn
     }
 
     // Empty body + simple alternative → cond || alt.body
     if (self.body.isInstanceOf[AstEmptyStatement] && self.alternative != null && self.alternative.nn.isInstanceOf[AstSimpleStatement]) {
       val bin = new AstBinary; bin.operator = "||"; bin.left = self.condition.nn; bin.right = self.alternative.nn.asInstanceOf[AstSimpleStatement].body.nn; bin.start = self.start; bin.end = self.end
-      val ss = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
+      val ss  = new AstSimpleStatement; ss.body = bin; ss.start = self.start; ss.end = self.end
       return optimizeSimpleStatement(ss) // @nowarn
     }
 
@@ -1108,7 +1116,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Merge nested if: if(a) if(b) x → if(a&&b) x (when no else on either)
     if (self.body.isInstanceOf[AstIf] && !self.body.asInstanceOf[AstIf].alternative.isInstanceOf[AstNode] && self.alternative == null) {
       val innerIf = self.body.asInstanceOf[AstIf]
-      val merged = new AstBinary; merged.operator = "&&"; merged.left = self.condition.nn; merged.right = innerIf.condition.nn; merged.start = self.start; merged.end = self.end
+      val merged  = new AstBinary; merged.operator = "&&"; merged.left = self.condition.nn; merged.right = innerIf.condition.nn; merged.start = self.start; merged.end = self.end
       self.condition = merged
       self.body = innerIf.body
     }
@@ -1152,10 +1160,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
 
       // Evaluate constant condition
-      val cond = self.condition.nn
+      val cond   = self.condition.nn
       val condEv = Evaluate.evaluate(cond, this)
       if (condEv != null && (condEv.asInstanceOf[AnyRef] ne cond.asInstanceOf[AnyRef])) {
-        val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        val p =
+          try parent(0)
+          catch { case _: IndexOutOfBoundsException => null }
         condEv match {
           case false | 0 | 0.0 | "" | null =>
             // Condition is falsy — return alternative with this-binding maintenance
@@ -1385,16 +1395,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
       // Helper: check if a constant has a truthy value
       def isTruthyValue(c: AstConstant): Boolean = c match {
-        case n: AstNumber  => n.value != 0.0 && !n.value.isNaN
-        case s: AstString  => s.value.nonEmpty
-        case _: AstTrue    => true
-        case _: AstFalse   => false
-        case _: AstNull    => false
-        case _             => true // other constants (regex, etc.) are truthy
+        case n: AstNumber => n.value != 0.0 && !n.value.isNaN
+        case s: AstString => s.value.nonEmpty
+        case _: AstTrue   => true
+        case _: AstFalse  => false
+        case _: AstNull   => false
+        case _ => true // other constants (regex, etc.) are truthy
       }
 
       // Helper: booleanize - ensure expression is boolean, using !! if needed
-      def booleanize(node: AstNode): AstNode = {
+      def booleanize(node: AstNode): AstNode =
         if (isBoolean(node)) node
         else {
           // !!expression
@@ -1405,7 +1415,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           neg.end = node.end
           neg
         }
-      }
 
       // Helper: check if expression is already boolean
       def isBoolean(node: AstNode): Boolean = node match {
@@ -1474,7 +1483,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Helper for call argument merging: find the single differing argument index, or -1 if not exactly one differs. */
   private def singleArgDiff(a: ArrayBuffer[AstNode], b: ArrayBuffer[AstNode]): Int = {
     var diffIdx = -1
-    var i = 0
+    var i       = 0
     while (i < a.size) {
       if (a(i).isInstanceOf[AstExpansion]) return -1 // @nowarn
       if (!AstEquivalent.equivalentTo(a(i), b(i))) {
@@ -1510,17 +1519,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     val decl = ArrayBuffer.empty[AstNode]
     val body = ArrayBuffer.empty[AstSwitchBranch]
-    var defaultBranch: AstDefault | Null = null
-    var exactMatch: AstSwitchBranch | Null = null
+    var defaultBranch: AstDefault | Null      = null
+    var exactMatch:    AstSwitchBranch | Null = null
 
     // Helper: eliminate_branch — merge dead branch body into prev or extract declarations
-    def eliminateBranch(branch: AstSwitchBranch, prev: AstSwitchBranch | Null = null): Unit = {
+    def eliminateBranch(branch: AstSwitchBranch, prev: AstSwitchBranch | Null = null): Unit =
       if (prev != null && aborts(prev) == null) {
         prev.nn.body.addAll(branch.body)
       } else {
         extractFromUnreachableCode(this, branch, decl)
       }
-    }
 
     // Helper: branches_equivalent — check if two branches have equivalent bodies
     def branchesEquivalent(branch: AstSwitchBranch, prev: AstSwitchBranch, insertBreak: Boolean): Boolean = {
@@ -1551,7 +1559,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     def hasNestedBreak(root: AstSwitch): Boolean = {
       var hasBreak = false
       var tw: TreeWalker = null.asInstanceOf[TreeWalker]
-      tw = new TreeWalker((node, _) => {
+      tw = new TreeWalker((node, _) =>
         if (hasBreak) true
         else if (node.isInstanceOf[AstLambda]) true
         else if (node.isInstanceOf[AstSimpleStatement]) true
@@ -1566,7 +1574,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               null
           }
         }
-      })
+      )
       root.walk(tw)
       hasBreak
     }
@@ -1588,10 +1596,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // - compress self.body into `body`
     // - find and deduplicate default branch
     // - find the exact match (`case 1234` inside `switch(1234)`)
-    var i = 0
+    var i   = 0
     val len = self.body.size
     while (i < len && exactMatch == null) {
-      val branch = self.body(i).asInstanceOf[AstSwitchBranch]
+      val branch    = self.body(i).asInstanceOf[AstSwitchBranch]
       var addToBody = true
       branch match {
         case d: AstDefault =>
@@ -1644,34 +1652,34 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // ** bail micro-optimization if not a simple switch case with breaks
     val allSimple = body.indices.forall { idx =>
       val branch = body(idx)
-      ((branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef]) || branch.isInstanceOf[AstCase] && branch.asInstanceOf[AstCase].expression != null && branch.asInstanceOf[AstCase].expression.nn.isInstanceOf[AstConstant]) &&
+      ((branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef]) || branch
+        .isInstanceOf[AstCase] && branch.asInstanceOf[AstCase].expression != null && branch.asInstanceOf[AstCase].expression.nn.isInstanceOf[AstConstant]) &&
       (branch.body.isEmpty || aborts(branch) != null || idx == body.size - 1)
     }
     if (allSimple) {
       var gi = 0
       while (gi < body.size) {
         val branch = body(gi)
-        var gj = gi + 1
+        var gj     = gi + 1
         while (gj < body.size) {
           val next = body(gj)
           if (next.body.isEmpty) { gj += 1 } // skip empty fall-through
           else {
             val lastBranch = gj == body.size - 1
-            val equiv = branchesEquivalent(next, branch, false)
+            val equiv      = branchesEquivalent(next, branch, false)
             if (equiv || (lastBranch && branchesEquivalent(next, branch, true))) {
               if (!equiv && lastBranch) {
                 val brk = new AstBreak; brk.start = next.start; brk.end = next.end
                 next.body.addOne(brk)
               }
               // find previous siblings with inert fallthrough
-              var x = gj - 1
+              var x                = gj - 1
               var fallthroughDepth = 0
-              while (x > gi) {
+              while (x > gi)
                 if (isInertBody(body(x))) { fallthroughDepth += 1; x -= 1 }
                 else { x = gi } // break out
-              }
-              val plucked = body.slice(gj - fallthroughDepth, gj + 1)
-              val removeIdx = gj - fallthroughDepth
+              val plucked     = body.slice(gj - fallthroughDepth, gj + 1)
+              val removeIdx   = gj - fallthroughDepth
               var removeCount = 1 + fallthroughDepth
               while (removeCount > 0) { body.remove(removeIdx); removeCount -= 1 }
               // Insert plucked after gi
@@ -1694,14 +1702,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       while (mi < body.size) {
         val branch = body(mi)
         if (branch.body.nonEmpty && aborts(branch) != null) {
-          var mj = mi + 1
+          var mj            = mi + 1
           var currentBranch = branch
           while (mj < body.size) {
             val next = body(mj)
             if (next.body.isEmpty) { mi += 1; mj += 1 }
             else if (
               branchesEquivalent(next, currentBranch, false) ||
-                (mj == body.size - 1 && branchesEquivalent(next, currentBranch, true))
+              (mj == body.size - 1 && branchesEquivalent(next, currentBranch, true))
             ) {
               currentBranch.body.clear()
               currentBranch = next
@@ -1722,13 +1730,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         while (pi >= 0) {
           val bbody = body(pi).body
           // Pop trailing breaks targeting self
-          while (bbody.nonEmpty && bbody.last.isInstanceOf[AstBreak] && {
-            val brk = bbody.last.asInstanceOf[AstBreak]
-            val target = loopcontrolTarget(brk)
-            target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
-          }) {
+          while (
+            bbody.nonEmpty && bbody.last.isInstanceOf[AstBreak] && {
+              val brk    = bbody.last.asInstanceOf[AstBreak]
+              val target = loopcontrolTarget(brk)
+              target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
+            }
+          )
             bbody.remove(bbody.size - 1)
-          }
           if (!isInertBody(body(pi))) break(())
           pi -= 1
         }
@@ -1742,7 +1751,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         boundary {
           while (pj >= pi) {
             val branch = body(pj)
-            if ((branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef])) {
+            if (branch.asInstanceOf[AnyRef] eq defaultOrExact.asInstanceOf[AnyRef]) {
               defaultOrExact = null
               eliminateBranch(body.remove(body.size - 1))
             } else if (branch.isInstanceOf[AstCase] && !hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)) {
@@ -1758,7 +1767,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // Prune side-effect free branches that fall into default.
     if (defaultOrExact != null) boundary {
-      val defaultIndex = body.indexOf(defaultOrExact)
+      val defaultIndex     = body.indexOf(defaultOrExact)
       var defaultBodyIndex = defaultIndex
       while (defaultBodyIndex < body.size - 1) {
         if (!isInertBody(body(defaultBodyIndex))) {
@@ -1773,7 +1782,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       boundary {
         while (sideEffectIndex >= 0) {
           val branch = body(sideEffectIndex)
-          if ((branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef])) {
+          if (branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) {
             sideEffectIndex -= 1
           } else if (branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)) {
             break(()) // found last side-effect branch
@@ -1803,7 +1812,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
       val sideEffect = body.find { branch =>
         !(branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) &&
-          branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)
+        branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)
       }
       // If no cases cause a side-effect, we can eliminate the switch entirely.
       if (sideEffect.isEmpty) {
@@ -1884,7 +1893,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // Two cases with default → convert to if/else
     if (body.size == 2 && defaultOrExact != null && !hasNestedBreak(self)) {
-      val branch: AstSwitchBranch = if (body(0).asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) body(1) else body(0)
+      val branch:   AstSwitchBranch           = if (body(0).asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) body(1) else body(0)
       val exactExp: AstSimpleStatement | Null = defaultOrExact.nn match {
         case c: AstCase if c.expression != null => statement(c.expression.nn)
         case _ => null
@@ -1893,7 +1902,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // Only the first branch body could have a break (at the last statement)
         val first = body(0)
         if (first.body.nonEmpty && first.body.last.isInstanceOf[AstBreak]) {
-          val brk = first.body.last.asInstanceOf[AstBreak]
+          val brk    = first.body.last.asInstanceOf[AstBreak]
           val target = loopcontrolTarget(brk)
           if (target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])) {
             first.body.remove(first.body.size - 1)
@@ -1901,13 +1910,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
         branch match {
           case cas: AstCase if cas.expression != null =>
-            val cmp = new AstBinary; cmp.operator = "==="; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
+            val cmp       = new AstBinary; cmp.operator = "==="; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
             val thenBlock = new AstBlockStatement; thenBlock.body = ArrayBuffer.from(cas.body); thenBlock.start = cas.start; thenBlock.end = cas.end
-            val elseBody = ArrayBuffer.empty[AstNode]
+            val elseBody  = ArrayBuffer.empty[AstNode]
             if (exactExp != null) elseBody.addOne(exactExp.nn)
             elseBody.addAll(defaultOrExact.nn.body)
             val elseBlock = new AstBlockStatement; elseBlock.body = elseBody; elseBlock.start = defaultOrExact.nn.start; elseBlock.end = defaultOrExact.nn.end
-            val ifNode = new AstIf; ifNode.condition = cmp; ifNode.body = thenBlock; ifNode.alternative = elseBlock; ifNode.start = self.start; ifNode.end = self.end
+            val ifNode    = new AstIf; ifNode.condition = cmp; ifNode.body = thenBlock; ifNode.alternative = elseBlock; ifNode.start = self.start; ifNode.end = self.end
             return optimizeIf(ifNode) // @nowarn
           case _ =>
         }
@@ -1924,9 +1933,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             operator = "!=="
             val tmp = always; always = consequent; consequent = tmp
           }
-          val cmp = new AstBinary; cmp.operator = operator; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
+          val cmp    = new AstBinary; cmp.operator = operator; cmp.left = self.expression.nn; cmp.right = cas.expression.nn; cmp.start = self.start; cmp.end = self.end
           val ifNode = new AstIf; ifNode.condition = cmp; ifNode.body = consequent; ifNode.alternative = null; ifNode.start = self.start; ifNode.end = self.end
-          val block = new AstBlockStatement
+          val block  = new AstBlockStatement
           block.body = ArrayBuffer(ifNode, always)
           block.start = self.start
           block.end = self.end
@@ -2049,7 +2058,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       if (optionBool("reduce_vars") && fn.isInstanceOf[AstSymbolRef]) {
         fn.asInstanceOf[AstSymbolRef].fixedValue() match {
           case resolved: AstNode => fn = resolved
-          case _                 =>
+          case _ =>
         }
       }
 
@@ -2061,11 +2070,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       // Trim unused arguments using UNUSED flag
       if (optionBool("unused") && simpleArgs && isFunc && !fn.asInstanceOf[AstLambda].usesArguments) {
         val lambda = fn.asInstanceOf[AstLambda]
-        var pos = 0
-        var last = 0
-        var i = 0
-        val len = self.args.size
-        while (i < len) {
+        var pos    = 0
+        var last   = 0
+        var i      = 0
+        val len    = self.args.size
+        while (i < len)
           // Check if argname at position i is AST_Expansion (rest parameter)
           if (i < lambda.argnames.size && lambda.argnames(i).isInstanceOf[AstExpansion]) {
             val restExp = lambda.argnames(i).asInstanceOf[AstExpansion]
@@ -2090,7 +2099,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             last = pos
             // break inner loop effectively handled by while condition
           } else {
-            val trim = i >= lambda.argnames.size
+            val trim        = i >= lambda.argnames.size
             val argIsUnused = !trim && hasFlag(lambda.argnames(i), UNUSED)
             if (trim || argIsUnused) {
               val dropped = DropSideEffectFree.dropSideEffectFree(self.args(i), this)
@@ -2116,7 +2125,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             last = pos
             i += 1
           }
-        }
         // Truncate args array to last meaningful position
         while (self.args.size > last) self.args.remove(self.args.size - 1)
       }
@@ -2128,7 +2136,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             case ref: AstSymbolRef if ref.name == "console" && ref.definition() != null && ref.definition().nn.undeclared =>
               if (self.args.nonEmpty) {
                 val condition = self.args(0)
-                val ev = Evaluate.evaluate(condition, this)
+                val ev        = Evaluate.evaluate(condition, this)
                 if (ev == true || ev == 1 || ev == 1.0) {
                   return makeVoid0(self) // @nowarn
                 }
@@ -2174,7 +2182,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   self.args(0) match {
                     case num: AstNumber if num.value >= 0 && num.value <= 11 && num.value == num.value.toInt.toDouble =>
                       val elements = ArrayBuffer.empty[AstNode]
-                      var k = 0
+                      var k        = 0
                       while (k < num.value.toInt) {
                         val hole = new AstHole
                         hole.start = self.start
@@ -2255,13 +2263,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   // Check that all args evaluated to non-node constants
                   if (params.forall(p => p != null && !p.isInstanceOf[AstNode])) {
                     val source = params(0).toString
-                    val flags = if (params.size > 1) params(1).toString else ""
+                    val flags  = if (params.size > 1) params(1).toString else ""
                     // Only optimize if the regex is safe (no problematic constructs)
                     if (regexpIsSafe(source)) {
                       try {
                         // Validate by creating the regex
                         val fixedSource = regexpSourceFix(new scala.util.matching.Regex(source).pattern.pattern())
-                        val rx = new AstRegExp
+                        val rx          = new AstRegExp
                         rx.start = self.start
                         rx.end = self.end
                         rx.value = RegExpValue(fixedSource, flags)
@@ -2300,11 +2308,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                     separator = Evaluate.evaluate(self.args(0), this)
                     if (separator == null || (separator.asInstanceOf[AnyRef] eq self.args(0).asInstanceOf[AnyRef])) break(()) // not a constant
                   }
-                  val sepStr = separator.toString
+                  val sepStr   = separator.toString
                   val elements = ArrayBuffer.empty[AstNode]
-                  val consts = ArrayBuffer.empty[Any]
-                  var canOpt = true
-                  var ei = 0
+                  val consts   = ArrayBuffer.empty[Any]
+                  var canOpt   = true
+                  var ei       = 0
                   while (ei < arr.elements.size && canOpt) {
                     val el = arr.elements(ei)
                     if (el.isInstanceOf[AstExpansion]) { canOpt = false }
@@ -2357,7 +2365,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   // Otherwise, best_of with optimized array
                   val nodeArr = new AstArray; nodeArr.elements = elements; nodeArr.start = arr.start; nodeArr.end = arr.end
                   val nodeDot = new AstDot; nodeDot.expression = nodeArr; nodeDot.property = "join"; nodeDot.optional = dot.optional; nodeDot.start = dot.start; nodeDot.end = dot.end
-                  val node = new AstCall; node.expression = nodeDot; node.args = ArrayBuffer.from(self.args); node.start = self.start; node.end = self.end
+                  val node    = new AstCall; node.expression = nodeDot; node.args = ArrayBuffer.from(self.args); node.start = self.start; node.end = self.end
                   return bestOfExpression(node, self) // @nowarn
                 }
 
@@ -2369,7 +2377,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   val idx = index match {
                     case d: Double => d.toInt
                     case i: Int    => i
-                    case _         => 0
+                    case _ => 0
                   }
                   val sub = new AstSub
                   sub.expression = dot.expression
@@ -2383,7 +2391,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 // fn.apply(ctx, [a, b]) → fn.call(ctx, a, b)
                 val spreadArgs = ArrayBuffer.from(self.args(1).asInstanceOf[AstArray].elements)
                 spreadArgs.insert(0, self.args(0))
-                val callDot = new AstDot; callDot.expression = dot.expression; callDot.optional = false; callDot.property = "call"; callDot.start = dot.start; callDot.end = dot.end
+                val callDot  = new AstDot; callDot.expression = dot.expression; callDot.optional = false; callDot.property = "call"; callDot.start = dot.start; callDot.end = dot.end
                 val callNode = new AstCall; callNode.expression = callDot; callNode.args = spreadArgs; callNode.start = self.start; callNode.end = self.end
                 return callNode // @nowarn
 
@@ -2393,14 +2401,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 if (func != null && func.nn.isInstanceOf[AstSymbolRef]) {
                   func.nn.asInstanceOf[AstSymbolRef].fixedValue() match {
                     case fv: AstNode => func = fv
-                    case _           =>
+                    case _ =>
                   }
                 }
                 if (func != null && func.nn.isInstanceOf[AstLambda] && !containsThis(func.nn)) {
                   if (self.args.nonEmpty) {
                     // Drop the `this` argument, call directly
-                    val seq = ArrayBuffer(self.args(0))
-                    val directCall = new AstCall; directCall.expression = dot.expression; directCall.args = ArrayBuffer.from(self.args.drop(1)); directCall.start = self.start; directCall.end = self.end
+                    val seq        = ArrayBuffer(self.args(0))
+                    val directCall = new AstCall; directCall.expression = dot.expression; directCall.args = ArrayBuffer.from(self.args.drop(1)); directCall.start = self.start;
+                    directCall.end = self.end
                     seq.addOne(directCall)
                     return makeSequence(self, seq) // @nowarn
                   } else {
@@ -2458,10 +2467,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     '\u2029' -> "u2029"
   )
 
-  /** Subset of regexps that is not going to cause regexp based DDOS.
-    * See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
-    * The original JS regex: /^[\\/|\0\s\w\^$.\[\]()]*$/
-    * Note: \0 is the NUL character (U+0000)
+  /** Subset of regexps that is not going to cause regexp based DDOS. See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS The original JS regex:
+    * /^[\\/|\0\s\w\^$.\[\]()]*$/ Note: \0 is the NUL character (U+0000)
     */
   private val reSafeRegexp = """^[\\/|\u0000\s\w\^$.\[\]()]*$""".r
 
@@ -2469,9 +2476,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def regexpIsSafe(source: String): Boolean =
     reSafeRegexp.findFirstIn(source).isDefined
 
-  /** Fix regexp source by escaping line terminators (V8 compatibility).
-    * V8 does not escape line terminators in regexp patterns in node 12.
-    * Also removes literal \0.
+  /** Fix regexp source by escaping line terminators (V8 compatibility). V8 does not escape line terminators in regexp patterns in node 12. Also removes literal \0.
     */
   private def regexpSourceFix(source: String): String = {
     val sb = new StringBuilder
@@ -2519,7 +2524,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.left != null) {
       self.left.nn match {
         case seq: AstSequence if seq.expressions.size >= 2 =>
-          val exprs = ArrayBuffer.from(seq.expressions)
+          val exprs    = ArrayBuffer.from(seq.expressions)
           val lastExpr = exprs.remove(exprs.size - 1)
           self.left = lastExpr
           exprs.addOne(self)
@@ -2613,10 +2618,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.left != null && self.right != null && (self.operator == "===" || self.operator == "!==")) {
       (self.left.nn, self.right.nn) match {
         case (lRef: AstSymbolRef, rRef: AstSymbolRef) if lRef.definition() != null && rRef.definition() != null =>
-          if ((lRef.definition().nn eq rRef.definition().nn) && {
-            val fv = lRef.fixedValue()
-            fv != null && (fv.isInstanceOf[AstArray] || fv.isInstanceOf[AstLambda] || fv.isInstanceOf[AstObject] || fv.isInstanceOf[AstClass])
-          }) {
+          if (
+            (lRef.definition().nn eq rRef.definition().nn) && {
+              val fv = lRef.fixedValue()
+              fv != null && (fv.isInstanceOf[AstArray] || fv.isInstanceOf[AstLambda] || fv.isInstanceOf[AstObject] || fv.isInstanceOf[AstClass])
+            }
+          ) {
             if (self.operator.charAt(0) == '=') {
               val t = new AstTrue; t.start = self.start; t.end = self.end; return t // @nowarn
             } else {
@@ -2633,10 +2640,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         def mkNot(n: AstNode): AstNode = {
           val neg = new AstUnaryPrefix; neg.operator = "!"; neg.expression = n; neg.start = n.start; neg.end = n.end; neg
         }
-        def booleanify(node: AstNode, truthy: Boolean): AstNode = {
+        def booleanify(node: AstNode, truthy: Boolean): AstNode =
           if (truthy) { if (inBooleanContext()) node else mkNot(mkNot(node)) }
           else mkNot(node)
-        }
         // The only falsy 32-bit integer is 0
         if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0) {
           return booleanify(self.right.nn, self.operator.charAt(0) == '!') // @nowarn
@@ -2654,13 +2660,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         lhs = lhs.asInstanceOf[AstBinary].right.nn
       }
       if (lhs.isInstanceOf[AstBinary] && self.right.nn.isInstanceOf[AstBinary]) {
-        val lBin = lhs.asInstanceOf[AstBinary]
-        val rBin = self.right.nn.asInstanceOf[AstBinary]
+        val lBin       = lhs.asInstanceOf[AstBinary]
+        val rBin       = self.right.nn.asInstanceOf[AstBinary]
         val expectedOp = if (self.operator == "&&") "!==" else "==="
         if (lBin.operator == expectedOp && rBin.operator == expectedOp && lBin.left != null && rBin.left != null && lBin.right != null && rBin.right != null) {
           val lIsUndef = isUndefined(lBin.left.nn, this)
-          val rIsNull = rBin.left.nn.isInstanceOf[AstNull]
-          val lIsNull = lBin.left.nn.isInstanceOf[AstNull]
+          val rIsNull  = rBin.left.nn.isInstanceOf[AstNull]
+          val lIsNull  = lBin.left.nn.isInstanceOf[AstNull]
           val rIsUndef = isUndefined(rBin.left.nn, this)
           if ((lIsUndef && rIsNull) || (lIsNull && rIsUndef)) {
             if (!hasSideEffects(lBin.right.nn, this) && AstEquivalent.equivalentTo(lBin.right.nn, rBin.right.nn)) {
@@ -2823,8 +2829,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               case false | 0 | 0.0 | "" | null =>
                 // Left is falsy → result is left (short-circuit)
                 // Use maintainThisBinding to preserve this-context for method calls
-                val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
-                val s = try { this.self() } catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
+                val p =
+                  try parent(0)
+                  catch { case _: IndexOutOfBoundsException => null }
+                val s =
+                  try this.self()
+                  catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
                 if (p != null) return optimizeNode(maintainThisBinding(p.asInstanceOf[AstNode], s, self.left.nn)) // @nowarn
                 return self.left.nn // @nowarn
               case _ =>
@@ -2847,7 +2857,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               case _ =>
                 // Right is truthy in && → result depends only on left
                 // But also check: parent.operator == "&&" && parent.left === compressor.self()
-                val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+                val par =
+                  try parent(0)
+                  catch { case _: IndexOutOfBoundsException => null }
                 val inParentAndWithLeft = par match {
                   case pbin: AstBinary if pbin.operator == "&&" && pbin.left != null =>
                     pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
@@ -2890,8 +2902,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               case _ =>
                 // Left is truthy → result is left (short-circuit)
                 // Use maintainThisBinding to preserve this-context for method calls
-                val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
-                val s = try { this.self() } catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
+                val p =
+                  try parent(0)
+                  catch { case _: IndexOutOfBoundsException => null }
+                val s =
+                  try this.self()
+                  catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
                 if (p != null) return optimizeNode(maintainThisBinding(p.asInstanceOf[AstNode], s, self.left.nn)) // @nowarn
                 return self.left.nn // @nowarn
             }
@@ -2902,7 +2918,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               case false | 0 | 0.0 | "" | null =>
                 // Right is falsy in || → result is left
                 // But also check: parent.operator == "||" && parent.left === compressor.self()
-                val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+                val par =
+                  try parent(0)
+                  catch { case _: IndexOutOfBoundsException => null }
                 val inParentOrWithLeft = par match {
                   case pbin: AstBinary if pbin.operator == "||" && pbin.left != null =>
                     pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
@@ -2933,7 +2951,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               if (lr != null && (lr.asInstanceOf[AnyRef] ne leftAnd.right.nn.asInstanceOf[AnyRef])) {
                 lr match {
                   case false | 0 | 0.0 | "" | null =>
-                    // lr is falsy — don't optimize
+                  // lr is falsy — don't optimize
                   case _ =>
                     // lr is truthy: x && truthy || y → x ? (x && truthy) : y
                     val cond = new AstConditional
@@ -3060,7 +3078,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         else if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0.0) self.left.nn
         else null
       if (zeroSide != null) {
-        val nonZeroSide = if ((zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef])) self.left.nn else self.right.nn
+        val nonZeroSide = if (zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
         if ((self.operator == "|" || self.operator == "^") && in32BitContext()) {
           return nonZeroSide // @nowarn
@@ -3084,7 +3102,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         else if (isFullMask(self.left.nn)) self.left.nn
         else null
       if (fullMask != null) {
-        val otherSide = if ((fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef])) self.left.nn else self.right.nn
+        val otherSide = if (fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x & -1 → x
         if (self.operator == "&" && in32BitContext()) {
           return otherSide // @nowarn
@@ -3125,7 +3143,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               // Check if rBin.right evaluates to a number
               var xNode: AstNode | Null = null
               var yNode: AstNode | Null = null
-              var y: Int = 0
+              var y:     Int            = 0
               val rrEval = Evaluate.evaluate(rBin.right.nn, this)
               if (rrEval.isInstanceOf[Double]) {
                 // z & (X | y)
@@ -3180,7 +3198,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       && self.right.nn.isInstanceOf[AstBinary]
       && self.right.nn.asInstanceOf[AstBinary].operator == self.operator
     ) {
-      val rBin = self.right.nn.asInstanceOf[AstBinary]
+      val rBin          = self.right.nn.asInstanceOf[AstBinary]
       val shouldFlatten =
         Inference.lazyOp.contains(self.operator) ||
           (self.operator == "+"
@@ -3218,8 +3236,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize assignment expressions.
     *
-    * ISS-111 fix: Add dead_code elimination for unreachable assignments
-    * and lift_sequences call for logical assignments.
+    * ISS-111 fix: Add dead_code elimination for unreachable assignments and lift_sequences call for logical assignments.
     */
   private def optimizeAssign(self: AstAssign): AstNode = {
     // Logical assignments (&&=, ||=, ??=) need lift_sequences
@@ -3252,13 +3269,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       val leftRef = self.left.nn.asInstanceOf[AstSymbolRef]
       theDef = leftRef.definition()
       if (theDef != null) {
-        val defScope = theDef.nn.scope
+        val defScope    = theDef.nn.scope
         val lambdaScope = findParent[AstLambda]
         if (defScope != null && lambdaScope != null && (defScope.asInstanceOf[AnyRef] eq lambdaScope.asInstanceOf[AnyRef])) {
           // Walk up to find if we're in an exit context (return/throw)
           var level = 0
-          var node: AstNode = self
-          var par: AstNode | Null = try { parent(level) } catch { case _: IndexOutOfBoundsException => null }
+          var node: AstNode        = self
+          var par:  AstNode | Null =
+            try parent(level)
+            catch { case _: IndexOutOfBoundsException => null }
           var foundExit = false
           boundary {
             while (par != null) {
@@ -3271,15 +3290,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                     break(())
                   }
                 case bin: AstBinary if bin.right != null && (bin.right.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) =>
-                  // Continue up
+                // Continue up
                 case seq: AstSequence if seq.expressions.nonEmpty && (seq.expressions.last.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) =>
-                  // Continue up
+                // Continue up
                 case _ =>
                   break(()) // Stop searching
               }
               node = par.nn
               level += 1
-              par = try { parent(level) } catch { case _: IndexOutOfBoundsException => null }
+              par =
+                try parent(level)
+                catch { case _: IndexOutOfBoundsException => null }
             }
           }
           if (foundExit) {
@@ -3353,7 +3374,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (optionBool("sequences") && self.left != null) {
       self.left.nn match {
         case seq: AstSequence if seq.expressions.size >= 2 =>
-          val exprs = ArrayBuffer.from(seq.expressions)
+          val exprs    = ArrayBuffer.from(seq.expressions)
           val lastExpr = exprs.remove(exprs.size - 1)
           self.left = lastExpr
           exprs.addOne(self)
@@ -3366,12 +3387,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def findParentBetween[T <: AstNode](maxLevel: Int)(using ct: scala.reflect.ClassTag[T]): T | Null = {
     var i = 0
     while (i < maxLevel) {
-      try {
+      try
         parent(i) match {
           case p if ct.runtimeClass.isInstance(p) => return p.asInstanceOf[T] // @nowarn
-          case _ =>
+          case _                                  =>
         }
-      } catch { case _: IndexOutOfBoundsException => return null }
+      catch { case _: IndexOutOfBoundsException => return null }
       i += 1
     }
     null
@@ -3379,11 +3400,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize property dot access — evaluate property reads on literals.
     *
-    * ISS-110 fix: Add unsafe_proto optimization and PropAccess-within-PropAccess
-    * early return guard.
+    * ISS-110 fix: Add unsafe_proto optimization and PropAccess-within-PropAccess early return guard.
     */
   private def optimizeDot(self: AstDot): AstNode = {
-    val parentNode = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+    val parentNode =
+      try parent(0)
+      catch { case _: IndexOutOfBoundsException => null }
 
     // Don't optimize LHS
     if (isLhs() != null) return self // @nowarn
@@ -3453,8 +3475,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // PropAccess-within-PropAccess early return guard
     // When self.expression is PropAccess and parent is also PropAccess, return early
-    if (self.expression != null && self.expression.nn.isInstanceOf[AstPropAccess] &&
-        parentNode != null && parentNode.nn.isInstanceOf[AstPropAccess]) {
+    if (
+      self.expression != null && self.expression.nn.isInstanceOf[AstPropAccess] &&
+      parentNode != null && parentNode.nn.isInstanceOf[AstPropAccess]
+    ) {
       return self // @nowarn
     }
 
@@ -3472,8 +3496,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize computed property access — convert to dot when key is a valid identifier.
     *
-    * ISS-109 fix: Add arguments[n] to named-param optimization and
-    * array-literal index flattening ([a,b,c][1] => side-effects + b).
+    * ISS-109 fix: Add arguments[n] to named-param optimization and array-literal index flattening ([a,b,c][1] => side-effects + b).
     */
   private def optimizeSub(self: AstSub): AstNode = {
     val expr = self.expression
@@ -3485,7 +3508,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (optionBool("properties") && prop != null) {
       val keyEv = Evaluate.evaluate(prop, this)
       val keyStr: String | Null = keyEv match {
-        case s: String => s
+        case s: String                          => s
         case d: Double if d == d.toInt.toDouble => d.toInt.toString
         case _ => null
       }
@@ -3534,8 +3557,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                     if (num.value == index.toDouble && index >= 0) {
                       // Check for duplicate or destructuring parameters
                       val params = scala.collection.mutable.Set.empty[String]
-                      var valid = true
-                      var n = 0
+                      var valid  = true
+                      var n      = 0
                       while (n < fn.argnames.size && valid) {
                         fn.argnames(n) match {
                           case sym: AstSymbolFunarg =>
@@ -3603,7 +3626,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (optionBool("properties") && optionBool("side_effects") && prop != null && expr != null) {
       prop match {
         case num: AstNumber if expr.isInstanceOf[AstArray] =>
-          val arr = expr.asInstanceOf[AstArray]
+          val arr   = expr.asInstanceOf[AstArray]
           val index = num.value.toInt
           if (num.value == index.toDouble && index >= 0 && index < arr.elements.size) {
             val retValue = arr.elements(index)
@@ -3612,15 +3635,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               case ref: AstSymbolRef =>
                 val fv = ref.fixedValue()
                 fv == null || !(fv.isInstanceOf[AstLambda] || fv.isInstanceOf[AstClass]) ||
-                  (fv.isInstanceOf[AstLambda] && !containsThis(fv.asInstanceOf[AstLambda])) ||
-                  (try { parent(0) } catch { case _: IndexOutOfBoundsException => null }).isInstanceOf[AstNew]
+                (fv.isInstanceOf[AstLambda] && !containsThis(fv.asInstanceOf[AstLambda])) ||
+                (try parent(0)
+                catch { case _: IndexOutOfBoundsException => null }).isInstanceOf[AstNew]
               case _: AstLambda | _: AstClass => false
-              case _ => true
+              case _                          => true
             }
             if (safeToFlatten && !retValue.isInstanceOf[AstExpansion]) {
               boundary {
                 var flatten = true
-                val values = ArrayBuffer.empty[AstNode]
+                val values  = ArrayBuffer.empty[AstNode]
                 // Elements after index
                 var i = arr.elements.size - 1
                 while (i > index) {
@@ -3702,7 +3726,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // If the entire chain expression is nullish, replace with void 0
     if (isNullish(self.expression.nn, this)) {
-      val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+      val p =
+        try parent(0)
+        catch { case _: IndexOutOfBoundsException => null }
       // `delete x?.y` → `delete 0` (not `delete undefined` which would be a syntax error)
       p match {
         case up: AstUnaryPrefix if up.operator == "delete" =>
@@ -3860,8 +3886,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Optimize `NaN` -> `0/0` only when NaN is shadowed or LHS is non-atomic. */
   private def optimizeNaN(self: AstNaN): AstNode = {
     val lhs = isLhs()
-    if ((lhs != null && !isAtomic(lhs.nn, self))
-      || findVariable("NaN") != null) {
+    if (
+      (lhs != null && !isAtomic(lhs.nn, self))
+      || findVariable("NaN") != null
+    ) {
       val zero1 = new AstNumber
       zero1.start = self.start
       zero1.end = self.end
@@ -3890,7 +3918,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       val num = new AstNumber; num.start = self.start; num.end = self.end; num.value = selfValue
       return num // @nowarn
     }
-    val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+    val p =
+      try parent(0)
+      catch { case _: IndexOutOfBoundsException => null }
     if (optionBool("booleans_as_integers")) {
       // Relax === to == in parent binary
       p match {
@@ -3930,7 +3960,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       if (evaluateRight != null && isUndefined(self.right.nn, this)) {
         // Check keep_fargs context: if parent is a Lambda, only drop when
         // keep_fargs is false, or parent is an IIFE
-        val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        val par =
+          try parent(0)
+          catch { case _: IndexOutOfBoundsException => null }
         par match {
           case lambda: AstLambda =>
             val keepFargs = optionBool("keep_fargs")
@@ -3938,7 +3970,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               return self.left.nn // @nowarn
             }
             // Check if parent's parent is a Call with the lambda as expression (IIFE)
-            val gpar = try { parent(1) } catch { case _: IndexOutOfBoundsException => null }
+            val gpar =
+              try parent(1)
+              catch { case _: IndexOutOfBoundsException => null }
             gpar match {
               case call: AstCall if call.expression != null && (call.expression.nn.asInstanceOf[AnyRef] eq lambda.asInstanceOf[AnyRef]) =>
                 return self.left.nn // @nowarn
@@ -3960,8 +3994,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Inline array-like spread: [...[a, b, c]] → [a, b, c]
     if (self.elements.nonEmpty) {
       val flattened = ArrayBuffer.empty[AstNode]
-      var changed = false
-      for (elem <- self.elements) {
+      var changed   = false
+      for (elem <- self.elements)
         elem match {
           case exp: AstExpansion if exp.expression != null =>
             exp.expression.nn match {
@@ -3974,7 +4008,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           case _ =>
             flattened.addOne(elem)
         }
-      }
       if (changed) self.elements = flattened
     }
     literalsInBooleanContext(self)
@@ -3985,8 +4018,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Inline object-prop spread: {...{a: 1, b: 2}} → {a: 1, b: 2}
     if (self.properties.nonEmpty) {
       val flattened = ArrayBuffer.empty[AstNode]
-      var changed = false
-      for (prop <- self.properties) {
+      var changed   = false
+      for (prop <- self.properties)
         prop match {
           case exp: AstExpansion if exp.expression != null =>
             exp.expression.nn match {
@@ -3999,7 +4032,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           case _ =>
             flattened.addOne(prop)
         }
-      }
       if (changed) self.properties = flattened
     }
     literalsInBooleanContext(self)
@@ -4063,12 +4095,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Check if a node contains a `this` reference (stops at non-arrow scope boundaries). */
   private def containsThis(node: AstNode): Boolean = {
     var found = false
-    val tw = new TreeWalker((n, _) => {
+    val tw    = new TreeWalker((n, _) =>
       if (found) true
       else if (n.isInstanceOf[AstThis]) { found = true; true }
       else if (!(n.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) && n.isInstanceOf[AstScope] && !n.isInstanceOf[AstArrow]) true
       else null
-    })
+    )
     node.walk(tw)
     found
   }
@@ -4125,15 +4157,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             case "<"  => negBin.operator = ">="; return negBin // @nowarn
             case ">=" => negBin.operator = "<"; return negBin // @nowarn
             case ">"  => negBin.operator = "<="; return negBin // @nowarn
-            case _ =>
+            case _    =>
           }
         }
         bin.operator match {
-          case "==" => negBin.operator = "!="; negBin
-          case "!=" => negBin.operator = "=="; negBin
+          case "=="  => negBin.operator = "!="; negBin
+          case "!="  => negBin.operator = "=="; negBin
           case "===" => negBin.operator = "!=="; negBin
           case "!==" => negBin.operator = "==="; negBin
-          case "&&" =>
+          case "&&"  =>
             negBin.operator = "||"
             negBin.left = negate(bin.left.nn, firstInStatement)
             negBin.right = negate(bin.right.nn, false)
@@ -4157,7 +4189,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Reset optimization flags before each pass. */
   private def resetOptFlags(toplevel: AstToplevel): Unit = {
     val hasTopRetain = topRetain != null && (topRetain ne ((_: Any) => false))
-    val tw = new TreeWalker((node, _) => {
+    val tw           = new TreeWalker((node, _) => {
       clearFlag(node, CLEAR_BETWEEN_PASSES)
 
       // Set TOP flag on retained top-level definitions
@@ -4186,20 +4218,20 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def dropConsole(toplevel: AstToplevel): AstToplevel = {
     val methodFilter: Option[Set[String]] = options.dropConsole match {
       case DropConsoleConfig.Methods(names) => Some(names)
-      case _                               => None
+      case _                                => None
     }
 
     val tt = new TreeTransformer(
-      before = (self, _) => {
+      before = (self, _) =>
         self match {
           case call: AstCall =>
             call.expression match {
               case pa: AstPropAccess =>
                 // Walk up property chains: console.log.bind(console) etc.
-                var nameNode: AstNode = pa.expression.nn
+                var nameNode: AstNode          = pa.expression.nn
                 var property: String | AstNode = pa.property
                 var keepWalking = true
-                while (keepWalking) {
+                while (keepWalking)
                   nameNode match {
                     case inner: AstPropAccess =>
                       property = inner.property
@@ -4207,12 +4239,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                     case _ =>
                       keepWalking = false
                   }
-                }
 
                 // Check if filtering by method name
                 val propertyName = property match {
                   case s: String => s
-                  case _         => null
+                  case _ => null
                 }
                 if (methodFilter.isDefined && propertyName != null && !methodFilter.get.contains(propertyName)) {
                   null // not a filtered method, keep it
@@ -4228,7 +4259,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
           case _ => null // not a call node
         }
-      }
     )
     toplevel.transform(tt).asInstanceOf[AstToplevel]
   }
@@ -4297,13 +4327,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               && fn.body(0).asInstanceOf[AstReturn].value != null =>
           // Check no `this` usage
           var usesThis = false
-          val tw = new TreeWalker((node, _) => {
+          val tw       = new TreeWalker((node, _) =>
             node match {
               case _: AstThis  => usesThis = true; true
               case _: AstScope => true
-              case _           => null
+              case _ => null
             }
-          })
+          )
           fn.walk(tw)
           if (!usesThis) {
             val arrow = new AstArrow
@@ -4318,7 +4348,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             kv.end = self.end
             kv.key = self.key match {
               case sym: AstSymbolMethod => sym.name
-              case other               => other
+              case other => other
             }
             kv.value = arrow
             kv.quote = self.quote
@@ -4332,8 +4362,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize object key-value: lift_key + function→concise method.
     *
-    * ISS-112 fix: Add unsafe_methods optimization that converts
-    * p:function(){} to p(){} and p:()=>{} to p(){} (concise method).
+    * ISS-112 fix: Add unsafe_methods optimization that converts p:function(){} to p(){} and p:()=>{} to p(){} (concise method).
     */
   private def optimizeObjectKeyVal(self: AstObjectKeyVal): AstNode = {
     liftKey(self)
@@ -4352,7 +4381,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       // ISS-198: Check if unsafe_methods is a regex filter or just true
       // Original: if (!(unsafe_methods instanceof RegExp) || unsafe_methods.test(self.key + ""))
       val keyStr = self.key match {
-        case s: String => s
+        case s:   String    => s
         case sym: AstSymbol => sym.name
         case _ => ""
       }
@@ -4364,11 +4393,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case s: String if s.startsWith("/") && s.lastIndexOf('/') > 0 =>
           // Parse regex from string like "/pattern/flags"
           try {
-            val lastSlash = s.lastIndexOf('/')
-            val pattern = s.substring(1, lastSlash)
-            val flags = s.substring(lastSlash + 1)
+            val lastSlash  = s.lastIndexOf('/')
+            val pattern    = s.substring(1, lastSlash)
+            val flags      = s.substring(lastSlash + 1)
             val regexFlags = if (flags.contains("i")) "(?i)" else ""
-            val regex = (regexFlags + pattern).r
+            val regex      = (regexFlags + pattern).r
             regex.findFirstIn(keyStr).isDefined
           } catch {
             case _: Exception => true // If regex parsing fails, allow all
@@ -4376,14 +4405,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ => true // Other truthy values: allow all
       }
       if (passesFilter) {
-        val value = self.value.nn
+        val value            = self.value.nn
         val isArrowWithBlock = value.isInstanceOf[AstArrow] &&
           value.asInstanceOf[AstArrow].body.nonEmpty &&
           !containsThis(value)
         val isFunction = value.isInstanceOf[AstFunction] && value.asInstanceOf[AstLambda].name == null
 
         if (isArrowWithBlock || isFunction) {
-          val lambda = value.asInstanceOf[AstLambda]
+          val lambda  = value.asInstanceOf[AstLambda]
           val concise = new AstConciseMethod
           concise.start = self.start
           concise.end = self.end
@@ -4436,15 +4465,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       // Check this isn't inside an export declaration
       // ISS-143: ancestors = [/^VarDef$/, /^(Const|Let|Var)$/, /^Export$/]
       val isExportDecl = {
-        var a = 0
-        var p = 0
+        var a       = 0
+        var p       = 0
         var matched = true
         while (a < 3 && matched) {
-          val par = try { parent(p) } catch { case _: IndexOutOfBoundsException => null }
+          val par =
+            try parent(p)
+            catch { case _: IndexOutOfBoundsException => null }
           if (par == null) { matched = false }
           else if (a == 0 && par.nn.nodeType == "Destructuring") { p += 1 }
           else {
-            val parType = par.nn.nodeType
+            val parType  = par.nn.nodeType
             val expected = a match {
               case 0 => parType == "VarDef"
               case 1 => parType == "Const" || parType == "Let" || parType == "Var"
@@ -4493,8 +4524,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize unary prefix expressions: !, void, typeof, -, +, ~, delete.
     *
-    * ISS-107 fix: Add negate binary in boolean context, tilde-xor distributivity,
-    * and is_32_bit_integer check for double-tilde.
+    * ISS-107 fix: Add negate binary in boolean context, tilde-xor distributivity, and is_32_bit_integer check for double-tilde.
     */
   private def optimizeUnaryPrefix(self: AstUnaryPrefix): AstNode = {
     if (self.expression == null) return self // @nowarn
@@ -4548,7 +4578,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             // ISS-107: !Binary → negate in boolean context (best_of with negate)
             case bin: AstBinary =>
               val negated = negate(bin, firstInStatement(this))
-              val result = bestOf(this, self, negated)
+              val result  = bestOf(this, self, negated)
               if (!(result eq self)) return result // @nowarn
             case _ =>
           }
@@ -4663,9 +4693,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // filter_for_side_effects: drop side-effect-free expressions (keep last always)
     // ISS-143: Use first_in_statement for correct first expression handling
-    var first = firstInStatement(this)
+    var first   = firstInStatement(this)
     val lastIdx = self.expressions.size - 1
-    var i = 0
+    var i       = 0
     while (i <= lastIdx) {
       var expr: AstNode | Null = self.expressions(i)
       if (i < lastIdx) {
@@ -4675,7 +4705,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // merge_sequence: flatten nested sequences
         expr.nn match {
           case seq: AstSequence => expressions.addAll(seq.expressions)
-          case _                => expressions.addOne(expr.nn)
+          case _ => expressions.addOne(expr.nn)
         }
         first = false
       }
@@ -4684,9 +4714,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // ISS-143: trim_right_for_undefined — trim trailing undefined expressions
     var end = expressions.size - 1
-    while (end > 0 && isUndefined(expressions(end), this)) {
+    while (end > 0 && isUndefined(expressions(end), this))
       end -= 1
-    }
     if (end < expressions.size - 1) {
       // Wrap the new last expression in void to preserve undefined return
       val voidExpr = new AstUnaryPrefix
@@ -4701,8 +4730,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // ISS-143: maintain_this_binding for single expression result
     if (end == 0 || expressions.size == 1) {
-      val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
-      val s = try { this.self() } catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
+      val p =
+        try parent(0)
+        catch { case _: IndexOutOfBoundsException => null }
+      val s =
+        try this.self()
+        catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
       val result = maintainThisBinding(if (p != null) p.nn else self, s, expressions(0))
       if (!result.isInstanceOf[AstSequence]) return optimizeNode(result) // @nowarn
       return result // @nowarn
@@ -4714,9 +4747,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize `new` expressions: unsafe constructor replacements.
     *
-    * ISS-142 fix: Add RegExp/Function/Error/Array→Call conversion.
-    * Original: `new Object/RegExp/Function/Error/Array(...)` → `Object/RegExp/Function/Error/Array(...)`
-    * This delegates to the call optimizer which handles these builtins.
+    * ISS-142 fix: Add RegExp/Function/Error/Array→Call conversion. Original: `new Object/RegExp/Function/Error/Array(...)` → `Object/RegExp/Function/Error/Array(...)` This delegates to the call
+    * optimizer which handles these builtins.
     */
   private def optimizeNew(self: AstNew): AstNode = {
     if (!optionBool("unsafe") || self.expression == null) return self // @nowarn
@@ -4743,20 +4775,21 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Optimize template strings: fold constant segments, unwrap single-segment.
     *
-    * ISS-143 fix: Add PrefixedTemplateString guard, length check, template-in-template
-    * flatten, and 3-segment folds to binary expressions.
+    * ISS-143 fix: Add PrefixedTemplateString guard, length check, template-in-template flatten, and 3-segment folds to binary expressions.
     */
   private def optimizeTemplateString(self: AstTemplateString): AstNode = {
     // ISS-143: Skip if evaluate is off or parent is PrefixedTemplateString
     if (!optionBool("evaluate")) return self // @nowarn
-    val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+    val par =
+      try parent(0)
+      catch { case _: IndexOutOfBoundsException => null }
     if (par != null && par.nn.isInstanceOf[AstPrefixedTemplateString]) return self // @nowarn
 
     if (self.segments.isEmpty) return self // @nowarn
 
     // Fold adjacent constant string segments
     val segments = ArrayBuffer.empty[AstNode]
-    var i = 0
+    var i        = 0
     while (i < self.segments.size) {
       val segment = self.segments(i)
       segment match {
@@ -4807,17 +4840,19 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
         case expr: AstNode =>
           // Check if expression evaluates to a string constant
-          val ev = Evaluate.evaluate(expr, this)
+          val ev    = Evaluate.evaluate(expr, this)
           val evStr = ev match {
-            case s: String => s
-            case d: Double => d.toString
+            case s: String  => s
+            case d: Double  => d.toString
             case b: Boolean => b.toString
             case null => "null"
-            case _ => null
+            case _    => null
           }
           // ISS-143: Length check - only fold if constant is shorter than ${segment}
-          if (evStr != null && (evStr.asInstanceOf[AnyRef] ne expr.asInstanceOf[AnyRef]) &&
-              evStr.length <= AstSize.size(expr) + "${}".length) {
+          if (
+            evStr != null && (evStr.asInstanceOf[AnyRef] ne expr.asInstanceOf[AnyRef]) &&
+            evStr.length <= AstSize.size(expr) + "${}".length
+          ) {
             // There should always be a previous segment if segment is a node
             // Merge into previous segment
             if (segments.nonEmpty) {
@@ -4877,15 +4912,15 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     // ISS-143: 3-segment folds to binary expressions
     if (segments.size == 3 && segments(1).isInstanceOf[AstNode] && !segments(1).isInstanceOf[AstTemplateSegment]) {
-      val middle = segments(1)
+      val middle                    = segments(1)
       val isStringOrNumberOrNullish =
         Inference.isString(middle, this) ||
-        Inference.isNumber(middle, this) ||
-        isNullish(middle, this) ||
-        optionBool("unsafe")
+          Inference.isNumber(middle, this) ||
+          isNullish(middle, this) ||
+          optionBool("unsafe")
       if (isStringOrNumberOrNullish) {
         val first = segments(0).asInstanceOf[AstTemplateSegment]
-        val last = segments(2).asInstanceOf[AstTemplateSegment]
+        val last  = segments(2).asInstanceOf[AstTemplateSegment]
         // `foo${bar}` => "foo" + bar (when last is empty)
         if (last.value == "") {
           val leftStr = new AstString
@@ -4925,25 +4960,24 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   // -----------------------------------------------------------------------
 
   /** Alternative is_lhs() that works within .optimize() by reading from the TreeWalker stack. */
-  def isLhs(): AstNode | Null = {
+  def isLhs(): AstNode | Null =
     try {
-      val selfNode = self()
+      val selfNode   = self()
       val parentNode = parent(0)
       if (parentNode == null) null
       else Inference.isLhs(selfNode, parentNode.nn)
     } catch {
       case _: IndexOutOfBoundsException => null // stack empty during initial transform
     }
-  }
 
   /** Lift sequences from a unary expression: !(a, b) → (a, !b) */
   private def liftSequencesUnary(self: AstUnary): AstNode = {
     if (optionBool("sequences") && self.expression != null) {
       self.expression.nn match {
         case seq: AstSequence if seq.expressions.size >= 2 =>
-          val exprs = ArrayBuffer.from(seq.expressions)
+          val exprs    = ArrayBuffer.from(seq.expressions)
           val lastExpr = exprs.remove(exprs.size - 1)
-          val cloned = self match {
+          val cloned   = self match {
             case _: AstUnaryPrefix =>
               val u = new AstUnaryPrefix
               u.operator = self.operator
@@ -4973,18 +5007,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       self.right.nn match {
         case seq: AstSequence if seq.expressions.size >= 2 =>
           val exprs = seq.expressions
-          val last = exprs.size - 1
+          val last  = exprs.size - 1
           // Check if all expressions before the last are side-effect-free (for non-assignment)
           val isAssign = self.operator == "=" && self.left.nn.isInstanceOf[AstSymbolRef]
-          var canLift = true
-          var splitAt = 0
-          while (splitAt < last && canLift) {
+          var canLift  = true
+          var splitAt  = 0
+          while (splitAt < last && canLift)
             if (!isAssign && hasSideEffects(exprs(splitAt), this)) canLift = false
             else splitAt += 1
-          }
           if (splitAt == last) {
             // Lift all: (a, b, c) → a, b, (x + c)
-            val x = ArrayBuffer.from(exprs.take(last))
+            val x      = ArrayBuffer.from(exprs.take(last))
             val cloned = new AstBinary
             cloned.operator = self.operator
             cloned.left = self.left
@@ -5017,8 +5050,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Check if a value is safe to flatten (not a `this`-bound method).
     *
-    * ISS-194: Port of safe_to_flatten from index.js:3516-3524.
-    * Returns false for Lambda/Class containing `this` unless parent is `new`.
+    * ISS-194: Port of safe_to_flatten from index.js:3516-3524. Returns false for Lambda/Class containing `this` unless parent is `new`.
     */
   private def safeToFlatten(value: AstNode | Null): Boolean = {
     var v: AstNode | Null = value
@@ -5037,12 +5069,16 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // Lambda is safe unless it contains `this` and parent is not `new`
         if (!containsThis(lambda)) true
         else {
-          val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+          val par =
+            try parent(0)
+            catch { case _: IndexOutOfBoundsException => null }
           par != null && par.nn.isInstanceOf[AstNew]
         }
       case _: AstClass =>
         // Class is always unsafe unless parent is `new`
-        val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        val par =
+          try parent(0)
+          catch { case _: IndexOutOfBoundsException => null }
         par != null && par.nn.isInstanceOf[AstNew]
       case _ => true
     }
@@ -5050,10 +5086,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** flatten_object: convert `{a:1, b:2}.a` → `[1, 2][0]` for property access on literal objects.
     *
-    * ISS-194: Add safe_to_flatten guard for this-bound methods.
-    * ISS-195: Add computed key sequence handling (return makeSequence([key, value])).
-    * ISS-196: Add ConciseMethod handling when unsafe_arrows enabled.
-    * ISS-197: Add Accessor to Function conversion.
+    * ISS-194: Add safe_to_flatten guard for this-bound methods. ISS-195: Add computed key sequence handling (return makeSequence([key, value])). ISS-196: Add ConciseMethod handling when unsafe_arrows
+    * enabled. ISS-197: Add Accessor to Function conversion.
     */
   private def flattenObject(self: AstPropAccess, key: String): AstNode | Null = {
     if (!optionBool("properties")) return null // @nowarn
@@ -5065,24 +5099,24 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
     self.expression match {
       case obj: AstObject if obj != null =>
-        val props = obj.properties
+        val props    = obj.properties
         var matchIdx = -1
-        var i = props.size - 1
+        var i        = props.size - 1
         while (i >= 0 && matchIdx < 0) {
           props(i) match {
             case kv: AstObjectKeyVal if !kv.computedKey() =>
               val propKey = kv.key match {
-                case s: String       => s
-                case sym: AstSymbol  => sym.name
-                case _               => ""
+                case s:   String    => s
+                case sym: AstSymbol => sym.name
+                case _ => ""
               }
               if (propKey == key) matchIdx = i
             // ISS-196: Also check ConciseMethod keys
             case cm: AstConciseMethod if !cm.computedKey() =>
               val propKey = cm.key match {
                 case sym: AstSymbolMethod => sym.name
-                case s: String            => s
-                case _                    => ""
+                case s:   String          => s
+                case _ => ""
               }
               if (propKey == key) matchIdx = i
             case _ =>
@@ -5094,10 +5128,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         // Check all props are flattenable (no computed keys, no getters/setters)
         // ISS-196: Include ConciseMethod when unsafe_arrows is enabled
         val allFlattenable = props.forall {
-          case kv: AstObjectKeyVal => !kv.computedKey()
+          case kv: AstObjectKeyVal  => !kv.computedKey()
           case cm: AstConciseMethod =>
             unsafeArrows && !cm.computedKey() && cm.value != null &&
-              !cm.value.nn.asInstanceOf[AstLambda].isGenerator
+            !cm.value.nn.asInstanceOf[AstLambda].isGenerator
           case _ => false
         }
         if (!allFlattenable) return null // @nowarn
@@ -5107,13 +5141,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         val matchedValue: AstNode | Null = matchedProp match {
           case kv: AstObjectKeyVal  => kv.value
           case cm: AstConciseMethod => cm.value
-          case _                    => null
+          case _ => null
         }
         if (!safeToFlatten(matchedValue)) return null // @nowarn
 
         // Build: [v0, v1, ...][matchIdx]
         val elements = ArrayBuffer.empty[AstNode]
-        for (p <- props) {
+        for (p <- props)
           p match {
             case kv: AstObjectKeyVal if kv.value != null =>
               var v: AstNode = kv.value.nn
@@ -5170,7 +5204,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
               }
             case _ =>
           }
-        }
         val arr = new AstArray
         arr.elements = elements
         arr.start = obj.start
@@ -5263,11 +5296,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           case block: AstBlockStatement =>
             block.body = ifNode.alternative match {
               case null => block.body.tail
-              case alt =>
+              case alt  =>
                 val rest = block.body.tail
                 alt.nn match {
                   case b: AstBlock => ArrayBuffer.from(b.body) ++ rest
-                  case s           => ArrayBuffer(s) ++ rest
+                  case s => ArrayBuffer(s) ++ rest
                 }
             }
           case _ =>
@@ -5298,7 +5331,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           case block: AstBlockStatement =>
             block.body = ifNode.body.nn match {
               case b: AstBlock => ArrayBuffer.from(b.body) ++ block.body.tail
-              case s           => ArrayBuffer(s) ++ block.body.tail
+              case s => ArrayBuffer(s) ++ block.body.tail
             }
           case _ =>
             self.body = ifNode.body
@@ -5312,9 +5345,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
   /** Check if an expression is a nullish check (== null or === null || === undefined).
     *
-    * ISS-143 fix: Add ===null||===undefined compound form check.
-    * This matches the original `is_nullish_check` function that handles both
-    * `foo == null` and `foo === null || foo === undefined` patterns.
+    * ISS-143 fix: Add ===null||===undefined compound form check. This matches the original `is_nullish_check` function that handles both `foo == null` and `foo === null || foo === undefined`
+    * patterns.
     */
   @annotation.nowarn("msg=unused private member") // used by optimizeConditional expansion (Batch 4)
   private def isNullishCheck(check: AstNode, checkSubject: AstNode): Boolean = {
@@ -5324,7 +5356,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     check match {
       // Form 1: foo == null
       case binary: AstBinary if binary.operator == "==" && binary.left != null && binary.right != null =>
-        val leftNullish = isNullish(binary.left.nn, this)
+        val leftNullish  = isNullish(binary.left.nn, this)
         val rightNullish = isNullish(binary.right.nn, this)
         if (leftNullish) {
           AstEquivalent.equivalentTo(binary.right.nn, checkSubject)
@@ -5336,12 +5368,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
       // ISS-143: Form 2: foo === null || foo === undefined
       case binary: AstBinary if binary.operator == "||" && binary.left != null && binary.right != null =>
-        var nullCmp: AstBinary | Null = null
+        var nullCmp:      AstBinary | Null = null
         var undefinedCmp: AstBinary | Null = null
 
         def findComparison(cmp: AstNode): Boolean = cmp match {
-          case cmpBin: AstBinary if (cmpBin.operator == "===" || cmpBin.operator == "==") &&
-            cmpBin.left != null && cmpBin.right != null =>
+          case cmpBin: AstBinary
+              if (cmpBin.operator == "===" || cmpBin.operator == "==") &&
+                cmpBin.left != null && cmpBin.right != null =>
             var found = 0
             var definedSide: AstNode | Null = null
 

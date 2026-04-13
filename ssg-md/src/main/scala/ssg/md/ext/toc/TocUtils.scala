@@ -53,7 +53,7 @@ object TocUtils {
     out.unmark().append("]:").mark().append('#').mark()
 
     val optionTitleHeading = options.getTitleHeading
-    val optionTitle = options.title
+    val optionTitle        = options.title
 
     if (defaultOptions == null || !optionTitleHeading.equals(defaultOptions.getTitleHeading)) { // @nowarn - Java interop: defaultOptions may be null
       if (optionTitle.nonEmpty) {
@@ -76,11 +76,11 @@ object TocUtils {
   @annotation.nowarn("msg=null")
   def markdownHeaderTexts(headings: ju.List[Heading], tocOptions: TocOptions): Pair[ju.List[Heading], ju.List[String]] = {
     val headingContents = new ju.ArrayList[String](headings.size())
-    val isReversed = tocOptions.listType == TocOptions.ListType.SORTED_REVERSED || tocOptions.listType == TocOptions.ListType.FLAT_REVERSED
-    val isSorted = tocOptions.listType == TocOptions.ListType.SORTED || tocOptions.listType == TocOptions.ListType.SORTED_REVERSED
-    val needText = isReversed || isSorted
+    val isReversed      = tocOptions.listType == TocOptions.ListType.SORTED_REVERSED || tocOptions.listType == TocOptions.ListType.FLAT_REVERSED
+    val isSorted        = tocOptions.listType == TocOptions.ListType.SORTED || tocOptions.listType == TocOptions.ListType.SORTED_REVERSED
+    val needText        = isReversed || isSorted
     val headingNodes: ju.HashMap[String, Heading] = if (!needText) null else new ju.HashMap[String, Heading](headings.size()) // @nowarn - Java interop: conditionally null
-    val headingTexts: ju.HashMap[String, String] = if (!needText || tocOptions.isTextOnly) null else new ju.HashMap[String, String](headings.size()) // @nowarn
+    val headingTexts: ju.HashMap[String, String]  = if (!needText || tocOptions.isTextOnly) null else new ju.HashMap[String, String](headings.size()) // @nowarn
 
     val it = headings.iterator()
     while (it.hasNext) {
@@ -92,7 +92,7 @@ object TocUtils {
         if (tocOptions.isTextOnly) headingText
         else heading.text.toString
 
-      val headerId = heading.anchorRefId
+      val headerId   = heading.anchorRefId
       val headerLink =
         if (headerId == null || headingContent.isEmpty) headingContent // @nowarn - Java interop
         else "[" + headingContent + "](#" + headerId + ")"
@@ -144,9 +144,8 @@ object TocUtils {
     if (options.isHtml) {
       val out = new MarkdownWriter(markdown.getOptions)
       val hIt = headings.iterator()
-      while (hIt.hasNext) {
+      while (hIt.hasNext)
         out.append(hIt.next().chars).line()
-      }
       out.append(getTocPrefix(options, defaultOptions))
 
       val options1: MutableDataHolder = new MutableDataSet(Nullable(document.asInstanceOf[ssg.md.util.data.DataHolder]))
@@ -162,12 +161,12 @@ object TocUtils {
       extensions.add(TocExtension.create())
       options1.set(Parser.EXTENSIONS, extensions.asInstanceOf[ju.Collection[Extension]])
 
-      val parser = Parser.builder(options1).build()
+      val parser       = Parser.builder(options1).build()
       val htmlRenderer = HtmlRenderer.builder(options1).build()
 
       val tocDocument = parser.parse(out.toString)
       // copy ref ids to make sure they are the same
-      var idx = 0
+      var idx     = 0
       val childIt = tocDocument.children.iterator()
       while (childIt.hasNext) {
         val node = childIt.next()
@@ -197,24 +196,23 @@ object TocUtils {
       }
 
       val headingLevels = new ju.ArrayList[Integer](headings.size())
-      val hIt = headings.iterator()
-      while (hIt.hasNext) {
+      val hIt           = headings.iterator()
+      while (hIt.hasNext)
         headingLevels.add(Integer.valueOf(hIt.next().level))
-      }
       renderMarkdownToc(markdown, headingLevels, headingTexts, options)
     }
   }
 
   def renderMarkdownToc(out: MarkdownWriter, headings: ju.List[Integer], headingTexts: ju.List[String], tocOptions: TocOptions): Unit = {
-    var initLevel = -1
-    var lastLevel = -1
-    val openedItems = new Array[Boolean](7)
-    val openedList = new Array[Boolean](7)
+    var initLevel             = -1
+    var lastLevel             = -1
+    val openedItems           = new Array[Boolean](7)
+    val openedList            = new Array[Boolean](7)
     val openedItemAppendCount = new Array[Int](7)
 
     var i = 0
     while (i < headings.size()) {
-      val headerText = headingTexts.get(i)
+      val headerText  = headingTexts.get(i)
       val headerLevel = if (tocOptions.listType != TocOptions.ListType.HIERARCHY) 1 else headings.get(i).intValue()
 
       if (initLevel == -1) {

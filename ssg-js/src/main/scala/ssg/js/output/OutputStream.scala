@@ -908,7 +908,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     if (token.file == null || token.file.isEmpty) return // @nowarn
     val name = node match {
       case sym: AstSymbol => sym.name
-      case _              => null
+      case _ => null
     }
     sm.nn.add(
       source = token.file,

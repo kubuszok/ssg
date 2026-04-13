@@ -16,7 +16,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 
 ## Build Rules
 
-- Scala **3.8.2**, compiler flags: `-deprecation -feature -no-indent -rewrite -Werror`
+- Scala **3.8.2**, compiler flags: `-deprecation -feature -no-indent -Werror`
 - **Linter flags**: `-Wimplausible-patterns -Wrecurse-with-default -Wenum-comment-discard -Wunused:imports,privates,locals,patvars,nowarn`
 - **Braces required** (`-no-indent`): `{}` for all `trait`, `class`, `enum`, method defs
 - **Split packages**: `package ssg` / `package md` / `package core` (never flat)

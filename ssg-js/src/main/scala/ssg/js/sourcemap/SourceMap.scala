@@ -36,7 +36,7 @@ class SourceMap(options: SourceMapOptions) {
   private val origMap: SourceMapConsumer | Null =
     options.orig match {
       case orig: SourceMapData => new SourceMapConsumer(orig)
-      case null                => null
+      case null => null
     }
 
   // Populate source content from the `files` option
@@ -46,7 +46,7 @@ class SourceMap(options: SourceMapOptions) {
     // Also pull from the original map's sourcesContent
     if (origMap != null) {
       val om = origMap.nn
-      var i = 0
+      var i  = 0
       while (i < om.sources.length) {
         val content = if (i < om.sourcesContent.length) om.sourcesContent(i) else null
         if (content != null) {
@@ -92,14 +92,16 @@ class SourceMap(options: SourceMapOptions) {
       val info = origMap.nn.originalPositionFor(origLine, origCol)
       if (info.source == null) {
         // No mapping in the original map — emit an unmapped segment
-        generator.addMapping(SourceMapping(
-          generatedLine = genLine,
-          generatedColumn = genCol,
-          source = null,
-          originalLine = 0,
-          originalColumn = 0,
-          name = null
-        ))
+        generator.addMapping(
+          SourceMapping(
+            generatedLine = genLine,
+            generatedColumn = genCol,
+            source = null,
+            originalLine = 0,
+            originalColumn = 0,
+            name = null
+          )
+        )
         return // @nowarn
       }
       actualSource = info.source.nn
@@ -108,14 +110,16 @@ class SourceMap(options: SourceMapOptions) {
       if (info.name != null) actualName = info.name
     }
 
-    generator.addMapping(SourceMapping(
-      generatedLine = genLine,
-      generatedColumn = genCol,
-      source = actualSource,
-      originalLine = actualOrigLine,
-      originalColumn = actualOrigCol,
-      name = actualName
-    ))
+    generator.addMapping(
+      SourceMapping(
+        generatedLine = genLine,
+        generatedColumn = genCol,
+        source = actualSource,
+        originalLine = actualOrigLine,
+        originalColumn = actualOrigCol,
+        name = actualName
+      )
+    )
     generator.setSourceContent(actualSource, sourcesContent.getOrElse(actualSource, null))
   }
 

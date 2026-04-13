@@ -99,27 +99,25 @@ final class DateFilterSuite extends munit.FunSuite {
 
   test("date filter: %B produces full month name via 'now'") {
     val result = render("{{ 'now' | date: '%B' }}")
-    val months = Set("January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December")
+    val months = Set("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
     assert(months.contains(result), s"Expected a month name, got: $result")
   }
 
   test("date filter: %b produces abbreviated month name via 'now'") {
     val result = render("{{ 'now' | date: '%b' }}")
-    val months = Set("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val months = Set("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     assert(months.contains(result), s"Expected abbreviated month, got: $result")
   }
 
   test("date filter: %A produces full weekday name via 'now'") {
     val result = render("{{ 'now' | date: '%A' }}")
-    val days = Set("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    val days   = Set("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
     assert(days.contains(result), s"Expected a weekday name, got: $result")
   }
 
   test("date filter: %a produces abbreviated weekday name via 'now'") {
     val result = render("{{ 'now' | date: '%a' }}")
-    val days = Set("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    val days   = Set("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     assert(days.contains(result), s"Expected abbreviated weekday, got: $result")
   }
 
@@ -250,8 +248,8 @@ final class DateFilterSuite extends munit.FunSuite {
 
   test("date filter: custom DateParser via Builder") {
     val customParser = new filters.date.DateParser()
-    val parser = new TemplateParser.Builder().withDateParser(customParser).build()
-    val vars = new JHashMap[String, Any]()
+    val parser       = new TemplateParser.Builder().withDateParser(customParser).build()
+    val vars         = new JHashMap[String, Any]()
     vars.put("ts", java.lang.Long.valueOf(1710505200L))
     val result = parser.parse("{{ ts | date: '%F' }}").render(vars)
     // Not UTC, so we just check it matches a date pattern
@@ -262,7 +260,7 @@ final class DateFilterSuite extends munit.FunSuite {
     val vars = new JHashMap[String, Any]()
     vars.put("ts", java.lang.Long.valueOf(0L))
     val utcParser = new TemplateParser.Builder().withDefaultTimeZone(ZoneId.of("UTC")).build()
-    val result = utcParser.parse("{{ ts | date: '%Y-%m-%d' }}").render(vars)
+    val result    = utcParser.parse("{{ ts | date: '%Y-%m-%d' }}").render(vars)
     assertEquals(result, "1970-01-01")
   }
 

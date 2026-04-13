@@ -52,9 +52,10 @@ enum EvalResult {
   * In the original JS, functions can be evaluated to a function object with properties like `.name` and `.length`. We use this wrapper to enable similar functionality.
   */
 final case class EvalFunction(node: AstLambda) {
+
   /** Get the function's name, or empty string if anonymous. */
   def name: String = node.name match {
-    case null       => ""
+    case null => ""
     case sym: AstSymbol => sym.name
     case _ => ""
   }
@@ -76,7 +77,9 @@ object Evaluate {
 
   /** Object.prototype methods that must not be overwritten by user object keys. */
   private val objectPrototypeFunctions: Set[String] = Set(
-    "toString", "valueOf", "constructor"
+    "toString",
+    "valueOf",
+    "constructor"
   )
 
   /** Line terminator escape mappings for regexp_source_fix. */
@@ -88,20 +91,18 @@ object Evaluate {
     '\u2029' -> "u2029"
   )
 
-  /** Subset of regexps that is not going to cause regexp based DDOS.
-    * See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
-    * The original JS regex: /^[\\/|\0\s\w\^$.\[\]()]*$/
-    * Note: \0 is the NUL character (U+0000)
+  /** Subset of regexps that is not going to cause regexp based DDOS. See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS The original JS regex:
+    * /^[\\/|\0\s\w\^$.\[\]()]*$/ Note: \0 is the NUL character (U+0000)
+    *
+    * We exclude NUL from the pattern for cross-platform compatibility (Scala Native regex doesn't support \u0000). Regexps containing NUL are rare and will be treated as unsafe.
     */
-  private val reSafeRegexp = """^[\\/|\u0000\s\w\^$.\[\]()]*$""".r
+  private val reSafeRegexp = """^[\\/|\s\w\^$.\[\]()]*$""".r
 
   /** Check if the regexp is safe for Terser to create without risking a RegExp DOS. */
   private def regexpIsSafe(source: String): Boolean =
-    reSafeRegexp.findFirstIn(source).isDefined
+    !source.contains('\u0000') && reSafeRegexp.findFirstIn(source).isDefined
 
-  /** Fix regexp source by escaping line terminators (V8 compatibility).
-    * V8 does not escape line terminators in regexp patterns in node 12.
-    * Also removes literal \0.
+  /** Fix regexp source by escaping line terminators (V8 compatibility). V8 does not escape line terminators in regexp patterns in node 12. Also removes literal \0.
     */
   private def regexpSourceFix(source: String): String = {
     val sb = new StringBuilder
@@ -159,8 +160,8 @@ object Evaluate {
         case null | false => result
         case _: scala.util.matching.Regex => result
         case _ if result.asInstanceOf[AnyRef] eq Nullish => node
-        case _: Map[?, ?] => node // object values (Map extends Function1)
-        case _: Seq[?]    => node // array values
+        case _: Map[?, ?]    => node // object values (Map extends Function1)
+        case _: Seq[?]       => node // array values
         case _: EvalFunction => node // evaluated function (used internally for .name/.length)
         case _: Function0[?] | _: Function1[?, ?] => node // function values
         case s: String =>
@@ -203,12 +204,12 @@ object Evaluate {
         prefix.expression != null && isConstantExpression(prefix.expression.nn)
       case binary: AstBinary =>
         binary.left != null && binary.right != null &&
-          isConstantExpression(binary.left.nn) && isConstantExpression(binary.right.nn)
+        isConstantExpression(binary.left.nn) && isConstantExpression(binary.right.nn)
       case seq: AstSequence =>
         seq.expressions.nonEmpty && seq.expressions.forall(isConstantExpression)
       case cond: AstConditional =>
         cond.condition != null && cond.consequent != null && cond.alternative != null &&
-          isConstantExpression(cond.condition.nn) && isConstantExpression(cond.consequent.nn) && isConstantExpression(cond.alternative.nn)
+        isConstantExpression(cond.condition.nn) && isConstantExpression(cond.consequent.nn) && isConstantExpression(cond.alternative.nn)
       case arr: AstArray =>
         arr.elements.forall(isConstantExpression)
       case _ => false
@@ -363,13 +364,13 @@ object Evaluate {
       // typeof special cases
       if (compressor.optionBool("typeofs") && prefix.operator == "typeof") {
         e.nn match {
-          case _: AstLambda => break("function")
+          case _:   AstLambda    => break("function")
           case ref: AstSymbolRef =>
             // Check fixed value for symbol references
             ref.fixedValue() match {
-              case _: AstLambda          => break("function")
+              case _: AstLambda => break("function")
               case _: AstObject | _: AstArray => break("object")
-              case _ => // continue to evaluate below
+              case _                          => // continue to evaluate below
             }
           case obj: AstObject if !Inference.hasSideEffects(obj, compressor) =>
             break("object")
@@ -468,7 +469,7 @@ object Evaluate {
       if (
         leftIsBigInt && (
           binary.operator == ">>>" ||
-          (binary.operator == "/" && right == BigInt(0))
+            (binary.operator == "/" && right == BigInt(0))
         )
       ) {
         break(binary)
@@ -728,9 +729,11 @@ object Evaluate {
                       val expr = dot.expression
                       if (expr == null) break(pa) // unevaluable
                       val evalExpr = evalNode(expr.nn, compressor, depth)
-                      if (evalExpr == null || (evalExpr.isInstanceOf[AstSymbolRef] &&
+                      if (
+                        evalExpr == null || (evalExpr.isInstanceOf[AstSymbolRef] &&
                           evalExpr.asInstanceOf[AstSymbolRef].definition() != null &&
-                          evalExpr.asInstanceOf[AstSymbolRef].definition().nn.undeclared)) {
+                          evalExpr.asInstanceOf[AstSymbolRef].definition().nn.undeclared)
+                      ) {
                         break(pa) // unevaluable
                       }
                     case _ if firstArg == null => break(pa) // unevaluable
@@ -745,20 +748,20 @@ object Evaluate {
             if (isPureNativeValue(ref.name, propName)) {
               // Return the actual value for known constants
               (ref.name, propName) match {
-                case ("Math", "E")              => break(Math.E)
-                case ("Math", "LN10")           => break(Math.log(10.0))
-                case ("Math", "LN2")            => break(Math.log(2.0))
-                case ("Math", "LOG2E")          => break(1.0 / Math.log(2.0))
-                case ("Math", "LOG10E")         => break(1.0 / Math.log(10.0))
-                case ("Math", "PI")             => break(Math.PI)
-                case ("Math", "SQRT1_2")        => break(Math.sqrt(0.5))
-                case ("Math", "SQRT2")          => break(Math.sqrt(2.0))
-                case ("Number", "MAX_VALUE")    => break(Double.MaxValue)
-                case ("Number", "MIN_VALUE")    => break(Double.MinPositiveValue)
-                case ("Number", "NaN")          => break(Double.NaN)
+                case ("Math", "E")                   => break(Math.E)
+                case ("Math", "LN10")                => break(Math.log(10.0))
+                case ("Math", "LN2")                 => break(Math.log(2.0))
+                case ("Math", "LOG2E")               => break(1.0 / Math.log(2.0))
+                case ("Math", "LOG10E")              => break(1.0 / Math.log(10.0))
+                case ("Math", "PI")                  => break(Math.PI)
+                case ("Math", "SQRT1_2")             => break(Math.sqrt(0.5))
+                case ("Math", "SQRT2")               => break(Math.sqrt(2.0))
+                case ("Number", "MAX_VALUE")         => break(Double.MaxValue)
+                case ("Number", "MIN_VALUE")         => break(Double.MinPositiveValue)
+                case ("Number", "NaN")               => break(Double.NaN)
                 case ("Number", "NEGATIVE_INFINITY") => break(Double.NegativeInfinity)
                 case ("Number", "POSITIVE_INFINITY") => break(Double.PositiveInfinity)
-                case _ => break(pa)
+                case _                               => break(pa)
               }
             }
             break(pa)
@@ -782,14 +785,14 @@ object Evaluate {
               case "dotAll"     => break(rv.flags.contains('s'))
               case "unicode"    => break(rv.flags.contains('u'))
               case "sticky"     => break(rv.flags.contains('y'))
-              case _ => break(pa)
+              case _            => break(pa)
             }
           case ef: EvalFunction =>
             // Function property access (.name, .length)
             propName match {
               case "name"   => break(ef.name)
               case "length" => break(ef.length.toDouble)
-              case _ => break(pa)
+              case _        => break(pa)
             }
           case m: Map[?, ?] =>
             // ISS-168: HOP check - only access if obj has own property
@@ -854,7 +857,7 @@ object Evaluate {
                 // first_arg = first_arg instanceof AST_Dot ? first_arg.expression : first_arg
                 firstArg = firstArg match {
                   case dot: AstDot => if (dot.expression != null) dot.expression.nn else firstArg
-                  case _           => firstArg
+                  case _ => firstArg
                 }
                 // If first_arg is null or has undeclared thedef, return unevaluable
                 firstArg match {
@@ -882,82 +885,95 @@ object Evaluate {
               if (ref.name == "Math") {
                 try
                   key match {
-                    case "abs"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.abs(d))
-                      case _ => break(call)
-                    }
-                    case "acos"  => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.acos(d))
-                      case _ => break(call)
-                    }
-                    case "asin"  => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.asin(d))
-                      case _ => break(call)
-                    }
-                    case "atan"  => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.atan(d))
-                      case _ => break(call)
-                    }
+                    case "abs" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.abs(d))
+                        case _               => break(call)
+                      }
+                    case "acos" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.acos(d))
+                        case _               => break(call)
+                      }
+                    case "asin" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.asin(d))
+                        case _               => break(call)
+                      }
+                    case "atan" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.atan(d))
+                        case _               => break(call)
+                      }
                     case "atan2" =>
                       if (globalArgs.size >= 2) {
                         (globalArgs(0), globalArgs(1)) match {
                           case (y: Double, x: Double) => break(Math.atan2(y, x))
-                          case _ => break(call)
+                          case _                      => break(call)
                         }
                       } else break(call)
-                    case "ceil"  => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.ceil(d))
-                      case _ => break(call)
-                    }
-                    case "cos"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.cos(d))
-                      case _ => break(call)
-                    }
-                    case "exp"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.exp(d))
-                      case _ => break(call)
-                    }
-                    case "floor" => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.floor(d))
-                      case _ => break(call)
-                    }
-                    case "log"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.log(d))
-                      case _ => break(call)
-                    }
-                    case "max"   =>
+                    case "ceil" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.ceil(d))
+                        case _               => break(call)
+                      }
+                    case "cos" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.cos(d))
+                        case _               => break(call)
+                      }
+                    case "exp" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.exp(d))
+                        case _               => break(call)
+                      }
+                    case "floor" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.floor(d))
+                        case _               => break(call)
+                      }
+                    case "log" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.log(d))
+                        case _               => break(call)
+                      }
+                    case "max" =>
                       val nums = globalArgs.collect { case d: Double => d }
                       if (nums.size == globalArgs.size && nums.nonEmpty)
                         break(nums.max)
                       else break(call)
-                    case "min"   =>
+                    case "min" =>
                       val nums = globalArgs.collect { case d: Double => d }
                       if (nums.size == globalArgs.size && nums.nonEmpty)
                         break(nums.min)
                       else break(call)
-                    case "pow"   =>
+                    case "pow" =>
                       if (globalArgs.size >= 2) {
                         (globalArgs(0), globalArgs(1)) match {
                           case (base: Double, exp: Double) => break(Math.pow(base, exp))
-                          case _ => break(call)
+                          case _                           => break(call)
                         }
                       } else break(call)
-                    case "round" => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.round(d).toDouble)
-                      case _ => break(call)
-                    }
-                    case "sin"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.sin(d))
-                      case _ => break(call)
-                    }
-                    case "sqrt"  => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.sqrt(d))
-                      case _ => break(call)
-                    }
-                    case "tan"   => globalArgs.headOption match {
-                      case Some(d: Double) => break(Math.tan(d))
-                      case _ => break(call)
-                    }
+                    case "round" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.round(d).toDouble)
+                        case _               => break(call)
+                      }
+                    case "sin" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.sin(d))
+                        case _               => break(call)
+                      }
+                    case "sqrt" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.sqrt(d))
+                        case _               => break(call)
+                      }
+                    case "tan" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(Math.tan(d))
+                        case _               => break(call)
+                      }
                     case _ => break(call)
                   }
                 catch {
@@ -969,14 +985,16 @@ object Evaluate {
               if (ref.name == "Number") {
                 try
                   key match {
-                    case "isFinite" => globalArgs.headOption match {
-                      case Some(d: Double) => break(d.isFinite)
-                      case _ => break(call)
-                    }
-                    case "isNaN" => globalArgs.headOption match {
-                      case Some(d: Double) => break(d.isNaN)
-                      case _ => break(call)
-                    }
+                    case "isFinite" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(d.isFinite)
+                        case _               => break(call)
+                      }
+                    case "isNaN" =>
+                      globalArgs.headOption match {
+                        case Some(d: Double) => break(d.isNaN)
+                        case _               => break(call)
+                      }
                     case _ => break(call)
                   }
                 catch {
@@ -988,11 +1006,12 @@ object Evaluate {
               if (ref.name == "Array") {
                 try
                   key match {
-                    case "isArray" => globalArgs.headOption match {
-                      case Some(_: Seq[?]) => break(true)
-                      case Some(_)         => break(false)
-                      case None            => break(call)
-                    }
+                    case "isArray" =>
+                      globalArgs.headOption match {
+                        case Some(_: Seq[?]) => break(true)
+                        case Some(_)         => break(false)
+                        case None            => break(call)
+                      }
                     case _ => break(call)
                   }
                 catch {
@@ -1098,7 +1117,7 @@ object Evaluate {
                     case "at" =>
                       args.headOption match {
                         case Some(d: Double) =>
-                          val idx = d.toInt
+                          val idx           = d.toInt
                           val normalizedIdx = if (idx < 0) arr.size + idx else idx
                           if (normalizedIdx >= 0 && normalizedIdx < arr.size) break(arr(normalizedIdx))
                           else break(()) // undefined
@@ -1110,7 +1129,7 @@ object Evaluate {
                       if (depth == 0) break(arr)
                       val flattened = arr.flatMap {
                         case inner: Seq[?] => inner
-                        case other         => Seq(other)
+                        case other => Seq(other)
                       }
                       break(flattened)
                     case "includes" =>
@@ -1124,7 +1143,7 @@ object Evaluate {
                       args.headOption match {
                         case Some(searchElement) =>
                           val fromIndex = if (args.size > 1) args(1).asInstanceOf[Double].toInt else 0
-                          val idx = arr.drop(fromIndex).indexOf(searchElement)
+                          val idx       = arr.drop(fromIndex).indexOf(searchElement)
                           break(if (idx >= 0) (idx + fromIndex).toDouble else -1.0)
                         case None => break(call)
                       }
@@ -1135,15 +1154,15 @@ object Evaluate {
                       args.headOption match {
                         case Some(searchElement) =>
                           val fromIndex = if (args.size > 1) args(1).asInstanceOf[Double].toInt else arr.size - 1
-                          val idx = arr.take(fromIndex + 1).lastIndexOf(searchElement)
+                          val idx       = arr.take(fromIndex + 1).lastIndexOf(searchElement)
                           break(idx.toDouble)
                         case None => break(call)
                       }
                     case "slice" =>
-                      val start = args.headOption.collect { case d: Double => d.toInt }.getOrElse(0)
-                      val end = if (args.size > 1) args(1).asInstanceOf[Double].toInt else arr.size
+                      val start           = args.headOption.collect { case d: Double => d.toInt }.getOrElse(0)
+                      val end             = if (args.size > 1) args(1).asInstanceOf[Double].toInt else arr.size
                       val normalizedStart = if (start < 0) Math.max(arr.size + start, 0) else start
-                      val normalizedEnd = if (end < 0) Math.max(arr.size + end, 0) else end
+                      val normalizedEnd   = if (end < 0) Math.max(arr.size + end, 0) else end
                       break(arr.slice(normalizedStart, normalizedEnd))
                     case "toString" | "valueOf" =>
                       break(arr.map(String.valueOf).mkString(","))
@@ -1187,7 +1206,7 @@ object Evaluate {
                         case _    => break(call)
                       }
                     case "toString" | "valueOf" => break(d)
-                    case _ => break(call)
+                    case _                      => break(call)
                   }
                 catch {
                   case _: Exception => break(call)

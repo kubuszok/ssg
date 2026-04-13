@@ -41,7 +41,7 @@ import ssg.js.ast.*
 import ssg.js.ast.AstEquivalent
 import ssg.js.compress.Common.*
 import ssg.js.compress.CompressorFlags.{ WRITE_ONLY, clearFlag }
-import ssg.js.compress.Inference.{ aborts, hasSideEffects, isLhs, isModified, lazyOp, mayThrow, unarySideEffects, isRefImmutable }
+import ssg.js.compress.Inference.{ aborts, hasSideEffects, isLhs, isModified, isRefImmutable, lazyOp, mayThrow, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
 import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
 
@@ -69,7 +69,7 @@ object TightenBody {
     */
   def tightenBody(statements: ArrayBuffer[AstNode], compressor: CompressorLike): Unit = {
     // Build a walker to get findScope
-    val tw = buildParentWalker(compressor)
+    val tw           = buildParentWalker(compressor)
     val nearestScope = tw.findScope()
     val defunScope   = if (nearestScope != null) nearestScope.nn.getDefunScope else null
 
@@ -96,11 +96,11 @@ object TightenBody {
       }
 
       val seqLimit = compressor.option("sequences") match {
-        case false    => 0
-        case true     => 200
+        case false => 0
+        case true  => 200
         case n: Int if n == 1 => 800
-        case n: Int   => n
-        case _        => 0
+        case n: Int           => n
+        case _ => 0
       }
       if (seqLimit > 0) {
         sequenceize(statements, compressor, seqLimit, markChanged)
@@ -121,9 +121,9 @@ object TightenBody {
 
   /** Build a TreeWalker with the parent stack from the compressor. */
   private def buildParentWalker(compressor: CompressorLike): TreeWalker = {
-    val tw = new TreeWalker()
-    var level = 0
-    var p     = compressor.parent(level)
+    val tw          = new TreeWalker()
+    var level       = 0
+    var p           = compressor.parent(level)
     val parentStack = ArrayBuffer.empty[AstNode]
     while (p != null) {
       parentStack.insert(0, p.nn)
@@ -276,14 +276,15 @@ object TightenBody {
   /** Get the body of a loop (unwrap BlockStatement if present). */
   private def loopBody(x: AstNode | Null): AstNode | Null =
     if (x == null) null
-    else x.nn match {
-      case it: AstIterationStatement =>
-        it.body match {
-          case bs: AstBlockStatement => bs
-          case _ => it
-        }
-      case _ => x
-    }
+    else
+      x.nn match {
+        case it: AstIterationStatement =>
+          it.body match {
+            case bs: AstBlockStatement => bs
+            case _ => it
+          }
+        case _ => x
+      }
 
   /** Remove statements that appear after return/throw/break/continue.
     *
@@ -295,7 +296,7 @@ object TightenBody {
     markChanged: () => Unit
   ): Unit = {
     // Build a walker to get loopcontrol_target
-    val tw = buildParentWalker(compressor)
+    val tw   = buildParentWalker(compressor)
     val self = compressor.parent() // self() in Terser — immediate parent
 
     var n = 0
@@ -308,12 +309,12 @@ object TightenBody {
 
       stat match {
         case lc: AstLoopControl =>
-          val lct = tw.loopcontrolTarget(lc)
+          val lct    = tw.loopcontrolTarget(lc)
           val dropIt = lc match {
             case _: AstBreak =>
               // Drop break if it doesn't target an iteration statement AND targets self
               lct != null && !lct.nn.isInstanceOf[AstIterationStatement] &&
-                (loopBody(lct) != null && self != null && (loopBody(lct).nn eq self.nn))
+              (loopBody(lct) != null && self != null && (loopBody(lct).nn eq self.nn))
             case _: AstContinue =>
               lct != null && self != null && (loopBody(lct) != null) && (loopBody(lct).nn eq self.nn)
             case _ => false
@@ -446,9 +447,9 @@ object TightenBody {
     val tw = buildParentWalker(compressor)
 
     // Check if we're in a lambda body
-    val self               = compressor.parent() // self() in Terser
-    val inLambda           = self != null && self.nn.isInstanceOf[AstLambda]
-    val multipleIfReturns  = hasMultipleIfReturns(statements)
+    val self              = compressor.parent() // self() in Terser
+    val inLambda          = self != null && self.nn.isInstanceOf[AstLambda]
+    val multipleIfReturns = hasMultipleIfReturns(statements)
 
     // Helper: check if an abrupt can be merged (returns are void, continue/break targets self)
     def canMergeFlow(ab: AstNode | Null): Boolean = {
@@ -471,8 +472,8 @@ object TightenBody {
         j += 1
       }
       ab.nn match {
-        case ret: AstReturn if inLambda && isReturnVoid(ret.value) => true
-        case cont: AstContinue =>
+        case ret:  AstReturn if inLambda && isReturnVoid(ret.value) => true
+        case cont: AstContinue                                      =>
           val lct = tw.loopcontrolTarget(cont)
           lct != null && self != null && (loopBody(lct) != null) && (self.nn eq loopBody(lct).nn)
         case brk: AstBreak =>
@@ -484,7 +485,7 @@ object TightenBody {
 
     // Helper: extract function definitions to move out of the if body
     def extractDefuns(i: Int): ArrayBuffer[AstNode] = {
-      val tail   = statements.slice(i + 1, statements.size)
+      val tail = statements.slice(i + 1, statements.size)
       while (statements.size > i + 1) statements.remove(statements.size - 1)
       val result = ArrayBuffer.empty[AstNode]
       tail.foreach { stat =>
@@ -536,7 +537,7 @@ object TightenBody {
             markChanged()
             statements.remove(i)
             i -= 1
-            // continue loop (skip rest of this iteration)
+          // continue loop (skip rest of this iteration)
           case ret: AstReturn
               if ret.value != null
                 && ret.value.nn.isInstanceOf[AstUnaryPrefix]
@@ -570,7 +571,7 @@ object TightenBody {
                   case _ =>
                 }
                 markChanged()
-                val negated = negate(ifStat.condition.nn)
+                val negated   = negate(ifStat.condition.nn)
                 val bodyBlock = new AstBlockStatement
                 bodyBlock.start = ifStat.start
                 bodyBlock.end = ifStat.end
@@ -634,9 +635,11 @@ object TightenBody {
             val value = ifStat.body.asInstanceOf[AstReturn].value
 
             // Pattern 4: if (foo()) return; return; -> foo(); return;
-            if (value == null && ifStat.alternative == null &&
-                (inLambda && next == null || (next != null && next.nn.isInstanceOf[AstReturn] &&
-                  next.nn.asInstanceOf[AstReturn].value == null))) {
+            if (
+              value == null && ifStat.alternative == null &&
+              (inLambda && next == null || (next != null && next.nn.isInstanceOf[AstReturn] &&
+                next.nn.asInstanceOf[AstReturn].value == null))
+            ) {
               markChanged()
               val ss = new AstSimpleStatement
               ss.start = ifStat.condition.nn.start
@@ -646,12 +649,14 @@ object TightenBody {
               i -= 1
             }
             // Pattern 5: if (foo()) return x; return y; -> return foo() ? x : y;
-            else if (value != null && ifStat.alternative == null &&
-                     next != null && next.nn.isInstanceOf[AstReturn] &&
-                     next.nn.asInstanceOf[AstReturn].value != null) {
+            else if (
+              value != null && ifStat.alternative == null &&
+              next != null && next.nn.isInstanceOf[AstReturn] &&
+              next.nn.asInstanceOf[AstReturn].value != null
+            ) {
               markChanged()
               val nextRet = next.nn.asInstanceOf[AstReturn]
-              val cond = new AstConditional
+              val cond    = new AstConditional
               cond.start = ifStat.start
               cond.end = nextRet.end
               cond.condition = ifStat.condition.nn
@@ -668,9 +673,11 @@ object TightenBody {
               i -= 1
             }
             // Pattern 6: if (foo()) return x; [return;] -> return foo() ? x : undefined;
-            else if (value != null && ifStat.alternative == null &&
-                     ((next == null && inLambda && multipleIfReturns) ||
-                       (next != null && next.nn.isInstanceOf[AstReturn]))) {
+            else if (
+              value != null && ifStat.alternative == null &&
+              ((next == null && inLambda && multipleIfReturns) ||
+                (next != null && next.nn.isInstanceOf[AstReturn]))
+            ) {
               markChanged()
               val alt: AstNode =
                 if (next != null && next.nn.asInstanceOf[AstReturn].value != null) {
@@ -702,12 +709,14 @@ object TightenBody {
             else if (compressor.optionBool("sequences") && inLambda && ifStat.alternative == null && value != null) {
               val prevIdx = prevIndex(statements, i)
               val prev    = if (prevIdx >= 0) statements(prevIdx) else null
-              if (prev != null && prev.nn.isInstanceOf[AstIf] &&
-                  prev.nn.asInstanceOf[AstIf].body.isInstanceOf[AstReturn] &&
-                  nextIndex(statements, j) == statements.size &&
-                  next != null && next.nn.isInstanceOf[AstSimpleStatement]) {
+              if (
+                prev != null && prev.nn.isInstanceOf[AstIf] &&
+                prev.nn.asInstanceOf[AstIf].body.isInstanceOf[AstReturn] &&
+                nextIndex(statements, j) == statements.size &&
+                next != null && next.nn.isInstanceOf[AstSimpleStatement]
+              ) {
                 markChanged()
-                val nextSS = next.nn.asInstanceOf[AstSimpleStatement]
+                val nextSS  = next.nn.asInstanceOf[AstSimpleStatement]
                 val voidRet = new AstReturn
                 voidRet.start = nextSS.start
                 voidRet.end = nextSS.end
@@ -822,9 +831,9 @@ object TightenBody {
   // -----------------------------------------------------------------------
 
   /** Convert statement into simple statement if possible. */
-  private def toSimpleStatement(block: AstNode | Null, decls: ArrayBuffer[AstNode]): AstNode | Null | Boolean = {
+  private def toSimpleStatement(block: AstNode | Null, decls: ArrayBuffer[AstNode]): AstNode | Null | Boolean =
     block match {
-      case null              => null
+      case null => null
       case bs: AstBlockStatement =>
         var stat: AstNode | Null = null
         var i = 0
@@ -844,19 +853,17 @@ object TightenBody {
         stat
       case other => other
     }
-  }
 
   /** Sequenceize pass 2: merge preceding simple statement into control structures.
     *
-    * `a; return b;` -> `return (a, b);`
-    * `a; for (init; ...) {}` -> `for (a, init; ...) {}`
+    * `a; return b;` -> `return (a, b);` `a; for (init; ...) {}` -> `for (a, init; ...) {}`
     */
   private def sequenceize2(
     statements:  ArrayBuffer[AstNode],
     compressor:  CompressorLike,
     markChanged: () => Unit
   ): Unit = {
-    var n    = 0
+    var n = 0
     var prev: AstSimpleStatement | Null = null
 
     def consSeq(right: AstNode): AstNode = {
@@ -872,21 +879,27 @@ object TightenBody {
       if (prev != null) {
         stat match {
           case exit: AstExit =>
-            val v = if (exit.value != null) exit.value.nn else {
-              val undef = new AstUndefined
-              undef.start = exit.start
-              undef.end = exit.end
-              undef
-            }
+            val v =
+              if (exit.value != null) exit.value.nn
+              else {
+                val undef = new AstUndefined
+                undef.start = exit.start
+                undef.end = exit.end
+                undef
+              }
             exit.value = consSeq(v)
 
           case forStat: AstFor if !forStat.init.isInstanceOf[AstDefinitionsLike] =>
             // Check that prev.body doesn't contain `x in y` binary
-            val hasInBinary = walk(prev.nn.body.nn, (node, _) => node match {
-              case _: AstScope => true // skip scopes
-              case bin: AstBinary if bin.operator == "in" => WalkAbort
-              case _ => null
-            })
+            val hasInBinary = walk(
+              prev.nn.body.nn,
+              (node, _) =>
+                node match {
+                  case _:   AstScope                          => true // skip scopes
+                  case bin: AstBinary if bin.operator == "in" => WalkAbort
+                  case _ => null
+                }
+            )
             if (!hasInBinary) {
               if (forStat.init != null)
                 forStat.init = consSeq(forStat.init.nn)
@@ -931,7 +944,7 @@ object TightenBody {
                 case _ => ifStat.body
               }
               val altStmt = alt match {
-                case null     => null
+                case null => null
                 case n: AstNode => n
                 case _ => ifStat.alternative
               }
@@ -1013,7 +1026,7 @@ object TightenBody {
     val exprs: ArrayBuffer[AstNode] = body match {
       case a: AstAssign if !a.logical => ArrayBuffer(a)
       case s: AstSequence             => ArrayBuffer.from(s.expressions)
-      case _                          => return null // @nowarn
+      case _ => return null // @nowarn
     }
 
     var trimmed = false
@@ -1024,8 +1037,9 @@ object TightenBody {
           assign.left match {
             case pa: AstPropAccess =>
               pa.expression match {
-                case ref: AstSymbolRef if varDef.name.isInstanceOf[AstSymbol] &&
-                                          ref.name == varDef.name.asInstanceOf[AstSymbol].name =>
+                case ref: AstSymbolRef
+                    if varDef.name.isInstanceOf[AstSymbol] &&
+                      ref.name == varDef.name.asInstanceOf[AstSymbol].name =>
                   // Check if right side is constant expression
                   if (Inference.isConstantExpression(assign.right.nn, nearestScope) == false) return if (trimmed) exprs else null // @nowarn
 
@@ -1036,7 +1050,7 @@ object TightenBody {
                       sub.property match {
                         case str: AstString => str.value
                         case num: AstNumber => num.value.toString
-                        case _              => return if (trimmed) exprs else null // @nowarn
+                        case _ => return if (trimmed) exprs else null // @nowarn
                       }
                     case _ => return if (trimmed) exprs else null // @nowarn
                   }
@@ -1045,43 +1059,46 @@ object TightenBody {
                   // Check if property already exists with different key
                   val ecmaVersion = compressor.option("ecma") match {
                     case n: Int => n
-                    case _      => 2020
+                    case _ => 2020
                   }
                   val hasStrict = compressor.hasDirective("use strict") != null
 
                   val diff: AstNode => Boolean =
                     if (ecmaVersion < 2015 && hasStrict)
-                      (node: AstNode) => node match {
-                        case p: AstObjectProperty =>
-                          val pKey: String | Null = p.key match {
-                            case s: String  => s
-                            case _: AstNode => null
-                          }
-                          pKey != propStr && (p.key match {
-                            case sym: AstSymbol => sym.name != propStr
-                            case _              => true
-                          })
-                        case _ => true
-                      }
+                      (node: AstNode) =>
+                        node match {
+                          case p: AstObjectProperty =>
+                            val pKey: String | Null = p.key match {
+                              case s: String  => s
+                              case _: AstNode => null
+                            }
+                            pKey != propStr && (p.key match {
+                              case sym: AstSymbol => sym.name != propStr
+                              case _ => true
+                            })
+                          case _ => true
+                        }
                     else
-                      (node: AstNode) => node match {
-                        case p: AstObjectProperty =>
-                          p.key match {
-                            case sym: AstSymbol => sym.name != propStr
-                            case _              => true
-                          }
-                        case _ => true
-                      }
+                      (node: AstNode) =>
+                        node match {
+                          case p: AstObjectProperty =>
+                            p.key match {
+                              case sym: AstSymbol => sym.name != propStr
+                              case _ => true
+                            }
+                          case _ => true
+                        }
 
                   if (!obj.properties.forall(diff)) return if (trimmed) exprs else null // @nowarn
 
                   // Find existing property with same key
                   val existing = obj.properties.collectFirst {
-                    case p: AstObjectProperty if (p.key match {
-                      case s: String      => s == propStr
-                      case sym: AstSymbol => sym.name == propStr
-                      case _              => false
-                    }) => p
+                    case p: AstObjectProperty if p.key match {
+                          case s:   String    => s == propStr
+                          case sym: AstSymbol => sym.name == propStr
+                          case _ => false
+                        } =>
+                      p
                   }
 
                   existing match {
@@ -1129,8 +1146,8 @@ object TightenBody {
     markChanged:  () => Unit
   ): Unit = {
     var defs: AstDefinitions | Null = null
-    var j    = -1
-    var i    = 0
+    var j = -1
+    var i = 0
 
     /** Extract object assignments from a value, updating j and statements. */
     def extractObjectAssignments(value: AstNode | Null, stat: AstNode, prev: AstNode | Null): AstNode | Null = {
@@ -1144,7 +1161,7 @@ object TightenBody {
         } else {
           value match {
             case seq: AstSequence => seq.expressions.last.asInstanceOf[AstAssign].left
-            case a: AstAssign     => a.left
+            case a:   AstAssign   => a.left
             case _ => value
           }
         }
@@ -1171,8 +1188,9 @@ object TightenBody {
             defs = d
           }
 
-        case u: AstUsing if prev != null && prev.nn.isInstanceOf[AstUsing] &&
-                            prev.nn.asInstanceOf[AstUsing].isAwait == u.isAwait =>
+        case u: AstUsing
+            if prev != null && prev.nn.isInstanceOf[AstUsing] &&
+              prev.nn.asInstanceOf[AstUsing].isAwait == u.isAwait =>
           prev.nn.asInstanceOf[AstUsing].definitions.addAll(u.definitions)
           markChanged()
 
@@ -1186,17 +1204,21 @@ object TightenBody {
             forStat.init = if (exprs.nn.nonEmpty) makeSequence(forStat.init.nn, exprs.nn) else null
             j += 1
             statements(j) = stat
-          } else if (prev != null && prev.nn.isInstanceOf[AstVar] &&
-              (forStat.init == null || forStat.init.nn.getClass == prev.nn.getClass)) {
+          } else if (
+            prev != null && prev.nn.isInstanceOf[AstVar] &&
+            (forStat.init == null || forStat.init.nn.getClass == prev.nn.getClass)
+          ) {
             if (forStat.init != null) {
               prev.nn.asInstanceOf[AstVar].definitions.addAll(forStat.init.nn.asInstanceOf[AstDefinitions].definitions)
             }
             forStat.init = prev.nn.asInstanceOf[AstVar]
             statements(j) = stat
             markChanged()
-          } else if (defs != null && defs.nn.isInstanceOf[AstVar] && forStat.init != null &&
-                     forStat.init.nn.isInstanceOf[AstVar] &&
-                     declarationsOnly(forStat.init.nn.asInstanceOf[AstVar])) {
+          } else if (
+            defs != null && defs.nn.isInstanceOf[AstVar] && forStat.init != null &&
+            forStat.init.nn.isInstanceOf[AstVar] &&
+            declarationsOnly(forStat.init.nn.asInstanceOf[AstVar])
+          ) {
             defs.nn.definitions.addAll(forStat.init.nn.asInstanceOf[AstDefinitions].definitions)
             forStat.init = null
             j += 1
@@ -1256,7 +1278,7 @@ object TightenBody {
   /** Check if LHS is read-only (cannot be assigned to). */
   private def isLhsReadOnly(lhs: AstNode): Boolean =
     lhs match {
-      case _: AstThis => true
+      case _:   AstThis      => true
       case ref: AstSymbolRef =>
         ref.definition() match {
           case null => false
@@ -1276,7 +1298,7 @@ object TightenBody {
         expr match {
           case _: AstRegExp   => false
           case _: AstConstant => true
-          case _              => isLhsReadOnly(expr)
+          case _ => isLhsReadOnly(expr)
         }
       case _ => false
     }
@@ -1284,9 +1306,9 @@ object TightenBody {
   /** Main collapse_vars pass.
     *
     * Search from right to left for assignment-like expressions:
-    * - `var a = x;`
-    * - `a = x;`
-    * - `++a`
+    *   - `var a = x;`
+    *   - `a = x;`
+    *   - `++a`
     *
     * For each candidate, scan from left to right for first usage, then try to fold assignment into the site for compression.
     */
@@ -1307,23 +1329,32 @@ object TightenBody {
 
     // Variables used during scanning (some only used in full implementation)
     // @nowarn annotations suppress warnings for vars used in simplified implementation
-    @annotation.nowarn("msg=local variable") var abort       = false
-    @annotation.nowarn("msg=local variable") var hit         = false
-    @annotation.nowarn("msg=local variable") var hitIndex    = 0
-    var hitStack    = ArrayBuffer.empty[AstNode]
-    var candidate:  AstNode = null.asInstanceOf[AstNode]
-    var valueDef:   SymbolDef | Null = null
-    @annotation.nowarn("msg=local variable") var stopAfter:  AstNode | Null = null
-    @annotation.nowarn("msg=local variable") var stopIfHit:  AstNode | Null = null
-    var lhs:        AstNode | Null = null
-    var lvalues:    mutable.Map[String, LValueInfo] = mutable.Map.empty
-    @annotation.nowarn("msg=local variable") var lhsLocal    = false
+    @annotation.nowarn("msg=local variable")
+    var abort = false
+    @annotation.nowarn("msg=local variable")
+    var hit = false
+    @annotation.nowarn("msg=local variable")
+    var hitIndex = 0
+    var hitStack = ArrayBuffer.empty[AstNode]
+    var candidate: AstNode          = null.asInstanceOf[AstNode]
+    var valueDef:  SymbolDef | Null = null
+    @annotation.nowarn("msg=local variable")
+    var stopAfter: AstNode | Null = null
+    @annotation.nowarn("msg=local variable")
+    var stopIfHit: AstNode | Null                  = null
+    var lhs:       AstNode | Null                  = null
+    var lvalues:   mutable.Map[String, LValueInfo] = mutable.Map.empty
+    @annotation.nowarn("msg=local variable")
+    var lhsLocal    = false
     var sideEffects = false
-    @annotation.nowarn("msg=local variable") var replaceAll  = false
-    @annotation.nowarn("msg=local variable") var mayThrowFlag = false
-    var funarg      = false
-    var replaced    = 0
-    @annotation.nowarn("msg=local variable") var canReplace  = false
+    @annotation.nowarn("msg=local variable")
+    var replaceAll = false
+    @annotation.nowarn("msg=local variable")
+    var mayThrowFlag = false
+    var funarg       = false
+    var replaced     = 0
+    @annotation.nowarn("msg=local variable")
+    var canReplace = false
 
     /** Info about an lvalue reference. */
     final case class LValueInfo(d: SymbolDef, modified: Boolean)
@@ -1351,10 +1382,10 @@ object TightenBody {
       }
 
     /** Get the left-hand side of a candidate. */
-    def getLhs(expr: AstNode): AstNode | Null = {
+    def getLhs(expr: AstNode): AstNode | Null =
       expr match {
         case a: AstAssign if a.logical => null
-        case v: AstVarDef =>
+        case v: AstVarDef              =>
           v.name match {
             case sym: AstSymbolDeclaration =>
               val d = sym.definition()
@@ -1398,11 +1429,13 @@ object TightenBody {
             case ref: AstSymbolRef =>
               ref.definition() match {
                 case null => l
-                case d =>
-                  if (d.nn.orig.nonEmpty &&
-                      (d.nn.orig(0).isInstanceOf[AstSymbolConst] ||
-                       d.nn.orig(0).isInstanceOf[AstSymbolLet] ||
-                       d.nn.orig(0).isInstanceOf[AstSymbolUsing])) {
+                case d    =>
+                  if (
+                    d.nn.orig.nonEmpty &&
+                    (d.nn.orig(0).isInstanceOf[AstSymbolConst] ||
+                      d.nn.orig(0).isInstanceOf[AstSymbolLet] ||
+                      d.nn.orig(0).isInstanceOf[AstSymbolUsing])
+                  ) {
                     null
                   } else {
                     l
@@ -1413,16 +1446,15 @@ object TightenBody {
         case u: AstUnary => u.expression
         case _ => null
       }
-    }
 
     /** Check if VarDef's value is a simple SymbolRef that can be mangled. */
     def mangleableVar(varDef: AstVarDef): Option[SymbolDef] =
       varDef.value match {
         case ref: AstSymbolRef if ref.name != "arguments" =>
           ref.definition() match {
-            case null => None
+            case null                 => None
             case d if d.nn.undeclared => None
-            case d =>
+            case d                    =>
               valueDef = d.nn
               Some(d.nn)
           }
@@ -1443,7 +1475,7 @@ object TightenBody {
           case ref: AstSymbolRef =>
             ref.definition() match {
               case null =>
-              case d =>
+              case d    =>
                 val prev = result.get(ref.name)
                 if (prev.isEmpty || !prev.get.modified) {
                   result(ref.name) = LValueInfo(d.nn, isModified(compressor, tw, node, node, 0))
@@ -1470,10 +1502,10 @@ object TightenBody {
         case ref: AstSymbolRef =>
           val d = ref.definition()
           d != null && d.nn.scope.getDefunScope == defunScope &&
-            !(inLoop &&
-              (lvalues.contains(ref.name) ||
-               candidate.isInstanceOf[AstUnary] ||
-               (candidate.isInstanceOf[AstAssign] &&
+          !(inLoop &&
+            (lvalues.contains(ref.name) ||
+              candidate.isInstanceOf[AstUnary] ||
+              (candidate.isInstanceOf[AstAssign] &&
                 !candidate.asInstanceOf[AstAssign].logical &&
                 candidate.asInstanceOf[AstAssign].operator != "=")))
         case _ => false
@@ -1499,7 +1531,7 @@ object TightenBody {
         case ref: AstSymbolRef =>
           ref.definition() match {
             case null => false
-            case d =>
+            case d    =>
               val refCount = d.nn.references.size - d.nn.replaced
               refCount == (if (candidate.isInstanceOf[AstVarDef]) 1 else 2)
           }
@@ -1509,13 +1541,13 @@ object TightenBody {
 
     /** Check if symbol may be modified from outside the current scope. */
     @annotation.nowarn("msg=unused local definition")
-    def mayModify(sym: AstNode): Boolean = {
+    def mayModify(sym: AstNode): Boolean =
       sym match {
-        case _: AstDestructuring => true
-        case ref: AstSymbolRef =>
+        case _:   AstDestructuring => true
+        case ref: AstSymbolRef     =>
           ref.definition() match {
             case null => true
-            case d =>
+            case d    =>
               if (d.nn.orig.size == 1 && d.nn.orig(0).isInstanceOf[AstSymbolDefun]) {
                 false
               } else if (d.nn.scope.getDefunScope != defunScope) {
@@ -1526,20 +1558,19 @@ object TightenBody {
           }
         case _ => true
       }
-    }
 
     /** Check for side effects external to the current scope. */
     @annotation.nowarn("msg=unused")
-    def sideEffectsExternal(node: AstNode, isLhsArg: Boolean = false): Boolean = {
+    def sideEffectsExternal(node: AstNode, isLhsArg: Boolean = false): Boolean =
       node match {
-        case a: AstAssign  => sideEffectsExternal(a.left.nn, isLhsArg = true)
-        case u: AstUnary   => sideEffectsExternal(u.expression.nn, isLhsArg = true)
-        case v: AstVarDef  => v.value != null && sideEffectsExternal(v.value.nn, isLhsArg = false)
+        case a: AstAssign => sideEffectsExternal(a.left.nn, isLhsArg = true)
+        case u: AstUnary  => sideEffectsExternal(u.expression.nn, isLhsArg = true)
+        case v: AstVarDef => v.value != null && sideEffectsExternal(v.value.nn, isLhsArg = false)
         case _ =>
           if (isLhsArg) {
             node match {
-              case dot: AstDot => sideEffectsExternal(dot.expression.nn, isLhsArg = true)
-              case sub: AstSub => sideEffectsExternal(sub.expression.nn, isLhsArg = true)
+              case dot: AstDot       => sideEffectsExternal(dot.expression.nn, isLhsArg = true)
+              case sub: AstSub       => sideEffectsExternal(sub.expression.nn, isLhsArg = true)
               case ref: AstSymbolRef =>
                 ref.definition() match {
                   case null => true
@@ -1551,7 +1582,6 @@ object TightenBody {
             false
           }
       }
-    }
 
     // -----------------------------------------------------------------------
     // handle_custom_scan_order: custom traversal order for certain AST nodes
@@ -1565,7 +1595,7 @@ object TightenBody {
         case sw: AstSwitch =>
           sw.expression = sw.expression.nn.transform(scanner)
           var i = 0
-          while (!abort && i < sw.body.size) {
+          while (!abort && i < sw.body.size)
             sw.body(i) match {
               case branch: AstCase =>
                 if (!hit) {
@@ -1590,7 +1620,6 @@ object TightenBody {
                 }
               case _ => i += 1
             }
-          }
           abort = true
           return node // @nowarn
         case _ =>
@@ -1607,10 +1636,12 @@ object TightenBody {
 
       parent.nn match {
         case assign: AstAssign =>
-          if (writeOnly && !assign.logical &&
-              !(assign.left.nn.isInstanceOf[AstPropAccess] ||
-                (assign.left.nn.isInstanceOf[AstSymbolRef] &&
-                  lvalues.contains(assign.left.nn.asInstanceOf[AstSymbolRef].name)))) {
+          if (
+            writeOnly && !assign.logical &&
+            !(assign.left.nn.isInstanceOf[AstPropAccess] ||
+              (assign.left.nn.isInstanceOf[AstSymbolRef] &&
+                lvalues.contains(assign.left.nn.asInstanceOf[AstSymbolRef].name)))
+          ) {
             findStop(parent.nn, level + 1, writeOnly, scanner)
           } else {
             node
@@ -1684,19 +1715,20 @@ object TightenBody {
     // has_overlapping_symbol: check if arg references vars defined in fn
     // -----------------------------------------------------------------------
     def hasOverlappingSymbol(fn: AstLambda, arg: AstNode, fnStrict: Boolean): Boolean = {
-      var found     = false
+      var found       = false
       var scanThisVar = !fn.isInstanceOf[AstArrow]
 
-      val tw = new TreeWalker((node, _) => {
+      val tw = new TreeWalker((node, _) =>
         if (found) {
           true // skip
         } else {
           node match {
-            case ref: AstSymbolRef if fn.variables.contains(ref.name) ||
-                                      (ref.definition() != null && redefinedWithinScope(ref.definition().nn, fn)) =>
+            case ref: AstSymbolRef
+                if fn.variables.contains(ref.name) ||
+                  (ref.definition() != null && redefinedWithinScope(ref.definition().nn, fn)) =>
               val s = ref.definition().nn.scope
               if (!(s.asInstanceOf[AnyRef] eq defunScope.asInstanceOf[AnyRef])) {
-                var ps = s.parentScope
+                var ps         = s.parentScope
                 var foundDefun = false
                 while (ps != null && !foundDefun) {
                   if (ps.nn.asInstanceOf[AnyRef] eq defunScope.asInstanceOf[AnyRef]) {
@@ -1729,7 +1761,7 @@ object TightenBody {
               null // continue descent
           }
         }
-      })
+      )
       arg.walk(tw)
       found
     }
@@ -1740,12 +1772,15 @@ object TightenBody {
     def argIsInjectable(arg: AstNode): Boolean = {
       if (arg.isInstanceOf[AstExpansion]) return false // @nowarn
       var containsAwait = false
-      walk(arg, (node, _) => node match {
-        case _: AstAwait =>
-          containsAwait = true
-          WalkAbort
-        case _ => null
-      })
+      walk(arg,
+           (node, _) =>
+             node match {
+               case _: AstAwait =>
+                 containsAwait = true
+                 WalkAbort
+               case _ => null
+             }
+      )
       !containsAwait
     }
 
@@ -1767,9 +1802,9 @@ object TightenBody {
               if (!call.args.forall(argIsInjectable)) return // @nowarn
 
               val fnStrictDir = compressor.hasDirective("use strict")
-              val fnStrict = fnStrictDir != null && !lambda.body.contains(fnStrictDir.nn)
+              val fnStrict    = fnStrictDir != null && !lambda.body.contains(fnStrictDir.nn)
 
-              val len   = lambda.argnames.size
+              val len = lambda.argnames.size
               args = ArrayBuffer.from(call.args.slice(len, call.args.size))
               val names = mutable.Set.empty[String]
 
@@ -1781,7 +1816,7 @@ object TightenBody {
                 // Check if reassigned
                 val d = sym match {
                   case s: AstSymbol => s.definition()
-                  case _            => null
+                  case _ => null
                 }
                 val isReassigned = d != null && d.nn.orig.size > 1
                 if (!isReassigned) {
@@ -1793,8 +1828,8 @@ object TightenBody {
                   args.nn.insert(0, varDef)
 
                   val symName = sym match {
-                    case s: AstSymbol           => s.name
-                    case exp: AstExpansion      => exp.expression.nn.asInstanceOf[AstSymbol].name
+                    case s:   AstSymbol    => s.name
+                    case exp: AstExpansion => exp.expression.nn.asInstanceOf[AstSymbol].name
                     case _ => ""
                   }
                   if (!names.contains(symName)) {
@@ -1830,8 +1865,10 @@ object TightenBody {
                           voidExpr.operator = "void"
                           voidExpr.expression = zero
                           candArg = voidExpr
-                        } else if (candArg.nn.isInstanceOf[AstLambda] && candArg.nn.asInstanceOf[AstLambda].pinned ||
-                                   hasOverlappingSymbol(lambda, candArg.nn, fnStrict)) {
+                        } else if (
+                          candArg.nn.isInstanceOf[AstLambda] && candArg.nn.asInstanceOf[AstLambda].pinned ||
+                          hasOverlappingSymbol(lambda, candArg.nn, fnStrict)
+                        ) {
                           candArg = null
                         }
                         if (candArg != null) {
@@ -1859,7 +1896,7 @@ object TightenBody {
     def removeCandidate(expr: AstNode): Boolean = {
       expr match {
         case v: AstVarDef if v.name.isInstanceOf[AstSymbolFunarg] =>
-          val iife = compressor.parent()
+          val iife     = compressor.parent()
           val argnames = compressor.parent().nn match {
             case l: AstLambda => l.argnames
             case _ => return true // @nowarn
@@ -1889,11 +1926,13 @@ object TightenBody {
       var found = false
 
       val remover = new TreeTransformer(
-        before = (node, _) => {
+        before = (node, _) =>
           if (found) node
-          else if ((node.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]) ||
-                   (node.isInstanceOf[AstSimpleStatement] &&
-                     (node.asInstanceOf[AstSimpleStatement].body.nn.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]))) {
+          else if (
+            (node.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]) ||
+            (node.isInstanceOf[AstSimpleStatement] &&
+              (node.asInstanceOf[AstSimpleStatement].body.nn.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]))
+          ) {
             found = true
             node match {
               case vd: AstVarDef =>
@@ -1919,9 +1958,8 @@ object TightenBody {
             }
           } else {
             null // continue descent
-          }
-        },
-        after = node => {
+          },
+        after = node =>
           node match {
             case seq: AstSequence =>
               seq.expressions.size match {
@@ -1931,7 +1969,6 @@ object TightenBody {
               }
             case _ => node
           }
-        }
       )
 
       statements(statIndex) = statements(statIndex).transform(remover)
@@ -1974,7 +2011,7 @@ object TightenBody {
           extractCandidates(dw.condition.nn)
           dw.body match {
             case _: AstBlock =>
-            case b           => extractCandidates(b)
+            case b => extractCandidates(b)
           }
 
         case exit: AstExit if exit.value != null =>
@@ -1986,26 +2023,26 @@ object TightenBody {
           if (forStat.step != null) extractCandidates(forStat.step.nn)
           forStat.body match {
             case _: AstBlock =>
-            case b           => extractCandidates(b)
+            case b => extractCandidates(b)
           }
 
         case forIn: AstForIn =>
           extractCandidates(forIn.obj.nn)
           forIn.body match {
             case _: AstBlock =>
-            case b           => extractCandidates(b)
+            case b => extractCandidates(b)
           }
 
         case ifStat: AstIf =>
           extractCandidates(ifStat.condition.nn)
           ifStat.body match {
             case _: AstBlock =>
-            case b           => extractCandidates(b)
+            case b => extractCandidates(b)
           }
           if (ifStat.alternative != null) {
             ifStat.alternative.nn match {
               case _: AstBlock =>
-              case b           => extractCandidates(b)
+              case b => extractCandidates(b)
             }
           }
 
@@ -2060,50 +2097,49 @@ object TightenBody {
             val parent = scanner.parent()
 
             // Check for abort conditions
-            val shouldAbort = {
+            val shouldAbort =
               (node.isInstanceOf[AstAssign] &&
                 (node.asInstanceOf[AstAssign].logical ||
                   (node.asInstanceOf[AstAssign].operator != "=" &&
                     lhs != null && AstEquivalent.equivalentTo(lhs.nn, node.asInstanceOf[AstAssign].left.nn)))) ||
-              node.isInstanceOf[AstAwait] ||
-              node.isInstanceOf[AstUsing] ||
-              (node.isInstanceOf[AstCall] && lhs != null && lhs.nn.isInstanceOf[AstPropAccess] &&
-                AstEquivalent.equivalentTo(lhs.nn, node.asInstanceOf[AstCall].expression.nn)) ||
-              ((node.isInstanceOf[AstCall] || node.isInstanceOf[AstPropAccess]) &&
-                (node match {
-                  case c: AstCall       => c.optional
-                  case p: AstPropAccess => p.optional
-                  case _                => false
-                })) ||
-              node.isInstanceOf[AstDebugger] ||
-              node.isInstanceOf[AstDestructuring] ||
-              (node.isInstanceOf[AstExpansion] &&
-                node.asInstanceOf[AstExpansion].expression.nn.isInstanceOf[AstSymbol] &&
-                (node.asInstanceOf[AstExpansion].expression.nn.isInstanceOf[AstThis] ||
-                  {
-                    val expRef = node.asInstanceOf[AstExpansion].expression.nn.asInstanceOf[AstSymbol]
-                    val expDef = expRef.definition()
-                    expDef != null && expDef.nn.references.size > 1
+                node.isInstanceOf[AstAwait] ||
+                node.isInstanceOf[AstUsing] ||
+                (node.isInstanceOf[AstCall] && lhs != null && lhs.nn.isInstanceOf[AstPropAccess] &&
+                  AstEquivalent.equivalentTo(lhs.nn, node.asInstanceOf[AstCall].expression.nn)) ||
+                ((node.isInstanceOf[AstCall] || node.isInstanceOf[AstPropAccess]) &&
+                  (node match {
+                    case c: AstCall       => c.optional
+                    case p: AstPropAccess => p.optional
+                    case _ => false
                   })) ||
-              (node.isInstanceOf[AstIterationStatement] && !node.isInstanceOf[AstFor]) ||
-              node.isInstanceOf[AstLoopControl] ||
-              node.isInstanceOf[AstTry] ||
-              node.isInstanceOf[AstWith] ||
-              node.isInstanceOf[AstYield] ||
-              node.isInstanceOf[AstExport] ||
-              node.isInstanceOf[AstClass] ||
-              (parent != null && parent.nn.isInstanceOf[AstFor] &&
-                !(node.asInstanceOf[AnyRef] eq parent.nn.asInstanceOf[AstFor].init.asInstanceOf[AnyRef])) ||
-              (!replaceAll &&
-                node.isInstanceOf[AstSymbolRef] &&
-                !Inference.isRefDeclared(node.asInstanceOf[AstSymbolRef], compressor) &&
-                !purePropAccessGlobals.contains(node.asInstanceOf[AstSymbolRef].name)) ||
-              (node.isInstanceOf[AstSymbolRef] &&
-                parent != null && parent.nn.isInstanceOf[AstCall] &&
-                (parent.nn.asInstanceOf[AstCall].flags & Annotations.NoInline) != 0) ||
-              (node.isInstanceOf[AstObjectProperty] &&
-                node.asInstanceOf[AstObjectProperty].key.isInstanceOf[AstNode])
-            }
+                node.isInstanceOf[AstDebugger] ||
+                node.isInstanceOf[AstDestructuring] ||
+                (node.isInstanceOf[AstExpansion] &&
+                  node.asInstanceOf[AstExpansion].expression.nn.isInstanceOf[AstSymbol] &&
+                  (node.asInstanceOf[AstExpansion].expression.nn.isInstanceOf[AstThis] ||
+                    {
+                      val expRef = node.asInstanceOf[AstExpansion].expression.nn.asInstanceOf[AstSymbol]
+                      val expDef = expRef.definition()
+                      expDef != null && expDef.nn.references.size > 1
+                    })) ||
+                (node.isInstanceOf[AstIterationStatement] && !node.isInstanceOf[AstFor]) ||
+                node.isInstanceOf[AstLoopControl] ||
+                node.isInstanceOf[AstTry] ||
+                node.isInstanceOf[AstWith] ||
+                node.isInstanceOf[AstYield] ||
+                node.isInstanceOf[AstExport] ||
+                node.isInstanceOf[AstClass] ||
+                (parent != null && parent.nn.isInstanceOf[AstFor] &&
+                  !(node.asInstanceOf[AnyRef] eq parent.nn.asInstanceOf[AstFor].init.asInstanceOf[AnyRef])) ||
+                (!replaceAll &&
+                  node.isInstanceOf[AstSymbolRef] &&
+                  !Inference.isRefDeclared(node.asInstanceOf[AstSymbolRef], compressor) &&
+                  !purePropAccessGlobals.contains(node.asInstanceOf[AstSymbolRef].name)) ||
+                (node.isInstanceOf[AstSymbolRef] &&
+                  parent != null && parent.nn.isInstanceOf[AstCall] &&
+                  (parent.nn.asInstanceOf[AstCall].flags & Annotations.NoInline) != 0) ||
+                (node.isInstanceOf[AstObjectProperty] &&
+                  node.asInstanceOf[AstObjectProperty].key.isInstanceOf[AstNode])
 
             if (shouldAbort) {
               abort = true
@@ -2115,10 +2151,10 @@ object TightenBody {
                   (parent.nn.isInstanceOf[AstBinary] &&
                     lazyOp.contains(parent.nn.asInstanceOf[AstBinary].operator) &&
                     !(parent.nn.asInstanceOf[AstBinary].left.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef])) ||
-                  (parent.nn.isInstanceOf[AstConditional] &&
-                    !(parent.nn.asInstanceOf[AstConditional].condition.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef])) ||
-                  (parent.nn.isInstanceOf[AstIf] &&
-                    !(parent.nn.asInstanceOf[AstIf].condition.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]))
+                    (parent.nn.isInstanceOf[AstConditional] &&
+                      !(parent.nn.asInstanceOf[AstConditional].condition.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef])) ||
+                    (parent.nn.isInstanceOf[AstIf] &&
+                      !(parent.nn.asInstanceOf[AstIf].condition.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]))
                 )
                 if (inConditional) {
                   stopIfHit = parent.nn
@@ -2126,10 +2162,12 @@ object TightenBody {
               }
 
               // Replace variable with assignment when found
-              if (canReplace &&
-                  !node.isInstanceOf[AstSymbolDeclaration] &&
-                  lhs != null && AstEquivalent.equivalentTo(lhs.nn, node) &&
-                  !shadows(scanner.findScope())) {
+              if (
+                canReplace &&
+                !node.isInstanceOf[AstSymbolDeclaration] &&
+                lhs != null && AstEquivalent.equivalentTo(lhs.nn, node) &&
+                !shadows(scanner.findScope())
+              ) {
                 if (stopIfHit != null) {
                   abort = true
                   node
@@ -2155,7 +2193,7 @@ object TightenBody {
                           prefix.expression = up.expression
                           prefix
                         case vd: AstVarDef =>
-                          val d = vd.name.asInstanceOf[AstSymbolDeclaration].definition()
+                          val d     = vd.name.asInstanceOf[AstSymbolDeclaration].definition()
                           val value = vd.value.nn
                           if (d != null && d.nn.references.size - d.nn.replaced == 1 && !compressor.exposed(d.nn)) {
                             d.nn.replaced += 1
@@ -2190,26 +2228,25 @@ object TightenBody {
                 }
               } else {
                 // Check for stop conditions that don't abort immediately
-                val sym = isLhs(node.asInstanceOf[AstNode], node)
-                val shouldStop = {
+                val sym        = isLhs(node.asInstanceOf[AstNode], node)
+                val shouldStop =
                   (node.isInstanceOf[AstCall]) ||
-                  (node.isInstanceOf[AstExit] &&
-                    (sideEffects || (lhs != null && lhs.nn.isInstanceOf[AstPropAccess]) || mayModify(lhs.nn))) ||
-                  (node.isInstanceOf[AstPropAccess] &&
-                    (sideEffects || Inference.mayThrowOnAccess(node.asInstanceOf[AstPropAccess].expression.nn, compressor))) ||
-                  (node.isInstanceOf[AstSymbolRef] &&
-                    (lvalues.get(node.asInstanceOf[AstSymbolRef].name).exists(_.modified) ||
-                      (sideEffects && mayModify(node)))) ||
-                  (node.isInstanceOf[AstVarDef] && node.asInstanceOf[AstVarDef].value != null &&
-                    (lvalues.contains(node.asInstanceOf[AstVarDef].name.asInstanceOf[AstSymbol].name) ||
-                      (sideEffects && mayModify(node.asInstanceOf[AstVarDef].name)))) ||
-                  node.isInstanceOf[AstUsing] ||
-                  (sym != null &&
-                    (sym.isInstanceOf[AstPropAccess] ||
-                      (sym.isInstanceOf[AstSymbolRef] && lvalues.contains(sym.asInstanceOf[AstSymbolRef].name)))) ||
-                  (mayThrowFlag &&
-                    (if (inTry) hasSideEffects(node, compressor) else sideEffectsExternal(node)))
-                }
+                    (node.isInstanceOf[AstExit] &&
+                      (sideEffects || (lhs != null && lhs.nn.isInstanceOf[AstPropAccess]) || mayModify(lhs.nn))) ||
+                    (node.isInstanceOf[AstPropAccess] &&
+                      (sideEffects || Inference.mayThrowOnAccess(node.asInstanceOf[AstPropAccess].expression.nn, compressor))) ||
+                    (node.isInstanceOf[AstSymbolRef] &&
+                      (lvalues.get(node.asInstanceOf[AstSymbolRef].name).exists(_.modified) ||
+                        (sideEffects && mayModify(node)))) ||
+                    (node.isInstanceOf[AstVarDef] && node.asInstanceOf[AstVarDef].value != null &&
+                      (lvalues.contains(node.asInstanceOf[AstVarDef].name.asInstanceOf[AstSymbol].name) ||
+                        (sideEffects && mayModify(node.asInstanceOf[AstVarDef].name)))) ||
+                    node.isInstanceOf[AstUsing] ||
+                    (sym != null &&
+                      (sym.isInstanceOf[AstPropAccess] ||
+                        (sym.isInstanceOf[AstSymbolRef] && lvalues.contains(sym.asInstanceOf[AstSymbolRef].name)))) ||
+                    (mayThrowFlag &&
+                      (if (inTry) hasSideEffects(node, compressor) else sideEffectsExternal(node)))
 
                 if (shouldStop) {
                   stopAfter = node
@@ -2221,7 +2258,7 @@ object TightenBody {
           }
         }
       },
-      after = node => {
+      after = node =>
         if (!abort) {
           if (stopAfter != null && (stopAfter.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef])) {
             abort = true
@@ -2230,14 +2267,13 @@ object TightenBody {
             stopIfHit = null
           }
         }
-      }
     )
 
     // -----------------------------------------------------------------------
     // multi_replacer: TreeTransformer for multi-use variable replacement
     // -----------------------------------------------------------------------
     lazy val multiReplacer: TreeTransformer = new TreeTransformer(
-      before = (node, _) => {
+      before = (node, _) =>
         if (abort) node
         else {
           // Skip nodes before `candidate` as quickly as possible
@@ -2274,11 +2310,10 @@ object TightenBody {
                 }
               // Skip (non-executed) functions and (leading) default case in switch
               case _: AstDefault | _: AstScope => node
-              case _ => null // continue descent
+              case _                           => null // continue descent
             }
           }
         }
-      }
     )
 
     // Main loop: iterate through statements from right to left
@@ -2315,7 +2350,7 @@ object TightenBody {
           mayThrowFlag = mayThrow(candidate, compressor)
           funarg = candidate match {
             case v: AstVarDef => v.name.isInstanceOf[AstSymbolFunarg]
-            case _            => false
+            case _ => false
           }
           hit = funarg
           abort = false
@@ -2326,9 +2361,9 @@ object TightenBody {
           if (!canReplace) {
             candidate match {
               case vd: AstVarDef =>
-                val argnames = compressor.parent().nn.asInstanceOf[AstLambda].argnames
+                val argnames  = compressor.parent().nn.asInstanceOf[AstLambda].argnames
                 val candIndex = argnames.lastIndexOf(vd.name)
-                var j = candIndex + 1
+                var j         = candIndex + 1
                 while (!abort && args != null && j < args.nn.size) {
                   args.nn(j) = args.nn(j).transform(scanner)
                   j += 1
@@ -2379,9 +2414,7 @@ object TightenBody {
 
   /** Remove initializer values from a var statement, keeping only declarations.
     *
-    * For simple declarations (`var x = 1`), sets value to null.
-    * For destructuring patterns (`var {a, b} = obj`), expands to individual
-    * name declarations (`var a, b`).
+    * For simple declarations (`var x = 1`), sets value to null. For destructuring patterns (`var {a, b} = obj`), expands to individual name declarations (`var a, b`).
     */
   private def removeInitializers(varStatement: AstVar): AstNode | Null = {
     val decls = ArrayBuffer.empty[AstNode]
@@ -2424,11 +2457,9 @@ object TightenBody {
 
   /** Extract all symbol declarations from a VarDef's name.
     *
-    * If the name is a simple SymbolDeclaration, returns just that symbol.
-    * If the name is a destructuring pattern, walks the pattern and returns
-    * all SymbolDeclaration nodes found within.
+    * If the name is a simple SymbolDeclaration, returns just that symbol. If the name is a destructuring pattern, walks the pattern and returns all SymbolDeclaration nodes found within.
     */
-  private def declarationsAsNames(vd: AstVarDef): ArrayBuffer[AstSymbol] = {
+  private def declarationsAsNames(vd: AstVarDef): ArrayBuffer[AstSymbol] =
     vd.name match {
       case sd: AstSymbolDeclaration =>
         ArrayBuffer(sd)
@@ -2450,7 +2481,6 @@ object TightenBody {
         )
         out
     }
-  }
 
   /** Walk an AST node, calling `visitor` for each child. Returns true if walk_abort was signaled.
     */
