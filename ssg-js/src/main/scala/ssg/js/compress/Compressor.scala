@@ -1106,7 +1106,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def optimizeConditional(self: AstConditional): AstNode =
     if (!optionBool("conditionals")) self
     else {
-      // Lift sequences from condition
+      // Lift sequences from condition (This looks like lift_sequences(), should probably be under "sequences")
       self.condition.nn match {
         case seq: AstSequence =>
           val exprs    = ArrayBuffer.from(seq.expressions)
@@ -1118,142 +1118,67 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
 
       // Evaluate constant condition
-      if (self.condition != null) {
-        val ev = Evaluate.evaluate(self.condition.nn, this)
-        if (ev != null && (ev.asInstanceOf[AnyRef] ne self.condition.nn.asInstanceOf[AnyRef])) {
-          ev match {
-            case false | 0 | 0.0 | "" | null =>
-              // Condition is falsy — return alternative, keep condition for side effects
-              if (hasSideEffects(self.condition.nn, this)) {
-                return makeSequence(self, ArrayBuffer(self.condition.nn, self.alternative.nn)) // @nowarn
-              }
-              return self.alternative.nn // @nowarn
-            case _ =>
-              // Condition is truthy — return consequent
-              if (hasSideEffects(self.condition.nn, this)) {
-                return makeSequence(self, ArrayBuffer(self.condition.nn, self.consequent.nn)) // @nowarn
-              }
-              return self.consequent.nn // @nowarn
-          }
+      val cond = self.condition.nn
+      val condEv = Evaluate.evaluate(cond, this)
+      if (condEv != null && (condEv.asInstanceOf[AnyRef] ne cond.asInstanceOf[AnyRef])) {
+        val p = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        condEv match {
+          case false | 0 | 0.0 | "" | null =>
+            // Condition is falsy — return alternative with this-binding maintenance
+            return maintainThisBinding(if (p != null) p.nn else self, self, self.alternative.nn) // @nowarn
+          case _ =>
+            // Condition is truthy — return consequent with this-binding maintenance
+            return maintainThisBinding(if (p != null) p.nn else self, self, self.consequent.nn) // @nowarn
         }
       }
 
-      // Boolean simplification: c ? true : false → !!c, c ? false : true → !c
-      (self.consequent.nn, self.alternative.nn) match {
-        case (_: AstTrue, _: AstFalse) =>
-          // c ? true : false → !!c
-          val inner = new AstUnaryPrefix
-          inner.operator = "!"
-          inner.expression = self.condition.nn
-          inner.start = self.start
-          inner.end = self.end
-          val outer = new AstUnaryPrefix
-          outer.operator = "!"
-          outer.expression = inner
-          outer.start = self.start
-          outer.end = self.end
-          return bestOfExpression(outer, self) // @nowarn
+      // Negate-if-shorter: if negating the condition and swapping branches is shorter, do it
+      val negated = negate(cond, firstInStatement(this))
+      if (bestOf(this, cond, negated) eq negated) {
+        val newCond = new AstConditional
+        newCond.condition = negated
+        newCond.consequent = self.alternative
+        newCond.alternative = self.consequent
+        newCond.start = self.start
+        newCond.end = self.end
+        // Update self in place for subsequent optimizations
+        self.condition = negated
+        val tmp = self.consequent
+        self.consequent = self.alternative
+        self.alternative = tmp
+      }
 
-        case (_: AstFalse, _: AstTrue) =>
-          // c ? false : true → !c
-          val neg = new AstUnaryPrefix
-          neg.operator = "!"
-          neg.expression = self.condition.nn
-          neg.start = self.start
-          neg.end = self.end
-          return bestOfExpression(neg, self) // @nowarn
+      val condition   = self.condition.nn
+      val consequent  = self.consequent.nn
+      val alternative = self.alternative.nn
 
+      // x ? x : y → x || y (when condition and consequent are SymbolRef with same definition)
+      (condition, consequent) match {
+        case (condRef: AstSymbolRef, consRef: AstSymbolRef) =>
+          val condDef = condRef.definition()
+          val consDef = consRef.definition()
+          if (condDef != null && consDef != null && (condDef.nn.asInstanceOf[AnyRef] eq consDef.nn.asInstanceOf[AnyRef])) {
+            val binary = new AstBinary
+            binary.operator = "||"
+            binary.left = condition
+            binary.right = alternative
+            binary.start = self.start
+            binary.end = self.end
+            return binary // @nowarn
+          }
         case _ =>
-      }
-
-      // c ? x : false → c && x
-      self.alternative.nn match {
-        case _: AstFalse if optionBool("booleans") =>
-          val binary = new AstBinary
-          binary.operator = "&&"
-          binary.left = self.condition.nn
-          binary.right = self.consequent.nn
-          binary.start = self.start
-          binary.end = self.end
-          return bestOfExpression(binary, self) // @nowarn
-        case _ =>
-      }
-
-      // c ? true : x → c || x
-      self.consequent.nn match {
-        case _: AstTrue if optionBool("booleans") =>
-          val binary = new AstBinary
-          binary.operator = "||"
-          binary.left = self.condition.nn
-          binary.right = self.alternative.nn
-          binary.start = self.start
-          binary.end = self.end
-          return bestOfExpression(binary, self) // @nowarn
-        case _ =>
-      }
-
-      // c ? false : x → !c && x
-      (self.consequent.nn, self.alternative.nn) match {
-        case (_: AstFalse, _) if optionBool("booleans") =>
-          val neg = new AstUnaryPrefix
-          neg.operator = "!"
-          neg.expression = self.condition.nn
-          neg.start = self.start
-          neg.end = self.end
-          val binary = new AstBinary
-          binary.operator = "&&"
-          binary.left = neg
-          binary.right = self.alternative.nn
-          binary.start = self.start
-          binary.end = self.end
-          return bestOfExpression(binary, self) // @nowarn
-        case _ =>
-      }
-
-      // c ? x : true → !c || x
-      (self.consequent.nn, self.alternative.nn) match {
-        case (_, _: AstTrue) if optionBool("booleans") =>
-          val neg = new AstUnaryPrefix
-          neg.operator = "!"
-          neg.expression = self.condition.nn
-          neg.start = self.start
-          neg.end = self.end
-          val binary = new AstBinary
-          binary.operator = "||"
-          binary.left = neg
-          binary.right = self.consequent.nn
-          binary.start = self.start
-          binary.end = self.end
-          return bestOfExpression(binary, self) // @nowarn
-        case _ =>
-      }
-
-      // x ? x : y → x || y (when condition equals consequent)
-      if (AstEquivalent.equivalentTo(self.condition.nn, self.consequent.nn)) {
-        val binary = new AstBinary
-        binary.operator = "||"
-        binary.left = self.condition.nn
-        binary.right = self.alternative.nn
-        binary.start = self.start
-        binary.end = self.end
-        return binary // @nowarn
-      }
-
-      // x ? y : y → (x, y) (when consequent equals alternative)
-      if (AstEquivalent.equivalentTo(self.consequent.nn, self.alternative.nn)) {
-        return makeSequence(self, ArrayBuffer(self.condition.nn, self.consequent.nn)) // @nowarn
       }
 
       // Assign merge: c ? (a = x) : (a = y) → a = c ? x : y
-      (self.consequent.nn, self.alternative.nn) match {
+      (consequent, alternative) match {
         case (asgn1: AstAssign, asgn2: AstAssign)
             if asgn1.operator == asgn2.operator
               && asgn1.logical == asgn2.logical
               && asgn1.left != null && asgn2.left != null
               && AstEquivalent.equivalentTo(asgn1.left.nn, asgn2.left.nn)
-              && (!hasSideEffects(self.condition.nn, this) || asgn1.operator == "=" && !hasSideEffects(asgn1.left.nn, this)) =>
+              && (!hasSideEffects(condition, this) || asgn1.operator == "=" && !hasSideEffects(asgn1.left.nn, this)) =>
           val newCond = new AstConditional
-          newCond.condition = self.condition.nn
+          newCond.condition = condition
           newCond.consequent = asgn1.right.nn
           newCond.alternative = asgn2.right.nn
           newCond.start = self.start
@@ -1269,27 +1194,107 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ =>
       }
 
+      // x ? y(a) : y(b) → y(x ? a : b) (single-arg-diff call merge)
+      (consequent, alternative) match {
+        case (consCall: AstCall, altCall: AstCall)
+            if consCall.args.nonEmpty
+              && consCall.args.size == altCall.args.size
+              && consCall.expression != null && altCall.expression != null
+              && AstEquivalent.equivalentTo(consCall.expression.nn, altCall.expression.nn)
+              && !hasSideEffects(condition, this)
+              && !hasSideEffects(consCall.expression.nn, this)
+              && consCall.nodeType == altCall.nodeType =>
+          // Find single differing argument
+          val argIndex = singleArgDiff(consCall.args, altCall.args)
+          if (argIndex >= 0) {
+            // Create a copy of the call node
+            val node = new AstCall
+            node.start = consCall.start
+            node.end = consCall.end
+            node.expression = consCall.expression
+            node.args = ArrayBuffer.from(consCall.args)
+            node.optional = consCall.optional
+            val newArg = new AstConditional
+            newArg.condition = condition
+            newArg.consequent = consCall.args(argIndex)
+            newArg.alternative = altCall.args(argIndex)
+            newArg.start = self.start
+            newArg.end = self.end
+            node.args(argIndex) = newArg
+            return node // @nowarn
+          }
+        case _ =>
+      }
+
       // a ? b : c ? b : d → (a || c) ? b : d
-      self.alternative.nn match {
-        case altCond: AstConditional if AstEquivalent.equivalentTo(self.consequent.nn, altCond.consequent.nn) =>
+      alternative match {
+        case altCond: AstConditional if AstEquivalent.equivalentTo(consequent, altCond.consequent.nn) =>
           val or = new AstBinary
           or.operator = "||"
-          or.left = self.condition.nn
+          or.left = condition
           or.right = altCond.condition.nn
           or.start = self.start
           or.end = self.end
-          self.condition = or
-          self.alternative = altCond.alternative
-          return self // @nowarn
+          val result = new AstConditional
+          result.condition = or
+          result.consequent = consequent
+          result.alternative = altCond.alternative
+          result.start = self.start
+          result.end = self.end
+          return optimizeConditional(result) // @nowarn
+        case _ =>
+      }
+
+      // a == null ? b : a → a ?? b (ECMAScript 2020+)
+      if (options.ecma >= 2020 && isNullishCheck(condition, alternative)) {
+        val nullish = new AstBinary
+        nullish.operator = "??"
+        nullish.left = alternative
+        nullish.right = consequent
+        nullish.start = self.start
+        nullish.end = self.end
+        return optimizeBinary(nullish) // @nowarn
+      }
+
+      // a ? b : (c, b) → (a || c), b
+      alternative match {
+        case altSeq: AstSequence if altSeq.expressions.nonEmpty && AstEquivalent.equivalentTo(consequent, altSeq.expressions.last) =>
+          val or = new AstBinary
+          or.operator = "||"
+          or.left = condition
+          or.right = makeSequence(self, ArrayBuffer.from(altSeq.expressions.dropRight(1)))
+          or.start = self.start
+          or.end = self.end
+          val result = makeSequence(self, ArrayBuffer(or, consequent))
+          return optimizeSequence(result.asInstanceOf[AstSequence]) // @nowarn
+        case _ =>
+      }
+
+      // a ? b : (c && b) → (a || c) && b
+      alternative match {
+        case altBin: AstBinary if altBin.operator == "&&" && altBin.right != null && AstEquivalent.equivalentTo(consequent, altBin.right.nn) =>
+          val or = new AstBinary
+          or.operator = "||"
+          or.left = condition
+          or.right = altBin.left.nn
+          or.start = self.start
+          or.end = self.end
+          val and = new AstBinary
+          and.operator = "&&"
+          and.left = or
+          and.right = consequent
+          and.start = self.start
+          and.end = self.end
+          return optimizeBinary(and) // @nowarn
         case _ =>
       }
 
       // x ? y ? z : a : a → x && y ? z : a
-      self.consequent.nn match {
-        case consCond: AstConditional if AstEquivalent.equivalentTo(consCond.alternative.nn, self.alternative.nn) =>
+      consequent match {
+        case consCond: AstConditional if AstEquivalent.equivalentTo(consCond.alternative.nn, alternative) =>
           val and = new AstBinary
           and.operator = "&&"
-          and.left = self.condition.nn
+          and.left = condition
           and.right = consCond.condition.nn
           and.start = self.start
           and.end = self.end
@@ -1299,65 +1304,154 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ =>
       }
 
-      // a == null ? b : a → a ?? b (ECMAScript 2020+)
-      if (options.ecma >= 2020 && self.alternative != null && self.condition != null) {
-        if (isNullishCheck(self.condition.nn, self.alternative.nn)) {
-          val nullish = new AstBinary
-          nullish.operator = "??"
-          nullish.left = self.alternative.nn
-          nullish.right = self.consequent.nn
-          nullish.start = self.start
-          nullish.end = self.end
-          return nullish // @nowarn
-        }
+      // x ? y : y → (x, y) (when consequent equals alternative)
+      if (AstEquivalent.equivalentTo(consequent, alternative)) {
+        return makeSequence(self, ArrayBuffer(condition, consequent)) // @nowarn
       }
 
       // x ? y || z : z → x && y || z
-      (self.consequent.nn, self.alternative.nn) match {
-        case (consOr: AstBinary, _)
-            if consOr.operator == "||"
-              && consOr.right != null
-              && AstEquivalent.equivalentTo(consOr.right.nn, self.alternative.nn) =>
+      consequent match {
+        case consOr: AstBinary if consOr.operator == "||" && consOr.right != null && AstEquivalent.equivalentTo(consOr.right.nn, alternative) =>
           val and = new AstBinary
           and.operator = "&&"
-          and.left = self.condition.nn
+          and.left = condition
           and.right = consOr.left.nn
           and.start = self.start
           and.end = self.end
           val or = new AstBinary
           or.operator = "||"
           or.left = and
-          or.right = self.alternative.nn
+          or.right = alternative
           or.start = self.start
           or.end = self.end
-          return or // @nowarn
+          return optimizeBinary(or) // @nowarn
         case _ =>
       }
 
-      // a ? b : (c && b) → (a || c) && b
-      (self.consequent.nn, self.alternative.nn) match {
-        case (_, altAnd: AstBinary)
-            if altAnd.operator == "&&"
-              && altAnd.right != null
-              && AstEquivalent.equivalentTo(self.consequent.nn, altAnd.right.nn) =>
-          val or = new AstBinary
-          or.operator = "||"
-          or.left = self.condition.nn
-          or.right = altAnd.left.nn
-          or.start = self.start
-          or.end = self.end
-          val and = new AstBinary
-          and.operator = "&&"
-          and.left = or
-          and.right = self.consequent.nn
-          and.start = self.start
-          and.end = self.end
-          return and // @nowarn
-        case _ =>
+      // Full truthy/falsy handling with booleanize
+      val inBool = inBooleanContext()
+
+      // Helper: check if node is truthy (AST_True, or !0, or in boolean context any truthy constant)
+      def isTrue(node: AstNode): Boolean =
+        node.isInstanceOf[AstTrue] ||
+          (inBool && node.isInstanceOf[AstConstant] && isTruthyValue(node.asInstanceOf[AstConstant])) ||
+          (node.isInstanceOf[AstUnaryPrefix] && node.asInstanceOf[AstUnaryPrefix].operator == "!" &&
+            node.asInstanceOf[AstUnaryPrefix].expression != null &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.isInstanceOf[AstConstant] &&
+            !isTruthyValue(node.asInstanceOf[AstUnaryPrefix].expression.nn.asInstanceOf[AstConstant]))
+
+      // Helper: check if node is falsy (AST_False, or !1, or in boolean context any falsy constant)
+      def isFalse(node: AstNode): Boolean =
+        node.isInstanceOf[AstFalse] ||
+          (inBool && node.isInstanceOf[AstConstant] && !isTruthyValue(node.asInstanceOf[AstConstant])) ||
+          (node.isInstanceOf[AstUnaryPrefix] && node.asInstanceOf[AstUnaryPrefix].operator == "!" &&
+            node.asInstanceOf[AstUnaryPrefix].expression != null &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.isInstanceOf[AstConstant] &&
+            isTruthyValue(node.asInstanceOf[AstUnaryPrefix].expression.nn.asInstanceOf[AstConstant]))
+
+      // Helper: check if a constant has a truthy value
+      def isTruthyValue(c: AstConstant): Boolean = c match {
+        case n: AstNumber  => n.value != 0.0 && !n.value.isNaN
+        case s: AstString  => s.value.nonEmpty
+        case _: AstTrue    => true
+        case _: AstFalse   => false
+        case _: AstNull    => false
+        case _             => true // other constants (regex, etc.) are truthy
+      }
+
+      // Helper: booleanize - ensure expression is boolean, using !! if needed
+      def booleanize(node: AstNode): AstNode = {
+        if (isBoolean(node)) node
+        else {
+          // !!expression
+          val neg = new AstUnaryPrefix
+          neg.operator = "!"
+          neg.expression = negate(node, false)
+          neg.start = node.start
+          neg.end = node.end
+          neg
+        }
+      }
+
+      // Helper: check if expression is already boolean
+      def isBoolean(node: AstNode): Boolean = node match {
+        case _: AstTrue | _: AstFalse => true
+        case bin: AstBinary =>
+          Set("==", "!=", "===", "!==", "<", "<=", ">", ">=", "in", "instanceof").contains(bin.operator)
+        case up: AstUnaryPrefix if up.operator == "!" => true
+        case _ => false
+      }
+
+      if (isTrue(consequent)) {
+        if (isFalse(alternative)) {
+          // c ? true : false → !!c
+          return booleanize(condition) // @nowarn
+        }
+        // c ? true : x → !!c || x
+        val or = new AstBinary
+        or.operator = "||"
+        or.left = booleanize(condition)
+        or.right = alternative
+        or.start = self.start
+        or.end = self.end
+        return or // @nowarn
+      }
+
+      if (isFalse(consequent)) {
+        if (isTrue(alternative)) {
+          // c ? false : true → !c
+          return booleanize(negate(condition, false)) // @nowarn
+        }
+        // c ? false : x → !c && x
+        val and = new AstBinary
+        and.operator = "&&"
+        and.left = booleanize(negate(condition, false))
+        and.right = alternative
+        and.start = self.start
+        and.end = self.end
+        return and // @nowarn
+      }
+
+      if (isTrue(alternative)) {
+        // c ? x : true → !c || x
+        val or = new AstBinary
+        or.operator = "||"
+        or.left = booleanize(negate(condition, false))
+        or.right = consequent
+        or.start = self.start
+        or.end = self.end
+        return or // @nowarn
+      }
+
+      if (isFalse(alternative)) {
+        // c ? x : false → !!c && x
+        val and = new AstBinary
+        and.operator = "&&"
+        and.left = booleanize(condition)
+        and.right = consequent
+        and.start = self.start
+        and.end = self.end
+        return and // @nowarn
       }
 
       self
     }
+
+  /** Helper for call argument merging: find the single differing argument index, or -1 if not exactly one differs. */
+  private def singleArgDiff(a: ArrayBuffer[AstNode], b: ArrayBuffer[AstNode]): Int = {
+    var diffIdx = -1
+    var i = 0
+    while (i < a.size) {
+      if (a(i).isInstanceOf[AstExpansion]) return -1 // @nowarn
+      if (!AstEquivalent.equivalentTo(a(i), b(i))) {
+        if (b(i).isInstanceOf[AstExpansion]) return -1 // @nowarn
+        if (diffIdx >= 0) return -1 // @nowarn  -- more than one difference
+        diffIdx = i
+      }
+      i += 1
+    }
+    diffIdx
+  }
 
   /** Optimize switch statements — constant case elimination, branch merging. */
   private def optimizeSwitch(self: AstSwitch): AstNode = {
@@ -1863,11 +1957,57 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     * Handles unused argument trimming, built-in constructor simplification (Array, Object, String, Number, Boolean), method call optimization (toString, join, charAt, apply, call), and function
     * inlining.
     */
+  /** Inline array-like spread: [...arr] where arr is an Array literal → flatten elements.
+    *
+    * Ported from original index.js inline_array_like_spread function. In array-like spread, spreading a non-iterable value is TypeError, so we can only optimize AST_Expansion of AST_Array without
+    * holes.
+    */
+  private def inlineArrayLikeSpread(elements: ArrayBuffer[AstNode]): Unit = {
+    var i = 0
+    while (i < elements.size) {
+      elements(i) match {
+        case exp: AstExpansion if exp.expression != null =>
+          exp.expression.nn match {
+            case arr: AstArray if !arr.elements.exists(_.isInstanceOf[AstHole]) =>
+              // Replace the spread with the array elements
+              elements.remove(i)
+              var j = 0
+              while (j < arr.elements.size) {
+                elements.insert(i + j, arr.elements(j))
+                j += 1
+              }
+              // Step back one, as the element at i is now new
+              i -= 1
+            case _ =>
+          }
+        case _ =>
+      }
+      i += 1
+    }
+  }
+
+  /** Check if expression contains optional property access or call. */
+  private def containsOptional(node: AstNode): Boolean =
+    node match {
+      case prop: AstPropAccess =>
+        prop.optional || (prop.expression != null && containsOptional(prop.expression.nn))
+      case call: AstCall =>
+        call.optional || (call.expression != null && containsOptional(call.expression.nn))
+      case chain: AstChain =>
+        // AstChain wraps optional expressions; check its inner expression
+        chain.expression != null && containsOptional(chain.expression.nn)
+      case _ => false
+    }
+
   private def optimizeCall(self: AstCall): AstNode =
     if (self.expression == null) {
       self
     } else {
       val exp = self.expression.nn
+
+      // Inline spread of array literals in args: f(...[a,b]) → f(a,b)
+      inlineArrayLikeSpread(self.args)
+
       val simpleArgs = !self.args.exists(_.isInstanceOf[AstExpansion])
 
       // Resolve SymbolRef via fixedValue when reduce_vars is enabled
@@ -1892,32 +2032,56 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         var i = 0
         val len = self.args.size
         while (i < len) {
-          val trim = i >= lambda.argnames.size
-          val argIsUnused = !trim && hasFlag(lambda.argnames(i), UNUSED)
-          if (trim || argIsUnused) {
-            val dropped = DropSideEffectFree.dropSideEffectFree(self.args(i), this)
-            if (dropped != null) {
-              self.args(pos) = dropped.nn
-              pos += 1
-            } else if (!trim) {
-              // Replace unused arg with 0 to preserve positional args
-              val zero = new AstNumber
-              zero.value = 0.0
-              zero.start = self.args(i).start
-              zero.end = self.args(i).end
-              self.args(pos) = zero
-              pos += 1
-              i += 1
-              last = pos
-              // continue — skip the last = pos below
-              while (false) {} // no-op to match original's continue
+          // Check if argname at position i is AST_Expansion (rest parameter)
+          if (i < lambda.argnames.size && lambda.argnames(i).isInstanceOf[AstExpansion]) {
+            val restExp = lambda.argnames(i).asInstanceOf[AstExpansion]
+            if (restExp.expression != null && hasFlag(restExp.expression.nn, UNUSED)) {
+              // Rest param is unused — drop remaining args (keep side effects)
+              while (i < len) {
+                val node = DropSideEffectFree.dropSideEffectFree(self.args(i), this)
+                if (node != null) {
+                  self.args(pos) = node.nn
+                  pos += 1
+                }
+                i += 1
+              }
+            } else {
+              // Rest param is used — keep remaining args as-is
+              while (i < len) {
+                self.args(pos) = self.args(i)
+                pos += 1
+                i += 1
+              }
             }
+            last = pos
+            // break inner loop effectively handled by while condition
           } else {
-            self.args(pos) = self.args(i)
-            pos += 1
+            val trim = i >= lambda.argnames.size
+            val argIsUnused = !trim && hasFlag(lambda.argnames(i), UNUSED)
+            if (trim || argIsUnused) {
+              val dropped = DropSideEffectFree.dropSideEffectFree(self.args(i), this)
+              if (dropped != null) {
+                self.args(pos) = dropped.nn
+                pos += 1
+              } else if (!trim) {
+                // Replace unused arg with 0 to preserve positional args
+                val zero = new AstNumber
+                zero.value = 0.0
+                zero.start = self.args(i).start
+                zero.end = self.args(i).end
+                self.args(pos) = zero
+                pos += 1
+                i += 1
+                last = pos
+                // continue — skip the last = pos below
+              }
+            } else {
+              self.args(pos) = self.args(i)
+              pos += 1
+            }
+            last = pos
+            i += 1
           }
-          last = pos
-          i += 1
         }
         // Truncate args array to last meaningful position
         while (self.args.size > last) self.args.remove(self.args.size - 1)
@@ -1940,12 +2104,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         case _ =>
       }
 
-      // Try to inline the call (empty body, identity function, etc.)
-      val inlined = Inline.inlineIntoCall(self, this)
-      if (!(inlined eq self)) return inlined // @nowarn
+      // Unsafe built-in constructor and method optimizations
+      if (optionBool("unsafe") && !containsOptional(exp)) {
+        // Array.from(arr) → arr (when arr is already an Array literal)
+        exp match {
+          case dot: AstDot
+              if dot.expression != null && dot.expression.nn.isInstanceOf[AstSymbolRef]
+                && dot.expression.nn.asInstanceOf[AstSymbolRef].name == "Array"
+                && dot.property == "from"
+                && self.args.size == 1 =>
+            self.args(0) match {
+              case arr: AstArray =>
+                val result = new AstArray
+                result.elements = arr.elements.clone()
+                result.start = arr.start
+                result.end = arr.end
+                return optimizeArray(result) // @nowarn
+              case _ =>
+            }
+          case _ =>
+        }
 
-      // Unsafe built-in constructor simplifications
-      if (optionBool("unsafe")) {
         exp match {
           case ref: AstSymbolRef if isUndeclaredRef(ref) =>
             ref.name match {
@@ -1990,14 +2169,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   s.start = self.start
                   s.end = self.end
                   return s // @nowarn
-                } else if (self.args.size == 1) {
+                } else if (self.args.size <= 1) {
                   val bin = new AstBinary
                   bin.operator = "+"
                   bin.left = self.args(0)
                   bin.right = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
                   bin.start = self.start
                   bin.end = self.end
-                  return bin // @nowarn
+                  return optimizeBinary(bin) // @nowarn
                 }
               case "Number" =>
                 if (self.args.isEmpty) {
@@ -2009,7 +2188,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   prefix.expression = self.args(0)
                   prefix.start = self.start
                   prefix.end = self.end
-                  return prefix // @nowarn
+                  return optimizeUnaryPrefix(prefix) // @nowarn
+                }
+              case "Symbol" =>
+                // Symbol("desc") → Symbol() when unsafe_symbols is enabled
+                if (self.args.size == 1 && self.args(0).isInstanceOf[AstString] && optionBool("unsafe_symbols")) {
+                  self.args.clear()
                 }
               case "Boolean" =>
                 if (self.args.isEmpty) {
@@ -2026,7 +2210,37 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   outer.expression = inner
                   outer.start = self.start
                   outer.end = self.end
-                  return outer // @nowarn
+                  return optimizeUnaryPrefix(outer) // @nowarn
+                }
+              case "RegExp" =>
+                // RegExp("pattern", "flags") → /pattern/flags when args are constants
+                if (self.args.nonEmpty && self.args.size <= 2 && self.args.forall(_.isInstanceOf[AstString])) {
+                  val params = self.args.map { arg =>
+                    Evaluate.evaluate(arg, this)
+                  }
+                  // Check that all args evaluated to non-node constants
+                  if (params.forall(p => p != null && !p.isInstanceOf[AstNode])) {
+                    val source = params(0).toString
+                    val flags = if (params.size > 1) params(1).toString else ""
+                    // Only optimize if the regex is safe (no problematic constructs)
+                    if (regexpIsSafe(source)) {
+                      try {
+                        // Validate by creating the regex
+                        val fixedSource = regexpSourceFix(new scala.util.matching.Regex(source).pattern.pattern())
+                        val rx = new AstRegExp
+                        rx.start = self.start
+                        rx.end = self.end
+                        rx.value = RegExpValue(fixedSource, flags)
+                        // Only return if the regex evaluates successfully
+                        val evResult = Evaluate.evaluate(rx, this)
+                        if (evResult != null && !(evResult.asInstanceOf[AnyRef] eq rx.asInstanceOf[AnyRef])) {
+                          return rx // @nowarn
+                        }
+                      } catch {
+                        case _: Exception => // Invalid regex, don't optimize
+                      }
+                    }
+                  }
                 }
               case _ =>
             }
@@ -2169,6 +2383,20 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
+      // unsafe_Function: new Function() => function(){}
+      // Function("arg1", "arg2", "body") => minified function
+      if (optionBool("unsafe_Function") && isUndeclaredRef(exp) && exp.asInstanceOf[AstSymbolRef].name == "Function") {
+        if (self.args.isEmpty) {
+          return makeEmptyFunction(self) // @nowarn
+        }
+        if (self.args.forall(_.isInstanceOf[AstString])) {
+          // All args are string constants — we can try to minify the function body
+          // This is a corner case documented at https://github.com/mishoo/UglifyJS2/issues/203
+          // For now, we just return self — full implementation would parse+minify the body
+          // The original Terser implementation parses the code and recompresses it
+        }
+      }
+
       // Try to evaluate constant calls
       if (optionBool("evaluate")) {
         val ev = Evaluate.evaluate(self, this)
@@ -2178,8 +2406,27 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         }
       }
 
+      // Try to inline the call (empty body, identity function, etc.)
+      // NOTE: This is called AFTER builtins, matching original Terser ordering
+      val inlined = Inline.inlineIntoCall(self, this)
+      if (!(inlined eq self)) return inlined // @nowarn
+
       self
     }
+
+  /** Check if a regex source is safe to fold into a literal. */
+  private def regexpIsSafe(source: String): Boolean = {
+    // Avoid problematic patterns that could change behavior
+    !source.contains("\\c") && // control characters
+    !source.contains("\\x") && // hex escapes without checking format
+    !source.contains("\\u") // unicode escapes without checking format
+  }
+
+  /** Fix regex source for literal representation. */
+  private def regexpSourceFix(source: String): String = {
+    // The original does more complex escaping; this is a simplified version
+    source.replace("/", "\\/")
+  }
 
   /** Optimize binary expressions.
     *
@@ -2207,17 +2454,28 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       }
     }
 
-    // Commutative operator: move constant to left
+    // Commutative operator: move constant to left (lhs_constants)
+    // Original: if right is a constant and left is not, swap them
+    // But avoid swapping if left is a binary with same or higher precedence (breaks associativity)
     val commutativeOps = Set("==", "===", "!=", "!==", "*", "&", "|", "^")
     if (optionBool("lhs_constants") && commutativeOps.contains(self.operator)) {
       if (self.right != null && self.left != null) {
-        val rightConst = self.right.nn.isInstanceOf[AstConstant]
-        val leftConst  = self.left.nn.isInstanceOf[AstConstant]
+        val rightConst = Evaluate.isConstant(self.right.nn)
+        val leftConst  = Evaluate.isConstant(self.left.nn)
         if (rightConst && !leftConst) {
-          // Swap left and right
-          val tmp = self.left
-          self.left = self.right
-          self.right = tmp
+          // Check precedence guard: don't swap if left is a binary with >= precedence
+          val canSwap = self.left.nn match {
+            case leftBin: AstBinary =>
+              val selfPrec = Precedence.get(self.operator)
+              val leftPrec = Precedence.get(leftBin.operator)
+              leftPrec < selfPrec
+            case _ => true
+          }
+          if (canSwap) {
+            val tmp = self.left
+            self.left = self.right
+            self.right = tmp
+          }
         }
       }
     }
@@ -2430,13 +2688,35 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (self.operator == "+" && self.left != null && self.right != null) {
       // template + constant → extend last segment
       (self.left.nn, self.right.nn) match {
+        case (tmplL: AstTemplateString, tmplR: AstTemplateString) =>
+          // `1${bar}2` + `foo${baz}` => `1${bar}2foo${baz}`
+          if (tmplL.segments.nonEmpty && tmplR.segments.nonEmpty) {
+            tmplL.segments.last match {
+              case lastSeg: AstTemplateSegment =>
+                tmplR.segments(0) match {
+                  case firstSeg: AstTemplateSegment =>
+                    // Concatenate the last segment of left with first segment of right
+                    lastSeg.value = lastSeg.value + firstSeg.value
+                    // Append remaining segments from right template
+                    var i = 1
+                    while (i < tmplR.segments.size) {
+                      tmplL.segments.addOne(tmplR.segments(i))
+                      i += 1
+                    }
+                    return tmplL // @nowarn
+                  case _ =>
+                }
+              case _ =>
+            }
+          }
         case (tmpl: AstTemplateString, _) =>
           val rr = Evaluate.evaluate(self.right.nn, this)
-          if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef]) && rr.isInstanceOf[String]) {
+          if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
+            val rrStr = rr.toString
             if (tmpl.segments.nonEmpty) {
               tmpl.segments.last match {
                 case seg: AstTemplateSegment =>
-                  seg.value = seg.value + rr.asInstanceOf[String]
+                  seg.value = seg.value + rrStr
                   return tmpl // @nowarn
                 case _ =>
               }
@@ -2444,11 +2724,12 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           }
         case (_, tmpl: AstTemplateString) =>
           val ll = Evaluate.evaluate(self.left.nn, this)
-          if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef]) && ll.isInstanceOf[String]) {
+          if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
+            val llStr = ll.toString
             if (tmpl.segments.nonEmpty) {
               tmpl.segments(0) match {
                 case seg: AstTemplateSegment =>
-                  seg.value = ll.asInstanceOf[String] + seg.value
+                  seg.value = llStr + seg.value
                   return tmpl // @nowarn
                 case _ =>
               }
@@ -2487,10 +2768,38 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 }
               case _ =>
                 // Right is truthy in && → result depends only on left
-                if (inBooleanContext()) {
+                // But also check: parent.operator == "&&" && parent.left === compressor.self()
+                val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+                val inParentAndWithLeft = par match {
+                  case pbin: AstBinary if pbin.operator == "&&" && pbin.left != null =>
+                    pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
+                  case _ => false
+                }
+                if (inParentAndWithLeft || inBooleanContext()) {
                   return self.left.nn // @nowarn
+                } else {
+                  setFlag(self, TRUTHY)
                 }
             }
+          }
+          // x || false && y ---> x ? y : false
+          self.left.nn match {
+            case leftOr: AstBinary if leftOr.operator == "||" && leftOr.right != null =>
+              val lr = Evaluate.evaluate(leftOr.right.nn, this)
+              if (lr != null && (lr.asInstanceOf[AnyRef] ne leftOr.right.nn.asInstanceOf[AnyRef])) {
+                lr match {
+                  case false | 0 | 0.0 | "" | null =>
+                    val cond = new AstConditional
+                    cond.condition = leftOr.left
+                    cond.consequent = self.right
+                    cond.alternative = leftOr.right
+                    cond.start = self.start
+                    cond.end = self.end
+                    return cond // @nowarn
+                  case _ =>
+                }
+              }
+            case _ =>
           }
 
         case "||" =>
@@ -2510,8 +2819,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             rr match {
               case false | 0 | 0.0 | "" | null =>
                 // Right is falsy in || → result is left
-                if (inBooleanContext()) {
+                // But also check: parent.operator == "||" && parent.left === compressor.self()
+                val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+                val inParentOrWithLeft = par match {
+                  case pbin: AstBinary if pbin.operator == "||" && pbin.left != null =>
+                    pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
+                  case _ => false
+                }
+                if (inParentOrWithLeft || inBooleanContext()) {
                   return self.left.nn // @nowarn
+                } else {
+                  setFlag(self, FALSY)
                 }
               case _ =>
                 // Right is truthy → always truthy
@@ -2524,6 +2842,28 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                   setFlag(self, TRUTHY)
                 }
             }
+          }
+          // x && truthy || y ---> x ? x && truthy : y (but original does x ? consequent : alternative)
+          // Original: if (self.left.operator == "&&") { lr = left.right.evaluate; if (lr && !(lr instanceof AST_Node)) ... }
+          self.left.nn match {
+            case leftAnd: AstBinary if leftAnd.operator == "&&" && leftAnd.right != null =>
+              val lr = Evaluate.evaluate(leftAnd.right.nn, this)
+              if (lr != null && (lr.asInstanceOf[AnyRef] ne leftAnd.right.nn.asInstanceOf[AnyRef])) {
+                lr match {
+                  case false | 0 | 0.0 | "" | null =>
+                    // lr is falsy — don't optimize
+                  case _ =>
+                    // lr is truthy: x && truthy || y → x ? (x && truthy) : y
+                    val cond = new AstConditional
+                    cond.condition = leftAnd.left
+                    cond.consequent = leftAnd.right
+                    cond.alternative = self.right
+                    cond.start = self.start
+                    cond.end = self.end
+                    return cond // @nowarn
+                }
+              }
+            case _ =>
           }
 
         case "??" =>
@@ -2555,9 +2895,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     }
 
     // Associative constant folding for +, *, &, |, ^
+    // Note: * associativity requires unsafe_math option (floating point rounding differences)
     if (optionBool("evaluate") && self.left != null && self.right != null) {
-      val assocOps = Set("+", "*", "&", "|", "^")
-      if (assocOps.contains(self.operator)) {
+      val assocOps = Set("+", "&", "|", "^")
+      // For "*" we need unsafe_math to be true for associativity
+      val isAssociative = assocOps.contains(self.operator) ||
+        (self.operator == "*" && optionBool("unsafe_math"))
+      if (isAssociative) {
         // (n + 2) + 3 → 5 + n  or  (2 * n) * 3 → 6 * n
         if (self.right.nn.isInstanceOf[AstConstant] && self.left.nn.isInstanceOf[AstBinary]) {
           val lBin = self.left.nn.asInstanceOf[AstBinary]
@@ -2687,6 +3031,64 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         zero.end = self.end
         self.left = zero
         self.operator = "|"
+      }
+
+      // De Morgan's laws: z & (X | y) => z & X (given y & z === 0), or z & X | {y & z} (given y & z !== 0)
+      if (self.operator == "&") {
+        val zEval = Evaluate.evaluate(self.left.nn, this)
+        if (zEval.isInstanceOf[Double]) {
+          val z = zEval.asInstanceOf[Double].toInt
+          self.right.nn match {
+            case rBin: AstBinary if rBin.operator == "|" && rBin.left != null && rBin.right != null =>
+              // Check if rBin.right evaluates to a number
+              var xNode: AstNode | Null = null
+              var yNode: AstNode | Null = null
+              var y: Int = 0
+              val rrEval = Evaluate.evaluate(rBin.right.nn, this)
+              if (rrEval.isInstanceOf[Double]) {
+                // z & (X | y)
+                xNode = rBin.left.nn
+                yNode = rBin.right.nn
+                y = rrEval.asInstanceOf[Double].toInt
+              } else {
+                val rlEval = Evaluate.evaluate(rBin.left.nn, this)
+                if (rlEval.isInstanceOf[Double]) {
+                  // z & (y | X)
+                  xNode = rBin.right.nn
+                  yNode = rBin.left.nn
+                  y = rlEval.asInstanceOf[Double].toInt
+                }
+              }
+              if (xNode != null && yNode != null) {
+                if ((y & z) == 0) {
+                  // y & z === 0 -> result is z & X
+                  val newBin = new AstBinary
+                  newBin.operator = "&"
+                  newBin.left = self.left
+                  newBin.right = xNode.nn
+                  newBin.start = self.start
+                  newBin.end = self.end
+                  return newBin // @nowarn
+                } else {
+                  // y & z !== 0 -> try (X & z) | (y & z)
+                  val reordered = new AstBinary
+                  reordered.operator = "|"
+                  val leftAnd = new AstBinary
+                  leftAnd.operator = "&"
+                  leftAnd.left = xNode.nn
+                  leftAnd.right = self.left
+                  leftAnd.start = self.start
+                  leftAnd.end = self.end
+                  reordered.left = leftAnd
+                  reordered.right = makeNodeFromConstant(y & z, yNode.nn)
+                  reordered.start = self.start
+                  reordered.end = self.end
+                  return bestOfExpression(reordered, self) // @nowarn
+                }
+              }
+            case _ =>
+          }
+        }
       }
     }
 
@@ -4177,4 +4579,31 @@ object Compressor {
 
   /** Create a Compressor with custom options. */
   def apply(options: CompressorOptions): Compressor = new Compressor(options)
+}
+
+/** Operator precedence table from Terser (lib/parse.js).
+  *
+  * Lower number = lower precedence (binds less tightly). Used by optimizeBinary to determine when swapping operands is safe (avoid breaking associativity).
+  */
+private[compress] object Precedence {
+  private val table: Map[String, Int] = {
+    val levels = Seq(
+      Seq("||"),
+      Seq("??"),
+      Seq("&&"),
+      Seq("|"),
+      Seq("^"),
+      Seq("&"),
+      Seq("==", "===", "!=", "!=="),
+      Seq("<", ">", "<=", ">=", "in", "instanceof"),
+      Seq(">>", "<<", ">>>"),
+      Seq("+", "-"),
+      Seq("*", "/", "%"),
+      Seq("**")
+    )
+    levels.zipWithIndex.flatMap { case (ops, i) => ops.map(_ -> (i + 1)) }.toMap
+  }
+
+  /** Get precedence for an operator (0 if not found). */
+  def get(op: String): Int = table.getOrElse(op, 0)
 }
