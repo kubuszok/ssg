@@ -84,8 +84,34 @@ object Hoisting {
               theDef.eliminated += 1
               theDef.replaced -= 1
             }
+          case dest: AstDestructuring =>
+            // Handle destructuring patterns: { a, b } = value or [a, b] = value
+            // Create assignment with the destructuring pattern as the LHS
+            val assign = new AstAssign
+            assign.operator = "="
+            assign.left = dest
+            assign.right = d.value.nn
+            assign.start = d.start
+            assign.end = d.end
+            assignments.addOne(assign)
+
+            // Update SymbolDef counters for all symbols in the destructuring pattern
+            if (reduceVars) {
+              allSymbols(dest).foreach { sym =>
+                if (sym.thedef != null) {
+                  sym.thedef.asInstanceOf[SymbolDef].fixed = false
+                }
+              }
+            }
+            allSymbols(dest).foreach { sym =>
+              val theDef = sym.definition()
+              if (theDef != null) {
+                theDef.eliminated += 1
+                theDef.replaced -= 1
+              }
+            }
           case _ =>
-            // Non-symbol name (destructuring) — skip for now
+            // Other name types — skip
         }
       } else if (d.name != null) {
         // No value — still update eliminated counter

@@ -303,8 +303,17 @@ object DropUnused {
       // Handle classes with side effects
       node match {
         case cls: AstClass if hasSideEffects(cls, ctx.compressor) =>
-          // Simplified: just descend (is_self_referential and visit_nondeferred_class_parts not ported)
-          descend()
+          // If the class references itself (by name or `this` in non-deferred parts),
+          // we must descend into the whole class. Otherwise, only visit the non-deferred
+          // parts (computed keys, static initializers, extends clause).
+          if (Inference.isSelfReferential(cls)) {
+            descend()
+          } else {
+            Inference.visitNondeferredClassParts(cls, (n, desc) => {
+              n.walk(this)
+              true
+            })
+          }
           return true
         case _ =>
       }

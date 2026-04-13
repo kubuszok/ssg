@@ -2419,16 +2419,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
       // unsafe_Function: new Function() => function(){}
       // Function("arg1", "arg2", "body") => minified function
+      // ISS-200: The body parsing optimization is intentionally unsupported in SSG.
+      // Original Terser parses and minifies the function body string, but this requires
+      // runtime code generation which is not suitable for a static site generator.
+      // We support only the empty function case: Function() => function(){}.
       if (optionBool("unsafe_Function") && isUndeclaredRef(exp) && exp.asInstanceOf[AstSymbolRef].name == "Function") {
         if (self.args.isEmpty) {
           return makeEmptyFunction(self) // @nowarn
         }
-        if (self.args.forall(_.isInstanceOf[AstString])) {
-          // All args are string constants — we can try to minify the function body
-          // This is a corner case documented at https://github.com/mishoo/UglifyJS2/issues/203
-          // For now, we just return self — full implementation would parse+minify the body
-          // The original Terser implementation parses the code and recompresses it
-        }
+        // String body parsing is intentionally not supported — see ISS-200.
+        // The optimization would require parsing user code at compile time,
+        // which adds complexity without meaningful benefit for typical SSG use cases.
       }
 
       // Try to evaluate constant calls
@@ -4348,17 +4349,31 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       && options.ecma >= 2015
       && self.value != null
     ) {
-      // Check if unsafe_methods is a regex filter or just true
-      // NOTE: keyStr extracted but regex test simplified for now (original checks RegExp.test(key + ""))
-      @annotation.nowarn("msg=unused local definition")
+      // ISS-198: Check if unsafe_methods is a regex filter or just true
+      // Original: if (!(unsafe_methods instanceof RegExp) || unsafe_methods.test(self.key + ""))
       val keyStr = self.key match {
         case s: String => s
         case sym: AstSymbol => sym.name
         case _ => ""
       }
       val passesFilter = unsafeMethods match {
-        case true | 1 | "true" => true
-        case _ => true // Simplified - original checks RegExp.test(keyStr)
+        case true | java.lang.Boolean.TRUE | 1 | "true" => true
+        case r: scala.util.matching.Regex =>
+          // Scala Regex: use findFirstIn to check match
+          r.findFirstIn(keyStr).isDefined
+        case s: String if s.startsWith("/") && s.lastIndexOf('/') > 0 =>
+          // Parse regex from string like "/pattern/flags"
+          try {
+            val lastSlash = s.lastIndexOf('/')
+            val pattern = s.substring(1, lastSlash)
+            val flags = s.substring(lastSlash + 1)
+            val regexFlags = if (flags.contains("i")) "(?i)" else ""
+            val regex = (regexFlags + pattern).r
+            regex.findFirstIn(keyStr).isDefined
+          } catch {
+            case _: Exception => true // If regex parsing fails, allow all
+          }
+        case _ => true // Other truthy values: allow all
       }
       if (passesFilter) {
         val value = self.value.nn
@@ -5000,11 +5015,53 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     self
   }
 
-  /** flatten_object: convert `{a:1, b:2}.a` → `[1, 2][0]` for property access on literal objects. */
+  /** Check if a value is safe to flatten (not a `this`-bound method).
+    *
+    * ISS-194: Port of safe_to_flatten from index.js:3516-3524.
+    * Returns false for Lambda/Class containing `this` unless parent is `new`.
+    */
+  private def safeToFlatten(value: AstNode | Null): Boolean = {
+    var v: AstNode | Null = value
+    // Resolve SymbolRef via fixed_value
+    v match {
+      case ref: AstSymbolRef =>
+        ref.fixedValue() match {
+          case fv: AstNode => v = fv
+          case _ =>
+        }
+      case _ =>
+    }
+    if (v == null) return false // @nowarn
+    v match {
+      case lambda: AstLambda =>
+        // Lambda is safe unless it contains `this` and parent is not `new`
+        if (!containsThis(lambda)) true
+        else {
+          val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+          par != null && par.nn.isInstanceOf[AstNew]
+        }
+      case _: AstClass =>
+        // Class is always unsafe unless parent is `new`
+        val par = try { parent(0) } catch { case _: IndexOutOfBoundsException => null }
+        par != null && par.nn.isInstanceOf[AstNew]
+      case _ => true
+    }
+  }
+
+  /** flatten_object: convert `{a:1, b:2}.a` → `[1, 2][0]` for property access on literal objects.
+    *
+    * ISS-194: Add safe_to_flatten guard for this-bound methods.
+    * ISS-195: Add computed key sequence handling (return makeSequence([key, value])).
+    * ISS-196: Add ConciseMethod handling when unsafe_arrows enabled.
+    * ISS-197: Add Accessor to Function conversion.
+    */
   private def flattenObject(self: AstPropAccess, key: String): AstNode | Null = {
     if (!optionBool("properties")) return null // @nowarn
     if (key == "__proto__") return null // @nowarn
     if (self.isInstanceOf[AstDotHash]) return null // @nowarn
+
+    // ISS-196: Check if ConciseMethod flattening is allowed
+    val unsafeArrows = optionBool("unsafe_arrows") && options.ecma >= 2015
 
     self.expression match {
       case obj: AstObject if obj != null =>
@@ -5020,6 +5077,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
                 case _               => ""
               }
               if (propKey == key) matchIdx = i
+            // ISS-196: Also check ConciseMethod keys
+            case cm: AstConciseMethod if !cm.computedKey() =>
+              val propKey = cm.key match {
+                case sym: AstSymbolMethod => sym.name
+                case s: String            => s
+                case _                    => ""
+              }
+              if (propKey == key) matchIdx = i
             case _ =>
           }
           i -= 1
@@ -5027,17 +5092,82 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         if (matchIdx < 0) return null // @nowarn
 
         // Check all props are flattenable (no computed keys, no getters/setters)
+        // ISS-196: Include ConciseMethod when unsafe_arrows is enabled
         val allFlattenable = props.forall {
           case kv: AstObjectKeyVal => !kv.computedKey()
+          case cm: AstConciseMethod =>
+            unsafeArrows && !cm.computedKey() && cm.value != null &&
+              !cm.value.nn.asInstanceOf[AstLambda].isGenerator
           case _ => false
         }
         if (!allFlattenable) return null // @nowarn
+
+        // ISS-194: Check safe_to_flatten on the matched property value
+        val matchedProp = props(matchIdx)
+        val matchedValue: AstNode | Null = matchedProp match {
+          case kv: AstObjectKeyVal  => kv.value
+          case cm: AstConciseMethod => cm.value
+          case _                    => null
+        }
+        if (!safeToFlatten(matchedValue)) return null // @nowarn
 
         // Build: [v0, v1, ...][matchIdx]
         val elements = ArrayBuffer.empty[AstNode]
         for (p <- props) {
           p match {
-            case kv: AstObjectKeyVal if kv.value != null => elements.addOne(kv.value.nn)
+            case kv: AstObjectKeyVal if kv.value != null =>
+              var v: AstNode = kv.value.nn
+              // ISS-197: Convert Accessor to Function
+              v match {
+                case acc: AstAccessor =>
+                  val fn = new AstFunction
+                  fn.start = acc.start
+                  fn.end = acc.end
+                  fn.argnames = acc.argnames
+                  fn.body = acc.body
+                  fn.isAsync = acc.isAsync
+                  fn.isGenerator = acc.isGenerator
+                  fn.name = acc.name
+                  fn.usesArguments = acc.usesArguments
+                  v = fn
+                case _ =>
+              }
+              // ISS-195: Handle computed keys (AstNode but not AstSymbolMethod)
+              val k = kv.key
+              k match {
+                case keyNode: AstNode if !keyNode.isInstanceOf[AstSymbolMethod] =>
+                  // Computed key: return makeSequence([key, value])
+                  elements.addOne(makeSequence(kv, ArrayBuffer(keyNode, v)))
+                case _ =>
+                  elements.addOne(v)
+              }
+            case cm: AstConciseMethod if cm.value != null =>
+              var v: AstNode = cm.value.nn
+              // ISS-197: Convert Accessor to Function for concise methods too
+              v match {
+                case acc: AstAccessor =>
+                  val fn = new AstFunction
+                  fn.start = acc.start
+                  fn.end = acc.end
+                  fn.argnames = acc.argnames
+                  fn.body = acc.body
+                  fn.isAsync = acc.isAsync
+                  fn.isGenerator = acc.isGenerator
+                  fn.name = acc.name
+                  fn.usesArguments = acc.usesArguments
+                  fn.usesEval = acc.usesEval
+                  fn.usesWith = acc.usesWith
+                  v = fn
+                case _ =>
+              }
+              // ISS-195: Handle computed keys
+              val k = cm.key
+              k match {
+                case keyNode: AstNode if !keyNode.isInstanceOf[AstSymbolMethod] =>
+                  elements.addOne(makeSequence(cm, ArrayBuffer(keyNode, v)))
+                case _ =>
+                  elements.addOne(v)
+              }
             case _ =>
           }
         }
