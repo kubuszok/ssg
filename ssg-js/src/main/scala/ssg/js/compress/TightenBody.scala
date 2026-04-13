@@ -785,8 +785,14 @@ object TightenBody {
           if (seq.size >= seqLimit) {
             pushSeq()
           }
-          if (ss.body != null) {
-            mergeSequence(seq, ss.body.nn)
+          var body: AstNode | Null = ss.body
+          // When merging into a sequence, drop side-effect-free expressions
+          // except for the first statement in the sequence
+          if (body != null && seq.nonEmpty) {
+            body = DropSideEffectFree.dropSideEffectFree(body.nn, compressor)
+          }
+          if (body != null) {
+            mergeSequence(seq, body.nn)
           }
 
         case d: AstDefinitions if declarationsOnly(d) =>
@@ -2371,7 +2377,12 @@ object TightenBody {
   // Helpers
   // -----------------------------------------------------------------------
 
-  /** Remove initializer values from a var statement, keeping only declarations. */
+  /** Remove initializer values from a var statement, keeping only declarations.
+    *
+    * For simple declarations (`var x = 1`), sets value to null.
+    * For destructuring patterns (`var {a, b} = obj`), expands to individual
+    * name declarations (`var a, b`).
+    */
   private def removeInitializers(varStatement: AstVar): AstNode | Null = {
     val decls = ArrayBuffer.empty[AstNode]
     varStatement.definitions.foreach { defn =>
@@ -2379,6 +2390,7 @@ object TightenBody {
         case vd: AstVarDef =>
           vd.name match {
             case _: AstSymbolDeclaration =>
+              // Simple declaration — just clear the value
               val stripped = new AstVarDef
               stripped.start = vd.start
               stripped.end = vd.end
@@ -2386,7 +2398,15 @@ object TightenBody {
               stripped.value = null
               decls.addOne(stripped)
             case _ =>
-            // Destructuring — expand to individual name declarations
+              // Destructuring — expand to individual name declarations
+              declarationsAsNames(vd).foreach { name =>
+                val stripped = new AstVarDef
+                stripped.start = vd.start
+                stripped.end = vd.end
+                stripped.name = name
+                stripped.value = null
+                decls.addOne(stripped)
+              }
           }
         case _ =>
       }
@@ -2399,6 +2419,36 @@ object TightenBody {
       result
     } else {
       null
+    }
+  }
+
+  /** Extract all symbol declarations from a VarDef's name.
+    *
+    * If the name is a simple SymbolDeclaration, returns just that symbol.
+    * If the name is a destructuring pattern, walks the pattern and returns
+    * all SymbolDeclaration nodes found within.
+    */
+  private def declarationsAsNames(vd: AstVarDef): ArrayBuffer[AstSymbol] = {
+    vd.name match {
+      case sd: AstSymbolDeclaration =>
+        ArrayBuffer(sd)
+      case _ =>
+        // Destructuring pattern — collect all symbols
+        val out = ArrayBuffer.empty[AstSymbol]
+        walk(
+          vd.name,
+          (node, _) =>
+            node match {
+              case sd: AstSymbolDeclaration =>
+                out.addOne(sd)
+                null
+              case _: AstLambda =>
+                true // Don't descend into nested lambdas
+              case _ =>
+                null
+            }
+        )
+        out
     }
   }
 

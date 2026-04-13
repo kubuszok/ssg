@@ -168,7 +168,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private var toplevelNode: Option[AstToplevel] = None
 
   /** Sequences limit for the sequenceize pass. */
-  val sequencesLimit: Int = {
+  override val sequencesLimit: Int = {
     val seq = options.sequencesLimit
     if (seq == 1) 800 else seq
   }
@@ -2448,18 +2448,57 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
       self
     }
 
-  /** Check if a regex source is safe to fold into a literal. */
-  private def regexpIsSafe(source: String): Boolean = {
-    // Avoid problematic patterns that could change behavior
-    !source.contains("\\c") && // control characters
-    !source.contains("\\x") && // hex escapes without checking format
-    !source.contains("\\u") // unicode escapes without checking format
-  }
+  /** Line terminator escape mappings for regexp_source_fix. */
+  private val lineTerminatorEscape: Map[Char, String] = Map(
+    '\u0000' -> "0",
+    '\n' -> "n",
+    '\r' -> "r",
+    '\u2028' -> "u2028",
+    '\u2029' -> "u2029"
+  )
 
-  /** Fix regex source for literal representation. */
+  /** Subset of regexps that is not going to cause regexp based DDOS.
+    * See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS
+    * The original JS regex: /^[\\/|\0\s\w\^$.\[\]()]*$/
+    * Note: \0 is the NUL character (U+0000)
+    */
+  private val reSafeRegexp = """^[\\/|\u0000\s\w\^$.\[\]()]*$""".r
+
+  /** Check if the regexp is safe for Terser to create without risking a RegExp DOS. */
+  private def regexpIsSafe(source: String): Boolean =
+    reSafeRegexp.findFirstIn(source).isDefined
+
+  /** Fix regexp source by escaping line terminators (V8 compatibility).
+    * V8 does not escape line terminators in regexp patterns in node 12.
+    * Also removes literal \0.
+    */
   private def regexpSourceFix(source: String): String = {
-    // The original does more complex escaping; this is a simplified version
-    source.replace("/", "\\/")
+    val sb = new StringBuilder
+    var i  = 0
+    while (i < source.length) {
+      val ch = source.charAt(i)
+      lineTerminatorEscape.get(ch) match {
+        case Some(esc) =>
+          // Check if already escaped
+          val alreadyEscaped =
+            i > 0 && source.charAt(i - 1) == '\\' && {
+              // Count preceding backslashes
+              var j     = i - 1
+              var count = 0
+              while (j >= 0 && source.charAt(j) == '\\') {
+                count += 1
+                j -= 1
+              }
+              count % 2 == 1 // odd count means already escaped
+            }
+          if (!alreadyEscaped) sb.append('\\')
+          sb.append(esc)
+        case None =>
+          sb.append(ch)
+      }
+      i += 1
+    }
+    sb.toString
   }
 
   /** Optimize binary expressions.

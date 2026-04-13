@@ -184,6 +184,13 @@ object Common {
         node.value = rv
         node
 
+      case bi: BigInt =>
+        val node = new AstBigInt
+        node.start = orig.start
+        node.end = orig.end
+        node.value = bi.toString
+        node
+
       case _ =>
         throw new IllegalArgumentException(
           s"Can't handle constant of type: ${if (value == null) "null" else value.getClass.getName}"
