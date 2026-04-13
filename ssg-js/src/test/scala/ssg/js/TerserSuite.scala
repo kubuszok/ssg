@@ -88,7 +88,7 @@ final class TerserSuite extends munit.FunSuite {
   }
 
   // -- With compression --
-  // Note: Compression tests are JVM-only due to Scala Native regex limitations (ISS-TBD)
+  // Note: Compression tests are JVM-only due to Scala Native regex limitations (ISS-201)
   // The reSafeRegexp pattern uses escapes that fail on Native's re2-based regex engine.
 
   private def isNative: Boolean =
