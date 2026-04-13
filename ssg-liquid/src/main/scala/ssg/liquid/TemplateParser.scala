@@ -20,7 +20,7 @@ package liquid
 import ssg.liquid.antlr.NameResolver
 import ssg.liquid.filters.{ Filter, Filters }
 import ssg.liquid.filters.date.{ BasicDateParser, DateParser }
-import ssg.liquid.parser.{ Flavor, LiquidSupport }
+import ssg.liquid.parser.{ Flavor, LiquidSupport, LiquidSupportPlatform }
 
 import java.nio.file.Path
 import java.time.ZoneId
@@ -117,7 +117,7 @@ final class TemplateParser(
   def evaluate(variable: Any): LiquidSupport =
     variable match {
       case ls: LiquidSupport => ls
-      case _ => new LiquidSupport.LiquidSupportFromInspectable(variable)
+      case _ => new LiquidSupportPlatform.LiquidSupportFromInspectable(variable)
     }
 }
 

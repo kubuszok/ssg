@@ -71,12 +71,12 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
   import ssg.md.parser.Parser
 
   private def createParser(): Parser = {
-    val extensions = java.util.List.of(EnumeratedReferenceExtension.create(), AttributesExtension.create())
+    val extensions = java.util.Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create())
     Parser.builder().extensions(extensions).build()
   }
 
   private def createRenderer(): HtmlRenderer = {
-    val extensions = java.util.List.of(EnumeratedReferenceExtension.create(), AttributesExtension.create())
+    val extensions = java.util.Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create())
     HtmlRenderer.builder().extensions(extensions).build()
   }
 
