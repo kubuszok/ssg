@@ -31,7 +31,7 @@ import java.util.{ ArrayList, Locale }
 class FuzzyDateDateParser extends BasicDateParser {
 
   override def parse(valAsString: String, locale: Locale, defaultZone: ZoneId): Nullable[ZonedDateTime] = {
-    val normalized = valAsString.toLowerCase
+    val normalized    = valAsString.toLowerCase
     val zonedDateTime = parseUsingCachedPatterns(normalized, locale, defaultZone)
     if (zonedDateTime.isDefined) {
       zonedDateTime
@@ -70,5 +70,5 @@ object FuzzyDateDateParser {
     case CONSTANT, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND, MICROSECOND, NANOSECOND
   }
 
-  private[date] final case class PartItem(kind: PartKind, pattern: String, start: Int, end: Int)
+  final private[date] case class PartItem(kind: PartKind, pattern: String, start: Int, end: Int)
 }

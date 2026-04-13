@@ -47,7 +47,7 @@ object LiquidSupport {
 
           // Public fields (including those from Inspectable anonymous classes)
           val fields = clazz.getFields
-          var i = 0
+          var i      = 0
           while (i < fields.length) {
             val f = fields(i)
             result.put(f.getName, f.get(variable))
@@ -64,13 +64,13 @@ object LiquidSupport {
               if (name.startsWith("get") && name.length > 3 && name != "getClass") {
                 val key = name.charAt(3).toLower.toString + name.substring(4)
                 if (!result.containsKey(key)) {
-                  try { result.put(key, m.invoke(variable)) }
+                  try result.put(key, m.invoke(variable))
                   catch { case _: Exception => }
                 }
               } else if (name.startsWith("is") && name.length > 2 && (m.getReturnType == classOf[Boolean] || m.getReturnType == java.lang.Boolean.TYPE)) {
                 val key = name.charAt(2).toLower.toString + name.substring(3)
                 if (!result.containsKey(key)) {
-                  try { result.put(key, m.invoke(variable)) }
+                  try result.put(key, m.invoke(variable))
                   catch { case _: Exception => }
                 }
               }
@@ -79,7 +79,7 @@ object LiquidSupport {
           }
         } catch {
           case _: Exception =>
-            // Reflection not available (e.g., Scala.js) — return empty map
+          // Reflection not available (e.g., Scala.js) — return empty map
         }
         result
       }

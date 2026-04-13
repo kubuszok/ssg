@@ -25,12 +25,11 @@ import scala.language.implicitConversions
 
 /** CommonMark spec.txt conformance test.
   *
-  * Reads the unmodified CommonMark spec files (v0.28, v0.29, v0.30), parses each example through [[Parser]] and
-  * [[HtmlRenderer]] with default CommonMark settings, and reports the conformance percentage.
+  * Reads the unmodified CommonMark spec files (v0.28, v0.29, v0.30), parses each example through [[Parser]] and [[HtmlRenderer]] with default CommonMark settings, and reports the conformance
+  * percentage.
   *
-  * Individual example mismatches do NOT fail the build — flexmark (and therefore ssg-md) intentionally deviates from
-  * strict CommonMark in some areas. The summary test asserts only that the conformance rate stays above a minimum
-  * threshold, so regressions are caught without blocking on known deviations.
+  * Individual example mismatches do NOT fail the build — flexmark (and therefore ssg-md) intentionally deviates from strict CommonMark in some areas. The summary test asserts only that the
+  * conformance rate stays above a minimum threshold, so regressions are caught without blocking on known deviations.
   */
 final class CommonMarkSpecConformanceTest extends munit.FunSuite {
 
@@ -79,14 +78,10 @@ object CommonMarkSpecConformanceTest {
   private val SPEC_029_RESOURCE = "/ssg/md/test/specs/spec.0.29.txt"
   private val SPEC_030_RESOURCE = "/ssg/md/test/specs/spec.0.30.txt"
 
-  /** Parser/renderer options matching the ComboCoreSpecTest baseline: INDENT_SIZE=0, percent-encode URLs, no
-    * directional punctuations.
+  /** Parser/renderer options matching the ComboCoreSpecTest baseline: INDENT_SIZE=0, percent-encode URLs, no directional punctuations.
     */
-  private val OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.INDENT_SIZE, 0)
-    .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, false)
-    .set(HtmlRenderer.PERCENT_ENCODE_URLS, true)
-    .toImmutable
+  private val OPTIONS: DataHolder =
+    new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 0).set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, false).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
 
   private val parser:   Parser       = Parser.builder(OPTIONS).build()
   private val renderer: HtmlRenderer = HtmlRenderer.builder(OPTIONS).build()
@@ -123,7 +118,7 @@ object CommonMarkSpecConformanceTest {
   /** Run all examples from a spec resource and return a summary. */
   private def runSpec(version: String, resource: String): SpecResult = {
     val examples = loadExamples(resource)
-    val results = examples.map { example =>
+    val results  = examples.map { example =>
       ExampleResult(
         section = example.section.getOrElse("Unknown"),
         exampleNumber = example.exampleNumber,
@@ -161,7 +156,7 @@ object CommonMarkSpecConformanceTest {
   }
 
   private def printPerSection(version: String, result: SpecResult): Unit = {
-    val bySection = result.examples.groupBy(_.section)
+    val bySection      = result.examples.groupBy(_.section)
     val sectionResults = bySection.toList.sortBy(_._1).map { case (section, sectionExamples) =>
       val sectionTotal  = sectionExamples.size
       val sectionPassed = sectionExamples.count(_.passed)

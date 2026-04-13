@@ -105,12 +105,39 @@ object Inference {
 
   /** Global names that are always considered "declared" in unsafe mode. */
   private val globalNames: Set[String] = Set(
-    "Array", "Boolean", "clearInterval", "clearTimeout", "console", "Date",
-    "decodeURI", "decodeURIComponent", "encodeURI", "encodeURIComponent",
-    "Error", "escape", "eval", "EvalError", "Function", "isFinite", "isNaN",
-    "JSON", "Math", "Number", "parseFloat", "parseInt", "RangeError",
-    "ReferenceError", "RegExp", "Object", "setInterval", "setTimeout",
-    "String", "SyntaxError", "TypeError", "unescape", "URIError"
+    "Array",
+    "Boolean",
+    "clearInterval",
+    "clearTimeout",
+    "console",
+    "Date",
+    "decodeURI",
+    "decodeURIComponent",
+    "encodeURI",
+    "encodeURIComponent",
+    "Error",
+    "escape",
+    "eval",
+    "EvalError",
+    "Function",
+    "isFinite",
+    "isNaN",
+    "JSON",
+    "Math",
+    "Number",
+    "parseFloat",
+    "parseInt",
+    "RangeError",
+    "ReferenceError",
+    "RegExp",
+    "Object",
+    "setInterval",
+    "setTimeout",
+    "String",
+    "SyntaxError",
+    "TypeError",
+    "unescape",
+    "URIError"
   )
 
   /** Check if a SymbolRef is considered declared. */
@@ -324,7 +351,7 @@ object Inference {
       case ref: AstSymbolRef =>
         ref.fixedValue() match {
           case n: AstNode => isNullOrUndefined(n, compressor)
-          case _          => false
+          case _ => false
         }
       case _ => false
     }
@@ -578,7 +605,7 @@ object Inference {
           // If callee is a Lambda, check if the body may throw
           call.expression match {
             case lambda: AstLambda => anyMayThrow(lambda.body, compressor)
-            case _                 => true
+            case _ => true
           }
         }
 
@@ -711,7 +738,7 @@ object Inference {
     val pg = compressor.option("pure_getters")
     pg match {
       case s: String => s.contains("strict")
-      case _         => false
+      case _ => false
     }
   }
 
@@ -726,19 +753,18 @@ object Inference {
       case _: AstArray    => false
       case _: AstClass    => false
       case _: AstFunction | _: AstArrow => false
-      case _:      AstUnaryPostfix   => false
-      case _:      AstObjectGetter   => true // must come before AstObjectProperty
-      case _:      AstObjectProperty => false
-      case obj: AstObject =>
+      case _:   AstUnaryPostfix   => false
+      case _:   AstObjectGetter   => true // must come before AstObjectProperty
+      case _:   AstObjectProperty => false
+      case obj: AstObject         =>
         if (!isStrict(compressor)) false
         else {
           // In strict mode, check if any property may throw (has getter)
           var i = obj.properties.size
-          while ({ i -= 1; i >= 0 }) {
+          while ({ i -= 1; i >= 0 })
             if (dotThrow(obj.properties(i), compressor)) {
               return true // @nowarn — performance hot path
             }
-          }
           false
         }
       case exp: AstExpansion =>
@@ -777,7 +803,7 @@ object Inference {
           // Check if the fixed value may throw on access
           ref.fixedValue() match {
             case n: AstNode => dotThrow(n, compressor)
-            case _          => true // No fixed value in strict mode -> may throw
+            case _ => true // No fixed value in strict mode -> may throw
           }
         }
       case _ =>
@@ -841,7 +867,7 @@ object Inference {
                 && !isCalleePure(call, compressor)
                 && (value match {
                   case fn: AstFunction => !call.isInstanceOf[AstNew] && containsThis(fn)
-                  case _               => true
+                  case _ => true
                 }) =>
             break(true)
           case _ =>
@@ -898,9 +924,9 @@ object Inference {
                 val grandparent = tw.parent(p + 2)
                 if (
                   seq.expressions.size > 2
-                    || seq.expressions.size == 1
-                    || grandparent == null
-                    || !Common.requiresSequenceToMaintainBinding(grandparent.nn, seq, seq.expressions(1))
+                  || seq.expressions.size == 1
+                  || grandparent == null
+                  || !Common.requiresSequenceToMaintainBinding(grandparent.nn, seq, seq.expressions(1))
                 ) {
                   break(false)
                 }
@@ -941,8 +967,8 @@ object Inference {
     if (thing == null) null
     else
       thing.nn match {
-        case _: AstJump   => thing
-        case _: AstImport => null
+        case _:     AstJump           => thing
+        case _:     AstImport         => null
         case block: AstBlockStatement =>
           var i = 0
           while (i < block.body.size) {
@@ -1017,7 +1043,7 @@ object Inference {
             dotExpr match {
               case ref: AstSymbolRef if ref.name == "hasOwnProperty" =>
                 if (call.args.nonEmpty) {
-                  val firstArg = call.args(0)
+                  val firstArg  = call.args(0)
                   val evaluated = Evaluate.evaluate(firstArg, compressor)
                   evaluated match {
                     case null => break(false)
@@ -1072,13 +1098,13 @@ object Inference {
       if (expr == null) break(false)
 
       val nativeObj: String | Null = expr.nn match {
-        case _: AstArray  => "Array"
-        case _ if isBoolean(expr.nn) => "Boolean"
+        case _: AstArray => "Array"
+        case _ if isBoolean(expr.nn)            => "Boolean"
         case _ if isNumber(expr.nn, compressor) => "Number"
         case _: AstRegExp => "RegExp"
-        case _ if isString(expr.nn, compressor) => "String"
+        case _ if isString(expr.nn, compressor)      => "String"
         case _ if !mayThrowOnAccess(dot, compressor) => "Object"
-        case _ => null
+        case _                                       => null
       }
 
       if (nativeObj == null) break(false)
@@ -1137,20 +1163,19 @@ object Inference {
 
   /** Is this expression a constant (can be inlined without side effects)?
     *
-    * Checks that all referenced variables are local to the expression's scope.
-    * Returns true if safe to inline, "f" if safe only within this function, false otherwise.
+    * Checks that all referenced variables are local to the expression's scope. Returns true if safe to inline, "f" if safe only within this function, false otherwise.
     */
-  def isConstantExpression(node: AstNode, scope: AstScope | Null = null): Any = {
+  def isConstantExpression(node: AstNode, scope: AstScope | Null = null): Any =
     node match {
-      case _: AstConstant => true
-      case cls: AstClass =>
+      case _:   AstConstant => true
+      case cls: AstClass    =>
         // Class extends must be constant
         if (cls.superClass != null && isConstantExpression(cls.superClass.nn, scope) == false) {
           false
         } else {
           // Check all properties
           var allConst = true
-          var i = 0
+          var i        = 0
           while (allConst && i < cls.properties.size) {
             val prop = cls.properties(i)
             // Computed keys must be constant
@@ -1225,52 +1250,61 @@ object Inference {
         }
       case _ => false
     }
-  }
 
   /** Check if all symbol references in node are local to its scope.
     *
     * Returns:
-    * - true: all refs are local, safe to inline anywhere
-    * - "f": refs are local to this function scope, safe to inline within same function
-    * - false: has external refs, not safe to inline
+    *   - true: all refs are local, safe to inline anywhere
+    *   - "f": refs are local to this function scope, safe to inline within same function
+    *   - false: has external refs, not safe to inline
     */
   private def allRefsLocal(node: AstScope, scope: AstScope | Null): Any =
     boundary[Any] {
       // If the node has been inlined, it's not safe
       if (hasFlag(node, INLINED)) break(false)
 
-      val enclosed = node.enclosed
+      val enclosed  = node.enclosed
       val variables = node.variables
 
       var result: Any = true
       var aborted = false
 
       // Walk the node looking for SymbolRef and This
-      walk(node, (current, _) => {
-        if (aborted) {
-          WalkAbort
-        } else {
-          current match {
-            case ref: AstSymbolRef =>
-              val d = ref.definition()
-              if (d != null) {
-                val sd = d.nn
-                // Check if enclosed in node but not defined in node's variables
-                var isEnclosed = false
-                var ei = 0
-                while (!isEnclosed && ei < enclosed.size) {
-                  if (enclosed(ei).asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef]) {
-                    isEnclosed = true
+      walk(
+        node,
+        (current, _) =>
+          if (aborted) {
+            WalkAbort
+          } else {
+            current match {
+              case ref: AstSymbolRef =>
+                val d = ref.definition()
+                if (d != null) {
+                  val sd = d.nn
+                  // Check if enclosed in node but not defined in node's variables
+                  var isEnclosed = false
+                  var ei         = 0
+                  while (!isEnclosed && ei < enclosed.size) {
+                    if (enclosed(ei).asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef]) {
+                      isEnclosed = true
+                    }
+                    ei += 1
                   }
-                  ei += 1
-                }
-                if (isEnclosed && !variables.contains(sd.name)) {
-                  if (scope != null) {
-                    val scopeDef = ScopeAnalysis.findVariable(scope.nn, ref.name)
-                    // If undeclared: scope_def must also be null
-                    // Otherwise: scope_def must be the same definition
-                    if (sd.undeclared) {
-                      if (scopeDef == null) {
+                  if (isEnclosed && !variables.contains(sd.name)) {
+                    if (scope != null) {
+                      val scopeDef = ScopeAnalysis.findVariable(scope.nn, ref.name)
+                      // If undeclared: scope_def must also be null
+                      // Otherwise: scope_def must be the same definition
+                      if (sd.undeclared) {
+                        if (scopeDef == null) {
+                          result = "f"
+                          true // skip children
+                        } else {
+                          result = false
+                          aborted = true
+                          WalkAbort
+                        }
+                      } else if (scopeDef != null && (scopeDef.nn.asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef])) {
                         result = "f"
                         true // skip children
                       } else {
@@ -1278,34 +1312,26 @@ object Inference {
                         aborted = true
                         WalkAbort
                       }
-                    } else if (scopeDef != null && (scopeDef.nn.asInstanceOf[AnyRef] eq sd.asInstanceOf[AnyRef])) {
-                      result = "f"
-                      true // skip children
                     } else {
                       result = false
                       aborted = true
                       WalkAbort
                     }
                   } else {
-                    result = false
-                    aborted = true
-                    WalkAbort
+                    true // skip children
                   }
                 } else {
                   true // skip children
                 }
-              } else {
-                true // skip children
-              }
-            case _: AstThis if node.isInstanceOf[AstArrow] =>
-              // Arrow function captures outer `this`
-              result = false
-              aborted = true
-              WalkAbort
-            case _ => null // continue walking
+              case _: AstThis if node.isInstanceOf[AstArrow] =>
+                // Arrow function captures outer `this`
+                result = false
+                aborted = true
+                WalkAbort
+              case _ => null // continue walking
+            }
           }
-        }
-      })
+      )
       result
     }
 
@@ -1318,14 +1344,16 @@ object Inference {
     * Stops at non-arrow function scopes since they have their own `this`.
     */
   def containsThis(node: AstNode): Boolean =
-    walk(node, (current, _) => {
-      current match {
-        case _: AstThis => WalkAbort
-        case scope: AstScope if (scope.asInstanceOf[AnyRef] ne node.asInstanceOf[AnyRef]) && !scope.isInstanceOf[AstArrow] =>
-          true // skip children (non-arrow scope has its own `this`)
-        case _ => null // continue walking
-      }
-    })
+    walk(
+      node,
+      (current, _) =>
+        current match {
+          case _:     AstThis                                                                                                => WalkAbort
+          case scope: AstScope if (scope.asInstanceOf[AnyRef] ne node.asInstanceOf[AnyRef]) && !scope.isInstanceOf[AstArrow] =>
+            true // skip children (non-arrow scope has its own `this`)
+          case _ => null // continue walking
+        }
+    )
 
   // -----------------------------------------------------------------------
   // Self-referential class
@@ -1333,8 +1361,7 @@ object Inference {
 
   /** Does the class reference itself by name or `this` in non-deferred parts?
     *
-    * Non-deferred parts are computed property keys and static initializers.
-    * If true, we cannot safely decompose the class.
+    * Non-deferred parts are computed property keys and static initializers. If true, we cannot safely decompose the class.
     */
   def isSelfReferential(cls: AstClass): Boolean = {
     val thisId = cls.name match {
@@ -1343,41 +1370,44 @@ object Inference {
         if (d != null) d.nn.id else -1
       case _ => -1
     }
-    var found = false
+    var found     = false
     var classThis = true // track whether `this` refers to the class
 
     // Visit only non-deferred class parts (computed keys and static initializers)
-    visitNondeferredClassParts(cls, (node, descend) => {
-      if (found) true // abort
-      else node match {
-        case _: AstThis =>
-          found = classThis
-          classThis
-        case ref: AstSymbolRef =>
-          val d = ref.definition()
-          found = d != null && d.nn.id == thisId
-          found
-        case lambda: AstLambda if !lambda.isInstanceOf[AstArrow] =>
-          // Non-arrow function: `this` inside refers to call-time value
-          val saveClassThis = classThis
-          classThis = false
-          descend()
-          classThis = saveClassThis
-          true // already descended
-        case _ =>
-          false // continue walking
-      }
-    })
+    visitNondeferredClassParts(
+      cls,
+      (node, descend) =>
+        if (found) true // abort
+        else
+          node match {
+            case _: AstThis =>
+              found = classThis
+              classThis
+            case ref: AstSymbolRef =>
+              val d = ref.definition()
+              found = d != null && d.nn.id == thisId
+              found
+            case lambda: AstLambda if !lambda.isInstanceOf[AstArrow] =>
+              // Non-arrow function: `this` inside refers to call-time value
+              val saveClassThis = classThis
+              classThis = false
+              descend()
+              classThis = saveClassThis
+              true // already descended
+            case _ =>
+              false // continue walking
+          }
+    )
     found
   }
 
   /** Walk non-deferred class parts (computed keys and static initializers).
     *
     * Non-deferred parts are evaluated at class definition time:
-    * - Computed property keys
-    * - Static property initializers
-    * - Static blocks
-    * - Extends clause
+    *   - Computed property keys
+    *   - Static property initializers
+    *   - Static blocks
+    *   - Extends clause
     */
   def visitNondeferredClassParts(cls: AstClass, visitor: (AstNode, () => Unit) => Boolean): Unit = {
     var i = 0
@@ -1419,13 +1449,13 @@ object Inference {
 
   /** Walk node tree, calling visitor for each node. */
   private def walkWithVisitor(node: AstNode, visitor: (AstNode, () => Unit) => Boolean): Unit = {
-    val tw = new TreeWalker((current, descend) => {
+    val tw = new TreeWalker((current, descend) =>
       if (visitor(current, descend)) true
       else {
         descend()
         true
       }
-    })
+    )
     node.walk(tw)
   }
 
@@ -1435,8 +1465,7 @@ object Inference {
 
   /** Negate an expression for drop_side_effect_free optimization.
     *
-    * Used to convert IIFE in statement position to negated form
-    * to avoid needing parentheses.
+    * Used to convert IIFE in statement position to negated form to avoid needing parentheses.
     */
   def negate(node: AstNode, compressor: CompressorLike, firstInStatement: Boolean = false): AstNode = {
     val neg = new AstUnaryPrefix

@@ -139,7 +139,7 @@ object ReduceVars {
   }
 
   /** Reset all variables in a scope. */
-  def resetVariables(state: ReduceVarsState, compressor: CompressorLike, scope: AstScope): Unit = {
+  def resetVariables(state: ReduceVarsState, compressor: CompressorLike, scope: AstScope): Unit =
     scope.variables.foreach { case (_, v) =>
       val d = v.asInstanceOf[SymbolDef]
       resetDef(compressor, d)
@@ -151,10 +151,9 @@ object ReduceVars {
         state.mark(d.id, true)
       }
     }
-  }
 
   /** Reset block-scoped variables. */
-  def resetBlockVariables(compressor: CompressorLike, node: AstNode): Unit = {
+  def resetBlockVariables(compressor: CompressorLike, node: AstNode): Unit =
     node match {
       case b: AstBlock if b.blockScope != null =>
         b.blockScope.nn.variables.foreach { case (_, v) =>
@@ -166,7 +165,6 @@ object ReduceVars {
         }
       case _ =>
     }
-  }
 
   // -----------------------------------------------------------------------
   // Safe-to-read / safe-to-assign predicates
@@ -322,7 +320,7 @@ object ReduceVars {
     if (level > 0) return // @nowarn
     parentNode match {
       case seq: AstSequence if seq.expressions.nonEmpty && !(node eq seq.expressions.last) => return // @nowarn
-      case _: AstSimpleStatement => return // @nowarn
+      case _:   AstSimpleStatement                                                         => return // @nowarn
       case _ =>
     }
 
@@ -641,7 +639,8 @@ object ReduceVars {
                   if (dd.fixed == null && (!lambda.usesArguments || tw.directives.contains("use strict"))) {
                     dd.fixed = new Function0[AstNode] {
                       def apply(): AstNode =
-                        if (argIdx < iife.args.size) iife.args(argIdx) else {
+                        if (argIdx < iife.args.size) iife.args(argIdx)
+                        else {
                           val void0 = new AstUnaryPrefix
                           void0.operator = "void"
                           void0.expression = {
@@ -689,16 +688,16 @@ object ReduceVars {
 
   /** Walk a node tree with parent access, similar to original walk_parent.
     *
-    * Traverses in depth-first order, calling cb for each node with access to the parent stack. If cb returns WalkAbort, the walk is aborted and returns true. If cb returns any other truthy
-    * value, children are skipped. Returns true if aborted, false otherwise.
+    * Traverses in depth-first order, calling cb for each node with access to the parent stack. If cb returns WalkAbort, the walk is aborted and returns true. If cb returns any other truthy value,
+    * children are skipped. Returns true if aborted, false otherwise.
     */
   private def walkParent(node: AstNode, cb: (AstNode, WalkParentInfo) => Any): Boolean = {
     import scala.util.boundary
     import scala.util.boundary.break
 
-    val toVisit       = ArrayBuffer[AstNode](node)
+    val toVisit = ArrayBuffer[AstNode](node)
     val push: AstNode => Unit = n => toVisit.addOne(n)
-    val stack         = ArrayBuffer.empty[AstNode]
+    val stack            = ArrayBuffer.empty[AstNode]
     val parentPopIndices = ArrayBuffer.empty[Int]
 
     val info = new WalkParentInfo(stack)
@@ -769,21 +768,23 @@ object ReduceVars {
     val defuns = ArrayBuffer.empty[AstDefun]
 
     // First pass: collect hoisted function definitions
-    walk(parent, (node, _) => {
-      if (node.asInstanceOf[AnyRef] eq parent.asInstanceOf[AnyRef]) {
-        null // continue into children
-      } else {
-        node match {
-          case defun: AstDefun =>
-            defuns.addOne(defun)
-            true // skip children of defun
-          case _: AstScope | _: AstSimpleStatement =>
-            true // skip children
-          case _ =>
-            null // continue
+    walk(
+      parent,
+      (node, _) =>
+        if (node.asInstanceOf[AnyRef] eq parent.asInstanceOf[AnyRef]) {
+          null // continue into children
+        } else {
+          node match {
+            case defun: AstDefun =>
+              defuns.addOne(defun)
+              true // skip children of defun
+            case _: AstScope | _: AstSimpleStatement =>
+              true // skip children
+            case _ =>
+              null // continue
+          }
         }
-      }
-    })
+    )
 
     // `defun` id to array of `defun` ids it uses
     val defunDependenciesMap = mutable.Map.empty[Int, ArrayBuffer[Int]]
@@ -793,11 +794,11 @@ object ReduceVars {
     val symbolsOfInterest = mutable.Set.empty[Int]
     val defunsOfInterest  = mutable.Set.empty[Int]
 
-    for (defun <- defuns) {
+    for (defun <- defuns)
       if (defun.name != null) {
         val fnameDefOpt = defun.name.nn.asInstanceOf[AstSymbol].definition()
         if (fnameDefOpt != null) {
-          val fnameDef     = fnameDefOpt.nn
+          val fnameDef      = fnameDefOpt.nn
           val enclosingDefs = ArrayBuffer.empty[SymbolDef]
 
           for (d <- defun.enclosed) {
@@ -838,7 +839,6 @@ object ReduceVars {
           }
         }
       }
-    }
 
     // No defuns use outside constants
     if (dependenciesMap.isEmpty) {
@@ -853,33 +853,36 @@ object ReduceVars {
     // Map a symbol ID to its last write (a `symbol_index`)
     val symbolLastWriteMap = mutable.Map.empty[Int, Int]
 
-    walkParent(parent, (node, walkInfo) => {
-      node match {
-        case sym: AstSymbol if sym.thedef != null =>
-          val d  = sym.definition()
-          if (d != null) {
-            val id = d.nn.id
+    walkParent(
+      parent,
+      (node, walkInfo) => {
+        node match {
+          case sym: AstSymbol if sym.thedef != null =>
+            val d = sym.definition()
+            if (d != null) {
+              val id = d.nn.id
 
-            symbolIndex += 1
+              symbolIndex += 1
 
-            // Track last-writes to symbols
-            if (symbolsOfInterest.contains(id)) {
-              if (sym.isInstanceOf[AstSymbolDeclaration] || Inference.isLhs(sym, walkInfo.parent().nn) != null) {
-                symbolLastWriteMap(id) = symbolIndex
+              // Track last-writes to symbols
+              if (symbolsOfInterest.contains(id)) {
+                if (sym.isInstanceOf[AstSymbolDeclaration] || Inference.isLhs(sym, walkInfo.parent().nn) != null) {
+                  symbolLastWriteMap(id) = symbolIndex
+                }
+              }
+
+              // Track first-reads of defuns (refined later)
+              if (defunsOfInterest.contains(id)) {
+                if (!defunFirstReadMap.contains(id) && !isRecursiveRefByInfo(walkInfo, id)) {
+                  defunFirstReadMap(id) = symbolIndex
+                }
               }
             }
-
-            // Track first-reads of defuns (refined later)
-            if (defunsOfInterest.contains(id)) {
-              if (!defunFirstReadMap.contains(id) && !isRecursiveRefByInfo(walkInfo, id)) {
-                defunFirstReadMap(id) = symbolIndex
-              }
-            }
-          }
-        case _ =>
+          case _ =>
+        }
+        null // continue walking
       }
-      null // continue walking
-    })
+    )
 
     // Refine `defun_first_read_map` to be as high as possible
     for ((defun, defunFirstRead) <- defunFirstReadMap) {
@@ -900,11 +903,10 @@ object ReduceVars {
             defunFirstReadMap(enclosedDefun) = defunFirstRead
 
             defunDependenciesMap.get(enclosedDefun).foreach { enclosedDeps =>
-              for (dep <- enclosedDeps) {
+              for (dep <- enclosedDeps)
                 if (!processed.contains(dep)) {
                   queue.add(dep)
                 }
-              }
             }
           }
         }
@@ -914,12 +916,12 @@ object ReduceVars {
     // Ensure write-then-read order, otherwise clear `fixed`
     // This is safe because last-writes (found_symbol_writes) are assumed to be as late as possible,
     // and first-reads (defun_first_read_map) are assumed to be as early as possible.
-    for ((defunId, defs) <- dependenciesMap) {
+    for ((defunId, defs) <- dependenciesMap)
       defunFirstReadMap.get(defunId) match {
         case None =>
         // defun is never read, skip
         case Some(defunFirstRead) =>
-          for (d <- defs) {
+          for (d <- defs)
             if (d.fixed != false) {
               val defLastWrite = symbolLastWriteMap.getOrElse(d.id, 0)
 
@@ -927,9 +929,7 @@ object ReduceVars {
                 d.fixed = false
               }
             }
-          }
       }
-    }
   }
 
   /** Check if a reference is recursive by walking up the parent stack.
@@ -941,7 +941,7 @@ object ReduceVars {
     import scala.util.boundary.break
 
     boundary[Boolean] {
-      var i = 0
+      var i    = 0
       var node = info.parent(i)
       while (node != null) {
         node.nn match {
@@ -987,7 +987,7 @@ object ReduceVars {
       case _ =>
     }
 
-    val finishWalk: () => Any = () => {
+    val finishWalk: () => Any = () =>
       if (assign.logical) {
         if (assign.left != null) assign.left.nn.walk(tw)
         state.push()
@@ -997,14 +997,13 @@ object ReduceVars {
       } else {
         null // continue normal walking
       }
-    }
 
     val sym = assign.left
     sym match {
       case ref: AstSymbolRef =>
         val d = ref.definition()
         if (d == null) return finishWalk() // @nowarn
-        val dd = d.nn
+        val dd   = d.nn
         val safe = safeToAssign(state, dd, ref.scope, assign.right)
         dd.assignments += 1
         if (!safe) return finishWalk() // @nowarn
@@ -1033,7 +1032,7 @@ object ReduceVars {
                 val bin = new AstBinary
                 bin.operator = assign.operator.stripSuffix("=")
                 bin.left = fixed match {
-                  case n: AstNode => n
+                  case n: AstNode      => n
                   case f: Function0[?] => f().asInstanceOf[AstNode]
                   case _ => ref // fallback
                 }
@@ -1107,10 +1106,9 @@ object ReduceVars {
         && !compressor.exposed(dd)
         && refOnce(state, compressor, dd)
       ) {
-        dd.singleUse =
-          (fixedValue.isInstanceOf[AstLambda] && !fixedValue.asInstanceOf[AstLambda].pinned) ||
-            fixedValue.isInstanceOf[AstClass] ||
-            ((dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef]) && Evaluate.isConstantExpression(fixedValue.nn))
+        dd.singleUse = (fixedValue.isInstanceOf[AstLambda] && !fixedValue.asInstanceOf[AstLambda].pinned) ||
+          fixedValue.isInstanceOf[AstClass] ||
+          ((dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef]) && Evaluate.isConstantExpression(fixedValue.nn))
       } else {
         dd.singleUse = false
       }
@@ -1143,7 +1141,7 @@ object ReduceVars {
       case ref: AstSymbolRef =>
         val d = ref.definition()
         if (d == null) return null // @nowarn
-        val dd = d.nn
+        val dd   = d.nn
         val safe = safeToAssign(state, dd, ref.scope, true)
         dd.assignments += 1
         if (!safe) return null // @nowarn — continue normal
@@ -1158,7 +1156,7 @@ object ReduceVars {
             val prefix = new AstUnaryPrefix
             prefix.operator = "+"
             prefix.expression = fixed match {
-              case n: AstNode => n
+              case n: AstNode      => n
               case f: Function0[?] => f().asInstanceOf[AstNode]
               case _ => ref
             }

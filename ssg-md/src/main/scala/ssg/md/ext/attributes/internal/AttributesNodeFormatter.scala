@@ -18,18 +18,18 @@ package attributes
 package internal
 
 import ssg.md.Nullable
-import ssg.md.ast.{AnchorRefTarget, Heading}
+import ssg.md.ast.{ AnchorRefTarget, Heading }
 import ssg.md.ast.util.AnchorRefTargetBlockVisitor
 import ssg.md.formatter.*
-import ssg.md.util.ast.{Document, Node}
-import ssg.md.util.data.{DataHolder, DataKey, NotNullValueSupplier}
+import ssg.md.util.ast.{ Document, Node }
+import ssg.md.util.data.{ DataHolder, DataKey, NotNullValueSupplier }
 import ssg.md.util.format.options.DiscretionaryText
-import ssg.md.util.html.{Attribute, MutableAttributes}
-import ssg.md.util.sequence.{BasedSequence, PrefixedSubSequence}
+import ssg.md.util.html.{ Attribute, MutableAttributes }
+import ssg.md.util.sequence.{ BasedSequence, PrefixedSubSequence }
 
 import scala.compiletime.uninitialized
 
-import java.{util => ju}
+import java.{ util => ju }
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 import scala.util.boundary
@@ -39,24 +39,24 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
 
   import AttributesNodeFormatter.*
 
-  private var attributeTranslationMap: ju.Map[String, String] = uninitialized // set during renderDocument
-  private var attributeTranslatedMap: ju.Map[String, String] = uninitialized  // set during renderDocument
-  private var attributeOriginalIdMap: ju.Map[String, String] = uninitialized  // set during renderDocument
-  private var attributeUniquificationIdMap: ju.Map[String, String] = uninitialized // set during renderDocument
-  private var attributeOriginalId: Int = 0
-  private val formatOptions: AttributesFormatOptions = new AttributesFormatOptions(options)
+  private var attributeTranslationMap:      ju.Map[String, String]  = uninitialized // set during renderDocument
+  private var attributeTranslatedMap:       ju.Map[String, String]  = uninitialized // set during renderDocument
+  private var attributeOriginalIdMap:       ju.Map[String, String]  = uninitialized // set during renderDocument
+  private var attributeUniquificationIdMap: ju.Map[String, String]  = uninitialized // set during renderDocument
+  private var attributeOriginalId:          Int                     = 0
+  private val formatOptions:                AttributesFormatOptions = new AttributesFormatOptions(options)
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
 
   override def getFormattingPhases: Nullable[Set[FormattingPhase]] =
     Nullable(Set(FormattingPhase.COLLECT))
 
-  override def addExplicitId(node: Node, id: Nullable[String], context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  override def addExplicitId(node: Node, id: Nullable[String], context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     if (id.isDefined && node.isInstanceOf[Heading]) {
       // if our id != generated id we add explicit attributes if none are found already
       if (context.getRenderPurpose == RenderPurpose.TRANSLATED) {
         if (hasNoIdAttribute(node) && attributeUniquificationIdMap != null) { // @nowarn - may be uninitialized
-          val idStr = id.get
+          val idStr    = id.get
           val uniqueId = attributeUniquificationIdMap.getOrDefault(idStr, idStr)
           if (uniqueId != idStr) {
             markdown.append(" {.")
@@ -66,7 +66,6 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
         }
       }
     }
-  }
 
   private def hasNoIdAttribute(node: Node): Boolean = {
     var haveIdAttribute = false
@@ -110,60 +109,69 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
             // make ids unique if there is a list of documents
             val mergedUniquified = new ju.HashSet[String]()
 
-            mergeContext.get.forEachPrecedingDocument(Nullable(document), new MergeContextConsumer {
-              override def accept(docContext: TranslationContext, doc: Document, index: Int): Unit = {
-                val attributes = AttributesExtension.NODE_ATTRIBUTES.get(Nullable(doc: DataHolder))
-                val idUniquificationMap = ATTRIBUTE_UNIQUIFICATION_ID_MAP.get(Nullable(docContext.getTranslationStore: DataHolder))
+            mergeContext.get.forEachPrecedingDocument(
+              Nullable(document),
+              new MergeContextConsumer {
+                override def accept(docContext: TranslationContext, doc: Document, index: Int): Unit = {
+                  val attributes          = AttributesExtension.NODE_ATTRIBUTES.get(Nullable(doc: DataHolder))
+                  val idUniquificationMap = ATTRIBUTE_UNIQUIFICATION_ID_MAP.get(Nullable(docContext.getTranslationStore: DataHolder))
 
-                for (attributesNodes <- attributes.values().asScala; attributesNode <- attributesNodes.asScala) {
-                  val it = attributesNode.children.iterator()
-                  while (it.hasNext) {
-                    val childNode = it.next()
-                    if (childNode.isInstanceOf[AttributeNode]) {
-                      val attributeNode = childNode.asInstanceOf[AttributeNode]
-                      if (attributeNode.isId) {
-                        val key = attributeNode.value.toString
-                        val newKey = idUniquificationMap.getOrDefault(key, key)
-                        if (!mergedUniquified.contains(newKey)) {
-                          mergedUniquified.add(newKey)
-                        }
-                      }
-                    }
-                  }
-                }
-
-                // add heading ids to contained ids
-                val generator = context.getIdGenerator
-                if (generator.isDefined) {
-                  new AnchorRefTargetBlockVisitor() {
-                    override protected def visit(refTarget: AnchorRefTarget): Unit = {
-                      val refNode = refTarget.asInstanceOf[Node]
-                      if (hasNoIdAttribute(refNode)) {
-                        var key = generator.get.getId(refNode)
-                        if (key.isEmpty) {
-                          val text = refTarget.anchorRefText
-                          key = generator.get.getId(text)
-                          key.foreach { k => refTarget.anchorRefId = k }
-                        }
-                        key.foreach { k =>
-                          val newKey = idUniquificationMap.getOrDefault(k, k)
+                  for {
+                    attributesNodes <- attributes.values().asScala
+                    attributesNode <- attributesNodes.asScala
+                  } {
+                    val it = attributesNode.children.iterator()
+                    while (it.hasNext) {
+                      val childNode = it.next()
+                      if (childNode.isInstanceOf[AttributeNode]) {
+                        val attributeNode = childNode.asInstanceOf[AttributeNode]
+                        if (attributeNode.isId) {
+                          val key    = attributeNode.value.toString
+                          val newKey = idUniquificationMap.getOrDefault(key, key)
                           if (!mergedUniquified.contains(newKey)) {
                             mergedUniquified.add(newKey)
                           }
                         }
                       }
                     }
-                  }.visit(document.asInstanceOf[Node])
+                  }
+
+                  // add heading ids to contained ids
+                  val generator = context.getIdGenerator
+                  if (generator.isDefined) {
+                    new AnchorRefTargetBlockVisitor() {
+                      override protected def visit(refTarget: AnchorRefTarget): Unit = {
+                        val refNode = refTarget.asInstanceOf[Node]
+                        if (hasNoIdAttribute(refNode)) {
+                          var key = generator.get.getId(refNode)
+                          if (key.isEmpty) {
+                            val text = refTarget.anchorRefText
+                            key = generator.get.getId(text)
+                            key.foreach { k => refTarget.anchorRefId = k }
+                          }
+                          key.foreach { k =>
+                            val newKey = idUniquificationMap.getOrDefault(k, k)
+                            if (!mergedUniquified.contains(newKey)) {
+                              mergedUniquified.add(newKey)
+                            }
+                          }
+                        }
+                      }
+                    }.visit(document.asInstanceOf[Node])
+                  }
                 }
               }
-            })
+            )
 
             // now make ours unique
-            val attributes = AttributesExtension.NODE_ATTRIBUTES.get(Nullable(document: DataHolder))
+            val attributes                = AttributesExtension.NODE_ATTRIBUTES.get(Nullable(document: DataHolder))
             val categoryUniquificationMap = ATTRIBUTE_UNIQUIFICATION_CATEGORY_MAP.get(Nullable(context.getTranslationStore: DataHolder))
-            val idMap = new ju.HashMap[String, String]()
+            val idMap                     = new ju.HashMap[String, String]()
 
-            for (attributesNodes <- attributes.values().asScala; attributesNode <- attributesNodes.asScala) {
+            for {
+              attributesNodes <- attributes.values().asScala
+              attributesNode <- attributesNodes.asScala
+            } {
               val it = attributesNode.children.iterator()
               while (it.hasNext) {
                 val childNode = it.next()
@@ -172,18 +180,18 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
                   if (attributeNode.isId) {
                     // this one needs to be unique
                     val valueChars = attributeNode.value
-                    val key = valueChars.toString
-                    var useKey = key
+                    val key        = valueChars.toString
+                    var useKey     = key
 
                     val pos = valueChars.indexOf(':')
                     if (pos != -1) {
-                      val category = valueChars.subSequence(0, pos).toString
-                      val catId = valueChars.subSequence(pos + 1).toString
+                      val category       = valueChars.subSequence(0, pos).toString
+                      val catId          = valueChars.subSequence(pos + 1).toString
                       val uniqueCategory = categoryUniquificationMap.getOrDefault(category, category)
                       useKey = s"$uniqueCategory:$catId"
                     }
 
-                    var i = 0
+                    var i      = 0
                     var newKey = useKey
                     while (mergedUniquified.contains(newKey)) {
                       i += 1
@@ -212,7 +220,7 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
                       key.foreach { k => refTarget.anchorRefId = k }
                     }
                     key.foreach { k =>
-                      var i = 0
+                      var i      = 0
                       var newKey = k
                       while (mergedUniquified.contains(newKey)) {
                         i += 1
@@ -250,7 +258,7 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
       )
     )
 
-  private def getEncodedOriginalId(attribute: String, context: NodeFormatterContext): String = {
+  private def getEncodedOriginalId(attribute: String, context: NodeFormatterContext): String =
     context.getRenderPurpose match {
       case RenderPurpose.TRANSLATION_SPANS =>
         attributeOriginalId += 1
@@ -274,7 +282,6 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
       case _ => // FORMAT
         attribute
     }
-  }
 
   private def render(node: AttributesNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     node.previous.foreach { prev =>
@@ -299,16 +306,16 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
   private def renderTranslating(node: AttributesNode, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(node.openingMarker)
     var firstChild = true
-    val it = node.children.iterator()
+    val it         = node.children.iterator()
     while (it.hasNext) {
-      val child = it.next()
+      val child         = it.next()
       val attributeNode = child.asInstanceOf[AttributeNode]
       if (!firstChild) markdown.append(' ')
 
       if (attributeNode.isId) {
         // encode as X:N if has :, otherwise as non-translating id
         val valueChars = attributeNode.value
-        val pos = valueChars.indexOf(':')
+        val pos        = valueChars.indexOf(':')
         if (pos == -1) {
           var encodedOriginal = getEncodedOriginalId(attributeNode.chars.toString, context)
           if (context.getRenderPurpose == RenderPurpose.TRANSLATED) {
@@ -320,8 +327,8 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
           markdown.append(encodedOriginal)
         } else {
           val category = valueChars.subSequence(0, pos).toString
-          val catId = valueChars.subSequence(pos + 1).toString
-          val encoded = getEncodedIdAttribute(category, catId, context, markdown, attributeTranslationMap, attributeTranslatedMap)
+          val catId    = valueChars.subSequence(pos + 1).toString
+          val encoded  = getEncodedIdAttribute(category, catId, context, markdown, attributeTranslationMap, attributeTranslatedMap)
           context.getRenderPurpose match {
             case RenderPurpose.TRANSLATION_SPANS | RenderPurpose.TRANSLATED_SPANS =>
               val encodedAttribute = "#" + encoded
@@ -360,8 +367,8 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
     if (processedNodes.contains(node)) {
       // already processed as part of a combine-consecutive group
     } else {
-      val chars = node.chars
-      val openMarker = node.openingMarker
+      val chars       = node.chars
+      val openMarker  = node.openingMarker
       val closeMarker = node.closingMarker
       var spaceAfterOpenMarker: BasedSequence =
         if (chars.safeBaseCharAt(openMarker.endOffset) == ' ') chars.baseSubSequence(openMarker.endOffset, openMarker.endOffset + 1)
@@ -371,11 +378,11 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
         else BasedSequence.NULL
 
       formatOptions.attributesSpaces match {
-        case DiscretionaryText.AS_IS   => // keep as is
-        case DiscretionaryText.ADD     =>
+        case DiscretionaryText.AS_IS => // keep as is
+        case DiscretionaryText.ADD   =>
           spaceAfterOpenMarker = BasedSequence.SPACE
           spaceBeforeCloseMarker = BasedSequence.SPACE
-        case DiscretionaryText.REMOVE  =>
+        case DiscretionaryText.REMOVE =>
           spaceAfterOpenMarker = BasedSequence.NULL
           spaceBeforeCloseMarker = BasedSequence.NULL
       }
@@ -384,14 +391,14 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
       markdown.append(spaceAfterOpenMarker)
       val valueQuotes = formatOptions.attributeValueQuotes
 
-      var firstChild = true
+      var firstChild     = true
       val attributeNodes = new ju.LinkedHashMap[String, AttributeNode]()
 
       if (formatOptions.combineConsecutive) {
         // see if there are attributes applicable to the same owner as this node
         val nodeAttributeRepository = AttributesExtension.NODE_ATTRIBUTES.get(Nullable(context.getDocument: DataHolder))
         boundary {
-          for (entry <- nodeAttributeRepository.entrySet().asScala) {
+          for (entry <- nodeAttributeRepository.entrySet().asScala)
             if (entry.getValue.contains(node)) {
               // have our list
               for (attributesNode <- entry.getValue.asScala) {
@@ -399,20 +406,19 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
                 val childIt = attributesNode.children.iterator()
                 while (childIt.hasNext) {
                   val attrChild = childIt.next()
-                  val attrNode = attrChild.asInstanceOf[AttributeNode]
+                  val attrNode  = attrChild.asInstanceOf[AttributeNode]
                   attributeNodes.put(attrNode.name.toString, combineAttributes(attributeNodes, attrNode))
                 }
               }
               break()
             }
-          }
         }
       }
 
       if (attributeNodes.isEmpty) {
         val childIt = node.children.iterator()
         while (childIt.hasNext) {
-          val child = childIt.next()
+          val child    = childIt.next()
           val attrNode = child.asInstanceOf[AttributeNode]
           attributeNodes.put(attrNode.name.toString, combineAttributes(attributeNodes, attrNode))
         }
@@ -421,17 +427,16 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
       val childNodes: ju.Collection[AttributeNode] =
         if (formatOptions.sort) {
           val entries = new ju.ArrayList[ju.Map.Entry[String, AttributeNode]](attributeNodes.entrySet())
-          entries.sort((o1, o2) => {
+          entries.sort((o1, o2) =>
             if (o1.getValue.isId) -1
             else if (o2.getValue.isId) 1
             else if (o1.getValue.isClass) -1
             else if (o2.getValue.isClass) 1
             else o1.getValue.name.compareTo(o2.getValue.name)
-          })
+          )
           val nodes = new ju.ArrayList[AttributeNode](entries.size())
-          for (entry <- entries.asScala) {
+          for (entry <- entries.asScala)
             nodes.add(entry.getValue)
-          }
           nodes
         } else {
           attributeNodes.values()
@@ -442,9 +447,9 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
         if (!firstChild) markdown.append(' ')
 
         val attrChars = attributeNode.chars
-        var name = attributeNode.name
-        val value = attributeNode.value
-        var sep = attributeNode.attributeSeparator
+        var name      = attributeNode.name
+        val value     = attributeNode.value
+        var sep       = attributeNode.attributeSeparator
 
         var spaceBeforeSep: BasedSequence =
           if (attrChars.safeBaseCharAt(sep.startOffset - 1) == ' ') attrChars.baseSubSequence(sep.startOffset - 1, sep.startOffset)
@@ -454,21 +459,21 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
           else BasedSequence.NULL
 
         formatOptions.attributeEqualSpace match {
-          case DiscretionaryText.AS_IS   => // keep as is
-          case DiscretionaryText.ADD     =>
+          case DiscretionaryText.AS_IS => // keep as is
+          case DiscretionaryText.ADD   =>
             spaceBeforeSep = BasedSequence.SPACE
             spaceAfterSep = BasedSequence.SPACE
-          case DiscretionaryText.REMOVE  =>
+          case DiscretionaryText.REMOVE =>
             spaceBeforeSep = BasedSequence.NULL
             spaceAfterSep = BasedSequence.NULL
         }
 
-        var quote = if (attributeNode.isImplicitName) "" else valueQuotes.quotesFor(value, attributeNode.openingMarker)
+        var quote     = if (attributeNode.isImplicitName) "" else valueQuotes.quotesFor(value, attributeNode.openingMarker)
         val needQuote = AttributeValueQuotes.NO_QUOTES_DOUBLE_PREFERRED.quotesFor(value, "")
 
         if (attributeNode.isId) {
           (if (needQuote.isEmpty) formatOptions.attributeId else AttributeImplicitName.EXPLICIT_PREFERRED) match {
-            case AttributeImplicitName.AS_IS => // keep as is
+            case AttributeImplicitName.AS_IS              => // keep as is
             case AttributeImplicitName.IMPLICIT_PREFERRED =>
               if (!attributeNode.isImplicitName) {
                 name = PrefixedSubSequence.prefixOf("#", name.getEmptyPrefix)
@@ -488,7 +493,7 @@ class AttributesNodeFormatter(options: DataHolder) extends PhasedNodeFormatter, 
           }
         } else if (attributeNode.isClass) {
           (if (needQuote.isEmpty) formatOptions.attributeClass else AttributeImplicitName.EXPLICIT_PREFERRED) match {
-            case AttributeImplicitName.AS_IS => // keep as is
+            case AttributeImplicitName.AS_IS              => // keep as is
             case AttributeImplicitName.IMPLICIT_PREFERRED =>
               if (!attributeNode.isImplicitName) {
                 name = PrefixedSubSequence.prefixOf(".", name.getEmptyPrefix)
@@ -559,8 +564,8 @@ object AttributesNodeFormatter {
 
   def getEncodedIdAttribute(category: String, categoryId: String, context: NodeFormatterContext, markdown: MarkdownWriter): String = {
     val attributeTranslationMap = ATTRIBUTE_TRANSLATION_MAP.get(Nullable(context.getTranslationStore: DataHolder))
-    val attributeTranslatedMap = ATTRIBUTE_TRANSLATED_MAP.get(Nullable(context.getTranslationStore: DataHolder))
-    val id = getEncodedIdAttribute(category, categoryId, context, markdown, attributeTranslationMap, attributeTranslatedMap)
+    val attributeTranslatedMap  = ATTRIBUTE_TRANSLATED_MAP.get(Nullable(context.getTranslationStore: DataHolder))
+    val id                      = getEncodedIdAttribute(category, categoryId, context, markdown, attributeTranslationMap, attributeTranslatedMap)
 
     if (context.getRenderPurpose == RenderPurpose.TRANSLATED) {
       val idUniquificationMap = ATTRIBUTE_UNIQUIFICATION_ID_MAP.get(Nullable(context.getTranslationStore: DataHolder))
@@ -575,15 +580,15 @@ object AttributesNodeFormatter {
   }
 
   private def getEncodedIdAttribute(
-    category: String,
-    categoryId: String,
-    context: NodeFormatterContext,
-    markdown: MarkdownWriter,
+    category:                String,
+    categoryId:              String,
+    context:                 NodeFormatterContext,
+    markdown:                MarkdownWriter,
     attributeTranslationMap: ju.Map[String, String],
-    attributeTranslatedMap: ju.Map[String, String]
+    attributeTranslatedMap:  ju.Map[String, String]
   ): String = {
     var encodedCategory = category
-    var encodedId = categoryId
+    var encodedId       = categoryId
     var placeholderId: Int = ATTRIBUTE_TRANSLATION_ID.get(Nullable(context.getTranslationStore: DataHolder))
 
     context.getRenderPurpose match {
@@ -607,7 +612,7 @@ object AttributesNodeFormatter {
         }
 
       case RenderPurpose.TRANSLATED_SPANS =>
-        // return encoded non-translating text — use category/categoryId as-is
+      // return encoded non-translating text — use category/categoryId as-is
 
       case RenderPurpose.TRANSLATED =>
         encodedCategory = attributeTranslatedMap.get(category) // @nowarn - may be null from Java Map.get
@@ -627,15 +632,15 @@ object AttributesNodeFormatter {
     }
   }
 
-  private[internal] def combineAttributes(attributeNodes: ju.LinkedHashMap[String, AttributeNode], attributeNode: AttributeNode): AttributeNode = {
+  private[internal] def combineAttributes(attributeNodes: ju.LinkedHashMap[String, AttributeNode], attributeNode: AttributeNode): AttributeNode =
     if (attributeNode.isId) {
       attributeNodes.remove("id")
       attributeNodes.remove("#")
       attributeNode
     } else if (attributeNode.isClass) {
-      var newNode = attributeNode
+      var newNode  = attributeNode
       val removed1 = attributeNodes.remove(Attribute.CLASS_ATTR) // @nowarn - may be null from Java Map.remove
-      val removed2 = attributeNodes.remove(".")                   // @nowarn
+      val removed2 = attributeNodes.remove(".") // @nowarn
       if (removed1 != null || removed2 != null) { // @nowarn - null check for Java Map returns
         val attributes = new MutableAttributes()
         if (removed1 != null) attributes.addValue(Attribute.CLASS_ATTR, removed1.value) // @nowarn
@@ -648,7 +653,7 @@ object AttributesNodeFormatter {
       }
       newNode
     } else if (attributeNode.name.equals(Attribute.STYLE_ATTR)) {
-      var newNode = attributeNode
+      var newNode  = attributeNode
       val removed1 = attributeNodes.remove(Attribute.STYLE_ATTR) // @nowarn
       if (removed1 != null) { // @nowarn
         val attributes = new MutableAttributes()
@@ -663,7 +668,6 @@ object AttributesNodeFormatter {
     } else {
       attributeNode
     }
-  }
 
   class Factory extends NodeFormatterFactory {
     override def create(options: DataHolder): NodeFormatter = new AttributesNodeFormatter(options)

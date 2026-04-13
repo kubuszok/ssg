@@ -25,9 +25,8 @@ final class PrefixedSubSequence private (
 ) extends BasedSequenceImpl(0),
       ReplacedBasedSequence {
 
-  private def this(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int, endIndex: Int) = {
+  private def this(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int, endIndex: Int) =
     this(prefix, baseSeq.subSequence(startIndex, endIndex))
-  }
 
   override def getBase: AnyRef = base.getBase
 

@@ -45,9 +45,8 @@ class TableFormatOptions(options: Nullable[DataHolder]) extends MutableDataSette
   val colonWidth: Int = charWidthProvider.getCharWidth(':')
   val dashWidth:  Int = charWidthProvider.getCharWidth('-')
 
-  def this() = {
+  def this() =
     this(Nullable(null))
-  }
 
   override def setIn(dataHolder: MutableDataHolder): MutableDataHolder = {
     dataHolder.set(TableFormatOptions.FORMAT_TABLE_LEAD_TRAIL_PIPES, leadTrailPipes)

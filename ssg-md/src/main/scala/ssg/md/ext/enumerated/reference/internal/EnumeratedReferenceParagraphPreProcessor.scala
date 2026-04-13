@@ -38,7 +38,7 @@ class EnumeratedReferenceParagraphPreProcessor(options: DataHolder) extends Para
   override def preProcessBlock(block: Paragraph, state: ParserState): Int = {
     val trySequence = block.chars
     val matcher     = EnumeratedReferenceParagraphPreProcessor.ENUM_REF_DEF_PARAGRAPH_PATTERN.matcher(trySequence)
-    var lastFound = 0
+    var lastFound   = 0
     boundary {
       while (matcher.find()) {
         if (matcher.start() != lastFound) {

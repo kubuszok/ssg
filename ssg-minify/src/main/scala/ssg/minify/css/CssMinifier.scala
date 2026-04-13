@@ -166,7 +166,7 @@ object CssMinifier {
     result
   }
 
-  private def rgbToHex(r: Int, g: Int, b: Int): String = {
+  private def rgbToHex(r: Int, g: Int, b: Int): String =
     if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
       s"rgb($r,$g,$b)"
     } else {
@@ -178,47 +178,46 @@ object CssMinifier {
         hex
       }
     }
-  }
 
   // -- Named color → hex (shorter alternatives only) --
 
   private val NamedColorMap: Map[String, String] = Map(
-    "white"                -> "#fff",
-    "black"                -> "#000",
-    "red"                  -> "red", // already 3 chars, #f00 is same length
-    "fuchsia"              -> "#f0f",
-    "magenta"              -> "#f0f",
-    "yellow"               -> "#ff0",
-    "cyan"                 -> "#0ff",
-    "aqua"                 -> "#0ff",
-    "darkblue"             -> "#00008b",
-    "darkgreen"            -> "#006400",
-    "darkred"              -> "#8b0000",
-    "darkcyan"             -> "#008b8b",
-    "darkmagenta"          -> "#8b008b",
-    "cornsilk"             -> "#fff8dc",
-    "bisque"               -> "#ffe4c4",
-    "azure"                -> "#f0ffff",
-    "beige"                -> "#f5f5dc",
-    "coral"                -> "#ff7f50",
-    "ivory"                -> "#fffff0",
-    "khaki"                -> "#f0e68c",
-    "linen"                -> "#faf0e6",
-    "orchid"               -> "#da70d6",
-    "plum"                 -> "#dda0dd",
-    "salmon"               -> "#fa8072",
-    "sienna"               -> "#a0522d",
-    "silver"               -> "#c0c0c0",
-    "tomato"               -> "#ff6347",
-    "violet"               -> "#ee82ee",
-    "wheat"                -> "#f5deb3"
+    "white" -> "#fff",
+    "black" -> "#000",
+    "red" -> "red", // already 3 chars, #f00 is same length
+    "fuchsia" -> "#f0f",
+    "magenta" -> "#f0f",
+    "yellow" -> "#ff0",
+    "cyan" -> "#0ff",
+    "aqua" -> "#0ff",
+    "darkblue" -> "#00008b",
+    "darkgreen" -> "#006400",
+    "darkred" -> "#8b0000",
+    "darkcyan" -> "#008b8b",
+    "darkmagenta" -> "#8b008b",
+    "cornsilk" -> "#fff8dc",
+    "bisque" -> "#ffe4c4",
+    "azure" -> "#f0ffff",
+    "beige" -> "#f5f5dc",
+    "coral" -> "#ff7f50",
+    "ivory" -> "#fffff0",
+    "khaki" -> "#f0e68c",
+    "linen" -> "#faf0e6",
+    "orchid" -> "#da70d6",
+    "plum" -> "#dda0dd",
+    "salmon" -> "#fa8072",
+    "sienna" -> "#a0522d",
+    "silver" -> "#c0c0c0",
+    "tomato" -> "#ff6347",
+    "violet" -> "#ee82ee",
+    "wheat" -> "#f5deb3"
   )
 
   private def foldNamedColors(css: String): String = {
     // Only fold named colors in value positions (after : and before ; or })
     // Use a simple word-boundary approach
     var result = css
-    for ((name, hex) <- NamedColorMap) {
+    for ((name, hex) <- NamedColorMap)
       // Only replace if hex is shorter than name
       if (hex.length < name.length) {
         // Case-insensitive replacement in value context
@@ -228,7 +227,6 @@ object CssMinifier {
         )
         result = pattern.matcher(result).replaceAll(hex)
       }
-    }
     result
   }
 

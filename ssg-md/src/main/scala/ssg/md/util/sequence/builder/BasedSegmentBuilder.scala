@@ -21,17 +21,14 @@ class BasedSegmentBuilder private (
 ) extends SegmentBuilderBase[BasedSegmentBuilder](options),
       IBasedSegmentBuilder[BasedSegmentBuilder] {
 
-  private def this(baseSeq: BasedSequence) = {
+  private def this(baseSeq: BasedSequence) =
     this(baseSeq.getBaseSequence, new CharRecoveryOptimizer(PositionAnchor.CURRENT), ISegmentBuilder.F_INCLUDE_ANCHORS)
-  }
 
-  private def this(baseSeq: BasedSequence, optimizer: SegmentOptimizer) = {
+  private def this(baseSeq: BasedSequence, optimizer: SegmentOptimizer) =
     this(baseSeq.getBaseSequence, optimizer, ISegmentBuilder.F_INCLUDE_ANCHORS)
-  }
 
-  private def this(baseSeq: BasedSequence, options: Int) = {
+  private def this(baseSeq: BasedSequence, options: Int) =
     this(baseSeq.getBaseSequence, new CharRecoveryOptimizer(PositionAnchor.CURRENT), options)
-  }
 
   override def baseSequence: BasedSequence = baseSeq
 

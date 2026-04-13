@@ -71,7 +71,7 @@ object Minifier {
     filePath:     String,
     options:      MinifyOptions = MinifyOptions.Defaults,
     jsCompressor: JsCompressor = BasicJsMinifier
-  ): String = {
+  ): String =
     if (options.exclude.exists(pattern => filePath.contains(pattern))) input
     else {
       fileTypeFromPath(filePath) match {
@@ -79,7 +79,6 @@ object Minifier {
         case None     => input
       }
     }
-  }
 
   /** Determine file type from a file path extension. */
   def fileTypeFromPath(path: String): Option[FileType] = {

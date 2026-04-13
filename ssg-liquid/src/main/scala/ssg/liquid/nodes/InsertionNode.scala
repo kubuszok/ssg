@@ -21,13 +21,11 @@ class InsertionNode(
   private val tokens:    Array[LNode]
 ) extends LNode {
 
-  def this(insertion: Insertion, tokens: Array[LNode]) = {
+  def this(insertion: Insertion, tokens: Array[LNode]) =
     this(if (insertion != null) insertion.name else null, insertion, tokens)
-  }
 
-  def this(insertion: Insertion, tokens: JList[LNode]) = {
+  def this(insertion: Insertion, tokens: JList[LNode]) =
     this(insertion, tokens.toArray(new Array[LNode](0)))
-  }
 
   if (tagName == null) {
     throw new IllegalArgumentException("tagName == null")

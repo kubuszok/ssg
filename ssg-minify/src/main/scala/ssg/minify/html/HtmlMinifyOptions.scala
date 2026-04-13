@@ -54,6 +54,7 @@ final case class HtmlMinifyOptions(
 }
 
 object HtmlMinifyOptions {
+
   /** Default tags whose content is preserved during minification. */
   val DefaultPreservedTags: List[String] = List("pre", "textarea", "script", "style")
 

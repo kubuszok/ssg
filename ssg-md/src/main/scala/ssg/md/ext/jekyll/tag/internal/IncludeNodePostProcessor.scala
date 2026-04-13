@@ -43,22 +43,20 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
   }
 
   val linkResolvers: JList[LinkResolver] = {
-    val rawFactories = JekyllTagExtension.LINK_RESOLVER_FACTORIES.get(document)
+    val rawFactories     = JekyllTagExtension.LINK_RESOLVER_FACTORIES.get(document)
     val orderedFactories = DependencyResolver.resolveFlatDependencies(rawFactories.asScala.toList, Nullable.empty, Nullable.empty)
-    val resolvers = new ArrayList[LinkResolver](orderedFactories.size)
-    for (factory <- orderedFactories) {
+    val resolvers        = new ArrayList[LinkResolver](orderedFactories.size)
+    for (factory <- orderedFactories)
       resolvers.add(factory.apply(context))
-    }
     resolvers
   }
 
   val contentResolvers: JList[UriContentResolver] = {
-    val rawFactories = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
+    val rawFactories     = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
     val orderedFactories = DependencyResolver.resolveFlatDependencies(rawFactories.asScala.toList, Nullable.empty, Nullable.empty)
-    val resolvers = new ArrayList[UriContentResolver](orderedFactories.size)
-    for (factory <- orderedFactories) {
+    val resolvers        = new ArrayList[UriContentResolver](orderedFactories.size)
+    for (factory <- orderedFactories)
       resolvers.add(factory.apply(context))
-    }
     resolvers
   }
 

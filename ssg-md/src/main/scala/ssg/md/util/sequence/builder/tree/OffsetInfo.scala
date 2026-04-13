@@ -21,9 +21,8 @@ final class OffsetInfo(
   val endIndex:    Int
 ) {
 
-  def this(pos: Int, offset: Int, isEndOffset: Boolean, startIndex: Int) = {
+  def this(pos: Int, offset: Int, isEndOffset: Boolean, startIndex: Int) =
     this(pos, offset, isEndOffset, startIndex, startIndex)
-  }
 
   override def toString: String =
     "OffsetInfo{ " +

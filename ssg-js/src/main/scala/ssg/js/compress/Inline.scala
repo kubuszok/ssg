@@ -64,7 +64,7 @@ object Inline {
         node.nn match {
           case _: AstStatement => break(false)
           case _: AstArray | _: AstObjectKeyVal | _: AstObject => break(true)
-          case _ =>
+          case _                                               =>
         }
         level += 1
         node = compressor.parent(level)
@@ -131,7 +131,7 @@ object Inline {
       var node: AstNode | Null = compressor.parent(level)
       while (node != null) {
         node.nn match {
-          case _: AstScope => break(false)
+          case _:    AstScope                                => break(false)
           case prop: AstObjectProperty if prop.computedKey() =>
             // Check if we're in the key position
             val keyNode = prop.key
@@ -161,7 +161,7 @@ object Inline {
     */
   private def isConstSymbolShorterThanInitValue(dd: SymbolDef, fixedValue: AstNode | Null): Boolean =
     if (dd.orig.size == 1 && fixedValue != null) {
-      val initValueLength = AstSize.size(fixedValue.nn)
+      val initValueLength  = AstSize.size(fixedValue.nn)
       val identifierLength = dd.name.length
       initValueLength > identifierLength
     } else {
@@ -198,7 +198,7 @@ object Inline {
       // Get fixed value for this symbol
       val fixed: AstNode | Null = self.fixedValue() match {
         case n: AstNode => n
-        case _          => null
+        case _ => null
       }
 
       // Handle top_retain option — keep the symbol if it's in the retain list
@@ -367,11 +367,11 @@ object Inline {
           result match {
             case lambda: AstLambda if lambda.name != null && lambda.name.nn.isInstanceOf[AstSymbolDefun] =>
               val defunName = lambda.name.nn.asInstanceOf[AstSymbolDefun]
-              val defunDef = defunName.thedef.asInstanceOf[SymbolDef]
+              val defunDef  = defunName.thedef.asInstanceOf[SymbolDef]
 
               // Check if a lambda_def already exists
               val existingLambdaDef = lambda.variables.get(defunName.name)
-              val (lambdaDef, _) = existingLambdaDef match {
+              val (lambdaDef, _)    = existingLambdaDef match {
                 case Some(ld) if ld.asInstanceOf[SymbolDef].orig.nonEmpty && ld.asInstanceOf[SymbolDef].orig(0).isInstanceOf[AstSymbolLambda] =>
                   (ld.asInstanceOf[SymbolDef], ld.asInstanceOf[SymbolDef].orig(0).asInstanceOf[AstSymbolLambda])
                 case _ =>
@@ -425,22 +425,26 @@ object Inline {
         fixed match {
           case _: AstThis =>
             // Replace AST_This if all references are in the same scope
-            if (!dd.orig.headOption.exists(_.isInstanceOf[AstSymbolFunarg]) &&
-                dd.references.forall(ref => dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef])) {
+            if (
+              !dd.orig.headOption.exists(_.isInstanceOf[AstSymbolFunarg]) &&
+              dd.references.forall(ref => dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef])
+            ) {
               replace = fixed
             }
 
           case _ =>
             // Try to evaluate the fixed value
             val ev = evaluate(fixed, compressor)
-            if ((ev.asInstanceOf[AnyRef] ne fixed.asInstanceOf[AnyRef]) &&
-                (compressor.optionBool("unsafe_regexp") || !ev.isInstanceOf[RegExpValue])) {
+            if (
+              (ev.asInstanceOf[AnyRef] ne fixed.asInstanceOf[AnyRef]) &&
+              (compressor.optionBool("unsafe_regexp") || !ev.isInstanceOf[RegExpValue])
+            ) {
               replace = makeNodeFromConstant(ev, fixed)
             }
         }
 
         if (replace != null) {
-          val nameLength = AstSize.size(self)
+          val nameLength  = AstSize.size(self)
           val replaceSize = AstSize.size(replace.nn)
 
           // Calculate overhead if the variable could be dropped
@@ -495,7 +499,7 @@ object Inline {
 
       // Handle reduce_vars: look through symbol refs to find the actual function
       if (compressor.optionBool("reduce_vars") && fn.isInstanceOf[AstSymbolRef] && !hasAnnotation(self, Annotations.NoInline)) {
-        val fnRef = fn.asInstanceOf[AstSymbolRef]
+        val fnRef    = fn.asInstanceOf[AstSymbolRef]
         val fixedVal = fnRef.fixedValue()
 
         fixedVal match {
@@ -571,16 +575,20 @@ object Inline {
                 case parentCall: AstCall if parentCall.expression != null && (parentCall.expression.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) =>
                   // Identity function was being used to remove `this`:
                   // id(bag.no_this)(...) -> (0, bag.no_this)(...)
-                  break(makeSequence(self, ArrayBuffer(
-                    {
-                      val zero = new AstNumber
-                      zero.start = self.start
-                      zero.end = self.end
-                      zero.value = 0.0
-                      zero
-                    },
-                    replacement
-                  )))
+                  break(
+                    makeSequence(self,
+                                 ArrayBuffer(
+                                   {
+                                     val zero = new AstNumber
+                                     zero.start = self.start
+                                     zero.end = self.end
+                                     zero.value = 0.0
+                                     zero
+                                   },
+                                   replacement
+                                 )
+                    )
+                  )
                 case _ =>
               }
             case _ =>
@@ -595,8 +603,8 @@ object Inline {
         val lambda = fn.asInstanceOf[AstLambda]
 
         // Variables for can_inject_symbols
-        var scopeVar: AstScope | Null = null
-        var inLoop: ArrayBuffer[SymbolDef] | Null = null
+        var scopeVar: AstScope | Null               = null
+        var inLoop:   ArrayBuffer[SymbolDef] | Null = null
         var level = -1
 
         // Helper to get the return value from a statement
@@ -619,8 +627,8 @@ object Inline {
 
         // Check if function body can be flattened
         def canFlattenBody(statNode: AstNode | Null): AstNode | Null = {
-          val bodyArr = lambda.body
-          val len = bodyArr.size
+          val bodyArr     = lambda.body
+          val len         = bodyArr.size
           val inlineLevel = compressor.option("inline") match {
             case n: Int => n
             case _ => 1
@@ -640,7 +648,7 @@ object Inline {
                     return null // @nowarn -- early return in helper function
                   }
                 case _: AstEmptyStatement =>
-                  // Skip empty statements
+                // Skip empty statements
                 case _ if lastNonVar != null =>
                   // More than one non-var statement
                   return null // @nowarn -- early return in helper function
@@ -656,22 +664,24 @@ object Inline {
         // Check if arguments can be injected
         def canInjectArgs(blockScoped: mutable.Set[String], safeToInject: Boolean): Boolean =
           boundary[Boolean] {
-            var i = 0
+            var i   = 0
             val len = lambda.argnames.size
             while (i < len) {
               val arg = lambda.argnames(i)
               arg match {
                 case da: AstDefaultAssign =>
                   if (!hasFlag(da.left.nn, UNUSED)) break(false)
-                case _: AstDestructuring => break(false)
-                case expand: AstExpansion =>
+                case _:      AstDestructuring => break(false)
+                case expand: AstExpansion     =>
                   if (!hasFlag(expand.expression.nn, UNUSED)) break(false)
                 case sym: AstSymbol =>
                   if (!hasFlag(sym, UNUSED)) {
-                    if (!safeToInject ||
-                        blockScoped.contains(sym.name) ||
-                        identifierAtom.contains(sym.name) ||
-                        (scopeVar != null && ScopeAnalysis.conflictingDef(scopeVar.nn, sym.name))) {
+                    if (
+                      !safeToInject ||
+                      blockScoped.contains(sym.name) ||
+                      identifierAtom.contains(sym.name) ||
+                      (scopeVar != null && ScopeAnalysis.conflictingDef(scopeVar.nn, sym.name))
+                    ) {
                       break(false)
                     }
                     if (inLoop != null) {
@@ -690,7 +700,7 @@ object Inline {
         def canInjectVars(blockScoped: mutable.Set[String], safeToInject: Boolean): Boolean =
           boundary[Boolean] {
             val len = lambda.body.size
-            var i = 0
+            var i   = 0
             while (i < len) {
               val statNode = lambda.body(i)
               statNode match {
@@ -700,11 +710,13 @@ object Inline {
                   while ({ j -= 1; j >= 0 }) {
                     val nameNode = varNode.definitions(j).asInstanceOf[AstVarDef].name
                     nameNode match {
-                      case _: AstDestructuring => break(false)
-                      case sym: AstSymbol =>
-                        if (blockScoped.contains(sym.name) ||
-                            identifierAtom.contains(sym.name) ||
-                            (scopeVar != null && ScopeAnalysis.conflictingDef(scopeVar.nn, sym.name))) {
+                      case _:   AstDestructuring => break(false)
+                      case sym: AstSymbol        =>
+                        if (
+                          blockScoped.contains(sym.name) ||
+                          identifierAtom.contains(sym.name) ||
+                          (scopeVar != null && ScopeAnalysis.conflictingDef(scopeVar.nn, sym.name))
+                        ) {
                           break(false)
                         }
                         if (inLoop != null) {
@@ -733,7 +745,7 @@ object Inline {
               level += 1
               currentScope = compressor.parent(level)
               currentScope != null && !currentScope.nn.isInstanceOf[AstScope]
-            }) {
+            })
               currentScope.nn match {
                 case block: AstBlock if block.blockScope != null =>
                   block.blockScope.nn.variables.foreach { case (name, _) =>
@@ -752,16 +764,15 @@ object Inline {
                   if (ref.fixedValue().isInstanceOf[AstScope]) break(false)
                 case _ =>
               }
-            }
 
             scopeVar = currentScope match {
               case s: AstScope => s
-              case _           => null
+              case _ => null
             }
 
             val safeToInject = scopeVar match {
               case _: AstToplevel => compressor.toplevel.vars
-              case _              => true
+              case _ => true
             }
 
             val inlineLevel = compressor.option("inline") match {
@@ -824,9 +835,8 @@ object Inline {
 
           // First, push excess arguments (beyond the parameter count)
           var i = self.args.size
-          while ({ i -= 1; i >= len }) {
+          while ({ i -= 1; i >= len })
             expressions.addOne(self.args(i))
-          }
 
           // Then process parameters in reverse order
           i = len
@@ -868,26 +878,28 @@ object Inline {
 
         // Flatten function local variables
         def flattenVars(decls: ArrayBuffer[AstVarDef], expressions: ArrayBuffer[AstNode]): Unit = {
-          val pos = expressions.size
-          var i = 0
+          val pos   = expressions.size
+          var i     = 0
           val lines = lambda.body.size
           while (i < lines) {
             val statNode = lambda.body(i)
             statNode match {
               case varNode: AstVar =>
-                var j = 0
+                var j    = 0
                 val defs = varNode.definitions.size
                 while (j < defs) {
-                  val varDef = varNode.definitions(j)
+                  val varDef      = varNode.definitions(j)
                   val varDefTyped = varDef.asInstanceOf[AstVarDef]
                   varDefTyped.name match {
                     case nameNode: AstSymbol =>
                       appendVar(decls, expressions, nameNode, varDefTyped.value)
                       // If in loop and var is not an argname, add initialization
-                      if (inLoop != null && !lambda.argnames.exists {
-                        case sym: AstSymbol => sym.name == nameNode.name
-                        case _ => false
-                      }) {
+                      if (
+                        inLoop != null && !lambda.argnames.exists {
+                          case sym: AstSymbol => sym.name == nameNode.name
+                          case _ => false
+                        }
+                      ) {
                         val d = lambda.variables.get(nameNode.name)
                         d match {
                           case Some(defObj) =>
@@ -922,7 +934,7 @@ object Inline {
 
         // Main flatten entry point
         def flattenFn(returnedValue: AstNode): ArrayBuffer[AstNode] = {
-          val decls = ArrayBuffer.empty[AstVarDef]
+          val decls       = ArrayBuffer.empty[AstVarDef]
           val expressions = ArrayBuffer.empty[AstNode]
           flattenArgs(decls, expressions)
           flattenVars(decls, expressions)
@@ -932,9 +944,9 @@ object Inline {
           if (decls.nonEmpty && scopeVar != null) {
             val parentIdx = compressor.parent(level - 1)
             // AstScope extends AstBlock, so scopeVar is always an AstBlock
-            val scope = scopeVar.nn.asInstanceOf[AstBlock]
+            val scope     = scopeVar.nn.asInstanceOf[AstBlock]
             val insertIdx = scope.body.indexOf(parentIdx) + 1
-            val varDecl = new AstVar
+            val varDecl   = new AstVar
             varDecl.start = lambda.start
             varDecl.end = lambda.end
             varDecl.definitions = decls.asInstanceOf[ArrayBuffer[AstNode]]
@@ -953,7 +965,7 @@ object Inline {
             while (p != null) {
               p.nn match {
                 case _: AstDefaultAssign => break(true)
-                case _: AstBlock => break(false)
+                case _: AstBlock         => break(false)
                 case _ =>
               }
               i += 1
@@ -1072,7 +1084,7 @@ object Inline {
 
       // Try to evaluate the entire call
       val ev = evaluate(self, compressor)
-      if ((ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
+      if (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef]) {
         val evNode = makeNodeFromConstant(ev, self)
         break(bestOfExpression(evNode, self))
       }
@@ -1106,15 +1118,15 @@ object Inline {
   /** Check if a function should be retained at top level. */
   private def retainTopFunc(fn: AstNode, compressor: CompressorLike): Boolean =
     fn.isInstanceOf[AstDefun] &&
-    hasFlag(fn, TOP) &&
-    (fn match {
-      case defun: AstDefun =>
-        defun.name match {
-          case sym: AstSymbol if sym.thedef != null => compressor.topRetain(sym.thedef)
-          case _ => false
-        }
-      case _ => false
-    })
+      hasFlag(fn, TOP) &&
+      (fn match {
+        case defun: AstDefun =>
+          defun.name match {
+            case sym: AstSymbol if sym.thedef != null => compressor.topRetain(sym.thedef)
+            case _ => false
+          }
+        case _ => false
+      })
 
   /** Check if a ref refers to the name of a function/class it's defined within. */
   private def isRecursiveRef(compressor: CompressorLike, theDef: SymbolDef): Boolean =
@@ -1149,8 +1161,8 @@ object Inline {
     var node: AstNode | Null = compressor.parent(i)
     while (node != null) {
       node.nn match {
-        case t: AstToplevel => return t // @nowarn -- interop boundary
-        case l: AstLambda   => return l // @nowarn -- interop boundary
+        case t: AstToplevel                      => return t // @nowarn -- interop boundary
+        case l: AstLambda                        => return l // @nowarn -- interop boundary
         case b: AstBlock if b.blockScope != null => return b.blockScope // @nowarn -- interop boundary
         case _ =>
       }
@@ -1175,7 +1187,7 @@ object Inline {
   }
 
   /** Clone an AST node (shallow clone with mutable collections copied). */
-  private def cloneNode(node: AstNode): AstNode = {
+  private def cloneNode(node: AstNode): AstNode =
     // Simple implementation: create a new node of the same type and copy fields
     // In practice, this should use the actual clone method if available
     node match {
@@ -1231,7 +1243,6 @@ object Inline {
         // In a full implementation, we'd use a visitor pattern or reflection
         node
     }
-  }
 
   /** Negate a node (for IIFE negation). */
   @annotation.nowarn("msg=unused private member") // matches original API signature

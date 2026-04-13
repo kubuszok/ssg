@@ -109,7 +109,7 @@ def walkBody(body: ArrayBuffer[AstNode], visitor: TreeWalker): Unit = {
 /** Transform each element of a list, returning a new list with the transformed nodes. */
 def transformList(list: ArrayBuffer[AstNode], tw: TreeTransformer): ArrayBuffer[AstNode] = {
   val result = ArrayBuffer.empty[AstNode]
-  var i = 0
+  var i      = 0
   while (i < list.size) {
     val ret = list(i).transform(tw)
     if (ret != null) result.addOne(ret)

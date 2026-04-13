@@ -18,13 +18,11 @@ import scala.language.implicitConversions
 
 class MarkdownWriter(appendable: Nullable[Appendable], formatOptions: Int) extends MarkdownWriterBase[MarkdownWriter, Node, NodeFormatterContext](appendable, formatOptions) {
 
-  def this() = {
+  def this() =
     this(Nullable.empty, 0)
-  }
 
-  def this(formatOptions: Int) = {
+  def this(formatOptions: Int) =
     this(Nullable.empty, formatOptions)
-  }
 
   override def getEmptyAppendable: MarkdownWriter =
     new MarkdownWriter(Nullable.empty, this.getOptions)
@@ -69,7 +67,7 @@ class MarkdownWriter(appendable: Nullable[Appendable], formatOptions: Int) exten
   }
 
   override def lastBlockQuoteChildPrefix(prefix: BasedSequence): BasedSequence = {
-    var result: BasedSequence               = prefix
+    var result: BasedSequence  = prefix
     var node:   Nullable[Node] = Nullable(context.getCurrentNode)
     while (node.isDefined && node.get.nextAnyNot(classOf[BlankLine]).isEmpty) {
       val parent = node.get.parent

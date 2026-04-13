@@ -25,13 +25,13 @@ import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap
   * Created via `TemplateParser.parse()` or `Template.parse()`.
   */
 final class Template(
-  val templateParser:  TemplateParser,
-  private val root:    BlockNode,
-  val templateSize:    Long = 0L,
-  val sourceLocation:  Option[Path] = None
+  val templateParser: TemplateParser,
+  private val root:   BlockNode,
+  val templateSize:   Long = 0L,
+  val sourceLocation: Option[Path] = None
 ) {
 
-  private var templateContext: TemplateContext = scala.compiletime.uninitialized
+  private var templateContext: TemplateContext        = scala.compiletime.uninitialized
   private var contextHolder:   Template.ContextHolder = scala.compiletime.uninitialized
 
   /** Sets a ContextHolder for accessing the rendering context externally. */
@@ -142,7 +142,7 @@ final class Template(
     renderToObjectUnguarded(variables, null, true)
 
   private def newRootContext(variables: JMap[String, Any]): TemplateContext = {
-    val context = new TemplateContext(templateParser, variables)
+    val context      = new TemplateContext(templateParser, variables)
     val configurator = templateParser.environmentMapConfigurator
     if (configurator != null) {
       configurator.accept(context.getEnvironmentMap.asInstanceOf[JMap[String, AnyRef]])
@@ -150,12 +150,11 @@ final class Template(
     context
   }
 
-  private def setRootFolderRegistry(context: TemplateContext, location: Option[Path]): Unit = {
+  private def setRootFolderRegistry(context: TemplateContext, location: Option[Path]): Unit =
     location.foreach { loc =>
       val registry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)
       registry.putIfAbsent(TemplateContext.REGISTRY_ROOT_FOLDER, loc.getParent)
     }
-  }
 }
 
 object Template {
