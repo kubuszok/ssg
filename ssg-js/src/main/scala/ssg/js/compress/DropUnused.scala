@@ -29,8 +29,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
-import ssg.js.compress.Common.{isEmpty, makeSequence, maintainThisBinding, canBeEvictedFromBlock, isRefOf}
-import ssg.js.compress.Inference.{hasSideEffects, isUsedInExpression}
+import ssg.js.compress.Common.{ canBeEvictedFromBlock, isEmpty, isRefOf, maintainThisBinding, makeSequence }
+import ssg.js.compress.Inference.{ hasSideEffects, isUsedInExpression }
 import ssg.js.compress.DropSideEffectFree.dropSideEffectFree
 import ssg.js.scope.SymbolDef
 
@@ -162,7 +162,7 @@ object DropUnused {
         case sym: AstSymbol =>
           sym.thedef match {
             case sd: SymbolDef => sd
-            case _             => null
+            case _ => null
           }
         case _ => null
       }
@@ -185,7 +185,7 @@ object DropUnused {
         case sd: SymbolDef =>
           sd.fixedValue match {
             case n: AstNode => n
-            case _          => null
+            case _ => null
           }
         case null => null
       }
@@ -309,10 +309,12 @@ object DropUnused {
           if (Inference.isSelfReferential(cls)) {
             descend()
           } else {
-            Inference.visitNondeferredClassParts(cls, (n, desc) => {
-              n.walk(this)
-              true
-            })
+            Inference.visitNondeferredClassParts(cls,
+                                                 (n, desc) => {
+                                                   n.walk(this)
+                                                   true
+                                                 }
+            )
           }
           return true
         case _ =>
@@ -325,9 +327,9 @@ object DropUnused {
             case sym: AstSymbol =>
               val nodeDef = ctx.getDefinition(sym)
               if (nodeDef != null) {
-                val nd       = nodeDef.nn
+                val nd         = nodeDef.nn
                 val parentNode = this.parent()
-                val inExport = parentNode.isInstanceOf[AstExport]
+                val inExport   = parentNode.isInstanceOf[AstExport]
                 if (inExport || (!ctx.dropFuncs && (ctx.currentScope eq ctx.self))) {
                   if (nd.global) {
                     ctx.inUseIds(nd.id) = nd
@@ -344,9 +346,9 @@ object DropUnused {
             case sym: AstSymbol =>
               val nodeDef = ctx.getDefinition(sym)
               if (nodeDef != null) {
-                val nd       = nodeDef.nn
+                val nd         = nodeDef.nn
                 val parentNode = this.parent()
-                val inExport = parentNode.isInstanceOf[AstExport]
+                val inExport   = parentNode.isInstanceOf[AstExport]
                 if (inExport || (!ctx.dropFuncs && (ctx.currentScope eq ctx.self))) {
                   if (nd.global) {
                     ctx.inUseIds(nd.id) = nd
@@ -394,12 +396,15 @@ object DropUnused {
 
               // Mark exported or non-droppable vars as in-use
               if (inExport || !ctx.dropVars) {
-                walkSymbolDeclarations(vdef.name, (sym: AstSymbolDeclaration) => {
-                  val d = ctx.getDefinition(sym)
-                  if (d != null && d.nn.global) {
-                    ctx.inUseIds(d.nn.id) = d.nn
+                walkSymbolDeclarations(
+                  vdef.name,
+                  (sym: AstSymbolDeclaration) => {
+                    val d = ctx.getDefinition(sym)
+                    if (d != null && d.nn.global) {
+                      ctx.inUseIds(d.nn.id) = d.nn
+                    }
                   }
-                })
+                )
               }
 
               // Walk destructuring patterns
@@ -562,11 +567,11 @@ object DropUnused {
             var sym = lambda.argnames(i)
             sym match {
               case exp: AstExpansion => sym = exp.expression
-              case _                 =>
+              case _ =>
             }
             sym match {
               case da: AstDefaultAssign => sym = da.left
-              case _                    =>
+              case _ =>
             }
             // Do not drop destructuring arguments — they constitute a type assertion
             sym match {
@@ -637,7 +642,7 @@ object DropUnused {
           // Don't process for-in init
           val isForInInit = parentNode match {
             case forIn: AstForIn => forIn.init eq node
-            case _               => false
+            case _ => false
           }
           if (!isForInInit) {
             return processDefinitions(defs, parentNode, inList, ctx, this)
@@ -658,7 +663,7 @@ object DropUnused {
             case _ =>
           }
           forNode.init match {
-            case ss: AstSimpleStatement                => forNode.init = ss.body
+            case ss: AstSimpleStatement => forNode.init = ss.body
             case init if init != null && isEmpty(init) => forNode.init = null
             case _                                     =>
           }
@@ -736,7 +741,7 @@ object DropUnused {
   }
 
   /** Marker class for nodes that should be spliced into a list. */
-  private final case class SpliceMarker(nodes: ArrayBuffer[AstNode]) extends AstNode {
+  final private case class SpliceMarker(nodes: ArrayBuffer[AstNode]) extends AstNode {
     def nodeType: String = "_Splice"
   }
 
@@ -763,7 +768,7 @@ object DropUnused {
     parentNode match {
       case _: AstBlock       => true
       case _: AstDefinitions => true
-      case _                 => false
+      case _ => false
     }
   }
 
@@ -782,8 +787,8 @@ object DropUnused {
   private def walkSymbolDeclarations(node: AstNode | Null, fn: AstSymbolDeclaration => Unit): Unit =
     if (node != null) {
       node.nn match {
-        case sd: AstSymbolDeclaration => fn(sd)
-        case dest: AstDestructuring =>
+        case sd:   AstSymbolDeclaration => fn(sd)
+        case dest: AstDestructuring     =>
           dest.names.foreach(n => walkSymbolDeclarations(n, fn))
         case da: AstDefaultAssign =>
           walkSymbolDeclarations(da.left, fn)
@@ -797,11 +802,11 @@ object DropUnused {
   private def keepName(compressor: CompressorLike, option: String, name: String): Boolean = {
     val opt = compressor.option(option)
     opt match {
-      case true                         => true
-      case false                        => false
+      case true  => true
+      case false => false
       case r: scala.util.matching.Regex => r.findFirstIn(name).isDefined
       case s: String                    => s.r.findFirstIn(name).isDefined
-      case _                            => false
+      case _ => false
     }
   }
 
@@ -815,7 +820,7 @@ object DropUnused {
   ): AstNode | Null = {
     val dropBlock = (parentNode match {
       case _: AstToplevel => false
-      case _              => true
+      case _ => true
     }) && !defs.isInstanceOf[AstVar]
 
     val body        = ArrayBuffer.empty[AstNode]
@@ -840,7 +845,7 @@ object DropUnused {
               case s: AstSymbol =>
                 s.thedef match {
                   case sd: SymbolDef => sd
-                  case _             => null
+                  case _ => null
                 }
               case _ => null
             }
@@ -854,8 +859,8 @@ object DropUnused {
           !(ctx.dropVars || dropBlock) ||
           (isDestructure && (
             vdef.name.asInstanceOf[AstDestructuring].names.nonEmpty ||
-            vdef.name.asInstanceOf[AstDestructuring].isArray ||
-            ctx.compressor.option("pure_getters") != true
+              vdef.name.asInstanceOf[AstDestructuring].isArray ||
+              ctx.compressor.option("pure_getters") != true
           )) ||
           ctx.inUseIds.contains(sym.nn.id)
         ) {

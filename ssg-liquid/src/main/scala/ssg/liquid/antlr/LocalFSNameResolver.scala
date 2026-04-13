@@ -15,14 +15,14 @@ package ssg
 package liquid
 package antlr
 
-import java.nio.file.{ Files, Paths }
+import ssg.commons.io.{ FileOps, FilePath }
 
 import scala.util.boundary
 import scala.util.boundary.break
 
 /** Resolves template names to file contents from the local filesystem.
   *
-  * JVM-only: uses `java.nio.file` for path resolution and file reading.
+  * JVM-only: uses ssg.commons.io for path resolution and file reading.
   *
   * If the name is an absolute path, it is used directly. Otherwise, the name is resolved relative to the configured root directory. If the name does not contain a dot (no extension), the default
   * extension `.liquid` is appended.
@@ -31,18 +31,18 @@ final class LocalFSNameResolver(private val root: String) extends NameResolver {
 
   override def resolve(name: String): NameResolver.ResolvedSource =
     boundary {
-      val directPath = Paths.get(name)
+      val directPath = FilePath.of(name)
       if (directPath.isAbsolute) {
-        val absPath = directPath.toAbsolutePath
-        val content = new String(Files.readAllBytes(absPath))
-        break(NameResolver.ResolvedSource(content, absPath.toString))
+        val absPath = directPath.toAbsolute
+        val content = FileOps.readString(absPath)
+        break(NameResolver.ResolvedSource(content, absPath.pathString))
       }
 
       val extension    = if (name.indexOf('.') > 0) "" else LocalFSNameResolver.DEFAULT_EXTENSION
       val resolvedName = name + extension
-      val path         = Paths.get(root, resolvedName).toAbsolutePath
-      val content      = new String(Files.readAllBytes(path))
-      NameResolver.ResolvedSource(content, path.toString)
+      val path         = FilePath.of(root).resolve(resolvedName).toAbsolute
+      val content      = FileOps.readString(path)
+      NameResolver.ResolvedSource(content, path.pathString)
     }
 }
 

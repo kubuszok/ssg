@@ -24,19 +24,17 @@ import java.util.{ ArrayList, Locale }
 
 /** Default date parser with 63 fallback patterns and ordinal normalization.
   *
-  * In case if anyone interesting about full set of supported by ruby date patterns: there no such set as the parsing there happening based on heuristic algorithms. This is how it looks
-  * like(~3K lines just for date parse): https://github.com/ruby/ruby/blob/ee102de6d7ec2454dc5da223483737478eb7bcc7/ext/date/date_parse.c
+  * In case if anyone interesting about full set of supported by ruby date patterns: there no such set as the parsing there happening based on heuristic algorithms. This is how it looks like(~3K lines
+  * just for date parse): https://github.com/ruby/ruby/blob/ee102de6d7ec2454dc5da223483737478eb7bcc7/ext/date/date_parse.c
   *
-  * And here's python. Just an example how it is violating standard in details regarding timezone representation:
-  * https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
+  * And here's python. Just an example how it is violating standard in details regarding timezone representation: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
   */
 class DateParser extends BasicDateParser(DateParser.datePatterns) {
 
   override def parse(str: String, locale: Locale, defaultZone: ZoneId): Nullable[ZonedDateTime] = {
     var normalized = str.toLowerCase
-    for ((ordinal, replacement) <- DateParser.toBeReplaced) {
+    for ((ordinal, replacement) <- DateParser.toBeReplaced)
       normalized = normalized.replace(ordinal, replacement)
-    }
     parseUsingCachedPatterns(normalized, locale, defaultZone)
   }
 }

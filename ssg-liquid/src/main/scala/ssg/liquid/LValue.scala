@@ -244,8 +244,7 @@ object LValue {
 
   /** Converts a temporal value to a string using Ruby date format.
     *
-    * Partial temporals (LocalDate, Instant, etc.) are first converted to
-    * ZonedDateTime so that the Ruby format string can be fully resolved.
+    * Partial temporals (LocalDate, Instant, etc.) are first converted to ZonedDateTime so that the Ruby format string can be fully resolved.
     */
   def temporalToString(value: Any): String =
     value match {
@@ -291,31 +290,29 @@ object LValue {
 
   /** Ruby has a single date type, and its equivalent is ZonedDateTime.
     *
-    * Follows Ruby rules: if some datetime part is missing, the default is
-    * taken from `now` with the system default zone.
+    * Follows Ruby rules: if some datetime part is missing, the default is taken from `now` with the system default zone.
     */
   def asRubyDate(value: Any, context: TemplateContext): ZonedDateTime = {
     val defaultZone = ZoneId.systemDefault()
     value match {
       case ta: TemporalAccessor => toZonedDateTime(ta, defaultZone)
-      case _                    => ZonedDateTime.now(defaultZone)
+      case _ => ZonedDateTime.now(defaultZone)
     }
   }
 
-  /** Converts a TemporalAccessor to ZonedDateTime, filling in missing parts
-    * from `now` at the given default zone.
+  /** Converts a TemporalAccessor to ZonedDateTime, filling in missing parts from `now` at the given default zone.
     *
     * Ported from: liqp/filters/date/BasicDateParser#getZonedDateTimeFromTemporalAccessor
     */
   private def toZonedDateTime(value: Any, defaultZone: ZoneId): ZonedDateTime =
     value match {
-      case null                   => ZonedDateTime.now(defaultZone)
-      case zdt: ZonedDateTime     => zdt
+      case null => ZonedDateTime.now(defaultZone)
+      case zdt:  ZonedDateTime    => zdt
       case inst: Instant          => ZonedDateTime.ofInstant(inst, defaultZone)
-      case odt: OffsetDateTime    => odt.toZonedDateTime
-      case ldt: LocalDateTime     => ldt.atZone(defaultZone)
-      case ld: LocalDate          => ld.atStartOfDay(defaultZone)
-      case ta: TemporalAccessor   =>
+      case odt:  OffsetDateTime   => odt.toZonedDateTime
+      case ldt:  LocalDateTime    => ldt.atZone(defaultZone)
+      case ld:   LocalDate        => ld.atStartOfDay(defaultZone)
+      case ta:   TemporalAccessor =>
         val zoneId = ta.query(TemporalQueries.zone())
         if (zoneId == null) {
           val date =
@@ -326,7 +323,7 @@ object LValue {
             else LocalTime.now(defaultZone)
           ZonedDateTime.of(date, time, defaultZone)
         } else {
-          var now = LocalDateTime.now(zoneId)
+          var now    = LocalDateTime.now(zoneId)
           val fields = Array(
             ChronoField.YEAR,
             ChronoField.MONTH_OF_YEAR,
@@ -336,11 +333,10 @@ object LValue {
             ChronoField.SECOND_OF_MINUTE,
             ChronoField.NANO_OF_SECOND
           )
-          for (tf <- fields) {
+          for (tf <- fields)
             if (ta.isSupported(tf)) {
               now = now.`with`(tf, ta.getLong(tf))
             }
-          }
           now.atZone(zoneId)
         }
       case _ => null
@@ -367,9 +363,8 @@ object LValue {
 
   /** Mimic ruby's BigDecimal.to_f with standard java capabilities. Ensures at least 1 decimal place (e.g., 5.0 not 5).
     *
-    * Original: bd.setScale(Math.max(1, bd.stripTrailingZeros().scale()), RoundingMode.UNNECESSARY)
-    * We avoid stripTrailingZeros().scale() which is unreliable on Native, and instead
-    * strip trailing zeros from the string representation directly.
+    * Original: bd.setScale(Math.max(1, bd.stripTrailingZeros().scale()), RoundingMode.UNNECESSARY) We avoid stripTrailingZeros().scale() which is unreliable on Native, and instead strip trailing
+    * zeros from the string representation directly.
     */
   def asFormattedNumber(bd: BigDecimal): BigDecimal = {
     val s = bd.toString
@@ -379,9 +374,8 @@ object LValue {
       val intPart  = s.substring(0, dotIdx)
       var fracPart = s.substring(dotIdx + 1)
       // Remove trailing zeros
-      while (fracPart.length > 1 && fracPart.charAt(fracPart.length - 1) == '0') {
+      while (fracPart.length > 1 && fracPart.charAt(fracPart.length - 1) == '0')
         fracPart = fracPart.substring(0, fracPart.length - 1)
-      }
       PlainBigDecimal(intPart + "." + fracPart)
     } else {
       // No decimal point — add .0

@@ -51,23 +51,27 @@ object PropertyResolverHelper {
 
     // default resolver for Inspectable type
     // allow Inspectable items to be inspected via "where" filter
-    helper.add(new PropertyResolverAdapter {
-      // dummy LValue for accessing helper method #asString
-      private val lValue: LValue = new LValue {}
-      override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any = {
-        val evaluated = context.parser.evaluate(input)
-        evaluated.toLiquid().get(lValue.asString(property, context))
+    helper.add(
+      new PropertyResolverAdapter {
+        // dummy LValue for accessing helper method #asString
+        private val lValue:                                                                LValue = new LValue {}
+        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any    = {
+          val evaluated = context.parser.evaluate(input)
+          evaluated.toLiquid().get(lValue.asString(property, context))
+        }
+        override def support(target: Any): Boolean =
+          target.isInstanceOf[Inspectable]
       }
-      override def support(target: Any): Boolean =
-        target.isInstanceOf[Inspectable]
-    })
+    )
 
-    helper.add(new PropertyResolverAdapter {
-      override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any =
-        input.asInstanceOf[JMap[?, ?]].get(property)
-      override def support(target: Any): Boolean =
-        target.isInstanceOf[JMap[?, ?]]
-    })
+    helper.add(
+      new PropertyResolverAdapter {
+        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any =
+          input.asInstanceOf[JMap[?, ?]].get(property)
+        override def support(target: Any): Boolean =
+          target.isInstanceOf[JMap[?, ?]]
+      }
+    )
 
     helper
   }

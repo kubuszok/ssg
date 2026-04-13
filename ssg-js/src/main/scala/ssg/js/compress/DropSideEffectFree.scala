@@ -29,8 +29,8 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
 import ssg.js.compress.Common.makeSequence
-import ssg.js.compress.Common.{ isIifeCall, isFuncExpr }
-import ssg.js.compress.Inference.{ hasSideEffects, isCalleePure, isCallPure, isNullishShortcircuited, isSelfReferential, lazyOp, mayThrowOnAccess, negate, unarySideEffects }
+import ssg.js.compress.Common.{ isFuncExpr, isIifeCall }
+import ssg.js.compress.Inference.{ hasSideEffects, isCallPure, isCalleePure, isNullishShortcircuited, isSelfReferential, lazyOp, mayThrowOnAccess, negate, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
 
 /** Side-effect-free expression removal.
@@ -129,7 +129,7 @@ object DropSideEffectFree {
       // SymbolRef
       case ref: AstSymbolRef =>
         // Declared symbols are safe to drop; undeclared may throw ReferenceError
-        val d = ref.definition()
+        val d          = ref.definition()
         val isDeclared = d != null && !d.nn.undeclared
         if (isDeclared || purePropAccessGlobals.contains(ref.name)) null else ref
 
@@ -315,64 +315,64 @@ object DropSideEffectFree {
       }
     } else {
       // Pure callee: drop if args have no side effects
-      val args = call.args
+      val args     = call.args
       val keptArgs = trim(args, compressor, firstInStatement)
       if (keptArgs == null) null
       else makeSequence(call, keptArgs)
     }
 
-  /** Process the body of a scope to convert returns to statements (when insert=false)
-    * or statements to returns (when insert=true). Used for IIFE optimization.
+  /** Process the body of a scope to convert returns to statements (when insert=false) or statements to returns (when insert=true). Used for IIFE optimization.
     */
   private def processExpression(scope: AstScope, insert: Boolean, compressor: CompressorLike): Unit = {
     var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
-    tt = new TreeTransformer(before = (node, _) => {
-      if (insert && node.isInstanceOf[AstSimpleStatement]) {
-        val ss = node.asInstanceOf[AstSimpleStatement]
-        val ret = new AstReturn
-        ret.start = ss.start
-        ret.end = ss.end
-        ret.value = ss.body
-        ret
-      } else if (!insert && node.isInstanceOf[AstReturn]) {
-        val ret = node.asInstanceOf[AstReturn]
-        if (ret.value != null) {
-          val ss = new AstSimpleStatement
-          ss.start = ret.start
-          ss.end = ret.end
-          ss.body = ret.value
-          ss
+    tt = new TreeTransformer(
+      before = (node, _) =>
+        if (insert && node.isInstanceOf[AstSimpleStatement]) {
+          val ss  = node.asInstanceOf[AstSimpleStatement]
+          val ret = new AstReturn
+          ret.start = ss.start
+          ret.end = ss.end
+          ret.value = ss.body
+          ret
+        } else if (!insert && node.isInstanceOf[AstReturn]) {
+          val ret = node.asInstanceOf[AstReturn]
+          if (ret.value != null) {
+            val ss = new AstSimpleStatement
+            ss.start = ret.start
+            ss.end = ret.end
+            ss.body = ret.value
+            ss
+          } else {
+            val empty = new AstEmptyStatement
+            empty.start = ret.start
+            empty.end = ret.end
+            empty
+          }
+        } else if (node.isInstanceOf[AstLambda] && (node.asInstanceOf[AnyRef] ne scope.asInstanceOf[AnyRef])) {
+          node // don't descend into nested lambdas
+        } else if (node.isInstanceOf[AstBlock]) {
+          val block = node.asInstanceOf[AstBlock]
+          var i     = 0
+          while (i < block.body.size) {
+            block.body(i) = block.body(i).transform(tt)
+            i += 1
+          }
+          node
+        } else if (node.isInstanceOf[AstIf]) {
+          val ifNode = node.asInstanceOf[AstIf]
+          ifNode.body = ifNode.body.transform(tt)
+          if (ifNode.alternative != null) {
+            ifNode.alternative = ifNode.alternative.nn.transform(tt)
+          }
+          node
+        } else if (node.isInstanceOf[AstWith]) {
+          val withNode = node.asInstanceOf[AstWith]
+          withNode.body = withNode.body.transform(tt)
+          node
         } else {
-          val empty = new AstEmptyStatement
-          empty.start = ret.start
-          empty.end = ret.end
-          empty
+          null // continue with default
         }
-      } else if (node.isInstanceOf[AstLambda] && (node.asInstanceOf[AnyRef] ne scope.asInstanceOf[AnyRef])) {
-        node // don't descend into nested lambdas
-      } else if (node.isInstanceOf[AstBlock]) {
-        val block = node.asInstanceOf[AstBlock]
-        var i = 0
-        while (i < block.body.size) {
-          block.body(i) = block.body(i).transform(tt)
-          i += 1
-        }
-        node
-      } else if (node.isInstanceOf[AstIf]) {
-        val ifNode = node.asInstanceOf[AstIf]
-        ifNode.body = ifNode.body.transform(tt)
-        if (ifNode.alternative != null) {
-          ifNode.alternative = ifNode.alternative.nn.transform(tt)
-        }
-        node
-      } else if (node.isInstanceOf[AstWith]) {
-        val withNode = node.asInstanceOf[AstWith]
-        withNode.body = withNode.body.transform(tt)
-        node
-      } else {
-        null // continue with default
-      }
-    })
+    )
     var i = 0
     while (i < scope.body.size) {
       scope.body(i) = scope.body(i).transform(tt)
@@ -485,10 +485,12 @@ object DropSideEffectFree {
       else {
         val left = assign.left.nn
         // Has side effects OR assigning to property on constant in strict mode
-        if (hasSideEffects(left, compressor) ||
-            (compressor.hasDirective("use strict") != null &&
-             left.isInstanceOf[AstPropAccess] &&
-             Evaluate.isConstant(left.asInstanceOf[AstPropAccess].expression.nn))) {
+        if (
+          hasSideEffects(left, compressor) ||
+          (compressor.hasDirective("use strict") != null &&
+            left.isInstanceOf[AstPropAccess] &&
+            Evaluate.isConstant(left.asInstanceOf[AstPropAccess].expression.nn))
+        ) {
           assign
         } else {
           setFlag(assign, WRITE_ONLY)

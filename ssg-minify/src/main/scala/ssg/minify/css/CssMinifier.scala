@@ -166,7 +166,7 @@ object CssMinifier {
     result
   }
 
-  private def rgbToHex(r: Int, g: Int, b: Int): String = {
+  private def rgbToHex(r: Int, g: Int, b: Int): String =
     if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
       s"rgb($r,$g,$b)"
     } else {
@@ -178,59 +178,94 @@ object CssMinifier {
         hex
       }
     }
-  }
 
   // -- Named color → hex (shorter alternatives only) --
 
   private val NamedColorMap: Map[String, String] = Map(
-    "white"                -> "#fff",
-    "black"                -> "#000",
-    "red"                  -> "red", // already 3 chars, #f00 is same length
-    "fuchsia"              -> "#f0f",
-    "magenta"              -> "#f0f",
-    "yellow"               -> "#ff0",
-    "cyan"                 -> "#0ff",
-    "aqua"                 -> "#0ff",
-    "darkblue"             -> "#00008b",
-    "darkgreen"            -> "#006400",
-    "darkred"              -> "#8b0000",
-    "darkcyan"             -> "#008b8b",
-    "darkmagenta"          -> "#8b008b",
-    "cornsilk"             -> "#fff8dc",
-    "bisque"               -> "#ffe4c4",
-    "azure"                -> "#f0ffff",
-    "beige"                -> "#f5f5dc",
-    "coral"                -> "#ff7f50",
-    "ivory"                -> "#fffff0",
-    "khaki"                -> "#f0e68c",
-    "linen"                -> "#faf0e6",
-    "orchid"               -> "#da70d6",
-    "plum"                 -> "#dda0dd",
-    "salmon"               -> "#fa8072",
-    "sienna"               -> "#a0522d",
-    "silver"               -> "#c0c0c0",
-    "tomato"               -> "#ff6347",
-    "violet"               -> "#ee82ee",
-    "wheat"                -> "#f5deb3"
+    "white" -> "#fff",
+    "black" -> "#000",
+    "red" -> "red", // already 3 chars, #f00 is same length
+    "fuchsia" -> "#f0f",
+    "magenta" -> "#f0f",
+    "yellow" -> "#ff0",
+    "cyan" -> "#0ff",
+    "aqua" -> "#0ff",
+    "darkblue" -> "#00008b",
+    "darkgreen" -> "#006400",
+    "darkred" -> "#8b0000",
+    "darkcyan" -> "#008b8b",
+    "darkmagenta" -> "#8b008b",
+    "cornsilk" -> "#fff8dc",
+    "bisque" -> "#ffe4c4",
+    "azure" -> "#f0ffff",
+    "beige" -> "#f5f5dc",
+    "coral" -> "#ff7f50",
+    "ivory" -> "#fffff0",
+    "khaki" -> "#f0e68c",
+    "linen" -> "#faf0e6",
+    "orchid" -> "#da70d6",
+    "plum" -> "#dda0dd",
+    "salmon" -> "#fa8072",
+    "sienna" -> "#a0522d",
+    "silver" -> "#c0c0c0",
+    "tomato" -> "#ff6347",
+    "violet" -> "#ee82ee",
+    "wheat" -> "#f5deb3"
   )
 
   private def foldNamedColors(css: String): String = {
-    // Only fold named colors in value positions (after : and before ; or })
-    // Use a simple word-boundary approach
-    var result = css
-    for ((name, hex) <- NamedColorMap) {
-      // Only replace if hex is shorter than name
-      if (hex.length < name.length) {
-        // Case-insensitive replacement in value context
-        val pattern = java.util.regex.Pattern.compile(
-          "(?<=[:\\s,])" + java.util.regex.Pattern.quote(name) + "(?=[;\\s},!])",
-          java.util.regex.Pattern.CASE_INSENSITIVE
-        )
-        result = pattern.matcher(result).replaceAll(hex)
+    // Only fold named colors in value positions (after : or , or whitespace, and before ; } , ! or whitespace)
+    // Manual scan to avoid lookbehind which isn't supported on JS ES2017
+    val len = css.length
+    val sb  = new StringBuilder(len)
+    var i   = 0
+
+    while (i < len) {
+      val c = css.charAt(i)
+      if (c == '\'' || c == '"') {
+        // Skip string literals
+        val start = i
+        i = skipStringLiteral(css, i, len)
+        sb.append(css.substring(start, i))
+      } else if ((c == ':' || c == ',' || c.isWhitespace) && i + 1 < len) {
+        sb.append(c)
+        i += 1
+        // Try to match a named color starting here
+        val matchResult = tryMatchNamedColor(css, i, len)
+        if (matchResult != null) {
+          sb.append(matchResult._2)
+          i += matchResult._1.length
+        }
+      } else {
+        sb.append(c)
+        i += 1
       }
     }
-    result
+
+    sb.toString()
   }
+
+  /** Try to match a named color at position i. Returns (colorName, hex) or null. */
+  private def tryMatchNamedColor(css: String, i: Int, len: Int): (String, String) =
+    boundary[(String, String)] {
+      for ((name, hex) <- NamedColorMap)
+        if (hex.length < name.length && i + name.length <= len) {
+          // Case-insensitive match
+          if (css.regionMatches(true, i, name, 0, name.length)) {
+            val afterName = i + name.length
+            // Check that it's followed by ; } , ! or whitespace (or end of string)
+            if (
+              afterName >= len || {
+                val next = css.charAt(afterName)
+                next == ';' || next == '}' || next == ',' || next == '!' || next.isWhitespace
+              }
+            ) {
+              break((name, hex))
+            }
+          }
+        }
+      null
+    }
 
   // -- Zero collapsing --
 

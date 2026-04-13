@@ -12,7 +12,6 @@ package ext
 package toc
 package internal
 
-import ssg.md.Nullable
 import ssg.md.util.data.{ DataHolder, MutableDataHolder }
 import ssg.md.util.misc.CharPredicate
 import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }

@@ -39,7 +39,6 @@ trait JsCompressor {
 
 /** Options for JavaScript compression. Implementations provide compressor-specific settings.
   *
-  * The base trait is empty — concrete implementations (e.g., `TerserOptions`) add
-  * fields for compress, mangle, output, ecma, ie8, safari10 etc.
+  * The base trait is empty — concrete implementations (e.g., `TerserOptions`) add fields for compress, mangle, output, ecma, ie8, safari10 etc.
   */
 trait JsCompressorOptions

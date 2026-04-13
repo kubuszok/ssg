@@ -40,21 +40,21 @@ trait AstSymbol extends AstNode {
   def fixedValue(): AstNode | Null | Boolean =
     definition() match {
       case d: SymbolDef => d.fixedValue
-      case null         => null
+      case null => null
     }
 
   /** Check if this symbol is unreferenced (no references and scope not pinned). */
   def unreferenced(): Boolean =
     definition() match {
       case d: SymbolDef => d.references.isEmpty && !d.scope.pinned
-      case null         => false
+      case null => false
     }
 
   /** Check if this symbol is global. */
   def isGlobal: Boolean =
     definition() match {
       case d: SymbolDef => d.global
-      case null         => false
+      case null => false
     }
 }
 

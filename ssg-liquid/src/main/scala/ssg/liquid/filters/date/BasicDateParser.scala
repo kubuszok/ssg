@@ -66,10 +66,7 @@ abstract class BasicDateParser {
   }
 
   protected def parseUsingPattern(normalized: String, pattern: String, locale: Locale): TemporalAccessor = {
-    val timeFormatter = new DateTimeFormatterBuilder()
-      .parseCaseInsensitive()
-      .appendPattern(pattern)
-      .toFormatter(locale)
+    val timeFormatter = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern(pattern).toFormatter(locale)
     timeFormatter.parse(normalized)
   }
 }
@@ -78,13 +75,13 @@ object BasicDateParser {
 
   /** Follow ruby rules: if some datetime part is missing, the default is taken from `now` with default zone.
     */
-  def getZonedDateTimeFromTemporalAccessor(temporal: TemporalAccessor, defaultZone: ZoneId): ZonedDateTime = {
+  def getZonedDateTimeFromTemporalAccessor(temporal: TemporalAccessor, defaultZone: ZoneId): ZonedDateTime =
     if (temporal == null) {
       ZonedDateTime.now(defaultZone)
     } else {
       temporal match {
-        case zdt: ZonedDateTime => zdt
-        case inst: Instant      => ZonedDateTime.ofInstant(inst, defaultZone)
+        case zdt:  ZonedDateTime => zdt
+        case inst: Instant       => ZonedDateTime.ofInstant(inst, defaultZone)
         case _ =>
           val zoneId = temporal.query(TemporalQueries.zone())
           if (zoneId == null) {
@@ -94,7 +91,7 @@ object BasicDateParser {
             if (localTime == null) localTime = LocalTime.now(defaultZone)
             ZonedDateTime.of(localDate, localTime, defaultZone)
           } else {
-            var now = LocalDateTime.now(zoneId)
+            var now       = LocalDateTime.now(zoneId)
             val copyThese = Array[java.time.temporal.TemporalField](
               ChronoField.YEAR,
               ChronoField.MONTH_OF_YEAR,
@@ -116,5 +113,4 @@ object BasicDateParser {
           }
       }
     }
-  }
 }

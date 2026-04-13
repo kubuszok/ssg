@@ -28,9 +28,8 @@ import java.util.{ HashMap, Map => JMap }
   */
 class Include(_name: String) extends Tag(_name) {
 
-  def this() = {
+  def this() =
     this("include")
-  }
 
   override def render(context: TemplateContext, nodes: Array[LNode]): Any =
     try {

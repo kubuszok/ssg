@@ -20,14 +20,14 @@ import ssg.minify.js.JsMinifyOptions
 import ssg.minify.html.HtmlMinifyOptions
 
 final case class MinifyOptions(
-  html:              HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
-  css:               CssMinifyOptions = CssMinifyOptions.Defaults,
-  js:                JsMinifyOptions = JsMinifyOptions.Defaults,
-  jsCompressorOpts:  Option[JsCompressorOptions] = None,
-  compressCss:       Boolean = true,
-  compressJs:        Boolean = true,
-  compressJson:      Boolean = true,
-  exclude:           List[String] = Nil
+  html:             HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
+  css:              CssMinifyOptions = CssMinifyOptions.Defaults,
+  js:               JsMinifyOptions = JsMinifyOptions.Defaults,
+  jsCompressorOpts: Option[JsCompressorOptions] = None,
+  compressCss:      Boolean = true,
+  compressJs:       Boolean = true,
+  compressJson:     Boolean = true,
+  exclude:          List[String] = Nil
 )
 
 object MinifyOptions {

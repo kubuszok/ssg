@@ -27,7 +27,7 @@ import scala.language.implicitConversions
 
 class SimTocNodeFormatter(dataOptions: DataHolder) extends NodeFormatter {
 
-  private val options: TocOptions = TocOptions.fromOptions(dataOptions, true)
+  private val options:       TocOptions       = TocOptions.fromOptions(dataOptions, true)
   private val formatOptions: TocFormatOptions = new TocFormatOptions(dataOptions)
 
   override def getNodeClasses: Nullable[Set[Class[?]]] = Nullable.empty
@@ -40,7 +40,7 @@ class SimTocNodeFormatter(dataOptions: DataHolder) extends NodeFormatter {
       )
     )
 
-  private def render(node: SimTocBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
+  private def render(node: SimTocBlock, context: NodeFormatterContext, markdown: MarkdownWriter): Unit =
     formatOptions.updateOnFormat match {
       case SimTocGenerateOnFormat.REMOVE =>
         val simTocPrefix = TocUtils.getSimTocPrefix(options, this.options)
@@ -48,12 +48,12 @@ class SimTocNodeFormatter(dataOptions: DataHolder) extends NodeFormatter {
         if (options.isBlankLineSpacer) markdown.blankLine()
 
       case SimTocGenerateOnFormat.UPDATE =>
-        val visitor = new HeadingCollectingVisitor()
+        val visitor  = new HeadingCollectingVisitor()
         val headings = visitor.collectAndGetHeadings(context.getDocument)
         if (headings != null) { // @nowarn - Java interop: may be null
           val optionsParser = new SimTocOptionsParser()
-          val parsed = optionsParser.parseOption(node.style, this.options, Nullable.empty)
-          var tocOpts = parsed.first.get
+          val parsed        = optionsParser.parseOption(node.style, this.options, Nullable.empty)
+          var tocOpts       = parsed.first.get
 
           if (node.title.isNotNull) {
             tocOpts = tocOpts.withTitle(node.title.unescape())
@@ -69,11 +69,10 @@ class SimTocNodeFormatter(dataOptions: DataHolder) extends NodeFormatter {
       case SimTocGenerateOnFormat.AS_IS =>
         markdown.openPreFormatted(false).append(node.chars).closePreFormatted()
     }
-  }
 
   private def renderTocHeaders(markdown: MarkdownWriter, headings: java.util.List[Heading], tocOpts: TocOptions): Unit = {
     val filteredHeadings = TocUtils.filteredHeadings(headings, tocOpts)
-    val paired = TocUtils.markdownHeaderTexts(filteredHeadings, tocOpts)
+    val paired           = TocUtils.markdownHeaderTexts(filteredHeadings, tocOpts)
     TocUtils.renderTocContent(markdown, tocOpts, this.options, paired.first.get, paired.second.get)
   }
 

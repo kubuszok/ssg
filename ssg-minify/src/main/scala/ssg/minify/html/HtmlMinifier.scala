@@ -140,9 +140,9 @@ object HtmlMinifier {
 
   // -- Whitespace --
 
-  private val MultiWhitespace    = "\\s{2,}".r
-  private val MultiSpaceOnly     = " {2,}".r
-  private val MultiSpaceWithNl   = " *\\n[ \\n]*".r
+  private val MultiWhitespace  = "\\s{2,}".r
+  private val MultiSpaceOnly   = " {2,}".r
+  private val MultiSpaceWithNl = " *\\n[ \\n]*".r
 
   private def collapseMultiSpaces(html: String, preserveLineBreaks: Boolean): String =
     if (preserveLineBreaks) {
@@ -154,7 +154,7 @@ object HtmlMinifier {
       MultiWhitespace.replaceAllIn(html, " ")
     }
 
-  private val IntertagSpace      = ">\\s+<".r
+  private val IntertagSpace       = ">\\s+<".r
   private val IntertagSpaceWithNl = ">[ \\t]*\\n[\\s]*<".r
   private val IntertagSpaceNoNl   = ">[ \\t]+<".r
 

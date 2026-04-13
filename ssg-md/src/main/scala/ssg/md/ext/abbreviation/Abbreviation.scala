@@ -11,7 +11,6 @@ package md
 package ext
 package abbreviation
 
-import ssg.md.Nullable
 import ssg.md.ext.abbreviation.internal.AbbreviationRepository
 import ssg.md.util.ast.{ DoNotDecorate, DoNotLinkDecorate, Document, Node, ReferencingNode }
 import ssg.md.util.sequence.BasedSequence

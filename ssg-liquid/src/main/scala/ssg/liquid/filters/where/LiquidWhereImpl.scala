@@ -54,7 +54,7 @@ class LiquidWhereImpl(
         end
       end
     end
-  */
+   */
 
   override def apply(input: Any, params: Array[Any]): Any = {
     val objects = toArray(input)
@@ -114,7 +114,7 @@ class LiquidWhereImpl(
     }
   }
 
-  private def toArray(in: Any): Array[Any] = {
+  private def toArray(in: Any): Array[Any] =
     if (in == null) {
       Array.empty[Any]
     } else if (in.getClass.isArray) {
@@ -127,7 +127,6 @@ class LiquidWhereImpl(
     } else {
       Array[Any](in)
     }
-  }
 
   private def flatten(obj: Any): JList[Any] = {
     val l = new ArrayList[Any]()
@@ -142,9 +141,8 @@ class LiquidWhereImpl(
       l
     } else if (obj.isInstanceOf[JCollection[?]]) {
       val iter = obj.asInstanceOf[JCollection[?]].iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext)
         l.addAll(flatten(iter.next()))
-      }
       l
     } else {
       l.add(obj)

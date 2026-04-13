@@ -29,12 +29,12 @@ class Absolute_Url extends Relative_Url {
     if (isValidAbsoluteUrl(valAsString)) {
       valAsString
     } else {
-      val configRoot = context.get(Relative_Url.site)
-      val siteMap    = objectToMap(configRoot, context)
-      val baseUrl    = asString(siteMap.get(Relative_Url.baseurl), context)
-      val siteConfig = siteMap.get(Absolute_Url.config)
-      val configs    = objectToMap(siteConfig, context)
-      val siteUrl    = asString(configs.get(Absolute_Url.url), context)
+      val configRoot  = context.get(Relative_Url.site)
+      val siteMap     = objectToMap(configRoot, context)
+      val baseUrl     = asString(siteMap.get(Relative_Url.baseurl), context)
+      val siteConfig  = siteMap.get(Absolute_Url.config)
+      val configs     = objectToMap(siteConfig, context)
+      val siteUrl     = asString(configs.get(Absolute_Url.url), context)
       val relativeUrl = getRelativeUrl(context, baseUrl, valAsString)
       if ("" == siteUrl) {
         relativeUrl
@@ -71,11 +71,11 @@ object Absolute_Url {
     *
     * Note: `java.net.IDN.toASCII` is JVM-only, so we skip punycode conversion and rely on URI normalization which works cross-platform. On JVM, the authority will already be ASCII in most cases.
     */
-  def convertUnicodeURLToAscii(url0: String): String = {
+  def convertUnicodeURLToAscii(url0: String): String =
     if (url0 != null) {
-      val url = url0.trim
-      var uri            = new URI(url)
-      var includeScheme  = true
+      val url           = url0.trim
+      var uri           = new URI(url)
+      var includeScheme = true
 
       // URI needs a scheme to work properly with authority parsing
       if (uri.getScheme == null) {
@@ -98,5 +98,4 @@ object Absolute_Url {
     } else {
       url0
     }
-  }
 }

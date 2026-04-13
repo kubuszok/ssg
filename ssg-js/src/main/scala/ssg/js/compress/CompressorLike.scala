@@ -73,25 +73,22 @@ trait CompressorLike {
 
   /** Maximum number of expressions to merge into a single sequence.
     *
-    * Computed from the `sequences` option: if false → 0, if true → 200,
-    * if 1 → 800 (special case for maximum merging), otherwise the numeric value.
+    * Computed from the `sequences` option: if false → 0, if true → 200, if 1 → 800 (special case for maximum merging), otherwise the numeric value.
     */
   def sequencesLimit: Int = {
     val seq = option("sequences")
     seq match {
-      case false     => 0
-      case true      => 200
+      case false => 0
+      case true  => 200
       case n: Int if n == 1 => 800
-      case n: Int    => n
-      case _         => 0
+      case n: Int           => n
+      case _ => 0
     }
   }
 
   /** Check if we're in a computed property key context.
     *
-    * This is true when inside `[...]` of a computed property access or
-    * computed property definition. Used by some optimizations that behave
-    * differently in computed key context.
+    * This is true when inside `[...]` of a computed property access or computed property definition. Used by some optimizations that behave differently in computed key context.
     */
   def inComputedKey(): Boolean = {
     var i = 0
@@ -104,7 +101,7 @@ trait CompressorLike {
           if (prevParent != null) {
             prevParent.nn match {
               case prop: AstObjectProperty if prop.computedKey() => return true // @nowarn
-              case prop: AstClassProperty if prop.computedKey() => return true // @nowarn
+              case prop: AstClassProperty if prop.computedKey()  => return true // @nowarn
               case _ =>
             }
           }
@@ -120,14 +117,11 @@ trait CompressorLike {
 
   /** Get mangle options for scope analysis.
     *
-    * Returns formatted mangle options including the nth_identifier generator
-    * and module flag. Used by scope analysis and other passes that need to
-    * know how names will be mangled.
+    * Returns formatted mangle options including the nth_identifier generator and module flag. Used by scope analysis and other passes that need to know how names will be mangled.
     */
-  def mangleOptions(): Map[String, Any] = {
+  def mangleOptions(): Map[String, Any] =
     // Default implementation returns basic module flag
     Map("module" -> optionBool("module"))
-  }
 }
 
 object CompressorLike {

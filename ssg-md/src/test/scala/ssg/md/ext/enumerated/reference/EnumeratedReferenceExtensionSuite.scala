@@ -71,12 +71,12 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
   import ssg.md.parser.Parser
 
   private def createParser(): Parser = {
-    val extensions = java.util.List.of(EnumeratedReferenceExtension.create(), AttributesExtension.create())
+    val extensions = java.util.Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create())
     Parser.builder().extensions(extensions).build()
   }
 
   private def createRenderer(): HtmlRenderer = {
-    val extensions = java.util.List.of(EnumeratedReferenceExtension.create(), AttributesExtension.create())
+    val extensions = java.util.Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create())
     HtmlRenderer.builder().extensions(extensions).build()
   }
 
@@ -97,7 +97,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
 
   test("e2e: enumerated reference text [#type:] renders ordinal") {
     // Define the format, create a heading with an id attribute, then reference it
-    val md = "[@fig]: Figure [#]\n\n# Heading {#fig:label1}\n\nSee [#fig:label1]\n"
+    val md   = "[@fig]: Figure [#]\n\n# Heading {#fig:label1}\n\nSee [#fig:label1]\n"
     val html = render(md)
     // The reference text should render the ordinal (1) with the format text "Figure"
     assert(html.contains("Figure"), s"Should contain format text 'Figure', got: $html")
@@ -105,7 +105,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
   }
 
   test("e2e: enumerated reference link [@type:label] renders as anchor") {
-    val md = "[@fig]: Figure [#]\n\n# My Figure {#fig:my-figure}\n\nSee [@fig:my-figure]\n"
+    val md   = "[@fig]: Figure [#]\n\n# My Figure {#fig:my-figure}\n\nSee [@fig:my-figure]\n"
     val html = render(md)
     // The reference link should render as an <a> tag with href
     assert(html.contains("<a"), s"Should contain anchor tag, got: $html")
@@ -130,7 +130,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
 
   test("e2e: enumerated reference without definition uses type as default text") {
     // Reference a type that has no [@type]: definition
-    val md = "# Heading {#tbl:my-table}\n\nSee [#tbl:my-table]\n"
+    val md   = "# Heading {#tbl:my-table}\n\nSee [#tbl:my-table]\n"
     val html = render(md)
     // When no definition block exists, the type string is used as default text
     assert(html.contains("tbl"), s"Should contain type text 'tbl' as fallback, got: $html")
@@ -138,7 +138,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
   }
 
   test("e2e: enumerated reference link renders title attribute") {
-    val md = "[@fig]: Figure [#]\n\n# Diagram {#fig:diagram}\n\nClick [@fig:diagram]\n"
+    val md   = "[@fig]: Figure [#]\n\n# Diagram {#fig:diagram}\n\nClick [@fig:diagram]\n"
     val html = render(md)
     assert(html.contains("<a"), s"Should render as link, got: $html")
     assert(html.contains("title="), s"Should have title attribute, got: $html")

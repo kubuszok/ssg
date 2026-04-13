@@ -226,7 +226,7 @@ object JsMinifier extends JsCompressor {
   /** Check if block comment at position is an important/license comment. */
   private def isImportantComment(input: String, start: Int, len: Int): Boolean =
     (start + 2 < len && input.charAt(start + 2) == '!') ||
-    (start + 11 < len && input.regionMatches(start + 2, " @license", 0, 9))
+      (start + 11 < len && input.regionMatches(start + 2, " @license", 0, 9))
 
   /** Skip block comment. Returns index after closing star-slash. */
   private def skipBlockComment(input: String, start: Int, len: Int): Int = {

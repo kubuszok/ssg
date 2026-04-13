@@ -78,7 +78,7 @@ final class TemplateSuite extends munit.FunSuite {
   }
 
   test("render(Map): nested map variable") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val inner = new JHashMap[String, Any]()
     inner.put("city", "London")
     vars.put("address", inner)
@@ -96,32 +96,36 @@ final class TemplateSuite extends munit.FunSuite {
   }
 
   // ---------------------------------------------------------------------------
-  // render(Inspectable)
+  // render(Inspectable) — JVM-only (requires reflection)
   // ---------------------------------------------------------------------------
 
   test("render(Inspectable): extracts getter fields") {
-    val data = new TemplateSuite.NameAgeData()
+    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
+    val data     = new TemplateSuite.NameAgeData()
     val template = Template.parse("{{ name }} is {{ age }}")
     val result   = template.render(data)
     assertEquals(result, "Alice is 30")
   }
 
   test("render(Inspectable): public fields are accessible") {
+    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     // Public fields are extracted by LiquidSupportFromInspectable
-    val data = new TemplateSuite.TitleData()
+    val data     = new TemplateSuite.TitleData()
     val template = Template.parse("Title: {{ title }}")
     val result   = template.render(data)
     assertEquals(result, "Title: Engineer")
   }
 
   test("render(Inspectable): isX boolean getters") {
-    val data = new TemplateSuite.ActiveData()
+    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
+    val data     = new TemplateSuite.ActiveData()
     val template = Template.parse("{% if active %}yes{% else %}no{% endif %}")
     val result   = template.render(data)
     assertEquals(result, "yes")
   }
 
   test("render(Inspectable): empty Inspectable yields no variables") {
+    // This test passes on all platforms since empty map is returned on non-JVM
     val data     = new TemplateSuite.EmptyData()
     val template = Template.parse("{{ missing }}")
     val result   = template.render(data)
@@ -144,10 +148,7 @@ final class TemplateSuite extends munit.FunSuite {
   }
 
   test("errors: populated in WARN mode for undefined variable") {
-    val parser   = new TemplateParser.Builder()
-      .withStrictVariables(true)
-      .withErrorMode(TemplateParser.ErrorMode.WARN)
-      .build()
+    val parser   = new TemplateParser.Builder().withStrictVariables(true).withErrorMode(TemplateParser.ErrorMode.WARN).build()
     val template = parser.parse("{{ undefined_var }}")
     template.render()
     assert(template.errors().size() > 0, "Expected at least one error")
@@ -204,15 +205,15 @@ final class TemplateSuite extends munit.FunSuite {
 
   test("templateSize: exact boundary (equal to limit) renders normally") {
     // A template of exactly N bytes should be allowed when limit is N
-    val input  = "12345"
-    val parser = new TemplateParser.Builder().withMaxTemplateSizeBytes(input.length.toLong).build()
+    val input    = "12345"
+    val parser   = new TemplateParser.Builder().withMaxTemplateSizeBytes(input.length.toLong).build()
     val template = parser.parse(input)
     assertEquals(template.render(), "12345")
   }
 
   test("templateSize: one byte over limit throws") {
-    val input  = "123456"
-    val parser = new TemplateParser.Builder().withMaxTemplateSizeBytes(5).build()
+    val input    = "123456"
+    val parser   = new TemplateParser.Builder().withMaxTemplateSizeBytes(5).build()
     val template = parser.parse(input)
     intercept[RuntimeException] {
       template.render()
@@ -224,19 +225,15 @@ final class TemplateSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("evaluateMode LAZY: variables passed through as-is") {
-    val parser = new TemplateParser.Builder()
-      .withEvaluateMode(TemplateParser.EvaluateMode.LAZY)
-      .build()
-    val vars = new JHashMap[String, Any]()
+    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.LAZY).build()
+    val vars   = new JHashMap[String, Any]()
     vars.put("name", "Lazy")
     val result = parser.parse("{{ name }}").render(vars)
     assertEquals(result, "Lazy")
   }
 
   test("evaluateMode EAGER: parser setting is stored") {
-    val parser = new TemplateParser.Builder()
-      .withEvaluateMode(TemplateParser.EvaluateMode.EAGER)
-      .build()
+    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
     assertEquals(parser.evaluateMode, TemplateParser.EvaluateMode.EAGER)
   }
 
@@ -244,10 +241,8 @@ final class TemplateSuite extends munit.FunSuite {
     // In EAGER mode, variables are pre-evaluated through LiquidSupportFromInspectable.
     // Simple string values get introspected (not just passed through), so the
     // rendered output differs from LAZY mode for plain strings.
-    val parser = new TemplateParser.Builder()
-      .withEvaluateMode(TemplateParser.EvaluateMode.EAGER)
-      .build()
-    val vars = new JHashMap[String, Any]()
+    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
+    val vars   = new JHashMap[String, Any]()
     vars.put("count", java.lang.Integer.valueOf(42))
     // Integer values get introspected — the result may differ from raw "42",
     // but the template should render without exceptions
@@ -256,11 +251,9 @@ final class TemplateSuite extends munit.FunSuite {
   }
 
   test("evaluateMode LAZY: nested map works") {
-    val parser = new TemplateParser.Builder()
-      .withEvaluateMode(TemplateParser.EvaluateMode.LAZY)
-      .build()
-    val vars = new JHashMap[String, Any]()
-    val inner = new JHashMap[String, Any]()
+    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.LAZY).build()
+    val vars   = new JHashMap[String, Any]()
+    val inner  = new JHashMap[String, Any]()
     inner.put("x", "deep")
     vars.put("data", inner)
     val result = parser.parse("{{ data.x }}").render(vars)
@@ -355,19 +348,18 @@ final class TemplateSuite extends munit.FunSuite {
 
 /** Test data classes for Inspectable tests.
   *
-  * Defined as top-level classes so that getter methods are public
-  * (anonymous classes inside test methods have private members that
-  * the compiler flags as unused under -Wunused:privates).
+  * Defined as top-level classes so that getter methods are public (anonymous classes inside test methods have private members that the compiler flags as unused under -Wunused:privates).
   */
 object TemplateSuite {
 
   class NameAgeData extends Inspectable {
     def getName: String = "Alice"
-    def getAge: Int     = 30
+    def getAge:  Int    = 30
   }
 
   class TitleData extends Inspectable {
-    @scala.beans.BeanProperty var title: String = "Engineer"
+    @scala.beans.BeanProperty
+    var title: String = "Engineer"
   }
 
   class ActiveData extends Inspectable {
