@@ -16,7 +16,6 @@ package blocks
 /** Blocks are tags that wrap a section of template content. */
 abstract class Block(_name: String) extends Insertion(_name) {
 
-  def this() = {
+  def this() =
     this(null)
-  }
 }
