@@ -8,65 +8,43 @@
  *
  * Migration notes:
  *   Renames: liqp.filters → ssg.liquid.filters
- *   Convention: Simplified where filter — inline implementation instead of delegate classes
+ *   Convention: Delegates to JekyllWhereImpl or LiquidWhereImpl based on liquidStyleWhere
+ *
+ * There are two different implementations of this filter in ruby.
+ *
+ * One is from shopify/liquid package:
+ * https://github.com/Shopify/liquid/blob/master/lib/liquid/standardfilters.rb
+ * https://github.com/Shopify/liquid/blob/master/test/integration/standard_filter_test.rb
+ *
+ * And the other is from jekyll/jekyll package:
+ * https://github.com/jekyll/jekyll/blob/master/lib/jekyll/filters.rb
+ * https://github.com/jekyll/jekyll/blob/master/test/test_filters.rb
+ *
+ * The differ between them are in how they work with objects and arrays as second argument.
+ * And this is rare usage case, and even more, java is not a ruby so we cannot implement
+ * exact behavior for these edge cases.
  */
 package ssg
 package liquid
 package filters
 
-import ssg.liquid.parser.Inspectable
-
-import java.util.{ ArrayList, List => JList, Map => JMap }
+import ssg.liquid.filters.where.{ JekyllWhereImpl, LiquidWhereImpl, PropertyResolverHelper, WhereImpl }
 
 /** Filters an array of objects by a property value.
   *
-  * Shopify Liquid and Jekyll have slightly different where semantics.
+  * Delegates to JekyllWhereImpl or LiquidWhereImpl based on the `liquidStyleWhere` parser setting.
   */
 class Where extends Filter("where") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    if (!isArray(value)) {
-      value
-    } else {
-      val items    = asArray(value, context)
-      val property = asString(params(0), context)
-
+  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+    val delegate: WhereImpl =
       if (context.parser.liquidStyleWhere) {
-        // Liquid style: where property [, value]
-        val targetValue = if (params.length > 1) params(1) else null
-        filterItems(items, property, targetValue, context, targetValue != null)
+        checkParams(params, 1, 2)
+        new LiquidWhereImpl(context, PropertyResolverHelper.INSTANCE)
       } else {
-        // Jekyll style: where property, value (required)
         checkParams(params, 2)
-        val targetValue = params(1)
-        filterItems(items, property, targetValue, context, true)
+        new JekyllWhereImpl(context, PropertyResolverHelper.INSTANCE)
       }
-    }
-
-  private def filterItems(items: Array[Any], property: String, targetValue: Any, context: TemplateContext, matchValue: Boolean): JList[Any] = {
-    val result = new ArrayList[Any]()
-    for (item <- items) {
-      val propValue = getProperty(item, property, context)
-      if (matchValue) {
-        if (LValue.areEqual(propValue, targetValue)) {
-          result.add(item)
-        }
-      } else {
-        // Liquid style without value: filter truthy
-        if (propValue != null && propValue != java.lang.Boolean.FALSE) {
-          result.add(item)
-        }
-      }
-    }
-    result
+    delegate.apply(value, params)
   }
-
-  private def getProperty(item: Any, property: String, context: TemplateContext): Any =
-    item match {
-      case map:  JMap[?, ?]  => map.get(property)
-      case insp: Inspectable =>
-        val evaluated = context.parser.evaluate(insp)
-        evaluated.toLiquid().get(property)
-      case _ => null
-    }
 }

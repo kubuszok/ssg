@@ -881,6 +881,9 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       case _ =>
     }
 
+    // Record source map mapping for this node
+    addSourceMapping(node)
+
     pushNode(node)
 
     def doit(): Unit = {
@@ -894,6 +897,27 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
     popNode()
     if (useAsm != null && (node eq useAsm.nn)) useAsm = null
+  }
+
+  /** Record a source map mapping for the given node at the current output position. */
+  private def addSourceMapping(node: AstNode): Unit = {
+    val sm = options.sourceMap
+    if (sm == null) return // @nowarn
+    val token = node.start
+    if (token == null) return // @nowarn
+    if (token.file == null || token.file.isEmpty) return // @nowarn
+    val name = node match {
+      case sym: AstSymbol => sym.name
+      case _ => null
+    }
+    sm.nn.add(
+      source = token.file,
+      genLine = currentLine,
+      genCol = currentCol,
+      origLine = token.line,
+      origCol = token.col,
+      name = name
+    )
   }
 
   // ========================================================================
@@ -1679,8 +1703,8 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   private def getSymbolName(sym: AstSymbol): String =
     sym.thedef match {
-      case null => sym.name
-      case _    => sym.name // SymbolDef not yet ported — use name directly
+      case sd: ssg.js.scope.SymbolDef if sd.mangledName != null => sd.mangledName.nn
+      case _ => sym.name
     }
 
   private def printClassPrivateProperty(node: AstClassPrivateProperty): Unit = {

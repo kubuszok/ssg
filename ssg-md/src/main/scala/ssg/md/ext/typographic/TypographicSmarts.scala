@@ -50,7 +50,7 @@ class TypographicSmarts() extends Node, DoNotAttributeDecorate, TypographicText 
   }
 
   override def astExtra(out: StringBuilder): Unit =
-    _typographicText.foreach(t => out.append(" typographic: ").append(t).append(" "))
+    out.append(" typographic: ").append(_typographicText.getOrElse("null")).append(" ")
 
   def typographicText: Nullable[String] = _typographicText
 

@@ -16,6 +16,8 @@ target/
 .cursorrules
 .cursorignore
 .cursorignorerules
+.claude/worktrees
+.claude/settings.local.json
 
 ## IntelliJ
 .idea/
@@ -30,6 +32,7 @@ target/
 scripts/bin/
 scripts/.metals-pid
 scripts/.metals.log
+scripts/data/*.lock
 .scala-build/
 
 ## re-scale stale locks

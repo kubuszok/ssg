@@ -63,6 +63,7 @@ class MacroDefinitionBlock() extends Block, ReferenceNode[MacroDefinitionReposit
   def this(chars: BasedSequence, segments: java.util.List[BasedSequence]) = {
     this()
     this.chars = chars
+    this.contentLines = segments
   }
 
   def this(blockContent: BlockContent) = {

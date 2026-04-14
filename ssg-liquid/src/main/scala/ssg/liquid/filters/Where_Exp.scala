@@ -17,7 +17,7 @@ package filters
 
 import ssg.liquid.parser.Inspectable
 
-import java.util.{ ArrayList, HashMap }
+import java.util.ArrayList
 
 /** Filters array elements using a Liquid expression (Jekyll-specific).
   *
@@ -62,15 +62,7 @@ class Where_Exp extends Filter("where_exp") {
   }
 
   private def matchCondition(context: TemplateContext, item: Any, varName: String, expression: Template): Boolean = {
-    val vars = new HashMap[String, Any]()
-    // Copy parent context variables
-    val parentVars = context.getVariables
-    vars.putAll(parentVars)
-    // Set the item variable
-    vars.put(varName, item)
-
-    val rendered = expression.render(vars)
-    // Truthiness: "true" is truthy, anything non-empty/non-false is truthy
-    rendered != null && rendered.nonEmpty && rendered != "false"
+    val vars = java.util.Collections.singletonMap[String, Any](varName, item)
+    "true" == String.valueOf(expression.renderToObjectUnguarded(vars, context, false))
   }
 }

@@ -12,6 +12,11 @@
  *   Renames: cssminify2 gem → ssg.minify.css.CssMinifier
  *   Convention: Pure Scala 3, regex-pipeline based, cross-platform
  *   Idiom: Stateless pure functions, no external dependencies
+ *   Gap: No rgb()/rgba()/named-color → hex folding, no margin/padding/font
+ *     shorthand collapsing, no vendor-prefix culling, no source maps (ISS-041).
+ *     Core whitespace/comment/zero/hex passes are complete.
+ *     See docs/architecture/jekyll-minifier-port.md.
+ *   Audited: 2026-04-07 (minor_issues)
  */
 package ssg
 package minify
@@ -32,14 +37,18 @@ object CssMinifier {
       if (options.collapseWhitespace) result = collapseWhitespace(result)
       if (options.removeTrailingSemicolons) result = removeTrailingSemicolons(result)
       if (options.removeEmptyRules) result = removeEmptyRules(result)
-      if (options.shortenColors) result = shortenColors(result)
+      if (options.shortenColors) {
+        result = shortenColors(result)
+        result = foldRgbToHex(result)
+        result = foldNamedColors(result)
+      }
       if (options.collapseZeros) result = collapseZeros(result)
       result.trim
     }
 
   // -- Comment removal --
 
-  /** Remove CSS block comments, preserving content inside strings. */
+  /** Remove CSS block comments, preserving content inside strings and important comments (`/*! ... */`). */
   private def removeComments(css: String): String = {
     val len = css.length
     val sb  = new StringBuilder(len)
@@ -48,11 +57,28 @@ object CssMinifier {
     while (i < len) {
       val c = css.charAt(i)
       if (c == '/' && i + 1 < len && css.charAt(i + 1) == '*') {
-        // Block comment — skip to */
-        i += 2
-        while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/'))
-          i += 1
-        if (i + 1 < len) i += 2
+        val isBangComment = i + 2 < len && css.charAt(i + 2) == '!'
+        if (isBangComment) {
+          // Preserve /*! ... */ important/license comments
+          sb.append('/')
+          sb.append('*')
+          i += 2
+          while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/')) {
+            sb.append(css.charAt(i))
+            i += 1
+          }
+          if (i + 1 < len) {
+            sb.append('*')
+            sb.append('/')
+            i += 2
+          }
+        } else {
+          // Regular block comment — skip to */
+          i += 2
+          while (i + 1 < len && !(css.charAt(i) == '*' && css.charAt(i + 1) == '/'))
+            i += 1
+          if (i + 1 < len) i += 2
+        }
       } else if (c == '\'' || c == '"') {
         i = copyStringLiteral(css, i, len, sb)
       } else {
@@ -128,6 +154,118 @@ object CssMinifier {
         }
       }
     )
+
+  // -- rgb()/rgba() to hex --
+
+  private val RgbPattern  = "rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)".r
+  private val RgbaPattern = "rgba\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*1(?:\\.0*)?\\s*\\)".r
+
+  private def foldRgbToHex(css: String): String = {
+    var result = RgbaPattern.replaceAllIn(css, m => rgbToHex(m.group(1).toInt, m.group(2).toInt, m.group(3).toInt))
+    result = RgbPattern.replaceAllIn(result, m => rgbToHex(m.group(1).toInt, m.group(2).toInt, m.group(3).toInt))
+    result
+  }
+
+  private def rgbToHex(r: Int, g: Int, b: Int): String =
+    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      s"rgb($r,$g,$b)"
+    } else {
+      val hex = f"#$r%02x$g%02x$b%02x"
+      // Shorten if possible: #aabbcc → #abc
+      if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6)) {
+        s"#${hex.charAt(1)}${hex.charAt(3)}${hex.charAt(5)}"
+      } else {
+        hex
+      }
+    }
+
+  // -- Named color → hex (shorter alternatives only) --
+
+  private val NamedColorMap: Map[String, String] = Map(
+    "white" -> "#fff",
+    "black" -> "#000",
+    "red" -> "red", // already 3 chars, #f00 is same length
+    "fuchsia" -> "#f0f",
+    "magenta" -> "#f0f",
+    "yellow" -> "#ff0",
+    "cyan" -> "#0ff",
+    "aqua" -> "#0ff",
+    "darkblue" -> "#00008b",
+    "darkgreen" -> "#006400",
+    "darkred" -> "#8b0000",
+    "darkcyan" -> "#008b8b",
+    "darkmagenta" -> "#8b008b",
+    "cornsilk" -> "#fff8dc",
+    "bisque" -> "#ffe4c4",
+    "azure" -> "#f0ffff",
+    "beige" -> "#f5f5dc",
+    "coral" -> "#ff7f50",
+    "ivory" -> "#fffff0",
+    "khaki" -> "#f0e68c",
+    "linen" -> "#faf0e6",
+    "orchid" -> "#da70d6",
+    "plum" -> "#dda0dd",
+    "salmon" -> "#fa8072",
+    "sienna" -> "#a0522d",
+    "silver" -> "#c0c0c0",
+    "tomato" -> "#ff6347",
+    "violet" -> "#ee82ee",
+    "wheat" -> "#f5deb3"
+  )
+
+  private def foldNamedColors(css: String): String = {
+    // Only fold named colors in value positions (after : or , or whitespace, and before ; } , ! or whitespace)
+    // Manual scan to avoid lookbehind which isn't supported on JS ES2017
+    val len = css.length
+    val sb  = new StringBuilder(len)
+    var i   = 0
+
+    while (i < len) {
+      val c = css.charAt(i)
+      if (c == '\'' || c == '"') {
+        // Skip string literals
+        val start = i
+        i = skipStringLiteral(css, i, len)
+        sb.append(css.substring(start, i))
+      } else if ((c == ':' || c == ',' || c.isWhitespace) && i + 1 < len) {
+        sb.append(c)
+        i += 1
+        // Try to match a named color starting here
+        val matchResult = tryMatchNamedColor(css, i, len)
+        if (matchResult != null) {
+          sb.append(matchResult._2)
+          i += matchResult._1.length
+        }
+      } else {
+        sb.append(c)
+        i += 1
+      }
+    }
+
+    sb.toString()
+  }
+
+  /** Try to match a named color at position i. Returns (colorName, hex) or null. */
+  private def tryMatchNamedColor(css: String, i: Int, len: Int): (String, String) =
+    boundary[(String, String)] {
+      for ((name, hex) <- NamedColorMap)
+        if (hex.length < name.length && i + name.length <= len) {
+          // Case-insensitive match
+          if (css.regionMatches(true, i, name, 0, name.length)) {
+            val afterName = i + name.length
+            // Check that it's followed by ; } , ! or whitespace (or end of string)
+            if (
+              afterName >= len || {
+                val next = css.charAt(afterName)
+                next == ';' || next == '}' || next == ',' || next == '!' || next.isWhitespace
+              }
+            ) {
+              break((name, hex))
+            }
+          }
+        }
+      null
+    }
 
   // -- Zero collapsing --
 

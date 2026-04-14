@@ -10,12 +10,11 @@ package ssg
 package md
 package ast
 
+import ssg.md.parser.ListOptions
 import ssg.md.util.data.DataHolder
 
-// NOTE: ListOptions is in the parser package, which may not be ported yet.
-// Using a forward reference type alias or trait here for now.
 trait ParagraphItemContainer {
-  def isParagraphInTightListItem(node:  Paragraph):                                        Boolean
-  def isItemParagraph(node:             Paragraph):                                        Boolean
-  def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean
+  def isParagraphInTightListItem(node:  Paragraph):                                                Boolean
+  def isItemParagraph(node:             Paragraph):                                                Boolean
+  def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean
 }

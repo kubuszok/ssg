@@ -5,6 +5,12 @@
  * Ported from: flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiReference.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Migration notes:
+ *   Renames: com.vladsch.flexmark.ext.emoji.internal → ssg.md.ext.emoji.internal
+ *   Breaking: Inner class renamed Emoji → EmojiData to avoid clash with
+ *     the outer ssg.md.ext.emoji.Emoji node class. All references in
+ *     EmojiResolvedShortcut and EmojiShortcuts updated accordingly.
  */
 package ssg
 package md

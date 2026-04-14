@@ -28,7 +28,7 @@ class TaskListFormatOptions(options: DataHolder) extends MutableDataSetter {
   val formatTaskItemPriorities:      JMap[Character, Integer] = TaskListExtension.FORMAT_TASK_ITEM_PRIORITIES.get(options)
   val formatPrioritizedTaskItems:    Boolean                  = TaskListExtension.FORMAT_PRIORITIZED_TASK_ITEMS.get(options)
 
-  def this() = this(null)
+  def this() = this(new ssg.md.util.data.MutableDataSet())
 
   override def setIn(dataHolder: MutableDataHolder): MutableDataHolder = {
     dataHolder.set(TaskListExtension.FORMAT_LIST_ITEM_CASE, taskListItemCase)
