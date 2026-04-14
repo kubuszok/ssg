@@ -11,7 +11,6 @@ package md
 package util
 package dependency
 
-import ssg.md.Nullable
 import ssg.md.util.collection.iteration.ReversibleIndexedIterator
 
 import java.util.BitSet

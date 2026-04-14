@@ -75,7 +75,8 @@ object EmojiResolvedShortcut {
         }
 
         // CAUTION: this exact string is used by html parser to convert emoji from Apple Mail HTML
-        alt = Nullable("emoji " + e.category.getOrElse("") + ":" + e.shortcut.getOrElse(""))
+        // Java concatenates possibly-null values yielding literal "null" substrings; match that behavior
+        alt = Nullable("emoji " + e.category.getOrElse("null") + ":" + e.shortcut.getOrElse("null"))
       }
     }
 

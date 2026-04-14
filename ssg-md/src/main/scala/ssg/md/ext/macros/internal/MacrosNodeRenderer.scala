@@ -83,7 +83,7 @@ class MacrosNodeRenderer(options: DataHolder) extends PhasedNodeRenderer {
             } else {
               context.renderChildren(child.get)
             }
-          } else if (child.isDefined) {
+          } else {
             if (macrosOptions.sourceWrapMacroReferences) {
               html.srcPos(node.chars).withAttr(AttributablePart.NODE_POSITION).tag("div").indent().line()
               context.renderChildren(macroDefinitionBlock)

@@ -151,10 +151,14 @@ class TemplateContext(
     }
   }
 
+  /** Returns the date parser configured on this context's TemplateParser. */
+  def getDateParser: filters.date.BasicDateParser =
+    parser.dateParser
+
   /** Returns the root folder path (for include_relative). */
-  def getRootFolder: Any = {
+  def getRootFolder: ssg.commons.io.FilePath = {
     val reg: JMap[String, Any] = getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)
-    reg.get(TemplateContext.REGISTRY_ROOT_FOLDER)
+    reg.get(TemplateContext.REGISTRY_ROOT_FOLDER).asInstanceOf[ssg.commons.io.FilePath]
   }
 }
 
