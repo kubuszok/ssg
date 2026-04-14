@@ -51,6 +51,14 @@ private trait AstObjectPropertyWalk extends AstObjectProperty {
       case _ =>
     }
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    key match {
+      case k: AstNode => key = k.transform(tw)
+      case _ =>
+    }
+    if (value != null) value = value.nn.transform(tw)
+  }
 }
 
 /** A key: value object property. */
@@ -161,6 +169,14 @@ class AstClassProperty extends AstNode with AstObjectProperty {
       case _: String  =>
     }
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    key match {
+      case k: AstNode => key = k.transform(tw)
+      case _ =>
+    }
+    if (value != null) value = value.nn.transform(tw)
+  }
 }
 
 /** A class property for a private property. */
@@ -176,6 +192,9 @@ class AstClassPrivateProperty extends AstNode with AstObjectProperty {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (value != null) push(value.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (value != null) value = value.nn.transform(tw)
 }
 
 /** An `in` binop when the key is private, eg `#x in this`. */
@@ -193,6 +212,11 @@ class AstPrivateIn extends AstNode {
   override def childrenBackwards(push: AstNode => Unit): Unit = {
     if (value != null) push(value.nn)
     if (key != null) push(key.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (key != null) key = key.nn.transform(tw)
+    if (value != null) value = value.nn.transform(tw)
   }
 }
 
@@ -213,6 +237,9 @@ class AstClassStaticBlock extends AstNode with AstScope {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +269,12 @@ class AstClass extends AstNode with AstScope {
     while ({ i -= 1; i >= 0 }) push(properties(i))
     if (superClass != null) push(superClass.nn)
     if (name != null) push(name.nn)
+  }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (name != null) name = name.nn.transform(tw)
+    if (superClass != null) superClass = superClass.nn.transform(tw)
+    properties = transformList(properties, tw)
   }
 }
 

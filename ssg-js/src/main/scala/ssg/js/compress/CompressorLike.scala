@@ -2,11 +2,11 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Minimal trait for compressor context used by optimization passes.
+ * Core trait for compressor context used by optimization passes.
  *
  * This trait captures the interface that Evaluate, Inference, ReduceVars,
  * DropSideEffectFree, and DropUnused need from the full Compressor class.
- * The full Compressor (Phase 7) will implement this trait.
+ * The full Compressor will implement this trait.
  *
  * Original source: terser lib/compress/index.js
  * Original author: Mihai Bazon
@@ -25,10 +25,9 @@ import scala.collection.mutable
 
 import ssg.js.ast.*
 
-/** Minimal compressor interface used by optimization passes.
+/** Core compressor interface used by optimization passes.
   *
-  * Provides option queries, parent-chain access, directive checks, and other contextual information that the various compress modules need. The full `Compressor` class (Phase 7) will implement this
-  * trait.
+  * Provides option queries, parent-chain access, directive checks, and other contextual information that the various compress modules need. The full `Compressor` will implement this trait.
   */
 trait CompressorLike {
 
@@ -71,6 +70,58 @@ trait CompressorLike {
 
   /** Cache of evaluated regular expressions. */
   val evaluatedRegexps: mutable.Map[RegExpValue, Any] = mutable.Map.empty
+
+  /** Maximum number of expressions to merge into a single sequence.
+    *
+    * Computed from the `sequences` option: if false → 0, if true → 200, if 1 → 800 (special case for maximum merging), otherwise the numeric value.
+    */
+  def sequencesLimit: Int = {
+    val seq = option("sequences")
+    seq match {
+      case false => 0
+      case true  => 200
+      case n: Int if n == 1 => 800
+      case n: Int           => n
+      case _ => 0
+    }
+  }
+
+  /** Check if we're in a computed property key context.
+    *
+    * This is true when inside `[...]` of a computed property access or computed property definition. Used by some optimizations that behave differently in computed key context.
+    */
+  def inComputedKey(): Boolean = {
+    var i = 0
+    var p: AstNode | Null = parent(i)
+    while (p != null) {
+      p.nn match {
+        case _: AstObjectProperty | _: AstClassProperty =>
+          // Check if we're in the key position (computed)
+          val prevParent = if (i > 0) parent(i - 1) else null
+          if (prevParent != null) {
+            prevParent.nn match {
+              case prop: AstObjectProperty if prop.computedKey() => return true // @nowarn
+              case prop: AstClassProperty if prop.computedKey()  => return true // @nowarn
+              case _ =>
+            }
+          }
+        case _: AstScope =>
+          return false // @nowarn — stop at scope boundary
+        case _ =>
+      }
+      i += 1
+      p = parent(i)
+    }
+    false
+  }
+
+  /** Get mangle options for scope analysis.
+    *
+    * Returns formatted mangle options including the nth_identifier generator and module flag. Used by scope analysis and other passes that need to know how names will be mangled.
+    */
+  def mangleOptions(): Map[String, Any] =
+    // Default implementation returns basic module flag
+    Map("module" -> optionBool("module"))
 }
 
 object CompressorLike {

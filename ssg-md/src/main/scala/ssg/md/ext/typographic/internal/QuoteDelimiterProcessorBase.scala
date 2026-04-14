@@ -18,7 +18,10 @@ import ssg.md.parser.core.delimiter.Delimiter
 import ssg.md.parser.delimiter.{ DelimiterProcessor, DelimiterRun }
 import ssg.md.util.ast.Node
 import ssg.md.util.sequence.BasedSequence
+
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 class QuoteDelimiterProcessorBase(
   protected val myOptions:        TypographicOptions,
@@ -59,29 +62,27 @@ class QuoteDelimiterProcessorBase(
 
   override def skipNonOpenerCloser: Boolean = false
 
-  protected def havePreviousOpener(opener: DelimiterRun): Boolean = {
+  protected def havePreviousOpener(opener: DelimiterRun): Boolean = boundary {
     var previous = opener.previous
     val minLen   = this.minLength
-    while (previous != null)
+    while (previous != null) {
       if (previous.delimiterChar == myOpenDelimiter) {
-        if (canOpen(previous, minLen)) return true // scalastyle:ignore
-        else { previous = previous.previous; /* continue */ }
-      } else {
-        previous = previous.previous
+        break(canOpen(previous, minLen))
       }
+      previous = previous.previous
+    }
     false
   }
 
-  protected def haveNextCloser(closer: DelimiterRun): Boolean = {
+  protected def haveNextCloser(closer: DelimiterRun): Boolean = boundary {
     var next   = closer.next
     val minLen = this.minLength
-    while (next != null)
+    while (next != null) {
       if (next.delimiterChar == myCloseDelimiter) {
-        if (canClose(next, minLen)) return true // scalastyle:ignore
-        else { next = next.next; /* continue */ }
-      } else {
-        next = next.next
+        break(canClose(next, minLen))
       }
+      next = next.next
+    }
     false
   }
 

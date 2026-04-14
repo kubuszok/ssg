@@ -54,7 +54,7 @@ Every Scala file must start with:
 ## Compiler Flags
 
 ```
--deprecation -feature -no-indent -rewrite -Werror
+-deprecation -feature -no-indent -Werror
 -Wimplausible-patterns -Wrecurse-with-default -Wenum-comment-discard
 -Wunused:imports,privates,locals,patvars,nowarn
 ```

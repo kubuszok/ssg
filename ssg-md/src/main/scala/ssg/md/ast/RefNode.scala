@@ -163,10 +163,8 @@ abstract class RefNode extends Node, LinkRefDerived, ReferencingNode[ReferenceRe
   def isDummyReference: Boolean =
     (textOpeningMarker ne BasedSequence.NULL) && (text eq BasedSequence.NULL) && (textClosingMarker ne BasedSequence.NULL)
 
-  @SuppressWarnings(Array("org.wartremover.warts.Null"))
   override def getReferenceNode(document: Document): Reference =
-    // NOTE: Parser.REFERENCES is not yet ported; this will need updating when it is
-    null.asInstanceOf[Reference] // @nowarn - Java interop: returns null when reference not found
+    getReferenceNode(ssg.md.parser.Parser.REFERENCES.get(Nullable(document: ssg.md.util.data.DataHolder)))
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   override def getReferenceNode(repository: ReferenceRepository): Reference =

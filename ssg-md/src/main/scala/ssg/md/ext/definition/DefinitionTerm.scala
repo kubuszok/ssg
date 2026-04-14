@@ -12,6 +12,7 @@ package ext
 package definition
 
 import ssg.md.ast.{ ListItem, Paragraph }
+import ssg.md.parser.ListOptions
 import ssg.md.util.ast.Node
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
@@ -37,5 +38,5 @@ class DefinitionTerm() extends ListItem {
     this.setCharsFromContent()
   }
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = true
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = true
 }

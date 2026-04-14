@@ -16,6 +16,7 @@ package ssg
 package liquid
 package filters
 
+import java.time.temporal.TemporalAccessor
 import java.util.{ Collection => JCollection, Map => JMap }
 
 /** Serializes a value to JSON. */
@@ -40,12 +41,15 @@ object Json {
   def toJson(value: Any): String =
     value match {
       case null => "null"
-      case b:   Boolean        => b.toString
-      case n:   Number         => n.toString
-      case s:   String         => quoteString(s)
-      case cs:  CharSequence   => quoteString(cs.toString)
-      case arr: Array[?]       => arr.map(toJson).mkString("[", ",", "]")
-      case col: JCollection[?] =>
+      case b:   Boolean                                     => b.toString
+      case n:   java.lang.Double if n.isNaN || n.isInfinite => "null"
+      case n:   java.lang.Float if n.isNaN || n.isInfinite  => "null"
+      case n:   Number                                      => n.toString
+      case ta:  TemporalAccessor                            => quoteString(ta.toString)
+      case s:   String                                      => quoteString(s)
+      case cs:  CharSequence                                => quoteString(cs.toString)
+      case arr: Array[?]                                    => arr.map(toJson).mkString("[", ",", "]")
+      case col: JCollection[?]                              =>
         val sb    = new StringBuilder("[")
         val it    = col.iterator()
         var first = true

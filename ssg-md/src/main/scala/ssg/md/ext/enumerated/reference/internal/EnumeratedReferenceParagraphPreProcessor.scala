@@ -18,8 +18,11 @@ import ssg.md.ast.Paragraph
 import ssg.md.parser.block.{ ParagraphPreProcessor, ParagraphPreProcessorFactory, ParserState }
 import ssg.md.parser.core.ReferencePreProcessorFactory
 import ssg.md.util.data.DataHolder
-import scala.language.implicitConversions
+
 import java.util.regex.Pattern
+import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 // NOT USED, Parsing is done by EnumeratedReferenceBlockParser,
 // otherwise Reference definitions take priority if preceded by reference definition
@@ -36,10 +39,11 @@ class EnumeratedReferenceParagraphPreProcessor(options: DataHolder) extends Para
     val trySequence = block.chars
     val matcher     = EnumeratedReferenceParagraphPreProcessor.ENUM_REF_DEF_PARAGRAPH_PATTERN.matcher(trySequence)
     var lastFound   = 0
-    while (matcher.find())
-      if (matcher.start() != lastFound) {
-        lastFound // break
-      } else {
+    boundary {
+      while (matcher.find()) {
+        if (matcher.start() != lastFound) {
+          break()
+        }
         lastFound = matcher.end()
 
         val openingStart  = matcher.start(1)
@@ -64,6 +68,7 @@ class EnumeratedReferenceParagraphPreProcessor(options: DataHolder) extends Para
 
         enumeratedReferences.put(enumeratedReferenceBlock.text.toString, enumeratedReferenceBlock)
       }
+    }
     lastFound
   }
 }

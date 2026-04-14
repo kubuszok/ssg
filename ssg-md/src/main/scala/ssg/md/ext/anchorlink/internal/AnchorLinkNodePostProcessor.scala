@@ -12,7 +12,6 @@ package ext
 package anchorlink
 package internal
 
-import ssg.md.Nullable
 import ssg.md.ast.{ BlockQuote, Heading }
 import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
 import ssg.md.util.ast.{ Document, Node, NodeTracker }

@@ -24,4 +24,21 @@ trait JsCompressor {
     *   compressed JavaScript
     */
   def compress(input: String): String
+
+  /** Compress JavaScript source code with options.
+    *
+    * @param input
+    *   JavaScript source
+    * @param options
+    *   compressor-specific options (e.g., TerserOptions for compress, mangle, output settings)
+    * @return
+    *   compressed JavaScript
+    */
+  def compress(input: String, options: JsCompressorOptions): String = compress(input)
 }
+
+/** Options for JavaScript compression. Implementations provide compressor-specific settings.
+  *
+  * The base trait is empty — concrete implementations (e.g., `TerserOptions`) add fields for compress, mangle, output, ecma, ie8, safari10 etc.
+  */
+trait JsCompressorOptions

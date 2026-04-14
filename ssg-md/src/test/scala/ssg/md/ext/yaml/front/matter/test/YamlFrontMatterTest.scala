@@ -14,7 +14,6 @@ package front
 package matter
 package test
 
-import ssg.md.Nullable
 import ssg.md.ext.yaml.front.matter.{ AbstractYamlFrontMatterVisitor, YamlFrontMatterExtension }
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser

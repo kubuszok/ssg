@@ -11,7 +11,8 @@
  *   Convention: Java interface → Scala trait
  *   Idiom: Replaced Jackson-based LiquidSupportFromInspectable with trait-based conversion
  *
- * NOTE: This is an initial stub. Full implementation in Phase 4.
+ * NOTE: LiquidSupportFromInspectable is in platform-specific directories (scala-jvm, scala-js, scala-native)
+ * because reflection APIs are not available on JS/Native.
  */
 package ssg
 package liquid

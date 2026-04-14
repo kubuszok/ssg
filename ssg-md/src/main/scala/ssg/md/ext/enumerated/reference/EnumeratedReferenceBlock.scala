@@ -14,6 +14,7 @@ package reference
 
 import ssg.md.Nullable
 import ssg.md.ast.{ Paragraph, ParagraphItemContainer }
+import ssg.md.parser.ListOptions
 import ssg.md.util.ast.{ Block, Node, ReferenceNode }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
@@ -54,7 +55,7 @@ class EnumeratedReferenceBlock() extends Block, ReferenceNode[EnumeratedReferenc
   override def isItemParagraph(node: Paragraph): Boolean =
     firstChild.contains(node)
 
-  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: Any, options: DataHolder): Boolean = true
+  override def isParagraphWrappingDisabled(node: Paragraph, listOptions: ListOptions, options: DataHolder): Boolean = true
 
   override def isParagraphInTightListItem(node: Paragraph): Boolean = true
 }

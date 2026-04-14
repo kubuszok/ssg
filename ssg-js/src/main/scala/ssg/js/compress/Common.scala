@@ -32,6 +32,7 @@ package js
 package compress
 
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.Selectable.reflectiveSelectable
 import scala.util.boundary
 import scala.util.boundary.break
 
@@ -183,6 +184,13 @@ object Common {
         node.value = rv
         node
 
+      case bi: BigInt =>
+        val node = new AstBigInt
+        node.start = orig.start
+        node.end = orig.end
+        node.value = bi.toString
+        node
+
       case _ =>
         throw new IllegalArgumentException(
           s"Can't handle constant of type: ${if (value == null) "null" else value.getClass.getName}"
@@ -215,6 +223,64 @@ object Common {
       case other => other
     }
   }
+
+  /** Find which node is smaller, and return that.
+    *
+    * Dispatches to bestOfStatement or bestOfExpression based on whether the current position is the first token in a statement (determined via the compressor's parent chain).
+    */
+  def bestOf(compressor: CompressorLike, ast1: AstNode, ast2: AstNode): AstNode =
+    if (firstInStatement(compressor)) bestOfStatement(ast1, ast2)
+    else bestOfExpression(ast1, ast2)
+
+  /** Returns true if the current position in the compressor's parent stack is lexically the first token in a statement.
+    *
+    * Walks up the parent chain: if at each level the node is the "leftmost" child of the parent (e.g., left operand of binary, first expression of sequence, condition of conditional, etc.), keep
+    * going. If the parent is a statement-with-body and the node is its body, return true.
+    */
+  def firstInStatement(stack: { def parent(n: Int): AstNode | Null }): Boolean =
+    boundary[Boolean] {
+      var node: AstNode | Null = stack.parent(-1)
+      if (node == null) break(false)
+      var i = 0
+      var p: AstNode | Null = stack.parent(i)
+      while (p != null) {
+        val parent = p.nn
+        parent match {
+          case stmt: AstStatementWithBody if stmt.body != null && (stmt.body.nn eq node.nn) =>
+            break(true)
+          case _ =>
+            val isLeftmost = parent match {
+              case seq: AstSequence =>
+                seq.expressions.nonEmpty && (seq.expressions.head eq node.nn)
+              case call: AstCall =>
+                call.expression != null && (call.expression.nn eq node.nn)
+              case pts: AstPrefixedTemplateString =>
+                pts.prefix != null && (pts.prefix.nn eq node.nn)
+              case dot: AstDot =>
+                dot.expression != null && (dot.expression.nn eq node.nn)
+              case sub: AstSub =>
+                sub.expression != null && (sub.expression.nn eq node.nn)
+              case chain: AstChain =>
+                chain.expression != null && (chain.expression.nn eq node.nn)
+              case cond: AstConditional =>
+                cond.condition != null && (cond.condition.nn eq node.nn)
+              case bin: AstBinary =>
+                bin.left != null && (bin.left.nn eq node.nn)
+              case post: AstUnaryPostfix =>
+                post.expression != null && (post.expression.nn eq node.nn)
+              case _ => false
+            }
+            if (isLeftmost) {
+              node = parent
+            } else {
+              break(false)
+            }
+        }
+        i += 1
+        p = stack.parent(i)
+      }
+      false
+    }
 
   // -----------------------------------------------------------------------
   // Property access helpers
@@ -291,20 +357,10 @@ object Common {
     */
   private def resolveFixedValue(node: AstNode): AstNode =
     node match {
-      case ref: AstSymbolRef if ref.thedef != null =>
-        // SymbolDef.fixed holds the fixed value (an AstNode) when the variable
-        // is assigned exactly once and never reassigned. Use reflection since
-        // SymbolDef is typed as Any.
-        try {
-          val sdClass     = ref.thedef.getClass
-          val fixedMethod = sdClass.getMethod("fixed")
-          val fixed       = fixedMethod.invoke(ref.thedef)
-          fixed match {
-            case n: AstNode => n
-            case _ => node
-          }
-        } catch {
-          case _: Exception => node
+      case ref: AstSymbolRef =>
+        ref.fixedValue() match {
+          case n: AstNode => n
+          case _ => node
         }
       case _ => node
     }
@@ -416,12 +472,25 @@ object Common {
       node.isInstanceOf[AstNaN] ||
       node.isInstanceOf[AstUndefined]
 
-  /** Check if `ref` is a SymbolRef whose definition has an orig of the given type. */
+  /** Check if `ref` is a SymbolRef whose definition has an orig of the given type.
+    *
+    * Scans the definition's `orig` array (which contains all declarations of this symbol) and returns true if any of them match the specified type.
+    */
   def isRefOf[T <: AstNode](ref: AstNode)(using ct: scala.reflect.ClassTag[T]): Boolean =
     ref match {
-      case _: AstSymbolRef =>
-        // TODO: implement when SymbolDef.orig is available
-        false
+      case symRef: AstSymbolRef =>
+        val theDef = symRef.definition()
+        if (theDef == null) false
+        else
+          boundary[Boolean] {
+            val orig = theDef.nn.orig
+            var i    = orig.size
+            while ({ i -= 1; i >= 0 })
+              if (ct.runtimeClass.isInstance(orig(i))) {
+                break(true)
+              }
+            false
+          }
       case _ => false
     }
 
@@ -453,29 +522,110 @@ object Common {
       }
 
   // -----------------------------------------------------------------------
+  // Walk with parent tracking
+  // -----------------------------------------------------------------------
+
+  /** Info object for walkParent callback (provides parent access). */
+  class WalkParentInfo(private val stack: ArrayBuffer[AstNode]) {
+    def parent(n: Int = 0): AstNode | Null = {
+      val idx = stack.size - 1 - n
+      if (idx >= 0) stack(idx) else null
+    }
+  }
+
+  /** Walk a node tree with parent access, similar to original walk_parent.
+    *
+    * Traverses in depth-first order, calling cb for each node with access to the parent stack. If cb returns WalkAbort, the walk is aborted and returns true. If cb returns any other truthy value,
+    * children are skipped. Returns true if aborted, false otherwise.
+    */
+  def walkParent(node: AstNode, cb: (AstNode, WalkParentInfo) => Any): Boolean = {
+    val toVisit = ArrayBuffer[AstNode](node)
+    val push: AstNode => Unit = n => toVisit.addOne(n)
+    val stack            = ArrayBuffer.empty[AstNode]
+    val parentPopIndices = ArrayBuffer.empty[Int]
+
+    val info = new WalkParentInfo(stack)
+
+    boundary[Boolean] {
+      while (toVisit.nonEmpty) {
+        val current = toVisit.remove(toVisit.size - 1)
+
+        // Pop parents that are no longer ancestors
+        while (parentPopIndices.nonEmpty && toVisit.size == parentPopIndices.last) {
+          stack.remove(stack.size - 1)
+          parentPopIndices.remove(parentPopIndices.size - 1)
+        }
+
+        val ret = cb(current, info)
+
+        if (ret != null && ret != false && ret != (())) {
+          if (ret.asInstanceOf[AnyRef] eq WalkAbort) {
+            break(true)
+          }
+          // truthy but not WalkAbort: skip children
+        } else {
+          val visitLength = toVisit.size
+
+          current.childrenBackwards(push)
+
+          // Push to stack only if we're going to traverse children
+          if (toVisit.size > visitLength) {
+            stack.addOne(current)
+            parentPopIndices.addOne(visitLength - 1)
+          }
+        }
+      }
+      false
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Reachability
   // -----------------------------------------------------------------------
 
   /** Check if any of `defs` are reachable (referenced) from within `scopeNode`, considering that inline function calls execute synchronously but closures (async/generators, non-call references) may
     * not.
+    *
+    * Uses walkParent to track ancestors. For nested scopes:
+    *   - If the scope is called as an IIFE (parent is Call with scope as expression) and is NOT async/generator, we continue walking to check references but they're considered reachable synchronously
+    *   - If it's NOT an IIFE or IS async/generator, any reference found means the def is reachable (closure capture)
     */
   def isReachable(scopeNode: AstNode, defs: ArrayBuffer[Any]): Boolean = {
-    // Walk using the top-level walk function with parent tracking
+    // Inner helper: walk to find references to any of defs
     val findRef: (AstNode, ArrayBuffer[AstNode]) => Any = (node, _) =>
       node match {
         case sr: AstSymbolRef if defs.contains(sr.thedef) => WalkAbort
         case _ => null
       }
 
-    // Simplified: walk all children looking for references
-    walk(
+    walkParent(
       scopeNode,
-      (node, parents) =>
+      (node, info) =>
         node match {
           case scope: AstScope if !(scope eq scopeNode) =>
-            // Check if this scope captures any of the defs
-            if (walk(scope, findRef)) WalkAbort
-            else true // skip children (already walked)
+            val parent = info.parent()
+
+            // Check if this is an IIFE that executes synchronously
+            val isSyncIife = parent match {
+              case call: AstCall if call.expression != null && (call.expression.nn eq scope) =>
+                // Async/Generators aren't guaranteed to sync evaluate all of
+                // their body steps, so it's possible they close over the variable.
+                scope match {
+                  case lambda: AstLambda => !lambda.isAsync && !lambda.isGenerator
+                  case _ => false
+                }
+              case _ => false
+            }
+
+            if (isSyncIife) {
+              // Sync IIFE: continue walking but don't abort here
+              // (still check for refs inside)
+              null
+            } else {
+              // Not an IIFE or async/generator: check if this scope captures any def
+              if (walk(scope, findRef)) WalkAbort
+              else true // skip children (already walked)
+            }
           case _ => null
         }
     )
@@ -534,4 +684,21 @@ object Common {
           }
         case _ => false
       })
+
+  // -----------------------------------------------------------------------
+  // Array utilities
+  // -----------------------------------------------------------------------
+
+  /** Remove an element from an ArrayBuffer by reference equality. */
+  def removeFromArrayBuffer[T <: AnyRef](buf: ArrayBuffer[T], elem: T): Boolean = {
+    var i = 0
+    while (i < buf.size) {
+      if (buf(i).asInstanceOf[AnyRef] eq elem.asInstanceOf[AnyRef]) {
+        buf.remove(i)
+        return true // @nowarn
+      }
+      i += 1
+    }
+    false
+  }
 }

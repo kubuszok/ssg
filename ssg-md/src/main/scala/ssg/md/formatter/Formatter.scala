@@ -406,7 +406,7 @@ object Formatter {
 
     private val document:               Document                                                            = doc
     private val renderers:              mutable.HashMap[Class[?], mutable.Buffer[NodeFormattingHandler[?]]] = mutable.HashMap.empty
-    private val collectedNodes:         Nullable[SubClassingBag[Node]]                                      = Nullable.empty
+    private var collectedNodes:         Nullable[SubClassingBag[Node]]                                      = Nullable.empty
     private val phasedFormatters:       mutable.Buffer[PhasedNodeFormatter]                                 = mutable.ArrayBuffer.empty
     private val renderingPhases:        mutable.Set[FormattingPhase]                                        = mutable.HashSet.empty
     private val myOptions:              DataHolder                                                          = new ScopedDataSet(document, opts)
@@ -430,8 +430,9 @@ object Formatter {
       else Nullable.empty
     private var controlProcessor:        Nullable[FormatControlProcessor] = Nullable.empty
     private val blockQuoteLikePredicate: CharPredicate                    = {
-      val sb        = new java.lang.StringBuilder()
-      val factories = formatter.nodeFormatterFactories
+      val sb               = new java.lang.StringBuilder()
+      val collectNodeTypes = new java.util.HashSet[Class[?]]()
+      val factories        = formatter.nodeFormatterFactories
       for (i <- factories.indices.reverse) {
         val nodeFormatter = factories(i).create(myOptions)
 
@@ -455,7 +456,7 @@ object Formatter {
         // get nodes of interest
         val nodeClasses = nodeFormatter.getNodeClasses
         nodeClasses.foreach { classes =>
-          // collectNodeTypes would be used here, handled below
+          for (cls <- classes) collectNodeTypes.add(cls)
         }
 
         nodeFormatter match {
@@ -469,6 +470,14 @@ object Formatter {
           case _ => ()
         }
       }
+
+      // collect nodes of interest from document
+      if (!collectNodeTypes.isEmpty) {
+        val collectingVisitor = new NodeCollectingVisitor(collectNodeTypes)
+        collectingVisitor.collect(document)
+        collectedNodes = Nullable(collectingVisitor.getSubClassingBag)
+      }
+
       CharPredicate.anyOf(sb.toString)
     }
     private val blockQuoteLikeChars: BasedSequence = BasedSequence.of(blockQuoteLikePredicate.toString)

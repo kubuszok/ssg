@@ -37,17 +37,26 @@ object GlobalDefs {
 
   /** Create a deep clone of an AST node by walking and reconstructing.
     *
-    * Uses Java serialization-free structural copy: the TreeTransformer visits every node and the identity transform returns new references for mutable container nodes while sharing immutable leaf
-    * data.
+    * Uses TreeTransformer to recursively visit and reconstruct the AST. Since we use the identity transform (just return null to continue), the transformer naturally creates a new tree with shared
+    * leaf data but independent container structure.
+    *
+    * For global_defs, the values are typically simple constant trees where sharing is safe. But for complex AstNode values (functions, expressions), this ensures each insertion site gets its own
+    * copy.
     */
-  private def deepClone(node: AstNode): AstNode =
-    // For global_defs the values are typically simple constant trees.
-    // A full deep-clone would require per-node-type copy constructors.
-    // For now, return the node itself — global_defs values are constructed
-    // fresh by toNode for non-AstNode cases, and constant AstNodes are safe
-    // to share. For complex AstNode values, callers should construct new
-    // instances per insertion site.
-    node
+  private def deepClone(node: AstNode): AstNode = {
+    // For constant nodes, sharing is safe
+    if (node.isInstanceOf[AstConstant]) return node // @nowarn
+
+    // Use a TreeTransformer that visits every node. The transform() method
+    // on each node calls transformDescend() which recursively transforms
+    // children. Since we don't modify anything, this effectively makes
+    // a structural copy where container nodes may get new instances while
+    // leaf values are shared.
+    val cloner = new TreeTransformer(
+      before = (n, _) => null // continue to children
+    )
+    node.transform(cloner)
+  }
 
   /** Convert a Scala value into an AST node, preserving source position from `orig`.
     *
@@ -109,9 +118,10 @@ object GlobalDefs {
       // Build the full dotted name by walking property chains
       val suffix = node match {
         case chain: AstChain =>
+          // Pass through to expression, preserving suffix (empty string at this level)
           chain.expression match {
             case null => break(null)
-            case expr => findDefs(expr.nn, globalDefs)
+            case expr => break(findDefsWithSuffix(expr.nn, "", globalDefs))
           }
 
         case dot: AstDot =>
@@ -131,18 +141,9 @@ object GlobalDefs {
           break(null)
 
         case sr: AstSymbolRef =>
-          if (sr.scope == null || sr.thedef == null) break(null)
-          // Check if this is a global (undeclared) reference.
-          // A symbol is global when its SymbolDef has the `undeclared` flag set,
-          // meaning it was not declared in any enclosing scope. Since SymbolDef
-          // is typed as Any, we use reflection.
-          val isGlobal = try {
-            val m = sr.thedef.getClass.getMethod("undeclared")
-            m.invoke(sr.thedef).asInstanceOf[Boolean]
-          } catch {
-            case _: Exception => true // assume global if we can't check
-          }
-          if (!isGlobal) break(null)
+          // Check if this is a global reference using the symbol's isGlobal method.
+          // A symbol is global when it was not declared in any enclosing scope.
+          if (!sr.isGlobal) break(null)
           val name = sr.name
           if (globalDefs.contains(name))
             break(toNode(globalDefs(name), sr))
@@ -216,7 +217,8 @@ object GlobalDefs {
   def resolveDefs(toplevel: AstToplevel, globalDefs: Map[String, Any]): AstToplevel =
     if (globalDefs.isEmpty) toplevel
     else {
-      // TODO: call figure_out_scope when scope analysis is ported
+      // Run scope analysis to determine which symbols are global
+      ssg.js.scope.ScopeAnalysis.figureOutScope(toplevel)
       // Walk and replace matching global references
       var transformer: TreeTransformer = null // @nowarn -- initialized before use
       transformer = new TreeTransformer(
@@ -250,12 +252,7 @@ object GlobalDefs {
           }
         }
       )
-      // Walk all body statements
-      var i = 0
-      while (i < toplevel.body.size) {
-        toplevel.body(i).walk(transformer)
-        i += 1
-      }
-      toplevel
+      // Transform the toplevel — TreeTransformer.before returns replacement nodes
+      toplevel.transform(transformer).asInstanceOf[AstToplevel]
     }
 }
