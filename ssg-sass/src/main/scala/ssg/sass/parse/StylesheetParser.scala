@@ -2957,6 +2957,10 @@ abstract class StylesheetParser protected (
     var operators:        Option[mutable.ListBuffer[BinaryOperator]] = None
     var operands:         Option[mutable.ListBuffer[Expression]]     = None
     var allowSlash = true
+    // Set to true when resetState() reparses from the beginning; the stall
+    // detector must skip the check for that iteration since the scanner
+    // legitimately rewinds.
+    var reparsed = false
 
     var singleExpression: Option[Expression] = Some(_rdSingleExpression())
 
@@ -2985,8 +2989,35 @@ abstract class StylesheetParser protected (
       case None      => ()
     }
 
-    def addSingleExpression(expr: Expression): Unit = {
+    // Resets the scanner state to the state it was at at the beginning of the
+    // expression, except for [_inParentheses].
+    // dart-sass lines 2033-2043.
+    def resetState(): Unit = {
+      commaExpressions = None
+      spaceExpressions = None
+      operators = None
+      operands = None
+      scanner.state = start
+      allowSlash = true
+      singleExpression = Some(_rdSingleExpression())
+      reparsed = true
+    }
+
+    def addSingleExpression(expr: Expression): Unit = boundary {
       if (singleExpression.isDefined) {
+        // If we discover we're parsing a list whose first element is a division
+        // operation, and we're in parentheses, reparse outside of a paren
+        // context. This ensures that `(1/2 1)` doesn't perform division on its
+        // first element.
+        // dart-sass lines 2110-2121.
+        if (_inParentheses) {
+          _inParentheses = false
+          if (allowSlash) {
+            resetState()
+            break(())
+          }
+        }
+
         val sp = spaceExpressions.getOrElse {
           val b = mutable.ListBuffer.empty[Expression]
           spaceExpressions = Some(b)
@@ -3171,25 +3202,40 @@ abstract class StylesheetParser protected (
             else if (c == 'o'.toInt && scanIdentifier("or")) addOperator(BinaryOperator.Or)
             else addSingleExpression(_rdIdentifierLike())
           case CharCode.`$comma` =>
-            val ce = commaExpressions.getOrElse {
-              val b = mutable.ListBuffer.empty[Expression]
-              commaExpressions = Some(b)
-              b
+            // If we discover we're parsing a list whose first element is a
+            // division operation, and we're in parentheses, reparse outside of
+            // a paren context. This ensures that `(1/2, 1)` doesn't perform
+            // division on its first element.
+            // dart-sass lines 2332-2343.
+            val commaReparsed = if (_inParentheses) {
+              _inParentheses = false
+              if (allowSlash) { resetState(); true }
+              else false
+            } else false
+            if (!commaReparsed) {
+              val ce = commaExpressions.getOrElse {
+                val b = mutable.ListBuffer.empty[Expression]
+                commaExpressions = Some(b)
+                b
+              }
+              if (singleExpression.isEmpty) scanner.error("Expected expression.")
+              resolveSpaceExpressions()
+              ce += singleExpression.get
+              val _ = scanner.readChar()
+              allowSlash = true
+              singleExpression = None
             }
-            if (singleExpression.isEmpty) scanner.error("Expected expression.")
-            resolveSpaceExpressions()
-            ce += singleExpression.get
-            val _ = scanner.readChar()
-            allowSlash = true
-            singleExpression = None
           case _ =>
             break(())
         }
         if (stopAtComma && scanner.peekChar() == CharCode.$comma) break(())
         // NASA-style stall detector: if the scanner hasn't advanced after
         // processing one full loop iteration, crash with diagnostic info
-        // instead of spinning forever.
-        if (scanner.position == loopStartPos) {
+        // instead of spinning forever. Skip the check when a reparse just
+        // occurred — the scanner legitimately rewinds in that case.
+        if (reparsed) {
+          reparsed = false
+        } else if (scanner.position == loopStartPos) {
           val ctx = if (scanner.isDone) "<EOF>"
             else {
               val end = math.min(scanner.position + 40, scanner.string.length)
@@ -3233,9 +3279,18 @@ abstract class StylesheetParser protected (
       case CharCode.`$ampersand`                               => _rdSelector()
       case CharCode.`$double_quote` | CharCode.`$single_quote` => _rdString()
       case CharCode.`$hash`                                    => _rdHashExpression()
-      case CharCode.`$plus` | CharCode.`$minus`                =>
-        val n1 = scanner.peekChar(1)
-        if ((n1 >= 0 && CharCode.isDigit(n1)) || n1 == CharCode.$dot) _rdNumber()
+      case CharCode.`$plus`                                    =>
+        val n1p = scanner.peekChar(1)
+        if ((n1p >= 0 && CharCode.isDigit(n1p)) || n1p == CharCode.$dot) _rdNumber()
+        else _rdUnaryOperation()
+      case CharCode.`$minus`                                   =>
+        // dart-sass _minusExpression: minus before a digit/dot is a negative
+        // number; minus before an identifier start (e.g. `-real-channel(...)`,
+        // `-webkit-calc(...)`) is an identifier-like expression; otherwise
+        // it's a unary-minus operation.
+        val n1m = scanner.peekChar(1)
+        if ((n1m >= 0 && CharCode.isDigit(n1m)) || n1m == CharCode.$dot) _rdNumber()
+        else if (lookingAtIdentifier()) _rdIdentifierLike()
         else _rdUnaryOperation()
       case CharCode.`$exclamation`                             => _rdImportantExpression()
       case _ if c >= CharCode.$0 && c <= CharCode.$9                => _rdNumber()

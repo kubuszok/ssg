@@ -8,7 +8,7 @@
  *
  * Migration notes:
  *   Renames: filesystem.dart -> FilesystemImporter.scala (JVM-only)
- *   Convention: Uses java.nio.file, so only compiled for the JVM target.
+ *   Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
  *   Idiom: Resolves imports by trying exact, partial, extended, and index
  *          variants in order.
  */
@@ -16,8 +16,7 @@ package ssg
 package sass
 package importer
 
-import java.nio.file.{ Files, Path, Paths }
-
+import ssg.commons.io.{ FileOps, FilePath }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -33,35 +32,35 @@ import scala.language.implicitConversions
   */
 final class FilesystemImporter(val loadPath: String) extends Importer {
 
-  private val rootPath: Path = Paths.get(loadPath).toAbsolutePath.normalize()
+  private val rootPath: FilePath = FilePath.of(loadPath).toAbsolute.normalize
 
   /** Candidate file names to try for the given import target. */
-  private def candidates(relative: String): List[Path] = {
-    val target   = Paths.get(relative)
-    val fileName = target.getFileName.toString
-    val parent   = Option(target.getParent).getOrElse(Paths.get(""))
+  private def candidates(relative: String): List[FilePath] = {
+    val target   = FilePath.of(relative)
+    val fName    = target.fileName
+    val par      = target.parent.getOrElse(FilePath.of(""))
 
-    val hasExtension = fileName.indexOf('.') >= 0
+    val hasExtension = fName.indexOf('.') >= 0
     val basenames: List[String] =
       if (hasExtension) {
         // Exact match only (plus partial form)
-        List(fileName, s"_$fileName").distinct
+        List(fName, s"_$fName").distinct
       } else {
         // Try each syntax, including partial form
         List(
-          s"$fileName.scss",
-          s"_$fileName.scss",
-          s"$fileName.sass",
-          s"_$fileName.sass",
-          s"$fileName.css",
-          s"_$fileName.css"
+          s"$fName.scss",
+          s"_$fName.scss",
+          s"$fName.sass",
+          s"_$fName.sass",
+          s"$fName.css",
+          s"_$fName.css"
         )
       }
 
-    val directCandidates = basenames.map(n => parent.resolve(n))
+    val directCandidates = basenames.map(n => par.resolve(n))
 
     // Also try index files if the relative path is a directory
-    val indexCandidates: List[Path] =
+    val indexCandidates: List[FilePath] =
       if (hasExtension) Nil
       else
         List(
@@ -71,7 +70,7 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
           target.resolve("index.sass")
         )
 
-    (directCandidates ++ indexCandidates).map((p: Path) => rootPath.resolve(p).normalize())
+    (directCandidates ++ indexCandidates).map(p => rootPath.resolve(p).normalize)
   }
 
   def canonicalize(url: String): Nullable[String] = {
@@ -82,10 +81,10 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
     while (result.isEmpty && i < cands.length) {
       val c      = cands(i)
       val exists =
-        try Files.exists(c) && Files.isRegularFile(c)
+        try FileOps.exists(c) && FileOps.isRegularFile(c)
         catch { case _: Throwable => false }
       if (exists) {
-        result = Nullable(c.toUri.toString)
+        result = Nullable(c.toAbsolute.pathString)
       }
       i += 1
     }
@@ -94,17 +93,18 @@ final class FilesystemImporter(val loadPath: String) extends Importer {
 
   def load(url: String): Nullable[ImporterResult] =
     try {
-      val path: Path = {
+      val path: FilePath = {
         val uri = java.net.URI.create(url)
-        if (uri.getScheme == "file") Paths.get(uri) else Paths.get(url)
+        if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
       }
-      if (!Files.exists(path) || !Files.isRegularFile(path)) {
+      if (!FileOps.exists(path) || !FileOps.isRegularFile(path)) {
         Nullable.empty
       } else {
-        val contents = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8)
+        val contents = FileOps.readString(path)
+        val pathStr  = path.pathString
         val syntax   =
-          if (path.toString.endsWith(".sass")) Syntax.Sass
-          else if (path.toString.endsWith(".css")) Syntax.Css
+          if (pathStr.endsWith(".sass")) Syntax.Sass
+          else if (pathStr.endsWith(".css")) Syntax.Css
           else Syntax.Scss
         Nullable(ImporterResult(contents, syntax))
       }

@@ -94,8 +94,21 @@ object SassCalculation {
   def unsimplified(name: String, arguments: Iterable[Any]): SassCalculation =
     new SassCalculation(name, arguments.toList)
 
-  /** Renders a calculation argument (SassNumber, CalculationOperation, SassString, or SassCalculation) as its CSS source form. */
+  /** Renders a calculation argument (SassNumber, CalculationOperation, SassString, or SassCalculation) as its CSS source form.
+    *
+    * Non-finite SassNumbers (Infinity, -Infinity, NaN) are written as
+    * CSS-spec lowercase `infinity` / `-infinity` / `NaN` with unit factors
+    * appended as ` * 1<unit>` / ` / 1<unit>`, matching dart-sass
+    * `_writeCalculationValue` + `_writeCalculationUnits`.
+    */
   def argumentToCss(arg: Any): String = arg match {
+    case n: SassNumber if !n.value.isFinite =>
+      val sb = new StringBuilder()
+      if (n.value == Double.PositiveInfinity) sb.append("infinity")
+      else if (n.value == Double.NegativeInfinity) sb.append("-infinity")
+      else sb.append("NaN")
+      appendCalculationUnits(sb, n.numeratorUnits, n.denominatorUnits)
+      sb.toString()
     case n:  SassNumber           => n.toCssString()
     case c:  SassCalculation      => c.toCssString()
     case s:  SassString           => s.toCssString(quote = false)
@@ -105,6 +118,22 @@ object SassCalculation {
       s"$l ${op.operator.operator} $r"
     case v: Value => v.toCssString(quote = false)
     case other => other.toString
+  }
+
+  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>`
+    * factors, matching dart-sass `_writeCalculationUnits`.
+    */
+  private def appendCalculationUnits(
+    sb:               StringBuilder,
+    numeratorUnits:   List[String],
+    denominatorUnits: List[String]
+  ): Unit = {
+    for (unit <- numeratorUnits) {
+      sb.append(" * 1").append(unit)
+    }
+    for (unit <- denominatorUnits) {
+      sb.append(" / 1").append(unit)
+    }
   }
 
   /** Wraps a CalculationOperation child in parens when its precedence is lower than the parent operator. */

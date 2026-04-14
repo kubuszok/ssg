@@ -7,5 +7,5 @@
 package ssg
 
 package object sass {
-  val Version = "0.1.0-SNAPSHOT"
+  val LibVersion = "0.1.0-SNAPSHOT"
 }
