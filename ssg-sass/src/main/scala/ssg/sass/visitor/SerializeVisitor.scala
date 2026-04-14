@@ -1680,11 +1680,20 @@ object SerializeVisitor {
     }
 
     if (exponent > 0) {
-      // Append `exponent - (significantDigitsAfterFirst)` zeros.
+      // Number of trailing zeros needed after the significant digits.
+      // Negative means the decimal point falls *inside* the digit string.
       val additionalZeroes = exponent - (digits.length - 1 - (if (negative) 1 else 0))
-      var k                = 0
-      while (k < additionalZeroes) { digits.append('0'); k += 1 }
-      digits.toString()
+      if (additionalZeroes >= 0) {
+        var k = 0
+        while (k < additionalZeroes) { digits.append('0'); k += 1 }
+        digits.toString()
+      } else {
+        // Java uses scientific notation earlier than Dart (>= 10^7 vs 10^21),
+        // so we may need to reinsert a decimal point within the digit string.
+        val insertPos = if (negative) exponent + 2 else exponent + 1
+        digits.insert(insertPos, '.')
+        digits.toString()
+      }
     } else {
       val result = new StringBuilder()
       if (negative) result.append('-')

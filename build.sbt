@@ -59,13 +59,6 @@ val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
 
 // --- SASS/SCSS compiler (dart-sass port) ---
 
-// ssg-sass needs JVM-only source directories for FilesystemImporter
-// (requires java.nio.file which isn't available on Scala.js).
-val sassJvmSettings: Seq[Setting[?]] = SsgSettings.jvmSettings ++ Seq(
-  Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-sass" / "src" / "main" / "scala-jvm",
-  Test    / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-sass" / "src" / "test" / "scala-jvm"
-)
-
 val `ssg-sass` = (projectMatrix in file("ssg-sass"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
   .settings(SsgSettings.commonSettings *)
@@ -77,7 +70,7 @@ val `ssg-sass` = (projectMatrix in file("ssg-sass"))
     )
   )
   .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = sassJvmSettings)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
