@@ -29,9 +29,18 @@ final class DeprecationSuite extends munit.FunSuite {
     assertHasDeprecation(r, "moz-document")
   }
 
-  test("slash-div emits slash-div deprecation for number / number") {
-    val r = compile("a { x: 10 / 2; }")
+  test("slash-div emits slash-div deprecation for number / number in parentheses") {
+    // Parentheses force division (rather than slash-separated literal), triggering the deprecation.
+    // Without parentheses, `10 / 2` is a slash-separated number (outputs `10/2`, no warning).
+    val r = compile("a { x: (10 / 2); }")
     assertHasDeprecation(r, "slash-div")
+  }
+
+  test("slash-div: unparenthesized slash is a slash-separated literal (no warning)") {
+    // dart-sass preserves `10 / 2` as `10/2` in output — no deprecation warning.
+    val r = compile("a { x: 10 / 2; }")
+    val found = r.warnings.exists(_.contains("[slash-div]"))
+    assert(!found, s"Expected NO slash-div warning for slash-separated literal, got:\n${r.warnings.mkString("\n")}")
   }
 
   test("lighten() emits color-functions deprecation") {
