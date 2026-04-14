@@ -169,6 +169,70 @@ final class EvaluateVisitor(
   }
 
   // ---------------------------------------------------------------------------
+  // Slash division deprecation (dart-sass async_evaluate.dart:2814-2867)
+  // ---------------------------------------------------------------------------
+
+  /** Returns the result of the SassScript `/` operation between [left] and [right] in [node]. */
+  private def _slash(left: Value, right: Value, node: BinaryOperationExpression): Value = {
+    val result = left.dividedBy(right)
+    (left, right) match {
+      case (l: SassNumber, r: SassNumber)
+          if node.allowsSlash && _operandAllowsSlash(node.left) && _operandAllowsSlash(node.right) =>
+        // Slash-separated number (e.g., font: 16px/1.4)
+        result.asInstanceOf[SassNumber].withSlash(l, r)
+      case (_: SassNumber, _: SassNumber) =>
+        // Both are numbers but slash-separated is not allowed — emit deprecation warning
+        warnForDeprecation(
+          Deprecation.SlashDiv,
+          "Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.\n\n" +
+            s"Recommendation: math.div(${node.left}, ${node.right}) or calc(${node.left} / ${node.right})\n\n" +
+            "More info and automated migrator: https://sass-lang.com/d/slash-div"
+        )
+        result
+      case _ =>
+        result
+    }
+  }
+
+  /** Returns whether [node] can be used as a component of a slash-separated number.
+    *
+    * Although this logic is mostly resolved at parse-time, we can't tell whether operands will be evaluated as calculations until evaluation-time.
+    */
+  private def _operandAllowsSlash(node: Expression): Boolean =
+    node match {
+      case fn: FunctionExpression =>
+        // A function expression allows slash only if it's a calc function
+        // (unnamespaced, name in the calc list, and no user-defined function shadows it)
+        fn.namespace.isEmpty && _calcFunctionNames.contains(fn.name.toLowerCase) &&
+        _environment.getFunction(fn.name).isEmpty
+      case _ =>
+        // Non-function expressions allow slash
+        true
+    }
+
+  /** Set of calc function names that are evaluated as calculations (not as user-defined functions). */
+  private val _calcFunctionNames: Set[String] = Set(
+    "calc",
+    "clamp",
+    "hypot",
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "sqrt",
+    "exp",
+    "sign",
+    "mod",
+    "rem",
+    "atan2",
+    "pow",
+    "log",
+    "calc-size"
+  )
+
+  // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
 
@@ -395,17 +459,7 @@ final class EvaluateVisitor(
       case BinaryOperator.Minus               => left.minus(node.right.accept(this))
       case BinaryOperator.Times               => left.times(node.right.accept(this))
       case BinaryOperator.DividedBy           =>
-        val rightVal = node.right.accept(this)
-        // ISS-028: slash-div deprecation. Only warn when both sides are numbers
-        // and the parser did NOT mark this as a CSS-style slash separator
-        // (allowsSlash=true is e.g. the result of `list.slash()` or parsed
-        // list slash context like `font: 16px/1.4 sans-serif`).
-        if (!node.allowsSlash && left.isInstanceOf[SassNumber] && rightVal.isInstanceOf[SassNumber])
-          warnForDeprecation(
-            Deprecation.SlashDiv,
-            "Using / for division is deprecated and will be removed in Dart Sass 2.0.0. Recommendation: math.div($left, $right) or calc($left / $right)."
-          )
-        left.dividedBy(rightVal)
+        _slash(left, node.right.accept(this), node)
       case BinaryOperator.Modulo => left.modulo(node.right.accept(this))
     }
   } catch {
