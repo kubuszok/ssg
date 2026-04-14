@@ -473,9 +473,14 @@ final class EvaluateVisitor(
 
   override def visitFunctionExpression(node: FunctionExpression): Value = try
     scala.util.boundary[Value] {
+      // dart-sass: identifiers starting with `--` are CSS custom idents and
+      // must always fall through to plain-CSS output, even if a user-defined
+      // function with that (normalised) name exists.
+      val isCssCustomIdent = node.originalName.startsWith("--")
       // Look up the callable in the current environment.
       val callable: Nullable[Callable] =
-        if (node.namespace.isDefined) {
+        if (isCssCustomIdent) Nullable.empty
+        else if (node.namespace.isDefined) {
           node.namespace.fold(Nullable.empty[Callable]) { ns =>
             _environment.getNamespacedFunction(ns, node.name)
           }
@@ -490,7 +495,17 @@ final class EvaluateVisitor(
       )
       if (!isUserDefined && node.namespace.isEmpty) {
         node.name.toLowerCase match {
-          case "calc" | "calc-size" | "min" | "max" | "clamp" | "round" | "mod" | "rem" | "abs" | "sign" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "atan2" | "sqrt" | "exp" | "pow" | "log" | "hypot" =>
+          // min/max/round/abs are legacy Sass functions that are only treated as
+          // calculations when all arguments are calculation-safe (no modulo, no
+          // comparisons, etc.).  Ported from dart-sass visitFunctionExpression
+          // lines 3058-3065.
+          case "min" | "max" | "round" | "abs"
+              if node.arguments.named.isEmpty &&
+                node.arguments.rest.isEmpty &&
+                node.arguments.positional.forall(_.isCalculationSafe) =>
+            val calcResult = _evaluateCalculation(node, inLegacySassFunction = Nullable(node.name.toLowerCase))
+            if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
+          case "calc" | "calc-size" | "clamp" | "hypot" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sqrt" | "exp" | "sign" | "mod" | "rem" | "atan2" | "pow" | "log" =>
             val calcResult = _evaluateCalculation(node)
             if (calcResult.isDefined) scala.util.boundary.break(calcResult.get)
           case _ => ()
@@ -740,66 +755,111 @@ final class EvaluateVisitor(
   // Helpers
   // ===========================================================================
 
-  /** First-class evaluation of `calc()`, `min()`, `max()`, `clamp()`. Walks the argument expressions, treating arithmetic operators as [[ssg.sass.value.CalculationOperation]]s and leaf expressions as
-    * normally-evaluated values. Returns a [[ssg.sass.value.SassCalculation]] (or a simplified [[ssg.sass.value.SassNumber]]) on success, or Nullable.empty if the calculation can't be built — in which
-    * case the caller falls through to the existing plain-CSS rendering path.
+  /** First-class evaluation of `calc()`, `min()`, `max()`, `clamp()`, and other CSS math functions. Walks the argument expressions, treating arithmetic operators as
+    * [[ssg.sass.value.CalculationOperation]]s and leaf expressions as normally-evaluated values. Returns a [[ssg.sass.value.SassCalculation]] (or a simplified [[ssg.sass.value.SassNumber]]) on success,
+    * or Nullable.empty if the calculation can't be built — in which case the caller falls through to the existing plain-CSS rendering path.
+    *
+    * Ported from: dart-sass `_visitCalculation` + `_checkCalculationArguments` + `_binaryOperatorToCalculationOperator` + value-type validation in `_visitCalculationExpression`.
     */
-  private def _evaluateCalculation(node: FunctionExpression): Nullable[Value] = {
-    import ssg.sass.value.{ CalculationOperator, SassCalculation }
+  private def _evaluateCalculation(node: FunctionExpression, inLegacySassFunction: Nullable[String] = Nullable.empty): Nullable[Value] = {
+    import ssg.sass.value.{ CalculationOperation, CalculationOperator, ListSeparator, SassCalculation }
+
+    // --- Reject named args and rest args (dart-sass _visitCalculation lines 3114-3123) ---
+    if (node.arguments.named.nonEmpty) {
+      throw SassException("Keyword arguments can't be used with calculations.", node.span)
+    }
+    if (node.arguments.rest.isDefined) {
+      throw SassException("Rest arguments can't be used with calculations.", node.span)
+    }
+
+    // --- Argument count validation (dart-sass _checkCalculationArguments lines 3211-3252) ---
+    _checkCalculationArguments(node)
+
     val args = node.arguments.positional
-    if (args.isEmpty || node.arguments.named.nonEmpty) return Nullable.empty
     try {
       def toArg(expr: Expression): Any = expr match {
-        case ParenthesizedExpression(inner, _)      => toArg(inner)
-        case BinaryOperationExpression(op, l, r, _) =>
-          val co: Nullable[CalculationOperator] = op match {
-            case BinaryOperator.Plus      => Nullable(CalculationOperator.Plus)
-            case BinaryOperator.Minus     => Nullable(CalculationOperator.Minus)
-            case BinaryOperator.Times     => Nullable(CalculationOperator.Times)
-            case BinaryOperator.DividedBy => Nullable(CalculationOperator.DividedBy)
-            case _                        => Nullable.empty[CalculationOperator]
+        case ParenthesizedExpression(inner, _) =>
+          // Ported from dart-sass _visitCalculationExpression ParenthesizedExpression case.
+          val result = toArg(inner)
+          result match {
+            case s: SassString => SassString(s"(${s.text})", hasQuotes = false)
+            case _             => result
           }
-          if (co.isEmpty) expr.accept(this)
-          else SassCalculation.operate(co.get, toArg(l), toArg(r))
+        case BinaryOperationExpression(op, l, r, _) =>
+          // --- Reject non-calc operators (dart-sass _binaryOperatorToCalculationOperator lines 3434-3441) ---
+          val co: CalculationOperator = op match {
+            case BinaryOperator.Plus      => CalculationOperator.Plus
+            case BinaryOperator.Minus     => CalculationOperator.Minus
+            case BinaryOperator.Times     => CalculationOperator.Times
+            case BinaryOperator.DividedBy => CalculationOperator.DividedBy
+            case _ =>
+              throw SassException("This operation can't be used in a calculation.", node.span)
+          }
+          SassCalculation.operate(co, toArg(l), toArg(r))
+        // --- StringExpression handling (dart-sass _visitCalculationExpression lines 3315-3327) ---
+        case se: StringExpression if !se.hasQuotes && se.isCalculationSafe =>
+          se.text.asPlain.fold(SassString(_performInterpolation(se.text), hasQuotes = false): Any) { plain =>
+            plain.toLowerCase match {
+              case "pi"        => SassNumber(math.Pi)
+              case "e"         => SassNumber(math.E)
+              case "infinity"  => SassNumber(Double.PositiveInfinity)
+              case "-infinity" => SassNumber(Double.NegativeInfinity)
+              case "nan"       => SassNumber(Double.NaN)
+              case _           => SassString(plain, hasQuotes = false)
+            }
+          }
+        // --- Space-separated list (dart-sass _visitCalculationExpression ListExpression case, lines 3364-3386) ---
+        case le: ListExpression if !le.hasBrackets && le.separator == ListSeparator.Space && le.contents.length >= 2 =>
+          val elements = le.contents.map(toArg)
+          _checkAdjacentCalculationValues(elements, le)
+          val rendered = elements.indices.map { i =>
+            val el = elements(i)
+            if (el.isInstanceOf[CalculationOperation] && le.contents(i).isInstanceOf[ParenthesizedExpression])
+              SassString(s"($el)", hasQuotes = false)
+            else el
+          }
+          SassString(rendered.mkString(" "), hasQuotes = false)
         case _ =>
           val v = expr.accept(this)
           // Special CSS calc keywords: pi, e, infinity, -infinity, NaN.
           v match {
             case s: SassString if !s.hasQuotes =>
-              s.text match {
+              s.text.toLowerCase match {
                 case "pi"        => SassNumber(math.Pi)
                 case "e"         => SassNumber(math.E)
                 case "infinity"  => SassNumber(Double.PositiveInfinity)
                 case "-infinity" => SassNumber(Double.NegativeInfinity)
-                case "NaN"       => SassNumber(Double.NaN)
+                case "nan"       => SassNumber(Double.NaN)
                 case _           => v
               }
-            case _ => v
+            // --- Value type validation (dart-sass _visitCalculationExpression lines 3354-3361) ---
+            case _: SassNumber                   => v
+            case _: SassCalculation              => v
+            case s: SassString if !s.hasQuotes   => v
+            case result =>
+              throw SassException(s"Value $result can't be used in a calculation.", node.span)
           }
       }
       val converted = args.map(toArg)
       def nOpt(i: Int): Nullable[Any] =
         if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
       val result: Value = node.name.toLowerCase match {
-        case "calc" if converted.length == 1 =>
+        case "calc" =>
           SassCalculation.calc(converted.head)
-        case "calc-size" if converted.length == 2 =>
-          SassCalculation.calcSize(converted(0), Nullable(converted(1)))
-        case "min"                            => SassCalculation.min(converted)
-        case "max"                            => SassCalculation.max(converted)
-        case "clamp" if converted.length == 3 =>
-          SassCalculation.clamp(converted(0), Nullable(converted(1)), Nullable(converted(2)))
-        case "clamp" if converted.length >= 1 && converted.length <= 3 =>
-          SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
-        case "hypot"                         => SassCalculation.hypot(converted)
-        case "sqrt" if converted.length == 1 => SassCalculation.sqrt(converted.head)
-        case "sin" if converted.length == 1  => SassCalculation.sin(converted.head)
-        case "cos" if converted.length == 1  => SassCalculation.cos(converted.head)
-        case "tan" if converted.length == 1  => SassCalculation.tan(converted.head)
-        case "asin" if converted.length == 1 => SassCalculation.asin(converted.head)
-        case "acos" if converted.length == 1 => SassCalculation.acos(converted.head)
-        case "atan" if converted.length == 1 => SassCalculation.atan(converted.head)
-        case "abs" if converted.length == 1  =>
+        case "calc-size" =>
+          SassCalculation.calcSize(converted(0), nOpt(1))
+        case "min"   => SassCalculation.min(converted)
+        case "max"   => SassCalculation.max(converted)
+        case "clamp" => SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
+        case "hypot" => SassCalculation.hypot(converted)
+        case "sqrt"  => SassCalculation.sqrt(converted.head)
+        case "sin"   => SassCalculation.sin(converted.head)
+        case "cos"   => SassCalculation.cos(converted.head)
+        case "tan"   => SassCalculation.tan(converted.head)
+        case "asin"  => SassCalculation.asin(converted.head)
+        case "acos"  => SassCalculation.acos(converted.head)
+        case "atan"  => SassCalculation.atan(converted.head)
+        case "abs" =>
           converted.head match {
             case n: SassNumber if n.hasUnit("%") =>
               warnForDeprecation(
@@ -809,23 +869,88 @@ final class EvaluateVisitor(
             case _ => ()
           }
           SassCalculation.abs(converted.head)
-        case "sign" if converted.length == 1  => SassCalculation.sign(converted.head)
-        case "exp" if converted.length == 1   => SassCalculation.exp(converted.head)
-        case "atan2" if converted.length == 2 => SassCalculation.atan2(converted(0), Nullable(converted(1)))
-        case "pow" if converted.length == 2   => SassCalculation.pow(converted(0), Nullable(converted(1)))
-        case "log" if converted.length == 1   => SassCalculation.log(converted.head, Nullable.empty[Any])
-        case "log" if converted.length == 2   => SassCalculation.log(converted(0), Nullable(converted(1)))
-        case "mod" if converted.length == 2   => SassCalculation.mod(converted(0), Nullable(converted(1)))
-        case "rem" if converted.length == 2   => SassCalculation.rem(converted(0), Nullable(converted(1)))
+        case "sign"  => SassCalculation.sign(converted.head)
+        case "exp"   => SassCalculation.exp(converted.head)
+        case "atan2" => SassCalculation.atan2(converted(0), Nullable(converted(1)))
+        case "pow"   => SassCalculation.pow(converted(0), Nullable(converted(1)))
+        case "log" if converted.length == 1 => SassCalculation.log(converted.head, Nullable.empty[Any])
+        case "log"   => SassCalculation.log(converted(0), Nullable(converted(1)))
+        case "mod"   => SassCalculation.mod(converted(0), Nullable(converted(1)))
+        case "rem"   => SassCalculation.rem(converted(0), Nullable(converted(1)))
         case "round" if converted.length == 1 => SassCalculation.round(converted.head)
         case "round" if converted.length == 2 => SassCalculation.round(converted(0), Nullable(converted(1)))
-        case "round" if converted.length == 3 => SassCalculation.round(converted(0), Nullable(converted(1)), Nullable(converted(2)))
-        case _                                => return Nullable.empty
+        case "round" => SassCalculation.round(converted(0), Nullable(converted(1)), Nullable(converted(2)))
+        case _       => return Nullable.empty
       }
       Nullable(result)
     } catch {
+      case e: SassException            => throw e
       case _: SassScriptException      => Nullable.empty
       case _: IllegalArgumentException => Nullable.empty
+    }
+  }
+
+  /** Verifies that the calculation [node] has the correct number of arguments.
+    *
+    * Ported from: dart-sass `_checkCalculationArguments` (async_evaluate.dart lines 3211-3252).
+    */
+  private def _checkCalculationArguments(node: FunctionExpression): Unit = {
+    val argCount = node.arguments.positional.length
+    def check(maxArgs: Int = -1): Unit = {
+      if (argCount == 0) {
+        throw SassException("Missing argument.", node.span)
+      } else if (maxArgs >= 0 && argCount > maxArgs) {
+        val argWord  = ssg.sass.Utils.pluralize("argument", maxArgs)
+        val verbWord = if (argCount == 1) "was" else "were"
+        throw SassException(
+          s"Only $maxArgs $argWord allowed, but $argCount $verbWord passed.",
+          node.span
+        )
+      }
+    }
+    node.name.toLowerCase match {
+      case "calc" | "sqrt" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "abs" | "exp" | "sign" =>
+        check(maxArgs = 1)
+      case "min" | "max" | "hypot" =>
+        check()
+      case "pow" | "atan2" | "log" | "mod" | "rem" | "calc-size" =>
+        check(maxArgs = 2)
+      case "round" | "clamp" =>
+        check(maxArgs = 3)
+      case _ =>
+        throw new UnsupportedOperationException(s"""Unknown calculation name "${node.name}".""")
+    }
+  }
+
+  /** Throws an error if [elements] contains two adjacent non-string values.
+    *
+    * Ported from: dart-sass `_checkAdjacentCalculationValues` (evaluate.dart lines 3444-3471).
+    */
+  private def _checkAdjacentCalculationValues(elements: Seq[Any], node: ListExpression): Unit = {
+    var i = 1
+    while (i < elements.length) {
+      val previous = elements(i - 1)
+      val current  = elements(i)
+      if (!previous.isInstanceOf[SassString] && !current.isInstanceOf[SassString]) {
+        val currentNode = node.contents(i)
+        val isUnaryPlusMinus = currentNode match {
+          case UnaryOperationExpression(UnaryOperator.Minus | UnaryOperator.Plus, _, _) => true
+          case ne: NumberExpression if ne.value < 0                                     => true
+          case _                                                                        => false
+        }
+        if (isUnaryPlusMinus) {
+          throw SassException(
+            """"+" and "-" must be surrounded by whitespace in calculations.""",
+            currentNode.span
+          )
+        } else {
+          throw SassException(
+            s""""${elements(i - 1)}" and "${elements(i)}" can't be used adjacent to one another in a calculation.""",
+            node.span
+          )
+        }
+      }
+      i += 1
     }
   }
 

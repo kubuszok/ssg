@@ -93,6 +93,36 @@ abstract class Expression extends SassNode {
 
   /** Calls the appropriate visit method on [visitor]. */
   def accept[T](visitor: ExpressionVisitor[T]): T
+
+  /** Returns whether this expression can safely be used in a calculation context.
+    *
+    * Ported from: dart-sass `lib/src/visitor/is_calculation_safe.dart`.
+    */
+  def isCalculationSafe: Boolean = this match {
+    case b: BinaryOperationExpression =>
+      (b.operator == BinaryOperator.Plus || b.operator == BinaryOperator.Minus ||
+        b.operator == BinaryOperator.Times || b.operator == BinaryOperator.DividedBy) &&
+        b.left.isCalculationSafe && b.right.isCalculationSafe
+    case _: FunctionExpression                => true
+    case _: IfExpression                      => true
+    case _: InterpolatedFunctionExpression    => true
+    case _: LegacyIfExpression                => true
+    case l: ListExpression                    =>
+      l.separator == ListSeparator.Space && !l.hasBrackets &&
+        l.contents.length > 1 && l.contents.forall(_.isCalculationSafe)
+    case _: NumberExpression                  => true
+    case p: ParenthesizedExpression           => p.expression.isCalculationSafe
+    case s: StringExpression                  =>
+      if (s.hasQuotes) false
+      else {
+        val text = s.text.initialPlain
+        !text.startsWith("!") && !text.startsWith("#") &&
+          !(text.length > 1 && text.charAt(1) == '+') &&
+          !(text.length > 3 && text.charAt(3) == '(')
+      }
+    case _: VariableExpression                => true
+    case _                                    => false
+  }
 }
 
 // ===========================================================================

@@ -28,6 +28,9 @@ object Nullable {
     else a
   def empty[A]: Nullable[A] = NestedNone(0)
 
+  /** Alias for `empty` — allows writing `Nullable.Null` which reads naturally. */
+  def Null[A]: Nullable[A] = empty[A]
+
   def fromOption[A](option: Option[A]): Nullable[A] = option.fold(empty[A])(apply)
 
   // Use isInstanceOf for NestedNone checks to avoid Serializable cast on Scala Native
@@ -90,6 +93,10 @@ object Nullable {
       if (isNone(maybe)) None
       else if (p(maybe.asInstanceOf[A])) maybe
       else None
+
+    def toOption: Option[A] =
+      if (isNone(maybe)) scala.None
+      else Some(maybe.asInstanceOf[A])
   }
   extension [A](maybe: Nullable[Nullable[A]]) {
 

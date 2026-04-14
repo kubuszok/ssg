@@ -8,6 +8,6 @@ package sass
 final class SassSuite extends munit.FunSuite {
 
   test("ssg-sass module loads") {
-    assertEquals(Version, "0.1.0-SNAPSHOT")
+    assertEquals(LibVersion, "0.1.0-SNAPSHOT")
   }
 }

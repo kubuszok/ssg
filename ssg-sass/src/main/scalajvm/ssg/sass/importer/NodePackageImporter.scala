@@ -8,7 +8,7 @@
  *
  * Migration notes:
  *   Renames: node_package.dart -> NodePackageImporter.scala (JVM-only)
- *   Convention: Uses java.nio.file, so only compiled for the JVM target.
+ *   Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
  *   Idiom: Walks upward from `entryPoint` to find a `node_modules/<pkg>`
  *          directory and resolves `pkg:` URLs through it. Uses a small
  *          hand-written JSON scanner to extract `sass` / `style` / `main`
@@ -19,8 +19,7 @@ package ssg
 package sass
 package importer
 
-import java.nio.file.{ Files, Path, Paths }
-
+import ssg.commons.io.{ FileOps, FilePath }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -38,23 +37,23 @@ import scala.language.implicitConversions
 final class NodePackageImporter(val entryPoint: String) extends Importer {
 
   private val Prefix = "pkg:"
-  private val rootPath: Path = Paths.get(entryPoint).toAbsolutePath.normalize()
+  private val rootPath: FilePath = FilePath.of(entryPoint).toAbsolute.normalize
 
   /** Find the nearest `node_modules/<pkg>` directory walking upward from the entry point. Returns `Nullable.empty` if not found.
     */
-  private def findPackageRoot(pkg: String): Nullable[Path] = {
-    val start: Nullable[Path] =
-      if (Files.isDirectory(rootPath)) Nullable(rootPath)
-      else Nullable(rootPath.getParent)
-    var dir:    Nullable[Path] = start
-    var result: Nullable[Path] = Nullable.empty
+  private def findPackageRoot(pkg: String): Nullable[FilePath] = {
+    val start: Nullable[FilePath] =
+      if (FileOps.isDirectory(rootPath)) Nullable(rootPath)
+      else Nullable.fromOption(rootPath.parent)
+    var dir:    Nullable[FilePath] = start
+    var result: Nullable[FilePath] = Nullable.empty
     while (result.isEmpty && dir.isDefined) {
       val d         = dir.get
       val candidate = d.resolve("node_modules").resolve(pkg)
-      if (Files.isDirectory(candidate)) {
-        result = Nullable(candidate.normalize())
+      if (FileOps.isDirectory(candidate)) {
+        result = Nullable(candidate.normalize)
       }
-      dir = Nullable(d.getParent)
+      dir = Nullable.fromOption(d.parent)
     }
     result
   }
@@ -112,12 +111,12 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
 
   /** Read the entry-point file path for a package: try `sass`, then `style`, then `main`. Returns the resolved path if the package.json exists.
     */
-  private def readEntryPoint(pkgRoot: Path): Nullable[String] = {
+  private def readEntryPoint(pkgRoot: FilePath): Nullable[String] = {
     val pj = pkgRoot.resolve("package.json")
-    if (!Files.isRegularFile(pj)) Nullable.empty
+    if (!FileOps.isRegularFile(pj)) Nullable.empty
     else {
       try {
-        val json  = new String(Files.readAllBytes(pj), java.nio.charset.StandardCharsets.UTF_8)
+        val json  = FileOps.readString(pj)
         val field =
           readStringField(json, "sass").orElse(readStringField(json, "style")).orElse(readStringField(json, "main"))
         field
@@ -164,10 +163,10 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
           else readEntryPoint(root)
         if (effectiveRest.isEmpty) {
           // Fall back to looking for an index file at the package root.
-          val fs = new FilesystemImporter(root.toString)
+          val fs = new FilesystemImporter(root.pathString)
           fs.canonicalize("")
         } else {
-          val fs = new FilesystemImporter(root.toString)
+          val fs = new FilesystemImporter(root.pathString)
           fs.canonicalize(effectiveRest.get)
         }
       }
@@ -176,17 +175,18 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
 
   def load(url: String): Nullable[ImporterResult] =
     try {
-      val path: Path = {
+      val path: FilePath = {
         val uri = java.net.URI.create(url)
-        if (uri.getScheme == "file") Paths.get(uri) else Paths.get(url)
+        if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
       }
-      if (!Files.exists(path) || !Files.isRegularFile(path)) {
+      if (!FileOps.exists(path) || !FileOps.isRegularFile(path)) {
         Nullable.empty
       } else {
-        val contents = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8)
+        val contents = FileOps.readString(path)
+        val pathStr  = path.pathString
         val syntax   =
-          if (path.toString.endsWith(".sass")) Syntax.Sass
-          else if (path.toString.endsWith(".css")) Syntax.Css
+          if (pathStr.endsWith(".sass")) Syntax.Sass
+          else if (pathStr.endsWith(".css")) Syntax.Css
           else Syntax.Scss
         Nullable(ImporterResult(contents, syntax))
       }
