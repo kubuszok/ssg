@@ -3856,6 +3856,15 @@ abstract class StylesheetParser protected (
   protected def _rdIdentifierLike(): Expression = {
     val start = scanner.state
     val name  = identifier()
+
+    // Unicode range: U+1234, U+0???, U+0020-007F
+    if ((name == "U" || name == "u") && scanner.peekChar() == CharCode.$plus) {
+      val next = scanner.peekChar(1)
+      if (next >= 0 && (CharCode.isHex(next) || next == CharCode.$question)) {
+        return _rdUnicodeRange(start, name)
+      }
+    }
+
     // Namespaced: `ns.foo` or `ns.$var`
     if (scanner.peekChar() == CharCode.$dot) {
       val _ = scanner.readChar()
@@ -4515,22 +4524,32 @@ abstract class StylesheetParser protected (
     * unpack its elements into positional arguments. Mirrors `_tryParseFunctionCall`'s `isColorFn` handling in the text-based path.
     */
   private def _rdMaybeUnpackColorArgs(name: String, args: ArgumentList): ArgumentList = {
+    // Only unpack legacy color functions that accept both comma-separated and
+    // modern space-separated syntax. Modern-only functions (lab, lch, oklab,
+    // oklch, color) should NOT be unpacked — they only use single-arg modern
+    // syntax and route through parseChannels which handles special values.
     val isColorFn =
-      name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" ||
-        name == "hwb" || name == "lab" || name == "lch" || name == "oklab" ||
-        name == "oklch" || name == "color"
+      name == "rgb" || name == "rgba" || name == "hsl" || name == "hsla" || name == "hwb"
     if (!isColorFn || args.positional.length != 1 || args.named.nonEmpty) return args
     args.positional.head match {
-      case list: ListExpression if list.separator == ListSeparator.Space && !list.hasBrackets =>
+      case list: ListExpression if list.separator == ListSeparator.Space && !list.hasBrackets && list.contents.size >= 3 =>
         // Don't unpack if the list contains a slash-separated element (like
         // `255 / 0.5` which represents channel / alpha). The built-in's
         // parseChannels / parseSlashChannels path handles this correctly
         // at evaluation time by extracting the asSlash pair.
+        // Also don't unpack lists with < 3 elements — those can't be a
+        // full set of color channels and should route through parseChannels
+        // (which handles multi_argument_var correctly).
+        // Don't unpack relative color syntax: `rgb(from #aaa r g b)`
+        val startsWithFrom = list.contents.headOption match {
+          case Some(StringExpression(interp, false)) if interp.isPlain && interp.asPlain.toOption.exists(_.toLowerCase == "from") => true
+          case _ => false
+        }
         val hasSlash = list.contents.exists {
           case b: BinaryOperationExpression if b.allowsSlash => true
           case _ => false
         }
-        if (hasSlash) args
+        if (hasSlash || startsWithFrom) args
         else new ArgumentList(
           list.contents,
           args.named,
@@ -4541,6 +4560,44 @@ abstract class StylesheetParser protected (
         )
       case _ => args
     }
+  }
+
+  /** dart-sass: `_unicodeRange` — parses a CSS unicode range like U+1234, U+0???, U+0020-007F.
+    * Returns a StringExpression with the raw text.
+    */
+  private def _rdUnicodeRange(start: ssg.sass.util.LineScannerState, prefix: String): Expression = {
+    val sb = new StringBuilder(prefix)
+    sb.append(scanner.readChar().toChar) // consume '+'
+
+    // Read hex digits (max 6 per CSS spec)
+    var hexCount = 0
+    while (!scanner.isDone && CharCode.isHex(scanner.peekChar()) && hexCount < 6) {
+      sb.append(scanner.readChar().toChar)
+      hexCount += 1
+    }
+
+    // Read '?' wildcards (total hex + wildcards <= 6)
+    var hasQuestion = false
+    while (!scanner.isDone && scanner.peekChar() == CharCode.$question && hexCount < 6) {
+      sb.append(scanner.readChar().toChar)
+      hexCount += 1
+      hasQuestion = true
+    }
+
+    // If no '?' wildcards, check for range: U+0020-007F
+    if (!hasQuestion && scanner.peekChar() == CharCode.$minus) {
+      val next = scanner.peekChar(1)
+      if (next >= 0 && CharCode.isHex(next)) {
+        sb.append(scanner.readChar().toChar) // consume '-'
+        var endCount = 0
+        while (!scanner.isDone && CharCode.isHex(scanner.peekChar()) && endCount < 6) {
+          sb.append(scanner.readChar().toChar)
+          endCount += 1
+        }
+      }
+    }
+
+    StringExpression(Interpolation.plain(sb.toString(), spanFrom(start)), hasQuotes = false)
   }
 
   /** dart-sass: `_unaryOperatorFor` — kept for potential stage-2 use. */
