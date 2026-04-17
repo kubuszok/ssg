@@ -1364,16 +1364,15 @@ final class EvaluateVisitor(
     val fromInt =
       try fromValue.assertInt(fromName)
       catch { case e: SassScriptException => throw e.withSpan(node.from.span) }
+    // Coerce `to` to `from`'s units before extracting integer. This ensures
+    // the direction comparison uses the same unit basis and also validates
+    // unit compatibility (throws for incompatible units).
     val toInt =
-      try toValue.assertInt(toName)
+      try {
+        val coercedVal = toValue.coerceValueToMatch(fromValue, toName, fromName)
+        SassNumber(coercedVal).assertInt(toName)
+      }
       catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
-
-    // Check unit compatibility by coercing `to` to `from`'s units. This
-    // throws a "have incompatible units" SassScriptException when they
-    // don't match (unless one side is unitless, which is allowed).
-    try {
-      val _ = toValue.coerceValueToMatch(fromValue, toName, fromName)
-    } catch { case e: SassScriptException => throw e.withSpan(node.to.span) }
 
     val direction = if (fromInt > toInt) -1 else 1
     val end       =
@@ -1498,10 +1497,36 @@ final class EvaluateVisitor(
     if (childless) {
       _addChild(rule)
     } else {
-      _withParent(rule) {
-        _withScope {
-          for (statement <- node.children.get) {
-            val _ = statement.accept(this)
+      // At-rules like @font-face and @keyframes bubble up from nested
+      // style rules. Unlike @media/@supports (which wrap a copy of the
+      // enclosing style rule inside), @font-face and @keyframes just
+      // hoist to the nearest non-style-rule parent without any selector
+      // wrapping.
+      val nameLower = nameText.toLowerCase
+      val shouldBubble = nameLower == "font-face" || nameLower == "keyframes" ||
+        nameLower == "-webkit-keyframes" || nameLower == "-moz-keyframes" ||
+        nameLower == "-o-keyframes" || nameLower == "-ms-keyframes"
+      val enclosingStyleRule = _styleRule
+
+      if (shouldBubble && enclosingStyleRule.isDefined) {
+        val savedParent = _parent
+        val nearestNonStyle = _nearestNonStyleRuleParent()
+        _parent = Nullable(nearestNonStyle)
+        try
+          _withParent(rule) {
+            _withScope {
+              for (statement <- node.children.get) {
+                val _ = statement.accept(this)
+              }
+            }
+          }
+        finally _parent = savedParent
+      } else {
+        _withParent(rule) {
+          _withScope {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
           }
         }
       }
