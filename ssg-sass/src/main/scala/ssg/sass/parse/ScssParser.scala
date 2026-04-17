@@ -153,12 +153,20 @@ class ScssParser(
 
   override protected def children(child: () => Statement): List[Statement] = {
     scanner.expectChar(CharCode.$lbrace)
-    whitespace(consumeNewlines = true)
+    // dart-sass scss.dart:84: use whitespaceWithoutComments so loud
+    // comments are parsed as child statements, not silently consumed.
+    whitespaceWithoutComments(consumeNewlines = true)
     val stmts = mutable.ListBuffer.empty[Statement]
     while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
       val scssChildPos = scanner.position
-      stmts += child()
-      whitespace(consumeNewlines = true)
+      // dart-sass scss.dart:84-86: bare semicolons inside blocks are no-ops
+      if (scanner.peekChar() == CharCode.$semicolon) {
+        scanner.readChar()
+        whitespaceWithoutComments(consumeNewlines = true)
+      } else {
+        stmts += child()
+        whitespaceWithoutComments(consumeNewlines = true)
+      }
       if (scanner.position == scssChildPos) {
         val ctx = if (scanner.isDone) "<EOF>" else {
           val end = math.min(scanner.position + 60, scanner.string.length)
@@ -173,12 +181,20 @@ class ScssParser(
 
   override protected def statements(statement: () => Nullable[Statement]): List[Statement] = {
     val stmts = mutable.ListBuffer.empty[Statement]
-    whitespace(consumeNewlines = true)
+    // dart-sass scss.dart:100: use whitespaceWithoutComments so loud
+    // comments are parsed as statements, not silently consumed.
+    whitespaceWithoutComments(consumeNewlines = true)
     while (!scanner.isDone) {
       val scssStmtPos = scanner.position
-      val s = statement()
-      if (s.isDefined) stmts += s.get
-      whitespace(consumeNewlines = true)
+      // dart-sass scss.dart:118-120: bare semicolons at top level are no-ops
+      if (scanner.peekChar() == CharCode.$semicolon) {
+        scanner.readChar()
+        whitespaceWithoutComments(consumeNewlines = true)
+      } else {
+        val s = statement()
+        if (s.isDefined) stmts += s.get
+        whitespaceWithoutComments(consumeNewlines = true)
+      }
       if (scanner.position == scssStmtPos) {
         val ctx = if (scanner.isDone) "<EOF>" else {
           val end = math.min(scanner.position + 60, scanner.string.length)

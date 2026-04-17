@@ -564,6 +564,18 @@ abstract class SassNumber protected (
     if (numeratorUnits.isEmpty) result else s"calc($result)"
   }
 
+  // dart-sass: toCssString delegates to the full serializer which handles
+  // asSlash, non-finite values, and complex units.  Until we wire up
+  // serializeValue() here, reproduce the asSlash handling from
+  // serialize.dart:visitNumber lines 1108-1112.
+  override def toCssString(quote: Boolean = true): String = {
+    if (asSlash.isDefined) {
+      val (before, after) = asSlash.get
+      return s"${before.toCssString(quote)}/${after.toCssString(quote)}"
+    }
+    toString
+  }
+
   override def toString: String = {
     val sb = new StringBuilder()
     sb.append(SassNumber.formatNumber(value))

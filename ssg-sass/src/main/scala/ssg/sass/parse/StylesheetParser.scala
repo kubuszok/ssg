@@ -91,7 +91,8 @@ import ssg.sass.ast.sass.{
   UseRule,
   VariableDeclaration,
   VariableExpression,
-  WarnRule
+  WarnRule,
+  WhileRule
 }
 import ssg.sass.value.ListSeparator
 import ssg.sass.util.{ CharCode, FileSpan }
@@ -832,15 +833,11 @@ abstract class StylesheetParser protected (
               val _ = scanner.readChar()
             }
           } else {
+            // dart-sass preserves `from`/`to` keywords as-is.
             val normSel = rawSel
               .split(',')
               .toList
               .map(_.trim)
-              .map {
-                case "from" => "0%"
-                case "to"   => "100%"
-                case other  => other
-              }
               .mkString(", ")
             val selSpan   = spanFrom(blockStart)
             val selInterp = Interpolation.plain(normSel, selSpan)
@@ -1036,6 +1033,15 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = false)
         val _ = scanner.scanChar(CharCode.$semicolon)
         Nullable(new ErrorRule(eExpr, spanFrom(start)))
+      case "while" =>
+        // @while <expression> { body }
+        whitespace(consumeNewlines = true)
+        val whileCondExpr = try _rdExpression(consumeNewlines = true, until = () => scanner.peekChar() == CharCode.$lbrace)
+          catch { case _: Exception => scanner.state = start; _expression() }
+        whitespace(consumeNewlines = true)
+        val whileKids = _children()
+        Nullable(new WhileRule(whileCondExpr, whileKids, spanFrom(start)))
+
       case "if" =>
         // @if <expression> { body } [@else if <expression> { body }]* [@else { body }]
         // Collect the condition text up to the opening `{`, respecting
@@ -1649,14 +1655,27 @@ abstract class StylesheetParser protected (
         return Nullable(Declaration.notSassScript(nameInterp, strExpr, spanFrom(start)))
       }
 
-      // If we're at end of declaration (no value), it's a nested declaration
-      // For simplicity, require a value.
+      // dart-sass _tryDeclarationChildren: if the next token is `{`,
+      // this is a nested namespace property (e.g. `border: { color: red; }`).
+      if (scanner.peekChar() == CharCode.$lbrace) {
+        val children = _rdDeclarationChildren()
+        return Nullable(Declaration.nested(nameInterp, children, spanFrom(start)))
+      }
+
       val expression = _rdExpression(consumeNewlines = false, until = () => {
         val ch = scanner.peekChar()
         ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace || ch == CharCode.$exclamation
       })
       whitespace(consumeNewlines = false)
       val important3 = _tryScanImportant()
+
+      // dart-sass: after parsing a value, if `{` follows, it's a declaration
+      // with both a value AND nested children (e.g. `font: bold { size: 14px; }`).
+      if (scanner.peekChar() == CharCode.$lbrace) {
+        val children = _rdDeclarationChildren()
+        return Nullable(Declaration.nested(nameInterp, children, spanFrom(start), value = Nullable(expression)))
+      }
+
       scanner.scanChar(CharCode.$semicolon)
       Nullable(Declaration(nameInterp, expression, spanFrom(start), isImportant = important3))
     } else {
@@ -1664,6 +1683,43 @@ abstract class StylesheetParser protected (
       scanner.state = savedState
       Nullable(_styleRule())
     }
+  }
+
+  /** Parses the children of a nested declaration block (`{ ... }`).
+    * Each child is either a declaration or an at-rule.
+    * dart-sass: `_withChildren(_declarationChild, ...)`.
+    */
+  private def _rdDeclarationChildren(): List[Statement] = {
+    scanner.expectChar(CharCode.$lbrace)
+    whitespace(consumeNewlines = true)
+    val kids = scala.collection.mutable.ListBuffer.empty[Statement]
+    while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+      if (scanner.peekChar() == CharCode.$at) {
+        // At-rule inside nested declaration — handle common cases
+        val atStart = scanner.state
+        val _ = scanner.readChar() // '@'
+        val directive = identifier()
+        whitespace(consumeNewlines = false)
+        directive.toLowerCase match {
+          case "warn" | "debug" | "error" =>
+            // Re-parse by rewinding — delegate to the at-rule handler
+            scanner.state = atStart
+            _atRule().foreach(s => kids += s)
+          case _ =>
+            // Unknown nested at-rule — skip to semicolon
+            scanner.state = atStart
+            _atRule().foreach(s => kids += s)
+        }
+      } else if (scanner.peekChar() == CharCode.$dollar) {
+        kids += _variableDeclaration()
+      } else {
+        // Parse as a child declaration (property: value or nested property: { ... })
+        _declarationOrStyleRule().foreach(s => kids += s)
+      }
+      whitespace(consumeNewlines = true)
+    }
+    scanner.expectChar(CharCode.$rbrace)
+    kids.toList
   }
 
   /** If the scanner is positioned at `!important` (optionally with whitespace between the `!` and `important`), consume it and return true. Otherwise leave the scanner unchanged and return false.
@@ -2299,7 +2355,7 @@ abstract class StylesheetParser protected (
   private def _isSpecialCssFunction(name: String): Boolean = {
     if (name.isEmpty) return false
     val lower = name.toLowerCase
-    if (lower == "url" || lower == "element" || lower == "expression") return true
+    if (lower == "url" || lower == "element" || lower == "expression" || lower == "type") return true
     if (lower.startsWith("progid:")) return true
     // Vendor prefix: `-<prefix>-<tail>` where tail is one of the special names.
     if (lower.length > 1 && lower.charAt(0) == '-') {
@@ -3331,7 +3387,11 @@ abstract class StylesheetParser protected (
     }
     if (hexLen == 3 || hexLen == 4 || hexLen == 6 || hexLen == 8) {
       val hexStr = scanner.substring(hexStart, scanner.position)
-      val color  = _parseHexColor(hexStr)
+      // Preserve the original "#..." source text so the serializer can emit
+      // it verbatim (dart-sass stylesheet.dart:2597 — SpanColorFormat when
+      // alpha is absent; 4-/8-digit forms don't get a span because browsers
+      // don't yet support them well).
+      val color = _parseHexColor(hexStr, "#" + hexStr)
       ColorExpression(color, spanFrom(start))
     } else {
       // Not a valid hex color — treat the whole thing as an unquoted string
@@ -3341,19 +3401,25 @@ abstract class StylesheetParser protected (
   }
 
   /** Parses 3/4/6/8 hex digits into a SassColor. */
-  private def _parseHexColor(hex: String): ssg.sass.value.SassColor = {
-    import ssg.sass.value.SassColor
+  private def _parseHexColor(hex: String, original: String): ssg.sass.value.SassColor = {
+    import ssg.sass.value.{ SassColor, SpanColorFormat, ColorFormat }
     import ssg.sass.Nullable
     def h(i: Int): Int = CharCode.asHex(hex.charAt(i).toInt)
+    // dart-sass: only preserve the span for 3/6-digit hex (no alpha).
+    // 4- and 8-digit forms (with alpha) aren't well-supported in browsers.
+    val format: Nullable[ColorFormat] =
+      if (original.nonEmpty && (hex.length == 3 || hex.length == 6))
+        Nullable(new SpanColorFormat(original))
+      else Nullable.Null
     hex.length match {
       case 3 =>
         val r = h(0); val g = h(1); val b = h(2)
-        SassColor.rgb(Nullable((r << 4 | r).toDouble), Nullable((g << 4 | g).toDouble), Nullable((b << 4 | b).toDouble))
+        SassColor.rgbInternal(Nullable((r << 4 | r).toDouble), Nullable((g << 4 | g).toDouble), Nullable((b << 4 | b).toDouble), Nullable(1.0), format)
       case 4 =>
         val r = h(0); val g = h(1); val b = h(2); val a = h(3)
         SassColor.rgb(Nullable((r << 4 | r).toDouble), Nullable((g << 4 | g).toDouble), Nullable((b << 4 | b).toDouble), Nullable(((a << 4 | a).toDouble) / 255.0))
       case 6 =>
-        SassColor.rgb(Nullable(((h(0) << 4) | h(1)).toDouble), Nullable(((h(2) << 4) | h(3)).toDouble), Nullable(((h(4) << 4) | h(5)).toDouble))
+        SassColor.rgbInternal(Nullable(((h(0) << 4) | h(1)).toDouble), Nullable(((h(2) << 4) | h(3)).toDouble), Nullable(((h(4) << 4) | h(5)).toDouble), Nullable(1.0), format)
       case 8 =>
         SassColor.rgb(Nullable(((h(0) << 4) | h(1)).toDouble), Nullable(((h(2) << 4) | h(3)).toDouble), Nullable(((h(4) << 4) | h(5)).toDouble), Nullable((((h(6) << 4) | h(7)).toDouble) / 255.0))
       case _ => throw new IllegalArgumentException(s"Invalid hex color: #$hex")
@@ -3836,8 +3902,17 @@ abstract class StylesheetParser protected (
         case "null"  => return new NullExpression(spanFrom(start))
         case _ =>
           ColorNames.colorsByName.get(lower) match {
-            case Some(color) => return ColorExpression(color, spanFrom(start))
-            case None        => ()
+            case Some(color) =>
+              // dart-sass stylesheet.dart:3002-3010: recreate the color with
+              // SpanColorFormat so the serializer preserves the original name.
+              val span = spanFrom(start)
+              val namedColor = ssg.sass.value.SassColor.rgbInternal(
+                Nullable(color.channel0), Nullable(color.channel1),
+                Nullable(color.channel2), Nullable(color.alpha),
+                Nullable(new ssg.sass.value.SpanColorFormat(name))
+              )
+              return ColorExpression(namedColor, span)
+            case None => ()
           }
       }
     }
@@ -3870,7 +3945,9 @@ abstract class StylesheetParser protected (
 
     // dart-sass: trySpecialFunction — handles calc(), url(), element(),
     // expression(), progid: and vendor-prefixed variants.
-    val specialFn = _rdTrySpecialFunction(name, start)
+    // dart-sass stylesheet.dart:3014 passes `lower`, not the raw `name`,
+    // so special-function output preserves the lowercased form.
+    val specialFn = _rdTrySpecialFunction(lower, start)
     if (specialFn.isDefined) return specialFn.get
 
     // Regular function call.
@@ -3888,6 +3965,16 @@ abstract class StylesheetParser protected (
     * Otherwise returns Nullable.empty.
     */
   protected def _rdTrySpecialFunction(name: String, start: ssg.sass.util.LineScannerState): Nullable[Expression] = {
+    // dart-sass stylesheet.dart:3328: `type()` is handled before unvendor
+    if (name == "type" && scanner.scanChar(CharCode.$lparen)) {
+      val buffer = new InterpolationBuffer()
+      buffer.write(name)
+      buffer.writeCharCode(CharCode.$lparen)
+      buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
+      scanner.expectChar(CharCode.$rparen)
+      buffer.writeCharCode(CharCode.$rparen)
+      return Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+    }
     val normalized = Utils.unvendor(name)
     val vendored   = normalized != name
     val lower      = normalized.toLowerCase
@@ -4435,7 +4522,16 @@ abstract class StylesheetParser protected (
     if (!isColorFn || args.positional.length != 1 || args.named.nonEmpty) return args
     args.positional.head match {
       case list: ListExpression if list.separator == ListSeparator.Space && !list.hasBrackets =>
-        new ArgumentList(
+        // Don't unpack if the list contains a slash-separated element (like
+        // `255 / 0.5` which represents channel / alpha). The built-in's
+        // parseChannels / parseSlashChannels path handles this correctly
+        // at evaluation time by extracting the asSlash pair.
+        val hasSlash = list.contents.exists {
+          case b: BinaryOperationExpression if b.allowsSlash => true
+          case _ => false
+        }
+        if (hasSlash) args
+        else new ArgumentList(
           list.contents,
           args.named,
           args.namedSpans,

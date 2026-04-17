@@ -14,6 +14,36 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
+  test("loud comments are preserved in output") {
+    val css = Compile.compileString("/* hello */\n.foo { a: b; }").css
+    assert(css.contains("/* hello */"), s"Top-level comment missing:\n$css")
+  }
+
+  test("loud comments inside rules are preserved") {
+    val css = Compile.compileString(".foo { /* inside */ a: b; }").css
+    assert(css.contains("/* inside */"), s"Inline comment missing:\n$css")
+  }
+
+  test("isGroupEnd: blank line between rules from different source blocks") {
+    val css = Compile.compileString(".a { x: 1; }\n.b { y: 2; }").css
+    assert(css.contains("}\n\n.b"), s"Expected blank line between .a and .b:\n$css")
+  }
+
+  test("isGroupEnd: no blank line between rules from same source block") {
+    val css = Compile.compileString(".parent { .a { x: 1; } .b { y: 2; } }").css
+    assert(css.contains("}\n.parent .b"), s"Expected no blank line between nested siblings:\n$css")
+  }
+
+  test("rgb(0 128 255 / 0.5) preserves alpha via slash-separated path") {
+    val css = Compile.compileString("a { c: rgb(0 128 255 / 0.5); }").css
+    assertEquals(css, "a {\n  c: rgba(0, 128, 255, 0.5);\n}\n")
+  }
+
+  test("hex #F00 preserves original case in output") {
+    val css = Compile.compileString("a { c: #F00; }").css
+    assertEquals(css, "a {\n  c: #F00;\n}\n")
+  }
+
   // --------------------------------------------------------------------------
   // Regression tests: selector-list separator (stage A.4 follow-up).
   //
@@ -2006,4 +2036,8 @@ final class CompileSuite extends munit.FunSuite {
     }
     assert(ex.getMessage.contains("Private members"))
   }
+
+  // Diagnostic: to-space with alpha — known issue: `/` parsed as division
+  // inside function args instead of slash-alpha separator. See ISS-235 / B001.
+  // test("DIAG: color.to-space with alpha") { ... }
 }

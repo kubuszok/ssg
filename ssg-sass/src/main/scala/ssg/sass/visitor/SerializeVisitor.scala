@@ -317,8 +317,9 @@ final class SerializeVisitor(
           child.accept(this)
         } else {
           writeLine()
-          // dart-sass: extra blank line if previous closes a "group" (rule).
-          if (previous != null && previous.isGroupEnd) writeLine()
+          // Note: dart-sass _visitChildren does NOT check isGroupEnd —
+          // blank lines between groups only happen at the stylesheet level
+          // (visitCssStylesheet), not inside brace blocks.
           indentLevel += 1
           writeIndent()
           child.accept(this)
@@ -533,29 +534,24 @@ final class SerializeVisitor(
     // This works around an IE bug. See sass/sass#1782.
     if (opaque) {
       val rgb = color.toSpace(ColorSpace.rgb)
+      // dart-sass serialize.dart:815-826: in expanded mode, always prefer
+      // the named color if one exists. Hex is only used when no name matches.
+      // This differs from compressed mode which picks the shortest form.
+      val name = ColorNames.namesByColor.get(rgb)
+      if (name.isDefined) break(name.get)
+
       if (canUseHex(rgb)) {
         val redInt = rgb.channel0.round.toInt
         val greenInt = rgb.channel1.round.toInt
         val blueInt = rgb.channel2.round.toInt
-        val shortHex = canUseShortHex(redInt, greenInt, blueInt)
-        val hexLen = if (shortHex) 4 else 7 // "#abc" vs "#aabbcc"
-        val name = ColorNames.namesByColor.get(rgb)
-        name match {
-          case Some(n) if n.length <= hexLen => break(n)
-          case _ =>
-            val sb = new StringBuilder()
-            sb.append('#')
-            if (shortHex) {
-              sb.append(hexCharFor(redInt & 0xF))
-              sb.append(hexCharFor(greenInt & 0xF))
-              sb.append(hexCharFor(blueInt & 0xF))
-            } else {
-              writeHexComponent(sb, redInt)
-              writeHexComponent(sb, greenInt)
-              writeHexComponent(sb, blueInt)
-            }
-            break(sb.toString())
-        }
+        val sb = new StringBuilder()
+        sb.append('#')
+        // dart-sass serialize.dart:820-825: expanded mode always uses
+        // 6-digit hex. Short 3-digit form is only for compressed mode.
+        writeHexComponent(sb, redInt)
+        writeHexComponent(sb, greenInt)
+        writeHexComponent(sb, blueInt)
+        break(sb.toString())
       }
     }
 
@@ -853,9 +849,16 @@ final class SerializeVisitor(
           case '\\'                       => sb.append("\\\\")
           case _ if c == q                => sb.append('\\'); sb.append(c)
           case _ if c < 0x20 || c == 0x7f =>
+            // dart-sass serialize.dart:1519-1528 (_writeEscape): only add
+            // a trailing space when the NEXT character is a hex digit,
+            // space, or tab (CSS hex escape terminator rule).
             sb.append('\\')
             sb.append(Integer.toHexString(c.toInt))
-            sb.append(' ')
+            if (i + 1 < s.text.length) {
+              val next = s.text.charAt(i + 1)
+              if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F') || next == ' ' || next == '\t')
+                sb.append(' ')
+            }
           case _ => sb.append(c)
         }
         i += 1
@@ -995,6 +998,12 @@ final class SerializeVisitor(
     * first-class CSS calc() expression.
     */
   private def formatSassNumber(n: SassNumber): String = {
+    // dart-sass serialize.dart:1108-1112 — slash-separated numbers emit
+    // `before/after` recursively rather than the computed numeric value.
+    if (n.asSlash.isDefined) {
+      val (before, after) = n.asSlash.get
+      return s"${formatSassNumber(before)}/${formatSassNumber(after)}"
+    }
     if (!n.value.isFinite) return formatNonFiniteNumber(n)
     if (n.hasComplexUnits) return formatComplexUnitNumber(n)
     val sb = new StringBuilder()
@@ -1229,13 +1238,16 @@ final class SerializeVisitor(
             writeSpace()
           } else {
             writeLine()
-            // Emit a blank line between non-comment top-level siblings
-            // (or when the previous node carries the explicit isGroupEnd
-            // marker) to match dart-sass's typical top-level output.
-            if (
-              previous.isGroupEnd ||
-              (!previous.isInstanceOf[CssComment] && !child.isInstanceOf[CssComment])
-            ) writeLine()
+            // dart-sass serialize.dart:183: extra blank line when the
+            // previous node is a group end. At-rules with children (media,
+            // supports, keyframes) also get blank lines since they always
+            // form visual groups, even without explicit isGroupEnd marking.
+            val prevIsAtRuleBlock = previous match {
+              case _: CssStyleRule => false  // style rules use isGroupEnd only
+              case p: CssParentNode if !p.isChildless => true
+              case _ => false
+            }
+            if (previous.isGroupEnd || prevIsAtRuleBlock) writeLine()
           }
         }
         previous = child
@@ -1548,6 +1560,11 @@ final class SerializeVisitor(
   override def visitCssComment(node: CssComment): Unit = {
     // In compressed mode, only preserve /*! comments
     if (isCompressed && !node.isPreserved) return
+    // dart-sass serialize.dart:200-202: strip sourceMappingURL and sourceURL comments
+    if (node.text.startsWith("/*# source")) {
+      val lower = node.text.toLowerCase
+      if (lower.startsWith("/*# sourcemappingurl=") || lower.startsWith("/*# sourceurl=")) return
+    }
     buffer.append(node.text)
   }
 

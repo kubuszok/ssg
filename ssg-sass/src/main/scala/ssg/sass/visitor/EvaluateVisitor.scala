@@ -527,7 +527,9 @@ final class EvaluateVisitor(
             val merged              =
               if (named.isEmpty) positional
               else _mergeBuiltInNamedArgs(bic, positional, named)
-            bic.callback(_padBuiltInPositional(bic, merged))
+            // dart-sass: _withoutSlash strips slash-separated info from
+            // the result of built-in function calls (async_evaluate.dart:3609).
+            bic.callback(_padBuiltInPositional(bic, merged)).withoutSlash
           case ud: UserDefinedCallable[?] =>
             ud.declaration match {
               case fr: FunctionRule =>
@@ -1095,6 +1097,10 @@ final class EvaluateVisitor(
     // emitted as siblings of the outer style rule rather than children.
     // Walk up `_parent` to the nearest non-CssStyleRule ancestor and add
     // the new rule there, then evaluate children with that as the parent.
+    // dart-sass async_evaluate.dart:2470-2472: when a style rule finishes
+    // at the top level (no enclosing style rule), mark the last child of the
+    // target parent as isGroupEnd so the serializer knows to emit a blank line.
+    val outerStyleRule = _styleRule
     val savedParent = _parent
     val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
     _parent = Nullable(nearestNonStyle)
@@ -1127,6 +1133,14 @@ final class EvaluateVisitor(
         }
       }
     finally _parent = savedParent
+    // Mark group end for blank-line control. Use the last VISIBLE child
+    // (dart-sass skips invisible nodes in the serializer, so marking an
+    // invisible empty rule would miss the intended group boundary).
+    if (outerStyleRule.isEmpty && nearestNonStyle.children.nonEmpty) {
+      nearestNonStyle.children.reverseIterator
+        .collectFirst { case m: ModifiableCssNode if !m.isInvisible => m }
+        .foreach(_.isGroupEnd = true)
+    }
     SassNull
   }
 
@@ -1225,12 +1239,46 @@ final class EvaluateVisitor(
       _addChild(decl)
     }
 
-    // Nested declarations: recurse with no added parent (they attach to
-    // the enclosing style rule in place currently).
+    // Nested declarations: each child declaration's name is prefixed with
+    // the parent name + "-". E.g., `border: { color: red; }` produces
+    // `border-color: red`. dart-sass evaluate.dart visitDeclaration.
     node.children.foreach { kids =>
       _withScope {
         for (statement <- kids) {
-          val _ = statement.accept(this)
+          statement match {
+            case childDecl: Declaration =>
+              // Create a prefixed child declaration: parent-child
+              val childNameText = _performInterpolation(childDecl.name)
+              val prefixedName  = s"$nameText-$childNameText"
+              val prefixedNameValue = new CssValue[String](prefixedName, childDecl.name.span)
+              childDecl.value.foreach { expression =>
+                val rawValue = expression.accept(this)
+                val cssVal: Value =
+                  if (childDecl.parsedAsSassScript) rawValue
+                  else rawValue match {
+                    case s: SassString => s
+                    case other => new SassString(other.toCssString(quote = false), hasQuotes = false)
+                  }
+                val valueWrapper = new CssValue[Value](cssVal, expression.span)
+                _addChild(new ModifiableCssDeclaration(
+                  prefixedNameValue, valueWrapper, childDecl.span,
+                  parsedAsSassScript = childDecl.parsedAsSassScript,
+                  isImportant = childDecl.isImportant
+                ))
+              }
+              // Recurse for nested-nested declarations
+              childDecl.children.foreach { grandkids =>
+                val syntheticNode = Declaration.nested(
+                  Interpolation.plain(prefixedName, childDecl.name.span),
+                  grandkids,
+                  childDecl.span,
+                  childDecl.value
+                )
+                syntheticNode.accept(this)
+              }
+            case other =>
+              val _ = other.accept(this)
+          }
         }
       }
     }
@@ -1262,7 +1310,9 @@ final class EvaluateVisitor(
           existing.isDefined && existing.get != SassNull
         } else false
       if (!skip) {
-        val value = node.expression.accept(this)
+        // dart-sass: _withoutSlash strips slash info on variable assignment
+        // (async_evaluate.dart:2687).
+        val value = node.expression.accept(this).withoutSlash
         if (node.isGlobal) {
           _environment.setGlobalVariable(node.name, value)
         } else {
@@ -1376,10 +1426,16 @@ final class EvaluateVisitor(
 
   override def visitWhileRule(node: WhileRule): Value = {
     _withSemiGlobalScope {
-      while (node.condition.accept(this).isTruthy)
+      var iterations = 0
+      while (node.condition.accept(this).isTruthy) {
+        iterations += 1
+        if (iterations > 100000) {
+          throw SassException("@while loop exceeded 100000 iterations (possible infinite loop).", node.span)
+        }
         for (statement <- node.children.get) {
           val _ = statement.accept(this)
         }
+      }
     }
     SassNull
   }
@@ -1839,7 +1895,8 @@ final class EvaluateVisitor(
               val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
                 _checkPrivateConfig(cv)
-                val cvValue = cv.expression.accept(this)
+                // dart-sass: _withoutSlash on with-clause values
+                val cvValue = cv.expression.accept(this).withoutSlash
                 localConfig(cv.name) = cvValue
               }
               val savedPending1 = _pendingConfig
@@ -1909,7 +1966,7 @@ final class EvaluateVisitor(
               val localConfig = scala.collection.mutable.LinkedHashMap.empty[String, ssg.sass.value.Value]
               for (cv <- node.configuration) {
                 _checkPrivateConfig(cv)
-                val cvValue = cv.expression.accept(this)
+                val cvValue = cv.expression.accept(this).withoutSlash
                 localConfig(cv.name) = cvValue
               }
               val savedPending2 = _pendingConfig
@@ -2353,8 +2410,9 @@ final class EvaluateVisitor(
     SassNull
   }
 
+  // dart-sass: _withoutSlash on @return expressions (async_evaluate.dart:2361)
   override def visitReturnRule(node: ReturnRule): Value =
-    throw new ReturnSignal(node.expression.accept(this))
+    throw new ReturnSignal(node.expression.accept(this).withoutSlash)
 
   override def visitContentRule(node: ContentRule): Value = {
     val block: Nullable[ContentBlock] = _environment.content
@@ -2572,7 +2630,9 @@ final class EvaluateVisitor(
                 SassNull
               }(_.accept(this))
           }
-      _environment.setVariable(param.name, value)
+      // dart-sass: parameter values (positional, named, or default) are
+      // stripped of slash info before binding.
+      _environment.setVariable(param.name, value.withoutSlash)
       i += 1
     }
     // Bind any remaining positional arguments to the rest parameter as
@@ -2776,11 +2836,14 @@ final class EvaluateVisitor(
     args: ssg.sass.ast.sass.ArgumentList
   ): (List[Value], ListMap[String, Value]) = {
     val positionalBuf = scala.collection.mutable.ListBuffer.empty[Value]
+    // dart-sass wraps every argument evaluation in _withoutSlash
+    // (async_evaluate.dart:3773) so that slash-separated numbers like
+    // `1/2` lose their slash info when passed to functions.
     for (expr <- args.positional)
-      positionalBuf += expr.accept(this)
+      positionalBuf += expr.accept(this).withoutSlash
     var named: ListMap[String, Value] = ListMap.empty
     for ((k, v) <- args.named)
-      named = named.updated(k, v.accept(this))
+      named = named.updated(k, v.accept(this).withoutSlash)
     // Splat the trailing rest argument (`$list...`).
     //   • SassArgumentList → splat its positional contents AND merge its
     //     captured keywords into the named-arg map (dart-sass parity).
@@ -2788,25 +2851,27 @@ final class EvaluateVisitor(
     //     must be a SassString. This is the `list.join((...)...)` form.
     //   • SassList         → splat as positional args.
     //   • anything else    → single positional arg.
+    // dart-sass: rest arg splatting also strips slash from each element
+    // (async_evaluate.dart:3807, 3814, 3819).
     args.rest.foreach { restExpr =>
       restExpr.accept(this) match {
         case al: ssg.sass.value.SassArgumentList =>
-          for (v <- al.asList) positionalBuf += v
+          for (v <- al.asList) positionalBuf += v.withoutSlash
           for ((k, v) <- al.keywords)
-            named = named.updated(k, v)
+            named = named.updated(k, v.withoutSlash)
         case map: ssg.sass.value.SassMap =>
           for ((k, v) <- map.contents) k match {
             case s: ssg.sass.value.SassString =>
-              named = named.updated(s.text, v)
+              named = named.updated(s.text, v.withoutSlash)
             case other =>
               throw SassScriptException(
                 s"Variable keyword argument map must have string keys. $other is not a string in ${map.toString}."
               )
           }
         case list: ssg.sass.value.SassList =>
-          for (v <- list.asList) positionalBuf += v
+          for (v <- list.asList) positionalBuf += v.withoutSlash
         case other =>
-          positionalBuf += other
+          positionalBuf += other.withoutSlash
       }
     }
     // Splat an optional keyword-rest argument (`..., $kwargs...`). Must
