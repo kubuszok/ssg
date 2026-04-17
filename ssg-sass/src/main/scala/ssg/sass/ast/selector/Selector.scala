@@ -198,7 +198,19 @@ object Selector {
       sb.append(pseudo.name)
       if (pseudo.argument.isDefined || pseudo.selector.isDefined) {
         sb.append("(")
-        pseudo.argument.foreach(sb.append)
+        pseudo.argument.foreach { arg =>
+          // Normalize An+B microsyntax for :nth-child/:nth-last-child:
+          // remove spaces around + and - (e.g. "2n + 1" → "2n+1")
+          val nn = pseudo.normalizedName
+          if ((nn == "nth-child" || nn == "nth-last-child" || nn == "nth-of-type" || nn == "nth-last-of-type") && arg.contains('n')) {
+            val ofIdx = arg.indexOf(" of")
+            val (anb, rest) = if (ofIdx >= 0) (arg.substring(0, ofIdx), arg.substring(ofIdx)) else (arg, "")
+            sb.append(anb.replaceAll("\\s*\\+\\s*", "+").replaceAll("\\s*-\\s*", "-"))
+            sb.append(rest)
+          } else {
+            sb.append(arg)
+          }
+        }
         if (pseudo.argument.isDefined && pseudo.selector.isDefined) sb.append(" ")
         pseudo.selector.foreach(s => sb.append(s.accept(this)))
         sb.append(")")

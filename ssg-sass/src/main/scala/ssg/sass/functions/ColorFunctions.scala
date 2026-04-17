@@ -58,10 +58,12 @@ object ColorFunctions {
     if (n.hasUnit("%")) n.value * percentScale / 100.0
     else n.value
 
-  /** Interpret a number in degrees as a hue value (unit-agnostic; deg/rad/grad would require conversion, but for legacy use the numeric value is used verbatim which matches dart-sass's legacy
-    * behaviour).
+  /** Interpret a number as a hue value in degrees. Converts angle-compatible
+    * units (rad, grad, turn) to degrees. Unitless values are used as-is.
     */
-  private def hueOf(n: SassNumber): Double = n.value
+  private def hueOf(n: SassNumber): Double =
+    if (n.compatibleWithUnit("deg")) n.coerceValueToUnit("deg")
+    else n.value
 
   /** The red channel of a color as a 0-255 integer (rounded). */
   private def red255(c: SassColor): Double =
@@ -601,11 +603,19 @@ object ColorFunctions {
   }
 
   /** Interprets [v] as a typed channel, using percentageOrUnitless with the
-    * channel's max value. Returns Nullable.Null for `none`.
+    * channel's max value. Returns Nullable.Null for `none`. Clamps channels
+    * that have clamped bounds (e.g., lightness in lab/lch/oklab/oklch).
     */
-  private def channelOrNone(v: Value, ch: ColorChannel): Nullable[Double] =
+  private def channelOrNone(v: Value, ch: ColorChannel): Nullable[Double] = {
     if (isNone(v)) Nullable.Null
-    else channelFromValueModern(ch, Some(v.assertNumber()), doClamp = false)
+    else {
+      val shouldClamp = ch match {
+        case lc: LinearChannel => lc.lowerClamped || lc.upperClamped
+        case _                 => false
+      }
+      channelFromValueModern(ch, Some(v.assertNumber()), doClamp = shouldClamp)
+    }
+  }
 
   /** Interprets [v] as a hue channel, returning Nullable.Null for `none`. */
   private def hueOrNone(v: Value): Nullable[Double] =
@@ -762,6 +772,11 @@ object ColorFunctions {
           if (args.length >= 4) {
             val alpha = if (args.length >= 5) args(4) else SassNumber(1)
             tryModernPassthrough("color", args.take(4), alpha)
+          } else if (args.length >= 2 && args.exists(v => isSpecialCssValue(v) || v.isSpecialNumber)) {
+            // When var() fills multiple channels, we get fewer explicit args.
+            // Passthrough as a CSS function string with space-separated args.
+            val content = SassList(args.toList, ListSeparator.Space)
+            Some(functionString("color", List(content)))
           } else None
         }.getOrElse {
           args.length match {
@@ -808,10 +823,25 @@ object ColorFunctions {
     BuiltInCallable.function("lightness", "$color", args => SassNumber(lightnessPct(args.head.assertColor()), "%"))
 
   private val alphaFn: BuiltInCallable =
-    BuiltInCallable.function("alpha", "$color", args => SassNumber(args.head.assertColor().alpha))
+    BuiltInCallable.function("alpha", "$color", { args =>
+      args.head match {
+        case _: SassColor => SassNumber(args.head.assertColor().alpha)
+        // IE alpha(opacity=N) filter
+        case s: SassString if !s.hasQuotes && s.text.contains("=") =>
+          SassString(s"alpha(${s.text})", hasQuotes = false)
+        case v => SassNumber(v.assertColor(Nullable("color")).alpha)
+      }
+    })
 
   private val opacityFn: BuiltInCallable =
-    BuiltInCallable.function("opacity", "$color", args => SassNumber(args.head.assertColor().alpha))
+    BuiltInCallable.function("opacity", "$color", { args =>
+      // CSS filter overload: opacity(50%) / opacity(1) / opacity(var(--x))
+      if (isCssFilterValue(args.head)) {
+        SassString(s"opacity(${args.head.toCssString(quote = false)})", hasQuotes = false)
+      } else {
+        SassNumber(args.head.assertColor().alpha)
+      }
+    })
 
   // --- Manipulation ---
 
@@ -922,21 +952,41 @@ object ColorFunctions {
       }
     )
 
+  /** Returns true if a value is a number, percentage, or special CSS value that
+    * should trigger the CSS filter function overload for saturate/grayscale/etc.
+    */
+  private def isCssFilterValue(v: Value): Boolean = v match {
+    case _: SassNumber       => true
+    case s: SassString       => !s.hasQuotes && (s.isSpecialNumber || isSpecialCssValue(s))
+    case _ if v.isSpecialNumber => true
+    case _                   => false
+  }
+
   private val saturateFn: BuiltInCallable =
     BuiltInCallable.function(
       "saturate",
       "$color, $amount",
       { args =>
-        val c   = args(0).assertColor()
-        if (!c.isLegacy) {
-          throw SassScriptException(
-            "saturate() is only supported for legacy colors. Please use " +
-            "color.adjust() instead with an explicit $space argument."
-          )
+        // CSS filter overload: saturate(50%) / saturate(1) / saturate(var(--x))
+        // Also handles saturate($amount: 50%) where $color is SassNull (gap fill)
+        val isSingleArg = args.length == 1 || (args.length == 2 && (args(1) eq SassNull))
+        val cssFilterArg = if (isSingleArg) args(0)
+          else if (args.length == 2 && (args(0) eq SassNull)) args(1) // saturate($amount: 50%)
+          else null
+        if (cssFilterArg != null && isCssFilterValue(cssFilterArg)) {
+          SassString(s"saturate(${cssFilterArg.toCssString(quote = false)})", hasQuotes = false)
+        } else {
+          val c = args(0).assertColor()
+          if (!c.isLegacy) {
+            throw SassScriptException(
+              "saturate() is only supported for legacy colors. Please use " +
+                "color.adjust() instead with an explicit $space argument."
+            )
+          }
+          warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
+          val amt = scalar(args(1).assertNumber(), 100)
+          adjustHsl(c, sDelta = amt)
         }
-        warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
-        val amt = scalar(args(1).assertNumber(), 100)
-        adjustHsl(c, sDelta = amt)
       }
     )
 
@@ -1007,6 +1057,10 @@ object ColorFunctions {
       "grayscale",
       "$color",
       { args =>
+        // CSS filter overload: grayscale(50%) / grayscale(1) / grayscale(var(--x))
+        if (isCssFilterValue(args(0))) {
+          SassString(s"grayscale(${args(0).toCssString(quote = false)})", hasQuotes = false)
+        } else {
         val c = args(0).assertColor()
         if (c.isLegacy) {
           val hsl = c.toSpace(ColorSpace.hsl)
@@ -1026,6 +1080,7 @@ object ColorFunctions {
             Nullable(oklch.alpha)
           ).toSpace(c.space)
         }
+        }
       }
     )
 
@@ -1037,8 +1092,10 @@ object ColorFunctions {
         // $weight may be SassNull when skipped via named $space parameter
         // (the framework fills gaps with null instead of parsing defaults)
         val weightNumber = if (args(1) eq SassNull) SassNumber(100, "%") else args(1).assertNumber(Nullable("weight"))
-        // If first arg is a number, treat as plain CSS invert() filter
+        // If first arg is a number or special CSS value, treat as plain CSS invert() filter
         args(0) match {
+          case v if isCssFilterValue(v) && !v.isInstanceOf[SassColor] && (weightNumber.value == 100 && weightNumber.hasUnit("%")) =>
+            SassString(s"invert(${v.toCssString(quote = false)})", hasQuotes = false)
           case _: SassNumber =>
             if (weightNumber.value != 100 || !weightNumber.hasUnit("%")) {
               throw SassScriptException(
@@ -1793,9 +1850,51 @@ object ColorFunctions {
       SassString(s"#${hexStr(color.alpha * 255)}${hexStr(color.channel0)}${hexStr(color.channel1)}${hexStr(color.channel2)}", hasQuotes = false)
     })
 
+  // Module-specific versions of functions that have CSS filter overloads in
+  // global scope but should only accept colors in module scope.
+  private val moduleSaturateFn: BuiltInCallable =
+    BuiltInCallable.function("saturate", "$color, $amount", { args =>
+      val c = args(0).assertColor()
+      if (!c.isLegacy) {
+        throw SassScriptException(
+          "saturate() is only supported for legacy colors. Please use " +
+            "color.adjust() instead with an explicit $space argument."
+        )
+      }
+      warnLegacyColorFunction("saturate", "color.adjust($color, $saturation: +$amount)")
+      val amt = scalar(args(1).assertNumber(), 100)
+      adjustHsl(c, sDelta = amt)
+    })
+
+  private val moduleGrayscaleFn: BuiltInCallable =
+    BuiltInCallable.function("grayscale", "$color", { args =>
+      val c = args(0).assertColor()
+      if (c.isLegacy) {
+        val hsl = c.toSpace(ColorSpace.hsl)
+        SassColor.hsl(hsl.channel0OrNull, Nullable(0.0), hsl.channel2OrNull, Nullable(hsl.alpha))
+          .toSpace(c.space, legacyMissing = false)
+      } else {
+        val oklch = c.toSpace(ColorSpace.oklch)
+        SassColor.oklch(oklch.channel0OrNull, Nullable(0.0), oklch.channel2OrNull, Nullable(oklch.alpha))
+          .toSpace(c.space)
+      }
+    })
+
+  private val moduleOpacityFn: BuiltInCallable =
+    BuiltInCallable.function("opacity", "$color", args => SassNumber(args.head.assertColor().alpha))
+
+  private val moduleAlphaFn: BuiltInCallable =
+    BuiltInCallable.function("alpha", "$color", args => SassNumber(args.head.assertColor().alpha))
+
   /** Color Module 4 entry points — only registered under the `sass:color` module (not as globals).
     */
   private val moduleOnly: List[Callable] = List(
+    // Module-specific overrides (no CSS filter overload):
+    moduleSaturateFn,
+    moduleGrayscaleFn,
+    moduleOpacityFn,
+    moduleAlphaFn,
+    // Module-only functions:
     changeFn,
     adjustFn,
     scaleFn,
@@ -1813,7 +1912,11 @@ object ColorFunctions {
     sameFn
   )
 
-  def module: List[Callable] = global ::: moduleOnly
+  def module: List[Callable] = {
+    // Module overrides shadow global functions with same name
+    val overrideNames = Set("saturate", "grayscale", "opacity", "alpha")
+    global.filterNot(c => overrideNames.contains(c.name)) ::: moduleOnly
+  }
 
   /** Fallback for unregistered color function names. */
   def stub(name: String, args: List[Value]): Value =

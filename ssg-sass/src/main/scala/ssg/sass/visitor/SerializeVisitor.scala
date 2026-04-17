@@ -89,6 +89,11 @@ final class SerializeVisitor(
       selectorInvisible || (
         !rule.isChildless && rule.children.forall(isNodeInvisible)
       )
+    case at: CssAtRule =>
+      // Generic at-rules with empty bodies ({}) are visible — they're CSS
+      // passthrough. But at-rules with all-invisible children are invisible.
+      if (at.isChildless) false
+      else at.children.nonEmpty && at.children.forall(isNodeInvisible)
     case p: CssParentNode =>
       if (p.isChildless) false
       else p.children.forall(isNodeInvisible)

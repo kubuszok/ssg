@@ -89,8 +89,10 @@ object ListFunctions {
           throw SassScriptException("Missing arguments to join().")
         val list1          = args(0)
         val list2          = args(1)
-        val separatorParam = (if (args.length > 2) args(2) else autoStr).assertString("separator")
-        val bracketedParam = if (args.length > 3) args(3) else autoStr
+        // $separator may be SassNull when skipped via named $bracketed parameter
+        // (the framework fills gaps with null instead of parsing defaults)
+        val separatorParam = (if (args.length > 2 && !(args(2) eq SassNull)) args(2) else autoStr).assertString("separator")
+        val bracketedParam = if (args.length > 3 && !(args(3) eq SassNull)) args(3) else autoStr
 
         val separator = separatorParam.text match {
           case "auto" =>
