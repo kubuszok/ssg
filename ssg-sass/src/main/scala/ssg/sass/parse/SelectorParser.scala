@@ -74,6 +74,17 @@ class SelectorParser(
   private def skipSpaces(): Unit =
     while (!isDone() && isWs(peek())) pos += 1
 
+  /** Like [[skipSpaces]] but returns `true` if a newline was consumed. */
+  private def skipSpacesTrackNewline(): Boolean = {
+    var hadNewline = false
+    while (!isDone() && isWs(peek())) {
+      val c = peek()
+      if (c == '\n' || c == '\r' || c == '\f') hadNewline = true
+      pos += 1
+    }
+    hadNewline
+  }
+
   private def isNameStart(c: Int): Boolean =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-' || c >= 0x80
 
@@ -150,15 +161,18 @@ class SelectorParser(
     skipSpaces()
     while (!isDone() && peek() == ',') {
       pos += 1
-      skipSpaces()
-      complexes += parseComplexSelector()
+      // dart-sass selector.dart:103-105: track if a newline occurred after
+      // the comma so the serializer can preserve multiline selector lists.
+      val hadNewline = skipSpacesTrackNewline()
+      if (!isDone() && peek() != ',') // skip empty comma slots
+        complexes += parseComplexSelector(lineBreak = hadNewline)
       skipSpaces()
     }
     if (complexes.isEmpty) fail("Expected selector.")
     SelectorList(complexes.toList, syntheticSp)
   }
 
-  def parseComplexSelector(): ComplexSelector = {
+  def parseComplexSelector(lineBreak: Boolean = false): ComplexSelector = {
     val leading    = scala.collection.mutable.ListBuffer.empty[CssValue[Combinator]]
     val components = scala.collection.mutable.ListBuffer.empty[ComplexSelectorComponent]
 
@@ -219,7 +233,7 @@ class SelectorParser(
     }
     val _ = first
     if (leading.isEmpty && components.isEmpty) fail("Expected selector.")
-    new ComplexSelector(leading.toList, components.toList, syntheticSp)
+    new ComplexSelector(leading.toList, components.toList, syntheticSp, lineBreak = lineBreak)
   }
 
   /** Returns the combinator at the current position, if any (without advancing). */
@@ -235,7 +249,7 @@ class SelectorParser(
 
   private def looksLikeCompoundStart(): Boolean = {
     val c = peek()
-    c >= 0 && (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\')
+    c >= 0 && (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\' || c == '|')
   }
 
   def parseCompoundSelector(): CompoundSelector = {
@@ -244,7 +258,7 @@ class SelectorParser(
     while (continueLoop) {
       val c = peek()
       if (c < 0) continueLoop = false
-      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\') {
+      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\' || c == '|') {
         simples += parseSimpleSelector()
       } else {
         continueLoop = false
@@ -259,7 +273,20 @@ class SelectorParser(
     c match {
       case '*' =>
         pos += 1
-        new UniversalSelector(syntheticSp)
+        // `*|name`, `*|*`: universal namespace followed by `|`
+        if (!isDone() && peek() == '|' && peekAt(1) != '=') {
+          pos += 1 // consume '|'
+          if (!isDone() && peek() == '*') {
+            pos += 1 // `*|*`
+            new UniversalSelector(syntheticSp, namespace = Nullable("*"))
+          } else {
+            val local = readIdentifier()
+            if (local.isEmpty) fail("Expected local name after '*|'.")
+            new TypeSelector(QualifiedName(local, Nullable("*")), syntheticSp)
+          }
+        } else {
+          new UniversalSelector(syntheticSp)
+        }
       case '&' =>
         pos += 1
         // Optional suffix is captured as raw identifier-body characters.
@@ -290,14 +317,30 @@ class SelectorParser(
         parseAttributeSelector()
       case ':' =>
         parsePseudoSelector()
+      case '|' if peekAt(1) != '=' =>
+        // `|*` or `|name`: empty namespace
+        pos += 1 // consume '|'
+        if (!isDone() && peek() == '*') {
+          pos += 1 // `|*`
+          new UniversalSelector(syntheticSp, namespace = Nullable(""))
+        } else {
+          val local = readIdentifier()
+          if (local.isEmpty) fail("Expected local name after '|'.")
+          new TypeSelector(QualifiedName(local, Nullable("")), syntheticSp)
+        }
       case _ if isNameStart(c) || c == '\\' =>
         val name = readIdentifier()
-        // Namespace handling: `ns|name`. We accept a single `|` separator.
+        // Namespace handling: `ns|name` or `ns|*`
         if (!isDone() && peek() == '|' && peekAt(1) != '=') {
-          pos += 1
-          val local = readIdentifier()
-          if (local.isEmpty) fail("Expected local name after namespace.")
-          new TypeSelector(QualifiedName(local, Nullable(name)), syntheticSp)
+          pos += 1 // consume '|'
+          if (!isDone() && peek() == '*') {
+            pos += 1 // `ns|*`
+            new UniversalSelector(syntheticSp, namespace = Nullable(name))
+          } else {
+            val local = readIdentifier()
+            if (local.isEmpty) fail("Expected local name after namespace.")
+            new TypeSelector(QualifiedName(local, Nullable(name)), syntheticSp)
+          }
         } else {
           new TypeSelector(QualifiedName(name), syntheticSp)
         }
