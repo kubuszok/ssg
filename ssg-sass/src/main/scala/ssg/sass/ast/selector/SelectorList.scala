@@ -67,8 +67,9 @@ final class SelectorList(
     *
     * Returns `Nullable.Null` if no such list can be produced.
     *
-    * This implementation handles the common case where every complex selector is a single compound selector — pairs of compounds are unified via [[SimpleSelector.unify]] and the cross-product results
-    * are returned. See also [[ssg.sass.extend.ExtendFunctions.unifyComplex]] for the full algorithm used by `@extend`.
+    * Ported from dart-sass `SelectorList.unify` (list.dart:92-100): delegates to
+    * [[ssg.sass.extend.ExtendFunctions.unifyComplex]] for every pair of complex
+    * selectors, handling multi-component complex selectors (not just single compounds).
     */
   def unify(other: SelectorList): Nullable[SelectorList] = {
     val unified = scala.collection.mutable.ListBuffer.empty[ComplexSelector]
@@ -76,18 +77,8 @@ final class SelectorList(
       a <- components
       b <- other.components
     } {
-      val aSingle = a.singleCompound
-      val bSingle = b.singleCompound
-      if (aSingle.isDefined && bSingle.isDefined) {
-        val merged = SelectorList.unifyCompounds(aSingle.get, bSingle.get)
-        if (merged.isDefined) {
-          unified += new ComplexSelector(
-            Nil,
-            List(new ComplexSelectorComponent(merged.get, Nil, span)),
-            span
-          )
-        }
-      }
+      val result = ssg.sass.extend.ExtendFunctions.unifyComplex(List(a, b), a.span)
+      if (result.isDefined) unified ++= result.get
     }
     if (unified.isEmpty) Nullable.Null
     else Nullable(SelectorList(unified.toList, span))
@@ -237,8 +228,9 @@ final class SelectorList(
         parentSelector match {
           case ps: ParentSelector =>
             if (simples.length == 1 && ps.suffix.isEmpty) {
+              // dart-sass list.dart:242-244: call on `parent`, not `this`
               Nullable(
-                withAdditionalCombinators(component.combinators).components
+                parent.withAdditionalCombinators(component.combinators).components
               )
             } else {
               Nullable(
