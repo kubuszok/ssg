@@ -409,6 +409,13 @@ sealed trait IfConditionExpression extends SassNode {
   /** Whether this is an arbitrary substitution expression. */
   def isArbitrarySubstitution: Boolean = false
 
+  /** Converts this expression into an interpolation that produces the same value.
+    *
+    * [arbitrarySubstitution]'s span is used for error reporting when a sass()
+    * condition is encountered (sass() cannot be serialized to raw text).
+    */
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation
+
   /** Calls the appropriate visit method on [visitor]. */
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T
 }
@@ -418,6 +425,14 @@ final case class IfConditionParenthesized(
   expression: IfConditionExpression,
   span:       FileSpan
 ) extends IfConditionExpression {
+
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = {
+    val buf = new InterpolationBuffer()
+    buf.writeCharCode('(')
+    buf.addInterpolation(expression.toInterpolation(arbitrarySubstitution))
+    buf.writeCharCode(')')
+    buf.interpolation(span)
+  }
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionParenthesized(this)
@@ -430,6 +445,13 @@ final case class IfConditionNegation(
   expression: IfConditionExpression,
   span:       FileSpan
 ) extends IfConditionExpression {
+
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = {
+    val buf = new InterpolationBuffer()
+    buf.write("not ")
+    buf.addInterpolation(expression.toInterpolation(arbitrarySubstitution))
+    buf.interpolation(span)
+  }
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionNegation(this)
@@ -446,6 +468,17 @@ final case class IfConditionOperation(
 
   def span: FileSpan =
     expressions.head.span.expand(expressions.last.span)
+
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = {
+    val buf = new InterpolationBuffer()
+    var first = true
+    for (expr <- expressions) {
+      if (first) first = false
+      else buf.write(s" $op ")
+      buf.addInterpolation(expr.toInterpolation(arbitrarySubstitution))
+    }
+    buf.interpolation(span)
+  }
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionOperation(this)
@@ -467,6 +500,15 @@ final case class IfConditionFunction(
     case _ => false
   }
 
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = {
+    val buf = new InterpolationBuffer()
+    buf.addInterpolation(name)
+    buf.writeCharCode('(')
+    buf.addInterpolation(arguments)
+    buf.writeCharCode(')')
+    buf.interpolation(span)
+  }
+
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionFunction(this)
 
@@ -478,6 +520,12 @@ final case class IfConditionSass(
   expression: Expression,
   span:       FileSpan
 ) extends IfConditionExpression {
+
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation =
+    throw new ssg.sass.SassException(
+      "if() conditions with arbitrary substitutions may not contain sass() expressions.",
+      arbitrarySubstitution.span
+    )
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionSass(this)
@@ -493,6 +541,8 @@ final case class IfConditionRaw(
   def span: FileSpan = text.span
 
   override def isArbitrarySubstitution: Boolean = true
+
+  def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = text
 
   def accept[T](visitor: IfConditionExpressionVisitor[T]): T =
     visitor.visitIfConditionRaw(this)

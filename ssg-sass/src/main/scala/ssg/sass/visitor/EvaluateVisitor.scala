@@ -380,13 +380,72 @@ final class EvaluateVisitor(
     val builder = scala.collection.mutable.LinkedHashMap.empty[String, Module[Callable]]
     for ((name, callables) <- ssg.sass.functions.Functions.modules) {
       val mixins: List[Callable] =
-        if (name == "meta") ssg.sass.functions.MetaFunctions.moduleMixins
+        if (name == "meta") _loadCssMixin :: ssg.sass.functions.MetaFunctions.moduleMixins
         else Nil
       val vars = ssg.sass.functions.Functions.moduleVariables(name)
       builder(s"sass:$name") = new BuiltInModule[Callable](name, callables, mixins, vars)
     }
     builder.toMap
   }
+
+  /// The `load-css` built-in mixin for the `sass:meta` module.
+  ///
+  /// This must be defined in the evaluator (not in MetaFunctions) because
+  /// it needs access to `_loadModule`, `_combineCss`, `_callableNode`,
+  /// and `_assertConfigurationIsEmpty`.
+  ///
+  /// Port of dart-sass `metaMixins[0]` (async_evaluate.dart:594-637).
+  @annotation.nowarn("msg=implicit conversion") // String -> Nullable[String] in assertString/assertMap name args
+  private lazy val _loadCssMixin: BuiltInCallable =
+    BuiltInCallable.mixin("load-css", "$url, $with: null", { (arguments: List[Value]) =>
+      val url = arguments.head.assertString("url").text
+      val withRaw = arguments(1)
+      val withMap: Nullable[SassMap] =
+        if (withRaw == SassNull) Nullable.empty
+        else Nullable(withRaw.assertMap("with"))
+
+      val callableNode = _callableNode.getOrElse {
+        throw SassScriptException("load-css() requires an active callable context.")
+      }
+      var configuration: Configuration = Configuration.empty
+      withMap.foreach { wm =>
+        val values = scala.collection.mutable.LinkedHashMap.empty[String, ConfiguredValue]
+        var privateDeprecation = false
+        for ((variable, value) <- wm.contents) {
+          val name = variable.assertString("with key").text.replace("_", "-")
+          if (values.contains(name)) {
+            throw SassScriptException(s"The variable $$$name was configured twice.")
+          } else if (name.startsWith("-") && !privateDeprecation) {
+            privateDeprecation = true
+            ssg.sass.EvaluationContext.warnForDeprecation(
+              Deprecation.WithPrivate,
+              s"Configuring private variables (such as $$$name) is " +
+                "deprecated.\n" +
+                "This will be an error in Dart Sass 2.0.0."
+            )
+          }
+          values(name) = ConfiguredValue.explicit(value, Nullable(callableNode))
+        }
+        configuration = ExplicitConfiguration(values.toMap, callableNode)
+      }
+
+      _loadModule(
+        url,
+        "load-css()",
+        callableNode,
+        (module, _) => {
+          // Replay the combined CSS into the current parent, using the
+          // CssVisitor implementation so that nested rules, @import, etc.
+          // are handled exactly like `@import` of a module.
+          val css = _combineCss(module, clone = true)
+          css.accept(this)
+        },
+        configuration = Nullable(configuration),
+        namesInErrors = true
+      )
+      _assertConfigurationIsEmpty(configuration, nameInError = true)
+      SassNull
+    })
 
   /** Parses (via the import cache) and returns the stylesheet at [canonicalUrl], or empty if [imp] can't load it. Dedupes parses across repeated `@use` of the same URL.
     */
@@ -564,6 +623,9 @@ final class EvaluateVisitor(
 
     _withStackFrame(stackFrame, nodeWithSpan, {
       val loaded = _loadStylesheet(url, nodeWithSpan.span)
+      if (loaded.isEmpty) {
+        throw _exception("Can't find stylesheet to import.", Nullable(nodeWithSpan.span))
+      }
       loaded.foreach { case (importedSheet, imp, isDependency) =>
         val canonicalUrl = importedSheet.span.sourceUrl.toString
         if (canonicalUrl.nonEmpty) {
@@ -659,7 +721,12 @@ final class EvaluateVisitor(
       case scala.None => () // fall through to execute
     }
 
-    val environment = Environment.withBuiltins()
+    // dart-sass: _execute creates a bare environment without built-in
+    // functions pre-populated. Built-ins are resolved via a separate
+    // fallback in visitFunctionExpression. This ensures that the module's
+    // public function surface (via toModule) contains only user-defined
+    // functions, not inherited built-ins.
+    val environment = Environment()
     var css: Nullable[CssStylesheet] = Nullable.empty
     var preModuleComments: Nullable[scala.collection.mutable.LinkedHashMap[Module[Callable], scala.collection.mutable.ListBuffer[CssComment]]] = Nullable.empty
     val extensionStore = ExtensionStore()
@@ -952,14 +1019,19 @@ final class EvaluateVisitor(
     } // boundary
   }
 
+  /// Modules whose CSS has already been injected into the root stylesheet.
+  /// Used by _injectModuleCss to prevent duplicate CSS output when the same
+  /// module is @use'd from multiple files.
+  private val _injectedModuleCss: scala.collection.mutable.Set[Module[Callable]] =
+    scala.collection.mutable.Set.empty
+
   /// Injects all CSS from [module] and its transitive upstream modules into
-  /// [rootNode]. This is a transitional bridge: in the full dart-sass model,
-  /// `_combineCss` handles CSS merging across module boundaries. Until that's
-  /// wired in, we inline the CSS directly so it appears in the output.
+  /// [rootNode]. Uses a global visited set so each module's CSS is injected
+  /// exactly once, preventing duplication when a module is @use'd multiple
+  /// times.
   private def _injectModuleCss(module: Module[Callable], rootNode: ModifiableCssStylesheet): Unit = {
-    val visited = scala.collection.mutable.Set.empty[Module[Callable]]
     def visit(mod: Module[Callable]): Unit = {
-      if (!visited.add(mod)) () // already processed
+      if (!_injectedModuleCss.add(mod)) () // already processed
       else {
         // Visit upstream first (depth-first, same order as _combineCss).
         for (upstream <- mod.upstream) {
@@ -1156,7 +1228,14 @@ final class EvaluateVisitor(
               _environment.getNamespacedFunction(ns, node.name)
             }
           } else {
-            _environment.getFunction(node.name)
+            // dart-sass: after checking the environment's scope chain and
+            // imported/global modules, fall back to the evaluator-level
+            // built-in function table (_builtInFunctions). This is necessary
+            // because _execute creates bare environments without built-ins.
+            _environment.getFunction(node.name).orElse {
+              ssg.sass.functions.Functions.lookupGlobal(node.name)
+                .fold(Nullable.empty[Callable])(b => Nullable(b: Callable))
+            }
           }
         })
       // User-defined functions shadow CSS math functions (dart-sass order).
@@ -3104,9 +3183,8 @@ final class EvaluateVisitor(
       if (firstLoad) _registerCommentsForModule(module)
       _environment.addModule(module, Nullable(node), namespace = node.namespace)
       // Inject the module's CSS (and all upstream modules' CSS) into the
-      // current tree. In the full dart-sass model, _combineCss handles
-      // this; as a transitional bridge, we inline all transitive CSS
-      // directly into the parent's _root so it appears in the output.
+      // current tree. The global _injectedModuleCss set ensures each
+      // module's CSS is only emitted once even when @use'd multiple times.
       _root.foreach { rootNode =>
         _injectModuleCss(module, rootNode)
       }
@@ -3227,6 +3305,13 @@ final class EvaluateVisitor(
                 case _: ssg.sass.ast.sass.ForwardRule => true
                 case _                                => false
               }
+              // @import always re-evaluates the imported file's CSS, even
+              // when the same module was already @use'd. Save and clear
+              // the injected-CSS set so modules @use'd within this import
+              // can re-inject their CSS into the output.
+              val savedInjected = _injectedModuleCss.clone()
+              _injectedModuleCss.clear()
+              try {
               if (!hasUseOrForward) {
                 // Simple inline path: no module-system directives, so the
                 // imported file can run against the caller's environment
@@ -3249,6 +3334,12 @@ final class EvaluateVisitor(
                 }
                 val dummyModule = forImportEnv.toDummyModule()
                 _environment.importForwards(dummyModule)
+              }
+              } finally {
+                // Restore the previous injected set, augmented with any
+                // modules newly injected during this import, so that
+                // subsequent @use's at the same level still deduplicate.
+                _injectedModuleCss ++= savedInjected
               }
             }
           finally {
@@ -3621,6 +3712,11 @@ final class EvaluateVisitor(
       throw SassException(s"Undefined mixin: ${node.name}.", node.span)
     }
     val (positional, named) = _evaluateArguments(node.arguments)
+    // dart-sass: set _callableNode so that built-in mixin callbacks
+    // (e.g. load-css, apply) can read the call-site node for span
+    // context and configuration construction.
+    val oldCallableNode = _callableNode
+    _callableNode = Nullable(node: ssg.sass.ast.AstNode)
     try
       _invokeMixinCallable(
         mixin,
@@ -3633,6 +3729,8 @@ final class EvaluateVisitor(
       // SassScriptExceptions from inside their callback; attach the include
       // site so they surface as proper SassExceptions with source location.
       case e: SassScriptException => throw e.withSpan(node.span)
+    } finally {
+      _callableNode = oldCallableNode
     }
     SassNull
   }
@@ -3684,11 +3782,23 @@ final class EvaluateVisitor(
             )
         }
       case bic: BuiltInCallable =>
+        // dart-sass: reject content block when the built-in mixin doesn't
+        // accept one (async_evaluate.dart:2116-2131).
+        if (!bic.acceptsContent && content.isDefined) {
+          throw SassScriptException("Mixin doesn't accept a content block.")
+        }
+        // dart-sass: arity check + named-arg merging, same as for
+        // built-in functions (via _runBuiltInCallable).
+        _checkBuiltInArity(bic, positional, named)
+        val merged =
+          if (named.isEmpty) positional
+          else _mergeBuiltInNamedArgs(bic, positional, named)
+        val padded = _padBuiltInPositional(bic, merged)
         // dart-sass: _environment.withContent + _environment.asMixin
         // wraps built-in mixin execution for content-exists() to work.
         _environment.withContent(content) {
           _environment.asMixin {
-            val _ = bic.callback(positional)
+            val _ = bic.callback(padded)
           }
         }
       case other =>
@@ -3835,13 +3945,33 @@ final class EvaluateVisitor(
   /** Pads the positional argument list for a [[BuiltInCallable]] with defaults parsed from its declared signature. For each declared parameter beyond `positional.size`, looks up the raw default
     * expression text, parses it via [[ssg.sass.parse.ScssParser]] and evaluates it in the current environment. Stops at the first parameter without a default (which becomes a required arg whose
     * absence is surfaced by the callback itself). Eliminates a large class of index-out-of-bounds bugs in hand-written built-ins that declare defaults like `"$start-at, $end-at: -1"`.
+    *
+    * Also fills intermediate gaps created by [[_mergeBuiltInNamedArgs]]: when a named arg is placed
+    * at index `j > positional.length`, positions between `positional.length` and `j` are filled
+    * with SassNull. This method replaces those intermediate SassNull values with the evaluated
+    * default if one exists in the signature.
     */
   private def _padBuiltInPositional(bic: BuiltInCallable, positional: List[Value]): List[Value] = {
     val defaults = bic.parameterDefaults
-    if (defaults.isEmpty || positional.length >= defaults.length) positional
+    if (defaults.isEmpty) positional
     else {
+      // Phase 1: fill intermediate SassNull gaps (created by _mergeBuiltInNamedArgs)
+      // with evaluated defaults from the signature.
       val buf = scala.collection.mutable.ListBuffer.from(positional)
-      var i   = positional.length
+      var i = 0
+      while (i < buf.length && i < defaults.length) {
+        if ((buf(i) eq SassNull) && defaults(i).isDefined) {
+          try {
+            val (expr, _) = new ssg.sass.parse.ScssParser(defaults(i).get).parseExpression()
+            buf(i) = expr.accept(this)
+          } catch {
+            case _: Throwable => // leave as SassNull on parse/eval failure
+          }
+        }
+        i += 1
+      }
+      // Phase 2: append trailing defaults beyond positional.length.
+      i = buf.length
       scala.util.boundary[Unit] {
         while (i < defaults.length) {
           defaults(i) match {
@@ -3932,6 +4062,56 @@ final class EvaluateVisitor(
     named:      ListMap[String, Value]
   ): List[Value] = {
     val names = bic.parameterNames
+    // For overloaded callables, different overloads accept different parameter
+    // names. We cannot validate named args against the canonical signature.
+    // Instead, treat the named args like a rest-parameter call: partition into
+    // known (canonical-signature) and leftover, then merge what we can and
+    // pass the rest through as-is. The overload dispatcher will select the
+    // right callback and the callback itself will do per-overload validation.
+    if (bic.isOverloaded && names.nonEmpty) {
+      val namesSet = names.toSet
+      val (knownNamed, leftoverNamed) = named.partition { case (k, _) => namesSet.contains(k) }
+      if (leftoverNamed.nonEmpty && knownNamed.isEmpty) {
+        // None of the named args match the canonical signature — the call
+        // is meant for a different overload. Package everything into a
+        // SassArgumentList so the single-arg overload (e.g. $channels)
+        // receives the named-arg value correctly.
+        val al = new ssg.sass.value.SassArgumentList(
+          positional,
+          named,
+          ssg.sass.value.ListSeparator.Comma
+        )
+        return List(al)
+      }
+      // Some match canonical, some don't — merge canonical names into
+      // positional and wrap the rest into an argument list.
+      if (leftoverNamed.nonEmpty) {
+        val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
+        val maxIdx       =
+          (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+        val buf = scala.collection.mutable.ListBuffer.empty[Value]
+        var i   = 0
+        while (i <= maxIdx && i < names.length) {
+          val pname = names(i)
+          if (i < positional.length) buf += positional(i)
+          else
+            knownNamed.get(pname) match {
+              case Some(v) => buf += v
+              case _       => buf += SassNull
+            }
+          i += 1
+        }
+        // Wrap leftover into argument list for rest consumption
+        val al = new ssg.sass.value.SassArgumentList(
+          Nil,
+          leftoverNamed,
+          ssg.sass.value.ListSeparator.Comma
+        )
+        buf += al
+        return buf.toList
+      }
+      // All named match canonical — fall through to normal merge
+    }
     if (names.isEmpty) {
       // rest-only signature (`$args...`): wrap positional + all kwargs
       // into a SassArgumentList if there are keyword args.
