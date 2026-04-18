@@ -8,6 +8,7 @@ package visitor
 
 import ssg.sass.ast.css.{ CssValue, ModifiableCssAtRule, ModifiableCssComment, ModifiableCssDeclaration, ModifiableCssNode, ModifiableCssStyleRule, ModifiableCssStylesheet }
 import ssg.sass.ast.selector.{ ClassSelector, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, SelectorList }
+import ssg.sass.parse.SelectorParser
 import ssg.sass.util.{ FileSpan, ModifiableBox }
 import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassMap, SassString, Value }
 import ssg.sass.Nullable
@@ -30,8 +31,9 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     )
 
   private def styleRule(selector: String, children: List[ModifiableCssNode]): ModifiableCssStyleRule = {
+    val sel  = new SelectorParser(selector).parse()
     val rule = new ModifiableCssStyleRule(
-      new ModifiableBox[Any](selector).seal(),
+      new ModifiableBox[SelectorList](sel).seal(),
       span
     )
     for (c <- children) rule.addChild(c)
@@ -453,7 +455,7 @@ final class SerializeVisitorSuite extends munit.FunSuite {
 
   private def styleRuleSel(selector: SelectorList, children: List[ModifiableCssNode]): ModifiableCssStyleRule = {
     val rule = new ModifiableCssStyleRule(
-      new ModifiableBox[Any](selector).seal(),
+      new ModifiableBox[SelectorList](selector).seal(),
       span
     )
     for (c <- children) rule.addChild(c)

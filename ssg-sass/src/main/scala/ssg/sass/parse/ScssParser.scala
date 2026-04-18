@@ -15,9 +15,9 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.Nullable
+import ssg.sass.{ Deprecation, InterpolationBuffer, Nullable }
 import ssg.sass.Nullable.*
-import ssg.sass.ast.sass.{ Interpolation, Statement }
+import ssg.sass.ast.sass.{ Interpolation, LoudComment, SilentComment, Statement }
 import ssg.sass.util.CharCode
 
 import scala.collection.mutable
@@ -109,100 +109,210 @@ class ScssParser(
   }
 
   override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
-    whitespace(consumeNewlines = false)
+    _whitespaceWithoutComments()
     if (scanner.isDone) return
     val c = scanner.peekChar()
-    if (c == CharCode.$semicolon) scanner.readChar()
-    else if (c == CharCode.$rbrace) () // close of block implies statement end
-    else {
-      val label = name.fold("statement")(n => s"$n statement")
-      scanner.error(s"Expected ';' after $label.")
-    }
+    if (c == CharCode.$semicolon) { scanner.readChar(); return }
+    if (c == CharCode.$rbrace) return
+    scanner.expectChar(CharCode.$semicolon)
   }
 
   override protected def atEndOfStatement(): Boolean = {
     val c = scanner.peekChar()
-    c < 0 || c == CharCode.$semicolon || c == CharCode.$rbrace
+    c < 0 || c == CharCode.$semicolon || c == CharCode.$rbrace || c == CharCode.$lbrace
   }
 
   override protected def lookingAtChildren(): Boolean =
     scanner.peekChar() == CharCode.$lbrace
 
   override protected def scanElse(ifIndentation: Int): Boolean = {
-    whitespace(consumeNewlines = true)
     val start = scanner.state
+    _whitespace()
+    val beforeAt = scanner.state
     if (scanner.scanChar(CharCode.$at)) {
-      // Use `identifier()` rather than `scanIdentifier("else")` so that
-      // Unicode escape sequences in the directive name are normalized
-      // before comparison — e.g. `@\65lse` must be recognized as `@else`.
-      if (lookingAtIdentifier()) {
-        val saved = scanner.state
-        val name  = identifier()
-        if (name == "else") true
-        else {
-          scanner.state = saved
-          scanner.state = start
-          false
-        }
+      if (scanIdentifier("else", caseSensitive = true)) true
+      else if (scanIdentifier("elseif", caseSensitive = true)) {
+        warnDeprecation(
+          Deprecation.Elseif,
+          "@elseif is deprecated and will not be supported in future Sass " +
+            "versions.\n\nRecommendation: @else if",
+          spanFrom(beforeAt)
+        )
+        scanner.position = scanner.position - 2
+        true
       } else {
         scanner.state = start
         false
       }
-    } else false
+    } else {
+      scanner.state = start
+      false
+    }
   }
 
   override protected def children(child: () => Statement): List[Statement] = {
     scanner.expectChar(CharCode.$lbrace)
-    // dart-sass scss.dart:84: use whitespaceWithoutComments so loud
-    // comments are parsed as child statements, not silently consumed.
-    whitespaceWithoutComments(consumeNewlines = true)
+    _whitespaceWithoutComments()
     val stmts = mutable.ListBuffer.empty[Statement]
-    while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
-      val scssChildPos = scanner.position
-      // dart-sass scss.dart:84-86: bare semicolons inside blocks are no-ops
-      if (scanner.peekChar() == CharCode.$semicolon) {
-        scanner.readChar()
-        whitespaceWithoutComments(consumeNewlines = true)
-      } else {
-        stmts += child()
-        whitespaceWithoutComments(consumeNewlines = true)
-      }
-      if (scanner.position == scssChildPos) {
-        val ctx = if (scanner.isDone) "<EOF>" else {
-          val end = math.min(scanner.position + 60, scanner.string.length)
-          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+    boundary {
+      while (true) {
+        scanner.peekChar() match {
+          case CharCode.`$dollar` =>
+            stmts += variableDeclarationWithoutNamespace()
+            // SSG convention: expectStatementSeparator already consumed `;`,
+            // so skip trailing whitespace before the next token.
+            _whitespaceWithoutComments()
+
+          case CharCode.`$slash` =>
+            scanner.peekChar(1) match {
+              case CharCode.`$slash` =>
+                stmts += _silentComment()
+                _whitespaceWithoutComments()
+              case CharCode.`$asterisk` =>
+                stmts += _loudComment()
+                _whitespaceWithoutComments()
+              case _ =>
+                stmts += child()
+                _whitespaceWithoutComments()
+            }
+
+          case CharCode.`$semicolon` =>
+            scanner.readChar()
+            _whitespaceWithoutComments()
+
+          case CharCode.`$rbrace` =>
+            scanner.expectChar(CharCode.$rbrace)
+            break(())
+
+          case _ =>
+            stmts += child()
+            _whitespaceWithoutComments()
         }
-        throw new Error(s"ScssParser.children() stall at pos ${scanner.position}: ctx=\"$ctx\"")
       }
     }
-    scanner.expectChar(CharCode.$rbrace)
     stmts.toList
   }
 
   override protected def statements(statement: () => Nullable[Statement]): List[Statement] = {
     val stmts = mutable.ListBuffer.empty[Statement]
-    // dart-sass scss.dart:100: use whitespaceWithoutComments so loud
-    // comments are parsed as statements, not silently consumed.
-    whitespaceWithoutComments(consumeNewlines = true)
+    _whitespaceWithoutComments()
     while (!scanner.isDone) {
-      val scssStmtPos = scanner.position
-      // dart-sass scss.dart:118-120: bare semicolons at top level are no-ops
-      if (scanner.peekChar() == CharCode.$semicolon) {
-        scanner.readChar()
-        whitespaceWithoutComments(consumeNewlines = true)
-      } else {
-        val s = statement()
-        if (s.isDefined) stmts += s.get
-        whitespaceWithoutComments(consumeNewlines = true)
-      }
-      if (scanner.position == scssStmtPos) {
-        val ctx = if (scanner.isDone) "<EOF>" else {
-          val end = math.min(scanner.position + 60, scanner.string.length)
-          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
-        }
-        throw new Error(s"ScssParser.statements() stall at pos ${scanner.position}: ctx=\"$ctx\"")
+      scanner.peekChar() match {
+        case CharCode.`$dollar` =>
+          stmts += variableDeclarationWithoutNamespace()
+          // SSG convention: expectStatementSeparator already consumed `;`,
+          // so skip trailing whitespace before the next token.
+          _whitespaceWithoutComments()
+
+        case CharCode.`$slash` =>
+          scanner.peekChar(1) match {
+            case CharCode.`$slash` =>
+              stmts += _silentComment()
+              _whitespaceWithoutComments()
+            case CharCode.`$asterisk` =>
+              stmts += _loudComment()
+              _whitespaceWithoutComments()
+            case _ =>
+              val child = statement()
+              if (child.isDefined) stmts += child.get
+              _whitespaceWithoutComments()
+          }
+
+        case CharCode.`$semicolon` =>
+          scanner.readChar()
+          _whitespaceWithoutComments()
+
+        case _ =>
+          val child = statement()
+          if (child.isDefined) stmts += child.get
+          _whitespaceWithoutComments()
       }
     }
     stmts.toList
   }
+
+  /** Consumes a statement-level silent comment block.
+    *
+    * dart-sass scss.dart lines 130-151.
+    */
+  private def _silentComment(): SilentComment = {
+    val start = scanner.state
+    scanner.expect("//")
+
+    var continue_ = true
+    while (continue_) {
+      while (!scanner.isDone && !CharCode.isNewline(scanner.readChar())) { /* consume */ }
+      if (scanner.isDone) { continue_ = false }
+      else {
+        spaces()
+        if (!scanner.scan("//")) { continue_ = false }
+      }
+    }
+
+    if (plainCss) {
+      error(
+        "Silent comments aren't allowed in plain CSS.",
+        spanFrom(start)
+      )
+    }
+
+    val comment = new SilentComment(
+      scanner.substring(start.position),
+      spanFrom(start)
+    )
+    lastSilentComment = Nullable(comment)
+    comment
+  }
+
+  /** Consumes a statement-level loud comment block.
+    *
+    * dart-sass scss.dart lines 154-189.
+    * Handles `#{...}` interpolation, `\r`->`\n` and `\f`->`\n` normalization.
+    */
+  private def _loudComment(): LoudComment = {
+    val start = scanner.state
+    scanner.expect("/*")
+    val buffer = new InterpolationBuffer()
+    buffer.write("/*")
+    boundary {
+      while (true) {
+        scanner.peekChar() match {
+          case CharCode.`$hash` =>
+            if (scanner.peekChar(1) == CharCode.$lbrace) {
+              val (expression, span) = singleInterpolation()
+              buffer.add(expression, span)
+            } else {
+              buffer.writeCharCode(scanner.readChar())
+            }
+
+          case CharCode.`$asterisk` =>
+            buffer.writeCharCode(scanner.readChar())
+            if (scanner.peekChar() == CharCode.$slash) {
+              buffer.writeCharCode(scanner.readChar())
+              break(())
+            }
+
+          case CharCode.`$cr` =>
+            scanner.readChar()
+            if (scanner.peekChar() != CharCode.$lf) buffer.writeCharCode(CharCode.$lf)
+
+          case CharCode.`$ff` =>
+            scanner.readChar()
+            buffer.writeCharCode(CharCode.$lf)
+
+          case _ =>
+            buffer.writeCharCode(scanner.readChar())
+        }
+      }
+    }
+    new LoudComment(buffer.interpolation(spanFrom(start)))
+  }
+
+  /** The value of `consumeNewlines` is not relevant for this class. */
+  private def _whitespace(): Unit =
+    whitespace(consumeNewlines = true)
+
+  /** The value of `consumeNewlines` is not relevant for this class. */
+  private def _whitespaceWithoutComments(): Unit =
+    whitespaceWithoutComments(consumeNewlines = true)
 }

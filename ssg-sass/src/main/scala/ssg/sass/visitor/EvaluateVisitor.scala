@@ -48,7 +48,7 @@ import ssg.sass.ast.css.{
   ModifiableCssStylesheet,
   ModifiableCssSupportsRule
 }
-import ssg.sass.util.ModifiableBox
+import ssg.sass.util.{ FileSpan, ModifiableBox }
 import ssg.sass.ast.sass.{
   AtRootRule,
   AtRule,
@@ -124,7 +124,7 @@ import ssg.sass.{ BuiltInCallable, Callable, Environment, ImportCache, Logger, N
 import ssg.sass.extend.{ ExtendMode, ExtendUtils, MutableExtensionStore }
 import ssg.sass.importer.Importer
 import ssg.sass.parse.SelectorParser
-import ssg.sass.ast.selector.SelectorList
+import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, QualifiedName, SelectorList, TypeSelector }
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs that were loaded during evaluation.
   */
@@ -152,21 +152,18 @@ final class EvaluateVisitor(
   // EvaluationContext — deprecation / warning emission
   // ---------------------------------------------------------------------------
 
-  override def currentCallableNode: ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode]
+  override def currentCallableNode: ssg.sass.ast.AstNode =
+    _callableNode.getOrElse(null.asInstanceOf[ssg.sass.ast.AstNode]) // @nowarn — null only at Java interop boundary
 
-  override def warn(message: String, deprecation: Boolean = false): Unit =
-    if (deprecation) {
-      _warnings += s"DEPRECATION WARNING: $message"
-      _logger.warn(message, deprecation = Nullable(Deprecation.UserAuthored))
-    } else {
-      _warnings += s"WARNING: $message"
-      _logger.warn(message)
+  override def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit =
+    deprecation match {
+      case dep if dep.isDefined =>
+        _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
+        _logger.warnForDeprecation(dep.get, message)
+      case _ =>
+        _warnings += s"WARNING: $message"
+        _logger.warn(message)
     }
-
-  override def warnForDeprecation(deprecation: Deprecation, message: String): Unit = {
-    _warnings += s"DEPRECATION WARNING [${deprecation.id}]: $message"
-    _logger.warnForDeprecation(deprecation, message)
-  }
 
   // ---------------------------------------------------------------------------
   // Slash division deprecation (dart-sass async_evaluate.dart:2814-2867)
@@ -243,6 +240,39 @@ final class EvaluateVisitor(
   /** Whether we're currently evaluating a `@supports` declaration. When true, calculations are not simplified.
     */
   private var _inSupportsDeclaration: Boolean = false
+
+  /** The name of the current member being evaluated (for stack traces).
+    * Corresponds to Dart's `_member`.
+    */
+  private var _member: String = "root stylesheet"
+
+  /** The evaluation stack, used for stack traces. Each entry is a
+    * (member-name, node-with-span) pair. Corresponds to Dart's `_stack`.
+    */
+  private val _stack: scala.collection.mutable.ListBuffer[(String, ssg.sass.ast.AstNode)] =
+    scala.collection.mutable.ListBuffer.empty
+
+  /** The node for the innermost callable invocation being evaluated.
+    * Used by `_addExceptionSpan` and `currentCallableSpan`.
+    * Corresponds to Dart's `_callableNode`.
+    */
+  @annotation.nowarn("msg=unset private variable") // not yet wired
+  private var _callableNode: Nullable[ssg.sass.ast.AstNode] = Nullable.empty
+
+  /** Whether we're currently in a `@dependency` context. When true and
+    * `_quietDeps` is also true, deprecation warnings are suppressed.
+    */
+  @annotation.nowarn("msg=unset private variable") // not yet wired
+  private var _inDependency: Boolean = false
+
+  /** Whether to suppress deprecation warnings for dependencies. */
+  private val _quietDeps: Boolean = false
+
+  /** Set of (message, span) pairs that have already been warned about,
+    * used to deduplicate warnings. Corresponds to Dart's `_warningsEmitted`.
+    */
+  private val _warningsEmitted: scala.collection.mutable.Set[(String, ssg.sass.util.FileSpan)] =
+    scala.collection.mutable.Set.empty
 
   /** The pending configuration map pushed in by an enclosing `@use "mid" with (...)`. `visitForwardRule` — and the recursive `@use` of the target inside a module that is itself being loaded — consult
     * this map so that configured variables flow through `@forward` chains. Keys are unprefixed variable names. Entries are evaluated expressions (not the raw AST) because the outer `with` clause must
@@ -336,7 +366,7 @@ final class EvaluateVisitor(
     */
   private val _selectorBoxes: scala.collection.mutable.LinkedHashMap[
     ModifiableCssStyleRule,
-    ModifiableBox[Any]
+    ModifiableBox[SelectorList]
   ] = scala.collection.mutable.LinkedHashMap.empty
 
   // ---------------------------------------------------------------------------
@@ -1035,6 +1065,365 @@ final class EvaluateVisitor(
     */
   private def _logger: Logger = logger.getOrElse(Logger.quiet)
 
+  // ---------------------------------------------------------------------------
+  // Infrastructure: stack frames, exception wrapping, warnings
+  // (dart-sass evaluate.dart lines 4619-4796)
+  // ---------------------------------------------------------------------------
+
+  /** Adds a frame to the stack with the given [member] name, and [nodeWithSpan]
+    * as the site of the new frame.
+    *
+    * Runs [callback] with the new stack.
+    *
+    * This takes an AstNode rather than a FileSpan so it can avoid calling
+    * AstNode.span if the span isn't required, since some nodes need to do
+    * real work to manufacture a source span.
+    *
+    * Port of dart-sass `_withStackFrame` (evaluate.dart:4619-4631).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _withStackFrame[T](member: String, nodeWithSpan: ssg.sass.ast.AstNode, callback: => T): T = {
+    _stack += ((_member, nodeWithSpan))
+    val oldMember = _member
+    _member = member
+    val result = callback
+    _member = oldMember
+    _stack.remove(_stack.length - 1)
+    result
+  }
+
+  /** Like [[ssg.sass.value.Value.withoutSlash]], but produces a deprecation warning if [value]
+    * was a slash-separated number.
+    *
+    * Port of dart-sass `_withoutSlash` (evaluate.dart:4635-4657).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _withoutSlash(value: ssg.sass.value.Value, nodeForSpan: ssg.sass.ast.AstNode): ssg.sass.value.Value = {
+    value match {
+      case n: SassNumber if n.asSlash.isDefined =>
+        def recommendation(number: SassNumber): String = number.asSlash.fold(number.toString) { pair =>
+          val (before, after) = pair
+          s"math.div(${recommendation(before)}, ${recommendation(after)})"
+        }
+
+        _warnWithSpan(
+          "Using / for division is deprecated and will be removed in Dart Sass " +
+            "2.0.0.\n" +
+            "\n" +
+            s"Recommendation: ${recommendation(value.asInstanceOf[SassNumber])}\n" +
+            "\n" +
+            "More info and automated migrator: " +
+            "https://sass-lang.com/d/slash-div",
+          nodeForSpan.span,
+          Nullable(Deprecation.SlashDiv)
+        )
+      case _ => ()
+    }
+    value.withoutSlash
+  }
+
+  /** Creates a new stack frame with location information from [member] and [span].
+    *
+    * Port of dart-sass `_stackFrame` (evaluate.dart:4661-4666).
+    */
+  private def _stackFrame(member: String, span: ssg.sass.util.FileSpan): ssg.sass.util.Frame =
+    ssg.sass.util.Frame.fromSpan(span, Nullable(member))
+
+  /** Returns a stack trace at the current point.
+    *
+    * If [span] is passed, it's used for the innermost stack frame.
+    *
+    * Port of dart-sass `_stackTrace` (evaluate.dart:4671-4678).
+    */
+  private def _stackTrace(span: Nullable[ssg.sass.util.FileSpan] = Nullable.empty): ssg.sass.util.Trace = {
+    val frames = scala.collection.mutable.ListBuffer.empty[ssg.sass.util.Frame]
+    for ((member, nodeWithSpan) <- _stack)
+      frames += _stackFrame(member, nodeWithSpan.span)
+    span.foreach(s => frames += _stackFrame(_member, s))
+    ssg.sass.util.Trace(frames.reverse.toList)
+  }
+
+  /** Emits a warning with the given [message] about the given [span].
+    *
+    * Port of dart-sass `_warn` (evaluate.dart:4681-4696).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _warnWithSpan(message: String, span: ssg.sass.util.FileSpan, deprecation: Nullable[Deprecation] = Nullable.empty): Unit = {
+    if (_quietDeps && _inDependency) return
+
+    if (!_warningsEmitted.add((message, span))) return
+    val trace = _stackTrace(Nullable(span))
+    deprecation match {
+      case dep if dep.isDefined =>
+        _logger.warnForDeprecation(dep.get, message, span = Nullable(span), trace = Nullable(trace))
+        _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
+      case _ =>
+        _logger.warn(message, span = Nullable(span), trace = Nullable(trace))
+        _warnings += s"WARNING: $message"
+    }
+  }
+
+  /** Returns a [SassRuntimeException] with the given [message].
+    *
+    * If [span] is passed, it's used for the innermost stack frame.
+    *
+    * Port of dart-sass `_exception` (evaluate.dart:4701-4706).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _exception(message: String, span: Nullable[ssg.sass.util.FileSpan] = Nullable.empty): SassRuntimeException = {
+    val effectiveSpan = span.getOrElse {
+      if (_stack.nonEmpty) _stack.last._2.span
+      else ssg.sass.util.FileSpan.synthetic("<unknown>")
+    }
+    SassRuntimeException(message, effectiveSpan, _stackTrace(span))
+  }
+
+  /** Returns a [MultiSpanSassRuntimeException] with the given [message],
+    * [primaryLabel], and [secondaryLabels].
+    *
+    * The primary span is taken from the current stack trace span.
+    *
+    * Port of dart-sass `_multiSpanException` (evaluate.dart:4712-4723).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _multiSpanException(
+    message:         String,
+    primaryLabel:    String,
+    secondaryLabels: Map[ssg.sass.util.FileSpan, String]
+  ): MultiSpanSassRuntimeException = {
+    val primarySpan =
+      if (_stack.nonEmpty) _stack.last._2.span
+      else ssg.sass.util.FileSpan.synthetic("<unknown>")
+    MultiSpanSassRuntimeException(message, primarySpan, primaryLabel, secondaryLabels, _stackTrace())
+  }
+
+  /** Runs [callback], and converts any [SassScriptException]s it throws to
+    * [SassRuntimeException]s with [nodeWithSpan]'s source span.
+    *
+    * This takes an AstNode rather than a FileSpan so it can avoid calling
+    * AstNode.span if the span isn't required, since some nodes need to do
+    * real work to manufacture a source span.
+    *
+    * If [addStackFrame] is true (the default), this will add an innermost stack
+    * frame for [nodeWithSpan]. Otherwise, it will use the existing stack as-is.
+    *
+    * Port of dart-sass `_addExceptionSpan` (evaluate.dart:4734-4750).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _addExceptionSpan[T](
+    nodeWithSpan:  ssg.sass.ast.AstNode,
+    callback:      => T,
+    addStackFrame: Boolean = true
+  ): T = {
+    try {
+      callback
+    } catch {
+      case error: SassScriptException =>
+        val spanToUse = if (addStackFrame) Nullable(nodeWithSpan.span) else Nullable.empty[ssg.sass.util.FileSpan]
+        throw error.withSpan(nodeWithSpan.span) match {
+          case se: SassException => se.withTrace(_stackTrace(spanToUse))
+        }
+    }
+  }
+
+  /** Runs [callback], and converts any [SassException]s that aren't already
+    * [SassRuntimeException]s to [SassRuntimeException]s with the current stack
+    * trace.
+    *
+    * Port of dart-sass `_addExceptionTrace` (evaluate.dart:4755-4767).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _addExceptionTrace[T](callback: => T): T = {
+    try {
+      callback
+    } catch {
+      case error: SassRuntimeException => throw error
+      case error: SassException =>
+        throw error.withTrace(_stackTrace(Nullable(error.span)))
+    }
+  }
+
+  /** Runs [callback], and converts any [SassRuntimeException]s containing an
+    * @error to throw a more relevant [SassRuntimeException] with [nodeWithSpan]'s
+    * source span.
+    *
+    * Port of dart-sass `_addErrorSpan` (evaluate.dart:4772-4783).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _addErrorSpan[T](nodeWithSpan: ssg.sass.ast.AstNode, callback: => T): T = {
+    try {
+      callback
+    } catch {
+      case error: SassRuntimeException =>
+        if (!error.span.text.startsWith("@error")) throw error
+        throw SassRuntimeException(error.sassMessage, nodeWithSpan.span, _stackTrace())
+    }
+  }
+
+  /** Returns the [AstNode] whose span should be used for [expression].
+    *
+    * If [expression] is a variable reference, AstNode's span will be the span
+    * where that variable was originally declared. Otherwise, this will just
+    * return [expression].
+    *
+    * Port of dart-sass `_expressionNode` (evaluate.dart:4483-4500).
+    */
+  @annotation.nowarn("msg=unused") // not yet wired
+  private def _expressionNode(expression: ssg.sass.ast.AstNode): ssg.sass.ast.AstNode =
+    expression match {
+      case _: VariableExpression =>
+        // TODO: once Environment tracks variable declaration nodes,
+        // look up the original declaration node for better error spans.
+        // Falls back to the expression itself if not found.
+        expression
+      case _ => expression
+    }
+
+  /** Returns the best human-readable message for [error].
+    *
+    * Port of dart-sass `_getErrorMessage` (evaluate.dart:4786-4795).
+    */
+  @annotation.nowarn("msg=unused private member") // not yet wired
+  private def _getErrorMessage(error: Throwable): String = error match {
+    case e: Error => e.toString
+    case e        =>
+      try e.getMessage
+      catch { case _: Throwable => e.toString }
+  }
+
+  // ---------------------------------------------------------------------------
+  // _runBuiltInCallable — full port of dart-sass evaluate.dart:3676-3758
+  // ---------------------------------------------------------------------------
+
+  /** Runs a [BuiltInCallable] with the given evaluated [arguments].
+    *
+    * This handles:
+    *   - Mapping positional + named arguments to the parameter list
+    *   - Rest argument handling (collecting extras into a SassArgumentList)
+    *   - Keyword argument handling
+    *   - Calling the callback
+    *   - Error wrapping with span context
+    *   - Post-call check that all keywords were accessed
+    *
+    * Port of dart-sass `_runBuiltInCallable` (evaluate.dart:3676-3758).
+    */
+  @annotation.nowarn("msg=unused private member")
+  private def _runBuiltInCallable(
+    arguments:   ssg.sass.ast.sass.ArgumentList,
+    callable:    BuiltInCallable,
+    nodeWithSpan: ssg.sass.ast.AstNode
+  ): Value = {
+    val (positional, named) = _evaluateArguments(arguments)
+
+    val oldCallableNode = _callableNode
+    _callableNode = Nullable(nodeWithSpan)
+
+    // dart-sass: callbackFor selects the overload whose parameter count
+    // matches the given positional count and named set. For non-overloaded
+    // callables, there is a single (overload, callback) pair.
+    // In our implementation, BuiltInCallable always has a single callback
+    // and the arity checking happens via _checkBuiltInArity.
+    _checkBuiltInArity(callable, positional, named)
+
+    // Merge named args into positional slots, then pad with defaults.
+    val merged =
+      if (named.isEmpty) positional
+      else _mergeBuiltInNamedArgs(callable, positional, named)
+    val padded = _padBuiltInPositional(callable, merged)
+
+    // Build a SassArgumentList if there's a rest parameter, so the
+    // callback can call `wereKeywordsAccessed` to check if all named
+    // args were consumed.
+    var argumentList: Nullable[ssg.sass.value.SassArgumentList] = Nullable.empty
+    if (callable.hasRestParameter) {
+      // Find any SassArgumentList in the padded args (from _mergeBuiltInNamedArgs)
+      padded.lastOption match {
+        case Some(al: ssg.sass.value.SassArgumentList) =>
+          argumentList = Nullable(al)
+        case _ => ()
+      }
+    }
+
+    val result: Value =
+      try {
+        _addExceptionSpan(nodeWithSpan, callable.callback(padded))
+      } catch {
+        case e: SassException => throw e
+        case error: Throwable =>
+          throw _exception(_getErrorMessage(error), Nullable(nodeWithSpan.span))
+      }
+    _callableNode = oldCallableNode
+
+    // dart-sass: if there was a SassArgumentList and keywords remain
+    // unconsumed (the callback never called `keywords`), raise an error
+    // listing the unexpected parameter names.
+    argumentList.foreach { al =>
+      if (named.nonEmpty && !al.wereKeywordsAccessed) {
+        val unusedNames = named.keys.map(n => s"$$$n")
+        val word        = Utils.pluralize("parameter", named.size)
+        throw SassRuntimeException(
+          s"No $word named ${Utils.toSentence(unusedNames, "or")}.",
+          nodeWithSpan.span,
+          _stackTrace(Nullable(nodeWithSpan.span))
+        )
+      }
+    }
+
+    result
+  }
+
+  // ---------------------------------------------------------------------------
+  // _warnForBogusCombinators — port of dart-sass evaluate.dart:2486-2536
+  // ---------------------------------------------------------------------------
+
+  /** Emits deprecation warnings for any bogus combinators in [rule].
+    *
+    * Port of dart-sass `_warnForBogusCombinators` (evaluate.dart:2486-2536).
+    */
+  private def _warnForBogusCombinators(rule: ModifiableCssStyleRule): Unit = {
+    // dart-sass calls rule.isInvisibleOtherThanBogusCombinators which delegates
+    // to the style rule's own visibility check. We use the selector's version.
+    if (!rule.selector.isInvisibleOtherThanBogusCombinators) {
+      for (complex <- rule.selector.components) {
+        if (complex.isBogus) {
+          if (complex.isUseless) {
+            _warnWithSpan(
+              s"""The selector "${complex.toString.trim}" is invalid CSS. It """ +
+                "will be omitted from the generated CSS.\n" +
+                "This will be an error in Dart Sass 2.0.0.\n" +
+                "\n" +
+                "More info: https://sass-lang.com/d/bogus-combinators",
+              complex.span.trimRight(),
+              Nullable(Deprecation.BogusCombinators)
+            )
+          } else if (complex.leadingCombinators.nonEmpty) {
+            _warnWithSpan(
+              s"""The selector "${complex.toString.trim}" is invalid CSS.\n""" +
+                "This will be an error in Dart Sass 2.0.0.\n" +
+                "\n" +
+                "More info: https://sass-lang.com/d/bogus-combinators",
+              complex.span.trimRight(),
+              Nullable(Deprecation.BogusCombinators)
+            )
+          } else {
+            _warnWithSpan(
+              s"""The selector "${complex.toString.trim}" is only valid for """ +
+                "nesting and shouldn't\n" +
+                "have children other than style rules." +
+                (if (complex.isBogusOtherThanLeadingCombinator) " It will be omitted from the generated CSS." else "") +
+                "\n" +
+                "This will be an error in Dart Sass 2.0.0.\n" +
+                "\n" +
+                "More info: https://sass-lang.com/d/bogus-combinators",
+              complex.span.trimRight(),
+              Nullable(Deprecation.BogusCombinators)
+            )
+          }
+        }
+      }
+    }
+  }
+
   // ===========================================================================
   // StatementVisitor
   // ===========================================================================
@@ -1074,12 +1463,7 @@ final class EvaluateVisitor(
     // to parse, matching the previous behaviour.
     val parsedExpanded: Nullable[SelectorList] = {
       val childParsed  = SelectorParser.tryParse(childSelectorText)
-      val parentParsed = _styleRule.flatMap { p =>
-        p.selector match {
-          case sl: SelectorList => Nullable(sl)
-          case other => SelectorParser.tryParse(other.toString)
-        }
-      }
+      val parentParsed: Nullable[SelectorList] = _styleRule.map(_.selector)
       if (childParsed.isEmpty) SelectorParser.tryParse(expandedSelector)
       else if (parentParsed.isEmpty) Nullable(childParsed.get)
       else
@@ -1087,8 +1471,17 @@ final class EvaluateVisitor(
         catch { case _: Throwable => SelectorParser.tryParse(expandedSelector) }
     }
 
-    val boxValue: Any = parsedExpanded.fold[Any](expandedSelector)(sl => sl: Any)
-    val modifiableSelectorBox = new ModifiableBox[Any](boxValue)
+    // In the Dart evaluator, `selector` is always a SelectorList. When
+    // AST-based expansion fails, parse the text-expanded selector as a
+    // final fallback. If that also fails (e.g. keyframe selectors like
+    // `0%` which are not valid CSS selectors), wrap the raw text in a
+    // synthetic SelectorList so the type contract is honoured.
+    val selectorList: SelectorList = parsedExpanded.getOrElse {
+      SelectorParser.tryParse(expandedSelector).getOrElse {
+        _syntheticSelectorList(expandedSelector, node.span)
+      }
+    }
+    val modifiableSelectorBox = new ModifiableBox[SelectorList](selectorList)
     val selectorBox           = modifiableSelectorBox.seal()
     val rule                  = new ModifiableCssStyleRule(selectorBox, node.span)
     _selectorBoxes(rule) = modifiableSelectorBox
@@ -1134,6 +1527,8 @@ final class EvaluateVisitor(
       }
     finally _parent = savedParent
     // Mark group end for blank-line control. Use the last VISIBLE child
+    // dart-sass: emit deprecation warnings for bogus combinators (evaluate.dart:2486-2536).
+    _warnForBogusCombinators(rule)
     // (dart-sass skips invisible nodes in the serializer, so marking an
     // invisible empty rule would miss the intended group boundary).
     if (outerStyleRule.isEmpty && nearestNonStyle.children.nonEmpty) {
@@ -1199,6 +1594,20 @@ final class EvaluateVisitor(
         else s"$p $c"
       expanded.mkString(", ")
     }
+
+  /** Creates a synthetic SelectorList for text that cannot be parsed as a CSS
+    * selector (e.g. keyframe selectors like `0%`, `from`, `to`). This is a
+    * temporary workaround until the evaluator properly routes keyframe blocks
+    * through a KeyframeSelectorParser like Dart does.
+    */
+  private def _syntheticSelectorList(text: String, span: ssg.sass.util.FileSpan): SelectorList = {
+    val synSpan   = FileSpan.synthetic(text)
+    val typeSelec  = new TypeSelector(QualifiedName(text), synSpan)
+    val compound   = new CompoundSelector(List(typeSelec), synSpan)
+    val component  = new ComplexSelectorComponent(compound, Nil, synSpan)
+    val complex    = new ComplexSelector(Nil, List(component), synSpan)
+    new SelectorList(List(complex), synSpan)
+  }
 
   override def visitDeclaration(node: Declaration): Value = {
     // ISS-026: mixed-decls deprecation. If a nested style rule has already
@@ -2287,31 +2696,28 @@ final class EvaluateVisitor(
             val t = part.trim
             if (t.nonEmpty) _allExtendableTargets += t
           }
-          val parsed: Nullable[SelectorList] = box.value match {
-            case sl: SelectorList => Nullable(sl)
-            case _ => SelectorParser.tryParse(currentSelector)
-          }
-          if (hasAst && parsed.isDefined) {
+          val selectorList: SelectorList = box.value
+          if (hasAst) {
             // Mark any pending extends whose target simple selector appears
             // in this rule's selector list as "found" in the current scope.
             for (pending <- _pendingExtends)
               if (!pending.found && pending.mediaKey == mediaKey && pending.target.isDefined) {
                 val tgt = pending.target.get
-                val hit = parsed.get.components.exists { complex =>
+                val hit = selectorList.components.exists { complex =>
                   complex.components.exists(_.selector.components.contains(tgt))
                 }
                 if (hit) pending.found = true
               }
-            val extended = astStore.get.extendList(parsed.get)
+            val extended = astStore.get.extendList(selectorList)
             val filtered = extended.components.filterNot(ExtendUtils.isPlaceholderOnly)
             if (filtered.isEmpty) {
               rule.remove()
               removed = true
             } else if (filtered.length != extended.components.length) {
               val newList = new ssg.sass.ast.selector.SelectorList(filtered, extended.span)
-              box.value = newList: Any
+              box.value = newList
             } else {
-              box.value = extended: Any
+              box.value = extended
             }
           } else if (hasLegacy) {
             val parts     = currentSelector.split(',').map((s: String) => s.trim).toList
@@ -2326,11 +2732,14 @@ final class EvaluateVisitor(
                   for (extender <- extenders)
                     augmented += part.replace(target, extender)
                 }
-            box.value = augmented.distinct.mkString(", ")
-          } else if (parsed.isDefined) {
+            val augmentedText = augmented.distinct.mkString(", ")
+            SelectorParser.tryParse(augmentedText).foreach { sl =>
+              box.value = sl
+            }
+          } else {
             // No extensions, but still strip any placeholder-only rules so
             // bare `%foo { ... }` never leaks into CSS output.
-            val filtered = parsed.get.components.filterNot(ExtendUtils.isPlaceholderOnly)
+            val filtered = selectorList.components.filterNot(ExtendUtils.isPlaceholderOnly)
             if (filtered.isEmpty) {
               rule.remove()
               removed = true

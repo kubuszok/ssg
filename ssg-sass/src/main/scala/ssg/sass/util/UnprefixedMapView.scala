@@ -16,12 +16,18 @@ package util
 
 import scala.collection.mutable
 
-/** A view of a map with string keys that strips a prefix from keys. Keys without the prefix are hidden. Remove is supported for @use with.
+/** A view of a map with string keys that strips a prefix from keys.
+  * Keys without the prefix are hidden. Supports `remove()` and
+  * `subtractOne()` so configurations can mark variables as used,
+  * but `addOne()` is unsupported.
+  *
+  * Extends `mutable.Map` so it can be assigned to the same variable as the
+  * underlying mutable map in `Configuration.throughForward`.
   */
 final class UnprefixedMapView[V](
   private val map:    mutable.Map[String, V],
   private val prefix: String
-) extends scala.collection.immutable.AbstractMap[String, V] {
+) extends mutable.AbstractMap[String, V] {
 
   override def get(key: String): Option[V] = map.get(prefix + key)
 
@@ -30,14 +36,16 @@ final class UnprefixedMapView[V](
       case (k, v) if k.startsWith(prefix) => (k.substring(prefix.length), v)
     }
 
-  override def removed(key: String): Map[String, V] =
-    iterator.toMap.removed(key)
+  override def subtractOne(key: String): this.type = {
+    map.remove(prefix + key)
+    this
+  }
 
-  override def updated[V1 >: V](key: String, value: V1): Map[String, V1] =
-    iterator.toMap.updated(key, value)
+  override def addOne(elem: (String, V)): this.type =
+    throw new UnsupportedOperationException("UnprefixedMapView does not support addOne")
 
   override def size: Int = map.keys.count(_.startsWith(prefix))
 
   /** Removes key (with prefix re-added) from the underlying map. */
-  def remove(key: String): Option[V] = map.remove(prefix + key)
+  override def remove(key: String): Option[V] = map.remove(prefix + key)
 }

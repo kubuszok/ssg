@@ -263,11 +263,19 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
     var result = selector
     if (_extensions.nonEmpty) {
-      result = _extendList(
-        original,
-        _extensions.toMap.view.mapValues(_.toMap).toMap,
-        mediaContext.toOption
-      )
+      try {
+        result = _extendList(
+          original,
+          _extensions.toMap.view.mapValues(_.toMap).toMap,
+          mediaContext.toOption
+        )
+      } catch {
+        case error: SassException =>
+          throw new SassException(
+            s"From ${error.span.message("")}\n${error.sassMessage}",
+            error.span
+          )
+      }
     }
 
     val modifiable = new ModifiableBox[SelectorList](result)
@@ -475,7 +483,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       val selectors = try {
         _extendComplex(ext.extender.selector, newExtensions, ext.mediaContext.toOption)
       } catch {
-        case _: SassException => null
+        case error: SassException =>
+          throw error.withAdditionalSpan(
+            ext.extender.selector.span,
+            "target selector"
+          )
       }
       if (selectors == null || selectors.isEmpty) ()
       else {
@@ -516,7 +528,12 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
           _mediaContexts.get(selector)
         )
       } catch {
-        case _: SassException => ()
+        // TODO(nweiz): Make this a MultiSpanSassException.
+        case error: SassException =>
+          throw new SassException(
+            s"From ${selector.value.span.message("")}\n${error.sassMessage}",
+            error.span
+          )
       }
       if (!(oldValue eq selector.value))
         _registerSelector(selector.value, selector)
@@ -838,11 +855,23 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     while (i >= 0) {
       val complex1 = selectors(i)
       if (isOriginal(complex1)) {
-        // Duplicate-original check
+        // Make sure we don't include duplicate originals, which could happen if
+        // a style rule extends a component of its own selector.
         var dup = false
         var j   = 0
         while (!dup && j < numOriginals) {
-          if (result(j) == complex1) dup = true
+          if (result(j) == complex1) {
+            // rotateSlice(result, 0, j + 1): move result(j) to position 0,
+            // shift elements 0..j-1 one position right.
+            val saved = result(j)
+            var k = j
+            while (k > 0) {
+              result(k) = result(k - 1)
+              k -= 1
+            }
+            result(0) = saved
+            dup = true
+          }
           j += 1
         }
         if (!dup) {

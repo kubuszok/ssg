@@ -14,17 +14,40 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{ Callable, Nullable }
+import ssg.sass.{ Callable, Nullable, SassScriptException }
+import ssg.sass.Nullable.*
 import ssg.sass.visitor.ValueVisitor
 
-/** A SassScript mixin reference. */
+/** A SassScript mixin reference.
+  *
+  * A mixin reference captures a mixin from the local environment so that
+  * it may be passed between modules.
+  */
 final class SassMixin(
-  val callable: Callable
+  val callable: Callable,
+  /** The unique compile context for tracking if this [[SassMixin]] belongs to the
+    * current compilation or not.
+    */
+  private val compileContext: Nullable[AnyRef] = Nullable.Null
 ) extends Value {
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitMixin(this)
 
   override def assertMixin(name: Nullable[String]): SassMixin = this
+
+  /** Asserts that this SassMixin belongs to [compileContext] and returns it.
+    *
+    * It's checked before evaluating a SassMixin to prevent execution of
+    * SassMixin across different compilations.
+    */
+  def assertCompileContext(ctx: AnyRef): SassMixin = {
+    if (compileContext.isDefined && (compileContext.get ne ctx)) {
+      throw SassScriptException(
+        s"$this does not belong to current compilation."
+      )
+    }
+    this
+  }
 
   override def hashCode(): Int = callable.hashCode()
 
@@ -34,4 +57,15 @@ final class SassMixin(
   }
 
   override def toString: String = s"""get-mixin("${callable.name}")"""
+}
+
+object SassMixin {
+
+  /** Creates a SassMixin without a compile context (for plugin-defined mixins). */
+  def apply(callable: Callable): SassMixin =
+    new SassMixin(callable)
+
+  /** Creates a SassMixin with a compile context (for user-defined mixins). */
+  def withCompileContext(callable: Callable, compileContext: AnyRef): SassMixin =
+    new SassMixin(callable, Nullable(compileContext))
 }

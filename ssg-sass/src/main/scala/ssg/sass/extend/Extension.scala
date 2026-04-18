@@ -160,7 +160,7 @@ object MergedExtension {
     (left.mediaContext.toOption, right.mediaContext.toOption) match {
       case (Some(l), Some(r)) if l != r =>
         throw new SassException(
-          s"From ${left.span}\n" +
+          s"From ${left.span.message("")}\n" +
             "You may not @extend the same selector from within different media queries.",
           right.span
         )
@@ -171,6 +171,10 @@ object MergedExtension {
     // doesn't need to be merged.
     if (right.isOptional && right.mediaContext.toOption.isEmpty) left
     else if (left.isOptional && left.mediaContext.toOption.isEmpty) right
-    else new MergedExtension(left, right)
+    else {
+      val merged = new MergedExtension(left, right)
+      merged.extender._extension = Nullable(merged)
+      merged
+    }
   }
 }

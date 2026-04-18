@@ -56,11 +56,17 @@ final class CleanupSuite extends munit.FunSuite {
   }
 
   test("Configuration.throwErrorForUnknownVariables throws for explicit unused values") {
-    val cfg = Configuration(
+    val fakeNode = ssg.sass.ast.AstNode.fake { () =>
+      val file = new ssg.sass.util.SourceFile(Nullable.empty, "")
+      val loc  = ssg.sass.util.FileLocation(file, 0, 0, 0)
+      ssg.sass.util.FileSpan(file, loc, loc)
+    }
+    val cfg = ExplicitConfiguration(
       Map(
         "primary" -> ConfiguredValue.explicit(SassNumber(1.0)),
         "accent" -> ConfiguredValue.explicit(SassNumber(2.0))
-      )
+      ),
+      fakeNode
     )
     intercept[SassException](cfg.throwErrorForUnknownVariables())
   }
