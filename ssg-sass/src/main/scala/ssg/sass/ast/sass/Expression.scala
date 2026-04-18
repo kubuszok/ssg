@@ -36,10 +36,11 @@ package sass
 package ast
 package sass
 
-import ssg.sass.Nullable
+import ssg.sass.{ InterpolationBuffer, Nullable }
 import ssg.sass.Nullable.*
 import ssg.sass.util.{ FileSpan, initialIdentifier, withoutNamespace }
 import ssg.sass.value.{ ListSeparator, SassColor, SassNumber, Value }
+import ssg.sass.visitor.SourceInterpolationVisitor
 
 import scala.util.boundary
 import scala.util.boundary.break
@@ -93,6 +94,17 @@ abstract class Expression extends SassNode {
 
   /** Calls the appropriate visit method on [visitor]. */
   def accept[T](visitor: ExpressionVisitor[T]): T
+
+  /** If this expression is valid interpolated plain CSS, returns the equivalent of parsing its source as an interpolated
+    * unknown value.
+    *
+    * Otherwise, returns empty.
+    */
+  def sourceInterpolation: Nullable[Interpolation] = {
+    val visitor = new SourceInterpolationVisitor()
+    accept(visitor)
+    visitor.buffer.map(_.interpolation(span))
+  }
 
   /** Returns whether this expression can safely be used in a calculation context.
     *
@@ -768,9 +780,37 @@ final case class StringExpression(
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitStringExpression(this)
 
-  override def toString: String =
-    if (!hasQuotes) text.toString
-    else s"\"$text\""
+  /** Interpolation that, when evaluated, produces the syntax of this string.
+    *
+    * Unlike [text], this doesn't resolve escapes and does include quotes for quoted strings.
+    *
+    * If [static] is true, this escapes any `#{` sequences in the string. If [quote] is passed, it uses that character
+    * as the quote mark; otherwise, it determines the best quote to add by looking at the string.
+    */
+  def asInterpolation(static: Boolean = false, quote: Nullable[Char] = Nullable.empty): Interpolation = {
+    if (!hasQuotes) text
+    else {
+      val q      = quote.getOrElse(StringExpression._bestQuote(text.contents.collect { case s: String => s }))
+      val buffer = new InterpolationBuffer()
+      buffer.writeChar(q)
+      var i = 0
+      while (i < text.contents.length) {
+        val value = text.contents(i)
+        value match {
+          case expr: Expression =>
+            buffer.add(expr, text.spanForElement(i))
+          case s: String =>
+            StringExpression._quoteInnerText(s, q, buffer, static = static)
+          case _ => // should not happen per Interpolation invariants
+        }
+        i += 1
+      }
+      buffer.writeChar(q)
+      buffer.interpolation(text.span)
+    }
+  }
+
+  override def toString: String = asInterpolation().toString
 }
 
 object StringExpression {
@@ -781,7 +821,7 @@ object StringExpression {
     val quote  = _bestQuote(List(text))
     val buffer = new StringBuilder()
     buffer.append(quote)
-    _quoteInnerText(text, quote, buffer)
+    _quoteInnerTextSb(text, quote, buffer, static = true)
     buffer.append(quote)
     buffer.toString()
   }
@@ -790,7 +830,44 @@ object StringExpression {
   def plain(text: String, span: FileSpan, quotes: Boolean = false): StringExpression =
     StringExpression(Interpolation.plain(text, span), hasQuotes = quotes)
 
-  private def _quoteInnerText(text: String, quote: Char, buffer: StringBuilder): Unit = {
+  /** Writes to [buffer] the contents of a string (without quotes) that evaluates to [text] according to Sass's parsing
+    * logic.
+    *
+    * This always adds an escape sequence before [quote]. If [static] is true, it also escapes any `#{` sequences in the
+    * string.
+    */
+  private[sass] def _quoteInnerText(text: String, quote: Char, buffer: InterpolationBuffer, static: Boolean = false): Unit = {
+    var i = 0
+    while (i < text.length) {
+      val c = text.charAt(i)
+      if (c == '\n' || c == '\r' || c == '\f') {
+        buffer.writeChar('\\')
+        buffer.writeChar('a')
+        if (i != text.length - 1) {
+          val next = text.charAt(i + 1)
+          if (Character.isWhitespace(next) || isHex(next)) {
+            buffer.writeChar(' ')
+          }
+        }
+      } else if (c == '\\') {
+        buffer.writeChar('\\')
+        buffer.writeChar(c)
+      } else if (c == quote) {
+        buffer.writeChar('\\')
+        buffer.writeChar(c)
+      } else if (c == '#' && static && i < text.length - 1 && text.charAt(i + 1) == '{') {
+        buffer.writeChar('\\')
+        buffer.writeChar(c)
+      } else {
+        buffer.writeChar(c)
+      }
+      i += 1
+    }
+  }
+
+  /** StringBuilder-based variant used by [quoteText] (static context, no InterpolationBuffer needed). */
+  @scala.annotation.nowarn("msg=unused private member")
+  private def _quoteInnerTextSb(text: String, quote: Char, buffer: StringBuilder, static: Boolean = false): Unit = {
     var i = 0
     while (i < text.length) {
       val c = text.charAt(i)
@@ -802,7 +879,13 @@ object StringExpression {
             buffer.append(' ')
           }
         }
-      } else if (c == '\\' || c == quote) {
+      } else if (c == '\\') {
+        buffer.append('\\')
+        buffer.append(c)
+      } else if (c == quote) {
+        buffer.append('\\')
+        buffer.append(c)
+      } else if (c == '#' && static && i < text.length - 1 && text.charAt(i + 1) == '{') {
         buffer.append('\\')
         buffer.append(c)
       } else {
@@ -812,7 +895,7 @@ object StringExpression {
     }
   }
 
-  private def _bestQuote(strings: List[String]): Char = boundary {
+  private[sass] def _bestQuote(strings: List[String]): Char = boundary {
     var containsDoubleQuote = false
     for {
       value <- strings

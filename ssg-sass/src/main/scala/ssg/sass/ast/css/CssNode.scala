@@ -11,7 +11,7 @@
  *   Renames: css/node.dart + css/value.dart + css/modifiable/node.dart -> CssNode.scala
  *   Convention: Dart abstract class -> Scala abstract class; mutable parent via var
  *   Idiom: _children internal list exposed as unmodifiable view via children
- *   Idiom: _IsInvisibleVisitor deferred to Phase 5 when CssVisitor is available
+ *   Idiom: _IsInvisibleVisitor ported as CssNode.IsInvisibleVisitor extending EveryCssVisitor
  */
 package ssg
 package sass
@@ -20,7 +20,7 @@ package css
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.visitor.CssVisitor
+import ssg.sass.visitor.{ CssVisitor, EveryCssVisitor }
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -44,17 +44,45 @@ abstract class CssNode extends AstNode {
   /** Whether this is invisible and won't be emitted to the compiled stylesheet.
     *
     * Note that this doesn't consider nodes that contain loud comments to be invisible even though they're omitted in compressed mode.
-    *
-    * Default implementation returns false; overridden via visitor.
     */
-  def isInvisible: Boolean = false
+  def isInvisible: Boolean =
+    accept(CssNode.IsInvisibleVisitor(includeBogus = true, includeComments = false))
 
   /** Whether this node would be invisible even if style rule selectors within it didn't have bogus combinators.
+    *
+    * Note that this doesn't consider nodes that contain loud comments to be invisible even though they're omitted in compressed mode.
     */
-  def isInvisibleOtherThanBogusCombinators: Boolean = false
+  def isInvisibleOtherThanBogusCombinators: Boolean =
+    accept(CssNode.IsInvisibleVisitor(includeBogus = false, includeComments = false))
 
   /** Whether this node will be invisible when loud comments are stripped. */
-  def isInvisibleHidingComments: Boolean = false
+  def isInvisibleHidingComments: Boolean =
+    accept(CssNode.IsInvisibleVisitor(includeBogus = true, includeComments = true))
+}
+
+object CssNode {
+
+  /** The visitor used to implement [CssNode.isInvisible]. */
+  private[css] final class IsInvisibleVisitor(
+    /** Whether to consider selectors with bogus combinators invisible. */
+    val includeBogus:    Boolean,
+    /** Whether to consider comments invisible. */
+    val includeComments: Boolean
+  ) extends EveryCssVisitor {
+
+    // An unknown at-rule is never invisible. Because we don't know the semantics
+    // of unknown rules, we can't guarantee that (for example) `@foo {}` isn't
+    // meaningful.
+    override def visitCssAtRule(node: CssAtRule): Boolean = false
+
+    override def visitCssComment(node: CssComment): Boolean =
+      includeComments && !node.isPreserved
+
+    override def visitCssStyleRule(node: CssStyleRule): Boolean =
+      (if (includeBogus) node.selector.isInvisible
+       else node.selector.isInvisibleOtherThanBogusCombinators) ||
+        super.visitCssStyleRule(node)
+  }
 }
 
 /** A CssNode that can have child statements. */

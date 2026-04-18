@@ -192,6 +192,16 @@ final class SpanScanner(
     FileSpan(sourceFile, startLoc, endLoc)
   }
 
+  /** Returns whether the scanner is at a position where [text] matches the
+    * upcoming characters, without consuming any input.
+    *
+    * Dart: `StringScanner.matches(Pattern)`.
+    */
+  def matches(text: String): Boolean = {
+    if (position + text.length > string.length) false
+    else string.regionMatches(position, text, 0, text.length)
+  }
+
   /** Creates a zero-length span at the current position. */
   def emptySpan: FileSpan = {
     val loc = FileLocation(sourceFile, position, _line, _column)

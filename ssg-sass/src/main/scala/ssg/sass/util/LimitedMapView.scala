@@ -16,12 +16,17 @@ package util
 
 import scala.collection.mutable
 
-/** A mostly-unmodifiable view of a map that only allows certain keys. Unmodifiable except for remove(), used for @use with configuration.
+/** A mostly-unmodifiable view of a map that only allows certain keys.
+  * Supports `remove()` and `subtractOne()` so configurations can mark
+  * variables as used, but `addOne()` is unsupported.
+  *
+  * Extends `mutable.Map` so it can be assigned to the same variable as the
+  * underlying mutable map in `Configuration.throughForward`.
   */
 final class LimitedMapView[K, V] private (
   private val map:         mutable.Map[K, V],
   private val allowedKeys: mutable.Set[K]
-) extends scala.collection.immutable.AbstractMap[K, V] {
+) extends mutable.AbstractMap[K, V] {
 
   override def get(key: K): Option[V] =
     if (allowedKeys.contains(key)) map.get(key)
@@ -32,16 +37,21 @@ final class LimitedMapView[K, V] private (
       map.get(k).map(v => (k, v))
     }
 
-  override def removed(key: K): Map[K, V] =
-    iterator.toMap.removed(key)
+  override def subtractOne(key: K): this.type = {
+    if (allowedKeys.contains(key)) {
+      allowedKeys -= key
+      map.remove(key)
+    }
+    this
+  }
 
-  override def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
-    iterator.toMap.updated(key, value)
+  override def addOne(elem: (K, V)): this.type =
+    throw new UnsupportedOperationException("LimitedMapView does not support addOne")
 
-  override def size: Int = allowedKeys.size
+  override def size: Int = allowedKeys.count(map.contains)
 
   /** Removes key from the underlying map if it's in the allowed set. */
-  def remove(key: K): Option[V] =
+  override def remove(key: K): Option[V] =
     if (allowedKeys.contains(key)) {
       allowedKeys -= key
       map.remove(key)

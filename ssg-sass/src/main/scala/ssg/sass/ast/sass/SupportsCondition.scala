@@ -16,13 +16,14 @@
  *   Renames: supports_condition.dart + 6 subtypes -> SupportsCondition.scala
  *   Convention: Dart abstract interface class -> Scala trait;
  *               Dart final class -> Scala final case class
- *   Idiom: toInterpolation and withSpan deferred (need InterpolationBuffer)
+ *   Idiom: toInterpolation uses InterpolationBuffer with span.before/after/between for fidelity
  */
 package ssg
 package sass
 package ast
 package sass
 
+import ssg.sass.InterpolationBuffer
 import ssg.sass.util.FileSpan
 
 /** An abstract class for defining the condition a `@supports` rule selects. */
@@ -52,9 +53,13 @@ final case class SupportsAnything(
   span:     FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation =
-    // Simplified: full version uses InterpolationBuffer
-    Interpolation.plain(toString, span)
+  def toInterpolation(): Interpolation = {
+    val buffer = new InterpolationBuffer()
+    buffer.write(span.before(contents.span).text)
+    buffer.addInterpolation(contents)
+    buffer.write(span.after(contents.span).text)
+    buffer.interpolation(span)
+  }
 
   def withSpan(newSpan: FileSpan): SupportsAnything =
     SupportsAnything(contents, newSpan)
@@ -88,9 +93,27 @@ final case class SupportsDeclaration(
     case _ => false
   }
 
-  def toInterpolation(): Interpolation =
-    // Simplified: full version uses InterpolationBuffer
-    Interpolation.plain(toString, span)
+  def toInterpolation(): Interpolation = {
+    val buffer = new InterpolationBuffer()
+    buffer.write(span.before(name.span).text)
+    name match {
+      case se: StringExpression if !se.hasQuotes =>
+        buffer.addInterpolation(se.text)
+      case _ =>
+        buffer.add(name, name.span)
+    }
+
+    buffer.write(name.span.between(value.span).text)
+    val sourceInterp = value.sourceInterpolation
+    if (sourceInterp.isDefined) {
+      buffer.addInterpolation(sourceInterp.get)
+    } else {
+      buffer.add(value, value.span)
+    }
+
+    buffer.write(span.after(value.span).text)
+    buffer.interpolation(span)
+  }
 
   def withSpan(newSpan: FileSpan): SupportsDeclaration =
     SupportsDeclaration(name, value, newSpan)
@@ -117,9 +140,14 @@ final case class SupportsFunction(
   span:      FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation =
-    // Simplified: full version uses InterpolationBuffer
-    Interpolation.plain(toString, span)
+  def toInterpolation(): Interpolation = {
+    val buffer = new InterpolationBuffer()
+    buffer.addInterpolation(name)
+    buffer.write(name.span.between(arguments.span).text)
+    buffer.addInterpolation(arguments)
+    buffer.write(span.after(arguments.span).text)
+    buffer.interpolation(span)
+  }
 
   def withSpan(newSpan: FileSpan): SupportsFunction =
     SupportsFunction(name, arguments, newSpan)
@@ -168,9 +196,13 @@ final case class SupportsNegation(
   span:      FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation =
-    // Simplified: full version uses InterpolationBuffer
-    Interpolation.plain(toString, span)
+  def toInterpolation(): Interpolation = {
+    val buffer = new InterpolationBuffer()
+    buffer.write(span.before(condition.span).text)
+    buffer.addInterpolation(condition.toInterpolation())
+    buffer.write(span.after(condition.span).text)
+    buffer.interpolation(span)
+  }
 
   def withSpan(newSpan: FileSpan): SupportsNegation =
     SupportsNegation(condition, newSpan)
@@ -204,9 +236,15 @@ final case class SupportsOperation(
   span:     FileSpan
 ) extends SupportsCondition {
 
-  def toInterpolation(): Interpolation =
-    // Simplified: full version uses InterpolationBuffer
-    Interpolation.plain(toString, span)
+  def toInterpolation(): Interpolation = {
+    val buffer = new InterpolationBuffer()
+    buffer.write(span.before(left.span).text)
+    buffer.addInterpolation(left.toInterpolation())
+    buffer.write(left.span.between(right.span).text)
+    buffer.addInterpolation(right.toInterpolation())
+    buffer.write(span.after(right.span).text)
+    buffer.interpolation(span)
+  }
 
   def withSpan(newSpan: FileSpan): SupportsOperation =
     SupportsOperation(left, right, operator, newSpan)

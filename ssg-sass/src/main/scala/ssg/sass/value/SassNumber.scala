@@ -408,16 +408,18 @@ abstract class SassNumber protected (
   override def plus(other: Value): Value = other match {
     case n: SassNumber =>
       withValue(coerceUnits(n, (num1, num2) => num1 + num2))
+    case _: SassColor =>
+      throw SassScriptException(s"""Undefined operation "$this + $other".""")
     case _ =>
-      // SassColor check would go here when SassColor is ported
       super.plus(other)
   }
 
   override def minus(other: Value): Value = other match {
     case n: SassNumber =>
       withValue(coerceUnits(n, (num1, num2) => num1 - num2))
+    case _: SassColor =>
+      throw SassScriptException(s"""Undefined operation "$this - $other".""")
     case _ =>
-      // SassColor check would go here when SassColor is ported
       super.minus(other)
   }
 

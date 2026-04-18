@@ -65,15 +65,19 @@ object ColorFunctions {
     if (n.compatibleWithUnit("deg")) n.coerceValueToUnit("deg")
     else n.value
 
-  /** The red channel of a color as a 0-255 integer (rounded). */
+  /** The red channel of a color as a 0-255 integer (rounded).
+    *
+    * Uses standard `.round` to match Dart's `color.red` getter which calls
+    * `_legacyChannel(ColorSpace.rgb, 'red').round()`.
+    */
   private def red255(c: SassColor): Double =
-    fuzzyRound(c.toSpace(ColorSpace.rgb).channel0).toDouble
+    math.round(c.toSpace(ColorSpace.rgb).channel0).toDouble
 
   private def green255(c: SassColor): Double =
-    fuzzyRound(c.toSpace(ColorSpace.rgb).channel1).toDouble
+    math.round(c.toSpace(ColorSpace.rgb).channel1).toDouble
 
   private def blue255(c: SassColor): Double =
-    fuzzyRound(c.toSpace(ColorSpace.rgb).channel2).toDouble
+    math.round(c.toSpace(ColorSpace.rgb).channel2).toDouble
 
   private def hueDeg(c: SassColor): Double =
     c.toSpace(ColorSpace.hsl).channel0
@@ -481,13 +485,13 @@ object ColorFunctions {
       }
   }
 
-  /** Force a SassNumber to have % unit if it already has a % or is unitless.
-    * Used for HSL saturation/lightness.
+  /** Returns [number] with unit `'%'` regardless of its original unit.
+    * Ported from dart-sass `_forcePercent`.
     */
   private def forcePercent(value: Option[SassNumber]): Option[SassNumber] =
     value.map { n =>
-      if (n.hasUnit("%") || !n.hasUnits) n
-      else n // Keep as-is if it has other units (will error in channelFromValue)
+      if (n.numeratorUnits == List("%") && n.denominatorUnits.isEmpty) n
+      else SassNumber(n.value, "%")
     }
 
   // --- Constructors ---
@@ -825,21 +829,23 @@ object ColorFunctions {
   private val alphaFn: BuiltInCallable =
     BuiltInCallable.function("alpha", "$color", { args =>
       args.head match {
-        case _: SassColor => SassNumber(args.head.assertColor().alpha)
-        // IE alpha(opacity=N) filter
+        // IE alpha(opacity=N) filter — no deprecation warning
         case s: SassString if !s.hasQuotes && s.text.contains("=") =>
           SassString(s"alpha(${s.text})", hasQuotes = false)
-        case v => SassNumber(v.assertColor(Nullable("color")).alpha)
+        case _ =>
+          BuiltInCallable.warnForGlobalBuiltIn("color", "alpha")
+          SassNumber(args.head.assertColor(Nullable("color")).alpha)
       }
     })
 
   private val opacityFn: BuiltInCallable =
     BuiltInCallable.function("opacity", "$color", { args =>
       // CSS filter overload: opacity(50%) / opacity(1) / opacity(var(--x))
-      if (isCssFilterValue(args.head)) {
-        SassString(s"opacity(${args.head.toCssString(quote = false)})", hasQuotes = false)
+      if (args.head.isInstanceOf[SassNumber] || args.head.isSpecialNumber) {
+        functionString("opacity", args)
       } else {
-        SassNumber(args.head.assertColor().alpha)
+        BuiltInCallable.warnForGlobalBuiltIn("color", "opacity")
+        SassNumber(args.head.assertColor(Nullable("color")).alpha)
       }
     })
 
@@ -976,6 +982,7 @@ object ColorFunctions {
         if (cssFilterArg != null && isCssFilterValue(cssFilterArg)) {
           SassString(s"saturate(${cssFilterArg.toCssString(quote = false)})", hasQuotes = false)
         } else {
+          BuiltInCallable.warnForGlobalBuiltIn("color", "adjust")
           val c = args(0).assertColor()
           if (!c.isLegacy) {
             throw SassScriptException(
@@ -1058,9 +1065,10 @@ object ColorFunctions {
       "$color",
       { args =>
         // CSS filter overload: grayscale(50%) / grayscale(1) / grayscale(var(--x))
-        if (isCssFilterValue(args(0))) {
-          SassString(s"grayscale(${args(0).toCssString(quote = false)})", hasQuotes = false)
+        if (args(0).isInstanceOf[SassNumber] || args(0).isSpecialNumber) {
+          functionString("grayscale", args)
         } else {
+        BuiltInCallable.warnForGlobalBuiltIn("color", "grayscale")
         val c = args(0).assertColor()
         if (c.isLegacy) {
           val hsl = c.toSpace(ColorSpace.hsl)
@@ -1089,6 +1097,10 @@ object ColorFunctions {
       "invert",
       "$color, $weight: 100%, $space: null",
       { args =>
+        // Emit global-builtin deprecation when not a CSS passthrough
+        if (!args(0).isInstanceOf[SassNumber] && !args(0).isSpecialNumber) {
+          BuiltInCallable.warnForGlobalBuiltIn("color", "invert")
+        }
         // $weight may be SassNull when skipped via named $space parameter
         // (the framework fills gaps with null instead of parsing defaults)
         val weightNumber = if (args(1) eq SassNull) SassNumber(100, "%") else args(1).assertNumber(Nullable("weight"))
@@ -1779,41 +1791,63 @@ object ColorFunctions {
 
   // --- Registration ---
 
+  /** Globally available color built-ins. Mirrors dart-sass `global`.
+    *
+    * Functions that always exist as CSS natives (rgb, rgba, hsl, hsla, hwb,
+    * lab, lch, oklab, oklch, color) do NOT get the `global-builtin` deprecation.
+    * Functions with conditional CSS filter overloads (invert, grayscale,
+    * saturate, alpha, opacity) emit the `global-builtin` warning inline
+    * (only when the argument is a Sass color, not a CSS passthrough). All
+    * other legacy functions use `.withDeprecationWarning("color")` or
+    * `.withDeprecationWarning("color", "adjust")`.
+    */
   val global: List[Callable] = List(
+    // ### RGB — channel accessors with deprecation
+    redFn.withDeprecationWarning("color"),
+    greenFn.withDeprecationWarning("color"),
+    blueFn.withDeprecationWarning("color"),
+    mixFn.withDeprecationWarning("color"),
+    // CSS-native rgb/rgba — no deprecation
     rgbFn,
     rgbaFn,
+    // invert has conditional inline warnForGlobalBuiltIn
+    invertFn,
+    // ### HSL — channel accessors with deprecation
+    hueFn.withDeprecationWarning("color"),
+    saturationFn.withDeprecationWarning("color"),
+    lightnessFn.withDeprecationWarning("color"),
+    // CSS-native hsl/hsla — no deprecation
     hslFn,
     hslaFn,
+    // grayscale has conditional inline warnForGlobalBuiltIn
+    grayscaleFn,
+    // Manipulation — point to color.adjust
+    adjustHueFn.withDeprecationWarning("color", "adjust"),
+    lightenFn.withDeprecationWarning("color", "adjust"),
+    darkenFn.withDeprecationWarning("color", "adjust"),
+    // saturate has conditional inline warnForGlobalBuiltIn in color branch
+    saturateFn,
+    desaturateFn.withDeprecationWarning("color", "adjust"),
+    // ### Opacity
+    opacifyFn.withDeprecationWarning("color", "adjust"),
+    fadeInFn.withDeprecationWarning("color", "adjust"),
+    transparentizeFn.withDeprecationWarning("color", "adjust"),
+    fadeOutFn.withDeprecationWarning("color", "adjust"),
+    // alpha/opacity have conditional inline warnForGlobalBuiltIn
+    alphaFn,
+    opacityFn,
+    // ### Color Spaces — CSS-native, no deprecation
+    colorFn,
     hwbFn,
     labFn,
     lchFn,
     oklabFn,
     oklchFn,
-    colorFn,
-    redFn,
-    greenFn,
-    blueFn,
-    hueFn,
-    saturationFn,
-    lightnessFn,
-    alphaFn,
-    opacityFn,
-    mixFn,
-    lightenFn,
-    darkenFn,
-    saturateFn,
-    desaturateFn,
-    adjustHueFn,
-    complementFn,
-    grayscaleFn,
-    invertFn,
-    opacifyFn,
-    transparentizeFn,
-    fadeInFn,
-    fadeOutFn,
-    changeColorFn,
-    adjustColorFn,
-    scaleColorFn
+    complementFn.withDeprecationWarning("color"),
+    // ### Miscellaneous
+    adjustColorFn.withDeprecationWarning("color", "adjust"),
+    scaleColorFn.withDeprecationWarning("color", "scale"),
+    changeColorFn.withDeprecationWarning("color", "change")
   )
 
   // --- Module-only function aliases (without -color suffix) ---

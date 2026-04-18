@@ -96,10 +96,16 @@ enum Deprecation(
   case FunctionName extends Deprecation("function-name", Version(1, 98, 0), "Uppercase reserved function names.")
   case UserAuthored extends Deprecation("user-authored", Nullable.Null)
 
+  /// @deprecated This deprecation name was never actually used.
+  case CalcInterp extends Deprecation("calc-interp", Nullable.Null)
+
   override def toString: String = id
 }
 
 object Deprecation {
+
+  /// @deprecated Use DuplicateVarFlags instead.
+  val duplicateVariableFlags: Deprecation = Deprecation.DuplicateVarFlags
 
   /** Returns the deprecation with the given ID, or None. */
   def fromId(id: String): Option[Deprecation] =

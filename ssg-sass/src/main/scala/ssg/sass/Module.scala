@@ -15,7 +15,8 @@ package ssg
 package sass
 
 import scala.language.implicitConversions
-import ssg.sass.ast.css.CssStylesheet
+import ssg.sass.ast.AstNode
+import ssg.sass.ast.css.{ CssComment, CssStylesheet }
 import ssg.sass.ast.sass.ForwardRule
 import ssg.sass.value.Value
 
@@ -23,29 +24,66 @@ import ssg.sass.value.Value
   */
 trait Module[T <: Callable] {
 
-  /** The canonical URL of this module's source stylesheet, if any. */
+  /// The canonical URL for this module's source file.
+  ///
+  /// This may be `null` if the module was loaded from a string without a URL
+  /// provided.
   def url: Nullable[String]
 
-  /** The variables defined in this module. */
+  /// Modules that this module uses.
+  def upstream: List[Module[T]]
+
+  /// The module's variables.
   def variables: Map[String, Value]
 
-  /** The functions defined in this module. */
+  /// The nodes where each variable in [variables] was defined.
+  ///
+  /// This stores [AstNode]s rather than [FileSpan]s so it can avoid calling
+  /// [AstNode.span] if the span isn't required, since some nodes need to do
+  /// real work to manufacture a source span.
+  ///
+  /// Implementations must ensure that this has the same keys as [variables].
+  def variableNodes: Map[String, AstNode]
+
+  /// The module's functions.
+  ///
+  /// Implementations must ensure that each [Callable] is stored under its
+  /// own name.
   def functions: Map[String, T]
 
-  /** The mixins defined in this module. */
+  /// The module's mixins.
+  ///
+  /// Implementations must ensure that each [Callable] is stored under its
+  /// own name.
   def mixins: Map[String, T]
 
-  /** The CSS emitted by evaluating this module. */
+  /// The module's CSS tree.
   def css: CssStylesheet
 
-  /** Whether this module's source was loaded from a dependency. */
+  /// A map from modules in [upstream] to loud comments written in this module
+  /// that should be emitted before the given module.
+  def preModuleComments: Map[Module[T], List[CssComment]]
+
+  /// Whether this module *or* any modules in [upstream] contain any CSS.
   def transitivelyContainsCss: Boolean
 
-  /** Whether this module contains any `@extend` rules. */
+  /// Whether this module *or* any modules in [upstream] contain `@extend`
+  /// rules.
   def transitivelyContainsExtensions: Boolean
 
-  /** Sets a variable's value in this module. */
+  /// Sets the variable named [name] to [value], associated with
+  /// [nodeWithSpan]'s source span.
+  ///
+  /// This takes an [AstNode] rather than a [FileSpan] so it can avoid calling
+  /// [AstNode.span] if the span isn't required, since some nodes need to do
+  /// real work to manufacture a source span.
+  ///
+  /// Throws a [SassScriptException] if this module doesn't define a variable
+  /// named [name].
   def setVariable(name: String, value: Value): Unit
+
+  /// Creates a copy of this module with new [css] and [extender].
+  def cloneCss(): Module[T]
 
   /** Returns an opaque identity token for the variable named [name] — used
     * by dart-sass's `_assertNoConflicts` to deduplicate variables that
@@ -81,6 +119,8 @@ final class BuiltInModule[T <: Callable](
 
   def url: Nullable[String] = s"sass:$name"
 
+  val upstream: List[Module[T]] = Nil
+
   val functions: Map[String, T] = functionList.map(f => f.name -> f).toMap
 
   val mixins: Map[String, T] = mixinList.map(m => m.name -> m).toMap
@@ -88,14 +128,20 @@ final class BuiltInModule[T <: Callable](
   private val variablesState = scala.collection.mutable.Map.from(variableMap)
   def variables: Map[String, Value] = variablesState.toMap
 
+  def variableNodes: Map[String, AstNode] = Map.empty
+
   // Built-in modules never produce CSS — return an empty stylesheet.
   val css: CssStylesheet = CssStylesheet.empty(url)
+
+  val preModuleComments: Map[Module[T], List[CssComment]] = Map.empty
 
   def transitivelyContainsCss:        Boolean = false
   def transitivelyContainsExtensions: Boolean = false
 
   def setVariable(name: String, value: Value): Unit =
     variablesState(name) = value
+
+  def cloneCss(): Module[T] = this
 }
 
 /** A view of a [[Module]] that only exposes members matching a forward rule (`@forward ... show`/`hide`).
@@ -142,9 +188,16 @@ final class ForwardedView[T <: Callable](
 
   def url: Nullable[String] = inner.url
 
+  def upstream: List[Module[T]] = inner.upstream
+
   def variables: Map[String, Value] =
     inner.variables.collect {
       case (n, v) if _isVarVisible(_prefixed(n)) => _prefixed(n) -> v
+    }
+
+  def variableNodes: Map[String, AstNode] =
+    inner.variableNodes.collect {
+      case (n, node) if _isVarVisible(_prefixed(n)) => _prefixed(n) -> node
     }
 
   def functions: Map[String, T] =
@@ -157,9 +210,10 @@ final class ForwardedView[T <: Callable](
       case (n, m) if _isCallableVisible(_prefixed(n)) => _prefixed(n) -> m
     }
 
-  def css:                            CssStylesheet = inner.css
-  def transitivelyContainsCss:        Boolean       = inner.transitivelyContainsCss
-  def transitivelyContainsExtensions: Boolean       = inner.transitivelyContainsExtensions
+  def css:                            CssStylesheet                   = inner.css
+  def preModuleComments:              Map[Module[T], List[CssComment]] = inner.preModuleComments
+  def transitivelyContainsCss:        Boolean                         = inner.transitivelyContainsCss
+  def transitivelyContainsExtensions: Boolean                         = inner.transitivelyContainsExtensions
 
   def setVariable(name: String, value: Value): Unit =
     // The incoming `name` is the prefixed key (caller-side). Visibility
@@ -171,6 +225,8 @@ final class ForwardedView[T <: Callable](
       _unprefix(name).fold(throw new IllegalArgumentException(s"Undefined variable: $$$name")) { underlying =>
         inner.setVariable(underlying, value)
       }
+
+  def cloneCss(): Module[T] = inner.cloneCss()
 
   override def variableIdentity(name: String): AnyRef = {
     val underlying = _unprefix(name)
@@ -207,8 +263,13 @@ final class ShadowedView[T <: Callable](
 
   def url: Nullable[String] = inner.url
 
+  def upstream: List[Module[T]] = inner.upstream
+
   def variables: Map[String, Value] =
     inner.variables.filterNot { case (n, _) => shadowedVars.contains(n) }
+
+  def variableNodes: Map[String, AstNode] =
+    inner.variableNodes.filterNot { case (n, _) => shadowedVars.contains(n) }
 
   def functions: Map[String, T] =
     inner.functions.filterNot { case (n, _) => shadowedFunctions.contains(n) }
@@ -216,14 +277,17 @@ final class ShadowedView[T <: Callable](
   def mixins: Map[String, T] =
     inner.mixins.filterNot { case (n, _) => shadowedMixins.contains(n) }
 
-  def css:                            CssStylesheet = inner.css
-  def transitivelyContainsCss:        Boolean       = inner.transitivelyContainsCss
-  def transitivelyContainsExtensions: Boolean       = inner.transitivelyContainsExtensions
+  def css:                            CssStylesheet                   = inner.css
+  def preModuleComments:              Map[Module[T], List[CssComment]] = inner.preModuleComments
+  def transitivelyContainsCss:        Boolean                         = inner.transitivelyContainsCss
+  def transitivelyContainsExtensions: Boolean                         = inner.transitivelyContainsExtensions
 
   def setVariable(name: String, value: Value): Unit =
     if (shadowedVars.contains(name))
       throw new IllegalArgumentException(s"Undefined variable: $$$name")
     else inner.setVariable(name, value)
+
+  def cloneCss(): Module[T] = inner.cloneCss()
 
   override def variableIdentity(name: String): AnyRef = inner.variableIdentity(name)
 

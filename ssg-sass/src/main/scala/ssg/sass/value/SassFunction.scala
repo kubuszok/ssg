@@ -14,17 +14,42 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{ Callable, Nullable }
+import ssg.sass.{ Callable, Nullable, SassScriptException }
+import ssg.sass.Nullable.*
 import ssg.sass.visitor.ValueVisitor
 
-/** A SassScript function reference. */
+/** A SassScript function reference.
+  *
+  * A function reference captures a function from the local environment so that
+  * it may be passed between modules.
+  */
 final class SassFunction(
-  val callable: Callable
+  val callable: Callable,
+  /** The unique compile context for tracking if this [[SassFunction]] belongs to
+    * the current compilation or not.
+    *
+    * This is `Nullable.Null` for functions defined in plugins' Scala code.
+    */
+  private val compileContext: Nullable[AnyRef] = Nullable.Null
 ) extends Value {
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitFunction(this)
 
   override def assertFunction(name: Nullable[String]): SassFunction = this
+
+  /** Asserts that this SassFunction belongs to [compileContext] and returns it.
+    *
+    * It's checked before evaluating a SassFunction to prevent execution of
+    * SassFunction across different compilations.
+    */
+  def assertCompileContext(ctx: AnyRef): SassFunction = {
+    if (compileContext.isDefined && (compileContext.get ne ctx)) {
+      throw SassScriptException(
+        s"$this does not belong to current compilation."
+      )
+    }
+    this
+  }
 
   override def hashCode(): Int = callable.hashCode()
 
@@ -34,4 +59,15 @@ final class SassFunction(
   }
 
   override def toString: String = s"""get-function("${callable.name}")"""
+}
+
+object SassFunction {
+
+  /** Creates a SassFunction without a compile context (for plugin-defined functions). */
+  def apply(callable: Callable): SassFunction =
+    new SassFunction(callable)
+
+  /** Creates a SassFunction with a compile context (for user-defined functions). */
+  def withCompileContext(callable: Callable, compileContext: AnyRef): SassFunction =
+    new SassFunction(callable, Nullable(compileContext))
 }

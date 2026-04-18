@@ -8,7 +8,7 @@
  *
  * Migration notes:
  *   Renames: style_rule.dart + modifiable/style_rule.dart -> CssStyleRule.scala
- *   Convention: SelectorList is a placeholder type (Any) until selector AST is ported
+ *   Convention: SelectorList used for the CSS selector type, matching Dart's CssStyleRule
  *   Idiom: Box[SelectorList] used for mutable selector reference from extension store
  */
 package ssg
@@ -18,22 +18,21 @@ package css
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
+import ssg.sass.ast.selector.SelectorList
 import ssg.sass.util.{ Box, FileSpan }
 import ssg.sass.visitor.CssVisitor
 
 /** A plain CSS style rule.
   *
   * This applies style declarations to elements that match a given selector. Note that this isn't strictly plain CSS, since the selector may still contain placeholder selectors.
-  *
-  * SelectorList is represented as Any until the selector AST is ported.
   */
 trait CssStyleRule extends CssParentNode {
 
   /** The selector for this rule. */
-  def selector: Any /* SelectorList */
+  def selector: SelectorList
 
   /** The selector for this rule, before any extensions were applied. */
-  def originalSelector: Any /* SelectorList */
+  def originalSelector: SelectorList
 
   /** Whether this style rule was originally defined in a plain CSS stylesheet. */
   def fromPlainCss: Boolean
@@ -41,18 +40,18 @@ trait CssStyleRule extends CssParentNode {
 
 /** A modifiable version of CssStyleRule for use in the evaluation step. */
 final class ModifiableCssStyleRule(
-  private val _selector: Box[Any], /* Box[SelectorList] */
+  private val _selector: Box[SelectorList],
   val span:              FileSpan,
-  originalSel:           Nullable[Any] = Nullable.empty, /* Nullable[SelectorList] */
+  originalSel:           Nullable[SelectorList] = Nullable.empty,
   val fromPlainCss:      Boolean = false
 ) extends ModifiableCssParentNode
     with CssStyleRule {
 
   /** The selector, possibly updated by the extension store. */
-  def selector: Any = _selector.value
+  def selector: SelectorList = _selector.value
 
   /** The original selector before extensions. */
-  val originalSelector: Any = originalSel.getOrElse(_selector.value)
+  val originalSelector: SelectorList = originalSel.getOrElse(_selector.value)
 
   def accept[T](visitor: CssVisitor[T]): T =
     visitor.visitCssStyleRule(this)
@@ -64,5 +63,5 @@ final class ModifiableCssStyleRule(
     }
 
   def copyWithoutChildren(): ModifiableCssStyleRule =
-    ModifiableCssStyleRule(_selector, span, Nullable(originalSelector), fromPlainCss)
+    new ModifiableCssStyleRule(_selector, span, Nullable(originalSelector), fromPlainCss)
 }

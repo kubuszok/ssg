@@ -1011,7 +1011,7 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("100%{opacity:1}"), result.css)
   }
 
-  test("@keyframes maps from/to to 0%/100%") {
+  test("@keyframes preserves from/to as-is (dart-sass compat)") {
     val result = Compile.compileString(
       """
         @keyframes fade {
@@ -1022,10 +1022,9 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@keyframes fade"), result.css)
-    assert(result.css.contains("0%{opacity:0}"), result.css)
-    assert(result.css.contains("100%{opacity:1}"), result.css)
-    assert(!result.css.contains("from{"), result.css)
-    assert(!result.css.contains("to{"), result.css)
+    // dart-sass preserves from/to as-is, does not normalize to 0%/100%
+    assert(result.css.contains("from{opacity:0}"), result.css)
+    assert(result.css.contains("to{opacity:1}"), result.css)
   }
 
   test("@keyframes supports comma-separated selectors") {

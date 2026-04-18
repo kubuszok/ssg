@@ -354,15 +354,6 @@ object SelectorFunctions {
   // Renamed copies for the global namespace.
   // ---------------------------------------------------------------------------
 
-  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
-    new BuiltInCallable(
-      name = newName,
-      parameters = callable.parameters,
-      callback = callable.callback,
-      acceptsContent = callable.acceptsContent,
-      signature = callable.signature
-    )
-
   // ---------------------------------------------------------------------------
   // Public lists.
   // ---------------------------------------------------------------------------
@@ -370,16 +361,18 @@ object SelectorFunctions {
   /** Globally available built-ins. Mirrors dart-sass `global`: is-superselector
     * and simple-selectors keep their bare names; the rest get the legacy
     * `selector-*` prefix via withName.
+    * Each entry uses `.withDeprecationWarning('selector')` to emit a
+    * `global-builtin` deprecation warning directing users to `selector.X`.
     */
   val global: List[Callable] = List(
-    isSuperselectorFn,
-    simpleSelectorsFn,
-    withName(parseFn, "selector-parse"),
-    withName(nestFn, "selector-nest"),
-    withName(appendFn, "selector-append"),
-    withName(extendFn, "selector-extend"),
-    withName(replaceFn, "selector-replace"),
-    withName(unifyFn, "selector-unify")
+    isSuperselectorFn.withDeprecationWarning("selector"),
+    simpleSelectorsFn.withDeprecationWarning("selector"),
+    parseFn.withDeprecationWarning("selector").withName("selector-parse"),
+    nestFn.withDeprecationWarning("selector").withName("selector-nest"),
+    appendFn.withDeprecationWarning("selector").withName("selector-append"),
+    extendFn.withDeprecationWarning("selector").withName("selector-extend"),
+    replaceFn.withDeprecationWarning("selector").withName("selector-replace"),
+    unifyFn.withDeprecationWarning("selector").withName("selector-unify")
   )
 
   /** Members of the `sass:selector` module. Mirrors dart-sass `module`. */

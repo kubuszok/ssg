@@ -82,10 +82,7 @@ final class SerializeVisitor(
       // A style rule is invisible if its selector is invisible (all complex
       // selectors contain placeholders or are bogus) OR if all children are
       // invisible. Matches dart-sass _IsInvisibleVisitor.visitCssStyleRule.
-      val selectorInvisible = rule.selector match {
-        case list: SelectorList => list.isInvisible
-        case _                 => false
-      }
+      val selectorInvisible = rule.selector.isInvisible
       selectorInvisible || (
         !rule.isChildless && rule.children.forall(isNodeInvisible)
       )
@@ -1266,14 +1263,8 @@ final class SerializeVisitor(
   }
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {
-    // Selector is stored as Any (either a SelectorList once the selector AST
-    // is wired, or a String text fallback used by the current evaluator).
     recordMapping(node.span)
-    node.selector match {
-      case list: SelectorList => buffer.append(formatSelectorList(list))
-      case s:    String       => buffer.append(s)
-      case other => buffer.append(other.toString)
-    }
+    buffer.append(formatSelectorList(node.selector))
     writeSpace()
     writeChildrenIn(node, node.children)
   }
@@ -1378,25 +1369,16 @@ final class SerializeVisitor(
     // formatter. Custom properties have no leading space; their raw text
     // already includes the right whitespace.
     if (!node.parsedAsSassScript) {
-      // ssg-sass's parser strips the leading whitespace after `:` before
-      // capturing the raw custom-property value, while dart-sass preserves
-      // it as part of the value text. Add a single space here in expanded
-      // mode to keep `--foo: value` round-tripping correctly. In compressed
-      // mode, dart-sass also drops the space (the folded value's leading
-      // newline collapses to nothing if no content precedes it).
+      // dart-sass `visitCssDeclaration`: custom property values are emitted
+      // raw via `_writeFoldedValue` (compressed) or `_writeReindentedValue`
+      // (expanded). The parser preserves leading whitespace as part of the
+      // value text (e.g., ` #ff0066`), so no extra space is added here.
       val raw = node.value.value match {
         case s: SassString => s.text
         case other         => other.toCssString()
       }
       if (isCompressed) writeFoldedCustomPropertyValue(raw)
-      else {
-        // Re-prepend the missing leading space so the output matches the
-        // canonical `--foo: value` form. The reindented helper assumes the
-        // first line is emitted verbatim; that's still correct because we
-        // append the space first.
-        writeSpace()
-        writeReindentedCustomPropertyValue(raw, node.name.span)
-      }
+      else writeReindentedCustomPropertyValue(raw, node.name.span)
     } else {
       writeSpace()
       recordMapping(node.span)
@@ -1591,8 +1573,44 @@ final class SerializeVisitor(
   }
 
   override def visitCssMediaRule(node: CssMediaRule): Unit = {
-    buffer.append("@media ")
-    buffer.append(node.queries.mkString(", "))
+    buffer.append("@media")
+    // Port of dart-sass _visitMediaQuery: format each query with
+    // modifier/type/conditions/conjunction handling.
+    var first = true
+    for (query <- node.queries) {
+      if (!first) buffer.append(',')
+      first = false
+      // In compressed mode, only emit a space when needed for parsing.
+      if (!isCompressed || query.modifier.isDefined || query.type_.isDefined) {
+        buffer.append(' ')
+      } else if (query.conditions.nonEmpty) {
+        // Conditions-only query: need space before '(' unless compressed
+        // and the condition starts with '('.
+        if (isCompressed) {
+          // Compressed: space before '(' is needed for valid CSS.
+          buffer.append(' ')
+        }
+      }
+      query.modifier.foreach { m =>
+        buffer.append(m)
+        buffer.append(' ')
+      }
+      query.type_.foreach { t =>
+        buffer.append(t)
+        if (query.conditions.nonEmpty) {
+          buffer.append(' ')
+          buffer.append(if (query.conjunction) "and" else "or")
+          buffer.append(' ')
+        }
+      }
+      val sep = if (query.conjunction) " and " else " or "
+      var firstCond = true
+      for (cond <- query.conditions) {
+        if (!firstCond) buffer.append(sep)
+        firstCond = false
+        buffer.append(cond)
+      }
+    }
     writeSpace()
     writeChildrenIn(node, node.children)
   }

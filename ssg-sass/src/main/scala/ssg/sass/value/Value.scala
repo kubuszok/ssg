@@ -15,8 +15,10 @@ package ssg
 package sass
 package value
 
-import ssg.sass.{ Nullable, SassScriptException }
+import ssg.sass.{ Deprecation, EvaluationContext, Nullable, SassFormatException, SassScriptException }
 import ssg.sass.Nullable.*
+import ssg.sass.ast.selector.{ ComplexSelector, CompoundSelector, SelectorList, SimpleSelector }
+import ssg.sass.parse.SelectorParser
 import ssg.sass.visitor.ValueVisitor
 
 import scala.language.implicitConversions
@@ -56,12 +58,24 @@ abstract class Value {
 
   /** Converts a 1-based Sass index to a 0-based list index. */
   def sassIndexToListIndex(sassIndex: Value, name: Nullable[String] = Nullable.Null): Int = {
-    val index = sassIndex.assertNumber(name).assertInt(name)
+    val indexValue = sassIndex.assertNumber(name)
+    if (indexValue.hasUnits) {
+      EvaluationContext.warnForDeprecation(
+        Deprecation.FunctionUnits,
+        s"$$${name.getOrElse("index")}: Passing a number with unit ${indexValue.unitString} is " +
+          "deprecated.\n" +
+          "\n" +
+          s"To preserve current behavior: ${indexValue.unitSuggestion(name.getOrElse("index"))}\n" +
+          "\n" +
+          "More info: https://sass-lang.com/d/function-units"
+      )
+    }
+    val index = indexValue.assertInt(name)
     if (index == 0) throw SassScriptException("List index may not be 0.", name.toOption)
     val len = lengthAsList
     if (index.abs > len) {
       throw SassScriptException(
-        s"Invalid index $index for a list with $len elements.",
+        s"Invalid index $sassIndex for a list with $len elements.",
         name.toOption
       )
     }
@@ -143,6 +157,197 @@ abstract class Value {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Selector assertion methods
+  // ---------------------------------------------------------------------------
+
+  /** Converts a `selector-parse()`-style input into a string that can be
+    * parsed.
+    *
+    * Throws a [[SassScriptException]] if `this` isn't a type or a structure that
+    * can be parsed as a selector.
+    */
+  private def selectorString(name: Nullable[String]): String = {
+    val s = selectorStringOrNull()
+    if (s.isEmpty) {
+      throw SassScriptException(
+        s"$this is not a valid selector: it must be a string,\n" +
+          "a list of strings, or a list of lists of strings.",
+        name.toOption
+      )
+    }
+    s.get
+  }
+
+  /** Converts a `selector-parse()`-style input into a string that can be
+    * parsed.
+    *
+    * Returns `Nullable.Null` if `this` isn't a type or a structure that can be
+    * parsed as a selector.
+    */
+  private def selectorStringOrNull(): Nullable[String] = {
+    this match {
+      case str: SassString => Nullable(str.text)
+      case list: SassList =>
+        if (list.asList.isEmpty) Nullable.Null
+        else {
+          val result = scala.collection.mutable.ListBuffer.empty[String]
+          list.separator match {
+            case ListSeparator.Comma =>
+              val it = list.asList.iterator
+              var failed = false
+              while (it.hasNext && !failed) {
+                it.next() match {
+                  case s: SassString =>
+                    result += s.text
+                  case inner: SassList if inner.separator == ListSeparator.Space =>
+                    val s = (inner: Value).selectorStringOrNull()
+                    if (s.isEmpty) failed = true
+                    else result += s.get
+                  case _ =>
+                    failed = true
+                }
+              }
+              if (failed) Nullable.Null
+              else Nullable(result.mkString(", "))
+            case ListSeparator.Slash =>
+              Nullable.Null
+            case _ =>
+              // Space or undecided separator
+              val it = list.asList.iterator
+              var failed = false
+              while (it.hasNext && !failed) {
+                it.next() match {
+                  case s: SassString =>
+                    result += s.text
+                  case _ =>
+                    failed = true
+                }
+              }
+              if (failed) Nullable.Null
+              else Nullable(result.mkString(" "))
+          }
+        }
+      case _ => Nullable.Null
+    }
+  }
+
+  /** Parses `this` as a selector list, in the same manner as the
+    * `selector-parse()` function.
+    *
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
+    * selector, or if parsing fails. If [allowParent] is `true`, this allows
+    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
+    * parse errors.
+    *
+    * If this came from a function argument, [name] is the argument name
+    * (without the `$`). It's used for error reporting.
+    */
+  def assertSelector(
+    name:        Nullable[String] = Nullable.Null,
+    allowParent: Boolean = false
+  ): SelectorList = {
+    val string = selectorString(name)
+    try {
+      new SelectorParser(string, allowParent = allowParent).parse()
+    } catch {
+      case error: SassFormatException =>
+        // TODO(nweiz): colorize this if we're running in an environment where
+        // that works.
+        throw SassScriptException(
+          error.toString.replaceFirst("Error: ", ""),
+          name.toOption
+        )
+    }
+  }
+
+  /** Parses `this` as a simple selector, in the same manner as the
+    * `selector-parse()` function.
+    *
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
+    * selector, or if parsing fails. If [allowParent] is `true`, this allows
+    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
+    * parse errors.
+    *
+    * If this came from a function argument, [name] is the argument name
+    * (without the `$`). It's used for error reporting.
+    */
+  def assertSimpleSelector(
+    name:        Nullable[String] = Nullable.Null,
+    allowParent: Boolean = false
+  ): SimpleSelector = {
+    val string = selectorString(name)
+    try {
+      new SelectorParser(string, allowParent = allowParent).parseSimpleSelector()
+    } catch {
+      case error: SassFormatException =>
+        // TODO(nweiz): colorize this if we're running in an environment where
+        // that works.
+        throw SassScriptException(
+          error.toString.replaceFirst("Error: ", ""),
+          name.toOption
+        )
+    }
+  }
+
+  /** Parses `this` as a compound selector, in the same manner as the
+    * `selector-parse()` function.
+    *
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
+    * selector, or if parsing fails. If [allowParent] is `true`, this allows
+    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
+    * parse errors.
+    *
+    * If this came from a function argument, [name] is the argument name
+    * (without the `$`). It's used for error reporting.
+    */
+  def assertCompoundSelector(
+    name:        Nullable[String] = Nullable.Null,
+    allowParent: Boolean = false
+  ): CompoundSelector = {
+    val string = selectorString(name)
+    try {
+      new SelectorParser(string, allowParent = allowParent).parseCompoundSelector()
+    } catch {
+      case error: SassFormatException =>
+        // TODO(nweiz): colorize this if we're running in an environment where
+        // that works.
+        throw SassScriptException(
+          error.toString.replaceFirst("Error: ", ""),
+          name.toOption
+        )
+    }
+  }
+
+  /** Parses `this` as a complex selector, in the same manner as the
+    * `selector-parse()` function.
+    *
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
+    * selector, or if parsing fails. If [allowParent] is `true`, this allows
+    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
+    * parse errors.
+    *
+    * If this came from a function argument, [name] is the argument name
+    * (without the `$`). It's used for error reporting.
+    */
+  def assertComplexSelector(
+    name:        Nullable[String] = Nullable.Null,
+    allowParent: Boolean = false
+  ): ComplexSelector = {
+    val string = selectorString(name)
+    try {
+      new SelectorParser(string, allowParent = allowParent).parseComplexSelector()
+    } catch {
+      case error: SassFormatException =>
+        // TODO(nweiz): colorize this if we're running in an environment where
+        // that works.
+        throw SassScriptException(
+          error.toString.replaceFirst("Error: ", ""),
+          name.toOption
+        )
+    }
+  }
+
   /** SassScript = operator (not ==). Returns unquoted string "left=right". */
   def singleEquals(other: Value): Value =
     SassString(s"${toCssString()}=${other.toCssString()}", hasQuotes = false)
@@ -170,12 +375,18 @@ abstract class Value {
   def plus(other: Value): Value = other match {
     case s: SassString =>
       SassString(s"${toCssString()}${s.text}", hasQuotes = s.hasQuotes)
+    case _: SassCalculation =>
+      throw SassScriptException(s"""Undefined operation "$this + $other".""")
     case _ =>
       SassString(s"${toCssString()}${other.toCssString()}", hasQuotes = false)
   }
 
-  def minus(other: Value): Value =
-    SassString(s"${toCssString()}-${other.toCssString()}", hasQuotes = false)
+  def minus(other: Value): Value = other match {
+    case _: SassCalculation =>
+      throw SassScriptException(s"""Undefined operation "$this - $other".""")
+    case _ =>
+      SassString(s"${toCssString()}-${other.toCssString()}", hasQuotes = false)
+  }
 
   def dividedBy(other: Value): Value =
     SassString(s"${toCssString()}/${other.toCssString()}", hasQuotes = false)

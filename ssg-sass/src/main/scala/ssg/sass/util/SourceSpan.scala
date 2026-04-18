@@ -192,21 +192,54 @@ final case class FileSpan(
     if (e == t.length) this else subspan(0, e)
   }
 
-  /** Returns the span between this span's end and [other]'s start. */
-  def between(other: FileSpan): FileSpan =
-    FileSpan(file, end, other.start)
+  /** Returns a span covering the text after this span and before [other].
+    *
+    * Throws an [IllegalArgumentException] if [other.start] isn't on or after `this.end` in the same file.
+    */
+  def between(other: FileSpan): FileSpan = {
+    if (sourceUrl != other.sourceUrl) {
+      throw new IllegalArgumentException(s"$this and $other are in different files.")
+    } else if (end.offset > other.start.offset) {
+      throw new IllegalArgumentException(s"$this isn't before $other.")
+    }
+    file.span(end.offset, other.start.offset)
+  }
 
-  /** Returns the span from this span's start to [inner]'s start. */
-  def before(inner: FileSpan): FileSpan =
-    FileSpan(file, start, inner.start)
+  /** Returns a span covering the text from the beginning of this span to the beginning of [inner].
+    *
+    * Throws an [IllegalArgumentException] if [inner] isn't fully within this span.
+    */
+  def before(inner: FileSpan): FileSpan = {
+    if (sourceUrl != inner.sourceUrl) {
+      throw new IllegalArgumentException(s"$this and $inner are in different files.")
+    } else if (inner.start.offset < start.offset || inner.end.offset > end.offset) {
+      throw new IllegalArgumentException(s"$inner isn't inside $this.")
+    }
+    file.span(start.offset, inner.start.offset)
+  }
 
-  /** Returns the span from [inner]'s end to this span's end. */
-  def after(inner: FileSpan): FileSpan =
-    FileSpan(file, inner.end, end)
+  /** Returns a span covering the text from the end of [inner] to the end of this span.
+    *
+    * Throws an [IllegalArgumentException] if [inner] isn't fully within this span.
+    */
+  def after(inner: FileSpan): FileSpan = {
+    if (sourceUrl != inner.sourceUrl) {
+      throw new IllegalArgumentException(s"$this and $inner are in different files.")
+    } else if (inner.start.offset < start.offset || inner.end.offset > end.offset) {
+      throw new IllegalArgumentException(s"$inner isn't inside $this.")
+    }
+    file.span(inner.end.offset, end.offset)
+  }
 
-  /** Whether this span fully contains [target]. */
+  /** Whether this [FileSpan] contains the [target] FileSpan.
+    *
+    * Validates the FileSpans to be in the same file and for the [target] to be within this [FileSpan]'s inclusive range
+    * `[start,end]`.
+    */
   def contains(target: FileSpan): Boolean =
-    start.offset <= target.start.offset && end.offset >= target.end.offset
+    file.url == target.file.url &&
+      start.offset <= target.start.offset &&
+      end.offset >= target.end.offset
 
   override def toString: String = {
     val name = file.url.getOrElse("<unknown>")
@@ -229,56 +262,98 @@ object FileSpan {
 
 extension (span: FileSpan) {
 
-  /** Returns the span covering the initial identifier in this span. If [includeLeading] is given, includes that many characters before the identifier (e.g. 1 for `$` in variable names).
+  /** Returns the span of the identifier at the start of this span.
+    *
+    * If [includeLeading] is greater than 0, that many additional characters will be included from the start of this
+    * span before looking for an identifier.
     */
   def initialIdentifier(includeLeading: Int = 0): FileSpan = {
     val t = span.text
     var i = includeLeading
-    if (i < t.length && (t.charAt(i).isLetter || t.charAt(i) == '_' || t.charAt(i) == '-')) {
-      i += 1
-      while (i < t.length && (t.charAt(i).isLetterOrDigit || t.charAt(i) == '_' || t.charAt(i) == '-'))
-        i += 1
-    }
+    i = _scanIdentifier(t, i)
     span.subspan(0, i)
   }
 
-  /** Returns the span with the initial `namespace.` prefix removed. */
-  def withoutNamespace(): FileSpan = {
-    val t      = span.text
-    val dotIdx = t.indexOf('.')
-    if (dotIdx < 0) span
-    else span.subspan(dotIdx + 1)
-  }
-
-  /** Returns the span with the initial `@rule ` prefix removed. */
-  def withoutInitialAtRule(): FileSpan = {
+  /** Returns a subspan excluding the identifier at the start of this span. */
+  def withoutInitialIdentifier(): FileSpan = {
     val t = span.text
-    // Skip past @rule and any whitespace
-    var i = 0
-    if (i < t.length && t.charAt(i) == '@') {
-      i += 1
-      while (i < t.length && !Character.isWhitespace(t.charAt(i))) i += 1
-      while (i < t.length && Character.isWhitespace(t.charAt(i))) i += 1
-    }
+    val i = _scanIdentifier(t, 0)
     span.subspan(i)
   }
 
-  /** Returns the span covering the first quoted string in this span. */
-  def initialQuoted(): FileSpan = {
+  /** Returns a subspan excluding a namespace and `.` at the start of this span. */
+  def withoutNamespace(): FileSpan =
+    span.withoutInitialIdentifier().subspan(1)
+
+  /** Returns a subspan excluding an initial at-rule and any whitespace after it. */
+  def withoutInitialAtRule(): FileSpan = {
     val t = span.text
+    // Skip past '@'
     var i = 0
-    while (i < t.length && t.charAt(i) != '\'' && t.charAt(i) != '"') i += 1
-    if (i >= t.length) span
-    else {
-      val quote = t.charAt(i)
-      val start = i
+    if (i < t.length && t.charAt(i).toInt == CharCode.$at) {
       i += 1
-      while (i < t.length && t.charAt(i) != quote) {
-        if (t.charAt(i) == '\\') i += 1
-        i += 1
-      }
-      if (i < t.length) i += 1 // include closing quote
-      span.subspan(start, i)
     }
+    // Scan past the identifier (e.g. "import", "use", "include")
+    i = _scanIdentifier(t, i)
+    span.subspan(i).trimLeft()
+  }
+
+  /** Returns the span of the quoted text at the start of this span.
+    *
+    * This span must start with `"` or `'`.
+    */
+  def initialQuoted(): FileSpan = {
+    val t     = span.text
+    val quote = t.charAt(0)
+    var i     = 1
+    while (true) {
+      val next = t.charAt(i)
+      i += 1
+      if (next == quote) return span.subspan(0, i)
+      if (next == '\\') i += 1 // skip escaped character
+    }
+    span.subspan(0, i) // unreachable but needed for compiler
+  }
+}
+
+/** Consumes an identifier from [text] starting at position [pos].
+  *
+  * Returns the position after the identifier.
+  */
+private def _scanIdentifier(text: String, pos: Int): Int = {
+  import scala.util.boundary
+  import scala.util.boundary.break
+  var i = pos
+  boundary[Int] {
+    while (i < text.length) {
+      val c = text.charAt(i).toInt
+      if (c == CharCode.$backslash) {
+        // Consume the backslash-escape sequence
+        i += 1 // skip backslash
+        if (i < text.length) {
+          val next = text.charAt(i).toInt
+          if (CharCode.isHex(next)) {
+            // Hex escape: consume up to 6 hex digits + optional trailing whitespace
+            var count = 0
+            while (i < text.length && count < 6 && CharCode.isHex(text.charAt(i).toInt)) {
+              i += 1
+              count += 1
+            }
+            // consume optional trailing whitespace
+            if (i < text.length && CharCode.isWhitespace(text.charAt(i).toInt)) {
+              i += 1
+            }
+          } else {
+            // Non-hex escape: just consume the next character
+            i += 1
+          }
+        }
+      } else if (CharCode.isName(c)) {
+        i += 1
+      } else {
+        break(i)
+      }
+    }
+    i
   }
 }

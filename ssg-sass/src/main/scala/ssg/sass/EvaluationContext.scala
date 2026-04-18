@@ -14,21 +14,38 @@ package ssg
 package sass
 
 import ssg.sass.ast.AstNode
+import ssg.sass.util.FileSpan
 
-/** An interface accessed by SassScript functions to get the context of the current evaluation.
-  */
+/// An interface that exposes information about the current Sass evaluation.
+///
+/// This allows us to expose zone-scoped information without having to create a
+/// new zone variable for each piece of information.
 trait EvaluationContext {
 
   /** Returns the AST node being evaluated, for use in error messages. */
   def currentCallableNode: AstNode
 
-  /** Emits a warning with the given [message]. */
-  def warn(message: String, deprecation: Boolean = false): Unit
+  /// Returns the span for the currently executing callable.
+  ///
+  /// For normal exception reporting, this should be avoided in favor of
+  /// throwing [SassScriptException]s. It should only be used when calling APIs
+  /// that require spans.
+  ///
+  /// Throws a [StateError] if there isn't a callable being invoked.
+  def currentCallableSpan: FileSpan = currentCallableNode.span
 
-  /** Emits a deprecation warning tagged with the given [[Deprecation]]. Default forwards to `warn` with a `[id]` prefix so the id surfaces in the flat warnings list.
+  /// Prints a warning message associated with the current `@import` or function
+  /// call.
+  ///
+  /// If [deprecation] is non-null, the warning is emitted as a deprecation
+  /// warning of that type.
+  def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit
+
+  /** Emits a deprecation warning tagged with the given [[Deprecation]].
+    * Default forwards to `warn` with the deprecation value.
     */
   def warnForDeprecation(deprecation: Deprecation, message: String): Unit =
-    warn(s"[${deprecation.id}] $message", deprecation = true)
+    warn(message, Nullable(deprecation))
 }
 
 object EvaluationContext {
@@ -54,13 +71,40 @@ object EvaluationContext {
     finally _stack = _stack.tail
   }
 
-  /** Emits a warning via the current context, if any. */
+  /// Prints a warning message associated with the current `@import` or function
+  /// call.
+  ///
+  /// If [deprecation] is `true`, the warning is emitted as a deprecation warning.
+  ///
+  /// This may only be called within a custom function or importer callback.
   def warn(message: String, deprecation: Boolean = false): Unit =
-    current.foreach(_.warn(message, deprecation))
+    current match {
+      case ctx if ctx.isDefined =>
+        ctx.get.warn(
+          message,
+          if (deprecation) Nullable(Deprecation.UserAuthored) else Nullable.Null
+        )
+      case _ if deprecation =>
+        Logger.default.warnForDeprecation(Deprecation.UserAuthored, message)
+      case _ =>
+        Logger.default.warn(message)
+    }
 
-  /** Emits a deprecation warning via the current context, if any. */
+  /// Prints a deprecation warning with [message] of type [deprecation].
   def warnForDeprecation(deprecation: Deprecation, message: String): Unit =
-    current.foreach(_.warnForDeprecation(deprecation, message))
+    current match {
+      case ctx if ctx.isDefined => ctx.get.warn(message, Nullable(deprecation))
+      case _                    => Logger.default.warnForDeprecation(deprecation, message)
+    }
+
+  /// Prints a deprecation warning with [message] of type [deprecation],
+  /// using stderr if there is no [EvaluationContext.current].
+  def warnForDeprecationFromApi(message: String, deprecation: Deprecation): Unit = {
+    current match {
+      case ctx if ctx.isDefined => ctx.get.warn(message, Nullable(deprecation))
+      case _                    => Logger.default.warnForDeprecation(deprecation, message)
+    }
+  }
 }
 
 /** Holds a reference to the [[Environment]] currently active inside an [[ssg.sass.visitor.EvaluateVisitor]] invocation. Built-in callables (e.g. `mixin-exists`, `variable-exists`, `module-functions`)

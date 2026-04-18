@@ -237,38 +237,25 @@ object ListFunctions {
     )
 
   // ---------------------------------------------------------------------------
-  // Renamed copy for the global namespace.
-  // ---------------------------------------------------------------------------
-
-  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
-    new BuiltInCallable(
-      name = newName,
-      parameters = callable.parameters,
-      callback = callable.callback,
-      acceptsContent = callable.acceptsContent,
-      signature = callable.signature
-    )
-
-  private val listSeparatorFn: BuiltInCallable = withName(separatorFn, "list-separator")
-
-  // ---------------------------------------------------------------------------
   // Public lists.
   // ---------------------------------------------------------------------------
 
   /** Globally available built-ins. Mirrors dart-sass `global`. Note `slash`
     * and `separator` (under its bare name) are NOT in the global; only the
     * `list-separator` alias is.
+    * Each entry uses `.withDeprecationWarning("list")` to emit a
+    * `global-builtin` deprecation warning directing users to `list.X`.
     */
   val global: List[Callable] = List(
-    lengthFn,
-    nthFn,
-    setNthFn,
-    joinFn,
-    appendFn,
-    zipFn,
-    indexFn,
-    isBracketedFn,
-    listSeparatorFn
+    lengthFn.withDeprecationWarning("list"),
+    nthFn.withDeprecationWarning("list"),
+    setNthFn.withDeprecationWarning("list"),
+    joinFn.withDeprecationWarning("list"),
+    appendFn.withDeprecationWarning("list"),
+    zipFn.withDeprecationWarning("list"),
+    indexFn.withDeprecationWarning("list"),
+    isBracketedFn.withDeprecationWarning("list"),
+    separatorFn.withDeprecationWarning("list").withName("list-separator")
   )
 
   /** Members of the `sass:list` module. Mirrors dart-sass `module`. */

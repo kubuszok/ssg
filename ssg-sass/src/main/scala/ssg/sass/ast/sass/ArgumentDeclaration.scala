@@ -19,9 +19,12 @@ package sass
 package ast
 package sass
 
-import ssg.sass.Nullable
+import ssg.sass.{ MultiSpanSassScriptException, Nullable, SassScriptException, Utils }
 import ssg.sass.Nullable.*
 import ssg.sass.util.{ FileSpan, initialIdentifier }
+
+import scala.util.boundary
+import scala.util.boundary.break
 
 // ---------------------------------------------------------------------------
 // ArgumentList — the arguments passed to a function or mixin invocation
@@ -112,10 +115,12 @@ final class Parameter(
     with SassDeclaration {
 
   /** The variable name as written in the document, without underscores converted to hyphens and including the leading `$`.
+    *
+    * This isn't particularly efficient, and should only be used for error messages.
     */
   def originalName: String =
     if (defaultValue.isEmpty) span.text
-    else span.text // simplified; full version uses declarationName
+    else Utils.declarationName(span)
 
   def nameSpan: FileSpan =
     if (defaultValue.isEmpty) span
@@ -166,6 +171,73 @@ final class ParameterList(
       // If the name didn't start with isNameStart, it's not a valid identifier.
       if (!isNameStart(text.charAt(i + 1))) span
       else span.file.span(i + 1, span.end.offset).trim()
+    }
+  }
+
+  /** Throws a [SassScriptException] if [positional] and [names] aren't valid for this parameter declaration.
+    */
+  def verify(positional: Int, names: Set[String]): Unit = boundary {
+    var namedUsed = 0
+    var i         = 0
+    while (i < parameters.length) {
+      val parameter = parameters(i)
+      if (i < positional) {
+        if (names.contains(parameter.name)) {
+          throw new SassScriptException(
+            s"Argument ${_originalParameterName(parameter.name)} was passed both by position and by name."
+          )
+        }
+      } else if (names.contains(parameter.name)) {
+        namedUsed += 1
+      } else if (parameter.defaultValue.isEmpty) {
+        throw new MultiSpanSassScriptException(
+          s"Missing argument ${_originalParameterName(parameter.name)}.",
+          "invocation",
+          Map(spanWithName -> "declaration")
+        )
+      }
+      i += 1
+    }
+
+    if (restParameter.isDefined) break(())
+
+    if (positional > parameters.length) {
+      throw new MultiSpanSassScriptException(
+        s"Only ${parameters.length} " +
+          (if (names.isEmpty) "" else "positional ") +
+          s"${Utils.pluralize("argument", parameters.length)} allowed, but " +
+          s"$positional ${Utils.pluralize("was", positional, Nullable("were"))} " +
+          "passed.",
+        "invocation",
+        Map(spanWithName -> "declaration")
+      )
+    }
+
+    if (namedUsed < names.size) {
+      val unknownNames = names -- parameters.map(_.name).toSet
+      throw new MultiSpanSassScriptException(
+        s"No ${Utils.pluralize("parameter", unknownNames.size)} named " +
+          s"${Utils.toSentence(unknownNames.map(name => s"$$$name"), "or")}.",
+        "invocation",
+        Map(spanWithName -> "declaration")
+      )
+    }
+  }
+
+  /** Returns the parameter named [name] with a leading `$` and its original underscores (which are otherwise converted
+    * to hyphens).
+    */
+  private def _originalParameterName(name: String): String = {
+    if (restParameter.exists(_ == name)) {
+      val text      = span.text
+      val fromDollar = text.substring(text.lastIndexOf("$"))
+      fromDollar.substring(0, fromDollar.indexOf("."))
+    } else {
+      parameters.find(_.name == name) match {
+        case Some(parameter) => parameter.originalName
+        case None =>
+          throw new IllegalArgumentException(s"This declaration has no parameter named \"$$$name\".")
+      }
     }
   }
 
