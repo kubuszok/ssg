@@ -25,6 +25,46 @@ import scala.util.boundary.break
 
 object Utils {
 
+  // Stack traces associated with exceptions thrown with [throwWithTrace].
+  // Uses a WeakHashMap so traces don't prevent garbage collection of the
+  // error objects (mirrors Dart's `Expando<StackTrace>()`).
+  private val _traces = new java.util.WeakHashMap[AnyRef, Throwable]()
+
+  /** Throws [error] with [originalError]'s stack trace (which defaults to
+    * [trace]) stored as its stack trace.
+    *
+    * Note that [trace] is only accessible via [getTrace].
+    */
+  def throwWithTrace(error: Throwable, originalError: Any, trace: Throwable): Nothing = {
+    val t = getTrace(originalError).getOrElse(trace)
+    attachTrace(error, t)
+    throw error
+  }
+
+  /** Attaches [trace] to [error] so that it may be retrieved using [getTrace].
+    *
+    * In most cases, [throwWithTrace] should be used instead of this.
+    */
+  def attachTrace(error: Any, trace: Throwable): Unit = error match {
+    case _: String | _: java.lang.Number | _: java.lang.Boolean => ()
+    case ref: AnyRef =>
+      // Don't store empty stack traces — they have no useful info.
+      if (trace.getStackTrace != null && trace.getStackTrace.nonEmpty) {
+        _traces.putIfAbsent(ref, trace)
+        ()
+      }
+    case _ => ()
+  }
+
+  /** Returns the stack trace associated with error using [throwWithTrace], or
+    * None if it was thrown normally.
+    */
+  def getTrace(error: Any): Option[Throwable] = error match {
+    case _: String | _: java.lang.Number | _: java.lang.Boolean => None
+    case ref: AnyRef => Option(_traces.get(ref))
+    case _           => None
+  }
+
   /** Converts iter into a sentence, separating each word with conjunction. */
   def toSentence(iter: Iterable[Any], conjunction: String = "and"): String = {
     val list = iter.toList

@@ -43,10 +43,9 @@ abstract class Parser protected (
     * If [consumeNewlines] is true, the indented syntax will consume newlines as whitespace. It should only be set to true in positions when a statement can't end.
     */
   protected def whitespace(consumeNewlines: Boolean): Unit = {
-    var continue = true
-    while (continue) {
+    whitespaceWithoutComments(consumeNewlines)
+    while (scanComment()) {
       whitespaceWithoutComments(consumeNewlines)
-      continue = scanComment()
     }
   }
 
@@ -564,27 +563,28 @@ abstract class Parser protected (
     // backtrack and re-parse as a function expression.
     val buffer = new StringBuilder()
     buffer.append("url(")
-    var done = false
-    while (!done) {
-      val c = scanner.peekChar()
-      if (c < 0) {
-        done = true
-      } else if (c == CharCode.$backslash) {
-        buffer.append(escape())
-      } else if (c == CharCode.$percent || c == CharCode.$ampersand || c == CharCode.$hash ||
-                 (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
-                 c >= 0x80) {
-        buffer.append(scanner.readChar().toChar)
-      } else if (CharCode.isWhitespace(c)) {
-        whitespace(consumeNewlines = true)
-        if (scanner.peekChar() != CharCode.$rparen) {
-          done = true
+    boundary {
+      while (true) {
+        val c = scanner.peekChar()
+        if (c < 0) {
+          break(())
+        } else if (c == CharCode.$backslash) {
+          buffer.append(escape())
+        } else if (c == CharCode.$percent || c == CharCode.$ampersand || c == CharCode.$hash ||
+                   (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
+                   c >= 0x80) {
+          buffer.append(scanner.readChar().toChar)
+        } else if (CharCode.isWhitespace(c)) {
+          whitespace(consumeNewlines = true)
+          if (scanner.peekChar() != CharCode.$rparen) {
+            break(())
+          }
+        } else if (c == CharCode.$rparen) {
+          buffer.append(scanner.readChar().toChar)
+          break(Nullable(buffer.toString()))
+        } else {
+          break(())
         }
-      } else if (c == CharCode.$rparen) {
-        buffer.append(scanner.readChar().toChar)
-        break(Nullable(buffer.toString()))
-      } else {
-        done = true
       }
     }
 
@@ -693,15 +693,15 @@ abstract class Parser protected (
       index -= 1
     }
 
-    // If the document *only* contains whitespace before [location], always
-    // return [location].
+    // If the document *only* contains whitespace before [location], fall
+    // through to the original [location].
     location
   }
 }
 
 object Parser {
 
-  /** A minimal concrete parser for static entry points. */
+  /** Concrete parser subclass used only for static entry-point utilities. */
   final private class StaticParser(text: String) extends Parser(text, Nullable.Null)
 
   /** Parses [text] as a CSS identifier and returns the result. */

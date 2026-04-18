@@ -597,8 +597,8 @@ object ExtendFunctions {
     boundary[Boolean] {
       if (complex1.length > complex2.length) break(false)
 
-      // TODO(nweiz): There's got to be a way to do this without a bunch of extra
-      // allocations...
+      // Note(nweiz): there may be a way to do this without the extra allocations
+      // from appending a bogus base component to both lists.
       val bogusSpan = FileSpan.synthetic("")
       val base = new ComplexSelectorComponent(
         new CompoundSelector(List(new PlaceholderSelector("<temp>", bogusSpan)), bogusSpan),

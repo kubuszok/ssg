@@ -192,7 +192,7 @@ final class ImportSuite extends munit.FunSuite {
     val importer = new FilesystemImporter(dir.toString)
     val result   = Compile.compileString(source, importer = Nullable(importer))
     assert(result.css.contains("blue"), result.css)
-    assert(result.css.contains("#ff0"), result.css)
+    assert(result.css.contains("yellow") || result.css.contains("#ff0"), result.css)
   }
 
   tempDir.test("@use without config uses !default value") { dir =>

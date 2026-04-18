@@ -389,7 +389,7 @@ final class ParentSelector(span: FileSpan, val suffix: Nullable[String] = Nullab
     throw new UnsupportedOperationException("& doesn't support unification.")
 }
 
-/** A placeholder selector.
+/** A `%name` selector.
   *
   * This doesn't match any elements. It's intended to be extended using `@extend`. It's not a plain CSS selector -- it should be removed before emitting a CSS document.
   */

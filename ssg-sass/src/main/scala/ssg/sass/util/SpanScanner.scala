@@ -55,6 +55,12 @@ final class SpanScanner(
   /** Current 0-based column number. */
   private var _column: Int = 0
 
+  /** Public getter for the current 0-based column number.
+    *
+    * Needed by [[ssg.sass.parse.SassParser]] for indentation error reporting.
+    */
+  def column: Int = _column
+
   /** The last regex match result, if any. */
   private var _lastMatch: Nullable[scala.util.matching.Regex.Match] = Nullable.Null
 

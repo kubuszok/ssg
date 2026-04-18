@@ -238,10 +238,11 @@ final class Environment private (
         }
       case Some(ns) =>
         if (_modules.contains(ns)) {
-          val priorSpan = _namespaceNodes.get(ns).flatMap(_.toOption)
-            .map(_.span.toString).getOrElse("<unknown>")
-          throw SassScriptException(
-            s"""There's already a module with namespace "$ns" (first loaded at $priorSpan)."""
+          val originalSpan = _namespaceNodes.get(ns).flatMap(_.toOption).map(_.span)
+          throw MultiSpanSassScriptException(
+            s"""There's already a module with namespace "$ns".""",
+            "new @use",
+            originalSpan.map(s => s -> "original @use").toMap
           )
         }
         _modules(ns) = module
@@ -306,8 +307,14 @@ final class Environment private (
           else large == small
         if (!isSame) {
           val displayName = if (memberType == "variable") s"$$$name" else name
-          throw SassScriptException(
-            s"Two forwarded modules both define a $memberType named $displayName."
+          val originalSpan = _forwardedModules.toOption
+            .flatMap(_.get(oldModule))
+            .flatMap(_.toOption)
+            .map(_.span)
+          throw MultiSpanSassScriptException(
+            s"Two forwarded modules both define a $memberType named $displayName.",
+            "new @forward",
+            originalSpan.map(s => s -> "original @forward").toMap
           )
         }
       }
@@ -363,7 +370,7 @@ final class Environment private (
         )
         shadowed.foreach { s =>
           val _ = _importedModules.remove(m)
-          _importedModules(s) = node
+          if (!s.isEmpty) _importedModules(s) = node
         }
       }
       val tforwarded = _forwardedModules.toOption.getOrElse {
@@ -381,7 +388,7 @@ final class Environment private (
         )
         shadowed.foreach { s =>
           val _ = tforwarded.remove(m)
-          tforwarded(s) = node
+          if (!s.isEmpty) tforwarded(s) = node
         }
       }
 
@@ -919,16 +926,18 @@ final class Environment private (
     * surface.
     */
   def toModule(
-    css:            CssStylesheet,
-    extensionStore: ExtensionStore,
-    url:            Nullable[String] = Nullable.empty
+    css:                CssStylesheet,
+    extensionStore:     ExtensionStore,
+    url:                Nullable[String] = Nullable.empty,
+    preModuleComments:  Map[Module[Callable], List[CssComment]] = Map.empty
   ): Module[Callable] =
     new Environment.EnvironmentModule(
       env = this,
       css = css,
       extensionStore = extensionStore,
       explicitUrl = url,
-      forwarded = _forwardedModules.toOption.map(_.keySet.toSet).getOrElse(Set.empty)
+      forwarded = _forwardedModules.toOption.map(_.keySet.toSet).getOrElse(Set.empty),
+      preModuleComments0 = preModuleComments
     )
 
   /** Returns a module with the same members and upstream modules as this
@@ -1003,8 +1012,17 @@ final class Environment private (
           case _           => m.variableIdentity(name)
         }
         if (identityFromModule != identity) {
-          if (resolved.isDefined)
-            throw SassScriptException(s"This $typeName is available from multiple global modules.")
+          if (resolved.isDefined) {
+            val secondarySpans = _globalModules.iterator.collect {
+              case (mod, nodeOpt) if callback(mod).isDefined && nodeOpt.isDefined =>
+                nodeOpt.get.span -> s"includes $typeName"
+            }.toMap
+            throw MultiSpanSassScriptException(
+              s"This $typeName is available from multiple global modules.",
+              s"$typeName use",
+              secondarySpans
+            )
+          }
           resolved = valueInModule
           identity = identityFromModule
         }
@@ -1224,7 +1242,8 @@ object Environment {
     val css:                    CssStylesheet,
     val extensionStore:         ExtensionStore,
     explicitUrl:                Nullable[String],
-    forwarded:                  Set[Module[Callable]]
+    forwarded:                  Set[Module[Callable]],
+    preModuleComments0:         Map[Module[Callable], List[CssComment]] = Map.empty
   ) extends Module[Callable] {
 
     val url: Nullable[String] =
@@ -1239,7 +1258,7 @@ object Environment {
         forwarded.map(_.variableNodes)
       )
 
-    val preModuleComments: Map[Module[Callable], List[CssComment]] = Map.empty
+    val preModuleComments: Map[Module[Callable], List[CssComment]] = preModuleComments0
 
     /** For each variable name, the module that actually holds the
       * underlying storage. Used by `setVariable` to route writes to the
@@ -1268,7 +1287,9 @@ object Environment {
       )
 
     val transitivelyContainsCss: Boolean =
-      css.children.nonEmpty || env._allModules.exists(_.transitivelyContainsCss)
+      css.children.nonEmpty ||
+        preModuleComments.nonEmpty ||
+        env._allModules.exists(_.transitivelyContainsCss)
 
     val transitivelyContainsExtensions: Boolean =
       !extensionStore.isEmpty || env._allModules.exists(_.transitivelyContainsExtensions)
@@ -1307,34 +1328,25 @@ object Environment {
       if (url.isEmpty) "<unknown url>" else url.get
 
     /** Returns a copy of this module with its CSS and ExtensionStore
-      * cloned. Mirrors dart-sass `_EnvironmentModule.cloneCss`.
+      * deep-cloned. Mirrors dart-sass `_EnvironmentModule.cloneCss`.
       *
       * If the module contains no transitive CSS, returns `this` (no
-      * cloning needed). Otherwise produces a new EnvironmentModule
-      * sharing the same Environment and member maps but with a
-      * fresh CssStylesheet wrapping a snapshot of the children, plus
-      * a fresh ExtensionStore obtained via `cloneStore`. The clone
-      * is hermetic — applying `@extend` to the clone has no effect
-      * on the original.
+      * cloning needed). Otherwise uses [[ssg.sass.visitor.CloneCssVisitor]]
+      * to deep-clone the stylesheet and extension store, ensuring that
+      * applying `@extend` to the clone has no effect on the original.
       */
     def cloneCss(): Module[Callable] = {
       if (!transitivelyContainsCss) this
       else {
-        // CssStylesheet exposes its children list directly; building
-        // a new stylesheet around the same span and children gives a
-        // shallow clone whose own `children` list can be mutated by
-        // the consumer (typically `_combineCss`) without bleeding
-        // into the original module's CSS.
-        val newCss = CssStylesheet(css.children.toList, css.span)
-        val newStore =
-          if (extensionStore.isEmpty) ExtensionStore.empty
-          else extensionStore.cloneStore()._1
+        val (newStylesheet, newExtensionStore) =
+          ssg.sass.visitor.CloneCssVisitor.cloneCssStylesheet(css, extensionStore)
         new EnvironmentModule(
           env = env,
-          css = newCss,
-          extensionStore = newStore,
+          css = newStylesheet,
+          extensionStore = newExtensionStore,
           explicitUrl = explicitUrl,
-          forwarded = forwarded
+          forwarded = forwarded,
+          preModuleComments0 = preModuleComments
         )
       }
     }

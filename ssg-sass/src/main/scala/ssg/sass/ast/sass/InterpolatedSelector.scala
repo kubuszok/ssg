@@ -311,10 +311,10 @@ final class InterpolatedParentSelector(
 // InterpolatedPlaceholderSelector
 // ===========================================================================
 
-/** A placeholder selector.
+/** A `%name` selector in interpolated form.
   *
   * @param name
-  *   the name of the placeholder
+  *   the interpolated name of this `%` selector
   */
 final class InterpolatedPlaceholderSelector(
   val name: Interpolation

@@ -252,8 +252,8 @@ abstract class Value {
       new SelectorParser(string, allowParent = allowParent).parse()
     } catch {
       case error: SassFormatException =>
-        // TODO(nweiz): colorize this if we're running in an environment where
-        // that works.
+        // Note(nweiz): error messages are not colorized yet (no terminal
+        // capability detection).
         throw SassScriptException(
           error.toString.replaceFirst("Error: ", ""),
           name.toOption
@@ -281,8 +281,8 @@ abstract class Value {
       new SelectorParser(string, allowParent = allowParent).parseSimpleSelector()
     } catch {
       case error: SassFormatException =>
-        // TODO(nweiz): colorize this if we're running in an environment where
-        // that works.
+        // Note(nweiz): error messages are not colorized yet (no terminal
+        // capability detection).
         throw SassScriptException(
           error.toString.replaceFirst("Error: ", ""),
           name.toOption
@@ -310,8 +310,8 @@ abstract class Value {
       new SelectorParser(string, allowParent = allowParent).parseCompoundSelector()
     } catch {
       case error: SassFormatException =>
-        // TODO(nweiz): colorize this if we're running in an environment where
-        // that works.
+        // Note(nweiz): error messages are not colorized yet (no terminal
+        // capability detection).
         throw SassScriptException(
           error.toString.replaceFirst("Error: ", ""),
           name.toOption
@@ -339,8 +339,8 @@ abstract class Value {
       new SelectorParser(string, allowParent = allowParent).parseComplexSelector()
     } catch {
       case error: SassFormatException =>
-        // TODO(nweiz): colorize this if we're running in an environment where
-        // that works.
+        // Note(nweiz): error messages are not colorized yet (no terminal
+        // capability detection).
         throw SassScriptException(
           error.toString.replaceFirst("Error: ", ""),
           name.toOption

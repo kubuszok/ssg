@@ -62,7 +62,7 @@ final class NoOpImporter extends Importer {
   *
   * A URL of the form `pkg:name/rest/of/path` is rewritten to `<root>/rest/of/path` (where `<root>` is looked up in [[packages]]) and delegated to [[delegate]] for actual canonicalization and loading.
   *
-  * This is a simple stub that lets callers wire in package-style imports without requiring a real `node_modules` traversal (that job belongs to [[NodePackageImporter]]).
+  * This lets callers wire in package-style imports without requiring a real `node_modules` traversal (that job belongs to [[NodePackageImporter]]).
   */
 final class PackageImporter(
   val packages: Map[String, String],

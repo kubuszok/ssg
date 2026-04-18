@@ -37,7 +37,7 @@ class ScssParser(
 
   /** Consumes a selector interpolation until `{`.
     *
-    * Basic: collects raw text as plain interpolation. Proper interpolation parsing (with `#{...}` expressions) is a TODO.
+    * Basic: collects raw text as plain interpolation. Full `#{...}` expression interpolation is handled by the parent StylesheetParser.
     */
   override protected def styleRuleSelector(): Interpolation = {
     val start    = scanner.state

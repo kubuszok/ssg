@@ -35,7 +35,7 @@ import scala.util.boundary.break
 /** A SassScript calculation.
   *
   * Although calculations can in principle have any name or any number of arguments, this class only exposes the specific calculations that are supported by the Sass spec. This ensures that all
-  * calculations that the user works with are always fully simplified.
+  * calculations that the user works with are always fully reduced.
   */
 final class SassCalculation private (
   val name:      String,
@@ -89,7 +89,7 @@ final class SassCalculation private (
 
 object SassCalculation {
 
-  /** Creates a new calculation with the given name and arguments that will not be simplified.
+  /** Creates a new calculation with the given name and arguments, without reducing them.
     */
   def unsimplified(name: String, arguments: Iterable[Any]): SassCalculation =
     new SassCalculation(name, arguments.toList)
@@ -299,13 +299,25 @@ object SassCalculation {
 
   /** Creates an `abs()` calculation with the given argument.
     *
-    * Note: The deprecation warning for percentage units is emitted via EvaluationContext when applicable.
+    * This automatically simplifies the calculation, so it may return a
+    * SassNumber rather than a SassCalculation. It throws an exception if it
+    * can determine that the calculation will definitely produce invalid CSS.
     */
   def abs(argument: Any): Value = {
     val simplified = _simplify(argument)
     simplified match {
       case number: SassNumber =>
-        // Emit deprecation warning for hasUnit("%") via EvaluationContext when applicable.
+        if (number.hasUnit("%")) {
+          ssg.sass.EvaluationContext.warnForDeprecation(
+            ssg.sass.Deprecation.AbsPercent,
+            "Passing percentage units to the global abs() function is deprecated.\n" +
+              "In the future, this will emit a CSS abs() function to be resolved by the browser.\n" +
+              "To preserve current behavior: math.abs($argument)" +
+              "\n" +
+              "To emit a CSS abs() now: abs(#{$argument})\n" +
+              "More info: https://sass-lang.com/d/abs-percent"
+          )
+        }
         _numberAbs(number)
       case _ =>
         new SassCalculation("abs", List(simplified))
@@ -727,7 +739,7 @@ object SassCalculation {
         case ("up", _)                           => _matchUnits(-0.0, number)
         case ("down", v) if v < 0                => _matchUnits(Double.NegativeInfinity, number)
         case ("down", _)                         => _matchUnits(0.0, number)
-        case _                                   => throw new UnsupportedOperationException(s"Invalid argument: $strategy.")
+        case _                                   => throw new IllegalArgumentException(s"Invalid argument: $strategy.")
       }
     } else {
       val stepWithNumberUnit = step.convertValueToMatch(number)
@@ -766,7 +778,7 @@ object SassCalculation {
     }
   }
 
-  /** Returns a list of args, with each argument simplified. */
+  /** Returns a list of args, with each argument reduced via [[_simplify]]. */
   private def _simplifyArguments(args: Iterable[Any]): List[Any] =
     args.map(_simplify).toList
 

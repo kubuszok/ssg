@@ -12,7 +12,7 @@
  *   Renames: argument_list.dart + parameter.dart + parameter_list.dart
  *            -> ArgumentDeclaration.scala
  *   Convention: Dart final class -> Scala final class
- *   Idiom: Nullable for optional fields; boundary/break not needed (no early return)
+ *   Idiom: Nullable for optional fields; boundary/break for early return in matches()
  */
 package ssg
 package sass
@@ -244,24 +244,26 @@ final class ParameterList(
   /** Returns whether [positional] and [names] are valid for this parameter declaration.
     */
   def matches(positional: Int, names: Set[String]): Boolean = {
-    var namedUsed = 0
-    var i         = 0
-    while (i < parameters.length) {
-      val parameter = parameters(i)
-      if (i < positional) {
-        if (names.contains(parameter.name)) {
-          return false // scalastyle:ignore (only in matches())
+    boundary[Boolean] {
+      var namedUsed = 0
+      var i         = 0
+      while (i < parameters.length) {
+        val parameter = parameters(i)
+        if (i < positional) {
+          if (names.contains(parameter.name)) {
+            break(false)
+          }
+        } else if (names.contains(parameter.name)) {
+          namedUsed += 1
+        } else if (parameter.defaultValue.isEmpty) {
+          break(false)
         }
-      } else if (names.contains(parameter.name)) {
-        namedUsed += 1
-      } else if (parameter.defaultValue.isEmpty) {
-        return false // scalastyle:ignore
+        i += 1
       }
-      i += 1
+      if (restParameter.isDefined) true
+      else if (positional > parameters.length) false
+      else namedUsed >= names.size
     }
-    if (restParameter.isDefined) true
-    else if (positional > parameters.length) false
-    else namedUsed >= names.size
   }
 
   override def toString: String = {

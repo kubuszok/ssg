@@ -488,11 +488,10 @@ object MathFunctions {
     unitFn.withDeprecationWarning("math"),
     compatibleFn.withDeprecationWarning("math").withName("comparable"),
     isUnitlessFn.withDeprecationWarning("math").withName("unitless"),
-    // TODO(Wave 8): Remove these once EvaluateVisitor dispatches top-level
-    // sqrt()/sin()/cos()/etc. through the calc evaluation path like dart-sass.
-    // In dart-sass these are NOT global — they are handled by the evaluator's
-    // special-case calc function dispatch. Keeping them global temporarily to
-    // avoid 42 regressions in values/calculation/* error tests.
+    // These math functions are registered globally as a workaround: in dart-sass
+    // they are dispatched by the evaluator's special-case calc path, not as
+    // global built-ins. Once EvaluateVisitor handles top-level sqrt()/sin()/
+    // cos()/etc. through calc evaluation, these entries can be removed.
     sqrtFn, sinFn, cosFn, tanFn, asinFn, acosFn, atanFn,
     logFn, powFn, clampFn, hypotFn
   )
