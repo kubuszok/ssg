@@ -422,7 +422,7 @@ object SassSpecRunner {
       stream.iterator().asScala.foreach { p =>
         if (Files.isRegularFile(p)) {
           val name = p.getFileName.toString
-          if (name == "input.scss") {
+          if (name == "input.scss" || name == "input.sass") {
             loadLooseCase(root, p).foreach(buf += _)
           } else if (name.endsWith(".hrx")) {
             loadHrxCases(root, p).foreach(buf += _)
@@ -457,7 +457,7 @@ object SassSpecRunner {
         stream.iterator().asScala.foreach { p =>
           if (Files.isRegularFile(p)) {
             val name = p.getFileName.toString
-            if (name != "input.scss" && (name.endsWith(".scss") || name.endsWith(".sass"))) {
+            if (name != "input.scss" && name != "input.sass" && (name.endsWith(".scss") || name.endsWith(".sass"))) {
               val c = Try(new String(Files.readAllBytes(p), StandardCharsets.UTF_8)).toOption
               c.foreach(siblings(name) = _)
             }
@@ -501,26 +501,27 @@ object SassSpecRunner {
 
       val archiveRel = root.toAbsolutePath.relativize(archive.toAbsolutePath).toString
       byDir.iterator.flatMap { case (dir, files) =>
-        files.get("input.scss") match {
+        (files.get("input.scss") orElse files.get("input.sass")) match {
           case Some(src) =>
+            val inputName = if (files.contains("input.scss")) "input.scss" else "input.sass"
             val out    = files.get("output.css")
             val err    = files.get("error")
             val origin = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
             // Sibling files (for the MapImporter): same-directory files
-            // except input.scss and the expected-output fixtures.
+            // except input.scss/input.sass and the expected-output fixtures.
             val sameDirSiblings = files.filter { case (name, _) =>
-              name != "input.scss" && name != "output.css" && name != "error" && name != "warning"
+              name != "input.scss" && name != "input.sass" && name != "output.css" && name != "error" && name != "warning"
             }
             // Also include files from ALL archive entries with relative paths.
             // This lets tests resolve both child dirs (@use "dir" → dir/_index.scss)
             // and parent dirs (@use "../utils" → ../_utils.scss).
             val dirPrefix = if (dir.isEmpty) "" else dir + "/"
             val archiveSiblings = allEntries.iterator.flatMap { case (fullPath, content) =>
-              // Skip the test's own input.scss
-              if (fullPath == dirPrefix + "input.scss") None
+              // Skip the test's own input.scss / input.sass
+              if (fullPath == dirPrefix + inputName) None
               // Skip fixture files
               else if (fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
-                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss")) None
+                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")) None
               // Skip top-level fixture files (output.css, error, warning at root)
               else if (!fullPath.contains('/') && (fullPath == "output.css" || fullPath == "error" || fullPath == "warning")) None
               else {
@@ -619,6 +620,7 @@ object SassSpecRunner {
           Compile.compileString(
             tc.source,
             style = OutputStyle.Expanded,
+            syntax = if (tc.relPath.contains("input.sass")) Syntax.Sass else Syntax.Scss,
             importer = importer
           )
         )

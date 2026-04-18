@@ -214,7 +214,7 @@ final class ImportCache(
     else {
       val canonical = result.get
       // Relative canonical URLs (empty scheme) should throw an error starting in
-      // Dart Sass 2.0.0, but for now, they only emit a deprecation warning in
+      // Dart Sass 2.0.0; currently they only emit a deprecation warning in
       // the evaluator.
       if (hasScheme(canonical) && importer.isNonCanonicalScheme(schemeOf(canonical))) {
         throw new IllegalStateException(

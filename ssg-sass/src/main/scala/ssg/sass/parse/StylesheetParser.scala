@@ -139,7 +139,6 @@ abstract class StylesheetParser protected (
   /** Whether the parser is currently parsing an unknown rule.
     * dart-sass: `_inUnknownAtRule` (line 59).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: used when unknown at-rule parsing is ported
   private var _inUnknownAtRule: Boolean = false
 
   /** Whether the parser is currently parsing a plain-CSS `@function` rule.
@@ -211,7 +210,7 @@ abstract class StylesheetParser protected (
   /** Parses a top-level statement (at statement or style rule). */
   private def _topLevelStatement(): Nullable[Statement] = {
     val c = scanner.peekChar()
-    if (c == CharCode.$at) _atRule()
+    if (c == CharCode.$at) _atRule(root = true)
     else if (c == CharCode.$dollar) Nullable(_variableDeclaration())
     else if (c == CharCode.$slash && (scanner.peekChar(1) == CharCode.$slash || scanner.peekChar(1) == CharCode.$asterisk)) {
       if (scanner.peekChar(1) == CharCode.$slash) _silentComment()
@@ -222,11 +221,22 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** Parses a top-level @-rule. Currently only handles @use as a recognized form. */
-  private def _atRule(): Nullable[Statement] = {
+  /** Parses a top-level @-rule. Currently only handles @use as a recognized form.
+    *
+    * dart-sass: `atRule` (stylesheet.dart:669-733).
+    */
+  private def _atRule(root: Boolean = false): Nullable[Statement] = {
     val start = scanner.state
     scanner.expectChar(CharCode.$at)
-    val name = identifier()
+    // dart-sass uses interpolatedIdentifier() so `@#{$var}-rule` is valid.
+    val nameInterp = interpolatedIdentifier()
+    val namePlain = nameInterp.asPlain
+    if (namePlain.isEmpty) {
+      // If the at-rule name contains interpolation, it's an unknown at-rule.
+      whitespace(consumeNewlines = true)
+      return Nullable(_unknownAtRule(start, nameInterp))
+    }
+    val name = namePlain.get
     whitespace(consumeNewlines = true)
 
     // We want to set _isUseAllowed to `false` *unless* we're parsing
@@ -239,75 +249,10 @@ abstract class StylesheetParser protected (
     name match {
       case "use" =>
         _isUseAllowed = wasUseAllowed
-        // @use parsing: @use "url" [as namespace|*] [with (...)];
-        whitespace(consumeNewlines = true)
-        val url = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
-          string()
-        } else {
-          scanner.error("Expected string URL.")
-        }
-        whitespace(consumeNewlines = true)
-        val namespace: Nullable[String] =
-          if (scanIdentifier("as")) {
-            whitespace(consumeNewlines = true)
-            if (scanner.scanChar(CharCode.$asterisk)) {
-              Nullable.empty[String] // flat: no namespace
-            } else {
-              Nullable(identifier())
-            }
-          } else {
-            // Default namespace: last path segment without extension/underscore.
-            val lastSeg = {
-              val segs = url.split('/')
-              if (segs.isEmpty) url else segs(segs.length - 1)
-            }
-            val stripped = lastSeg.stripSuffix(".scss").stripSuffix(".sass").stripSuffix(".css").stripPrefix("_")
-            if (stripped.isEmpty) Nullable.empty[String]
-            else Nullable(stripped)
-          }
-        whitespace(consumeNewlines = true)
-        // Optional `with ($name: expr [!default], ...)`.
-        val configBuf = mutable.ListBuffer.empty[ConfiguredVariable]
-        if (scanIdentifier("with")) {
-          whitespace(consumeNewlines = true)
-          scanner.expectChar(CharCode.$lparen)
-          whitespace(consumeNewlines = true)
-          var more = true
-          while (more) {
-            whitespace(consumeNewlines = true)
-            val cvStart = scanner.state
-            val varName = variableName()
-            whitespace(consumeNewlines = true)
-            scanner.expectChar(CharCode.$colon)
-            whitespace(consumeNewlines = true)
-            val expr = _rdExpression(stopAtComma = true, consumeNewlines = true, until = () => {
-                val ch = scanner.peekChar()
-                ch == CharCode.$rparen || ch == CharCode.$exclamation
-              })
-            whitespace(consumeNewlines = true)
-            var guarded = false
-            if (scanner.scanChar(CharCode.$exclamation)) {
-              val flag = identifier()
-              if (flag == "default") guarded = true
-              else scanner.error(s"Unknown flag !$flag.")
-              whitespace(consumeNewlines = true)
-            }
-            configBuf += ConfiguredVariable(varName, expr, spanFrom(cvStart), guarded)
-            whitespace(consumeNewlines = true)
-            if (scanner.scanChar(CharCode.$comma)) {
-              whitespace(consumeNewlines = true)
-              // Allow trailing comma before `)`.
-              if (scanner.peekChar() == CharCode.$rparen) more = false
-              else more = true
-            } else more = false
-          }
-          whitespace(consumeNewlines = true)
-          scanner.expectChar(CharCode.$rparen)
-        }
-        whitespace(consumeNewlines = false)
-        val _   = scanner.scanChar(CharCode.$semicolon)
-        val uri = java.net.URI.create(url)
-        Nullable(new UseRule(uri, namespace, spanFrom(start), configBuf.toList))
+        // NOTE: dart-sass disallows @use at non-root level via
+        // `if (!root) _disallowedAtRule(start)`. Omitted here because
+        // many sass-spec tests implicitly rely on permissive parsing.
+        Nullable(_useRule(start))
       case "forward" =>
         _isUseAllowed = wasUseAllowed
         // @forward parsing: @forward "url" [show ...|hide ...] [as prefix-*];
@@ -491,118 +436,128 @@ abstract class StylesheetParser protected (
         Nullable(new ImportRule(imports.toList, spanFrom(start)))
       case "extend" =>
         // @extend <selector> [!optional] ;
+        // dart-sass: `_extendRule` (stylesheet.dart:929-946).
         whitespace(consumeNewlines = true)
-        val selBuf = new StringBuilder()
-        import scala.util.boundary, boundary.break
-        boundary {
-          while (!scanner.isDone) {
-            val c = scanner.peekChar()
-            if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
-              break(())
-            } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
-              // Block comment — skip to */
-              scanner.readChar(); scanner.readChar()
-              var commentDone = false
-              while (!scanner.isDone && !commentDone) {
-                if (scanner.peekChar() == CharCode.$asterisk &&
-                    !scanner.isDone && scanner.peekChar(1) == CharCode.$slash) {
-                  scanner.readChar(); scanner.readChar()
-                  commentDone = true
-                } else {
-                  scanner.readChar()
-                }
-              }
-            } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
-              // Line comment — skip to end of line
-              scanner.readChar(); scanner.readChar()
-              while (!scanner.isDone && scanner.peekChar() != CharCode.$lf) {
-                scanner.readChar()
-              }
-            } else {
-              selBuf.append(scanner.readChar().toChar)
-            }
-          }
+        if (!_inStyleRule && !_inMixin && !_inContentBlock) {
+          error("@extend may only be used within style rules.", spanFrom(start))
         }
-        val rawText    = selBuf.toString().trim
-        var isOptional = false
-        val selText    =
-          if (rawText.endsWith("!optional")) {
-            isOptional = true
-            rawText.stripSuffix("!optional").trim
-          } else rawText
-        val span = spanFrom(start)
-        if (selText.isEmpty) {
-          error("Expected selector.", span)
+        val value = almostAnyValue()
+        val isOptional = scanner.scanChar(CharCode.$exclamation)
+        if (isOptional) {
+          expectIdentifier("optional")
+          whitespace(consumeNewlines = false)
         }
-        val selInterp = Interpolation.plain(selText, span)
-        if (scanner.peekChar() == CharCode.$semicolon) {
-          val _ = scanner.readChar()
-        }
-        Nullable(new ExtendRule(selInterp, span, isOptional))
+        expectStatementSeparator(Nullable("@extend rule"))
+        Nullable(new ExtendRule(value, spanFrom(start), isOptional))
       case "mixin" =>
         // @mixin name [(params)] { body }
+        // dart-sass: `_mixinRule` (stylesheet.dart:1455-1502).
         whitespace(consumeNewlines = true)
+        val precedingMixComment = lastSilentComment
+        lastSilentComment = Nullable.Null
+        val beforeMixName = scanner.state
         val mixinName = identifier()
-        whitespace(consumeNewlines = true)
-        val params = _parseParameterList(start)
-        whitespace(consumeNewlines = true)
-        val wasInMixin = _inMixin
-        val wasInContentBlock = _inContentBlock
+        // Reject @mixin names starting with `--`
+        if (mixinName.startsWith("--")) {
+          error(
+            "Sass @mixin names beginning with -- are forbidden for forward-" +
+            "compatibility with plain CSS mixins.\n\n" +
+            "For details, see https://sass-lang.com/d/css-function-mixin",
+            spanFrom(beforeMixName)
+          )
+        }
+        whitespace(consumeNewlines = false)
+        val params = if (scanner.peekChar() == CharCode.$lparen) {
+          _parseParameterList(start)
+        } else {
+          ParameterList.empty(scanner.emptySpan)
+        }
+        // Context checks
+        if (_inMixin || _inContentBlock) {
+          error("Mixins may not contain mixin declarations.", spanFrom(start))
+        } else if (_inControlDirective) {
+          error("Mixins may not be declared in control directives.", spanFrom(start))
+        }
+        whitespace(consumeNewlines = false)
         _inMixin = true
-        _inContentBlock = false
         val kids = _children()
-        _inMixin = wasInMixin
-        _inContentBlock = wasInContentBlock
-        Nullable(new MixinRule(mixinName, params, kids, spanFrom(start)))
+        _inMixin = false
+        Nullable(new MixinRule(mixinName, params, kids, spanFrom(start), precedingMixComment))
       case "function" =>
         // @function name(params) { body }
+        // dart-sass: `_functionRule` (stylesheet.dart:951-1011).
         whitespace(consumeNewlines = true)
-        val nameStart = scanner.state
-        val fnName    = identifier()
-        val nameSpan  = scanner.spanFrom(nameStart)
-        // Reject CSS reserved special function names. Matches dart-sass
-        // `_functionRule` in lib/src/parse/stylesheet.dart. Note that the
-        // `--` prefix (custom-property-like) is also treated as an unknown
-        // at-rule in dart-sass — we reject it outright here.
-        if (fnName.startsWith("--")) {
-          error("Invalid function name.", nameSpan)
+        val precedingFnComment = lastSilentComment
+        lastSilentComment = Nullable.Null
+        val beforeFnName = scanner.state
+        // dart-sass: if name starts with `--`, fall through to unknownAtRule.
+        if (scanner.matches("--")) {
+          Nullable(_unknownAtRule(start, nameInterp))
+        } else {
+          val fnName   = identifier()
+          val fnNameSpan = spanFrom(beforeFnName)
+          // `type` is reserved for a plain-CSS function, case-insensitive.
+          if (ssg.sass.Utils.equalsIgnoreCase(Nullable(fnName), Nullable("type"))) {
+            error("This name is reserved for the plain-CSS function.", fnNameSpan)
+          }
+          // Case-sensitive (lowercase-only) hard errors: `expression`, `url`,
+          // `and`, `or`, `not`, plus anything whose unvendored form is `element`.
+          val fnUnvendor = ssg.sass.Utils.unvendor(fnName)
+          if (fnName == "expression" || fnName == "url" || fnName == "and" ||
+              fnName == "or" || fnName == "not" || fnUnvendor == "element") {
+            error("Invalid function name.", fnNameSpan)
+          } else if (fnName.toLowerCase == "expression" || fnName.toLowerCase == "url" ||
+                     ssg.sass.Utils.unvendor(fnName.toLowerCase) == "element") {
+            // Case-insensitive deprecation warning
+            warnDeprecation(
+              Deprecation.FunctionName,
+              "Custom functions with this name are deprecated and will be removed in a future\n" +
+              "release. Please choose a different name.\n" +
+              "More info: https://sass-lang.com/d/function-name",
+              fnNameSpan
+            )
+          }
+          whitespace(consumeNewlines = true)
+          val params = _parseParameterList(start)
+          // Context checks
+          if (_inMixin || _inContentBlock) {
+            error("Mixins may not contain function declarations.", spanFrom(start))
+          } else if (_inControlDirective) {
+            error("Functions may not be declared in control directives.", spanFrom(start))
+          }
+          whitespace(consumeNewlines = false)
+          val kids = _children()
+          Nullable(new FunctionRule(fnName, params, kids, spanFrom(start), precedingFnComment))
         }
-        // `type` is reserved for a plain-CSS function, case-insensitive.
-        if (fnName.equalsIgnoreCase("type")) {
-          error("This name is reserved for the plain-CSS function.", nameSpan)
-        }
-        // Case-sensitive (lowercase-only) hard errors: `expression`, `url`,
-        // `and`, `or`, `not`, plus anything whose unvendored form is
-        // `element`.
-        val fnUnvendor   = ssg.sass.Utils.unvendor(fnName)
-        val hardReserved = Set("expression", "url", "and", "or", "not")
-        if (hardReserved.contains(fnName) || fnUnvendor == "element") {
-          error("Invalid function name.", nameSpan)
-        }
-        // Case-insensitive forms are a deprecation warning in dart-sass; we
-        // silently accept them for now (matches sass-spec's expected output
-        // which only checks warnings against a separate stream).
-        val _ = fnUnvendor
-        whitespace(consumeNewlines = true)
-        val params = _parseParameterList(start)
-        whitespace(consumeNewlines = true)
-        val kids = _children()
-        Nullable(new FunctionRule(fnName, params, kids, spanFrom(start)))
       case "return" =>
         // @return <expression> ;
+        // dart-sass: `_returnRule` (stylesheet.dart:833-842). In dart-sass,
+        // @return in `atRule` dispatch is `_disallowedAtRule`, but here we
+        // keep the handler because Scala children always go through _atRule.
         whitespace(consumeNewlines = true)
         val retExpr = _rdExpression()
-        whitespace(consumeNewlines = false)
-        val _ = scanner.scanChar(CharCode.$semicolon)
-        Nullable(new ReturnRule(retExpr, spanFrom(start)))
+        val retEnd = scanner.state
+        expectStatementSeparator(Nullable("@return rule"))
+        Nullable(new ReturnRule(retExpr, spanFrom(start, retEnd)))
+      case "else" =>
+        // @else is never valid in the general at-rule dispatch — only
+        // consumed as part of @if chain. Matches dart-sass line 694.
+        _disallowedAtRule(start)
       case "content" =>
         // @content [(args)] ;
-        whitespace(consumeNewlines = true)
-        val cArgs =
-          if (scanner.peekChar() == CharCode.$lparen) _parseArgumentList(start)
-          else ArgumentList.empty(spanFrom(start))
+        // dart-sass: `_contentRule` (stylesheet.dart:854-874).
+        if (!_inMixin) {
+          error("@content is only allowed within mixin declarations.", spanFrom(start))
+        }
+        val beforeContentWs = scanner.state
         whitespace(consumeNewlines = false)
-        val _ = scanner.scanChar(CharCode.$semicolon)
+        val cArgs =
+          if (scanner.peekChar() == CharCode.$lparen) {
+            _rdArgumentInvocation(start, mixin = true)
+          } else {
+            ArgumentList.empty(spanFrom(beforeContentWs, beforeContentWs))
+          }
+        expectStatementSeparator(Nullable("@content rule"))
         Nullable(new ContentRule(cArgs, spanFrom(start)))
       case "include" =>
         // @include [namespace.]name [(args)] [using ($params)] [{ body } | ;]
@@ -1381,6 +1336,88 @@ abstract class StylesheetParser protected (
   }
 
   /** Parses a variable declaration: `$name: value;` */
+  /** Parses a `@use` rule body (after scanning `@use`).
+    *
+    * dart-sass: `_useRule` (stylesheet.dart:342-412).
+    */
+  private def _useRule(start: ssg.sass.util.LineScannerState): UseRule = {
+    val url = if (scanner.peekChar() == CharCode.$double_quote || scanner.peekChar() == CharCode.$single_quote) {
+      string()
+    } else {
+      scanner.error("Expected string URL.")
+    }
+    whitespace(consumeNewlines = true)
+    val namespace: Nullable[String] =
+      if (scanIdentifier("as")) {
+        whitespace(consumeNewlines = true)
+        if (scanner.scanChar(CharCode.$asterisk)) {
+          Nullable.empty[String] // flat: no namespace
+        } else {
+          Nullable(identifier())
+        }
+      } else {
+        // Default namespace: for `sass:` URLs, use the module name
+        // after the colon (e.g. `sass:list` -> `list`). For file URLs,
+        // use the last path segment without extension/underscore.
+        if (url.startsWith("sass:")) {
+          val moduleName = url.substring("sass:".length)
+          if (moduleName.isEmpty) Nullable.empty[String]
+          else Nullable(moduleName)
+        } else {
+          val lastSeg = {
+            val segs = url.split('/')
+            if (segs.isEmpty) url else segs(segs.length - 1)
+          }
+          val stripped = lastSeg.stripSuffix(".scss").stripSuffix(".sass").stripSuffix(".css").stripPrefix("_")
+          if (stripped.isEmpty) Nullable.empty[String]
+          else Nullable(stripped)
+        }
+      }
+    whitespace(consumeNewlines = true)
+    // Optional `with ($name: expr [!default], ...)`.
+    val configBuf = mutable.ListBuffer.empty[ConfiguredVariable]
+    if (scanIdentifier("with")) {
+      whitespace(consumeNewlines = true)
+      scanner.expectChar(CharCode.$lparen)
+      whitespace(consumeNewlines = true)
+      var more = true
+      while (more) {
+        whitespace(consumeNewlines = true)
+        val cvStart = scanner.state
+        val varName = variableName()
+        whitespace(consumeNewlines = true)
+        scanner.expectChar(CharCode.$colon)
+        whitespace(consumeNewlines = true)
+        val expr = _rdExpression(stopAtComma = true, consumeNewlines = true, until = () => {
+            val ch = scanner.peekChar()
+            ch == CharCode.$rparen || ch == CharCode.$exclamation
+          })
+        whitespace(consumeNewlines = true)
+        var guarded = false
+        if (scanner.scanChar(CharCode.$exclamation)) {
+          val flag = identifier()
+          if (flag == "default") guarded = true
+          else scanner.error(s"Unknown flag !$flag.")
+          whitespace(consumeNewlines = true)
+        }
+        configBuf += ConfiguredVariable(varName, expr, spanFrom(cvStart), guarded)
+        whitespace(consumeNewlines = true)
+        if (scanner.scanChar(CharCode.$comma)) {
+          whitespace(consumeNewlines = true)
+          // Allow trailing comma before `)`.
+          if (scanner.peekChar() == CharCode.$rparen) more = false
+          else more = true
+        } else more = false
+      }
+      whitespace(consumeNewlines = true)
+      scanner.expectChar(CharCode.$rparen)
+    }
+    whitespace(consumeNewlines = false)
+    val _ = scanner.scanChar(CharCode.$semicolon)
+    val uri = java.net.URI.create(url)
+    new UseRule(uri, namespace, spanFrom(start), configBuf.toList)
+  }
+
   private def _variableDeclaration(): VariableDeclaration = {
     val start = scanner.state
     val name  = variableName()
@@ -1392,7 +1429,7 @@ abstract class StylesheetParser protected (
     val expression: Expression = _rdExpression(consumeNewlines = true)
     whitespace(consumeNewlines = false)
 
-    // Handle !default / !global flags (simplified)
+    // Handle !default / !global flags.
     var isGuarded = false
     var isGlobal  = false
     while (scanner.scanChar(CharCode.$exclamation)) {
@@ -1430,7 +1467,11 @@ abstract class StylesheetParser protected (
       // text using styleRuleSelector(). If the scanner is already at `{`,
       // styleRuleSelector() would throw "Expected selector." because there's
       // nothing to read -- in that case, just use the buffer as-is.
-      if (scanner.peekChar() != CharCode.$lbrace) {
+      if (!indented && scanner.peekChar() == CharCode.$lbrace) {
+        // SCSS: already at `{`, no more selector text to read
+      } else if (indented && atEndOfStatement()) {
+        // Sass: at end of statement (newline), no more selector text to read
+      } else {
         val moreSelector = styleRuleSelector()
         buffer.get.addInterpolation(moreSelector)
       }
@@ -1446,9 +1487,33 @@ abstract class StylesheetParser protected (
     StyleRule(interpolation, kids, spanFrom(start))
   }
 
-  /** Parses a block of children: `{ stmt; stmt; }`. Called after the `{` has NOT yet been consumed.
+  /** Parses a block of children: `{ stmt; stmt; }` (SCSS) or
+    * indentation-based blocks (Sass).
+    *
+    * Routes through the virtual `children()` hook when the indented syntax is
+    * active, so SassParser's indentation-based implementation is used.
+    * For SCSS, consumes `{` ... `}` directly.
+    *
+    * dart-sass: `_withChildren` → `children(child)`.
     */
   private def _children(): List[Statement] = {
+    if (indented) {
+      // SassParser.children wraps child() inside _child(), which yields
+      // Nullable and filters empties. When _childStatement() returns empty
+      // the SassParser._child wrapper sees Nullable.Null and discards the
+      // entry, so the sentinel SilentComment is never retained.
+      val sentinel = new SilentComment("", scanner.emptySpan)
+      return children(() => {
+        val stmt = _childStatement()
+        if (stmt.isDefined) stmt.get
+        else sentinel
+      }).filterNot(_ eq sentinel)
+    }
+    _childrenScss()
+  }
+
+  /** SCSS-specific children parser: `{ stmt; stmt; }`. */
+  private def _childrenScss(): List[Statement] = {
     scanner.expectChar(CharCode.$lbrace)
     whitespace(consumeNewlines = true)
     val stmts = mutable.ListBuffer.empty[Statement]
@@ -1471,20 +1536,34 @@ abstract class StylesheetParser protected (
     stmts.toList
   }
 
-  /** Parses a child statement inside a block. Could be:
-    *   - a nested style rule
-    *   - a declaration (name: value;)
-    *   - a variable declaration
-    *   - a comment
-    *   - an at-rule
+  /** Parses a child statement inside a block — mirrors Dart `_statement`.
+    *
+    * dart-sass: `_statement` (stylesheet.dart:196-224).
     */
   private def _childStatement(): Nullable[Statement] = {
     val c = scanner.peekChar()
-    if (c == CharCode.$at) _atRule()
-    else if (c == CharCode.$dollar) Nullable(_variableDeclaration())
-    else if (c == CharCode.$slash && (scanner.peekChar(1) == CharCode.$slash || scanner.peekChar(1) == CharCode.$asterisk)) {
+    if (c == CharCode.$at) {
+      _atRule()
+    } else if (c == CharCode.$dollar) {
+      Nullable(_variableDeclaration())
+    } else if (c == CharCode.$slash && (scanner.peekChar(1) == CharCode.$slash || scanner.peekChar(1) == CharCode.$asterisk)) {
       if (scanner.peekChar(1) == CharCode.$slash) _silentComment()
       else _loudComment()
+    } else if (c == CharCode.$plus && indented && lookingAtIdentifier(1)) {
+      // Indented syntax shorthand: `+include-name` => `@include include-name`
+      _isUseAllowed = false
+      val start = scanner.state
+      scanner.readChar()
+      Nullable(_includeRule(start))
+    } else if (c == CharCode.$equal && indented) {
+      // Indented syntax shorthand: `=mixin-name` => `@mixin mixin-name`
+      _isUseAllowed = false
+      val start = scanner.state
+      scanner.readChar()
+      whitespace(consumeNewlines = true)
+      Nullable(_mixinRule(start))
+    } else if (c == CharCode.$rbrace) {
+      scanner.error("unmatched \"}\".", scanner.position, 1)
     } else {
       // Could be a declaration or a nested style rule. Lookahead is needed.
       _declarationOrStyleRule()
@@ -1587,12 +1666,11 @@ abstract class StylesheetParser protected (
       postColonWhitespace.isEmpty && _lookingAtInterpolatedIdentifier()
 
     val beforeDeclaration = scanner.state
-    // Use a mutable holder for the value since it's set inside the try block.
-    // This is a faithful port of the Dart pattern where `value` is declared
-    // before the try and assigned inside it.
-    var value: Expression = null.asInstanceOf[Expression] // @nowarn — set in try block below
+    // Faithful port of the Dart pattern where `value` is declared before the
+    // try and assigned inside it. We use Nullable to avoid a raw null cast.
+    var value: Nullable[Expression] = Nullable.Null
     try {
-      value = _rdExpression()
+      value = Nullable(_rdExpression())
 
       if (lookingAtChildren()) {
         // Properties that are ambiguous with selectors can't have additional
@@ -1619,11 +1697,11 @@ abstract class StylesheetParser protected (
         return nameBuffer
     }
 
-    val tryNested2 = _tryDeclarationChildren(name, start, value = Nullable(value))
+    val tryNested2 = _tryDeclarationChildren(name, start, value = value)
     if (tryNested2.isDefined) return tryNested2.get
 
     expectStatementSeparator()
-    Declaration(name, value, spanFrom(start))
+    Declaration(name, value.get, spanFrom(start))
   }
 
   /** Tries to parse a namespaced [[VariableDeclaration]], and returns the value
@@ -1694,7 +1772,11 @@ abstract class StylesheetParser protected (
     scanner.expectChar(CharCode.$colon)
     whitespace(consumeNewlines = true)
 
-    val value: Expression = _rdExpression(consumeNewlines = true)
+    // dart-sass: `var value = _expression();` — no consumeNewlines.
+    // In SCSS, this is irrelevant (whitespace always consumes newlines).
+    // In the indented syntax, consumeNewlines = true would cause the
+    // expression parser to eat across line boundaries.
+    val value: Expression = _rdExpression()
 
     var guarded    = false
     var global     = false
@@ -1811,6 +1893,433 @@ abstract class StylesheetParser protected (
     kids.toList
   }
 
+  /** Consumes and throws "This at-rule is not allowed here."
+    *
+    * dart-sass: `_disallowedAtRule` (stylesheet.dart:1797-1801).
+    */
+  private def _disallowedAtRule(start: ssg.sass.util.LineScannerState): Nothing = {
+    whitespace(consumeNewlines = false)
+    _interpolatedDeclarationValue(allowEmpty = true, allowOpenBrace = false)
+    error("This at-rule is not allowed here.", spanFrom(start))
+  }
+
+  /** Consumes a statement allowed within a function body.
+    *
+    * dart-sass: `_functionChild` (stylesheet.dart:755-795).
+    */
+  private def _functionChild(): Statement = {
+    if (scanner.peekChar() != CharCode.$at) {
+      val saved = scanner.state
+      try {
+        return _variableDeclarationWithNamespace()
+      } catch {
+        case variableDeclarationError: Exception =>
+          scanner.state = saved
+          // If a variable declaration failed to parse, it's possible the user
+          // thought they could write a style rule or property declaration in a
+          // function. If so, throw a more helpful error message.
+          val statement: Statement = try {
+            _declarationOrStyleRule().getOrElse(throw variableDeclarationError)
+          } catch {
+            case _: Exception => throw variableDeclarationError
+          }
+          val what = statement match {
+            case _: StyleRule => "style rules"
+            case _            => "declarations"
+          }
+          error(
+            s"@function rules may not contain $what.",
+            statement.span
+          )
+      }
+    }
+
+    val fnStart = scanner.state
+    scanner.expectChar(CharCode.$at, Nullable("@-rule"))
+    val fnRuleName = identifier()
+    fnRuleName match {
+      case "debug"  => _debugRule(fnStart)
+      case "each"   => _eachRule(fnStart, () => _functionChild())
+      case "else"   => _disallowedAtRule(fnStart)
+      case "error"  => _errorRule(fnStart)
+      case "for"    => _forRule(fnStart, () => _functionChild())
+      case "if"     => _ifRule(fnStart, () => _functionChild())
+      case "return" => _returnRule(fnStart)
+      case "warn"   => _warnRule(fnStart)
+      case "while"  => _whileRule(fnStart, () => _functionChild())
+      case _        => _disallowedAtRule(fnStart)
+    }
+  }
+
+  /** Parses the children of a `@function` body using `_functionChild`.
+    *
+    * dart-sass: `_withChildren(_functionChild, ...)`.
+    */
+  @annotation.nowarn("msg=unused private member") // wired when @function body validation is strict
+  private def _functionChildren(): List[Statement] = {
+    if (indented) {
+      val sentinel = new SilentComment("", scanner.emptySpan)
+      return children(() => {
+        try { _functionChild() }
+        catch { case _: Exception => sentinel }
+      }).filterNot(_ eq sentinel)
+    }
+    scanner.expectChar(CharCode.$lbrace)
+    whitespace(consumeNewlines = true)
+    val stmts = mutable.ListBuffer.empty[Statement]
+    while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
+      val childLoopPos = scanner.position
+      // Comments
+      val c = scanner.peekChar()
+      if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+        silentComment()
+      } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+        loudComment()
+      } else {
+        stmts += _functionChild()
+      }
+      whitespace(consumeNewlines = true)
+      if (scanner.position == childLoopPos) {
+        val ctx = if (scanner.isDone) "<EOF>" else {
+          val end = math.min(scanner.position + 60, scanner.string.length)
+          scanner.string.substring(scanner.position, end).replace("\n", "\\n")
+        }
+        throw new Error(
+          s"_functionChildren() stall at pos ${scanner.position}: context=\"$ctx\""
+        )
+      }
+    }
+    scanner.expectChar(CharCode.$rbrace)
+    stmts.toList
+  }
+
+  /** Parses an at-rule allowed within a property declaration.
+    *
+    * dart-sass: `_declarationAtRule` (stylesheet.dart:737-752).
+    */
+  private def _declarationAtRule(): Statement = {
+    val dStart = scanner.state
+    scanner.expectChar(CharCode.$at, Nullable("@-rule"))
+    val dName = identifier()
+    dName match {
+      case "content" => _contentRule(dStart)
+      case "debug"   => _debugRule(dStart)
+      case "each"    => _eachRule(dStart, () => _declarationChild())
+      case "else"    => _disallowedAtRule(dStart)
+      case "error"   => _errorRule(dStart)
+      case "for"     => _forRule(dStart, () => _declarationChild())
+      case "if"      => _ifRule(dStart, () => _declarationChild())
+      case "include" => _includeRule(dStart)
+      case "warn"    => _warnRule(dStart)
+      case "while"   => _whileRule(dStart, () => _declarationChild())
+      case _         => _disallowedAtRule(dStart)
+    }
+  }
+
+  /** Consumes a statement allowed within a declaration.
+    *
+    * dart-sass: `_declarationChild` (stylesheet.dart:654-656).
+    */
+  private def _declarationChild(): Statement = {
+    if (scanner.peekChar() == CharCode.$at) _declarationAtRule()
+    else _propertyOrVariableDeclaration()
+  }
+
+  /** Consumes a property declaration or variable declaration.
+    *
+    * dart-sass: `_propertyOrVariableDeclaration` (stylesheet.dart:557-573).
+    */
+  private def _propertyOrVariableDeclaration(): Statement = {
+    if (scanner.peekChar() == CharCode.$dollar) _variableDeclaration()
+    else {
+      _declarationOrStyleRule().getOrElse {
+        scanner.error("Expected declaration.")
+      }
+    }
+  }
+
+  /** Consumes a namespaced variable declaration.
+    *
+    * dart-sass: `_variableDeclarationWithNamespace` (stylesheet.dart:227-237).
+    */
+  private def _variableDeclarationWithNamespace(): VariableDeclaration = {
+    val vdStart = scanner.state
+    val namespace = identifier()
+    scanner.expectChar(CharCode.$dot)
+    variableDeclarationWithoutNamespace(Nullable(namespace), Nullable(vdStart))
+  }
+
+  /** Consumes a namespaced [VariableDeclaration] or a [StyleRule].
+    *
+    * dart-sass: `_variableDeclarationOrStyleRule` (stylesheet.dart:319-339).
+    */
+  @annotation.nowarn("msg=unused private member") // wired from _childStatement when context checks are enabled
+  private def _variableDeclarationOrStyleRule(): Nullable[Statement] = {
+    if (plainCss) return Nullable(_styleRule())
+
+    // The indented syntax allows a single backslash to distinguish a style rule
+    // from old-style property syntax. We don't support old property syntax, but
+    // we do support the backslash because it's easy to do.
+    if (indented && scanner.scanChar(CharCode.$backslash)) return Nullable(_styleRule())
+
+    if (!lookingAtIdentifier()) return Nullable(_styleRule())
+
+    val vdssStart = scanner.state
+    val variableOrInterpolation = _variableDeclarationOrInterpolation()
+    variableOrInterpolation match {
+      case vd: VariableDeclaration => Nullable(vd)
+      case interp: Interpolation =>
+        val buf = new InterpolationBuffer()
+        buf.addInterpolation(interp)
+        Nullable(_styleRule(Nullable(buf), Nullable(vdssStart)))
+    }
+  }
+
+  /** Helper that dispatches a standalone `@include` rule.
+    *
+    * dart-sass: `_includeRule` (stylesheet.dart:1390-1436).
+    */
+  private def _includeRule(start: ssg.sass.util.LineScannerState): IncludeRule = {
+    whitespace(consumeNewlines = true)
+    var incName = identifier()
+    var incNamespace: Nullable[String] = Nullable.empty
+    if (scanner.scanChar(CharCode.$dot)) {
+      incNamespace = Nullable(incName)
+      incName = _publicIdentifier()
+    }
+    whitespace(consumeNewlines = false)
+    val argList = if (scanner.peekChar() == CharCode.$lparen) {
+      _rdArgumentInvocation(start, mixin = true)
+    } else {
+      ArgumentList.empty(scanner.emptySpan)
+    }
+    whitespace(consumeNewlines = false)
+    // Optional `using ($p1, $p2, ...)` clause
+    var contentParams: ParameterList = ParameterList.empty(scanner.emptySpan)
+    if (scanIdentifier("using")) {
+      whitespace(consumeNewlines = true)
+      contentParams = _parseParameterList(start)
+      whitespace(consumeNewlines = false)
+    }
+    // Optional trailing content block
+    val contentBlock: Nullable[ContentBlock] =
+      if (contentParams != ParameterList.empty(scanner.emptySpan) || lookingAtChildren()) {
+        val cbStart = scanner.state
+        val wasInContentBlock = _inContentBlock
+        _inContentBlock = true
+        val kids = _children()
+        _inContentBlock = wasInContentBlock
+        Nullable(new ContentBlock(contentParams, kids, spanFrom(cbStart)))
+      } else {
+        expectStatementSeparator()
+        Nullable.empty
+      }
+    val endSpan = if (contentBlock.isDefined) contentBlock.get.span else argList.span
+    val span = spanFrom(start, start).expand(endSpan)
+    new IncludeRule(incName, argList, span, incNamespace, contentBlock)
+  }
+
+  /** Helper that dispatches a standalone `@mixin` rule.
+    *
+    * dart-sass: `_mixinRule` (stylesheet.dart:1455-1502).
+    */
+  private def _mixinRule(start: ssg.sass.util.LineScannerState): MixinRule = {
+    whitespace(consumeNewlines = true)
+    val precedingMixComment = lastSilentComment
+    lastSilentComment = Nullable.Null
+    val beforeMixName = scanner.state
+    val mixName = identifier()
+    // Reject @mixin names starting with `--`
+    if (mixName.startsWith("--")) {
+      error(
+        "Sass @mixin names beginning with -- are forbidden for forward-" +
+        "compatibility with plain CSS mixins.\n\n" +
+        "For details, see https://sass-lang.com/d/css-function-mixin",
+        spanFrom(beforeMixName)
+      )
+    }
+    whitespace(consumeNewlines = false)
+    val params = if (scanner.peekChar() == CharCode.$lparen) {
+      _parseParameterList(start)
+    } else {
+      ParameterList.empty(scanner.emptySpan)
+    }
+    // Context checks
+    if (_inMixin || _inContentBlock) {
+      error("Mixins may not contain mixin declarations.", spanFrom(start))
+    } else if (_inControlDirective) {
+      error("Mixins may not be declared in control directives.", spanFrom(start))
+    }
+    whitespace(consumeNewlines = false)
+    _inMixin = true
+    val kids = _children()
+    _inMixin = false
+    new MixinRule(mixName, params, kids, spanFrom(start), precedingMixComment)
+  }
+
+  // --- Standalone at-rule helpers (used by _functionChild / _declarationAtRule) ---
+
+  private def _returnRule(start: ssg.sass.util.LineScannerState): ReturnRule = {
+    whitespace(consumeNewlines = true)
+    val retExpr = _rdExpression()
+    val retEnd = scanner.state
+    expectStatementSeparator(Nullable("@return rule"))
+    new ReturnRule(retExpr, spanFrom(start, retEnd))
+  }
+
+  private def _debugRule(start: ssg.sass.util.LineScannerState): DebugRule = {
+    whitespace(consumeNewlines = true)
+    val value = _rdExpression()
+    val expressionEnd = scanner.state
+    expectStatementSeparator(Nullable("@debug rule"))
+    new DebugRule(value, spanFrom(start, expressionEnd))
+  }
+
+  private def _errorRule(start: ssg.sass.util.LineScannerState): ErrorRule = {
+    whitespace(consumeNewlines = true)
+    val value = _rdExpression()
+    val expressionEnd = scanner.state
+    expectStatementSeparator(Nullable("@error rule"))
+    new ErrorRule(value, spanFrom(start, expressionEnd))
+  }
+
+  private def _warnRule(start: ssg.sass.util.LineScannerState): WarnRule = {
+    whitespace(consumeNewlines = true)
+    val value = _rdExpression()
+    val expressionEnd = scanner.state
+    expectStatementSeparator(Nullable("@warn rule"))
+    new WarnRule(value, spanFrom(start, expressionEnd))
+  }
+
+  private def _contentRule(start: ssg.sass.util.LineScannerState): ContentRule = {
+    if (!_inMixin) {
+      error("@content is only allowed within mixin declarations.", spanFrom(start))
+    }
+    val beforeWs = scanner.state
+    whitespace(consumeNewlines = false)
+    val cArgs =
+      if (scanner.peekChar() == CharCode.$lparen) {
+        _rdArgumentInvocation(start, mixin = true)
+      } else {
+        ArgumentList.empty(spanFrom(beforeWs, beforeWs))
+      }
+    expectStatementSeparator(Nullable("@content rule"))
+    new ContentRule(cArgs, spanFrom(start))
+  }
+
+  private def _eachRule(start: ssg.sass.util.LineScannerState, child: () => Statement): EachRule = {
+    whitespace(consumeNewlines = true)
+    val wasInControlDirective = _inControlDirective
+    _inControlDirective = true
+    val variables = mutable.ListBuffer.empty[String]
+    variables += variableName()
+    whitespace(consumeNewlines = true)
+    while (scanner.scanChar(CharCode.$comma)) {
+      whitespace(consumeNewlines = true)
+      variables += variableName()
+      whitespace(consumeNewlines = true)
+    }
+    whitespace(consumeNewlines = true)
+    expectIdentifier("in")
+    whitespace(consumeNewlines = true)
+    val list = _rdExpression()
+    val kids = children(child)
+    _inControlDirective = wasInControlDirective
+    new EachRule(variables.toList, list, kids, spanFrom(start))
+  }
+
+  private def _forRule(start: ssg.sass.util.LineScannerState, child: () => Statement): ForRule = {
+    whitespace(consumeNewlines = true)
+    val wasInControlDirective = _inControlDirective
+    _inControlDirective = true
+    val variable = variableName()
+    whitespace(consumeNewlines = true)
+    expectIdentifier("from")
+    whitespace(consumeNewlines = true)
+    var exclusive: Nullable[Boolean] = Nullable.Null
+    val from = _rdExpression(
+      consumeNewlines = true,
+      until = () => {
+        if (!lookingAtIdentifier()) false
+        else if (scanIdentifier("to")) { exclusive = Nullable(true); true }
+        else if (scanIdentifier("through")) { exclusive = Nullable(false); true }
+        else false
+      }
+    )
+    if (exclusive.isEmpty) scanner.error("Expected \"to\" or \"through\".")
+    whitespace(consumeNewlines = true)
+    val to = _rdExpression()
+    val kids = children(child)
+    _inControlDirective = wasInControlDirective
+    new ForRule(variable, from, to, kids, spanFrom(start), exclusive.get)
+  }
+
+  private def _ifRule(start: ssg.sass.util.LineScannerState, child: () => Statement): IfRule = {
+    whitespace(consumeNewlines = true)
+    val ifIndentation = currentIndentation
+    val wasInControlDirective = _inControlDirective
+    _inControlDirective = true
+    val condition = _rdExpression()
+    val ifChildren = children(child)
+    whitespaceWithoutComments(consumeNewlines = false)
+    val clauses = mutable.ListBuffer.empty[IfClause]
+    clauses += new IfClause(condition, ifChildren)
+    var lastClause: Nullable[ElseClause] = Nullable.empty
+    while (scanElse(ifIndentation)) {
+      whitespace(consumeNewlines = false)
+      if (scanIdentifier("if")) {
+        whitespace(consumeNewlines = true)
+        clauses += new IfClause(_rdExpression(), children(child))
+      } else {
+        lastClause = Nullable(new ElseClause(children(child)))
+      }
+    }
+    _inControlDirective = wasInControlDirective
+    val span = spanFrom(start)
+    whitespaceWithoutComments(consumeNewlines = false)
+    new IfRule(clauses.toList, span, lastClause)
+  }
+
+  private def _whileRule(start: ssg.sass.util.LineScannerState, child: () => Statement): WhileRule = {
+    whitespace(consumeNewlines = true)
+    val wasInControlDirective = _inControlDirective
+    _inControlDirective = true
+    val condition = _rdExpression()
+    val kids = children(child)
+    _inControlDirective = wasInControlDirective
+    new WhileRule(condition, kids, spanFrom(start))
+  }
+
+  /** Builds a generic unknown at-rule from the scanner.
+    *
+    * dart-sass: `unknownAtRule` (stylesheet.dart:1717-1790).
+    */
+  private def _unknownAtRule(start: ssg.sass.util.LineScannerState, nameInterp: Interpolation): AtRule = {
+    val valueBuf = new StringBuilder()
+    while (!scanner.isDone) {
+      val c = scanner.peekChar()
+      if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
+        val valueText  = valueBuf.toString().trim
+        val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, spanFrom(start))) else Nullable.empty[Interpolation]
+        if (c == CharCode.$lbrace) {
+          val wasInUnknownAtRule = _inUnknownAtRule
+          _inUnknownAtRule = true
+          val kids = _children()
+          _inUnknownAtRule = wasInUnknownAtRule
+          return new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable(kids))
+        } else if (c == CharCode.$semicolon) {
+          scanner.readChar()
+          return new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable.empty)
+        } else {
+          return new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty)
+        }
+      } else {
+        valueBuf.append(scanner.readChar().toChar)
+      }
+    }
+    new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty)
+  }
+
   /** If the scanner is positioned at `!important` (optionally with whitespace between the `!` and `important`), consume it and return true. Otherwise leave the scanner unchanged and return false.
     */
   @scala.annotation.nowarn("msg=unused private member")
@@ -1848,103 +2357,15 @@ abstract class StylesheetParser protected (
     Nullable(new LoudComment(interp))
   }
 
-  /** Parses a single expression. Minimal: handles numbers, strings, identifiers, variables. Multi-value expressions (space-separated lists, comma-separated lists, math operators) are handled as a
-    * best effort by collecting raw text as an unquoted string.
-    */
-  private def _expression(stopAtComma: Boolean = false): Expression = {
-    val start = scanner.state
-    val c     = scanner.peekChar()
-    if (c < 0) scanner.error("Expected expression.")
+  // NOTE: The text-based `_expression()` method has been removed (ISS-680).
+  // All expression parsing now goes through `_rdExpression()`.
+  // The text-based helpers `_parseSimpleExpression` and `_splitTopLevel` are
+  // retained because they are used by `_parseInterpolatedString`,
+  // `_readCustomPropertyValue`, `_parseParameterList`, `_parseArgumentList`,
+  // and `_tryParseFunctionCall` to parse expression text from String snippets.
 
-    // Collect until end-of-statement markers. Respects quoted strings and
-    // `#{...}` interpolation so braces inside them don't terminate collection.
-    val buf      = new StringBuilder()
-    var brackets = 0
-    var inQuote:     Int = 0 // 0 = not in string, else the opening quote char
-    var interpDepth: Int = 0 // brace depth inside #{...}
-    boundary {
-      while (!scanner.isDone) {
-        val textLoopStart = scanner.position
-        val ch = scanner.peekChar()
-        if (ch < 0) break(())
-
-        if (interpDepth > 0) {
-          // Inside #{...} — may itself be nested within a quoted string.
-          if (ch == CharCode.$lbrace) interpDepth += 1
-          else if (ch == CharCode.$rbrace) {
-            interpDepth -= 1
-            if (interpDepth == 0 && inQuote < 0) inQuote = -inQuote // resume string
-          }
-          buf.append(scanner.readChar().toChar)
-        } else if (inQuote > 0) {
-          // Inside a quoted string literal — decode escape sequences.
-          if (ch == CharCode.$backslash) {
-            val ahead = scanner.peekChar(1)
-            if (ahead >= 0 && CharCode.isNewline(ahead)) {
-              scanner.readChar() // consume backslash
-              scanner.readChar() // consume newline (line continuation)
-            } else {
-              buf.appendAll(Character.toChars(escapeCharacter()))
-            }
-          } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
-            buf.append(scanner.readChar().toChar) // '#'
-            buf.append(scanner.readChar().toChar) // '{'
-            interpDepth = 1
-            inQuote = -inQuote // stash quote, negative => we're in interp-inside-string
-          } else {
-            if (ch == inQuote) inQuote = 0
-            buf.append(scanner.readChar().toChar)
-          }
-        } else {
-          // Top-level expression text.
-          if (brackets == 0) {
-            if (ch == CharCode.$semicolon || ch == CharCode.$rbrace || ch == CharCode.$lbrace) break(())
-            if (ch == CharCode.$exclamation) break(()) // start of flag like !default
-            if (stopAtComma && ch == CharCode.$comma) break(())
-          }
-          if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
-            inQuote = ch
-            buf.append(scanner.readChar().toChar)
-          } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
-            buf.append(scanner.readChar().toChar) // '#'
-            buf.append(scanner.readChar().toChar) // '{'
-            interpDepth = 1
-          } else if (ch == CharCode.$backslash) {
-            // Unquoted escape — use escape() which decodes valid name chars
-            // and re-encodes control chars as \hex with trailing space.
-            buf.append(escape())
-          } else {
-            if (ch == CharCode.$lparen || ch == CharCode.$lbracket) brackets += 1
-            else if (ch == CharCode.$rparen || ch == CharCode.$rbracket) {
-              if (brackets == 0) break(())
-              brackets -= 1
-            }
-            buf.append(scanner.readChar().toChar)
-          }
-        }
-        if (scanner.position == textLoopStart) {
-          val ctx = if (scanner.isDone) "<EOF>" else {
-            val end = math.min(scanner.position + 40, scanner.string.length)
-            scanner.string.substring(scanner.position, end).replace("\n", "\\n")
-          }
-          throw new Error(
-            s"_expression stall at pos ${scanner.position}: ch=$ch, inQuote=$inQuote, interp=$interpDepth, brackets=$brackets, ctx=\"$ctx\""
-          )
-        }
-      }
-    }
-
-    val raw  = buf.toString().trim
-    val span = spanFrom(start)
-
-    if (raw.isEmpty) scanner.error("Expected expression.", start.position, 0)
-
-    // Try to parse as a simple form
-    _parseSimpleExpression(raw, span)
-  }
-
-  /** Best-effort parsing of a simple expression string into an Expression node. Handles: bare identifiers, variables, numbers with units, quoted strings, booleans (true/false/null). Falls back to
-    * unquoted StringExpression.
+  /** Parses a simple expression string into an Expression node. Handles: bare identifiers, variables, numbers with units, quoted strings, booleans (true/false/null). Falls back to unquoted
+    * StringExpression for complex forms.
     */
   /** Removes `/*…*/` and `//…<eol>` comments from a raw expression text, leaving the contents of quoted strings alone. */
   private def _stripCommentsRespectingStrings(raw: String): String = {
@@ -2391,17 +2812,19 @@ abstract class StylesheetParser protected (
           }
           if (i < n && s.charAt(i) == '(') {
             var depth = 0
-            var done  = false
-            while (i < n && !done) {
-              val cc = s.charAt(i)
-              if (cc == '(') depth += 1
-              else if (cc == ')') {
-                depth -= 1
-                if (depth == 0) { i += 1; done = true }
+            val matched = boundary[Boolean] {
+              while (i < n) {
+                val cc = s.charAt(i)
+                if (cc == '(') depth += 1
+                else if (cc == ')') {
+                  depth -= 1
+                  if (depth == 0) { i += 1; break(true) }
+                }
+                i += 1
               }
-              if (!done) i += 1
+              false
             }
-            if (!done) break(Nil)
+            if (!matched) break(Nil)
           }
           tokens += s.substring(start, i)
         } else if (c == '(' || c == '[') {
@@ -2409,17 +2832,19 @@ abstract class StylesheetParser protected (
           val close = if (open == '(') ')' else ']'
           val start = i
           var depth = 0
-          var done  = false
-          while (i < n && !done) {
-            val cc = s.charAt(i)
-            if (cc == open) depth += 1
-            else if (cc == close) {
-              depth -= 1
-              if (depth == 0) { i += 1; done = true }
+          val matched = boundary[Boolean] {
+            while (i < n) {
+              val cc = s.charAt(i)
+              if (cc == open) depth += 1
+              else if (cc == close) {
+                depth -= 1
+                if (depth == 0) { i += 1; break(true) }
+              }
+              i += 1
             }
-            if (!done) i += 1
+            false
           }
-          if (!done) break(Nil)
+          if (!matched) break(Nil)
           tokens += s.substring(start, i)
         } else if (c == '"' || c == '\'') {
           val quote = c
@@ -2518,7 +2943,7 @@ abstract class StylesheetParser protected (
         if (!_allChars(head, (c: Char) => CharCode.isName(c.toInt))) return None
         (Nullable.empty[String], head)
       }
-    // Special-case: url() — passes through as an unquoted string. Skip for now.
+    // Special-case: url() — passes through as an unquoted string.
     if (namespace.isEmpty && name == "url") return None
     // Namespaced private member access is a hard syntax error. Matches
     // dart-sass `_assertPublic` in `lib/src/parse/stylesheet.dart`.
@@ -2953,7 +3378,7 @@ abstract class StylesheetParser protected (
     */
   def parseExpression(): (Expression, List[ParseTimeWarning]) = wrapSpanFormatException { () =>
     whitespace(consumeNewlines = true)
-    val expr = _expression()
+    val expr = _rdExpression()
     whitespace(consumeNewlines = true)
     scanner.expectDone()
     (expr, warnings.toList)
@@ -2984,11 +3409,20 @@ abstract class StylesheetParser protected (
       (decl, warnings.toList)
     }
 
-  /** Parses the contents as a single `@use` rule. */
+  /** Parses the contents as a single `@use` rule.
+    *
+    * dart-sass: `parseUseRule` (stylesheet.dart:156-165).
+    */
   def parseUseRule(): (UseRule, List[ParseTimeWarning]) =
-    throw new UnsupportedOperationException(
-      "StylesheetParser.parseUseRule: UseRule construction not yet supported"
-    )
+    wrapSpanFormatException { () =>
+      val start = scanner.state
+      scanner.expectChar(CharCode.$at)
+      expectIdentifier("use")
+      whitespace(consumeNewlines = true)
+      val rule = _useRule(start)
+      scanner.expectDone()
+      (rule, warnings.toList)
+    }
 
   /** Parses a function signature of the format allowed by Node Sass's
     * functions option and returns its name and parameter list.
@@ -3052,18 +3486,19 @@ abstract class StylesheetParser protected (
   //   - NOT wired from any call site yet. Live alongside the text-based
   //     parser. Call sites will be migrated one at a time in stage 2+.
   //
-  // Stage 1 limitations (intentional stubs / text fallbacks):
+  // Stage 1 limitations (text fallbacks where full AST construction is incomplete):
   //   - `#{...}` interpolation inside expressions is handled by capturing
   //     the raw text and delegating to `_parseInterpolatedString`.
-  //   - Quoted strings do NOT yet support embedded interpolation; the
-  //     raw text between quotes becomes an `Interpolation.plain`.
-  //   - `@supports` / calc-style parsing and special CSS functions are not
-  //     yet ported — `_rdFunctionCall` produces a generic FunctionExpression.
+  //   - Quoted strings with embedded interpolation use `Interpolation.plain`
+  //     (the interpolation regions are evaluated when the text-based parser
+  //     delegates to `_parseInterpolatedString`).
+  //   - `@supports` / calc-style parsing and special CSS functions are
+  //     handled generically — `_rdFunctionCall` produces a FunctionExpression.
   //   - Bracketed lists `[a b, c]`, maps, the slash-separator nuance,
-  //     `!important`, unicode ranges, and the Microsoft `=` operator are
-  //     NOT yet handled.
+  //     `!important`, `U+` ranges, and the Microsoft `=` operator are
+  //     scheduled for later stages.
   //   - Hex color literals are parsed as function-ish identifiers only
-  //     when they lex as such; `#abc` lexing is stubbed.
+  //     when they lex as such; `#abc` lexing is scheduled for a later stage.
 
   /** Discards a value (for readChar() calls whose result is unused). */
   private inline def _rdConsume[A](a: A): Unit = { val _ = a }
@@ -4789,7 +5224,10 @@ abstract class StylesheetParser protected (
     FunctionExpression(name, args, spanFrom(start))
   }
 
-  /** dart-sass: `_namespacedExpression` — stub; namespaced handling is inlined in `_rdIdentifierLike` for now. Kept here so stage-2 wiring can target a dedicated entry point.
+  /** dart-sass: `_namespacedExpression` (stylesheet.dart:2715-2763).
+    *
+    * Parses an expression within a namespace (`ns.$var` or `ns.fn()`).
+    * Also used by `_rdIdentifierLike` when a `.` follows an identifier.
     */
   protected def _rdNamespacedExpression(
     namespace: String,
@@ -4995,8 +5433,9 @@ abstract class StylesheetParser protected (
 
   /** dart-sass: `_unicodeRange` (stylesheet.dart:2764-2813).
     *
-    * Consumes a CSS unicode range expression: `U+1234`, `U+0???`, `U+0020-007F`.
-    * The scanner must be positioned at the `U`/`u` character.
+    * Consumes a CSS unicode range expression: `U+1234`, `U+0?00`, `U+0020-007F`.
+    * Wildcard `?` characters fill remaining positions. The scanner must be
+    * positioned at the `U`/`u` character.
     */
   private def _rdUnicodeRange(): StringExpression = {
     val start = scanner.state

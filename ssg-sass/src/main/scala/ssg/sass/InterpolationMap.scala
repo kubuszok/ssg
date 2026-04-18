@@ -171,38 +171,41 @@ final class InterpolationMap(
   private def _expandInterpolationSpanLeft(start: FileLocation): Int = {
     val source = start.file.text
     var i      = start.offset - 1
-    while (i >= 0) {
-      val prev = source.charAt(i).toInt
-      i -= 1
-      if (prev == CharCode.$lbrace) {
-        if (source.charAt(i).toInt == CharCode.$hash) {
-          // found the opening #{, break
-          return i
-        }
-      } else if (prev == CharCode.$slash) {
-        val second = source.charAt(i).toInt
+    boundary[Int] {
+      while (i >= 0) {
+        val prev = source.charAt(i).toInt
         i -= 1
-        if (second == CharCode.$asterisk) {
-          // skip backwards through a /* ... */ comment
-          var done = false
-          while (!done) {
-            var char = source.charAt(i).toInt
-            i -= 1
-            if (char != CharCode.$asterisk) {
-              // continue
-            } else {
-              // consume consecutive asterisks
-              while (char == CharCode.$asterisk) {
-                char = source.charAt(i).toInt
+        if (prev == CharCode.$lbrace) {
+          if (source.charAt(i).toInt == CharCode.$hash) {
+            // found the opening #{
+            break(i)
+          }
+        } else if (prev == CharCode.$slash) {
+          val second = source.charAt(i).toInt
+          i -= 1
+          if (second == CharCode.$asterisk) {
+            // skip backwards through a /* ... */ comment
+            boundary {
+              while (true) {
+                var char = source.charAt(i).toInt
                 i -= 1
+                if (char != CharCode.$asterisk) {
+                  // continue
+                } else {
+                  // consume consecutive asterisks
+                  while (char == CharCode.$asterisk) {
+                    char = source.charAt(i).toInt
+                    i -= 1
+                  }
+                  if (char == CharCode.$slash) break(())
+                }
               }
-              if (char == CharCode.$slash) done = true
             }
           }
         }
       }
+      i
     }
-    i
   }
 
   /** Given the end of a [FileSpan] covering an interpolated expression, returns the offset of the interpolation's
@@ -224,19 +227,20 @@ final class InterpolationMap(
             while (!CharCode.isNewline(source.charAt(i).toInt)) i += 1
           } else if (second == CharCode.$asterisk) {
             // skip forward through a /* ... */ comment
-            var done = false
-            while (!done) {
-              var char = source.charAt(i).toInt
-              i += 1
-              if (char != CharCode.$asterisk) {
-                // continue
-              } else {
-                // consume consecutive asterisks
-                while (char == CharCode.$asterisk) {
-                  char = source.charAt(i).toInt
-                  i += 1
+            boundary {
+              while (true) {
+                var char = source.charAt(i).toInt
+                i += 1
+                if (char != CharCode.$asterisk) {
+                  // continue
+                } else {
+                  // consume consecutive asterisks
+                  while (char == CharCode.$asterisk) {
+                    char = source.charAt(i).toInt
+                    i += 1
+                  }
+                  if (char == CharCode.$slash) break(())
                 }
-                if (char == CharCode.$slash) done = true
               }
             }
           }

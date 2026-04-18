@@ -28,7 +28,9 @@ trait Callable {
 
 object Callable {
 
-  /** Creates a function [[Callable]] with the given name, arguments signature and callback. TODO: parse arguments into a [[ParameterList]].
+  /** Creates a function [[Callable]] with the given name, arguments signature and callback.
+    *
+    * Note: the `arguments` string is parsed into a [[ParameterList]] inside [[BuiltInCallable]].
     */
   def function(name: String, arguments: String, callback: List[Value] => Value): Callable =
     BuiltInCallable.function(name, arguments, callback)

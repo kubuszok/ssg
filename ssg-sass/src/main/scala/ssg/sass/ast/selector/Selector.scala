@@ -17,7 +17,10 @@ package sass
 package ast
 package selector
 
+import ssg.sass.Nullable
 import ssg.sass.util.FileSpan
+
+import scala.language.implicitConversions
 
 /** A node in the abstract syntax tree for a selector.
   *
@@ -57,6 +60,23 @@ abstract class Selector(val span: FileSpan) extends AstNode {
     */
   def isUseless: Boolean =
     accept(Selector.IsUselessVisitor)
+
+  /** Prints a warning if `this` is a bogus selector.
+    *
+    * This may only be called from within a custom Sass function. This will
+    * throw a [[ssg.sass.SassException]] in Dart Sass 2.0.0.
+    */
+  def assertNotBogus(name: Nullable[String] = Nullable.Null): Unit = {
+    if (!isBogus) return
+    val prefix = if (name.isDefined) s"$$${name.get}: " else ""
+    ssg.sass.EvaluationContext.warnForDeprecation(
+      ssg.sass.Deprecation.BogusCombinators,
+      prefix + s"$this is not valid CSS.\n" +
+        "This will be an error in Dart Sass 2.0.0.\n" +
+        "\n" +
+        "More info: https://sass-lang.com/d/bogus-combinators"
+    )
+  }
 
   /** Calls the appropriate visit method on `visitor`. */
   def accept[T](visitor: SelectorVisitor[T]): T

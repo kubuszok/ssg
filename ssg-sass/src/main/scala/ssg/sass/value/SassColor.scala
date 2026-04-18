@@ -343,6 +343,32 @@ final class SassColor private (
       Nullable(newAlpha)
     )
 
+  /** Changes one or more of this color's HSL channels and returns the result.
+    * Only supported for legacy colors.
+    * Ported from dart-sass `SassColor.changeHsl`.
+    */
+  def changeHsl(
+    hue:        Option[Double] = None,
+    saturation: Option[Double] = None,
+    lightness:  Option[Double] = None,
+    alpha:      Option[Double] = None
+  ): SassColor = {
+    if (!isLegacy) {
+      throw SassScriptException(
+        "color.changeHsl() is only supported for legacy colors. Please use " +
+          "color.changeChannels() instead with an explicit $space argument."
+      )
+    }
+    SassColor
+      .hsl(
+        Nullable(hue.getOrElse(this.hue)),
+        Nullable(saturation.getOrElse(this.saturation)),
+        Nullable(lightness.getOrElse(this.lightness)),
+        Nullable(alpha.getOrElse(this.alpha))
+      )
+      .toSpace(this.space)
+  }
+
   /** Changes one or more of this color's channels and returns the result. */
   def changeChannels(
     newValues: Map[String, Double],
