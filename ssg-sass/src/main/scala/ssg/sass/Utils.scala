@@ -314,4 +314,62 @@ object Utils {
     val text = span.text
     trimAsciiRight(text.substring(0, text.indexOf(':')))
   }
+
+  /** Returns a bulleted list of items in [bullets]. */
+  def bulletedList(bullets: Iterable[String]): String =
+    bullets.map { element =>
+      val lines = element.split("\n")
+      // glyph.bullet in Dart's term_glyph; we use ASCII '*' (same as ascii mode)
+      val first = s"* ${lines.head}"
+      if (lines.length > 1) first + "\n" + indent(lines.tail.mkString("\n"), 2)
+      else first
+    }.mkString("\n")
+
+  /** Returns a deep copy of a map that contains maps. */
+  def copyMapOfMap[K1, K2, V](
+    map: Map[K1, Map[K2, V]]
+  ): scala.collection.mutable.Map[K1, scala.collection.mutable.Map[K2, V]] = {
+    val result = scala.collection.mutable.Map.empty[K1, scala.collection.mutable.Map[K2, V]]
+    for ((key, child) <- map) result(key) = scala.collection.mutable.Map.from(child)
+    result
+  }
+
+  /** Returns a deep copy of a map that contains lists. */
+  def copyMapOfList[K, E](
+    map: Map[K, List[E]]
+  ): scala.collection.mutable.Map[K, ArrayBuffer[E]] = {
+    val result = scala.collection.mutable.Map.empty[K, ArrayBuffer[E]]
+    for ((key, list) <- map) result(key) = ArrayBuffer.from(list)
+    result
+  }
+
+  /** Consumes an escape sequence from [scanner] and returns the character it
+    * represents.
+    *
+    * See https://drafts.csswg.org/css-syntax-3/#consume-escaped-code-point.
+    */
+  def consumeEscapedCharacter(scanner: ssg.sass.util.SpanScanner): Int = {
+    scanner.expectChar(CharCode.$backslash)
+    val next = scanner.peekChar()
+    if (next == -1) {
+      // null case in Dart -- EOF after backslash
+      0xFFFD
+    } else if (CharCode.isNewline(next)) {
+      scanner.error("Expected escape sequence.")
+    } else if (CharCode.isHex(next)) {
+      var value = 0
+      var i     = 0
+      while (i < 6 && { val peek = scanner.peekChar(); peek != -1 && CharCode.isHex(peek) }) {
+        value = (value << 4) + CharCode.asHex(scanner.readChar())
+        i += 1
+      }
+      if (CharCode.isWhitespace(scanner.peekChar())) {
+        val _ = scanner.readChar()
+      }
+      if (value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= CharCode.maxAllowedCharacter) 0xFFFD
+      else value
+    } else {
+      scanner.readChar()
+    }
+  }
 }

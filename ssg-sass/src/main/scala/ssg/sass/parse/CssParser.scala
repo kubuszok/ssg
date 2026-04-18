@@ -36,17 +36,21 @@ import ssg.sass.ast.sass.{
   DynamicImport,
   EachRule,
   ErrorRule,
+  Expression,
   ExtendRule,
   ForRule,
   ForwardRule,
+  FunctionExpression,
   FunctionRule,
   IfRule,
   ImportRule,
   IncludeRule,
   Interpolation,
+  ListExpression,
   LoudComment,
   MediaRule,
   MixinRule,
+  ParenthesizedExpression,
   ReturnRule,
   SilentComment,
   Statement,
@@ -54,6 +58,7 @@ import ssg.sass.ast.sass.{
   StyleRule,
   Stylesheet,
   SupportsRule,
+  UnaryOperationExpression,
   UseRule,
   VariableDeclaration,
   WarnRule,
@@ -96,6 +101,37 @@ class CssParser(
     "at-root",
     "use",
     "forward"
+  )
+
+  /** The set of all function names disallowed in plain CSS.
+    *
+    * dart-sass css.dart lines 14-34: `globalFunctions.map(...).toSet()` minus the
+    * CSS-native functions that are allowed (abs, alpha, color, grayscale, hsl, hsla,
+    * hwb, invert, lab, lch, max, min, oklab, oklch, opacity, rgb, rgba, round, saturate).
+    */
+  private val _disallowedFunctionNames: Set[String] = Set(
+    // color module globals
+    "red", "green", "blue", "mix", "hue", "saturation", "lightness",
+    "adjust-hue", "lighten", "darken", "desaturate",
+    "opacify", "fade-in", "transparentize", "fade-out",
+    "complement", "ie-hex-str", "adjust-color", "scale-color", "change-color",
+    // list module globals
+    "length", "nth", "set-nth", "join", "append", "zip", "index",
+    "is-bracketed", "list-separator",
+    // map module globals
+    "map-get", "map-merge", "map-remove", "map-keys", "map-values", "map-has-key",
+    // math module globals
+    "ceil", "floor", "percentage", "random", "unit", "comparable", "unitless",
+    // selector module globals
+    "is-superselector", "simple-selectors", "selector-parse", "selector-nest",
+    "selector-append", "selector-extend", "selector-replace", "selector-unify",
+    // string module globals
+    "unquote", "quote", "to-upper-case", "to-lower-case", "unique-id",
+    "str-length", "str-insert", "str-index", "str-slice",
+    // meta module globals
+    "feature-exists", "inspect", "type-of", "keywords",
+    // special globals
+    "if"
   )
 
   override def parse(): Stylesheet = {
@@ -215,9 +251,10 @@ class CssParser(
         s.selector.foreach(_checkSelectorInterpolation)
         s.selector.foreach(_checkSelectorParent)
         _validateStatements(s.children.get, insideStyleRule = true)
-      // --- Declarations: allow custom properties, walk nested children -----
+      // --- Declarations: allow custom properties, walk nested children, check expressions -----
       case d: Declaration =>
         _checkInterpolation(d.name, "Interpolation isn't allowed in plain CSS.")
+        d.value.foreach(_validateExpression)
         d.children.foreach { kids =>
           _validateStatements(kids, insideStyleRule)
         }
@@ -299,6 +336,32 @@ class CssParser(
       }
     }
   }
+
+  /** Validates an expression, checking for disallowed Sass function calls.
+    *
+    * dart-sass css.dart lines 197-203: rejects function calls whose name appears in
+    * `_disallowedFunctionNames`.
+    */
+  private def _validateExpression(expr: Expression): Unit =
+    expr match {
+      case fe: FunctionExpression =>
+        if (_disallowedFunctionNames.contains(fe.name)) {
+          throw new SassFormatException(
+            "This function isn't allowed in plain CSS.",
+            fe.span
+          )
+        }
+        // Also validate the arguments
+        fe.arguments.positional.foreach(_validateExpression)
+        fe.arguments.named.foreach { case (_, v) => _validateExpression(v) }
+      case le: ListExpression =>
+        le.contents.foreach(_validateExpression)
+      case pe: ParenthesizedExpression =>
+        _validateExpression(pe.expression)
+      case ue: UnaryOperationExpression =>
+        _validateExpression(ue.operand)
+      case _ => ()
+    }
 
   /** Returns true if [text] contains a parent-selector `&` that isn't inside a string literal or an attribute selector (`[attr="&"]`).
     */

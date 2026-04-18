@@ -98,13 +98,14 @@ final class ColorModule4Suite extends munit.FunSuite {
     assertEquals(c.space, ColorSpace.oklch)
   }
 
-  test("color.to-gamut(rgb(300 0 0), srgb) produces an in-gamut color") {
+  test("color.to-gamut(rgb(300 0 0), srgb, local-minde) produces an in-gamut color") {
     val oog = SassColor.rgb(
       Nullable(300.0),
       Nullable(0.0),
       Nullable(0.0)
     )
-    val mapped  = fn("to-gamut")(List(oog, str("srgb"))).asInstanceOf[SassColor]
+    // $method is now required per dart-sass spec
+    val mapped  = fn("to-gamut")(List(oog, str("srgb"), str("local-minde"))).asInstanceOf[SassColor]
     val inGamut = fn("is-in-gamut")(List(mapped, str("srgb"))).asInstanceOf[SassBoolean]
     assertEquals(inGamut.value, true)
   }

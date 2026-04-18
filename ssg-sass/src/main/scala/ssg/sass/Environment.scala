@@ -75,7 +75,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 
 import ssg.sass.ast.AstNode
-import ssg.sass.ast.css.CssStylesheet
+import ssg.sass.ast.css.{ CssComment, CssStylesheet }
 import ssg.sass.ast.sass.{ ContentBlock, ForwardRule }
 import ssg.sass.extend.ExtensionStore
 import ssg.sass.value.Value
@@ -1231,6 +1231,16 @@ object Environment {
       if (explicitUrl.isDefined) explicitUrl
       else Nullable(css.span.sourceUrl.toString)
 
+    val upstream: List[Module[Callable]] = env._allModules.toList
+
+    val variableNodes: Map[String, AstNode] =
+      EnvironmentModule.memberMap(
+        env._variableNodes(0).iterator.filter { case (n, _) => !Environment.isPrivate(n) }.toMap,
+        forwarded.map(_.variableNodes)
+      )
+
+    val preModuleComments: Map[Module[Callable], List[CssComment]] = Map.empty
+
     /** For each variable name, the module that actually holds the
       * underlying storage. Used by `setVariable` to route writes to the
       * forwarded module and by `variableIdentity` to compare variables
@@ -1307,7 +1317,7 @@ object Environment {
       * is hermetic — applying `@extend` to the clone has no effect
       * on the original.
       */
-    def cloneCss: Module[Callable] = {
+    def cloneCss(): Module[Callable] = {
       if (!transitivelyContainsCss) this
       else {
         // CssStylesheet exposes its children list directly; building

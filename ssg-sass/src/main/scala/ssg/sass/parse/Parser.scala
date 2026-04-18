@@ -15,8 +15,8 @@ package ssg
 package sass
 package parse
 
-import ssg.sass.util.{ CharCode, FileSpan, LineScannerState, SpanScanner, StringScannerException }
-import ssg.sass.{ InterpolationMap, Nullable, SassFormatException }
+import ssg.sass.util.{ CharCode, FileLocation, FileSpan, LazyFileSpan, LineScannerState, SpanScanner, StringScannerException }
+import ssg.sass.{ InterpolationMap, MultiSpanSassFormatException, Nullable, SassFormatException, Utils }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -50,18 +50,13 @@ abstract class Parser protected (
     }
   }
 
-  /** Consumes whitespace, but not comments. */
+  /** Consumes whitespace, but not comments.
+    *
+    * If [consumeNewlines] is true, the indented syntax will consume newlines as whitespace. It should only be set to true in positions when a statement can't end.
+    */
   protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit =
-    while (!scanner.isDone) {
-      val c = scanner.peekChar()
-      if (c < 0) return
-      if (consumeNewlines) {
-        if (CharCode.isWhitespace(c)) scanner.readChar()
-        else return
-      } else {
-        if (CharCode.isSpaceOrTab(c)) scanner.readChar()
-        else return
-      }
+    while (!scanner.isDone && CharCode.isWhitespace(scanner.peekChar())) {
+      scanner.readChar()
     }
 
   /** Consumes spaces and tabs (never newlines). */
@@ -72,13 +67,15 @@ abstract class Parser protected (
       scanner.readChar()
     }
 
-  /** Consumes and ignores a comment if possible. Returns true if consumed. */
+  /** Consumes and ignores a comment if possible.
+    *
+    * Returns whether the comment was consumed.
+    */
   protected def scanComment(): Boolean = {
     if (scanner.peekChar() != CharCode.$slash) return false
     scanner.peekChar(1) match {
       case CharCode.`$slash` =>
         silentComment()
-        true
       case CharCode.`$asterisk` =>
         loudComment()
         true
@@ -86,14 +83,16 @@ abstract class Parser protected (
     }
   }
 
-  /** Consumes and ignores a single silent (Sass-style) comment. */
-  protected def silentComment(): Unit = {
+  /** Consumes and ignores a single silent (Sass-style) comment, not including the trailing newline.
+    *
+    * Returns whether the comment was consumed.
+    */
+  protected def silentComment(): Boolean = {
     scanner.expect("//")
-    while (!scanner.isDone) {
-      val c = scanner.peekChar()
-      if (c < 0 || CharCode.isNewline(c)) return
+    while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar())) {
       scanner.readChar()
     }
+    true
   }
 
   /** Consumes and ignores a loud (CSS-style) comment.
@@ -121,12 +120,12 @@ abstract class Parser protected (
     }
   }
 
-  /** Consumes whitespace and errors if none was found. */
+  /** Like [[whitespace]], but throws an error if no whitespace is consumed.
+    *
+    * If [consumeNewlines] is true, the indented syntax will consume newlines as whitespace. It should only be set to true in positions when a statement can't end.
+    */
   protected def expectWhitespace(consumeNewlines: Boolean = false): Unit = {
-    if (scanner.isDone) scanner.error("Expected whitespace.")
-    val c     = scanner.peekChar()
-    val hasWs = if (consumeNewlines) CharCode.isWhitespace(c) else CharCode.isSpaceOrTab(c)
-    if (!hasWs && !scanComment()) {
+    if (scanner.isDone || !(CharCode.isWhitespace(scanner.peekChar()) || scanComment())) {
       scanner.error("Expected whitespace.")
     }
     whitespace(consumeNewlines)
@@ -221,8 +220,7 @@ abstract class Parser protected (
         value = (value << 4) | CharCode.asHex(scanner.readChar())
         i += 1
       }
-      val peek = scanner.peekChar()
-      if (peek >= 0 && CharCode.isWhitespace(peek)) scanner.readChar()
+      scanCharIf(c => c >= 0 && CharCode.isWhitespace(c))
 
       if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff) {
         value = 0xfffd
@@ -258,32 +256,39 @@ abstract class Parser protected (
     CharCode.isNameStart(second) || second == CharCode.$backslash || second == CharCode.$minus
   }
 
-  /** Returns whether the scanner is looking at the given identifier text. */
+  /** Returns whether the scanner is immediately before a sequence of characters that could be part of a plain CSS identifier body. */
   protected def lookingAtIdentifierBody(): Boolean = {
     val c = scanner.peekChar()
     c >= 0 && (CharCode.isName(c) || c == CharCode.$backslash)
   }
 
-  /** Consumes an identifier and returns whether it matches [text]. */
-  protected def scanIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
-    if (!lookingAtIdentifier()) return false
-    val start   = scanner.state
-    var i       = 0
-    var matched = true
-    while (matched && i < text.length) {
-      val expected = text.charAt(i).toInt
-      val actual   = scanner.peekChar()
-      val match_   =
-        if (caseSensitive) actual == expected
-        else CharCode.characterEqualsIgnoreCase(actual, expected)
-      if (match_) {
-        scanner.readChar()
-        i += 1
-      } else {
-        matched = false
+  /** Returns whether the scanner is immediately before a number.
+    *
+    * This follows [[https://drafts.csswg.org/css-syntax-3/#starts-with-a-number the CSS algorithm]].
+    */
+  protected def lookingAtNumber(): Boolean = {
+    val first = scanner.peekChar()
+    if (first >= 0 && CharCode.isDigit(first)) return true
+    if (first == CharCode.$dot) {
+      val second = scanner.peekChar(1)
+      return second >= 0 && CharCode.isDigit(second)
+    }
+    if (first == CharCode.$plus || first == CharCode.$minus) {
+      val second = scanner.peekChar(1)
+      if (second >= 0 && CharCode.isDigit(second)) return true
+      if (second == CharCode.$dot) {
+        val third = scanner.peekChar(2)
+        return third >= 0 && CharCode.isDigit(third)
       }
     }
-    if (matched && !lookingAtIdentifierBody()) {
+    false
+  }
+
+  /** Consumes an identifier if its name exactly matches [text]. */
+  protected def scanIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
+    if (!lookingAtIdentifier()) return false
+    val start = scanner.state
+    if (_consumeIdentifier(text, caseSensitive) && !lookingAtIdentifierBody()) {
       true
     } else {
       scanner.state = start
@@ -291,12 +296,46 @@ abstract class Parser protected (
     }
   }
 
-  /** Consumes an identifier and throws if it doesn't match [text]. */
-  protected def expectIdentifier(text: String, name: Nullable[String] = Nullable.Null): Unit =
-    if (!scanIdentifier(text)) {
-      val label = name.getOrElse(s"\"$text\"")
-      scanner.error(s"Expected $label.")
+  /** Returns whether an identifier whose name exactly matches [text] is at the current scanner position.
+    *
+    * This doesn't move the scan pointer forward.
+    */
+  protected def matchesIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
+    if (!lookingAtIdentifier()) return false
+    val start  = scanner.state
+    val result = _consumeIdentifier(text, caseSensitive) && !lookingAtIdentifierBody()
+    scanner.state = start
+    result
+  }
+
+  /** Consumes [text] as an identifier, but doesn't verify whether there's additional identifier text afterwards.
+    *
+    * Returns true if the full [text] is consumed and false otherwise, but doesn't reset the scan pointer.
+    */
+  private def _consumeIdentifier(text: String, caseSensitive: Boolean): Boolean = {
+    var i = 0
+    while (i < text.length) {
+      if (!scanIdentChar(text.charAt(i).toInt, caseSensitive = caseSensitive)) return false
+      i += 1
     }
+    true
+  }
+
+  /** Consumes an identifier and asserts that its name exactly matches [text]. */
+  protected def expectIdentifier(text: String, name: Nullable[String] = Nullable.Null, caseSensitive: Boolean = false): Unit = {
+    val label = name.getOrElse(s"\"$text\"")
+    val start = scanner.position
+    var i     = 0
+    while (i < text.length) {
+      if (!scanIdentChar(text.charAt(i).toInt, caseSensitive = caseSensitive)) {
+        scanner.error(s"Expected $label.", start, 0)
+      }
+      i += 1
+    }
+    if (lookingAtIdentifierBody()) {
+      scanner.error(s"Expected $label", start, 0)
+    }
+  }
 
   /** Consumes a quoted CSS string and returns its contents. */
   protected def string(): String = {
@@ -351,6 +390,63 @@ abstract class Parser protected (
     } else {
       scanner.readChar()
     }
+  }
+
+  // ## Characters
+
+  // Consumes the next character if it matches [condition].
+  //
+  // Returns whether or not the character was consumed.
+  protected def scanCharIf(condition: Int => Boolean): Boolean = {
+    val next = scanner.peekChar()
+    if (!condition(next)) return false
+    scanner.readChar()
+    true
+  }
+
+  /** Consumes the next character or escape sequence if it matches [expected].
+    *
+    * Matching will be case-insensitive unless [caseSensitive] is true.
+    */
+  protected def scanIdentChar(char: Int, caseSensitive: Boolean = false): Boolean = {
+    def matches(actual: Int): Boolean =
+      if (caseSensitive) actual == char
+      else CharCode.characterEqualsIgnoreCase(char, actual)
+
+    val next = scanner.peekChar()
+    if (next >= 0 && next != CharCode.$backslash && matches(next)) {
+      scanner.readChar()
+      true
+    } else if (next == CharCode.$backslash) {
+      val start = scanner.state
+      if (matches(escapeCharacter())) true
+      else {
+        scanner.state = start
+        false
+      }
+    } else {
+      false
+    }
+  }
+
+  /** Consumes the next character or escape sequence and asserts it matches [char].
+    *
+    * Matching will be case-insensitive unless [caseSensitive] is true.
+    */
+  protected def expectIdentChar(letter: Int, caseSensitive: Boolean = false): Unit = {
+    if (scanIdentChar(letter, caseSensitive = caseSensitive)) return
+    scanner.error(s"""Expected "${letter.toChar}".""", scanner.position, 0)
+  }
+
+  // ## Utilities
+
+  /** Runs [consumer] and returns the source text that it consumes.
+    * dart-sass: `rawText` (parser.dart:664-668).
+    */
+  protected def rawText(consumer: () => Unit): String = {
+    val start = scanner.position
+    consumer()
+    scanner.substring(start)
   }
 
   /** Consumes and returns a natural number as a double. */
@@ -425,6 +521,14 @@ abstract class Parser protected (
         } else if (next == CharCode.$semicolon) {
           if (brackets.isEmpty) break(())
           buf.append(scanner.readChar().toChar)
+        } else if (next == CharCode.$u || next == CharCode.$U) {
+          val url = tryUrl()
+          if (url.isDefined) {
+            buf.append(url.get)
+          } else {
+            buf.append(scanner.readChar().toChar)
+          }
+          wroteNewline = false
         } else {
           if (lookingAtIdentifier()) {
             buf.append(identifier())
@@ -441,26 +545,158 @@ abstract class Parser protected (
     buf.toString()
   }
 
+  /** Consumes a `url()` token if possible, and returns null otherwise. */
+  protected def tryUrl(): Nullable[String] = boundary[Nullable[String]] {
+    // NOTE: this logic is largely duplicated in ScssParser._tryUrlContents.
+    // Most changes here should be mirrored there.
+
+    val start = scanner.state
+    if (!scanIdentifier("url")) break(Nullable.Null)
+
+    if (!scanner.scanChar(CharCode.$lparen)) {
+      scanner.state = start
+      break(Nullable.Null)
+    }
+
+    whitespace(consumeNewlines = true)
+
+    // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
+    // backtrack and re-parse as a function expression.
+    val buffer = new StringBuilder()
+    buffer.append("url(")
+    var done = false
+    while (!done) {
+      val c = scanner.peekChar()
+      if (c < 0) {
+        done = true
+      } else if (c == CharCode.$backslash) {
+        buffer.append(escape())
+      } else if (c == CharCode.$percent || c == CharCode.$ampersand || c == CharCode.$hash ||
+                 (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
+                 c >= 0x80) {
+        buffer.append(scanner.readChar().toChar)
+      } else if (CharCode.isWhitespace(c)) {
+        whitespace(consumeNewlines = true)
+        if (scanner.peekChar() != CharCode.$rparen) {
+          done = true
+        }
+      } else if (c == CharCode.$rparen) {
+        buffer.append(scanner.readChar().toChar)
+        break(Nullable(buffer.toString()))
+      } else {
+        done = true
+      }
+    }
+
+    scanner.state = start
+    Nullable.Null
+  }
+
   /** Consumes a Sass variable name, returning the name without the dollar sign. */
   protected def variableName(): String = {
     scanner.expectChar(CharCode.$dollar)
     identifier(normalize = true)
   }
 
-  /** Creates a span from the given start state to the current position. */
-  protected def spanFrom(start: LineScannerState): FileSpan = scanner.spanFrom(start)
+  /** Like [[scanner.spanFrom]], but passes the span through [[interpolationMap]] if it's available. */
+  protected def spanFrom(start: LineScannerState): FileSpan = {
+    val span = scanner.spanFrom(start)
+    if (interpolationMap.isEmpty) span
+    else new LazyFileSpan(() => interpolationMap.get.mapSpan(span)).span
+  }
+
+  /** Like [[spanFrom(start)]] but with an explicit end state. */
+  protected def spanFrom(start: LineScannerState, end: LineScannerState): FileSpan = {
+    val span = scanner.spanFrom(start, end)
+    if (interpolationMap.isEmpty) span
+    else new LazyFileSpan(() => interpolationMap.get.mapSpan(span)).span
+  }
+
+  /** Like [[scanner.spanFromPosition]], but passes the span through [[interpolationMap]] if it's available. */
+  protected def spanFromPosition(start: Int, end: Int = -1): FileSpan = {
+    val span = scanner.spanFromPosition(start, end)
+    if (interpolationMap.isEmpty) span
+    else new LazyFileSpan(() => interpolationMap.get.mapSpan(span)).span
+  }
 
   /** Throws a SassFormatException with the given message and span. */
   protected def error(message: String, span: FileSpan): Nothing =
     throw new SassFormatException(message, span)
 
-  /** Wraps [body] in a handler that rethrows scanner errors as [[SassFormatException]]. */
-  protected def wrapSpanFormatException[T](body: () => T): T =
-    try body()
+  /** Runs callback and, if it throws a [[StringScannerException]], rethrows it with [message] as its message. */
+  protected def withErrorMessage[T](message: String)(callback: => T): T =
+    try callback
     catch {
-      case e: StringScannerException =>
-        throw new SassFormatException(e.getMessage, e.span)
+      case error: StringScannerException =>
+        throw new StringScannerException(message, error.span)
     }
+
+  /** Runs [callback] and wraps any [[StringScannerException]] it throws in a [[SassFormatException]]. */
+  protected def wrapSpanFormatException[T](callback: () => T): T = {
+    try {
+      try callback()
+      catch {
+        case error: StringScannerException if interpolationMap.isDefined =>
+          val mapped = interpolationMap.get.mapSpan(error.span)
+          if (mapped eq error.span) throw error
+          throw new StringScannerException(error.getMessage, mapped)
+      }
+    } catch {
+      case error: MultiSpanSassFormatException =>
+        // MultiSpanSassFormatException is-a SassFormatException; catch it first
+        var span           = error.span
+        var secondarySpans = error.secondarySpans
+        if (Utils.startsWithIgnoreCase(error.sassMessage, "expected")) {
+          span = _adjustExceptionSpan(span)
+          secondarySpans = secondarySpans.map { case (s, desc) => _adjustExceptionSpan(s) -> desc }
+        }
+        throw new MultiSpanSassFormatException(error.sassMessage, span, error.primaryLabel, secondarySpans)
+      case error: SassFormatException =>
+        var span = error.span
+        if (Utils.startsWithIgnoreCase(error.sassMessage, "expected")) {
+          span = _adjustExceptionSpan(span)
+        }
+        throw new SassFormatException(error.sassMessage, span)
+      case error: StringScannerException =>
+        var span = error.span
+        if (Utils.startsWithIgnoreCase(error.getMessage, "expected")) {
+          span = _adjustExceptionSpan(span)
+        }
+        throw new SassFormatException(error.getMessage, span)
+    }
+  }
+
+  /** Moves span to [[_firstNewlineBefore]] if necessary. */
+  private def _adjustExceptionSpan(span: FileSpan): FileSpan = {
+    if (span.length > 0) return span
+    val start = _firstNewlineBefore(span.start)
+    if (start == span.start) span else start.pointSpan
+  }
+
+  /** If [location] is separated from the previous non-whitespace character in `scanner.string` by one or more newlines, returns the location of the last separating newline.
+    *
+    * Otherwise returns [location].
+    *
+    * This helps avoid missing token errors pointing at the next closing bracket rather than the line where the problem actually occurred.
+    */
+  private def _firstNewlineBefore(location: FileLocation): FileLocation = {
+    val text            = location.file.getText(0, location.offset)
+    var index           = location.offset - 1
+    var lastNewline: Int = -1
+    while (index >= 0) {
+      val codeUnit = text.charAt(index).toInt
+      if (!CharCode.isWhitespace(codeUnit)) {
+        return if (lastNewline < 0) location
+        else location.file.location(lastNewline)
+      }
+      if (CharCode.isNewline(codeUnit)) lastNewline = index
+      index -= 1
+    }
+
+    // If the document *only* contains whitespace before [location], always
+    // return [location].
+    location
+  }
 }
 
 object Parser {

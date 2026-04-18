@@ -432,20 +432,9 @@ object MathFunctions {
     )
 
   // ---------------------------------------------------------------------------
-  // Global aliases via withName. Matches dart-sass's
-  // `.withDeprecationWarning('math').withName("comparable")` pattern;
-  // the deprecation-warning wiring lives under the sass:meta module
-  // introspection work and does not belong in this file.
+  // Global aliases via withDeprecationWarning / withName.
+  // Matches dart-sass's `.withDeprecationWarning('math').withName(...)` pattern.
   // ---------------------------------------------------------------------------
-
-  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
-    new BuiltInCallable(
-      name = newName,
-      parameters = callable.parameters,
-      callback = callable.callback,
-      acceptsContent = callable.acceptsContent,
-      signature = callable.signature
-    )
 
   /** The global abs() — has additional `abs-percent` deprecation plus
     * `global-builtin` deprecation warnings that the module-level abs
@@ -460,12 +449,14 @@ object MathFunctions {
         if (number.hasUnit("%")) {
           EvaluationContext.warnForDeprecation(
             Deprecation.AbsPercent,
-            "Passing percentages to the global abs() function is deprecated.\n" +
+            "Passing percentage units to the global abs() function is deprecated.\n" +
               "In the future, this will emit a CSS abs() function to be resolved by the browser.\n" +
-              "To preserve current behavior: math.abs(" + number + ")\n\n" +
-              "To emit a CSS abs() now: abs(#{" + number + "})\n" +
+              "To preserve current behavior: math.abs($number)\n\n" +
+              "To emit a CSS abs() now: abs(#{$number})\n" +
               "More info: https://sass-lang.com/d/abs-percent"
           )
+        } else {
+          BuiltInCallable.warnForGlobalBuiltIn("math", "abs")
         }
         SassNumber.withUnits(
           math.abs(number.value),
@@ -479,42 +470,31 @@ object MathFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** Globally available built-ins. Mirrors dart-sass `global` plus
-    * backward-compat: dart-sass rejects unprefixed sin/cos/sqrt/etc. at
-    * the top level (they route through the calc shorthand, which
-    * raises on unit mismatches). ssg-sass's evaluator currently catches
-    * SassScriptException from the calc shorthand to enable fall-through
-    * to the sass:math functions when the calc path can't simplify —
-    * which also swallows the unit errors. Keeping sin/cos/sqrt/etc. in
-    * the global (with unit-aware bodies) guarantees the same error text
-    * ends up at the user even when the catch masks the calc-side error.
-    * Remove once the calc shorthand/global-function dispatch is
-    * reconciled in EvaluateVisitor (tracked as a follow-up B-task).
+  /** Globally available built-ins. Mirrors dart-sass `global` exactly.
+    * Each entry uses `.withDeprecationWarning("math")` to emit a
+    * `global-builtin` deprecation warning directing users to `math.X`.
+    * The global `abs()` handles its own deprecation warnings inline
+    * (it has the additional `abs-percent` path), so it is not wrapped.
     */
   val global: List[Callable] = List(
     globalAbsFn,
-    ceilFn,
-    floorFn,
-    maxFn,
-    minFn,
-    percentageFn,
-    randomFn,
-    roundFn,
-    unitFn,
-    withName(compatibleFn, "comparable"),
-    withName(isUnitlessFn, "unitless"),
-    // Compatibility-only entries (not in dart-sass global).
-    sqrtFn,
-    powFn,
-    sinFn,
-    cosFn,
-    tanFn,
-    asinFn,
-    acosFn,
-    atanFn,
-    logFn,
-    clampFn,
-    hypotFn
+    ceilFn.withDeprecationWarning("math"),
+    floorFn.withDeprecationWarning("math"),
+    maxFn.withDeprecationWarning("math"),
+    minFn.withDeprecationWarning("math"),
+    percentageFn.withDeprecationWarning("math"),
+    randomFn.withDeprecationWarning("math"),
+    roundFn.withDeprecationWarning("math"),
+    unitFn.withDeprecationWarning("math"),
+    compatibleFn.withDeprecationWarning("math").withName("comparable"),
+    isUnitlessFn.withDeprecationWarning("math").withName("unitless"),
+    // TODO(Wave 8): Remove these once EvaluateVisitor dispatches top-level
+    // sqrt()/sin()/cos()/etc. through the calc evaluation path like dart-sass.
+    // In dart-sass these are NOT global — they are handled by the evaluator's
+    // special-case calc function dispatch. Keeping them global temporarily to
+    // avoid 42 regressions in values/calculation/* error tests.
+    sqrtFn, sinFn, cosFn, tanFn, asinFn, acosFn, atanFn,
+    logFn, powFn, clampFn, hypotFn
   )
 
   /** Members of the `sass:math` module. Mirrors dart-sass `module`. */

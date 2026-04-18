@@ -16,6 +16,7 @@ package ssg
 package sass
 
 import ssg.sass.util.{ FileSpan, Frame, Trace }
+import ssg.sass.value.SassString
 
 import scala.language.implicitConversions
 
@@ -41,20 +42,44 @@ class SassException(
   def withLoadedUrls(urls: Set[String]): SassException =
     SassException(sassMessage, span, urls)
 
-  /** Returns CSS that will display this error message. */
+  /** Returns CSS that will display this error message above the current page. */
   def toCssString: String = {
-    val openComment    = "/" + "*"
-    val closeComment   = "*" + "/"
-    val commentMessage = toString.replace(closeComment, "*\u2215").replaceAll("\r\n", "\n")
+    // Don't render the error message in Unicode for the inline comment, since
+    // we can't be sure the user's default encoding is UTF-8.
+    // (In Dart, term_glyph.ascii is toggled here; we always use ASCII glyphs.)
+    val commentMessage = toString
+      // Replace comment-closing sequences in the error message with
+      // visually-similar sequences that won't actually close the comment.
+      .replace("*/", "*\u2215")
+      // If the original text contains CRLF newlines, replace them with LF
+      // newlines to match the rest of the document.
+      .replaceAll("\r\n", "\n")
 
-    val commentBody  = commentMessage.split("\n").mkString("\n * ")
-    val contentValue = escapeForCssContent(sassMessage)
-    val sb           = new StringBuilder()
-    sb.append(openComment)
-    sb.append(" ")
+    // For the string comment, render all non-US-ASCII characters as escape
+    // sequences so that they'll show up even if the HTTP headers are set
+    // incorrectly.
+    val sassStr = new SassString(toString)
+    val cssRepr = sassStr.toCssString()
+    val stringMessage = new StringBuilder()
+    val codePoints    = cssRepr.codePoints().toArray
+    var idx           = 0
+    while (idx < codePoints.length) {
+      val rune = codePoints(idx)
+      if (rune > 0x7F) {
+        stringMessage.append('\\')
+        stringMessage.append(Integer.toHexString(rune))
+        stringMessage.append(' ')
+      } else {
+        stringMessage.append(Character.toChars(rune))
+      }
+      idx += 1
+    }
+
+    val commentBody = commentMessage.split("\n").mkString("\n * ")
+    val sb          = new StringBuilder()
+    sb.append("/* ")
     sb.append(commentBody)
-    sb.append(" ")
-    sb.append(closeComment)
+    sb.append(" */")
     sb.append("\n\nbody::before {\n")
     sb.append("  font-family: \"Source Code Pro\", \"SF Mono\", Monaco, Inconsolata, \"Fira Mono\",\n")
     sb.append("      \"Droid Sans Mono\", monospace, monospace;\n")
@@ -63,27 +88,10 @@ class SassException(
     sb.append("  padding: 1em;\n")
     sb.append("  margin-bottom: 1em;\n")
     sb.append("  border-bottom: 2px solid black;\n")
-    sb.append(s"""  content: "$contentValue";\n""")
+    sb.append("  content: ")
+    sb.append(stringMessage)
+    sb.append(";\n")
     sb.append("}")
-    sb.toString()
-  }
-
-  private def escapeForCssContent(s: String): String = {
-    val sb = new StringBuilder()
-    for (c <- s)
-      if (c > 0x7f) {
-        sb.append('\\')
-        sb.append(c.toInt.toHexString)
-        sb.append(' ')
-      } else if (c == '"') {
-        sb.append("\\\"")
-      } else if (c == '\\') {
-        sb.append("\\\\")
-      } else if (c == '\n') {
-        sb.append("\\a ")
-      } else {
-        sb.append(c)
-      }
     sb.toString()
   }
 

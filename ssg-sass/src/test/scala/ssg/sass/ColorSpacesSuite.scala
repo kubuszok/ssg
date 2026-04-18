@@ -7,7 +7,7 @@ package sass
 
 import ssg.sass.Nullable
 import ssg.sass.functions.ColorFunctions
-import ssg.sass.value.{ SassColor, SassNumber, SassString, Value }
+import ssg.sass.value.{ SassColor, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.color.{ ColorSpace, HueInterpolationMethod, InterpolationMethod }
 
 /** Tests for modern CSS color space support:
@@ -111,7 +111,8 @@ final class ColorSpacesSuite extends munit.FunSuite {
   test("color.mix(red, blue) in default rgb space produces purple at the midpoint") {
     val red  = SassColor.rgb(Nullable(255.0), Nullable(0.0), Nullable(0.0))
     val blue = SassColor.rgb(Nullable(0.0), Nullable(0.0), Nullable(255.0))
-    val mix  = fn("mix")(List(red, blue)).asInstanceOf[SassColor]
+    // Pass $weight: 50% and $method: null explicitly since we call the callback directly
+    val mix  = fn("mix")(List(red, blue, pct(50), SassNull)).asInstanceOf[SassColor]
     // Legacy rgb mix with weight 0.5: half-red + half-blue.
     assertEqualsDouble(mix.channel0, 127.5, 1.0)
     assertEqualsDouble(mix.channel2, 127.5, 1.0)
@@ -125,7 +126,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
     // interpolate(...).toSpace(this.space) returns a color in red's space (rgb).
     // Verify it's NOT equal to the legacy rgb midpoint — oklch interpolation
     // yields a perceptually different color (typically a less-muddy purple).
-    val legacy = fn("mix")(List(red, blue)).asInstanceOf[SassColor]
+    val legacy = fn("mix")(List(red, blue, pct(50), SassNull)).asInstanceOf[SassColor]
     val diff   = math.abs(mix.channel0 - legacy.channel0) + math.abs(mix.channel2 - legacy.channel2)
     assert(diff > 1.0, s"expected oklch and rgb mixes to differ, diff=$diff")
   }

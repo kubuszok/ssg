@@ -39,14 +39,15 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
       lower.startsWith("calc(") || lower.startsWith("var(") ||
       lower.startsWith("env(") || lower.startsWith("min(") ||
       lower.startsWith("max(") || lower.startsWith("clamp(") ||
-      lower.startsWith("attr(")
+      lower.startsWith("attr(") || lower.startsWith("if(")
     }
 
   override def isSpecialVariable: Boolean =
     if (hasQuotes) false
     else {
       val lower = text.toLowerCase
-      lower.startsWith("var(") || lower.startsWith("env(")
+      lower.startsWith("attr(") || lower.startsWith("if(") ||
+      lower.startsWith("var(")
     }
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitString(this)
@@ -88,7 +89,7 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
 
   override def plus(other: Value): Value = other match {
     case s: SassString =>
-      SassString(text + s.text, hasQuotes || s.hasQuotes)
+      SassString(text + s.text, hasQuotes)
     case _ =>
       SassString(text + other.toCssString(), hasQuotes)
   }

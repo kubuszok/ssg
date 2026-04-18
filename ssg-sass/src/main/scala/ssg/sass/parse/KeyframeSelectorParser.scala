@@ -8,15 +8,21 @@
  *
  * Migration notes:
  *   Renames: keyframe_selector.dart -> KeyframeSelectorParser.scala
- *   Idiom: Phase 11 — small text-based parser. Normalizes `from`->`0%` and
- *          `to`->`100%`, and validates that percentages fall in [0, 100].
+ *   Idiom: Faithful port of dart-sass KeyframeSelectorParser using the
+ *     inherited Parser.scanner. Preserves `from`/`to` as-is (no normalization),
+ *     supports scientific notation (e/E exponents), and `+` prefix for
+ *     percentages.
  */
 package ssg
 package sass
 package parse
 
 import ssg.sass.{ InterpolationMap, Nullable, SassFormatException }
-import ssg.sass.util.FileSpan
+import ssg.sass.Nullable.*
+import ssg.sass.util.CharCode
+
+import scala.collection.mutable
+import scala.language.implicitConversions
 
 /** A parser for `@keyframes` block selectors. */
 class KeyframeSelectorParser(
@@ -25,86 +31,76 @@ class KeyframeSelectorParser(
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 
-  private val text: String = contents
-  private var pos:  Int    = 0
-
-  private def fail(msg: String): Nothing =
-    throw new SassFormatException(msg, FileSpan.synthetic(text))
-
   def parse(): List[String] = {
-    pos = 0
-    skipWs()
-    val out = scala.collection.mutable.ListBuffer.empty[String]
-    out += parseOne()
-    skipWs()
-    while (pos < text.length && text.charAt(pos) == ',') {
-      pos += 1
-      skipWs()
-      out += parseOne()
-      skipWs()
-    }
-    if (pos < text.length) fail(s"Unexpected token in keyframe selector: '${text.substring(pos)}'")
-    out.toList
-  }
-
-  private def parseOne(): String = {
-    skipWs()
-    if (pos >= text.length) fail("Expected keyframe selector.")
-    val c = text.charAt(pos)
-    if ((c >= '0' && c <= '9') || c == '.') {
-      parsePercentage()
-    } else if (c == 'f' || c == 'F' || c == 't' || c == 'T') {
-      val ident = readIdentifier().toLowerCase
-      ident match {
-        case "from" => "0%"
-        case "to"   => "100%"
-        case other  => fail(s"Expected 'from', 'to', or a percentage; got '$other'.")
+    wrapSpanFormatException { () =>
+      val selectors = mutable.ListBuffer.empty[String]
+      var continue_ = true
+      while (continue_) {
+        _whitespace()
+        if (lookingAtIdentifier()) {
+          if (scanIdentifier("from")) {
+            selectors += "from"
+          } else {
+            expectIdentifier("to", name = "\"to\" or \"from\"")
+            selectors += "to"
+          }
+        } else {
+          selectors += _percentage()
+        }
+        _whitespace()
+        if (!scanner.scanChar(CharCode.$comma)) continue_ = false
       }
-    } else {
-      fail(s"Expected keyframe selector at position $pos.")
+      scanner.expectDone()
+
+      selectors.toList
     }
   }
 
-  private def parsePercentage(): String = {
-    val start = pos
-    while (pos < text.length && text.charAt(pos) >= '0' && text.charAt(pos) <= '9') pos += 1
-    if (pos < text.length && text.charAt(pos) == '.') {
-      pos += 1
-      while (pos < text.length && text.charAt(pos) >= '0' && text.charAt(pos) <= '9') pos += 1
+  private def _percentage(): String = {
+    val buffer = new StringBuilder()
+    if (scanner.scanChar(CharCode.$plus)) buffer.appendAll(Character.toChars(CharCode.$plus))
+
+    val second = scanner.peekChar()
+    if (!CharCode.isDigit(second) && second != CharCode.$dot) {
+      scanner.error("Expected number.")
     }
-    if (pos >= text.length || text.charAt(pos) != '%') {
-      fail(s"Expected '%' in keyframe percentage at position $pos.")
+
+    while (CharCode.isDigit(scanner.peekChar())) {
+      buffer.appendAll(Character.toChars(scanner.readChar()))
     }
-    val numText = text.substring(start, pos)
-    pos += 1
-    val value =
-      try numText.toDouble
-      catch { case _: NumberFormatException => fail(s"Invalid percentage '$numText'.") }
-    if (value < 0.0 || value > 100.0) {
-      fail(s"Keyframe percentage must be between 0 and 100, got $value.")
+
+    if (scanner.peekChar() == CharCode.$dot) {
+      buffer.appendAll(Character.toChars(scanner.readChar()))
+
+      while (CharCode.isDigit(scanner.peekChar())) {
+        buffer.appendAll(Character.toChars(scanner.readChar()))
+      }
     }
-    s"$numText%"
+
+    if (scanIdentChar(CharCode.$e)) {
+      buffer.appendAll(Character.toChars(CharCode.$e))
+      scanner.peekChar() match {
+        case CharCode.`$plus` | CharCode.`$minus` =>
+          buffer.appendAll(Character.toChars(scanner.readChar()))
+        case _ => ()
+      }
+      if (!CharCode.isDigit(scanner.peekChar())) scanner.error("Expected digit.")
+
+      var hasDigit = true
+      while (hasDigit) {
+        buffer.appendAll(Character.toChars(scanner.readChar()))
+        if (!CharCode.isDigit(scanner.peekChar())) hasDigit = false
+      }
+    }
+
+    scanner.expectChar(CharCode.$percent)
+    buffer.appendAll(Character.toChars(CharCode.$percent))
+    buffer.toString()
   }
 
-  private def readIdentifier(): String = {
-    val start    = pos
-    var continue = true
-    while (continue && pos < text.length) {
-      val c = text.charAt(pos)
-      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-' || c == '_') pos += 1
-      else continue = false
-    }
-    text.substring(start, pos)
-  }
-
-  private def skipWs(): Unit = {
-    var continue = true
-    while (continue && pos < text.length) {
-      val c = text.charAt(pos)
-      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') pos += 1
-      else continue = false
-    }
-  }
+  /** The value of `consumeNewlines` is not relevant for this class. */
+  private def _whitespace(): Unit =
+    whitespace(consumeNewlines = true)
 }
 
 object KeyframeSelectorParser {
