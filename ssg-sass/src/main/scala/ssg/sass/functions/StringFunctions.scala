@@ -278,40 +278,24 @@ object StringFunctions {
     )
 
   // ---------------------------------------------------------------------------
-  // Renamed copies for the global namespace (str-length etc).
-  // ---------------------------------------------------------------------------
-
-  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
-    new BuiltInCallable(
-      name = newName,
-      parameters = callable.parameters,
-      callback = callable.callback,
-      acceptsContent = callable.acceptsContent,
-      signature = callable.signature
-    )
-
-  private val strLengthFn: BuiltInCallable = withName(lengthFn, "str-length")
-  private val strInsertFn: BuiltInCallable = withName(insertFn, "str-insert")
-  private val strIndexFn:  BuiltInCallable = withName(indexFn, "str-index")
-  private val strSliceFn:  BuiltInCallable = withName(sliceFn, "str-slice")
-
-  // ---------------------------------------------------------------------------
   // Public lists.
   // ---------------------------------------------------------------------------
 
   /** The globally available built-ins. Mirrors dart-sass `global` (excluding
     * `split`, which is module-only).
+    * Each entry uses `.withDeprecationWarning("string")` to emit a
+    * `global-builtin` deprecation warning directing users to `string.X`.
     */
   val global: List[Callable] = List(
-    unquoteFn,
-    quoteFn,
-    toUpperCaseFn,
-    toLowerCaseFn,
-    uniqueIdFn,
-    strLengthFn,
-    strInsertFn,
-    strIndexFn,
-    strSliceFn
+    unquoteFn.withDeprecationWarning("string"),
+    quoteFn.withDeprecationWarning("string"),
+    toUpperCaseFn.withDeprecationWarning("string"),
+    toLowerCaseFn.withDeprecationWarning("string"),
+    uniqueIdFn.withDeprecationWarning("string"),
+    lengthFn.withDeprecationWarning("string").withName("str-length"),
+    insertFn.withDeprecationWarning("string").withName("str-insert"),
+    indexFn.withDeprecationWarning("string").withName("str-index"),
+    sliceFn.withDeprecationWarning("string").withName("str-slice")
   )
 
   /** The members of the `sass:string` module. Mirrors dart-sass `module`. */

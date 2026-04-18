@@ -331,39 +331,22 @@ object MapFunctions {
   }
 
   // ---------------------------------------------------------------------------
-  // Renamed copies for the global namespace.
-  //
-  // dart-sass uses `.withDeprecationWarning('map').withName("map-get")`
-  // for the six legacy globals. ssg-sass emits the equivalent globals
-  // via withName; the deprecation-warning wiring is tracked separately
-  // under the sass:meta module introspection work and does not belong
-  // in this file.
-  // ---------------------------------------------------------------------------
-
-  private def withName(callable: BuiltInCallable, newName: String): BuiltInCallable =
-    new BuiltInCallable(
-      name = newName,
-      parameters = callable.parameters,
-      callback = callable.callback,
-      acceptsContent = callable.acceptsContent,
-      signature = callable.signature
-    )
-
-  // ---------------------------------------------------------------------------
   // Public lists.
   // ---------------------------------------------------------------------------
 
   /** Globally available built-ins. Mirrors dart-sass `global`. Note `set`,
     * `deep-merge`, and `deep-remove` are NOT in the global; only the six
     * deprecated `map-*` aliases are.
+    * Each entry uses `.withDeprecationWarning('map').withName("map-*")`
+    * to emit a `global-builtin` deprecation warning directing users to `map.X`.
     */
   val global: List[Callable] = List(
-    withName(getFn, "map-get"),
-    withName(mergeFn, "map-merge"),
-    withName(removeFn, "map-remove"),
-    withName(keysFn, "map-keys"),
-    withName(valuesFn, "map-values"),
-    withName(hasKeyFn, "map-has-key")
+    getFn.withDeprecationWarning("map").withName("map-get"),
+    mergeFn.withDeprecationWarning("map").withName("map-merge"),
+    removeFn.withDeprecationWarning("map").withName("map-remove"),
+    keysFn.withDeprecationWarning("map").withName("map-keys"),
+    valuesFn.withDeprecationWarning("map").withName("map-values"),
+    hasKeyFn.withDeprecationWarning("map").withName("map-has-key")
   )
 
   /** Members of the `sass:map` module. Mirrors dart-sass `module`. */

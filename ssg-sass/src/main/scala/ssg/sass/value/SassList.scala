@@ -16,7 +16,7 @@ package sass
 package value
 
 import ssg.sass.Nullable
-import ssg.sass.visitor.ValueVisitor
+import ssg.sass.visitor.{ SerializeVisitor, ValueVisitor }
 
 import scala.language.implicitConversions
 
@@ -26,6 +26,12 @@ class SassList(
   override val separator: ListSeparator,
   brackets:               Boolean = false
 ) extends Value {
+
+  if (separator == ListSeparator.Undecided && contents.length > 1) {
+    throw new IllegalArgumentException(
+      "A list with more than one element must have an explicit separator."
+    )
+  }
 
   override val hasBrackets: Boolean = brackets
 
@@ -93,7 +99,22 @@ class SassList(
     else inner
   }
 
-  override def toString: String = toCssString()
+  /** Add parentheses to the debug information for lists to help make the list
+    * bounds clear.
+    *
+    * Ported from dart-sass `SassList.toString()` — calls `serializeValue` with
+    * inspect mode, then wraps non-bracketed, non-trivial lists in parentheses.
+    */
+  override def toString: String = {
+    val inspectStr = SerializeVisitor.serializeValue(this, inspect = true)
+    if (hasBrackets ||
+        lengthAsList == 0 ||
+        (lengthAsList == 1 && separator == ListSeparator.Comma)) {
+      inspectStr
+    } else {
+      s"($inspectStr)"
+    }
+  }
 }
 
 object SassList {

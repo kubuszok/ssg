@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Ported from: lib/src/visitor/every_css.dart
- * Original: Copyright (c) 2019 Google Inc.
+ * Original: Copyright (c) 2022 Google Inc.
  * Original license: MIT
  *
  * Migration notes:
  *   Renames: every_css.dart -> EveryCssVisitor.scala
- *   Convention: Skeleton — defaults each visit method to true. Concrete
- *               subclasses override to enforce a predicate.
+ *   Convention: Dart mixin -> Scala trait
+ *   Idiom: Parent nodes recurse via node.children.forall(_.accept(this));
+ *          leaf nodes default to false.
  */
 package ssg
 package sass
@@ -17,18 +18,25 @@ package visitor
 
 import ssg.sass.ast.css.*
 
-/** A visitor that returns true if every CSS node in the tree matches a predicate.
+/** A visitor that visits each statement in a CSS AST and returns `true` if all
+  * of the individual methods return `true`.
   *
-  * Skeleton — defaults all visit methods to true.
+  * Each method returns `false` by default.
   */
 trait EveryCssVisitor extends CssVisitor[Boolean] {
-  def visitCssAtRule(node:        CssAtRule):        Boolean = true
-  def visitCssComment(node:       CssComment):       Boolean = true
-  def visitCssDeclaration(node:   CssDeclaration):   Boolean = true
-  def visitCssImport(node:        CssImport):        Boolean = true
-  def visitCssKeyframeBlock(node: CssKeyframeBlock): Boolean = true
-  def visitCssMediaRule(node:     CssMediaRule):     Boolean = true
-  def visitCssStyleRule(node:     CssStyleRule):     Boolean = true
-  def visitCssStylesheet(node:    CssStylesheet):    Boolean = true
-  def visitCssSupportsRule(node:  CssSupportsRule):  Boolean = true
+  def visitCssAtRule(node:        CssAtRule):        Boolean =
+    node.children.forall(_.accept(this))
+  def visitCssComment(node:       CssComment):       Boolean = false
+  def visitCssDeclaration(node:   CssDeclaration):   Boolean = false
+  def visitCssImport(node:        CssImport):        Boolean = false
+  def visitCssKeyframeBlock(node: CssKeyframeBlock): Boolean =
+    node.children.forall(_.accept(this))
+  def visitCssMediaRule(node:     CssMediaRule):     Boolean =
+    node.children.forall(_.accept(this))
+  def visitCssStyleRule(node:     CssStyleRule):     Boolean =
+    node.children.forall(_.accept(this))
+  def visitCssStylesheet(node:    CssStylesheet):    Boolean =
+    node.children.forall(_.accept(this))
+  def visitCssSupportsRule(node:  CssSupportsRule):  Boolean =
+    node.children.forall(_.accept(this))
 }

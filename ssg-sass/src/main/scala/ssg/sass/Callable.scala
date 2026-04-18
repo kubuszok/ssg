@@ -32,6 +32,38 @@ object Callable {
     */
   def function(name: String, arguments: String, callback: List[Value] => Value): Callable =
     BuiltInCallable.function(name, arguments, callback)
+
+  /// Creates a callable with a single [signature] and a single [callback].
+  ///
+  /// Throws a [SassFormatException] if parsing fails.
+  def fromSignature(
+    signature:    String,
+    callback:     List[Value] => Value,
+    requireParens: Boolean = true
+  ): Callable = {
+    val (name, declaration) = parseSignature(signature, requireParens)
+    BuiltInCallable.parsed(name, declaration, callback)
+  }
+
+  /// Parses a function signature string into a (name, ParameterList) pair.
+  ///
+  /// If [requireParens] is `false`, this allows parentheses to be omitted.
+  ///
+  /// Throws a [SassFormatException] if parsing fails.
+  private[sass] def parseSignature(
+    signature:    String,
+    requireParens: Boolean = true
+  ): (String, ParameterList) = {
+    try {
+      new ssg.sass.parse.ScssParser(signature).parseSignature(requireParens = requireParens)
+    } catch {
+      case e: SassException =>
+        throw new SassException(
+          s"""Invalid signature "$signature": ${e.getMessage}""",
+          e.span
+        )
+    }
+  }
 }
 
 /** A callable defined in Dart/Scala code, wrapping a native function. */
@@ -129,10 +161,53 @@ final class BuiltInCallable(
     }
   }
 
+  /** Returns a copy of this callable with the given [newName].
+    * Port of dart-sass `BuiltInCallable.withName`.
+    */
+  def withName(newName: String): BuiltInCallable =
+    new BuiltInCallable(newName, parameters, callback, acceptsContent, signature, isOverloaded)
+
+  /** Returns a copy of this callable that emits a deprecation warning
+    * directing users to the module form of the function.
+    * Port of dart-sass `BuiltInCallable.withDeprecationWarning`.
+    */
+  def withDeprecationWarning(module: String, newName: String = ""): BuiltInCallable = {
+    val effectiveName = if (newName.nonEmpty) newName else name
+    val origCallback = callback
+    val wrappedCallback: List[Value] => Value = { args =>
+      BuiltInCallable.warnForGlobalBuiltIn(module, effectiveName)
+      origCallback(args)
+    }
+    new BuiltInCallable(name, parameters, wrappedCallback, acceptsContent, signature, isOverloaded)
+  }
+
   override def toString: String = s"BuiltInCallable($name)"
 }
 
 object BuiltInCallable {
+
+  /** Emits a deprecation warning for a global built-in function that is now
+    * available as function [name] in built-in module [module].
+    * Port of dart-sass `warnForGlobalBuiltIn` in `lib/src/callable/async_built_in.dart`.
+    */
+  def warnForGlobalBuiltIn(module: String, name: String): Unit = {
+    EvaluationContext.warnForDeprecation(
+      Deprecation.GlobalBuiltin,
+      s"Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.\n" +
+        s"Use $module.$name instead.\n\n" +
+        "More info and automated migrator: https://sass-lang.com/d/import"
+    )
+  }
+
+  /// Creates a callable with a single parsed [parameters] declaration and a
+  /// single [callback].
+  def parsed(
+    name:       String,
+    parameters: ParameterList,
+    callback:   List[Value] => Value,
+    acceptsContent: Boolean = false
+  ): BuiltInCallable =
+    BuiltInCallable(name, Nullable(parameters), callback, acceptsContent)
 
   def function(name: String, arguments: String, callback: List[Value] => Value): BuiltInCallable =
     BuiltInCallable(name, Nullable.empty, callback, signature = arguments)

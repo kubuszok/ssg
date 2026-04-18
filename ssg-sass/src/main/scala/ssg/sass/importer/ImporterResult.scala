@@ -35,9 +35,45 @@ object ImporterResult {
   ): ImporterResult = new ImporterResult(contents, sourceMapUrl, syntax)
 }
 
-/** The context passed to [[Importer.canonicalize]] about the URL being resolved — the containing URL and whether it's being imported from an `@import` rule.
+/** Contextual information used by importers' `canonicalize` method.
+  *
+  * Tracks whether the [[containingUrl]] has been accessed, which determines whether the canonicalization result is cacheable.
   */
 final class CanonicalizeContext(
-  val containingUrl: Nullable[String],
-  val fromImport:    Boolean
-)
+  private val _containingUrl: Nullable[String],
+  private var _fromImport:    Boolean
+) {
+
+  /** Whether the Sass compiler is currently evaluating an `@import` rule. */
+  def fromImport: Boolean = _fromImport
+
+  /** The URL of the stylesheet that contains the current load.
+    *
+    * Accessing this marks the result as non-cacheable.
+    */
+  def containingUrl: Nullable[String] = {
+    _wasContainingUrlAccessed = true
+    _containingUrl
+  }
+
+  /** Returns the same value as [[containingUrl]], but doesn't mark it accessed. */
+  def containingUrlWithoutMarking: Nullable[String] = _containingUrl
+
+  /** Whether [[containingUrl]] has been accessed.
+    *
+    * This is used to determine whether canonicalize result is cacheable.
+    */
+  def wasContainingUrlAccessed: Boolean = _wasContainingUrlAccessed
+  private var _wasContainingUrlAccessed: Boolean = false
+
+  /** Runs [[callback]] in a context with specified [[fromImport]]. */
+  def withFromImport[T](fromImport: Boolean, callback: () => T): T = {
+    val oldFromImport = _fromImport
+    _fromImport = fromImport
+    try {
+      callback()
+    } finally {
+      _fromImport = oldFromImport
+    }
+  }
+}

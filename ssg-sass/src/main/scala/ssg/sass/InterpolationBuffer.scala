@@ -66,6 +66,11 @@ final class InterpolationBuffer {
     val _ = text.append(c)
   }
 
+  /** Appends a newline to the plain-text portion of the buffer. */
+  def writeln(): Unit = {
+    val _ = text.append('\n')
+  }
+
   /** Adds an expression [expression] with its [span] to the buffer. */
   def add(expression: Expression, span: FileSpan): Unit = {
     _flushText()
@@ -94,10 +99,21 @@ final class InterpolationBuffer {
     val _ = first
   }
 
-  /** Builds the resulting [[Interpolation]] over [span]. */
+  /** Builds the resulting [[Interpolation]] over [span].
+    *
+    * This creates a snapshot of the buffer's current state without modifying it,
+    * matching the Dart behavior. The buffer can continue to be used after this call.
+    */
   def interpolation(span: FileSpan): Interpolation = {
-    _flushText()
-    new Interpolation(contents.toList, spans.toList, span)
+    if (text.nonEmpty) {
+      new Interpolation(
+        contents.toList :+ text.toString,
+        spans.toList :+ Nullable.empty[FileSpan],
+        span
+      )
+    } else {
+      new Interpolation(contents.toList, spans.toList, span)
+    }
   }
 
   private def _flushText(): Unit =
