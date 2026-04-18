@@ -821,53 +821,140 @@ final class SerializeVisitor(
   // ---------------------------------------------------------------------------
   private def formatString(s: SassString): String =
     if (!s.hasQuotes) {
-      // Fold newlines to a single space to avoid breaking declarations.
-      val sb = new StringBuilder()
-      var i  = 0
-      while (i < s.text.length) {
-        val c = s.text.charAt(i)
-        if (c == '\n') sb.append(' ')
-        else sb.append(c)
-        i += 1
-      }
-      sb.toString()
+      visitUnquotedString(s.text)
     } else {
-      var hasDouble = false
-      var hasSingle = false
-      var i         = 0
-      while (i < s.text.length) {
-        val c = s.text.charAt(i)
-        if (c == '"') hasDouble = true
-        else if (c == '\'') hasSingle = true
-        i += 1
-      }
-      val q  = if (hasDouble && !hasSingle) '\'' else '"'
-      val sb = new StringBuilder()
-      sb.append(q)
-      i = 0
-      while (i < s.text.length) {
-        val c = s.text.charAt(i)
-        c match {
-          case '\\'                       => sb.append("\\\\")
-          case _ if c == q                => sb.append('\\'); sb.append(c)
-          case _ if c < 0x20 || c == 0x7f =>
-            // dart-sass serialize.dart:1519-1528 (_writeEscape): only add
-            // a trailing space when the NEXT character is a hex digit,
-            // space, or tab (CSS hex escape terminator rule).
-            sb.append('\\')
-            sb.append(Integer.toHexString(c.toInt))
-            if (i + 1 < s.text.length) {
-              val next = s.text.charAt(i + 1)
-              if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F') || next == ' ' || next == '\t')
-                sb.append(' ')
-            }
-          case _ => sb.append(c)
-        }
-        i += 1
-      }
-      sb.append(q)
-      sb.toString()
+      visitQuotedString(s.text)
     }
+
+  /// Writes an unquoted string with [string] contents to a new StringBuilder.
+  ///
+  /// Port of dart-sass `_visitUnquotedString` (serialize.dart:1452-1473).
+  /// Folds newlines to a single space, collapses post-newline whitespace to a
+  /// single space, and hex-escapes PUA characters in expanded mode.
+  private def visitUnquotedString(string: String): String = {
+    val sb = new StringBuilder()
+    var afterNewline = false
+    var i = 0
+    while (i < string.length) {
+      val c = string.charAt(i)
+      if (c == '\n') {
+        sb.append(' ')
+        afterNewline = true
+        i += 1
+      } else if (c == ' ' && afterNewline) {
+        // Collapse post-newline whitespace: skip spaces after a newline.
+        i += 1
+      } else {
+        afterNewline = false
+        tryPrivateUseCharacter(sb, c.toInt, string, i) match {
+          case Some(newIndex) =>
+            i = newIndex + 1
+          case scala.None =>
+            sb.append(c)
+            i += 1
+        }
+      }
+    }
+    sb.toString()
+  }
+
+  /// Writes a quoted string to a new StringBuilder.
+  ///
+  /// Port of dart-sass `_visitQuotedString` (serialize.dart:1348-1448).
+  /// Handles PUA character escaping in expanded mode.
+  private def visitQuotedString(text: String): String = {
+    var hasDouble = false
+    var hasSingle = false
+    var i         = 0
+    while (i < text.length) {
+      val c = text.charAt(i)
+      if (c == '"') hasDouble = true
+      else if (c == '\'') hasSingle = true
+      i += 1
+    }
+    val q  = if (hasDouble && !hasSingle) '\'' else '"'
+    val sb = new StringBuilder()
+    sb.append(q)
+    i = 0
+    while (i < text.length) {
+      val c = text.charAt(i)
+      c match {
+        case '\\'                       => sb.append("\\\\")
+        case _ if c == q                => sb.append('\\'); sb.append(c)
+        case _ if c < 0x20 || c == 0x7f =>
+          // dart-sass serialize.dart:1519-1528 (_writeEscape): only add
+          // a trailing space when the NEXT character is a hex digit,
+          // space, or tab (CSS hex escape terminator rule).
+          writeEscape(sb, c.toInt, text, i)
+        case _ =>
+          tryPrivateUseCharacter(sb, c.toInt, text, i) match {
+            case Some(newIndex) =>
+              i = newIndex
+            case scala.None =>
+              sb.append(c)
+          }
+      }
+      i += 1
+    }
+    sb.append(q)
+    sb.toString()
+  }
+
+  /// If [codeUnit] is (the beginning of) a private-use character and Sass isn't
+  /// emitting compressed CSS, writes that character as an escape to [sb].
+  ///
+  /// Returns Some(lastConsumedIndex) on success, None otherwise.
+  ///
+  /// In expanded mode, we print all characters in Private Use Areas as escape
+  /// codes since there's no useful way to render them directly. These
+  /// characters are often used for glyph fonts, where it's useful for readers
+  /// to be able to distinguish between them in the rendered stylesheet.
+  ///
+  /// Port of dart-sass `_tryPrivateUseCharacter` (serialize.dart:1475-1511).
+  private def tryPrivateUseCharacter(
+    sb:       StringBuilder,
+    codeUnit: Int,
+    string:   String,
+    i:        Int
+  ): Option[Int] = {
+    if (isCompressed) return scala.None
+
+    // BMP Private Use Area: U+E000-U+F8FF
+    if (codeUnit >= 0xE000 && codeUnit <= 0xF8FF) {
+      writeEscape(sb, codeUnit, string, i)
+      return Some(i)
+    }
+
+    // High surrogate for Supplementary Private Use Areas:
+    // U+DB80-U+DBFF (high surrogates for plane 15-16 PUA)
+    if (codeUnit >= 0xDB80 && codeUnit <= 0xDBFF && string.length > i + 1) {
+      val low = string.charAt(i + 1).toInt
+      val combined = ((codeUnit - 0xD800) << 10) + (low - 0xDC00) + 0x10000
+      writeEscape(sb, combined, string, i + 1)
+      return Some(i + 1)
+    }
+
+    scala.None
+  }
+
+  /// Writes [character] as a hexadecimal escape sequence to [sb].
+  ///
+  /// Port of dart-sass `_writeEscape` (serialize.dart:1519-1528).
+  private def writeEscape(sb: StringBuilder, character: Int, string: String, i: Int): Unit = {
+    sb.append('\\')
+    sb.append(Integer.toHexString(character))
+
+    if (i + 1 < string.length) {
+      val next = string.charAt(i + 1)
+      if (isHexChar(next) || next == ' ' || next == '\t') {
+        sb.append(' ')
+      }
+    }
+  }
+
+  /// Returns whether [c] is a hexadecimal digit.
+  private def isHexChar(c: Char): Boolean =
+    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 
   // ---------------------------------------------------------------------------
   // Stage A.3: list and map formatting
@@ -1172,11 +1259,12 @@ final class SerializeVisitor(
 
     // Round up if needed.
     if (text.charAt(textIndex) - '0' >= 5) {
-      var done = false
-      while (!done) {
-        digits(digitsIndex - 1) += 1
-        if (digits(digitsIndex - 1) != 10) done = true
-        else digitsIndex -= 1
+      boundary {
+        while (true) {
+          digits(digitsIndex - 1) += 1
+          if (digits(digitsIndex - 1) != 10) break(())
+          else digitsIndex -= 1
+        }
       }
     }
 
@@ -1197,7 +1285,7 @@ final class SerializeVisitor(
 
     if (negative) sb.append('-')
 
-    // Write the digits before the decimal. Omit the leading `0` placeholder
+    // Write the digits before the decimal. Omit the leading `0` padding digit
     // added for rounding headroom; in compressed mode also omit the `0`
     // before the decimal point.
     var writtenIndex = 0
@@ -1552,7 +1640,26 @@ final class SerializeVisitor(
       val lower = node.text.toLowerCase
       if (lower.startsWith("/*# sourcemappingurl=") || lower.startsWith("/*# sourceurl=")) return
     }
-    buffer.append(node.text)
+
+    // dart-sass serialize.dart:204-217: multi-line comment reindentation.
+    // When a loud comment spans multiple lines and is inside an indented
+    // block in expanded mode, reindent the body using minimumIndentation
+    // and writeWithIndent so the output aligns with the current nesting
+    // level.
+    //
+    // Note: indentation before the comment text is emitted by the caller
+    // (writeChildrenIn / visitCssStylesheet), so we only handle internal
+    // reindentation here.
+    val minIndent = minimumIndentation(node.text)
+    if (minIndent != Int.MaxValue && minIndent >= 0) {
+      // The comment has newlines with indented content; reindent relative
+      // to the current indentation and the comment's original start column.
+      val effectiveMinIndent = math.min(minIndent, node.span.start.column)
+      writeWithIndent(node.text, effectiveMinIndent)
+    } else {
+      // Single-line comment or no indented content: emit verbatim.
+      buffer.append(node.text)
+    }
   }
 
   override def visitCssAtRule(node: CssAtRule): Unit = {
@@ -1616,8 +1723,16 @@ final class SerializeVisitor(
   }
 
   override def visitCssSupportsRule(node: CssSupportsRule): Unit = {
-    buffer.append("@supports ")
-    buffer.append(node.condition.value)
+    buffer.append("@supports")
+    // dart-sass serialize.dart:340-351: in compressed mode, omit the space
+    // after `@supports` when the condition starts with `(`.
+    val condText = node.condition.value
+    if (isCompressed && condText.nonEmpty && condText.charAt(0) == '(') {
+      // no space needed — the `(` is unambiguous
+    } else {
+      buffer.append(' ')
+    }
+    buffer.append(condText)
     writeSpace()
     writeChildrenIn(node, node.children)
   }
@@ -1625,11 +1740,38 @@ final class SerializeVisitor(
   override def visitCssImport(node: CssImport): Unit = {
     // dart-sass: visitCssImport does NOT emit a trailing `;`. The separator
     // is supplied by `_visitChildren` via `requiresSemicolon`.
-    buffer.append("@import ")
-    buffer.append(node.url.value)
+    buffer.append("@import")
+    writeSpace()
+    writeImportUrl(node.url.value)
     node.modifiers.foreach { m =>
-      buffer.append(' ')
+      writeSpace()
       buffer.append(m.value)
+    }
+  }
+
+  /// Writes [url], which is an import's URL, to the buffer.
+  ///
+  /// Port of dart-sass `_writeImportUrl` (serialize.dart:277-294).
+  /// In compressed mode, strips the `url()` wrapper for terser output and
+  /// wraps unquoted URLs in quotes.
+  private def writeImportUrl(url: String): Unit = {
+    if (!isCompressed || url.isEmpty || url.charAt(0) != 'u') {
+      buffer.append(url)
+      return
+    }
+
+    // If this is url(...), remove the surrounding function. This is terser and
+    // it allows us to remove whitespace between `@import` and the URL.
+    val urlContents = url.substring(4, url.length - 1)
+
+    val maybeQuote = urlContents.charAt(0)
+    if (maybeQuote == '\'' || maybeQuote == '"') {
+      buffer.append(urlContents)
+    } else {
+      // If the URL didn't contain quotes, write them manually.
+      buffer.append('"')
+      buffer.append(urlContents)
+      buffer.append('"')
     }
   }
 

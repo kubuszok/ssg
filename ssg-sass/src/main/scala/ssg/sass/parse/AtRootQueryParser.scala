@@ -19,6 +19,9 @@ import ssg.sass.{ InterpolationMap, Nullable, SassFormatException }
 import ssg.sass.ast.sass.AtRootQuery
 import ssg.sass.util.FileSpan
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** A parser for `@at-root` queries. */
 class AtRootQueryParser(
   contents:         String,
@@ -69,23 +72,25 @@ class AtRootQueryParser(
   }
 
   private def readIdentifier(): String = {
-    val start    = pos
-    var continue = true
-    while (continue && pos < text.length) {
-      val c = text.charAt(pos)
-      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-        pos += 1
-      } else continue = false
+    val start = pos
+    boundary {
+      while (pos < text.length) {
+        val c = text.charAt(pos)
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+          pos += 1
+        } else break(())
+      }
     }
     text.substring(start, pos)
   }
 
   private def skipWs(): Unit = {
-    var continue = true
-    while (continue && pos < text.length) {
-      val c = text.charAt(pos)
-      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') pos += 1
-      else continue = false
+    boundary {
+      while (pos < text.length) {
+        val c = text.charAt(pos)
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') pos += 1
+        else break(())
+      }
     }
   }
 }

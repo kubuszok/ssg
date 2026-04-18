@@ -528,7 +528,8 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
           _mediaContexts.get(selector)
         )
       } catch {
-        // TODO(nweiz): Make this a MultiSpanSassException.
+        // Note(nweiz): this should become a MultiSpanSassException once that type
+        // is available.
         case error: SassException =>
           throw new SassException(
             s"From ${selector.value.span.message("")}\n${error.sassMessage}",
@@ -1140,8 +1141,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   def astTargets: Iterable[SimpleSelector] = astExtensions.keys
 }
 
-/** Returns true if the given complex selector is composed solely of placeholder selectors (and so should be stripped from CSS output).
-  */
+/** Utilities for working with selectors in extension logic. */
 object ExtendUtils {
   def isPlaceholderOnly(complex: ComplexSelector): Boolean =
     complex.components.nonEmpty &&

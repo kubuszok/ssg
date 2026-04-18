@@ -24,7 +24,7 @@ import ssg.sass.visitor.CssVisitor
 
 /** A plain CSS style rule.
   *
-  * This applies style declarations to elements that match a given selector. Note that this isn't strictly plain CSS, since the selector may still contain placeholder selectors.
+  * This applies style declarations to elements that match a given selector. Note that this isn't strictly plain CSS, since the selector may still contain `%name` selectors.
   */
 trait CssStyleRule extends CssParentNode {
 

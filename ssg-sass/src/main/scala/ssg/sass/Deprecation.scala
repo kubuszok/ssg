@@ -116,7 +116,7 @@ object Deprecation {
    *
    * A deprecation is included if:
    * - Its deprecatedIn version is <= the given version
-   * - It is not yet obsolete (obsoleteIn is null)
+   * - It has not become obsolete (obsoleteIn is null)
    */
   def forVersion(version: Version): Set[Deprecation] = {
     val result = Set.newBuilder[Deprecation]
