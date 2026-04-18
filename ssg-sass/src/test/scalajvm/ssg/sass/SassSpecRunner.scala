@@ -412,7 +412,8 @@ object SassSpecRunner {
     source:        String,
     expectedOut:   Option[String],
     expectedError: Option[String],
-    siblingFiles:  Map[String, String] = Map.empty
+    siblingFiles:  Map[String, String] = Map.empty,
+    isSass:        Boolean = false
   )
 
   def collectCases(root: Path): List[TestCase] = {
@@ -465,7 +466,8 @@ object SassSpecRunner {
         }
       finally stream.close()
     }
-    source.map(s => TestCase(rel, s, expectedO, expectedE, siblings.toMap))
+    val sass = input.getFileName.toString.endsWith(".sass")
+    source.map(s => TestCase(rel, s, expectedO, expectedE, siblings.toMap, isSass = sass))
   }
 
   /** Parse an HRX archive into test cases.
@@ -542,7 +544,7 @@ object SassSpecRunner {
               }
             }.toMap
             val siblings = sameDirSiblings ++ archiveSiblings
-            Iterator.single(TestCase(origin, src, out, err, siblings))
+            Iterator.single(TestCase(origin, src, out, err, siblings, isSass = inputName.endsWith(".sass")))
           case None => Iterator.empty
         }
       }.toList
@@ -620,7 +622,7 @@ object SassSpecRunner {
           Compile.compileString(
             tc.source,
             style = OutputStyle.Expanded,
-            syntax = if (tc.relPath.contains("input.sass")) Syntax.Sass else Syntax.Scss,
+            syntax = if (tc.isSass || tc.relPath.contains("input.sass")) Syntax.Sass else Syntax.Scss,
             importer = importer
           )
         )
