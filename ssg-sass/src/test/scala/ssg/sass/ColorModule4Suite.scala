@@ -28,19 +28,20 @@ final class ColorModule4Suite extends munit.FunSuite {
 
   private def num(d: Double): SassNumber = SassNumber(d)
   private def str(s: String): SassString = SassString(s, hasQuotes = false)
+  private def qstr(s: String): SassString = SassString(s, hasQuotes = true)
 
   private def red: SassColor =
     fn("rgb")(List(num(255), num(0), num(0))).asInstanceOf[SassColor]
 
   test("color.channel(red, red) returns 255 in legacy rgb") {
     val c = red
-    val v = fn("channel")(List(c, str("red"))).asInstanceOf[SassNumber]
+    val v = fn("channel")(List(c, qstr("red"))).asInstanceOf[SassNumber]
     assertEqualsDouble(v.value, 255.0, 1e-9)
   }
 
   test("color.channel(red, red, $space: srgb) returns normalized 1") {
     val c = red
-    val v = fn("channel")(List(c, str("red"), str("srgb"))).asInstanceOf[SassNumber]
+    val v = fn("channel")(List(c, qstr("red"), str("srgb"))).asInstanceOf[SassNumber]
     assertEqualsDouble(v.value, 1.0, 1e-6)
   }
 
@@ -84,12 +85,12 @@ final class ColorModule4Suite extends munit.FunSuite {
 
   test("color.is-powerless(hsl(120 0 50%), hue) is true when saturation is 0") {
     val c = fn("hsl")(List(num(120), num(0), num(50))).asInstanceOf[SassColor]
-    val b = fn("is-powerless")(List(c, str("hue"))).asInstanceOf[SassBoolean]
+    val b = fn("is-powerless")(List(c, qstr("hue"))).asInstanceOf[SassBoolean]
     assertEquals(b.value, true)
   }
 
   test("color.is-missing(red, red) is false") {
-    val b = fn("is-missing")(List(red, str("red"))).asInstanceOf[SassBoolean]
+    val b = fn("is-missing")(List(red, qstr("red"))).asInstanceOf[SassBoolean]
     assertEquals(b.value, false)
   }
 

@@ -1274,6 +1274,14 @@ final class EvaluateVisitor(
         }
       }
       callable.fold[Value] {
+        // dart-sass: plain CSS functions don't support keyword arguments
+        // (async_evaluate.dart:3631-3636).
+        if (node.arguments.named.nonEmpty || node.arguments.keywordRest.isDefined) {
+          throw _exception(
+            "Plain CSS functions don't support keyword arguments.",
+            Nullable(node.span)
+          )
+        }
         // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
         val args = node.arguments.positional.map(a => _evaluateToCss(a))
         new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
@@ -2566,78 +2574,75 @@ final class EvaluateVisitor(
       )
     }
 
-    val nameText  = _performInterpolation(node.name)
-    val nameValue = new CssValue[String](nameText, node.name.span)
+    // dart-sass (async_evaluate.dart:1371-1378): reject non-SassScript
+    // declarations nested inside a declaration block.
+    if (_declarationName.isDefined && !node.parsedAsSassScript) {
+      throw _exception(
+        if (node.name.asPlain.exists(_.startsWith("--")))
+          "Declarations whose names begin with \"--\" may not be nested."
+        else
+          "Declarations parsed as raw CSS may not be nested.",
+        Nullable(node.span)
+      )
+    }
+
+    val nameText = _performInterpolation(node.name)
+    // If we're inside a nested declaration block, prepend the parent name
+    // (e.g., inside `background: { color: red; }`, _declarationName is
+    // "background" and nameText is "color", producing "background-color").
+    val name = new CssValue[String](
+      _declarationName.fold(nameText)(dn => s"$dn-$nameText"),
+      node.name.span
+    )
 
     // A declaration may have no value if it's purely a container for
     // nested declarations (e.g. `font: { family: ...; }`).
     node.value.foreach { expression =>
-      val rawValue = expression.accept(this)
-      val cssVal: Value =
-        if (node.parsedAsSassScript) rawValue
-        else {
-          // Custom property / non-SassScript: must be a SassString.
-          rawValue match {
-            case s: SassString => s
-            case other => new SassString(other.toCssString(quote = false), hasQuotes = false)
+      val value = expression.accept(this)
+      // dart-sass (async_evaluate.dart:1387-1393): skip blank values
+      // unless it's an empty list (which should produce an error) or
+      // a custom property (allowed to be empty per spec).
+      if (!value.isBlank || _isEmptyList(value) || name.value.startsWith("--")) {
+        val cssVal: Value =
+          if (node.parsedAsSassScript) value
+          else {
+            // Custom property / non-SassScript: must be a SassString.
+            value match {
+              case s: SassString => s
+              case other => new SassString(other.toCssString(quote = false), hasQuotes = false)
+            }
           }
-        }
-      val valueWrapper = new CssValue[Value](cssVal, expression.span)
-      val decl         = new ModifiableCssDeclaration(
-        nameValue,
-        valueWrapper,
-        node.span,
-        parsedAsSassScript = node.parsedAsSassScript,
-        isImportant = node.isImportant
-      )
-      _addChild(decl)
+        _copyParentAfterSibling()
+        _addChild(new ModifiableCssDeclaration(
+          name,
+          new CssValue[Value](cssVal, expression.span),
+          node.span,
+          parsedAsSassScript = node.parsedAsSassScript,
+          isImportant = node.isImportant
+        ))
+      }
     }
 
-    // Nested declarations: each child declaration's name is prefixed with
-    // the parent name + "-". E.g., `border: { color: red; }` produces
-    // `border-color: red`. dart-sass evaluate.dart visitDeclaration.
+    // Nested declarations: set _declarationName so that ALL child
+    // statements (including @if, @for, @each, @include) that ultimately
+    // produce declarations will have the parent prefix applied.
+    // dart-sass evaluate.dart visitDeclaration (lines 1407-1416).
     node.children.foreach { kids =>
-      _withScope {
-        for (statement <- kids) {
-          statement match {
-            case childDecl: Declaration =>
-              // Create a prefixed child declaration: parent-child
-              val childNameText = _performInterpolation(childDecl.name)
-              val prefixedName  = s"$nameText-$childNameText"
-              val prefixedNameValue = new CssValue[String](prefixedName, childDecl.name.span)
-              childDecl.value.foreach { expression =>
-                val rawValue = expression.accept(this)
-                val cssVal: Value =
-                  if (childDecl.parsedAsSassScript) rawValue
-                  else rawValue match {
-                    case s: SassString => s
-                    case other => new SassString(other.toCssString(quote = false), hasQuotes = false)
-                  }
-                val valueWrapper = new CssValue[Value](cssVal, expression.span)
-                _addChild(new ModifiableCssDeclaration(
-                  prefixedNameValue, valueWrapper, childDecl.span,
-                  parsedAsSassScript = childDecl.parsedAsSassScript,
-                  isImportant = childDecl.isImportant
-                ))
-              }
-              // Recurse for nested-nested declarations
-              childDecl.children.foreach { grandkids =>
-                val syntheticNode = Declaration.nested(
-                  Interpolation.plain(prefixedName, childDecl.name.span),
-                  grandkids,
-                  childDecl.span,
-                  childDecl.value
-                )
-                syntheticNode.accept(this)
-              }
-            case other =>
-              val _ = other.accept(this)
-          }
+      val oldDeclarationName = _declarationName
+      _declarationName = Nullable(name.value)
+      _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+        for (child <- kids) {
+          child.accept(this)
         }
       }
+      _declarationName = oldDeclarationName
     }
     SassNull
   }
+
+  /// Returns whether [value] is an empty list.
+  /// Port of dart-sass `_isEmptyList` (evaluate.dart:1422).
+  private def _isEmptyList(value: Value): Boolean = value.asList.isEmpty
 
   /// Port of dart-sass `visitVariableDeclaration` (evaluate.dart:2648-2707).
   override def visitVariableDeclaration(node: VariableDeclaration): Value = {
@@ -3446,6 +3451,16 @@ final class EvaluateVisitor(
     //   2. Each extend call site is recorded as a `PendingExtend` so that,
     //      after the tree walk, unmatched non-optional targets raise
     //      `"The target selector was not found"`.
+
+    // dart-sass: @extend may only be used within style rules
+    // (async_evaluate.dart:1477-1481).
+    if (_styleRule.isEmpty || _declarationName.isDefined) {
+      throw _exception(
+        "@extend may only be used within style rules.",
+        Nullable(node.span)
+      )
+    }
+
     _styleRule.foreach { rule =>
       val extenderText = rule.selector.toString
       val targetText   = _performInterpolation(node.selector).trim
@@ -3809,6 +3824,11 @@ final class EvaluateVisitor(
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case mr: MixinRule =>
+            // dart-sass: reject content block when the mixin doesn't use
+            // @content (async_evaluate.dart:2143-2151).
+            if (!mr.hasContent && content.isDefined) {
+              throw SassScriptException("Mixin doesn't accept a content block.")
+            }
             // dart-sass _runUserDefinedCallable: switch to a fresh closure of
             // the mixin's captured environment, then push a scope inside it.
             // The fresh closure isolates the body's mutations from the

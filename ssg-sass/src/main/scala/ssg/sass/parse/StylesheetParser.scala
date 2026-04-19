@@ -286,6 +286,11 @@ abstract class StylesheetParser protected (
               val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
               imports += StaticImport(urlInterp, spanFrom(importStart), modifiers)
             } else {
+              // dart-sass: dynamic @import inside control directives or
+              // mixins is disallowed (stylesheet.dart:1201-1203).
+              if (_inControlDirective || _inMixin) {
+                _disallowedAtRule(start)
+              }
               imports += DynamicImport(url, spanFrom(importStart))
             }
           } else {

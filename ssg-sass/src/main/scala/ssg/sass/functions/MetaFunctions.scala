@@ -50,7 +50,7 @@ package functions
 
 import scala.language.implicitConversions
 
-import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Environment, Nullable, PlainCssCallable, SassScriptException, UserDefinedCallable }
+import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Nullable, PlainCssCallable, SassScriptException, UserDefinedCallable }
 import ssg.sass.ast.sass.MixinRule
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.ListSeparator
@@ -92,20 +92,51 @@ object MetaFunctions {
     case _                   => "unknown"
   }
 
-  /** Extracts a string-typed argument's text. */
+  /** Extracts a string-typed argument's text, validating that it is a string.
+    * dart-sass: `sassIndexToListIndex`, `_environment.getVariable`, etc.
+    * all require string arguments for `$name` parameters.
+    */
   private def argName(v: Value): String = v match {
     case s: SassString => s.text
     case other => other.toString
   }
 
-  /** Resolves the env to introspect for an optional `$module` argument: `null` -> the active environment, otherwise the namespaced module registered under that name (or empty if none).
+  /** Validates that [v] is a SassString for a parameter named [paramName],
+    * and returns its text. Throws SassScriptException if not.
     */
-  private def envFor(moduleArg: Value): Nullable[Environment] =
-    CurrentEnvironment.get.flatMap { env =>
-      moduleArg match {
-        case SassNull => Nullable(env)
-        case other    => env.getNamespace(argName(other))
-      }
+  private def assertString(v: Value, paramName: String): String = v match {
+    case s: SassString => s.text
+    case other => throw SassScriptException(s"$$$paramName: $other is not a string.")
+  }
+
+  /** Validates that [v] is a SassString or SassNull for the `$module` parameter.
+    * Returns the string text or null.
+    */
+  private def assertOptionalString(v: Value, paramName: String): Nullable[String] = v match {
+    case SassNull      => Nullable.empty
+    case s: SassString => Nullable(s.text)
+    case other         => throw SassScriptException(s"$$$paramName: $other is not a string.")
+  }
+
+  /** Validates and resolves an optional `$module` argument to a namespace string.
+    * Returns `Nullable.empty` when moduleArg is SassNull (no module specified).
+    * Throws SassScriptException if the module arg is not a string, or if the
+    * namespace doesn't exist in the current environment.
+    *
+    * dart-sass: `_environment.getModule(module)` / `_getModule(module)`
+    */
+  private def resolveModuleNamespace(moduleArg: Value): Nullable[String] =
+    moduleArg match {
+      case SassNull => Nullable.empty
+      case other =>
+        val moduleName = assertOptionalString(other, "module").getOrElse(other.toString)
+        CurrentEnvironment.get.foreach { env =>
+          val moduleExists = env.findNamespacedModule(moduleName).isDefined
+          if (!moduleExists) {
+            throw SassScriptException(s"There is no module with the namespace \"$moduleName\".")
+          }
+        }
+        Nullable(moduleName)
     }
 
   private val ifFn: BuiltInCallable =
@@ -154,7 +185,7 @@ object MetaFunctions {
       "$name",
       args =>
         SassBoolean(
-          CurrentEnvironment.get.fold(false)(_.variableExists(argName(args.head)))
+          CurrentEnvironment.get.fold(false)(_.variableExists(assertString(args.head, "name")))
         )
     )
 
@@ -163,9 +194,10 @@ object MetaFunctions {
       "function-exists",
       "$name, $module: null",
       { args =>
-        val name      = argName(args.head)
+        val name      = assertString(args.head, "name")
         val moduleArg = if (args.length > 1) args(1) else SassNull
-        val found     = envFor(moduleArg).fold(false)(_.functionExists(name)) ||
+        val ns        = resolveModuleNamespace(moduleArg)
+        val found     = CurrentEnvironment.get.fold(false)(_.functionExists(name, ns)) ||
           (moduleArg == SassNull && Functions.lookupGlobal(name).isDefined)
         SassBoolean(found)
       }
@@ -176,14 +208,6 @@ object MetaFunctions {
       "keywords",
       "$args",
       { args =>
-        // dart-sass throws `"$args: X is not an argument list."` when the
-        // argument isn't a SassArgumentList, but it relies on the binder
-        // always producing a SassArgumentList for `$arglist...` calls.
-        // ssg-sass's binder doesn't do this yet for positional-only rest
-        // calls (see libsass-closed-issues/issue_672 where `test(a, b)`
-        // arrives as a plain SassList). Until the binder is fixed, we
-        // fall back to an empty map for non-arglist inputs — matching
-        // the prior ssg-sass permissive behaviour — rather than throw.
         args(0) match {
           case al: SassArgumentList =>
             // dart-sass uses unquoted (`quotes: false`) string keys.
@@ -191,7 +215,14 @@ object MetaFunctions {
               (SassString(k, hasQuotes = false): Value) -> v
             }.toList
             SassMap(ListMap.from(entries))
-          case _ => SassMap.empty
+          case _: SassList =>
+            // ssg-sass's binder sometimes converts SassArgumentList to a
+            // plain SassList for positional-only rest calls. Until the
+            // binder is fixed, fall back to an empty map.
+            SassMap.empty
+          case other =>
+            // dart-sass: `$args: X is not an argument list.`
+            throw SassScriptException(s"$$args: $other is not an argument list.")
         }
       }
     )
@@ -201,9 +232,10 @@ object MetaFunctions {
       "mixin-exists",
       "$name, $module: null",
       { args =>
-        val name      = argName(args.head)
+        val name      = assertString(args.head, "name")
         val moduleArg = if (args.length > 1) args(1) else SassNull
-        SassBoolean(envFor(moduleArg).fold(false)(_.mixinExists(name)))
+        val ns        = resolveModuleNamespace(moduleArg)
+        SassBoolean(CurrentEnvironment.get.fold(false)(_.mixinExists(name, ns)))
       }
     )
 
@@ -212,9 +244,18 @@ object MetaFunctions {
       "global-variable-exists",
       "$name, $module: null",
       { args =>
-        val name      = argName(args.head)
+        val name      = assertString(args.head, "name")
         val moduleArg = if (args.length > 1) args(1) else SassNull
-        SassBoolean(envFor(moduleArg).fold(false)(_.variableExists(name)))
+        val ns        = resolveModuleNamespace(moduleArg)
+        // dart-sass: for global-variable-exists with a module, check the
+        // module's variable surface; without a module, check the global scope.
+        val found = CurrentEnvironment.get.fold(false) { env =>
+          if (ns.isDefined)
+            env.findNamespacedModule(ns.get).fold(false)(m => m.variables.contains(name))
+          else
+            env.variableExists(name)
+        }
+        SassBoolean(found)
       }
     )
 
@@ -297,11 +338,15 @@ object MetaFunctions {
       "module-variables",
       "$module",
       { args =>
-        val name = argName(args.head)
+        val name = assertString(args.head, "module")
         // Walk the module's PUBLIC variable surface (`Module.variables`)
         // which includes any members `@forward`ed from upstream modules
         // — not the inner Environment's local scope chain.
-        CurrentEnvironment.get.flatMap(_.findNamespacedModule(name)).fold(SassMap.empty) { m =>
+        val moduleOpt = CurrentEnvironment.get.flatMap(_.findNamespacedModule(name))
+        if (moduleOpt.isEmpty) {
+          throw SassScriptException(s"There is no module with namespace \"$name\".")
+        }
+        moduleOpt.fold(SassMap.empty) { m =>
           val entries = m.variables.iterator.map { case (k, v) =>
             (SassString(k, hasQuotes = true): Value) -> v
           }.toList
@@ -315,12 +360,16 @@ object MetaFunctions {
       "module-functions",
       "$module",
       { args =>
-        val name = argName(args.head)
+        val name = assertString(args.head, "module")
         // Surface the namespace's function members as a name->name map.
         // Use the module's PUBLIC functions surface, which includes
         // forwarded members. Falls back to the static built-in module
         // table for `sass:` modules when no `@use` is in scope.
-        val nsEntries = CurrentEnvironment.get.flatMap(_.findNamespacedModule(name)).fold(List.empty[(Value, Value)]) { m =>
+        val moduleOpt = CurrentEnvironment.get.flatMap(_.findNamespacedModule(name))
+        if (moduleOpt.isEmpty) {
+          throw SassScriptException(s"There is no module with namespace \"$name\".")
+        }
+        val nsEntries = moduleOpt.fold(List.empty[(Value, Value)]) { m =>
           m.functions.iterator.map { case (fnName, fn) =>
             (SassString(fnName, hasQuotes = true): Value) ->
               (new SassFunction(fn): Value)
