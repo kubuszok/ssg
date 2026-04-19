@@ -29,6 +29,7 @@ import ssg.sass.ast.sass.{
   AtRule,
   BinaryOperationExpression,
   BinaryOperator,
+  BooleanOperator,
   BooleanExpression,
   ColorExpression,
   ConfiguredVariable,
@@ -47,7 +48,6 @@ import ssg.sass.ast.sass.{
   FunctionExpression,
   FunctionRule,
   InterpolatedFunctionExpression,
-  BooleanOperator,
   IfClause,
   IfConditionExpression,
   IfConditionFunction,
@@ -84,7 +84,11 @@ import ssg.sass.ast.sass.{
   Stylesheet,
   SupportsAnything,
   SupportsCondition,
+  SupportsDeclaration,
   SupportsFunction,
+  SupportsInterpolation,
+  SupportsNegation,
+  SupportsOperation,
   SupportsRule,
   UnaryOperationExpression,
   UnaryOperator,
@@ -543,143 +547,11 @@ abstract class StylesheetParser protected (
         Nullable(new MediaRule(queryInterp, kids, spanFrom(start)))
       case "supports" =>
         // @supports <condition> { body }
-        // The condition text is collected up to the opening `{`, respecting
-        // balanced parens, `#{...}` interpolations, and string literals so
-        // that a `{` inside interpolation does not terminate the condition.
+        // Ported from dart-sass stylesheet.dart _supportsRule (line 1600-1614).
         whitespace(consumeNewlines = true)
-        val cStart = scanner.state
-        val cBuf   = new StringBuilder()
-        var cDepth = 0
-        var cQuote: Int = 0
-        boundary {
-          while (!scanner.isDone) {
-            val ch = scanner.peekChar()
-            if (ch < 0) break(())
-            if (cQuote > 0) {
-              if (ch == CharCode.$backslash) {
-                cBuf.append(scanner.readChar().toChar)
-                if (!scanner.isDone) cBuf.append(scanner.readChar().toChar)
-              } else {
-                if (ch == cQuote) cQuote = 0
-                cBuf.append(scanner.readChar().toChar)
-              }
-            } else if (ch == CharCode.$double_quote || ch == CharCode.$single_quote) {
-              cQuote = ch
-              cBuf.append(scanner.readChar().toChar)
-            } else if (ch == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
-              // Copy an entire `#{...}` interpolation verbatim, balancing
-              // nested braces within so an inner `{` / `}` does not end
-              // the condition.
-              cBuf.append(scanner.readChar().toChar) // '#'
-              cBuf.append(scanner.readChar().toChar) // '{'
-              var iDepth = 1
-              boundary {
-                while (!scanner.isDone) {
-                  val cc = scanner.peekChar()
-                  if (cc < 0) break(())
-                  if (cc == CharCode.$lbrace) iDepth += 1
-                  else if (cc == CharCode.$rbrace) {
-                    iDepth -= 1
-                    cBuf.append(scanner.readChar().toChar)
-                    if (iDepth == 0) break(())
-                  } else {
-                    cBuf.append(scanner.readChar().toChar)
-                  }
-                }
-              }
-            } else if (ch == CharCode.$lparen) {
-              cDepth += 1
-              cBuf.append(scanner.readChar().toChar)
-            } else if (ch == CharCode.$rparen) {
-              if (cDepth > 0) cDepth -= 1
-              cBuf.append(scanner.readChar().toChar)
-            } else if (cDepth == 0 && (ch == CharCode.$lbrace || ch == CharCode.$semicolon)) {
-              break(())
-            } else if (ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
-              // Silent comment (//) — skip to end of line without buffering.
-              while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
-                scanner.readChar()
-            } else if (cDepth == 0 && ch == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
-              // Loud comment (/* */) at top level — skip without buffering.
-              scanner.readChar(); scanner.readChar()
-              while (
-                !scanner.isDone &&
-                !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash)
-              ) { scanner.readChar() }
-              if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
-            } else {
-              cBuf.append(scanner.readChar().toChar)
-            }
-          }
-        }
-        val condRawAll = cBuf.toString().trim
-        val condSpan   = spanFrom(cStart)
-        // `SupportsAnything` renders as `(<contents>)` in the evaluator,
-        // so strip one balanced outer `(...)` layer when the source
-        // already provided one (`@supports (display: grid)`). Conditions
-        // like `(a) and (b)` leave the outer pair absent and are kept
-        // verbatim.
-        val condInnerText =
-          if (
-            condRawAll.length >= 2 && condRawAll.charAt(0) == '(' &&
-            condRawAll.charAt(condRawAll.length - 1) == ')'
-          ) {
-            var outerBalanced = true
-            var pd            = 0
-            var i             = 0
-            while (i < condRawAll.length && outerBalanced) {
-              val ch = condRawAll.charAt(i)
-              if (ch == '(') pd += 1
-              else if (ch == ')') {
-                pd -= 1
-                if (pd == 0 && i != condRawAll.length - 1) outerBalanced = false
-              }
-              i += 1
-            }
-            if (outerBalanced) condRawAll.substring(1, condRawAll.length - 1).trim
-            else condRawAll
-          } else condRawAll
-        val innerInterp =
-          if (condInnerText.isEmpty) Interpolation.plain("", condSpan)
-          else _parseInterpolatedString(condInnerText, condSpan)
+        val condition = _supportsCondition()
         whitespace(consumeNewlines = true)
         val supportsKids = _children()
-        // Detect function-syntax conditions like `selector(:has(> a))`
-        // and build a `SupportsFunction` so the serializer emits the
-        // raw form without an extra wrapping `(...)`. Matches
-        // `<ident>( ... )` with balanced parens over the whole string.
-        val condition: SupportsCondition = {
-          val src = condRawAll
-          var i   = 0
-          while (i < src.length && (CharCode.isName(src.charAt(i).toInt) || src.charAt(i) == '-'))
-            i += 1
-          if (
-            i > 0 && i < src.length && src.charAt(i) == '(' &&
-            src.length >= 2 && src.charAt(src.length - 1) == ')'
-          ) {
-            var pd      = 0
-            var matched = true
-            var k       = i
-            while (k < src.length && matched) {
-              val c = src.charAt(k)
-              if (c == '(') pd += 1
-              else if (c == ')') {
-                pd -= 1
-                if (pd == 0 && k != src.length - 1) matched = false
-              }
-              k += 1
-            }
-            if (matched) {
-              val fnName     = src.substring(0, i)
-              val fnArgsText = src.substring(i + 1, src.length - 1)
-              val nameInterp = Interpolation.plain(fnName, condSpan)
-              val argsInterp =
-                if (fnArgsText.isEmpty) Interpolation.plain("", condSpan)
-                else _parseInterpolatedString(fnArgsText, condSpan)
-              SupportsFunction(nameInterp, argsInterp, condSpan)
-            } else SupportsAnything(innerInterp, condSpan)
-          } else SupportsAnything(innerInterp, condSpan)
-        }
         Nullable(new SupportsRule(condition, supportsKids, spanFrom(start)))
       case "keyframes" | "-webkit-keyframes" | "-moz-keyframes" | "-o-keyframes" | "-ms-keyframes" =>
         // @keyframes <name> { <keyframe-block>* }
@@ -4608,6 +4480,225 @@ abstract class StylesheetParser protected (
     }
 
     buffer.interpolation(spanFrom(start))
+  }
+
+  // ---------------------------------------------------------------------------
+  // @supports condition parsing
+  // Ported from dart-sass stylesheet.dart _supportsCondition (line 4510-4544),
+  // _supportsConditionInParens (line 4547-4637),
+  // _supportsDeclarationValue (line 4640-4653),
+  // _trySupportsOperation (line 4658-4695).
+  // ---------------------------------------------------------------------------
+
+  /** Consumes a `@supports` condition.
+    *
+    * If [inParentheses] is true, the indented syntax will consume newlines
+    * where a statement otherwise would end.
+    */
+  protected def _supportsCondition(inParentheses: Boolean = false): SupportsCondition = {
+    val start = scanner.state
+    if (scanIdentifier("not")) {
+      whitespace(consumeNewlines = inParentheses)
+      return SupportsNegation(
+        _supportsConditionInParens(),
+        spanFrom(start)
+      )
+    }
+
+    var condition: SupportsCondition = _supportsConditionInParens()
+    whitespace(consumeNewlines = inParentheses)
+    var operator: Nullable[BooleanOperator] = Nullable.empty
+    while (lookingAtIdentifier()) {
+      if (operator.isDefined) {
+        expectIdentifier(operator.get.toString)
+      } else if (scanIdentifier("or")) {
+        operator = Nullable(BooleanOperator.Or)
+      } else {
+        expectIdentifier("and")
+        operator = Nullable(BooleanOperator.And)
+      }
+
+      whitespace(consumeNewlines = inParentheses)
+      val right = _supportsConditionInParens()
+      condition = SupportsOperation(
+        condition,
+        right,
+        operator.get,
+        spanFrom(start)
+      )
+      whitespace(consumeNewlines = inParentheses)
+    }
+    condition
+  }
+
+  /** Consumes a parenthesized supports condition, or an interpolation. */
+  protected def _supportsConditionInParens(): SupportsCondition = {
+    val start = scanner.state
+
+    if (_lookingAtInterpolatedIdentifier()) {
+      val identifier = interpolatedIdentifier()
+      if (identifier.asPlain.isDefined &&
+          identifier.asPlain.get.toLowerCase() == "not") {
+        error("\"not\" is not a valid identifier here.", identifier.span)
+      }
+
+      if (scanner.scanChar(CharCode.$lparen)) {
+        val arguments = _interpolatedDeclarationValue(
+          allowEmpty = true,
+          allowSemicolon = true,
+          consumeNewlines = true
+        )
+        scanner.expectChar(CharCode.$rparen)
+        return SupportsFunction(identifier, arguments, spanFrom(start))
+      } else {
+        // Check if it's a single-expression interpolation
+        identifier.contents match {
+          case (expr: Expression) :: Nil =>
+            return SupportsInterpolation(expr, spanFrom(start))
+          case _ =>
+            error("Expected @supports condition.", identifier.span)
+        }
+      }
+    }
+
+    scanner.expectChar(CharCode.$lparen)
+    whitespace(consumeNewlines = true)
+    if (scanIdentifier("not")) {
+      whitespace(consumeNewlines = true)
+      val condition = _supportsConditionInParens()
+      scanner.expectChar(CharCode.$rparen)
+      return SupportsNegation(condition, spanFrom(start))
+    } else if (scanner.peekChar() == CharCode.$lparen) {
+      val condition = _supportsCondition(inParentheses = true)
+      scanner.expectChar(CharCode.$rparen)
+      return condition.withSpan(spanFrom(start))
+    }
+
+    // Unfortunately, we may have to backtrack here. The grammar is:
+    //
+    //       Expression ":" Expression
+    //     | InterpolatedIdentifier InterpolatedAnyValue?
+    //
+    // These aren't ambiguous because this `InterpolatedAnyValue` is forbidden
+    // from containing a top-level colon, but we still have to parse the full
+    // expression to figure out if there's a colon after it.
+    //
+    // We could avoid the overhead of a full expression parse by looking ahead
+    // for a colon (outside of balanced brackets), but in practice we expect the
+    // vast majority of real uses to be `Expression ":" Expression`, so it makes
+    // sense to parse that case faster in exchange for less code complexity and
+    // a slower backtracking case.
+    val nameStart = scanner.state
+    val wasInParentheses = _inParentheses
+    try {
+      val name = _rdExpression(consumeNewlines = true)
+      scanner.expectChar(CharCode.$colon)
+
+      val value = _supportsDeclarationValue(name)
+      scanner.expectChar(CharCode.$rparen)
+      return SupportsDeclaration(name, value, spanFrom(start))
+    } catch {
+      case _: Exception =>
+        scanner.state = nameStart
+        _inParentheses = wasInParentheses
+    }
+
+    // Backtrack: try parsing as InterpolatedIdentifier + InterpolatedAnyValue
+    val identifier = interpolatedIdentifier()
+    val tryOp = _trySupportsOperation(identifier, nameStart)
+    if (tryOp.isDefined) {
+      scanner.expectChar(CharCode.$rparen)
+      return tryOp.get.withSpan(spanFrom(start))
+    }
+
+    // If parsing an expression fails, try to parse an
+    // `InterpolatedAnyValue` instead. But if that value runs into a
+    // top-level colon, then this is probably intended to be a declaration
+    // after all, so we rethrow the declaration-parsing error.
+    val contentsBuffer = new ssg.sass.InterpolationBuffer()
+    contentsBuffer.addInterpolation(identifier)
+    try {
+      contentsBuffer.addInterpolation(
+        _interpolatedDeclarationValue(
+          allowEmpty = true,
+          allowSemicolon = true,
+          allowColon = false,
+          consumeNewlines = true
+        )
+      )
+    } catch {
+      case e: Exception =>
+        // If we hit a colon, this was probably meant to be a declaration
+        if (scanner.peekChar() == CharCode.$colon) throw e
+        throw e
+    }
+
+    scanner.expectChar(CharCode.$rparen)
+    SupportsAnything(contentsBuffer.interpolation(spanFrom(nameStart)), spanFrom(start))
+  }
+
+  /** Parses and returns the right-hand side of a declaration in a supports
+    * query.
+    *
+    * dart-sass: `_supportsDeclarationValue` (stylesheet.dart:4640-4653).
+    */
+  private def _supportsDeclarationValue(name: Expression): Expression = {
+    name match {
+      case se: StringExpression
+        if !se.hasQuotes && se.text.initialPlain.startsWith("--") =>
+        StringExpression(_interpolatedDeclarationValue())
+      case _ =>
+        whitespace(consumeNewlines = true)
+        _rdExpression(consumeNewlines = true)
+    }
+  }
+
+  /** If [interpolation] is followed by `"and"` or `"or"`, parse it as a supports operation.
+    *
+    * Otherwise, return `null` without moving the scanner position.
+    *
+    * dart-sass: `_trySupportsOperation` (stylesheet.dart:4658-4695).
+    */
+  private def _trySupportsOperation(
+    interpolation: Interpolation,
+    start:         ssg.sass.util.LineScannerState
+  ): Nullable[SupportsOperation] = {
+    if (interpolation.contents.length != 1) return Nullable.empty
+    interpolation.contents.head match {
+      case expression: Expression =>
+        val beforeWhitespace = scanner.state
+        whitespace(consumeNewlines = true)
+
+        var operation: Nullable[SupportsOperation] = Nullable.empty
+        var operator: Nullable[BooleanOperator] = Nullable.empty
+        while (lookingAtIdentifier()) {
+          if (operator.isDefined) {
+            expectIdentifier(operator.get.toString)
+          } else if (scanIdentifier("and")) {
+            operator = Nullable(BooleanOperator.And)
+          } else if (scanIdentifier("or")) {
+            operator = Nullable(BooleanOperator.Or)
+          } else {
+            scanner.state = beforeWhitespace
+            return Nullable.empty
+          }
+
+          whitespace(consumeNewlines = true)
+          val right = _supportsConditionInParens()
+          operation = Nullable(SupportsOperation(
+            if (operation.isDefined) operation.get
+            else SupportsInterpolation(expression, interpolation.span),
+            right,
+            operator.get,
+            spanFrom(start)
+          ))
+          whitespace(consumeNewlines = true)
+        }
+
+        operation
+      case _ =>
+        Nullable.empty
+    }
   }
 
   /** Consumes tokens until it reaches a top-level `";"`, `")"`, `"]"`, or

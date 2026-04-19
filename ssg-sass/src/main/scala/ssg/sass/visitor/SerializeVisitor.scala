@@ -22,7 +22,7 @@ package visitor
 
 import ssg.sass.ColorNames
 import ssg.sass.Nullable
-import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
+import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaQuery, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
 import ssg.sass.value.{ ColorFormat, ListSeparator, SassColor, SassList, SassMap, SassNull, SassNumber, SassString, SpanColorFormat, Value }
@@ -992,19 +992,18 @@ final class SerializeVisitor(
     if (singleton && !l.hasBrackets) sb.append('(')
     if (l.hasBrackets) sb.append('[')
 
-    // In CSS output mode we drop blank elements (null, empty lists, etc.)
-    // from non-comma/non-bracketed separators to avoid producing invalid
-    // CSS. In inspect mode, blank elements are meaningful (they represent
-    // the actual structure of the list), so we keep them all.
+    // dart-sass serialize.dart:1031-1033: in inspect mode keep all elements;
+    // in CSS output mode drop blank elements (null, empty unbracketed lists)
+    // regardless of separator or brackets.
     val elems =
-      if (inspect || l.separator == ListSeparator.Comma || l.hasBrackets) l.asList
+      if (inspect) l.asList
       else l.asList.filterNot(_.isBlank)
 
     val sepStr = l.separator match {
       case ListSeparator.Comma     => if (isCompressed) "," else ", "
       case ListSeparator.Space     => " "
       case ListSeparator.Slash     => if (isCompressed) "/" else " / "
-      case ListSeparator.Undecided => " "
+      case ListSeparator.Undecided => ""
     }
 
     var first = true
@@ -1681,36 +1680,45 @@ final class SerializeVisitor(
 
   override def visitCssMediaRule(node: CssMediaRule): Unit = {
     buffer.append("@media")
-    // Port of dart-sass _visitMediaQuery: format each query with
-    // modifier/type/conditions/conjunction handling.
+    // Port of dart-sass visitCssMediaRule / _visitMediaQuery.
+    // Space after @media: in compressed mode, only emit when the first
+    // query has a modifier, type, or a single "(not ...)" condition.
+    val firstQuery = node.queries.head
+    if (!isCompressed ||
+        firstQuery.modifier.isDefined ||
+        firstQuery.type_.isDefined ||
+        (firstQuery.conditions.length == 1 &&
+            firstQuery.conditions.head.startsWith("(not "))) {
+      buffer.append(' ')
+    }
     var first = true
     for (query <- node.queries) {
-      if (!first) buffer.append(',')
+      if (!first) buffer.append(if (isCompressed) "," else ", ")
       first = false
-      // In compressed mode, only emit a space when needed for parsing.
-      if (!isCompressed || query.modifier.isDefined || query.type_.isDefined) {
-        buffer.append(' ')
-      } else if (query.conditions.nonEmpty) {
-        // Conditions-only query: need space before '(' unless compressed
-        // and the condition starts with '('.
-        if (isCompressed) {
-          // Compressed: space before '(' is needed for valid CSS.
-          buffer.append(' ')
-        }
-      }
-      query.modifier.foreach { m =>
-        buffer.append(m)
-        buffer.append(' ')
-      }
-      query.type_.foreach { t =>
-        buffer.append(t)
-        if (query.conditions.nonEmpty) {
-          buffer.append(' ')
-          buffer.append(if (query.conjunction) "and" else "or")
-          buffer.append(' ')
-        }
-      }
-      val sep = if (query.conjunction) " and " else " or "
+      _visitMediaQuery(query)
+    }
+    writeSpace()
+    writeChildrenIn(node, node.children)
+  }
+
+  // Port of dart-sass `_visitMediaQuery` (serialize.dart:307-330).
+  private def _visitMediaQuery(query: CssMediaQuery): Unit = {
+    query.modifier.foreach { m =>
+      buffer.append(m)
+      buffer.append(' ')
+    }
+    query.type_.foreach { t =>
+      buffer.append(t)
+      if (query.conditions.nonEmpty) buffer.append(" and ")
+    }
+    // dart-sass serialize.dart:318-321: single "(not ...)" condition gets unwrapped.
+    if (query.conditions.length == 1 && query.conditions.head.startsWith("(not ")) {
+      buffer.append("not ")
+      val cond = query.conditions.head
+      buffer.append(cond.substring("(not ".length, cond.length - 1))
+    } else {
+      val operator = if (query.conjunction) "and" else "or"
+      val sep = if (isCompressed) s"$operator " else s" $operator "
       var firstCond = true
       for (cond <- query.conditions) {
         if (!firstCond) buffer.append(sep)
@@ -1718,8 +1726,6 @@ final class SerializeVisitor(
         buffer.append(cond)
       }
     }
-    writeSpace()
-    writeChildrenIn(node, node.children)
   }
 
   override def visitCssSupportsRule(node: CssSupportsRule): Unit = {

@@ -1858,6 +1858,15 @@ object ColorFunctions {
       }
     )
 
+  /** ie-hex-str -- defined before global to avoid init-order NPE. */
+  private val ieHexStrFn: BuiltInCallable =
+    BuiltInCallable.function("ie-hex-str", "$color", { args =>
+      val color = args(0).assertColor().toSpace(ColorSpace.rgb).toGamut(GamutMapMethod.localMinde)
+      def hexStr(component: Double): String =
+        fuzzyRound(component).toInt.toHexString.toUpperCase.reverse.padTo(2, '0').reverse
+      SassString(s"#${hexStr(color.alpha * 255)}${hexStr(color.channel0)}${hexStr(color.channel1)}${hexStr(color.channel2)}", hasQuotes = false)
+    })
+
   // --- Registration ---
 
   /** Globally available color built-ins. Mirrors dart-sass `global`.
@@ -1916,7 +1925,8 @@ object ColorFunctions {
     // ### Miscellaneous
     adjustColorFn.withDeprecationWarning("color", "adjust"),
     scaleColorFn.withDeprecationWarning("color", "scale"),
-    changeColorFn.withDeprecationWarning("color", "change")
+    changeColorFn.withDeprecationWarning("color", "change"),
+    ieHexStrFn
   )
 
   // --- Module-only function aliases (without -color suffix) ---
@@ -1932,14 +1942,7 @@ object ColorFunctions {
 
   // (whitenessFn, blacknessFn moved to inline channelFunction calls in moduleOnly)
 
-  /** color.ie-hex-str($color) — converts to IE hex format #AARRGGBB */
-  private val ieHexStrFn: BuiltInCallable =
-    BuiltInCallable.function("ie-hex-str", "$color", { args =>
-      val color = args(0).assertColor().toSpace(ColorSpace.rgb).toGamut(GamutMapMethod.localMinde)
-      def hexStr(component: Double): String =
-        fuzzyRound(component).toInt.toHexString.toUpperCase.reverse.padTo(2, '0').reverse
-      SassString(s"#${hexStr(color.alpha * 255)}${hexStr(color.channel0)}${hexStr(color.channel1)}${hexStr(color.channel2)}", hasQuotes = false)
-    })
+  // ieHexStrFn moved before `global` to avoid forward-reference NPE.
 
   /** Returns a function that throws an error indicating that `color.adjust()` should be used instead.
     * Ported from dart-sass `_removedColorFunction`.
