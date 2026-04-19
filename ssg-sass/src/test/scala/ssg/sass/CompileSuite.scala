@@ -950,7 +950,8 @@ final class CompileSuite extends munit.FunSuite {
       "@supports (display: grid) { .a { color: red; } }",
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@supports (display: grid)"), result.css)
+    // In compressed mode, the space between @supports and ( is omitted.
+    assert(result.css.contains("@supports(display: grid)") || result.css.contains("@supports (display: grid)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
   }
 
@@ -974,7 +975,8 @@ final class CompileSuite extends munit.FunSuite {
       """,
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@supports (display: grid)"), result.css)
+    // In compressed mode, the space between @supports and ( is omitted.
+    assert(result.css.contains("@supports(display: grid)") || result.css.contains("@supports (display: grid)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
   }
 
@@ -983,7 +985,8 @@ final class CompileSuite extends munit.FunSuite {
       ".a { @supports (display: grid) { color: red; } }",
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@supports (display: grid)"), result.css)
+    // In compressed mode, the space between @supports and ( is omitted.
+    assert(result.css.contains("@supports(display: grid)") || result.css.contains("@supports (display: grid)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
     val atIdx   = result.css.indexOf("@supports")
     val ruleIdx = result.css.indexOf(".a{color:red}")

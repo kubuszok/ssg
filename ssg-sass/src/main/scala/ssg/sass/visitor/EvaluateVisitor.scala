@@ -72,6 +72,7 @@ import ssg.sass.ast.sass.{
   ForwardRule,
   FunctionExpression,
   FunctionRule,
+  IfConditionExpression,
   IfConditionExpressionVisitor,
   IfConditionFunction,
   IfConditionNegation,
@@ -356,10 +357,9 @@ final class EvaluateVisitor(
   /// The name of the current declaration parent.
   private var _declarationName: Nullable[String] = Nullable.empty
 
-  /// The style rule that tracks `_styleRuleIgnoringAtRoot` for save/restore.
-  /// When `_atRootExcludingStyleRule` is true, the effective `_styleRule`
-  /// returns Nullable.empty. This field holds the underlying value regardless.
-  @annotation.nowarn("msg=unused private member") // used by _execute save/restore
+  /// The underlying style rule, independent of `_atRootExcludingStyleRule`.
+  /// Used by `_styleRule` (derived getter), `_withStyleRule`, `_execute`,
+  /// `visitSelectorExpression`, and `visitStyleRule`/`visitAtRootRule`.
   private var _styleRuleIgnoringAtRoot: Nullable[ModifiableCssStyleRule] = Nullable.empty
 
   /** Effective ImportCache used for parse-deduping across `@use`/`@forward`/`@import`. If the caller didn't supply one, we build a fresh cache whose only importer is the evaluator's `importer` (if
@@ -446,14 +446,6 @@ final class EvaluateVisitor(
       _assertConfigurationIsEmpty(configuration, nameInError = true)
       SassNull
     })
-
-  /** Parses (via the import cache) and returns the stylesheet at [canonicalUrl], or empty if [imp] can't load it. Dedupes parses across repeated `@use` of the same URL.
-    */
-  private def _loadAndParseCached(
-    imp:          Importer,
-    canonicalUrl: String
-  ): Nullable[ssg.sass.ast.sass.Stylesheet] =
-    _effectiveImportCache.importCanonical(imp, canonicalUrl)
 
   /** Stack of canonical URLs currently being loaded, used to detect `@import`/`@use`/`@forward` cycles within a single compilation.
     */
@@ -741,6 +733,7 @@ final class EvaluateVisitor(
       val oldOutOfOrderImports = _outOfOrderImports
       val oldExtensionStore = _extensionStore
       val oldStyleRule = _styleRule
+      val oldStyleRuleIgnoring = _styleRuleIgnoringAtRoot
       val oldMediaQueries = _mediaQueries
       val oldDeclarationName = _declarationName
       val oldInUnknownAtRule = _inUnknownAtRule
@@ -757,6 +750,7 @@ final class EvaluateVisitor(
       _outOfOrderImports = Nullable.empty
       _extensionStore = Nullable(extensionStore)
       _styleRule = Nullable.empty
+      _styleRuleIgnoringAtRoot = Nullable.empty
       _mediaQueries = Nil
       _declarationName = Nullable.empty
       _inUnknownAtRule = false
@@ -780,6 +774,7 @@ final class EvaluateVisitor(
       _outOfOrderImports = oldOutOfOrderImports
       _extensionStore = oldExtensionStore
       _styleRule = oldStyleRule
+      _styleRuleIgnoringAtRoot = oldStyleRuleIgnoring
       _mediaQueries = oldMediaQueries
       _declarationName = oldDeclarationName
       _inUnknownAtRule = oldInUnknownAtRule
@@ -969,26 +964,42 @@ final class EvaluateVisitor(
     lastImport + 1
   }
 
-  /// Loads the stylesheet at [url] via the configured importer.
+  /// Loads the [Stylesheet] identified by [url], or returns empty if loading
+  /// fails.
   ///
-  /// Returns Some((stylesheet, importer, isDependency)) or None.
+  /// This first tries loading [url] relative to [baseUrl], which defaults to
+  /// `_stylesheet.span.sourceUrl`.
   ///
   /// Port of dart-sass `_loadStylesheet` (evaluate.dart:1983-2055).
   private def _loadStylesheet(
-    url:  String,
-    span: ssg.sass.util.FileSpan
+    url:       String,
+    span:      ssg.sass.util.FileSpan,
+    baseUrl:   Nullable[String] = Nullable.empty,
+    forImport: Boolean = false
   ): Nullable[(Stylesheet, Importer, Boolean)] = {
-    _importer.fold[Nullable[(Stylesheet, Importer, Boolean)]](Nullable.empty) { imp =>
-      val canonical = imp.canonicalize(url)
-      canonical.fold[Nullable[(Stylesheet, Importer, Boolean)]](Nullable.empty) { canonicalUrl =>
-        // Record canonical URL as loaded even if the parse fails.
-        _loadedUrls += canonicalUrl
-        val isDependency = _inDependency || !_importer.exists(_ eq imp)
-        _loadAndParseCached(imp, canonicalUrl).fold[Nullable[(Stylesheet, Importer, Boolean)]](
-          Nullable.empty
-        ) { stylesheet =>
-          Nullable((stylesheet, imp, isDependency))
-        }
+    val effectiveBaseUrl: Nullable[String] =
+      if (baseUrl.isDefined) baseUrl
+      else _stylesheet.flatMap(s => s.span.sourceUrl)
+
+    val canonResult = _effectiveImportCache.canonicalize(
+      url,
+      baseImporter = _importer,
+      baseUrl = effectiveBaseUrl,
+      forImport = forImport
+    )
+    canonResult.flatMap { cr =>
+      // Make sure we record the canonical URL as "loaded" even if the
+      // actual load fails, because watchers should watch it to see if it
+      // changes in a way that allows the load to succeed.
+      _loadedUrls += cr.canonicalUrl
+
+      val isDependency = _inDependency || !_importer.exists(_ eq cr.importer)
+      _effectiveImportCache.importCanonical(
+        cr.importer,
+        cr.canonicalUrl,
+        originalUrl = Nullable(cr.originalUrl)
+      ).map { stylesheet =>
+        (stylesheet, cr.importer, isDependency)
       }
     }
   }
@@ -1322,27 +1333,44 @@ final class EvaluateVisitor(
   }
 
   override def visitIfExpression(node: IfExpression): Value = {
-    // Walk branches; the first whose condition is truthy wins. Conditions
-    // are full Sass expressions wrapped in IfConditionSass for the simple
-    // case. The Object/String|bool variant of conditions used by CSS `if()`
-    // is preserved here but coerced to truthiness for plain Sass usage.
+    // Ported from dart-sass evaluate.dart visitIfExpression.
+    // Conditions evaluate to either String (CSS function condition that must
+    // be preserved in the output) or Boolean (Sass condition that can be
+    // short-circuited). When any CSS condition is encountered, the entire
+    // `if()` expression is serialized as a plain CSS `if(...)` string.
+    import scala.util.boundary, boundary.break
     val branches = node.branches
-    var result: Nullable[Value] = Nullable.empty
+    var results: List[(String, Value)] = Nil
     var i = 0
-    while (i < branches.length && result.isEmpty) {
-      val (condition, expression) = branches(i)
-      val matched: Boolean = condition.fold(true) { c =>
-        c.accept(this) match {
-          case b: Boolean => b
-          case _ => true
+    boundary {
+      while (i < branches.length) {
+        val (condition, expression) = branches(i)
+        val condResult: Any = condition.fold[Any](true)(_.accept(this))
+        condResult match {
+          case s: String =>
+            results = (s, expression.accept(this)) :: results
+          case true if results.nonEmpty =>
+            results = ("else", expression.accept(this)) :: results
+          case true =>
+            break(expression.accept(this))
+          case _ => () // false — skip this branch
         }
+        i += 1
       }
-      if (matched) {
-        result = Nullable(expression.accept(this))
+      if (results.isEmpty) SassNull
+      else {
+        val pairs = results.reverse
+        val sb = new StringBuilder("if(")
+        var first = true
+        for ((cond, value) <- pairs) {
+          if (!first) sb.append("; ")
+          first = false
+          sb.append(cond).append(": ").append(value.toCssString())
+        }
+        sb.append(')')
+        new SassString(sb.toString(), hasQuotes = false)
       }
-      i += 1
     }
-    result.getOrElse(SassNull)
   }
 
   override def visitInterpolatedFunctionExpression(node: InterpolatedFunctionExpression): Value = {
@@ -1426,8 +1454,8 @@ final class EvaluateVisitor(
     // Full SelectorList value type is postponed — text suffices for `&`
     // SassScript references in the current text-based selector model.
     val _ = node
-    _styleRule.fold[Value](SassNull) { rule =>
-      new SassString(rule.selector.toString, hasQuotes = false)
+    _styleRuleIgnoringAtRoot.fold[Value](SassNull) { rule =>
+      rule.originalSelector.asSassList
     }
   }
 
@@ -1458,9 +1486,9 @@ final class EvaluateVisitor(
   }
 
   override def visitSupportsExpression(node: SupportsExpression): Value =
-    // Until SupportsCondition handling is fully ported, render the condition
-    // as an unquoted string from its toString form.
-    new SassString(node.condition.toString, hasQuotes = false)
+    // Ported from dart-sass visitSupportsExpression (evaluate.dart).
+    // Evaluates the condition and returns its CSS text as an unquoted string.
+    new SassString(_visitSupportsCondition(node.condition), hasQuotes = false)
 
   override def visitUnaryOperationExpression(node: UnaryOperationExpression): Value = try {
     val operand = node.operand.accept(this)
@@ -1510,22 +1538,31 @@ final class EvaluateVisitor(
 
   override def visitIfConditionOperation(node: IfConditionOperation): Any = {
     // Short-circuit evaluation: false on `and` returns false, true on `or`
-    // returns true. Otherwise, accumulate as Sass-side strings.
-    var values: List[String] = Nil
+    // returns true. Otherwise, accumulate CSS-side string conditions.
+    // Ported from dart-sass evaluate.dart visitIfConditionOperation.
+    var values: List[(IfConditionExpression, String)] = Nil
     val it = node.expressions.iterator
     var shortCircuit: Nullable[Any] = Nullable.empty
     while (it.hasNext && shortCircuit.isEmpty) {
       val expression = it.next()
       expression.accept(this) match {
-        case s: String => values = s :: values
+        case s: String => values = (expression, s) :: values
         case false if node.op == BooleanOperator.And => shortCircuit = Nullable(false)
         case true if node.op == BooleanOperator.Or   => shortCircuit = Nullable(true)
         case _                                       => ()
       }
     }
     shortCircuit.fold[Any] {
-      if (values.isEmpty) node.op == BooleanOperator.And
-      else values.reverse.mkString(s" ${node.op} ")
+      values.reverse match {
+        case Nil => node.op == BooleanOperator.And
+        // If the only CSS node left in the operation is parenthesized, remove
+        // the parentheses. This is guaranteed to be valid because parentheses
+        // contain an `<if-group>` and this operation is itself an `<if-group>`.
+        case ((_: IfConditionParenthesized, s)) :: Nil =>
+          s.substring(1, s.length - 1)
+        case pairs =>
+          pairs.map(_._2).mkString(s" ${node.op} ")
+      }
     }(identity)
   }
 
@@ -1582,7 +1619,12 @@ final class EvaluateVisitor(
             case _ =>
               throw SassException("This operation can't be used in a calculation.", node.span)
           }
-          SassCalculation.operate(co, toArg(l), toArg(r))
+          SassCalculation.operateInternal(
+            co, toArg(l), toArg(r),
+            inLegacySassFunction = Nullable.Null,
+            simplify = !_inSupportsDeclaration,
+            warn = Nullable.Null
+          )
         // --- StringExpression handling (dart-sass _visitCalculationExpression lines 3315-3327) ---
         case se: StringExpression if !se.hasQuotes && se.isCalculationSafe =>
           se.text.asPlain.fold(SassString(_performInterpolation(se.text), hasQuotes = false): Any) { plain =>
@@ -1628,6 +1670,11 @@ final class EvaluateVisitor(
           }
       }
       val converted = args.map(toArg)
+      // dart-sass line 3133: in a @supports declaration, return the
+      // calculation unsimplified so calc(1 + 2) stays as-is.
+      if (_inSupportsDeclaration) {
+        return Nullable(SassCalculation.unsimplified(node.name, converted))
+      }
       def nOpt(i: Int): Nullable[Any] =
         if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
       val result: Value = node.name.toLowerCase match {
@@ -1943,9 +1990,14 @@ final class EvaluateVisitor(
   /** Runs [[body]] with [[rule]] as the active enclosing style rule. */
   private def _withStyleRule[T](rule: ModifiableCssStyleRule)(body: => T): T = {
     val saved = _styleRule
+    val savedIgnoring = _styleRuleIgnoringAtRoot
     _styleRule = Nullable(rule)
+    _styleRuleIgnoringAtRoot = Nullable(rule)
     try body
-    finally _styleRule = saved
+    finally {
+      _styleRule = saved
+      _styleRuleIgnoringAtRoot = savedIgnoring
+    }
   }
 
   /** Runs [[body]] inside a new lexical scope in [[_environment]]. */
@@ -2346,22 +2398,21 @@ final class EvaluateVisitor(
     // for each comma-separated child piece, replace `&` with each parent
     // piece, or prepend the parent piece + space if `&` is absent. Cross
     // multiple parent and child commas to flatten the result.
-    val parentSelector: Nullable[String] = _styleRule.fold[Nullable[String]](Nullable.empty) { p =>
-      Nullable(p.selector.toString)
-    }
-    val expandedSelector: String = _expandSelector(childSelectorText, parentSelector)
+    // dart-sass: use _styleRuleIgnoringAtRoot for & resolution inside @at-root.
+    val parentSelectorRule: Nullable[ModifiableCssStyleRule] = _styleRuleIgnoringAtRoot
+    val implicitParent: Boolean = !_atRootExcludingStyleRule
+    val parentText: Nullable[String] =
+      if (implicitParent) _styleRule.fold[Nullable[String]](Nullable.empty)(p => Nullable(p.selector.toString))
+      else Nullable.empty
+    val expandedSelector: String = _expandSelector(childSelectorText, parentText)
 
-    // Prefer an AST-based expansion: parse both child and parent, then use
-    // `SelectorList.nestWithin` so we store a real `SelectorList` in the
-    // rule's box. Fall back to the textual expansion when either side fails
-    // to parse, matching the previous behaviour.
     val parsedExpanded: Nullable[SelectorList] = {
-      val childParsed  = SelectorParser.tryParse(childSelectorText)
-      val parentParsed: Nullable[SelectorList] = _styleRule.map(_.selector)
+      val childParsed = SelectorParser.tryParse(childSelectorText)
+      val parentParsed: Nullable[SelectorList] = parentSelectorRule.map(_.originalSelector)
       if (childParsed.isEmpty) SelectorParser.tryParse(expandedSelector)
       else if (parentParsed.isEmpty) Nullable(childParsed.get)
       else
-        try Nullable(childParsed.get.nestWithin(parentParsed))
+        try Nullable(childParsed.get.nestWithin(parentParsed, implicitParent = implicitParent))
         catch { case _: Exception => SelectorParser.tryParse(expandedSelector) }
     }
 
@@ -3120,11 +3171,17 @@ final class EvaluateVisitor(
         root: ModifiableCssParentNode
       }
 
-    val savedParent    = _parent
-    val savedStyleRule = _styleRule
+    val savedParent              = _parent
+    val savedStyleRule           = _styleRule
+    val savedStyleRuleIgnoring   = _styleRuleIgnoringAtRoot
+    val savedAtRootExcluding     = _atRootExcludingStyleRule
     _parent = Nullable(newParent)
-    // Clear the active style rule if it's no longer in the kept chain.
-    if (query.excludesStyleRules) _styleRule = Nullable.empty
+    // dart-sass: set _atRootExcludingStyleRule when excluding style rules.
+    // _styleRuleIgnoringAtRoot keeps the real parent for `&` resolution.
+    if (query.excludesStyleRules) {
+      _styleRule = Nullable.empty
+      _atRootExcludingStyleRule = true
+    }
     try {
       // ISS-027: if an enclosing style rule survived the query (e.g.
       // `@media { .a { @at-root (without: media) { ... } } }`), re-wrap
@@ -3158,6 +3215,8 @@ final class EvaluateVisitor(
     } finally {
       _parent = savedParent
       _styleRule = savedStyleRule
+      _styleRuleIgnoringAtRoot = savedStyleRuleIgnoring
+      _atRootExcludingStyleRule = savedAtRootExcluding
     }
     SassNull
   }
@@ -3288,66 +3347,65 @@ final class EvaluateVisitor(
     *     `_fromOneModule` AND so variable assignments find the right
     *     backing storage in the upstream module.
     */
-  private def _loadDynamicImport(url: String): Unit =
-    importer.foreach { imp =>
-      val canonical = imp.canonicalize(url)
-      canonical.foreach { canonicalUrl =>
-        if (_activeImports.contains(canonicalUrl)) {
-          // Cycle — skip silently.
-        } else if (!_loadedUrls.contains(canonicalUrl)) {
-          _loadedUrls += canonicalUrl
-          _activeImports += canonicalUrl
-          try
-            _loadAndParseCached(imp, canonicalUrl).foreach { importedSheet =>
-              val children = importedSheet.children.get
-              val hasUseOrForward = children.exists {
-                case _: ssg.sass.ast.sass.UseRule     => true
-                case _: ssg.sass.ast.sass.ForwardRule => true
-                case _                                => false
-              }
-              // @import always re-evaluates the imported file's CSS, even
-              // when the same module was already @use'd. Save and clear
-              // the injected-CSS set so modules @use'd within this import
-              // can re-inject their CSS into the output.
-              val savedInjected = _injectedModuleCss.clone()
-              _injectedModuleCss.clear()
-              try {
-              if (!hasUseOrForward) {
-                // Simple inline path: no module-system directives, so the
-                // imported file can run against the caller's environment
-                // without any `forImport`/`importForwards` plumbing.
-                children.foreach { stmt =>
-                  val _ = stmt.accept(this)
-                }
-              } else {
-                // dart-sass `forImport` path: evaluate in an isolated
-                // `_modules`/`_globalModules`/`_forwardedModules` shell that
-                // still shares the variable / function / mixin scope chain
-                // with the caller, then `importForwards` the resulting
-                // dummy module so the caller's lookup chain can reach
-                // anything the imported file `@forward`ed.
-                val forImportEnv = _environment.forImport()
-                _withEnvironment(forImportEnv) {
-                  children.foreach { stmt =>
-                    val _ = stmt.accept(this)
-                  }
-                }
-                val dummyModule = forImportEnv.toDummyModule()
-                _environment.importForwards(dummyModule)
-              }
-              } finally {
-                // Restore the previous injected set, augmented with any
-                // modules newly injected during this import, so that
-                // subsequent @use's at the same level still deduplicate.
-                _injectedModuleCss ++= savedInjected
+  private def _loadDynamicImport(url: String): Unit = {
+    val loaded = _loadStylesheet(url, ssg.sass.util.FileSpan.synthetic("<@import>"), forImport = true)
+    loaded.foreach { case (importedSheet, _, _) =>
+      val canonicalUrl = importedSheet.span.sourceUrl.getOrElse("")
+      if (canonicalUrl.nonEmpty && _activeImports.contains(canonicalUrl)) {
+        // Cycle — skip silently.
+      } else {
+        if (canonicalUrl.nonEmpty) _activeImports += canonicalUrl
+        try {
+          val children = importedSheet.children.get
+          val hasUseOrForward = children.exists {
+            case _: ssg.sass.ast.sass.UseRule     => true
+            case _: ssg.sass.ast.sass.ForwardRule => true
+            case _                                => false
+          }
+          // @import always re-evaluates the imported file's CSS, even
+          // when the same module was already @use'd. Save and clear
+          // the injected-CSS set so modules @use'd within this import
+          // can re-inject their CSS into the output.
+          val savedInjected = _injectedModuleCss.clone()
+          _injectedModuleCss.clear()
+          try {
+          if (!hasUseOrForward) {
+            // Simple inline path: no module-system directives, so the
+            // imported file can run against the caller's environment
+            // without any `forImport`/`importForwards` plumbing.
+            children.foreach { stmt =>
+              val _ = stmt.accept(this)
+            }
+          } else {
+            // dart-sass `forImport` path: evaluate in an isolated
+            // `_modules`/`_globalModules`/`_forwardedModules` shell that
+            // still shares the variable / function / mixin scope chain
+            // with the caller, then `importForwards` the resulting
+            // dummy module so the caller's lookup chain can reach
+            // anything the imported file `@forward`ed.
+            val forImportEnv = _environment.forImport()
+            _withEnvironment(forImportEnv) {
+              children.foreach { stmt =>
+                val _ = stmt.accept(this)
               }
             }
-          finally {
+            val dummyModule = forImportEnv.toDummyModule()
+            _environment.importForwards(dummyModule)
+          }
+          } finally {
+            // Restore the previous injected set, augmented with any
+            // modules newly injected during this import, so that
+            // subsequent @use's at the same level still deduplicate.
+            _injectedModuleCss ++= savedInjected
+          }
+        } finally {
+          if (canonicalUrl.nonEmpty) {
             val _ = _activeImports.remove(canonicalUrl)
           }
         }
       }
     }
+  }
 
   /** Returns the nearest enclosing `@media` rule in the current CSS parent chain, or `null` if this `@extend` is declared outside any media block.
     */
@@ -3593,8 +3651,9 @@ final class EvaluateVisitor(
       _inSupportsDeclaration = true
       try {
         val nameStr  = _evaluateToCss(sd.name, quote = false)
+        val space    = if (sd.isCustomProperty) "" else " "
         val valueStr = _evaluateToCss(sd.value, quote = false)
-        s"($nameStr: $valueStr)"
+        s"($nameStr:$space$valueStr)"
       } finally
         _inSupportsDeclaration = oldInSupports
 
