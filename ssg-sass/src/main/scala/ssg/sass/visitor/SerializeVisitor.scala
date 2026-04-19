@@ -1307,17 +1307,9 @@ final class SerializeVisitor(
   }
 
   override def visitCssStylesheet(node: CssStylesheet): Unit = {
-    // Top-level siblings: dart-sass `visitCssStylesheet`. Between visible
+    // dart-sass serialize.dart:173-194 (visitCssStylesheet): between visible
     // siblings emit a line feed (or trailing-comment space), and an extra
     // line feed when the previous sibling has `isGroupEnd == true`.
-    //
-    // Note: ssg-sass's evaluator does not currently propagate `isGroupEnd` from
-    // the original source position (a flag dart-sass sets when nested
-    // blocks are flattened). To preserve the historical output where
-    // top-level rules and at-rules are separated by a blank line in
-    // expanded mode, we conservatively emit the second line feed for any
-    // non-comment-following-non-comment pair. This matches dart-sass's
-    // observable output for typical inputs without requiring AST changes.
     var previous: CssNode | Null = null
     for (child <- node.children) {
       if (!isNodeInvisible(child)) {
@@ -1328,15 +1320,20 @@ final class SerializeVisitor(
           } else {
             writeLine()
             // dart-sass serialize.dart:183: extra blank line when the
-            // previous node is a group end. At-rules with children (media,
-            // supports, keyframes) also get blank lines since they always
-            // form visual groups, even without explicit isGroupEnd marking.
-            val prevIsAtRuleBlock = previous match {
-              case _: CssStyleRule => false  // style rules use isGroupEnd only
-              case p: CssParentNode if !p.isChildless => true
-              case _ => false
-            }
-            if (previous.isGroupEnd || prevIsAtRuleBlock) writeLine()
+            // previous node is a group end.
+            //
+            // Supplement: the evaluator does not yet propagate isGroupEnd
+            // for media/supports blocks emitted directly at the top level
+            // (not from flattened style rules). As a workaround, also add
+            // a blank line when the previous sibling is a CssMediaRule or
+            // CssSupportsRule with children. This matches the sass-spec
+            // expected output.
+            val prevNeedsBlankLine = previous.isGroupEnd || (previous match {
+              case _: CssMediaRule    => true
+              case _: CssSupportsRule => true
+              case _                  => false
+            })
+            if (prevNeedsBlankLine) writeLine()
           }
         }
         previous = child
