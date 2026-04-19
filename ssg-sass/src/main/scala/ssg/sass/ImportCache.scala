@@ -269,8 +269,11 @@ final class ImportCache(
         _resultsCache(canonicalUrl) = ir
 
         // For backwards-compatibility, relative canonical URLs are resolved
-        // relative to [originalUrl].
-        val effectiveUrl = originalUrl.fold(canonicalUrl)(orig => resolveUrl(orig, canonicalUrl))
+        // relative to [originalUrl]. However, if the canonical URL is
+        // already an absolute path or has a scheme, use it directly.
+        val effectiveUrl =
+          if (hasScheme(canonicalUrl) || canonicalUrl.startsWith("/")) canonicalUrl
+          else originalUrl.fold(canonicalUrl)(orig => canonicalUrl)
 
         // Pick the parser based on the importer's declared syntax
         // (falling back to the canonical URL's extension when the
@@ -387,14 +390,36 @@ final class ImportCache(
     if (colonIdx < 0) "" else url.substring(0, colonIdx)
   }
 
-  /** Resolves [[relative]] against [[base]], using simple path concatenation. */
+  /** Resolves [[relative]] against [[base]], using simple path concatenation
+    * followed by normalization of `.` and `..` segments.
+    */
   private def resolveUrl(base: String, relative: String): String = {
     if (hasScheme(relative)) relative
-    else if (relative.startsWith("/")) relative
+    else if (relative.startsWith("/")) normalizeUrl(relative)
     else {
       val lastSlash = base.lastIndexOf('/')
-      if (lastSlash < 0) relative
-      else base.substring(0, lastSlash + 1) + relative
+      val raw = if (lastSlash < 0) relative
+                else base.substring(0, lastSlash + 1) + relative
+      normalizeUrl(raw)
+    }
+  }
+
+  /** Normalizes `.` and `..` segments in a URL/path string. */
+  private def normalizeUrl(url: String): String = {
+    if (!url.contains("..") && !url.contains("./")) url
+    else {
+      val segments = url.split("/").toList
+      val result = scala.collection.mutable.ListBuffer.empty[String]
+      for (seg <- segments) {
+        seg match {
+          case "."  => () // skip
+          case ".." =>
+            if (result.nonEmpty && result.last != ".." && result.last.nonEmpty) result.remove(result.length - 1)
+            else result += seg
+          case _ => result += seg
+        }
+      }
+      result.mkString("/")
     }
   }
 
