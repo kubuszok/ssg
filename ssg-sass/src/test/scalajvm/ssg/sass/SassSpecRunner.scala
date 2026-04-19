@@ -413,7 +413,15 @@ object SassSpecRunner {
     expectedOut:   Option[String],
     expectedError: Option[String],
     siblingFiles:  Map[String, String] = Map.empty,
-    isSass:        Boolean = false
+    isSass:        Boolean = false,
+    /** Filesystem-based source URL for the input file, used as the base URL
+      * for resolving relative `@use`/`@import`/`@forward` paths. For loose
+      * test cases this is the absolute path of `input.scss`; for HRX
+      * entries it's the path of the HRX archive's directory combined with
+      * the archive-internal subdirectory (so that `../` references resolve
+      * to sibling files on disk).
+      */
+    sourceUrl:     Option[String] = None
   )
 
   def collectCases(root: Path): List[TestCase] = {
@@ -467,7 +475,8 @@ object SassSpecRunner {
       finally stream.close()
     }
     val sass = input.getFileName.toString.endsWith(".sass")
-    source.map(s => TestCase(rel, s, expectedO, expectedE, siblings.toMap, isSass = sass))
+    val srcUrl = Some(input.toAbsolutePath.normalize.toString)
+    source.map(s => TestCase(rel, s, expectedO, expectedE, siblings.toMap, isSass = sass, sourceUrl = srcUrl))
   }
 
   /** Parse an HRX archive into test cases.
@@ -543,8 +552,43 @@ object SassSpecRunner {
                 if (relativePath.nonEmpty) Some(relativePath -> content) else None
               }
             }.toMap
-            val siblings = sameDirSiblings ++ archiveSiblings
-            Iterator.single(TestCase(origin, src, out, err, siblings, isSass = inputName.endsWith(".sass")))
+            // Also include entries keyed by their full spec-root-relative
+            // paths. Some tests use absolute-looking imports like
+            // `@use 'callable/arguments/function/utils'` that reference
+            // files within the same HRX archive via their spec-root-relative
+            // path (as if the archive were extracted to disk under the spec
+            // root). The archive stem (e.g. `callable/arguments` for
+            // `callable/arguments.hrx`) is prepended to each entry path.
+            val archiveStem = {
+              val relStr = archiveRel
+              if (relStr.endsWith(".hrx")) relStr.dropRight(4) else relStr
+            }
+            val specRootSiblings = allEntries.iterator.flatMap { case (fullPath, content) =>
+              if (fullPath == dirPrefix + inputName) None
+              else if (fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
+                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")) None
+              else if (!fullPath.contains('/') && (fullPath == "output.css" || fullPath == "error" || fullPath == "warning")) None
+              else {
+                val specRelPath = archiveStem + "/" + fullPath
+                Some(specRelPath -> content)
+              }
+            }.toMap
+            val siblings = sameDirSiblings ++ archiveSiblings ++ specRootSiblings
+            // Compute a filesystem-based source URL for the input file.
+            // The convention is that `foo.hrx` expands to a `foo/` directory
+            // in the same parent. So for an archive at
+            //   <spec>/core_functions/color/hwb/three_args/w3c/reds.hrx
+            // with internal dir "" (root), the source URL becomes:
+            //   <spec-abs>/core_functions/color/hwb/three_args/w3c/reds/input.scss
+            // This allows `../test-hue` to resolve against the filesystem.
+            val archiveBase = {
+              val name = archive.getFileName.toString
+              val stem = if (name.endsWith(".hrx")) name.dropRight(4) else name
+              archive.getParent.resolve(stem)
+            }
+            val inputDir = if (dir.isEmpty) archiveBase else archiveBase.resolve(dir)
+            val srcUrl = Some(inputDir.toAbsolutePath.normalize.resolve(inputName).toString)
+            Iterator.single(TestCase(origin, src, out, err, siblings, isSass = inputName.endsWith(".sass"), sourceUrl = srcUrl))
           case None => Iterator.empty
         }
       }.toList
@@ -623,7 +667,8 @@ object SassSpecRunner {
             tc.source,
             style = OutputStyle.Expanded,
             syntax = if (tc.isSass || tc.relPath.contains("input.sass")) Syntax.Sass else Syntax.Scss,
-            importer = importer
+            importer = importer,
+            url = tc.sourceUrl.fold(Nullable.empty[String])(u => Nullable(u))
           )
         )
       catch {
