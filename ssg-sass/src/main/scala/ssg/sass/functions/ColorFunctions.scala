@@ -1327,12 +1327,19 @@ object ColorFunctions {
     else None
   }
 
-  /** Convert color to space specified by keyword, or return as-is. */
+  /** Convert color to space specified by keyword, or return as-is.
+    * dart-sass: `$space` must be an unquoted string.
+    */
   private def colorInSpace(color: SassColor, spaceKeyword: Option[Value]): SassColor =
     spaceKeyword match {
       case None    => color
       case Some(v) =>
-        val s = v.assertString()
+        val s = v.assertString(Nullable("space"))
+        if (s.hasQuotes) {
+          throw SassScriptException(
+            s"$$space: Expected ${s.toCssString} to be an unquoted string.",
+          )
+        }
         color.toSpace(ColorSpace.fromName(s.text, Some("space")), legacyMissing = false)
     }
 
@@ -1684,21 +1691,21 @@ object ColorFunctions {
       ColorSpace.fromName(s.text, name)
     }
 
-  /** Parse a `$space` argument as a color-space name, or None for SassNull / omitted. */
+  /** Parse a `$space` argument as a color-space name, or None for SassNull / omitted.
+    * dart-sass: `$space` must be an unquoted string.
+    */
   private def optSpace(v: Value): Option[ColorSpace] =
     if (v eq SassNull) None
-    else
-      v match {
-        case s: SassString => Some(ColorSpace.fromName(s.text))
-        case other => Some(ColorSpace.fromName(other.assertString().text))
+    else {
+      val s = v.assertString(Nullable("space"))
+      if (s.hasQuotes) {
+        throw SassScriptException(
+          s"$$space: Expected ${s.toCssString} to be an unquoted string.",
+        )
       }
+      Some(ColorSpace.fromName(s.text, Some("space")))
+    }
 
-  /** Parse a string argument (for channel / space / method names). Unquoted SassString is the canonical representation; quoted strings are also accepted.
-    */
-  private def strArg(v: Value): String = v match {
-    case s: SassString => s.text
-    case other => other.assertString().text
-  }
 
   /** Build a SassNumber for a channel value, attaching the channel's associated unit (e.g. "deg" for hue, "%" for hsl saturation/lightness when not normalized).
     * For conventionallyPercent channels with max != 100, the internal value is scaled:
@@ -1723,7 +1730,13 @@ object ColorFunctions {
       "$color, $channel, $space: null",
       { args =>
         val color       = args(0).assertColor()
-        val channelName = strArg(args(1))
+        val channelStr  = args(1).assertString(Nullable("channel"))
+        if (!channelStr.hasQuotes) {
+          throw SassScriptException(
+            s"$$channel: Expected ${channelStr.text} to be a quoted string.",
+          )
+        }
+        val channelName = channelStr.text
         val spaceOpt    = if (args.length >= 3) optSpace(args(2)) else None
         val viewed      = spaceOpt.fold(color)(sp => color.toSpace(sp))
         if (channelName == "alpha") SassNumber(viewed.alpha)
@@ -1771,40 +1784,64 @@ object ColorFunctions {
       }
     )
 
-  /** color.is-powerless($color, $channel, $space: null) */
+  /** color.is-powerless($color, $channel, $space: null)
+    * dart-sass: `$channel` must be a quoted string; `$space` must be unquoted.
+    */
   private val isPowerlessFn: BuiltInCallable =
     BuiltInCallable.function(
       "is-powerless",
       "$color, $channel, $space: null",
       { args =>
         val color       = args(0).assertColor()
-        val channelName = strArg(args(1))
+        val channelStr  = args(1).assertString(Nullable("channel"))
+        if (!channelStr.hasQuotes) {
+          throw SassScriptException(
+            s"$$channel: Expected ${channelStr.text} to be a quoted string.",
+          )
+        }
+        val channelName = channelStr.text
         val spaceOpt    = if (args.length >= 3) optSpace(args(2)) else None
         val viewed      = spaceOpt.fold(color)(sp => color.toSpace(sp))
         SassBoolean(viewed.isChannelPowerless(channelName))
       }
     )
 
-  /** color.is-missing($color, $channel) */
+  /** color.is-missing($color, $channel)
+    * dart-sass: `$channel` must be a quoted string.
+    */
   private val isMissingFn: BuiltInCallable =
     BuiltInCallable.function(
       "is-missing",
       "$color, $channel",
       { args =>
         val color       = args(0).assertColor()
-        val channelName = strArg(args(1))
+        val channelStr  = args(1).assertString(Nullable("channel"))
+        if (!channelStr.hasQuotes) {
+          throw SassScriptException(
+            s"$$channel: Expected ${channelStr.text} to be a quoted string.",
+          )
+        }
+        val channelName = channelStr.text
         SassBoolean(color.isChannelMissing(channelName))
       }
     )
 
-  /** color.to-space($color, $space) */
+  /** color.to-space($color, $space)
+    * dart-sass: `$space` must be an unquoted string.
+    */
   private val toSpaceFn: BuiltInCallable =
     BuiltInCallable.function(
       "to-space",
       "$color, $space",
       { args =>
         val color = args(0).assertColor()
-        val sp    = ColorSpace.fromName(strArg(args(1)))
+        val s     = args(1).assertString(Nullable("space"))
+        if (s.hasQuotes) {
+          throw SassScriptException(
+            s"$$space: Expected ${s.toCssString} to be an unquoted string.",
+          )
+        }
+        val sp = ColorSpace.fromName(s.text, Some("space"))
         // legacyMissing=false triggers replacement of missing channels
         // with 0 for legacy spaces (the condition in toSpace is inverted).
         color.toSpace(sp, legacyMissing = false)
@@ -2118,9 +2155,18 @@ object ColorFunctions {
   )
 
   def module: List[Callable] = {
-    // Module functions shadow globals with the same name.
-    val overrideNames = moduleOnly.map(_.name).toSet
-    global.filterNot(c => overrideNames.contains(c.name)) ::: moduleOnly
+    // dart-sass: the module exposes moduleOnly functions plus only the
+    // CSS-native global functions (rgb, rgba, hsl, hsla, hwb, lab, lch,
+    // oklab, oklch, color). Deprecated globals like adjust-color,
+    // scale-color, change-color, str-length etc. are NOT included.
+    val overrideNames  = moduleOnly.map(_.name).toSet
+    // Only keep globals whose names don't overlap with module members
+    // AND are CSS-native functions (not deprecated Sass globals).
+    val cssNativeNames = Set(
+      "rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch",
+      "oklab", "oklch", "color"
+    )
+    global.filter(c => cssNativeNames.contains(c.name) && !overrideNames.contains(c.name)) ::: moduleOnly
   }
 
   /** Fallback for unregistered color function names. */
