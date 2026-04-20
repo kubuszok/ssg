@@ -71,16 +71,53 @@ class SelectorParser(
   private def isWs(c: Int): Boolean =
     c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'
 
-  private def skipSpaces(): Unit =
-    while (!isDone() && isWs(peek())) pos += 1
+  private def skipSpaces(): Unit = {
+    var continue_ = true
+    while (continue_ && !isDone()) {
+      if (isWs(peek())) {
+        pos += 1
+      } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '*') {
+        // Skip loud comment /* ... */
+        pos += 2
+        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) {
+          pos += 1
+        }
+        if (pos + 1 < src.length) pos += 2 // skip */
+      } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '/') {
+        // Skip silent comment // ... to end of line
+        pos += 2
+        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r') {
+          pos += 1
+        }
+      } else {
+        continue_ = false
+      }
+    }
+  }
 
   /** Like [[skipSpaces]] but returns `true` if a newline was consumed. */
   private def skipSpacesTrackNewline(): Boolean = {
     var hadNewline = false
-    while (!isDone() && isWs(peek())) {
+    var continue_ = true
+    while (continue_ && !isDone()) {
       val c = peek()
-      if (c == '\n' || c == '\r' || c == '\f') hadNewline = true
-      pos += 1
+      if (isWs(c)) {
+        if (c == '\n' || c == '\r' || c == '\f') hadNewline = true
+        pos += 1
+      } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '*') {
+        pos += 2
+        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) {
+          pos += 1
+        }
+        if (pos + 1 < src.length) pos += 2
+      } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '/') {
+        pos += 2
+        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r') {
+          pos += 1
+        }
+      } else {
+        continue_ = false
+      }
     }
     hadNewline
   }
@@ -163,8 +200,13 @@ class SelectorParser(
       pos += 1
       // dart-sass selector.dart:103-105: track if a newline occurred after
       // the comma so the serializer can preserve multiline selector lists.
-      val hadNewline = skipSpacesTrackNewline()
-      if (!isDone() && peek() != ',') // skip empty comma slots
+      // Accumulate across empty comma slots so `a,,\nb` still gets lineBreak.
+      var hadNewline = skipSpacesTrackNewline()
+      while (!isDone() && peek() == ',') {
+        pos += 1
+        hadNewline = skipSpacesTrackNewline() || hadNewline
+      }
+      if (!isDone())
         complexes += parseComplexSelector(lineBreak = hadNewline)
       skipSpaces()
     }

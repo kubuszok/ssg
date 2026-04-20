@@ -76,7 +76,7 @@ import scala.language.implicitConversions
 
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.css.{ CssComment, CssStylesheet }
-import ssg.sass.ast.sass.{ ContentBlock, ForwardRule }
+import ssg.sass.ast.sass.ForwardRule
 import ssg.sass.extend.ExtensionStore
 import ssg.sass.value.Value
 
@@ -99,7 +99,7 @@ final class Environment private (
   private val _variableNodes:     mutable.ArrayBuffer[mutable.Map[String, AstNode]],
   private val _functions:         mutable.ArrayBuffer[mutable.Map[String, Callable]],
   private val _mixins:            mutable.ArrayBuffer[mutable.Map[String, Callable]],
-  private var _content:           Nullable[ContentBlock],
+  private var _content:           Nullable[UserDefinedCallable[Environment]],
   private val _configurableVariables: mutable.Set[String]
 ) {
 
@@ -786,11 +786,11 @@ final class Environment private (
   // Content block / `asMixin`
   // ---------------------------------------------------------------------------
 
-  def content:                              Nullable[ContentBlock] = _content
-  def content_=(block: Nullable[ContentBlock]): Unit                = _content = block
+  def content:                              Nullable[UserDefinedCallable[Environment]] = _content
+  def content_=(block: Nullable[UserDefinedCallable[Environment]]): Unit               = _content = block
 
   /** Sets [content] as the content block for the duration of [callback]. */
-  def withContent[T](newContent: Nullable[ContentBlock])(callback: => T): T = {
+  def withContent[T](newContent: Nullable[UserDefinedCallable[Environment]])(callback: => T): T = {
     val saved = _content
     _content = newContent
     try callback

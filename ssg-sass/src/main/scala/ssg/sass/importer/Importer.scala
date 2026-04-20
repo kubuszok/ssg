@@ -125,59 +125,43 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
     result.mkString("/")
   }
 
-  /** Generates candidate paths for a given relative URL.
+  /** If [[paths]] contains exactly one path, returns it.
+    * If it contains no paths, returns empty.
+    * If it contains more than one, throws an exception.
     *
-    * Follows the same resolution order as [[ImporterFileUtils.resolveImportPath]]:
-    *   1. If the path has an explicit `.sass`/`.scss`/`.css` extension,
-    *      try the exact path and the partial (`_`-prefixed) variant.
-    *   2. If no extension, try `.sass`, `.scss` extensions (and their
-    *      partial variants), then `.css` as a fallback.
-    *   3. For extensionless paths, also try directory-index resolution:
-    *      `<path>/_index.scss`, `<path>/index.scss`,
-    *      `<path>/_index.sass`, `<path>/index.sass`.
+    * Mirrors ImporterFileUtils.exactlyOne.
     */
-  private def candidates(relative: String): List[String] = {
-    val slashIdx = relative.lastIndexOf('/')
-    val parent   = if (slashIdx < 0) "" else relative.substring(0, slashIdx + 1)
-    val fileName = if (slashIdx < 0) relative else relative.substring(slashIdx + 1)
+  private def exactlyOne(paths: List[String]): Nullable[String] = paths match {
+    case Nil         => Nullable.empty
+    case head :: Nil => Nullable(head)
+    case ambiguous   =>
+      throw new IllegalStateException(
+        "It's not clear which file to import. Found:\n" +
+          ambiguous.map(p => "  " + p).mkString("\n")
+      )
+  }
 
-    // Only treat `.sass`, `.scss`, `.css` as known extensions, matching
-    // ImporterFileUtils.resolveImportPath. Other dots (e.g. `dir.foo`)
-    // are directory names, not extensions.
-    val hasKnownExtension = {
-      val dot = fileName.lastIndexOf('.')
-      dot > 0 && {
-        val ext = fileName.substring(dot)
-        ext == ".sass" || ext == ".scss" || ext == ".css"
-      }
-    }
-    val basenames: List[String] =
-      if (hasKnownExtension) List(fileName, s"_$fileName").distinct
-      else
-        List(
-          // .sass before .scss matches ImporterFileUtils.tryPathWithExtensions order
-          s"$fileName.sass",
-          s"_$fileName.sass",
-          s"$fileName.scss",
-          s"_$fileName.scss",
-          // .css as fallback (same as ImporterFileUtils: only if .sass/.scss not found)
-          s"$fileName.css",
-          s"_$fileName.css"
-        )
+  /** Like [[tryPath]] but checks `.sass`, `.scss`, and `.css` extensions.
+    * Mirrors ImporterFileUtils.tryPathWithExtensions.
+    */
+  private def tryPathWithExtensions(path: String): List[String] = {
+    val result = tryPath(path + ".sass") ++ tryPath(path + ".scss")
+    if (result.nonEmpty) result else tryPath(path + ".css")
+  }
 
-    val direct = basenames.map(parent + _)
-
-    val index: List[String] =
-      if (hasKnownExtension) Nil
-      else
-        List(
-          s"$parent$fileName/_index.scss",
-          s"$parent$fileName/index.scss",
-          s"$parent$fileName/_index.sass",
-          s"$parent$fileName/index.sass"
-        )
-
-    direct ++ index
+  /** Returns the [[path]] and/or the partial with the same name, if either
+    * or both exists in [[sources]].
+    * Mirrors ImporterFileUtils.tryPath.
+    */
+  private def tryPath(path: String): List[String] = {
+    val slashIdx = path.lastIndexOf('/')
+    val dir      = if (slashIdx < 0) "" else path.substring(0, slashIdx + 1)
+    val base     = if (slashIdx < 0) path else path.substring(slashIdx + 1)
+    val partial  = s"${dir}_$base"
+    val result   = scala.collection.mutable.ArrayBuffer.empty[String]
+    if (sources.contains(partial)) result += partial
+    if (sources.contains(path)) result += path
+    result.toList
   }
 
   def canonicalize(url: String): Nullable[String] = {
@@ -185,17 +169,43 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
     // Normalize `..` and `.` segments so `../foo/bar` resolves correctly
     // when the key in the map is a clean relative path.
     val cleaned = if (stripped.contains("..") || stripped.contains("./")) normalizePath(stripped) else stripped
-    if (sources.contains(cleaned)) Nullable(cleaned)
-    else {
-      val cands = candidates(cleaned)
-      var result: Nullable[String] = Nullable.empty
-      var i = 0
-      while (result.isEmpty && i < cands.length) {
-        val c = cands(i)
-        if (sources.contains(c)) result = Nullable(c)
-        i += 1
+    if (sources.contains(cleaned)) return Nullable(cleaned)
+
+    val slashIdx = cleaned.lastIndexOf('/')
+    val fileName = if (slashIdx < 0) cleaned else cleaned.substring(slashIdx + 1)
+
+    // Check if the file has a known Sass extension
+    val hasKnownExtension = {
+      val dot = fileName.lastIndexOf('.')
+      dot > 0 && {
+        val ext = fileName.substring(dot)
+        ext == ".sass" || ext == ".scss" || ext == ".css"
       }
-      result
+    }
+
+    if (hasKnownExtension) {
+      // With explicit extension: in @import context, try .import variant first
+      val importOnly = ImporterUtils.ifInImport { () =>
+        val dot = cleaned.lastIndexOf('.')
+        val ext = cleaned.substring(dot)
+        val base = cleaned.substring(0, dot)
+        exactlyOne(tryPath(s"$base.import$ext"))
+      }.flatten
+      importOnly.orElse(exactlyOne(tryPath(cleaned)))
+    } else {
+      // Without extension: in @import context, try .import variant first
+      val importOnly = ImporterUtils.ifInImport { () =>
+        exactlyOne(tryPathWithExtensions(s"$cleaned.import"))
+      }.flatten
+      importOnly
+        .orElse(exactlyOne(tryPathWithExtensions(cleaned)))
+        .orElse {
+          // Try directory index resolution
+          val importIndex = ImporterUtils.ifInImport { () =>
+            exactlyOne(tryPathWithExtensions(s"$cleaned/index.import"))
+          }.flatten
+          importIndex.orElse(exactlyOne(tryPathWithExtensions(s"$cleaned/index")))
+        }
     }
   }
 

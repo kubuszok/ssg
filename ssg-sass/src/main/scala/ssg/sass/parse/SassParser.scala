@@ -559,6 +559,10 @@ class SassParser(
       }
     }
 
+    // In the indented syntax, comments without an explicit `*/` closer need
+    // one appended. Matches dart-sass _loudComment (sass.dart:243-245):
+    //   buffer.write(" */")
+    buffer.write(" */")
     new LoudComment(buffer.interpolation(spanFrom(start)))
   }
 

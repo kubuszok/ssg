@@ -219,13 +219,22 @@ object Selector {
       if (pseudo.argument.isDefined || pseudo.selector.isDefined) {
         sb.append("(")
         pseudo.argument.foreach { arg =>
-          // Normalize An+B microsyntax for :nth-child/:nth-last-child:
-          // remove spaces around + and - (e.g. "2n + 1" → "2n+1")
+          // Normalize An+B microsyntax for :nth-* pseudo selectors.
           val nn = pseudo.normalizedName
-          if ((nn == "nth-child" || nn == "nth-last-child" || nn == "nth-of-type" || nn == "nth-last-of-type") && arg.contains('n')) {
+          if ((nn == "nth-child" || nn == "nth-last-child") && arg.contains('n')) {
+            // For nth-child/nth-last-child: strip ALL spaces around +/-
+            // (e.g. "2n + 1" → "2n+1").
             val ofIdx = arg.indexOf(" of")
             val (anb, rest) = if (ofIdx >= 0) (arg.substring(0, ofIdx), arg.substring(ofIdx)) else (arg, "")
             sb.append(anb.replaceAll("\\s*\\+\\s*", "+").replaceAll("\\s*-\\s*", "-"))
+            sb.append(rest)
+          } else if (nn.startsWith("nth-") && arg.contains('n')) {
+            // For other nth-* (nth-of-type, nth-last-of-type, etc.):
+            // collapse multiple spaces to a single space (e.g.
+            // "2n  +  1" → "2n + 1") but preserve single spaces.
+            val ofIdx = arg.indexOf(" of")
+            val (anb, rest) = if (ofIdx >= 0) (arg.substring(0, ofIdx), arg.substring(ofIdx)) else (arg, "")
+            sb.append(anb.replaceAll(" {2,}", " "))
             sb.append(rest)
           } else {
             sb.append(arg)

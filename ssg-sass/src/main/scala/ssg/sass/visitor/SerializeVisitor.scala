@@ -160,7 +160,7 @@ final class SerializeVisitor(
     visitCssStylesheet(node)
     val css = buffer.toString()
     val prefix: String =
-      if (containsNonAscii(css)) {
+      if (containsNonAscii(css) && !css.startsWith("@charset")) {
         if (isCompressed) "\uFEFF" else "@charset \"UTF-8\";\n"
       } else ""
     val mapJson: Nullable[String] =
@@ -289,6 +289,11 @@ final class SerializeVisitor(
     if (isCompressed) return false
     node match {
       case _: CssComment =>
+        // dart-sass: a comment trailing ANOTHER comment is not considered
+        // trailing — two sibling comments should each appear on their own
+        // line. Only a comment trailing a non-comment (rule, declaration,
+        // import) is collapsed onto the previous line.
+        if (previous.isInstanceOf[CssComment]) return false
         val nodeSpan = node.span
         val prevSpan = previous.span
         if (nodeSpan == null || prevSpan == null) false
@@ -881,10 +886,10 @@ final class SerializeVisitor(
       c match {
         case '\\'                       => sb.append("\\\\")
         case _ if c == q                => sb.append('\\'); sb.append(c)
-        case _ if c < 0x20 || c == 0x7f =>
-          // dart-sass serialize.dart:1519-1528 (_writeEscape): only add
-          // a trailing space when the NEXT character is a hex digit,
-          // space, or tab (CSS hex escape terminator rule).
+        case _ if (c < 0x20 && c != '\t') || c == 0x7f =>
+          // dart-sass serialize.dart:1393-1424 (_visitQuotedString): the
+          // list of control characters that get hex-escaped explicitly
+          // excludes $tab (0x09). Tab is emitted as a literal character.
           writeEscape(sb, c.toInt, text, i)
         case _ =>
           tryPrivateUseCharacter(sb, c.toInt, text, i) match {
@@ -1320,14 +1325,13 @@ final class SerializeVisitor(
           } else {
             writeLine()
             // dart-sass serialize.dart:183: extra blank line when the
-            // previous node is a group end.
-            //
-            // Supplement: the evaluator does not yet propagate isGroupEnd
-            // for media/supports blocks emitted directly at the top level
-            // (not from flattened style rules). As a workaround, also add
-            // a blank line when the previous sibling is a CssMediaRule or
-            // CssSupportsRule with children. This matches the sass-spec
-            // expected output.
+            // previous node is a group end. The evaluator sets isGroupEnd
+            // on the last child inside a parent (e.g. the style rule inside
+            // a media block), but the serializer checks the top-level node.
+            // Supplement: also treat CssMediaRule and CssSupportsRule as
+            // group ends since they contain flattened style rules whose
+            // isGroupEnd flag lives on their children, not on the parent
+            // at-rule itself.
             val prevNeedsBlankLine = previous.isGroupEnd || (previous match {
               case _: CssMediaRule    => true
               case _: CssSupportsRule => true
@@ -1414,7 +1418,7 @@ final class SerializeVisitor(
     val comps   = complex.components
     while (compIdx < comps.length) {
       val component = comps(compIdx)
-      sb.append(component.selector.toString)
+      writeCompoundSelectorTo(sb, component.selector)
       for (comb <- component.combinators)
         if (isCompressed) sb.append(comb.value.text)
         else {
@@ -1434,6 +1438,60 @@ final class SerializeVisitor(
       }
       compIdx += 1
     }
+  }
+
+  /** Writes a compound selector to [sb], filtering out invisible components
+    * from pseudo-selector arguments.
+    *
+    * Mirrors dart-sass `visitCompoundSelector` / `visitPseudoSelector` in
+    * lib/src/visitor/serialize.dart: if a pseudo-selector's inner selector
+    * list contains placeholder selectors, those are filtered out. If `:not()`
+    * has an entirely invisible inner selector, the whole `:not()` is omitted
+    * (semantically equivalent to `*`). If the compound ends up empty after
+    * filtering, `*` is emitted.
+    */
+  private def writeCompoundSelectorTo(sb: StringBuilder, compound: ssg.sass.ast.selector.CompoundSelector): Unit = {
+    val start = sb.length
+    for (simple <- compound.components) {
+      simple match {
+        case pseudo: ssg.sass.ast.selector.PseudoSelector if pseudo.selector.isDefined =>
+          val innerSel = pseudo.selector.get
+          // dart-sass: `:not(%a)` is semantically identical to `*` — skip it.
+          if (pseudo.name == "not" && innerSel.isInvisible) {
+            // Omit the entire :not() pseudo — it matches everything.
+          } else {
+            // Filter invisible complex selectors from the inner list.
+            val visibleComplexes = innerSel.components.filterNot(_.isInvisible)
+            if (visibleComplexes.isEmpty && pseudo.name != "not") {
+              // All inner selectors are invisible — omit the pseudo entirely.
+            } else {
+              sb.append(if (pseudo.isSyntacticClass) ":" else "::")
+              sb.append(pseudo.name)
+              sb.append('(')
+              pseudo.argument.foreach { arg =>
+                sb.append(arg)
+                if (visibleComplexes.nonEmpty) sb.append(' ')
+              }
+              // Write the filtered selector list.
+              var first = true
+              for (complex <- visibleComplexes) {
+                if (!first) sb.append(", ")
+                first = false
+                writeComplexSelectorTo(sb, complex)
+              }
+              sb.append(')')
+            }
+          }
+        case _: ssg.sass.ast.selector.PlaceholderSelector =>
+          // Placeholders are invisible — skip in non-inspect mode.
+          if (inspect) sb.append(simple.toString)
+        case _ =>
+          sb.append(simple.toString)
+      }
+    }
+    // dart-sass: if we emit an empty compound, it's because all components got
+    // optimized out because they match all selectors, so we emit `*`.
+    if (sb.length == start) sb.append('*')
   }
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {

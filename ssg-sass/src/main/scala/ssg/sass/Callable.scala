@@ -85,7 +85,11 @@ final class BuiltInCallable(
     * callables entirely (the dispatcher will raise its own "no
     * matching overload" error if needed).
     */
-  val isOverloaded:   Boolean = false
+  val isOverloaded:   Boolean = false,
+  /** All overload signatures (non-empty only when [[isOverloaded]] is true).
+    * Used by the evaluator to find the right overload for named-arg binding.
+    */
+  val allSignatures:  List[String] = Nil
 ) extends Callable {
 
   /** Positional parameter names and their optional default-expression text, derived from the textual [[signature]] (e.g. `"$color, $amount: 1"` → `List(("color", None), ("amount", Some("1")))`).
@@ -308,7 +312,7 @@ object BuiltInCallable {
           .sortBy(t => (-t._2, -t._3))
           .head
           ._1
-    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig, isOverloaded = true)
+    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig, isOverloaded = true, allSignatures = candidates)
   }
 }
 

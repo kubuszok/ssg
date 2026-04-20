@@ -348,6 +348,10 @@ final class EvaluateVisitor(
   /// rules.
   private var _atRootExcludingStyleRule: Boolean = false
 
+  /// Whether we're currently executing a function body.
+  /// dart-sass: `_inFunction` (evaluate.dart:233).
+  private var _inFunction: Boolean = false
+
   /// Whether we're currently building the output of a `@keyframes` rule.
   private var _inKeyframes: Boolean = false
 
@@ -1283,8 +1287,23 @@ final class EvaluateVisitor(
           )
         }
         // Render unknown function as plain CSS: `name(arg1, arg2, ...)`.
-        val args = node.arguments.positional.map(a => _evaluateToCss(a))
-        new SassString(s"${node.originalName}(${args.mkString(", ")})", hasQuotes = false)
+        // dart-sass (async_evaluate.dart:3638-3656): render positional args
+        // then append any rest arg if present.
+        val buf = new StringBuilder(node.originalName)
+        buf.append('(')
+        var first = true
+        for (arg <- node.arguments.positional) {
+          if (!first) buf.append(", ")
+          first = false
+          buf.append(_evaluateToCss(arg))
+        }
+        node.arguments.rest.foreach { restExpr =>
+          val rest = restExpr.accept(this)
+          if (!first) buf.append(", ")
+          buf.append(rest.toCssString())
+        }
+        buf.append(')')
+        new SassString(buf.toString(), hasQuotes = false)
       } { c =>
         // Built-in callable dispatch: evaluate positional args and call.
         // Unwrap any AliasedCallable wrapper (inserted by `@forward ... as
@@ -1941,7 +1960,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_mergeMediaQueries` (evaluate.dart:2346-2365).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: wired when @media query merging is ported
   private def _mergeMediaQueries(
     queries1: Iterable[CssMediaQuery],
     queries2: Iterable[CssMediaQuery]
@@ -1968,12 +1986,10 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_withMediaQueries` (evaluate.dart:4596-4609).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: wired when @media query scoping is ported
   private def _withMediaQueries[T](
     queries: List[CssMediaQuery],
-    sources: Set[CssMediaQuery],
-    body:    => T
-  ): T = {
+    sources: Set[CssMediaQuery]
+  )(body: => T): T = {
     val oldMediaQueries = _mediaQueries
     val oldSources      = _mediaQuerySources
     _mediaQueries = queries
@@ -1987,8 +2003,12 @@ final class EvaluateVisitor(
 
   /** Runs [[body]] with [[parent]] as the active parent node, restoring the previous parent when complete. Mirrors Dart's `_withParent`.
     */
-  private def _withParent[T, S <: ModifiableCssParentNode](parent: S, addChild: Boolean = true)(body: => T): T = {
-    if (addChild) _addChild(parent)
+  private def _withParent[T, S <: ModifiableCssParentNode](
+    parent:   S,
+    addChild: Boolean = true,
+    through:  (CssNode => Boolean) = null
+  )(body: => T): T = {
+    if (addChild) _addChild(parent, through)
     val saved = _parent
     _parent = Nullable(parent: ModifiableCssParentNode)
     try body
@@ -2407,8 +2427,13 @@ final class EvaluateVisitor(
     // piece, or prepend the parent piece + space if `&` is absent. Cross
     // multiple parent and child commas to flatten the result.
     // dart-sass: use _styleRuleIgnoringAtRoot for & resolution inside @at-root.
-    val parentSelectorRule: Nullable[ModifiableCssStyleRule] = _styleRuleIgnoringAtRoot
-    val implicitParent: Boolean = !_atRootExcludingStyleRule
+    // dart-sass: inside @keyframes, style rules don't nest under their parent
+    // selector because keyframe blocks (to, from, 0%, etc.) are standalone.
+    // In dart-sass these are parsed as KeyframeBlock nodes, but our parser
+    // produces StyleRule nodes for them. Skip parent nesting when _inKeyframes.
+    val parentSelectorRule: Nullable[ModifiableCssStyleRule] =
+      if (_inKeyframes) Nullable.empty else _styleRuleIgnoringAtRoot
+    val implicitParent: Boolean = !_atRootExcludingStyleRule && !_inKeyframes
     val parentText: Nullable[String] =
       if (implicitParent) _styleRule.fold[Nullable[String]](Nullable.empty)(p => Nullable(p.selector.toString))
       else Nullable.empty
@@ -2671,18 +2696,19 @@ final class EvaluateVisitor(
           }
         }
 
-        val existing = _environment.getVariable(node.name)
+        val existing = _environment.getVariable(node.name, namespace = node.namespace)
         if (existing.isDefined && existing.get != SassNull) break(SassNull)
       }
 
       // dart-sass: _withoutSlash strips slash info on variable assignment
       // (async_evaluate.dart:2687).
       val value = node.expression.accept(this).withoutSlash
-      if (node.isGlobal) {
-        _environment.setGlobalVariable(node.name, value)
-      } else {
-        _environment.setVariable(node.name, value)
-      }
+      _environment.setVariable(
+        node.name,
+        value,
+        namespace = node.namespace,
+        global = node.isGlobal
+      )
       SassNull
     }
   }
@@ -2743,10 +2769,13 @@ final class EvaluateVisitor(
       if (node.isExclusive) toInt
       else toInt + direction
 
+    // dart-sass (async_evaluate.dart:1645-1662): use setLocalVariable for
+    // the loop variable so it doesn't overwrite an outer variable with the
+    // same name. The entire loop runs inside a semi-global scope.
     _withSemiGlobalScope {
       var i = fromInt
       while (i != end) {
-        _environment.setVariable(
+        _environment.setLocalVariable(
           node.variable,
           SassNumber.withUnits(
             i.toDouble,
@@ -2765,17 +2794,20 @@ final class EvaluateVisitor(
 
   override def visitEachRule(node: EachRule): Value = {
     val listValue = node.list.accept(this)
+    // dart-sass (async_evaluate.dart:1424-1445): use setLocalVariable for
+    // the loop variable so it doesn't overwrite an outer variable with the
+    // same name. The entire loop runs inside a semi-global scope.
     _withSemiGlobalScope {
       for (element <- listValue.asList) {
         if (node.variables.length == 1) {
-          _environment.setVariable(node.variables.head, element)
+          _environment.setLocalVariable(node.variables.head, element.withoutSlash)
         } else {
           // Destructure sub-list values; pad with null for missing slots.
           val sub = element.asList
           var i   = 0
           while (i < node.variables.length) {
-            val v = if (i < sub.length) sub(i) else SassNull
-            _environment.setVariable(node.variables(i), v)
+            val v = if (i < sub.length) sub(i).withoutSlash else SassNull
+            _environment.setLocalVariable(node.variables(i), v)
             i += 1
           }
         }
@@ -2837,9 +2869,25 @@ final class EvaluateVisitor(
   override def visitSilentComment(node: SilentComment): Value = SassNull
 
   override def visitLoudComment(node: LoudComment): Value = {
-    val text    = _performInterpolation(node.text)
-    val comment = new ModifiableCssComment(text, node.text.span)
-    _addChild(comment)
+    // NOTE: this logic is largely duplicated in [visitCssComment]. Most changes
+    // here should be mirrored there.
+
+    // dart-sass: loud comments inside function bodies are silently ignored.
+    if (_inFunction) return SassNull
+
+    // Comments are allowed to appear between CSS imports.
+    _root.foreach { root =>
+      if ((_parent.get eq root) && _endOfImports == root.children.length) {
+        _endOfImports += 1
+      }
+    }
+
+    var text = _performInterpolation(node.text)
+    // Indented syntax doesn't require */
+    if (!text.endsWith("*/")) text += " */"
+
+    _copyParentAfterSibling()
+    _addChild(new ModifiableCssComment(text, node.text.span))
     SassNull
   }
 
@@ -2847,7 +2895,11 @@ final class EvaluateVisitor(
     val nameText  = _performInterpolation(node.name)
     val nameValue = new CssValue[String](nameText, node.name.span)
     val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
-      new CssValue[String](_performInterpolation(interp), interp.span)
+      val raw = _performInterpolation(interp)
+      // dart-sass strips // comments at parse time; our raw-text parser
+      // preserves them, so strip them post-interpolation.
+      val stripped = _stripSilentComments(raw)
+      new CssValue[String](stripped, interp.span)
     }
 
     val childless = node.children.isEmpty
@@ -2861,39 +2913,51 @@ final class EvaluateVisitor(
     if (childless) {
       _addChild(rule)
     } else {
-      // At-rules like @font-face and @keyframes bubble up from nested
-      // style rules. Unlike @media/@supports (which wrap a copy of the
-      // enclosing style rule inside), @font-face and @keyframes just
-      // hoist to the nearest non-style-rule parent without any selector
-      // wrapping.
+      val wasInKeyframes = _inKeyframes
+      val wasInUnknownAtRule = _inUnknownAtRule
       val nameLower = nameText.toLowerCase
-      val shouldBubble = nameLower == "font-face" || nameLower == "keyframes" ||
-        nameLower == "-webkit-keyframes" || nameLower == "-moz-keyframes" ||
-        nameLower == "-o-keyframes" || nameLower == "-ms-keyframes"
-      val enclosingStyleRule = _styleRule
+      if (ssg.sass.Utils.unvendor(nameLower) == "keyframes") {
+        _inKeyframes = true
+      } else {
+        _inUnknownAtRule = true
+      }
 
-      if (shouldBubble && enclosingStyleRule.isDefined) {
-        val savedParent = _parent
-        val nearestNonStyle = _nearestNonStyleRuleParent()
-        _parent = Nullable(nearestNonStyle)
-        try
-          _withParent(rule) {
-            _withScope {
+      // dart-sass: _withParent with through = CssStyleRule makes the
+      // at-rule bubble through enclosing style rules automatically.
+      // When inside a style rule, a copy of the style rule is created
+      // inside the at-rule to hold the nested children.
+      _addChild(rule, through = (n: CssNode) => n.isInstanceOf[CssStyleRule])
+      val savedParent = _parent
+      _parent = Nullable(rule: ModifiableCssParentNode)
+      try {
+        val enclosingStyleRule = _styleRule
+        if (enclosingStyleRule.isEmpty || _inKeyframes || nameLower == "font-face") {
+          // Special-cased at-rules within style blocks are pulled out to the
+          // root. Equivalent to prepending "@at-root" on them.
+          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
+          }
+        } else {
+          // If we're in a style rule, copy it into the at-rule so that
+          // declarations immediately inside it have somewhere to go.
+          //
+          // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
+          val innerRule = enclosingStyleRule.get.copyWithoutChildren()
+          _withParent(innerRule, addChild = true) {
+            _withStyleRule(innerRule) {
               for (statement <- node.children.get) {
                 val _ = statement.accept(this)
               }
             }
           }
-        finally _parent = savedParent
-      } else {
-        _withParent(rule) {
-          _withScope {
-            for (statement <- node.children.get) {
-              val _ = statement.accept(this)
-            }
-          }
         }
+      } finally {
+        _parent = savedParent
       }
+      _inUnknownAtRule = wasInUnknownAtRule
+      _inKeyframes = wasInKeyframes
     }
     SassNull
   }
@@ -2910,11 +2974,10 @@ final class EvaluateVisitor(
     *
     * This will be non-empty if and only if [[_mediaQueries]] is the result of a merge. Port of dart-sass `_mediaQuerySources` (evaluate.dart:213).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: used when @media query merge tracking is wired
   private var _mediaQuerySources: Set[CssMediaQuery] = Set.empty
 
   override def visitMediaRule(node: MediaRule): Value = {
-    val queryText = _performInterpolation(node.query)
+    val queryText = _stripCssComments(_performInterpolation(node.query))
     // Preflight: reject obviously invalid @media query shapes that dart-sass
     // rejects at parse time but that our stage-1 StylesheetParser slurps as
     // raw text. We do this to bring expected-error-not-raised cases in line
@@ -2927,53 +2990,176 @@ final class EvaluateVisitor(
     // Level-3 syntax our parser supports (e.g. interpolated fragments).
     val parsed: List[CssMediaQuery] =
       ssg.sass.parse.MediaQueryParser.tryParseList(queryText).getOrElse(List(CssMediaQuery.condition(List(queryText))))
-    val rule         = new ModifiableCssMediaRule(parsed, node.span)
-    val savedQueries = _mediaQueries
-    _mediaQueries = parsed
 
-    // Sass media bubbling: when a `@media` rule appears inside a style
-    // rule, the media rule itself attaches to the nearest non-style
-    // parent (typically the stylesheet root or an enclosing media rule),
-    // and a clone of the enclosing style rule is placed inside the media
-    // rule to hold the nested children. This produces output like
-    // `.a { @media (q) { color: red; } }` => `@media (q) { .a { color: red; } }`.
-    val enclosingStyleRule = _styleRule
-    try
-      if (enclosingStyleRule.isDefined) {
-        val savedParent = _parent
-        val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
-        _parent = Nullable(nearestNonStyle)
-        try
-          _withParent(rule) {
-            // Build a fresh style rule inside the media rule with the
-            // same selector box as the enclosing style rule, then run
-            // the media's children as if they were direct children of
-            // that style rule.
-            val outer     = enclosingStyleRule.get
-            val innerRule = outer.copyWithoutChildren()
-            _withParent(innerRule) {
-              _withStyleRule(innerRule) {
-                _withScope {
-                  for (statement <- node.children.get) {
-                    val _ = statement.accept(this)
-                  }
-                }
+    // dart-sass: merge with enclosing @media queries if any exist.
+    // If the merge produces an empty result, the nested @media is
+    // impossible (e.g. @media screen { @media print { ... } }) and
+    // should be skipped entirely. If there are no enclosing queries,
+    // use the parsed queries as-is.
+    val mergedQueries: Nullable[List[CssMediaQuery]] =
+      if (_mediaQueries.nonEmpty) _mergeMediaQueries(_mediaQueries, parsed)
+      else Nullable.empty
+    // If merge returned an empty list (no possible merge), skip this rule.
+    if (mergedQueries.isDefined && mergedQueries.get.isEmpty) return SassNull
+
+    val effectiveQueries = mergedQueries.getOrElse(parsed)
+    val mergedSources: Set[CssMediaQuery] =
+      if (mergedQueries.isEmpty) Set.empty
+      else _mediaQuerySources ++ _mediaQueries.toSet ++ parsed.toSet
+
+    val rule = new ModifiableCssMediaRule(effectiveQueries, node.span)
+
+    // dart-sass (async_evaluate.dart:2284-2316): use _withParent with a
+    // `through` function that bubbles the media rule past enclosing style
+    // rules and past enclosing media rules whose queries are all part of
+    // the merge sources. This is what causes nested @media to be promoted
+    // to siblings of the outer @media when the merge succeeds.
+    // dart-sass: bubble @media past CssStyleRule and past merge-source
+    // CssMediaRule. When _inKeyframes, our parser produces CssStyleRule
+    // nodes for keyframe selectors (to/from/0%/etc.) — dart-sass produces
+    // CssKeyframeBlock instead. Don't bubble through CssStyleRule when
+    // _inKeyframes to avoid moving @media out of keyframe blocks.
+    val throughFn: CssNode => Boolean = { (n: CssNode) =>
+      n match {
+        case _: CssStyleRule => !_inKeyframes
+        case mr: CssMediaRule if mergedSources.nonEmpty =>
+          mr.queries.forall(mergedSources.contains)
+        case _ => false
+      }
+    }
+
+    _withParent(rule, through = throughFn) {
+      _withMediaQueries(effectiveQueries, mergedSources) {
+        val enclosingStyleRule = _styleRule
+        // dart-sass: when inside keyframes, our parser uses CssStyleRule for
+        // keyframe selectors (to/from/0%) while dart-sass uses CssKeyframeBlock.
+        // Don't copy the keyframe selector into the media query — @media
+        // inside keyframes should contain its children directly.
+        if (enclosingStyleRule.isDefined && !_inKeyframes) {
+          // If we're in a style rule, copy it into the media query so that
+          // declarations immediately inside @media have somewhere to go.
+          //
+          // For example, "a {@media screen {b: c}}" should produce
+          // "@media screen {a {b: c}}".
+          val innerRule = enclosingStyleRule.get.copyWithoutChildren()
+          _withParent(innerRule) {
+            _withStyleRule(innerRule) {
+              for (statement <- node.children.get) {
+                val _ = statement.accept(this)
               }
             }
           }
-        finally _parent = savedParent
-      } else {
-        _withParent(rule) {
-          _withScope {
-            for (statement <- node.children.get) {
-              val _ = statement.accept(this)
-            }
+        } else {
+          for (statement <- node.children.get) {
+            val _ = statement.accept(this)
           }
         }
       }
-    finally
-      _mediaQueries = savedQueries
+    }
     SassNull
+  }
+
+  /** Strips `/* ... */` CSS comments from text, collapsing surrounding
+    * whitespace to a single space. Preserves quoted strings. Mirrors the
+    * comment-stripping that dart-sass's structured media-query parser
+    * performs implicitly by consuming and discarding comments during
+    * tokenization.
+    */
+  /** Strips `//` (silent) comments from text produced by raw-text interpolation
+    * in SCSS at-rule values. The dart-sass parser handles these at parse time;
+    * our stage-1 parser copies raw text, so we strip them post-interpolation.
+    * Only strips `//` when it's outside strings and parentheses (to avoid
+    * stripping `//` in URLs like `url(//example.com)`).
+    */
+  private def _stripSilentComments(text: String): String = {
+    if (!text.contains("//")) return text
+    val sb = new StringBuilder(text.length)
+    var i = 0
+    val n = text.length
+    var parenDepth = 0
+    while (i < n) {
+      val c = text.charAt(i)
+      if (c == '/' && i + 1 < n && text.charAt(i + 1) == '/' && parenDepth == 0) {
+        // Skip to end of line
+        while (i < n && text.charAt(i) != '\n') i += 1
+        // Trim trailing whitespace before the comment
+        while (sb.nonEmpty && sb.last == ' ') sb.deleteCharAt(sb.length - 1)
+      } else if (c == '(') {
+        parenDepth += 1
+        sb.append(c)
+        i += 1
+      } else if (c == ')') {
+        if (parenDepth > 0) parenDepth -= 1
+        sb.append(c)
+        i += 1
+      } else if (c == '"' || c == '\'') {
+        // Don't strip inside strings
+        sb.append(c)
+        i += 1
+        while (i < n && text.charAt(i) != c) {
+          if (text.charAt(i) == '\\' && i + 1 < n) {
+            sb.append(text.charAt(i))
+            i += 1
+          }
+          sb.append(text.charAt(i))
+          i += 1
+        }
+        if (i < n) { sb.append(text.charAt(i)); i += 1 }
+      } else {
+        sb.append(c)
+        i += 1
+      }
+    }
+    sb.toString().trim
+  }
+
+  private def _stripCssComments(text: String): String = {
+    if (!text.contains("/*")) text
+    else {
+      val sb = new StringBuilder(text.length)
+      var i = 0
+      val n = text.length
+      while (i < n) {
+        val c = text.charAt(i)
+        if (c == '/' && i + 1 < n && text.charAt(i + 1) == '*') {
+          // Skip past */
+          i += 2
+          while (i + 1 < n && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/')) i += 1
+          if (i + 1 < n) i += 2 // skip */
+          // Collapse surrounding whitespace: after stripping a comment, ensure
+          // at most one space exists in its place. If preceding text already ends
+          // with whitespace, skip any following whitespace too; otherwise emit one
+          // space if the comment was not adjacent to structural characters.
+          if (sb.nonEmpty && (sb.last == ' ' || sb.last == '\t')) {
+            // Already have whitespace before the comment; skip any whitespace after it.
+            while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) i += 1
+          } else if (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) {
+            // No whitespace before, but whitespace after; keep exactly one space.
+            sb.append(' ')
+            while (i < n && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) i += 1
+          } else if (sb.nonEmpty && i < n) {
+            // No whitespace on either side; emit a space as separator.
+            sb.append(' ')
+          }
+        } else if (c == '"' || c == '\'') {
+          sb.append(c)
+          i += 1
+          while (i < n && text.charAt(i) != c) {
+            if (text.charAt(i) == '\\' && i + 1 < n) {
+              sb.append(text.charAt(i))
+              i += 1
+            }
+            sb.append(text.charAt(i))
+            i += 1
+          }
+          if (i < n) { sb.append(text.charAt(i)); i += 1 }
+        } else {
+          sb.append(c)
+          i += 1
+        }
+      }
+      sb.toString()
+    }
   }
 
   /** Rejects a small set of unambiguously invalid `@media` query shapes. Mirrors dart-sass StylesheetParser diagnostics for cases that our stage-1 parser would otherwise accept as raw text. Only runs
@@ -3665,9 +3851,9 @@ final class EvaluateVisitor(
       val oldInSupports = _inSupportsDeclaration
       _inSupportsDeclaration = true
       try {
-        val nameStr  = _evaluateToCss(sd.name, quote = false)
+        val nameStr  = _evaluateToCss(sd.name)
         val space    = if (sd.isCustomProperty) "" else " "
-        val valueStr = _evaluateToCss(sd.value, quote = false)
+        val valueStr = _evaluateToCss(sd.value)
         s"($nameStr:$space$valueStr)"
       } finally
         _inSupportsDeclaration = oldInSupports
@@ -3739,32 +3925,27 @@ final class EvaluateVisitor(
     throw new ReturnSignal(node.expression.accept(this).withoutSlash)
 
   override def visitContentRule(node: ContentRule): Value = {
-    val block: Nullable[ContentBlock] = _environment.content
-    block.foreach { cb =>
+    val contentCallable: Nullable[UserDefinedCallable[Environment]] = _environment.content
+    contentCallable.foreach { callable =>
+      val cb = callable.declaration.asInstanceOf[ContentBlock]
       // Evaluate `@content(arg1, arg2, ...)` arguments in the current
-      // (mixin) environment, then bind them to the content block's
-      // declared parameters (`@include foo using ($p1, $p2)`) before
-      // running the block body in a fresh scope.
+      // (mixin) environment, then switch to the call-site environment
+      // captured by the content callable and run the block body.
       //
-      // Crucially, while running the block we must NOT see the same content
-      // pointer that brought us here: otherwise a nested `@include` whose
-      // own body contains `@content` would recurse into itself forever.
-      // We clear `_environment.content` for the duration of the block
-      // evaluation (dart-sass keeps a per-block closure environment, but
-      // clearing is enough to break the recursion — the correct forwarding
-      // to the caller's content is a separate feature tracked elsewhere).
+      // dart-sass (async_evaluate.dart:1345-1350) delegates to
+      // _runUserDefinedCallable, which switches to the callable's
+      // captured environment. This ensures variables inside the
+      // @content body resolve in the scope where the @include was
+      // written, not the mixin's body scope.
       val (positional, named) = _evaluateArguments(node.arguments)
-      val savedContent        = _environment.content
-      _environment.content = Nullable.empty
-      try
-        _withScope {
+      _withEnvironment(callable.environment.closure()) {
+        _environment.scope() {
           _bindParameters(cb.parameters, positional, named)
           for (statement <- cb.childrenList) {
             val _ = statement.accept(this)
           }
         }
-      finally
-        _environment.content = savedContent
+      }
     }
     SassNull
   }
@@ -3791,12 +3972,22 @@ final class EvaluateVisitor(
     // context and configuration construction.
     val oldCallableNode = _callableNode
     _callableNode = Nullable(node: ssg.sass.ast.AstNode)
+    // dart-sass: wrap the @content block in a UserDefinedCallable that
+    // captures the call-site environment, so that @content evaluates
+    // variables in the scope where the @include was written, not the
+    // scope of the mixin body (async_evaluate.dart:2196-2202).
+    val contentCallable: Nullable[UserDefinedCallable[Environment]] =
+      node.content match {
+        case cb: ContentBlock =>
+          Nullable(UserDefinedCallable(cb, _environment.closure()))
+        case _ => Nullable.empty
+      }
     try
       _invokeMixinCallable(
         mixin,
         positional,
         named,
-        node.content.asInstanceOf[Nullable[ContentBlock]]
+        contentCallable
       )
     catch {
       // Built-in mixins (e.g. `meta.apply`) may raise bare
@@ -3818,7 +4009,7 @@ final class EvaluateVisitor(
     callable:   Callable,
     positional: List[Value],
     named:      ListMap[String, Value],
-    content:    Nullable[ContentBlock]
+    content:    Nullable[UserDefinedCallable[Environment]]
   ): Unit =
     ssg.sass.AliasedCallable.unwrap(callable) match {
       case ud: UserDefinedCallable[?] =>
@@ -3899,6 +4090,8 @@ final class EvaluateVisitor(
     // shielded from the body's mutations.
     _environment.scope() {
       _bindParameters(fr.parameters, positional, named)
+      val oldInFunction = _inFunction
+      _inFunction = true
       try {
         for (statement <- fr.childrenList) {
           val _ = statement.accept(this)
@@ -3908,6 +4101,8 @@ final class EvaluateVisitor(
         SassNull
       } catch {
         case rs: ReturnSignal => rs.value
+      } finally {
+        _inFunction = oldInFunction
       }
     }
 
@@ -3995,19 +4190,14 @@ final class EvaluateVisitor(
       // Leftover named args = anything not consumed by a declared param.
       val declaredNames = params.iterator.map(_.name).toSet
       val leftover      = named.filter { case (k, _) => !declaredNames.contains(k) }
+      // dart-sass: the rest parameter always gets a SassArgumentList
+      // (not a plain SassList) so type-of() returns "arglist".
       val restValue: ssg.sass.value.Value =
-        if (declared.keywordRestParameter.isDefined || leftover.nonEmpty) {
-          new ssg.sass.value.SassArgumentList(
-            extras,
-            leftover,
-            ssg.sass.value.ListSeparator.Comma
-          )
-        } else {
-          ssg.sass.value.SassList(
-            extras,
-            ssg.sass.value.ListSeparator.Comma
-          )
-        }
+        new ssg.sass.value.SassArgumentList(
+          extras,
+          leftover,
+          ssg.sass.value.ListSeparator.Comma
+        )
       _environment.setVariable(restName, restValue)
     }
     // Bind the keyword-rest parameter to a map of leftover keyword args.
@@ -4149,47 +4339,54 @@ final class EvaluateVisitor(
     // right callback and the callback itself will do per-overload validation.
     if (bic.isOverloaded && names.nonEmpty) {
       val namesSet = names.toSet
+      val namedKeys = named.keySet
       val (knownNamed, leftoverNamed) = named.partition { case (k, _) => namesSet.contains(k) }
-      if (leftoverNamed.nonEmpty && knownNamed.isEmpty) {
-        // None of the named args match the canonical signature — the call
-        // is meant for a different overload. Package everything into a
-        // SassArgumentList so the single-arg overload (e.g. $channels)
-        // receives the named-arg value correctly.
-        val al = new ssg.sass.value.SassArgumentList(
-          positional,
-          named,
-          ssg.sass.value.ListSeparator.Comma
-        )
-        return List(al)
+      // For overloaded functions, always try to find the tightest-fitting
+      // overload whose parameter names are a superset of the named keys.
+      // The canonical signature may be wider (e.g. $red,$green,$blue,$alpha)
+      // when the caller meant ($color, $alpha) — both contain "alpha".
+      val betterSig = _findMatchingOverloadSig(bic, positional.length, namedKeys)
+      betterSig match {
+        case Some(altNames) =>
+          return _mergeWithParamNames(altNames, positional, named)
+        case None if leftoverNamed.nonEmpty =>
+          if (knownNamed.isEmpty) {
+            // None of the named args match any overload — package
+            // into a SassArgumentList for the single-arg overload.
+            val al = new ssg.sass.value.SassArgumentList(
+              positional,
+              named,
+              ssg.sass.value.ListSeparator.Comma
+            )
+            return List(al)
+          }
+          // Partial match to canonical — merge what we can and wrap the
+          // rest into an argument list.
+          val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
+          val maxIdx       =
+            (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+          val buf = scala.collection.mutable.ListBuffer.empty[Value]
+          var i   = 0
+          while (i <= maxIdx && i < names.length) {
+            val pname = names(i)
+            if (i < positional.length) buf += positional(i)
+            else
+              knownNamed.get(pname) match {
+                case Some(v) => buf += v
+                case _       => buf += SassNull
+              }
+            i += 1
+          }
+          val al = new ssg.sass.value.SassArgumentList(
+            Nil,
+            leftoverNamed,
+            ssg.sass.value.ListSeparator.Comma
+          )
+          buf += al
+          return buf.toList
+        case None =>
+          // All named match canonical — fall through to normal merge
       }
-      // Some match canonical, some don't — merge canonical names into
-      // positional and wrap the rest into an argument list.
-      if (leftoverNamed.nonEmpty) {
-        val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
-        val maxIdx       =
-          (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
-        val buf = scala.collection.mutable.ListBuffer.empty[Value]
-        var i   = 0
-        while (i <= maxIdx && i < names.length) {
-          val pname = names(i)
-          if (i < positional.length) buf += positional(i)
-          else
-            knownNamed.get(pname) match {
-              case Some(v) => buf += v
-              case _       => buf += SassNull
-            }
-          i += 1
-        }
-        // Wrap leftover into argument list for rest consumption
-        val al = new ssg.sass.value.SassArgumentList(
-          Nil,
-          leftoverNamed,
-          ssg.sass.value.ListSeparator.Comma
-        )
-        buf += al
-        return buf.toList
-      }
-      // All named match canonical — fall through to normal merge
     }
     if (names.isEmpty) {
       // rest-only signature (`$args...`): wrap positional + all kwargs
@@ -4246,6 +4443,94 @@ final class EvaluateVisitor(
       }
       buf.toList
     }
+  }
+
+  /** Extracts parameter names from a raw overload signature string.
+    * E.g. `"$color, $alpha"` -> `List("color", "alpha")`.
+    */
+  private def _sigParamNames(sig: String): List[String] = {
+    val trimmed = sig.trim
+    if (trimmed.isEmpty) return Nil
+    val parts = scala.collection.mutable.ListBuffer.empty[String]
+    val buf   = new StringBuilder()
+    var depth = 0
+    var i     = 0
+    while (i < trimmed.length) {
+      val c = trimmed.charAt(i)
+      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+      else buf.append(c)
+      i += 1
+    }
+    if (buf.nonEmpty) parts += buf.toString().trim
+    parts.toList.flatMap { raw =>
+      val withoutDefault = raw.indexOf(':') match {
+        case -1  => raw
+        case idx => raw.substring(0, idx).trim
+      }
+      if (withoutDefault.endsWith("...")) None
+      else if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
+      else None
+    }
+  }
+
+  /** Searches all overload signatures of [[bic]] to find one whose parameter
+    * names are a superset of the caller's [[namedKeys]] and can accommodate
+    * [[positionalCount]] positional args. Returns the matched parameter names
+    * or None.
+    */
+  private def _findMatchingOverloadSig(
+    bic:             BuiltInCallable,
+    positionalCount: Int,
+    namedKeys:       Set[String]
+  ): Option[List[String]] = {
+    // Collect all matching overloads and pick the one with the fewest
+    // parameters (tightest match). This avoids accidentally matching a
+    // wider overload like ($red, $green, $blue, $alpha) when the caller
+    // meant ($color, $alpha) — both contain "$alpha" in their names.
+    val totalArgCount = positionalCount + namedKeys.size
+    var best: Option[List[String]] = None
+    var bestArity = Int.MaxValue
+    for (sig <- bic.allSignatures) {
+      val pNames = _sigParamNames(sig)
+      val pNameSet = pNames.toSet
+      if (namedKeys.subsetOf(pNameSet) && pNames.length >= totalArgCount) {
+        if (pNames.length < bestArity) {
+          best = Some(pNames)
+          bestArity = pNames.length
+        }
+      }
+    }
+    best
+  }
+
+  /** Merges named arguments into the positional list using a specific
+    * parameter name list (from a matched overload signature).
+    */
+  private def _mergeWithParamNames(
+    paramNames: List[String],
+    positional: List[Value],
+    named:      ListMap[String, Value]
+  ): List[Value] = {
+    val namedIndices = named.keys.flatMap(k => {
+      val idx = paramNames.indexOf(k)
+      if (idx >= 0) Some(idx) else None
+    })
+    val maxIdx = (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+    val buf = scala.collection.mutable.ListBuffer.empty[Value]
+    var i   = 0
+    while (i <= maxIdx && i < paramNames.length) {
+      val pname = paramNames(i)
+      if (i < positional.length) buf += positional(i)
+      else
+        named.get(pname) match {
+          case Some(v) => buf += v
+          case _       => buf += SassNull
+        }
+      i += 1
+    }
+    buf.toList
   }
 
   /** Evaluates the positional and named expressions in [[args]] against the current environment, returning a `(positional, named)` pair. Rest and keyword-rest arguments are expanded below.
@@ -4524,7 +4809,7 @@ final class EvaluateVisitor(
     val saved = _parent
     _parent = Nullable(mediaRule: ModifiableCssParentNode)
     try {
-      _withMediaQueries(effectiveQueries, mergedSources,
+      _withMediaQueries(effectiveQueries, mergedSources) {
         _styleRule match {
           case sr if sr.isDefined =>
             // If we're in a style rule, copy it into the media query so that
@@ -4543,7 +4828,7 @@ final class EvaluateVisitor(
               child.accept(this)
             }
         }
-      )
+      }
     } finally {
       _parent = saved
     }
