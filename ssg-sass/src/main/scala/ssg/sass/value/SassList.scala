@@ -85,9 +85,8 @@ class SassList(
     * reached through `meta.inspect(...)` and the debug/error paths.
     */
   override def toCssString(quote: Boolean = true): String = {
-    val elems =
-      if (separator == ListSeparator.Comma || hasBrackets) contents
-      else contents.filterNot(_.isBlank)
+    // dart-sass: filter out blank (null) elements for all separators.
+    val elems = contents.filterNot(_.isBlank)
     val sepStr = separator match {
       case ListSeparator.Comma     => ", "
       case ListSeparator.Space     => " "

@@ -119,63 +119,45 @@ object SimpleSelector {
   /** Unifies a universal or type selector with another simple selector.
     *
     * Returns `None` if unification is impossible.
+    *
+    * Port of dart-sass `unifyUniversalAndElement` (lib/src/extend/functions.dart:166-194).
+    * Namespace semantics:
+    *   - `Nullable.Null` = default (no prefix) — matches only the default namespace
+    *   - `Some("*")`     = wildcard `*|` — matches any namespace
+    *   - `Some("")`      = empty `||` — matches elements with no namespace
+    *   - `Some("ns")`    = explicit — matches only that namespace
     */
   private[selector] def unifyUniversalAndElement(
     selector1: SimpleSelector,
     selector2: SimpleSelector
   ): Option[SimpleSelector] = {
-    val (ns1, name1) = selector1 match {
-      case u: UniversalSelector => (u.namespace, Nullable.Null[String])
-      case t: TypeSelector      => (t.name.namespace, Nullable(t.name.name))
-      case _ => (Nullable.Null[String], Nullable.Null[String])
-    }
-    val (ns2, name2) = selector2 match {
-      case u: UniversalSelector => (u.namespace, Nullable.Null[String])
-      case t: TypeSelector      => (t.name.namespace, Nullable(t.name.name))
-      case _ => (Nullable.Null[String], Nullable.Null[String])
-    }
+    val (namespace1, name1) = _namespaceAndName(selector1)
+    val (namespace2, name2) = _namespaceAndName(selector2)
 
-    val resultNs: Nullable[String] =
-      if (ns1 == ns2 || ns2.exists(_ == "*")) ns1
-      else if (ns1.exists(_ == "*") || ns1.isEmpty) ns2
-      else Nullable.Null
+    // Unify namespaces
+    val namespace: Nullable[String] =
+      if (namespace1 == namespace2 || namespace2.exists(_ == "*")) namespace1
+      else if (namespace1.exists(_ == "*")) namespace2
+      else return None // incompatible namespaces
 
-    // Check for conflicting namespaces
-    if (
-      resultNs.isEmpty && ns1.isDefined && ns2.isDefined &&
-      !ns1.exists(_ == "*") && !ns2.exists(_ == "*") && ns1 != ns2
-    ) {
-      // Actually conflicting
-      None
-    } else {
-      val resultName: Nullable[String] =
-        if (name1.isDefined && name2.isDefined) {
-          if (name1 == name2) name1
-          else Nullable.Null // conflicting names
-        } else if (name1.isDefined) name1
-        else name2
+    // Unify names
+    val name: Nullable[String] =
+      if (name1 == name2 || name2.isEmpty) name1
+      else if (name1.isEmpty) name2
+      else return None // incompatible names
 
-      // If we couldn't reconcile names, fail
-      if (name1.isDefined && name2.isDefined && name1 != name2) {
-        None
-      } else {
-        val sp         = selector1.span
-        val resolvedNs =
-          if (resultNs.isEmpty && ns1.isEmpty && ns2.isEmpty) Nullable.Null
-          else if (resultNs.isEmpty) {
-            if (ns1.exists(_ == "*")) ns2
-            else if (ns2.exists(_ == "*")) ns1
-            else ns1.orElse(ns2)
-          } else resultNs
-
-        if (resultName.isDefined) {
-          Some(TypeSelector(QualifiedName(resultName.get, resolvedNs), sp))
-        } else {
-          Some(new UniversalSelector(sp, resolvedNs))
-        }
-      }
-    }
+    val sp = selector1.span
+    if (name.isDefined) Some(TypeSelector(QualifiedName(name.get, namespace), sp))
+    else Some(new UniversalSelector(sp, namespace))
   }
+
+  /** Extracts (namespace, name) from a UniversalSelector or TypeSelector. */
+  private def _namespaceAndName(selector: SimpleSelector): (Nullable[String], Nullable[String]) =
+    selector match {
+      case u: UniversalSelector => (u.namespace, Nullable.Null)
+      case t: TypeSelector      => (t.name.namespace, Nullable(t.name.name))
+      case _ => throw new IllegalArgumentException(s"Expected UniversalSelector or TypeSelector, got ${selector.getClass}")
+    }
 }
 
 // ---------------------------------------------------------------------------

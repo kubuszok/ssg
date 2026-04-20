@@ -232,6 +232,10 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   // Public API
   // ---------------------------------------------------------------------------
 
+  /** Adds [complexes] to the set of original selectors, so _trim doesn't drop them. */
+  def addOriginals(complexes: Iterable[ComplexSelector]): Unit =
+    _originals ++= complexes
+
   override def isEmpty: Boolean = _extensions.isEmpty
 
   override def simpleSelectors: Set[SimpleSelector] = _selectors.keySet.toSet
@@ -544,7 +548,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   // Private: _extendList / _extendComplex / _extendCompound / _extendSimple
   // ---------------------------------------------------------------------------
 
-  private[extend] def _extendList(
+  private[sass] def _extendList(
     list:              SelectorList,
     extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]] = None

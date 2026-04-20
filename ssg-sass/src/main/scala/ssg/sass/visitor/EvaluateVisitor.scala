@@ -2431,9 +2431,11 @@ final class EvaluateVisitor(
     // selector because keyframe blocks (to, from, 0%, etc.) are standalone.
     // In dart-sass these are parsed as KeyframeBlock nodes, but our parser
     // produces StyleRule nodes for them. Skip parent nesting when _inKeyframes.
+    // For plain CSS, skip parent nesting — preserve the selector as-is.
+    val _isPlainCssSelector = _stylesheet.exists(_.plainCss)
     val parentSelectorRule: Nullable[ModifiableCssStyleRule] =
-      if (_inKeyframes) Nullable.empty else _styleRuleIgnoringAtRoot
-    val implicitParent: Boolean = !_atRootExcludingStyleRule && !_inKeyframes
+      if (_inKeyframes || _isPlainCssSelector) Nullable.empty else _styleRuleIgnoringAtRoot
+    val implicitParent: Boolean = !_atRootExcludingStyleRule && !_inKeyframes && !_isPlainCssSelector
     val parentText: Nullable[String] =
       if (implicitParent) _styleRule.fold[Nullable[String]](Nullable.empty)(p => Nullable(p.selector.toString))
       else Nullable.empty
@@ -2471,9 +2473,16 @@ final class EvaluateVisitor(
     // dart-sass async_evaluate.dart:2470-2472: when a style rule finishes
     // at the top level (no enclosing style rule), mark the last child of the
     // target parent as isGroupEnd so the serializer knows to emit a blank line.
+    //
+    // EXCEPTION: for plain CSS files, preserve native CSS nesting — nested
+    // style rules are attached as children of the current parent, not
+    // hoisted to a non-style-rule ancestor.
     val outerStyleRule = _styleRule
     val savedParent = _parent
-    val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
+    val isPlainCss = _stylesheet.exists(_.plainCss)
+    val nearestNonStyle: ModifiableCssParentNode =
+      if (isPlainCss) _parent.getOrElse(_nearestNonStyleRuleParent())
+      else _nearestNonStyleRuleParent()
     _parent = Nullable(nearestNonStyle)
     try
       _withParent(rule) {

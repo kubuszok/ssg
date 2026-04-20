@@ -555,6 +555,24 @@ abstract class StylesheetParser protected (
             } else if (ch == CharCode.$rparen) {
               if (depth > 0) depth -= 1
               qBuf.append(scanner.readChar().toChar)
+            } else if (ch == CharCode.$dollar && {
+              val next = scanner.peekChar(1)
+              next >= 0 && CharCode.isNameStart(next)
+            }) {
+              // Bare $variable in media query — wrap as #{$var} so
+              // _parseInterpolatedString evaluates it as an expression.
+              scanner.readChar() // consume '$'
+              val varBuf = new StringBuilder()
+              boundary {
+                while (!scanner.isDone) {
+                  val nc = scanner.peekChar()
+                  if (nc >= 0 && CharCode.isName(nc)) varBuf.append(scanner.readChar().toChar)
+                  else break(())
+                }
+              }
+              qBuf.append("#{$")
+              qBuf.append(varBuf)
+              qBuf.append('}')
             } else if (depth == 0 && (ch == CharCode.$lbrace || ch == CharCode.$semicolon)) {
               break(())
             } else {
@@ -2392,6 +2410,9 @@ abstract class StylesheetParser protected (
     if (trimmed == "true") return new BooleanExpression(value = true, span)
     if (trimmed == "false") return new BooleanExpression(value = false, span)
     if (trimmed == "null") return new NullExpression(span)
+
+    // Parent selector expression: bare `&` evaluates to the current selector.
+    if (trimmed == "&") return SelectorExpression(span)
 
     // Quoted string. Only treat as a single string literal if the opening
     // quote's matching close is at the very end (i.e. the entire trimmed
@@ -4299,10 +4320,36 @@ abstract class StylesheetParser protected (
     if (closeIdx < 0) return text // Unbalanced — return as-is
 
     val inside = text.substring(openIdx, closeIdx)
-    // Only normalize if the supports() content contains newlines
-    if (inside.indexOf('\n') < 0) return text
 
-    val normalized = _collapseNewlineWhitespace(inside)
+    // Trim only leading whitespace (trailing may be significant for
+    // custom property values like `--a: `).
+    val ltrimmed = inside.replaceFirst("^\\s+", "")
+
+    // dart-sass: if the supports() argument is a single `(decl: value)`
+    // condition (one pair of balanced outer parens), strip the outer
+    // parens — `supports((a: b))` → `supports(a: b)`.
+    val ft = ltrimmed.trim
+    val unwrapped =
+      if (ft.startsWith("(") && ft.endsWith(")")) {
+        var innerDepth = 0
+        var k          = 0
+        var balanced   = true
+        while (k < ft.length && balanced) {
+          val ch = ft.charAt(k)
+          if (ch == '(') innerDepth += 1
+          else if (ch == ')') {
+            innerDepth -= 1
+            if (innerDepth == 0 && k != ft.length - 1) balanced = false
+          }
+          k += 1
+        }
+        if (balanced && innerDepth == 0) ft.substring(1, ft.length - 1).trim
+        else ltrimmed
+      } else ltrimmed
+
+    // If the supports() content contains newlines, collapse them.
+    val normalized = if (unwrapped.indexOf('\n') >= 0) _collapseNewlineWhitespace(unwrapped)
+                     else unwrapped
     text.substring(0, openIdx) + normalized + text.substring(closeIdx)
   }
 
@@ -5573,7 +5620,12 @@ abstract class StylesheetParser protected (
           buffer.write(escape(identifierStart = true))
           wroteNewline = false
         } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          // dart-sass uses interpolatedStringToken() which includes the quote
+          // characters in the Interpolation. We wrap the quote chars manually.
+          val q = scanner.peekChar()
+          buffer.writeCharCode(q)
           buffer.addInterpolation(interpolatedString().text)
+          buffer.writeCharCode(q)
           wroteNewline = false
         } else if (c == CharCode.$slash) {
           scanner.peekChar(1) match {

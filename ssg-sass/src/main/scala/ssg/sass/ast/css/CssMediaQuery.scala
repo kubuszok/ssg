@@ -207,7 +207,7 @@ final class CssMediaQuery private (
 object CssMediaQuery {
 
   /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes alone. */
-  private[css] def normalizeCondition(cond: String): String = {
+  private[sass] def normalizeCondition(cond: String): String = {
     if (!(cond.startsWith("(") && cond.endsWith(")"))) return cond
     val inner = cond.substring(1, cond.length - 1)
     val colon = inner.indexOf(':')

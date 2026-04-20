@@ -58,7 +58,7 @@ import ssg.sass.ast.selector.{
   TypeSelector,
   UniversalSelector
 }
-import ssg.sass.extend.{ ExtendMode, MutableExtensionStore }
+import ssg.sass.extend.{ ExtendMode, Extension, MutableExtensionStore }
 import ssg.sass.parse.SelectorParser
 import ssg.sass.util.FileSpan
 import ssg.sass.value.{ ListSeparator, SassBoolean, SassList, SassNull, SassString, Value }
@@ -276,6 +276,18 @@ object SelectorFunctions {
     * Each simple selector in the target compound list gets an extension
     * recorded; the result is the combined selector list after extension.
     */
+  /** Runs the AST-level extend pipeline for `selector-extend` and
+    * `selector-replace` against a throwaway [[MutableExtensionStore]].
+    *
+    * Port of dart-sass `ExtensionStore._extendOrReplace`.  Each target
+    * complex is processed SEQUENTIALLY: the result of extending with one
+    * target feeds into the next, matching the dart-sass loop:
+    * {{{
+    *   for (var complex in targets.components) {
+    *     selector = extender._extendList(selector, { ... }, null);
+    *   }
+    * }}}
+    */
   private def runExtendPipeline(
     selector: SelectorList,
     target:   SelectorList,
@@ -283,19 +295,22 @@ object SelectorFunctions {
     mode:     ExtendMode
   ): SelectorList = {
     val store = new MutableExtensionStore(mode)
-    // Register every simple selector from every complex in `target` as an
-    // extension target. `selector-extend($x, $a.b, $y)` semantically
-    // rewrites each occurrence of `a.b` in `$x` to `$y, a.b`.
+    if (!selector.isInvisible) store.addOriginals(selector.components)
+    var result = selector
     for (complex <- target.components) {
       if (complex.components.length != 1)
         throw SassScriptException(s"Can't extend complex selector $complex.")
       val compound = complex.components.head.selector
-      for (simple <- compound.components) {
-        for (ext <- source.components)
-          store.addExtensionAst(ext, simple, optional = false)
-      }
+      // Build the per-target extensions map
+      val extsMap: Map[SimpleSelector, Map[ComplexSelector, Extension]] =
+        compound.components.iterator.map { simple =>
+          simple -> source.components.iterator.map { ext =>
+            ext -> Extension(ext, simple, selector.span, optional = true)
+          }.toMap
+        }.toMap
+      result = store._extendList(result, extsMap)
     }
-    store.extendList(selector)
+    result
   }
 
   // ---------------------------------------------------------------------------

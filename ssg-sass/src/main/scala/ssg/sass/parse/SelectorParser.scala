@@ -96,6 +96,7 @@ class SelectorParser(
   }
 
   /** Like [[skipSpaces]] but returns `true` if a newline was consumed. */
+  @annotation.nowarn("msg=unused private member") // kept for future use
   private def skipSpacesTrackNewline(): Boolean = {
     var hadNewline = false
     var continue_ = true
@@ -191,23 +192,43 @@ class SelectorParser(
     list
   }
 
+  /** Returns the line number (0-based) for position [p] in the source. */
+  private def lineAt(p: Int): Int = {
+    var line = 0
+    var i    = 0
+    while (i < p && i < src.length) {
+      if (src.charAt(i) == '\n' || src.charAt(i) == '\r' || src.charAt(i) == '\f') {
+        line += 1
+        // Skip \r\n as a single newline
+        if (src.charAt(i) == '\r' && i + 1 < src.length && src.charAt(i + 1) == '\n') i += 1
+      }
+      i += 1
+    }
+    line
+  }
+
   private def parseSelectorList(): SelectorList = {
     val complexes = scala.collection.mutable.ListBuffer.empty[ComplexSelector]
     skipSpaces()
+    // dart-sass selector.dart:94: track the line number of the previous
+    // complex selector so we can detect line breaks between selectors.
+    var previousLine = lineAt(pos)
     complexes += parseComplexSelector()
     skipSpaces()
     while (!isDone() && peek() == ',') {
       pos += 1
-      // dart-sass selector.dart:103-105: track if a newline occurred after
-      // the comma so the serializer can preserve multiline selector lists.
-      // Accumulate across empty comma slots so `a,,\nb` still gets lineBreak.
-      var hadNewline = skipSpacesTrackNewline()
+      skipSpaces()
       while (!isDone() && peek() == ',') {
         pos += 1
-        hadNewline = skipSpacesTrackNewline() || hadNewline
+        skipSpaces()
       }
+      // dart-sass selector.dart:103-105: lineBreak is true if the current
+      // position is on a different line from where the previous complex
+      // selector started, mirroring `scanner.line != previousLine`.
+      val lineBreak = lineAt(pos) != previousLine
+      if (lineBreak) previousLine = lineAt(pos)
       if (!isDone())
-        complexes += parseComplexSelector(lineBreak = hadNewline)
+        complexes += parseComplexSelector(lineBreak = lineBreak)
       skipSpaces()
     }
     if (complexes.isEmpty) fail("Expected selector.")
