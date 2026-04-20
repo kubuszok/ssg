@@ -179,13 +179,21 @@ object MetaFunctions {
       }
     )
 
+  /** Sass treats `_` and `-` as interchangeable in identifiers.
+    * Normalize to `-` for consistent lookup.
+    */
+  private def normalizeName(name: String): String = name.replace('_', '-')
+
   private val variableExistsFn: BuiltInCallable =
     BuiltInCallable.function(
       "variable-exists",
       "$name",
       args =>
         SassBoolean(
-          CurrentEnvironment.get.fold(false)(_.variableExists(assertString(args.head, "name")))
+          CurrentEnvironment.get.fold(false)(e =>
+            e.variableExists(assertString(args.head, "name")) ||
+            e.variableExists(normalizeName(assertString(args.head, "name")))
+          )
         )
     )
 
@@ -194,11 +202,13 @@ object MetaFunctions {
       "function-exists",
       "$name, $module: null",
       { args =>
-        val name      = assertString(args.head, "name")
+        val rawName   = assertString(args.head, "name")
+        val name      = rawName
         val moduleArg = if (args.length > 1) args(1) else SassNull
         val ns        = resolveModuleNamespace(moduleArg)
-        val found     = CurrentEnvironment.get.fold(false)(_.functionExists(name, ns)) ||
-          (moduleArg == SassNull && Functions.lookupGlobal(name).isDefined)
+        val found     = CurrentEnvironment.get.fold(false)(e =>
+          e.functionExists(name, ns) || e.functionExists(normalizeName(name), ns)
+        ) || (moduleArg == SassNull && (Functions.lookupGlobal(name).isDefined || Functions.lookupGlobal(normalizeName(name)).isDefined))
         SassBoolean(found)
       }
     )
@@ -235,7 +245,9 @@ object MetaFunctions {
         val name      = assertString(args.head, "name")
         val moduleArg = if (args.length > 1) args(1) else SassNull
         val ns        = resolveModuleNamespace(moduleArg)
-        SassBoolean(CurrentEnvironment.get.fold(false)(_.mixinExists(name, ns)))
+        SassBoolean(CurrentEnvironment.get.fold(false)(e =>
+          e.mixinExists(name, ns) || e.mixinExists(normalizeName(name), ns)
+        ))
       }
     )
 
@@ -251,9 +263,9 @@ object MetaFunctions {
         // module's variable surface; without a module, check the global scope.
         val found = CurrentEnvironment.get.fold(false) { env =>
           if (ns.isDefined)
-            env.findNamespacedModule(ns.get).fold(false)(m => m.variables.contains(name))
+            env.findNamespacedModule(ns.get).fold(false)(m => m.variables.contains(name) || m.variables.contains(normalizeName(name)))
           else
-            env.variableExists(name)
+            env.variableExists(name) || env.variableExists(normalizeName(name))
         }
         SassBoolean(found)
       }
@@ -414,41 +426,46 @@ object MetaFunctions {
 
   /** Helper: looks up a function callable by name, optionally in a namespaced module. Falls back to the global built-in registry when no module is specified. Returns `Nullable.empty` if not found.
     */
-  private def lookupFunction(name: String, moduleArg: Value): Nullable[Callable] =
+  private def lookupFunction(name: String, moduleArg: Value): Nullable[Callable] = {
+    // Try both the original name and the _/- normalized form.
+    val normalized = normalizeName(name)
     moduleArg match {
       case SassNull =>
-        CurrentEnvironment.get.flatMap(_.getFunction(name)) match {
+        CurrentEnvironment.get.flatMap(e => e.getFunction(name).orElse(e.getFunction(normalized))) match {
           case n if n.isDefined => n
           case _                =>
-            Functions.lookupGlobal(name) match {
+            Functions.lookupGlobal(name).orElse(Functions.lookupGlobal(normalized)) match {
               case Some(b) => Nullable(b: Callable)
               case None    => Nullable.empty
             }
         }
       case other =>
         val ns = argName(other)
-        CurrentEnvironment.get.flatMap(_.getNamespacedFunction(ns, name)) match {
+        CurrentEnvironment.get.flatMap(e => e.getNamespacedFunction(ns, name).orElse(e.getNamespacedFunction(ns, normalized))) match {
           case n if n.isDefined => n
           case _                =>
             // Fall back to the static built-in module table for `sass:` modules
             // even when no `@use` is in scope.
             Functions.modules.get(ns).flatMap { fns =>
-              fns.collectFirst { case b: BuiltInCallable if b.name == name => b: Callable }
+              fns.collectFirst { case b: BuiltInCallable if b.name == name || b.name == normalized => b: Callable }
             } match {
               case Some(c) => Nullable(c)
               case None    => Nullable.empty
             }
         }
     }
+  }
 
   /** Helper: looks up a mixin callable by name, optionally in a namespaced module. */
-  private def lookupMixin(name: String, moduleArg: Value): Nullable[Callable] =
+  private def lookupMixin(name: String, moduleArg: Value): Nullable[Callable] = {
+    val normalized = normalizeName(name)
     moduleArg match {
-      case SassNull => CurrentEnvironment.get.flatMap(_.getMixin(name))
+      case SassNull => CurrentEnvironment.get.flatMap(e => e.getMixin(name).orElse(e.getMixin(normalized)))
       case other    =>
         val ns = argName(other)
-        CurrentEnvironment.get.flatMap(env => env.getNamespace(ns)).flatMap(_.getMixin(name))
+        CurrentEnvironment.get.flatMap(env => env.getNamespace(ns)).flatMap(m => m.getMixin(name).orElse(m.getMixin(normalized)))
     }
+  }
 
   // dart-sass: evaluate.dart:489-520
   private val getFunctionFn: BuiltInCallable =

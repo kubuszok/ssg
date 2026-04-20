@@ -210,7 +210,10 @@ abstract class StylesheetParser protected (
     new Stylesheet(stmts, span, plainCss, warnings.toList, _globalVariables.toMap)
   }
 
-  /** Parses a top-level statement (at statement or style rule). */
+  /** Parses a top-level statement (at statement or style rule).
+    *
+    * dart-sass: `_statement` (stylesheet.dart:196-224).
+    */
   private def _topLevelStatement(): Nullable[Statement] = {
     val c = scanner.peekChar()
     if (c == CharCode.$at) _atRule(root = true)
@@ -219,7 +222,7 @@ abstract class StylesheetParser protected (
       if (scanner.peekChar(1) == CharCode.$slash) _silentComment()
       else _loudComment()
     } else {
-      // Style rule
+      // Style rule (or namespaced variable declaration at top level)
       Nullable(_styleRule())
     }
   }
@@ -250,6 +253,18 @@ abstract class StylesheetParser protected (
     _isUseAllowed = false
 
     name match {
+      case "charset" =>
+        // dart-sass: @charset is silently consumed and not emitted to the CSS.
+        // The charset is used only by the parser for encoding detection;
+        // it does not produce any AST node.
+        _isUseAllowed = wasUseAllowed
+        if (!root) _disallowedAtRule(start)
+        // Consume the string argument and statement separator.
+        if (!atEndOfStatement()) {
+          _rdExpression()
+        }
+        expectStatementSeparator(Nullable("@charset rule"))
+        Nullable.Null
       case "use" =>
         _isUseAllowed = wasUseAllowed
         // dart-sass: @use is only allowed at the root of the stylesheet.
@@ -274,16 +289,21 @@ abstract class StylesheetParser protected (
             val urlText = _consumeImportUrl()
             whitespace(consumeNewlines = false)
             val modifiers = _tryImportModifiers()
-            val urlInterp = Interpolation.plain(urlText, spanFrom(importStart))
-            imports += StaticImport(urlInterp, spanFrom(importStart), modifiers)
+            val urlSpan = spanFrom(importStart)
+            val urlInterp =
+              if (urlText.contains("#{")) _parseInterpolatedString(urlText, urlSpan)
+              else Interpolation.plain(urlText, urlSpan)
+            imports += StaticImport(urlInterp, urlSpan, modifiers)
           } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+            val quoteChar = c.toChar
             val url = string()
             whitespace(consumeNewlines = false)
             val modifiers = _tryImportModifiers()
             val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
               url.startsWith("https://") || url.startsWith("//")
             if (isPlainCss || modifiers.isDefined) {
-              val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
+              // Preserve the original quote style from the source.
+              val urlInterp = Interpolation.plain(s"$quoteChar$url$quoteChar", spanFrom(importStart))
               imports += StaticImport(urlInterp, spanFrom(importStart), modifiers)
             } else {
               // dart-sass: dynamic @import inside control directives or
@@ -849,7 +869,12 @@ abstract class StylesheetParser protected (
               )
             )
           } else {
-            Nullable(new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty))
+            // End of file or unexpected char — treat as childless at-rule.
+            // Preserve the value text if present (e.g. `@namespace url(...)` at EOF).
+            val valueInterp =
+              if (valueText.nonEmpty) Nullable(if (valueText.contains("#{")) _parseInterpolatedString(valueText, nameSpan) else Interpolation.plain(valueText, nameSpan))
+              else Nullable.empty
+            Nullable(new AtRule(nameInterp, spanFrom(start), valueInterp, Nullable.empty))
           }
         }
     }
@@ -1410,20 +1435,30 @@ abstract class StylesheetParser protected (
   /** SCSS-specific children parser: `{ stmt; stmt; }`. */
   private def _childrenScss(): List[Statement] = {
     scanner.expectChar(CharCode.$lbrace)
-    whitespace(consumeNewlines = true)
+    // dart-sass scss.dart:65: whitespace-without-comments after opening brace
+    whitespaceWithoutComments(consumeNewlines = true)
     val stmts = mutable.ListBuffer.empty[Statement]
     while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
       val childLoopPos = scanner.position
-      val stmt = _childStatement()
-      if (stmt.isDefined) stmts += stmt.get
-      whitespace(consumeNewlines = true)
+      // dart-sass scss.dart:68-94: comments are parsed as statements and
+      // followed by whitespaceWithoutComments. Bare semicolons are consumed
+      // then followed by whitespaceWithoutComments.
+      val c = scanner.peekChar()
+      if (c == CharCode.$semicolon) {
+        scanner.readChar()
+        whitespaceWithoutComments(consumeNewlines = true)
+      } else {
+        val stmt = _childStatement()
+        if (stmt.isDefined) stmts += stmt.get
+        whitespaceWithoutComments(consumeNewlines = true)
+      }
       if (scanner.position == childLoopPos) {
         val ctx = if (scanner.isDone) "<EOF>" else {
           val end = math.min(scanner.position + 60, scanner.string.length)
           scanner.string.substring(scanner.position, end).replace("\n", "\\n")
         }
         throw new Error(
-          s"_children() stall at pos ${scanner.position}: stmt=${stmt.isDefined}, context=\"$ctx\""
+          s"_children() stall at pos ${scanner.position}: context=\"$ctx\""
         )
       }
     }
@@ -1967,7 +2002,7 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_variableDeclarationOrStyleRule` (stylesheet.dart:319-339).
     */
-  @annotation.nowarn("msg=unused private member") // wired from _childStatement when context checks are enabled
+  @annotation.nowarn("msg=unused private member") // wired from _topLevelStatement / _childStatement in a future pass
   private def _variableDeclarationOrStyleRule(): Nullable[Statement] = {
     if (plainCss) return Nullable(_styleRule())
 
@@ -2214,28 +2249,61 @@ abstract class StylesheetParser protected (
     */
   private def _unknownAtRule(start: ssg.sass.util.LineScannerState, nameInterp: Interpolation): AtRule = {
     val valueBuf = new StringBuilder()
-    while (!scanner.isDone) {
-      val c = scanner.peekChar()
-      if (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace) {
-        val valueText  = valueBuf.toString().trim
-        val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, spanFrom(start))) else Nullable.empty[Interpolation]
-        if (c == CharCode.$lbrace) {
-          val wasInUnknownAtRule = _inUnknownAtRule
-          _inUnknownAtRule = true
-          val kids = _children()
-          _inUnknownAtRule = wasInUnknownAtRule
-          return new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable(kids))
-        } else if (c == CharCode.$semicolon) {
-          scanner.readChar()
-          return new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable.empty)
+    var brackets = 0
+    import scala.util.boundary, boundary.break
+    boundary {
+      while (!scanner.isDone) {
+        val c = scanner.peekChar()
+        if (brackets == 0 && (c == CharCode.$semicolon || c == CharCode.$lbrace || c == CharCode.$rbrace)) {
+          break(())
+        } else if (brackets == 0 && indented && CharCode.isNewline(c)) {
+          // In the indented syntax, a newline terminates the at-rule value
+          // when not inside brackets (matching dart-sass behavior).
+          break(())
+        } else if (c == CharCode.$lparen || c == CharCode.$lbracket) {
+          brackets += 1
+          valueBuf.append(scanner.readChar().toChar)
+        } else if (c == CharCode.$rparen || c == CharCode.$rbracket) {
+          if (brackets > 0) brackets -= 1
+          valueBuf.append(scanner.readChar().toChar)
+        } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
+          val q = scanner.readChar()
+          valueBuf.append(q.toChar)
+          while (!scanner.isDone && scanner.peekChar() != q) {
+            if (scanner.peekChar() == CharCode.$backslash) {
+              valueBuf.append(scanner.readChar().toChar)
+              if (!scanner.isDone) valueBuf.append(scanner.readChar().toChar)
+            } else {
+              valueBuf.append(scanner.readChar().toChar)
+            }
+          }
+          if (!scanner.isDone) valueBuf.append(scanner.readChar().toChar)
         } else {
-          return new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty)
+          valueBuf.append(scanner.readChar().toChar)
         }
-      } else {
-        valueBuf.append(scanner.readChar().toChar)
       }
     }
-    new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty)
+    val valueText  = valueBuf.toString().trim
+    val valueInterp = if (valueText.nonEmpty) Nullable(Interpolation.plain(valueText, spanFrom(start))) else Nullable.empty[Interpolation]
+    val c = if (!scanner.isDone) scanner.peekChar() else -1
+    if (c == CharCode.$lbrace) {
+      val wasInUnknownAtRule = _inUnknownAtRule
+      _inUnknownAtRule = true
+      val kids = _children()
+      _inUnknownAtRule = wasInUnknownAtRule
+      new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable(kids))
+    } else if (c == CharCode.$semicolon) {
+      scanner.readChar()
+      new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable.empty)
+    } else if (c == CharCode.$rbrace) {
+      new AtRule(nameInterp, spanFrom(start), Nullable.empty, Nullable.empty)
+    } else {
+      // End of statement (newline in indented syntax or EOF) — childless at-rule
+      if (indented && !scanner.isDone && CharCode.isNewline(scanner.peekChar())) {
+        scanner.readChar() // consume the newline
+      }
+      new AtRule(name = nameInterp, span = spanFrom(start), value = valueInterp, childStatements = Nullable.empty)
+    }
   }
 
   /** If the scanner is positioned at `!important` (optionally with whitespace between the `!` and `important`), consume it and return true. Otherwise leave the scanner unchanged and return false.
@@ -2271,7 +2339,11 @@ abstract class StylesheetParser protected (
     val start = scanner.state
     loudComment()
     val text   = scanner.substring(start.position)
-    val interp = Interpolation.plain(text, spanFrom(start))
+    val span   = spanFrom(start)
+    // Parse #{...} interpolations within the comment text so they're
+    // evaluated at runtime (e.g. `/*#{meta.inspect($x)}*/`).
+    val interp = if (text.contains("#{")) _parseInterpolatedString(text, span)
+                 else Interpolation.plain(text, span)
     Nullable(new LoudComment(interp))
   }
 
@@ -4157,11 +4229,21 @@ abstract class StylesheetParser protected (
           }
           if (!scanner.isDone) buf.append(scanner.readChar().toChar)
         } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
-          // Skip loud comments
-          scanner.readChar(); scanner.readChar()
-          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
-            scanner.readChar()
-          if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
+          // Loud comments inside parenthesized arguments (depth > 0) are
+          // part of the CSS output; at the top level (depth == 0) they are
+          // stripped (sass-spec import/comment tests).
+          if (depth > 0) {
+            buf.append(scanner.readChar().toChar) // '/'
+            buf.append(scanner.readChar().toChar) // '*'
+            while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
+              buf.append(scanner.readChar().toChar)
+            if (!scanner.isDone) { buf.append(scanner.readChar().toChar); buf.append(scanner.readChar().toChar) }
+          } else {
+            scanner.readChar(); scanner.readChar()
+            while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
+              scanner.readChar()
+            if (!scanner.isDone) { scanner.readChar(); scanner.readChar() }
+          }
         } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
           // Skip silent comments
           while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
@@ -4171,9 +4253,101 @@ abstract class StylesheetParser protected (
         }
       }
     }
-    val raw = buf.toString().trim
+    val raw = _normalizeImportSupportsWhitespace(buf.toString().trim)
     if (raw.isEmpty) return Nullable.empty
-    Nullable(Interpolation.plain(raw, spanFrom(modStart)))
+    val modSpan = spanFrom(modStart)
+    val interp =
+      if (raw.contains("#{")) _parseInterpolatedString(raw, modSpan)
+      else Interpolation.plain(raw, modSpan)
+    Nullable(interp)
+  }
+
+  /** Normalizes whitespace only inside `supports(...)` content in an @import
+    * modifier string, and only when that content contains newlines (from
+    * indented syntax). Collapses sequences of whitespace including newlines
+    * to a single space. Other modifier functions (layer, arbitrary) and
+    * supports() without embedded newlines are returned unchanged.
+    */
+  private def _normalizeImportSupportsWhitespace(text: String): String = {
+    // Find `supports(` prefix (case-insensitive)
+    val lowerText    = text.toLowerCase
+    val supportsIdx  = lowerText.indexOf("supports(")
+    if (supportsIdx < 0) return text // No supports() — return as-is
+
+    // Find the matching `)` for `supports(`
+    val openIdx = supportsIdx + "supports(".length
+    var depth   = 1
+    var i       = openIdx
+    val len     = text.length
+    var closeIdx = -1
+    while (i < len && depth > 0) {
+      val c = text.charAt(i)
+      if (c == '(') depth += 1
+      else if (c == ')') {
+        depth -= 1
+        if (depth == 0) closeIdx = i
+      } else if (c == '"' || c == '\'') {
+        // Skip quoted strings
+        i += 1
+        while (i < len && text.charAt(i) != c) {
+          if (text.charAt(i) == '\\' && i + 1 < len) i += 1
+          i += 1
+        }
+      }
+      i += 1
+    }
+    if (closeIdx < 0) return text // Unbalanced — return as-is
+
+    val inside = text.substring(openIdx, closeIdx)
+    // Only normalize if the supports() content contains newlines
+    if (inside.indexOf('\n') < 0) return text
+
+    val normalized = _collapseNewlineWhitespace(inside)
+    text.substring(0, openIdx) + normalized + text.substring(closeIdx)
+  }
+
+  /** Collapses whitespace runs that include at least one newline into a
+    * single space. Runs of whitespace that are only spaces/tabs are left
+    * as-is. Strips leading/trailing whitespace only when it includes a
+    * newline. Preserves quoted strings.
+    */
+  private def _collapseNewlineWhitespace(text: String): String = {
+    val sb  = new StringBuilder(text.length)
+    var i   = 0
+    val len = text.length
+    while (i < len) {
+      val c = text.charAt(i)
+      if (c == '"' || c == '\'') {
+        sb.append(c)
+        i += 1
+        while (i < len && text.charAt(i) != c) {
+          if (text.charAt(i) == '\\' && i + 1 < len) {
+            sb.append(text.charAt(i))
+            i += 1
+          }
+          sb.append(text.charAt(i))
+          i += 1
+        }
+        if (i < len) { sb.append(text.charAt(i)); i += 1 }
+      } else if (c == '\n' || c == '\r') {
+        // Newline found — collapse entire surrounding whitespace run to a space
+        // First, remove any trailing space/tab already appended to sb
+        while (sb.nonEmpty && (sb.last == ' ' || sb.last == '\t')) {
+          sb.deleteCharAt(sb.length - 1)
+        }
+        i += 1
+        // Skip any further whitespace (spaces, tabs, more newlines)
+        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r')) {
+          i += 1
+        }
+        // Only emit a space if we're between content
+        if (sb.nonEmpty && i < len) sb.append(' ')
+      } else {
+        sb.append(c)
+        i += 1
+      }
+    }
+    sb.toString()
   }
 
   // =========================================================================

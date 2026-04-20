@@ -82,6 +82,26 @@ class ScssParser(
               buf.append(scanner.readChar().toChar)
             }
           }
+        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
+          // Silent comment inside selector — consume everything up to the
+          // end of line. Discard from the selector text so interpolations
+          // inside the comment are not evaluated as selector interpolations.
+          scanner.readChar() // first '/'
+          scanner.readChar() // second '/'
+          while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar())) {
+            scanner.readChar()
+          }
+        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
+          // Loud comment inside selector — consume and include in selector.
+          buf.append(scanner.readChar().toChar) // '/'
+          buf.append(scanner.readChar().toChar) // '*'
+          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash)) {
+            buf.append(scanner.readChar().toChar)
+          }
+          if (!scanner.isDone) {
+            buf.append(scanner.readChar().toChar) // '*'
+            buf.append(scanner.readChar().toChar) // '/'
+          }
         } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
           // Quoted strings — preserve verbatim including escapes.
           val q = scanner.readChar()

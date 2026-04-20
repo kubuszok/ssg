@@ -24,7 +24,7 @@ import scala.util.boundary.break
 
 import ssg.sass.ast.sass.Stylesheet
 import ssg.sass.importer.{ CanonicalizeContext, Importer, ImporterResult, ImporterUtils }
-import ssg.sass.parse.{ CssParser, ScssParser, StylesheetParser }
+import ssg.sass.parse.{ CssParser, SassParser, ScssParser, StylesheetParser }
 
 /** A canonicalized URL and the importer that canonicalized it.
   *
@@ -284,9 +284,7 @@ final class ImportCache(
         val parser: StylesheetParser = effectiveSyntax match {
           case Syntax.Css  => new CssParser(ir.contents, Nullable(effectiveUrl))
           case Syntax.Sass =>
-            // The indented-syntax parser may not be fully wired;
-            // fall back to SCSS so existing tests are unaffected.
-            new ScssParser(ir.contents, Nullable(effectiveUrl))
+            new SassParser(ir.contents, Nullable(effectiveUrl))
           case Syntax.Scss => new ScssParser(ir.contents, Nullable(effectiveUrl))
         }
         Nullable(parser.parse())
