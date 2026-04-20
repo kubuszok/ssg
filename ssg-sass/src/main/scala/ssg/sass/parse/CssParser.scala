@@ -31,6 +31,7 @@ import ssg.sass.SassFormatException
 import ssg.sass.ast.sass.{
   AtRootRule,
   AtRule,
+  BinaryOperationExpression,
   DebugRule,
   Declaration,
   DynamicImport,
@@ -45,22 +46,26 @@ import ssg.sass.ast.sass.{
   IfRule,
   ImportRule,
   IncludeRule,
+  InterpolatedFunctionExpression,
   Interpolation,
   ListExpression,
   LoudComment,
+  MapExpression,
   MediaRule,
   MixinRule,
-  ParenthesizedExpression,
   ReturnRule,
+  SelectorExpression,
   SilentComment,
   Statement,
   StaticImport,
+  StringExpression,
   StyleRule,
   Stylesheet,
   SupportsRule,
   UnaryOperationExpression,
   UseRule,
   VariableDeclaration,
+  VariableExpression,
   WarnRule,
   WhileRule
 }
@@ -240,21 +245,26 @@ class CssParser(
           "Silent comments aren't allowed in plain CSS.",
           c.span
         )
-      // --- Style rules: reject nesting, `&`, and interpolated selectors ----
+      // --- Style rules: CSS Nesting (spec) is allowed; `&` and interpolation
+      // are still validated. At the top level, `&` is rejected entirely.
+      // Inside nested rules, `&` is allowed per CSS Nesting but `&suffix`
+      // (e.g. `&b`) is still Sass-only and rejected.
+      // Trailing combinators (`a >`, `a +`) with children are also rejected.
       case s: StyleRule =>
-        if (insideStyleRule) {
-          throw new SassFormatException(
-            "Nested style rules aren't allowed in plain CSS.",
-            s.span
-          )
-        }
         s.selector.foreach(_checkSelectorInterpolation)
-        s.selector.foreach(_checkSelectorParent)
+        s.selector.foreach(_checkTrailingCombinator)
+        s.selector.foreach(_checkPlaceholderSelector)
+        if (!insideStyleRule) {
+          s.selector.foreach(_checkSelectorParent)
+          s.selector.foreach(_checkLeadingCombinator)
+        } else {
+          s.selector.foreach(_checkParentSelectorSuffix)
+        }
         _validateStatements(s.children.get, insideStyleRule = true)
       // --- Declarations: allow custom properties, walk nested children, check expressions -----
       case d: Declaration =>
         _checkInterpolation(d.name, "Interpolation isn't allowed in plain CSS.")
-        d.value.foreach(_validateExpression)
+        d.value.foreach(e => _validateExpression(e))
         d.children.foreach { kids =>
           _validateStatements(kids, insideStyleRule)
         }
@@ -337,12 +347,88 @@ class CssParser(
     }
   }
 
-  /** Validates an expression, checking for disallowed Sass function calls.
-    *
-    * dart-sass css.dart lines 197-203: rejects function calls whose name appears in
-    * `_disallowedFunctionNames`.
+  /** Rejects selectors starting with a combinator (e.g. `> a {b: c}`) at top level. */
+  private def _checkLeadingCombinator(interp: Interpolation): Unit = {
+    val plain = interp.asPlain
+    plain.foreach { text =>
+      val trimmed = text.trim
+      if (trimmed.nonEmpty) {
+        val first = trimmed.charAt(0)
+        if (first == '>' || first == '+' || first == '~') {
+          throw new SassFormatException(
+            "expected selector.",
+            interp.span
+          )
+        }
+      }
+    }
+  }
+
+  /** Rejects placeholder selectors (`%foo`) which are Sass-only. */
+  private def _checkPlaceholderSelector(interp: Interpolation): Unit = {
+    val plain = interp.asPlain
+    plain.foreach { text =>
+      if (text.contains('%')) {
+        throw new SassFormatException(
+          "Placeholder selectors aren't allowed in plain CSS.",
+          interp.span
+        )
+      }
+    }
+  }
+
+  /** Rejects selectors that end with a combinator (`>`, `+`, `~`) which
+    * would be invalid CSS — e.g. `a > {b {c: d}}` should error on `a >`.
     */
-  private def _validateExpression(expr: Expression): Unit =
+  private def _checkTrailingCombinator(interp: Interpolation): Unit = {
+    val plain = interp.asPlain
+    plain.foreach { text =>
+      val trimmed = text.trim
+      if (trimmed.nonEmpty) {
+        val last = trimmed.charAt(trimmed.length - 1)
+        if (last == '>' || last == '+' || last == '~') {
+          throw new SassFormatException(
+            "expected selector.",
+            interp.span
+          )
+        }
+      }
+    }
+  }
+
+  /** Rejects `&suffix` (parent selector with suffix) in nested CSS rules.
+    * Plain `&`, `&.class`, `.class&` are all valid CSS Nesting.
+    */
+  private def _checkParentSelectorSuffix(interp: Interpolation): Unit = {
+    val plain = interp.asPlain
+    plain.foreach { text =>
+      // Check for `&` immediately followed by a name character (letter, digit, hyphen, underscore)
+      // This catches `&b`, `&foo` but NOT `&.b`, `& `, `&:hover` etc.
+      var i = 0
+      while (i < text.length) {
+        if (text.charAt(i) == '&' && i + 1 < text.length) {
+          val next = text.charAt(i + 1)
+          if (ssg.sass.util.CharCode.isNameStart(next.toInt) || next == '-' || next == '_') {
+            throw new SassFormatException(
+              "Parent selectors can't have suffixes in plain CSS.",
+              interp.span
+            )
+          }
+        }
+        i += 1
+      }
+    }
+  }
+
+  /** Validates an expression, rejecting Sass-only constructs in plain CSS.
+    *
+    * dart-sass css.dart: rejects function calls, operations, interpolation,
+    * variables, maps, parenthesized expressions, and other Sass-only features.
+    *
+    * @param insideCalc if true, arithmetic operators and parentheses are allowed
+    *                   (valid CSS calc() syntax).
+    */
+  private def _validateExpression(expr: Expression, insideCalc: Boolean = false): Unit =
     expr match {
       case fe: FunctionExpression =>
         if (_disallowedFunctionNames.contains(fe.name)) {
@@ -351,17 +437,67 @@ class CssParser(
             fe.span
           )
         }
-        // Also validate the arguments
-        fe.arguments.positional.foreach(_validateExpression)
-        fe.arguments.named.foreach { case (_, v) => _validateExpression(v) }
+        // calc/min/max/clamp allow arithmetic operators inside
+        val calcFn = _isCalcLikeFunction(fe.name)
+        fe.arguments.positional.foreach(e => _validateExpression(e, insideCalc = calcFn))
+        fe.arguments.named.foreach { case (_, v) => _validateExpression(v, insideCalc = calcFn) }
+      case boe: BinaryOperationExpression if !insideCalc =>
+        // `/` (DividedBy) is valid in plain CSS (font shorthand, grid, etc.)
+        // `SingleEquals` (=) is valid in IE filter syntax (alpha(opacity=65))
+        import ssg.sass.ast.sass.BinaryOperator
+        if (boe.operator != BinaryOperator.DividedBy && boe.operator != BinaryOperator.SingleEquals) {
+          throw new SassFormatException(
+            "Operators aren't allowed in plain CSS.",
+            expr.span
+          )
+        }
+        _validateExpression(boe.left, insideCalc)
+        _validateExpression(boe.right, insideCalc)
+      case _: VariableExpression =>
+        throw new SassFormatException(
+          "Sass variables aren't allowed in plain CSS.",
+          expr.span
+        )
+      case _: MapExpression =>
+        throw new SassFormatException(
+          "Sass maps aren't allowed in plain CSS.",
+          expr.span
+        )
+      case se: StringExpression if !se.text.isPlain =>
+        throw new SassFormatException(
+          "Interpolation isn't allowed in plain CSS.",
+          se.span
+        )
+      case ife: InterpolatedFunctionExpression =>
+        throw new SassFormatException(
+          "Interpolation isn't allowed in plain CSS.",
+          ife.span
+        )
+      case _: SelectorExpression =>
+        throw new SassFormatException(
+          "The parent selector isn't allowed in plain CSS.",
+          expr.span
+        )
       case le: ListExpression =>
-        le.contents.foreach(_validateExpression)
-      case pe: ParenthesizedExpression =>
-        _validateExpression(pe.expression)
+        le.contents.foreach(e => _validateExpression(e, insideCalc))
       case ue: UnaryOperationExpression =>
-        _validateExpression(ue.operand)
+        _validateExpression(ue.operand, insideCalc)
+      case be: BinaryOperationExpression =>
+        // insideCalc=true: validate children
+        _validateExpression(be.left, insideCalc)
+        _validateExpression(be.right, insideCalc)
       case _ => ()
     }
+
+  /** Returns true for CSS mathematical functions that allow operators. */
+  private def _isCalcLikeFunction(name: String): Boolean = {
+    val lower = name.toLowerCase
+    lower == "calc" || lower == "min" || lower == "max" || lower == "clamp" ||
+    lower == "sin" || lower == "cos" || lower == "tan" || lower == "sqrt" ||
+    lower == "exp" || lower == "log" || lower == "pow" || lower == "abs" ||
+    lower == "sign" || lower == "mod" || lower == "rem" || lower == "round" ||
+    lower == "atan2" || lower == "hypot"
+  }
 
   /** Returns true if [text] contains a parent-selector `&` that isn't inside a string literal or an attribute selector (`[attr="&"]`).
     */

@@ -164,7 +164,7 @@ object ListFunctions {
         // the positional args directly. Detect both shapes.
         val raw: List[Value] =
           if (args.isEmpty) Nil
-          else if (args.length == 1) args(0).asList
+          else if (args.length == 1 && args(0).isInstanceOf[ssg.sass.value.SassArgumentList]) args(0).asList
           else args
         val lists: List[List[Value]] = raw.map(_.asList)
         if (lists.isEmpty) {
