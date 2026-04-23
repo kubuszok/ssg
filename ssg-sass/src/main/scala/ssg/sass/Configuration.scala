@@ -30,7 +30,7 @@ import ssg.sass.value.Value
 /// Explicit configurations have spans associated with them and are represented
 /// by the [ExplicitConfiguration] subclass.
 class Configuration private[sass] (
-  private[sass] val _values:                  mutable.Map[String, ConfiguredValue],
+  private[sass] val _values:           mutable.Map[String, ConfiguredValue],
   private val __originalConfiguration: Nullable[Configuration]
 ) {
 
@@ -56,20 +56,18 @@ class Configuration private[sass] (
   /// will be considered to have the same original config if they were created
   /// as a copy from the same base configuration.
   def sameOriginal(that: Configuration): Boolean =
-    (_originalConfiguration eq that._originalConfiguration)
+    _originalConfiguration eq that._originalConfiguration
 
   def isEmpty: Boolean = _values.isEmpty
 
-  /** Whether this configuration is implicit (not created with an explicit
-    * `with` clause). Implicit configurations are ignored when a module
-    * has already been loaded.
+  /** Whether this configuration is implicit (not created with an explicit `with` clause). Implicit configurations are ignored when a module has already been loaded.
     */
   def isImplicit: Boolean = !this.isInstanceOf[ExplicitConfiguration]
 
   /// Removes a variable with [name] from this configuration, returning it.
   ///
   /// If no such variable exists in this configuration, returns null.
-  def remove(name: String): Nullable[ConfiguredValue] = {
+  def remove(name: String): Nullable[ConfiguredValue] =
     if (isEmpty) Nullable.empty
     else {
       _values.remove(name) match {
@@ -77,7 +75,6 @@ class Configuration private[sass] (
         case scala.None => Nullable.empty
       }
     }
-  }
 
   /// Creates a new configuration from this one based on a `@forward` rule.
   def throughForward(forward: ForwardRule): Configuration = {
@@ -111,9 +108,7 @@ class Configuration private[sass] (
   protected def _withValues(newValues: mutable.Map[String, ConfiguredValue]): Configuration =
     new Configuration(newValues, Nullable(_originalConfiguration))
 
-  /** Throws a [[SassException]] if any values remain — i.e. for values that
-    * weren't used by the module. Implicit configurations are ignored: an
-    * unused forwarded `with` clause is not an error.
+  /** Throws a [[SassException]] if any values remain — i.e. for values that weren't used by the module. Implicit configurations are ignored: an unused forwarded `with` clause is not an error.
     */
   def throwErrorForUnknownVariables(): Unit = {
     if (isImplicit || _values.isEmpty) return
@@ -159,10 +154,10 @@ object Configuration {
 /// that has already been loaded, while implicit configurations will be
 /// silently ignored in this case.
 final class ExplicitConfiguration(
-  values:                 mutable.Map[String, ConfiguredValue],
+  values: mutable.Map[String, ConfiguredValue],
   /// The node whose span indicates where the configuration was declared.
-  val nodeWithSpan:       AstNode,
-  originalConfiguration:  Nullable[Configuration] = Nullable.Null
+  val nodeWithSpan:      AstNode,
+  originalConfiguration: Nullable[Configuration] = Nullable.Null
 ) extends Configuration(values, originalConfiguration) {
 
   /// Returns a copy of `this` with the given [values] map.

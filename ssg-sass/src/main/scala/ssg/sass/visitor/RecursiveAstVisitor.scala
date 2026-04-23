@@ -83,16 +83,14 @@ trait RecursiveAstVisitor extends RecursiveStatementVisitor with ExpressionVisit
     }
   }
 
-  override def visitImportRule(node: ImportRule): Unit = {
-    for (imp <- node.imports) {
+  override def visitImportRule(node: ImportRule): Unit =
+    for (imp <- node.imports)
       imp match {
         case si: StaticImport =>
           visitInterpolation(si.url)
           si.modifiers.foreach(visitInterpolation)
         case _ => ()
       }
-    }
-  }
 
   override def visitIncludeRule(node: IncludeRule): Unit = {
     visitArgumentList(node.arguments)

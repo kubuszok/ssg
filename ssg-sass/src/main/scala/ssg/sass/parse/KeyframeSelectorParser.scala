@@ -31,7 +31,7 @@ class KeyframeSelectorParser(
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 
-  def parse(): List[String] = {
+  def parse(): List[String] =
     wrapSpanFormatException { () =>
       val selectors = mutable.ListBuffer.empty[String]
       var continue_ = true
@@ -54,7 +54,6 @@ class KeyframeSelectorParser(
 
       selectors.toList
     }
-  }
 
   private def _percentage(): String = {
     val buffer = new StringBuilder()
@@ -65,16 +64,14 @@ class KeyframeSelectorParser(
       scanner.error("Expected number.")
     }
 
-    while (CharCode.isDigit(scanner.peekChar())) {
+    while (CharCode.isDigit(scanner.peekChar()))
       buffer.appendAll(Character.toChars(scanner.readChar()))
-    }
 
     if (scanner.peekChar() == CharCode.$dot) {
       buffer.appendAll(Character.toChars(scanner.readChar()))
 
-      while (CharCode.isDigit(scanner.peekChar())) {
+      while (CharCode.isDigit(scanner.peekChar()))
         buffer.appendAll(Character.toChars(scanner.readChar()))
-      }
     }
 
     if (scanIdentChar(CharCode.$e)) {

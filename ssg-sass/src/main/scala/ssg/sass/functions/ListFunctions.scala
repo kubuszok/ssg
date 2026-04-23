@@ -65,10 +65,10 @@ object ListFunctions {
       "set-nth",
       "$list, $n, $value",
       { args =>
-        val list     = args(0)
-        val index    = args(1)
-        val value    = args(2)
-        val newList  = list.asList.toBuffer
+        val list    = args(0)
+        val index   = args(1)
+        val value   = args(2)
+        val newList = list.asList.toBuffer
         newList(list.sassIndexToListIndex(index, "n")) = value
         list.withListContents(newList.toList)
       }
@@ -87,8 +87,8 @@ object ListFunctions {
       { args =>
         if (args.length < 2)
           throw SassScriptException("Missing arguments to join().")
-        val list1          = args(0)
-        val list2          = args(1)
+        val list1 = args(0)
+        val list2 = args(1)
         // $separator may be SassNull when skipped via named $bracketed parameter
         // (the framework fills gaps with null instead of parsing defaults)
         val separatorParam = (if (args.length > 2 && !(args(2) eq SassNull)) args(2) else autoStr).assertString("separator")
@@ -98,8 +98,8 @@ object ListFunctions {
           case "auto" =>
             (list1.separator, list2.separator) match {
               case (ListSeparator.Undecided, ListSeparator.Undecided) => ListSeparator.Space
-              case (ListSeparator.Undecided, sep) => sep
-              case (sep, _)                       => sep
+              case (ListSeparator.Undecided, sep)                     => sep
+              case (sep, _)                                           => sep
             }
           case "space" => ListSeparator.Space
           case "comma" => ListSeparator.Comma
@@ -112,7 +112,7 @@ object ListFunctions {
 
         val bracketed = bracketedParam match {
           case s: SassString if s.text == "auto" => list1.hasBrackets
-          case _                                 => bracketedParam.isTruthy
+          case _ => bracketedParam.isTruthy
         }
 
         SassList(list1.asList ::: list2.asList, separator, brackets = bracketed)
@@ -240,11 +240,8 @@ object ListFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** Globally available built-ins. Mirrors dart-sass `global`. Note `slash`
-    * and `separator` (under its bare name) are NOT in the global; only the
-    * `list-separator` alias is.
-    * Each entry uses `.withDeprecationWarning("list")` to emit a
-    * `global-builtin` deprecation warning directing users to `list.X`.
+  /** Globally available built-ins. Mirrors dart-sass `global`. Note `slash` and `separator` (under its bare name) are NOT in the global; only the `list-separator` alias is. Each entry uses
+    * `.withDeprecationWarning("list")` to emit a `global-builtin` deprecation warning directing users to `list.X`.
     */
   val global: List[Callable] = List(
     lengthFn.withDeprecationWarning("list"),

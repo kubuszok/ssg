@@ -22,20 +22,15 @@ import ssg.sass.Nullable
 import ssg.sass.Nullable.*
 import ssg.sass.ast.sass.*
 
-/** A visitor that recursively traverses each expression in a SassScript AST and
-  * replaces its contents with the values returned by nested recursion.
+/** A visitor that recursively traverses each expression in a SassScript AST and replaces its contents with the values returned by nested recursion.
   *
-  * In addition to the methods from [[ExpressionVisitor]], this has more general
-  * protected methods that can be overridden to add behavior for a wide variety
-  * of AST nodes:
+  * In addition to the methods from [[ExpressionVisitor]], this has more general protected methods that can be overridden to add behavior for a wide variety of AST nodes:
   *
   *   - [[visitArgumentList]]
   *   - [[visitSupportsCondition]]
   *   - [[visitInterpolation]]
   */
-trait ReplaceExpressionVisitor
-    extends ExpressionVisitor[Expression]
-    with IfConditionExpressionVisitor[IfConditionExpression] {
+trait ReplaceExpressionVisitor extends ExpressionVisitor[Expression] with IfConditionExpressionVisitor[IfConditionExpression] {
 
   def visitBinaryOperationExpression(node: BinaryOperationExpression): Expression =
     BinaryOperationExpression(
@@ -142,8 +137,7 @@ trait ReplaceExpressionVisitor
 
   /** Replaces each expression in an [invocation].
     *
-    * The default implementation of the visit methods calls this to replace any
-    * argument invocation in an expression.
+    * The default implementation of the visit methods calls this to replace any argument invocation in an expression.
     */
   protected def visitArgumentList(invocation: ArgumentList): ArgumentList =
     new ArgumentList(
@@ -159,10 +153,9 @@ trait ReplaceExpressionVisitor
 
   /** Replaces each expression in [condition].
     *
-    * The default implementation of the visit methods call this to visit any
-    * [[SupportsCondition]] they encounter.
+    * The default implementation of the visit methods call this to visit any [[SupportsCondition]] they encounter.
     */
-  protected def visitSupportsCondition(condition: SupportsCondition): SupportsCondition = {
+  protected def visitSupportsCondition(condition: SupportsCondition): SupportsCondition =
     condition match {
       case op: SupportsOperation =>
         SupportsOperation(
@@ -193,18 +186,16 @@ trait ReplaceExpressionVisitor
           condition.span
         )
     }
-  }
 
   /** Replaces each expression in an [interpolation].
     *
-    * The default implementation of the visit methods call this to visit any
-    * interpolation in an expression.
+    * The default implementation of the visit methods call this to visit any interpolation in an expression.
     */
   protected def visitInterpolation(interpolation: Interpolation): Interpolation =
     new Interpolation(
       interpolation.contents.map {
         case expr: Expression => expr.accept(this)
-        case other            => other
+        case other => other
       },
       interpolation.spans,
       interpolation.span

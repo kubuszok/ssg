@@ -30,8 +30,7 @@ object Utils {
   // error objects (mirrors Dart's `Expando<StackTrace>()`).
   private val _traces = new java.util.WeakHashMap[AnyRef, Throwable]()
 
-  /** Throws [error] with [originalError]'s stack trace (which defaults to
-    * [trace]) stored as its stack trace.
+  /** Throws [error] with [originalError]'s stack trace (which defaults to [trace]) stored as its stack trace.
     *
     * Note that [trace] is only accessible via [getTrace].
     */
@@ -56,13 +55,12 @@ object Utils {
     case _ => ()
   }
 
-  /** Returns the stack trace associated with error using [throwWithTrace], or
-    * None if it was thrown normally.
+  /** Returns the stack trace associated with error using [throwWithTrace], or None if it was thrown normally.
     */
   def getTrace(error: Any): Option[Throwable] = error match {
     case _: String | _: java.lang.Number | _: java.lang.Boolean => None
     case ref: AnyRef => Option(_traces.get(ref))
-    case _           => None
+    case _ => None
   }
 
   /** Converts iter into a sentence, separating each word with conjunction. */
@@ -357,13 +355,15 @@ object Utils {
 
   /** Returns a bulleted list of items in [bullets]. */
   def bulletedList(bullets: Iterable[String]): String =
-    bullets.map { element =>
-      val lines = element.split("\n")
-      // glyph.bullet in Dart's term_glyph; we use ASCII '*' (same as ascii mode)
-      val first = s"* ${lines.head}"
-      if (lines.length > 1) first + "\n" + indent(lines.tail.mkString("\n"), 2)
-      else first
-    }.mkString("\n")
+    bullets
+      .map { element =>
+        val lines = element.split("\n")
+        // glyph.bullet in Dart's term_glyph; we use ASCII '*' (same as ascii mode)
+        val first = s"* ${lines.head}"
+        if (lines.length > 1) first + "\n" + indent(lines.tail.mkString("\n"), 2)
+        else first
+      }
+      .mkString("\n")
 
   /** Returns a deep copy of a map that contains maps. */
   def copyMapOfMap[K1, K2, V](
@@ -383,8 +383,7 @@ object Utils {
     result
   }
 
-  /** Consumes an escape sequence from [scanner] and returns the character it
-    * represents.
+  /** Consumes an escape sequence from [scanner] and returns the character it represents.
     *
     * See https://drafts.csswg.org/css-syntax-3/#consume-escaped-code-point.
     */
@@ -393,7 +392,7 @@ object Utils {
     val next = scanner.peekChar()
     if (next == -1) {
       // null case in Dart -- EOF after backslash
-      0xFFFD
+      0xfffd
     } else if (CharCode.isNewline(next)) {
       scanner.error("Expected escape sequence.")
     } else if (CharCode.isHex(next)) {
@@ -406,7 +405,7 @@ object Utils {
       if (CharCode.isWhitespace(scanner.peekChar())) {
         val _ = scanner.readChar()
       }
-      if (value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= CharCode.maxAllowedCharacter) 0xFFFD
+      if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value >= CharCode.maxAllowedCharacter) 0xfffd
       else value
     } else {
       scanner.readChar()

@@ -41,8 +41,7 @@ import ssg.sass.value.{ ListSeparator, SassList, SassNull, SassNumber, SassStrin
 
 /** Built-in `sass:string` functions.
   *
-  * Faithful port of `lib/src/functions/string.dart`. The module is exposed
-  * via [[Functions.modules]] and the global members via [[Functions.global]].
+  * Faithful port of `lib/src/functions/string.dart`. The module is exposed via [[Functions.modules]] and the global members via [[Functions.global]].
   */
 object StringFunctions {
 
@@ -117,8 +116,8 @@ object StringFunctions {
       "index",
       "$string, $substring",
       { args =>
-        val s   = args(0).assertString("string")
-        val sub = args(1).assertString("substring")
+        val s           = args(0).assertString("string")
+        val sub         = args(1).assertString("substring")
         val codeUnitIdx = s.text.indexOf(sub.text)
         if (codeUnitIdx == -1) SassNull
         else {
@@ -165,9 +164,9 @@ object StringFunctions {
       "to-upper-case",
       "$string",
       { args =>
-        val s   = args(0).assertString("string")
-        val sb  = new StringBuilder(s.text.length)
-        var i   = 0
+        val s  = args(0).assertString("string")
+        val sb = new StringBuilder(s.text.length)
+        var i  = 0
         while (i < s.text.length) {
           sb.append(CharCode.toUpperCase(s.text.charAt(i).toInt).toChar)
           i += 1
@@ -181,9 +180,9 @@ object StringFunctions {
       "to-lower-case",
       "$string",
       { args =>
-        val s   = args(0).assertString("string")
-        val sb  = new StringBuilder(s.text.length)
-        var i   = 0
+        val s  = args(0).assertString("string")
+        val sb = new StringBuilder(s.text.length)
+        var i  = 0
         while (i < s.text.length) {
           sb.append(CharCode.toLowerCase(s.text.charAt(i).toInt).toChar)
           i += 1
@@ -203,7 +202,7 @@ object StringFunctions {
     BuiltInCallable.function(
       "unique-id",
       "",
-      { _ =>
+      _ =>
         synchronized {
           // Make it difficult to guess the next ID by randomizing the increase.
           previousUniqueId += random.nextInt(36) + 1L
@@ -211,11 +210,10 @@ object StringFunctions {
           if (previousUniqueId > max) previousUniqueId %= max
 
           // The leading "u" ensures that the result is a valid identifier.
-          val padded = java.lang.Long.toString(previousUniqueId, 36)
+          val padded  = java.lang.Long.toString(previousUniqueId, 36)
           val withPad = "0" * math.max(0, 6 - padded.length) + padded
           SassString("u" + withPad, hasQuotes = false)
         }
-      }
     )
 
   private val splitFn: BuiltInCallable =
@@ -223,8 +221,8 @@ object StringFunctions {
       "split",
       "$string, $separator, $limit: null",
       { args =>
-        val s      = args(0).assertString("string")
-        val sep    = args(1).assertString("separator")
+        val s   = args(0).assertString("string")
+        val sep = args(1).assertString("separator")
         // Optional $limit (null means no limit).
         val limit: Option[Int] = args(2) match {
           case SassNull => None
@@ -281,10 +279,8 @@ object StringFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** The globally available built-ins. Mirrors dart-sass `global` (excluding
-    * `split`, which is module-only).
-    * Each entry uses `.withDeprecationWarning("string")` to emit a
-    * `global-builtin` deprecation warning directing users to `string.X`.
+  /** The globally available built-ins. Mirrors dart-sass `global` (excluding `split`, which is module-only). Each entry uses `.withDeprecationWarning("string")` to emit a `global-builtin` deprecation
+    * warning directing users to `string.X`.
     */
   val global: List[Callable] = List(
     unquoteFn.withDeprecationWarning("string"),
@@ -327,7 +323,7 @@ object StringFunctions {
     index:              Int,
     lengthInCodepoints: Int,
     allowNegative:      Boolean = false
-  ): Int = {
+  ): Int =
     if (index == 0) 0
     else if (index > 0) math.min(index - 1, lengthInCodepoints)
     else {
@@ -335,5 +331,4 @@ object StringFunctions {
       if (result < 0 && !allowNegative) 0
       else result
     }
-  }
 }

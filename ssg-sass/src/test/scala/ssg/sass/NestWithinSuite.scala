@@ -8,7 +8,7 @@ package sass
 final class NestWithinSuite extends munit.FunSuite {
 
   test("nestWithin with implicitParent=false and no & returns child as-is") {
-    val child = ssg.sass.parse.SelectorParser.tryParse(".child")
+    val child  = ssg.sass.parse.SelectorParser.tryParse(".child")
     val parent = ssg.sass.parse.SelectorParser.tryParse(".parent")
     assert(child.isDefined, "Failed to parse .child")
     assert(parent.isDefined, "Failed to parse .parent")
@@ -17,7 +17,7 @@ final class NestWithinSuite extends munit.FunSuite {
   }
 
   test("nestWithin with implicitParent=false and & resolves parent") {
-    val child = ssg.sass.parse.SelectorParser.tryParse("&")
+    val child  = ssg.sass.parse.SelectorParser.tryParse("&")
     val parent = ssg.sass.parse.SelectorParser.tryParse("foo")
     assert(child.isDefined, "Failed to parse &")
     assert(parent.isDefined, "Failed to parse foo")
@@ -26,7 +26,7 @@ final class NestWithinSuite extends munit.FunSuite {
   }
 
   test("nestWithin with implicitParent=false and .bar & resolves parent") {
-    val child = ssg.sass.parse.SelectorParser.tryParse(".bar &")
+    val child  = ssg.sass.parse.SelectorParser.tryParse(".bar &")
     val parent = ssg.sass.parse.SelectorParser.tryParse("foo")
     assert(child.isDefined, "Failed to parse .bar &")
     assert(parent.isDefined, "Failed to parse foo")

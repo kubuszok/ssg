@@ -20,15 +20,7 @@ package parse
 
 import ssg.sass.{ InterpolationBuffer, MultiSpanSassFormatException, Nullable }
 import ssg.sass.Nullable.*
-import ssg.sass.ast.sass.{
-  DynamicImport,
-  Import,
-  Interpolation,
-  LoudComment,
-  SilentComment,
-  Statement,
-  StaticImport
-}
+import ssg.sass.ast.sass.{ DynamicImport, Import, Interpolation, LoudComment, SilentComment, Statement, StaticImport }
 import ssg.sass.util.{ CharCode, LineScannerState }
 import ssg.sass.value.SassString
 
@@ -39,10 +31,8 @@ import scala.util.boundary.break
 
 /** A parser for the whitespace-sensitive indented Sass syntax.
   *
-  * Implements the indented Sass syntax by overriding [[StylesheetParser]]'s
-  * virtual hooks to use indentation-based block structure instead of `{`/`}`
-  * braces and `;` terminators. This is a faithful port of dart-sass's
-  * `SassParser` class in `lib/src/parse/sass.dart`.
+  * Implements the indented Sass syntax by overriding [[StylesheetParser]]'s virtual hooks to use indentation-based block structure instead of `{`/`}` braces and `;` terminators. This is a faithful
+  * port of dart-sass's `SassParser` class in `lib/src/parse/sass.dart`.
   */
 class SassParser(
   contents:       String,
@@ -57,15 +47,13 @@ class SassParser(
   override def currentIndentation: Int = _currentIndentation
   private var _currentIndentation: Int = 0
 
-  /** The indentation level of the next source line after the scanner's
-    * position, or `null` if that hasn't been computed yet.
+  /** The indentation level of the next source line after the scanner's position, or `null` if that hasn't been computed yet.
     *
     * A source line is any line that's not entirely whitespace.
     */
   private var _nextIndentation: Nullable[Int] = Nullable.Null
 
-  /** The beginning of the next source line after the scanner's position, or
-    * `null` if the next indentation hasn't been computed yet.
+  /** The beginning of the next source line after the scanner's position, or `null` if the next indentation hasn't been computed yet.
     *
     * A source line is any line that's not entirely whitespace.
     */
@@ -73,9 +61,8 @@ class SassParser(
 
   /** Whether the document is indented using spaces or tabs.
     *
-    * If this is `true`, the document is indented using spaces. If it's `false`,
-    * the document is indented using tabs. If it's `null`, we haven't yet seen
-    * the indentation character used by the document.
+    * If this is `true`, the document is indented using spaces. If it's `false`, the document is indented using tabs. If it's `null`, we haven't yet seen the indentation character used by the
+    * document.
     */
   private var _spaces: Nullable[Boolean] = Nullable.Null
 
@@ -93,7 +80,7 @@ class SassParser(
   override protected def lookingAtChildren(): Boolean =
     atEndOfStatement() && _peekIndentation() > currentIndentation
 
-  override protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit = {
+  override protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit =
     // This overrides whitespace consumption to only consume newlines when
     // `consumeNewlines` is true.
     boundary {
@@ -104,7 +91,6 @@ class SassParser(
         scanner.readChar()
       }
     }
-  }
 
   // ---------------------------------------------------------------------------
   // styleRuleSelector — dart-sass sass.dart lines 43-54
@@ -113,7 +99,7 @@ class SassParser(
   override protected def styleRuleSelector(): Interpolation = {
     val start = scanner.state
 
-    val buffer = new InterpolationBuffer()
+    val buffer    = new InterpolationBuffer()
     var continue_ = true
     while (continue_) {
       buffer.addInterpolation(almostAnyValue(omitComments = true))
@@ -148,13 +134,11 @@ class SassParser(
 
   /** Consumes an import argument for the indented syntax.
     *
-    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs
-    * in addition to quoted strings and `url(...)` syntax.
+    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs in addition to quoted strings and `url(...)` syntax.
     *
     * dart-sass sass.dart lines 73-116.
     *
-    * Note: This will become an `override` when `importArgument` is extracted
-    * as a virtual method in StylesheetParser's `_importRule`.
+    * Note: This will become an `override` when `importArgument` is extracted as a virtual method in StylesheetParser's `_importRule`.
     */
   @annotation.nowarn("msg=unused private member") // scaffolding: will be wired when importArgument is virtual
   private def _importArgument(): Import = {
@@ -178,11 +162,13 @@ class SassParser(
 
     // Bare URL — consume until comma, semicolon, or newline
     val start = scanner.state
-    var next = scanner.peekChar()
-    while (next >= 0 &&
-           next != CharCode.$comma &&
-           next != CharCode.$semicolon &&
-           !CharCode.isNewline(next)) {
+    var next  = scanner.peekChar()
+    while (
+      next >= 0 &&
+      next != CharCode.$comma &&
+      next != CharCode.$semicolon &&
+      !CharCode.isNewline(next)
+    ) {
       scanner.readChar()
       next = scanner.peekChar()
     }
@@ -197,9 +183,9 @@ class SassParser(
         span
       )
     } else {
-      try {
+      try
         DynamicImport(_parseImportUrl(url), span)
-      } catch {
+      catch {
         case e: Exception =>
           error(s"Invalid URL: ${e.getMessage}", span)
       }
@@ -208,21 +194,19 @@ class SassParser(
 
   /** Delegate to the SCSS-style import argument parsing in StylesheetParser.
     *
-    * Since `importArgument` is not a virtual method in StylesheetParser
-    * (import parsing is inlined in `_atRule`), this re-implements the
-    * quoted-string / `url()` path that SCSS uses.
+    * Since `importArgument` is not a virtual method in StylesheetParser (import parsing is inlined in `_atRule`), this re-implements the quoted-string / `url()` path that SCSS uses.
     */
   private def _superImportArgument(): Import = {
     val importStart = scanner.state
-    val c = scanner.peekChar()
+    val c           = scanner.peekChar()
     if (c == CharCode.$u || c == CharCode.$U) {
       // url(...) syntax
-      val urlText = _consumeImportUrlForSass()
+      val urlText   = _consumeImportUrlForSass()
       val urlInterp = Interpolation.plain(urlText, spanFrom(importStart))
       StaticImport(urlInterp, spanFrom(importStart))
     } else {
       // Quoted string
-      val url = string()
+      val url        = string()
       val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
         url.startsWith("https://") || url.startsWith("//")
       if (isPlainCss) {
@@ -236,7 +220,7 @@ class SassParser(
 
   /** Consumes a `url(...)` token. Returns the full text including `url(` and `)`. */
   private def _consumeImportUrlForSass(): String = {
-    val buf = new StringBuilder()
+    val buf   = new StringBuilder()
     val ident = identifier()
     if (!ident.equalsIgnoreCase("url")) scanner.error("Expected 'url'.")
     buf.append(ident)
@@ -247,14 +231,13 @@ class SassParser(
     if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
       buf.append(c.toChar)
       scanner.readChar()
-      while (!scanner.isDone && scanner.peekChar() != c) {
+      while (!scanner.isDone && scanner.peekChar() != c)
         if (scanner.peekChar() == CharCode.$backslash) {
           buf.append(scanner.readChar().toChar)
           if (!scanner.isDone) buf.append(scanner.readChar().toChar)
         } else {
           buf.append(scanner.readChar().toChar)
         }
-      }
       if (!scanner.isDone) buf.append(scanner.readChar().toChar)
     } else {
       var urlDone = false
@@ -306,9 +289,9 @@ class SassParser(
 
   override protected def scanElse(ifIndentation: Int): Boolean = {
     if (_peekIndentation() != ifIndentation) return false
-    val start = scanner.state
-    val startIndentation = currentIndentation
-    val startNextIndentation = _nextIndentation
+    val start                   = scanner.state
+    val startIndentation        = currentIndentation
+    val startNextIndentation    = _nextIndentation
     val startNextIndentationEnd = _nextIndentationEnd
 
     _readIndentation()
@@ -364,9 +347,7 @@ class SassParser(
 
   /** Consumes a child of the current statement.
     *
-    * This consumes children that are allowed at all levels of the document; the
-    * [child] parameter is called to consume any children that are specifically
-    * allowed in the caller's context.
+    * This consumes children that are allowed at all levels of the document; the [child] parameter is called to consume any children that are specifically allowed in the caller's context.
     */
   private def _child(child: () => Nullable[Statement]): Nullable[Statement] = {
     val c = scanner.peekChar()
@@ -378,9 +359,9 @@ class SassParser(
         Nullable(variableDeclarationWithoutNamespace())
       case CharCode.`$slash` =>
         scanner.peekChar(1) match {
-          case CharCode.`$slash` => Nullable(_silentComment())
+          case CharCode.`$slash`    => Nullable(_silentComment())
           case CharCode.`$asterisk` => Nullable(_loudComment())
-          case _ => child()
+          case _                    => child()
         }
       case _ => child()
     }
@@ -394,7 +375,7 @@ class SassParser(
   private def _silentComment(): SilentComment = {
     val start = scanner.state
     scanner.expect("//")
-    val buffer = new StringBuilder()
+    val buffer            = new StringBuilder()
     val parentIndentation = currentIndentation
 
     var outerContinue = true
@@ -413,12 +394,13 @@ class SassParser(
           i += 1
         }
 
-        while (!scanner.isDone && {
-          val c = scanner.peekChar()
-          c >= 0 && !CharCode.isNewline(c)
-        }) {
+        while (
+          !scanner.isDone && {
+            val c = scanner.peekChar()
+            c >= 0 && !CharCode.isNewline(c)
+          }
+        )
           buffer.append(scanner.readChar().toChar)
-        }
         buffer.append('\n')
 
         if (_peekIndentation() < parentIndentation) {
@@ -426,8 +408,10 @@ class SassParser(
           innerContinue = false
         } else if (_peekIndentation() == parentIndentation) {
           // Look ahead to the next line to see if it starts another comment.
-          if (scanner.peekChar(1 + parentIndentation) == CharCode.$slash &&
-              scanner.peekChar(2 + parentIndentation) == CharCode.$slash) {
+          if (
+            scanner.peekChar(1 + parentIndentation) == CharCode.$slash &&
+            scanner.peekChar(2 + parentIndentation) == CharCode.$slash
+          ) {
             _readIndentation()
           }
           innerContinue = false
@@ -456,11 +440,11 @@ class SassParser(
     val start = scanner.state
     scanner.expect("/*")
 
-    var first = true
+    var first  = true
     val buffer = new InterpolationBuffer()
     buffer.write("/*")
     val parentIndentation = currentIndentation
-    var loopContinue = true
+    var loopContinue      = true
     while (loopContinue) {
       if (first) {
         // If the first line is empty, ignore it.
@@ -514,18 +498,16 @@ class SassParser(
                 pc >= 0 && CharCode.isNewline(pc) &&
                 _peekIndentation() > parentIndentation
               }) {
-                while (_lookingAtDoubleNewline()) {
+                while (_lookingAtDoubleNewline())
                   _expectNewline()
-                }
                 _readIndentation()
                 whitespace(consumeNewlines = false)
               }
 
               if (!scanner.isDone && { val pc = scanner.peekChar(); pc >= 0 && !CharCode.isNewline(pc) }) {
                 val errorStart = scanner.state
-                while (!scanner.isDone && { val pc = scanner.peekChar(); pc >= 0 && !CharCode.isNewline(pc) }) {
+                while (!scanner.isDone && { val pc = scanner.peekChar(); pc >= 0 && !CharCode.isNewline(pc) })
                   scanner.readChar()
-                }
                 throw new MultiSpanSassFormatException(
                   "Unexpected text after end of comment",
                   spanFrom(errorStart),
@@ -572,8 +554,7 @@ class SassParser(
 
   /** Expect and consume a single newline character.
     *
-    * If [trailingSemicolon] is true, this follows a semicolon, which is used
-    * for error reporting.
+    * If [trailingSemicolon] is true, this follows a semicolon, which is used for error reporting.
     *
     * dart-sass sass.dart lines 338-354.
     */
@@ -608,7 +589,7 @@ class SassParser(
             val c2 = scanner.peekChar(2)
             c2 >= 0 && CharCode.isNewline(c2)
           case CharCode.`$cr` | CharCode.`$ff` => true
-          case _ => false
+          case _                               => false
         }
       case CharCode.`$lf` | CharCode.`$ff` =>
         val c1 = scanner.peekChar(1)
@@ -617,8 +598,7 @@ class SassParser(
     }
   }
 
-  /** As long as the scanner's position is indented beneath the starting line,
-    * runs [body] to consume the next statement.
+  /** As long as the scanner's position is indented beneath the starting line, runs [body] to consume the next statement.
     *
     * dart-sass sass.dart lines 369-385.
     */
@@ -642,16 +622,14 @@ class SassParser(
     }
   }
 
-  /** Consumes indentation whitespace and returns the indentation level of the
-    * next line.
+  /** Consumes indentation whitespace and returns the indentation level of the next line.
     *
     * dart-sass sass.dart lines 389-396.
     */
   private def _readIndentation(): Int = {
-    val currentInd = {
+    val currentInd =
       if (_nextIndentation.isDefined) _nextIndentation.get
       else _peekIndentation()
-    }
     _currentIndentation = currentInd
     scanner.state = _nextIndentationEnd.get
     _nextIndentation = Nullable.Null
@@ -677,10 +655,10 @@ class SassParser(
       scanner.error("Expected newline.", scanner.position, 0)
     }
 
-    var containsTab = false
-    var containsSpace = false
+    var containsTab     = false
+    var containsSpace   = false
     var nextIndentation = 0
-    var lineLoop = true
+    var lineLoop        = true
     while (lineLoop) {
       containsTab = false
       containsSpace = false
@@ -726,12 +704,11 @@ class SassParser(
 
   /** Ensures that the document uses consistent characters for indentation.
     *
-    * The [containsTab] and [containsSpace] parameters refer to a single line of
-    * indentation that has just been parsed.
+    * The [containsTab] and [containsSpace] parameters refer to a single line of indentation that has just been parsed.
     *
     * dart-sass sass.dart lines 456-478.
     */
-  private def _checkIndentationConsistency(containsTab: Boolean, containsSpace: Boolean): Unit = {
+  private def _checkIndentationConsistency(containsTab: Boolean, containsSpace: Boolean): Unit =
     if (containsTab) {
       if (containsSpace) {
         scanner.error(
@@ -753,7 +730,6 @@ class SassParser(
         scanner.column
       )
     }
-  }
 
   /** Consumes a semicolon and trailing whitespace, including comments.
     *
@@ -761,12 +737,11 @@ class SassParser(
     *
     * dart-sass sass.dart lines 483-489.
     */
-  private def _tryTrailingSemicolon(): Boolean = {
+  private def _tryTrailingSemicolon(): Boolean =
     if (scanCharIf(c => c == CharCode.$semicolon)) {
       whitespace(consumeNewlines = false)
       true
     } else {
       false
     }
-  }
 }

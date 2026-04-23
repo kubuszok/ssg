@@ -82,25 +82,23 @@ import ssg.sass.value.Value
 
 /** The lexical environment in which Sass code is evaluated.
   *
-  * Full port of dart-sass `Environment` with one-for-one fields and
-  * methods. The scope chain is stored as `_variables: ArrayBuffer[Map]`
-  * where index 0 is the global scope and the tail is the innermost
-  * local scope; `_functions` and `_mixins` follow the same layout.
+  * Full port of dart-sass `Environment` with one-for-one fields and methods. The scope chain is stored as `_variables: ArrayBuffer[Map]` where index 0 is the global scope and the tail is the
+  * innermost local scope; `_functions` and `_mixins` follow the same layout.
   */
 final class Environment private (
-  private val _modules:          mutable.Map[String, Module[Callable]],
-  private val _namespaceNodes:   mutable.Map[String, Nullable[AstNode]],
-  private val _globalModules:    mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
-  private val _importedModules:  mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
-  private var _forwardedModules: Nullable[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]],
+  private val _modules:                mutable.Map[String, Module[Callable]],
+  private val _namespaceNodes:         mutable.Map[String, Nullable[AstNode]],
+  private val _globalModules:          mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
+  private val _importedModules:        mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]],
+  private var _forwardedModules:       Nullable[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]],
   private var _nestedForwardedModules: Nullable[mutable.ArrayBuffer[mutable.ArrayBuffer[Module[Callable]]]],
-  private val _allModules:        mutable.ArrayBuffer[Module[Callable]],
-  private val _variables:         mutable.ArrayBuffer[mutable.Map[String, Value]],
-  private val _variableNodes:     mutable.ArrayBuffer[mutable.Map[String, AstNode]],
-  private val _functions:         mutable.ArrayBuffer[mutable.Map[String, Callable]],
-  private val _mixins:            mutable.ArrayBuffer[mutable.Map[String, Callable]],
-  private var _content:           Nullable[UserDefinedCallable[Environment]],
-  private val _configurableVariables: mutable.Set[String]
+  private val _allModules:             mutable.ArrayBuffer[Module[Callable]],
+  private val _variables:              mutable.ArrayBuffer[mutable.Map[String, Value]],
+  private val _variableNodes:          mutable.ArrayBuffer[mutable.Map[String, AstNode]],
+  private val _functions:              mutable.ArrayBuffer[mutable.Map[String, Callable]],
+  private val _mixins:                 mutable.ArrayBuffer[mutable.Map[String, Callable]],
+  private var _content:                Nullable[UserDefinedCallable[Environment]],
+  private val _configurableVariables:  mutable.Set[String]
 ) {
 
   /** Lazy name->scope-index caches. Rebuilt on scope pop. */
@@ -115,10 +113,8 @@ final class Environment private (
   /** Whether we are lexically inside a mixin body. */
   private var _inMixin: Boolean = false
 
-  /** Whether assignments in the current scope should propagate to the
-    * enclosing scope without an explicit `!global`. `true` in the
-    * global scope, in `@if`/`@for`/`@each`/`@while` bodies, and
-    * inherited from parent when nested.
+  /** Whether assignments in the current scope should propagate to the enclosing scope without an explicit `!global`. `true` in the global scope, in `@if`/`@for`/`@each`/`@while` bodies, and inherited
+    * from parent when nested.
     */
   private var _inSemiGlobalScope: Boolean = true
 
@@ -151,9 +147,7 @@ final class Environment private (
   // Closure / import variant constructors.
   // ---------------------------------------------------------------------------
 
-  /** Creates a closure whose scope chain is a snapshot of the current
-    * chain. Subsequent scope pushes/pops in this environment do not
-    * affect the closure, but existing scope entries remain shared so
+  /** Creates a closure whose scope chain is a snapshot of the current chain. Subsequent scope pushes/pops in this environment do not affect the closure, but existing scope entries remain shared so
     * later assignments through them are visible to both.
     */
   def closure(): Environment = new Environment(
@@ -176,10 +170,8 @@ final class Environment private (
 
   /** Returns a fresh environment for evaluating an `@import`ed file.
     *
-    * Shares variables/functions/mixins with the caller but starts with
-    * empty `_modules` / `_globalModules` / `_forwardedModules` so the
-    * imported file cannot access modules that were namespaced into the
-    * caller. Imported modules flow through via `_importedModules`.
+    * Shares variables/functions/mixins with the caller but starts with empty `_modules` / `_globalModules` / `_forwardedModules` so the imported file cannot access modules that were namespaced into
+    * the caller. Imported modules flow through via `_importedModules`.
     */
   def forImport(): Environment = {
     val e = new Environment(
@@ -201,25 +193,28 @@ final class Environment private (
     e
   }
 
+  /** Transfers all modules from [other]'s `_allModules` into this environment's `_allModules`. Used when `@import`ing a file with `@use`/`@forward`: the imported file's modules must become upstream
+    * of the importing module so that `_combineCss` includes their CSS.
+    */
+  def importModules(other: Environment): Unit =
+    for (m <- other._allModules)
+      if (!_allModules.contains(m)) _allModules += m
+
   // ---------------------------------------------------------------------------
   // Module storage
   // ---------------------------------------------------------------------------
 
   /** Adds a module to this environment.
     *
-    * When [namespace] is empty, the module is added as a namespaceless
-    * global module. The variables of the current global scope are
-    * checked for collisions with the new module's variables, matching
+    * When [namespace] is empty, the module is added as a namespaceless global module. The variables of the current global scope are checked for collisions with the new module's variables, matching
     * dart-sass's error message.
     *
-    * When [namespace] is present, the module is stored under that
-    * name; a pre-existing module with the same namespace raises a
-    * MultiSpanSassException containing the span of the original `@use`.
+    * When [namespace] is present, the module is stored under that name; a pre-existing module with the same namespace raises a MultiSpanSassException containing the span of the original `@use`.
     */
   def addModule(
     module:       Module[Callable],
     nodeWithSpan: Nullable[AstNode] = Nullable.empty,
-    namespace:    Nullable[String]  = Nullable.empty
+    namespace:    Nullable[String] = Nullable.empty
   ): Unit =
     namespace.toOption match {
       case None =>
@@ -230,7 +225,7 @@ final class Environment private (
         _allModules += module
         // Collision with an existing global variable of the same name.
         val globalVars = _variables(0)
-        val clashing = globalVars.keysIterator.find(name => module.variables.contains(name))
+        val clashing   = globalVars.keysIterator.find(name => module.variables.contains(name))
         clashing.foreach { name =>
           throw SassScriptException(
             s"""This module and the new module both define a variable named "$$$name"."""
@@ -250,12 +245,10 @@ final class Environment private (
         _allModules += module
     }
 
-  /** Exposes [module]'s members to downstream modules under a forwarded
-    * view per [rule].
+  /** Exposes [module]'s members to downstream modules under a forwarded view per [rule].
     *
-    * Checks each of `variables`/`functions`/`mixins` for conflicts with
-    * already-forwarded modules, collapsing name-clashes that share the
-    * same `variableIdentity` (meaning they come from a common upstream).
+    * Checks each of `variables`/`functions`/`mixins` for conflicts with already-forwarded modules, collapsing name-clashes that share the same `variableIdentity` (meaning they come from a common
+    * upstream).
     */
   def forwardModule(module: Module[Callable], rule: ForwardRule): Unit = {
     val forwarded = _forwardedModules.toOption.getOrElse {
@@ -284,9 +277,7 @@ final class Environment private (
     forwarded(view) = rule
   }
 
-  /** Throws a SassScriptException if [newMembers] from [newModule] has
-    * any keys overlapping [oldMembers] from [oldModule] that don't
-    * share a `variableIdentity` (for variables) or reference equality
+  /** Throws a SassScriptException if [newMembers] from [newModule] has any keys overlapping [oldMembers] from [oldModule] that don't share a `variableIdentity` (for variables) or reference equality
     * (for callables).
     */
   private def _assertNoConflicts(
@@ -299,18 +290,15 @@ final class Environment private (
     val (smaller, larger) =
       if (newMembers.size < oldMembers.size) (newMembers, oldMembers)
       else (oldMembers, newMembers)
-    for ((name, small) <- smaller) {
+    for ((name, small) <- smaller)
       larger.get(name).foreach { large =>
         val isSame =
           if (memberType == "variable")
             newModule.variableIdentity(name) == oldModule.variableIdentity(name)
           else large == small
         if (!isSame) {
-          val displayName = if (memberType == "variable") s"$$$name" else name
-          val originalSpan = _forwardedModules.toOption
-            .flatMap(_.get(oldModule))
-            .flatMap(_.toOption)
-            .map(_.span)
+          val displayName  = if (memberType == "variable") s"$$$name" else name
+          val originalSpan = _forwardedModules.toOption.flatMap(_.get(oldModule)).flatMap(_.toOption).map(_.span)
           throw MultiSpanSassScriptException(
             s"Two forwarded modules both define a $memberType named $displayName.",
             "new @forward",
@@ -318,21 +306,17 @@ final class Environment private (
           )
         }
       }
-    }
   }
 
-  /** Makes [module]'s forwarded members available in the current
-    * environment, matching `@import` semantics.
+  /** Makes [module]'s forwarded members available in the current environment, matching `@import` semantics.
     *
-    * At root, existing imported and forwarded modules are shadowed so
-    * they no longer expose names that the newly-imported module
-    * forwards. Below root, the new modules go into
+    * At root, existing imported and forwarded modules are shadowed so they no longer expose names that the newly-imported module forwards. Below root, the new modules go into
     * `_nestedForwardedModules` at the current scope level.
     */
   def importForwards(module: Module[Callable]): Unit = {
     val fwdOpt = module match {
       case impl: Environment.EnvironmentModule => impl.env._forwardedModules
-      case _                                   => Nullable.empty[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]]
+      case _ => Nullable.empty[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]]
     }
     if (fwdOpt.isEmpty) return
     var forwarded: mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]] = fwdOpt.get
@@ -426,9 +410,7 @@ final class Environment private (
   // Variable lookup
   // ---------------------------------------------------------------------------
 
-  /** Returns the variable named [name] from the namespace [namespace] if
-    * given, or walking the scope chain then namespaceless modules
-    * otherwise. Returns Nullable.empty when undefined.
+  /** Returns the variable named [name] from the namespace [namespace] if given, or walking the scope chain then namespaceless modules otherwise. Returns Nullable.empty when undefined.
     */
   def getVariable(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Value] = {
     if (namespace.isDefined)
@@ -465,22 +447,22 @@ final class Environment private (
     }
   }
 
-  /** Looks up [name] via `_fromOneModule` across the namespaceless
-    * (imported + global) modules.
+  /** Looks up [name] via `_fromOneModule` across the namespaceless (imported + global) modules.
     */
   private def _getVariableFromGlobalModule(name: String): Nullable[Value] =
-    _fromOneModule[Value](name, "variable", m => m.variables.get(name) match {
-      case Some(v) => Nullable(v)
-      case None    => Nullable.empty
-    })
+    _fromOneModule[Value](name,
+                          "variable",
+                          m =>
+                            m.variables.get(name) match {
+                              case Some(v) => Nullable(v)
+                              case None    => Nullable.empty
+                            }
+    )
 
-  /** Returns the [[AstNode]] for the variable named [name], or empty if no
-    * such variable is declared. The node is intended as a proxy for the
-    * source span of the variable's value origin — used by the evaluator
-    * to attach source spans to deprecation warnings without forcing
-    * span materialization for variables that never need it.
+  /** Returns the [[AstNode]] for the variable named [name], or empty if no such variable is declared. The node is intended as a proxy for the source span of the variable's value origin — used by the
+    * evaluator to attach source spans to deprecation warnings without forcing span materialization for variables that never need it.
     */
-  def getVariableNode(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[AstNode] = {
+  def getVariableNode(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[AstNode] =
     if (namespace.isDefined) {
       // No public `variableNodes` accessor on Module yet — we look the
       // node up through the namespaced env if available.
@@ -520,17 +502,11 @@ final class Environment private (
           } else _getVariableNodeFromGlobalModule(name)
       }
     }
-  }
 
-  /** Walks namespaceless (imported + global) modules to find the AstNode
-    * for [name]. Mirrors dart-sass `_getVariableNodeFromGlobalModule`.
+  /** Walks namespaceless (imported + global) modules to find the AstNode for [name]. Mirrors dart-sass `_getVariableNodeFromGlobalModule`.
     *
-    * dart-sass's `Module` carries a `variableNodes` map. The ssg-sass
-    * `Module` trait routes variable-node access through its concrete
-    * subtypes — the `EnvironmentModule` wrapper exposes its underlying
-    * env's `_variableNodes(0)` directly. For built-in and forwarded-view
-    * modules variable nodes are absent (those modules never produce
-    * runtime span warnings on their own variables), so this method
+    * dart-sass's `Module` carries a `variableNodes` map. The ssg-sass `Module` trait routes variable-node access through its concrete subtypes — the `EnvironmentModule` wrapper exposes its underlying
+    * env's `_variableNodes(0)` directly. For built-in and forwarded-view modules variable nodes are absent (those modules never produce runtime span warnings on their own variables), so this method
     * returns empty for them.
     */
   private def _getVariableNodeFromGlobalModule(name: String): Nullable[AstNode] = scala.util.boundary {
@@ -568,7 +544,7 @@ final class Environment private (
   def globalVariableExists(name: String, namespace: Nullable[String] = Nullable.empty): Boolean =
     namespace.toOption match {
       case Some(ns) => _getModule(ns).variables.contains(name)
-      case None =>
+      case None     =>
         if (_variables(0).contains(name)) true
         else _getVariableFromGlobalModule(name).isDefined
     }
@@ -616,10 +592,10 @@ final class Environment private (
     val nested = _nestedForwardedModules.toOption
     if (nested.isDefined && !_variableIndices.contains(name) && _variableIndex(name) < 0) {
       val buckets = nested.get
-      var i = buckets.length - 1
+      var i       = buckets.length - 1
       while (i >= 0) {
         val bucket = buckets(i)
-        var j = bucket.length - 1
+        var j      = bucket.length - 1
         while (j >= 0) {
           val m = bucket(j)
           if (m.variables.contains(name)) {
@@ -634,14 +610,15 @@ final class Environment private (
 
     var index =
       if (_lastVariableName.exists(_ == name)) _lastVariableIndex
-      else _variableIndices.get(name) match {
-        case Some(i) => i
-        case None =>
-          val found    = _variableIndex(name)
-          val resolved = if (found < 0) _variables.length - 1 else found
-          _variableIndices(name) = resolved
-          resolved
-      }
+      else
+        _variableIndices.get(name) match {
+          case Some(i) => i
+          case None    =>
+            val found    = _variableIndex(name)
+            val resolved = if (found < 0) _variables.length - 1 else found
+            _variableIndices(name) = resolved
+            resolved
+        }
 
     if (!_inSemiGlobalScope && index == 0) {
       index = _variables.length - 1
@@ -706,10 +683,14 @@ final class Environment private (
   }
 
   private def _getFunctionFromGlobalModule(name: String): Nullable[Callable] =
-    _fromOneModule[Callable](name, "function", m => m.functions.get(name) match {
-      case Some(c) => Nullable(c)
-      case None    => Nullable.empty
-    })
+    _fromOneModule[Callable](name,
+                             "function",
+                             m =>
+                               m.functions.get(name) match {
+                                 case Some(c) => Nullable(c)
+                                 case None    => Nullable.empty
+                               }
+    )
 
   private def _functionIndex(name: String): Int = {
     var i = _functions.length - 1
@@ -759,10 +740,14 @@ final class Environment private (
   }
 
   private def _getMixinFromGlobalModule(name: String): Nullable[Callable] =
-    _fromOneModule[Callable](name, "mixin", m => m.mixins.get(name) match {
-      case Some(c) => Nullable(c)
-      case None    => Nullable.empty
-    })
+    _fromOneModule[Callable](name,
+                             "mixin",
+                             m =>
+                               m.mixins.get(name) match {
+                                 case Some(c) => Nullable(c)
+                                 case None    => Nullable.empty
+                               }
+    )
 
   private def _mixinIndex(name: String): Int = {
     var i = _mixins.length - 1
@@ -786,8 +771,8 @@ final class Environment private (
   // Content block / `asMixin`
   // ---------------------------------------------------------------------------
 
-  def content:                              Nullable[UserDefinedCallable[Environment]] = _content
-  def content_=(block: Nullable[UserDefinedCallable[Environment]]): Unit               = _content = block
+  def content:                                                      Nullable[UserDefinedCallable[Environment]] = _content
+  def content_=(block: Nullable[UserDefinedCallable[Environment]]): Unit                                       = _content = block
 
   /** Sets [content] as the content block for the duration of [callback]. */
   def withContent[T](newContent: Nullable[UserDefinedCallable[Environment]])(callback: => T): T = {
@@ -811,16 +796,12 @@ final class Environment private (
 
   /** Runs [callback] in a new scope.
     *
-    * Variables, functions, and mixins declared in the new scope are
-    * inaccessible outside of it. When [semiGlobal] is `true` AND the
-    * caller is itself in a semi-global scope, assignments can write
-    * back to the global scope without an explicit `!global`. When
-    * [when] is `false`, no scope is pushed — the scope decision is
-    * logical only, matching dart-sass's `when` semantics.
+    * Variables, functions, and mixins declared in the new scope are inaccessible outside of it. When [semiGlobal] is `true` AND the caller is itself in a semi-global scope, assignments can write back
+    * to the global scope without an explicit `!global`. When [when] is `false`, no scope is pushed — the scope decision is logical only, matching dart-sass's `when` semantics.
     */
   def scope[T](semiGlobal: Boolean = false, when: Boolean = true)(callback: => T): T = {
-    val effective    = semiGlobal && _inSemiGlobalScope
-    val wasSemi      = _inSemiGlobalScope
+    val effective = semiGlobal && _inSemiGlobalScope
+    val wasSemi   = _inSemiGlobalScope
     _inSemiGlobalScope = effective
 
     if (!when) {
@@ -854,18 +835,15 @@ final class Environment private (
   /** Thunk overload kept for existing callers that pass `() => T`. */
   def withinScope[T](callback: () => T): T = scope(semiGlobal = false)(callback())
 
-  /** Convenience overload: `withinScope(semiGlobal = true) { body }`
-    * without having to write `scope(...)`.
+  /** Convenience overload: `withinScope(semiGlobal = true) { body }` without having to write `scope(...)`.
     */
   def withinScope[T](semiGlobal: Boolean)(body: => T): T = scope(semiGlobal = semiGlobal)(body)
 
   /** Shorthand for a semi-global scope. */
   def withinSemiGlobalScope[T](body: => T): T = scope(semiGlobal = true)(body)
 
-  /** Runs [body] in a fully isolated snapshot: saves variables /
-    * function / mixin tables, content, runs the body, then restores.
-    * Used by the evaluator's callable dispatchers so parameter
-    * bindings don't leak.
+  /** Runs [body] in a fully isolated snapshot: saves variables / function / mixin tables, content, runs the body, then restores. Used by the evaluator's callable dispatchers so parameter bindings
+    * don't leak.
     */
   def withSnapshot[T](body: => T): T = {
     val savedVars    = _variables.map(_.clone()).toBuffer
@@ -893,43 +871,38 @@ final class Environment private (
   // Configuration and module sealing
   // ---------------------------------------------------------------------------
 
-  /** Creates an implicit configuration from the variables declared in
-    * this environment, mirroring dart-sass `toImplicitConfiguration`.
+  /** Creates an implicit configuration from the variables declared in this environment, mirroring dart-sass `toImplicitConfiguration`.
     *
-    * For each scope level, the namespaceless modules visible at that
-    * level (`_importedModules` at the global level, the corresponding
-    * bucket of `_nestedForwardedModules` for non-root levels) contribute
-    * their variables first, and the level's own variables overlay on
-    * top. Innermost levels win on duplicate names because the loop
-    * proceeds outermost-to-innermost and overwrites the map.
+    * For each scope level, the namespaceless modules visible at that level (`_importedModules` at the global level, the corresponding bucket of `_nestedForwardedModules` for non-root levels)
+    * contribute their variables first, and the level's own variables overlay on top. Innermost levels win on duplicate names because the loop proceeds outermost-to-innermost and overwrites the map.
     */
   def toImplicitConfiguration(): Map[String, Value] = {
     val out = mutable.LinkedHashMap.empty[String, Value]
-    var i = 0
+    var i   = 0
     while (i < _variables.length) {
       val modules: Iterable[Module[Callable]] =
         if (i == 0) _importedModules.keys
-        else _nestedForwardedModules.toOption.flatMap { buckets =>
-          if (i - 1 < buckets.length) Some(buckets(i - 1)) else None
-        }.getOrElse(Iterable.empty)
-      for (m <- modules) {
+        else
+          _nestedForwardedModules.toOption
+            .flatMap { buckets =>
+              if (i - 1 < buckets.length) Some(buckets(i - 1)) else None
+            }
+            .getOrElse(Iterable.empty)
+      for (m <- modules)
         for ((name, value) <- m.variables) out(name) = value
-      }
       for ((name, value) <- _variables(i)) out(name) = value
       i += 1
     }
     out.toMap
   }
 
-  /** Seals this environment into a [[Module]] containing [css] and
-    * [extensionStore], exposing the top-level members as its public
-    * surface.
+  /** Seals this environment into a [[Module]] containing [css] and [extensionStore], exposing the top-level members as its public surface.
     */
   def toModule(
-    css:                CssStylesheet,
-    extensionStore:     ExtensionStore,
-    url:                Nullable[String] = Nullable.empty,
-    preModuleComments:  Map[Module[Callable], List[CssComment]] = Map.empty
+    css:               CssStylesheet,
+    extensionStore:    ExtensionStore,
+    url:               Nullable[String] = Nullable.empty,
+    preModuleComments: Map[Module[Callable], List[CssComment]] = Map.empty
   ): Module[Callable] =
     new Environment.EnvironmentModule(
       env = this,
@@ -940,15 +913,10 @@ final class Environment private (
       preModuleComments0 = preModuleComments
     )
 
-  /** Returns a module with the same members and upstream modules as this
-    * environment, but an empty stylesheet and extension store.
+  /** Returns a module with the same members and upstream modules as this environment, but an empty stylesheet and extension store.
     *
-    * Used when resolving `@import`s — the importing context needs a
-    * Module wrapper around the forImport env so that
-    * `_environment.importForwards(dummyModule)` can hoist the imported
-    * file's `@forward`ed modules into the outer env's lookup chain. The
-    * dummy module's CSS is empty (the actual CSS lives directly in the
-    * outer env), and the extension store is fresh because no @extend
+    * Used when resolving `@import`s — the importing context needs a Module wrapper around the forImport env so that `_environment.importForwards(dummyModule)` can hoist the imported file's
+    * `@forward`ed modules into the outer env's lookup chain. The dummy module's CSS is empty (the actual CSS lives directly in the outer env), and the extension store is fresh because no @extend
     * processing happens against this stand-in.
     */
   def toDummyModule(url: Nullable[String] = Nullable.empty): Module[Callable] =
@@ -971,10 +939,8 @@ final class Environment private (
         throw SassScriptException(s"""There is no module with the namespace "$namespace".""")
     }
 
-  /** Returns the result of [callback] for the first namespaceless
-    * module (nested forwarded, imported, or global) that provides a
-    * non-null value. Throws if two unrelated global modules both
-    * provide a value.
+  /** Returns the result of [callback] for the first namespaceless module (nested forwarded, imported, or global) that provides a non-null value. Throws if two unrelated global modules both provide a
+    * value.
     */
   private def _fromOneModule[T](
     name:     String,
@@ -984,10 +950,10 @@ final class Environment private (
     val nested = _nestedForwardedModules.toOption
     if (nested.isDefined) {
       val buckets = nested.get
-      var i = buckets.length - 1
+      var i       = buckets.length - 1
       while (i >= 0) {
         val bucket = buckets(i)
-        var j = bucket.length - 1
+        var j      = bucket.length - 1
         while (j >= 0) {
           val value = callback(bucket(j))
           if (value.isDefined) scala.util.boundary.break(value)
@@ -1009,7 +975,7 @@ final class Environment private (
       if (valueInModule.isDefined) {
         val identityFromModule: AnyRef = valueInModule.get match {
           case c: Callable => c
-          case _           => m.variableIdentity(name)
+          case _ => m.variableIdentity(name)
         }
         if (identityFromModule != identity) {
           if (resolved.isDefined) {
@@ -1039,13 +1005,11 @@ final class Environment private (
   def getNamespace(name: String): Nullable[Environment] =
     _modules.get(name) match {
       case Some(impl: Environment.EnvironmentModule) => Nullable(impl.env)
-      case _                                             => Nullable.empty
+      case _                                         => Nullable.empty
     }
 
-  /** Returns the [[Module]] registered under [namespace], if any.
-    * Used by `meta.module-variables`/`meta.module-functions` to walk the
-    * module's *public* surface (which includes forwarded members) rather
-    * than just the inner Environment's local scope.
+  /** Returns the [[Module]] registered under [namespace], if any. Used by `meta.module-variables`/`meta.module-functions` to walk the module's *public* surface (which includes forwarded members)
+    * rather than just the inner Environment's local scope.
     */
   def findNamespacedModule(namespace: String): Nullable[Module[Callable]] =
     _modules.get(namespace) match {
@@ -1055,7 +1019,8 @@ final class Environment private (
 
   def getNamespacedVariable(namespace: String, name: String): Nullable[Value] =
     _modules.get(namespace) match {
-      case Some(m) => m.variables.get(name) match {
+      case Some(m) =>
+        m.variables.get(name) match {
           case Some(v) => Nullable(v)
           case None    => Nullable.empty
         }
@@ -1064,7 +1029,8 @@ final class Environment private (
 
   def getNamespacedFunction(namespace: String, name: String): Nullable[Callable] =
     _modules.get(namespace) match {
-      case Some(m) => m.functions.get(name) match {
+      case Some(m) =>
+        m.functions.get(name) match {
           case Some(c) => Nullable(c)
           case None    => Nullable.empty
         }
@@ -1073,20 +1039,16 @@ final class Environment private (
 
   def getNamespacedMixin(namespace: String, name: String): Nullable[Callable] =
     _modules.get(namespace) match {
-      case Some(m) => m.mixins.get(name) match {
+      case Some(m) =>
+        m.mixins.get(name) match {
           case Some(c) => Nullable(c)
           case None    => Nullable.empty
         }
       case None => Nullable.empty
     }
 
-  /** Legacy Environment-based namespace registration used by
-    * `@use "sass:X"`. Wraps [env] in an EnvironmentModule. The
-    * `nodeWithSpan` is intentionally empty — built-in modules are
-    * registered without a source span because their load site is
-    * synthetic (the `@use "sass:X"` AST node is processed in
-    * EvaluateVisitor, which already carries its own span for
-    * diagnostics).
+  /** Legacy Environment-based namespace registration used by `@use "sass:X"`. Wraps [env] in an EnvironmentModule. The `nodeWithSpan` is intentionally empty — built-in modules are registered without
+    * a source span because their load site is synthetic (the `@use "sass:X"` AST node is processed in EvaluateVisitor, which already carries its own span for diagnostics).
     */
   def addNamespace(name: String, env: Environment): Unit =
     addModule(
@@ -1099,8 +1061,7 @@ final class Environment private (
   // Iteration helpers
   // ---------------------------------------------------------------------------
 
-  /** Iterates over all variable name/value pairs across all scopes
-    * (innermost wins on duplicates).
+  /** Iterates over all variable name/value pairs across all scopes (innermost wins on duplicates).
     */
   def variableEntries: Iterator[(String, Value)] = {
     val seen = mutable.Set.empty[String]
@@ -1146,9 +1107,7 @@ final class Environment private (
     buf.iterator
   }
 
-  /** Returns a public-view copy that hides private (`-`/`_`-prefixed)
-    * members. Used by the evaluator before registering a module under a
-    * caller's namespace.
+  /** Returns a public-view copy that hides private (`-`/`_`-prefixed) members. Used by the evaluator before registering a module under a caller's namespace.
     */
   def publicView(): Environment = {
     val out = new Environment()
@@ -1165,8 +1124,7 @@ final class Environment private (
     out
   }
 
-  /** Creates a new global-only environment containing the built-ins
-    * plus any variables declared with `!global` in this environment.
+  /** Creates a new global-only environment containing the built-ins plus any variables declared with `!global` in this environment.
     */
   def global(): Environment = {
     val g = Environment.withBuiltins()
@@ -1202,9 +1160,7 @@ object Environment {
     env
   }
 
-  /** Returns a `ShadowedView` wrapping [module] with the given hidden
-    * sets, or `Nullable.empty` if the shadow would be a no-op (no
-    * overlap with the module's members).
+  /** Returns a `ShadowedView` wrapping [module] with the given hidden sets, or `Nullable.empty` if the shadow would be a no-op (no overlap with the module's members).
     */
   private[sass] def makeShadowed(
     module:    Module[Callable],
@@ -1233,17 +1189,15 @@ object Environment {
   // toDummyModule. Port of dart-sass's private `_EnvironmentModule` class.
   // ---------------------------------------------------------------------------
 
-  /** A [[Module]] that wraps an [[Environment]] and exposes its
-    * top-level members as its public surface. Private members are
-    * filtered; members forwarded from upstream modules are merged in.
+  /** A [[Module]] that wraps an [[Environment]] and exposes its top-level members as its public surface. Private members are filtered; members forwarded from upstream modules are merged in.
     */
   final class EnvironmentModule(
-    val env:                    Environment,
-    val css:                    CssStylesheet,
-    val extensionStore:         ExtensionStore,
-    explicitUrl:                Nullable[String],
-    forwarded:                  Set[Module[Callable]],
-    preModuleComments0:         Map[Module[Callable], List[CssComment]] = Map.empty
+    val env:            Environment,
+    val css:            CssStylesheet,
+    val extensionStore: ExtensionStore,
+    explicitUrl:        Nullable[String],
+    forwarded:          Set[Module[Callable]],
+    preModuleComments0: Map[Module[Callable], List[CssComment]] = Map.empty
   ) extends Module[Callable] {
 
     val url: Nullable[String] =
@@ -1260,9 +1214,7 @@ object Environment {
 
     val preModuleComments: Map[Module[Callable], List[CssComment]] = preModuleComments0
 
-    /** For each variable name, the module that actually holds the
-      * underlying storage. Used by `setVariable` to route writes to the
-      * forwarded module and by `variableIdentity` to compare variables
+    /** For each variable name, the module that actually holds the underlying storage. Used by `setVariable` to route writes to the forwarded module and by `variableIdentity` to compare variables
       * across forward chains.
       */
     private val _modulesByVariable: Map[String, Module[Callable]] =
@@ -1294,7 +1246,7 @@ object Environment {
     val transitivelyContainsExtensions: Boolean =
       !extensionStore.isEmpty || env._allModules.exists(_.transitivelyContainsExtensions)
 
-    def setVariable(name: String, value: Value): Unit = {
+    def setVariable(name: String, value: Value): Unit =
       _modulesByVariable.get(name) match {
         case Some(m) =>
           m.setVariable(name, value)
@@ -1303,7 +1255,6 @@ object Environment {
             throw SassScriptException(s"Undefined variable: $$$name")
           env._variables(0)(name) = value
       }
-    }
 
     override def variableIdentity(name: String): AnyRef =
       _modulesByVariable.get(name) match {
@@ -1327,15 +1278,12 @@ object Environment {
     override def toString: String =
       if (url.isEmpty) "<unknown url>" else url.get
 
-    /** Returns a copy of this module with its CSS and ExtensionStore
-      * deep-cloned. Mirrors dart-sass `_EnvironmentModule.cloneCss`.
+    /** Returns a copy of this module with its CSS and ExtensionStore deep-cloned. Mirrors dart-sass `_EnvironmentModule.cloneCss`.
       *
-      * If the module contains no transitive CSS, returns `this` (no
-      * cloning needed). Otherwise uses [[ssg.sass.visitor.CloneCssVisitor]]
-      * to deep-clone the stylesheet and extension store, ensuring that
-      * applying `@extend` to the clone has no effect on the original.
+      * If the module contains no transitive CSS, returns `this` (no cloning needed). Otherwise uses [[ssg.sass.visitor.CloneCssVisitor]] to deep-clone the stylesheet and extension store, ensuring
+      * that applying `@extend` to the clone has no effect on the original.
       */
-    def cloneCss(): Module[Callable] = {
+    def cloneCss(): Module[Callable] =
       if (!transitivelyContainsCss) this
       else {
         val (newStylesheet, newExtensionStore) =
@@ -1349,7 +1297,6 @@ object Environment {
           preModuleComments0 = preModuleComments
         )
       }
-    }
   }
 
   object EnvironmentModule {
@@ -1357,7 +1304,7 @@ object Environment {
     private[sass] def makeModulesByVariable(forwarded: Set[Module[Callable]]): Map[String, Module[Callable]] = {
       if (forwarded.isEmpty) return Map.empty
       val out = mutable.Map.empty[String, Module[Callable]]
-      for (m <- forwarded) {
+      for (m <- forwarded)
         m match {
           case impl: EnvironmentModule =>
             // Flatten nested forwarded modules to avoid O(depth) overhead.
@@ -1368,13 +1315,10 @@ object Environment {
           case other =>
             for (v <- other.variables.keys) out(v) = other
         }
-      }
       out.toMap
     }
 
-    /** Returns a map containing [localMap] plus every other-map
-      * entry, with `localMap` taking precedence. `localMap` is assumed
-      * to already hide private members.
+    /** Returns a map containing [localMap] plus every other-map entry, with `localMap` taking precedence. `localMap` is assumed to already hide private members.
       */
     private[sass] def memberMap[V](localMap: Map[String, V], otherMaps: Iterable[Map[String, V]]): Map[String, V] = {
       if (otherMaps.isEmpty) return localMap

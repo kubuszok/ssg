@@ -233,8 +233,7 @@ final case class FileSpan(
 
   /** Whether this [FileSpan] contains the [target] FileSpan.
     *
-    * Validates the FileSpans to be in the same file and for the [target] to be within this [FileSpan]'s inclusive range
-    * `[start,end]`.
+    * Validates the FileSpans to be in the same file and for the [target] to be within this [FileSpan]'s inclusive range `[start,end]`.
     */
   def contains(target: FileSpan): Boolean =
     file.url == target.file.url &&
@@ -264,8 +263,7 @@ extension (span: FileSpan) {
 
   /** Returns the span of the identifier at the start of this span.
     *
-    * If [includeLeading] is greater than 0, that many additional characters will be included from the start of this
-    * span before looking for an identifier.
+    * If [includeLeading] is greater than 0, that many additional characters will be included from the start of this span before looking for an identifier.
     */
   def initialIdentifier(includeLeading: Int = 0): FileSpan = {
     val t = span.text

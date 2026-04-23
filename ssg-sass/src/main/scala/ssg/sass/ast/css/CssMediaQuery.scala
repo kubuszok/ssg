@@ -206,16 +206,42 @@ final class CssMediaQuery private (
 
 object CssMediaQuery {
 
-  /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes alone. */
+  /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes (nested parens, no colon) alone. */
   private[sass] def normalizeCondition(cond: String): String = {
     if (!(cond.startsWith("(") && cond.endsWith(")"))) return cond
     val inner = cond.substring(1, cond.length - 1)
+    if (inner.contains('(')) return cond
     val colon = inner.indexOf(':')
     if (colon < 0) return cond
     val name  = inner.substring(0, colon).trim
     val value = inner.substring(colon + 1).trim
     if (name.isEmpty || value.isEmpty) return cond
     s"($name: $value)"
+  }
+
+  /** Normalize all parenthesized media features in a modifier string. */
+  private[sass] def normalizeMediaFeatures(text: String): String = {
+    if (!text.contains('(')) return text
+    val sb = new StringBuilder()
+    var i = 0
+    while (i < text.length) {
+      if (text.charAt(i) == '(') {
+        var depth = 1
+        var j = i + 1
+        while (j < text.length && depth > 0) {
+          val ch = text.charAt(j)
+          if (ch == '(') depth += 1
+          else if (ch == ')') depth -= 1
+          j += 1
+        }
+        sb.append(normalizeCondition(text.substring(i, j)))
+        i = j
+      } else {
+        sb.append(text.charAt(i))
+        i += 1
+      }
+    }
+    sb.toString()
   }
 
   /** Creates a media query that specifies a type and, optionally, conditions.

@@ -23,17 +23,14 @@ import ssg.sass.ast.sass.*
 // would default to returning `true` if we added a new expression type and
 // forgot to update this class.
 
-/** A visitor that determines whether an expression is valid plain CSS that will
-  * produce the same result as it would in Sass.
+/** A visitor that determines whether an expression is valid plain CSS that will produce the same result as it would in Sass.
   *
   * This should be used through [Expression.isPlainCss].
   *
   * @param allowInterpolation
   *   if true, interpolated expressions are allowed as an exception, even if they contain SassScript.
   */
-final class IsPlainCssVisitor(allowInterpolation: Boolean = false)
-    extends ExpressionVisitor[Boolean]
-    with IfConditionExpressionVisitor[Boolean] {
+final class IsPlainCssVisitor(allowInterpolation: Boolean = false) extends ExpressionVisitor[Boolean] with IfConditionExpressionVisitor[Boolean] {
 
   def visitBinaryOperationExpression(node: BinaryOperationExpression): Boolean = false
 

@@ -52,18 +52,12 @@ import ssg.sass.value.{ ListSeparator, SassArgumentList, SassBoolean, SassList, 
 /** Built-in `sass:map` functions. Faithful port of `lib/src/functions/map.dart`. */
 object MapFunctions {
 
-  /** Resolve the rest-arg slice for a callback whose declared signature
-    * uses `$args...`. ssg-sass's binder may pass the splat as either:
+  /** Resolve the rest-arg slice for a callback whose declared signature uses `$args...`. ssg-sass's binder may pass the splat as either:
     *
-    *   - A single trailing positional value that is a [[SassArgumentList]]
-    *     (the canonical splat shape — used when the call site itself
-    *     splatted, e.g. `set(map, $list...)`).
-    *   - The raw positional values themselves (when the call site passed
-    *     them inline, e.g. `set(map, k1, k2, v)`).
+    *   - A single trailing positional value that is a [[SassArgumentList]] (the canonical splat shape — used when the call site itself splatted, e.g. `set(map, $list...)`).
+    *   - The raw positional values themselves (when the call site passed them inline, e.g. `set(map, k1, k2, v)`).
     *
-    * Both shapes have to be handled because the binder behavior is not
-    * yet fully unified. Returns `args.drop(skip)` collapsed to the rest
-    * elements.
+    * Both shapes must be handled because the binder produces different representations depending on call-site form. Returns `args.drop(skip)` collapsed to the rest elements.
     */
   private def restAfter(args: List[Value], skip: Int): List[Value] = {
     val tail = args.drop(skip)
@@ -114,11 +108,11 @@ object MapFunctions {
           val map     = args(0).assertMap("map")
           val argList = restAfter(args, 1)
           argList match {
-            case Nil      =>
+            case Nil =>
               throw SassScriptException("Expected $args to contain a key.")
             case _ :: Nil =>
               throw SassScriptException("Expected $args to contain a value.")
-            case _        =>
+            case _ =>
               val keys  = argList.init
               val value = argList.last
               modify(map, keys, _ => value)
@@ -140,24 +134,23 @@ object MapFunctions {
           val map1    = args(0).assertMap("map1")
           val argList = restAfter(args, 1)
           argList match {
-            case Nil      =>
+            case Nil =>
               throw SassScriptException("Expected $args to contain a key.")
             case _ :: Nil =>
               throw SassScriptException("Expected $args to contain a map.")
-            case _        =>
+            case _ =>
               val keys = argList.init
               val last = argList.last
               val map2 = last.assertMap("map2")
               modify(
                 map1,
                 keys,
-                oldValue => {
+                oldValue =>
                   oldValue.tryMap() match {
-                    case None             => map2
-                    case Some(nestedMap)  =>
+                    case None            => map2
+                    case Some(nestedMap) =>
                       SassMap(nestedMap.contents ++ map2.contents)
                   }
-                }
               )
           }
         }
@@ -175,9 +168,9 @@ object MapFunctions {
           args(0).assertMap("map")
         },
         "$map, $key, $keys..." -> { (args: List[Value]) =>
-          val map               = args(0).assertMap("map")
+          val map = args(0).assertMap("map")
           val keys: List[Value] = args(1) :: restAfter(args, 2)
-          val keySet            = keys.toSet
+          val keySet   = keys.toSet
           val filtered = map.contents.filterNot { case (k, _) => keySet.contains(k) }
           SassMap(ListMap.from(filtered))
         }
@@ -203,12 +196,12 @@ object MapFunctions {
       "has-key",
       "$map, $key, $keys...",
       { args =>
-        var map               = args(0).assertMap("map")
+        var map = args(0).assertMap("map")
         val keys: List[Value] = args(1) :: restAfter(args, 2)
-        val last              = keys.last
-        val intermediates     = keys.init
-        var bailed            = false
-        val it                = intermediates.iterator
+        val last          = keys.last
+        val intermediates = keys.init
+        var bailed        = false
+        val it            = intermediates.iterator
         while (!bailed && it.hasNext) {
           val key = it.next()
           map.contents.get(key) match {
@@ -237,21 +230,20 @@ object MapFunctions {
       "deep-remove",
       "$map, $key, $keys...",
       { args =>
-        val map               = args(0).assertMap("map")
+        val map = args(0).assertMap("map")
         val keys: List[Value] = args(1) :: restAfter(args, 2)
-        val last              = keys.last
-        val pathKeys          = keys.init
+        val last     = keys.last
+        val pathKeys = keys.init
         modify(
           map,
           pathKeys,
-          { value =>
+          value =>
             value.tryMap() match {
               case Some(nestedMap) if nestedMap.contents.contains(last) =>
                 SassMap(nestedMap.contents - last)
               case _ =>
                 value
-            }
-          },
+            },
           addNesting = false
         )
       }
@@ -261,20 +253,15 @@ object MapFunctions {
   // Private helpers (exact port of dart-sass `_modify` and `_deepMergeImpl`).
   // ---------------------------------------------------------------------------
 
-  /** Updates the specified value in [map] by applying the [modifyFn] callback
-    * to it, then returns the resulting map.
+  /** Updates the specified value in [map] by applying the [modifyFn] callback to it, then returns the resulting map.
     *
-    * If more than one key is provided, this means the map targeted for update
-    * is nested within [map]. The multiple [keys] form a path of nested maps
-    * that leads to the targeted value, which is passed to [modifyFn].
+    * If more than one key is provided, this means the map targeted for update is nested within [map]. The multiple [keys] form a path of nested maps that leads to the targeted value, which is passed
+    * to [modifyFn].
     *
-    * If any value along the path (other than the last one) is not a map and
-    * [addNesting] is `true`, this creates nested maps to match [keys] and
-    * passes the empty map to [modifyFn]. Otherwise, this fails and returns
-    * [map] with no changes.
+    * If any value along the path (other than the last one) is not a map and [addNesting] is `true`, this creates nested maps to match [keys] and passes the empty map to [modifyFn]. Otherwise, this
+    * fails and returns [map] with no changes.
     *
-    * If no keys are provided, this passes [map] directly to [modifyFn] and
-    * returns the result.
+    * If no keys are provided, this passes [map] directly to [modifyFn] and returns the result.
     */
   private def modify(
     map:        SassMap,
@@ -304,8 +291,7 @@ object MapFunctions {
 
   /** Merges [map1] and [map2], with values in [map2] taking precedence.
     *
-    * If both [map1] and [map2] have a map value associated with the same
-    * key, this recursively merges those maps as well.
+    * If both [map1] and [map2] have a map value associated with the same key, this recursively merges those maps as well.
     */
   private def deepMergeImpl(map1: SassMap, map2: SassMap): SassMap = {
     if (map1.contents.isEmpty) return map2
@@ -334,11 +320,8 @@ object MapFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** Globally available built-ins. Mirrors dart-sass `global`. Note `set`,
-    * `deep-merge`, and `deep-remove` are NOT in the global; only the six
-    * deprecated `map-*` aliases are.
-    * Each entry uses `.withDeprecationWarning('map').withName("map-*")`
-    * to emit a `global-builtin` deprecation warning directing users to `map.X`.
+  /** Globally available built-ins. Mirrors dart-sass `global`. Note `set`, `deep-merge`, and `deep-remove` are NOT in the global; only the six deprecated `map-*` aliases are. Each entry uses
+    * `.withDeprecationWarning('map').withName("map-*")` to emit a `global-builtin` deprecation warning directing users to `map.X`.
     */
   val global: List[Callable] = List(
     getFn.withDeprecationWarning("map").withName("map-get"),

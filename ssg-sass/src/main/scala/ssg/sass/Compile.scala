@@ -37,30 +37,28 @@ object Compile {
     *
     * Wires the full pipeline: StylesheetParser -> EvaluateVisitor -> SerializeVisitor.
     *
-    * The first two positional parameters preserve the original calling convention
-    * (source, style) used throughout the test suite.
+    * The first two positional parameters preserve the original calling convention (source, style) used throughout the test suite.
     *
-    * At most one of `importCache` and `nodeImporter` may be provided at once
-    * (nodeImporter is omitted in the SSG port because we have no JS-specific API).
+    * At most one of `importCache` and `nodeImporter` may be provided at once (nodeImporter is omitted in the SSG port because we have no JS-specific API).
     */
   def compileString(
-    source:               String,
-    style:                String = OutputStyle.Expanded,
-    importer:             Nullable[Importer] = Nullable.empty,
-    sourceMap:            Boolean = false,
-    syntax:               Syntax = Syntax.Scss,
-    logger:               Nullable[Logger] = Nullable.empty,
-    importCache:          Nullable[ImportCache] = Nullable.empty,
-    importers:            Nullable[Iterable[Importer]] = Nullable.empty,
-    loadPaths:            Nullable[Iterable[String]] = Nullable.empty,
-    functions:            Nullable[Iterable[Callable]] = Nullable.empty,
-    url:                  Nullable[String] = Nullable.empty,
-    quietDeps:            Boolean = false,
-    verbose:              Boolean = false,
-    charset:              Boolean = true,
-    silenceDeprecations:  Nullable[Iterable[Deprecation]] = Nullable.empty,
-    fatalDeprecations:    Nullable[Iterable[Deprecation]] = Nullable.empty,
-    futureDeprecations:   Nullable[Iterable[Deprecation]] = Nullable.empty
+    source:              String,
+    style:               String = OutputStyle.Expanded,
+    importer:            Nullable[Importer] = Nullable.empty,
+    sourceMap:           Boolean = false,
+    syntax:              Syntax = Syntax.Scss,
+    logger:              Nullable[Logger] = Nullable.empty,
+    importCache:         Nullable[ImportCache] = Nullable.empty,
+    importers:           Nullable[Iterable[Importer]] = Nullable.empty,
+    loadPaths:           Nullable[Iterable[String]] = Nullable.empty,
+    functions:           Nullable[Iterable[Callable]] = Nullable.empty,
+    url:                 Nullable[String] = Nullable.empty,
+    quietDeps:           Boolean = false,
+    verbose:             Boolean = false,
+    charset:             Boolean = true,
+    silenceDeprecations: Nullable[Iterable[Deprecation]] = Nullable.empty,
+    fatalDeprecations:   Nullable[Iterable[Deprecation]] = Nullable.empty,
+    futureDeprecations:  Nullable[Iterable[Deprecation]] = Nullable.empty
   ): CompileResult = {
     // Wrap the user's logger with deprecation processing
     val deprecationLogger = new DeprecationProcessingLogger(
@@ -100,23 +98,22 @@ object Compile {
 
   /** Compile a Sass/SCSS file at the given path.
     *
-    * This cross-platform default throws -- the JVM override in `CompileFile`
-    * provides the real implementation using FilesystemImporter.
+    * This cross-platform default throws -- the JVM override in `CompileFile` provides the real implementation using FilesystemImporter.
     */
   def compile(
-    path:                 String,
-    style:                String = OutputStyle.Expanded,
-    syntax:               Nullable[Syntax] = Nullable.empty,
-    logger:               Nullable[Logger] = Nullable.empty,
-    importCache:          Nullable[ImportCache] = Nullable.empty,
-    functions:            Nullable[Iterable[Callable]] = Nullable.empty,
-    quietDeps:            Boolean = false,
-    verbose:              Boolean = false,
-    sourceMap:            Boolean = false,
-    charset:              Boolean = true,
-    silenceDeprecations:  Nullable[Iterable[Deprecation]] = Nullable.empty,
-    fatalDeprecations:    Nullable[Iterable[Deprecation]] = Nullable.empty,
-    futureDeprecations:   Nullable[Iterable[Deprecation]] = Nullable.empty
+    path:                String,
+    style:               String = OutputStyle.Expanded,
+    syntax:              Nullable[Syntax] = Nullable.empty,
+    logger:              Nullable[Logger] = Nullable.empty,
+    importCache:         Nullable[ImportCache] = Nullable.empty,
+    functions:           Nullable[Iterable[Callable]] = Nullable.empty,
+    quietDeps:           Boolean = false,
+    verbose:             Boolean = false,
+    sourceMap:           Boolean = false,
+    charset:             Boolean = true,
+    silenceDeprecations: Nullable[Iterable[Deprecation]] = Nullable.empty,
+    fatalDeprecations:   Nullable[Iterable[Deprecation]] = Nullable.empty,
+    futureDeprecations:  Nullable[Iterable[Deprecation]] = Nullable.empty
   ): CompileResult =
     throw new UnsupportedOperationException(
       "Compile.compile(path) requires filesystem access -- use CompileFile on JVM."

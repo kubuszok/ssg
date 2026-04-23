@@ -62,9 +62,7 @@ final class InterpolationMap(
     val startIndex = _indexInContents(target.start)
     val endIndex   = _indexInContents(target.end)
 
-    val hasExpression = interpolation.contents
-      .slice(startIndex, endIndex + 1)
-      .exists(_.isInstanceOf[Expression])
+    val hasExpression = interpolation.contents.slice(startIndex, endIndex + 1).exists(_.isInstanceOf[Expression])
 
     if (!hasExpression) {
       SassFormatException(error.sassMessage, source, error.loadedUrls)
@@ -117,9 +115,8 @@ final class InterpolationMap(
 
   /** Maps a location in the string generated from this interpolation to its original source.
     *
-    * If [target] points to an un-interpolated portion of the original string, this will return the corresponding
-    * [FileLocation]. If it points to text generated from interpolation, this will return the full [FileSpan] for that
-    * interpolated expression.
+    * If [target] points to an un-interpolated portion of the original string, this will return the corresponding [FileLocation]. If it points to text generated from interpolation, this will return
+    * the full [FileSpan] for that interpolated expression.
     */
   private def _mapLocation(target: FileLocation): FileLocation | FileSpan = {
     if (interpolation.contents.isEmpty) return interpolation.span
@@ -151,7 +148,7 @@ final class InterpolationMap(
   }
 
   /** Return the index in [interpolation.contents] at which [target] points. */
-  private def _indexInContents(target: FileLocation): Int = {
+  private def _indexInContents(target: FileLocation): Int =
     boundary[Int] {
       var i = 0
       while (i < targetOffsetList.length) {
@@ -160,13 +157,10 @@ final class InterpolationMap(
       }
       interpolation.contents.length - 1
     }
-  }
 
-  /** Given the start of a [FileSpan] covering an interpolated expression, returns the offset of the interpolation's
-    * opening `#`.
+  /** Given the start of a [FileSpan] covering an interpolated expression, returns the offset of the interpolation's opening `#`.
     *
-    * Note that this can be tricked by a `#{` that appears within a single-line comment before the expression, but since
-    * it's only used for error reporting that's probably fine.
+    * Note that this can be tricked by a `#{` that appears within a single-line comment before the expression, but since it's only used for error reporting that's probably fine.
     */
   private def _expandInterpolationSpanLeft(start: FileLocation): Int = {
     val source = start.file.text
@@ -208,8 +202,7 @@ final class InterpolationMap(
     }
   }
 
-  /** Given the end of a [FileSpan] covering an interpolated expression, returns the offset of the interpolation's
-    * closing `}`.
+  /** Given the end of a [FileSpan] covering an interpolated expression, returns the offset of the interpolation's closing `}`.
     */
   private def _expandInterpolationSpanRight(end: FileLocation): Int = {
     val source = end.file.text

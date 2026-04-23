@@ -1,6 +1,6 @@
 package ssg.sass
 
-import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{ Executors, TimeUnit, TimeoutException }
 
 object DeclWiringTest {
   def main(args: Array[String]): Unit = {
@@ -42,17 +42,19 @@ object DeclWiringTest {
       // Unterminated comment (ISS-252 candidate)
       "a {\n  b: c /* d\n}",
       // Splat args (number-format regression)
-      "@function foo($a, $b, $c, $d) {\n  @return \"a: #{$a}, b: #{$b}, c: #{$c}, d: #{$d}\";\n}\n$list: 2, 3, 4;\n.foo {val: foo(1, $list...)}",
+      "@function foo($a, $b, $c, $d) {\n  @return \"a: #{$a}, b: #{$b}, c: #{$c}, d: #{$d}\";\n}\n$list: 2, 3, 4;\n.foo {val: foo(1, $list...)}"
     )
     val exec = Executors.newSingleThreadExecutor()
     tests.foreach { t =>
       print(s"${t.take(60).padTo(60, ' ')} => ")
-      val future = exec.submit(new java.util.concurrent.Callable[String] {
-        def call(): String = {
-          val r = Compile.compileString(t)
-          s"OK: ${r.css.take(40).replace("\n", "\\n")}"
+      val future = exec.submit(
+        new java.util.concurrent.Callable[String] {
+          def call(): String = {
+            val r = Compile.compileString(t)
+            s"OK: ${r.css.take(40).replace("\n", "\\n")}"
+          }
         }
-      })
+      )
       try {
         val result = future.get(5, TimeUnit.SECONDS)
         println(result)

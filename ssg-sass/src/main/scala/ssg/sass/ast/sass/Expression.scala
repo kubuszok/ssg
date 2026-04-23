@@ -95,8 +95,7 @@ abstract class Expression extends SassNode {
   /** Calls the appropriate visit method on [visitor]. */
   def accept[T](visitor: ExpressionVisitor[T]): T
 
-  /** If this expression is valid interpolated plain CSS, returns the equivalent of parsing its source as an interpolated
-    * unknown value.
+  /** If this expression is valid interpolated plain CSS, returns the equivalent of parsing its source as an interpolated unknown value.
     *
     * Otherwise, returns empty.
     */
@@ -114,26 +113,26 @@ abstract class Expression extends SassNode {
     case b: BinaryOperationExpression =>
       (b.operator == BinaryOperator.Plus || b.operator == BinaryOperator.Minus ||
         b.operator == BinaryOperator.Times || b.operator == BinaryOperator.DividedBy) &&
-        b.left.isCalculationSafe && b.right.isCalculationSafe
-    case _: FunctionExpression                => true
-    case _: IfExpression                      => true
-    case _: InterpolatedFunctionExpression    => true
-    case _: LegacyIfExpression                => true
-    case l: ListExpression                    =>
+      b.left.isCalculationSafe && b.right.isCalculationSafe
+    case _: FunctionExpression             => true
+    case _: IfExpression                   => true
+    case _: InterpolatedFunctionExpression => true
+    case _: LegacyIfExpression             => true
+    case l: ListExpression                 =>
       l.separator == ListSeparator.Space && !l.hasBrackets &&
-        l.contents.length > 1 && l.contents.forall(_.isCalculationSafe)
-    case _: NumberExpression                  => true
-    case p: ParenthesizedExpression           => p.expression.isCalculationSafe
-    case s: StringExpression                  =>
+      l.contents.length > 1 && l.contents.forall(_.isCalculationSafe)
+    case _: NumberExpression        => true
+    case p: ParenthesizedExpression => p.expression.isCalculationSafe
+    case s: StringExpression        =>
       if (s.hasQuotes) false
       else {
         val text = s.text.initialPlain
         !text.startsWith("!") && !text.startsWith("#") &&
-          !(text.length > 1 && text.charAt(1) == '+') &&
-          !(text.length > 3 && text.charAt(3) == '(')
+        !(text.length > 1 && text.charAt(1) == '+') &&
+        !(text.length > 3 && text.charAt(3) == '(')
       }
-    case _: VariableExpression                => true
-    case _                                    => false
+    case _: VariableExpression => true
+    case _ => false
   }
 }
 
@@ -411,8 +410,7 @@ sealed trait IfConditionExpression extends SassNode {
 
   /** Converts this expression into an interpolation that produces the same value.
     *
-    * [arbitrarySubstitution]'s span is used for error reporting when a sass()
-    * condition is encountered (sass() cannot be serialized to raw text).
+    * [arbitrarySubstitution]'s span is used for error reporting when a sass() condition is encountered (sass() cannot be serialized to raw text).
     */
   def toInterpolation(arbitrarySubstitution: SassNode): Interpolation
 
@@ -470,7 +468,7 @@ final case class IfConditionOperation(
     expressions.head.span.expand(expressions.last.span)
 
   def toInterpolation(arbitrarySubstitution: SassNode): Interpolation = {
-    val buf = new InterpolationBuffer()
+    val buf   = new InterpolationBuffer()
     var first = true
     for (expr <- expressions) {
       if (first) first = false
@@ -834,10 +832,10 @@ final case class StringExpression(
     *
     * Unlike [text], this doesn't resolve escapes and does include quotes for quoted strings.
     *
-    * If [static] is true, this escapes any `#{` sequences in the string. If [quote] is passed, it uses that character
-    * as the quote mark; otherwise, it determines the best quote to add by looking at the string.
+    * If [static] is true, this escapes any `#{` sequences in the string. If [quote] is passed, it uses that character as the quote mark; otherwise, it determines the best quote to add by looking at
+    * the string.
     */
-  def asInterpolation(static: Boolean = false, quote: Nullable[Char] = Nullable.empty): Interpolation = {
+  def asInterpolation(static: Boolean = false, quote: Nullable[Char] = Nullable.empty): Interpolation =
     if (!hasQuotes) text
     else {
       val q      = quote.getOrElse(StringExpression._bestQuote(text.contents.collect { case s: String => s }))
@@ -858,7 +856,6 @@ final case class StringExpression(
       buffer.writeChar(q)
       buffer.interpolation(text.span)
     }
-  }
 
   override def toString: String = asInterpolation().toString
 }
@@ -880,11 +877,9 @@ object StringExpression {
   def plain(text: String, span: FileSpan, quotes: Boolean = false): StringExpression =
     StringExpression(Interpolation.plain(text, span), hasQuotes = quotes)
 
-  /** Writes to [buffer] the contents of a string (without quotes) that evaluates to [text] according to Sass's parsing
-    * logic.
+  /** Writes to [buffer] the contents of a string (without quotes) that evaluates to [text] according to Sass's parsing logic.
     *
-    * This always adds an escape sequence before [quote]. If [static] is true, it also escapes any `#{` sequences in the
-    * string.
+    * This always adds an escape sequence before [quote]. If [static] is true, it also escapes any `#{` sequences in the string.
     */
   private[sass] def _quoteInnerText(text: String, quote: Char, buffer: InterpolationBuffer, static: Boolean = false): Unit = {
     var i = 0

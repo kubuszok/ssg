@@ -118,8 +118,8 @@ object MathFunctions {
     // Math.pow does not: `pow(1, ±infinity)` → 1 (Java returns NaN),
     // and `pow(±1, ±infinity)` likewise. Falls through to Math.pow
     // for every other input.
-    val b = base.value
-    val e = exponent.value
+    val b      = base.value
+    val e      = exponent.value
     val result =
       if (math.abs(b) == 1.0 && e.isInfinite) 1.0
       else math.pow(b, e)
@@ -137,8 +137,7 @@ object MathFunctions {
   // Factory helpers (port of _function / _numberFunction / _singleArgumentMathFunc).
   // ---------------------------------------------------------------------------
 
-  /** Creates a callable that transforms a number's value with [transform]
-    * and preserves its units — matches dart-sass's `_numberFunction`.
+  /** Creates a callable that transforms a number's value with [transform] and preserves its units — matches dart-sass's `_numberFunction`.
     */
   private def numberFn(name: String, transform: Double => Double): BuiltInCallable =
     BuiltInCallable.function(
@@ -150,9 +149,7 @@ object MathFunctions {
       }
     )
 
-  /** Creates a single-argument math callable — matches dart-sass's
-    * `_singleArgumentMathFunc`. Delegates unit handling to the passed
-    * SassNumber -> SassNumber function.
+  /** Creates a single-argument math callable — matches dart-sass's `_singleArgumentMathFunc`. Delegates unit handling to the passed SassNumber -> SassNumber function.
     */
   private def singleArgMathFn(name: String, fn: SassNumber => SassNumber): BuiltInCallable =
     BuiltInCallable.function(
@@ -199,7 +196,7 @@ object MathFunctions {
       "max",
       "$numbers...",
       { args =>
-        val raw: List[Value] = if (args.length == 1) args(0).asList else args
+        val raw:  List[Value]          = if (args.length == 1) args(0).asList else args
         var maxN: Nullable[SassNumber] = Nullable.empty
         for (value <- raw) {
           val number = value.assertNumber()
@@ -216,7 +213,7 @@ object MathFunctions {
       "min",
       "$numbers...",
       { args =>
-        val raw: List[Value] = if (args.length == 1) args(0).asList else args
+        val raw:  List[Value]          = if (args.length == 1) args(0).asList else args
         var minN: Nullable[SassNumber] = Nullable.empty
         for (value <- raw) {
           val number = value.assertNumber()
@@ -239,8 +236,8 @@ object MathFunctions {
       "hypot",
       "$numbers...",
       { args =>
-        val raw: List[Value]  = if (args.length == 1) args(0).asList else args
-        val numbers           = raw.map(_.assertNumber())
+        val raw: List[Value] = if (args.length == 1) args(0).asList else args
+        val numbers = raw.map(_.assertNumber())
         if (numbers.isEmpty)
           throw SassScriptException("At least one argument must be passed.")
 
@@ -250,10 +247,9 @@ object MathFunctions {
         // we have to re-raise the "isn't compatible with CSS calculations"
         // error ourselves to match dart-sass's user-facing behavior
         // (see values/calculation/hypot.hrx!error/unsimplifiable).
-        for (n <- numbers) {
+        for (n <- numbers)
           if (n.hasComplexUnits)
             throw SassScriptException(s"Number $n isn't compatible with CSS calculations.")
-        }
 
         var subtotal = 0.0
         var i        = 0
@@ -436,9 +432,7 @@ object MathFunctions {
   // Matches dart-sass's `.withDeprecationWarning('math').withName(...)` pattern.
   // ---------------------------------------------------------------------------
 
-  /** The global abs() — has additional `abs-percent` deprecation plus
-    * `global-builtin` deprecation warnings that the module-level abs
-    * does not emit. The body otherwise matches `numberAbs`.
+  /** The global abs() — has additional `abs-percent` deprecation plus `global-builtin` deprecation warnings that the module-level abs does not emit. The body otherwise matches `numberAbs`.
     */
   private val globalAbsFn: BuiltInCallable =
     BuiltInCallable.function(
@@ -470,11 +464,8 @@ object MathFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** Globally available built-ins. Mirrors dart-sass `global` exactly.
-    * Each entry uses `.withDeprecationWarning("math")` to emit a
-    * `global-builtin` deprecation warning directing users to `math.X`.
-    * The global `abs()` handles its own deprecation warnings inline
-    * (it has the additional `abs-percent` path), so it is not wrapped.
+  /** Globally available built-ins. Mirrors dart-sass `global` exactly. Each entry uses `.withDeprecationWarning("math")` to emit a `global-builtin` deprecation warning directing users to `math.X`.
+    * The global `abs()` handles its own deprecation warnings inline (it has the additional `abs-percent` path), so it is not wrapped.
     */
   val global: List[Callable] = List(
     globalAbsFn,
@@ -492,8 +483,17 @@ object MathFunctions {
     // they are dispatched by the evaluator's special-case calc path, not as
     // global built-ins. Once EvaluateVisitor handles top-level sqrt()/sin()/
     // cos()/etc. through calc evaluation, these entries can be removed.
-    sqrtFn, sinFn, cosFn, tanFn, asinFn, acosFn, atanFn,
-    logFn, powFn, clampFn, hypotFn
+    sqrtFn,
+    sinFn,
+    cosFn,
+    tanFn,
+    asinFn,
+    acosFn,
+    atanFn,
+    logFn,
+    powFn,
+    clampFn,
+    hypotFn
   )
 
   /** Members of the `sass:math` module. Mirrors dart-sass `module`. */
@@ -524,19 +524,16 @@ object MathFunctions {
     divFn
   )
 
-  /** Built-in constants exposed as module variables under `@use "sass:math"`.
-    * Mirrors dart-sass's `variables` map on the math BuiltInModule.
-    * The evaluator consumes this map through `EvaluateVisitor.visitUseRule`
-    * when loading `sass:math`, which seeds these names into the math
-    * module's `Environment` via `Functions.moduleVariables(moduleName)`.
+  /** Built-in constants exposed as module variables under `@use "sass:math"`. Mirrors dart-sass's `variables` map on the math BuiltInModule. The evaluator consumes this map through
+    * `EvaluateVisitor.visitUseRule` when loading `sass:math`, which seeds these names into the math module's `Environment` via `Functions.moduleVariables(moduleName)`.
     */
   def moduleVariables: Map[String, Value] = Map(
-    "e"                -> SassNumber(math.E),
-    "pi"               -> SassNumber(math.Pi),
-    "epsilon"          -> SassNumber(2.220446049250313e-16),
+    "e" -> SassNumber(math.E),
+    "pi" -> SassNumber(math.Pi),
+    "epsilon" -> SassNumber(2.220446049250313e-16),
     "max-safe-integer" -> SassNumber(9007199254740991.0),
     "min-safe-integer" -> SassNumber(-9007199254740991.0),
-    "max-number"       -> SassNumber(Double.MaxValue),
-    "min-number"       -> SassNumber(Double.MinPositiveValue)
+    "max-number" -> SassNumber(Double.MaxValue),
+    "min-number" -> SassNumber(Double.MinPositiveValue)
   )
 }

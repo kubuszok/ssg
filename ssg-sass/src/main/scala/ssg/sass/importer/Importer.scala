@@ -112,8 +112,8 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
   /** Normalizes a path by resolving `.` and `..` segments. */
   private def normalizePath(path: String): String = {
     val segments = path.split("/").toList
-    val result = scala.collection.mutable.ListBuffer.empty[String]
-    for (seg <- segments) {
+    val result   = scala.collection.mutable.ListBuffer.empty[String]
+    for (seg <- segments)
       seg match {
         case "."  => () // skip
         case ".." =>
@@ -121,13 +121,10 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
           else result += seg
         case _ => result += seg
       }
-    }
     result.mkString("/")
   }
 
-  /** If [[paths]] contains exactly one path, returns it.
-    * If it contains no paths, returns empty.
-    * If it contains more than one, throws an exception.
+  /** If [[paths]] contains exactly one path, returns it. If it contains no paths, returns empty. If it contains more than one, throws an exception.
     *
     * Mirrors ImporterFileUtils.exactlyOne.
     */
@@ -141,17 +138,14 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
       )
   }
 
-  /** Like [[tryPath]] but checks `.sass`, `.scss`, and `.css` extensions.
-    * Mirrors ImporterFileUtils.tryPathWithExtensions.
+  /** Like [[tryPath]] but checks `.sass`, `.scss`, and `.css` extensions. Mirrors ImporterFileUtils.tryPathWithExtensions.
     */
   private def tryPathWithExtensions(path: String): List[String] = {
     val result = tryPath(path + ".sass") ++ tryPath(path + ".scss")
     if (result.nonEmpty) result else tryPath(path + ".css")
   }
 
-  /** Returns the [[path]] and/or the partial with the same name, if either
-    * or both exists in [[sources]].
-    * Mirrors ImporterFileUtils.tryPath.
+  /** Returns the [[path]] and/or the partial with the same name, if either or both exists in [[sources]]. Mirrors ImporterFileUtils.tryPath.
     */
   private def tryPath(path: String): List[String] = {
     val slashIdx = path.lastIndexOf('/')
@@ -165,7 +159,7 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
   }
 
   def canonicalize(url: String): Nullable[String] = {
-    val stripped  = if (url.startsWith("file:")) url.stripPrefix("file:") else url
+    val stripped = if (url.startsWith("file:")) url.stripPrefix("file:") else url
     // Normalize `..` and `.` segments so `../foo/bar` resolves correctly
     // when the key in the map is a clean relative path.
     val cleaned = if (stripped.contains("..") || stripped.contains("./")) normalizePath(stripped) else stripped
@@ -186,8 +180,8 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
     if (hasKnownExtension) {
       // With explicit extension: in @import context, try .import variant first
       val importOnly = ImporterUtils.ifInImport { () =>
-        val dot = cleaned.lastIndexOf('.')
-        val ext = cleaned.substring(dot)
+        val dot  = cleaned.lastIndexOf('.')
+        val ext  = cleaned.substring(dot)
         val base = cleaned.substring(0, dot)
         exactlyOne(tryPath(s"$base.import$ext"))
       }.flatten
@@ -197,15 +191,13 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
       val importOnly = ImporterUtils.ifInImport { () =>
         exactlyOne(tryPathWithExtensions(s"$cleaned.import"))
       }.flatten
-      importOnly
-        .orElse(exactlyOne(tryPathWithExtensions(cleaned)))
-        .orElse {
-          // Try directory index resolution
-          val importIndex = ImporterUtils.ifInImport { () =>
-            exactlyOne(tryPathWithExtensions(s"$cleaned/index.import"))
-          }.flatten
-          importIndex.orElse(exactlyOne(tryPathWithExtensions(s"$cleaned/index")))
-        }
+      importOnly.orElse(exactlyOne(tryPathWithExtensions(cleaned))).orElse {
+        // Try directory index resolution
+        val importIndex = ImporterUtils.ifInImport { () =>
+          exactlyOne(tryPathWithExtensions(s"$cleaned/index.import"))
+        }.flatten
+        importIndex.orElse(exactlyOne(tryPathWithExtensions(s"$cleaned/index")))
+      }
     }
   }
 

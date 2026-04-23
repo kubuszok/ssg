@@ -16,13 +16,10 @@ package util
 
 import scala.collection.mutable
 
-/** A view of a map with string keys that strips a prefix from keys.
-  * Keys without the prefix are hidden. Supports `remove()` and
-  * `subtractOne()` so configurations can mark variables as used,
-  * but `addOne()` is unsupported.
+/** A view of a map with string keys that strips a prefix from keys. Keys without the prefix are hidden. Supports `remove()` and `subtractOne()` so configurations can mark variables as used, but
+  * `addOne()` is unsupported.
   *
-  * Extends `mutable.Map` so it can be assigned to the same variable as the
-  * underlying mutable map in `Configuration.throughForward`.
+  * Extends `mutable.Map` so it can be assigned to the same variable as the underlying mutable map in `Configuration.throughForward`.
   */
 final class UnprefixedMapView[V](
   private val map:    mutable.Map[String, V],

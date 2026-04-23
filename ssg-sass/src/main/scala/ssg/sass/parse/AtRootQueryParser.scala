@@ -84,7 +84,7 @@ class AtRootQueryParser(
     text.substring(start, pos)
   }
 
-  private def skipWs(): Unit = {
+  private def skipWs(): Unit =
     boundary {
       while (pos < text.length) {
         val c = text.charAt(pos)
@@ -92,7 +92,6 @@ class AtRootQueryParser(
         else break(())
       }
     }
-  }
 }
 
 object AtRootQueryParser {

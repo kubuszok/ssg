@@ -110,31 +110,80 @@ class CssParser(
 
   /** The set of all function names disallowed in plain CSS.
     *
-    * dart-sass css.dart lines 14-34: `globalFunctions.map(...).toSet()` minus the
-    * CSS-native functions that are allowed (abs, alpha, color, grayscale, hsl, hsla,
-    * hwb, invert, lab, lch, max, min, oklab, oklch, opacity, rgb, rgba, round, saturate).
+    * dart-sass css.dart lines 14-34: `globalFunctions.map(...).toSet()` minus the CSS-native functions that are allowed (abs, alpha, color, grayscale, hsl, hsla, hwb, invert, lab, lch, max, min,
+    * oklab, oklch, opacity, rgb, rgba, round, saturate).
     */
   private val _disallowedFunctionNames: Set[String] = Set(
     // color module globals
-    "red", "green", "blue", "mix", "hue", "saturation", "lightness",
-    "adjust-hue", "lighten", "darken", "desaturate",
-    "opacify", "fade-in", "transparentize", "fade-out",
-    "complement", "ie-hex-str", "adjust-color", "scale-color", "change-color",
+    "red",
+    "green",
+    "blue",
+    "mix",
+    "hue",
+    "saturation",
+    "lightness",
+    "adjust-hue",
+    "lighten",
+    "darken",
+    "desaturate",
+    "opacify",
+    "fade-in",
+    "transparentize",
+    "fade-out",
+    "complement",
+    "ie-hex-str",
+    "adjust-color",
+    "scale-color",
+    "change-color",
     // list module globals
-    "length", "nth", "set-nth", "join", "append", "zip", "index",
-    "is-bracketed", "list-separator",
+    "length",
+    "nth",
+    "set-nth",
+    "join",
+    "append",
+    "zip",
+    "index",
+    "is-bracketed",
+    "list-separator",
     // map module globals
-    "map-get", "map-merge", "map-remove", "map-keys", "map-values", "map-has-key",
+    "map-get",
+    "map-merge",
+    "map-remove",
+    "map-keys",
+    "map-values",
+    "map-has-key",
     // math module globals
-    "ceil", "floor", "percentage", "random", "unit", "comparable", "unitless",
+    "ceil",
+    "floor",
+    "percentage",
+    "random",
+    "unit",
+    "comparable",
+    "unitless",
     // selector module globals
-    "is-superselector", "simple-selectors", "selector-parse", "selector-nest",
-    "selector-append", "selector-extend", "selector-replace", "selector-unify",
+    "is-superselector",
+    "simple-selectors",
+    "selector-parse",
+    "selector-nest",
+    "selector-append",
+    "selector-extend",
+    "selector-replace",
+    "selector-unify",
     // string module globals
-    "unquote", "quote", "to-upper-case", "to-lower-case", "unique-id",
-    "str-length", "str-insert", "str-index", "str-slice",
+    "unquote",
+    "quote",
+    "to-upper-case",
+    "to-lower-case",
+    "unique-id",
+    "str-length",
+    "str-insert",
+    "str-index",
+    "str-slice",
     // meta module globals
-    "feature-exists", "inspect", "type-of", "keywords",
+    "feature-exists",
+    "inspect",
+    "type-of",
+    "keywords",
     // special globals
     "if"
   )
@@ -364,7 +413,7 @@ class CssParser(
     }
   }
 
-  /** Rejects placeholder selectors (`%foo`) which are Sass-only. */
+  /** Rejects `%name` selectors which are Sass-only. */
   private def _checkPlaceholderSelector(interp: Interpolation): Unit = {
     val plain = interp.asPlain
     plain.foreach { text =>
@@ -377,8 +426,7 @@ class CssParser(
     }
   }
 
-  /** Rejects selectors that end with a combinator (`>`, `+`, `~`) which
-    * would be invalid CSS — e.g. `a > {b {c: d}}` should error on `a >`.
+  /** Rejects selectors that end with a combinator (`>`, `+`, `~`) which would be invalid CSS — e.g. `a > {b {c: d}}` should error on `a >`.
     */
   private def _checkTrailingCombinator(interp: Interpolation): Unit = {
     val plain = interp.asPlain
@@ -396,8 +444,7 @@ class CssParser(
     }
   }
 
-  /** Rejects `&suffix` (parent selector with suffix) in nested CSS rules.
-    * Plain `&`, `&.class`, `.class&` are all valid CSS Nesting.
+  /** Rejects `&suffix` (parent selector with suffix) in nested CSS rules. Plain `&`, `&.class`, `.class&` are all valid CSS Nesting.
     */
   private def _checkParentSelectorSuffix(interp: Interpolation): Unit = {
     val plain = interp.asPlain
@@ -422,11 +469,10 @@ class CssParser(
 
   /** Validates an expression, rejecting Sass-only constructs in plain CSS.
     *
-    * dart-sass css.dart: rejects function calls, operations, interpolation,
-    * variables, maps, parenthesized expressions, and other Sass-only features.
+    * dart-sass css.dart: rejects function calls, operations, interpolation, variables, maps, parenthesized expressions, and other Sass-only features.
     *
-    * @param insideCalc if true, arithmetic operators and parentheses are allowed
-    *                   (valid CSS calc() syntax).
+    * @param insideCalc
+    *   if true, arithmetic operators and parentheses are allowed (valid CSS calc() syntax).
     */
   private def _validateExpression(expr: Expression, insideCalc: Boolean = false): Unit =
     expr match {

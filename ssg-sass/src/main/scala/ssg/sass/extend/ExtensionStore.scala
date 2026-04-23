@@ -28,7 +28,7 @@ import ssg.sass.{ Nullable, SassException, SassScriptException }
 import ssg.sass.Nullable.*
 import ssg.sass.ast.css.CssMediaQuery
 import ssg.sass.ast.sass.ExtendRule
-import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, PseudoSelector, PlaceholderSelector, SelectorList, SimpleSelector }
+import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, PlaceholderSelector, PseudoSelector, SelectorList, SimpleSelector }
 import ssg.sass.util.{ Box, FileSpan, ModifiableBox }
 
 import scala.collection.mutable
@@ -128,14 +128,14 @@ object ExtensionStore {
       val compound = complex.singleCompound
       if (compound.isEmpty)
         throw SassScriptException(s"Can't extend complex selector $complex.")
-      val extsForCompound = mutable.Map.empty[SimpleSelector, mutable.Map[ComplexSelector, Extension]]
+      val extsForCompound = mutable.LinkedHashMap.empty[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]]
       for (simple <- compound.get.components) {
-        val inner = mutable.Map.empty[ComplexSelector, Extension]
+        val inner = mutable.LinkedHashMap.empty[ComplexSelector, Extension]
         for (c <- source.components)
           inner(c) = Extension(c, simple, span, optional = true)
         extsForCompound(simple) = inner
       }
-      result = store._extendList(result, extsForCompound.toMap.view.mapValues(_.toMap).toMap)
+      result = store._extendList(result, extsForCompound)
     }
     result
   }
@@ -183,13 +183,8 @@ object EmptyExtensionStore extends ExtensionStore {
 
 /** Default mutable [ExtensionStore] implementation.
   *
-  * Faithful port of dart-sass `ExtensionStore` class in
-  * lib/src/extend/extension_store.dart. Contains the full
-  * _extendList / _extendComplex / _extendCompound / _extendSimple /
-  * _extendPseudo pipeline, the _trim / _unifyExtenders helpers, the
-  * addExtension / addSelector / addExtensions / cloneStore public
-  * API, and the _extendExistingExtensions / _extendExistingSelectors
-  * graph-update operations.
+  * Faithful port of dart-sass `ExtensionStore` class in lib/src/extend/extension_store.dart. Contains the full _extendList / _extendComplex / _extendCompound / _extendSimple / _extendPseudo pipeline,
+  * the _trim / _unifyExtenders helpers, the addExtension / addSelector / addExtensions / cloneStore public API, and the _extendExistingExtensions / _extendExistingSelectors graph-update operations.
   */
 final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
@@ -197,22 +192,21 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   // State (matches dart-sass field-for-field)
   // ---------------------------------------------------------------------------
 
-  /** A map from all simple selectors in the stylesheet to the selector lists
-    * that contain them.
+  /** A map from all simple selectors in the stylesheet to the selector lists that contain them.
     */
   private val _selectors: mutable.Map[SimpleSelector, mutable.Set[ModifiableBox[SelectorList]]] =
     mutable.Map.empty
 
-  /** A map from all extended simple selectors to the sources of those extensions.
-    * Keyed by (target → (extender complex → Extension)).
+  /** A map from all extended simple selectors to the sources of those extensions. Keyed by (target → (extender complex → Extension)). Uses LinkedHashMap to preserve insertion order (Dart maps are
+    * insertion-ordered).
     */
-  private val _extensions: mutable.Map[SimpleSelector, mutable.Map[ComplexSelector, Extension]] =
-    mutable.Map.empty
+  private val _extensions: mutable.LinkedHashMap[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]] =
+    mutable.LinkedHashMap.empty
 
-  /** A map from all simple selectors in extenders to the extensions that those extenders define.
+  /** A map from all simple selectors in extenders to the extensions that those extenders define. Uses LinkedHashMap to preserve insertion order (Dart maps are insertion-ordered).
     */
-  private val _extensionsByExtender: mutable.Map[SimpleSelector, mutable.ListBuffer[Extension]] =
-    mutable.Map.empty
+  private val _extensionsByExtender: mutable.LinkedHashMap[SimpleSelector, mutable.ListBuffer[Extension]] =
+    mutable.LinkedHashMap.empty
 
   /** A map from CSS selectors to the media query contexts they're defined in. */
   private val _mediaContexts: mutable.Map[ModifiableBox[SelectorList], List[CssMediaQuery]] =
@@ -222,8 +216,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   private[extend] val _sourceSpecificity: mutable.Map[SimpleSelector, Int] =
     mutable.Map.empty
 
-  /** The set of ComplexSelectors that were originally part of their component
-    * SelectorLists, as opposed to being added by @extend.
+  /** The set of ComplexSelectors that were originally part of their component SelectorLists, as opposed to being added by @extend.
     */
   private[extend] val _originals: mutable.Set[ComplexSelector] =
     mutable.Set.empty
@@ -267,13 +260,13 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
     var result = selector
     if (_extensions.nonEmpty) {
-      try {
+      try
         result = _extendList(
           original,
-          _extensions.toMap.view.mapValues(_.toMap).toMap,
+          _extensions,
           mediaContext.toOption
         )
-      } catch {
+      catch {
         case error: SassException =>
           throw new SassException(
             s"From ${error.span.message("")}\n${error.sassMessage}",
@@ -294,13 +287,13 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extend:       ExtendRule,
     mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
   ): Unit = {
-    val existingSelectors   = _selectors.get(target)
-    val existingExtensions  = _extensionsByExtender.get(target)
+    val existingSelectors  = _selectors.get(target)
+    val existingExtensions = _extensionsByExtender.get(target)
 
-    var newExtensions: mutable.Map[ComplexSelector, Extension] = null
-    val sources = _extensions.getOrElseUpdate(target, mutable.Map.empty)
+    var newExtensions: mutable.LinkedHashMap[ComplexSelector, Extension] = null
+    val sources = _extensions.getOrElseUpdate(target, mutable.LinkedHashMap.empty)
 
-    for (complex <- extender.components) {
+    for (complex <- extender.components)
       if (!complex.isUseless) {
         val ext = Extension(
           complex,
@@ -320,46 +313,43 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
               _sourceSpecificity.getOrElseUpdate(simple, complex.specificity)
             }
             if (existingSelectors.isDefined || existingExtensions.isDefined) {
-              if (newExtensions == null) newExtensions = mutable.Map.empty
+              if (newExtensions == null) newExtensions = mutable.LinkedHashMap.empty
               newExtensions(complex) = ext
             }
         }
       }
-    }
 
     if (newExtensions == null) return
 
-    val newExtByTarget: mutable.Map[SimpleSelector, Map[ComplexSelector, Extension]] =
-      mutable.Map(target -> newExtensions.toMap)
+    val newExtByTarget: mutable.LinkedHashMap[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]] =
+      mutable.LinkedHashMap(target -> newExtensions)
 
     if (existingExtensions.isDefined) {
       val additional = _extendExistingExtensions(
         existingExtensions.get.toList,
-        newExtByTarget.toMap
+        newExtByTarget
       )
       additional.foreach { add =>
-        for ((k, v) <- add) {
-          val existing = newExtByTarget.getOrElse(k, Map.empty)
-          newExtByTarget(k) = existing ++ v
-        }
+        for ((k, v) <- add)
+          newExtByTarget.getOrElseUpdate(k, mutable.LinkedHashMap.empty) ++= v
       }
     }
 
     if (existingSelectors.isDefined) {
-      _extendExistingSelectors(existingSelectors.get.toSet, newExtByTarget.toMap)
+      _extendExistingSelectors(existingSelectors.get.toSet, newExtByTarget)
     }
   }
 
   override def addExtensions(extenders: Iterable[ExtensionStore]): Unit = {
-    var extensionsToExtend:  mutable.ListBuffer[Extension]                                    = null
-    var selectorsToExtend:   mutable.Set[ModifiableBox[SelectorList]]                         = null
-    var newExtensions:       mutable.Map[SimpleSelector, mutable.Map[ComplexSelector, Extension]] = null
+    var extensionsToExtend: mutable.ListBuffer[Extension]                                                            = null
+    var selectorsToExtend:  mutable.Set[ModifiableBox[SelectorList]]                                                 = null
+    var newExtensions:      mutable.LinkedHashMap[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]] = null
 
-    for (store <- extenders) {
+    for (store <- extenders)
       if (!store.isEmpty) {
         val mutable_ = store.asInstanceOf[MutableExtensionStore]
         _sourceSpecificity ++= mutable_._sourceSpecificity
-        for ((target, newSources) <- mutable_._extensions) {
+        for ((target, newSources) <- mutable_._extensions)
           target match {
             case p: PlaceholderSelector if Environment.isPrivate(p.name) => ()
             case _ =>
@@ -382,36 +372,33 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
                     }
                     existingSources(extenderKey) = merged
                     if (extensionsForTarget.isDefined || selectorsForTarget.isDefined) {
-                      if (newExtensions == null) newExtensions = mutable.Map.empty
-                      newExtensions.getOrElseUpdate(target, mutable.Map.empty)(extenderKey) = merged
+                      if (newExtensions == null) newExtensions = mutable.LinkedHashMap.empty
+                      newExtensions.getOrElseUpdate(target, mutable.LinkedHashMap.empty)(extenderKey) = merged
                     }
                   }
                 case None =>
-                  _extensions(target) = mutable.Map.from(newSources)
+                  _extensions(target) = mutable.LinkedHashMap.from(newSources)
                   if (extensionsForTarget.isDefined || selectorsForTarget.isDefined) {
-                    if (newExtensions == null) newExtensions = mutable.Map.empty
-                    newExtensions(target) = mutable.Map.from(newSources)
+                    if (newExtensions == null) newExtensions = mutable.LinkedHashMap.empty
+                    newExtensions(target) = mutable.LinkedHashMap.from(newSources)
                   }
               }
           }
-        }
       }
-    }
 
     if (newExtensions != null) {
-      val newExtsImmutable = newExtensions.toMap.view.mapValues(_.toMap).toMap
       if (extensionsToExtend != null)
-        _extendExistingExtensions(extensionsToExtend.toList, newExtsImmutable)
+        _extendExistingExtensions(extensionsToExtend.toList, newExtensions)
       if (selectorsToExtend != null)
-        _extendExistingSelectors(selectorsToExtend.toSet, newExtsImmutable)
+        _extendExistingSelectors(selectorsToExtend.toSet, newExtensions)
     }
   }
 
   override def cloneStore(): (ExtensionStore, Map[SelectorList, Box[SelectorList]]) = {
-    val newSelectors      = mutable.Map.empty[SimpleSelector, mutable.Set[ModifiableBox[SelectorList]]]
-    val newMediaContexts  = mutable.Map.empty[ModifiableBox[SelectorList], List[CssMediaQuery]]
-    val oldToNew          = mutable.Map.empty[SelectorList, Box[SelectorList]]
-    val newBoxes          = mutable.Map.empty[ModifiableBox[SelectorList], ModifiableBox[SelectorList]]
+    val newSelectors     = mutable.Map.empty[SimpleSelector, mutable.Set[ModifiableBox[SelectorList]]]
+    val newMediaContexts = mutable.Map.empty[ModifiableBox[SelectorList], List[CssMediaQuery]]
+    val oldToNew         = mutable.Map.empty[SelectorList, Box[SelectorList]]
+    val newBoxes         = mutable.Map.empty[ModifiableBox[SelectorList], ModifiableBox[SelectorList]]
 
     for ((simple, sels) <- _selectors) {
       val newSet = mutable.Set.empty[ModifiableBox[SelectorList]]
@@ -426,7 +413,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
     val newStore = new MutableExtensionStore(mode)
     newStore._selectors ++= newSelectors
-    for ((k, v) <- _extensions) newStore._extensions(k) = mutable.Map.from(v)
+    for ((k, v) <- _extensions) newStore._extensions(k) = mutable.LinkedHashMap.from(v)
     for ((k, v) <- _extensionsByExtender) newStore._extensionsByExtender(k) = mutable.ListBuffer.from(v)
     newStore._mediaContexts ++= newMediaContexts
     newStore._sourceSpecificity ++= _sourceSpecificity
@@ -478,21 +465,22 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private def _extendExistingExtensions(
     extensions:    List[Extension],
-    newExtensions: Map[SimpleSelector, Map[ComplexSelector, Extension]]
-  ): Option[Map[SimpleSelector, Map[ComplexSelector, Extension]]] = {
-    var additional: mutable.Map[SimpleSelector, mutable.Map[ComplexSelector, Extension]] = null
+    newExtensions: collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]]
+  ): Option[collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]]] = {
+    var additional: mutable.LinkedHashMap[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]] = null
 
     for (ext <- extensions) {
-      val sources = _extensions(ext.target)
-      val selectors = try {
-        _extendComplex(ext.extender.selector, newExtensions, ext.mediaContext.toOption)
-      } catch {
-        case error: SassException =>
-          throw error.withAdditionalSpan(
-            ext.extender.selector.span,
-            "target selector"
-          )
-      }
+      val sources   = _extensions(ext.target)
+      val selectors =
+        try
+          _extendComplex(ext.extender.selector, newExtensions, ext.mediaContext.toOption)
+        catch {
+          case error: SassException =>
+            throw error.withAdditionalSpan(
+              ext.extender.selector.span,
+              "target selector"
+            )
+        }
       if (selectors == null || selectors.isEmpty) ()
       else {
         val skip = if (selectors.head == ext.extender.selector) 1 else 0
@@ -507,8 +495,8 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
                 for (simple <- component.selector.components)
                   _extensionsByExtender.getOrElseUpdate(simple, mutable.ListBuffer.empty) += withExtender
               if (newExtensions.contains(ext.target)) {
-                if (additional == null) additional = mutable.Map.empty
-                additional.getOrElseUpdate(ext.target, mutable.Map.empty)(complex) = withExtender
+                if (additional == null) additional = mutable.LinkedHashMap.empty
+                additional.getOrElseUpdate(ext.target, mutable.LinkedHashMap.empty)(complex) = withExtender
               }
           }
         }
@@ -516,22 +504,22 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     }
 
     if (additional == null) None
-    else Some(additional.toMap.view.mapValues(_.toMap).toMap)
+    else Some(additional)
   }
 
   private def _extendExistingSelectors(
     selectors:     Set[ModifiableBox[SelectorList]],
-    newExtensions: Map[SimpleSelector, Map[ComplexSelector, Extension]]
+    newExtensions: collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]]
   ): Unit =
     for (selector <- selectors) {
       val oldValue = selector.value
-      try {
+      try
         selector.value = _extendList(
           selector.value,
           newExtensions,
           _mediaContexts.get(selector)
         )
-      } catch {
+      catch {
         // Note(nweiz): this should become a MultiSpanSassException once that type
         // is available.
         case error: SassException =>
@@ -550,7 +538,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private[sass] def _extendList(
     list:              SelectorList,
-    extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
+    extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]] = None
   ): SelectorList = {
     var extended: mutable.ListBuffer[ComplexSelector] = null
@@ -573,7 +561,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private def _extendComplex(
     complex:           ComplexSelector,
-    extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
+    extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]]
   ): List[ComplexSelector] = {
     if (complex.leadingCombinators.length > 1) return null
@@ -594,12 +582,14 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
         extendedNotExpanded += extended
       } else if (i != 0) {
         extendedNotExpanded = mutable.ListBuffer(
-          List(new ComplexSelector(
-            complex.leadingCombinators,
-            complex.components.take(i),
-            complex.span,
-            lineBreak = complex.lineBreak
-          )),
+          List(
+            new ComplexSelector(
+              complex.leadingCombinators,
+              complex.components.take(i),
+              complex.span,
+              lineBreak = complex.lineBreak
+            )
+          ),
           extended
         )
       } else if (complex.leadingCombinators.isEmpty) {
@@ -607,8 +597,9 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       } else {
         extendedNotExpanded = mutable.ListBuffer(
           extended.collect {
-            case nc if nc.leadingCombinators.isEmpty ||
-              nc.leadingCombinators == complex.leadingCombinators =>
+            case nc
+                if nc.leadingCombinators.isEmpty ||
+                  nc.leadingCombinators == complex.leadingCombinators =>
               new ComplexSelector(
                 complex.leadingCombinators,
                 nc.components,
@@ -636,7 +627,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private def _extendCompound(
     component:         ComplexSelectorComponent,
-    extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
+    extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]],
     inOriginal:        Boolean
   ): List[ComplexSelector] = {
@@ -670,7 +661,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     // Single-option fast path
     if (options.length == 1) {
       val extenders = options.head
-      val results = mutable.ListBuffer.empty[ComplexSelector]
+      val results   = mutable.ListBuffer.empty[ComplexSelector]
       for (extender <- extenders) {
         extender.assertCompatibleMediaContext(
           if (mediaQueryContext.isDefined) Nullable(mediaQueryContext.get) else Nullable.empty
@@ -684,21 +675,23 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
     // Multi-option: compute cartesian product, unify each path
     val extenderPaths = ExtendFunctions.paths(options.toList)
-    val result = mutable.ListBuffer.empty[ComplexSelector]
+    val result        = mutable.ListBuffer.empty[ComplexSelector]
 
     if (mode != ExtendMode.Replace) {
       // First path = original compound, reconstructed from the extenders
-      val firstPath = extenderPaths.head
+      val firstPath       = extenderPaths.head
       val originalSimples = firstPath.flatMap { extender =>
         extender.selector.components.last.selector.components
       }
       result += new ComplexSelector(
         Nil,
-        List(new ComplexSelectorComponent(
-          new CompoundSelector(originalSimples, component.selector.span),
-          component.combinators,
-          component.span
-        )),
+        List(
+          new ComplexSelectorComponent(
+            new CompoundSelector(originalSimples, component.selector.span),
+            component.combinators,
+            component.span
+          )
+        ),
         component.span
       )
     }
@@ -726,7 +719,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private def _extendSimple(
     simple:            SimpleSelector,
-    extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
+    extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]],
     targetsUsed:       mutable.Set[SimpleSelector]
   ): List[List[Extender]] = {
@@ -764,11 +757,13 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     new Extender(
       new ComplexSelector(
         Nil,
-        List(new ComplexSelectorComponent(
-          new CompoundSelector(List(simple), simple.span),
-          Nil,
-          simple.span
-        )),
+        List(
+          new ComplexSelectorComponent(
+            new CompoundSelector(List(simple), simple.span),
+            Nil,
+            simple.span
+          )
+        ),
         simple.span
       ),
       specificityOpt = Nullable(_sourceSpecificity.getOrElse(simple, 0)),
@@ -803,11 +798,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     mediaQueryContext: Option[List[CssMediaQuery]],
     span:              FileSpan
   ): List[ComplexSelector] = scala.util.boundary {
-    val toUnify            = mutable.ListBuffer.empty[ComplexSelector]
-    var originals:         mutable.ListBuffer[SimpleSelector] = null
+    val toUnify = mutable.ListBuffer.empty[ComplexSelector]
+    var originals: mutable.ListBuffer[SimpleSelector] = null
     var originalsLineBreak = false
 
-    for (extender <- extenders) {
+    for (extender <- extenders)
       if (extender.isOriginal) {
         if (originals == null) originals = mutable.ListBuffer.empty
         val lastComponent = extender.selector.components.last
@@ -818,17 +813,18 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       } else {
         toUnify += extender.selector
       }
-    }
 
     if (originals != null) {
       toUnify.prepend(
         new ComplexSelector(
           Nil,
-          List(new ComplexSelectorComponent(
-            new CompoundSelector(originals.toList, span),
-            Nil,
-            span
-          )),
+          List(
+            new ComplexSelectorComponent(
+              new CompoundSelector(originals.toList, span),
+              Nil,
+              span
+            )
+          ),
           span,
           lineBreak = originalsLineBreak
         )
@@ -869,7 +865,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
             // rotateSlice(result, 0, j + 1): move result(j) to position 0,
             // shift elements 0..j-1 one position right.
             val saved = result(j)
-            var k = j
+            var k     = j
             while (k > 0) {
               result(k) = result(k - 1)
               k -= 1
@@ -907,7 +903,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   private def _extendPseudo(
     pseudo:            PseudoSelector,
-    extensions:        Map[SimpleSelector, Map[ComplexSelector, Extension]],
+    extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]]
   ): List[PseudoSelector] = {
     val selector = pseudo.selector.get
@@ -916,9 +912,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     if (extended eq selector) return null
 
     var complexes: List[ComplexSelector] = extended.components
-    if (pseudo.normalizedName == "not" &&
+    if (
+      pseudo.normalizedName == "not" &&
       !selector.components.exists(_.components.length > 1) &&
-      extended.components.exists(_.components.length == 1)) {
+      extended.components.exists(_.components.length == 1)
+    ) {
       complexes = extended.components.filter(_.components.length <= 1)
     }
 
@@ -977,23 +975,22 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   /** Returns a new [SelectorList] with all applicable extensions applied to [list].
     *
-    * Delegates to the faithful dart-sass `_extendList` pipeline by converting the
-    * ad-hoc `astExtensions` map into the format the pipeline expects. The ad-hoc
-    * map stores `SimpleSelector → List[ComplexSelector]` (extenders); the dart pipeline
-    * expects `SimpleSelector → Map[ComplexSelector, Extension]`.
+    * Delegates to the faithful dart-sass `_extendList` pipeline by converting the ad-hoc `astExtensions` map into the format the pipeline expects. The ad-hoc map stores
+    * `SimpleSelector → List[ComplexSelector]` (extenders); the dart pipeline expects `SimpleSelector → Map[ComplexSelector, Extension]`.
     */
   def extendList(list: SelectorList): SelectorList = {
     if (astExtensions.isEmpty) return list
     // Ensure originals are tracked so _trim doesn't drop them.
     if (!list.isInvisible) _originals ++= list.components
     // Build the extensions map that _extendList expects.
-    val extsMap: Map[SimpleSelector, Map[ComplexSelector, Extension]] =
-      astExtensions.view.map { case (target, extenders) =>
-        val inner = extenders.iterator.map { complex =>
-          complex -> Extension(complex, target, list.span, optional = true)
-        }.toMap
-        target -> inner
-      }.toMap
+    // Use LinkedHashMap to preserve insertion order (Dart maps are insertion-ordered).
+    val extsMap = mutable.LinkedHashMap.empty[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]]
+    for ((target, extenders) <- astExtensions) {
+      val inner = mutable.LinkedHashMap.empty[ComplexSelector, Extension]
+      for (complex <- extenders)
+        inner(complex) = Extension(complex, target, list.span, optional = true)
+      extsMap(target) = inner
+    }
     _extendList(list, extsMap)
   }
 
@@ -1002,7 +999,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     val results = mutable.ListBuffer.empty[ComplexSelector]
     results += complex
     val originalSpecificity = complex.specificity
-    var i = 0
+    var i                   = 0
     while (i < complex.components.length) {
       val component = complex.components(i)
       val compound  = component.selector
@@ -1060,21 +1057,25 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extender:       ComplexSelector,
     mergedCompound: CompoundSelector
   ): List[ComplexSelector] = {
-    val origComponent = complex.components(componentIndex)
-    val newLast       = new ComplexSelectorComponent(mergedCompound, origComponent.combinators, origComponent.span)
+    val origComponent    = complex.components(componentIndex)
+    val newLast          = new ComplexSelectorComponent(mergedCompound, origComponent.combinators, origComponent.span)
     val prefixComponents = complex.components.take(componentIndex)
     val extLeading       = extender.components.init
 
     if (prefixComponents.isEmpty) {
       val newComponents = extLeading :+ newLast
-      List(new ComplexSelector(
-        complex.leadingCombinators ++ extender.leadingCombinators,
-        newComponents, complex.span, lineBreak = complex.lineBreak
-      ))
+      List(
+        new ComplexSelector(
+          complex.leadingCombinators ++ extender.leadingCombinators,
+          newComponents,
+          complex.span,
+          lineBreak = complex.lineBreak
+        )
+      )
     } else {
       val prefixComplex = new ComplexSelector(complex.leadingCombinators, prefixComponents, complex.span, lineBreak = complex.lineBreak)
       val extPrefix     = new ComplexSelector(extender.leadingCombinators, extLeading, extender.span, lineBreak = extender.lineBreak)
-      val woven = ExtendFunctions.weave(List(prefixComplex, extPrefix), complex.span)
+      val woven         = ExtendFunctions.weave(List(prefixComplex, extPrefix), complex.span)
       woven.map(p => p.withAdditionalComponent(newLast, complex.span))
     }
   }
@@ -1127,7 +1128,9 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     val newComponents     = complex.components.take(componentIndex) ++ extLeading ++ (newComponent :: complex.components.drop(componentIndex + 1))
     new ComplexSelector(
       complex.leadingCombinators ++ extender.leadingCombinators,
-      newComponents, complex.span, lineBreak = complex.lineBreak
+      newComponents,
+      complex.span,
+      lineBreak = complex.lineBreak
     )
   }
 

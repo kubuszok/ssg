@@ -87,8 +87,10 @@ final class SerializeVisitor(
         !rule.isChildless && rule.children.forall(isNodeInvisible)
       )
     case at: CssAtRule =>
-      // Generic at-rules with empty bodies ({}) are visible — they're CSS
-      // passthrough. But at-rules with all-invisible children are invisible.
+      // dart-sass _IsInvisibleVisitor.visitCssAtRule: a truly unknown at-rule
+      // is NEVER invisible. However, our evaluator sometimes represents
+      // @media/@supports as generic CssAtRule nodes, so we keep the
+      // all-children-invisible check to avoid emitting empty blocks.
       if (at.isChildless) false
       else at.children.nonEmpty && at.children.forall(isNodeInvisible)
     case p: CssParentNode =>
@@ -1328,16 +1330,9 @@ final class SerializeVisitor(
             // previous node is a group end. The evaluator sets isGroupEnd
             // on the last child inside a parent (e.g. the style rule inside
             // a media block), but the serializer checks the top-level node.
-            // Supplement: also treat CssMediaRule and CssSupportsRule as
-            // group ends since they contain flattened style rules whose
-            // isGroupEnd flag lives on their children, not on the parent
-            // at-rule itself.
-            val prevNeedsBlankLine = previous.isGroupEnd || (previous match {
-              case _: CssMediaRule    => true
-              case _: CssSupportsRule => true
-              case _                  => false
-            })
-            if (prevNeedsBlankLine) writeLine()
+            // dart-sass only checks `previous.isGroupEnd` here — it does NOT
+            // blanket-treat CssMediaRule/CssSupportsRule as group ends.
+            if (previous.isGroupEnd) writeLine()
           }
         }
         previous = child
@@ -1445,7 +1440,7 @@ final class SerializeVisitor(
     *
     * Mirrors dart-sass `visitCompoundSelector` / `visitPseudoSelector` in
     * lib/src/visitor/serialize.dart: if a pseudo-selector's inner selector
-    * list contains placeholder selectors, those are filtered out. If `:not()`
+    * list contains `%name` selectors, those are filtered out. If `:not()`
     * has an entirely invisible inner selector, the whole `:not()` is omitted
     * (semantically equivalent to `*`). If the compound ends up empty after
     * filtering, `*` is emitted.
@@ -1778,7 +1773,7 @@ final class SerializeVisitor(
       for (cond <- query.conditions) {
         if (!firstCond) buffer.append(sep)
         firstCond = false
-        buffer.append(cond)
+        buffer.append(CssMediaQuery.normalizeCondition(cond))
       }
     }
   }
@@ -1806,7 +1801,7 @@ final class SerializeVisitor(
     writeImportUrl(node.url.value)
     node.modifiers.foreach { m =>
       writeSpace()
-      buffer.append(m.value)
+      buffer.append(CssMediaQuery.normalizeMediaFeatures(m.value))
     }
   }
 

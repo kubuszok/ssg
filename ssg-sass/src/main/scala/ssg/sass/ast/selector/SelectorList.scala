@@ -67,9 +67,8 @@ final class SelectorList(
     *
     * Returns `Nullable.Null` if no such list can be produced.
     *
-    * Ported from dart-sass `SelectorList.unify` (list.dart:92-100): delegates to
-    * [[ssg.sass.extend.ExtendFunctions.unifyComplex]] for every pair of complex
-    * selectors, handling multi-component complex selectors (not just single compounds).
+    * Ported from dart-sass `SelectorList.unify` (list.dart:92-100): delegates to [[ssg.sass.extend.ExtendFunctions.unifyComplex]] for every pair of complex selectors, handling multi-component complex
+    * selectors (not just single compounds).
     */
   def unify(other: SelectorList): Nullable[SelectorList] = {
     val unified = scala.collection.mutable.ListBuffer.empty[ComplexSelector]
@@ -102,14 +101,28 @@ final class SelectorList(
     if (parent.isEmpty) {
       if (preserveParentSelectors) this
       else {
-        val parentSelector = SelectorList.findParentSelector(this)
-        if (parentSelector.isEmpty) this
-        else {
+        // dart-sass: when there's no parent context, parent selectors with
+        // suffixes (&suffix) are errors ("Top-level selectors may not contain
+        // the parent selector '&'."). Parent selectors that appear in a
+        // non-initial position within a compound selector (e.g. `pre&`) are
+        // also errors ("'&' may only used at the beginning of a compound
+        // selector."). Bare `&` alone at the start of a compound is allowed
+        // and preserved as-is in the output.
+        val suffixed = SelectorList.findParentSelectorWithSuffix(this)
+        if (suffixed.isDefined) {
           throw SassException(
             "Top-level selectors may not contain the parent selector \"&\".",
-            parentSelector.get.span
+            suffixed.get.span
           )
         }
+        val nonInitial = SelectorList.findNonInitialParentSelector(this)
+        if (nonInitial.isDefined) {
+          throw SassException(
+            "\"&\" may only used at the beginning of a compound selector.",
+            nonInitial.get.span
+          )
+        }
+        this
       }
     } else {
       val parentList = parent.get
@@ -367,6 +380,111 @@ object SelectorList {
     */
   private[sass] def findParentSelector(selector: Selector): Nullable[ParentSelector] =
     selector.accept(FindParentSelectorVisitor)
+
+  /** Finds the first [[ParentSelector]] with a non-null suffix in the given selector. Returns `Nullable.Null` if no suffixed parent selector is found. Used by `nestWithin` to detect `&suffix` at top
+    * level which is an error, while bare `&` is allowed.
+    */
+  private[sass] def findParentSelectorWithSuffix(selector: Selector): Nullable[ParentSelector] =
+    selector.accept(FindSuffixedParentSelectorVisitor)
+
+  /** Visitor that searches for a [[ParentSelector]] that has a non-null suffix. */
+  private object FindSuffixedParentSelectorVisitor extends SelectorVisitor[Nullable[ParentSelector]] {
+
+    def visitAttributeSelector(attribute:     AttributeSelector):   Nullable[ParentSelector] = Nullable.Null
+    def visitClassSelector(klass:             ClassSelector):       Nullable[ParentSelector] = Nullable.Null
+    def visitIDSelector(id:                   IDSelector):          Nullable[ParentSelector] = Nullable.Null
+    def visitTypeSelector(tpe:                TypeSelector):        Nullable[ParentSelector] = Nullable.Null
+    def visitUniversalSelector(universal:     UniversalSelector):   Nullable[ParentSelector] = Nullable.Null
+    def visitPlaceholderSelector(placeholder: PlaceholderSelector): Nullable[ParentSelector] = Nullable.Null
+
+    def visitParentSelector(parent: ParentSelector): Nullable[ParentSelector] =
+      if (parent.suffix.isDefined) Nullable(parent)
+      else Nullable.Null
+
+    def visitPseudoSelector(pseudo: PseudoSelector): Nullable[ParentSelector] =
+      pseudo.selector.flatMap(_.accept(this))
+
+    def visitCompoundSelector(compound: CompoundSelector): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        for (component <- compound.components) {
+          val result = component.accept(this)
+          if (result.isDefined) break(result)
+        }
+        Nullable.Null
+      }
+
+    def visitComplexSelector(complex: ComplexSelector): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        for (component <- complex.components) {
+          val result = component.selector.accept(this)
+          if (result.isDefined) break(result)
+        }
+        Nullable.Null
+      }
+
+    def visitSelectorList(list: SelectorList): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        for (component <- list.components) {
+          val result = component.accept(this)
+          if (result.isDefined) break(result)
+        }
+        Nullable.Null
+      }
+  }
+
+  /** Finds the first [[ParentSelector]] that appears in a non-initial position within its compound selector (e.g. `pre&`). Returns `Nullable.Null` if every parent selector is the first simple in its
+    * compound.
+    */
+  private[sass] def findNonInitialParentSelector(selector: Selector): Nullable[ParentSelector] =
+    selector.accept(FindNonInitialParentSelectorVisitor)
+
+  /** Visitor that searches for a [[ParentSelector]] that is NOT the first component of its containing [[CompoundSelector]].
+    */
+  private object FindNonInitialParentSelectorVisitor extends SelectorVisitor[Nullable[ParentSelector]] {
+
+    def visitAttributeSelector(attribute:     AttributeSelector):   Nullable[ParentSelector] = Nullable.Null
+    def visitClassSelector(klass:             ClassSelector):       Nullable[ParentSelector] = Nullable.Null
+    def visitIDSelector(id:                   IDSelector):          Nullable[ParentSelector] = Nullable.Null
+    def visitTypeSelector(tpe:                TypeSelector):        Nullable[ParentSelector] = Nullable.Null
+    def visitUniversalSelector(universal:     UniversalSelector):   Nullable[ParentSelector] = Nullable.Null
+    def visitPlaceholderSelector(placeholder: PlaceholderSelector): Nullable[ParentSelector] = Nullable.Null
+    def visitParentSelector(parent:           ParentSelector):      Nullable[ParentSelector] = Nullable.Null // handled in visitCompoundSelector
+
+    def visitPseudoSelector(pseudo: PseudoSelector): Nullable[ParentSelector] =
+      pseudo.selector.flatMap(_.accept(this))
+
+    def visitCompoundSelector(compound: CompoundSelector): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        // Only look at non-first components for ParentSelector.
+        var i = 1
+        while (i < compound.components.length) {
+          compound.components(i) match {
+            case ps: ParentSelector => break(Nullable(ps))
+            case _ => ()
+          }
+          i += 1
+        }
+        Nullable.Null
+      }
+
+    def visitComplexSelector(complex: ComplexSelector): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        for (component <- complex.components) {
+          val result = component.selector.accept(this)
+          if (result.isDefined) break(result)
+        }
+        Nullable.Null
+      }
+
+    def visitSelectorList(list: SelectorList): Nullable[ParentSelector] =
+      boundary[Nullable[ParentSelector]] {
+        for (component <- list.components) {
+          val result = component.accept(this)
+          if (result.isDefined) break(result)
+        }
+        Nullable.Null
+      }
+  }
 
   /** Visitor that searches for a [[ParentSelector]]. */
   private object FindParentSelectorVisitor extends SelectorVisitor[Nullable[ParentSelector]] {

@@ -93,26 +93,18 @@ trait Module[T <: Callable] {
   /// Creates a copy of this module with new [css] and [extender].
   def cloneCss(): Module[T]
 
-  /** Returns an opaque identity token for the variable named [name] — used
-    * by dart-sass's `_assertNoConflicts` to deduplicate variables that
-    * are re-exported from a common upstream module under the same name.
+  /** Returns an opaque identity token for the variable named [name] — used by dart-sass's `_assertNoConflicts` to deduplicate variables that are re-exported from a common upstream module under the
+    * same name.
     *
-    * The default implementation uses the module itself as the identity,
-    * which causes every variable in an unrelated module to compare
-    * unequal. Forwarded/shadowed views override this to delegate to the
-    * underlying module so that two forward chains pointing at the same
-    * source collapse to a single identity.
+    * The default implementation uses the module itself as the identity, which causes every variable in an unrelated module to compare unequal. Forwarded/shadowed views override this to delegate to
+    * the underlying module so that two forward chains pointing at the same source collapse to a single identity.
     */
   def variableIdentity(name: String): AnyRef = this
 
-  /** Whether this module (or any module it transitively forwards) could
-    * have declared a `!default` variable with any of the given [[names]]
-    * as its name. Used by dart-sass to detect configuration-arrives-
-    * too-late errors when `@forward ... with (...)` configures a module
-    * that was already loaded elsewhere.
+  /** Whether this module (or any module it transitively forwards) could have declared a `!default` variable with any of the given [[names]] as its name. Used by dart-sass to detect
+    * configuration-arrives- too-late errors when `@forward ... with (...)` configures a module that was already loaded elsewhere.
     *
-    * The default implementation returns `false`, matching a module that
-    * has no configurable variables. `_EnvironmentModule` overrides this.
+    * The default implementation returns `false`, matching a module that has no configurable variables. `_EnvironmentModule` overrides this.
     */
   def couldHaveBeenConfigured(names: Set[String]): Boolean = false
 }
@@ -156,12 +148,10 @@ final class BuiltInModule[T <: Callable](
 
 /** A view of a [[Module]] that only exposes members matching a forward rule (`@forward ... show`/`hide`).
   *
-  * Members can additionally be exposed under a `prefix` (`@forward ... as prefix-*`). Filtering order
-  * mirrors dart-sass's `_forwardedMap`:
+  * Members can additionally be exposed under a `prefix` (`@forward ... as prefix-*`). Filtering order mirrors dart-sass's `_forwardedMap`:
   *   1. The inner module's keys are wrapped through the `prefix` (so `a` becomes `prefix-a`).
-  *   2. show/hide filters are applied against the *prefixed* keys — i.e. `hide a` paired with
-  *      `as b-*` does NOT hide the upstream `a` (its prefixed form is `b-a`, which doesn't match
-  *      the hide name `a`).
+  *   2. show/hide filters are applied against the *prefixed* keys — i.e. `hide a` paired with `as b-*` does NOT hide the upstream `a` (its prefixed form is `b-a`, which doesn't match the hide name
+  *      `a`).
   */
 final class ForwardedView[T <: Callable](
   val inner:                    Module[T],
@@ -223,8 +213,8 @@ final class ForwardedView[T <: Callable](
   def css:                            CssStylesheet                    = inner.css
   def extensionStore:                 ExtensionStore                   = inner.extensionStore
   def preModuleComments:              Map[Module[T], List[CssComment]] = inner.preModuleComments
-  def transitivelyContainsCss:        Boolean                         = inner.transitivelyContainsCss
-  def transitivelyContainsExtensions: Boolean                         = inner.transitivelyContainsExtensions
+  def transitivelyContainsCss:        Boolean                          = inner.transitivelyContainsCss
+  def transitivelyContainsExtensions: Boolean                          = inner.transitivelyContainsExtensions
 
   def setVariable(name: String, value: Value): Unit =
     // The incoming `name` is the prefixed key (caller-side). Visibility
@@ -291,8 +281,8 @@ final class ShadowedView[T <: Callable](
   def css:                            CssStylesheet                    = inner.css
   def extensionStore:                 ExtensionStore                   = inner.extensionStore
   def preModuleComments:              Map[Module[T], List[CssComment]] = inner.preModuleComments
-  def transitivelyContainsCss:        Boolean                         = inner.transitivelyContainsCss
-  def transitivelyContainsExtensions: Boolean                         = inner.transitivelyContainsExtensions
+  def transitivelyContainsCss:        Boolean                          = inner.transitivelyContainsCss
+  def transitivelyContainsExtensions: Boolean                          = inner.transitivelyContainsExtensions
 
   def setVariable(name: String, value: Value): Unit =
     if (shadowedVars.contains(name))

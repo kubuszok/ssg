@@ -63,8 +63,7 @@ abstract class Selector(val span: FileSpan) extends AstNode {
 
   /** Prints a warning if `this` is a bogus selector.
     *
-    * This may only be called from within a custom Sass function. This will
-    * throw a [[ssg.sass.SassException]] in Dart Sass 2.0.0.
+    * This may only be called from within a custom Sass function. This will throw a [[ssg.sass.SassException]] in Dart Sass 2.0.0.
     */
   def assertNotBogus(name: Nullable[String] = Nullable.Null): Unit = {
     if (!isBogus) return
@@ -224,7 +223,7 @@ object Selector {
           if ((nn == "nth-child" || nn == "nth-last-child") && arg.contains('n')) {
             // For nth-child/nth-last-child: strip ALL spaces around +/-
             // (e.g. "2n + 1" → "2n+1").
-            val ofIdx = arg.indexOf(" of")
+            val ofIdx       = arg.indexOf(" of")
             val (anb, rest) = if (ofIdx >= 0) (arg.substring(0, ofIdx), arg.substring(ofIdx)) else (arg, "")
             sb.append(anb.replaceAll("\\s*\\+\\s*", "+").replaceAll("\\s*-\\s*", "-"))
             sb.append(rest)
@@ -232,7 +231,7 @@ object Selector {
             // For other nth-* (nth-of-type, nth-last-of-type, etc.):
             // collapse multiple spaces to a single space (e.g.
             // "2n  +  1" → "2n + 1") but preserve single spaces.
-            val ofIdx = arg.indexOf(" of")
+            val ofIdx       = arg.indexOf(" of")
             val (anb, rest) = if (ofIdx >= 0) (arg.substring(0, ofIdx), arg.substring(ofIdx)) else (arg, "")
             sb.append(anb.replaceAll(" {2,}", " "))
             sb.append(rest)

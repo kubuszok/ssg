@@ -39,8 +39,8 @@ object Callable {
   ///
   /// Throws a [SassFormatException] if parsing fails.
   def fromSignature(
-    signature:    String,
-    callback:     List[Value] => Value,
+    signature:     String,
+    callback:      List[Value] => Value,
     requireParens: Boolean = true
   ): Callable = {
     val (name, declaration) = parseSignature(signature, requireParens)
@@ -53,19 +53,18 @@ object Callable {
   ///
   /// Throws a [SassFormatException] if parsing fails.
   private[sass] def parseSignature(
-    signature:    String,
+    signature:     String,
     requireParens: Boolean = true
-  ): (String, ParameterList) = {
-    try {
+  ): (String, ParameterList) =
+    try
       new ssg.sass.parse.ScssParser(signature).parseSignature(requireParens = requireParens)
-    } catch {
+    catch {
       case e: SassException =>
         throw new SassException(
           s"""Invalid signature "$signature": ${e.getMessage}""",
           e.span
         )
     }
-  }
 }
 
 /** A callable defined in Dart/Scala code, wrapping a native function. */
@@ -75,21 +74,14 @@ final class BuiltInCallable(
   val callback:       List[Value] => Value,
   val acceptsContent: Boolean = false,
   val signature:      String = "",
-  /** True when this callable was built via
-    * [[BuiltInCallable.overloadedFunction]] — i.e. the `callback` is
-    * an overload dispatcher that picks between multiple textual
-    * signatures at runtime. The canonical `signature` field on the
-    * callable is just the longest-named one for named-arg binding;
-    * the actual arity constraint lives inside the dispatcher, so
-    * the evaluator's per-call arity check must skip overloaded
-    * callables entirely (the dispatcher will raise its own "no
-    * matching overload" error if needed).
+  /** True when this callable was built via [[BuiltInCallable.overloadedFunction]] — i.e. the `callback` is an overload dispatcher that picks between multiple textual signatures at runtime. The
+    * canonical `signature` field on the callable is just the longest-named one for named-arg binding; the actual arity constraint lives inside the dispatcher, so the evaluator's per-call arity check
+    * must skip overloaded callables entirely (the dispatcher will raise its own "no matching overload" error if needed).
     */
-  val isOverloaded:   Boolean = false,
-  /** All overload signatures (non-empty only when [[isOverloaded]] is true).
-    * Used by the evaluator to find the right overload for named-arg binding.
+  val isOverloaded: Boolean = false,
+  /** All overload signatures (non-empty only when [[isOverloaded]] is true). Used by the evaluator to find the right overload for named-arg binding.
     */
-  val allSignatures:  List[String] = Nil
+  val allSignatures: List[String] = Nil
 ) extends Callable {
 
   /** Positional parameter names and their optional default-expression text, derived from the textual [[signature]] (e.g. `"$color, $amount: 1"` → `List(("color", None), ("amount", Some("1")))`).
@@ -135,30 +127,28 @@ final class BuiltInCallable(
   /** Raw default-expression text for each declared parameter (None if required). */
   lazy val parameterDefaults: List[Option[String]] = parameterEntries.map(_._2)
 
-  /** Whether this callable's signature ends in a rest parameter (`$args...`
-    * or `$kwargs...`). Rest callables accept any number of positional
-    * arguments beyond the declared slots, so they are exempt from the
-    * `_checkBuiltInArity` positional-count validation in the evaluator.
+  /** Whether this callable's signature ends in a rest parameter (`$args...` or `$kwargs...`). Rest callables accept any number of positional arguments beyond the declared slots, so they are exempt
+    * from the `_checkBuiltInArity` positional-count validation in the evaluator.
     *
-    * Rest parameters are detected by scanning the raw signature for a
-    * trailing `...` inside a top-level (depth-0) argument. Both the
-    * positional-rest (`$x, $args...`) and the keyword-rest
-    * (`$x, $kwargs...`) forms are treated as rest.
+    * Rest parameters are detected by scanning the raw signature for a trailing `...` inside a top-level (depth-0) argument. Both the positional-rest (`$x, $args...`) and the keyword-rest (`$x,
+    * $kwargs...`) forms are treated as rest.
     */
   lazy val hasRestParameter: Boolean = {
     val trimmed = signature.trim
     if (trimmed.isEmpty) false
     else {
       // Quick scan for `...` at depth 0 — avoids a full re-parse.
-      var depth    = 0
-      var i        = 0
-      var sawRest  = false
+      var depth   = 0
+      var i       = 0
+      var sawRest = false
       while (!sawRest && i < trimmed.length) {
         val c = trimmed.charAt(i)
         if (c == '(' || c == '[') depth += 1
         else if (c == ')' || c == ']') depth -= 1
-        else if (depth == 0 && c == '.' && i + 2 < trimmed.length
-                 && trimmed.charAt(i + 1) == '.' && trimmed.charAt(i + 2) == '.') {
+        else if (
+          depth == 0 && c == '.' && i + 2 < trimmed.length
+          && trimmed.charAt(i + 1) == '.' && trimmed.charAt(i + 2) == '.'
+        ) {
           sawRest = true
         }
         i += 1
@@ -167,19 +157,16 @@ final class BuiltInCallable(
     }
   }
 
-  /** Returns a copy of this callable with the given [newName].
-    * Port of dart-sass `BuiltInCallable.withName`.
+  /** Returns a copy of this callable with the given [newName]. Port of dart-sass `BuiltInCallable.withName`.
     */
   def withName(newName: String): BuiltInCallable =
     new BuiltInCallable(newName, parameters, callback, acceptsContent, signature, isOverloaded)
 
-  /** Returns a copy of this callable that emits a deprecation warning
-    * directing users to the module form of the function.
-    * Port of dart-sass `BuiltInCallable.withDeprecationWarning`.
+  /** Returns a copy of this callable that emits a deprecation warning directing users to the module form of the function. Port of dart-sass `BuiltInCallable.withDeprecationWarning`.
     */
   def withDeprecationWarning(module: String, newName: String = ""): BuiltInCallable = {
     val effectiveName = if (newName.nonEmpty) newName else name
-    val origCallback = callback
+    val origCallback  = callback
     val wrappedCallback: List[Value] => Value = { args =>
       BuiltInCallable.warnForGlobalBuiltIn(module, effectiveName)
       origCallback(args)
@@ -192,25 +179,23 @@ final class BuiltInCallable(
 
 object BuiltInCallable {
 
-  /** Emits a deprecation warning for a global built-in function that is now
-    * available as function [name] in built-in module [module].
-    * Port of dart-sass `warnForGlobalBuiltIn` in `lib/src/callable/async_built_in.dart`.
+  /** Emits a deprecation warning for a global built-in function that is now available as function [name] in built-in module [module]. Port of dart-sass `warnForGlobalBuiltIn` in
+    * `lib/src/callable/async_built_in.dart`.
     */
-  def warnForGlobalBuiltIn(module: String, name: String): Unit = {
+  def warnForGlobalBuiltIn(module: String, name: String): Unit =
     EvaluationContext.warnForDeprecation(
       Deprecation.GlobalBuiltin,
       s"Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.\n" +
         s"Use $module.$name instead.\n\n" +
         "More info and automated migrator: https://sass-lang.com/d/import"
     )
-  }
 
   /// Creates a callable with a single parsed [parameters] declaration and a
   /// single [callback].
   def parsed(
-    name:       String,
-    parameters: ParameterList,
-    callback:   List[Value] => Value,
+    name:           String,
+    parameters:     ParameterList,
+    callback:       List[Value] => Value,
     acceptsContent: Boolean = false
   ): BuiltInCallable =
     BuiltInCallable(name, Nullable(parameters), callback, acceptsContent)
@@ -236,9 +221,7 @@ object BuiltInCallable {
     *   - Otherwise, the rest-parameter overload (`$args...`) wins.
     *   - If nothing matches, an `IllegalArgumentException` is thrown.
     *
-    * The resulting callable's textual `signature` is taken from the
-    * first non-rest overload (or the first overload if all are rest),
-    * so named-argument binding still works for the common case of a
+    * The resulting callable's textual `signature` is taken from the first non-rest overload (or the first overload if all are rest), so named-argument binding still works for the common case of a
     * direct call against the canonical positional shape.
     */
   def overloadedFunction(
@@ -307,20 +290,16 @@ object BuiltInCallable {
     val canonicalSig: String =
       if (candidates.isEmpty) ""
       else
-        candidates
-          .map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1))
-          .sortBy(t => (-t._2, -t._3))
-          .head
-          ._1
+        candidates.map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1)).sortBy(t => (-t._2, -t._3)).head._1
     BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig, isOverloaded = true, allSignatures = candidates)
   }
 }
 
 /** Name-aware overload dispatch. Port of dart-sass `BuiltInCallable.callbackFor` in `lib/src/callable/built_in.dart`.
   *
-  * Each overload is declared with its textual signature (e.g. `"$color, $amount"`) and a callback. At call time the dispatcher picks the overload whose declared positional parameter set is a
-  * superset of the caller's positional count AND whose parameter names are a superset of the caller's named keys. This lets a single function name back signatures like `rgb($red, $green, $blue)`
-  * vs `rgb($color, $alpha)` where the split is purely by the shape of the caller's arguments.
+  * Each overload is declared with its textual signature (e.g. `"$color, $amount"`) and a callback. At call time the dispatcher picks the overload whose declared positional parameter set is a superset
+  * of the caller's positional count AND whose parameter names are a superset of the caller's named keys. This lets a single function name back signatures like `rgb($red, $green, $blue)` vs
+  * `rgb($color, $alpha)` where the split is purely by the shape of the caller's arguments.
   */
 object BuiltInOverloadDispatch {
 
@@ -333,10 +312,10 @@ object BuiltInOverloadDispatch {
   private def parseSignature(signature: String): Overload = {
     val trimmed = signature.trim
     if (trimmed.isEmpty) return Overload(Nil, hasRest = false, (_, _) => throw new IllegalStateException("empty overload invoked"))
-    val parts  = scala.collection.mutable.ListBuffer.empty[String]
-    val buf    = new StringBuilder()
-    var depth  = 0
-    var i      = 0
+    val parts = scala.collection.mutable.ListBuffer.empty[String]
+    val buf   = new StringBuilder()
+    var depth = 0
+    var i     = 0
     while (i < trimmed.length) {
       val c = trimmed.charAt(i)
       if (c == '(' || c == '[') { depth += 1; buf.append(c) }
@@ -346,8 +325,8 @@ object BuiltInOverloadDispatch {
       i += 1
     }
     if (buf.nonEmpty) parts += buf.toString().trim
-    val partList = parts.toList
-    val hasRest  = partList.lastOption.exists(_.endsWith("..."))
+    val partList  = parts.toList
+    val hasRest   = partList.lastOption.exists(_.endsWith("..."))
     val effective =
       (if (hasRest) partList.init else partList).flatMap { raw =>
         val withoutDefault = raw.indexOf(':') match {
@@ -360,12 +339,12 @@ object BuiltInOverloadDispatch {
     Overload(effective, hasRest, (_, _) => throw new IllegalStateException("overload has no callback attached"))
   }
 
-  /** Given [raw] overload signatures paired with callbacks, select the overload for a call site with [positional] positional arguments and [named] named keys. Matches dart-sass semantics: the
-    * chosen overload's parameter-name set must be a superset of [named], and its arity (plus optional rest) must accept [positional].length.
+  /** Given [raw] overload signatures paired with callbacks, select the overload for a call site with [positional] positional arguments and [named] named keys. Matches dart-sass semantics: the chosen
+    * overload's parameter-name set must be a superset of [named], and its arity (plus optional rest) must accept [positional].length.
     */
   def select(
-    name:      String,
-    overloads: Seq[(String, (List[Value], Map[String, Value]) => Value)],
+    name:       String,
+    overloads:  Seq[(String, (List[Value], Map[String, Value]) => Value)],
     positional: List[Value],
     named:      Map[String, Value]
   ): Value = {
@@ -384,20 +363,18 @@ object BuiltInOverloadDispatch {
     })
     resty match {
       case Some(o) => o.callback(positional, named)
-      case None    => throw new IllegalArgumentException(
-        s"No overload of $name matches ${positional.length} positional and named ${nameKeys.mkString("{", ",", "}")}"
-      )
+      case None    =>
+        throw new IllegalArgumentException(
+          s"No overload of $name matches ${positional.length} positional and named ${nameKeys.mkString("{", ",", "}")}"
+        )
     }
   }
 }
 
-/** A callable that delegates to another callable but reports a different
-  * name. Used by `@forward ... as prefix-*` to expose an existing function
-  * or mixin under a prefixed name without losing the original's body.
+/** A callable that delegates to another callable but reports a different name. Used by `@forward ... as prefix-*` to expose an existing function or mixin under a prefixed name without losing the
+  * original's body.
   *
-  * The evaluator's mixin/function dispatchers unwrap [[AliasedCallable]]
-  * via `underlying` before inspecting the callable kind, so an aliased
-  * [[UserDefinedCallable]] remains invocable and an aliased
+  * The evaluator's mixin/function dispatchers unwrap [[AliasedCallable]] via `underlying` before inspecting the callable kind, so an aliased [[UserDefinedCallable]] remains invocable and an aliased
   * [[BuiltInCallable]] still routes to its native callback.
   */
 final class AliasedCallable(
@@ -409,7 +386,7 @@ final class AliasedCallable(
 
   override def equals(other: Any): Boolean = other match {
     case that: AliasedCallable => this.name == that.name && this.underlying == that.underlying
-    case _                     => false
+    case _ => false
   }
 
   override def hashCode(): Int = name.hashCode ^ underlying.hashCode()
@@ -417,8 +394,7 @@ final class AliasedCallable(
 
 object AliasedCallable {
 
-  /** Returns [callable] unchanged if its name already matches [newName];
-    * otherwise wraps it in an [[AliasedCallable]].
+  /** Returns [callable] unchanged if its name already matches [newName]; otherwise wraps it in an [[AliasedCallable]].
     */
   def apply(newName: String, callable: Callable): Callable =
     if (newName == callable.name) callable
@@ -438,13 +414,11 @@ object AliasedCallable {
           new AliasedCallable(newName, other)
       }
 
-  /** Peels all [[AliasedCallable]] layers off of [callable], returning the
-    * innermost underlying callable. Returns the argument unchanged when
-    * [callable] isn't aliased.
+  /** Peels all [[AliasedCallable]] layers off of [callable], returning the innermost underlying callable. Returns the argument unchanged when [callable] isn't aliased.
     */
   def unwrap(callable: Callable): Callable = callable match {
     case alias: AliasedCallable => unwrap(alias.underlying)
-    case other                  => other
+    case other => other
   }
 }
 

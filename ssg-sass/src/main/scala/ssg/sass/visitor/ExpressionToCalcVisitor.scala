@@ -21,8 +21,7 @@ package visitor
 import ssg.sass.Nullable
 import ssg.sass.ast.sass.*
 
-/** A visitor that replaces constructs that can't be used in a calculation with
-  * those that can.
+/** A visitor that replaces constructs that can't be used in a calculation with those that can.
   */
 final class ExpressionToCalcVisitor extends ReplaceExpressionVisitor {
 
@@ -49,7 +48,7 @@ final class ExpressionToCalcVisitor extends ReplaceExpressionVisitor {
   override def visitUnaryOperationExpression(node: UnaryOperationExpression): Expression =
     node.operator match {
       // `calc()` doesn't support unary operations.
-      case UnaryOperator.Plus => node.operand
+      case UnaryOperator.Plus  => node.operand
       case UnaryOperator.Minus =>
         BinaryOperationExpression(
           BinaryOperator.Times,
@@ -67,9 +66,7 @@ object ExpressionToCalcVisitor {
 
   /** Converts [expression] to an equivalent `calc()`.
     *
-    * This assumes that [expression] already returns a number. It's intended for
-    * use in end-user messaging, and may not produce directly evaluable
-    * expressions.
+    * This assumes that [expression] already returns a number. It's intended for use in end-user messaging, and may not produce directly evaluable expressions.
     */
   def expressionToCalc(expression: Expression): FunctionExpression =
     FunctionExpression(

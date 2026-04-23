@@ -31,15 +31,14 @@ object CloneCssVisitor {
     extensionStore: ExtensionStore
   ): (ModifiableCssStylesheet, ExtensionStore) = {
     val (newExtensionStore, oldToNewSelectors) = extensionStore.cloneStore()
-    val visitor = new CloneCssVisitor(oldToNewSelectors)
+    val visitor                                = new CloneCssVisitor(oldToNewSelectors)
     (visitor.visitCssStylesheet(stylesheet), newExtensionStore)
   }
 }
 
 /** A visitor that creates a deep (and mutable) copy of a [CssStylesheet]. */
 final class CloneCssVisitor private[visitor] (
-  /** A map from selectors in the original stylesheet to selectors generated for
-    * the new stylesheet using [ExtensionStore.cloneStore].
+  /** A map from selectors in the original stylesheet to selectors generated for the new stylesheet using [ExtensionStore.cloneStore].
     */
   private val oldToNewSelectors: Map[SelectorList, Box[SelectorList]]
 ) extends CssVisitor[ModifiableCssNode] {
@@ -78,7 +77,7 @@ final class CloneCssVisitor private[visitor] (
   def visitCssMediaRule(node: CssMediaRule): ModifiableCssMediaRule =
     _visitChildren(new ModifiableCssMediaRule(node.queries, node.span), node)
 
-  def visitCssStyleRule(node: CssStyleRule): ModifiableCssStyleRule = {
+  def visitCssStyleRule(node: CssStyleRule): ModifiableCssStyleRule =
     oldToNewSelectors.get(node.selector) match {
       case Some(newSelector) =>
         _visitChildren(
@@ -95,7 +94,6 @@ final class CloneCssVisitor private[visitor] (
             "must come from the same compilation."
         )
     }
-  }
 
   def visitCssStylesheet(node: CssStylesheet): ModifiableCssStylesheet =
     _visitChildren(new ModifiableCssStylesheet(node.span), node)
@@ -106,8 +104,7 @@ final class CloneCssVisitor private[visitor] (
       node
     )
 
-  /** Visits [oldParent]'s children and adds their cloned values as children of
-    * [newParent], then returns [newParent].
+  /** Visits [oldParent]'s children and adds their cloned values as children of [newParent], then returns [newParent].
     */
   private def _visitChildren[T <: ModifiableCssParentNode](
     newParent: T,

@@ -16,12 +16,9 @@ package util
 
 import scala.collection.mutable
 
-/** A mostly-unmodifiable view of a map that only allows certain keys.
-  * Supports `remove()` and `subtractOne()` so configurations can mark
-  * variables as used, but `addOne()` is unsupported.
+/** A mostly-unmodifiable view of a map that only allows certain keys. Supports `remove()` and `subtractOne()` so configurations can mark variables as used, but `addOne()` is unsupported.
   *
-  * Extends `mutable.Map` so it can be assigned to the same variable as the
-  * underlying mutable map in `Configuration.throughForward`.
+  * Extends `mutable.Map` so it can be assigned to the same variable as the underlying mutable map in `Configuration.throughForward`.
   */
 final class LimitedMapView[K, V] private (
   private val map:         mutable.Map[K, V],

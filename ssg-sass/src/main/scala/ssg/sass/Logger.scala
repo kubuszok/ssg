@@ -157,7 +157,7 @@ final class DeprecationProcessingLogger(
 
   /** Warns if any of the deprecations options are incompatible or unnecessary. */
   def validate(): Unit = {
-    for (deprecation <- fatalDeprecations) {
+    for (deprecation <- fatalDeprecations)
       if (deprecation.isFuture && !futureDeprecations.contains(deprecation)) {
         inner.warn(
           s"Future $deprecation deprecation must be enabled before it can be made fatal."
@@ -171,9 +171,8 @@ final class DeprecationProcessingLogger(
           s"Ignoring setting to silence $deprecation deprecation, since it has also been made fatal."
         )
       }
-    }
 
-    for (deprecation <- silenceDeprecations) {
+    for (deprecation <- silenceDeprecations)
       if (deprecation == Deprecation.UserAuthored) {
         inner.warn("User-authored deprecations should not be silenced.")
       } else if (deprecation.obsoleteIn.isDefined) {
@@ -189,29 +188,22 @@ final class DeprecationProcessingLogger(
           s"Future $deprecation deprecation is not yet active, so silencing it is unnecessary."
         )
       }
-    }
 
-    for (deprecation <- futureDeprecations) {
+    for (deprecation <- futureDeprecations)
       if (!deprecation.isFuture) {
         inner.warn(
           s"$deprecation is not a future deprecation, so it does not need to be explicitly enabled."
         )
       }
-    }
   }
 
-  /**
-   * Prints a warning indicating the number of deprecation warnings that were
-   * omitted due to repetition.
-   *
-   * @param js indicates whether this is running in JS mode, in which case
-   *           it doesn't mention "verbose mode" because the JS API doesn't support that.
-   */
+  /** Prints a warning indicating the number of deprecation warnings that were omitted due to repetition.
+    *
+    * @param js
+    *   indicates whether this is running in JS mode, in which case it doesn't mention "verbose mode" because the JS API doesn't support that.
+    */
   def summarize(js: Boolean = false): Unit = {
-    val total = warningCounts.values
-      .filter(_ > maxRepetitions)
-      .map(_ - maxRepetitions)
-      .sum
+    val total = warningCounts.values.filter(_ > maxRepetitions).map(_ - maxRepetitions).sum
     if (total > 0) {
       val verboseHint = if (js) "" else "\nRun in verbose mode to see all warnings."
       inner.warn(s"$total repetitive deprecation warnings omitted.$verboseHint")
@@ -232,17 +224,14 @@ final class DeprecationProcessingLogger(
     }
   }
 
-  /**
-   * Processes a deprecation warning.
-   *
-   * If the deprecation is in fatalDeprecations, this throws an error.
-   *
-   * If it's a future deprecation that hasn't been opted into or it's a
-   * deprecation that's already been warned for maxRepetitions times and
-   * limitRepetition is true, the warning is dropped.
-   *
-   * Otherwise, this is passed on to the inner logger.
-   */
+  /** Processes a deprecation warning.
+    *
+    * If the deprecation is in fatalDeprecations, this throws an error.
+    *
+    * If it's a future deprecation that hasn't been opted into or it's a deprecation that's already been warned for maxRepetitions times and limitRepetition is true, the warning is dropped.
+    *
+    * Otherwise, this is passed on to the inner logger.
+    */
   private def handleDeprecation(
     deprecation: Deprecation,
     message:     String,

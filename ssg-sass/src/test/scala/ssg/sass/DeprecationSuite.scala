@@ -38,7 +38,7 @@ final class DeprecationSuite extends munit.FunSuite {
 
   test("slash-div: unparenthesized slash is a slash-separated literal (no warning)") {
     // dart-sass preserves `10 / 2` as `10/2` in output — no deprecation warning.
-    val r = compile("a { x: 10 / 2; }")
+    val r     = compile("a { x: 10 / 2; }")
     val found = r.warnings.exists(_.contains("[slash-div]"))
     assert(!found, s"Expected NO slash-div warning for slash-separated literal, got:\n${r.warnings.mkString("\n")}")
   }
@@ -107,13 +107,13 @@ final class DeprecationSuite extends munit.FunSuite {
 
   test("DeprecationProcessingLogger.validate warns about obsolete deprecations marked fatal") {
     val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
-    val inner = new Logger {
+    val inner    = new Logger {
       def warn(
         message:     String,
         span:        Nullable[ssg.sass.util.FileSpan],
         trace:       Nullable[ssg.sass.util.Trace],
         deprecation: Nullable[Deprecation]
-      ): Unit = warnings += message
+      ):                                                        Unit = warnings += message
       def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
     }
     // MixedDecls has obsoleteIn set
@@ -124,13 +124,13 @@ final class DeprecationSuite extends munit.FunSuite {
 
   test("DeprecationProcessingLogger.validate warns about silencing user-authored") {
     val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
-    val inner = new Logger {
+    val inner    = new Logger {
       def warn(
         message:     String,
         span:        Nullable[ssg.sass.util.FileSpan],
         trace:       Nullable[ssg.sass.util.Trace],
         deprecation: Nullable[Deprecation]
-      ): Unit = warnings += message
+      ):                                                        Unit = warnings += message
       def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
     }
     val dp = new DeprecationProcessingLogger(inner, silenceDeprecations = Set(Deprecation.UserAuthored))
@@ -140,13 +140,13 @@ final class DeprecationSuite extends munit.FunSuite {
 
   test("DeprecationProcessingLogger.summarize reports omitted warnings") {
     val warnings = scala.collection.mutable.ArrayBuffer.empty[String]
-    val inner = new Logger {
+    val inner    = new Logger {
       def warn(
         message:     String,
         span:        Nullable[ssg.sass.util.FileSpan],
         trace:       Nullable[ssg.sass.util.Trace],
         deprecation: Nullable[Deprecation]
-      ): Unit = warnings += message
+      ):                                                        Unit = warnings += message
       def debug(message: String, span: ssg.sass.util.FileSpan): Unit = ()
     }
     val dp = new DeprecationProcessingLogger(inner)
@@ -155,7 +155,9 @@ final class DeprecationSuite extends munit.FunSuite {
       dp.warnForDeprecation(Deprecation.SlashDiv, "test")
     dp.summarize()
     // Should report 5 omitted warnings (10 - 5 = 5)
-    assert(warnings.exists(_.contains("5 repetitive deprecation warnings omitted")),
-      s"Expected summary of 5 omitted warnings, got: $warnings")
+    assert(
+      warnings.exists(_.contains("5 repetitive deprecation warnings omitted")),
+      s"Expected summary of 5 omitted warnings, got: $warnings"
+    )
   }
 }

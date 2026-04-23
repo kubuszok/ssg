@@ -20,13 +20,11 @@ import ssg.sass.visitor.ValueVisitor
 
 /** A SassScript mixin reference.
   *
-  * A mixin reference captures a mixin from the local environment so that
-  * it may be passed between modules.
+  * A mixin reference captures a mixin from the local environment so that it may be passed between modules.
   */
 final class SassMixin(
   val callable: Callable,
-  /** The unique compile context for tracking if this [[SassMixin]] belongs to the
-    * current compilation or not.
+  /** The unique compile context for tracking if this [[SassMixin]] belongs to the current compilation or not.
     */
   private val compileContext: Nullable[AnyRef] = Nullable.Null
 ) extends Value {
@@ -37,8 +35,7 @@ final class SassMixin(
 
   /** Asserts that this SassMixin belongs to [compileContext] and returns it.
     *
-    * It's checked before evaluating a SassMixin to prevent execution of
-    * SassMixin across different compilations.
+    * It's checked before evaluating a SassMixin to prevent execution of SassMixin across different compilations.
     */
   def assertCompileContext(ctx: AnyRef): SassMixin = {
     if (compileContext.isDefined && (compileContext.get ne ctx)) {

@@ -75,8 +75,7 @@ final class ComplexSelector(
       other.leadingCombinators.isEmpty &&
       complexIsSuperselector(components, other.components)
 
-  /** Delegates to the full combinator-aware `complexIsSuperselector` in
-    * [[ExtendFunctions]].
+  /** Delegates to the full combinator-aware `complexIsSuperselector` in [[ExtendFunctions]].
     */
   private def complexIsSuperselector(
     superComponents: List[ComplexSelectorComponent],

@@ -63,9 +63,9 @@ abstract class CssNode extends AstNode {
 object CssNode {
 
   /** The visitor used to implement [CssNode.isInvisible]. */
-  private[css] final class IsInvisibleVisitor(
+  final private[css] class IsInvisibleVisitor(
     /** Whether to consider selectors with bogus combinators invisible. */
-    val includeBogus:    Boolean,
+    val includeBogus: Boolean,
     /** Whether to consider comments invisible. */
     val includeComments: Boolean
   ) extends EveryCssVisitor {

@@ -115,9 +115,9 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext pushes/pops a current context") {
     final class StubCtx(label: String) extends EvaluationContext {
-      def currentCallableNode:                                                    ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
-      def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit              = ()
-      override def toString:                                                      String               = s"Stub($label)"
+      def currentCallableNode:                                                       ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
+      def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit                 = ()
+      override def toString:                                                         String               = s"Stub($label)"
     }
     assert(EvaluationContext.current.isEmpty)
     val outer = new StubCtx("outer")
@@ -139,8 +139,8 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext restores the previous context on exception") {
     final class StubCtx extends EvaluationContext {
-      def currentCallableNode:                                                    ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
-      def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit              = ()
+      def currentCallableNode:                                                       ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
+      def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit                 = ()
     }
     val ctx = new StubCtx
     intercept[RuntimeException] {
@@ -182,25 +182,25 @@ final class ModuleInfraSuite extends munit.FunSuite {
     // Two overloads share the name but are disambiguated by named keys:
     //   rgb($color, $alpha)       -> picks when named = {color, alpha}
     //   rgb($red, $green, $blue)  -> picks when named = {red, green, blue}
-    val one   = SassNumber(1.0)
+    val one    = SassNumber(1.0)
     val picked = scala.collection.mutable.Buffer.empty[String]
     val cb1: (List[Value], Map[String, Value]) => Value = (_, _) => { picked += "color-alpha"; one }
     val cb2: (List[Value], Map[String, Value]) => Value = (_, _) => { picked += "rgb-triple"; one }
     val overloads = Seq(
-      "$color, $alpha"     -> cb1,
+      "$color, $alpha" -> cb1,
       "$red, $green, $blue" -> cb2
     )
     BuiltInOverloadDispatch.select(
       "rgb",
       overloads,
       positional = Nil,
-      named      = Map("color" -> one, "alpha" -> one)
+      named = Map("color" -> one, "alpha" -> one)
     )
     BuiltInOverloadDispatch.select(
       "rgb",
       overloads,
       positional = Nil,
-      named      = Map("red" -> one, "green" -> one, "blue" -> one)
+      named = Map("red" -> one, "green" -> one, "blue" -> one)
     )
     assertEquals(picked.toList, List("color-alpha", "rgb-triple"))
   }

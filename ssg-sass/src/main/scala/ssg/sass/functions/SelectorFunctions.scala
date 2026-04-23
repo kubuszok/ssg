@@ -48,16 +48,7 @@ package functions
 import scala.language.implicitConversions
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
-import ssg.sass.ast.selector.{
-  ComplexSelector,
-  ComplexSelectorComponent,
-  CompoundSelector,
-  ParentSelector,
-  SelectorList,
-  SimpleSelector,
-  TypeSelector,
-  UniversalSelector
-}
+import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, ParentSelector, SelectorList, SimpleSelector, TypeSelector, UniversalSelector }
 import ssg.sass.extend.{ ExtendMode, Extension, MutableExtensionStore }
 import ssg.sass.parse.SelectorParser
 import ssg.sass.util.FileSpan
@@ -78,8 +69,7 @@ object SelectorFunctions {
   // one call can be round-tripped back into a SelectorList by the next.
   // ---------------------------------------------------------------------------
 
-  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's
-    * internal conversion before handing off to the parser.
+  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's internal conversion before handing off to the parser.
     */
   private def asSelectorText(v: Value): Option[String] = v match {
     case s: SassString => Some(s.text)
@@ -95,24 +85,26 @@ object SelectorFunctions {
     case _ => None
   }
 
-  /** Parse a [[Value]] as a [[SelectorList]]. Raises a SassScriptException
-    * with the caller-supplied argument name on failure, matching dart-sass's
-    * `assertSelector` error format.
+  /** Parse a [[Value]] as a [[SelectorList]]. Raises a SassScriptException with the caller-supplied argument name on failure, matching dart-sass's `assertSelector` error format.
+    *
+    * @param allowParent
+    *   whether `&` (parent selectors) are permitted. Defaults to `false`, matching dart-sass's `assertSelector`.
     */
-  private def asSelectorList(v: Value, name: String): SelectorList =
+  private def asSelectorList(v: Value, name: String, allowParent: Boolean = false): SelectorList =
     asSelectorText(v) match {
       case Some(text) =>
-        val parsed = SelectorParser.tryParse(text)
-        if (parsed.isDefined) parsed.get
-        else throw SassScriptException(s"$$$name: Can't parse $text as a selector.")
+        try
+          new SelectorParser(text, allowParent = allowParent).parse()
+        catch {
+          case e: Exception =>
+            throw SassScriptException(s"$$$name: ${e.getMessage}")
+        }
       case None =>
         throw SassScriptException(s"$$$name: $v is not a valid selector.")
     }
 
-  /** Extracts a single [[CompoundSelector]] from a [[Value]] if the argument
-    * parses as a selector whose only complex selector has one compound
-    * component. Raises a SassScriptException otherwise, matching
-    * dart-sass's `assertCompoundSelector`.
+  /** Extracts a single [[CompoundSelector]] from a [[Value]] if the argument parses as a selector whose only complex selector has one compound component. Raises a SassScriptException otherwise,
+    * matching dart-sass's `assertCompoundSelector`.
     */
   private def assertCompoundSelectorArg(v: Value, name: String): CompoundSelector = {
     val list = asSelectorList(v, name)
@@ -156,21 +148,12 @@ object SelectorFunctions {
         var first  = true
         val parsed = raw.map { v =>
           // The first selector may not contain `&`; all subsequent
-          // selectors may.
-          val list = asSelectorList(v, "selectors")
-          if (first) {
-            val parent = SelectorList.findParentSelector(list)
-            if (parent.isDefined)
-              throw SassScriptException(
-                """$selectors: Parent selectors aren't allowed here."""
-              )
-            first = false
-          }
+          // selectors may. Matches dart-sass `allowParent: !first`.
+          val list = asSelectorList(v, "selectors", allowParent = !first)
+          first = false
           list
         }
-        parsed
-          .reduceLeft((parent, child) => child.nestWithin(Nullable(parent), implicitParent = true))
-          .asSassList
+        parsed.reduceLeft((parent, child) => child.nestWithin(Nullable(parent), implicitParent = true)).asSassList
       }
     )
 
@@ -191,33 +174,29 @@ object SelectorFunctions {
         if (raw.isEmpty)
           throw SassScriptException("$selectors: At least one selector must be passed.")
         val parsed = raw.map(v => asSelectorList(v, "selectors"))
-        parsed
-          .reduceLeft { (parent, child) =>
-            val prepended = SelectorList(
-              child.components.map { complex =>
-                if (complex.leadingCombinators.nonEmpty)
-                  throw SassScriptException(s"Can't append $complex to $parent.")
-                val head :: rest = complex.components: @unchecked
-                val newCompound  = prependParent(head.selector, complex.span)
-                if (newCompound.isEmpty)
-                  throw SassScriptException(s"Can't append $complex to $parent.")
-                new ComplexSelector(
-                  Nil,
-                  new ComplexSelectorComponent(newCompound.get, head.combinators, head.span) :: rest,
-                  complex.span
-                )
-              },
-              child.span
-            )
-            prepended.nestWithin(Nullable(parent), implicitParent = true)
-          }
-          .asSassList
+        parsed.reduceLeft { (parent, child) =>
+          val prepended = SelectorList(
+            child.components.map { complex =>
+              if (complex.leadingCombinators.nonEmpty)
+                throw SassScriptException(s"Can't append $complex to $parent.")
+              val head :: rest = complex.components: @unchecked
+              val newCompound  = prependParent(head.selector, complex.span)
+              if (newCompound.isEmpty)
+                throw SassScriptException(s"Can't append $complex to $parent.")
+              new ComplexSelector(
+                Nil,
+                new ComplexSelectorComponent(newCompound.get, head.combinators, head.span) :: rest,
+                complex.span
+              )
+            },
+            child.span
+          )
+          prepended.nestWithin(Nullable(parent), implicitParent = true)
+        }.asSassList
       }
     )
 
-  /** Prepends a [[ParentSelector]] to [compound], matching dart-sass's
-    * `_prependParent` helper. Returns Nullable.empty if the result
-    * wouldn't be a valid selector (e.g. the compound starts with a
+  /** Prepends a [[ParentSelector]] to [compound], matching dart-sass's `_prependParent` helper. Returns Nullable.empty if the result wouldn't be a valid selector (e.g. the compound starts with a
     * universal selector or a namespaced type selector).
     */
   private def prependParent(
@@ -228,7 +207,7 @@ object SelectorFunctions {
     if (comps.isEmpty) Nullable.empty
     else
       comps.head match {
-        case _: UniversalSelector => Nullable.empty
+        case _: UniversalSelector                          => Nullable.empty
         case t: TypeSelector if t.name.namespace.isDefined =>
           Nullable.empty
         case t: TypeSelector =>
@@ -271,17 +250,12 @@ object SelectorFunctions {
       }
     )
 
-  /** Runs the AST-level extend pipeline for `selector-extend` and
-    * `selector-replace` against a throwaway [[MutableExtensionStore]].
-    * Each simple selector in the target compound list gets an extension
+  /** Runs the AST-level extend pipeline for `selector-extend` and `selector-replace` against a throwaway [[MutableExtensionStore]]. Each simple selector in the target compound list gets an extension
     * recorded; the result is the combined selector list after extension.
     */
-  /** Runs the AST-level extend pipeline for `selector-extend` and
-    * `selector-replace` against a throwaway [[MutableExtensionStore]].
+  /** Runs the AST-level extend pipeline for `selector-extend` and `selector-replace` against a throwaway [[MutableExtensionStore]].
     *
-    * Port of dart-sass `ExtensionStore._extendOrReplace`.  Each target
-    * complex is processed SEQUENTIALLY: the result of extending with one
-    * target feeds into the next, matching the dart-sass loop:
+    * Port of dart-sass `ExtensionStore._extendOrReplace`. Each target complex is processed SEQUENTIALLY: the result of extending with one target feeds into the next, matching the dart-sass loop:
     * {{{
     *   for (var complex in targets.components) {
     *     selector = extender._extendList(selector, { ... }, null);
@@ -359,7 +333,7 @@ object SelectorFunctions {
       { args =>
         val compound = assertCompoundSelectorArg(args(0), "selector")
         SassList(
-          compound.components.map(s => (SassString(s.toString, hasQuotes = false): Value)),
+          compound.components.map(s => SassString(s.toString, hasQuotes = false): Value),
           ListSeparator.Comma
         )
       }
@@ -373,11 +347,8 @@ object SelectorFunctions {
   // Public lists.
   // ---------------------------------------------------------------------------
 
-  /** Globally available built-ins. Mirrors dart-sass `global`: is-superselector
-    * and simple-selectors keep their bare names; the rest get the legacy
-    * `selector-*` prefix via withName.
-    * Each entry uses `.withDeprecationWarning('selector')` to emit a
-    * `global-builtin` deprecation warning directing users to `selector.X`.
+  /** Globally available built-ins. Mirrors dart-sass `global`: is-superselector and simple-selectors keep their bare names; the rest get the legacy `selector-*` prefix via withName. Each entry uses
+    * `.withDeprecationWarning('selector')` to emit a `global-builtin` deprecation warning directing users to `selector.X`.
     */
   val global: List[Callable] = List(
     isSuperselectorFn.withDeprecationWarning("selector"),

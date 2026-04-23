@@ -112,8 +112,10 @@ final class SassSpecRunner extends munit.FunSuite {
     }
     if (cases.isEmpty && subdirFilter.isDefined)
       fail(s"no cases matched subdir filter '${subdirFilter.get}'")
-    println(s"sass-spec: collected ${cases.size} test cases" +
-      subdirFilter.fold("")(p => s" (filtered to subdir $p)"))
+    println(
+      s"sass-spec: collected ${cases.size} test cases" +
+        subdirFilter.fold("")(p => s" (filtered to subdir $p)")
+    )
 
     val results = cases.map(runCase)
 
@@ -190,7 +192,7 @@ final class SassSpecRunner extends munit.FunSuite {
             "Run snapshot without a subdir filter to capture the full pass set."
         )
       val tracked = repoRoot.resolve(".rescale").resolve("data").resolve("sass-spec-baseline.tsv")
-      val target = baselinePath.map(Paths.get(_)).getOrElse(tracked)
+      val target  = baselinePath.map(Paths.get(_)).getOrElse(tracked)
       writeBaseline(target, results)
       println(s"Wrote baseline: $target (${results.size} cases)")
       return
@@ -245,8 +247,8 @@ final class SassSpecRunner extends munit.FunSuite {
       }
     }
     effectiveBaseline.foreach { path =>
-      val baseline = readBaseline(path)
-      val current  = results.map(r => r.relPath -> r.outcome).toMap
+      val baseline  = readBaseline(path)
+      val current   = results.map(r => r.relPath -> r.outcome).toMap
       val regressed = baseline.toList.flatMap { case (rel, prior) =>
         if (prior == Outcome.Pass || prior == Outcome.ExpectedErrorOk) {
           current.get(rel) match {
@@ -257,9 +259,12 @@ final class SassSpecRunner extends munit.FunSuite {
         } else Nil
       }
       if (regressed.nonEmpty) {
-        val preview = regressed.take(10).map { case (rel, prior, now) =>
-          s"  $rel: $prior -> $now"
-        }.mkString("\n")
+        val preview = regressed
+          .take(10)
+          .map { case (rel, prior, now) =>
+            s"  $rel: $prior -> $now"
+          }
+          .mkString("\n")
         fail(
           s"sass-spec: ${regressed.size} regressions vs baseline $path (prior pass -> current fail).\n$preview"
         )
@@ -268,7 +273,7 @@ final class SassSpecRunner extends munit.FunSuite {
       // count so the user sees progress.
       val newPasses = current.toList.count { case (rel, now) =>
         (now == Outcome.Pass || now == Outcome.ExpectedErrorOk) &&
-          !baseline.get(rel).exists(prior => prior == Outcome.Pass || prior == Outcome.ExpectedErrorOk)
+        !baseline.get(rel).exists(prior => prior == Outcome.Pass || prior == Outcome.ExpectedErrorOk)
       }
       if (newPasses > 0) println(s"sass-spec: $newPasses cases newly passing vs baseline")
     }
@@ -279,11 +284,8 @@ final class SassSpecRunner extends munit.FunSuite {
     if (total == 0) fail("sass-spec: no cases collected — spec walker returned empty")
   }
 
-  /** Read mode keys from `ssg-sass/target/sass-spec-mode.tsv`. The file is
-    * one `key=value` per line; recognized keys are `strict`, `subdir`,
-    * `baseline`, `snapshot`. Returns an empty map if the file is absent
-    * (the runner falls back to system properties for direct sbt-testOnly
-    * invocations).
+  /** Read mode keys from `ssg-sass/target/sass-spec-mode.tsv`. The file is one `key=value` per line; recognized keys are `strict`, `subdir`, `baseline`, `snapshot`. Returns an empty map if the file
+    * is absent (the runner falls back to system properties for direct sbt-testOnly invocations).
     */
   private def modeFileExists(): Boolean = {
     val path = modeFilePath()
@@ -295,9 +297,11 @@ final class SassSpecRunner extends munit.FunSuite {
     if (path.isEmpty || !Files.isRegularFile(path.get)) Map.empty
     else {
       val out   = scala.collection.mutable.Map.empty[String, String]
-      val lines = scala.util.Try(
-        Files.readAllLines(path.get, StandardCharsets.UTF_8).asScala.toList
-      ).getOrElse(Nil)
+      val lines = scala.util
+        .Try(
+          Files.readAllLines(path.get, StandardCharsets.UTF_8).asScala.toList
+        )
+        .getOrElse(Nil)
       lines.foreach { line =>
         if (line.nonEmpty && !line.startsWith("#")) {
           val eq = line.indexOf('=')
@@ -325,13 +329,10 @@ final class SassSpecRunner extends munit.FunSuite {
     }
   }
 
-  /** Resolve the mode file path via the spec-root-derived repo root.
-    * Falls back to a few cwd-relative candidates so direct invocations
-    * (e.g. raw `sbt testOnly` from the repo root) still work.
+  /** Resolve the mode file path via the spec-root-derived repo root. Falls back to a few cwd-relative candidates so direct invocations (e.g. raw `sbt testOnly` from the repo root) still work.
     *
-    * The forked test JVM under sbt has cwd `.sbt/matrix/ssg-sass/`, so
-    * relative paths alone are unreliable. We compute the same repo root
-    * the regression-baseline reader uses so the location is consistent.
+    * The forked test JVM under sbt has cwd `.sbt/matrix/ssg-sass/`, so relative paths alone are unreliable. We compute the same repo root the regression-baseline reader uses so the location is
+    * consistent.
     */
   private def modeFilePath(): Option[Path] = {
     val viaSpecRoot: Option[Path] = locateSpecRoot().map { specRoot =>
@@ -344,9 +345,7 @@ final class SassSpecRunner extends munit.FunSuite {
       Paths.get("target", "sass-spec-mode.tsv")
     )
     val all = viaSpecRoot.toList ++ cwdRelative
-    all.find(p => Files.isRegularFile(p))
-      .orElse(viaSpecRoot)
-      .orElse(all.find(p => Files.isDirectory(p.toAbsolutePath.getParent)))
+    all.find(p => Files.isRegularFile(p)).orElse(viaSpecRoot).orElse(all.find(p => Files.isDirectory(p.toAbsolutePath.getParent)))
   }
 }
 
@@ -394,8 +393,7 @@ object SassSpecRunner {
   /** A single test case.
     *
     * @param relPath
-    *   path relative to the spec root (for loose cases) or a composite
-    *   `archive.hrx!sub/dir` origin (for HRX entries)
+    *   path relative to the spec root (for loose cases) or a composite `archive.hrx!sub/dir` origin (for HRX entries)
     * @param source
     *   the `input.scss` contents
     * @param expectedOut
@@ -403,9 +401,7 @@ object SassSpecRunner {
     * @param expectedError
     *   contents of the adjacent `error` file, if any
     * @param siblingFiles
-    *   HRX-only: all other files in the same archive directory, keyed
-    *   by their basename, so the runner can build a MapImporter that
-    *   resolves `@use 'sibling'`-style references
+    *   HRX-only: all other files in the same archive directory, keyed by their basename, so the runner can build a MapImporter that resolves `@use 'sibling'`-style references
     */
   final case class TestCase(
     relPath:       String,
@@ -414,14 +410,10 @@ object SassSpecRunner {
     expectedError: Option[String],
     siblingFiles:  Map[String, String] = Map.empty,
     isSass:        Boolean = false,
-    /** Filesystem-based source URL for the input file, used as the base URL
-      * for resolving relative `@use`/`@import`/`@forward` paths. For loose
-      * test cases this is the absolute path of `input.scss`; for HRX
-      * entries it's the path of the HRX archive's directory combined with
-      * the archive-internal subdirectory (so that `../` references resolve
-      * to sibling files on disk).
+    /** Filesystem-based source URL for the input file, used as the base URL for resolving relative `@use`/`@import`/`@forward` paths. For loose test cases this is the absolute path of `input.scss`;
+      * for HRX entries it's the path of the HRX archive's directory combined with the archive-internal subdirectory (so that `../` references resolve to sibling files on disk).
       */
-    sourceUrl:     Option[String] = None
+    sourceUrl: Option[String] = None
   )
 
   def collectCases(root: Path): List[TestCase] = {
@@ -474,19 +466,15 @@ object SassSpecRunner {
         }
       finally stream.close()
     }
-    val sass = input.getFileName.toString.endsWith(".sass")
+    val sass   = input.getFileName.toString.endsWith(".sass")
     val srcUrl = Some(input.toAbsolutePath.normalize.toString)
     source.map(s => TestCase(rel, s, expectedO, expectedE, siblings.toMap, isSass = sass, sourceUrl = srcUrl))
   }
 
   /** Parse an HRX archive into test cases.
     *
-    * Phase 0.5: previously this path skipped any case with sibling
-    * `.scss` files or non-`sass:` imports. That hid every multi-file
-    * `forward`/`use`/`import`/`extend` spec from the measured pass
-    * rate. The new behavior emits one TestCase per `input.scss` entry
-    * with the sibling files captured so the runner can build a
-    * MapImporter from them.
+    * Phase 0.5: previously this path skipped any case with sibling `.scss` files or non-`sass:` imports. That hid every multi-file `forward`/`use`/`import`/`extend` spec from the measured pass rate.
+    * The new behavior emits one TestCase per `input.scss` entry with the sibling files captured so the runner can build a MapImporter from them.
     */
   def loadHrxCases(root: Path, archive: Path): List[TestCase] = {
     val raw = Try(new String(Files.readAllBytes(archive), StandardCharsets.UTF_8)).toOption.getOrElse("")
@@ -515,9 +503,9 @@ object SassSpecRunner {
         (files.get("input.scss") orElse files.get("input.sass")) match {
           case Some(src) =>
             val inputName = if (files.contains("input.scss")) "input.scss" else "input.sass"
-            val out    = files.get("output.css")
-            val err    = files.get("error")
-            val origin = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
+            val out       = files.get("output.css")
+            val err       = files.get("error")
+            val origin    = s"$archiveRel!${if (dir.isEmpty) "<root>" else dir}"
             // Sibling files (for the MapImporter): same-directory files
             // except input.scss/input.sass and the expected-output fixtures.
             val sameDirSiblings = files.filter { case (name, _) =>
@@ -526,29 +514,32 @@ object SassSpecRunner {
             // Also include files from ALL archive entries with relative paths.
             // This lets tests resolve both child dirs (@use "dir" → dir/_index.scss)
             // and parent dirs (@use "../utils" → ../_utils.scss).
-            val dirPrefix = if (dir.isEmpty) "" else dir + "/"
+            val dirPrefix       = if (dir.isEmpty) "" else dir + "/"
             val archiveSiblings = allEntries.iterator.flatMap { case (fullPath, content) =>
               // Skip the test's own input.scss / input.sass
               if (fullPath == dirPrefix + inputName) None
               // Skip fixture files
-              else if (fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
-                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")) None
+              else if (
+                fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
+                fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")
+              ) None
               // Skip top-level fixture files (output.css, error, warning at root)
               else if (!fullPath.contains('/') && (fullPath == "output.css" || fullPath == "error" || fullPath == "warning")) None
               else {
                 // Compute relative path from test dir to this entry
-                val relativePath = if (dir.isEmpty) fullPath
-                else {
-                  val dirParts = dir.split("/")
-                  val fileParts = fullPath.split("/")
-                  // Find common prefix length
-                  var common = 0
-                  while (common < dirParts.length && common < fileParts.length && dirParts(common) == fileParts(common)) common += 1
-                  val ups = dirParts.length - common
-                  val rest = fileParts.drop(common).mkString("/")
-                  if (ups == 0) rest
-                  else ("../" * ups) + rest
-                }
+                val relativePath =
+                  if (dir.isEmpty) fullPath
+                  else {
+                    val dirParts  = dir.split("/")
+                    val fileParts = fullPath.split("/")
+                    // Find common prefix length
+                    var common = 0
+                    while (common < dirParts.length && common < fileParts.length && dirParts(common) == fileParts(common)) common += 1
+                    val ups  = dirParts.length - common
+                    val rest = fileParts.drop(common).mkString("/")
+                    if (ups == 0) rest
+                    else ("../" * ups) + rest
+                  }
                 if (relativePath.nonEmpty) Some(relativePath -> content) else None
               }
             }.toMap
@@ -565,8 +556,10 @@ object SassSpecRunner {
             }
             val specRootSiblings = allEntries.iterator.flatMap { case (fullPath, content) =>
               if (fullPath == dirPrefix + inputName) None
-              else if (fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
-                       fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")) None
+              else if (
+                fullPath.endsWith("/output.css") || fullPath.endsWith("/error") ||
+                fullPath.endsWith("/warning") || fullPath.endsWith("/input.scss") || fullPath.endsWith("/input.sass")
+              ) None
               else if (!fullPath.contains('/') && (fullPath == "output.css" || fullPath == "error" || fullPath == "warning")) None
               else {
                 val specRelPath = archiveStem + "/" + fullPath
@@ -587,7 +580,7 @@ object SassSpecRunner {
               archive.getParent.resolve(stem)
             }
             val inputDir = if (dir.isEmpty) archiveBase else archiveBase.resolve(dir)
-            val srcUrl = Some(inputDir.toAbsolutePath.normalize.resolve(inputName).toString)
+            val srcUrl   = Some(inputDir.toAbsolutePath.normalize.resolve(inputName).toString)
             Iterator.single(TestCase(origin, src, out, err, siblings, isSass = inputName.endsWith(".sass"), sourceUrl = srcUrl))
           case None => Iterator.empty
         }
@@ -629,11 +622,10 @@ object SassSpecRunner {
     buf.filter { case (p, _) => !p.isEmpty }.toList
   }
 
-  /** Composite importer: tries MapImporter first, then falls back to FilesystemImporter.
-    * This allows HRX test cases to resolve both sibling files from the archive
-    * AND utility files on disk (e.g. `@use 'core_functions/color/utils'`).
+  /** Composite importer: tries MapImporter first, then falls back to FilesystemImporter. This allows HRX test cases to resolve both sibling files from the archive AND utility files on disk (e.g.
+    * `@use 'core_functions/color/utils'`).
     */
-  private final class CompositeImporter(
+  final private class CompositeImporter(
     map: MapImporter,
     fs:  ssg.sass.importer.FilesystemImporter
   ) extends ssg.sass.importer.Importer {
@@ -647,8 +639,7 @@ object SassSpecRunner {
     }
   }
 
-  /** Filesystem importer rooted at the sass-spec `spec/` directory.
-    * Lazily initialized so that test skip logic isn't affected.
+  /** Filesystem importer rooted at the sass-spec `spec/` directory. Lazily initialized so that test skip logic isn't affected.
     */
   private lazy val specFsImporter: ssg.sass.importer.FilesystemImporter =
     new ssg.sass.importer.FilesystemImporter(specRoot.toString)
@@ -707,11 +698,8 @@ object SassSpecRunner {
 
   private def stripWs(s: String): String = s.replaceAll("\\s+", "")
 
-  /** Category names that are never legitimate sass-spec failures —
-    * they're internal-state escapes (NPE/IOBE/MatchError etc.) or
-    * unimplemented features in ssg-sass. Strict mode treats any of
-    * these as a hard test failure so they cannot inflate the "wrong
-    * output" bucket and hide.
+  /** Category names that are never legitimate sass-spec failures — they're internal-state escapes (NPE/IOBE/MatchError etc.) or unimplemented features in ssg-sass. Strict mode treats any of these as
+    * a hard test failure so they cannot inflate the "wrong output" bucket and hide.
     */
   val LeakCategories: Set[String] = Set(
     "stack-overflow",
@@ -768,20 +756,18 @@ object SassSpecRunner {
     v == "1" || v == "true" || v == "yes" || v == "on"
   }
 
-  /** Read a baseline TSV into a map from relPath -> Outcome. Unknown
-    * outcome strings are silently dropped (they can't be compared
-    * against anyway).
+  /** Read a baseline TSV into a map from relPath -> Outcome. Unknown outcome strings are silently dropped (they can't be compared against anyway).
     */
   def readBaseline(path: Path): Map[String, Outcome] = {
     if (!Files.isRegularFile(path)) return Map.empty
-    val out = scala.collection.mutable.Map.empty[String, Outcome]
+    val out   = scala.collection.mutable.Map.empty[String, Outcome]
     val lines =
       Try(Files.readAllLines(path, StandardCharsets.UTF_8).asScala.toList).getOrElse(Nil)
     lines.foreach { line =>
       if (line.nonEmpty && !line.startsWith("#")) {
         val tab = line.indexOf('\t')
         if (tab > 0) {
-          val rel = line.substring(0, tab)
+          val rel  = line.substring(0, tab)
           val out2 = line.substring(tab + 1).trim
           Outcome.parse(out2).foreach(o => out(rel) = o)
         }

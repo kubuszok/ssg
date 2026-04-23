@@ -54,8 +54,7 @@ final class InterpolationBuffer {
     val _ = text.append(s)
   }
 
-  /** Appends a single codepoint [c] to the plain-text portion of the buffer.
-    * Handles supplementary codepoints (> U+FFFF) correctly via surrogate pairs.
+  /** Appends a single codepoint [c] to the plain-text portion of the buffer. Handles supplementary codepoints (> U+FFFF) correctly via surrogate pairs.
     */
   def writeCharCode(c: Int): Unit = {
     val _ = text.appendAll(Character.toChars(c))
@@ -101,10 +100,9 @@ final class InterpolationBuffer {
 
   /** Builds the resulting [[Interpolation]] over [span].
     *
-    * This creates a snapshot of the buffer's current state without modifying it,
-    * matching the Dart behavior. The buffer can continue to be used after this call.
+    * This creates a snapshot of the buffer's current state without modifying it, matching the Dart behavior. The buffer can continue to be used after this call.
     */
-  def interpolation(span: FileSpan): Interpolation = {
+  def interpolation(span: FileSpan): Interpolation =
     if (text.nonEmpty) {
       new Interpolation(
         contents.toList :+ text.toString,
@@ -114,7 +112,6 @@ final class InterpolationBuffer {
     } else {
       new Interpolation(contents.toList, spans.toList, span)
     }
-  }
 
   private def _flushText(): Unit =
     if (text.nonEmpty) {

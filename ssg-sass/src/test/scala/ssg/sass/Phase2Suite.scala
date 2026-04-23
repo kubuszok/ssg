@@ -81,7 +81,7 @@ final class Phase2Suite extends munit.FunSuite {
 
   test("Deprecation.forVersion returns deprecations up to the given version") {
     // CallString was deprecated in 0.0.0, should always be included
-    val v1 = Version(1, 0, 0)
+    val v1    = Version(1, 0, 0)
     val deps1 = Deprecation.forVersion(v1)
     assert(deps1.contains(Deprecation.CallString), "CallString should be in deprecations for v1.0.0")
 
@@ -89,12 +89,12 @@ final class Phase2Suite extends munit.FunSuite {
     assert(!deps1.contains(Deprecation.SlashDiv), "SlashDiv should NOT be in deprecations for v1.0.0")
 
     // SlashDiv should be in 1.33.0 and later
-    val v133 = Version(1, 33, 0)
+    val v133    = Version(1, 33, 0)
     val deps133 = Deprecation.forVersion(v133)
     assert(deps133.contains(Deprecation.SlashDiv), "SlashDiv should be in deprecations for v1.33.0")
 
     // MixedDecls is obsolete (has obsoleteIn set), so should NOT be included
-    val v200 = Version(2, 0, 0)
+    val v200    = Version(2, 0, 0)
     val deps200 = Deprecation.forVersion(v200)
     assert(!deps200.contains(Deprecation.MixedDecls), "MixedDecls is obsolete, should not be included")
 

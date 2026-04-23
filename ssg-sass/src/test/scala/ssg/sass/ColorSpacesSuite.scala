@@ -112,7 +112,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
     val red  = SassColor.rgb(Nullable(255.0), Nullable(0.0), Nullable(0.0))
     val blue = SassColor.rgb(Nullable(0.0), Nullable(0.0), Nullable(255.0))
     // Pass $weight: 50% and $method: null explicitly since we call the callback directly
-    val mix  = fn("mix")(List(red, blue, pct(50), SassNull)).asInstanceOf[SassColor]
+    val mix = fn("mix")(List(red, blue, pct(50), SassNull)).asInstanceOf[SassColor]
     // Legacy rgb mix with weight 0.5: half-red + half-blue.
     assertEqualsDouble(mix.channel0, 127.5, 1.0)
     assertEqualsDouble(mix.channel2, 127.5, 1.0)

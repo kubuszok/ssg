@@ -120,12 +120,11 @@ object SimpleSelector {
     *
     * Returns `None` if unification is impossible.
     *
-    * Port of dart-sass `unifyUniversalAndElement` (lib/src/extend/functions.dart:166-194).
-    * Namespace semantics:
+    * Port of dart-sass `unifyUniversalAndElement` (lib/src/extend/functions.dart:166-194). Namespace semantics:
     *   - `Nullable.Null` = default (no prefix) — matches only the default namespace
-    *   - `Some("*")`     = wildcard `*|` — matches any namespace
-    *   - `Some("")`      = empty `||` — matches elements with no namespace
-    *   - `Some("ns")`    = explicit — matches only that namespace
+    *   - `Some("*")` = wildcard `*|` — matches any namespace
+    *   - `Some("")` = empty `||` — matches elements with no namespace
+    *   - `Some("ns")` = explicit — matches only that namespace
     */
   private[selector] def unifyUniversalAndElement(
     selector1: SimpleSelector,
