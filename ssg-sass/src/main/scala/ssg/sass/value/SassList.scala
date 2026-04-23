@@ -67,26 +67,19 @@ class SassList(
 
   /** CSS representation of this list.
     *
-    * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`) in
-    * CSS output mode (i.e. `_inspect = false`):
+    * dart-sass rules (lib/src/visitor/serialize.dart `_writeList`) in CSS output mode (i.e. `_inspect = false`):
     *   - space-separated lists drop `null`/blank elements
     *   - comma-separated lists keep all elements
-    *   - single-element lists do NOT get `(x,)` / `[x,]` wrapping —
-    *     that wrapping is an inspect-mode-only disambiguation to
-    *     distinguish a one-element Sass list from a parenthesized
-    *     scalar in the source literal. In CSS output, a single-
-    *     element list renders as its only element (or `[a]` when
-    *     bracketed).
+    *   - single-element lists do NOT get `(x,)` / `[x,]` wrapping — that wrapping is an inspect-mode-only disambiguation to distinguish a one-element Sass list from a parenthesized scalar in the
+    *     source literal. In CSS output, a single- element list renders as its only element (or `[a]` when bracketed).
     *   - bracketed lists wrap the content in `[...]`
-    *   - elements are emitted via `toCssString`, not `toString`, so
-    *     nested colors/strings/etc. round-trip correctly.
+    *   - elements are emitted via `toCssString`, not `toString`, so nested colors/strings/etc. round-trip correctly.
     *
-    * The inspect-mode form lives in SerializeVisitor.formatList,
-    * reached through `meta.inspect(...)` and the debug/error paths.
+    * The inspect-mode form lives in SerializeVisitor.formatList, reached through `meta.inspect(...)` and the debug/error paths.
     */
   override def toCssString(quote: Boolean = true): String = {
     // dart-sass: filter out blank (null) elements for all separators.
-    val elems = contents.filterNot(_.isBlank)
+    val elems  = contents.filterNot(_.isBlank)
     val sepStr = separator match {
       case ListSeparator.Comma     => ", "
       case ListSeparator.Space     => " "
@@ -98,17 +91,17 @@ class SassList(
     else inner
   }
 
-  /** Add parentheses to the debug information for lists to help make the list
-    * bounds clear.
+  /** Add parentheses to the debug information for lists to help make the list bounds clear.
     *
-    * Ported from dart-sass `SassList.toString()` — calls `serializeValue` with
-    * inspect mode, then wraps non-bracketed, non-trivial lists in parentheses.
+    * Ported from dart-sass `SassList.toString()` — calls `serializeValue` with inspect mode, then wraps non-bracketed, non-trivial lists in parentheses.
     */
   override def toString: String = {
     val inspectStr = SerializeVisitor.serializeValue(this, inspect = true)
-    if (hasBrackets ||
-        lengthAsList == 0 ||
-        (lengthAsList == 1 && separator == ListSeparator.Comma)) {
+    if (
+      hasBrackets ||
+      lengthAsList == 0 ||
+      (lengthAsList == 1 && separator == ListSeparator.Comma)
+    ) {
       inspectStr
     } else {
       s"($inspectStr)"

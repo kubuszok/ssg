@@ -8,9 +8,7 @@
 package ssg
 package sass
 
-/** Re-export of `ssg.commons.Nullable` — the canonical implementation
-  * lives in ssg-commons; this file keeps the symbol visible in `ssg.sass`
-  * package scope without requiring 100+ import edits.
+/** Re-export of `ssg.commons.Nullable` — the canonical implementation lives in ssg-commons; this file keeps the symbol visible in `ssg.sass` package scope without requiring 100+ import edits.
   */
 type Nullable[A] = ssg.commons.Nullable[A]
 val Nullable = ssg.commons.Nullable // scalastyle:ignore

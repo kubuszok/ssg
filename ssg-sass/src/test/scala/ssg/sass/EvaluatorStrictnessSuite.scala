@@ -62,34 +62,37 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
 
   // ISS-033 — private-var module config --------------------------------------
 
-  test("ISS-033: @use with ($_private: ...) is rejected") {
-    // Use an in-memory importer so there is a real module to configure.
+  test("ISS-033: @use with ($_private: ...) emits deprecation warning") {
+    // dart-sass: configuring private variables is deprecated (not yet an error).
+    // The configuration succeeds but emits a with-private deprecation warning.
     val importer = new ssg.sass.importer.MapImporter(
       Map("lib" -> "$_priv: 1 !default; a { x: $_priv; }")
     )
-    val exn = intercept[SassException] {
-      Compile.compileString(
-        """@use "lib" with ($_priv: 2);""",
-        importer = importer
-      )
-    }
-    assert(
-      exn.getMessage.contains("Private members"),
-      s"Expected 'Private members' in message, got: ${exn.getMessage}"
+    val result = Compile.compileString(
+      """@use "lib" with ($_priv: 2);""",
+      importer = importer
     )
+    assert(
+      result.warnings.exists(w => w.contains("with-private") || w.contains("private variables")),
+      s"Expected 'with-private' deprecation warning, got: ${result.warnings}"
+    )
+    assert(result.css.contains("x: 2"), s"expected x: 2 in ${result.css}")
   }
 
-  test("ISS-033: @use with ($-dash: ...) is rejected") {
+  test("ISS-033: @use with ($-dash: ...) emits deprecation warning") {
+    // dart-sass: configuring private variables is deprecated (not yet an error).
     val importer = new ssg.sass.importer.MapImporter(
       Map("lib" -> "$-dash: 1 !default; a { x: $-dash; }")
     )
-    val exn = intercept[SassException] {
-      Compile.compileString(
-        """@use "lib" with ($-dash: 2);""",
-        importer = importer
-      )
-    }
-    assert(exn.getMessage.contains("Private members"))
+    val result = Compile.compileString(
+      """@use "lib" with ($-dash: 2);""",
+      importer = importer
+    )
+    assert(
+      result.warnings.exists(w => w.contains("with-private") || w.contains("private variables")),
+      s"Expected 'with-private' deprecation warning, got: ${result.warnings}"
+    )
+    assert(result.css.contains("x: 2"), s"expected x: 2 in ${result.css}")
   }
 
   test("ISS-033: public var in with(...) is accepted") {

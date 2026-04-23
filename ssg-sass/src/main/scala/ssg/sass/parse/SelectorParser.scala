@@ -73,33 +73,30 @@ class SelectorParser(
 
   private def skipSpaces(): Unit = {
     var continue_ = true
-    while (continue_ && !isDone()) {
+    while (continue_ && !isDone())
       if (isWs(peek())) {
         pos += 1
       } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '*') {
         // Skip loud comment /* ... */
         pos += 2
-        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) {
+        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/'))
           pos += 1
-        }
         if (pos + 1 < src.length) pos += 2 // skip */
       } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '/') {
         // Skip silent comment // ... to end of line
         pos += 2
-        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r') {
+        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r')
           pos += 1
-        }
       } else {
         continue_ = false
       }
-    }
   }
 
   /** Like [[skipSpaces]] but returns `true` if a newline was consumed. */
   @annotation.nowarn("msg=unused private member") // kept for future use
   private def skipSpacesTrackNewline(): Boolean = {
     var hadNewline = false
-    var continue_ = true
+    var continue_  = true
     while (continue_ && !isDone()) {
       val c = peek()
       if (isWs(c)) {
@@ -107,15 +104,13 @@ class SelectorParser(
         pos += 1
       } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '*') {
         pos += 2
-        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) {
+        while (pos + 1 < src.length && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/'))
           pos += 1
-        }
         if (pos + 1 < src.length) pos += 2
       } else if (pos + 1 < src.length && src.charAt(pos) == '/' && src.charAt(pos + 1) == '/') {
         pos += 2
-        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r') {
+        while (!isDone() && src.charAt(pos) != '\n' && src.charAt(pos) != '\r')
           pos += 1
-        }
       } else {
         continue_ = false
       }
@@ -131,26 +126,23 @@ class SelectorParser(
 
   private def readIdentifier(): String = {
     val sb = new StringBuilder()
-    while (!isDone() && (isName(peek()) || peek() == '\\')) {
+    while (!isDone() && (isName(peek()) || peek() == '\\'))
       if (peek() == '\\') sb.append(readEscape(identifierStart = sb.isEmpty))
       else sb.append(read())
-    }
     sb.toString()
   }
 
-  /** Consumes a CSS escape sequence and returns the text to emit.
-    * Mirrors `Parser.escape()`: valid name chars are decoded; control
-    * chars and non-name codepoints are re-encoded as `\hex ` or `\char`.
+  /** Consumes a CSS escape sequence and returns the text to emit. Mirrors `Parser.escape()`: valid name chars are decoded; control chars and non-name codepoints are re-encoded as `\hex ` or `\char`.
     */
   private def readEscape(identifierStart: Boolean = false): String = {
     pos += 1 // consume backslash
     if (isDone()) return "\ufffd"
-    val c = peek()
+    val c     = peek()
     var value = 0
     if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
       var i = 0
       while (i < 6 && !isDone()) {
-        val h = peek()
+        val h     = peek()
         val digit =
           if (h >= '0' && h <= '9') h - '0'
           else if (h >= 'a' && h <= 'f') 10 + h - 'a'
@@ -261,6 +253,16 @@ class SelectorParser(
           if (looksLikeCompoundStart()) Some(parseCompoundSelector())
           else None
 
+        // dart-sass: After parsing a compound selector, if the next char is `&`
+        // it means `&` appeared in the middle of a compound (e.g. `pre&`).
+        // Only check this when parent is NOT allowed (i.e., in selector functions).
+        // When allowParent=true, the `&` would be consumed by parseSimpleSelector
+        // as part of the compound, so this check only fires when `&` was rejected
+        // by parseSimpleSelector's allowParent check and remains unconsumed.
+        if (compoundOpt.isDefined && !isDone() && peek() == '&' && !_allowParent) {
+          fail(""""&" may only used at the beginning of a compound selector.""")
+        }
+
         // Then collect any number of trailing combinators.
         skipSpaces()
         val combinators   = scala.collection.mutable.ListBuffer.empty[CssValue[Combinator]]
@@ -351,13 +353,15 @@ class SelectorParser(
           new UniversalSelector(syntheticSp)
         }
       case '&' =>
+        if (!_allowParent) {
+          fail("Parent selectors aren't allowed here.")
+        }
         pos += 1
         // Optional suffix is captured as raw identifier-body characters.
         val sufBuf = new StringBuilder()
-        while (!isDone() && (isName(peek()) || peek() == '\\')) {
+        while (!isDone() && (isName(peek()) || peek() == '\\'))
           if (peek() == '\\') sufBuf.append(readEscape())
           else sufBuf.append(read())
-        }
         val suffix: Nullable[String] =
           if (sufBuf.isEmpty) Nullable.Null else Nullable(sufBuf.toString)
         new ParentSelector(syntheticSp, suffix)
@@ -470,19 +474,30 @@ class SelectorParser(
           sb.toString()
       }
       skipSpaces()
+      // dart-sass: modifier is a single ASCII letter only.
+      // Characters outside a-z/A-Z (digits, underscore, unicode) are not valid
+      // modifiers; the expectation of `]` will produce an error for them.
       val modifier: Nullable[String] =
-        if (!isDone() && peek() != ']') {
-          val m = readIdentifier()
-          if (m.isEmpty) Nullable.Null else Nullable(m)
+        if (
+          !isDone() && {
+            val c = peek()
+            (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+          }
+        ) {
+          Nullable(read().toString)
         } else Nullable.Null
       skipSpaces()
-      if (peek() != ']') fail("Expected ']'.")
+      if (peek() != ']') fail("expected \"]\".")
       pos += 1
       AttributeSelector.withOperator(name, op.get, value, syntheticSp, modifier)
     }
   }
 
-  /** Parses a `:foo` or `::foo(arg)` pseudo selector. */
+  /** Parses a `:foo` or `::foo(arg)` pseudo selector.
+    *
+    * For `:nth-child` / `:nth-last-child`, the argument before `of` is stored in `argument` and the selector after `of` is stored in `selector`. This matches dart-sass `_pseudoSelector` in
+    * lib/src/parse/selector.dart.
+    */
   private def parsePseudoSelector(): PseudoSelector = {
     if (peek() != ':') fail("Expected ':'.")
     pos += 1
@@ -494,34 +509,140 @@ class SelectorParser(
     var selector: Nullable[SelectorList] = Nullable.Null
     if (!isDone() && peek() == '(') {
       pos += 1
-      // Read raw argument until matching `)`, balancing brackets.
-      val sb    = new StringBuilder()
-      var depth = 1
-      while (!isDone() && depth > 0) {
-        val ch = peek()
-        if (ch == '(') { depth += 1; sb.append(read()) }
-        else if (ch == ')') {
-          depth -= 1
-          if (depth == 0) pos += 1
-          else sb.append(read())
-        } else sb.append(read())
-      }
-      val raw = sb.toString().trim
-      // For known selector-pseudos, parse the argument as a selector list.
-      if (
-        SelectorParser.selectorPseudoClasses.contains(name) ||
-        (element && SelectorParser.selectorPseudoElements.contains(name))
-      ) {
-        try
-          selector = Nullable(new SelectorParser(raw, url).parse())
-        catch {
-          case _: Throwable => argument = Nullable(raw)
+      val unvendored = ssg.sass.Utils.unvendor(name)
+      if (!element && (unvendored == "nth-child" || unvendored == "nth-last-child")) {
+        // Parse An+B argument first, then optionally "of <selector-list>".
+        // Port of dart-sass _pseudoSelector nth-child/nth-last-child branch.
+        skipSpaces()
+        val argStr = parseAnPlusB()
+        skipSpaces()
+        // Check if there's "of" keyword followed by selector list
+        val savedPos = pos
+        if (!isDone() && peek() != ')') {
+          // Try to read "of"
+          val maybeOf = readIdentifier()
+          if (maybeOf.equalsIgnoreCase("of")) {
+            skipSpaces()
+            // Read the rest until `)` as a selector list
+            val selectorRaw = readBalancedUntilClose()
+            try
+              selector = Nullable(new SelectorParser(selectorRaw, url).parse())
+            catch {
+              case _: Throwable =>
+                // If parsing fails, fall back to treating everything as argument
+                argument = Nullable((argStr + " of " + selectorRaw).trim)
+            }
+            if (selector.isDefined) {
+              argument = Nullable(argStr + " of")
+            }
+          } else {
+            // Not "of", rewind and include it all as argument
+            pos = savedPos
+            val rest = readBalancedUntilClose()
+            argument = Nullable((argStr + " " + rest).trim)
+          }
+        } else {
+          argument = Nullable(argStr)
         }
+        if (!isDone() && peek() == ')') pos += 1
       } else {
-        argument = Nullable(raw)
+        // Read raw argument until matching `)`, balancing brackets.
+        val sb    = new StringBuilder()
+        var depth = 1
+        while (!isDone() && depth > 0) {
+          val ch = peek()
+          if (ch == '(') { depth += 1; sb.append(read()) }
+          else if (ch == ')') {
+            depth -= 1
+            if (depth == 0) pos += 1
+            else sb.append(read())
+          } else sb.append(read())
+        }
+        val raw = sb.toString().trim
+        // For known selector-pseudos, parse the argument as a selector list.
+        if (
+          SelectorParser.selectorPseudoClasses.contains(name) ||
+          (element && SelectorParser.selectorPseudoElements.contains(name))
+        ) {
+          try
+            selector = Nullable(new SelectorParser(raw, url).parse())
+          catch {
+            case _: Throwable => argument = Nullable(raw)
+          }
+        } else {
+          argument = Nullable(raw)
+        }
       }
     }
     new PseudoSelector(name, syntheticSp, element = element, argument = argument, selector = selector)
+  }
+
+  /** Parses an An+B expression (e.g. "2n+1", "even", "odd", "-n+3"). Port of dart-sass `_aNPlusB` in lib/src/parse/selector.dart.
+    */
+  private def parseAnPlusB(): String = {
+    val sb = new StringBuilder()
+    if (!isDone()) {
+      val ch = peek()
+      if (ch == 'e' || ch == 'E') {
+        // "even"
+        val ident = readIdentifier()
+        if (ident.equalsIgnoreCase("even")) return "even"
+        else { sb.append(ident); return sb.toString() }
+      } else if (ch == 'o' || ch == 'O') {
+        // "odd"
+        val ident = readIdentifier()
+        if (ident.equalsIgnoreCase("odd")) return "odd"
+        else { sb.append(ident); return sb.toString() }
+      } else if (ch == '+' || ch == '-') {
+        sb.append(read())
+      }
+    }
+    // Read digits
+    if (!isDone() && peek().toChar.isDigit) {
+      while (!isDone() && peek().toChar.isDigit) sb.append(read())
+      skipSpaces()
+      if (!isDone() && (peek() == 'n' || peek() == 'N')) {
+        sb.append(read())
+      } else {
+        return sb.toString()
+      }
+    } else {
+      // Expect 'n'
+      if (!isDone() && (peek() == 'n' || peek() == 'N')) {
+        sb.append(read())
+      } else {
+        return sb.toString()
+      }
+    }
+    skipSpaces()
+    // Check for +/- after n
+    if (!isDone() && (peek() == '+' || peek() == '-')) {
+      sb.append(read())
+      skipSpaces()
+      while (!isDone() && peek().toChar.isDigit) sb.append(read())
+    }
+    sb.toString()
+  }
+
+  /** Reads balanced content until the matching `)`, not consuming the `)`. */
+  private def readBalancedUntilClose(): String = {
+    val sb    = new StringBuilder()
+    var depth = 0
+    while (!isDone()) {
+      val ch = peek()
+      if (ch == '(') { depth += 1; sb.append(read()) }
+      else if (ch == ')') {
+        if (depth == 0) {
+          // Don't consume the closing paren
+          return sb.toString().trim
+        }
+        depth -= 1
+        sb.append(read())
+      } else {
+        sb.append(read())
+      }
+    }
+    sb.toString().trim
   }
 }
 
@@ -548,5 +669,16 @@ object SelectorParser {
     try Nullable(new SelectorParser(text).parse())
     catch {
       case _: Throwable => Nullable.Null
+    }
+
+  /** Parses [text] as a selector list, propagating [[SassFormatException]] but returning `Nullable.Null` for other failures (e.g. non-standard selectors that our parser cannot handle).
+    *
+    * Used in contexts where selector syntax errors should surface to the user (like style rule evaluation) rather than being silently swallowed.
+    */
+  def tryParseStrict(text: String): Nullable[SelectorList] =
+    try Nullable(new SelectorParser(text).parse())
+    catch {
+      case e: SassFormatException => throw e
+      case _: Throwable           => Nullable.Null
     }
 }

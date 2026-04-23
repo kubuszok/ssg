@@ -25,20 +25,15 @@ import ssg.sass.util.FileSpan
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** A visitor that builds an [[Interpolation]] that evaluates to the same text as
-  * the given expression.
+/** A visitor that builds an [[Interpolation]] that evaluates to the same text as the given expression.
   *
   * This should be used through [Expression.sourceInterpolation].
   */
-final class SourceInterpolationVisitor
-    extends ExpressionVisitor[Unit]
-    with IfConditionExpressionVisitor[Unit] {
+final class SourceInterpolationVisitor extends ExpressionVisitor[Unit] with IfConditionExpressionVisitor[Unit] {
 
-  /** The buffer to which content is added each time this visitor visits an
-    * expression.
+  /** The buffer to which content is added each time this visitor visits an expression.
     *
-    * This is set to empty if the visitor encounters a node that's not valid CSS
-    * with interpolations.
+    * This is set to empty if the visitor encounters a node that's not valid CSS with interpolations.
     */
   var buffer: Nullable[InterpolationBuffer] = Nullable(new InterpolationBuffer())
 
@@ -59,8 +54,7 @@ final class SourceInterpolationVisitor
     _visitArguments(node.arguments)
   }
 
-  /** Visits the positional arguments in [arguments], if it's
-    * valid interpolated plain CSS.
+  /** Visits the positional arguments in [arguments], if it's valid interpolated plain CSS.
     */
   private def _visitArguments(arguments: ArgumentList): Unit = {
     if (arguments.named.nonEmpty || arguments.rest.isDefined) return
@@ -78,7 +72,7 @@ final class SourceInterpolationVisitor
   def visitIfExpression(node: IfExpression): Unit = {
     var lastSpan: Nullable[FileSpan] = Nullable.empty
     for ((condition, expression) <- node.branches) {
-      val firstSpan = if (condition.isDefined) condition.get.span else expression.span
+      val firstSpan   = if (condition.isDefined) condition.get.span else expression.span
       val betweenText =
         if (lastSpan.isDefined) lastSpan.get.between(firstSpan).text
         else node.span.before(firstSpan).text
@@ -105,9 +99,8 @@ final class SourceInterpolationVisitor
     node.expression.accept(this)
   }
 
-  def visitIfConditionOperation(node: IfConditionOperation): Unit = {
+  def visitIfConditionOperation(node: IfConditionOperation): Unit =
     _writeListAndBetween(node.expressions, (n: IfConditionExpression) => n.accept(this))
-  }
 
   def visitIfConditionFunction(node: IfConditionFunction): Unit = {
     buffer.foreach(_.addInterpolation(node.name))
@@ -116,13 +109,11 @@ final class SourceInterpolationVisitor
     buffer.foreach(_.write(node.span.after(node.arguments.span).text))
   }
 
-  def visitIfConditionSass(node: IfConditionSass): Unit = {
+  def visitIfConditionSass(node: IfConditionSass): Unit =
     buffer = Nullable.empty
-  }
 
-  def visitIfConditionRaw(node: IfConditionRaw): Unit = {
+  def visitIfConditionRaw(node: IfConditionRaw): Unit =
     buffer.foreach(_.addInterpolation(node.text))
-  }
 
   def visitLegacyIfExpression(node: LegacyIfExpression): Unit =
     buffer = Nullable.empty
@@ -199,8 +190,7 @@ final class SourceInterpolationVisitor
   def visitVariableExpression(node: VariableExpression): Unit =
     buffer = Nullable.empty
 
-  /** Visits each expression in [nodes] with [visit], and writes whatever text
-    * is between them to [buffer].
+  /** Visits each expression in [nodes] with [visit], and writes whatever text is between them to [buffer].
     */
   private def _writeListAndBetween[T <: AstNode](
     nodes: List[T],

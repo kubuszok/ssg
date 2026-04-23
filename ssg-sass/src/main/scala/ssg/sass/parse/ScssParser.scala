@@ -88,16 +88,14 @@ class ScssParser(
           // inside the comment are not evaluated as selector interpolations.
           scanner.readChar() // first '/'
           scanner.readChar() // second '/'
-          while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar())) {
+          while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
             scanner.readChar()
-          }
         } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
           // Loud comment inside selector — consume and include in selector.
           buf.append(scanner.readChar().toChar) // '/'
           buf.append(scanner.readChar().toChar) // '*'
-          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash)) {
+          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
             buf.append(scanner.readChar().toChar)
-          }
           if (!scanner.isDone) {
             buf.append(scanner.readChar().toChar) // '*'
             buf.append(scanner.readChar().toChar) // '/'
@@ -106,14 +104,13 @@ class ScssParser(
           // Quoted strings — preserve verbatim including escapes.
           val q = scanner.readChar()
           buf.append(q.toChar)
-          while (!scanner.isDone && scanner.peekChar() != q) {
+          while (!scanner.isDone && scanner.peekChar() != q)
             if (scanner.peekChar() == CharCode.$backslash) {
               buf.append(scanner.readChar().toChar) // backslash
               if (!scanner.isDone) buf.append(scanner.readChar().toChar) // next char
             } else {
               buf.append(scanner.readChar().toChar)
             }
-          }
           if (!scanner.isDone) buf.append(scanner.readChar().toChar) // closing quote
         } else {
           if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
@@ -175,7 +172,7 @@ class ScssParser(
     _whitespaceWithoutComments()
     val stmts = mutable.ListBuffer.empty[Statement]
     boundary {
-      while (true) {
+      while (true)
         scanner.peekChar() match {
           case CharCode.`$dollar` =>
             stmts += variableDeclarationWithoutNamespace()
@@ -208,7 +205,6 @@ class ScssParser(
             stmts += child()
             _whitespaceWithoutComments()
         }
-      }
     }
     stmts.toList
   }
@@ -216,7 +212,7 @@ class ScssParser(
   override protected def statements(statement: () => Nullable[Statement]): List[Statement] = {
     val stmts = mutable.ListBuffer.empty[Statement]
     _whitespaceWithoutComments()
-    while (!scanner.isDone) {
+    while (!scanner.isDone)
       scanner.peekChar() match {
         case CharCode.`$dollar` =>
           stmts += variableDeclarationWithoutNamespace()
@@ -247,7 +243,6 @@ class ScssParser(
           if (child.isDefined) stmts += child.get
           _whitespaceWithoutComments()
       }
-    }
     stmts.toList
   }
 
@@ -286,8 +281,7 @@ class ScssParser(
 
   /** Consumes a statement-level loud comment block.
     *
-    * dart-sass scss.dart lines 154-189.
-    * Handles `#{...}` interpolation, `\r`->`\n` and `\f`->`\n` normalization.
+    * dart-sass scss.dart lines 154-189. Handles `#{...}` interpolation, `\r`->`\n` and `\f`->`\n` normalization.
     */
   private def _loudComment(): LoudComment = {
     val start = scanner.state
@@ -295,7 +289,7 @@ class ScssParser(
     val buffer = new InterpolationBuffer()
     buffer.write("/*")
     boundary {
-      while (true) {
+      while (true)
         scanner.peekChar() match {
           case CharCode.`$hash` =>
             if (scanner.peekChar(1) == CharCode.$lbrace) {
@@ -323,7 +317,6 @@ class ScssParser(
           case _ =>
             buffer.writeCharCode(scanner.readChar())
         }
-      }
     }
     new LoudComment(buffer.interpolation(spanFrom(start)))
   }

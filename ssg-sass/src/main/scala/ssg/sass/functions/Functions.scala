@@ -47,9 +47,7 @@ object Functions {
     "string" -> StringFunctions.module
   )
 
-  /** Per-module variables, keyed by `sass:` module name. Currently only
-    * `sass:math` exposes any (`$pi`, `$e`, `$epsilon`, etc.); the other
-    * built-in modules return empty maps.
+  /** Per-module variables, keyed by `sass:` module name. Currently only `sass:math` exposes any (`$pi`, `$e`, `$epsilon`, etc.); the other built-in modules return empty maps.
     */
   def moduleVariables(moduleName: String): Map[String, Value] = moduleName match {
     case "math" => MathFunctions.moduleVariables

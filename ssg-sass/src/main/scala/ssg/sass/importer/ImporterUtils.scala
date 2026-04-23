@@ -52,7 +52,7 @@ object ImporterUtils {
 
   /** Runs [[callback]] in a context where [[fromImport]] returns `true` and `resolveImportPath` uses `@import` semantics rather than `@use` semantics.
     */
-  def inImportRule[T](callback: () => T): T = {
+  def inImportRule[T](callback: () => T): T =
     _canonicalizeContext.toOption match {
       case scala.None =>
         withCanonicalizeContext(Nullable(new CanonicalizeContext(Nullable.empty, true)), callback)
@@ -61,17 +61,15 @@ object ImporterUtils {
       // Dart has a third branch for unexpected values; since our var is typed
       // Nullable[CanonicalizeContext], that cannot happen here.
     }
-  }
 
   /** Runs [[callback]] in the given context. */
   def withCanonicalizeContext[T](context: Nullable[CanonicalizeContext], callback: () => T): T = {
     val prev = _canonicalizeContext
     _canonicalizeContext = context
-    try {
+    try
       callback()
-    } finally {
+    finally
       _canonicalizeContext = prev
-    }
   }
 
   /** If [[fromImport]] is `true`, invokes callback and returns the result.

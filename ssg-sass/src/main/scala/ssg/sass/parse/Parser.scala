@@ -44,9 +44,8 @@ abstract class Parser protected (
     */
   protected def whitespace(consumeNewlines: Boolean): Unit = {
     whitespaceWithoutComments(consumeNewlines)
-    while (scanComment()) {
+    while (scanComment())
       whitespaceWithoutComments(consumeNewlines)
-    }
   }
 
   /** Consumes whitespace, but not comments.
@@ -54,9 +53,8 @@ abstract class Parser protected (
     * If [consumeNewlines] is true, the indented syntax will consume newlines as whitespace. It should only be set to true in positions when a statement can't end.
     */
   protected def whitespaceWithoutComments(consumeNewlines: Boolean): Unit =
-    while (!scanner.isDone && CharCode.isWhitespace(scanner.peekChar())) {
+    while (!scanner.isDone && CharCode.isWhitespace(scanner.peekChar()))
       scanner.readChar()
-    }
 
   /** Consumes spaces and tabs (never newlines). */
   protected def spaces(): Unit =
@@ -88,17 +86,14 @@ abstract class Parser protected (
     */
   protected def silentComment(): Boolean = {
     scanner.expect("//")
-    while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar())) {
+    while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
       scanner.readChar()
-    }
     true
   }
 
   /** Consumes and ignores a loud (CSS-style) comment.
     *
-    * In dart-sass, `scanner.readChar()` throws at EOF, so an
-    * unterminated comment naturally produces "expected more input."
-    * Our `readChar()` returns -1 instead, so we check explicitly.
+    * In dart-sass, `scanner.readChar()` throws at EOF, so an unterminated comment naturally produces "expected more input." Our `readChar()` returns -1 instead, so we check explicitly.
     */
   protected def loudComment(): Unit = {
     scanner.expect("/*")
@@ -198,12 +193,8 @@ abstract class Parser protected (
 
   /** Consumes an escape sequence and returns the text that defines it.
     *
-    * Port of dart-sass `escape`. If the decoded codepoint is a valid CSS
-    * name character (or nameStart when `identifierStart` is true), the
-    * decoded character is returned directly. Control characters
-    * (U+0000–U+001F, U+007F) and leading digits are re-encoded as
-    * `\hex ` with a trailing space. All other non-name codepoints are
-    * returned as `\<char>`.
+    * Port of dart-sass `escape`. If the decoded codepoint is a valid CSS name character (or nameStart when `identifierStart` is true), the decoded character is returned directly. Control characters
+    * (U+0000–U+001F, U+007F) and leading digits are re-encoded as `\hex ` with a trailing space. All other non-name codepoints are returned as `\<char>`.
     */
   protected def escape(identifierStart: Boolean = false): String = {
     scanner.expectChar(CharCode.$backslash)
@@ -439,8 +430,7 @@ abstract class Parser protected (
 
   // ## Utilities
 
-  /** Runs [consumer] and returns the source text that it consumes.
-    * dart-sass: `rawText` (parser.dart:664-668).
+  /** Runs [consumer] and returns the source text that it consumes. dart-sass: `rawText` (parser.dart:664-668).
     */
   protected def rawText(consumer: () => Unit): String = {
     val start = scanner.position
@@ -570,9 +560,11 @@ abstract class Parser protected (
           break(())
         } else if (c == CharCode.$backslash) {
           buffer.append(escape())
-        } else if (c == CharCode.$percent || c == CharCode.$ampersand || c == CharCode.$hash ||
-                   (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
-                   c >= 0x80) {
+        } else if (
+          c == CharCode.$percent || c == CharCode.$ampersand || c == CharCode.$hash ||
+          (c >= CharCode.$asterisk && c <= CharCode.$tilde) ||
+          c >= 0x80
+        ) {
           buffer.append(scanner.readChar().toChar)
         } else if (CharCode.isWhitespace(c)) {
           whitespace(consumeNewlines = true)
@@ -632,8 +624,8 @@ abstract class Parser protected (
     }
 
   /** Runs [callback] and wraps any [[StringScannerException]] it throws in a [[SassFormatException]]. */
-  protected def wrapSpanFormatException[T](callback: () => T): T = {
-    try {
+  protected def wrapSpanFormatException[T](callback: () => T): T =
+    try
       try callback()
       catch {
         case error: StringScannerException if interpolationMap.isDefined =>
@@ -641,7 +633,7 @@ abstract class Parser protected (
           if (mapped eq error.span) throw error
           throw new StringScannerException(error.getMessage, mapped)
       }
-    } catch {
+    catch {
       case error: MultiSpanSassFormatException =>
         // MultiSpanSassFormatException is-a SassFormatException; catch it first
         var span           = error.span
@@ -664,7 +656,6 @@ abstract class Parser protected (
         }
         throw new SassFormatException(error.getMessage, span)
     }
-  }
 
   /** Moves span to [[_firstNewlineBefore]] if necessary. */
   private def _adjustExceptionSpan(span: FileSpan): FileSpan = {
@@ -680,8 +671,8 @@ abstract class Parser protected (
     * This helps avoid missing token errors pointing at the next closing bracket rather than the line where the problem actually occurred.
     */
   private def _firstNewlineBefore(location: FileLocation): FileLocation = {
-    val text            = location.file.getText(0, location.offset)
-    var index           = location.offset - 1
+    val text  = location.file.getText(0, location.offset)
+    var index = location.offset - 1
     var lastNewline: Int = -1
     while (index >= 0) {
       val codeUnit = text.charAt(index).toInt

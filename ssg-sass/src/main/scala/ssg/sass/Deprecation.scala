@@ -19,11 +19,10 @@ import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
 
-/**
- * A semantic version with major, minor, and patch components.
- *
- * Implements proper semver comparison where 1.10.0 > 1.9.0.
- */
+/** A semantic version with major, minor, and patch components.
+  *
+  * Implements proper semver comparison where 1.10.0 > 1.9.0.
+  */
 final case class Version(major: Int, minor: Int, patch: Int) extends Ordered[Version] {
 
   override def compare(that: Version): Int = {
@@ -111,13 +110,12 @@ object Deprecation {
   def fromId(id: String): Option[Deprecation] =
     Deprecation.values.find(_.id == id)
 
-  /**
-   * Returns the set of all deprecations done in or before [version].
-   *
-   * A deprecation is included if:
-   * - Its deprecatedIn version is <= the given version
-   * - It has not become obsolete (obsoleteIn is null)
-   */
+  /** Returns the set of all deprecations done in or before [version].
+    *
+    * A deprecation is included if:
+    *   - Its deprecatedIn version is <= the given version
+    *   - It has not become obsolete (obsoleteIn is null)
+    */
   def forVersion(version: Version): Set[Deprecation] = {
     val result = Set.newBuilder[Deprecation]
     var i      = 0

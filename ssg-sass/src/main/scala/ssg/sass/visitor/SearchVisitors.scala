@@ -194,9 +194,7 @@ trait AstSearchVisitor[T] extends StatementSearchVisitor[T] with ExpressionVisit
     node.query.flatMap(visitInterpolation).orElse(super.visitAtRootRule(node))
 
   override def visitAtRule(node: AtRule): Nullable[T] =
-    visitInterpolation(node.name)
-      .orElse(node.value.flatMap(visitInterpolation))
-      .orElse(super.visitAtRule(node))
+    visitInterpolation(node.name).orElse(node.value.flatMap(visitInterpolation)).orElse(super.visitAtRule(node))
 
   override def visitContentRule(node: ContentRule): Nullable[T] =
     visitArgumentList(node.arguments)
@@ -205,9 +203,7 @@ trait AstSearchVisitor[T] extends StatementSearchVisitor[T] with ExpressionVisit
     visitExpression(node.expression)
 
   override def visitDeclaration(node: Declaration): Nullable[T] =
-    visitInterpolation(node.name)
-      .orElse(node.value.flatMap(visitExpression))
-      .orElse(super.visitDeclaration(node))
+    visitInterpolation(node.name).orElse(node.value.flatMap(visitExpression)).orElse(super.visitDeclaration(node))
 
   override def visitEachRule(node: EachRule): Nullable[T] =
     visitExpression(node.list).orElse(super.visitEachRule(node))
@@ -219,9 +215,7 @@ trait AstSearchVisitor[T] extends StatementSearchVisitor[T] with ExpressionVisit
     visitInterpolation(node.selector)
 
   override def visitForRule(node: ForRule): Nullable[T] =
-    visitExpression(node.from)
-      .orElse(visitExpression(node.to))
-      .orElse(super.visitForRule(node))
+    visitExpression(node.from).orElse(visitExpression(node.to)).orElse(super.visitForRule(node))
 
   override def visitForwardRule(node: ForwardRule): Nullable[T] =
     _search(node.configuration)(variable => visitExpression(variable.expression))
@@ -359,9 +353,7 @@ trait AstSearchVisitor[T] extends StatementSearchVisitor[T] with ExpressionVisit
   // Interpolated selectors
 
   def visitAttributeSelector(node: InterpolatedAttributeSelector): Nullable[T] =
-    visitQualifiedName(node.name)
-      .orElse(node.value.flatMap(visitInterpolation))
-      .orElse(node.modifier.flatMap(visitInterpolation))
+    visitQualifiedName(node.name).orElse(node.value.flatMap(visitInterpolation)).orElse(node.modifier.flatMap(visitInterpolation))
 
   def visitClassSelector(node: InterpolatedClassSelector): Nullable[T] =
     visitInterpolation(node.name)
@@ -382,9 +374,7 @@ trait AstSearchVisitor[T] extends StatementSearchVisitor[T] with ExpressionVisit
     visitInterpolation(node.name)
 
   def visitPseudoSelector(node: InterpolatedPseudoSelector): Nullable[T] =
-    visitInterpolation(node.name)
-      .orElse(node.argument.flatMap(visitInterpolation))
-      .orElse(node.selector.flatMap(visitSelectorList))
+    visitInterpolation(node.name).orElse(node.argument.flatMap(visitInterpolation)).orElse(node.selector.flatMap(visitSelectorList))
 
   def visitSelectorList(node: InterpolatedSelectorList): Nullable[T] =
     _search(node.components)(component => visitComplexSelector(component))

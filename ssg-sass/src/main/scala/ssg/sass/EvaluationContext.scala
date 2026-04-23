@@ -41,8 +41,7 @@ trait EvaluationContext {
   /// warning of that type.
   def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit
 
-  /** Emits a deprecation warning tagged with the given [[Deprecation]].
-    * Default forwards to `warn` with the deprecation value.
+  /** Emits a deprecation warning tagged with the given [[Deprecation]]. Default forwards to `warn` with the deprecation value.
     */
   def warnForDeprecation(deprecation: Deprecation, message: String): Unit =
     warn(message, Nullable(deprecation))
@@ -99,12 +98,11 @@ object EvaluationContext {
 
   /// Prints a deprecation warning with [message] of type [deprecation],
   /// using stderr if there is no [EvaluationContext.current].
-  def warnForDeprecationFromApi(message: String, deprecation: Deprecation): Unit = {
+  def warnForDeprecationFromApi(message: String, deprecation: Deprecation): Unit =
     current match {
       case ctx if ctx.isDefined => ctx.get.warn(message, Nullable(deprecation))
       case _                    => Logger.default.warnForDeprecation(deprecation, message)
     }
-  }
 }
 
 /** Holds a reference to the [[Environment]] currently active inside an [[ssg.sass.visitor.EvaluateVisitor]] invocation. Built-in callables (e.g. `mixin-exists`, `variable-exists`, `module-functions`)

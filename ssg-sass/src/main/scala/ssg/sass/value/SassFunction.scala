@@ -20,13 +20,11 @@ import ssg.sass.visitor.ValueVisitor
 
 /** A SassScript function reference.
   *
-  * A function reference captures a function from the local environment so that
-  * it may be passed between modules.
+  * A function reference captures a function from the local environment so that it may be passed between modules.
   */
 final class SassFunction(
   val callable: Callable,
-  /** The unique compile context for tracking if this [[SassFunction]] belongs to
-    * the current compilation or not.
+  /** The unique compile context for tracking if this [[SassFunction]] belongs to the current compilation or not.
     *
     * This is `Nullable.Null` for functions defined in plugins' Scala code.
     */
@@ -39,8 +37,7 @@ final class SassFunction(
 
   /** Asserts that this SassFunction belongs to [compileContext] and returns it.
     *
-    * It's checked before evaluating a SassFunction to prevent execution of
-    * SassFunction across different compilations.
+    * It's checked before evaluating a SassFunction to prevent execution of SassFunction across different compilations.
     */
   def assertCompileContext(ctx: AnyRef): SassFunction = {
     if (compileContext.isDefined && (compileContext.get ne ctx)) {

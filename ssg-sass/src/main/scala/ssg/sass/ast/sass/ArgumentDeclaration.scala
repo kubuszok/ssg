@@ -224,26 +224,24 @@ final class ParameterList(
     }
   }
 
-  /** Returns the parameter named [name] with a leading `$` and its original underscores (which are otherwise converted
-    * to hyphens).
+  /** Returns the parameter named [name] with a leading `$` and its original underscores (which are otherwise converted to hyphens).
     */
-  private def _originalParameterName(name: String): String = {
+  private def _originalParameterName(name: String): String =
     if (restParameter.exists(_ == name)) {
-      val text      = span.text
+      val text       = span.text
       val fromDollar = text.substring(text.lastIndexOf("$"))
       fromDollar.substring(0, fromDollar.indexOf("."))
     } else {
       parameters.find(_.name == name) match {
         case Some(parameter) => parameter.originalName
-        case None =>
+        case None            =>
           throw new IllegalArgumentException(s"This declaration has no parameter named \"$$$name\".")
       }
     }
-  }
 
   /** Returns whether [positional] and [names] are valid for this parameter declaration.
     */
-  def matches(positional: Int, names: Set[String]): Boolean = {
+  def matches(positional: Int, names: Set[String]): Boolean =
     boundary[Boolean] {
       var namedUsed = 0
       var i         = 0
@@ -264,7 +262,6 @@ final class ParameterList(
       else if (positional > parameters.length) false
       else namedUsed >= names.size
     }
-  }
 
   override def toString: String = {
     val parts = scala.collection.mutable.ListBuffer[String]()

@@ -63,17 +63,16 @@ final class CanonicalizeContext(
     *
     * This is used to determine whether canonicalize result is cacheable.
     */
-  def wasContainingUrlAccessed: Boolean = _wasContainingUrlAccessed
+  def wasContainingUrlAccessed:          Boolean = _wasContainingUrlAccessed
   private var _wasContainingUrlAccessed: Boolean = false
 
   /** Runs [[callback]] in a context with specified [[fromImport]]. */
   def withFromImport[T](fromImport: Boolean, callback: () => T): T = {
     val oldFromImport = _fromImport
     _fromImport = fromImport
-    try {
+    try
       callback()
-    } finally {
+    finally
       _fromImport = oldFromImport
-    }
   }
 }

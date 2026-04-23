@@ -58,14 +58,14 @@ class SassException(
     // For the string comment, render all non-US-ASCII characters as escape
     // sequences so that they'll show up even if the HTTP headers are set
     // incorrectly.
-    val sassStr = new SassString(toString)
-    val cssRepr = sassStr.toCssString()
+    val sassStr       = new SassString(toString)
+    val cssRepr       = sassStr.toCssString()
     val stringMessage = new StringBuilder()
     val codePoints    = cssRepr.codePoints().toArray
     var idx           = 0
     while (idx < codePoints.length) {
       val rune = codePoints(idx)
-      if (rune > 0x7F) {
+      if (rune > 0x7f) {
         stringMessage.append('\\')
         stringMessage.append(Integer.toHexString(rune))
         stringMessage.append(' ')

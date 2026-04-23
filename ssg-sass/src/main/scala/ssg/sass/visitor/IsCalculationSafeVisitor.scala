@@ -23,8 +23,7 @@ import ssg.sass.value.ListSeparator
 // would default to returning `true` if we added a new expression type and
 // forgot to update this class.
 
-/** A visitor that determines whether an expression is valid in a calculation
-  * context.
+/** A visitor that determines whether an expression is valid in a calculation context.
   *
   * This should be used through [[Expression.isCalculationSafe]].
   */
@@ -67,7 +66,7 @@ final class IsCalculationSafeVisitor extends ExpressionVisitor[Boolean] {
 
   def visitSelectorExpression(node: SelectorExpression): Boolean = false
 
-  def visitStringExpression(node: StringExpression): Boolean = {
+  def visitStringExpression(node: StringExpression): Boolean =
     if (node.hasQuotes) false
     else {
       // Exclude non-identifier constructs that are parsed as [StringExpression]s.
@@ -83,7 +82,6 @@ final class IsCalculationSafeVisitor extends ExpressionVisitor[Boolean] {
       // url()
       !(text.length > 3 && text.charAt(3) == '(')
     }
-  }
 
   def visitSupportsExpression(node: SupportsExpression): Boolean = false
 

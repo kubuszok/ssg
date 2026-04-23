@@ -133,8 +133,7 @@ abstract class Value {
       brackets = brackets.getOrElse(this.hasBrackets)
     )
 
-  /** Asserts that this value is a space- (or slash-) separated list with no brackets,
-    * throwing a SassScriptException if it isn't.
+  /** Asserts that this value is a space- (or slash-) separated list with no brackets, throwing a SassScriptException if it isn't.
     *
     * Returns the list contents. Ported from dart-sass `Value.assertCommonListStyle`.
     */
@@ -161,11 +160,9 @@ abstract class Value {
   // Selector assertion methods
   // ---------------------------------------------------------------------------
 
-  /** Converts a `selector-parse()`-style input into a string that can be
-    * parsed.
+  /** Converts a `selector-parse()`-style input into a string that can be parsed.
     *
-    * Throws a [[SassScriptException]] if `this` isn't a type or a structure that
-    * can be parsed as a selector.
+    * Throws a [[SassScriptException]] if `this` isn't a type or a structure that can be parsed as a selector.
     */
   private def selectorString(name: Nullable[String]): String = {
     val s = selectorStringOrNull()
@@ -179,24 +176,22 @@ abstract class Value {
     s.get
   }
 
-  /** Converts a `selector-parse()`-style input into a string that can be
-    * parsed.
+  /** Converts a `selector-parse()`-style input into a string that can be parsed.
     *
-    * Returns `Nullable.Null` if `this` isn't a type or a structure that can be
-    * parsed as a selector.
+    * Returns `Nullable.Null` if `this` isn't a type or a structure that can be parsed as a selector.
     */
-  private def selectorStringOrNull(): Nullable[String] = {
+  private def selectorStringOrNull(): Nullable[String] =
     this match {
-      case str: SassString => Nullable(str.text)
-      case list: SassList =>
+      case str:  SassString => Nullable(str.text)
+      case list: SassList   =>
         if (list.asList.isEmpty) Nullable.Null
         else {
           val result = scala.collection.mutable.ListBuffer.empty[String]
           list.separator match {
             case ListSeparator.Comma =>
-              val it = list.asList.iterator
+              val it     = list.asList.iterator
               var failed = false
-              while (it.hasNext && !failed) {
+              while (it.hasNext && !failed)
                 it.next() match {
                   case s: SassString =>
                     result += s.text
@@ -207,50 +202,43 @@ abstract class Value {
                   case _ =>
                     failed = true
                 }
-              }
               if (failed) Nullable.Null
               else Nullable(result.mkString(", "))
             case ListSeparator.Slash =>
               Nullable.Null
             case _ =>
               // Space or undecided separator
-              val it = list.asList.iterator
+              val it     = list.asList.iterator
               var failed = false
-              while (it.hasNext && !failed) {
+              while (it.hasNext && !failed)
                 it.next() match {
                   case s: SassString =>
                     result += s.text
                   case _ =>
                     failed = true
                 }
-              }
               if (failed) Nullable.Null
               else Nullable(result.mkString(" "))
           }
         }
       case _ => Nullable.Null
     }
-  }
 
-  /** Parses `this` as a selector list, in the same manner as the
-    * `selector-parse()` function.
+  /** Parses `this` as a selector list, in the same manner as the `selector-parse()` function.
     *
-    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
-    * selector, or if parsing fails. If [allowParent] is `true`, this allows
-    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
-    * parse errors.
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a selector, or if parsing fails. If [allowParent] is `true`, this allows [[ssg.sass.ast.selector.ParentSelector]]s.
+    * Otherwise, they're considered parse errors.
     *
-    * If this came from a function argument, [name] is the argument name
-    * (without the `$`). It's used for error reporting.
+    * If this came from a function argument, [name] is the argument name (without the `$`). It's used for error reporting.
     */
   def assertSelector(
     name:        Nullable[String] = Nullable.Null,
     allowParent: Boolean = false
   ): SelectorList = {
     val string = selectorString(name)
-    try {
+    try
       new SelectorParser(string, allowParent = allowParent).parse()
-    } catch {
+    catch {
       case error: SassFormatException =>
         // Note(nweiz): error messages are not colorized yet (no terminal
         // capability detection).
@@ -261,25 +249,21 @@ abstract class Value {
     }
   }
 
-  /** Parses `this` as a simple selector, in the same manner as the
-    * `selector-parse()` function.
+  /** Parses `this` as a simple selector, in the same manner as the `selector-parse()` function.
     *
-    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
-    * selector, or if parsing fails. If [allowParent] is `true`, this allows
-    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
-    * parse errors.
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a selector, or if parsing fails. If [allowParent] is `true`, this allows [[ssg.sass.ast.selector.ParentSelector]]s.
+    * Otherwise, they're considered parse errors.
     *
-    * If this came from a function argument, [name] is the argument name
-    * (without the `$`). It's used for error reporting.
+    * If this came from a function argument, [name] is the argument name (without the `$`). It's used for error reporting.
     */
   def assertSimpleSelector(
     name:        Nullable[String] = Nullable.Null,
     allowParent: Boolean = false
   ): SimpleSelector = {
     val string = selectorString(name)
-    try {
+    try
       new SelectorParser(string, allowParent = allowParent).parseSimpleSelector()
-    } catch {
+    catch {
       case error: SassFormatException =>
         // Note(nweiz): error messages are not colorized yet (no terminal
         // capability detection).
@@ -290,25 +274,21 @@ abstract class Value {
     }
   }
 
-  /** Parses `this` as a compound selector, in the same manner as the
-    * `selector-parse()` function.
+  /** Parses `this` as a compound selector, in the same manner as the `selector-parse()` function.
     *
-    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
-    * selector, or if parsing fails. If [allowParent] is `true`, this allows
-    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
-    * parse errors.
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a selector, or if parsing fails. If [allowParent] is `true`, this allows [[ssg.sass.ast.selector.ParentSelector]]s.
+    * Otherwise, they're considered parse errors.
     *
-    * If this came from a function argument, [name] is the argument name
-    * (without the `$`). It's used for error reporting.
+    * If this came from a function argument, [name] is the argument name (without the `$`). It's used for error reporting.
     */
   def assertCompoundSelector(
     name:        Nullable[String] = Nullable.Null,
     allowParent: Boolean = false
   ): CompoundSelector = {
     val string = selectorString(name)
-    try {
+    try
       new SelectorParser(string, allowParent = allowParent).parseCompoundSelector()
-    } catch {
+    catch {
       case error: SassFormatException =>
         // Note(nweiz): error messages are not colorized yet (no terminal
         // capability detection).
@@ -319,25 +299,21 @@ abstract class Value {
     }
   }
 
-  /** Parses `this` as a complex selector, in the same manner as the
-    * `selector-parse()` function.
+  /** Parses `this` as a complex selector, in the same manner as the `selector-parse()` function.
     *
-    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a
-    * selector, or if parsing fails. If [allowParent] is `true`, this allows
-    * [[ssg.sass.ast.selector.ParentSelector]]s. Otherwise, they're considered
-    * parse errors.
+    * Throws a [[SassScriptException]] if this isn't a type that can be parsed as a selector, or if parsing fails. If [allowParent] is `true`, this allows [[ssg.sass.ast.selector.ParentSelector]]s.
+    * Otherwise, they're considered parse errors.
     *
-    * If this came from a function argument, [name] is the argument name
-    * (without the `$`). It's used for error reporting.
+    * If this came from a function argument, [name] is the argument name (without the `$`). It's used for error reporting.
     */
   def assertComplexSelector(
     name:        Nullable[String] = Nullable.Null,
     allowParent: Boolean = false
   ): ComplexSelector = {
     val string = selectorString(name)
-    try {
+    try
       new SelectorParser(string, allowParent = allowParent).parseComplexSelector()
-    } catch {
+    catch {
       case error: SassFormatException =>
         // Note(nweiz): error messages are not colorized yet (no terminal
         // capability detection).

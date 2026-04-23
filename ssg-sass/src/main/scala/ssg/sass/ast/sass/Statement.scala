@@ -834,17 +834,15 @@ final class MixinRule(
 
   /** Recursively checks whether any child is a [ContentRule].
     *
-    * dart-sass uses a full `StatementSearchVisitor` for this.  We replicate
-    * that behaviour by pattern-matching all statement types that carry nested
-    * children — in particular [[IfRule]], whose clauses are *not*
-    * [[ParentStatement]] subtypes and would otherwise be missed.
+    * dart-sass uses a full `StatementSearchVisitor` for this. We replicate that behaviour by pattern-matching all statement types that carry nested children — in particular [[IfRule]], whose clauses
+    * are *not* [[ParentStatement]] subtypes and would otherwise be missed.
     */
   private def _hasContentInChildren(stmts: List[Statement]): Boolean =
     stmts.exists {
-      case _:  ContentRule     => true
-      case ir: IfRule          =>
+      case _:  ContentRule => true
+      case ir: IfRule      =>
         ir.clauses.exists(c => _hasContentInChildren(c.children)) ||
-          ir.lastClause.fold(false)(ec => _hasContentInChildren(ec.children))
+        ir.lastClause.fold(false)(ec => _hasContentInChildren(ec.children))
       case ps: ParentStatement =>
         ps.children.fold(false)(_hasContentInChildren)
       case _ => false

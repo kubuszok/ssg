@@ -73,9 +73,7 @@ object InterpolationMethod {
 
   /** Parses a SassScript value representing an interpolation method, not beginning with "in".
     *
-    * Throws a SassScriptException if value isn't a valid interpolation method.
-    * If value came from a function argument, name is the argument name (without the `$`).
-    * This is used for error reporting.
+    * Throws a SassScriptException if value isn't a valid interpolation method. If value came from a function argument, name is the argument name (without the `$`). This is used for error reporting.
     */
   def fromValue(value: Value, name: Nullable[String] = Nullable.Null): InterpolationMethod = boundary {
     val list = value.assertCommonListStyle(name, allowSlash = false)
@@ -153,9 +151,8 @@ object HueInterpolationMethod {
 
   /** Parses a SassScript value representing a hue interpolation method, not ending with "hue".
     *
-    * Throws a SassScriptException if value isn't a valid hue interpolation method.
-    * If value came from a function argument, name is the argument name (without the `$`).
-    * This is used for error reporting.
+    * Throws a SassScriptException if value isn't a valid hue interpolation method. If value came from a function argument, name is the argument name (without the `$`). This is used for error
+    * reporting.
     */
   private[color] def fromValue(value: Value, name: Nullable[String] = Nullable.Null): HueInterpolationMethod = {
     val str = value.assertString(name)

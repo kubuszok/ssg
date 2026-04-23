@@ -96,9 +96,7 @@ object SassCalculation {
 
   /** Renders a calculation argument (SassNumber, CalculationOperation, SassString, or SassCalculation) as its CSS source form.
     *
-    * Non-finite SassNumbers (Infinity, -Infinity, NaN) are written as
-    * CSS-spec lowercase `infinity` / `-infinity` / `NaN` with unit factors
-    * appended as ` * 1<unit>` / ` / 1<unit>`, matching dart-sass
+    * Non-finite SassNumbers (Infinity, -Infinity, NaN) are written as CSS-spec lowercase `infinity` / `-infinity` / `NaN` with unit factors appended as ` * 1<unit>` / ` / 1<unit>`, matching dart-sass
     * `_writeCalculationValue` + `_writeCalculationUnits`.
     */
   def argumentToCss(arg: Any): String = arg match {
@@ -120,30 +118,49 @@ object SassCalculation {
     case other => other.toString
   }
 
-  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>`
-    * factors, matching dart-sass `_writeCalculationUnits`.
+  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>` factors, matching dart-sass `_writeCalculationUnits`.
     */
   private def appendCalculationUnits(
     sb:               StringBuilder,
     numeratorUnits:   List[String],
     denominatorUnits: List[String]
   ): Unit = {
-    for (unit <- numeratorUnits) {
+    for (unit <- numeratorUnits)
       sb.append(" * 1").append(unit)
-    }
-    for (unit <- denominatorUnits) {
+    for (unit <- denominatorUnits)
       sb.append(" / 1").append(unit)
-    }
   }
 
-  /** Wraps a CalculationOperation child in parens when its precedence is lower than the parent operator. */
-  private def argumentToCssParenthesized(arg: Any, parentOp: CalculationOperator, isLeft: Boolean): String = arg match {
-    case op: CalculationOperation
-        if op.operator.precedence < parentOp.precedence ||
-          (!isLeft && op.operator.precedence == parentOp.precedence &&
-            (parentOp == CalculationOperator.Minus || parentOp == CalculationOperator.DividedBy)) =>
-      s"(${argumentToCss(op)})"
-    case _ => argumentToCss(arg)
+  /** Returns whether the right-hand operation of a calculation should be
+    * parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
+    */
+  private def parenthesizeCalculationRhs(
+    outer: CalculationOperator,
+    right: CalculationOperator
+  ): Boolean = outer match {
+    case CalculationOperator.DividedBy => true
+    case CalculationOperator.Plus      => false
+    case _ => right == CalculationOperator.Plus || right == CalculationOperator.Minus
+  }
+
+  /** Wraps a calculation child in parens when necessary, matching dart-sass
+    * `_writeCalculationValue` parenthesization logic.
+    */
+  private def argumentToCssParenthesized(arg: Any, parentOp: CalculationOperator, isLeft: Boolean): String = {
+    val needsParens = if (isLeft) {
+      arg match {
+        case op: CalculationOperation => op.operator.precedence < parentOp.precedence
+        case _                        => false
+      }
+    } else {
+      arg match {
+        case op: CalculationOperation => parenthesizeCalculationRhs(parentOp, op.operator)
+        case n: SassNumber if parentOp == CalculationOperator.DividedBy =>
+          if (n.value.isFinite) n.hasComplexUnits else n.hasUnits
+        case _ => false
+      }
+    }
+    if (needsParens) s"(${argumentToCss(arg)})" else argumentToCss(arg)
   }
 
   /** Creates a `calc()` calculation with the given argument.
@@ -299,9 +316,8 @@ object SassCalculation {
 
   /** Creates an `abs()` calculation with the given argument.
     *
-    * This automatically simplifies the calculation, so it may return a
-    * SassNumber rather than a SassCalculation. It throws an exception if it
-    * can determine that the calculation will definitely produce invalid CSS.
+    * This automatically simplifies the calculation, so it may return a SassNumber rather than a SassCalculation. It throws an exception if it can determine that the calculation will definitely
+    * produce invalid CSS.
     */
   def abs(argument: Any): Value = {
     val simplified = _simplify(argument)

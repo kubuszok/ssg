@@ -60,10 +60,10 @@ object ExtendFunctions {
   ): Nullable[CompoundSelector] =
     boundary[Nullable[CompoundSelector]] {
       var result: List[SimpleSelector] = compound1.components
-      var pseudoResult                 = List.empty[SimpleSelector]
-      var pseudoElementFound           = false
+      var pseudoResult       = List.empty[SimpleSelector]
+      var pseudoElementFound = false
 
-      for (simple <- compound2.components) {
+      for (simple <- compound2.components)
         // All pseudo-classes are unified separately after a pseudo-element to
         // preserve their relative order with the pseudo-element.
         if (pseudoElementFound && simple.isInstanceOf[PseudoSelector]) {
@@ -76,7 +76,6 @@ object ExtendFunctions {
           if (unified.isEmpty) break(Nullable.Null)
           result = unified.get
         }
-      }
 
       Nullable(new CompoundSelector(result ++ pseudoResult, compound1.span))
     }
@@ -175,7 +174,7 @@ object ExtendFunctions {
     span:           FileSpan,
     forceLineBreak: Boolean = false
   ): List[ComplexSelector] = complexes match {
-    case Nil => Nil
+    case Nil            => Nil
     case complex :: Nil =>
       if (!forceLineBreak || complex.lineBreak) complexes
       else
@@ -193,9 +192,9 @@ object ExtendFunctions {
         if (complex.components.length == 1) {
           prefixes = prefixes.map(_.concatenate(complex, span, forceLineBreak = forceLineBreak))
         } else {
-          prefixes = {
+          prefixes =
             for {
-              prefix       <- prefixes
+              prefix <- prefixes
               parentPrefix <- {
                 val wp = weaveParents(prefix, complex, span)
                 if (wp.isEmpty) Nil else wp.get
@@ -205,7 +204,6 @@ object ExtendFunctions {
               span,
               forceLineBreak = forceLineBreak
             )
-          }
         }
       prefixes
   }
@@ -214,8 +212,8 @@ object ExtendFunctions {
     *
     * Uses the LCS-based algorithm from dart-sass `_weaveParents`. Returns `Nullable.empty` if the intersection is empty (incompatible combinators or rootish selectors).
     *
-    * Semantically, for selectors `P` and `C`, this returns all selectors `PC_i` such that the union over all `i` of elements matched by `PC_i` is identical to the intersection of all elements
-    * matched by `C` and all descendants of elements matched by `P`. Some `PC_i` are elided to reduce the size of the output.
+    * Semantically, for selectors `P` and `C`, this returns all selectors `PC_i` such that the union over all `i` of elements matched by `PC_i` is identical to the intersection of all elements matched
+    * by `C` and all descendants of elements matched by `P`. Some `PC_i` are elided to reduce the size of the output.
     */
   private def weaveParents(
     prefix: ComplexSelector,
@@ -235,7 +233,7 @@ object ExtendFunctions {
       val queue1 = mutable.ListBuffer.from(prefix.components)
       val queue2 = mutable.ListBuffer.from(base.components.init)
 
-      val result = mutable.ListBuffer.empty[List[List[ComplexSelectorComponent]]]
+      val result              = mutable.ListBuffer.empty[List[List[ComplexSelectorComponent]]]
       val trailingCombinators = mergeTrailingCombinators(queue1, queue2, span, result)
       if (trailingCombinators.isEmpty) break(Nullable.empty)
 
@@ -265,10 +263,10 @@ object ExtendFunctions {
 
       val groups1 = groupSelectors(queue1)
       val groups2 = groupSelectors(queue2)
-      val lcs = Utils.longestCommonSubsequence[List[ComplexSelectorComponent]](
+      val lcs     = Utils.longestCommonSubsequence[List[ComplexSelectorComponent]](
         groups2.toList,
         groups1.toList,
-        select = (group1, group2) => {
+        select = (group1, group2) =>
           if (group1 == group2) Nullable(group1)
           else if (complexIsParentSuperselector(group1, group2)) Nullable(group2)
           else if (complexIsParentSuperselector(group2, group1)) Nullable(group1)
@@ -288,7 +286,6 @@ object ExtendFunctions {
               else Nullable.Null
             }
           }
-        }
       )
 
       val choices = mutable.ListBuffer.empty[List[Iterable[ComplexSelectorComponent]]]
@@ -296,7 +293,7 @@ object ExtendFunctions {
         choices += chunks[List[ComplexSelectorComponent]](
           groups1,
           groups2,
-          (sequence) => complexIsParentSuperselector(sequence(0), group)
+          sequence => complexIsParentSuperselector(sequence(0), group)
         ).map(chunk => chunk.flatMap(identity))
         choices += List(group)
         groups1.remove(0)
@@ -305,7 +302,7 @@ object ExtendFunctions {
       choices += chunks[List[ComplexSelectorComponent]](
         groups1,
         groups2,
-        (sequence) => sequence.isEmpty
+        sequence => sequence.isEmpty
       ).map(chunk => chunk.flatMap(identity))
       choices ++= trailingCombinators.get.toList
 
@@ -494,11 +491,12 @@ object ExtendFunctions {
     * For example, given `[[1, 2], [3, 4], [5]]`, this returns `[[1, 3, 5], [2, 3, 5], [1, 4, 5], [2, 4, 5]]`.
     */
   def paths[T](choices: List[List[T]]): List[List[T]] =
-    choices.foldLeft(List(List.empty[T])) { (acc, options) =>
-      for {
-        prefix <- acc
-        option <- options
-      } yield prefix :+ option
+    // dart-sass iterates option-first, then paths — this preserves the original
+    // selector ordering that the spec tests expect.
+    choices.foldLeft(List(List.empty[T])) { (paths, choice) =>
+      choice.flatMap { option =>
+        paths.map(_ :+ option)
+      }
     }
 
   /** Returns a leading combinator list that's compatible with both [combinators1] and [combinators2].
@@ -508,13 +506,12 @@ object ExtendFunctions {
   private def mergeLeadingCombinators(
     combinators1: List[CssValue[Combinator]],
     combinators2: List[CssValue[Combinator]]
-  ): Nullable[List[CssValue[Combinator]]] = {
+  ): Nullable[List[CssValue[Combinator]]] =
     if (combinators1.length > 1 || combinators2.length > 1) Nullable.empty
     else if (combinators1.isEmpty) Nullable(combinators2)
     else if (combinators2.isEmpty) Nullable(combinators1)
     else if (combinators1 == combinators2) Nullable(combinators1)
     else Nullable.empty
-  }
 
   /** If the first element of [queue] has a selector like `:root` that can only appear in a complex selector's first component, removes and returns that element.
     */
@@ -572,7 +569,7 @@ object ExtendFunctions {
         val buf = mutable.LinkedHashSet.empty[SimpleSelector]
         for {
           component <- complex1
-          simple    <- component.selector.components
+          simple <- component.selector.components
           if isUnique(simple)
         } buf += simple
         buf
@@ -600,7 +597,7 @@ object ExtendFunctions {
       // Note(nweiz): there may be a way to do this without the extra allocations
       // from appending a bogus base component to both lists.
       val bogusSpan = FileSpan.synthetic("")
-      val base = new ComplexSelectorComponent(
+      val base      = new ComplexSelectorComponent(
         new CompoundSelector(List(new PlaceholderSelector("<temp>", bogusSpan)), bogusSpan),
         Nil,
         bogusSpan
@@ -610,8 +607,7 @@ object ExtendFunctions {
 
   // — Superselector functions —
 
-  /** Returns whether a [CompoundSelector] may contain only one simple selector of
-    * the same type as [simple].
+  /** Returns whether a [CompoundSelector] may contain only one simple selector of the same type as [simple].
     */
   private def isUnique(simple: SimpleSelector): Boolean =
     simple.isInstanceOf[IDSelector] || (simple.isInstanceOf[PseudoSelector] && simple.asInstanceOf[PseudoSelector].isElement)
@@ -630,14 +626,14 @@ object ExtendFunctions {
     // null (descendant) is a supercombinator of child
     if (combinator1.isEmpty && combinator2.isDefined && combinator2.get.value == Combinator.Child) return true
     // followingSibling is a supercombinator of nextSibling
-    if (combinator1.isDefined && combinator1.get.value == Combinator.FollowingSibling &&
-        combinator2.isDefined && combinator2.get.value == Combinator.NextSibling) return true
+    if (
+      combinator1.isDefined && combinator1.get.value == Combinator.FollowingSibling &&
+      combinator2.isDefined && combinator2.get.value == Combinator.NextSibling
+    ) return true
     false
   }
 
-  /** Returns whether [parents] are valid intersitial components between one
-    * complex superselector and another, given that the earlier complex
-    * superselector had the combinator [previous].
+  /** Returns whether [parents] are valid intersitial components between one complex superselector and another, given that the earlier complex superselector had the combinator [previous].
     */
   private def compatibleWithPreviousCombinator(
     previous: Nullable[CssValue[Combinator]],
@@ -661,8 +657,7 @@ object ExtendFunctions {
 
   /** Returns whether [list1] is a superselector of [list2].
     *
-    * That is, whether [list1] matches every element that [list2] matches, as well
-    * as possibly additional elements.
+    * That is, whether [list1] matches every element that [list2] matches, as well as possibly additional elements.
     */
   def listIsSuperselector(
     list1: List[ComplexSelector],
@@ -674,8 +669,7 @@ object ExtendFunctions {
 
   /** Returns whether [complex1] is a superselector of [complex2].
     *
-    * That is, whether [complex1] matches every element that [complex2] matches, as well
-    * as possibly additional elements.
+    * That is, whether [complex1] matches every element that [complex2] matches, as well as possibly additional elements.
     */
   def complexIsSuperselector(
     complex1: List[ComplexSelectorComponent],
@@ -708,10 +702,12 @@ object ExtendFunctions {
               if (component1.selector.hasComplicatedSuperselectorSemantics)
                 Nullable(complex2.slice(i2, complex2.length - 1))
               else Nullable.empty
-            break(component1.selector.isSuperselector(
-              complex2.last.selector,
-              parents
-            ))
+            break(
+              component1.selector.isSuperselector(
+                complex2.last.selector,
+                parents
+              )
+            )
           }
         }
 
@@ -719,7 +715,7 @@ object ExtendFunctions {
         // `complex2.sublist(i2, endOfSubselector + 1)` is a subselector of
         // [component1.selector].
         var endOfSubselector = i2
-        var found = false
+        var found            = false
         while (!found) {
           val component2 = complex2(endOfSubselector)
           if (component2.combinators.length > 1) break(false)
@@ -727,10 +723,12 @@ object ExtendFunctions {
             if (component1.selector.hasComplicatedSuperselectorSemantics)
               Nullable(complex2.slice(i2, endOfSubselector))
             else Nullable.empty
-          if (component1.selector.isSuperselector(
-            component2.selector,
-            parents
-          )) {
+          if (
+            component1.selector.isSuperselector(
+              component2.selector,
+              parents
+            )
+          ) {
             found = true
           } else {
             endOfSubselector += 1
@@ -744,10 +742,12 @@ object ExtendFunctions {
           }
         }
 
-        if (!compatibleWithPreviousCombinator(
-          previousCombinator,
-          complex2.slice(i2, endOfSubselector)
-        )) {
+        if (
+          !compatibleWithPreviousCombinator(
+            previousCombinator,
+            complex2.slice(i2, endOfSubselector)
+          )
+        ) {
           break(false)
         }
 
@@ -766,12 +766,14 @@ object ExtendFunctions {
           if (combinator1.isDefined && combinator1.get.value == Combinator.FollowingSibling) {
             // The selector `.foo ~ .bar` is only a superselector of selectors that
             // *exclusively* contain subcombinators of `~`.
-            if (!complex2.slice(i2, complex2.length - 1).forall { component =>
-              isSupercombinator(
-                combinator1,
-                Nullable.fromOption(component.combinators.headOption)
-              )
-            }) {
+            if (
+              !complex2.slice(i2, complex2.length - 1).forall { component =>
+                isSupercombinator(
+                  combinator1,
+                  Nullable.fromOption(component.combinators.headOption)
+                )
+              }
+            ) {
               break(false)
             }
           } else if (combinator1.isDefined) {

@@ -32,9 +32,9 @@ class MediaQueryParser(
   interpolationMap: Nullable[InterpolationMap] = Nullable.Null
 ) extends Parser(contents, url, interpolationMap) {
 
-  def parse(): List[CssMediaQuery] = {
+  def parse(): List[CssMediaQuery] =
     wrapSpanFormatException { () =>
-      val queries = mutable.ListBuffer.empty[CssMediaQuery]
+      val queries   = mutable.ListBuffer.empty[CssMediaQuery]
       var continue_ = true
       while (continue_) {
         _whitespace()
@@ -45,7 +45,6 @@ class MediaQueryParser(
       scanner.expectDone()
       queries.toList
     }
-  }
 
   /** Consumes a single media query. */
   private def _mediaQuery(): CssMediaQuery = {
@@ -68,7 +67,7 @@ class MediaQueryParser(
     }
 
     var modifier: Option[String] = None
-    var type_ : Option[String]   = None
+    var type_   : Option[String] = None
     val identifier1 = identifier()
 
     if (Utils.equalsIgnoreCase(identifier1, "not")) {
@@ -124,11 +123,10 @@ class MediaQueryParser(
     )
   }
 
-  /** Consumes one or more `<media-in-parens>` expressions separated by
-    * [operator] and returns them.
+  /** Consumes one or more `<media-in-parens>` expressions separated by [operator] and returns them.
     */
   private def _mediaLogicSequence(operator: String): List[String] = {
-    val result = mutable.ListBuffer.empty[String]
+    val result    = mutable.ListBuffer.empty[String]
     var continue_ = true
     while (continue_) {
       result += _mediaInParens()
@@ -140,14 +138,13 @@ class MediaQueryParser(
     result.toList
   }
 
-  /** Consumes a `<media-in-parens>` expression and returns it, parentheses
-    * included.
+  /** Consumes a `<media-in-parens>` expression and returns it, parentheses included.
     */
   private def _mediaInParens(): String = {
     scanner.expectChar(CharCode.$lparen, name = "media condition in parentheses")
-    val result = s"(${declarationValue()})"
+    val rawCond = s"(${declarationValue()})"
     scanner.expectChar(CharCode.$rparen)
-    result
+    CssMediaQuery.normalizeCondition(rawCond)
   }
 
   /** The value of `consumeNewlines` is not relevant for this class. */
