@@ -20,12 +20,11 @@ package ssg
 package sass
 package visitor
 
-import ssg.sass.ColorNames
-import ssg.sass.Nullable
+import ssg.sass.{ ColorNames, MultiSpanSassException, MultiSpanSassScriptException, Nullable, SassException, SassScriptException }
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaQuery, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
-import ssg.sass.value.{ ColorFormat, ListSeparator, SassColor, SassList, SassMap, SassNull, SassNumber, SassString, SpanColorFormat, Value }
+import ssg.sass.value.{ CalculationOperation, CalculationOperator, ColorFormat, ListSeparator, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, SpanColorFormat, Value }
 import ssg.sass.value.color.{ ColorSpace, LinearChannel }
 
 import scala.util.boundary
@@ -45,7 +44,8 @@ final case class SerializeResult(css: String, sourceMap: Nullable[String] = Null
 final class SerializeVisitor(
   val style:     String = OutputStyle.Expanded,
   val inspect:   Boolean = false,
-  val sourceMap: Boolean = false
+  val sourceMap: Boolean = false,
+  private val quote: Boolean = true
 ) extends CssVisitor[Unit] {
 
   private val buffer = new StringBuilder()
@@ -74,29 +74,35 @@ final class SerializeVisitor(
   // Declarations, imports, and preserved comments are always visible. Regular
   // comments are visible except in compressed mode.
   // ---------------------------------------------------------------------------
-  private def isNodeInvisible(node: CssNode): Boolean = node match {
-    case _: CssDeclaration => false
-    case _: CssImport      => false
-    case c: CssComment     => isCompressed && !c.isPreserved
-    case rule: CssStyleRule =>
-      // A style rule is invisible if its selector is invisible (all complex
-      // selectors contain placeholders or are bogus) OR if all children are
-      // invisible. Matches dart-sass _IsInvisibleVisitor.visitCssStyleRule.
-      val selectorInvisible = rule.selector.isInvisible
-      selectorInvisible || (
-        !rule.isChildless && rule.children.forall(isNodeInvisible)
-      )
-    case at: CssAtRule =>
-      // dart-sass _IsInvisibleVisitor.visitCssAtRule: a truly unknown at-rule
-      // is NEVER invisible. However, our evaluator sometimes represents
-      // @media/@supports as generic CssAtRule nodes, so we keep the
-      // all-children-invisible check to avoid emitting empty blocks.
-      if (at.isChildless) false
-      else at.children.nonEmpty && at.children.forall(isNodeInvisible)
-    case p: CssParentNode =>
-      if (p.isChildless) false
-      else p.children.forall(isNodeInvisible)
-    case _ => false
+  // dart-sass `_isInvisible` (serialize.dart:1822-1825): in inspect mode,
+  // nothing is invisible. Otherwise delegate to node.isInvisible with the
+  // appropriate hiding type (comments hidden in compressed mode).
+  private def isNodeInvisible(node: CssNode): Boolean = {
+    if (inspect) return false
+    node match {
+      case _: CssDeclaration => false
+      case _: CssImport      => false
+      case c: CssComment     => isCompressed && !c.isPreserved
+      case rule: CssStyleRule =>
+        // A style rule is invisible if its selector is invisible (all complex
+        // selectors contain placeholders or are bogus) OR if all children are
+        // invisible. Matches dart-sass _IsInvisibleVisitor.visitCssStyleRule.
+        val selectorInvisible = rule.selector.isInvisible
+        selectorInvisible || (
+          !rule.isChildless && rule.children.forall(isNodeInvisible)
+        )
+      case at: CssAtRule =>
+        // dart-sass _IsInvisibleVisitor.visitCssAtRule: a truly unknown at-rule
+        // is NEVER invisible. However, our evaluator sometimes represents
+        // @media/@supports as generic CssAtRule nodes, so we keep the
+        // all-children-invisible check to avoid emitting empty blocks.
+        if (at.isChildless) false
+        else at.children.nonEmpty && at.children.forall(isNodeInvisible)
+      case p: CssParentNode =>
+        if (p.isChildless) false
+        else p.children.forall(isNodeInvisible)
+      case _ => false
+    }
   }
 
   /** Recomputes the (line, column) cursor from the current buffer length. */
@@ -160,6 +166,10 @@ final class SerializeVisitor(
     segmentsByLine.clear()
     segmentsByLine += scala.collection.mutable.ArrayBuffer.empty
     visitCssStylesheet(node)
+    // dart-sass visitCssStylesheet does NOT emit a trailing newline.
+    // We add one here for non-empty expanded output to match POSIX text
+    // file conventions and sass-spec expected output format.
+    if (!isCompressed && buffer.nonEmpty) buffer.append('\n')
     val css = buffer.toString()
     val prefix: String =
       if (containsNonAscii(css) && !css.startsWith("@charset")) {
@@ -269,6 +279,18 @@ final class SerializeVisitor(
   private def writeSpace(): Unit =
     if (!isCompressed) buffer.append(' ')
 
+  /// Runs [callback] without any indentation.
+  ///
+  /// Port of dart-sass `_withoutIndentation` (serialize.dart:1815-1820).
+  /// Temporarily zeroes the indentation level for the duration of [callback],
+  /// used when emitting trailing comments that shouldn't carry block indentation.
+  private def withoutIndentation(callback: => Unit): Unit = {
+    val savedIndentation = indentLevel
+    indentLevel = 0
+    callback
+    indentLevel = savedIndentation
+  }
+
   // ---------------------------------------------------------------------------
   // Stage 1: sibling spacing & semicolon emission
   // Ported from dart-sass `_requiresSemicolon` / `_isTrailingComment` /
@@ -286,28 +308,46 @@ final class SerializeVisitor(
     case _                => true
   }
 
-  /** Whether [node] is a trailing comment that should be appended to [previous]'s line. */
+  /** Whether [node] represents a trailing comment when it appears after
+    * [previous] in a sequence of nodes being serialized.
+    *
+    * Note [previous] could be either a sibling of [node] or the parent of
+    * [node], with [node] being the first visible child.
+    *
+    * Port of dart-sass `_isTrailingComment` (serialize.dart:1733-1761).
+    */
   private def isTrailingComment(node: CssNode, previous: CssNode): Boolean = {
+    // Short-circuit in compressed mode to avoid expensive span shenanigans
+    // (shespanigans?), since we're compressing all whitespace anyway.
     if (isCompressed) return false
-    node match {
-      case _: CssComment =>
-        // dart-sass: a comment trailing ANOTHER comment is not considered
-        // trailing — two sibling comments should each appear on their own
-        // line. Only a comment trailing a non-comment (rule, declaration,
-        // import) is collapsed onto the previous line.
-        if (previous.isInstanceOf[CssComment]) return false
-        val nodeSpan = node.span
-        val prevSpan = previous.span
-        if (nodeSpan == null || prevSpan == null) false
-        else if (nodeSpan.file.url != prevSpan.file.url) false
-        else if (!prevSpan.contains(nodeSpan)) {
-          nodeSpan.start.line == prevSpan.end.line
-        } else {
-          // Heuristic: if the comment starts on the same line as the parent's
-          // first line (i.e., before the `{`), treat as trailing.
-          nodeSpan.start.line == prevSpan.start.line
-        }
-      case _ => false
+    if (!node.isInstanceOf[CssComment]) return false
+    val nodeSpan = node.span
+    val prevSpan = previous.span
+    if (nodeSpan == null || prevSpan == null) return false
+    if (nodeSpan.file.url != prevSpan.file.url) return false
+
+    if (!prevSpan.contains(nodeSpan)) {
+      nodeSpan.start.line == prevSpan.end.line
+    } else {
+      // Walk back from just before the current node starts looking for the
+      // parent's left brace (to open the child block). This is safer than a
+      // simple forward search of the previous.span.text as that might contain
+      // other left braces.
+      val searchFrom = nodeSpan.start.offset - prevSpan.start.offset - 1
+
+      // Imports can cause a node to be "contained" by another node when they are
+      // actually the same node twice in a row.
+      if (searchFrom < 0) return false
+
+      val endOffset = {
+        val idx = prevSpan.text.lastIndexOf('{', searchFrom)
+        math.max(0, idx)
+      }
+      val span = prevSpan.file.span(
+        prevSpan.start.offset,
+        prevSpan.start.offset + endOffset
+      )
+      nodeSpan.start.line == span.end.line
     }
   }
 
@@ -322,8 +362,10 @@ final class SerializeVisitor(
         val precedent: CssNode | Null = if (previous != null) previous else parent
         if (precedent != null && isTrailingComment(child, precedent)) {
           // Trailing comment: append on the same line with a single space.
+          // dart-sass uses _withoutIndentation so multi-line trailing comments
+          // are not indented at the block level (serialize.dart:1694-1696).
           writeSpace()
-          child.accept(this)
+          withoutIndentation { child.accept(this) }
         } else {
           writeLine()
           // Note: dart-sass _visitChildren does NOT check isGroupEnd —
@@ -361,18 +403,26 @@ final class SerializeVisitor(
   // ---------------------------------------------------------------------------
 
   /** Formats a value for emission in a declaration. Applies per-type customizations (color shorthand, named-color preference, compressed-mode number tweaks).
+    *
+    * All known Value subtypes are dispatched explicitly. This avoids
+    * falling through to `v.toCssString()` which would re-enter
+    * `serializeValue` and infinite-loop.
     */
   private def formatValue(v: Value): String = v match {
-    case c: SassColor  => formatColorDispatch(c)
-    case n: SassNumber => formatSassNumber(n)
-    case s: SassString => formatString(s)
-    case l: SassList   => formatList(l)
-    case m: SassMap    => formatMap(m)
+    case c: SassColor       => formatColorDispatch(c)
+    case n: SassNumber      => formatSassNumber(n)
+    case s: SassString      => formatString(s)
+    case l: SassList        => formatList(l)
+    case m: SassMap         => formatMap(m)
+    case c: SassCalculation => formatCalculation(c)
+    case b: SassBoolean     => b.value.toString
+    case f: SassFunction    => formatFunction(f)
+    case m: SassMixin       => formatMixin(m)
     // dart-sass renders `null` as `"null"` in inspect mode (used by
     // `meta.inspect()`) and as an empty string in normal output, since
     // null values are filtered from declaration-value serialization.
-    case SassNull      => if (inspect) "null" else ""
-    case _             => v.toCssString()
+    case SassNull           => if (inspect) "null" else ""
+    case _                  => v.toString
   }
 
   /** Public forwarder so the companion-object `serializeValue` entry
@@ -380,6 +430,142 @@ final class SerializeVisitor(
     * unrelated consumers.
     */
   private[visitor] def formatValuePublic(v: Value): String = formatValue(v)
+
+  // ---------------------------------------------------------------------------
+  // visitFunction / visitMixin
+  // Ported from dart-sass `visitFunction` / `visitMixin` in
+  // lib/src/visitor/serialize.dart (lines 993-1011).
+  // In non-inspect mode, these throw SassScriptException because
+  // function/mixin references aren't valid CSS values. In inspect mode,
+  // they emit `get-function("name")` / `get-mixin("name")`.
+  // ---------------------------------------------------------------------------
+
+  /** Formats a SassFunction value.
+    *
+    * Port of dart-sass `visitFunction` (serialize.dart:993-1001).
+    */
+  private def formatFunction(f: SassFunction): String = {
+    if (!inspect) {
+      throw SassScriptException(s"$f isn't a valid CSS value.")
+    }
+    val sb = new StringBuilder()
+    sb.append("get-function(")
+    sb.append(visitQuotedString(f.callable.name))
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Formats a SassMixin value.
+    *
+    * Port of dart-sass `visitMixin` (serialize.dart:1003-1011).
+    */
+  private def formatMixin(m: SassMixin): String = {
+    if (!inspect) {
+      throw SassScriptException(s"$m isn't a valid CSS value.")
+    }
+    val sb = new StringBuilder()
+    sb.append("get-mixin(")
+    sb.append(visitQuotedString(m.callable.name))
+    sb.append(')')
+    sb.toString()
+  }
+
+  // ---------------------------------------------------------------------------
+  // visitCalculation / _writeCalculationValue
+  // Ported from dart-sass `visitCalculation` / `_writeCalculationValue` in
+  // lib/src/visitor/serialize.dart (lines 520-575).
+  // Unlike the static `SassCalculation.argumentToCss`, this method
+  // respects the output style (compressed mode drops spaces around
+  // `*` and `/` in calculations).
+  // ---------------------------------------------------------------------------
+
+  /** Formats a SassCalculation value.
+    *
+    * Port of dart-sass `visitCalculation` (serialize.dart:520-524).
+    */
+  private def formatCalculation(calc: SassCalculation): String = {
+    val sb = new StringBuilder()
+    sb.append(calc.name)
+    sb.append('(')
+    var first = true
+    for (arg <- calc.arguments) {
+      if (!first) sb.append(commaSeparator)
+      first = false
+      writeCalculationValue(sb, arg)
+    }
+    sb.append(')')
+    sb.toString()
+  }
+
+  /** Writes a calculation value to [sb], respecting compressed-mode spacing.
+    *
+    * Port of dart-sass `_writeCalculationValue` (serialize.dart:527-575).
+    */
+  private def writeCalculationValue(sb: StringBuilder, value: Any): Unit = value match {
+    case n: SassNumber if !n.value.isFinite =>
+      val v = n.value
+      if (v == Double.PositiveInfinity) sb.append("infinity")
+      else if (v == Double.NegativeInfinity) sb.append("-infinity")
+      else sb.append("NaN")
+      appendCalculationUnits(sb, n.numeratorUnits, n.denominatorUnits)
+
+    case n: SassNumber if n.hasComplexUnits =>
+      writeNumberTo(sb, n.value)
+      n.numeratorUnits match {
+        case first :: rest =>
+          sb.append(first)
+          appendCalculationUnits(sb, rest, n.denominatorUnits)
+        case Nil =>
+          appendCalculationUnits(sb, Nil, n.denominatorUnits)
+      }
+
+    case v: Value =>
+      sb.append(formatValue(v))
+
+    case op: CalculationOperation =>
+      val parenthesizeLeft = op.left match {
+        case leftOp: CalculationOperation => leftOp.operator.precedence < op.operator.precedence
+        case _ => false
+      }
+      if (parenthesizeLeft) sb.append('(')
+      writeCalculationValue(sb, op.left)
+      if (parenthesizeLeft) sb.append(')')
+
+      // dart-sass serialize.dart:560: spaces around + and - are always preserved;
+      // spaces around * and / are only in expanded mode.
+      val operatorWhitespace = !isCompressed || op.operator.precedence == 1
+      if (operatorWhitespace) sb.append(' ')
+      sb.append(op.operator.operator)
+      if (operatorWhitespace) sb.append(' ')
+
+      val parenthesizeRight = (op.right match {
+        case rightOp: CalculationOperation =>
+          parenthesizeCalculationRhs(op.operator, rightOp.operator)
+        case _ => false
+      }) || (op.operator == CalculationOperator.DividedBy && (op.right match {
+        case n: SassNumber =>
+          if (n.value.isFinite) n.hasComplexUnits else n.hasUnits
+        case _ => false
+      }))
+      if (parenthesizeRight) sb.append('(')
+      writeCalculationValue(sb, op.right)
+      if (parenthesizeRight) sb.append(')')
+
+    case other =>
+      sb.append(other.toString)
+  }
+
+  /** Returns whether the right-hand operation of a calculation should be
+    * parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
+    */
+  private def parenthesizeCalculationRhs(
+    outer: CalculationOperator,
+    right: CalculationOperator
+  ): Boolean = outer match {
+    case CalculationOperator.DividedBy => true
+    case CalculationOperator.Plus      => false
+    case _ => right == CalculationOperator.Plus || right == CalculationOperator.Minus
+  }
 
   // ---------------------------------------------------------------------------
   // Stage 2: modern color space dispatch
@@ -472,10 +658,10 @@ final class SerializeVisitor(
   private def writeLegacyColor(color: SassColor): String = boundary[String] {
     val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
 
-    // Out-of-gamut colors can only be represented accurately as HSL because
-    // only HSL isn't clamped at parse time. Skip when any channel is NaN since
-    // HSL conversion produces meaningless results for NaN.
-    if (!color.isInGamut && !inspect && !hasNaNChannel(color)) {
+    // Out-of-gamut colors can _only_ be represented accurately as HSL, because
+    // only HSL isn't clamped at parse time (except negative saturation which
+    // isn't necessary anyway).
+    if (!color.isInGamut && !inspect) {
       break(writeHsl(color))
     }
 
@@ -709,22 +895,22 @@ final class SerializeVisitor(
   }
 
   /** Writes a channel value, or `none` for missing. Ported from dart-sass `_writeChannel`.
-    * Per CSS spec, NaN color channel values are treated as 0.
+    * Non-finite values (NaN, Infinity) are wrapped in calc() via the SassNumber path,
+    * matching dart-sass behavior.
     */
   private def writeChannel(sb: StringBuilder, ch: Nullable[Double], unit: Nullable[String] = Nullable.Null): Unit = {
     if (ch.isEmpty) {
       sb.append("none")
     } else {
       val v = ch.get
-      if (v.isNaN) {
-        // CSS spec: NaN color channel values resolve to 0.
-        sb.append('0')
-        unit.foreach(u => sb.append(u))
-      } else if (v.isFinite) {
+      if (v.isFinite) {
         writeNumberTo(sb, v)
         unit.foreach(u => sb.append(u))
       } else {
-        // Infinity: format via SassNumber path
+        // Non-finite (NaN or Infinity): format via SassNumber path which wraps
+        // in calc(NaN), calc(NaN * 1deg), calc(infinity), etc.
+        // This matches dart-sass _writeChannel which calls
+        // visitNumber(SassNumber(channel, unit)) for non-finite values.
         val num = if (unit.isDefined) SassNumber(v, unit.get) else SassNumber(v)
         sb.append(formatSassNumber(num))
       }
@@ -813,10 +999,6 @@ final class SerializeVisitor(
   private def hexCharFor(number: Int): Char =
     if (number < 10) ('0' + number).toChar else ('a' - 10 + number).toChar
 
-  /** Whether any color channel (or alpha) contains NaN. */
-  private def hasNaNChannel(c: SassColor): Boolean =
-    c.channel0.isNaN || c.channel1.isNaN || c.channel2.isNaN || c.alpha.isNaN
-
   // ---------------------------------------------------------------------------
   // Stage A.2: quoted/unquoted string formatting
   // Ported from dart-sass `_visitQuotedString` / `_visitUnquotedString` in
@@ -827,7 +1009,7 @@ final class SerializeVisitor(
   // `\hh ` hex form.
   // ---------------------------------------------------------------------------
   private def formatString(s: SassString): String =
-    if (!s.hasQuotes) {
+    if (!s.hasQuotes || !quote) {
       visitUnquotedString(s.text)
     } else {
       visitQuotedString(s.text)
@@ -985,10 +1167,13 @@ final class SerializeVisitor(
     //   - `[x,]` for a single-element bracketed comma list
     //   - parentheses around nested sub-lists whose separator would be
     //     ambiguous with the outer separator (see elementNeedsParens)
-    if (l.hasBrackets && l.asList.isEmpty) return "[]"
-    if (!l.hasBrackets && l.asList.isEmpty) {
-      if (inspect) return "()"
-      else return "" // non-inspect: caller decides (property path emits blank)
+    if (l.hasBrackets) {
+      if (l.asList.isEmpty) return "[]"
+    } else if (l.asList.isEmpty) {
+      if (!inspect) {
+        throw new SassScriptException("() isn't a valid CSS value.")
+      }
+      return "()"
     }
 
     val singleton =
@@ -1062,6 +1247,10 @@ final class SerializeVisitor(
   }
 
   private def formatMap(m: SassMap): String = {
+    // dart-sass serialize.dart:1080-1082: maps aren't valid CSS values.
+    if (!inspect) {
+      throw SassScriptException(s"$m isn't a valid CSS value.")
+    }
     val sep       = if (isCompressed) "," else ", "
     val kvSpacing = if (isCompressed) "" else " "
     // In inspect mode, wrap key/value sub-lists whose separator would
@@ -1339,9 +1528,8 @@ final class SerializeVisitor(
         child.accept(this)
       }
     }
-    if (previous != null) {
-      if (requiresSemicolon(previous) && !isCompressed) buffer.append(';')
-      if (!isCompressed) buffer.append('\n')
+    if (previous != null && requiresSemicolon(previous) && !isCompressed) {
+      buffer.append(';')
     }
   }
 
@@ -1363,22 +1551,34 @@ final class SerializeVisitor(
   // complex selectors are joined with a bare `,`.
   // ---------------------------------------------------------------------------
   private def formatSelectorList(list: SelectorList): String = {
-    val sb    = new StringBuilder()
+    val sb = new StringBuilder()
+    // dart-sass visitSelectorList (serialize.dart:1603-1606): in inspect mode,
+    // all complex selectors are included (even invisible ones like placeholders).
+    // In normal mode, invisible selectors are filtered out.
+    val complexes = if (inspect) list.components else list.components.filterNot(_.isInvisible)
+    if (complexes.isEmpty) return ""
+    writeSelectorListTo(sb, complexes)
+    sb.toString()
+  }
+
+  /** Writes a list of complex selectors to [sb], using proper comma/line-break
+    * formatting matching dart-sass `visitSelectorList` (serialize.dart:1603-1623).
+    *
+    * Separators between complex selectors follow the dart-sass rules:
+    * - comma is always emitted
+    * - in expanded mode: if the next complex selector has `lineBreak == true`,
+    *   emit a newline + current indentation; otherwise emit a single space
+    * - in compressed mode: no separator beyond the comma
+    */
+  private def writeSelectorListTo(sb: StringBuilder, complexes: Seq[ComplexSelector]): Unit = {
     var first = true
-    // Filter out invisible complex selectors (placeholders, bogus combinators).
-    // Matches dart-sass visitSelectorList which filters with `!complex.isInvisible`.
-    val visible = list.components.filterNot(_.isInvisible)
-    if (visible.isEmpty) return ""
-    for (complex <- visible) {
+    for (complex <- complexes) {
       if (!first) {
         sb.append(',')
         if (!isCompressed) {
           // dart-sass `visitSelectorList`: if the complex selector is marked
           // with `lineBreak`, break the line and re-indent; otherwise emit a
-          // single separating space (`_writeOptionalSpace`). The current
-          // evaluator pipeline doesn't propagate `lineBreak` yet, so in
-          // practice we take the space branch — matching the authored
-          // selector in the common case.
+          // single separating space (`_writeOptionalSpace`).
           if (complex.lineBreak) {
             sb.append('\n')
             var i = 0
@@ -1394,7 +1594,6 @@ final class SerializeVisitor(
       first = false
       writeComplexSelectorTo(sb, complex)
     }
-    sb.toString()
   }
 
   private def writeComplexSelectorTo(sb: StringBuilder, complex: ComplexSelector): Unit = {
@@ -1451,12 +1650,17 @@ final class SerializeVisitor(
       simple match {
         case pseudo: ssg.sass.ast.selector.PseudoSelector if pseudo.selector.isDefined =>
           val innerSel = pseudo.selector.get
-          // dart-sass: `:not(%a)` is semantically identical to `*` — skip it.
+          // dart-sass visitPseudoSelector (serialize.dart:1637-1643):
+          // `:not(%a)` is semantically identical to `*` — skip it.
           if (pseudo.name == "not" && innerSel.isInvisible) {
             // Omit the entire :not() pseudo — it matches everything.
           } else {
-            // Filter invisible complex selectors from the inner list.
-            val visibleComplexes = innerSel.components.filterNot(_.isInvisible)
+            // dart-sass visitPseudoSelector (serialize.dart:1645-1656):
+            // Filter invisible complex selectors from the inner list (unless
+            // in inspect mode, per visitSelectorList).
+            val visibleComplexes =
+              if (inspect) innerSel.components
+              else innerSel.components.filterNot(_.isInvisible)
             if (visibleComplexes.isEmpty && pseudo.name != "not") {
               // All inner selectors are invisible — omit the pseudo entirely.
             } else {
@@ -1465,21 +1669,22 @@ final class SerializeVisitor(
               sb.append('(')
               pseudo.argument.foreach { arg =>
                 sb.append(arg)
-                if (visibleComplexes.nonEmpty) sb.append(' ')
+                if (pseudo.selector.isDefined) sb.append(' ')
               }
-              // Write the filtered selector list.
-              var first = true
-              for (complex <- visibleComplexes) {
-                if (!first) sb.append(", ")
-                first = false
-                writeComplexSelectorTo(sb, complex)
-              }
+              // dart-sass visitPseudoSelector calls visitSelectorList for
+              // proper formatting with line-break handling (serialize.dart:1655).
+              writeSelectorListTo(sb, visibleComplexes)
               sb.append(')')
             }
           }
         case _: ssg.sass.ast.selector.PlaceholderSelector =>
           // Placeholders are invisible — skip in non-inspect mode.
           if (inspect) sb.append(simple.toString)
+        case attr: ssg.sass.ast.selector.AttributeSelector =>
+          // dart-sass visitAttributeSelector (serialize.dart:1532-1551):
+          // uses Parser.isIdentifier to check if the value needs quoting,
+          // handles `--` prefix, and uses _visitQuotedString for the value.
+          writeAttributeSelectorTo(sb, attr)
         case _ =>
           sb.append(simple.toString)
       }
@@ -1487,6 +1692,38 @@ final class SerializeVisitor(
     // dart-sass: if we emit an empty compound, it's because all components got
     // optimized out because they match all selectors, so we emit `*`.
     if (sb.length == start) sb.append('*')
+  }
+
+  /** Writes an attribute selector to [sb] matching dart-sass
+    * `visitAttributeSelector` (serialize.dart:1532-1551).
+    *
+    * Uses `Parser.isIdentifier` to decide whether the value can be emitted
+    * bare or needs quoting via `visitQuotedString`. Values starting with `--`
+    * are always quoted for IE11 compatibility.
+    */
+  private def writeAttributeSelectorTo(sb: StringBuilder, attribute: ssg.sass.ast.selector.AttributeSelector): Unit = {
+    sb.append('[')
+    sb.append(attribute.name.toString)
+    if (attribute.value.isDefined) {
+      val value = attribute.value.get
+      sb.append(attribute.op.get.text)
+      if (ssg.sass.parse.Parser.isIdentifier(value) &&
+          // Emit identifiers that start with `--` with quotes, because IE11
+          // doesn't consider them to be valid identifiers.
+          !value.startsWith("--")) {
+        sb.append(value)
+        if (attribute.modifier.isDefined) sb.append(' ')
+      } else {
+        sb.append(visitQuotedString(value))
+        if (attribute.modifier.isDefined) {
+          if (!isCompressed) sb.append(' ')
+        }
+      }
+      attribute.modifier.foreach { m =>
+        sb.append(m)
+      }
+    }
+    sb.append(']')
   }
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
@@ -1519,10 +1756,22 @@ final class SerializeVisitor(
     } else {
       writeSpace()
       recordMapping(node.span)
-      buffer.append(formatValue(node.value.value))
-    }
-    if (node.isImportant) {
-      if (isCompressed) buffer.append("!important") else buffer.append(" !important")
+      // dart-sass serialize.dart:376-398: wraps value serialization in try/catch,
+      // converting SassScriptException (which has no span) to SassException
+      // (with the declaration value's span).
+      try {
+        buffer.append(formatValue(node.value.value))
+      } catch {
+        case error: MultiSpanSassScriptException =>
+          throw MultiSpanSassException(
+            error.sassMessage,
+            node.value.span,
+            error.primaryLabel,
+            error.secondarySpans
+          )
+        case error: SassScriptException =>
+          throw SassException(error.sassMessage, node.value.span)
+      }
     }
   }
 
@@ -1563,8 +1812,10 @@ final class SerializeVisitor(
       // No newlines: emit verbatim.
       buffer.append(text)
     } else if (minIndent < 0) {
-      // Has newlines but no non-empty indented line: trim trailing space.
-      buffer.append(trimRight(text))
+      // Has newlines but no non-empty indented line: trim trailing space,
+      // but preserve trailing escape sequences (dart-sass uses
+      // `trimAsciiRight(value, excludeEscape: true)`).
+      buffer.append(trimRight(text, excludeEscape = true))
       buffer.append(' ')
     } else {
       val nameCol = if (nameSpan != null) nameSpan.start.column else 0
@@ -1615,12 +1866,26 @@ final class SerializeVisitor(
     if (!saw) -1 else min
   }
 
-  private def trimRight(s: String): String = {
+  /** Like `String.trimRight`, but only trims ASCII whitespace.
+    *
+    * If `excludeEscape` is `true`, this doesn't trim whitespace included in a CSS
+    * escape (i.e. if the last non-whitespace character is a backslash, the
+    * immediately following whitespace character is preserved as part of the
+    * escape sequence). Ported from dart-sass `trimAsciiRight` / `_lastNonWhitespace`
+    * in utils.dart.
+    */
+  private def trimRight(s: String, excludeEscape: Boolean): String = {
     var end = s.length
     while (end > 0 && {
       val c = s.charAt(end - 1)
       c == ' ' || c == '\t' || c == '\n' || c == '\r'
     }) end -= 1
+    // dart-sass _lastNonWhitespace: if excludeEscape is true and the last
+    // non-whitespace char is a backslash (not at position 0 or s.length-1),
+    // include one trailing whitespace char as part of the escape sequence.
+    if (excludeEscape && end > 0 && end < s.length && end > 1 && s.charAt(end - 1) == '\\') {
+      end += 1
+    }
     s.substring(0, end)
   }
 
@@ -1773,7 +2038,7 @@ final class SerializeVisitor(
       for (cond <- query.conditions) {
         if (!firstCond) buffer.append(sep)
         firstCond = false
-        buffer.append(CssMediaQuery.normalizeCondition(cond))
+        buffer.append(cond)
       }
     }
   }
@@ -1801,7 +2066,7 @@ final class SerializeVisitor(
     writeImportUrl(node.url.value)
     node.modifiers.foreach { m =>
       writeSpace()
-      buffer.append(CssMediaQuery.normalizeMediaFeatures(m.value))
+      buffer.append(m.value)
     }
   }
 
@@ -1825,14 +2090,14 @@ final class SerializeVisitor(
       buffer.append(urlContents)
     } else {
       // If the URL didn't contain quotes, write them manually.
-      buffer.append('"')
-      buffer.append(urlContents)
-      buffer.append('"')
+      // dart-sass uses _visitQuotedString to properly escape special characters.
+      buffer.append(visitQuotedString(urlContents))
     }
   }
 
   override def visitCssKeyframeBlock(node: CssKeyframeBlock): Unit = {
-    buffer.append(node.selector.value.mkString(", "))
+    // dart-sass serialize.dart:296-302: uses _commaSeparator (`, ` expanded, `,` compressed)
+    buffer.append(node.selector.value.mkString(commaSeparator))
     writeSpace()
     writeChildrenIn(node, node.children)
   }
@@ -1859,8 +2124,8 @@ object SerializeVisitor {
     *
     * Ported from dart-sass `serializeValue` in serialize.dart.
     */
-  def serializeValue(value: Value, inspect: Boolean = false): String = {
-    val visitor = new SerializeVisitor(inspect = inspect)
+  def serializeValue(value: Value, inspect: Boolean = false, quote: Boolean = true): String = {
+    val visitor = new SerializeVisitor(inspect = inspect, quote = quote)
     visitor.formatValuePublic(value)
   }
 

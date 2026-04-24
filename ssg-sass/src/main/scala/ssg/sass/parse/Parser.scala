@@ -197,6 +197,8 @@ abstract class Parser protected (
     * (U+0000–U+001F, U+007F) and leading digits are re-encoded as `\hex ` with a trailing space. All other non-name codepoints are returned as `\<char>`.
     */
   protected def escape(identifierStart: Boolean = false): String = {
+    // See https://drafts.csswg.org/css-syntax-3/#consume-escaped-code-point.
+    val start = scanner.position
     scanner.expectChar(CharCode.$backslash)
     val first = scanner.peekChar()
     if (first < 0) scanner.error("Expected escape sequence.")
@@ -211,16 +213,21 @@ abstract class Parser protected (
         i += 1
       }
       scanCharIf(c => c >= 0 && CharCode.isWhitespace(c))
-
-      if (value == 0 || (value >= 0xd800 && value <= 0xdfff) || value > 0x10ffff) {
-        value = 0xfffd
-      }
+      // Note: unlike escapeCharacter(), escape() does NOT replace value 0,
+      // surrogates, or too-high codepoints with U+FFFD. Instead, value 0 falls
+      // through to the control-character re-encoding branch below, and invalid
+      // code points trigger an error via the Character.toChars RangeError path.
     } else {
       value = scanner.readChar()
     }
 
     if (if (identifierStart) CharCode.isNameStart(value) else CharCode.isName(value)) {
-      new String(Character.toChars(value))
+      try {
+        new String(Character.toChars(value))
+      } catch {
+        case _: IllegalArgumentException =>
+          scanner.error("Invalid Unicode code point.", start, scanner.position - start)
+      }
     } else if (value <= 0x1f || value == 0x7f || (identifierStart && CharCode.isDigit(value))) {
       // Re-encode control characters as \hex with trailing space
       val sb = new StringBuilder()
