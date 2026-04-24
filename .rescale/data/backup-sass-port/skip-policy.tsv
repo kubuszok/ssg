@@ -44,12 +44,3 @@ ssg-md/src/main/scala/ssg/md/html/AttributeProvider.scala	shortcuts	Domain term:
 ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumRefTextCollectingVisitor.scala	shortcuts	Domain term: ordinal placeholder/substitution marker in enumerated references	2026-04-10	dev
 ssg-md/src/main/scala/ssg/md/ext/enumerated/reference/internal/EnumeratedReferenceNodeRenderer.scala	shortcuts	Domain term: ordinal placeholder/substitution marker in enumerated references	2026-04-10	dev
 ssg-md/src/main/scala/ssg/md/formatter/internal/CoreNodeFormatter.scala	shortcuts	Domain term: placeholder refers to translation placeholder, plus null at Java interop	2026-04-10	dev
-ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/ast/selector/SimpleSelector.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/Compile.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	shortcuts	(no reason)	2026-04-18	dev
-ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	shortcuts	(no reason)	2026-04-24	dev

@@ -126,8 +126,17 @@ class SelectorParser(
 
   private def readIdentifier(): String = {
     val sb = new StringBuilder()
+    // First character must be a name-start char (letter, _, -, non-ASCII) or
+    // an escape sequence — digits are NOT valid identifier-start characters.
+    if (!isDone() && peek() == '\\') {
+      sb.append(readEscape(identifierStart = true))
+    } else if (!isDone() && isNameStart(peek())) {
+      sb.append(read())
+    } else {
+      return "" // no valid identifier start found
+    }
     while (!isDone() && (isName(peek()) || peek() == '\\'))
-      if (peek() == '\\') sb.append(readEscape(identifierStart = sb.isEmpty))
+      if (peek() == '\\') sb.append(readEscape(identifierStart = false))
       else sb.append(read())
     sb.toString()
   }
@@ -297,6 +306,10 @@ class SelectorParser(
       }
     }
     val _ = first
+    // dart-sass selector.dart:190: trailing combinators are rejected in plain CSS.
+    if (components.nonEmpty && components.last.combinators.nonEmpty && _plainCss) {
+      fail("expected selector.")
+    }
     if (leading.isEmpty && components.isEmpty) fail("Expected selector.")
     new ComplexSelector(leading.toList, components.toList, syntheticSp, lineBreak = lineBreak)
   }
@@ -319,12 +332,17 @@ class SelectorParser(
 
   def parseCompoundSelector(): CompoundSelector = {
     val simples      = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
+    // dart-sass selector.dart:220: first simple uses default allowParent;
+    // subsequent simples in _plainCss mode allow parent (CSS Nesting).
+    var isFirst      = true
     var continueLoop = true
     while (continueLoop) {
       val c = peek()
       if (c < 0) continueLoop = false
       else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\' || c == '|') {
-        simples += parseSimpleSelector()
+        val allowParentOverride = if (!isFirst && _plainCss) Some(true) else None
+        simples += parseSimpleSelector(allowParentOverride)
+        isFirst = false
       } else {
         continueLoop = false
       }
@@ -333,7 +351,7 @@ class SelectorParser(
     new CompoundSelector(simples.toList, syntheticSp)
   }
 
-  def parseSimpleSelector(): SimpleSelector = {
+  def parseSimpleSelector(allowParentOverride: Option[Boolean] = None): SimpleSelector = {
     val c = peek()
     c match {
       case '*' =>
@@ -353,7 +371,8 @@ class SelectorParser(
           new UniversalSelector(syntheticSp)
         }
       case '&' =>
-        if (!_allowParent) {
+        val effectiveAllowParent = allowParentOverride.getOrElse(_allowParent)
+        if (!effectiveAllowParent) {
           fail("Parent selectors aren't allowed here.")
         }
         pos += 1
@@ -364,6 +383,10 @@ class SelectorParser(
           else sufBuf.append(read())
         val suffix: Nullable[String] =
           if (sufBuf.isEmpty) Nullable.Null else Nullable(sufBuf.toString)
+        // dart-sass selector.dart:384: parent selectors can't have suffixes in plain CSS.
+        if (_plainCss && suffix.isDefined) {
+          fail("Parent selectors can't have suffixes in plain CSS.")
+        }
         new ParentSelector(syntheticSp, suffix)
       case '#' =>
         pos += 1
@@ -379,6 +402,10 @@ class SelectorParser(
         pos += 1
         val name = readIdentifier()
         if (name.isEmpty) fail("Expected identifier after '%'")
+        // `%name` selectors aren't allowed in plain CSS (dart-sass selector.dart:242).
+        if (_plainCss) {
+          fail("Placeholder selectors aren't allowed in plain CSS.")
+        }
         new PlaceholderSelector(name, syntheticSp)
       case '[' =>
         parseAttributeSelector()
@@ -664,21 +691,29 @@ object SelectorParser {
   /** Pseudo-element selectors that take unadorned selectors as arguments. */
   val selectorPseudoElements: Set[String] = Set("slotted")
 
-  /** Parses [text] as a selector list. Returns `Nullable.Null` on parse error. */
-  def tryParse(text: String): Nullable[SelectorList] =
-    try Nullable(new SelectorParser(text).parse())
-    catch {
-      case _: Throwable => Nullable.Null
-    }
-
-  /** Parses [text] as a selector list, propagating [[SassFormatException]] but returning `Nullable.Null` for other failures (e.g. non-standard selectors that our parser cannot handle).
-    *
-    * Used in contexts where selector syntax errors should surface to the user (like style rule evaluation) rather than being silently swallowed.
+  /** Messages produced by plainCss validation checks in the SelectorParser
+    * that should propagate even when parsing is lenient (tryParse).  These
+    * are *intentional* rejections, not "parser can't handle this" failures.
     */
-  def tryParseStrict(text: String): Nullable[SelectorList] =
-    try Nullable(new SelectorParser(text).parse())
+  private val _plainCssValidationMessages: Set[String] = Set(
+    "Placeholder selectors aren't allowed in plain CSS.",
+    "Parent selectors can't have suffixes in plain CSS.",
+    "expected selector.",
+    "Parent selectors aren't allowed here."
+  )
+
+  /** Parses [text] as a selector list. Returns `Nullable.Null` on parse error.
+    *
+    * When [plainCss] is true, the parser enables plain-CSS validation checks.
+    * SassFormatException from those checks (`%name` selectors, parent
+    * selector suffixes, trailing combinators) are re-thrown instead of
+    * swallowed, so the user sees the intended error message.
+    */
+  def tryParse(text: String, plainCss: Boolean = false): Nullable[SelectorList] =
+    try Nullable(new SelectorParser(text, plainCss = plainCss).parse())
     catch {
-      case e: SassFormatException => throw e
-      case _: Throwable           => Nullable.Null
+      case e: SassFormatException if plainCss && _plainCssValidationMessages.contains(e.getMessage) =>
+        throw e
+      case _: Throwable => Nullable.Null
     }
 }

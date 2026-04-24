@@ -134,14 +134,12 @@ class SassParser(
 
   /** Consumes an import argument for the indented syntax.
     *
-    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs in addition to quoted strings and `url(...)` syntax.
+    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs
+    * in addition to quoted strings and `url(...)` syntax.
     *
     * dart-sass sass.dart lines 73-116.
-    *
-    * Note: This will become an `override` when `importArgument` is extracted as a virtual method in StylesheetParser's `_importRule`.
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: will be wired when importArgument is virtual
-  private def _importArgument(): Import = {
+  override protected def importArgument(): Import = {
     val c = scanner.peekChar()
     // url(...) or URL(...)
     if (c == CharCode.$u || c == CharCode.$U) {
@@ -149,7 +147,7 @@ class SassParser(
       if (scanIdentifier("url")) {
         if (scanner.scanChar(CharCode.$lparen)) {
           scanner.state = start
-          return _superImportArgument()
+          return super.importArgument()
         } else {
           scanner.state = start
         }
@@ -157,7 +155,7 @@ class SassParser(
     }
     // Quoted string
     if (c == CharCode.$single_quote || c == CharCode.$double_quote) {
-      return _superImportArgument()
+      return super.importArgument()
     }
 
     // Bare URL — consume until comma, semicolon, or newline
@@ -175,7 +173,7 @@ class SassParser(
     val url  = scanner.substring(start.position)
     val span = spanFrom(start)
 
-    if (_isPlainImportUrl(url)) {
+    if (isPlainImportUrl(url)) {
       // Serialize [url] as a Sass string because [StaticImport] expects it to
       // include quotes.
       StaticImport(
@@ -184,103 +182,12 @@ class SassParser(
       )
     } else {
       try
-        DynamicImport(_parseImportUrl(url), span)
+        DynamicImport(parseImportUrl(url), span)
       catch {
         case e: Exception =>
           error(s"Invalid URL: ${e.getMessage}", span)
       }
     }
-  }
-
-  /** Delegate to the SCSS-style import argument parsing in StylesheetParser.
-    *
-    * Since `importArgument` is not a virtual method in StylesheetParser (import parsing is inlined in `_atRule`), this re-implements the quoted-string / `url()` path that SCSS uses.
-    */
-  private def _superImportArgument(): Import = {
-    val importStart = scanner.state
-    val c           = scanner.peekChar()
-    if (c == CharCode.$u || c == CharCode.$U) {
-      // url(...) syntax
-      val urlText   = _consumeImportUrlForSass()
-      val urlInterp = Interpolation.plain(urlText, spanFrom(importStart))
-      StaticImport(urlInterp, spanFrom(importStart))
-    } else {
-      // Quoted string
-      val url        = string()
-      val isPlainCss = url.endsWith(".css") || url.startsWith("http://") ||
-        url.startsWith("https://") || url.startsWith("//")
-      if (isPlainCss) {
-        val urlInterp = Interpolation.plain(s"\"$url\"", spanFrom(importStart))
-        StaticImport(urlInterp, spanFrom(importStart))
-      } else {
-        DynamicImport(url, spanFrom(importStart))
-      }
-    }
-  }
-
-  /** Consumes a `url(...)` token. Returns the full text including `url(` and `)`. */
-  private def _consumeImportUrlForSass(): String = {
-    val buf   = new StringBuilder()
-    val ident = identifier()
-    if (!ident.equalsIgnoreCase("url")) scanner.error("Expected 'url'.")
-    buf.append(ident)
-    scanner.expectChar(CharCode.$lparen)
-    buf.append('(')
-    whitespace(consumeNewlines = false)
-    val c = scanner.peekChar()
-    if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
-      buf.append(c.toChar)
-      scanner.readChar()
-      while (!scanner.isDone && scanner.peekChar() != c)
-        if (scanner.peekChar() == CharCode.$backslash) {
-          buf.append(scanner.readChar().toChar)
-          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
-        } else {
-          buf.append(scanner.readChar().toChar)
-        }
-      if (!scanner.isDone) buf.append(scanner.readChar().toChar)
-    } else {
-      var urlDone = false
-      while (!scanner.isDone && !urlDone) {
-        val ch = scanner.peekChar()
-        if (ch == CharCode.$rparen || CharCode.isWhitespace(ch)) {
-          urlDone = true
-        } else if (ch == CharCode.$backslash) {
-          buf.append(scanner.readChar().toChar)
-          if (!scanner.isDone) buf.append(scanner.readChar().toChar)
-        } else {
-          buf.append(scanner.readChar().toChar)
-        }
-      }
-    }
-    whitespace(consumeNewlines = false)
-    scanner.expectChar(CharCode.$rparen)
-    buf.append(')')
-    buf.toString()
-  }
-
-  /** Returns whether [url] indicates that an `@import` is a plain CSS import.
-    *
-    * dart-sass: `isPlainImportUrl` (stylesheet.dart:1267-1276).
-    */
-  private def _isPlainImportUrl(url: String): Boolean = {
-    if (url.length < 5) return false
-    if (url.endsWith(".css")) return true
-    val c0 = url.charAt(0).toInt
-    if (c0 == CharCode.$slash) return url.length > 1 && url.charAt(1).toInt == CharCode.$slash
-    if (c0 == CharCode.$h) return url.startsWith("http://") || url.startsWith("https://")
-    false
-  }
-
-  /** Parses [url] as an import URL.
-    *
-    * dart-sass: `parseImportUrl` (stylesheet.dart:1252-1263).
-    */
-  private def _parseImportUrl(url: String): String = {
-    // Backwards-compatibility for implementations that allow absolute Windows
-    // paths in imports. Validates the URL string as a URI.
-    val _ = java.net.URI.create(url)
-    url
   }
 
   // ---------------------------------------------------------------------------

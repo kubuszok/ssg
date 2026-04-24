@@ -381,8 +381,11 @@ abstract class Value {
   /** Returns this value without any slash. Default: returns this. */
   def withoutSlash: Value = this
 
-  /** Returns the CSS string representation. */
+  /** Returns the CSS string representation.
+    *
+    * Ported from dart-sass `Value.toCssString` (value.dart:430):
+    * delegates to `serializeValue(this, quote: quote)`.
+    */
   def toCssString(quote: Boolean = true): String =
-    // Default: use the serializer. Currently, use toString as fallback.
-    toString
+    ssg.sass.visitor.SerializeVisitor.serializeValue(this, quote = quote)
 }

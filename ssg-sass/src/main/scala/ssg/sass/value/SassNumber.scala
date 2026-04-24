@@ -567,16 +567,10 @@ abstract class SassNumber protected (
   }
 
   // dart-sass: toCssString delegates to the full serializer which handles
-  // asSlash, non-finite values, and complex units.  Until we wire up
-  // serializeValue() here, reproduce the asSlash handling from
-  // serialize.dart:visitNumber lines 1108-1112.
-  override def toCssString(quote: Boolean = true): String = {
-    if (asSlash.isDefined) {
-      val (before, after) = asSlash.get
-      return s"${before.toCssString(quote)}/${after.toCssString(quote)}"
-    }
-    toString
-  }
+  // asSlash, non-finite values, and complex units.  Value.toCssString calls
+  // serializeValue(this) which dispatches to formatSassNumber, faithfully
+  // porting dart-sass visitNumber (serialize.dart:1108-1112).
+  // No override needed — the base Value.toCssString correctly delegates.
 
   override def toString: String = {
     val sb = new StringBuilder()

@@ -7,23 +7,25 @@ package sass
 
 final class CompileDebugSuite extends munit.FunSuite {
 
-  test("@debug appends DEBUG: message to warnings") {
+  test("@debug outputs to logger, not to warnings") {
+    // dart-sass: visitDebugRule (evaluate.dart:1363-1370) only calls
+    // _logger.debug — does NOT add to the warnings list.
     val result = Compile.compileString("""@debug "hello world";""")
     assertEquals(result.css, "")
     assert(
-      result.warnings.contains("DEBUG: hello world"),
-      s"warnings=${result.warnings}"
+      !result.warnings.exists(_.contains("DEBUG")),
+      s"@debug should not appear in warnings, got: ${result.warnings}"
     )
   }
 
-  test("@debug evaluates an expression (variable + arithmetic)") {
+  test("@debug evaluates an expression (variable + arithmetic) without adding to warnings") {
     val result = Compile.compileString(
       """$x: 2;
         |@debug $x + 3;""".stripMargin
     )
     assert(
-      result.warnings.contains("DEBUG: 5"),
-      s"warnings=${result.warnings}"
+      !result.warnings.exists(_.contains("DEBUG")),
+      s"@debug should not appear in warnings, got: ${result.warnings}"
     )
   }
 

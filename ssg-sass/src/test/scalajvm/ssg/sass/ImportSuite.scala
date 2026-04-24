@@ -63,14 +63,17 @@ final class ImportSuite extends munit.FunSuite {
     assert(result.css.contains(".box"))
   }
 
-  tempDir.test("unresolved @import is silently skipped") { dir =>
+  tempDir.test("unresolved @import raises error (matches dart-sass)") { dir =>
     val source   = """
       @import "nonexistent";
       a { color: red; }
     """
     val importer = new FilesystemImporter(dir.toString)
-    val result   = Compile.compileString(source, importer = Nullable(importer))
-    assert(result.css.contains("color: red"))
+    // dart-sass: unresolved @import throws "Can't find stylesheet to import."
+    val ex = intercept[SassException] {
+      Compile.compileString(source, importer = Nullable(importer))
+    }
+    assert(ex.getMessage.contains("Can't find stylesheet to import"), s"Unexpected message: ${ex.getMessage}")
   }
 
   tempDir.test("imported variables are visible to caller") { dir =>

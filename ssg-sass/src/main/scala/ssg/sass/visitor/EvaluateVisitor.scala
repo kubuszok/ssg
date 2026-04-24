@@ -49,7 +49,7 @@ import ssg.sass.ast.css.{
   ModifiableCssStylesheet,
   ModifiableCssSupportsRule
 }
-import ssg.sass.util.{ FileSpan, ModifiableBox }
+import ssg.sass.util.ModifiableBox
 import ssg.sass.ast.sass.{
   AtRootRule,
   AtRule,
@@ -123,10 +123,10 @@ import ssg.sass.ast.sass.{
 }
 import ssg.sass.value.{ SassBoolean, SassList, SassMap, SassNull, SassNumber, SassString, Value }
 import ssg.sass.{ BuiltInCallable, Callable, Configuration, ConfiguredValue, Environment, ExplicitConfiguration, ImportCache, Logger, Module, Nullable, PlainCssCallable, SassException, SassScriptException, UserDefinedCallable }
-import ssg.sass.extend.{ ExtendMode, Extension, ExtensionStore, ExtendUtils, MutableExtensionStore }
+import ssg.sass.extend.{ Extension, ExtensionStore }
 import ssg.sass.importer.Importer
-import ssg.sass.parse.SelectorParser
-import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, QualifiedName, SelectorList, TypeSelector }
+import ssg.sass.parse.{ KeyframeSelectorParser, SelectorParser }
+import ssg.sass.ast.selector.SelectorList
 
 /** Result of evaluating a Sass stylesheet — a CSS AST plus the set of URLs that were loaded during evaluation.
   */
@@ -451,10 +451,8 @@ final class EvaluateVisitor(
       SassNull
     })
 
-  /** Stack of canonical URLs currently being loaded, used to detect `@import`/`@use`/`@forward` cycles within a single compilation.
-    */
-  private val _activeImports: scala.collection.mutable.LinkedHashSet[String] =
-    scala.collection.mutable.LinkedHashSet.empty
+  // Note: cycle detection for @import is now handled by _activeModules
+  // (which was already used for @use/@forward cycle detection).
 
   /** The root modifiable CSS stylesheet currently being built. Set at the start of [[run]] and used as the initial value of [[_parent]].
     */
@@ -471,51 +469,10 @@ final class EvaluateVisitor(
     */
   private var _endOfImports: Int = 0
 
-  /** AST-level extension store keyed by media context. The `null` key holds extensions declared outside any `@media` block. Each media rule gets its own store so extensions declared inside `@media`
-    * only apply to rules in the same media block.
-    */
-  private val _mediaExtensionStores: scala.collection.mutable.LinkedHashMap[
-    ModifiableCssMediaRule | Null,
-    MutableExtensionStore
-  ] = {
-    val m = scala.collection.mutable.LinkedHashMap.empty[ModifiableCssMediaRule | Null, MutableExtensionStore]
-    m.put(null, new MutableExtensionStore(ExtendMode.Normal))
-    m
-  }
-
-  /** Legacy textual extend map, keyed by the same media-scope identity used by `_mediaExtensionStores`.
-    */
-  private val _mediaLegacyExtends: scala.collection.mutable.LinkedHashMap[
-    ModifiableCssMediaRule | Null,
-    scala.collection.mutable.LinkedHashMap[String, scala.collection.mutable.ListBuffer[String]]
-  ] = scala.collection.mutable.LinkedHashMap.empty
-
-  /** An `@extend` whose target must be matched somewhere in the same media scope, unless it is marked `!optional`. Populated by [[visitExtendRule]] and validated at the end of [[_applyExtends]].
-    */
-  final private case class PendingExtend(
-    targetText: String,
-    target:     Nullable[ssg.sass.ast.selector.SimpleSelector],
-    isOptional: Boolean,
-    span:       ssg.sass.util.FileSpan,
-    mediaKey:   ModifiableCssMediaRule | Null,
-    var found:  Boolean
-  )
-
-  private val _pendingExtends: scala.collection.mutable.ListBuffer[PendingExtend] =
-    scala.collection.mutable.ListBuffer.empty
-
-  /** Warnings produced during evaluation. Currently populated by the extend subsystem and surfaced through [[EvaluateResult.warnings]].
+  /** Warnings produced during evaluation. Surfaced through [[EvaluateResult.warnings]].
     */
   private val _warnings: scala.collection.mutable.ListBuffer[String] =
     scala.collection.mutable.ListBuffer.empty
-
-  /** Side map from a style rule to the underlying ModifiableBox that holds its selector. Used by `_applyExtends` to mutate selectors in place, since Box itself is unmodifiable.
-    */
-  @annotation.nowarn("msg=unused") // retained for _applyExtends legacy path
-  private val _selectorBoxes: scala.collection.mutable.LinkedHashMap[
-    ModifiableCssStyleRule,
-    ModifiableBox[SelectorList]
-  ] = scala.collection.mutable.LinkedHashMap.empty
 
   // ---------------------------------------------------------------------------
   // Public entry points
@@ -526,9 +483,8 @@ final class EvaluateVisitor(
     * The entrypoint sets up top-level state and calls `visitStylesheet`
     * directly (like the pre-module era). `@use`/`@forward` within the
     * stylesheet call `_loadModule` -> `_execute` to load child modules.
-    * After the tree walk, `_applyExtends` handles selector rewriting
-    * for the legacy path, and `_combineCss` will be wired in later
-    * for full module-CSS merging.
+    * After the tree walk, `_combineCss` merges all upstream modules' CSS
+    * and applies cross-module `@extend` via `_extendModules`.
     */
   def run(stylesheet: Stylesheet): EvaluateResult = {
     val url = stylesheet.span.sourceUrl.toString
@@ -542,7 +498,11 @@ final class EvaluateVisitor(
       Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeCallable(c, pos, named))
     )
     val savedMixinInv = ssg.sass.CurrentMixinInvoker.set(
-      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeMixinCallable(c, pos, named, Nullable.empty))
+      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) =>
+        // dart-sass: meta.apply reads _environment.content so that the @content
+        // block from the @include site is forwarded to the inner mixin.
+        _invokeMixinCallable(c, pos, named, _environment.content)
+      )
     )
     try
       ssg.sass.EvaluationContext.withContext(this) {
@@ -553,16 +513,22 @@ final class EvaluateVisitor(
             _warnings += s"DEPRECATION WARNING [${d.id}]: ${ptw.message}"
           }
         // dart-sass run():
-        //   var module = _execute(importer, node);
+        //   var module = _addExceptionTrace(() => _execute(importer, node));
         //   result = (stylesheet: _combineCss(module), loadedUrls: _loadedUrls);
         //
         // _execute evaluates the stylesheet into a Module, building its own
         // CSS tree and extension store. _combineCss then topologically merges
         // all upstream modules' CSS and applies cross-module @extend via
         // _extendModules.
-        val module = _execute(_importer, stylesheet)
-        val out = _combineCss(module)
-        EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
+        try {
+          val module = _addExceptionTrace(_execute(_importer, stylesheet))
+          val out = _combineCss(module)
+          EvaluateResult(out, _loadedUrls.toSet, _warnings.toList)
+        } catch {
+          // dart-sass evaluate.dart:728-730: rethrow with loadedUrls
+          case error: SassException =>
+            throw error.withLoadedUrls(_loadedUrls.toSet)
+        }
       }
     finally {
       val _ = ssg.sass.CurrentEnvironment.set(savedCur)
@@ -1030,38 +996,6 @@ final class EvaluateVisitor(
     } // boundary
   }
 
-  /// Modules whose CSS has already been injected into the root stylesheet.
-  /// Used by _injectModuleCss to prevent duplicate CSS output when the same
-  /// module is @use'd from multiple files.
-  @annotation.nowarn("msg=unused") // retained for @import legacy path
-  private val _injectedModuleCss: scala.collection.mutable.Set[Module[Callable]] =
-    scala.collection.mutable.Set.empty
-
-  /// Injects all CSS from [module] and its transitive upstream modules into
-  /// [rootNode]. Uses a global visited set so each module's CSS is injected
-  /// exactly once, preventing duplication when a module is @use'd multiple
-  /// times.
-  @annotation.nowarn("msg=unused") // retained for @import legacy path
-  private def _injectModuleCss(module: Module[Callable], rootNode: ModifiableCssStylesheet): Unit = {
-    def visit(mod: Module[Callable]): Unit = {
-      if (!_injectedModuleCss.add(mod)) () // already processed
-      else {
-        // Visit upstream first (depth-first, same order as _combineCss).
-        for (upstream <- mod.upstream) {
-          if (upstream.transitivelyContainsCss) visit(upstream)
-        }
-        // Then inject this module's own CSS.
-        for (child <- mod.css.children) {
-          child match {
-            case mn: ModifiableCssNode => rootNode.addChild(mn)
-            case _ => ()
-          }
-        }
-      }
-    }
-    visit(module)
-  }
-
   /// Updates [configuration] to include [node]'s configuration and returns the
   /// result.
   ///
@@ -1144,7 +1078,9 @@ final class EvaluateVisitor(
         val merged =
           if (named.isEmpty) positional
           else _mergeBuiltInNamedArgs(bic, positional, named)
-        bic.callback(_padBuiltInPositional(bic, merged))
+        val padded0 = _padBuiltInPositional(bic, merged)
+        val (padded, _) = _collectBuiltInRestArgs(bic, padded0, named)
+        bic.callback(padded)
       case ud: UserDefinedCallable[?] =>
         ud.declaration match {
           case fr: ssg.sass.ast.sass.FunctionRule =>
@@ -1209,27 +1145,37 @@ final class EvaluateVisitor(
   // ExpressionVisitor
   // ===========================================================================
 
-  override def visitBinaryOperationExpression(node: BinaryOperationExpression): Value = try {
-    val left = node.left.accept(this)
-    node.operator match {
-      case BinaryOperator.SingleEquals        => left.singleEquals(node.right.accept(this))
-      case BinaryOperator.Or                  => if (left.isTruthy) left else node.right.accept(this)
-      case BinaryOperator.And                 => if (left.isTruthy) node.right.accept(this) else left
-      case BinaryOperator.Equals              => SassBoolean(left == node.right.accept(this))
-      case BinaryOperator.NotEquals           => SassBoolean(left != node.right.accept(this))
-      case BinaryOperator.GreaterThan         => left.greaterThan(node.right.accept(this))
-      case BinaryOperator.GreaterThanOrEquals => left.greaterThanOrEquals(node.right.accept(this))
-      case BinaryOperator.LessThan            => left.lessThan(node.right.accept(this))
-      case BinaryOperator.LessThanOrEquals    => left.lessThanOrEquals(node.right.accept(this))
-      case BinaryOperator.Plus                => left.plus(node.right.accept(this))
-      case BinaryOperator.Minus               => left.minus(node.right.accept(this))
-      case BinaryOperator.Times               => left.times(node.right.accept(this))
-      case BinaryOperator.DividedBy           =>
-        _slash(left, node.right.accept(this), node)
-      case BinaryOperator.Modulo => left.modulo(node.right.accept(this))
+  override def visitBinaryOperationExpression(node: BinaryOperationExpression): Value = {
+    // dart-sass evaluate.dart:2769-2776: reject non-= non-/ operators in plain CSS
+    if (_stylesheet.exists(_.plainCss) &&
+        node.operator != BinaryOperator.SingleEquals &&
+        node.operator != BinaryOperator.DividedBy) {
+      throw _exception(
+        "Operators aren't allowed in plain CSS.",
+        Nullable(node.operatorSpan)
+      )
     }
-  } catch {
-    case e: SassScriptException => throw e.withSpan(node.span)
+
+    _addExceptionSpan(node, {
+      val left = node.left.accept(this)
+      node.operator match {
+        case BinaryOperator.SingleEquals        => left.singleEquals(node.right.accept(this))
+        case BinaryOperator.Or                  => if (left.isTruthy) left else node.right.accept(this)
+        case BinaryOperator.And                 => if (left.isTruthy) node.right.accept(this) else left
+        case BinaryOperator.Equals              => SassBoolean(left == node.right.accept(this))
+        case BinaryOperator.NotEquals           => SassBoolean(left != node.right.accept(this))
+        case BinaryOperator.GreaterThan         => left.greaterThan(node.right.accept(this))
+        case BinaryOperator.GreaterThanOrEquals => left.greaterThanOrEquals(node.right.accept(this))
+        case BinaryOperator.LessThan            => left.lessThan(node.right.accept(this))
+        case BinaryOperator.LessThanOrEquals    => left.lessThanOrEquals(node.right.accept(this))
+        case BinaryOperator.Plus                => left.plus(node.right.accept(this))
+        case BinaryOperator.Minus               => left.minus(node.right.accept(this))
+        case BinaryOperator.Times               => left.times(node.right.accept(this))
+        case BinaryOperator.DividedBy           =>
+          _slash(left, node.right.accept(this), node)
+        case BinaryOperator.Modulo => left.modulo(node.right.accept(this))
+      }
+    })
   }
 
   override def visitBooleanExpression(node: BooleanExpression): Value =
@@ -1289,7 +1235,11 @@ final class EvaluateVisitor(
           case _ => ()
         }
       }
-      callable.fold[Value] {
+      // dart-sass (evaluate.dart:3092-3098): set _inFunction around the
+      // entire function call dispatch (including built-ins).
+      val oldInFunction = _inFunction
+      _inFunction = true
+      val fnResult = try callable.fold[Value] {
         // dart-sass: when a namespaced function is not found, throw
         // "Undefined function." rather than falling through to plain CSS.
         // (evaluate.dart:3051-3054)
@@ -1334,6 +1284,8 @@ final class EvaluateVisitor(
             val merged              =
               if (named.isEmpty) positional
               else _mergeBuiltInNamedArgs(bic, positional, named)
+            val padded0 = _padBuiltInPositional(bic, merged)
+            val (padded, _) = _collectBuiltInRestArgs(bic, padded0, named)
             // dart-sass: _withoutSlash strips slash-separated info from
             // the result of built-in function calls (async_evaluate.dart:3609).
             // dart-sass: wrap built-in invocations with _addExceptionSpan
@@ -1341,7 +1293,7 @@ final class EvaluateVisitor(
             val oldCallableNode = _callableNode
             _callableNode = Nullable(node: ssg.sass.ast.AstNode)
             val bicResult = _addExceptionSpan(node,
-              bic.callback(_padBuiltInPositional(bic, merged))
+              bic.callback(padded)
             ).withoutSlash
             _callableNode = oldCallableNode
             bicResult
@@ -1371,7 +1323,10 @@ final class EvaluateVisitor(
           case other =>
             throw SassScriptException(s"Callable type not yet supported: $other")
         }
+      } finally {
+        _inFunction = oldInFunction
       }
+      fnResult
     }
   catch {
     case e: SassScriptException => throw e.withSpan(node.span)
@@ -1453,13 +1408,15 @@ final class EvaluateVisitor(
 
   override def visitLegacyIfExpression(node: LegacyIfExpression): Value = {
     // Three-argument macro form of `if($condition, $if-true, $if-false)`.
+    // dart-sass uses _evaluateMacroArguments + _withoutSlash to strip slash
+    // info from the result (evaluate.dart:2981-2993).
     val positional = node.arguments.positional
     if (positional.length < 3) {
       throw SassScriptException("Missing arguments to if().")
     }
     val condition = positional(0).accept(this)
-    if (condition.isTruthy) positional(1).accept(this)
-    else positional(2).accept(this)
+    val result = if (condition.isTruthy) positional(1) else positional(2)
+    _withoutSlash(result.accept(this), _expressionNode(result))
   }
 
   override def visitListExpression(node: ListExpression): Value =
@@ -1470,17 +1427,26 @@ final class EvaluateVisitor(
     )
 
   override def visitMapExpression(node: MapExpression): Value = {
+    // dart-sass evaluate.dart:3019-3040: track key nodes for multi-span error
     var map: ListMap[Value, Value] = ListMap.empty
+    val keyNodes = scala.collection.mutable.LinkedHashMap.empty[Value, Expression]
     for ((key, value) <- node.pairs) {
       val keyValue   = key.accept(this)
       val valueValue = value.accept(this)
       if (map.contains(keyValue)) {
-        // Attach a span so this surfaces as a proper SassException rather
-        // than a bare SassScriptException (which the runner reports as
-        // "script-error" because it lacks a source location).
-        throw SassScriptException("Duplicate key.").withSpan(key.span)
+        // dart-sass throws MultiSpanSassRuntimeException with spans for both keys
+        val oldKeySpan = keyNodes.get(keyValue).map(_.span)
+        val secondarySpans = oldKeySpan.map(s => Map(s -> "first key")).getOrElse(Map.empty)
+        throw MultiSpanSassRuntimeException(
+          "Duplicate key.",
+          key.span,
+          "second key",
+          secondarySpans,
+          _stackTrace(Nullable(key.span))
+        )
       }
       map = map.updated(keyValue, valueValue)
+      keyNodes(keyValue) = key
     }
     SassMap(map)
   }
@@ -1491,7 +1457,14 @@ final class EvaluateVisitor(
     node.unit.fold[SassNumber](SassNumber(node.value))(u => SassNumber(node.value, u))
 
   override def visitParenthesizedExpression(node: ParenthesizedExpression): Value =
-    node.expression.accept(this)
+    // dart-sass evaluate.dart:3000-3006: reject parentheses in plain CSS
+    if (_stylesheet.exists(_.plainCss))
+      throw _exception(
+        "Parentheses aren't allowed in plain CSS.",
+        Nullable(node.span)
+      )
+    else
+      node.expression.accept(this)
 
   override def visitSelectorExpression(node: SelectorExpression): Value = {
     // Returns the current enclosing style rule's selector text as an
@@ -1518,7 +1491,7 @@ final class EvaluateVisitor(
           case e: Expression =>
             e.accept(this) match {
               case s: SassString => sb.append(s.text)
-              case other => sb.append(other.toCssString(quote = false))
+              case other => sb.append(_serialize(other, e, quote = false))
             }
           case other =>
             throw new IllegalStateException(s"Unknown interpolation value $other")
@@ -1535,22 +1508,24 @@ final class EvaluateVisitor(
     // Evaluates the condition and returns its CSS text as an unquoted string.
     new SassString(_visitSupportsCondition(node.condition), hasQuotes = false)
 
-  override def visitUnaryOperationExpression(node: UnaryOperationExpression): Value = try {
+  override def visitUnaryOperationExpression(node: UnaryOperationExpression): Value = {
+    // dart-sass evaluate.dart:2880-2892: wrap entire operation in _addExceptionSpan
     val operand = node.operand.accept(this)
-    node.operator match {
-      case UnaryOperator.Plus   => operand.unaryPlus()
-      case UnaryOperator.Minus  => operand.unaryMinus()
-      case UnaryOperator.Divide => operand.unaryDivide()
-      case UnaryOperator.Not    => operand.unaryNot()
-    }
-  } catch {
-    case e: SassScriptException => throw e.withSpan(node.span)
+    _addExceptionSpan(node, {
+      node.operator match {
+        case UnaryOperator.Plus   => operand.unaryPlus()
+        case UnaryOperator.Minus  => operand.unaryMinus()
+        case UnaryOperator.Divide => operand.unaryDivide()
+        case UnaryOperator.Not    => operand.unaryNot()
+      }
+    })
   }
 
   override def visitValueExpression(node: ValueExpression): Value = node.value
 
   override def visitVariableExpression(node: VariableExpression): Value = {
-    val result: Nullable[Value] =
+    // dart-sass evaluate.dart:2871-2878: wrap getVariable in _addExceptionSpan
+    val result: Nullable[Value] = _addExceptionSpan(node, {
       if (node.namespace.isDefined) {
         node.namespace.fold(Nullable.empty[Value]) { ns =>
           _environment.getNamespacedVariable(ns, node.name)
@@ -1558,9 +1533,9 @@ final class EvaluateVisitor(
       } else {
         _environment.getVariable(node.name)
       }
+    })
     result.getOrElse {
-      val qualified = node.namespace.fold(s"$$${node.name}")(ns => s"$ns.$$${node.name}")
-      throw SassException(s"Undefined variable: $qualified.", node.span)
+      throw _exception("Undefined variable.", Nullable(node.span))
     }
   }
 
@@ -1645,6 +1620,7 @@ final class EvaluateVisitor(
     _checkCalculationArguments(node)
 
     val args = node.arguments.positional
+    var converted: List[Any] = Nil
     try {
       def toArg(expr: Expression): Any = expr match {
         case ParenthesizedExpression(inner, _) =>
@@ -1717,7 +1693,7 @@ final class EvaluateVisitor(
               throw SassException(s"Value $result can't be used in a calculation.", node.span)
           }
       }
-      val converted = args.map(toArg)
+      converted = args.map(toArg)
       // dart-sass line 3133: in a @supports declaration, return the
       // calculation unsimplified so calc(1 + 2) stays as-is.
       if (_inSupportsDeclaration) {
@@ -1766,9 +1742,52 @@ final class EvaluateVisitor(
       }
       Nullable(result)
     } catch {
-      case e: SassException            => throw e
-      case _: SassScriptException      => Nullable.empty
+      case e: SassException       => throw e
+      case e: SassScriptException =>
+        // dart-sass async_evaluate.dart:3197-3204: the simplification logic
+        // in SassCalculation static methods throws SassScriptException for
+        // incompatible arguments. Re-throw as SassException with span info.
+        if (e.getMessage != null && e.getMessage.contains("compatible")) {
+          _verifyCalcCompatibleNumbers(converted, args)
+        }
+        throw SassException(e.getMessage, node.span)
       case _: IllegalArgumentException => Nullable.empty
+    }
+  }
+
+  /** Verifies that calculation arguments aren't known to be incompatible,
+    * throwing a multi-span error with source positions when they are.
+    *
+    * Ported from: dart-sass `_verifyCompatibleNumbers` (async_evaluate.dart lines 3259-3293).
+    */
+  private def _verifyCalcCompatibleNumbers(args: List[Any], nodesWithSpans: List[Expression]): Unit = {
+    for (i <- args.indices) {
+      args(i) match {
+        case n: SassNumber if n.hasComplexUnits =>
+          throw SassException(
+            s"Number $n isn't compatible with CSS calculations.",
+            nodesWithSpans(i).span
+          )
+        case _ => ()
+      }
+    }
+    for (i <- args.indices.dropRight(1)) {
+      args(i) match {
+        case number1: SassNumber =>
+          for (j <- (i + 1) until args.length) {
+            args(j) match {
+              case number2: SassNumber =>
+                if (!number1.hasPossiblyCompatibleUnits(number2)) {
+                  throw SassException(
+                    s"$number1 and $number2 are incompatible.",
+                    nodesWithSpans(i).span
+                  )
+                }
+              case _ => ()
+            }
+          }
+        case _ => ()
+      }
     }
   }
 
@@ -1866,31 +1885,69 @@ final class EvaluateVisitor(
     }
   }
 
-  /** Evaluate an [[Interpolation]] to its plain string form, evaluating any embedded expressions and serializing them to CSS.
+  /** Evaluate an [[Interpolation]] to its plain string form, evaluating any
+    * embedded expressions and serializing them to CSS.
+    *
+    * If [[warnForColor]] is `true`, this will emit a warning for any named
+    * color values passed into the interpolation.
+    *
+    * Port of dart-sass `_performInterpolation` (evaluate.dart:4375-4457).
     */
-  private def _performInterpolation(interpolation: Interpolation): String = {
-    val sb = new StringBuilder()
-    var i  = 0
-    while (i < interpolation.contents.length) {
-      interpolation.contents(i) match {
-        case s: String     => sb.append(s)
-        case e: Expression => sb.append(_evaluateToCss(e, quote = false))
-        case other =>
-          throw new IllegalStateException(s"Unknown interpolation value $other")
+  private def _performInterpolation(interpolation: Interpolation, warnForColor: Boolean = false): String = {
+    val oldInSupports = _inSupportsDeclaration
+    _inSupportsDeclaration = false
+    try {
+      val sb = new StringBuilder()
+      var i  = 0
+      while (i < interpolation.contents.length) {
+        interpolation.contents(i) match {
+          case s: String => sb.append(s)
+          case e: Expression =>
+            val result = e.accept(this)
+            if (warnForColor) {
+              result match {
+                case c: ssg.sass.value.SassColor =>
+                  ColorNames.namesByColor.get(c).foreach { colorName =>
+                    _warnWithSpan(
+                      s"You probably don't mean to use the color value " +
+                        s"$colorName in interpolation here.\n" +
+                        s"It may end up represented as $result, which will likely produce " +
+                        "invalid CSS.\n" +
+                        "Always quote color names when using them as strings or map keys " +
+                        s"""(for example, "$colorName").\n""" +
+                        s"""If you really want to use the color value here, use '"" + $${e}'.""",
+                      e.span,
+                      Nullable.empty
+                    )
+                  }
+                case _ => ()
+              }
+            }
+            sb.append(_serialize(result, e, quote = false))
+          case other =>
+            throw new IllegalStateException(s"Unknown interpolation value $other")
+        }
+        i += 1
       }
-      i += 1
-    }
-    sb.toString()
+      sb.toString()
+    } finally
+      _inSupportsDeclaration = oldInSupports
   }
 
-  /** Evaluate [[expression]] and return its CSS string representation. */
-  private def _evaluateToCss(expression: Expression, quote: Boolean = true): String = {
-    val value = expression.accept(this)
-    value match {
-      case s: SassString if !quote => s.text
-      case _ => value.toCssString(quote)
-    }
-  }
+  /** Calls `value.toCssString()` and wraps a [SassScriptException] to associate
+    * it with [nodeWithSpan]'s source span.
+    *
+    * Port of dart-sass `_serialize` (evaluate.dart:4473-4474).
+    */
+  private def _serialize(value: Value, nodeWithSpan: ssg.sass.ast.AstNode, quote: Boolean): String =
+    _addExceptionSpan(nodeWithSpan, value.toCssString(quote))
+
+  /** Evaluate [[expression]] and return its CSS string representation.
+    *
+    * Port of dart-sass `_evaluateToCss` (evaluate.dart:4461-4465).
+    */
+  private def _evaluateToCss(expression: Expression, quote: Boolean = true): String =
+    _serialize(expression.accept(this), expression, quote = quote)
 
   /** ISS-033: warns about configuring a module member whose variable name
     * begins with `-` or `_`, matching dart-sass `_validateConfiguration` in
@@ -2128,7 +2185,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_withoutSlash` (evaluate.dart:4635-4657).
     */
-  @annotation.nowarn("msg=unused private member") // called from _runUserDefinedCallable path (not yet ported)
   private def _withoutSlash(value: ssg.sass.value.Value, nodeForSpan: ssg.sass.ast.AstNode): ssg.sass.value.Value = {
     value match {
       case n: SassNumber if n.asSlash.isDefined =>
@@ -2260,7 +2316,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_addExceptionTrace` (evaluate.dart:4755-4767).
     */
-  @annotation.nowarn("msg=unused private member") // called from _execute path (wired for @use/@forward)
   private def _addExceptionTrace[T](callback: => T): T = {
     try {
       callback
@@ -2359,14 +2414,17 @@ final class EvaluateVisitor(
     val merged =
       if (named.isEmpty) positional
       else _mergeBuiltInNamedArgs(callable, positional, named)
-    val padded = _padBuiltInPositional(callable, merged)
+    val padded0 = _padBuiltInPositional(callable, merged)
 
-    // Build a SassArgumentList if there's a rest parameter, so the
-    // callback can call `wereKeywordsAccessed` to check if all named
-    // args were consumed.
+    // dart-sass: collect extra positional args beyond declared params
+    // into a SassArgumentList (evaluate.dart:3709-3726). This is
+    // essential for rest-parameter built-ins like meta.call($function, $args...)
+    // where the callback expects arguments[1] to be a SassArgumentList.
+    val (padded, remainingNamed) = _collectBuiltInRestArgs(callable, padded0, named)
+
+    // Track the SassArgumentList (if created) for post-call keyword checks.
     var argumentList: Nullable[ssg.sass.value.SassArgumentList] = Nullable.empty
     if (callable.hasRestParameter) {
-      // Find any SassArgumentList in the padded args (from _mergeBuiltInNamedArgs)
       padded.lastOption match {
         case Some(al: ssg.sass.value.SassArgumentList) =>
           argumentList = Nullable(al)
@@ -2388,9 +2446,9 @@ final class EvaluateVisitor(
     // unconsumed (the callback never called `keywords`), raise an error
     // listing the unexpected parameter names.
     argumentList.foreach { al =>
-      if (named.nonEmpty && !al.wereKeywordsAccessed) {
-        val unusedNames = named.keys.map(n => s"$$$n")
-        val word        = Utils.pluralize("parameter", named.size)
+      if (remainingNamed.nonEmpty && !al.wereKeywordsAccessed) {
+        val unusedNames = remainingNamed.keys.map(n => s"$$$n")
+        val word        = Utils.pluralize("parameter", remainingNamed.size)
         throw SassRuntimeException(
           s"No $word named ${Utils.toSentence(unusedNames, "or")}.",
           nodeWithSpan.span,
@@ -2467,112 +2525,116 @@ final class EvaluateVisitor(
         val _ = statement.accept(this)
       }
     }
+
+    // Make sure all global variables declared in a module always appear in the
+    // module's definition, even if their assignments aren't reached.
+    // dart-sass evaluate.dart:1175-1181
+    for ((name, span) <- node.globalVariables) {
+      val _ = visitVariableDeclaration(
+        new VariableDeclaration(name, NullExpression(span), span, isGuarded = true)
+      )
+    }
+
     SassNull
   }
 
   override def visitStyleRule(node: StyleRule): Value = {
-    // Evaluate the selector interpolation. The resolved text is parsed
-    // into an AST-based selector matching the ModifiableCssStyleRule contract.
-    val childSelectorText: String = node.selector.fold(
+    // NOTE: this logic is largely duplicated in [visitCssStyleRule]. Most
+    // changes here should be mirrored there.
+
+    // dart-sass evaluate.dart:2376-2386: guard checks
+    if (_declarationName.isDefined) {
+      throw _exception(
+        "Style rules may not be used within nested declarations.",
+        Nullable(node.span)
+      )
+    } else if (_inKeyframes && _parent.exists(_.isInstanceOf[CssKeyframeBlock])) {
+      throw _exception(
+        "Style rules may not be used within keyframe blocks.",
+        Nullable(node.span)
+      )
+    }
+
+    // dart-sass evaluate.dart:2388-2391: evaluate the selector interpolation
+    val selectorText: String = node.selector.fold(
       node.parsedSelector.fold("")(ps => ps.toString)
     )(interpolation => _performInterpolation(interpolation))
 
-    // Text-based parent (`&`) expansion. When nested inside another style
-    // rule, combine the child selector with the parent's selector text:
-    // for each comma-separated child piece, replace `&` with each parent
-    // piece, or prepend the parent piece + space if `&` is absent. Cross
-    // multiple parent and child commas to flatten the result.
-    // dart-sass: use _styleRuleIgnoringAtRoot for & resolution inside @at-root.
-    // dart-sass: inside @keyframes, style rules don't nest under their parent
-    // selector because keyframe blocks (to, from, 0%, etc.) are standalone.
-    // In dart-sass these are parsed as KeyframeBlock nodes, but our parser
-    // produces StyleRule nodes for them. Skip parent nesting when _inKeyframes.
-    // For plain CSS, skip parent nesting — preserve the selector as-is.
-    val _isPlainCssSelector = _stylesheet.exists(_.plainCss)
-    val parentSelectorRule: Nullable[ModifiableCssStyleRule] =
-      if (_inKeyframes || _isPlainCssSelector) Nullable.empty else _styleRuleIgnoringAtRoot
-    val implicitParent: Boolean = !_atRootExcludingStyleRule && !_inKeyframes && !_isPlainCssSelector
-    val parentText: Nullable[String] =
-      if (implicitParent) _styleRule.fold[Nullable[String]](Nullable.empty)(p => Nullable(p.selector.toString))
-      else Nullable.empty
-    val expandedSelector: String = _expandSelector(childSelectorText, parentText)
-
-    val parsedExpanded: Nullable[SelectorList] = {
-      val childParsed = SelectorParser.tryParse(childSelectorText)
-      val parentParsed: Nullable[SelectorList] = parentSelectorRule.map(_.originalSelector)
-      if (childParsed.isEmpty) SelectorParser.tryParse(expandedSelector)
-      else if (parentParsed.isEmpty) {
-        // dart-sass: when there is no parent, nestWithin validates that the
-        // selector doesn't contain a parent selector with a suffix (`&suffix`).
-        // Bare `&` without suffix is allowed and preserved as-is.
-        // We call nestWithin which performs this check.  SassException from
-        // nestWithin must propagate — it is the intended error.
-        try Nullable(childParsed.get.nestWithin(
-          Nullable.empty,
-          implicitParent = implicitParent,
-          preserveParentSelectors = _isPlainCssSelector
-        ))
-        catch {
-          case e: SassException => throw e
-          case _: Exception     => Nullable(childParsed.get)
-        }
-      } else {
-        try Nullable(childParsed.get.nestWithin(
-          parentParsed,
-          implicitParent = implicitParent,
-          preserveParentSelectors = _isPlainCssSelector
-        ))
-        catch {
-          case e: SassException => throw e
-          case _: Exception     => SelectorParser.tryParse(expandedSelector)
+    if (_inKeyframes) {
+      // NOTE: this logic is largely duplicated in [visitCssKeyframeBlock].
+      // Most changes here should be mirrored there.
+      //
+      // dart-sass evaluate.dart:2393-2416: inside @keyframes, parse with
+      // KeyframeSelectorParser and create a CssKeyframeBlock instead of a
+      // CssStyleRule. Keyframe selectors (from, to, 0%, 50%) are not valid
+      // CSS selectors, so they must not go through SelectorList.parse.
+      val parsedSelector = new KeyframeSelectorParser(selectorText).parse()
+      val rule = new ModifiableCssKeyframeBlock(
+        new CssValue(parsedSelector, node.selector.fold(node.span)(_.span)),
+        node.span
+      )
+      _withParent(rule, through = (n: CssNode) => n.isInstanceOf[CssStyleRule]) {
+        _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+          node.children.foreach { kids =>
+            for (child <- kids) {
+              val _ = child.accept(this)
+            }
+          }
         }
       }
-    }
+    } else {
+      // dart-sass evaluate.dart:2418-2422: parse the evaluated selector text
+      // into a SelectorList AST. No fallback — if parsing fails, it's an error.
+      val isPlainCss = _stylesheet.exists(_.plainCss)
+      var parsedSelector = new SelectorParser(selectorText, plainCss = isPlainCss).parse()
 
-    // In the Dart evaluator, `selector` is always a SelectorList. When
-    // AST-based expansion fails, parse the text-expanded selector as a
-    // final fallback. If that also fails (e.g. keyframe selectors like
-    // `0%` which are not valid CSS selectors), wrap the raw text in a
-    // synthetic SelectorList so the type contract is honoured.
-    val selectorList: SelectorList = parsedExpanded.getOrElse {
-      SelectorParser.tryParse(expandedSelector).getOrElse {
-        _syntheticSelectorList(expandedSelector, node.span)
+      // dart-sass evaluate.dart:2424-2428: determine whether to merge (nest)
+      // with the parent selector.
+      val merge: Boolean = _styleRule match {
+        case sr if sr.isEmpty => true
+        case sr if sr.get.fromPlainCss => false
+        case _ => !(isPlainCss && parsedSelector.containsParentSelector)
       }
-    }
-    // Register the selector in the extension store so @extend can find it.
-    // dart-sass: _extensionStore.addSelector() returns a Box that the store
-    // can update in-place when new extensions are added.
-    val selectorBox = _extensionStore.fold(
-      new ModifiableBox[SelectorList](selectorList).seal()
-    )(_.addSelector(selectorList, Nullable(_mediaQueries).filter(_.nonEmpty)))
-    val rule = new ModifiableCssStyleRule(
-      selectorBox,
-      node.span,
-      originalSel = Nullable(selectorList)
-    )
+      if (merge) {
+        // dart-sass evaluate.dart:2430-2443: in plain CSS, reject leading
+        // combinators at the top level.
+        if (isPlainCss) {
+          for (complex <- parsedSelector.components) {
+            if (complex.leadingCombinators.nonEmpty) {
+              throw _exception(
+                "Top-level leading combinators aren't allowed in plain CSS.",
+                Nullable(complex.leadingCombinators.head.span)
+              )
+            }
+          }
+        }
 
-    // Nested style rules in CSS output must be FLAT — they should be
-    // emitted as siblings of the outer style rule rather than children.
-    // Walk up `_parent` to the nearest non-CssStyleRule ancestor and add
-    // the new rule there, then evaluate children with that as the parent.
-    // dart-sass async_evaluate.dart:2470-2472: when a style rule finishes
-    // at the top level (no enclosing style rule), mark the last child of the
-    // target parent as isGroupEnd so the serializer knows to emit a blank line.
-    //
-    // EXCEPTION: for plain CSS files, preserve native CSS nesting — nested
-    // style rules are attached as children of the current parent, not
-    // hoisted to a non-style-rule ancestor.
-    val outerStyleRule = _styleRule
-    val savedParent = _parent
-    val isPlainCss = _stylesheet.exists(_.plainCss)
-    val nearestNonStyle: ModifiableCssParentNode =
-      if (isPlainCss) _parent.getOrElse(_nearestNonStyleRuleParent())
-      else _nearestNonStyleRuleParent()
-    _parent = Nullable(nearestNonStyle)
-    try
-      _withParent(rule) {
+        // dart-sass evaluate.dart:2445-2449: nest within the parent selector.
+        parsedSelector = parsedSelector.nestWithin(
+          _styleRuleIgnoringAtRoot.map(_.originalSelector),
+          implicitParent = !_atRootExcludingStyleRule,
+          preserveParentSelectors = isPlainCss
+        )
+      }
+
+      // dart-sass evaluate.dart:2452: register selector in the extension store.
+      val selectorBox = _extensionStore.fold(
+        new ModifiableBox[SelectorList](parsedSelector).seal()
+      )(_.addSelector(parsedSelector, Nullable(_mediaQueries).filter(_.nonEmpty)))
+      val rule = new ModifiableCssStyleRule(
+        selectorBox,
+        node.span,
+        originalSel = Nullable(parsedSelector),
+        fromPlainCss = isPlainCss
+      )
+      // dart-sass evaluate.dart:2459: save and reset _atRootExcludingStyleRule
+      val oldAtRootExcludingStyleRule = _atRootExcludingStyleRule
+      _atRootExcludingStyleRule = false
+      // dart-sass evaluate.dart:2461-2472: use _withParent with through to
+      // bubble style rules up through parent CssStyleRules when merging.
+      _withParent(rule, through = if (merge) (n: CssNode) => n.isInstanceOf[CssStyleRule] else null) {
         _withStyleRule(rule) {
-          _withScope {
+          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
             // ISS-026: track whether a nested style rule has been seen in
             // the current source block so visitDeclaration can emit the
             // `mixed-decls` deprecation for declarations written after it.
@@ -2597,19 +2659,21 @@ final class EvaluateVisitor(
           }
         }
       }
-    finally _parent = savedParent
-    // dart-sass: emit deprecation warnings for bogus combinators (evaluate.dart:2486-2536).
-    _warnForBogusCombinators(rule)
-    // dart-sass evaluate.dart:2477-2480: mark the last child of _parent as
-    // isGroupEnd so the serializer emits a blank line between groups.
-    // Note: dart-sass marks _parent.children.last unconditionally (not just
-    // the last visible child).
-    if (outerStyleRule.isEmpty) {
-      val parentNode = _parent.getOrElse(nearestNonStyle)
-      if (parentNode.children.nonEmpty) {
-        parentNode.children.last match {
-          case m: ModifiableCssNode => m.isGroupEnd = true
-          case _ => ()
+      _atRootExcludingStyleRule = oldAtRootExcludingStyleRule
+
+      // dart-sass evaluate.dart:2475: emit deprecation warnings for bogus combinators.
+      _warnForBogusCombinators(rule)
+      // dart-sass evaluate.dart:2477-2480: mark the last child of _parent as
+      // isGroupEnd so the serializer emits a blank line between groups.
+      if (_styleRule.isEmpty) {
+        val parentNode = _parent.getOrElse {
+          throw new IllegalStateException("EvaluateVisitor has no active parent node.")
+        }
+        if (parentNode.children.nonEmpty) {
+          parentNode.children.last match {
+            case m: ModifiableCssNode => m.isGroupEnd = true
+            case _ => ()
+          }
         }
       }
     }
@@ -2654,36 +2718,6 @@ final class EvaluateVisitor(
         )
       )(r => r: ModifiableCssParentNode)
     }
-  }
-
-  /** Text-based parent selector (`&`) expansion. For each comma-separated child piece, substitute `&` with each comma-separated parent piece, or prepend the parent piece + space when `&` is absent.
-    * With no parent, the child selector is returned unchanged.
-    */
-  private def _expandSelector(childSel: String, parentSel: Nullable[String]): String =
-    parentSel.fold(childSel) { parent =>
-      val parentParts = parent.split(",").map((s: String) => s.trim)
-      val childParts  = childSel.split(",").map((s: String) => s.trim)
-      val expanded    = for {
-        p <- parentParts
-        c <- childParts
-      } yield
-        if (c.contains("&")) c.replace("&", p)
-        else s"$p $c"
-      expanded.mkString(", ")
-    }
-
-  /** Creates a synthetic SelectorList for text that cannot be parsed as a CSS
-    * selector (e.g. keyframe selectors like `0%`, `from`, `to`). This is a
-    * temporary workaround until the evaluator properly routes keyframe blocks
-    * through a KeyframeSelectorParser like Dart does.
-    */
-  private def _syntheticSelectorList(text: String, span: ssg.sass.util.FileSpan): SelectorList = {
-    val synSpan   = FileSpan.synthetic(text)
-    val typeSelec  = new TypeSelector(QualifiedName(text), synSpan)
-    val compound   = new CompoundSelector(List(typeSelec), synSpan)
-    val component  = new ComplexSelectorComponent(compound, Nil, synSpan)
-    val complex    = new ComplexSelector(Nil, List(component), synSpan)
-    new SelectorList(List(complex), synSpan)
   }
 
   override def visitDeclaration(node: Declaration): Value = {
@@ -2795,19 +2829,43 @@ final class EvaluateVisitor(
           }
         }
 
-        val existing = _environment.getVariable(node.name, namespace = node.namespace)
+        val existing = _addExceptionSpan(node,
+          _environment.getVariable(node.name, namespace = node.namespace)
+        )
         if (existing.isDefined && existing.get != SassNull) break(SassNull)
+      }
+
+      // dart-sass evaluate.dart:2668-2685: warn when !global declares a new variable
+      if (node.isGlobal && !_environment.globalVariableExists(node.name)) {
+        _warnWithSpan(
+          if (_environment.atRoot)
+            "As of Dart Sass 2.0.0, !global assignments won't be able to " +
+              "declare new variables.\n" +
+              "\n" +
+              "Since this assignment is at the root of the stylesheet, the " +
+              "!global flag is\n" +
+              "unnecessary and can safely be removed."
+          else
+            "As of Dart Sass 2.0.0, !global assignments won't be able to " +
+              "declare new variables.\n" +
+              "\n" +
+              s"Recommendation: add `$$${node.name}: null` at the stylesheet root.",
+          node.span,
+          Nullable(Deprecation.NewGlobal)
+        )
       }
 
       // dart-sass: _withoutSlash strips slash info on variable assignment
       // (async_evaluate.dart:2687).
       val value = node.expression.accept(this).withoutSlash
-      _environment.setVariable(
+      // dart-sass evaluate.dart:2696-2704: wrap setVariable in
+      // _addExceptionSpan so SassScriptException gets a source span.
+      _addExceptionSpan(node, _environment.setVariable(
         node.name,
         value,
         namespace = node.namespace,
         global = node.isGlobal
-      )
+      ))
       SassNull
     }
   }
@@ -2919,13 +2977,9 @@ final class EvaluateVisitor(
   }
 
   override def visitWhileRule(node: WhileRule): Value = {
+    // dart-sass: no iteration limit (evaluate.dart:2747-2764)
     _withSemiGlobalScope {
-      var iterations = 0
       while (node.condition.accept(this).isTruthy) {
-        iterations += 1
-        if (iterations > 100000) {
-          throw SassException("@while loop exceeded 100000 iterations (possible infinite loop).", node.span)
-        }
         for (statement <- node.children.get) {
           val _ = statement.accept(this)
         }
@@ -2935,13 +2989,14 @@ final class EvaluateVisitor(
   }
 
   override def visitDebugRule(node: DebugRule): Value = {
+    // dart-sass: visitDebugRule (evaluate.dart:1363-1370)
+    // Only calls _logger.debug — does NOT add to warnings.
     val value   = node.expression.accept(this)
     val message = value match {
       case s: SassString => s.text
-      case other => other.toCssString(quote = false)
+      case other => SerializeVisitor.serializeValue(other, inspect = true)
     }
     _logger.debug(message, node.span)
-    _warnings += s"DEBUG: $message"
     SassNull
   }
 
@@ -2991,6 +3046,14 @@ final class EvaluateVisitor(
   }
 
   override def visitAtRule(node: AtRule): Value = {
+    // dart-sass (evaluate.dart:1555-1560): reject @rules nested inside declarations.
+    if (_declarationName.isDefined) {
+      throw _exception(
+        "At-rules may not be used within nested declarations.",
+        Nullable(node.span)
+      )
+    }
+
     val nameText  = _performInterpolation(node.name)
     val nameValue = new CssValue[String](nameText, node.name.span)
     val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
@@ -3019,6 +3082,21 @@ final class EvaluateVisitor(
         _inKeyframes = true
       } else {
         _inUnknownAtRule = true
+      }
+
+      // dart-sass: if the user has already opted into plain CSS nesting, don't
+      // bother with any merging or bubbling.
+      if (_hasCssNesting) {
+        _withParent(rule) {
+          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
+          }
+        }
+        _inUnknownAtRule = wasInUnknownAtRule
+        _inKeyframes = wasInKeyframes
+        return SassNull
       }
 
       // dart-sass: _withParent with through = CssStyleRule makes the
@@ -3076,6 +3154,14 @@ final class EvaluateVisitor(
   private var _mediaQuerySources: Set[CssMediaQuery] = Set.empty
 
   override def visitMediaRule(node: MediaRule): Value = {
+    // dart-sass (evaluate.dart:2261-2266): reject @media nested inside declarations.
+    if (_declarationName.isDefined) {
+      throw _exception(
+        "Media rules may not be used within nested declarations.",
+        Nullable(node.span)
+      )
+    }
+
     val queryText = _stripCssComments(_performInterpolation(node.query))
     // Preflight: reject obviously invalid @media query shapes that dart-sass
     // rejects at parse time but that our stage-1 StylesheetParser slurps as
@@ -3089,6 +3175,18 @@ final class EvaluateVisitor(
     // Level-3 syntax our parser supports (e.g. interpolated fragments).
     val parsed: List[CssMediaQuery] =
       ssg.sass.parse.MediaQueryParser.tryParseList(queryText).getOrElse(List(CssMediaQuery.condition(List(queryText))))
+
+    // dart-sass: If the user has already opted into plain CSS nesting, don't
+    // bother with any merging or bubbling; this rule is already only usable by
+    // browsers that support nesting natively anyway.
+    if (_hasCssNesting) {
+      _withParent(new ModifiableCssMediaRule(parsed, node.span)) {
+        for (child <- node.children.get) {
+          val _ = child.accept(this)
+        }
+      }
+      return SassNull
+    }
 
     // dart-sass: merge with enclosing @media queries if any exist.
     // If the merge produces an empty result, the nested @media is
@@ -3539,9 +3637,28 @@ final class EvaluateVisitor(
   }
 
   override def visitSupportsRule(node: SupportsRule): Value = {
+    // dart-sass (evaluate.dart:2541-2546): reject @supports nested inside declarations.
+    if (_declarationName.isDefined) {
+      throw _exception(
+        "Supports rules may not be used within nested declarations.",
+        Nullable(node.span)
+      )
+    }
+
     val conditionText = _visitSupportsCondition(node.condition)
     val cssCondition  = new CssValue[String](conditionText, node.condition.span)
     val rule          = new ModifiableCssSupportsRule(cssCondition, node.span)
+
+    // dart-sass: if the user has already opted into plain CSS nesting, don't
+    // bother with bubbling.
+    if (_hasCssNesting) {
+      _withParent(rule) {
+        for (statement <- node.children.get) {
+          val _ = statement.accept(this)
+        }
+      }
+      return SassNull
+    }
 
     // Sass supports-bubbling (mirrors @media): when a `@supports` rule
     // appears inside a style rule, the supports rule itself attaches to
@@ -3789,7 +3906,7 @@ final class EvaluateVisitor(
             val cssImport = new ModifiableCssImport(urlValue, di.span, Nullable.empty)
             _visitStaticImportNode(cssImport)
           } else {
-            _loadDynamicImport(url)
+            _visitDynamicImport(di)
           }
         case _ => ()
       }
@@ -3823,114 +3940,223 @@ final class EvaluateVisitor(
     }
   }
 
-  /** Loads a dynamic `@import` via the configured importer, parses the
-    * contents, and evaluates the resulting stylesheet.
+  /** Adds the stylesheet imported by [importNode] to the current document.
     *
-    * dart-sass `_visitDynamicImport` model:
-    *   - If the imported file uses no `@use` or `@forward`, evaluate its
-    *     children directly in the current environment. Variable / function /
-    *     mixin definitions land in the importing env's scopes via the
-    *     normal evaluator code paths.
-    *   - If the imported file does have `@use` or `@forward`, evaluate it
-    *     in a `forImport()` environment that shares variable / function /
-    *     mixin storage with the caller but has its own `_modules` /
-    *     `_globalModules` / `_forwardedModules`. After the body has run,
-    *     seal the forImport env as a dummy module and call
-    *     `_environment.importForwards(dummyModule)` on the outer env. This
-    *     hoists the imported file's `@forward`ed modules into the outer
-    *     env's `_importedModules` (at root) or `_nestedForwardedModules`
-    *     (below root) so the importing scope can resolve them via
-    *     `_fromOneModule` AND so variable assignments find the right
-    *     backing storage in the upstream module.
+    * Port of dart-sass `_visitDynamicImport` (evaluate.dart:1858-1976).
+    *
+    * The semantics depend on whether the imported file uses `@use` or `@forward`:
+    *
+    * '''Simple path''' (no `@use`/`@forward`): Evaluates the imported file's
+    * statements directly in the current environment, sharing the current
+    * `_extensionStore`, `_root`, `_parent`, etc. Extensions from the imported
+    * file merge into the caller's store. Variable / function / mixin
+    * definitions land in the importing env's scopes.
+    *
+    * '''Complex path''' (has `@use`/`@forward`): Evaluates in a `forImport()`
+    * environment. If the imported file loads user-defined (non-`sass:`)
+    * modules, a separate CSS root is created so that `@extend`s within the
+    * imported scope can be resolved hermetically via `_combineCss` before
+    * injecting the result into the caller's tree. This prevents extensions
+    * from leaking across `@use` boundaries.
     */
-  private def _loadDynamicImport(url: String): Unit = {
-    val loaded = _loadStylesheet(url, ssg.sass.util.FileSpan.synthetic("<@import>"), forImport = true)
-    loaded.foreach { case (importedSheet, _, _) =>
-      val canonicalUrl = importedSheet.span.sourceUrl.getOrElse("")
-      if (canonicalUrl.nonEmpty && _activeImports.contains(canonicalUrl)) {
-        // Cycle — skip silently.
-      } else {
-        if (canonicalUrl.nonEmpty) _activeImports += canonicalUrl
-        try {
-          val children = importedSheet.children.get
-          val hasUseOrForward = children.exists {
-            case _: ssg.sass.ast.sass.UseRule     => true
-            case _: ssg.sass.ast.sass.ForwardRule => true
-            case _                                => false
-          }
-          // @import always re-evaluates the imported file's CSS, even
-          // when the same module was already @use'd. Save and clear
-          // the injected-CSS set so modules @use'd within this import
-          // can re-inject their CSS into the output.
-          val savedInjected = _injectedModuleCss.clone()
-          _injectedModuleCss.clear()
-          try {
-          if (!hasUseOrForward) {
-            // Simple inline path: no module-system directives, so the
-            // imported file can run against the caller's environment
-            // without any `forImport`/`importForwards` plumbing.
-            children.foreach { stmt =>
-              val _ = stmt.accept(this)
-            }
-          } else {
-            // dart-sass `forImport` path: evaluate in an isolated
-            // `_modules`/`_globalModules`/`_forwardedModules` shell that
-            // still shares the variable / function / mixin scope chain
-            // with the caller, then `importForwards` the resulting
-            // dummy module so the caller's lookup chain can reach
-            // anything the imported file `@forward`ed.
-            val forImportEnv = _environment.forImport()
-            _withEnvironment(forImportEnv) {
-              children.foreach { stmt =>
-                val _ = stmt.accept(this)
+  private def _visitDynamicImport(importNode: DynamicImport): Unit = {
+    import scala.util.boundary, boundary.break
+    _withStackFrame("@import", importNode, {
+      val loaded = _loadStylesheet(importNode.urlString, importNode.span, forImport = true)
+      if (loaded.isEmpty) {
+        throw _exception("Can't find stylesheet to import.", Nullable(importNode.span))
+      }
+      loaded.foreach { case (stylesheet, loadedImporter, isDependency) =>
+        boundary {
+        val url = stylesheet.span.sourceUrl
+        url.foreach { canonicalUrl =>
+          if (canonicalUrl.nonEmpty) {
+            if (_activeModules.contains(canonicalUrl)) {
+              val prevNode = _activeModules.get(canonicalUrl).flatMap(_.toOption)
+              throw prevNode match {
+                case Some(previousLoad) =>
+                  _multiSpanException(
+                    "This file is already being loaded.",
+                    "new load",
+                    Map(previousLoad.span -> "original load")
+                  )
+                case _ =>
+                  _exception("This file is already being loaded.")
               }
             }
-            val dummyModule = forImportEnv.toDummyModule()
-            _environment.importForwards(dummyModule)
-            // Transfer modules @use'd inside the imported file to the calling
-            // environment so that _combineCss can find their CSS.
-            _environment.importModules(forImportEnv)
-          }
-          } finally {
-            // Restore the previous injected set, augmented with any
-            // modules newly injected during this import, so that
-            // subsequent @use's at the same level still deduplicate.
-            _injectedModuleCss ++= savedInjected
-          }
-        } finally {
-          if (canonicalUrl.nonEmpty) {
-            val _ = _activeImports.remove(canonicalUrl)
+            _activeModules(canonicalUrl) = Nullable(importNode: ssg.sass.ast.AstNode)
           }
         }
+
+        // If the imported stylesheet doesn't use any modules, we can inject its
+        // CSS directly into the current stylesheet. If it does use modules, we
+        // need to put its CSS into an intermediate ModifiableCssStylesheet so
+        // that we can hermetically resolve `@extend`s before injecting it.
+        if (stylesheet.uses.isEmpty && stylesheet.forwards.isEmpty) {
+          val oldImporter = _importer
+          val oldStylesheet0 = _stylesheet
+          val oldInDependency = _inDependency
+          _importer = Nullable(loadedImporter)
+          // dart-sass sets _stylesheet here for error reporting. We also
+          // do so, UNLESS the imported file is plain CSS (.css). For plain
+          // CSS imports, we keep the caller's _stylesheet so that the
+          // _isPlainCssSelector check in visitStyleRule remains false and
+          // parent-nesting works (the imported rules nest under the
+          // enclosing selector). When the CSS file is @use'd, it gets
+          // its own _execute context where _stylesheet is set normally.
+          if (!stylesheet.plainCss) _stylesheet = Nullable(stylesheet)
+          _inDependency = isDependency
+          visitStylesheet(stylesheet)
+          _importer = oldImporter
+          _stylesheet = oldStylesheet0
+          _inDependency = oldInDependency
+          url.foreach(u => if (u.nonEmpty) _activeModules.remove(u))
+          break(())
+        }
+
+        // If only built-in modules are loaded, we still need a separate
+        // environment to ensure their namespaces aren't exposed in the outer
+        // environment, but we don't need to worry about `@extend`s, so we can
+        // add styles directly to the existing stylesheet instead of creating a
+        // new one.
+        val loadsUserDefinedModules =
+          stylesheet.uses.exists(rule => !rule.url.toString.startsWith("sass:")) ||
+            stylesheet.forwards.exists(rule => !rule.url.toString.startsWith("sass:"))
+
+        var children: List[ssg.sass.ast.css.CssNode] = Nil
+        val environment = _environment.forImport()
+        _withEnvironment(environment) {
+          val oldImporter = _importer
+          val oldStylesheet0 = _stylesheet
+          val oldRoot0 = _root
+          val oldParent0 = _parent
+          val oldEndOfImports0 = _endOfImports
+          val oldOutOfOrderImports0 = _outOfOrderImports
+          val oldConfiguration = _configuration
+          val oldInDependency = _inDependency
+          _importer = Nullable(loadedImporter)
+          _stylesheet = Nullable(stylesheet)
+          if (loadsUserDefinedModules) {
+            val newRoot = new ModifiableCssStylesheet(stylesheet.span)
+            _root = Nullable(newRoot)
+            _parent = Nullable(newRoot: ModifiableCssParentNode)
+            _endOfImports = 0
+            _outOfOrderImports = Nullable.empty
+          }
+          _inDependency = isDependency
+
+          // This configuration is only used if it passes through a `@forward`
+          // rule, so we avoid creating unnecessary ones for performance reasons.
+          if (stylesheet.forwards.nonEmpty) {
+            _configuration = Configuration.implicitConfig(environment.toImplicitConfiguration())
+          }
+
+          visitStylesheet(stylesheet)
+          children = if (loadsUserDefinedModules) _addOutOfOrderImports() else Nil
+
+          _importer = oldImporter
+          _stylesheet = oldStylesheet0
+          if (loadsUserDefinedModules) {
+            _root = oldRoot0
+            _parent = oldParent0
+            _endOfImports = oldEndOfImports0
+            _outOfOrderImports = oldOutOfOrderImports0
+          }
+          _configuration = oldConfiguration
+          _inDependency = oldInDependency
+        }
+
+        // Create a dummy module with empty CSS and no extensions to make forwarded
+        // members available in the current import context and to combine all the
+        // CSS from modules used by [stylesheet].
+        val module = environment.toDummyModule()
+        _environment.importForwards(module)
+        if (loadsUserDefinedModules) {
+          if (module.transitivelyContainsCss) {
+            // If any transitively used module contains extensions, we need to
+            // clone all modules' CSS. Otherwise, it's possible that they'll be
+            // used or imported from another location that shouldn't have the same
+            // extensions applied.
+            val combinedCss = _combineCss(
+              module,
+              clone = module.transitivelyContainsExtensions
+            )
+            combinedCss.accept(this)
+          }
+
+          for (child <- children) {
+            child match {
+              case mn: ModifiableCssNode => _visitImportedCssChild(mn)
+              case _                     => ()
+            }
+          }
+        }
+
+        url.foreach(u => if (u.nonEmpty) _activeModules.remove(u))
+        } // boundary
       }
-    }
+    })
   }
 
-  /** Returns the nearest enclosing `@media` rule in the current CSS parent chain, or `null` if this `@extend` is declared outside any media block.
+  /** Adds an imported CSS child node to the current tree, handling
+    * `@import` ordering and `through` propagation.
+    *
+    * Port of dart-sass `_ImportedCssVisitor` (evaluate.dart:4809-4868).
     */
-  @annotation.nowarn("msg=unused") // retained for _applyExtends legacy path
-  private def _enclosingMediaRule(): ModifiableCssMediaRule | Null = {
-    var cur: Nullable[ModifiableCssParentNode] = _parent
-    var out: ModifiableCssMediaRule | Null     = null
-    import scala.util.boundary, boundary.break
-    boundary {
-      while (cur.isDefined) {
-        val node = cur.get
-        node match {
-          case mr: ModifiableCssMediaRule =>
-            out = mr
-            break(())
-          case _ =>
-            cur = node.parent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) { pn =>
-              pn match {
-                case mp: ModifiableCssParentNode => Nullable(mp)
-                case _ => Nullable.empty
-              }
-            }
+  private def _visitImportedCssChild(node: ModifiableCssNode): Unit = {
+    node match {
+      case atRule: ModifiableCssAtRule =>
+        _addChild(
+          atRule,
+          through = if (atRule.isChildless) null else (n: CssNode) => n.isInstanceOf[CssStyleRule]
+        )
+      case comment: ModifiableCssComment =>
+        _addChild(comment)
+      case decl: ModifiableCssDeclaration =>
+        _addChild(decl)
+      case imp: ModifiableCssImport =>
+        val isAtRoot = _root.exists(rootNode => _parent.exists(_ eq rootNode))
+        if (!isAtRoot) {
+          _addChild(imp)
+        } else if (_root.exists(rootNode => _endOfImports == rootNode.children.length)) {
+          _addChild(imp)
+          _endOfImports += 1
+        } else {
+          _outOfOrderImports match {
+            case ooi if ooi.isDefined =>
+              ooi.get += imp
+            case _ =>
+              val buf = scala.collection.mutable.ListBuffer[ModifiableCssImport](imp)
+              _outOfOrderImports = Nullable(buf)
+          }
         }
-      }
+      case _: ModifiableCssKeyframeBlock =>
+        throw new AssertionError("visitCssKeyframeBlock() should never be called.")
+      case media: ModifiableCssMediaRule =>
+        // Whether [media.queries] has been merged with [_mediaQueries]. If it
+        // has been merged, merging again is a no-op; if it hasn't been merged,
+        // merging again will fail.
+        val hasBeenMerged = _mediaQueries.isEmpty ||
+          _mergeMediaQueries(_mediaQueries, media.queries).isDefined
+        _addChild(
+          media,
+          through = (n: CssNode) =>
+            n.isInstanceOf[CssStyleRule] || (hasBeenMerged && n.isInstanceOf[CssMediaRule])
+        )
+      case styleRule: ModifiableCssStyleRule =>
+        _addChild(styleRule, through = (n: CssNode) => n.isInstanceOf[CssStyleRule])
+      case supports: ModifiableCssSupportsRule =>
+        _addChild(supports, through = (n: CssNode) => n.isInstanceOf[CssStyleRule])
+      case stylesheet: ModifiableCssStylesheet =>
+        for (child <- stylesheet.children) {
+          child match {
+            case mn: ModifiableCssNode => _visitImportedCssChild(mn)
+            case _                     => ()
+          }
+        }
+      case other =>
+        _addChild(other)
     }
-    out
   }
 
   override def visitExtendRule(node: ExtendRule): Value = {
@@ -3947,7 +4173,24 @@ final class EvaluateVisitor(
       )
     }
 
-    val targetText = _performInterpolation(node.selector).trim
+    // dart-sass evaluate.dart:1484-1498: warn for bogus combinators in the
+    // extender's original selector.
+    for (complex <- styleRule.get.originalSelector.components) {
+      if (complex.isBogus) {
+        _warnWithSpan(
+          s"""The selector "${complex.toString.trim}" is invalid CSS and """ +
+            (if (complex.isUseless) "can't" else "shouldn't") +
+            " be an extender.\n" +
+            "This will be an error in Dart Sass 2.0.0.\n" +
+            "\n" +
+            "More info: https://sass-lang.com/d/bogus-combinators",
+          complex.span.trimRight(),
+          Nullable(Deprecation.BogusCombinators)
+        )
+      }
+    }
+
+    val targetText = _performInterpolation(node.selector, warnForColor = true).trim
     val list = new ssg.sass.parse.SelectorParser(targetText, allowParent = false).parse()
 
     for (complex <- list.components) {
@@ -3982,134 +4225,12 @@ final class EvaluateVisitor(
     SassNull
   }
 
-  /** Entry point: walk the root with no active media scope, then validate any non-optional `@extend`s whose targets were never matched.
-    */
-  @annotation.nowarn("msg=unused") // retained for legacy _execute path
-  private def _applyExtends(node: ModifiableCssParentNode): Unit = {
-    _applyExtendsIn(node, null)
-    // Detect media-scoped extends whose target exists at another scope
-    // (most commonly at top-level): dart-sass emits a warning that the
-    // extend has no effect in the media context. We check the set of
-    // targets encountered during the walk.
-    for (pending <- _pendingExtends)
-      if (!pending.found && pending.mediaKey != null) {
-        val tgt = pending.targetText
-        if (_allExtendableTargets.contains(tgt)) {
-          _warnings +=
-            s"Extending $tgt in @media context has no effect since $tgt is not in the same @media context"
-          // Mark as found so the hard error below doesn't also fire.
-          pending.found = true
-        }
-      }
-    // Enforce the non-optional target-not-found check.
-    for (pending <- _pendingExtends)
-      if (!pending.found && !pending.isOptional) {
-        throw new SassException(
-          "The target selector was not found.\n" +
-            "Use \"@extend " + pending.targetText + " !optional\" to avoid this error.",
-          pending.span
-        )
-      }
-  }
-
-  /** Every simple-selector textual form encountered under any style rule during extend application. Used to diagnose cross-media extends whose target exists in a different scope.
-    */
-  private val _allExtendableTargets: scala.collection.mutable.Set[String] =
-    scala.collection.mutable.Set.empty
-
-  /** Walks the modifiable CSS tree under `node`, rewriting every style rule's selectors to include any extensions declared in the same media scope (`mediaKey`). A new `ModifiableCssMediaRule`
-    * encountered as a child switches the active `mediaKey`, so that extensions inside `@media` blocks only apply to rules in the same block.
-    *
-    * This is still a textual rewrite over the parsed `SelectorList` AST: no unification, no "second law of extend" beyond what `ExtensionStore.extendList` provides. The per-media scope and
-    * unresolved-extend tracking are the parts that make `!optional` work.
-    */
-  private def _applyExtendsIn(
-    node:     ModifiableCssParentNode,
-    mediaKey: ModifiableCssMediaRule | Null
-  ): Unit = {
-    val astStore    = _mediaExtensionStores.get(mediaKey)
-    val legacyStore = _mediaLegacyExtends.get(mediaKey)
-    val hasAst      = astStore.exists(_.hasAstExtensions)
-    val hasLegacy   = legacyStore.exists(_.nonEmpty)
-
-    // Snapshot children because rule removal mutates the live list.
-    val toVisit = node.modifiableChildren
-    for (child <- toVisit) child match {
-      case rule: ModifiableCssStyleRule =>
-        var removed = false
-        _selectorBoxes.get(rule).foreach { box =>
-          val currentSelector = box.value.toString
-          // Record each comma-separated piece as a potential extend target.
-          for (part <- currentSelector.split(',')) {
-            val t = part.trim
-            if (t.nonEmpty) _allExtendableTargets += t
-          }
-          val selectorList: SelectorList = box.value
-          if (hasAst) {
-            // Mark any unresolved extends whose target simple selector appears
-            // in this rule's selector list as "found" in the current scope.
-            for (pending <- _pendingExtends)
-              if (!pending.found && pending.mediaKey == mediaKey && pending.target.isDefined) {
-                val tgt = pending.target.get
-                val hit = selectorList.components.exists { complex =>
-                  complex.components.exists(_.selector.components.contains(tgt))
-                }
-                if (hit) pending.found = true
-              }
-            val extended = astStore.get.extendList(selectorList)
-            val filtered = extended.components.filterNot(ExtendUtils.isPlaceholderOnly)
-            if (filtered.isEmpty) {
-              rule.remove()
-              removed = true
-            } else if (filtered.length != extended.components.length) {
-              val newList = new ssg.sass.ast.selector.SelectorList(filtered, extended.span)
-              box.value = newList
-            } else {
-              box.value = extended
-            }
-          } else if (hasLegacy) {
-            val parts     = currentSelector.split(',').map((s: String) => s.trim).toList
-            val augmented = scala.collection.mutable.ListBuffer[String]()
-            augmented ++= parts
-            for (part <- parts)
-              for ((target, extenders) <- legacyStore.get)
-                if (part == target || part.contains(target)) {
-                  for (pending <- _pendingExtends)
-                    if (!pending.found && pending.mediaKey == mediaKey && pending.targetText == target)
-                      pending.found = true
-                  for (extender <- extenders)
-                    augmented += part.replace(target, extender)
-                }
-            val augmentedText = augmented.distinct.mkString(", ")
-            SelectorParser.tryParse(augmentedText).foreach { sl =>
-              box.value = sl
-            }
-          } else {
-            // No extensions, but still strip rules containing only `%`-prefixed
-            // selectors so bare `%foo { ... }` never leaks into CSS output.
-            val filtered = selectorList.components.filterNot(ExtendUtils.isPlaceholderOnly)
-            if (filtered.isEmpty) {
-              rule.remove()
-              removed = true
-            }
-          }
-        }
-        if (!removed) _applyExtendsIn(rule, mediaKey)
-      case mr:     ModifiableCssMediaRule  => _applyExtendsIn(mr, mr)
-      case parent: ModifiableCssParentNode => _applyExtendsIn(parent, mediaKey)
-      case _ => ()
-    }
-  }
-
-  override def visitContentBlock(node: ContentBlock): Value = {
-    // Content blocks are normally consumed by @include via _environment.content
-    // and never visited directly. If we do reach here, evaluate the child
-    // statements in-place as a defensive fallback.
-    for (statement <- node.childrenList) {
-      val _ = statement.accept(this)
-    }
-    SassNull
-  }
+  override def visitContentBlock(node: ContentBlock): Value =
+    // dart-sass: visitContentBlock (evaluate.dart:1345-1347)
+    // Evaluation handles @include and its content block together.
+    throw new UnsupportedOperationException(
+      "Evaluation handles @include's content block in its own logic."
+    )
 
   // --- Supports condition serialisation --------------------------------------
 
@@ -4239,6 +4360,24 @@ final class EvaluateVisitor(
     val mixin = lookup.getOrElse {
       throw SassException(s"Undefined mixin: ${node.name}.", node.span)
     }
+    // dart-sass async_evaluate.dart:2184-2193: reject @include --name when the
+    // mixin was not originally declared with a -- name.
+    if (node.originalName.startsWith("--")) {
+      mixin match {
+        case udc: UserDefinedCallable[_] =>
+          udc.declaration match {
+            case cd: ssg.sass.ast.sass.CallableDeclaration if !cd.originalName.startsWith("--") =>
+              throw SassException(
+                "Sass @mixin names beginning with -- are forbidden for forward-" +
+                  "compatibility with plain CSS mixins.\n\n" +
+                  "For details, see https://sass-lang.com/d/css-function-mixin",
+                node.nameSpan
+              )
+            case _ => ()
+          }
+        case _ => ()
+      }
+    }
     val (positional, named, splatSep) = _evaluateArguments(node.arguments)
     // dart-sass: set _callableNode so that built-in mixin callbacks
     // (e.g. load-css, apply) can read the call-site node for span
@@ -4338,7 +4477,8 @@ final class EvaluateVisitor(
         val merged =
           if (named.isEmpty) positional
           else _mergeBuiltInNamedArgs(bic, positional, named)
-        val padded = _padBuiltInPositional(bic, merged)
+        val padded0 = _padBuiltInPositional(bic, merged)
+        val (padded, _) = _collectBuiltInRestArgs(bic, padded0, named)
         // dart-sass: _environment.withContent + _environment.asMixin
         // wraps built-in mixin execution for content-exists() to work.
         _environment.withContent(content) {
@@ -4366,19 +4506,18 @@ final class EvaluateVisitor(
     // shielded from the body's mutations.
     _environment.scope() {
       _bindParameters(fr.parameters, positional, named, splatSep)
-      val oldInFunction = _inFunction
-      _inFunction = true
       try {
         for (statement <- fr.childrenList) {
           val _ = statement.accept(this)
         }
-        // Falling off the end of a function body with no @return is an error
-        // in Sass; return null currently (matches "null" result of no-op).
-        SassNull
+        // dart-sass (evaluate.dart:3622-3626): falling off the end of a
+        // function body without a @return statement is an error.
+        throw _exception(
+          "Function finished without @return.",
+          Nullable(fr.span)
+        )
       } catch {
         case rs: ReturnSignal => rs.value
-      } finally {
-        _inFunction = oldInFunction
       }
     }
 
@@ -4565,6 +4704,52 @@ final class EvaluateVisitor(
     * dispatcher picks the right overload before the callback runs, so
     * any per-overload arity enforcement happens inside the callback.
     */
+  /** Collects extra positional arguments beyond the declared parameters into a
+    * [[ssg.sass.value.SassArgumentList]] and appends it to the argument list,
+    * matching dart-sass's `_runBuiltInCallable` behavior (evaluate.dart:3709-3726).
+    *
+    * If the callable has no rest parameter, returns the args unchanged. If there
+    * IS a rest parameter, any args beyond `parameterNames.length` are removed
+    * from the positional list, wrapped in a SassArgumentList (with remaining
+    * named args that weren't consumed by the declared parameters), and appended.
+    *
+    * The `originalNamed` parameter is the named arg map from BEFORE merging.
+    * This method computes which names were consumed by declared parameters and
+    * passes only the leftover names to the SassArgumentList.
+    */
+  private def _collectBuiltInRestArgs(
+    bic:           BuiltInCallable,
+    positional:    List[Value],
+    originalNamed: ListMap[String, Value]
+  ): (List[Value], ListMap[String, Value]) = {
+    if (!bic.hasRestParameter) return (positional, originalNamed)
+    // If _mergeBuiltInNamedArgs already created a SassArgumentList for the
+    // rest parameter (which it does when named args are present), don't
+    // create a second wrapper.
+    positional.lastOption match {
+      case Some(_: ssg.sass.value.SassArgumentList) =>
+        return (positional, originalNamed)
+      case _ => ()
+    }
+    val paramCount = bic.parameterNames.length
+    val rest: List[Value] =
+      if (positional.length > paramCount) positional.drop(paramCount)
+      else Nil
+    val base =
+      if (positional.length > paramCount) positional.take(paramCount)
+      else positional
+    // Compute which named args remain after the declared parameters
+    // consumed their share during _mergeBuiltInNamedArgs.
+    val declaredSet    = bic.parameterNames.toSet
+    val remainingNamed = originalNamed.filterNot { case (k, _) => declaredSet.contains(k) }
+    val argumentList = new ssg.sass.value.SassArgumentList(
+      rest,
+      remainingNamed,
+      ssg.sass.value.ListSeparator.Comma
+    )
+    (base :+ argumentList, remainingNamed)
+  }
+
   private def _checkBuiltInArity(
     bic:        BuiltInCallable,
     positional: List[Value],
@@ -4574,7 +4759,11 @@ final class EvaluateVisitor(
     // right overload at runtime and handles arity inside the callback.
     if (bic.isOverloaded) return
     val declared = bic.parameterNames
-    if (declared.isEmpty) return // rest-only or unknown signature — skip
+    // Skip rest-only signatures (e.g. `$args...`) where parameterNames is
+    // empty BUT the raw signature is non-empty. For truly zero-parameter
+    // functions (empty signature, no rest), fall through to the arity
+    // checks below so that extra arguments are rejected.
+    if (declared.isEmpty && (bic.hasRestParameter || bic.signature.trim.nonEmpty)) return
     val declaredSet = declared.toSet
     // 1. Unknown named args (skip when rest parameter absorbs them).
     if (!bic.hasRestParameter) {

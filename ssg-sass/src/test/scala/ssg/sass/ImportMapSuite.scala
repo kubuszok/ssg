@@ -61,14 +61,17 @@ final class ImportMapSuite extends munit.FunSuite {
     assert(r1.css.contains("fonts.googleapis.com"), s"missing host in: ${r1.css}")
   }
 
-  test("unresolved @import is silently skipped") {
+  test("unresolved @import raises error (matches dart-sass)") {
     val importer = importerOf()
     val source   = """
       @import "nonexistent";
       a { color: red; }
     """
-    val result   = Compile.compileString(source, importer = Nullable(importer))
-    assert(result.css.contains("color: red"))
+    // dart-sass: unresolved @import throws "Can't find stylesheet to import."
+    val ex = intercept[SassException] {
+      Compile.compileString(source, importer = Nullable(importer))
+    }
+    assert(ex.getMessage.contains("Can't find stylesheet to import"), s"Unexpected message: ${ex.getMessage}")
   }
 
   test("@use loads module with default namespace") {

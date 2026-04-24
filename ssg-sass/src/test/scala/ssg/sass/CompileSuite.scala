@@ -65,6 +65,11 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(css, ".x, .y, .z {\n  p: 1;\n}\n")
   }
 
+  test("slash division in if() macro produces division result") {
+    val css = Compile.compileString("c {d: if(true, 1/2, null)}").css
+    assertEquals(css, "c {\n  d: 0.5;\n}\n")
+  }
+
   test("compressed mode: comma list joined with bare comma") {
     val css = Compile.compileString("a, d { b: c; }", OutputStyle.Compressed).css
     assertEquals(css, "a,d{b:c}")
@@ -118,7 +123,8 @@ final class CompileSuite extends munit.FunSuite {
 
   test("min() preserves multiple incompatible arguments") {
     val css = Compile.compileString("a { width: min(100%, 500px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:min(100%, 500px)}")
+    // dart-sass: compressed mode uses commaSeparator which is `,` (no space)
+    assertEquals(css, "a{width:min(100%,500px)}")
   }
 
   test("max() resolves variable arguments") {
@@ -131,12 +137,14 @@ final class CompileSuite extends munit.FunSuite {
   test("max() preserves incompatible variable arguments") {
     val src = "$base: 50%; a { width: max(10px, $base); }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, "a{width:max(10px, 50%)}")
+    // dart-sass: compressed mode uses commaSeparator which is `,` (no space)
+    assertEquals(css, "a{width:max(10px,50%)}")
   }
 
   test("clamp() with three numeric arguments") {
     val css = Compile.compileString("a { width: clamp(10px, 50%, 500px); }", OutputStyle.Compressed).css
-    assertEquals(css, "a{width:clamp(10px, 50%, 500px)}")
+    // dart-sass: compressed mode uses commaSeparator which is `,` (no space)
+    assertEquals(css, "a{width:clamp(10px,50%,500px)}")
   }
 
   test("@at-root (with: media) inside @media keeps the media wrapper") {
@@ -217,9 +225,12 @@ final class CompileSuite extends munit.FunSuite {
     assert(result.css.contains("border"))
   }
 
-  test("compiles @charset at-rule") {
+  // dart-sass: @charset is parsed and consumed by the parser — it doesn't
+  // produce any output in the CSS AST. The @charset prefix in the output
+  // is only added by the serializer when the output contains non-ASCII.
+  test("@charset at-rule produces no output for ASCII-only content") {
     val result = Compile.compileString("""@charset "UTF-8";""")
-    assert(result.css.contains("@charset"))
+    assertEquals(result.css, "")
   }
 
   test("compiles @at-root bare block at stylesheet root") {
@@ -824,26 +835,28 @@ final class CompileSuite extends munit.FunSuite {
 
   // --- Value formatting (color shorthand, named colors, number tweaks) ---
 
-  test("rgb(255,255,255) emits #fff (named is shorter -> white)") {
-    // #ffffff -> #fff (3 chars after #), white is 5 chars; #fff wins.
+  // dart-sass: colors created via rgb() built-in have format=RgbFunction,
+  // so they are serialized back as rgb(r, g, b) in expanded mode.
+  // The hex/named-color shorthand only applies to colors without a
+  // format (e.g., hex literals, named-color literals).
+  test("rgb(255,255,255) preserves rgb() format in expanded mode") {
     val result = Compile.compileString(".box { color: rgb(255, 255, 255); }")
-    assert(result.css.contains("color: #fff"), result.css)
+    assert(result.css.contains("color: rgb(255, 255, 255)"), result.css)
   }
 
-  test("rgb(255,0,0) emits red (name shorter than #f00)") {
-    // #f00 (4 chars) vs red (3 chars). red wins in expanded mode.
+  test("rgb(255,0,0) preserves rgb() format in expanded mode") {
     val result = Compile.compileString(".box { color: rgb(255, 0, 0); }")
-    assert(result.css.contains("color: red"), result.css)
+    assert(result.css.contains("color: rgb(255, 0, 0)"), result.css)
   }
 
-  test("rgb(170,187,204) emits #abc shorthand") {
+  test("rgb(170,187,204) preserves rgb() format in expanded mode") {
     val result = Compile.compileString(".box { color: rgb(170, 187, 204); }")
-    assert(result.css.contains("color: #abc"), result.css)
+    assert(result.css.contains("color: rgb(170, 187, 204)"), result.css)
   }
 
-  test("rgb(18,52,86) emits full 6-digit hex (no shorthand possible)") {
+  test("rgb(18,52,86) preserves rgb() format in expanded mode") {
     val result = Compile.compileString(".box { color: rgb(18, 52, 86); }")
-    assert(result.css.contains("color: #123456"), result.css)
+    assert(result.css.contains("color: rgb(18, 52, 86)"), result.css)
   }
 
   test("compressed mode: rgb(255,255,255) emits #fff") {
@@ -886,7 +899,9 @@ final class CompileSuite extends munit.FunSuite {
       "@media (max-width: 600px) { .a { color: red; } }",
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    // dart-sass compressed: no space between @media and ( when query
+    // has no modifier, no type, and condition doesn't start with "(not ".
+    assert(result.css.contains("@media(max-width: 600px)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
   }
 
@@ -907,7 +922,7 @@ final class CompileSuite extends munit.FunSuite {
       """,
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    assert(result.css.contains("@media(max-width: 600px)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
   }
 
@@ -916,8 +931,9 @@ final class CompileSuite extends munit.FunSuite {
       ".a { @media (max-width: 600px) { color: red; } }",
       OutputStyle.Compressed
     )
-    // Expected bubbling: `@media (max-width: 600px) { .a { color: red; } }`.
-    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    // Expected bubbling: `@media(max-width: 600px) { .a { color: red; } }`.
+    // dart-sass compressed: no space between @media and ( for condition-only queries.
+    assert(result.css.contains("@media(max-width: 600px)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
     // The @media must appear before the inner `.a` selector.
     val mediaIdx = result.css.indexOf("@media")
@@ -936,8 +952,9 @@ final class CompileSuite extends munit.FunSuite {
       """,
       OutputStyle.Compressed
     )
-    assert(result.css.contains("@media screen"), result.css)
-    assert(result.css.contains("@media (max-width: 600px)"), result.css)
+    // dart-sass merges nested @media into a single @media with "and":
+    // `@media screen and (max-width: 600px) { .a { color: red; } }`
+    assert(result.css.contains("@media screen and (max-width: 600px)"), result.css)
     assert(result.css.contains(".a{color:red}"), result.css)
   }
 
@@ -1041,7 +1058,8 @@ final class CompileSuite extends munit.FunSuite {
       OutputStyle.Compressed
     )
     assert(result.css.contains("@keyframes pulse"), result.css)
-    assert(result.css.contains("0%, 100%"), result.css)
+    // dart-sass: compressed mode uses commaSeparator (`,` without space)
+    assert(result.css.contains("0%,100%"), result.css)
   }
 
   // ---------------------------------------------------------------------------
@@ -1428,8 +1446,8 @@ final class CompileSuite extends munit.FunSuite {
       """.stripMargin
       )
       .css
-    // rgb(255, 0, 0) → red, serialized as the named color or hex shorthand.
-    assert(css.contains("red") || css.contains("#f00") || css.contains("#ff0000"), css)
+    // dart-sass: rgb() built-in sets format=RgbFunction, so output is rgb(r, g, b).
+    assert(css.contains("rgb(255, 0, 0)"), css)
   }
 
   test("meta.call invokes a user-defined @function via get-function") {
@@ -1453,7 +1471,8 @@ final class CompileSuite extends munit.FunSuite {
         """a { color: call("rgb", 0, 128, 0); }"""
       )
       .css
-    assert(css.contains("green") || css.contains("#008000"), css)
+    // dart-sass: rgb() built-in sets format=RgbFunction, so output is rgb(r, g, b).
+    assert(css.contains("rgb(0, 128, 0)"), css)
   }
 
   test("meta.module-functions returns a function map for sass:math") {
@@ -1523,25 +1542,29 @@ final class CompileSuite extends munit.FunSuite {
   // CSS custom properties and modern @supports syntax
   // ---------------------------------------------------------------------------
 
+  // dart-sass: custom property values are parsed as raw text with the
+  // leading whitespace after the colon preserved. In compressed mode,
+  // `_writeFoldedValue` preserves this space. So `--brand: #ff0066`
+  // serializes with a space after the colon even in compressed mode.
   test("custom property with literal value passes through") {
     val css = Compile.compileString(":root { --brand: #ff0066; }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--brand:#ff0066}")
+    assertEquals(css, ":root{--brand: #ff0066}")
   }
 
   test("custom property with #{...} interpolation evaluates") {
     val src = "$c: red; :root { --brand: #{$c}; }"
     val css = Compile.compileString(src, OutputStyle.Compressed).css
-    assertEquals(css, ":root{--brand:red}")
+    assertEquals(css, ":root{--brand: red}")
   }
 
   test("custom property value does NOT evaluate + operator") {
     val css = Compile.compileString(":root { --foo: 1 + 2; }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--foo:1 + 2}")
+    assertEquals(css, ":root{--foo: 1 + 2}")
   }
 
   test("custom property value preserves nested parens") {
     val css = Compile.compileString(":root { --grid: repeat(3, 1fr); }", OutputStyle.Compressed).css
-    assertEquals(css, ":root{--grid:repeat(3, 1fr)}")
+    assertEquals(css, ":root{--grid: repeat(3, 1fr)}")
   }
 
   test("var(--foo) passes through as a plain CSS function") {
@@ -1559,9 +1582,12 @@ final class CompileSuite extends munit.FunSuite {
     assertEquals(css, "@supports selector(:is(a, b)){.x{color:red}}")
   }
 
+  // dart-sass: `!important` is parsed as part of the value expression
+  // (a space-separated list element). The space between the value and
+  // `!important` is preserved in all modes, matching dart-sass behavior.
   test("!important flag emits ` !important` before the trailing semicolon") {
     val css = Compile.compileString("a { color: red !important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red!important}")
+    assertEquals(css, "a{color:red !important}")
   }
 
   test("!important flag is omitted when absent") {
@@ -1571,7 +1597,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("!important tolerates whitespace between ! and important") {
     val css = Compile.compileString("a { color: red !  important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:red!important}")
+    assertEquals(css, "a{color:red !important}")
   }
 
   test("!important expanded-mode output has space before !important") {
@@ -1581,7 +1607,7 @@ final class CompileSuite extends munit.FunSuite {
 
   test("!important works with variable-valued expressions") {
     val css = Compile.compileString("$c: blue; a { color: $c !important; }", OutputStyle.Compressed).css
-    assertEquals(css, "a{color:blue!important}")
+    assertEquals(css, "a{color:blue !important}")
   }
 
   // ISS-093: plain-CSS function preservation

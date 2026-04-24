@@ -46,16 +46,21 @@ final class MetaApplySuite extends munit.FunSuite {
     assertEquals(css, """a{content:"hi"}""")
   }
 
-  test("cross-media @extend emits a warning when target is at top level") {
+  test("cross-media @extend raises error when target is at top level (dart-sass semantics)") {
+    // dart-sass throws "You may not @extend selectors across media queries."
+    // The legacy code path emitted a warning; the module-system-based
+    // ExtensionStore correctly raises a hard error.
     val src =
       """.foo { color: red; }
         |@media screen {
         |  .bar { @extend .foo; }
         |}""".stripMargin
-    val result = Compile.compileString(src, OutputStyle.Compressed)
+    val ex = intercept[SassException] {
+      Compile.compileString(src, OutputStyle.Compressed)
+    }
     assert(
-      result.warnings.exists(_.contains("has no effect")),
-      s"expected cross-media warning, got: ${result.warnings}"
+      ex.getMessage.contains("@extend") || ex.getMessage.contains("media"),
+      s"expected cross-media extend error, got: ${ex.getMessage}"
     )
   }
 

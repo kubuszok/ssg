@@ -245,14 +245,16 @@ object MetaFunctions {
       { args =>
         val name      = assertString(args.head, "name")
         val moduleArg = if (args.length > 1) args(1) else SassNull
-        val ns        = resolveModuleNamespace(moduleArg)
-        // dart-sass: for global-variable-exists with a module, check the
-        // module's variable surface; without a module, check the global scope.
+        // dart-sass: `_environment.globalVariableExists(variable.text.replaceAll("_", "-"), namespace: module?.text)`
+        // Uses globalVariableExists which checks only the global scope (index 0),
+        // not all scopes. A local variable declared inside a rule block is NOT global.
+        val moduleNs: Nullable[String] = moduleArg match {
+          case SassNull => Nullable.empty
+          case other    => Nullable(assertString(other, "module"))
+        }
+        val normalized = normalizeName(name)
         val found = CurrentEnvironment.get.fold(false) { env =>
-          if (ns.isDefined)
-            env.findNamespacedModule(ns.get).fold(false)(m => m.variables.contains(name) || m.variables.contains(normalizeName(name)))
-          else
-            env.variableExists(name) || env.variableExists(normalizeName(name))
+          env.globalVariableExists(normalized, moduleNs)
         }
         SassBoolean(found)
       }
@@ -536,7 +538,7 @@ object MetaFunctions {
     )
 
   private val applyFn: BuiltInCallable =
-    BuiltInCallable.function(
+    BuiltInCallable.mixin(
       "apply",
       "$mixin, $args...",
       { args =>
@@ -570,7 +572,8 @@ object MetaFunctions {
           // Mixins emit statements; meta.apply itself returns null.
           SassNull
         }
-      }
+      },
+      acceptsContent = true
     )
 
   /** Built-in mixins exposed by `sass:meta`. These are registered in the mixin slot of the namespace env rather than the function slot so that `@include meta.apply(...)` resolves.

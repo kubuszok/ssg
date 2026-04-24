@@ -166,19 +166,15 @@ final class PseudoSelector(
             if isElement && otherPseudo.isElement &&
               normalizedName == "slotted" && otherPseudo.name == name =>
           otherPseudo.selector.exists(sel.isSuperselector)
-        case otherPseudo: PseudoSelector
-            if normalizedName == otherPseudo.normalizedName &&
-              isClass == otherPseudo.isClass && name == otherPseudo.name =>
-          // Two pseudos of the same name with selector arguments are
-          // superselectors of each other if the inner selectors are.
-          otherPseudo.selector.exists(sel.isSuperselector)
         case _ =>
-          // Full `_selectorPseudoIsSuperselector` logic from
-          // dart-sass/lib/src/extend/functions.dart is ported in
-          // ExtendFunctions; conservative `false` here avoids the
-          // infinite recursion that the previous
-          // `CompoundSelector(List(this), ...)` fallback triggered.
-          false
+          // Fall back to the logic defined in CompoundSelector /
+          // ExtendFunctions, which knows how to compare selector
+          // pseudoclasses against raw selectors.
+          // Port of dart-sass PseudoSelector.isSuperselector fallback:
+          //   CompoundSelector([this], span)
+          //       .isSuperselector(CompoundSelector([other], span))
+          new CompoundSelector(List(this), span)
+            .isSuperselector(new CompoundSelector(List(other), other.span))
       }
     }
 

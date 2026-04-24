@@ -68,16 +68,18 @@ final class ImportCacheSuite extends munit.FunSuite {
     assertEquals(imp.loadCount("vars.scss"), 1)
   }
 
-  test("Circular @import is broken silently without stack overflow") {
+  test("Circular @import raises 'already being loaded' error (matches dart-sass)") {
     val files = Map(
       "a.scss" -> """@import "b"; .a { color: red; }""",
       "b.scss" -> """@import "a"; .b { color: blue; }"""
     )
     val imp    = new CountingMemoryImporter(files)
     val source = """@import "a"; .root { x: 1; }"""
-    val result = Compile.compileString(source, importer = Nullable(imp))
-    // Must finish, emit at least the root rule, and not blow up.
-    assert(result.css.contains(".root"))
+    // dart-sass: circular @import throws "This file is already being loaded."
+    val ex = intercept[SassException] {
+      Compile.compileString(source, importer = Nullable(imp))
+    }
+    assert(ex.getMessage.contains("already being loaded"), s"Expected 'already being loaded' but got: ${ex.getMessage}")
   }
 
   test("StylesheetGraph.addEdge rejects direct self-cycle") {

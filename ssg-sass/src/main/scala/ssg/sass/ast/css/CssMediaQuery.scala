@@ -199,7 +199,7 @@ final class CssMediaQuery private (
       sb.append(t)
       if (conditions.nonEmpty) sb.append(" and ")
     }
-    sb.append(conditions.map(CssMediaQuery.normalizeCondition).mkString(if (conjunction) " and " else " or "))
+    sb.append(conditions.mkString(if (conjunction) " and " else " or "))
     sb.toString()
   }
 }

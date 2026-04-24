@@ -876,8 +876,8 @@ final class Environment private (
     * For each scope level, the namespaceless modules visible at that level (`_importedModules` at the global level, the corresponding bucket of `_nestedForwardedModules` for non-root levels)
     * contribute their variables first, and the level's own variables overlay on top. Innermost levels win on duplicate names because the loop proceeds outermost-to-innermost and overwrites the map.
     */
-  def toImplicitConfiguration(): Map[String, Value] = {
-    val out = mutable.LinkedHashMap.empty[String, Value]
+  def toImplicitConfiguration(): Map[String, ConfiguredValue] = {
+    val out = mutable.LinkedHashMap.empty[String, ConfiguredValue]
     var i   = 0
     while (i < _variables.length) {
       val modules: Iterable[Module[Callable]] =
@@ -889,8 +889,14 @@ final class Environment private (
             }
             .getOrElse(Iterable.empty)
       for (m <- modules)
-        for ((name, value) <- m.variables) out(name) = value
-      for ((name, value) <- _variables(i)) out(name) = value
+        for ((name, value) <- m.variables) {
+          val node: Nullable[AstNode] = m.variableNodes.get(name).fold(Nullable.empty[AstNode])(n => Nullable(n))
+          out(name) = ConfiguredValue.implicitValue(value, node)
+        }
+      for ((name, value) <- _variables(i)) {
+        val node: Nullable[AstNode] = _variableNodes(i).get(name).fold(Nullable.empty[AstNode])(n => Nullable(n))
+        out(name) = ConfiguredValue.implicitValue(value, node)
+      }
       i += 1
     }
     out.toMap

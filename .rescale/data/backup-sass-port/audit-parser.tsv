@@ -1,0 +1,193 @@
+dart_method	dart_file	dart_line	ssg_method	ssg_file	ssg_line	status	notes
+parse	stylesheet.dart	98	parse	StylesheetParser.scala	124	SIMPLIFIED	SSG uses _topLevelStatement instead of _statement(root=true); no _isUseAllowed gating; no _globalVariables tracking; Stylesheet constructor differs
+parseParameterList	stylesheet.dart	126	_parseParameterList	StylesheetParser.scala	1174	SIMPLIFIED	SSG version functional but inlined; not a public entry point
+parseExpression	stylesheet.dart	137	parseExpression	StylesheetParser.scala	2716	PORTED	Faithful wrapper around _expression
+parseNumber	stylesheet.dart	142	parseNumber	StylesheetParser.scala	2725	PORTED	Faithful port
+parseVariableDeclaration	stylesheet.dart	147	parseVariableDeclaration	StylesheetParser.scala	2740	PORTED	Faithful port
+parseUseRule	stylesheet.dart	156	parseUseRule	StylesheetParser.scala	2750	STUB	Throws UnsupportedOperationException
+parseSignature	stylesheet.dart	180	parseSignature	StylesheetParser.scala	2757	STUB	Throws UnsupportedOperationException
+_parseSingleProduction	stylesheet.dart	168	(none)	-	-	MISSING	Used by parse*, parseSignature; SSG inlines this pattern
+_statement	stylesheet.dart	196	_topLevelStatement + _childStatement	StylesheetParser.scala	137	SIMPLIFIED	Split into two methods; missing root parameter; does not dispatch to _declarationOrStyleRule context-sensitively
+_variableDeclarationWithNamespace	stylesheet.dart	227	(none)	-	-	MISSING	Namespaced variable declarations ($ns.$var: value) not supported in child context
+variableDeclarationWithoutNamespace	stylesheet.dart	239	_variableDeclaration	StylesheetParser.scala	1388	SIMPLIFIED	Missing namespace parameter; missing precedingComment/lastSilentComment tracking; missing _globalVariables tracking; missing duplicate !default/!global warnings
+_variableDeclarationOrStyleRule	stylesheet.dart	320	(inlined in _topLevelStatement)	StylesheetParser.scala	137	SIMPLIFIED	SSG checks first char; dart-sass uses sophisticated lookahead with _variableDeclarationOrInterpolation
+_declarationOrStyleRule	stylesheet.dart	370	_declarationOrStyleRule	StylesheetParser.scala	1471	SIMPLIFIED	SSG uses heuristic identifier+colon check; dart-sass uses _declarationOrBuffer with backtracking; custom property detection missing nested --;  many edge cases unhandled
+_declarationOrBuffer	stylesheet.dart	390	(none)	-	-	MISSING	Critical disambiguation method; SSG uses simpler heuristic
+_variableDeclarationOrInterpolation	stylesheet.dart	503	(none)	-	-	MISSING	Disambiguates $ns.$var from interpolated identifier
+_styleRule	stylesheet.dart	526	_styleRule	StylesheetParser.scala	1428	SIMPLIFIED	Missing _parseSelectors path (InterpolatedSelector); missing _withStyleRuleChildren; no _inStyleRule tracking
+_withStyleRuleChildren	stylesheet.dart	559	(none)	-	-	MISSING	Sets _inStyleRule context flag; warns on empty selectors in indented syntax
+_propertyOrVariableDeclaration	stylesheet.dart	590	(none)	-	-	MISSING	Handles nested property/variable declarations; SSG uses _declarationOrStyleRule for all
+_tryDeclarationChildren	stylesheet.dart	636	(none)	-	-	MISSING	Nested declarations (e.g. font: { size: 12px; weight: bold; })
+_declarationChild	stylesheet.dart	654	(none)	-	-	MISSING	Used for nested declaration context
+atRule	stylesheet.dart	669	_atRule	StylesheetParser.scala	151	SIMPLIFIED	SSG uses a single monolithic method; dart-sass uses dispatch table with _isUseAllowed/wasUseAllowed gating; missing interpolated name support; many at-rules handled differently
+_declarationAtRule	stylesheet.dart	737	(none)	-	-	MISSING	At-rules inside declarations (limited set allowed)
+_functionChild	stylesheet.dart	755	(none)	-	-	MISSING	Child statement handler inside @function (no style rules allowed)
+_plainAtRuleName	stylesheet.dart	798	(none)	-	-	MISSING	SSG inlines @-rule name parsing
+_atRootRule	stylesheet.dart	807	(in _atRule case "at-root")	StylesheetParser.scala	1057	SIMPLIFIED	Missing query parsing with _atRootQuery; selector-only form partially handled
+_atRootQuery	stylesheet.dart	829	(none)	-	-	MISSING	Query expression (foo: bar) for @at-root
+_contentRule	stylesheet.dart	854	(in _atRule case "content")	StylesheetParser.scala	492	SIMPLIFIED	Missing _inMixin check; simplified argument parsing
+_debugRule	stylesheet.dart	879	(in _atRule case "debug")	StylesheetParser.scala	970	PORTED	Faithful
+_eachRule	stylesheet.dart	891	(in _atRule case "each")	StylesheetParser.scala	821	SIMPLIFIED	Text-based expression collection instead of recursive descent; missing _inControlDirective tracking
+_errorRule	stylesheet.dart	918	(in _atRule case "error")	StylesheetParser.scala	984	PORTED	Faithful
+_extendRule	stylesheet.dart	929	(in _atRule case "extend")	StylesheetParser.scala	402	SIMPLIFIED	Missing _inStyleRule/_inMixin/_inContentBlock context checks; uses raw text collection instead of almostAnyValue()
+_functionRule	stylesheet.dart	951	(in _atRule case "function")	StylesheetParser.scala	442	SIMPLIFIED	Missing some validation (reserved name warnings via Deprecation.functionName); missing _inMixin/_inControlDirective checks; missing --name→unknownAtRule redirect
+_forRule	stylesheet.dart	1017	(in _atRule case "for")	StylesheetParser.scala	880	SIMPLIFIED	Text-based expression collection with keyword scanning; missing _inControlDirective; functional but not canonical
+_forwardRule	stylesheet.dart	1064	(in _atRule case "forward")	StylesheetParser.scala	225	SIMPLIFIED	Partially implemented; show/hide parsing is basic; missing proper URI validation; raw text swallowing on unsupported clauses
+_memberList	stylesheet.dart	1131	(parseMembers inline)	StylesheetParser.scala	252	SIMPLIFIED	Inlined; functional but does not use identifier(normalize=true) consistently
+_ifRule	stylesheet.dart	1153	(in _atRule case "if")	StylesheetParser.scala	991	SIMPLIFIED	Text-based condition collection; missing _inControlDirective tracking; missing whitespaceWithoutComments after children
+_importRule	stylesheet.dart	1185	(in _atRule case "import")	StylesheetParser.scala	365	SIMPLIFIED	Missing deprecation warning for DynamicImport; missing _inControlDirective/_inMixin disallow check
+importArgument	stylesheet.dart	1217	(inlined)	StylesheetParser.scala	371	SIMPLIFIED	Simplified; missing dynamicUrl() path for url() imports; missing parseImportUrl()
+parseImportUrl	stylesheet.dart	1253	(none)	-	-	MISSING	Windows absolute path normalization for import URLs
+isPlainImportUrl	stylesheet.dart	1267	(inlined)	StylesheetParser.scala	385	SIMPLIFIED	Only checks .css/http/https//; functional
+tryImportModifiers	stylesheet.dart	1282	_tryImportModifiers	StylesheetParser.scala	3231	SIMPLIFIED	Raw text collection; no _importSupportsQuery parsing; no _mediaQueryList integration
+_importSupportsQuery	stylesheet.dart	1338	(none)	-	-	MISSING	supports() function inside @import modifiers
+_tryImportSupportsFunction	stylesheet.dart	1365	(none)	-	-	MISSING	Function call within supports() after @import
+_includeRule	stylesheet.dart	1390	(in _atRule case "include")	StylesheetParser.scala	501	SIMPLIFIED	Missing _inContentBlock tracking on content block parsing; span construction differs
+mediaRule	stylesheet.dart	1442	(in _atRule case "media")	StylesheetParser.scala	550	SIMPLIFIED	Text-based query collection instead of _mediaQueryList(); functional but no structured media query parsing
+_mixinRule	stylesheet.dart	1455	(in _atRule case "mixin")	StylesheetParser.scala	433	SIMPLIFIED	Missing --name validation; missing _inMixin/_inContentBlock/_inControlDirective context checks; missing precedingComment
+mozDocumentRule	stylesheet.dart	1512	(in _atRule fallback)	StylesheetParser.scala	1119	SIMPLIFIED	Handled as generic unknown at-rule with deprecation warning; no structured value parsing
+_returnRule	stylesheet.dart	1593	(in _atRule case "return")	StylesheetParser.scala	476	SIMPLIFIED	Uses _rdLooksLikeSingleFunctionCall heuristic with fallback
+supportsRule	stylesheet.dart	1604	(in _atRule case "supports")	StylesheetParser.scala	617	SIMPLIFIED	Text-based condition collection; SupportsAnything/SupportsFunction heuristic instead of structured _supportsCondition parsing
+_useRule	stylesheet.dart	1618	(in _atRule case "use")	StylesheetParser.scala	158	SIMPLIFIED	Missing URI.parse validation; missing _isUseAllowed enforcement; namespace parsing simplified
+_useNamespace	stylesheet.dart	1641	(inlined)	StylesheetParser.scala	175	SIMPLIFIED	Inlined; missing Parser.parseIdentifier fallback on namespace
+_configuration	stylesheet.dart	1672	(inlined)	StylesheetParser.scala	187	SIMPLIFIED	Inlined; missing private variable warning (Deprecation.withPrivate); missing duplicate variable check
+_warnRule	stylesheet.dart	1732	(in _atRule case "warn")	StylesheetParser.scala	977	PORTED	Faithful
+_whileRule	stylesheet.dart	1744	(none)	-	-	MISSING	@while rule not recognized; falls through to generic at-rule
+unknownAtRule	stylesheet.dart	1759	(in _atRule fallback)	StylesheetParser.scala	1110	SIMPLIFIED	Missing _inUnknownAtRule/_inPlainCssFunction context tracking; no interpolated name support
+_disallowedAtRule	stylesheet.dart	1797	(none)	-	-	MISSING	Error reporting for disallowed at-rules in specific contexts
+_parameterList	stylesheet.dart	1804	_parseParameterList	StylesheetParser.scala	1174	SIMPLIFIED	Functional; missing duplicate parameter name check; keyword-rest partially supported
+_argumentInvocation	stylesheet.dart	1862	_parseArgumentList + _rdArgumentInvocation	StylesheetParser.scala	1282	SIMPLIFIED	Two implementations (text-based and RD); missing allowEmptySecondArg; missing Deprecation.misplacedRest warnings; missing namedSpans
+_expression	stylesheet.dart	1971	_expression + _rdExpression	StylesheetParser.scala	1633	SIMPLIFIED	Two implementations: text-based (_expression) collects raw text then parses via _parseSimpleExpression; RD (_rdExpression) is a partial port. Text-based misses: _inParentheses slash reparse, _inExpression flag, bracket lists, unicode ranges, selector (&), _importantExpression, _percentExpression. RD misses: bracket lists, unicode ranges, hash expressions, selector expression, important, percent, if() modern, not keyword
+expressionUntilComma	stylesheet.dart	2409	(stopAtComma parameter)	StylesheetParser.scala	1633	SIMPLIFIED	Implemented as stopAtComma=true parameter
+_isSlashOperand	stylesheet.dart	2419	_rdIsSlashOperand	StylesheetParser.scala	2824	PORTED	Faithful
+_singleExpression	stylesheet.dart	2425	_rdSingleExpression	StylesheetParser.scala	3044	SIMPLIFIED	Missing: bracket list, selector (&), hash expression, important (!), percent (%), unicode range (u+)
+parentheses	stylesheet.dart	2459	_rdParenthesizedExpression	StylesheetParser.scala	3065	SIMPLIFIED	Functional for parens/maps/lists; missing _inParentheses tracking
+_map	stylesheet.dart	2513	(inlined in _rdParenthesizedExpression)	StylesheetParser.scala	3076	PORTED	Inlined but faithful
+_hashExpression	stylesheet.dart	2532	(none)	-	-	MISSING	Hash color/interpolation dispatch; SSG handles hex colors in _parseSimpleExpression text path only
+_hexColorContents	stylesheet.dart	2557	_tryParseHexColor	StylesheetParser.scala	1975	SIMPLIFIED	Functional for parsing hex colors from text; not wired from RD path
+_isHexColor	stylesheet.dart	2603	(inlined)	StylesheetParser.scala	1975	SIMPLIFIED	Inlined in _tryParseHexColor
+_hexDigit	stylesheet.dart	2613	(none)	-	-	MISSING	Inlined in _tryParseHexColor
+_plusExpression	stylesheet.dart	2618	(none)	-	-	MISSING	SSG handles + in _rdExpression loop
+_minusExpression	stylesheet.dart	2625	(none)	-	-	MISSING	SSG handles - in _rdExpression loop
+_importantExpression	stylesheet.dart	2633	_tryScanImportant	StylesheetParser.scala	1598	SIMPLIFIED	Only works in declaration context; not available as expression
+_percentExpression	stylesheet.dart	2644	(none)	-	-	MISSING	Bare % expression
+_unaryOperation	stylesheet.dart	2653	_rdUnaryOperation	StylesheetParser.scala	3314	SIMPLIFIED	Missing plainCss check; missing null check on operator
+_unaryOperatorFor	stylesheet.dart	2673	_rdUnaryOperatorFor	StylesheetParser.scala	3559	PORTED	Faithful
+_number	stylesheet.dart	2681	_rdNumber	StylesheetParser.scala	3116	SIMPLIFIED	Missing _tryDecimal allowTrailingDot logic; missing _tryExponent as separate method; functional
+_consumeNaturalNumber	stylesheet.dart	2717	(inlined)	StylesheetParser.scala	3123	SIMPLIFIED	Inlined in _rdNumber
+_tryDecimal	stylesheet.dart	2732	(inlined)	StylesheetParser.scala	3131	SIMPLIFIED	Missing allowTrailingDot parameter
+_tryExponent	stylesheet.dart	2747	(inlined)	StylesheetParser.scala	3141	SIMPLIFIED	Inlined in _rdNumber
+_unicodeRange	stylesheet.dart	2764	(none)	-	-	MISSING	Unicode range expressions (U+XXXX) not implemented
+_variable	stylesheet.dart	2816	_rdVariable	StylesheetParser.scala	3173	SIMPLIFIED	Missing plainCss check
+_selector	stylesheet.dart	2831	(none)	-	-	MISSING	Selector expression (&) in expression context
+interpolatedString	stylesheet.dart	2856	_rdString	StylesheetParser.scala	3286	SIMPLIFIED	Missing #{...} interpolation inside strings; creates Interpolation.plain instead
+interpolatedStringToken	stylesheet.dart	2901	(none)	-	-	MISSING	Raw string token with preserved escapes/interpolation
+identifierLike	stylesheet.dart	2944	_rdIdentifierLike	StylesheetParser.scala	3331	SIMPLIFIED	Missing: legacy if() detection, modern if() expression, not-operator, trySpecialFunction, interpolated function expression, colorsByName (partially present)
+ifExpression	stylesheet.dart	3050	(none)	-	-	MISSING	Modern CSS if() expression
+_ifConditionExpression	stylesheet.dart	3069	(none)	-	-	MISSING	Modern CSS if() condition parsing
+_ifConditionRaw	stylesheet.dart	3142	(none)	-	-	MISSING	if() condition raw fallback
+_ifGroup	stylesheet.dart	3213	(none)	-	-	MISSING	if() grouped expression
+_tryArbitrarySubstitution	stylesheet.dart	3265	(none)	-	-	MISSING	Arbitrary substitution in if() conditions
+namespacedExpression	stylesheet.dart	3302	_rdNamespacedExpression	StylesheetParser.scala	3393	SIMPLIFIED	Missing _assertPublic; functional
+trySpecialFunction	stylesheet.dart	3326	_trySpecialCssFunction	StylesheetParser.scala	2234	SIMPLIFIED	Handles url/element/expression/progid/vendor-prefixed; missing calc/type special handling; missing Deprecation.functionName warnings
+_tryUrlContents	stylesheet.dart	3448	(none)	-	-	MISSING	URL content parsing with interpolation/backtracking; SSG uses text-based approach
+dynamicUrl	stylesheet.dart	3528	_consumeImportUrl	StylesheetParser.scala	3184	SIMPLIFIED	Only in @import context; missing SassScript-containing url() form
+almostAnyValue	stylesheet.dart	3559	(none)	-	-	MISSING	Used by @extend and selectors; SSG uses raw text collection
+_interpolatedDeclarationValue	stylesheet.dart	3676	_readCustomPropertyValue	StylesheetParser.scala	2430	SIMPLIFIED	Only handles custom property case; dart-sass version is general-purpose with many parameters; missing allowSemicolon/allowColon/allowOpenBrace/endAfterOf/silentComments/consumeNewlines options
+interpolatedIdentifier	stylesheet.dart	3822	_readInterpolatedName	StylesheetParser.scala	2516	SIMPLIFIED	Only used for property names; missing escapes in start; missing -- handling
+_interpolatedIdentifierBody	stylesheet.dart	3856	(none)	-	-	MISSING	Interpolated identifier body parsing
+_interpolatedIdentifierBodyHelper	stylesheet.dart	3865	(none)	-	-	MISSING	Helper for interpolated identifier body
+singleInterpolation	stylesheet.dart	3887	(none)	-	-	MISSING	#{} interpolation parsing as (Expression, Span); SSG does this inline
+_selectorList	stylesheet.dart	3907	(none)	-	-	MISSING	Interpolated selector list parsing (InterpolatedSelectorList)
+_complexSelector	stylesheet.dart	3930	(none)	-	-	MISSING	Complex selector with combinators
+_compoundSelector	stylesheet.dart	4030	(none)	-	-	MISSING	Compound selector
+_simpleSelector	stylesheet.dart	4044	(none)	-	-	MISSING	Simple selector dispatch
+_attributeSelector	stylesheet.dart	4080	(none)	-	-	MISSING	Attribute selector [attr=value]
+_attributeName	stylesheet.dart	4116	(none)	-	-	MISSING	Qualified attribute name with namespace
+_attributeOperator	stylesheet.dart	4144	(none)	-	-	MISSING	Attribute comparison operator
+_classSelector	stylesheet.dart	4178	(none)	-	-	MISSING	Class selector .name
+_idSelector	stylesheet.dart	4185	(none)	-	-	MISSING	ID selector #name
+_placeholderSelector	stylesheet.dart	4192	(none)	-	-	MISSING	Placeholder selector %name
+_parentSelector	stylesheet.dart	4199	(none)	-	-	MISSING	Parent selector &
+_pseudoSelector	stylesheet.dart	4217	(none)	-	-	MISSING	Pseudo selector :name / ::name
+_typeOrUniversalSelector	stylesheet.dart	4261	(none)	-	-	MISSING	Type/universal selector with namespace
+_isSimpleSelectorStart	stylesheet.dart	4299	(none)	-	-	MISSING	Character start check for selectors
+_mediaQueryList	stylesheet.dart	4315	(none)	-	-	MISSING	Structured media query list; SSG uses text collection
+_mediaQuery	stylesheet.dart	4330	(none)	-	-	MISSING	Individual media query parsing
+_mediaLogicSequence	stylesheet.dart	4404	(none)	-	-	MISSING	Media query logical sequence (and/or)
+_mediaOrInterp	stylesheet.dart	4419	(none)	-	-	MISSING	Media or interpolation
+_mediaInParens	stylesheet.dart	4429	(none)	-	-	MISSING	Media in parentheses
+_expressionUntilComparison	stylesheet.dart	4495	(none)	-	-	MISSING	Expression until comparison operator (for media queries)
+_supportsCondition	stylesheet.dart	4510	(none)	-	-	MISSING	Structured @supports condition; SSG uses SupportsAnything
+_supportsConditionInParens	stylesheet.dart	4547	(none)	-	-	MISSING	@supports condition in parentheses with backtracking
+_supportsDeclarationValue	stylesheet.dart	4642	(none)	-	-	MISSING	RHS of declaration in @supports
+_trySupportsOperation	stylesheet.dart	4658	(none)	-	-	MISSING	@supports operation (and/or) after interpolation
+_lookingAtInterpolatedIdentifier	stylesheet.dart	4706	(none)	-	-	MISSING	Lookahead for interpolated identifier; SSG uses lookingAtIdentifier from Parser
+_lookingAtPotentialPropertyHack	stylesheet.dart	4723	(none)	-	-	MISSING	Property hack detection (*prop, :prop, etc.)
+_lookingAtInterpolatedIdentifierBody	stylesheet.dart	4733	(none)	-	-	MISSING	Lookahead for interpolated identifier body
+_lookingAtExpression	stylesheet.dart	4741	(none)	-	-	MISSING	Lookahead for expression start; SSG checks peekChar inline
+_withChildren	stylesheet.dart	4770	_children	StylesheetParser.scala	1437	SIMPLIFIED	SSG version does not accept a child() callback or create() function; no whitespaceWithoutComments after
+_urlString	stylesheet.dart	4781	(inlined)	StylesheetParser.scala	161	SIMPLIFIED	Inlined in @use parsing
+_publicIdentifier	stylesheet.dart	4796	(none)	-	-	MISSING	Identifier that rejects private names
+_assertPublic	stylesheet.dart	4806	_isPrivateMember	StylesheetParser.scala	3427	SIMPLIFIED	Check exists but not called in all required places
+_addOrInject	stylesheet.dart	4816	(none)	-	-	MISSING	Helper for @at-root query building
+indented	stylesheet.dart	4828	indented	StylesheetParser.scala	114	PORTED	Abstract property
+plainCss	stylesheet.dart	4832	plainCss	StylesheetParser.scala	111	PORTED	Default false
+currentIndentation	stylesheet.dart	4839	currentIndentation	StylesheetParser.scala	117	PORTED	Abstract property
+styleRuleSelector	stylesheet.dart	4843	styleRuleSelector	StylesheetParser.scala	2767	PORTED	Abstract method
+expectStatementSeparator	stylesheet.dart	4852	expectStatementSeparator	StylesheetParser.scala	2770	PORTED	Abstract method
+atEndOfStatement	stylesheet.dart	4856	atEndOfStatement	StylesheetParser.scala	2773	PORTED	Abstract method
+lookingAtChildren	stylesheet.dart	4860	lookingAtChildren	StylesheetParser.scala	2776	PORTED	Abstract method
+scanElse	stylesheet.dart	4870	scanElse	StylesheetParser.scala	2779	PORTED	Abstract method
+children	stylesheet.dart	4878	children	StylesheetParser.scala	2782	PORTED	Abstract method
+statements	stylesheet.dart	4884	statements	StylesheetParser.scala	2785	PORTED	Abstract method
+whitespace	parser.dart	82	whitespace	Parser.scala	45	PORTED	Faithful
+whitespaceWithoutComments	parser.dart	94	whitespaceWithoutComments	Parser.scala	54	PORTED	Faithful
+spaces	parser.dart	102	spaces	Parser.scala	68	PORTED	Faithful
+scanComment	parser.dart	112	scanComment	Parser.scala	76	PORTED	Faithful
+expectWhitespace	parser.dart	132	expectWhitespace	Parser.scala	114	PORTED	Faithful
+silentComment	parser.dart	144	silentComment	Parser.scala	90	SIMPLIFIED	Returns Unit instead of Boolean
+loudComment	parser.dart	154	loudComment	Parser.scala	100	PORTED	Faithful
+identifier	parser.dart	175	identifier	Parser.scala	128	PORTED	Faithful
+identifierBody	parser.dart	211	identifierBody	Parser.scala	159	PORTED	Faithful
+_identifierBody	parser.dart	219	identifierBody(buf)	Parser.scala	167	PORTED	Faithful; private to protected
+string	parser.dart	251	string	Parser.scala	291	PORTED	Faithful
+naturalNumber	parser.dart	291	naturalNumber	Parser.scala	346	PORTED	Faithful
+declarationValue	parser.dart	310	declarationValue	Parser.scala	359	SIMPLIFIED	Missing tryUrl() call for url() tokens inside declaration values
+tryUrl	parser.dart	392	(none)	-	-	MISSING	URL token parsing in plain CSS context
+variableName	parser.dart	442	variableName	Parser.scala	434	PORTED	Faithful
+escape	parser.dart	454	escape	Parser.scala	199	PORTED	Faithful
+escapeCharacter	parser.dart	502	escapeCharacter	Parser.scala	323	PORTED	Faithful
+scanCharIf	parser.dart	509	(none)	-	-	MISSING	Conditional character consumption; used internally
+scanIdentChar	parser.dart	520	(none)	-	-	MISSING	Identifier character scan with case sensitivity and escape support
+expectIdentChar	parser.dart	543	(none)	-	-	MISSING	Expects identifier char; used in unicode range parsing
+lookingAtNumber	parser.dart	560	(none)	-	-	MISSING	Lookahead for number
+lookingAtIdentifier	parser.dart	580	lookingAtIdentifier	Parser.scala	239	PORTED	Faithful
+lookingAtIdentifierBody	parser.dart	597	lookingAtIdentifierBody	Parser.scala	251	PORTED	Faithful
+scanIdentifier	parser.dart	604	scanIdentifier	Parser.scala	257	SIMPLIFIED	Missing escape-aware character comparison (scanIdentChar); uses direct char compare
+matchesIdentifier	parser.dart	621	(none)	-	-	MISSING	Non-consuming identifier match
+_consumeIdentifier	parser.dart	636	(none)	-	-	MISSING	Internal identifier consumption helper
+expectIdentifier	parser.dart	645	expectIdentifier	Parser.scala	284	SIMPLIFIED	Missing per-character escape-aware comparison; uses scanIdentifier
+rawText	parser.dart	664	(none)	-	-	MISSING	Consumer-to-raw-text capture; SSG uses scanner.substring inline
+spanFrom	parser.dart	673	spanFrom	Parser.scala	440	SIMPLIFIED	Missing InterpolationMap support
+spanFromPosition	parser.dart	683	(none)	-	-	MISSING	Span from position offset
+error	parser.dart	694	error	Parser.scala	443	SIMPLIFIED	Missing stack trace parameter; missing multi-source span variant
+withErrorMessage	parser.dart	706	(none)	-	-	MISSING	Error message wrapping
+debug	parser.dart	723	(none)	-	-	MISSING	Debug helper (not needed for production)
+wrapSpanFormatException	parser.dart	734	wrapSpanFormatException	Parser.scala	447	SIMPLIFIED	Missing InterpolationMap mapping; missing MultiSourceSpanFormatException handling; missing _adjustExceptionSpan
+_adjustExceptionSpan	parser.dart	783	(none)	-	-	MISSING	Exception span adjustment for newlines
+_firstNewlineBefore	parser.dart	798	(none)	-	-	MISSING	Newline location helper for error spans
+parseIdentifier	parser.dart	35	Parser.parseIdentifier	Parser.scala	461	PORTED	Faithful
+isIdentifier	parser.dart	38	Parser.isIdentifier	Parser.scala	471	PORTED	Faithful
+isVariableDeclarationLike	parser.dart	50	Parser.isVariableDeclarationLike	Parser.scala	480	PORTED	Faithful
+indented	scss.dart	15	indented	ScssParser.scala	35	PORTED	Faithful (false)
+currentIndentation	scss.dart	16	currentIndentation	ScssParser.scala	36	PORTED	Faithful (0)
+styleRuleSelector	scss.dart	20	styleRuleSelector	ScssParser.scala	42	SIMPLIFIED	SSG collects raw text + interpolation; dart-sass delegates to almostAnyValue()
+expectStatementSeparator	scss.dart	22	expectStatementSeparator	ScssParser.scala	111	SIMPLIFIED	Missing _whitespaceWithoutComments call before check; less strict
+atEndOfStatement	scss.dart	29	atEndOfStatement	ScssParser.scala	123	PORTED	Faithful
+lookingAtChildren	scss.dart	37	lookingAtChildren	ScssParser.scala	128	PORTED	Faithful
+scanElse	scss.dart	39	scanElse	ScssParser.scala	131	SIMPLIFIED	Missing Deprecation.elseif handling for @elseif; SSG uses identifier() instead of scanIdentifier
+children	scss.dart	63	children	ScssParser.scala	154	SIMPLIFIED	Missing variable/comment dispatch optimization; simpler loop
+statements	scss.dart	98	statements	ScssParser.scala	166	SIMPLIFIED	Missing variable/comment dispatch optimization; simpler loop
+_silentComment	scss.dart	130	(none)	-	-	MISSING	Statement-level SilentComment creation (SSG handles in StylesheetParser._silentComment)
+_loudComment	scss.dart	154	(none)	-	-	MISSING	Statement-level LoudComment with interpolation (SSG handles in StylesheetParser._loudComment)

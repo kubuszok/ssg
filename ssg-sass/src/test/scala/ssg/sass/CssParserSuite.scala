@@ -51,16 +51,22 @@ final class CssParserSuite extends munit.FunSuite {
     intercept[SassFormatException](compileCss(source))
   }
 
-  test("nested style rules are rejected") {
+  test("nested style rules are allowed (CSS nesting support, dart-sass compat)") {
+    // Modern dart-sass supports CSS nesting in plain CSS files.
+    // Nested rules are preserved as-is, not flattened or rejected.
     val source = ".outer { .inner { color: red; } }"
-    intercept[SassFormatException](compileCss(source))
+    val result = compileCss(source)
+    assert(result.css.contains(".outer"), s"outer selector missing: ${result.css}")
+    assert(result.css.contains(".inner"), s"inner selector missing: ${result.css}")
+    assert(result.css.contains("color: red"), s"declaration missing: ${result.css}")
   }
 
-  test("parent selector & is rejected") {
-    // `&:hover` wrapped in a synthetic outer so it appears at top level.
-    // CssParser validates selectors textually for `&`.
+  test("parent selector & is allowed in plain CSS (CSS Nesting spec)") {
+    // dart-sass: `&` is allowed at the top level in plain CSS per CSS Nesting.
+    // CssParser no longer rejects `&` selectors at the top level.
     val source = "& { color: red; }"
-    intercept[SassFormatException](compileCss(source))
+    val result = compileCss(source)
+    assert(result.css.contains("color: red"), result.css.toString)
   }
 
   test("@if / @for / @function / @return all rejected") {
@@ -93,13 +99,17 @@ final class CssParserSuite extends munit.FunSuite {
     // The MapImporter assigns Syntax.forPath, so `evil.css` loads as
     // Syntax.Css, and ImportCache picks CssParser — which rejects the
     // Sass variable inside it.
+    // dart-sass: _addExceptionTrace wraps _execute, so the SassFormatException
+    // from parsing gets converted to SassRuntimeException with a trace.
+    // The outer run() catch then adds loadedUrls.
     val importer = new MapImporter(
       Map("evil.css" -> "$oops: red; .a { color: $oops; }")
     )
     val source = """@use "evil.css";"""
-    intercept[SassFormatException] {
+    val ex = intercept[SassRuntimeException] {
       Compile.compileString(source, importer = Nullable(importer))
     }
+    assert(ex.sassMessage.contains("Sass variables aren't allowed in plain CSS"))
   }
 
   test("@use of a .scss file still routes through ScssParser") {

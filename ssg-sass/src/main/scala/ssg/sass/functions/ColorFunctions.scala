@@ -351,6 +351,8 @@ object ColorFunctions {
   ): SassColor =
     space match {
       case ColorSpace.hsl =>
+        channel1.foreach(checkPercent(_, "saturation"))
+        channel2.foreach(checkPercent(_, "lightness"))
         SassColor.hsl(
           channel0.map(n => angleValue(n, "hue")).fold(Nullable.Null: Nullable[Double])(Nullable(_)),
           channelFromValueModern(space.channels(1), forcePercent(channel1), doClamp = true),
@@ -436,12 +438,15 @@ object ColorFunctions {
       }
       if (doClamp) {
         channel match {
-          case lc: LinearChannel if lc.lowerClamped && lc.upperClamped =>
-            Nullable(clampLikeCss(raw, lc.min, lc.max))
-          case lc: LinearChannel if lc.lowerClamped =>
-            Nullable(math.max(raw, lc.min))
-          case lc: LinearChannel if lc.upperClamped =>
-            Nullable(math.min(raw, lc.max))
+          // dart-sass uses clampLikeCss for all clamped channels, passing
+          // -infinity/infinity for unclamped sides. This correctly handles
+          // NaN (clampLikeCss returns lowerBound for NaN).
+          case lc: LinearChannel if lc.lowerClamped || lc.upperClamped =>
+            Nullable(clampLikeCss(
+              raw,
+              if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
+              if (lc.upperClamped) lc.max else Double.PositiveInfinity
+            ))
           case _ =>
             Nullable(raw)
         }
@@ -643,11 +648,13 @@ object ColorFunctions {
     }
 
   /** Interprets [v] as a hue channel, returning Nullable.Null for `none`. */
+  @annotation.nowarn("msg=unused private member") // reserved for modern color API
   private def hueOrNone(v: Value): Nullable[Double] =
     if (isNone(v)) Nullable.Null
     else Nullable(hueOf(v.assertNumber()))
 
   /** Interprets [v] as an alpha channel, returning Nullable.Null for `none`, clamped to `[0, 1]`. */
+  @annotation.nowarn("msg=unused private member") // reserved for modern color API
   private def alphaOrNone(v: Value): Nullable[Double] =
     if (isNone(v)) Nullable.Null
     else Nullable(clamp(scalar(v.assertNumber()), 0, 1))
@@ -655,6 +662,7 @@ object ColorFunctions {
   /** Helper for modern color functions (lab/lch/oklab/oklch/hwb/color): if any channel or the alpha is a special CSS value, return a passthrough string using modern space-separated syntax with `/`
     * for alpha. Channels are separated by spaces; alpha (if non-default) is appended with `/` directly after the last channel (no spaces around `/`), matching dart-sass behavior.
     */
+  @annotation.nowarn("msg=unused private member") // reserved for modern color API
   private def tryModernPassthrough(name: String, channels: List[Value], alpha: Value): Option[Value] =
     if (
       channels.exists(v => isSpecialCssValue(v) || v.isSpecialNumber) ||
@@ -1297,8 +1305,10 @@ object ColorFunctions {
   }
 
   /** Convert color to space specified by keyword, or return as-is. dart-sass: `$space` must be an unquoted string.
+    *
+    * dart-sass: `_colorInSpace` (color.dart:1623-1638). The default for [legacyMissing] is `true`; only `to-space` passes `false`.
     */
-  private def colorInSpace(color: SassColor, spaceKeyword: Option[Value]): SassColor =
+  private def colorInSpace(color: SassColor, spaceKeyword: Option[Value], legacyMissing: Boolean = true): SassColor =
     spaceKeyword match {
       case None    => color
       case Some(v) =>
@@ -1308,7 +1318,7 @@ object ColorFunctions {
             s"$$space: Expected ${s.toCssString} to be an unquoted string."
           )
         }
-        color.toSpace(ColorSpace.fromName(s.text, Some("space")), legacyMissing = false)
+        color.toSpace(ColorSpace.fromName(s.text, Some("space")), legacyMissing = legacyMissing)
     }
 
   /** Extract channel value from SassNumber according to channel metadata. Ported from dart-sass `_channelFromValue`.
@@ -1337,12 +1347,15 @@ object ColorFunctions {
         }
         if (doClamp) {
           channel match {
-            case lc: LinearChannel if lc.lowerClamped && lc.upperClamped =>
-              Nullable(clampLikeCss(channelValue, lc.min, lc.max))
-            case lc: LinearChannel if lc.lowerClamped =>
-              Nullable(math.max(channelValue, lc.min))
-            case lc: LinearChannel if lc.upperClamped =>
-              Nullable(math.min(channelValue, lc.max))
+            // dart-sass uses clampLikeCss for all clamped channels, passing
+            // -infinity/infinity for unclamped sides. This correctly handles
+            // NaN (clampLikeCss returns lowerBound for NaN).
+            case lc: LinearChannel if lc.lowerClamped || lc.upperClamped =>
+              Nullable(clampLikeCss(
+                channelValue,
+                if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
+                if (lc.upperClamped) lc.max else Double.PositiveInfinity
+              ))
             case _ =>
               Nullable(channelValue)
           }
@@ -1468,7 +1481,19 @@ object ColorFunctions {
         val n = v.assertNumber(Nullable("alpha"))
         if (!n.hasUnits) Nullable(n.valueInRange(0, 1, Nullable("alpha")))
         else if (n.hasUnit("%")) Nullable(n.valueInRangeWithUnit(0, 100, "alpha", "%") / 100.0)
-        else Nullable(n.valueInRange(0, 1, Nullable("alpha")))
+        else {
+          EvaluationContext.warnForDeprecation(
+            Deprecation.FunctionUnits,
+            s"$$alpha: Passing a unit other than % ($n) is " +
+              "deprecated.\n" +
+              "\n" +
+              "To preserve current behavior: " +
+              s"${n.unitSuggestion("alpha")}\n" +
+              "\n" +
+              "See https://sass-lang.com/d/function-units"
+          )
+          Nullable(n.valueInRange(0, 1, Nullable("alpha")))
+        }
     }
     colorFromChannels(
       color.space,
@@ -1582,13 +1607,30 @@ object ColorFunctions {
         var adjustmentNum = adjNum
         (color.space, channel) match {
           case (ColorSpace.hsl | ColorSpace.hwb, _) if channel.isPolarAngle =>
-            // Legacy hue: accept any angle unit or unitless
+            // `_channelFromValue` expects all hue values to be compatible with `deg`,
+            // but we're still in the deprecation period where we allow non-`deg`
+            // values for HSL and HWB so we have to handle that ahead-of-time.
             adjustmentNum = SassNumber(angleValue(adjustmentNum, "hue"))
           case (ColorSpace.hsl, lc: LinearChannel) if lc.name == "saturation" || lc.name == "lightness" =>
-            // Legacy saturation/lightness: accept % or unitless
+            // `_channelFromValue` expects lightness/saturation to be `%`, but we're
+            // still in the deprecation period where we allow non-`%` values so we
+            // have to handle that ahead-of-time.
+            checkPercent(adjustmentNum, channel.name)
             adjustmentNum = SassNumber(adjustmentNum.value, "%")
           case (_, ColorChannel.alpha) if adjustmentNum.hasUnits =>
-            // Alpha with units: treat value as unitless
+            // `_channelFromValue` expects alpha to be unitless or `%`, but we're
+            // still in the deprecation period where we allow other values (and
+            // interpret `%` as unitless) so we have to handle that ahead-of-time.
+            EvaluationContext.warnForDeprecation(
+              Deprecation.FunctionUnits,
+              s"$$alpha: Passing a number with unit ${adjustmentNum.unitString} is " +
+                "deprecated.\n" +
+                "\n" +
+                "To preserve current behavior: " +
+                s"${adjustmentNum.unitSuggestion("alpha")}\n" +
+                "\n" +
+                "More info: https://sass-lang.com/d/function-units"
+            )
             adjustmentNum = SassNumber(adjustmentNum.value)
           case _ => ()
         }
@@ -1607,11 +1649,23 @@ object ColorFunctions {
         }
     }
 
-  /** Extract angle value in degrees, accepting any angle-compatible unit or unitless. Ported from dart-sass `_angleValue`; deprecation warnings are handled by the caller.
+  /** Asserts that [number] is a number and returns its value in degrees.
+    *
+    * Prints a deprecation warning if [number] has a non-angle unit. Ported from dart-sass `_angleValue`.
     */
   private def angleValue(number: SassNumber, name: String): Double =
     if (number.compatibleWithUnit("deg")) number.coerceValueToUnit("deg")
-    else number.value
+    else {
+      EvaluationContext.warnForDeprecation(
+        Deprecation.FunctionUnits,
+        s"$$$name: Passing a unit other than deg ($number) is deprecated.\n" +
+          "\n" +
+          s"To preserve current behavior: ${number.unitSuggestion(name)}\n" +
+          "\n" +
+          "See https://sass-lang.com/d/function-units"
+      )
+      number.value
+    }
 
   // --- Callables ---
 
@@ -1825,22 +1879,47 @@ object ColorFunctions {
       }
     )
 
-  /** color.same($color1, $color2) — true if both normalize to the same xyz-d65 value. */
+  /** color.same($color1, $color2) — true if both normalize to the same xyz-d65 value.
+    *
+    * dart-sass: `same` (color.dart:714-752). When both colors are in the same
+    * space, channels are compared directly. Otherwise, both are converted to
+    * xyz-d65 with missing channels treated as 0 (`toXyzNoMissing`).
+    */
   private val sameFn: BuiltInCallable =
     BuiltInCallable.function(
       "same",
       "$color1, $color2",
       { args =>
-        val a      = args(0).assertColor()
-        val b      = args(1).assertColor()
-        val target = ColorSpace.xyzD65
-        val aa     = a.toSpace(target)
-        val bb     = b.toSpace(target)
-        val equal  =
-          fuzzyEquals(aa.channel0, bb.channel0) &&
-            fuzzyEquals(aa.channel1, bb.channel1) &&
-            fuzzyEquals(aa.channel2, bb.channel2) &&
-            fuzzyEquals(aa.alpha, bb.alpha)
+        val color1 = args(0).assertColor(Nullable("color1"))
+        val color2 = args(1).assertColor(Nullable("color2"))
+
+        /// Converts [color] to the xyz-d65 space without any missing channels.
+        def toXyzNoMissing(color: SassColor): SassColor = {
+          if ((color.space eq ColorSpace.xyzD65) && !color.hasMissingChannel) {
+            color
+          } else if (color.space eq ColorSpace.xyzD65) {
+            // Replace missing channels with 0
+            SassColor.xyzD65(Nullable(color.channel0), Nullable(color.channel1), Nullable(color.channel2), Nullable(color.alpha))
+          } else {
+            // Use [ColorSpace.convert] manually so that we can convert missing
+            // channels to 0 without having to create new intermediate color
+            // objects.
+            color.space.convert(
+              ColorSpace.xyzD65, Nullable(color.channel0), Nullable(color.channel1),
+              Nullable(color.channel2), Nullable(color.alpha)
+            )
+          }
+        }
+
+        val equal =
+          if (color1.space eq color2.space) {
+            fuzzyEquals(color1.channel0, color2.channel0) &&
+              fuzzyEquals(color1.channel1, color2.channel1) &&
+              fuzzyEquals(color1.channel2, color2.channel2) &&
+              fuzzyEquals(color1.alpha, color2.alpha)
+          } else {
+            toXyzNoMissing(color1) == toXyzNoMissing(color2)
+          }
         SassBoolean(equal)
       }
     )
