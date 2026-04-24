@@ -7,7 +7,7 @@ package sass
 
 import ssg.sass.Nullable
 import ssg.sass.functions.ColorFunctions
-import ssg.sass.value.{ SassColor, SassNull, SassNumber, SassString, Value }
+import ssg.sass.value.{ ListSeparator, SassColor, SassList, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.color.{ ColorSpace, HueInterpolationMethod, InterpolationMethod }
 
 /** Tests for modern CSS color space support:
@@ -27,13 +27,15 @@ final class ColorSpacesSuite extends munit.FunSuite {
   private def num(d: Double): SassNumber = SassNumber(d)
   private def pct(d: Double): SassNumber = SassNumber(d, "%")
   private def str(s: String): SassString = SassString(s, hasQuotes = false)
+  /** Wrap values into a space-separated list (single $channels argument for modern color functions). */
+  private def channels(vs: Value*): SassList = SassList(vs.toList, ListSeparator.Space)
 
   // ------------------------------------------------------------------
   // Constructors parse / produce the right color space
   // ------------------------------------------------------------------
 
   test("lab(50 20 -30) produces a color in the lab space") {
-    val c = fn("lab")(List(num(50), num(20), num(-30))).asInstanceOf[SassColor]
+    val c = fn("lab")(List(channels(num(50), num(20), num(-30)))).asInstanceOf[SassColor]
     assertEquals(c.space, ColorSpace.lab)
     assertEqualsDouble(c.channel0, 50.0, 1e-9)
     assertEqualsDouble(c.channel1, 20.0, 1e-9)
@@ -41,7 +43,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("lab() serializes in modern CSS syntax") {
-    val c   = fn("lab")(List(num(50), num(20), num(-30))).asInstanceOf[SassColor]
+    val c   = fn("lab")(List(channels(num(50), num(20), num(-30)))).asInstanceOf[SassColor]
     val css = c.toCssString()
     assert(css.startsWith("lab("), s"expected lab(...), got: $css")
     assert(css.contains("50%"), css)
@@ -50,7 +52,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("lch(50 60 180) round-trips back to itself") {
-    val c = fn("lch")(List(num(50), num(60), num(180))).asInstanceOf[SassColor]
+    val c = fn("lch")(List(channels(num(50), num(60), num(180)))).asInstanceOf[SassColor]
     assertEquals(c.space, ColorSpace.lch)
     val back = c.toSpace(ColorSpace.lab).toSpace(ColorSpace.lch)
     assertEqualsDouble(back.channel0, 50.0, 1e-6)
@@ -59,7 +61,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("oklch(0.7 0.15 180) parses and lives in oklch") {
-    val c = fn("oklch")(List(num(0.7), num(0.15), num(180))).asInstanceOf[SassColor]
+    val c = fn("oklch")(List(channels(num(0.7), num(0.15), num(180)))).asInstanceOf[SassColor]
     assertEquals(c.space, ColorSpace.oklch)
     assertEqualsDouble(c.channel0, 0.7, 1e-9)
     assertEqualsDouble(c.channel1, 0.15, 1e-9)
@@ -67,7 +69,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("oklab() constructor builds an oklab color") {
-    val c = fn("oklab")(List(num(0.5), num(0.1), num(-0.05))).asInstanceOf[SassColor]
+    val c = fn("oklab")(List(channels(num(0.5), num(0.1), num(-0.05)))).asInstanceOf[SassColor]
     assertEquals(c.space, ColorSpace.oklab)
     assertEqualsDouble(c.channel0, 0.5, 1e-9)
   }
@@ -150,29 +152,34 @@ final class ColorSpacesSuite extends munit.FunSuite {
   }
 
   test("e2e: lch(50% 60 180) round-trips") {
-    assertEquals(compileDecl("color: lch(50% 60 180)"), "color: lch(50% 60 180)")
+    // dart-sass serializer emits `deg` suffix for polar (hue) angles in lch
+    assertEquals(compileDecl("color: lch(50% 60 180)"), "color: lch(50% 60 180deg)")
   }
 
   test("e2e: oklab(0.5 0.1 -0.05) round-trips") {
-    assertEquals(compileDecl("color: oklab(0.5 0.1 -0.05)"), "color: oklab(0.5 0.1 -0.05)")
+    // dart-sass serializer emits lightness as percentage for ok* spaces (0.5 -> 50%)
+    assertEquals(compileDecl("color: oklab(0.5 0.1 -0.05)"), "color: oklab(50% 0.1 -0.05)")
   }
 
   test("e2e: oklch(0.7 0.15 180) round-trips") {
-    assertEquals(compileDecl("color: oklch(0.7 0.15 180)"), "color: oklch(0.7 0.15 180)")
+    // dart-sass: lightness as percentage (0.7 -> 70%), hue with deg suffix
+    assertEquals(compileDecl("color: oklch(0.7 0.15 180)"), "color: oklch(70% 0.15 180deg)")
   }
 
   test("e2e: oklch(0.7 0.15 180 / 0.5) with alpha round-trips") {
+    // dart-sass: lightness as percentage, hue with deg suffix
     assertEquals(
       compileDecl("color: oklch(0.7 0.15 180 / 0.5)"),
-      "color: oklch(0.7 0.15 180 / 0.5)"
+      "color: oklch(70% 0.15 180deg / 0.5)"
     )
   }
 
   test("e2e: hwb(120 10% 20%) parses and serializes") {
+    // dart-sass: in-gamut HWB without a format is serialized as HSL
+    // (writeLegacyColor falls through to writeHsl for HWB). This
+    // matches dart-sass serialize.dart:596-597.
     val out = compileDecl("color: hwb(120 10% 20%)")
-    assert(out.startsWith("color: hwb(120"), out)
-    assert(out.contains("10%"), out)
-    assert(out.contains("20%"), out)
+    assert(out.startsWith("color: hsl(120"), out)
   }
 
   test("e2e: color(display-p3 1 0.5 0) round-trips") {

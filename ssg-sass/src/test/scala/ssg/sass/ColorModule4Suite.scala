@@ -6,7 +6,7 @@ package ssg
 package sass
 
 import ssg.sass.functions.ColorFunctions
-import ssg.sass.value.{ SassBoolean, SassColor, SassNumber, SassString, Value }
+import ssg.sass.value.{ ListSeparator, SassBoolean, SassColor, SassList, SassNumber, SassString, Value }
 import ssg.sass.value.color.ColorSpace
 
 /** Tests for the CSS Color Module 4 introspection API registered under the `sass:color` module: color.channel, color.space, color.is-legacy, color.is-in-gamut, color.is-powerless, color.is-missing,
@@ -29,6 +29,7 @@ final class ColorModule4Suite extends munit.FunSuite {
   private def num(d:  Double): SassNumber = SassNumber(d)
   private def str(s:  String): SassString = SassString(s, hasQuotes = false)
   private def qstr(s: String): SassString = SassString(s, hasQuotes = true)
+  private def channels(vs: Value*): SassList = SassList(vs.toList, ListSeparator.Space)
 
   private def red: SassColor =
     fn("rgb")(List(num(255), num(0), num(0))).asInstanceOf[SassColor]
@@ -51,7 +52,7 @@ final class ColorModule4Suite extends munit.FunSuite {
   }
 
   test("color.space(lab(50 20 -30)) returns 'lab'") {
-    val c = fn("lab")(List(num(50), num(20), num(-30))).asInstanceOf[SassColor]
+    val c = fn("lab")(List(channels(num(50), num(20), num(-30)))).asInstanceOf[SassColor]
     val s = fn("space")(List(c)).asInstanceOf[SassString]
     assertEquals(s.text, "lab")
   }
@@ -62,7 +63,7 @@ final class ColorModule4Suite extends munit.FunSuite {
   }
 
   test("color.is-legacy(lab(50 20 -30)) is false") {
-    val c = fn("lab")(List(num(50), num(20), num(-30))).asInstanceOf[SassColor]
+    val c = fn("lab")(List(channels(num(50), num(20), num(-30)))).asInstanceOf[SassColor]
     val b = fn("is-legacy")(List(c)).asInstanceOf[SassBoolean]
     assertEquals(b.value, false)
   }
