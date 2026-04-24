@@ -51,6 +51,7 @@ import ssg.sass.ast.sass.{
   ListExpression,
   LoudComment,
   MapExpression,
+  ParenthesizedExpression,
   MediaRule,
   MixinRule,
   ReturnRule,
@@ -304,7 +305,8 @@ class CssParser(
         s.selector.foreach(_checkTrailingCombinator)
         s.selector.foreach(_checkPlaceholderSelector)
         if (!insideStyleRule) {
-          s.selector.foreach(_checkSelectorParent)
+          // dart-sass: `&` is allowed at the top level in plain CSS (CSS Nesting spec).
+          // Only check for leading combinators, not parent selectors.
           s.selector.foreach(_checkLeadingCombinator)
         } else {
           s.selector.foreach(_checkParentSelectorSuffix)
@@ -335,8 +337,13 @@ class CssParser(
             case _ => ()
           }
       // --- @media / @supports: allowed; walk children ----------------------
+      // Note: the structured media query parser (StylesheetParser._mediaQueryList)
+      // legitimately stores parsed Expression objects in the Interpolation buffer
+      // (for feature names and values like `min-width: 600px`), so isPlain will
+      // be false even when the source has no `#{...}` interpolation. We skip the
+      // interpolation check here; actual `#{...}` in plain CSS would be caught at
+      // evaluation time.
       case mr: MediaRule =>
-        _checkInterpolation(mr.query, "Interpolation isn't allowed in plain CSS.")
         _validateStatements(mr.children.get, insideStyleRule)
       case sr: SupportsRule =>
         _validateStatements(sr.children.get, insideStyleRule)
@@ -349,11 +356,19 @@ class CssParser(
         _checkInterpolation(ar.name, "Interpolation isn't allowed in plain CSS.")
         val plainName = ar.name.asPlain
         plainName.foreach { n =>
-          if (_forbiddenAtRuleNames.contains(n.toLowerCase)) {
-            throw new SassFormatException(
-              s"@$n isn't allowed in plain CSS.",
-              ar.span
-            )
+          val lower = n.toLowerCase
+          if (_forbiddenAtRuleNames.contains(lower)) {
+            // dart-sass css.dart:137-146: `@function` is allowed in plain CSS
+            // when the function name starts with `--` (CSS native custom function).
+            val isCssFunction = lower == "function" && ar.value.exists { v =>
+              v.asPlain.exists(_.trim.startsWith("--"))
+            }
+            if (!isCssFunction) {
+              throw new SassFormatException(
+                s"@$n isn't allowed in plain CSS.",
+                ar.span
+              )
+            }
           }
         }
         ar.children.foreach { kids =>
@@ -384,6 +399,7 @@ class CssParser(
       )
     }
 
+  @scala.annotation.nowarn("msg=unused private member") // scaffolding: used when plain-CSS parent selector check is wired
   private def _checkSelectorParent(interp: Interpolation): Unit = {
     val plain = interp.asPlain
     plain.foreach { text =>
@@ -483,6 +499,13 @@ class CssParser(
             fe.span
           )
         }
+        // dart-sass css.dart: variable arguments `...` are rejected in plain CSS.
+        if (fe.arguments.rest.isDefined) {
+          throw new SassFormatException(
+            "expected \")\".",
+            fe.span
+          )
+        }
         // calc/min/max/clamp allow arithmetic operators inside
         val calcFn = _isCalcLikeFunction(fe.name)
         fe.arguments.positional.foreach(e => _validateExpression(e, insideCalc = calcFn))
@@ -523,6 +546,23 @@ class CssParser(
         throw new SassFormatException(
           "The parent selector isn't allowed in plain CSS.",
           expr.span
+        )
+      // dart-sass css.dart: parenthesized expressions are rejected in plain CSS.
+      // Evaluation-time validation rejects `(expr)` syntax. Only calc-like
+      // functions allow parenthesised sub-expressions.
+      case pe: ParenthesizedExpression if !insideCalc =>
+        throw new SassFormatException(
+          "Parentheses aren't allowed in plain CSS.",
+          pe.span
+        )
+      case pe: ParenthesizedExpression =>
+        _validateExpression(pe.expression, insideCalc)
+      // dart-sass css.dart: empty `()` produces an empty ListExpression,
+      // which in plain CSS is "Expected expression."
+      case le: ListExpression if le.contents.isEmpty =>
+        throw new SassFormatException(
+          "Expected expression.",
+          le.span
         )
       case le: ListExpression =>
         le.contents.foreach(e => _validateExpression(e, insideCalc))

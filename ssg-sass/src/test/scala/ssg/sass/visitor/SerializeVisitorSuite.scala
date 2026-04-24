@@ -281,10 +281,13 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     assertEquals(result.css, "")
   }
 
-  test("serialize skips an empty @media at-rule") {
+  // dart-sass `_IsInvisibleVisitor.visitCssAtRule` returns false — unknown
+  // at-rules are NEVER invisible, even when empty, because we can't guarantee
+  // that e.g. `@foo {}` isn't meaningful.
+  test("serialize keeps an empty @media at-rule (at-rules are never invisible)") {
     val media = new ModifiableCssAtRule(str("media"), span, value = Nullable(str("print")))
     val s     = stylesheet(List(media))
-    assertEquals(SerializeVisitor.serialize(s).css, "")
+    assertEquals(SerializeVisitor.serialize(s).css, "@media print {}\n")
   }
 
   test("serialize keeps a non-empty rule next to an empty sibling") {
@@ -405,9 +408,14 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   private def rgb(r: Int, g: Int, b: Int, a: Double = 1.0): SassColor =
     SassColor.rgb(Nullable(r.toDouble), Nullable(g.toDouble), Nullable(b.toDouble), Nullable(a))
 
-  test("writeColor: opaque rgb uses hex shorthand") {
-    assertEquals(fmtValue(rgb(0xff, 0xff, 0xff)), "#fff")
-    assertEquals(fmtValue(rgb(0xaa, 0xbb, 0xcc)), "#abc")
+  // dart-sass serialize.dart:815-826: in expanded mode, named colors take
+  // priority over hex, and hex always uses the 6-digit form. Short hex is
+  // compressed-only.
+  test("writeColor: opaque rgb prefers named color, then 6-digit hex") {
+    // white is a named color — preferred over #fff in expanded mode
+    assertEquals(fmtValue(rgb(0xff, 0xff, 0xff)), "white")
+    // #aabbcc has no named color — 6-digit hex in expanded mode
+    assertEquals(fmtValue(rgb(0xaa, 0xbb, 0xcc)), "#aabbcc")
   }
 
   test("writeColor: opaque rgb falls back to full hex when no shorthand") {
@@ -424,12 +432,22 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   }
 
   test("writeColor: compressed rgba drops spaces") {
-    assertEquals(fmtValue(rgb(10, 20, 30, 0.5), compressed = true), "rgba(10,20,30,0.5)")
+    // In compressed mode, the leading zero in alpha 0.5 is stripped to .5
+    assertEquals(fmtValue(rgb(10, 20, 30, 0.5), compressed = true), "rgba(10,20,30,.5)")
   }
 
-  test("writeMap: renders as (k: v, k2: v2) expanded") {
+  test("writeMap: throws in non-inspect mode (maps aren't valid CSS values)") {
     val m = new SassMap(ListMap[Value, Value](u("a") -> u("1"), u("b") -> u("2")))
-    assertEquals(fmtValue(m), "(a: 1, b: 2)")
+    // dart-sass visitMap: maps throw SassScriptException in non-inspect mode.
+    // The serializer wraps this as a SassException when emitting a declaration.
+    intercept[SassException] {
+      fmtValue(m)
+    }
+  }
+
+  test("writeMap: renders as (k: v, k2: v2) in inspect mode") {
+    val m = new SassMap(ListMap[Value, Value](u("a") -> u("1"), u("b") -> u("2")))
+    assertEquals(SerializeVisitor.serializeValue(m, inspect = true), "(a: 1, b: 2)")
   }
 
   // --- Stage A.4: selector formatting --------------------------------------
