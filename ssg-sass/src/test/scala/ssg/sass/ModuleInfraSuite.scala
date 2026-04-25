@@ -85,12 +85,11 @@ final class ModuleInfraSuite extends munit.FunSuite {
     assertEquals(view.functions.keySet, Set("ns-foo", "ns-bar"))
     assertEquals(view.mixins.keySet, Set("ns-mx"))
     assertEquals(view.variables.keySet, Set("ns-color", "ns-size"))
-    // setVariable strips the prefix and forwards to the inner module
-    view.setVariable("ns-color", SassString("blue", hasQuotes = false))
-    assertEquals(
-      inner.variables("color").asInstanceOf[SassString].text,
-      "blue"
-    )
+    // Built-in modules are read-only (dart-sass built_in.dart:53-58),
+    // so setVariable rejects modifications.
+    intercept[SassScriptException] {
+      view.setVariable("ns-color", SassString("blue", hasQuotes = false))
+    }
   }
 
   // ---------------------------------------------------------------------------

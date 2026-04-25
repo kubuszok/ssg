@@ -19,6 +19,7 @@ package color
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
+import ssg.sass.util.NativeMath
 import ssg.sass.util.NumberUtil.fuzzyEquals
 
 import scala.language.implicitConversions
@@ -73,7 +74,7 @@ object ColorSpaceUtils {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
     if (abs <= 0.04045) channel / 12.92
-    else math.signum(channel) * math.pow((abs + 0.055) / 1.055, 2.4)
+    else math.signum(channel) * NativeMath.pow((abs + 0.055) / 1.055, 2.4)
   }
 
   /** The algorithm for converting a single srgb or display-p3 channel to gamma-corrected form. */
@@ -81,7 +82,7 @@ object ColorSpaceUtils {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
     if (abs <= 0.0031308) channel * 12.92
-    else math.signum(channel) * (1.055 * math.pow(abs, 1.0 / 2.4) - 0.055)
+    else math.signum(channel) * (1.055 * NativeMath.pow(abs, 1.0 / 2.4) - 0.055)
   }
 
   /** Converts a Lab or OKLab color to LCH or OKLCH, respectively. */
@@ -97,11 +98,11 @@ object ColorSpaceUtils {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val aVal   = a.getOrElse(0.0)
     val bVal   = b.getOrElse(0.0)
-    val chroma = math.sqrt(math.pow(aVal, 2) + math.pow(bVal, 2))
+    val chroma = NativeMath.sqrt(aVal * aVal + bVal * bVal)
     val hue: Nullable[Double] =
       if (missingHue || fuzzyEquals(chroma, 0)) Nullable.Null
       else {
-        val h = math.atan2(bVal, aVal) * 180 / math.Pi
+        val h = NativeMath.atan2(bVal, aVal) * 180 / math.Pi
         if (h >= 0) Nullable(h) else Nullable(h + 360)
       }
 

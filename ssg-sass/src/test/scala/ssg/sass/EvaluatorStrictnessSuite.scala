@@ -65,8 +65,9 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
   test("ISS-033: @use with ($_private: ...) emits deprecation warning") {
     // dart-sass: configuring private variables is deprecated (not yet an error).
     // The configuration succeeds but emits a with-private deprecation warning.
+    // MapImporter keys use .scss extension to match Sass import resolution rules.
     val importer = new ssg.sass.importer.MapImporter(
-      Map("lib" -> "$_priv: 1 !default; a { x: $_priv; }")
+      Map("lib.scss" -> "$_priv: 1 !default; a { x: $_priv; }")
     )
     val result = Compile.compileString(
       """@use "lib" with ($_priv: 2);""",
@@ -81,8 +82,9 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
 
   test("ISS-033: @use with ($-dash: ...) emits deprecation warning") {
     // dart-sass: configuring private variables is deprecated (not yet an error).
+    // MapImporter keys use .scss extension to match Sass import resolution rules.
     val importer = new ssg.sass.importer.MapImporter(
-      Map("lib" -> "$-dash: 1 !default; a { x: $-dash; }")
+      Map("lib.scss" -> "$-dash: 1 !default; a { x: $-dash; }")
     )
     val result = Compile.compileString(
       """@use "lib" with ($-dash: 2);""",
@@ -96,8 +98,9 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
   }
 
   test("ISS-033: public var in with(...) is accepted") {
+    // MapImporter keys use .scss extension to match Sass import resolution rules.
     val importer = new ssg.sass.importer.MapImporter(
-      Map("lib" -> "$pub: 1 !default; a { x: $pub; }")
+      Map("lib.scss" -> "$pub: 1 !default; a { x: $pub; }")
     )
     val result = Compile.compileString(
       """@use "lib" with ($pub: 2);""",
@@ -119,12 +122,16 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
     assert(css.contains("color:red") || css.contains("color: red"))
   }
 
-  test("ISS-027: @at-root (with: media) preserves the @media wrapper") {
+  test("ISS-027: @at-root (with: media) with bare declaration errors") {
+    // dart-sass: @at-root (with: media) inside a style rule excludes the style
+    // rule, so bare declarations are invalid. Verified against dart-sass 1.x.
     val src =
       """|@media (max-width: 600px) {
          |  .a { @at-root (with: media) { color: red; } }
          |}""".stripMargin
-    val css = Compile.compileString(src, ssg.sass.visitor.OutputStyle.Compressed).css
-    assert(css.contains("@media"), s"expected @media in output, got: $css")
+    val ex = intercept[SassException] {
+      Compile.compileString(src, ssg.sass.visitor.OutputStyle.Compressed)
+    }
+    assert(ex.getMessage.contains("Declarations may only be used within style rules"))
   }
 }

@@ -21,7 +21,6 @@ import ssg.sass.ast.sass.{ Interpolation, LoudComment, SilentComment, Statement 
 import ssg.sass.util.CharCode
 
 import scala.collection.mutable
-import scala.language.implicitConversions
 import scala.util.boundary
 import scala.util.boundary.break
 
@@ -37,93 +36,11 @@ class ScssParser(
 
   /** Consumes a selector interpolation until `{`.
     *
-    * Basic: collects raw text as plain interpolation. Full `#{...}` expression interpolation is handled by the parent StylesheetParser.
+    * dart-sass scss.dart line 20: simply delegates to [[almostAnyValue]],
+    * which properly handles escape sequences, `#{...}` expression
+    * interpolation, quoted strings, and comments.
     */
-  override protected def styleRuleSelector(): Interpolation = {
-    val start    = scanner.state
-    val buf      = new StringBuilder()
-    var brackets = 0
-
-    boundary {
-      while (!scanner.isDone) {
-        val c = scanner.peekChar()
-        if (c < 0) break(())
-        // Detect `#{` interpolation start so we don't mistake its inner `{`/`}`
-        // for selector braces. Consume the whole `#{...}` region balancing braces.
-        if (c == CharCode.$hash && scanner.peekChar(1) == CharCode.$lbrace) {
-          buf.append(scanner.readChar().toChar) // '#'
-          buf.append(scanner.readChar().toChar) // '{'
-          var depth = 1
-          while (!scanner.isDone && depth > 0) {
-            val cc = scanner.peekChar()
-            if (cc == CharCode.$lbrace) depth += 1
-            else if (cc == CharCode.$rbrace) depth -= 1
-            buf.append(scanner.readChar().toChar)
-          }
-        } else if (brackets == 0 && c == CharCode.$lbrace) {
-          break(())
-        } else if (c == CharCode.$backslash) {
-          // Preserve escape sequences raw (backslash + hex digits + optional
-          // whitespace, or backslash + single char) so they round-trip through
-          // the selector parser correctly.
-          buf.append(scanner.readChar().toChar) // backslash
-          if (!scanner.isDone) {
-            val next = scanner.peekChar()
-            if (CharCode.isHex(next)) {
-              var i = 0
-              while (i < 6 && !scanner.isDone && CharCode.isHex(scanner.peekChar())) {
-                buf.append(scanner.readChar().toChar)
-                i += 1
-              }
-              // Consume optional trailing whitespace and include it
-              if (!scanner.isDone && CharCode.isWhitespace(scanner.peekChar()))
-                buf.append(scanner.readChar().toChar)
-            } else {
-              buf.append(scanner.readChar().toChar)
-            }
-          }
-        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$slash) {
-          // Silent comment inside selector — consume everything up to the
-          // end of line. Discard from the selector text so interpolations
-          // inside the comment are not evaluated as selector interpolations.
-          scanner.readChar() // first '/'
-          scanner.readChar() // second '/'
-          while (!scanner.isDone && !CharCode.isNewline(scanner.peekChar()))
-            scanner.readChar()
-        } else if (c == CharCode.$slash && scanner.peekChar(1) == CharCode.$asterisk) {
-          // Loud comment inside selector — consume and include in selector.
-          buf.append(scanner.readChar().toChar) // '/'
-          buf.append(scanner.readChar().toChar) // '*'
-          while (!scanner.isDone && !(scanner.peekChar() == CharCode.$asterisk && scanner.peekChar(1) == CharCode.$slash))
-            buf.append(scanner.readChar().toChar)
-          if (!scanner.isDone) {
-            buf.append(scanner.readChar().toChar) // '*'
-            buf.append(scanner.readChar().toChar) // '/'
-          }
-        } else if (c == CharCode.$double_quote || c == CharCode.$single_quote) {
-          // Quoted strings — preserve verbatim including escapes.
-          val q = scanner.readChar()
-          buf.append(q.toChar)
-          while (!scanner.isDone && scanner.peekChar() != q)
-            if (scanner.peekChar() == CharCode.$backslash) {
-              buf.append(scanner.readChar().toChar) // backslash
-              if (!scanner.isDone) buf.append(scanner.readChar().toChar) // next char
-            } else {
-              buf.append(scanner.readChar().toChar)
-            }
-          if (!scanner.isDone) buf.append(scanner.readChar().toChar) // closing quote
-        } else {
-          if (c == CharCode.$lparen || c == CharCode.$lbracket) brackets += 1
-          else if (c == CharCode.$rparen || c == CharCode.$rbracket) brackets -= 1
-          buf.append(scanner.readChar().toChar)
-        }
-      }
-    }
-
-    val selectorText = buf.toString().trim
-    if (selectorText.isEmpty) scanner.error("Expected selector.")
-    _parseInterpolatedString(selectorText, spanFrom(start))
-  }
+  override protected def styleRuleSelector(): Interpolation = almostAnyValue()
 
   override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
     _whitespaceWithoutComments()

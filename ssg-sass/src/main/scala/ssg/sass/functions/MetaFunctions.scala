@@ -509,8 +509,16 @@ object MetaFunctions {
         val callable: Callable = args.head match {
           case f: SassFunction => f.callable
           case s: SassString   =>
+            // dart-sass: passing a string to call() is deprecated. If the
+            // function is found, use it; otherwise, fall back to a plain CSS
+            // function call (emit e.g. `missing(...)` as CSS).
+            EvaluationContext.warnForDeprecation(
+              Deprecation.CallString,
+              "Passing a string to call() is deprecated and will be illegal in " +
+              "Dart Sass 2.0.0.\n\nRecommendation: call(get-function(" + s.text + "))"
+            )
             lookupFunction(s.text, SassNull).getOrElse {
-              throw SassScriptException(s"Function not found: ${s.text}")
+              new PlainCssCallable(s.text)
             }
           case other =>
             throw SassScriptException(s"call() expected a function, got: $other")

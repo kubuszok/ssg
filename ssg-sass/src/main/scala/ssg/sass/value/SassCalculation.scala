@@ -716,6 +716,15 @@ object SassCalculation {
   private def _isRoundingStrategy(text: String): Boolean =
     text == "nearest" || text == "up" || text == "down" || text == "to-zero"
 
+  /** Rounds half away from zero, matching Dart's `double.round()` semantics.
+    *
+    * Dart: `(-1.5).round() == -2`, `(1.5).round() == 2`
+    * Java: `Math.round(-1.5) == -1`, `Math.round(1.5) == 2`
+    */
+  private def _roundHalfAwayFromZero(x: Double): Double =
+    if (x < 0) -math.round(-x).toDouble
+    else math.round(x).toDouble
+
   /** Returns value coerced to number's units. */
   private def _matchUnits(value: Double, number: SassNumber): SassNumber =
     SassNumber.withUnits(
@@ -762,7 +771,7 @@ object SassCalculation {
       strategy match {
         case "nearest" =>
           _matchUnits(
-            math.round(number.value / stepWithNumberUnit).toDouble * stepWithNumberUnit,
+            _roundHalfAwayFromZero(number.value / stepWithNumberUnit) * stepWithNumberUnit,
             number
           )
         case "up" =>

@@ -107,7 +107,10 @@ final class PackageImporter(
   *
   * Keys in [[sources]] should be the canonical form (what [[canonicalize]] returns) — typically the resolved file name including extension, e.g. `_colors.scss` or `vars.scss`.
   */
-final class MapImporter(val sources: Map[String, String]) extends Importer {
+final class MapImporter(
+  val sources: Map[String, String],
+  val baseDir: Nullable[String] = Nullable.Null
+) extends Importer {
 
   /** Normalizes a path by resolving `.` and `..` segments. */
   private def normalizePath(path: String): String = {
@@ -162,8 +165,35 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
     val stripped = if (url.startsWith("file:")) url.stripPrefix("file:") else url
     // Normalize `..` and `.` segments so `../foo/bar` resolves correctly
     // when the key in the map is a clean relative path.
-    val cleaned = if (stripped.contains("..") || stripped.contains("./")) normalizePath(stripped) else stripped
-    if (sources.contains(cleaned)) return Nullable(cleaned)
+    val cleaned0 = if (stripped.contains("..") || stripped.contains("./")) normalizePath(stripped) else stripped
+
+    // If the URL is absolute and we have a baseDir, try to produce a relative
+    // path that matches our source keys. First try stripping the baseDir
+    // prefix (for same-directory or child-directory files). If the URL is NOT
+    // under baseDir (e.g. `@use "../utils"` resolved to a parent directory),
+    // compute a relative path with `..` segments so it matches map keys built
+    // by the test runner's archive-sibling logic.
+    val cleaned =
+      if (baseDir.isDefined && cleaned0.startsWith("/")) {
+        val bd = baseDir.get
+        if (cleaned0.startsWith(bd)) cleaned0.substring(bd.length)
+        else {
+          // Compute relative path from baseDir to the target URL.
+          // Both are absolute paths; find the common prefix and add `..`
+          // segments for each remaining component in baseDir.
+          val bdParts   = bd.stripSuffix("/").split("/").toList
+          val urlParts  = cleaned0.split("/").toList
+          var common    = 0
+          while (common < bdParts.length && common < urlParts.length && bdParts(common) == urlParts(common)) common += 1
+          val ups       = bdParts.length - common
+          val remainder = urlParts.drop(common)
+          if (ups > 0 && remainder.nonEmpty) {
+            ("../" * ups) + remainder.mkString("/")
+          } else {
+            cleaned0 // fallback: keep the absolute URL (won't match map keys)
+          }
+        }
+      } else cleaned0
 
     val slashIdx = cleaned.lastIndexOf('/')
     val fileName = if (slashIdx < 0) cleaned else cleaned.substring(slashIdx + 1)
@@ -176,6 +206,12 @@ final class MapImporter(val sources: Map[String, String]) extends Importer {
         ext == ".sass" || ext == ".scss" || ext == ".css"
       }
     }
+
+    // dart-sass: only resolve an exact-match (no extension trial) when the URL
+    // already has a known Sass extension. Files without extensions (e.g.
+    // `other` with no `.scss`/`.sass`/`.css` suffix) are NOT valid import
+    // targets.
+    if (hasKnownExtension && sources.contains(cleaned)) return Nullable(cleaned)
 
     if (hasKnownExtension) {
       // With explicit extension: in @import context, try .import variant first

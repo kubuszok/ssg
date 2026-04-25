@@ -64,7 +64,9 @@ final class StylesheetParserSuite extends munit.FunSuite {
   test("parses a simple style rule with declarations") {
     val sheet = parse("a { color: red; }")
     val rule  = sheet.children.get.head.asInstanceOf[StyleRule]
-    assertEquals(rule.selector.get.asPlain.get, "a")
+    // almostAnyValue() (dart-sass parity) does not trim trailing whitespace;
+    // the evaluator trims when re-parsing the selector. Assert trimmed value.
+    assertEquals(rule.selector.get.asPlain.get.trim, "a")
     assertEquals(rule.children.get.size, 1)
     val decl = rule.children.get.head.asInstanceOf[Declaration]
     assertEquals(decl.name.asPlain.get, "color")

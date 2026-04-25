@@ -264,11 +264,11 @@ class SelectorParser(
 
         // dart-sass: After parsing a compound selector, if the next char is `&`
         // it means `&` appeared in the middle of a compound (e.g. `pre&`).
-        // Only check this when parent is NOT allowed (i.e., in selector functions).
-        // When allowParent=true, the `&` would be consumed by parseSimpleSelector
-        // as part of the compound, so this check only fires when `&` was rejected
-        // by parseSimpleSelector's allowParent check and remains unconsumed.
-        if (compoundOpt.isDefined && !isDone() && peek() == '&' && !_allowParent) {
+        // This check runs unconditionally — even when allowParent=true, `&` at
+        // the START of a compound would have been consumed by parseSimpleSelector
+        // as a ParentSelector. If `&` remains after the compound, it's not at
+        // the beginning.
+        if (compoundOpt.isDefined && !isDone() && peek() == '&') {
           fail(""""&" may only used at the beginning of a compound selector.""")
         }
 
@@ -332,15 +332,20 @@ class SelectorParser(
 
   def parseCompoundSelector(): CompoundSelector = {
     val simples      = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
-    // dart-sass selector.dart:220: first simple uses default allowParent;
-    // subsequent simples in _plainCss mode allow parent (CSS Nesting).
+    // dart-sass selector.dart:217-221 / stylesheet.dart:4030-4038:
+    // First simple uses default allowParent. Subsequent simples check
+    // `_isSimpleSelectorStart` which only includes `&` in plain CSS mode
+    // (CSS Nesting). In SCSS, `&` in non-first position of a compound is
+    // left unconsumed so the post-compound check in parseComplexSelector
+    // can fire with the "may only used at beginning" error.
     var isFirst      = true
     var continueLoop = true
     while (continueLoop) {
       val c = peek()
       if (c < 0) continueLoop = false
-      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '&' || c == '%' || c == '\\' || c == '|') {
-        val allowParentOverride = if (!isFirst && _plainCss) Some(true) else None
+      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '%' || c == '\\' || c == '|' ||
+        (c == '&' && (isFirst || _plainCss))) {
+        val allowParentOverride = if (isFirst) None else if (_plainCss) Some(true) else None
         simples += parseSimpleSelector(allowParentOverride)
         isFirst = false
       } else {
@@ -449,16 +454,35 @@ class SelectorParser(
     pos += 1
     skipSpaces()
     // Read name (with optional namespace).
-    val first = readIdentifier()
-    if (first.isEmpty) fail("Expected attribute name.")
+    // Follows dart-sass _attributeName():
+    //   - `*|name` = universal namespace
+    //   - `|name`  = empty namespace (no namespace)
+    //   - `ns|name` = explicit namespace
+    //   - `name` = no namespace qualifier
     val name: QualifiedName =
-      if (!isDone() && peek() == '|' && peekAt(1) != '=') {
-        pos += 1
+      if (!isDone() && peek() == '*' && peekAt(1) == '|') {
+        // Universal namespace: `*|name`
+        pos += 2 // skip `*|`
         val local = readIdentifier()
-        if (local.isEmpty) fail("Expected local attribute name.")
-        QualifiedName(local, Nullable(first))
+        if (local.isEmpty) fail("Expected attribute name after '*|'.")
+        QualifiedName(local, Nullable("*"))
+      } else if (!isDone() && peek() == '|' && peekAt(1) != '=') {
+        // Empty namespace: `|name`
+        pos += 1 // skip `|`
+        val local = readIdentifier()
+        if (local.isEmpty) fail("Expected attribute name after '|'.")
+        QualifiedName(local, Nullable(""))
       } else {
-        QualifiedName(first)
+        val first = readIdentifier()
+        if (first.isEmpty) fail("Expected attribute name.")
+        if (!isDone() && peek() == '|' && peekAt(1) != '=') {
+          pos += 1
+          val local = readIdentifier()
+          if (local.isEmpty) fail("Expected local attribute name.")
+          QualifiedName(local, Nullable(first))
+        } else {
+          QualifiedName(first)
+        }
       }
     skipSpaces()
 
@@ -487,9 +511,11 @@ class SelectorParser(
           val sb = new StringBuilder()
           while (!isDone() && peek() != q)
             if (peek() == '\\' && pos + 1 < src.length) {
-              sb.append(src.charAt(pos))
-              sb.append(src.charAt(pos + 1))
-              pos += 2
+              // dart-sass: `string()` unescapes escape sequences in quoted
+              // attribute values. `\\` becomes `\`, `\n` becomes `n`, etc.
+              // This matches CSS string parsing semantics.
+              pos += 1 // skip the backslash
+              sb.append(read()) // append the escaped character
             } else {
               sb.append(read())
             }
@@ -587,9 +613,11 @@ class SelectorParser(
         }
         val raw = sb.toString().trim
         // For known selector-pseudos, parse the argument as a selector list.
+        // dart-sass selector.dart:416: use the unvendored name for the check
+        // so that vendor-prefixed pseudos like :-moz-any are recognized.
         if (
-          SelectorParser.selectorPseudoClasses.contains(name) ||
-          (element && SelectorParser.selectorPseudoElements.contains(name))
+          (element && SelectorParser.selectorPseudoElements.contains(unvendored)) ||
+          (!element && SelectorParser.selectorPseudoClasses.contains(unvendored))
         ) {
           try
             selector = Nullable(new SelectorParser(raw, url).parse())
@@ -634,11 +662,12 @@ class SelectorParser(
         return sb.toString()
       }
     } else {
-      // Expect 'n'
+      // Expect 'n' — dart-sass uses expectIdentChar($n) here which
+      // throws "Expected 'n'" if the character is missing or wrong.
       if (!isDone() && (peek() == 'n' || peek() == 'N')) {
         sb.append(read())
       } else {
-        return sb.toString()
+        fail("Expected \"n\".")
       }
     }
     skipSpaces()

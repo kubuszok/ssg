@@ -107,11 +107,16 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
     case _ => false
   }
 
-  /** CSS representation of this string. For unquoted strings this is just the raw text. For quoted strings dart-sass prefers double quotes, falling back to single quotes when the text contains a
-    * double quote and no single quote (see `_visitQuotedString` in `serialize.dart`). Control characters are escaped with `\hh ` hex form; `\`, and the active quote char are backslash-escaped.
+  /** CSS representation of this string. For unquoted strings, newlines are
+    * folded to spaces and post-newline whitespace is collapsed (matching
+    * dart-sass `_visitUnquotedString`). For quoted strings dart-sass prefers
+    * double quotes, falling back to single quotes when the text contains a
+    * double quote and no single quote (see `_visitQuotedString` in
+    * `serialize.dart`). Control characters are escaped with `\hh ` hex form;
+    * `\`, and the active quote char are backslash-escaped.
     */
   override def toCssString(quote: Boolean = true): String =
-    if (!hasQuotes || !quote) text
+    if (!hasQuotes || !quote) foldNewlines(text)
     else {
       var hasDouble = false
       var hasSingle = false
@@ -145,6 +150,31 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
       sb.append(q)
       sb.toString()
     }
+
+  /** Fold newlines to a single space and collapse post-newline whitespace,
+    * matching dart-sass `_visitUnquotedString` (serialize.dart:1452-1473).
+    * Returns [s] unchanged if it contains no newlines.
+    */
+  private def foldNewlines(s: String): String = {
+    if (s.indexOf('\n') < 0) return s
+    val sb = new StringBuilder(s.length)
+    var afterNewline = false
+    var i = 0
+    while (i < s.length) {
+      val c = s.charAt(i)
+      if (c == '\n') {
+        sb.append(' ')
+        afterNewline = true
+      } else if (c == ' ' && afterNewline) {
+        // skip: collapse post-newline spaces
+      } else {
+        afterNewline = false
+        sb.append(c)
+      }
+      i += 1
+    }
+    sb.toString()
+  }
 
   override def toString: String = toCssString()
 }

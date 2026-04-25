@@ -28,7 +28,9 @@ package parse
 
 import ssg.sass.Nullable
 import ssg.sass.SassFormatException
+import ssg.sass.util.CharCode
 import ssg.sass.ast.sass.{
+  ArgumentList,
   AtRootRule,
   AtRule,
   BinaryOperationExpression,
@@ -86,6 +88,22 @@ class CssParser(
 ) extends ScssParser(contents, url, parseSelectors) {
 
   override def plainCss: Boolean = true
+
+  /** dart-sass css.dart: silentComment() — in plain CSS, `//` is never a
+    * comment. Inside expressions, return false so `//` is not consumed
+    * (allowing `1///bar` to parse as value text). Outside expressions,
+    * consume the `//` via the super implementation and then throw, matching
+    * dart-sass's "Silent comments aren't allowed in plain CSS." error.
+    */
+  override protected def silentComment(): Boolean = {
+    if (inExpression) return false
+    val start = scanner.state
+    super.silentComment()
+    error(
+      "Silent comments aren't allowed in plain CSS.",
+      spanFrom(start)
+    )
+  }
 
   /** Sass at-rule keywords that are forbidden inside plain CSS even when they reach the AST as a generic [[AtRule]] (i.e. when the base [[StylesheetParser]] has no dedicated node type for them).
     */
@@ -188,6 +206,88 @@ class CssParser(
     // special globals
     "if"
   )
+
+  /** Overrides the base identifierLike to treat all identifiers as plain
+    * strings in plain CSS context. dart-sass CssParser.identifierLike()
+    * (css.dart:159-209) does NOT convert `null`/`true`/`false` to
+    * NullExpression/BooleanExpression, and does NOT convert color names
+    * to ColorExpression. All non-function identifiers become StringExpression.
+    *
+    * Function calls use `expressionUntilComma(singleEquals = true)` for
+    * arguments (to allow `=` in IE filter syntax), and disallowed function
+    * names are rejected immediately.
+    */
+  override protected def _rdIdentifierLike(): Expression = {
+    val start = scanner.state
+    val identifier = interpolatedIdentifier()
+    // CSS doesn't allow non-plain identifiers
+    val plain = identifier.asPlain.getOrElse {
+      error("Interpolation isn't allowed in plain CSS.", identifier.span)
+    }
+
+    val lower = plain.toLowerCase
+    // dart-sass css.dart:165-167: trySpecialFunction
+    val specialFn = _rdTrySpecialFunction(lower, start)
+    if (specialFn.isDefined) return specialFn.get
+
+    // dart-sass css.dart:170-177: dot / if / function call / string.
+    // `namespacedExpression()` is just here to throw a clearer error.
+    if (scanner.scanChar(CharCode.$dot)) {
+      return _rdNamespacedExpression(plain, start)
+    } else if (lower == "if" && scanner.peekChar() == CharCode.$lparen) {
+      // dart-sass css.dart:173-174: `if()` is handled via ifExpression().
+      // Reset the scanner state and delegate to the base class which has
+      // the full if() disambiguation logic (legacy vs CSS if() syntax).
+      scanner.state = start
+      return super._rdIdentifierLike()
+    } else if (!scanner.scanChar(CharCode.$lparen)) {
+      // In plain CSS, all non-function identifiers are just strings.
+      // No conversion to NullExpression, BooleanExpression, or ColorExpression.
+      return StringExpression(identifier)
+    }
+
+    // dart-sass css.dart:179-208: function call argument parsing.
+    // Uses expressionUntilComma(singleEquals = true) to allow `=` in
+    // IE filter syntax (e.g. alpha(opacity=65)).
+    val allowEmptySecondArg = lower == "var"
+    val arguments = scala.collection.mutable.ListBuffer.empty[Expression]
+    if (!scanner.scanChar(CharCode.$rparen)) {
+      import scala.util.boundary, boundary.break
+      boundary {
+        while (true) {
+          whitespace(consumeNewlines = true)
+          if (allowEmptySecondArg &&
+            arguments.length == 1 &&
+            scanner.peekChar() == CharCode.$rparen) {
+            arguments += StringExpression(Interpolation.plain("", spanFrom(start)))
+            break(())
+          }
+          arguments += expressionUntilComma(singleEquals = true)
+          whitespace(consumeNewlines = true)
+          if (!scanner.scanChar(CharCode.$comma)) break(())
+        }
+      }
+      scanner.expectChar(CharCode.$rparen)
+    }
+
+    if (_disallowedFunctionNames.contains(plain)) {
+      error(
+        "This function isn't allowed in plain CSS.",
+        spanFrom(start)
+      )
+    }
+
+    FunctionExpression(
+      plain,
+      new ArgumentList(
+        arguments.toList,
+        Map.empty,
+        Map.empty,
+        spanFrom(start)
+      ),
+      spanFrom(start)
+    )
+  }
 
   override def parse(): Stylesheet = {
     val sheet = super.parse()
