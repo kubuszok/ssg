@@ -91,13 +91,12 @@ final class SerializeVisitor(
         selectorInvisible || (
           !rule.isChildless && rule.children.forall(isNodeInvisible)
         )
-      case at: CssAtRule =>
-        // dart-sass _IsInvisibleVisitor.visitCssAtRule: a truly unknown at-rule
-        // is NEVER invisible. However, our evaluator sometimes represents
-        // @media/@supports as generic CssAtRule nodes, so we keep the
-        // all-children-invisible check to avoid emitting empty blocks.
-        if (at.isChildless) false
-        else at.children.nonEmpty && at.children.forall(isNodeInvisible)
+      case _: CssAtRule =>
+        // dart-sass _IsInvisibleVisitor.visitCssAtRule (node.dart:89):
+        // An unknown at-rule is NEVER invisible. Because we don't know the
+        // semantics of unknown rules, we can't guarantee that `@foo {}` isn't
+        // meaningful.
+        false
       case p: CssParentNode =>
         if (p.isChildless) false
         else p.children.forall(isNodeInvisible)
@@ -1257,9 +1256,10 @@ final class SerializeVisitor(
     // be ambiguous with the outer comma-separated map layout (e.g.
     // `((1, 2): 3)` vs `(1, 2: 3)`). Port of dart-sass's
     // `_visitMap` wrapping rule.
+    // dart-sass `_writeMapElement`: wraps value in parens if it is a
+    // comma-separated list (any length) without brackets.
     def formatEntryPart(v: Value): String = v match {
-      case l: SassList if inspect && l.asList.length >= 2 && !l.hasBrackets &&
-            (l.separator == ListSeparator.Comma || l.separator == ListSeparator.Slash) =>
+      case l: SassList if l.separator == ListSeparator.Comma && !l.hasBrackets =>
         s"(${formatValue(l)})"
       case _ => formatValue(v)
     }

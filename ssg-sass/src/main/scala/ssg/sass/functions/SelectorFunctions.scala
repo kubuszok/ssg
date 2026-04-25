@@ -69,19 +69,40 @@ object SelectorFunctions {
   // one call can be round-tripped back into a SelectorList by the next.
   // ---------------------------------------------------------------------------
 
-  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's internal conversion before handing off to the parser.
+  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's
+    * `Value._selectorStringOrNull`. Returns `None` if the value isn't a valid
+    * selector structure. The rules are:
+    *   - SassString: return its text.
+    *   - SassList with slash separator: invalid (None).
+    *   - SassList with comma separator: each element must be a SassString or a
+    *     space-separated SassList whose elements are themselves valid.
+    *   - SassList with space/undecided separator: each element must be a SassString.
+    *   - Anything else: invalid (None).
     */
   private def asSelectorText(v: Value): Option[String] = v match {
     case s: SassString => Some(s.text)
     case l: SassList   =>
-      val sep = l.separator match {
-        case ListSeparator.Comma => ", "
-        case _                   => " "
-      }
       val items = l.asList
-      val parts = items.flatMap(asSelectorText)
-      if (parts.length != items.length) None
-      else Some(parts.mkString(sep))
+      if (items.isEmpty) return None
+      l.separator match {
+        case ListSeparator.Slash => None
+        case ListSeparator.Comma =>
+          val parts = items.map {
+            case s: SassString => Some(s.text)
+            case sub: SassList if sub.separator == ListSeparator.Space || sub.separator == ListSeparator.Undecided =>
+              asSelectorText(sub)
+            case _ => None
+          }
+          if (parts.exists(_.isEmpty)) None
+          else Some(parts.flatten.mkString(", "))
+        case _ => // Space or Undecided
+          val parts = items.map {
+            case s: SassString => Some(s.text)
+            case _             => None
+          }
+          if (parts.exists(_.isEmpty)) None
+          else Some(parts.flatten.mkString(" "))
+      }
     case _ => None
   }
 
@@ -100,7 +121,10 @@ object SelectorFunctions {
             throw SassScriptException(s"$$$name: ${e.getMessage}")
         }
       case None =>
-        throw SassScriptException(s"$$$name: $v is not a valid selector.")
+        throw SassScriptException(
+          s"$$$name: $v is not a valid selector: it must be a string,\n" +
+            "a list of strings, or a list of lists of strings."
+        )
     }
 
   /** Extracts a single [[CompoundSelector]] from a [[Value]] if the argument parses as a selector whose only complex selector has one compound component. Raises a SassScriptException otherwise,
@@ -147,9 +171,23 @@ object SelectorFunctions {
           throw SassScriptException("$selectors: At least one selector must be passed.")
         var first  = true
         val parsed = raw.map { v =>
-          // The first selector may not contain `&`; all subsequent
-          // selectors may. Matches dart-sass `allowParent: !first`.
-          val list = asSelectorList(v, "selectors", allowParent = !first)
+          // dart-sass 1.99 allows `&` in the first selector (sass-spec commit
+          // 39c45e727: "Update tests to allow a top-level &"), but still
+          // rejects `&` with a suffix in the first selector.
+          val list = asSelectorList(v, "selectors", allowParent = true)
+          if (first) {
+            // Check for parent selectors with suffixes in the first argument
+            for (complex <- list.components; component <- complex.components) {
+              component.selector.components.foreach {
+                case ps: ssg.sass.ast.selector.ParentSelector if ps.suffix.isDefined =>
+                  throw SassScriptException(
+                    "A top-level selector may not contain a parent selector with a suffix.",
+                    Some("selectors")
+                  )
+                case _ => ()
+              }
+            }
+          }
           first = false
           list
         }

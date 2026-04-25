@@ -23,6 +23,7 @@ package color
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
+import ssg.sass.util.NativeMath
 import ssg.sass.util.NumberUtil.{ fuzzyEquals, fuzzyGreaterThanOrEquals }
 
 // ---- Legacy RGB ----
@@ -405,11 +406,11 @@ final class A98RgbColorSpace extends ColorSpace("a98-rgb", ColorSpaceUtils.rgbCh
 
   override protected def toLinear(channel: Double): Double =
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
-    math.signum(channel) * math.pow(math.abs(channel), 563.0 / 256)
+    math.signum(channel) * NativeMath.pow(math.abs(channel), 563.0 / 256)
 
   override protected def fromLinear(channel: Double): Double =
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
-    math.signum(channel) * math.pow(math.abs(channel), 256.0 / 563)
+    math.signum(channel) * NativeMath.pow(math.abs(channel), 256.0 / 563)
 
   override protected def transformationMatrix(dest: ColorSpace): Array[Double] = dest match {
     case ColorSpace.srgbLinear | ColorSpace.srgb | ColorSpace.rgb => Conversions.linearA98RgbToLinearSrgb
@@ -433,13 +434,13 @@ final class ProphotoRgbColorSpace extends ColorSpace("prophoto-rgb", ColorSpaceU
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
     if (abs <= 16.0 / 512) channel / 16
-    else math.signum(channel) * math.pow(abs, 1.8)
+    else math.signum(channel) * NativeMath.pow(abs, 1.8)
   }
 
   override protected def fromLinear(channel: Double): Double = {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
-    if (abs >= 1.0 / 512) math.signum(channel) * math.pow(abs, 1.0 / 1.8)
+    if (abs >= 1.0 / 512) math.signum(channel) * NativeMath.pow(abs, 1.0 / 1.8)
     else 16 * channel
   }
 
@@ -471,13 +472,13 @@ final class Rec2020ColorSpace extends ColorSpace("rec2020", ColorSpaceUtils.rgbC
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
     if (abs < _beta * 4.5) channel / 4.5
-    else math.signum(channel) * math.pow((abs + _alpha - 1) / _alpha, 1.0 / 0.45)
+    else math.signum(channel) * NativeMath.pow((abs + _alpha - 1) / _alpha, 1.0 / 0.45)
   }
 
   override protected def fromLinear(channel: Double): Double = {
     // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
     val abs = math.abs(channel)
-    if (abs > _beta) math.signum(channel) * (_alpha * math.pow(abs, 0.45) - (_alpha - 1))
+    if (abs > _beta) math.signum(channel) * (_alpha * NativeMath.pow(abs, 0.45) - (_alpha - 1))
     else 4.5 * channel
   }
 
@@ -587,7 +588,7 @@ final class XyzD50ColorSpace extends ColorSpace("xyz-d50", ColorSpaceUtils.xyzCh
 
   /** Does a partial conversion of a single XYZ component to Lab. */
   private def _convertComponentToLabF(component: Double): Double =
-    if (component > ColorSpaceUtils.labEpsilon) math.pow(component, 1.0 / 3) + 0.0
+    if (component > ColorSpaceUtils.labEpsilon) NativeMath.pow(component, 1.0 / 3) + 0.0
     else (ColorSpaceUtils.labKappa * component + 16) / 116
 
   override protected def toLinear(channel:   Double): Double = channel
@@ -662,9 +663,10 @@ final class LabColorSpace
             dest,
             Nullable(_convertFToXorZ((a.getOrElse(0.0)) / 500 + f1) * Conversions.d50(0)),
             Nullable(
-              (if (lVal > ColorSpaceUtils.labKappa * ColorSpaceUtils.labEpsilon)
-                 math.pow((lVal + 16) / 116, 3) * 1.0
-               else lVal / ColorSpaceUtils.labKappa) * Conversions.d50(1)
+              (if (lVal > ColorSpaceUtils.labKappa * ColorSpaceUtils.labEpsilon) {
+                 // Dart's math.pow(x, 3) with int exponent uses x*x*x
+                 val t = (lVal + 16) / 116; t * t * t
+               } else lVal / ColorSpaceUtils.labKappa) * Conversions.d50(1)
             ),
             Nullable(_convertFToXorZ(f1 - (b.getOrElse(0.0)) / 200) * Conversions.d50(2)),
             alpha,
@@ -678,7 +680,9 @@ final class LabColorSpace
 
   /** Converts an f-format component to the X or Z channel of an XYZ color. */
   private def _convertFToXorZ(component: Double): Double = {
-    val cubed = math.pow(component, 3) + 0.0
+    // Dart's math.pow(x, 3) with int exponent uses x*x*x (repeated multiply),
+    // NOT libm pow(x, 3.0), so we must do the same for bit-exact matching.
+    val cubed = component * component * component
     if (cubed > ColorSpaceUtils.labEpsilon) cubed
     else (116 * component - 16) / ColorSpaceUtils.labKappa
   }
@@ -712,8 +716,8 @@ final class LchColorSpace
       .convertWithMissing(
         dest,
         lightness,
-        Nullable((chroma.getOrElse(0.0)) * math.cos(hueRadians)),
-        Nullable((chroma.getOrElse(0.0)) * math.sin(hueRadians)),
+        Nullable((chroma.getOrElse(0.0)) * NativeMath.cos(hueRadians)),
+        Nullable((chroma.getOrElse(0.0)) * NativeMath.sin(hueRadians)),
         alpha,
         missingChroma = chroma.isEmpty,
         missingHue = hue.isEmpty
@@ -764,13 +768,18 @@ final class OklabColorSpace
       val bVal             = b.getOrElse(0.0)
       val m                = Conversions.oklabToLms
       // Algorithm from https://www.w3.org/TR/css-color-4/#color-conversion-code
+      // Dart's math.pow(x, 3) with int exponent uses x*x*x (repeated multiply),
+      // NOT libm pow(x, 3.0), so we must do the same for bit-exact matching.
+      val c0 = m(0) * l + m(1) * aVal + m(2) * bVal
+      val c1 = m(3) * l + m(4) * aVal + m(5) * bVal
+      val c2 = m(6) * l + m(7) * aVal + m(8) * bVal
       ColorSpace.lms
         .asInstanceOf[LmsColorSpace]
         .convertWithMissing(
           dest,
-          Nullable(math.pow(m(0) * l + m(1) * aVal + m(2) * bVal, 3) + 0.0),
-          Nullable(math.pow(m(3) * l + m(4) * aVal + m(5) * bVal, 3) + 0.0),
-          Nullable(math.pow(m(6) * l + m(7) * aVal + m(8) * bVal, 3) + 0.0),
+          Nullable(c0 * c0 * c0),
+          Nullable(c1 * c1 * c1),
+          Nullable(c2 * c2 * c2),
           alpha,
           missingLightness = missingLightness,
           missingChroma = missingChroma,
@@ -809,8 +818,8 @@ final class OklchColorSpace
       .convertWithMissing(
         dest,
         lightness,
-        Nullable((chroma.getOrElse(0.0)) * math.cos(hueRadians)),
-        Nullable((chroma.getOrElse(0.0)) * math.sin(hueRadians)),
+        Nullable((chroma.getOrElse(0.0)) * NativeMath.cos(hueRadians)),
+        Nullable((chroma.getOrElse(0.0)) * NativeMath.sin(hueRadians)),
         alpha,
         missingChroma = chroma.isEmpty,
         missingHue = hue.isEmpty
@@ -905,7 +914,7 @@ final class LmsColorSpace
 
   /** Returns the cube root of the absolute value of number with the same sign. */
   private def _cubeRootPreservingSign(number: Double): Double =
-    math.pow(math.abs(number), 1.0 / 3) * math.signum(number)
+    NativeMath.pow(math.abs(number), 1.0 / 3) * math.signum(number)
 
   override protected def toLinear(channel:   Double): Double = channel
   override protected def fromLinear(channel: Double): Double = channel

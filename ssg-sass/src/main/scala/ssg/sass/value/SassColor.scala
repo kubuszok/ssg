@@ -253,74 +253,11 @@ final class SassColor private (
 
   override def assertColor(name: Nullable[String] = Nullable.Null): SassColor = this
 
-  /** Renders a SassColor in modern CSS color syntax for non-legacy-rgb spaces.
-    *
-    * Legacy `rgb` colors are handled by `SerializeVisitor.formatColor` which picks hex/name/rgba; we only need to cover the other spaces here. `hsl` and `hwb` are legacy but also render as functional
-    * notation in modern output when not going through `formatColor`.
-    */
-  override def toCssString(quote: Boolean = true): String = {
-    def fmt(d: Double): String = {
-      val r = math.rint(d * 100000.0) / 100000.0
-      if (r == r.toLong.toDouble) r.toLong.toString else r.toString
-    }
-    def ch(n: Nullable[Double]): String = if (n.isEmpty) "none" else fmt(n.get)
-    val alphaSuffix =
-      if (alphaOrNull.isEmpty) " / none"
-      else if (fuzzyEquals(alphaOrNull.get, 1.0)) ""
-      else s" / ${fmt(alphaOrNull.get)}"
-    space match {
-      case ColorSpace.rgb =>
-        // Legacy rgb: emit the shortest of name / short hex / full hex when
-        // opaque and in-gamut, falling back to `rgba(...)` for alpha != 1 or
-        // out-of-range channels. `SerializeVisitor` has its own copy of this
-        // logic for the declaration-value case; this branch covers
-        // interpolation (`#{$color}`) and any other path that goes through
-        // `toCssString` directly.
-        val ri     = math.round(channel0).toInt
-        val gi     = math.round(channel1).toInt
-        val bi     = math.round(channel2).toInt
-        val opaque = alphaOrNull.isDefined && fuzzyEquals(alphaOrNull.get, 1.0)
-        if (!opaque) {
-          val r = fmt(channel0)
-          val g = fmt(channel1)
-          val b = fmt(channel2)
-          s"rgba($r, $g, $b, ${fmt(alpha)})"
-        } else if (ri < 0 || ri > 255 || gi < 0 || gi > 255 || bi < 0 || bi > 255) {
-          val r = fmt(channel0)
-          val g = fmt(channel1)
-          val b = fmt(channel2)
-          s"rgb($r, $g, $b)"
-        } else {
-          val hex   = "#%02x%02x%02x".format(ri, gi, bi)
-          val short =
-            if (hex.charAt(1) == hex.charAt(2) && hex.charAt(3) == hex.charAt(4) && hex.charAt(5) == hex.charAt(6))
-              "#" + hex.charAt(1) + hex.charAt(3) + hex.charAt(5)
-            else hex
-          val name = ssg.sass.ColorNames.namesByColor.get(this)
-          name match {
-            case Some(n) if n.length <= short.length => n
-            case _                                   => short
-          }
-        }
-      case ColorSpace.hsl =>
-        s"hsl(${ch(channel0OrNull)}, ${ch(channel1OrNull)}%, ${ch(channel2OrNull)}%${alphaSuffix.replace(" / ", ", ")})"
-      case ColorSpace.hwb =>
-        s"hwb(${ch(channel0OrNull)} ${ch(channel1OrNull)}% ${ch(channel2OrNull)}%$alphaSuffix)"
-      case ColorSpace.lab =>
-        s"lab(${ch(channel0OrNull)}% ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
-      case ColorSpace.lch =>
-        s"lch(${ch(channel0OrNull)}% ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
-      case ColorSpace.oklab =>
-        s"oklab(${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
-      case ColorSpace.oklch =>
-        s"oklch(${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
-      case _ =>
-        // Predefined spaces (srgb, srgb-linear, display-p3, a98-rgb,
-        // prophoto-rgb, rec2020, xyz, xyz-d50, xyz-d65, lms): use
-        // `color(<space> c1 c2 c3 / alpha)` notation.
-        s"color(${space.name} ${ch(channel0OrNull)} ${ch(channel1OrNull)} ${ch(channel2OrNull)}$alphaSuffix)"
-    }
-  }
+  // dart-sass: SassColor does NOT override toCssString. It inherits the
+  // base Value.toCssString which delegates to SerializeVisitor.serializeValue.
+  // This ensures color formatting uses the same digit-by-digit writeRounded
+  // algorithm as declaration-value serialization, avoiding 1-ULP divergences
+  // from the multiply-round-divide approach previously used here.
 
   /** Throws a SassScriptException if this isn't in a legacy color space. */
   def assertLegacy(name: Nullable[String] = Nullable.Null): Unit =

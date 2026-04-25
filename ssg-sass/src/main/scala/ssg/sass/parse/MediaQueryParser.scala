@@ -139,26 +139,17 @@ class MediaQueryParser(
   }
 
   /** Consumes a `<media-in-parens>` expression and returns it, parentheses included.
+    *
+    * dart-sass media_query.dart:120-125: the text-based MediaQueryParser simply
+    * wraps `declarationValue()` in parentheses without any normalization.
+    * Colon-space normalization is only done by the structured parser in
+    * stylesheet.dart, not here.
     */
   private def _mediaInParens(): String = {
     scanner.expectChar(CharCode.$lparen, name = "media condition in parentheses")
-    val raw = declarationValue()
+    val result = s"(${declarationValue()})"
     scanner.expectChar(CharCode.$rparen)
-    // Ensure space after colon in simple media features like
-    // `(orientation:landscape)` -> `(orientation: landscape)`.
-    // Only normalize single-level features (no nested parens).
-    val inner = raw.trim
-    if (!inner.contains('(')) {
-      val colon = inner.indexOf(':')
-      if (colon >= 0) {
-        val name  = inner.substring(0, colon).trim
-        val value = inner.substring(colon + 1).trim
-        if (name.nonEmpty && value.nonEmpty) {
-          return s"($name: $value)"
-        }
-      }
-    }
-    s"($inner)"
+    result
   }
 
   /** The value of `consumeNewlines` is not relevant for this class. */

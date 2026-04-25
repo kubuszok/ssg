@@ -23,7 +23,10 @@ final class SelectorParserSuite extends munit.FunSuite {
   }
 
   test("parses class, id, universal, parent, placeholder") {
-    val list     = parse(".foo#bar*&%placeholder")
+    // dart-sass: `&` may only appear at the beginning of a compound in SCSS
+    // mode (_plainCss = false). So we put `&` first and the other simple
+    // selectors after it.
+    val list     = parse("&.foo#bar*%placeholder")
     val compound = list.components.head.components.head.selector
     val kinds    = compound.components.map(_.getClass.getSimpleName)
     assert(kinds.contains("ClassSelector"), kinds.toString)

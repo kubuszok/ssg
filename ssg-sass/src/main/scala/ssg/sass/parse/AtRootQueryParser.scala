@@ -57,7 +57,7 @@ class AtRootQueryParser(
     skipWs()
     val names = scala.collection.mutable.LinkedHashSet.empty[String]
     while (pos < text.length && text.charAt(pos) != ')') {
-      val name = readIdentifier()
+      val name = readNameOrString()
       if (name.isEmpty) fail("Expected a name in @at-root query.")
       names += name.toLowerCase
       skipWs()
@@ -69,6 +69,44 @@ class AtRootQueryParser(
     skipWs()
     if (pos < text.length) fail(s"Unexpected token after @at-root query: '${text.substring(pos)}'")
     new AtRootQuery(names.toSet, include)
+  }
+
+  /** Reads either an unquoted identifier or a quoted string value.
+    *
+    * Dart-sass parses the @at-root query values as full Sass expressions, so
+    * `(without: "media")` resolves to `media` (quotes stripped). Our parser
+    * captures raw text, so we need to handle quoted values explicitly here.
+    */
+  private def readNameOrString(): String = {
+    if (pos < text.length) {
+      val c = text.charAt(pos)
+      if (c == '"' || c == '\'') {
+        return readQuotedString(c)
+      }
+    }
+    readIdentifier()
+  }
+
+  private def readQuotedString(quote: Char): String = {
+    pos += 1 // skip opening quote
+    val buf = new StringBuilder()
+    boundary {
+      while (pos < text.length) {
+        val c = text.charAt(pos)
+        if (c == quote) {
+          pos += 1 // skip closing quote
+          break(())
+        } else if (c == '\\' && pos + 1 < text.length) {
+          pos += 1
+          buf.append(text.charAt(pos))
+          pos += 1
+        } else {
+          buf.append(c)
+          pos += 1
+        }
+      }
+    }
+    buf.toString()
   }
 
   private def readIdentifier(): String = {

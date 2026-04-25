@@ -403,12 +403,17 @@ object ColorFunctions {
         )
 
       case _ =>
-        // Other color spaces (display-p3, a98-rgb, etc.)
+        // Other color spaces (lch, oklch, display-p3, a98-rgb, etc.)
+        // dart-sass: _colorFromChannels default case passes clamp=true for
+        // all channels. The clamping logic in channelFromValueModern checks
+        // each channel's lowerClamped/upperClamped flags, so channels without
+        // clamping flags (e.g. a98-rgb, display-p3) are unaffected, while
+        // lch/oklch lightness and chroma are correctly clamped.
         SassColor.forSpaceInternal(
           space,
-          channelFromValueModern(space.channels(0), channel0, doClamp = false),
-          channelFromValueModern(space.channels(1), channel1, doClamp = false),
-          channelFromValueModern(space.channels(2), channel2, doClamp = false),
+          channelFromValueModern(space.channels(0), channel0, doClamp = true),
+          channelFromValueModern(space.channels(1), channel1, doClamp = true),
+          channelFromValueModern(space.channels(2), channel2, doClamp = true),
           alpha
         )
     }
@@ -432,7 +437,10 @@ object ColorFunctions {
         case lc: LinearChannel =>
           percentageOrUnitless(n, lc.max, Some(channel.name))
         case _ if channel.isPolarAngle =>
-          angleValue(n, channel.name) % 360
+          // dart-sass: `value.coerceValueToUnit('deg', channel.name) % 360`
+          // This throws for non-angle units (px, %, etc.) — distinct from
+          // `angleValue` which only warns (used for legacy hsl/hwb hue).
+          n.coerceValueToUnit("deg", Nullable(channel.name)) % 360
         case _ =>
           n.value
       }
@@ -683,146 +691,90 @@ object ColorFunctions {
       Some(SassString(str, hasQuotes = false))
     } else None
 
+  // dart-sass defines lab/lch/oklab/oklch with a single `$channels` parameter.
+  // However, our StylesheetParser pre-splits space-separated channel values
+  // into separate positional args (e.g. `lab(50% 30 -20)` → 3 args), so we
+  // need an overloaded function that accepts both forms:
+  // dart-sass: lab/lch/oklab/oklch only accept a single `$channels` argument.
+  // There is no multi-arg overload — callers must use the space-separated
+  // channel syntax (e.g. `lab(50% 20 -30)` or `lab(50% 20 -30 / 0.5)`).
   private val labFn: BuiltInCallable =
     BuiltInCallable.function(
       "lab",
-      "$lightness, $a, $b, $alpha: 1",
-      args =>
-        args.length match {
-          case 1 => parseChannels("lab", args(0), Some(ColorSpace.lab), Nullable("channels"))
-          case _ =>
-            val alpha = if (args.length >= 4) args(3) else SassNumber(1)
-            tryModernPassthrough("lab", args.take(3), alpha).getOrElse {
-              val l  = channelOrNone(args(0), ColorSpace.lab.channels(0))
-              val a  = channelOrNone(args(1), ColorSpace.lab.channels(1))
-              val b  = channelOrNone(args(2), ColorSpace.lab.channels(2))
-              val al = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-              SassColor.lab(l, a, b, al)
-            }
-        }
+      "$channels",
+      args => parseChannels("lab", args(0), Some(ColorSpace.lab), Nullable("channels"))
     )
 
   private val lchFn: BuiltInCallable =
     BuiltInCallable.function(
       "lch",
-      "$lightness, $chroma, $hue, $alpha: 1",
-      args =>
-        args.length match {
-          case 1 => parseChannels("lch", args(0), Some(ColorSpace.lch), Nullable("channels"))
-          case _ =>
-            val alpha = if (args.length >= 4) args(3) else SassNumber(1)
-            tryModernPassthrough("lch", args.take(3), alpha).getOrElse {
-              val l  = channelOrNone(args(0), ColorSpace.lch.channels(0))
-              val c  = channelOrNone(args(1), ColorSpace.lch.channels(1))
-              val h  = if (isNone(args(2))) Nullable.Null[Double] else Nullable(hueOf(args(2).assertNumber()))
-              val al = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-              SassColor.lch(l, c, h, al)
-            }
-        }
+      "$channels",
+      args => parseChannels("lch", args(0), Some(ColorSpace.lch), Nullable("channels"))
     )
 
   private val oklabFn: BuiltInCallable =
     BuiltInCallable.function(
       "oklab",
-      "$lightness, $a, $b, $alpha: 1",
-      args =>
-        args.length match {
-          case 1 => parseChannels("oklab", args(0), Some(ColorSpace.oklab), Nullable("channels"))
-          case _ =>
-            val alpha = if (args.length >= 4) args(3) else SassNumber(1)
-            tryModernPassthrough("oklab", args.take(3), alpha).getOrElse {
-              val l  = channelOrNone(args(0), ColorSpace.oklab.channels(0))
-              val a  = channelOrNone(args(1), ColorSpace.oklab.channels(1))
-              val b  = channelOrNone(args(2), ColorSpace.oklab.channels(2))
-              val al = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-              SassColor.oklab(l, a, b, al)
-            }
-        }
+      "$channels",
+      args => parseChannels("oklab", args(0), Some(ColorSpace.oklab), Nullable("channels"))
     )
 
   private val oklchFn: BuiltInCallable =
     BuiltInCallable.function(
       "oklch",
-      "$lightness, $chroma, $hue, $alpha: 1",
-      args =>
-        args.length match {
-          case 1 => parseChannels("oklch", args(0), Some(ColorSpace.oklch), Nullable("channels"))
-          case _ =>
-            val alpha = if (args.length >= 4) args(3) else SassNumber(1)
-            tryModernPassthrough("oklch", args.take(3), alpha).getOrElse {
-              val l  = channelOrNone(args(0), ColorSpace.oklch.channels(0))
-              val c  = channelOrNone(args(1), ColorSpace.oklch.channels(1))
-              val h  = if (isNone(args(2))) Nullable.Null[Double] else Nullable(hueOf(args(2).assertNumber()))
-              val al = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-              SassColor.oklch(l, c, h, al)
-            }
-        }
+      "$channels",
+      args => parseChannels("oklch", args(0), Some(ColorSpace.oklch), Nullable("channels"))
     )
 
+  // dart-sass global hwb is overloaded: `$hue, $whiteness, $blackness, $alpha: 1`
+  // (for comma-separated or parser pre-split calls) and `$channels` (for named
+  // arg calls like `hwb($channels: ...)`). Both route through parseChannels.
   private val hwbFn: BuiltInCallable =
-    BuiltInCallable.function(
+    BuiltInCallable.overloadedFunction(
       "hwb",
-      "$hue, $whiteness, $blackness, $alpha: 1",
-      args =>
-        {
-          val alpha = if (args.length >= 4) args(3) else SassNumber(1)
-          tryModernPassthrough("hwb", args.take(3), alpha)
-        }.getOrElse {
-          if (args.length >= 3 && args.take(3).exists(isNone)) {
-            val channelList = SassList(args.take(3), ListSeparator.Space)
-            val input       = if (args.length >= 4) SassList(List(channelList, args(3)), ListSeparator.Slash) else channelList
-            parseChannels("hwb", input, Some(ColorSpace.hwb), Nullable("channels"))
-          } else
-            args.length match {
-              case 1 =>
-                parseChannels("hwb", args(0), Some(ColorSpace.hwb), Nullable("channels"))
-              case _ =>
-                val h     = hueOrNone(args(0))
-                val w     = if (isNone(args(1))) Nullable.Null else Nullable(clamp(args(1).assertNumber().value, 0, 100))
-                val b     = if (isNone(args(2))) Nullable.Null else Nullable(clamp(args(2).assertNumber().value, 0, 100))
-                val alpha = if (args.length >= 4) alphaOrNone(args(3)) else Nullable(1.0)
-                SassColor.hwb(h, w, b, alpha)
-            }
+      Map(
+        "$hue, $whiteness, $blackness, $alpha: 1" -> { (args: List[Value]) =>
+          parseChannels(
+            "hwb",
+            SassList(
+              List(SassList(args.take(3), ListSeparator.Space), if (args.length >= 4) args(3) else SassNumber(1)),
+              ListSeparator.Slash
+            ),
+            Some(ColorSpace.hwb),
+            Nullable.empty
+          )
+        },
+        "$channels" -> { (args: List[Value]) =>
+          parseChannels("hwb", args(0), Some(ColorSpace.hwb), Nullable("channels"))
         }
+      )
     )
 
-  /** `color($description)` or `color($space, $c1, $c2, $c3, $alpha: 1)` — constructs a color in an explicit non-legacy color space (srgb, display-p3, a98-rgb, etc.). The single-argument form accepts
-    * modern CSS color syntax like `color(display-p3 1 0 0 / 0.5)`.
+  /** `color($description)` — constructs a color in an explicit non-legacy color space.
+    * In dart-sass this function only accepts a single `$description` parameter
+    * (a space-separated channel list). The multi-arg form is handled by our
+    * parser pre-splitting space-separated values into positional args, so we
+    * need an overloaded callable with both signatures.
     */
   private val colorFn: BuiltInCallable =
-    BuiltInCallable.function(
+    BuiltInCallable.overloadedFunction(
       "color",
-      "$space, $channel1, $channel2, $channel3, $alpha: 1",
-      args =>
-        {
-          if (args.length >= 4) {
-            val alpha = if (args.length >= 5) args(4) else SassNumber(1)
-            tryModernPassthrough("color", args.take(4), alpha)
-          } else if (args.length >= 2 && args.exists(v => isSpecialCssValue(v) || v.isSpecialNumber)) {
-            val content = SassList(args.toList, ListSeparator.Space)
-            Some(functionString("color", List(content)))
-          } else None
-        }.getOrElse {
-          args.length match {
-            case 1 =>
-              parseChannels("color", args(0), None, Nullable("description"))
-            case n if n < 4 =>
-              throw SassScriptException(
-                s"color() requires at least 4 arguments or a single space-separated description, was $n."
-              )
-            case _ =>
-              val spaceName = args(0) match {
-                case s: SassString => s.text
-                case other         => other.assertString().text
-              }
-              val space = ColorSpace.fromName(spaceName)
-              val c0    = channelOrNone(args(1), space.channels(0))
-              val c1    = channelOrNone(args(2), space.channels(1))
-              val c2    = channelOrNone(args(3), space.channels(2))
-              val alpha = if (args.length >= 5) alphaOrNone(args(4)) else Nullable(1.0)
-              SassColor.forSpaceInternal(space, c0, c1, c2, alpha)
-          }
+      Map(
+        "$space, $channel1, $channel2, $channel3, $alpha: 1" -> { (args: List[Value]) =>
+          // Wrap the pre-split positional args back into a space-separated
+          // list and route through parseChannels (matching dart-sass which
+          // only has the $description single-arg form).
+          val spaceName = args(0)
+          val channels  = args.slice(1, 4)
+          val alpha     = if (args.length >= 5) args(4) else SassNumber(1)
+          val channelList = SassList(spaceName :: channels, ListSeparator.Space)
+          val input       = SassList(List(channelList, alpha), ListSeparator.Slash)
+          parseChannels("color", input, None, Nullable.empty)
+        },
+        "$description" -> { (args: List[Value]) =>
+          parseChannels("color", args(0), None, Nullable("description"))
         }
+      )
     )
 
   // --- Accessors ---
@@ -1329,8 +1281,9 @@ object ColorFunctions {
       case Some(v) =>
         val channelValue: Double = channel match {
           case _: ColorChannel if channel.isPolarAngle =>
-            if (v.compatibleWithUnit("deg")) v.coerceValueToUnit("deg")
-            else v.value
+            // dart-sass: `value.coerceValueToUnit('deg', channel.name) % 360`
+            // This throws for non-angle units (px, %, etc.).
+            v.coerceValueToUnit("deg", Nullable(channel.name)) % 360
           case lc: LinearChannel if lc.requiresPercent && !v.hasUnit("%") =>
             throw SassScriptException(
               s"Expected $v to have unit \"%\".",
@@ -1369,6 +1322,10 @@ object ColorFunctions {
     if (number.isNaN) lowerBound else math.max(lowerBound, math.min(upperBound, number))
 
   /** Create a SassColor from SassNumber channels with unit conversion. Ported from dart-sass `_colorFromChannels`.
+    *
+    * For HSL/HWB, the hue uses `angleValue` (which warns for non-angle units instead of throwing),
+    * matching dart-sass's explicit HSL/HWB cases. For all other spaces (including lch/oklch),
+    * `channelFromValue` is used which throws for non-angle hue units via `coerceValueToUnit`.
     */
   private def colorFromChannels(
     space:   ColorSpace,
@@ -1377,14 +1334,53 @@ object ColorFunctions {
     c2:      Option[SassNumber],
     alpha:   Nullable[Double],
     doClamp: Boolean
-  ): SassColor =
-    SassColor.forSpaceInternal(
-      space,
-      channelFromValue(space.channels(0), c0, doClamp),
-      channelFromValue(space.channels(1), c1, doClamp),
-      channelFromValue(space.channels(2), c2, doClamp),
-      alpha
-    )
+  ): SassColor = space match {
+    case ColorSpace.hsl =>
+      // dart-sass: _colorFromChannels HSL case uses _angleValue for hue
+      c1.foreach(checkPercent(_, "saturation"))
+      c2.foreach(checkPercent(_, "lightness"))
+      SassColor.hsl(
+        c0.map(n => angleValue(n, "hue")).fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+        channelFromValue(space.channels(1), forcePercent(c1), doClamp),
+        channelFromValue(space.channels(2), forcePercent(c2), doClamp),
+        alpha
+      )
+
+    case ColorSpace.hwb =>
+      // dart-sass: _colorFromChannels HWB case uses _angleValue for hue
+      c1.foreach(_.assertUnit("%", Nullable("whiteness")))
+      c2.foreach(_.assertUnit("%", Nullable("blackness")))
+      var whiteness = c1.map(_.value)
+      var blackness = c2.map(_.value)
+      (whiteness, blackness) match {
+        case (Some(w), Some(b)) if w + b > 100 =>
+          val oldWhiteness = w
+          whiteness = Some(w / (w + b) * 100)
+          blackness = Some(b / (oldWhiteness + b) * 100)
+        case _ =>
+      }
+      SassColor.hwb(
+        c0.map(n => angleValue(n, "hue")).fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+        whiteness.fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+        blackness.fold(Nullable.Null: Nullable[Double])(Nullable(_)),
+        alpha
+      )
+
+    case ColorSpace.rgb =>
+      val ch0 = channelFromValue(space.channels(0), c0, doClamp)
+      val ch1 = channelFromValue(space.channels(1), c1, doClamp)
+      val ch2 = channelFromValue(space.channels(2), c2, doClamp)
+      SassColor.forSpaceInternal(space, ch0, ch1, ch2, alpha)
+
+    case _ =>
+      SassColor.forSpaceInternal(
+        space,
+        channelFromValue(space.channels(0), c0, doClamp),
+        channelFromValue(space.channels(1), c1, doClamp),
+        channelFromValue(space.channels(2), c2, doClamp),
+        alpha
+      )
+  }
 
   /** Error for modifying a missing channel. */
   private def missingChannelError(color: SassColor, channel: String): Nothing =
@@ -1717,14 +1713,20 @@ object ColorFunctions {
       Some(ColorSpace.fromName(s.text, Some("space")))
     }
 
-  /** Build a SassNumber for a channel value, attaching the channel's associated unit (e.g. "deg" for hue, "%" for hsl saturation/lightness when not normalized). For conventionallyPercent channels
-    * with max != 100, the internal value is scaled: e.g. oklab lightness internal 0.1 with max=1 → 0.1 * 100 / 1 = 10%.
+  /** Build a SassNumber for a channel value, attaching the channel's associated unit.
+    *
+    * Ported from dart-sass `color.channel` (lib/src/functions/color.dart:704-709):
+    * when the channel's associated unit is `%`, the internal value is always
+    * scaled by `* 100 / max` — even when `max == 100`. Although `x * 100 / 100`
+    * is mathematically identity, IEEE 754 double arithmetic can produce a
+    * different bit pattern, and the digit-by-digit `writeRounded` serializer
+    * is sensitive to that difference (e.g. `-392156.4705882353` vs
+    * `-392156.47058823536`). Removing the `max != 100` short-circuit keeps
+    * the output bit-identical to dart-sass.
     */
   private def channelNumber(value: Double, channel: ssg.sass.value.color.ColorChannel): SassNumber =
     channel match {
-      case lc: LinearChannel if channel.associatedUnit.toOption.contains("%") && lc.max != 100 =>
-        // Conventionally-percent channel with max != 100 (e.g. oklab/lab lightness with max=1):
-        // scale internal value to percentage. Internal 0.1 with max=1 → 0.1 * 100 / 1 = 10%.
+      case lc: LinearChannel if channel.associatedUnit.toOption.contains("%") =>
         SassNumber(value * 100.0 / lc.max, "%")
       case _ =>
         val unit = channel.associatedUnit
@@ -2181,9 +2183,9 @@ object ColorFunctions {
     moduleAlphaFn,
     moduleOpacityFn,
     // ### Color Spaces
-    // The SSG parser splits space-separated channels into separate positional
-    // args for color functions, so we reuse the multi-arg global callables
-    // which handle both 1-arg (single SassList) and multi-arg cases.
+    // lab/lch/oklab/oklch are overloaded to handle both the parser pre-split
+    // positional form and the single `$channels` named-arg form. Both
+    // overloads route through parseChannels for consistent behavior.
     colorFn,
     labFn,
     lchFn,

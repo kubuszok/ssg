@@ -433,6 +433,11 @@ final class EvaluateVisitor(
         configuration = ExplicitConfiguration(values.toMap, callableNode)
       }
 
+      // dart-sass: resolve URL relative to the call site's source URL,
+      // so that `meta.load-css("x")` inside a mixin defined in subdir/
+      // resolves relative to that subdir, not the top-level input file.
+      val baseUrl0: Nullable[String] =
+        Nullable(callableNode.span.sourceUrl.toString).filter(_.nonEmpty)
       _loadModule(
         url,
         "load-css()",
@@ -445,7 +450,8 @@ final class EvaluateVisitor(
           css.accept(this)
         },
         configuration = Nullable(configuration),
-        namesInErrors = true
+        namesInErrors = true,
+        baseUrl = baseUrl0
       )
       _assertConfigurationIsEmpty(configuration, nameInError = true)
       SassNull
@@ -558,7 +564,8 @@ final class EvaluateVisitor(
     nodeWithSpan:   ssg.sass.ast.AstNode,
     callback:       (Module[Callable], Boolean) => Unit,
     configuration:  Nullable[Configuration] = Nullable.empty,
-    namesInErrors:  Boolean = false
+    namesInErrors:  Boolean = false,
+    baseUrl:        Nullable[String] = Nullable.empty
   ): Unit = {
     import scala.util.boundary, boundary.break
     boundary {
@@ -581,7 +588,7 @@ final class EvaluateVisitor(
     }
 
     _withStackFrame(stackFrame, nodeWithSpan, {
-      val loaded = _loadStylesheet(url, nodeWithSpan.span)
+      val loaded = _loadStylesheet(url, nodeWithSpan.span, baseUrl = baseUrl)
       if (loaded.isEmpty) {
         throw _exception("Can't find stylesheet to import.", Nullable(nodeWithSpan.span))
       }
@@ -1104,6 +1111,10 @@ final class EvaluateVisitor(
       case pcc: PlainCssCallable =>
         // dart-sass: _runFunctionCallable for PlainCssCallable produces a
         // plain CSS function call string, e.g. `round(0.6)`.
+        // dart-sass: plain CSS functions don't support keyword arguments.
+        if (named.nonEmpty) {
+          throw SassScriptException("Plain CSS functions don't support keyword arguments.")
+        }
         val sb = new StringBuilder()
         sb.append(pcc.name)
         sb.append('(')
@@ -1672,7 +1683,10 @@ final class EvaluateVisitor(
             else el
           }
           SassString(rendered.mkString(" "), hasQuotes = false)
-        case _ =>
+        // dart-sass lines 3350-3353: only NumberExpression, VariableExpression,
+        // FunctionExpression, and LegacyIfExpression are allowed to be evaluated.
+        // Everything else (including UnaryOperationExpression) is rejected.
+        case _: NumberExpression | _: VariableExpression | _: FunctionExpression | _: InterpolatedFunctionExpression | _: LegacyIfExpression | _: IfExpression =>
           val v = expr.accept(this)
           // Special CSS calc keywords: pi, e, infinity, -infinity, NaN.
           v match {
@@ -1692,6 +1706,9 @@ final class EvaluateVisitor(
             case result =>
               throw SassException(s"Value $result can't be used in a calculation.", node.span)
           }
+        case _ =>
+          // dart-sass lines 3388-3393: reject any other expression type
+          throw SassException("This expression can't be used in a calculation.", node.span)
       }
       converted = args.map(toArg)
       // dart-sass line 3133: in a @supports declaration, return the
@@ -1735,9 +1752,14 @@ final class EvaluateVisitor(
         case "log"   => SassCalculation.log(converted(0), Nullable(converted(1)))
         case "mod"   => SassCalculation.mod(converted(0), Nullable(converted(1)))
         case "rem"   => SassCalculation.rem(converted(0), Nullable(converted(1)))
-        case "round" if converted.length == 1 => SassCalculation.round(converted.head)
-        case "round" if converted.length == 2 => SassCalculation.round(converted(0), Nullable(converted(1)))
-        case "round" => SassCalculation.round(converted(0), Nullable(converted(1)), Nullable(converted(2)))
+        case "round" =>
+          val warnFn: Nullable[(String, Nullable[Deprecation]) => Unit] =
+            Nullable((msg: String, dep: Nullable[Deprecation]) => warn(msg, dep))
+          SassCalculation.roundInternal(
+            converted(0), nOpt(1), nOpt(2),
+            inLegacySassFunction = inLegacySassFunction,
+            warn = warnFn
+          )
         case _       => return Nullable.empty
       }
       Nullable(result)
@@ -2024,7 +2046,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_copyParentAfterSibling` (evaluate.dart:4531-4538).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: wired when CSS nesting output is ported
   private def _copyParentAfterSibling(): Unit = {
     val parent = _parent.getOrElse {
       throw new IllegalStateException("EvaluateVisitor has no active parent node.")
@@ -2721,6 +2742,15 @@ final class EvaluateVisitor(
   }
 
   override def visitDeclaration(node: Declaration): Value = {
+    // dart-sass (async_evaluate.dart:1365-1370): declarations are only valid
+    // inside style rules, unknown at-rules, or keyframes blocks.
+    if (_styleRule.isEmpty && !_inUnknownAtRule && !_inKeyframes) {
+      throw _exception(
+        "Declarations may only be used within style rules.",
+        Nullable(node.span)
+      )
+    }
+
     // ISS-026: mixed-decls deprecation. If a nested style rule has already
     // been visited in the current enclosing style-rule body, emit the
     // `mixed-decls` warning. Mirrors dart-sass `_warnForRule` in
@@ -3056,12 +3086,16 @@ final class EvaluateVisitor(
 
     val nameText  = _performInterpolation(node.name)
     val nameValue = new CssValue[String](nameText, node.name.span)
+    // dart-sass evaluate.dart:1564-1566: trim the value and warn for color.
     val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
       val raw = _performInterpolation(interp)
       // dart-sass strips // comments at parse time; our raw-text parser
       // preserves them, so strip them post-interpolation.
       val stripped = _stripSilentComments(raw)
-      new CssValue[String](stripped, interp.span)
+      // dart-sass: `_interpolationToValue(value, trim: true, ...)` — trim ASCII
+      // whitespace from the interpolated value.
+      val trimmed = ssg.sass.Utils.trimAscii(stripped, excludeEscape = true)
+      new CssValue[String](trimmed, interp.span)
     }
 
     val childless = node.children.isEmpty
@@ -3073,7 +3107,10 @@ final class EvaluateVisitor(
     )
 
     if (childless) {
-      _addChild(rule)
+      // dart-sass evaluate.dart:1569-1573: copy the parent after any siblings
+      // so that the childless at-rule appears after any bubbled-up rules.
+      _copyParentAfterSibling()
+      _parent.get.addChild(rule)
     } else {
       val wasInKeyframes = _inKeyframes
       val wasInUnknownAtRule = _inUnknownAtRule
@@ -3712,10 +3749,9 @@ final class EvaluateVisitor(
       ssg.sass.parse.AtRootQueryParser.tryParseQuery(queryText).getOrElse(ssg.sass.ast.sass.AtRootQuery.defaultQuery)
     }
 
-    // Walk up the current parent chain and find the topmost non-excluded
-    // ancestor. The new attachment point is that ancestor (or `root` if
-    // every ancestor is excluded).
-    def excludes(node: ModifiableCssParentNode): Boolean = node match {
+    // dart-sass evaluate.dart:1196-1208: walk up from _parent to the
+    // stylesheet root, collecting NON-excluded ancestors (innermost-first).
+    def excludes(n: ModifiableCssParentNode): Boolean = n match {
       case _:  ModifiableCssStyleRule    => query.excludesStyleRules
       case _:  ModifiableCssMediaRule    => query.excludesName("media")
       case _:  ModifiableCssSupportsRule => query.excludesName("supports")
@@ -3723,91 +3759,158 @@ final class EvaluateVisitor(
       case _ => false
     }
 
-    // Collect ancestors innermost-first, stopping at the root stylesheet.
-    val ancestors = scala.collection.mutable.ListBuffer.empty[ModifiableCssParentNode]
-    var cur: Nullable[ModifiableCssParentNode] = _parent
-    var atRoot = false
-    while (cur.isDefined && !atRoot) {
-      val n = cur.get
-      n match {
-        case _: ModifiableCssStylesheet => atRoot = true
+    var parent: ModifiableCssParentNode = _parent.getOrElse(root)
+    val included = scala.collection.mutable.ListBuffer.empty[ModifiableCssParentNode]
+    while (!parent.isInstanceOf[ModifiableCssStylesheet]) {
+      if (!excludes(parent)) included += parent
+      parent.modifiableParent match {
+        case gp if gp.isDefined => parent = gp.get
         case _ =>
-          ancestors += n
-          cur = n.parent.fold[Nullable[ModifiableCssParentNode]](Nullable.empty) {
-            case mp: ModifiableCssParentNode => Nullable(mp)
-            case _ => Nullable.empty
-          }
+          throw new IllegalStateException(
+            "CssNodes must have a CssStylesheet transitive parent node."
+          )
       }
     }
 
-    // ISS-027: find the OUTERMOST excluded ancestor; the at-root target
-    // is the ancestor just above it. If no ancestor is excluded, stay at
-    // the current parent. This correctly handles
-    // `@media { .a { @at-root (without: media) { ... } } }` where the
-    // style rule `.a` is innermost but the media wrapper must be stripped.
-    var lastExcludedIdx = -1
-    var i               = 0
-    while (i < ancestors.length) {
-      if (excludes(ancestors(i))) lastExcludedIdx = i
+    // dart-sass evaluate.dart:1209: _trimIncluded
+    val trimmedRoot = _trimIncluded(included)
+
+    // dart-sass evaluate.dart:1213-1220: if nothing was excluded, just
+    // evaluate children in place. However, we still need to apply the
+    // _atRootExcludingStyleRule flag so that nested style rules don't
+    // get an implicit parent selector. This is needed when @at-root
+    // runs inside an @import context where _styleRuleIgnoringAtRoot
+    // is inherited from the outer scope.
+    if (trimmedRoot eq _parent.getOrElse(root)) {
+      val savedAtRootExcluding = _atRootExcludingStyleRule
+      if (query.excludesStyleRules) {
+        _atRootExcludingStyleRule = true
+      }
+      try {
+        _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+          for (child <- node.children.get) {
+            child.accept(this)
+          }
+        }
+      } finally {
+        _atRootExcludingStyleRule = savedAtRootExcluding
+      }
+      return SassNull
+    }
+
+    // dart-sass evaluate.dart:1222-1233: create copies of included
+    // ancestors and nest them. `innerCopy` is where children will be
+    // evaluated; `outerCopy` is attached to `trimmedRoot`.
+    var innerCopy: ModifiableCssParentNode = trimmedRoot
+    if (included.nonEmpty) {
+      innerCopy = included.head.copyWithoutChildren()
+      var outerCopy = innerCopy
+      for (n <- included.tail) {
+        val copy = n.copyWithoutChildren()
+        copy.addChild(outerCopy)
+        outerCopy = copy
+      }
+      trimmedRoot.addChild(outerCopy)
+    }
+
+    // dart-sass evaluate.dart:1235-1239: _scopeForAtRoot + evaluate children
+    _scopeForAtRoot(node, innerCopy, query, included.toList) {
+      for (child <- node.children.get) {
+        child.accept(this)
+      }
+    }
+
+    SassNull
+  }
+
+  /** dart-sass evaluate.dart:1254-1284: destructively trims a trailing
+    * sublist from [nodes] that matches the current list of parents.
+    *
+    * [nodes] is a list of parents included by an `@at-root` rule, from
+    * innermost to outermost. If it contains a trailing sublist that's
+    * contiguous and whose final node is a direct child of [_root], this
+    * removes that sublist and returns the innermost removed parent.
+    *
+    * Otherwise, leaves [nodes] as-is and returns [_root].
+    */
+  private def _trimIncluded(
+    nodes: scala.collection.mutable.ListBuffer[ModifiableCssParentNode]
+  ): ModifiableCssParentNode = {
+    val root = _root.get
+    if (nodes.isEmpty) return root
+
+    var parent: ModifiableCssParentNode = _parent.getOrElse(root)
+    var innermostContiguous: Int        = -1
+    var i                              = 0
+    while (i < nodes.length) {
+      while (!(parent eq nodes(i))) {
+        innermostContiguous = -1
+        val gp = parent.modifiableParent
+        if (gp.isDefined) parent = gp.get
+        else throw new IllegalArgumentException(
+          s"Expected ${nodes(i)} to be an ancestor of this."
+        )
+      }
+      if (innermostContiguous < 0) innermostContiguous = i
+
+      val gp = parent.modifiableParent
+      if (gp.isDefined) parent = gp.get
+      else throw new IllegalArgumentException(
+        s"Expected ${nodes(i)} to be an ancestor of this."
+      )
       i += 1
     }
-    val newParent: ModifiableCssParentNode =
-      if (lastExcludedIdx < 0) {
-        _parent.getOrElse(root: ModifiableCssParentNode)
-      } else if (lastExcludedIdx + 1 < ancestors.length) {
-        ancestors(lastExcludedIdx + 1)
-      } else {
-        root: ModifiableCssParentNode
-      }
 
+    if (!(parent eq root)) return root
+    val result = nodes(innermostContiguous)
+    nodes.remove(innermostContiguous, nodes.length - innermostContiguous)
+    result
+  }
+
+  /** dart-sass evaluate.dart:1291-1343: returns a scope callback for the
+    * at-root query. Adjusts _parent, _atRootExcludingStyleRule,
+    * _mediaQueries, _inKeyframes, and _inUnknownAtRule for the duration.
+    */
+  private def _scopeForAtRoot(
+    node:     AtRootRule,
+    newParent: ModifiableCssParentNode,
+    query:    ssg.sass.ast.sass.AtRootQuery,
+    included: List[ModifiableCssParentNode]
+  )(callback: => Unit): Unit = {
     val savedParent              = _parent
     val savedStyleRule           = _styleRule
     val savedStyleRuleIgnoring   = _styleRuleIgnoringAtRoot
     val savedAtRootExcluding     = _atRootExcludingStyleRule
+    val savedInKeyframes         = _inKeyframes
+    val savedInUnknownAtRule     = _inUnknownAtRule
+
     _parent = Nullable(newParent)
-    // dart-sass: set _atRootExcludingStyleRule when excluding style rules.
-    // _styleRuleIgnoringAtRoot keeps the real parent for `&` resolution.
+
     if (query.excludesStyleRules) {
       _styleRule = Nullable.empty
       _atRootExcludingStyleRule = true
     }
+
+    if (_inKeyframes && query.excludesName("keyframes")) {
+      _inKeyframes = false
+    }
+
+    if (_inUnknownAtRule && !included.exists(_.isInstanceOf[ModifiableCssAtRule])) {
+      _inUnknownAtRule = false
+    }
+
     try {
-      // ISS-027: if an enclosing style rule survived the query (e.g.
-      // `@media { .a { @at-root (without: media) { ... } } }`), re-wrap
-      // the body in a fresh copy of that style rule at the new parent
-      // so bare declarations retain their selector context.
-      val needStyleRuleWrapper =
-        !query.excludesStyleRules &&
-          savedStyleRule.isDefined &&
-          (newParent match {
-            case _: ModifiableCssStyleRule => false
-            case _ => true
-          })
-      if (needStyleRuleWrapper) {
-        val wrapper = savedStyleRule.get.copyWithoutChildren().asInstanceOf[ModifiableCssStyleRule]
-        _withParent(wrapper) {
-          _withStyleRule(wrapper) {
-            _withScope {
-              for (statement <- node.children.get) {
-                val _ = statement.accept(this)
-              }
-            }
-          }
-        }
-      } else {
-        _withScope {
-          for (statement <- node.children.get) {
-            val _ = statement.accept(this)
-          }
-        }
+      _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+        callback
       }
     } finally {
       _parent = savedParent
       _styleRule = savedStyleRule
       _styleRuleIgnoringAtRoot = savedStyleRuleIgnoring
       _atRootExcludingStyleRule = savedAtRootExcluding
+      _inKeyframes = savedInKeyframes
+      _inUnknownAtRule = savedInUnknownAtRule
     }
-    SassNull
   }
 
   /// Port of dart-sass `visitUseRule` (evaluate.dart:2708-2733).
@@ -3997,14 +4100,11 @@ final class EvaluateVisitor(
           val oldStylesheet0 = _stylesheet
           val oldInDependency = _inDependency
           _importer = Nullable(loadedImporter)
-          // dart-sass sets _stylesheet here for error reporting. We also
-          // do so, UNLESS the imported file is plain CSS (.css). For plain
-          // CSS imports, we keep the caller's _stylesheet so that the
-          // _isPlainCssSelector check in visitStyleRule remains false and
-          // parent-nesting works (the imported rules nest under the
-          // enclosing selector). When the CSS file is @use'd, it gets
-          // its own _execute context where _stylesheet is set normally.
-          if (!stylesheet.plainCss) _stylesheet = Nullable(stylesheet)
+          // dart-sass evaluate.dart:1889-1890: always set _stylesheet to the
+          // imported stylesheet, including plain CSS files. This ensures that
+          // `_stylesheet.plainCss` returns the correct value in visitStyleRule,
+          // which is needed for CSS nesting preservation.
+          _stylesheet = Nullable(stylesheet)
           _inDependency = isDependency
           visitStylesheet(stylesheet)
           _importer = oldImporter
@@ -4592,7 +4692,10 @@ final class EvaluateVisitor(
           }
       // dart-sass: parameter values (positional, named, or default) are
       // stripped of slash info before binding.
-      _environment.setVariable(param.name, value.withoutSlash)
+      // dart-sass uses setLocalVariable (not setVariable) so that parameter
+      // bindings are scoped to the innermost scope and don't propagate to
+      // enclosing scopes (evaluate.dart:3529, 3545).
+      _environment.setLocalVariable(param.name, value.withoutSlash)
       i += 1
     }
     // Bind any remaining positional arguments to the rest parameter as
@@ -4621,7 +4724,7 @@ final class EvaluateVisitor(
           leftover,
           restSeparator
         )
-      _environment.setVariable(restName, restValue)
+      _environment.setLocalVariable(restName, restValue)
     }
     // Bind the keyword-rest parameter to a map of leftover keyword args.
     declared.keywordRestParameter.foreach { kwName =>
@@ -4630,7 +4733,7 @@ final class EvaluateVisitor(
       val entries       = leftover.iterator.map { case (k, v) =>
         (ssg.sass.value.SassString(k, hasQuotes = false): ssg.sass.value.Value) -> v
       }.toList
-      _environment.setVariable(kwName, ssg.sass.value.SassMap(ListMap.from(entries)))
+      _environment.setLocalVariable(kwName, ssg.sass.value.SassMap(ListMap.from(entries)))
     }
   }
 
@@ -4640,25 +4743,45 @@ final class EvaluateVisitor(
     *
     * Also fills intermediate gaps created by [[_mergeBuiltInNamedArgs]]: when a named arg is placed
     * at index `j > positional.length`, positions between `positional.length` and `j` are filled
-    * with SassNull. This method replaces those intermediate SassNull values with the evaluated
-    * default if one exists in the signature.
+    * with `_argGap`. This method replaces those gap markers with the evaluated
+    * default if one exists in the signature. Explicitly-passed `null` values
+    * (SassNull) are left intact so callbacks can distinguish "not provided"
+    * from "provided as null".
     */
+
+  /** Sentinel value used for unfilled argument positions in built-in argument
+    * merging. Distinguished from SassNull (which represents a user-provided
+    * `null` value) so that `_padBuiltInPositional` can replace gaps with
+    * defaults without clobbering explicit nulls.
+    */
+  private val _argGap: Value = new Value {
+    override def isTruthy: Boolean = false
+    override def toCssString(quote: Boolean): String = "null"
+    override def toString: String = "_argGap"
+    override def accept[T](visitor: ssg.sass.visitor.ValueVisitor[T]): T =
+      throw new UnsupportedOperationException("_argGap sentinel should not be visited")
+  }
+
   private def _padBuiltInPositional(bic: BuiltInCallable, positional: List[Value]): List[Value] = {
     val defaults = bic.parameterDefaults
-    if (defaults.isEmpty) positional
+    if (defaults.isEmpty) positional.map(v => if (v eq _argGap) SassNull else v)
     else {
-      // Fill intermediate SassNull gaps (created by _mergeBuiltInNamedArgs)
-      // with evaluated defaults from the signature.
+      // Fill intermediate gap markers (created by _mergeBuiltInNamedArgs)
+      // with evaluated defaults from the signature. An explicit `null`
+      // passed by the caller is SassNull and must NOT be replaced.
       val buf = scala.collection.mutable.ListBuffer.from(positional)
       var i = 0
       while (i < buf.length && i < defaults.length) {
-        if ((buf(i) eq SassNull) && defaults(i).isDefined) {
+        if ((buf(i) eq _argGap) && defaults(i).isDefined) {
           try {
             val (expr, _) = new ssg.sass.parse.ScssParser(defaults(i).get).parseExpression()
             buf(i) = expr.accept(this)
           } catch {
-            case _: Throwable => // leave as SassNull on parse/eval failure
+            case _: Throwable => buf(i) = SassNull // fallback gap to SassNull on parse/eval failure
           }
+        } else if (buf(i) eq _argGap) {
+          // Gap with no default — replace sentinel with SassNull
+          buf(i) = SassNull
         }
         i += 1
       }
@@ -4725,11 +4848,16 @@ final class EvaluateVisitor(
     if (!bic.hasRestParameter) return (positional, originalNamed)
     // If _mergeBuiltInNamedArgs already created a SassArgumentList for the
     // rest parameter (which it does when named args are present), don't
-    // create a second wrapper.
-    positional.lastOption match {
-      case Some(_: ssg.sass.value.SassArgumentList) =>
-        return (positional, originalNamed)
-      case _ => ()
+    // create a second wrapper. This only applies when named args were
+    // provided (_mergeBuiltInNamedArgs is only called with non-empty named);
+    // a user-supplied SassArgumentList among positional args must still be
+    // wrapped into its own rest SassArgumentList.
+    if (originalNamed.nonEmpty) {
+      positional.lastOption match {
+        case Some(_: ssg.sass.value.SassArgumentList) =>
+          return (positional, originalNamed)
+        case _ => ()
+      }
     }
     val paramCount = bic.parameterNames.length
     val rest: List[Value] =
@@ -4846,7 +4974,7 @@ final class EvaluateVisitor(
             else
               knownNamed.get(pname) match {
                 case Some(v) => buf += v
-                case _       => buf += SassNull
+                case _       => buf += _argGap
               }
             i += 1
           }
@@ -4899,7 +5027,7 @@ final class EvaluateVisitor(
         else
           knownNamed.get(pname) match {
             case Some(v) => buf += v
-            case _       => buf += SassNull
+            case _       => buf += _argGap
           }
         i += 1
       }
@@ -4999,7 +5127,7 @@ final class EvaluateVisitor(
       else
         named.get(pname) match {
           case Some(v) => buf += v
-          case _       => buf += SassNull
+          case _       => buf += _argGap
         }
       i += 1
     }
