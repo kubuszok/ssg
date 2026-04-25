@@ -49,6 +49,7 @@ import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
 
+import ssg.sass.ImportCache
 import ssg.sass.importer.MapImporter
 import ssg.sass.visitor.OutputStyle
 
@@ -353,6 +354,35 @@ object SassSpecRunner {
 
   val SassSpecTag: munit.Tag = new munit.Tag("SassSpec")
 
+  /** Decode raw bytes to a String, detecting charset from BOM.
+    *   - `0xFE 0xFF` = UTF-16 Big Endian (BOM stripped by decoder)
+    *   - `0xFF 0xFE` = UTF-16 Little Endian (BOM stripped by decoder)
+    *   - `0xEF 0xBB 0xBF` = UTF-8 BOM (strip it manually)
+    *   - otherwise plain UTF-8
+    */
+  private def decodeWithBom(bytes: Array[Byte]): String = {
+    if (bytes.length >= 2) {
+      val b0 = bytes(0) & 0xff
+      val b1 = bytes(1) & 0xff
+      if (b0 == 0xfe && b1 == 0xff) {
+        // UTF-16 BE BOM — Java's UTF-16BE decoder doesn't strip BOM, skip first 2 bytes
+        return new String(bytes, 2, bytes.length - 2, StandardCharsets.UTF_16BE)
+      }
+      if (b0 == 0xff && b1 == 0xfe) {
+        // UTF-16 LE BOM — skip first 2 bytes
+        return new String(bytes, 2, bytes.length - 2, StandardCharsets.UTF_16LE)
+      }
+      if (bytes.length >= 3) {
+        val b2 = bytes(2) & 0xff
+        if (b0 == 0xef && b1 == 0xbb && b2 == 0xbf) {
+          // UTF-8 BOM — strip the 3-byte BOM
+          return new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8)
+        }
+      }
+    }
+    new String(bytes, StandardCharsets.UTF_8)
+  }
+
   val ExpectedSpecRoot: Path =
     Paths.get("original-src", "sass-spec", "spec")
 
@@ -439,7 +469,7 @@ object SassSpecRunner {
     val rel       = root.toAbsolutePath.relativize(input.toAbsolutePath).toString
     val outFile   = dir.resolve("output.css")
     val errFile   = dir.resolve("error")
-    val source    = Try(new String(Files.readAllBytes(input), StandardCharsets.UTF_8)).toOption
+    val source    = Try(decodeWithBom(Files.readAllBytes(input))).toOption
     val expectedO =
       if (Files.isRegularFile(outFile))
         Try(new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8)).toOption
@@ -459,7 +489,7 @@ object SassSpecRunner {
           if (Files.isRegularFile(p)) {
             val name = p.getFileName.toString
             if (name != "input.scss" && name != "input.sass" && (name.endsWith(".scss") || name.endsWith(".sass"))) {
-              val c = Try(new String(Files.readAllBytes(p), StandardCharsets.UTF_8)).toOption
+              val c = Try(decodeWithBom(Files.readAllBytes(p))).toOption
               c.foreach(siblings(name) = _)
             }
           }
@@ -477,7 +507,7 @@ object SassSpecRunner {
     * The new behavior emits one TestCase per `input.scss` entry with the sibling files captured so the runner can build a MapImporter from them.
     */
   def loadHrxCases(root: Path, archive: Path): List[TestCase] = {
-    val raw = Try(new String(Files.readAllBytes(archive), StandardCharsets.UTF_8)).toOption.getOrElse("")
+    val raw = Try(decodeWithBom(Files.readAllBytes(archive))).toOption.getOrElse("")
     if (raw.isEmpty) Nil
     else {
       val entries = parseHrx(raw)
@@ -598,9 +628,12 @@ object SassSpecRunner {
     val body = new StringBuilder
     def flush(): Unit = {
       currentPath.foreach { path =>
-        val s       = body.toString
-        val trimmed = if (s.endsWith("\n")) s.dropRight(1) else s
-        buf += (path -> trimmed)
+        // Preserve the file content exactly as-is. HRX boundaries separate
+        // entries; the final newline before a boundary is part of the file
+        // content (text files end with a newline). Stripping it would cause
+        // the indented-syntax parser to mis-handle trailing whitespace at
+        // end-of-file (e.g. custom property values with trailing spaces).
+        buf += (path -> body.toString)
       }
       currentPath = None
       body.clear()
@@ -622,23 +655,6 @@ object SassSpecRunner {
     buf.filter { case (p, _) => !p.isEmpty }.toList
   }
 
-  /** Composite importer: tries MapImporter first, then falls back to FilesystemImporter. This allows HRX test cases to resolve both sibling files from the archive AND utility files on disk (e.g.
-    * `@use 'core_functions/color/utils'`).
-    */
-  final private class CompositeImporter(
-    map: MapImporter,
-    fs:  ssg.sass.importer.FilesystemImporter
-  ) extends ssg.sass.importer.Importer {
-    def canonicalize(url: String): Nullable[String] = {
-      val fromMap = map.canonicalize(url)
-      if (fromMap.isDefined) fromMap else fs.canonicalize(url)
-    }
-    def load(url: String): Nullable[ssg.sass.importer.ImporterResult] = {
-      val fromMap = map.load(url)
-      if (fromMap.isDefined) fromMap else fs.load(url)
-    }
-  }
-
   /** Filesystem importer rooted at the sass-spec `spec/` directory. Lazily initialized so that test skip logic isn't affected.
     */
   private lazy val specFsImporter: ssg.sass.importer.FilesystemImporter =
@@ -648,9 +664,36 @@ object SassSpecRunner {
   private var specRoot: java.nio.file.Path = scala.compiletime.uninitialized
 
   def runCase(tc: TestCase): Result = {
+    // Importer setup: mimic dart-sass's architecture where the base importer
+    // handles relative resolution and the ImportCache's importers list handles
+    // non-relative lookups (e.g. `@use 'core_functions/color/utils'`).
+    //
+    // When siblings exist (HRX multi-file test), the MapImporter is the base
+    // importer (for resolving archive-local files). The FilesystemImporter is
+    // placed in the ImportCache's importers list so non-relative URLs like
+    // `@use 'core_functions/color/utils'` still resolve on disk.
+    //
+    // This separation prevents a bug where `@import "sibling"` from a
+    // subdirectory file (e.g. `dir/child.scss`) incorrectly matches a
+    // root-level `sibling.scss` through the importers-list fallback.
     val importer: Nullable[ssg.sass.importer.Importer] =
       if (tc.siblingFiles.isEmpty) Nullable(specFsImporter)
-      else Nullable(new CompositeImporter(new MapImporter(tc.siblingFiles), specFsImporter))
+      else {
+        // Derive the base directory from the source URL so that the
+        // MapImporter can strip absolute path prefixes when resolving
+        // `../`-relative imports.
+        val baseDir: ssg.sass.Nullable[String] = tc.sourceUrl match {
+          case Some(u) =>
+            val lastSlash = u.lastIndexOf('/')
+            if (lastSlash >= 0) ssg.sass.Nullable(u.substring(0, lastSlash + 1))
+            else ssg.sass.Nullable.Null
+          case None => ssg.sass.Nullable.Null
+        }
+        Nullable(new MapImporter(tc.siblingFiles, baseDir): ssg.sass.importer.Importer)
+      }
+    val cache: Nullable[ImportCache] =
+      if (tc.siblingFiles.isEmpty) Nullable.empty
+      else Nullable(new ImportCache(importers = List(specFsImporter)))
     val compiled: Try[CompileResult] =
       try
         Success(
@@ -659,6 +702,7 @@ object SassSpecRunner {
             style = OutputStyle.Expanded,
             syntax = if (tc.isSass || tc.relPath.contains("input.sass")) Syntax.Sass else Syntax.Scss,
             importer = importer,
+            importCache = cache,
             url = tc.sourceUrl.fold(Nullable.empty[String])(u => Nullable(u))
           )
         )

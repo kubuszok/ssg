@@ -1226,9 +1226,13 @@ object Environment {
     private val _modulesByVariable: Map[String, Module[Callable]] =
       EnvironmentModule.makeModulesByVariable(forwarded)
 
+    // dart-sass: variables uses a PublicMemberMapView which is a LIVE view
+    // over the mutable environment map. This ensures that setVariable()
+    // mutations are reflected when the module's variables are read later
+    // (e.g. when a module is loaded twice and state is shared).
     val variables: Map[String, Value] =
       EnvironmentModule.memberMap(
-        env._variables(0).iterator.filter { case (n, _) => !Environment.isPrivate(n) }.toMap,
+        new PublicMemberMapView(env._variables(0)),
         forwarded.map(_.variables)
       )
 
@@ -1325,14 +1329,40 @@ object Environment {
     }
 
     /** Returns a map containing [localMap] plus every other-map entry, with `localMap` taking precedence. `localMap` is assumed to already hide private members.
+      *
+      * When localMap is a live view and there are no otherMaps, it's returned
+      * directly so that mutations to the underlying mutable map are reflected.
       */
     private[sass] def memberMap[V](localMap: Map[String, V], otherMaps: Iterable[Map[String, V]]): Map[String, V] = {
       if (otherMaps.isEmpty) return localMap
+      val nonEmpty = otherMaps.filter(_.nonEmpty)
+      if (nonEmpty.isEmpty) return localMap
       val out = mutable.LinkedHashMap.empty[String, V]
-      for (m <- otherMaps if m.nonEmpty)
+      for (m <- nonEmpty)
         for ((k, v) <- m) out(k) = v
       for ((k, v) <- localMap) out(k) = v
       out.toMap
     }
+  }
+
+  /** A live, read-only view of a mutable Map that hides private members
+    * (names starting with `-` or `_`). Mirrors dart-sass `PublicMemberMapView`.
+    *
+    * This is NOT a snapshot — reads delegate to the underlying mutable map,
+    * so mutations via `setVariable` are immediately visible.
+    */
+  private[sass] final class PublicMemberMapView[V](underlying: mutable.Map[String, V]) extends scala.collection.immutable.AbstractMap[String, V] {
+    def get(key: String): Option[V] =
+      if (Environment.isPrivate(key)) scala.None
+      else underlying.get(key)
+
+    def iterator: Iterator[(String, V)] =
+      underlying.iterator.filter { case (k, _) => !Environment.isPrivate(k) }
+
+    def removed(key: String): Map[String, V] =
+      iterator.toMap.removed(key)
+
+    def updated[V1 >: V](key: String, value: V1): Map[String, V1] =
+      iterator.toMap.updated(key, value)
   }
 }

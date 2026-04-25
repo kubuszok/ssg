@@ -141,8 +141,12 @@ final class BuiltInModule[T <: Callable](
   def transitivelyContainsCss:        Boolean = false
   def transitivelyContainsExtensions: Boolean = false
 
-  def setVariable(name: String, value: Value): Unit =
-    variablesState(name) = value
+  // dart-sass built_in.dart:53-58: built-in module variables are read-only.
+  def setVariable(name: String, value: Value): Unit = {
+    if (!variables.contains(name))
+      throw SassScriptException("Undefined variable.")
+    throw SassScriptException("Cannot modify built-in variable.")
+  }
 
   def cloneCss(): Module[T] = this
 }

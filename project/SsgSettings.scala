@@ -27,7 +27,11 @@ object SsgSettings {
   )
 
   val jvmSettings: Seq[Setting[?]] = Seq(
-    fork := true
+    fork := true,
+    // Enable native access for the Foreign Function & Memory API (JEP 454),
+    // used by NativeMathPlatform to call the native C pow() for exact
+    // floating-point parity with dart-sass / JavaScript Math.pow.
+    javaOptions += "--enable-native-access=ALL-UNNAMED"
   )
 
   val jsSettings: Seq[Setting[?]] = Seq.empty

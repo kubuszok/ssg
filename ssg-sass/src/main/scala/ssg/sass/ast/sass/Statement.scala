@@ -843,6 +843,10 @@ final class MixinRule(
       case ir: IfRule      =>
         ir.clauses.exists(c => _hasContentInChildren(c.children)) ||
         ir.lastClause.fold(false)(ec => _hasContentInChildren(ec.children))
+      case inc: IncludeRule =>
+        // Check the ContentBlock's children for @content rules —
+        // e.g. `@include meta.apply(x) using ($arg) { @content($arg); }`
+        inc.content.fold(false)(cb => _hasContentInChildren(cb.childrenList))
       case ps: ParentStatement =>
         ps.children.fold(false)(_hasContentInChildren)
       case _ => false

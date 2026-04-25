@@ -32,6 +32,7 @@ import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, Compou
 import ssg.sass.util.{ Box, FileSpan, ModifiableBox }
 
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 /** Tracks style rules and extensions, computing the final selectors after `@extend` rules are applied.
@@ -212,14 +213,22 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   private val _mediaContexts: mutable.Map[ModifiableBox[SelectorList], List[CssMediaQuery]] =
     mutable.Map.empty
 
-  /** A map from SimpleSelectors to the specificity of their source selectors. */
+  /** A map from SimpleSelectors to the specificity of their source selectors.
+    *
+    * Uses identity semantics (like Dart's `Map.identity()`) so that only the exact
+    * instance stored during extension registration is matched during specificity lookup.
+    */
   private[extend] val _sourceSpecificity: mutable.Map[SimpleSelector, Int] =
-    mutable.Map.empty
+    new java.util.IdentityHashMap[SimpleSelector, Int]().asScala
 
   /** The set of ComplexSelectors that were originally part of their component SelectorLists, as opposed to being added by @extend.
+    *
+    * Uses identity semantics (like Dart's `Set.identity()`) so that structurally equal selectors from different rules are not confused.
     */
   private[extend] val _originals: mutable.Set[ComplexSelector] =
-    mutable.Set.empty
+    java.util.Collections.newSetFromMap(
+      new java.util.IdentityHashMap[ComplexSelector, java.lang.Boolean]()
+    ).asScala
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -541,6 +550,13 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]] = None
   ): SelectorList = {
+    // dart-sass extension_store.dart lines 508-533.
+    // dart-sass line 532 uses `_originals.contains` with identity semantics
+    // (Set.identity()). We replicate this faithfully: selectors that are the
+    // SAME OBJECT in `_originals` are never trimmed by `_trim`. This correctly
+    // handles the case where an extension's extender selector object (registered
+    // via addSelector for a visible style rule) flows through withoutPseudo /
+    // the fast path and appears directly in the output list.
     var extended: mutable.ListBuffer[ComplexSelector] = null
     var i = 0
     while (i < list.components.length) {
@@ -549,14 +565,22 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       if (result == null) {
         if (extended != null) extended += complex
       } else {
-        if (extended == null)
+        if (extended == null) {
           extended = if (i == 0) mutable.ListBuffer.empty else mutable.ListBuffer.from(list.components.take(i))
+        }
         extended ++= result
       }
       i += 1
     }
     if (extended == null) list
-    else new SelectorList(_trim(extended.toList, _originals.contains), list.span)
+    else {
+      // Use the identity-based _originals set, matching dart-sass line 532.
+      // The IdentityHashMap backing guarantees reference-equality checks.
+      val javaSet = _originals match {
+        case w: scala.collection.mutable.Set[ComplexSelector @unchecked] => w
+      }
+      new SelectorList(_trim(extended.toList, c => javaSet.contains(c)), list.span)
+    }
   }
 
   private def _extendComplex(
