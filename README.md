@@ -10,7 +10,7 @@ battle-tested libraries to idiomatic Scala 3.
 |--------|---------------|----------|---------|--------|
 | `ssg-md` | [flexmark-java](https://github.com/vsch/flexmark-java) 0.64.8 | Java | Markdown engine | 1645/1645 tests |
 | `ssg-liquid` | [liqp](https://github.com/bkiers/Liqp) 0.9.2 | Java | Liquid template engine | 280/280 tests |
-| `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) | Dart | SASS/SCSS compiler | Planned |
+| `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) 1.99 | Dart | SASS/SCSS compiler | 13865/13902 sass-spec (99.7%) |
 | `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) | Ruby | HTML/CSS/JS/JSON minification | 113/113 tests |
 | `ssg-js` | [terser](https://github.com/terser/terser) | JavaScript | JavaScript compiler/minifier | 116/116 tests |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
@@ -23,16 +23,16 @@ Requires: JDK 21+, sbt 1.12+, Scala 3.8.2
 
 ```bash
 # Compile all modules on default (JVM) platform
-ssg-dev build compile
+re-scale build compile
 
 # Compile on all platforms (JVM + JS + Native)
-ssg-dev build compile --all
+re-scale build compile --all
 
 # Run tests for a specific module
-ssg-dev test unit --module ssg-liquid
+re-scale test unit --module ssg-liquid
 
 # Full 3-platform verification
-ssg-dev test verify
+re-scale test verify
 ```
 
 ## Architecture
@@ -59,6 +59,24 @@ Key replacements:
 - ANTLR → hand-written 3-mode lexer + recursive descent parser
 - Jackson → `LiquidSupport` trait
 - strftime4j → `DateTimeFormatter` via scala-java-time polyfill
+
+### ssg-sass (SASS/SCSS Compiler)
+
+Ports dart-sass — the reference implementation of the Sass language — to
+Scala 3. Full compilation pipeline: SCSS/Sass/CSS parsing, evaluation,
+module system (`@use`/`@forward`), `@extend` resolution, and CSS serialization.
+
+Key features:
+- All 17 color spaces (oklch, lab, display-p3, etc.) with gamut mapping
+- Full module system (`@use`, `@forward`, `@import`) with configuration
+- `@extend` selector resolution with identity-based trimming
+- 130+ built-in functions across 8 modules (color, math, string, list, map, meta, selector)
+- NativeMath FFI (JVM calls native C `libm` via JEP 454) for IEEE 754 precision parity with dart-sass
+- Indented syntax (`.sass`) via faithful state-machine parser
+
+The 37 non-passing tests are: 32 whitespace mismatches against older sass-spec
+expected outputs (our output matches dart-sass 1.99), and 5 tests that
+dart-sass itself marks as `:todo:`.
 
 ### ssg-minify (HTML/CSS/JS/JSON Minification)
 
@@ -87,12 +105,12 @@ with ssg-minify via `ssg.TerserJsCompressorAdapter`.
 ssg/
 ├── ssg-md/          Markdown engine (flexmark-java port)
 ├── ssg-liquid/      Liquid template engine (liqp port)
-├── ssg-sass/        SASS/SCSS compiler (dart-sass port) — planned
+├── ssg-sass/        SASS/SCSS compiler (dart-sass port)
 ├── ssg-minify/      HTML/CSS/JS/JSON minification (jekyll-minifier port)
 ├── ssg-js/          JavaScript compiler/minifier (Terser port)
 ├── ssg/             Aggregator module
 ├── original-src/    Reference sources (git submodules, not compiled)
-├── scripts/         ssg-dev CLI toolkit
+├── .rescale/        re-scale project config + data
 ├── docs/            Architecture and conversion guides
 └── project/         sbt build configuration
 ```
@@ -115,6 +133,7 @@ original licenses:
 |---------|---------|-----------|
 | flexmark-java | BSD 2-Clause | 2015-2016 Atlassian, 2016-2018 Vladimir Schneider |
 | liqp | MIT | 2010-2013 Bart Kiers |
+| dart-sass | MIT | 2016 Google Inc. |
 | jekyll-minifier | MIT | 2014-2024 DigitalSparky |
 | terser | BSD 2-Clause | 2012 Mihai Bazon |
 
