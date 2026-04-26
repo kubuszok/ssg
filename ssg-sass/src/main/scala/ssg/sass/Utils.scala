@@ -30,9 +30,10 @@ import scala.util.boundary.break
 object Utils {
 
   // Stack traces associated with exceptions thrown with [throwWithTrace].
-  // Uses a WeakHashMap so traces don't prevent garbage collection of the
-  // error objects (mirrors Dart's `Expando<StackTrace>()`).
-  private val _traces = new java.util.WeakHashMap[AnyRef, Throwable]()
+  // Uses a mutable HashMap (WeakHashMap is JVM-only). On JVM this could leak
+  // long-lived error objects, but in practice sass compilations are short-lived.
+  // Mirrors Dart's `Expando<StackTrace>()`.
+  private val _traces = new scala.collection.mutable.HashMap[AnyRef, Throwable]()
 
   /** Throws [error] with [originalError]'s stack trace (which defaults to [trace]) stored as its stack trace.
     *
@@ -53,7 +54,7 @@ object Utils {
     case ref: AnyRef =>
       // Don't store empty stack traces — they have no useful info.
       if (trace.getStackTrace != null && trace.getStackTrace.nonEmpty) {
-        _traces.putIfAbsent(ref, trace)
+        if (!_traces.contains(ref)) _traces.put(ref, trace)
         ()
       }
     case _ => ()
@@ -63,7 +64,7 @@ object Utils {
     */
   def getTrace(error: Any): Option[Throwable] = error match {
     case _: String | _: java.lang.Number | _: java.lang.Boolean => None
-    case ref: AnyRef => Option(_traces.get(ref))
+    case ref: AnyRef => _traces.get(ref)
     case _ => None
   }
 
