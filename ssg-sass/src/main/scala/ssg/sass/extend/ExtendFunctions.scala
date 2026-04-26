@@ -17,6 +17,10 @@
  *          _mergeTrailingCombinators).
  *          Second-law specificity trimming lives in ExtensionStore.
  *   Audited: 2026-04-07
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/extend/functions.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

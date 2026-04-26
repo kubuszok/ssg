@@ -13,6 +13,10 @@
  *            -> ArgumentDeclaration.scala
  *   Convention: Dart final class -> Scala final class
  *   Idiom: Nullable for optional fields; boundary/break for early return in matches()
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/argument_list.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

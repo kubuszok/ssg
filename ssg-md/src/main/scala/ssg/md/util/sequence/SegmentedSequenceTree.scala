@@ -31,12 +31,11 @@ final class SegmentedSequenceTree private (
   private var cache: Nullable[SegmentedSequenceTree.Cache] = Nullable.empty
 
   // Constructor for original sequences from builder
-  private def this(baseSeq: BasedSequence, startOffset: Int, endOffset: Int, length: Int, segmentTree: SegmentTree) = {
+  private def this(baseSeq: BasedSequence, startOffset: Int, endOffset: Int, length: Int, segmentTree: SegmentTree) =
     this(baseSeq, startOffset, endOffset, length, segmentTree, 0, 0, segmentTree.size)
-  }
 
   // Constructor for sub-sequences via SegmentTreeRange
-  private def this(baseSeq: BasedSequence, segmentTree: SegmentTree, subSequenceRange: SegmentTreeRange) = {
+  private def this(baseSeq: BasedSequence, segmentTree: SegmentTree, subSequenceRange: SegmentTreeRange) =
     this(
       baseSeq,
       subSequenceRange.startOffset,
@@ -47,7 +46,6 @@ final class SegmentedSequenceTree private (
       subSequenceRange.startPos,
       subSequenceRange.endPos
     )
-  }
 
   private def getCache(index: Int): SegmentedSequenceTree.Cache = {
     val c = cache

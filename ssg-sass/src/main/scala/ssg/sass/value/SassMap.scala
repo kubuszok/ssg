@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: map.dart → SassMap.scala
  *   Convention: Uses ListMap for insertion order preservation
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/map.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -48,15 +52,13 @@ final class SassMap(val contents: ListMap[Value, Value]) extends Value {
     case _ => false
   }
 
-  /** dart-sass serialize.dart visitMap(): maps are NOT valid CSS values.
-    * Attempting to serialize a map for CSS output throws a SassScriptException.
-    * Only `toString` (which uses the inspect form) is allowed.
+  /** dart-sass serialize.dart visitMap(): maps are NOT valid CSS values. Attempting to serialize a map for CSS output throws a SassScriptException. Only `toString` (which uses the inspect form) is
+    * allowed.
     */
   override def toCssString(quote: Boolean = true): String =
     throw SassScriptException(s"$this isn't a valid CSS value.")
 
-  /** Inspect form of this map: `(k: v, ...)`. Used by `toString` and for debug
-    * output. This is NOT valid CSS.
+  /** Inspect form of this map: `(k: v, ...)`. Used by `toString` and for debug output. This is NOT valid CSS.
     */
   override def toString: String = {
     val entries = contents

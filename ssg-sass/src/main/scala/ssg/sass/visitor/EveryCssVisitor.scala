@@ -11,6 +11,10 @@
  *   Convention: Dart mixin -> Scala trait
  *   Idiom: Parent nodes recurse via node.children.forall(_.accept(this));
  *          leaf nodes default to false.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/every_css.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

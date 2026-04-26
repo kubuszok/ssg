@@ -26,10 +26,10 @@ final class ColorModule4Suite extends munit.FunSuite {
     cb.callback
   }
 
-  private def num(d:  Double): SassNumber = SassNumber(d)
-  private def str(s:  String): SassString = SassString(s, hasQuotes = false)
-  private def qstr(s: String): SassString = SassString(s, hasQuotes = true)
-  private def channels(vs: Value*): SassList = SassList(vs.toList, ListSeparator.Space)
+  private def num(d:       Double): SassNumber = SassNumber(d)
+  private def str(s:       String): SassString = SassString(s, hasQuotes = false)
+  private def qstr(s:      String): SassString = SassString(s, hasQuotes = true)
+  private def channels(vs: Value*): SassList   = SassList(vs.toList, ListSeparator.Space)
 
   private def red: SassColor =
     fn("rgb")(List(num(255), num(0), num(0))).asInstanceOf[SassColor]

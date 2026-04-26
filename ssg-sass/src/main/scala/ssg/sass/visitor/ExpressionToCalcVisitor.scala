@@ -13,6 +13,10 @@
  *   Idiom: `with ReplaceExpressionVisitor` -> `extends ReplaceExpressionVisitor`;
  *          only overrides that differ from the base trait are provided
  *   Audited: 2026-04-17
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/expression_to_calc.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

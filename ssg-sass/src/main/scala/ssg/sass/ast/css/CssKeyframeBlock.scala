@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: keyframe_block.dart + modifiable/keyframe_block.dart -> CssKeyframeBlock.scala
  *   Convention: Dart abstract interface class -> Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/keyframe_block.dart, lib/src/ast/css/modifiable/keyframe_block.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

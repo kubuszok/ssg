@@ -12,6 +12,10 @@
  *     Parser.scanner. Supports Level 3 and Level 4 media queries: type
  *     queries, feature queries, `not`/`only` modifiers, `and`/`or`
  *     conjunctions, and parenthesized `(not ...)` conditions.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/media_query.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -140,10 +144,8 @@ class MediaQueryParser(
 
   /** Consumes a `<media-in-parens>` expression and returns it, parentheses included.
     *
-    * dart-sass media_query.dart:120-125: the text-based MediaQueryParser simply
-    * wraps `declarationValue()` in parentheses without any normalization.
-    * Colon-space normalization is only done by the structured parser in
-    * stylesheet.dart, not here.
+    * dart-sass media_query.dart:120-125: the text-based MediaQueryParser simply wraps `declarationValue()` in parentheses without any normalization. Colon-space normalization is only done by the
+    * structured parser in stylesheet.dart, not here.
     */
   private def _mediaInParens(): String = {
     scanner.expectChar(CharCode.$lparen, name = "media condition in parentheses")

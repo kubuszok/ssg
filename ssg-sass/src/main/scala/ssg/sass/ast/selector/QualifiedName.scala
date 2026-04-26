@@ -10,6 +10,10 @@
  *   Renames: qualified_name.dart -> QualifiedName.scala
  *   Convention: Dart final class -> Scala final case class
  *   Idiom: Nullable namespace instead of null String?
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector/qualified_name.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

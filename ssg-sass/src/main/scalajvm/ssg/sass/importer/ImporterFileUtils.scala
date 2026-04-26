@@ -44,9 +44,7 @@ object ImporterFileUtils {
       val importOnly = ImporterUtils.ifInImport { () =>
         exactlyOne(tryPathWithExtensions(path + ".import"))
       }.flatten
-      importOnly
-        .orElse(exactlyOne(tryPathWithExtensions(path)))
-        .orElse(tryPathAsDirectory(path))
+      importOnly.orElse(exactlyOne(tryPathWithExtensions(path))).orElse(tryPathAsDirectory(path))
     }
   }
 
@@ -61,10 +59,10 @@ object ImporterFileUtils {
     * If neither exists, returns an empty list.
     */
   private def tryPath(path: String): List[String] = {
-    val dir      = dirname(path)
-    val base     = basename(path)
-    val partial  = if (dir.isEmpty) s"_$base" else s"$dir/_$base"
-    val result   = ArrayBuffer.empty[String]
+    val dir     = dirname(path)
+    val base    = basename(path)
+    val partial = if (dir.isEmpty) s"_$base" else s"$dir/_$base"
+    val result  = ArrayBuffer.empty[String]
     if (fileExists(partial)) result += partial
     if (fileExists(path)) result += path
     result.toList
@@ -74,7 +72,7 @@ object ImporterFileUtils {
     *
     * Otherwise, returns empty.
     */
-  private def tryPathAsDirectory(path: String): Nullable[String] = {
+  private def tryPathAsDirectory(path: String): Nullable[String] =
     if (!dirExists(path)) Nullable.empty
     else {
       val importOnly = ImporterUtils.ifInImport { () =>
@@ -82,7 +80,6 @@ object ImporterFileUtils {
       }.flatten
       importOnly.orElse(exactlyOne(tryPathWithExtensions(joinPath(path, "index"))))
     }
-  }
 
   /** If [[paths]] contains exactly one path, returns that path.
     *
@@ -91,7 +88,7 @@ object ImporterFileUtils {
   private def exactlyOne(paths: List[String]): Nullable[String] = paths match {
     case Nil         => Nullable.empty
     case head :: Nil => Nullable(head)
-    case _ =>
+    case _           =>
       throw new IllegalStateException(
         "It's not clear which file to import. Found:\n" +
           paths.map(p => "  " + p).mkString("\n")

@@ -4,6 +4,9 @@
  *
  * Lightweight Sass stack trace for error reporting.
  * Replaces Dart's `stack_trace` package (Trace, Frame).
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

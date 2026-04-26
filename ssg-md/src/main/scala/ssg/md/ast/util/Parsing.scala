@@ -607,7 +607,7 @@ object Parsing {
     val allowNameSpace:                  java.lang.Boolean
   ) {
 
-    def this(options: DataHolder) = {
+    def this(options: DataHolder) =
       this(
         intellijDummyIdentifier = Parser.INTELLIJ_DUMMY_IDENTIFIER.get(options),
         htmlForTranslator = Parser.HTML_FOR_TRANSLATOR.get(options),
@@ -620,7 +620,6 @@ object Parsing {
         listsOrderedItemDotOnly = Parser.LISTS_ORDERED_ITEM_DOT_ONLY.get(options),
         allowNameSpace = Parser.HTML_ALLOW_NAME_SPACE.get(options)
       )
-    }
 
     def withJekyllMacroInLinkUrl(): PatternTypeFlags = new PatternTypeFlags(intellijDummyIdentifier, null, null, null, null, parseJekyllMacroInLinkUrl, null, null, null, null)
 

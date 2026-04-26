@@ -10,6 +10,10 @@
  * Migration notes:
  *   Renames: module.dart -> Module.scala (merged family)
  *   Convention: Skeleton — public API surface only
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/module.dart, lib/src/module/built_in.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -158,12 +162,8 @@ final class BuiltInModule[T <: Callable](
   *   2. show/hide filters are applied against the *prefixed* keys — i.e. `hide a` paired with `as b-*` does NOT hide the upstream `a` (its prefixed form is `b-a`, which doesn't match the hide name
   *      `a`).
   *
-  * Port of dart-sass's `ForwardedModuleView` (lib/src/module/forwarded_view.dart).
-  * The `variables`, `variableNodes`, `functions`, and `mixins` accessors
-  * delegate to the inner module's live maps through filtering logic,
-  * so changes to the inner module after the view is created are reflected
-  * automatically — matching dart-sass's lazy `PrefixedMapView` /
-  * `LimitedMapView` semantics.
+  * Port of dart-sass's `ForwardedModuleView` (lib/src/module/forwarded_view.dart). The `variables`, `variableNodes`, `functions`, and `mixins` accessors delegate to the inner module's live maps
+  * through filtering logic, so changes to the inner module after the view is created are reflected automatically — matching dart-sass's lazy `PrefixedMapView` / `LimitedMapView` semantics.
   */
 final class ForwardedView[T <: Callable](
   val inner:                    Module[T],
@@ -270,8 +270,10 @@ final class ForwardedView[T <: Callable](
   /// Port of dart-sass `ForwardedModuleView.couldHaveBeenConfigured`.
   override def couldHaveBeenConfigured(names: Set[String]): Boolean = {
     assert(shownVariables.fold(true)(_ => true) || hiddenVariables.fold(true)(_ => true))
-    if (prefix.isEmpty && shownVariables.isEmpty &&
-        hiddenVariables.fold(true)(_.isEmpty)) {
+    if (
+      prefix.isEmpty && shownVariables.isEmpty &&
+      hiddenVariables.fold(true)(_.isEmpty)
+    ) {
       return inner.couldHaveBeenConfigured(names)
     }
     var adjusted = names
@@ -297,11 +299,11 @@ final class ForwardedView[T <: Callable](
   override def equals(other: Any): Boolean = other match {
     case that: ForwardedView[?] =>
       inner == that.inner &&
-        prefix == that.prefix &&
-        shownVariables == that.shownVariables &&
-        shownMixinsAndFunctions == that.shownMixinsAndFunctions &&
-        hiddenVariables == that.hiddenVariables &&
-        hiddenMixinsAndFunctions == that.hiddenMixinsAndFunctions
+      prefix == that.prefix &&
+      shownVariables == that.shownVariables &&
+      shownMixinsAndFunctions == that.shownMixinsAndFunctions &&
+      hiddenVariables == that.hiddenVariables &&
+      hiddenMixinsAndFunctions == that.hiddenMixinsAndFunctions
     case _ => false
   }
 
@@ -324,31 +326,26 @@ object ForwardedView {
       hiddenMixinsAndFunctions = rule.hiddenMixinsAndFunctions
     )
 
-  /** Like [[ForwardedView]], but returns `inner` as-is if it doesn't need
-    * any modification. Port of dart-sass `ForwardedModuleView.ifNecessary`.
+  /** Like [[ForwardedView]], but returns `inner` as-is if it doesn't need any modification. Port of dart-sass `ForwardedModuleView.ifNecessary`.
     */
-  def ifNecessary[T <: Callable](inner: Module[T], rule: ForwardRule): Module[T] = {
-    if (rule.prefix.isEmpty &&
-        rule.shownMixinsAndFunctions.isEmpty &&
-        rule.shownVariables.isEmpty &&
-        rule.hiddenMixinsAndFunctions.fold(true)(_.isEmpty) &&
-        rule.hiddenVariables.fold(true)(_.isEmpty)) {
+  def ifNecessary[T <: Callable](inner: Module[T], rule: ForwardRule): Module[T] =
+    if (
+      rule.prefix.isEmpty &&
+      rule.shownMixinsAndFunctions.isEmpty &&
+      rule.shownVariables.isEmpty &&
+      rule.hiddenMixinsAndFunctions.fold(true)(_.isEmpty) &&
+      rule.hiddenVariables.fold(true)(_.isEmpty)
+    ) {
       inner
     } else {
       ForwardedView(inner, rule)
     }
-  }
 }
 
-/** A view of a [[Module]] that hides a fixed set of names — typically the
-  * variables configured by an enclosing `@use ... with (...)` so they don't
-  * shadow themselves when re-exposed.
+/** A view of a [[Module]] that hides a fixed set of names — typically the variables configured by an enclosing `@use ... with (...)` so they don't shadow themselves when re-exposed.
   *
-  * Port of dart-sass's `ShadowedModuleView` (lib/src/module/shadowed_view.dart).
-  * The `variables`, `variableNodes`, `functions`, and `mixins` accessors
-  * delegate to the inner module's live maps through filtering logic,
-  * so changes to the inner module after the view is created are reflected
-  * automatically.
+  * Port of dart-sass's `ShadowedModuleView` (lib/src/module/shadowed_view.dart). The `variables`, `variableNodes`, `functions`, and `mixins` accessors delegate to the inner module's live maps through
+  * filtering logic, so changes to the inner module after the view is created are reflected automatically.
   */
 final class ShadowedView[T <: Callable](
   val inner:             Module[T],
@@ -414,9 +411,9 @@ final class ShadowedView[T <: Callable](
   override def equals(other: Any): Boolean = other match {
     case that: ShadowedView[?] =>
       inner == that.inner &&
-        variables.keys.toSeq == that.variables.keys.toSeq &&
-        functions.keys.toSeq == that.functions.keys.toSeq &&
-        mixins.keys.toSeq == that.mixins.keys.toSeq
+      variables.keys.toSeq == that.variables.keys.toSeq &&
+      functions.keys.toSeq == that.functions.keys.toSeq &&
+      mixins.keys.toSeq == that.mixins.keys.toSeq
     case _ => false
   }
 

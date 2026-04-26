@@ -44,14 +44,13 @@ class DataKey[T](name: String, dv: T, f: DataNotNullValueFactory[T]) extends Dat
     * @param supplier
     *   data value factory for creating a new default value for the key not dependent on dataHolder
     */
-  def this(name: String, supplier: NotNullValueSupplier[T]) = {
+  def this(name: String, supplier: NotNullValueSupplier[T]) =
     this(name,
          supplier.get,
          new DataNotNullValueFactory[T] {
            def apply(dataHolder: DataHolder): Nullable[T] = Nullable(supplier.get)
          }
     )
-  }
 
   /** Creates a DataKey with a dynamic default value taken from a value of another key.
     *
@@ -62,7 +61,7 @@ class DataKey[T](name: String, dv: T, f: DataNotNullValueFactory[T]) extends Dat
     * @param defaultKey
     *   The DataKey to take the default value from at time of construction.
     */
-  def this(name: String, defaultKey: DataKey[T]) = {
+  def this(name: String, defaultKey: DataKey[T]) =
     this(
       name,
       defaultKey.defaultValue,
@@ -70,9 +69,8 @@ class DataKey[T](name: String, dv: T, f: DataNotNullValueFactory[T]) extends Dat
         def apply(dataHolder: DataHolder): Nullable[T] = Nullable(defaultKey.get(Nullable(dataHolder)))
       }
     )
-  }
 
-  def this(name: String, defaultValue: T) = {
+  def this(name: String, defaultValue: T) =
     this(
       name,
       defaultValue,
@@ -81,7 +79,6 @@ class DataKey[T](name: String, dv: T, f: DataNotNullValueFactory[T]) extends Dat
         def apply(dataHolder: DataHolder): Nullable[T] = Nullable(dv)
       }
     )
-  }
 
   override def get(holder: Nullable[DataHolder]): T =
     super.get(holder)

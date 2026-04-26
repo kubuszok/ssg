@@ -16,6 +16,10 @@
  *   Full support for @use/@forward/@media/@if/@for/@each/@function/@mixin
  *   is deferred to a later pass. At-rules that aren't recognized fall back
  *   to a generic AtRule parse.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/stylesheet.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -85,11 +89,11 @@ import ssg.sass.ast.sass.{
   SupportsAnything,
   SupportsCondition,
   SupportsDeclaration,
+  SupportsExpression,
   SupportsFunction,
   SupportsInterpolation,
   SupportsNegation,
   SupportsOperation,
-  SupportsExpression,
   SupportsRule,
   UnaryOperationExpression,
   UnaryOperator,
@@ -524,9 +528,7 @@ abstract class StylesheetParser protected (
 
   /** Consumes a parameter list.
     *
-    * dart-sass: `_parameterList` (stylesheet.dart:1804-1849).
-    * Uses `expressionUntilComma()` for default values (recursive-descent),
-    * replacing the old text-based `_parseSimpleExpression` pipeline.
+    * dart-sass: `_parameterList` (stylesheet.dart:1804-1849). Uses `expressionUntilComma()` for default values (recursive-descent), replacing the old text-based `_parseSimpleExpression` pipeline.
     */
   private def _parseParameterList(startState: ssg.sass.util.LineScannerState): ParameterList = {
     val start = scanner.state
@@ -606,8 +608,8 @@ abstract class StylesheetParser protected (
           // onwards. This removes ALL extensions (e.g., `other.foo.bar.scss`
           // -> `other`), matching dart-sass behavior.
           val withoutUnderscore = if (lastSeg.startsWith("_")) lastSeg.substring(1) else lastSeg
-          val dot = withoutUnderscore.indexOf('.')
-          val stripped = if (dot >= 0) withoutUnderscore.substring(0, dot) else withoutUnderscore
+          val dot               = withoutUnderscore.indexOf('.')
+          val stripped          = if (dot >= 0) withoutUnderscore.substring(0, dot) else withoutUnderscore
           if (stripped.isEmpty) Nullable.empty[String]
           else Nullable(stripped)
         }
@@ -854,9 +856,7 @@ abstract class StylesheetParser protected (
 
   /** Consumes an @at-root query expression of the form `(keyword: name name ...)`.
     *
-    * dart-sass: `_atRootQuery` (stylesheet.dart:828-849).
-    * Uses `_expression` to parse the keyword and names, which correctly handles
-    * both unquoted identifiers and quoted strings (e.g. `"media"`).
+    * dart-sass: `_atRootQuery` (stylesheet.dart:828-849). Uses `_expression` to parse the keyword and names, which correctly handles both unquoted identifiers and quoted strings (e.g. `"media"`).
     */
   private def _atRootQuery(start: ssg.sass.util.LineScannerState): Interpolation = {
     val queryStart = scanner.state
@@ -882,19 +882,17 @@ abstract class StylesheetParser protected (
 
   /** Adds the result of an expression to [buffer].
     *
-    * If the expression is a StringExpression, it injects its interpolation
-    * directly into the buffer. Otherwise, it wraps the expression in the buffer.
+    * If the expression is a StringExpression, it injects its interpolation directly into the buffer. Otherwise, it wraps the expression in the buffer.
     *
     * dart-sass: `_addOrInject` (stylesheet.dart:4694-4703).
     */
-  private def _addOrInjectExpr(buffer: InterpolationBuffer, expression: Expression): Unit = {
+  private def _addOrInjectExpr(buffer: InterpolationBuffer, expression: Expression): Unit =
     expression match {
       case se: StringExpression if !se.hasQuotes =>
         buffer.addInterpolation(se.text)
       case _ =>
         buffer.add(expression, expression.span)
     }
-  }
 
   private def _styleRule(
     buffer:   Nullable[InterpolationBuffer] = Nullable.Null,
@@ -1212,11 +1210,13 @@ abstract class StylesheetParser protected (
     if (plainCss) {
       scanner.error("Nested declarations aren't allowed in plain CSS.")
     }
-    Nullable(_withChildren(
-      () => _declarationChild(),
-      start,
-      (kids, span) => Declaration.nested(name, kids, span, value = value)
-    ))
+    Nullable(
+      _withChildren(
+        () => _declarationChild(),
+        start,
+        (kids, span) => Declaration.nested(name, kids, span, value = value)
+      )
+    )
   }
 
   /** Consumes a variable declaration (with an optional preceding namespace).
@@ -1326,8 +1326,6 @@ abstract class StylesheetParser protected (
     )
   }
 
-
-
   /** Consumes and throws "This at-rule is not allowed here."
     *
     * dart-sass: `_disallowedAtRule` (stylesheet.dart:1797-1801).
@@ -1404,7 +1402,7 @@ abstract class StylesheetParser protected (
     val stmts = mutable.ListBuffer.empty[Statement]
     while (!scanner.isDone && scanner.peekChar() != CharCode.$rbrace) {
       val childLoopPos = scanner.position
-      val c = scanner.peekChar()
+      val c            = scanner.peekChar()
       // dart-sass scss.dart:63-96: the SCSS `children()` loop handles `$`,
       // comments, `;`, and `}` directly before delegating to the `child()`
       // callback. We replicate that dispatch here.
@@ -1469,11 +1467,9 @@ abstract class StylesheetParser protected (
     if (scanner.peekChar() == CharCode.$at) _declarationAtRule()
     else _propertyOrVariableDeclaration()
 
-  /** Consumes either a property declaration or a namespaced variable
-    * declaration.
+  /** Consumes either a property declaration or a namespaced variable declaration.
     *
-    * This is only used when nested beneath other declarations. Otherwise,
-    * [[_declarationOrStyleRule]] is used instead.
+    * This is only used when nested beneath other declarations. Otherwise, [[_declarationOrStyleRule]] is used instead.
     *
     * dart-sass: `_propertyOrVariableDeclaration` (stylesheet.dart:590-629).
     */
@@ -1490,8 +1486,8 @@ abstract class StylesheetParser protected (
       } else if (!plainCss) {
         val variableOrInterpolation = _variableDeclarationOrInterpolation()
         variableOrInterpolation match {
-          case vd: VariableDeclaration => return vd
-          case interp: Interpolation   => interp
+          case vd:     VariableDeclaration => return vd
+          case interp: Interpolation       => interp
         }
       } else {
         interpolatedIdentifier()
@@ -1508,7 +1504,7 @@ abstract class StylesheetParser protected (
     val tryNested = _tryDeclarationChildren(name, start)
     if (tryNested.isDefined) return tryNested.get
 
-    val value = _rdExpression()
+    val value      = _rdExpression()
     val tryNested2 = _tryDeclarationChildren(name, start, value = Nullable(value))
     if (tryNested2.isDefined) return tryNested2.get
 
@@ -1544,8 +1540,8 @@ abstract class StylesheetParser protected (
     val vdssStart               = scanner.state
     val variableOrInterpolation = _variableDeclarationOrInterpolation()
     variableOrInterpolation match {
-      case vd:     VariableDeclaration => Nullable(vd)
-      case _: Interpolation =>
+      case vd: VariableDeclaration => Nullable(vd)
+      case _:  Interpolation       =>
         // Not a namespaced variable — rewind and parse as a style rule.
         // dart-sass resets the scanner when _parseSelectors is true (line 534);
         // we always reset because our styleRuleSelector() reads the full text
@@ -1804,7 +1800,7 @@ abstract class StylesheetParser protected (
       case _ => ()
     }
 
-    try {
+    try
       // dart-sass lines 1774-1785: either children or statement separator.
       if (lookingAtChildren()) {
         val kids = _children()
@@ -1813,7 +1809,7 @@ abstract class StylesheetParser protected (
         expectStatementSeparator()
         new AtRule(name = nameInterp, span = spanFrom(start), value = value, childStatements = Nullable.empty)
       }
-    } finally {
+    finally {
       _inUnknownAtRule = wasInUnknownAtRule
       _inPlainCssFunction = wasInPlainCssFunction
     }
@@ -1821,18 +1817,14 @@ abstract class StylesheetParser protected (
 
   /** Consumes a `@-moz-document` rule.
     *
-    * dart-sass: `mozDocumentRule` (stylesheet.dart:1504-1588).
-    * Gecko's `@-moz-document` diverges from the specification; it allows the
-    * `url-prefix` and `domain` functions to omit quotation marks.
+    * dart-sass: `mozDocumentRule` (stylesheet.dart:1504-1588). Gecko's `@-moz-document` diverges from the specification; it allows the `url-prefix` and `domain` functions to omit quotation marks.
     *
-    * The key difference from `_unknownAtRule` is that `whitespace()` is called
-    * between function arguments, which strips comments that would otherwise
-    * be preserved verbatim in the at-rule value.
+    * The key difference from `_unknownAtRule` is that `whitespace()` is called between function arguments, which strips comments that would otherwise be preserved verbatim in the at-rule value.
     */
   private def _mozDocumentRule(start: ssg.sass.util.LineScannerState, nameInterp: Interpolation): AtRule = {
     whitespace(consumeNewlines = false)
-    val valueStart = scanner.state
-    val buffer     = new InterpolationBuffer()
+    val valueStart              = scanner.state
+    val buffer                  = new InterpolationBuffer()
     var needsDeprecationWarning = false
 
     import scala.util.boundary, boundary.break
@@ -1858,7 +1850,7 @@ abstract class StylesheetParser protected (
                 // reading the string and manually wrapping with quotes,
                 // preserving the original quote character.
                 val argQuote = scanner.peekChar().toChar
-                val argStr = interpolatedString()
+                val argStr   = interpolatedString()
                 scanner.expectChar(CharCode.$rparen)
                 buffer.write(ident)
                 buffer.writeCharCode(CharCode.$lparen)
@@ -3163,7 +3155,7 @@ abstract class StylesheetParser protected (
     try {
       val start = scanner.state
       // dart-sass lines 1996-1998: save and set expression state flags.
-      val wasInExpression = _inExpression
+      val wasInExpression  = _inExpression
       val wasInParentheses = _inParentheses
       _inExpression = true
 
@@ -3251,7 +3243,8 @@ abstract class StylesheetParser protected (
         // dart-sass: reject non-arithmetic operators in plain CSS mode.
         // SingleEquals and arithmetic operators (+, -, *, /) are allowed
         // because they may appear in calculations — checked at evaluation time.
-        if (plainCss &&
+        if (
+          plainCss &&
           operator != BinaryOperator.SingleEquals &&
           operator != BinaryOperator.Plus &&
           operator != BinaryOperator.Minus &&
@@ -3573,12 +3566,10 @@ abstract class StylesheetParser protected (
     SelectorExpression(spanFrom(start))
   }
 
-  /** dart-sass: `_hashExpression` (stylesheet.dart:2532-2554).
-    * Dispatches `#` to hex color or `#{...}` interpolation.
+  /** dart-sass: `_hashExpression` (stylesheet.dart:2532-2554). Dispatches `#` to hex color or `#{...}` interpolation.
     *
-    * When the character after `#` is a digit, parse directly as hex color.
-    * Otherwise, parse as an interpolated identifier, check whether it's a
-    * plain hex color (3/4/6/8 hex digits), and backtrack if so.
+    * When the character after `#` is a digit, parse directly as hex color. Otherwise, parse as an interpolated identifier, check whether it's a plain hex color (3/4/6/8 hex digits), and backtrack if
+    * so.
     */
   private def _rdHashExpression(): Expression = {
     val start = scanner.state
@@ -3617,9 +3608,7 @@ abstract class StylesheetParser protected (
     StringExpression(buf.interpolation(spanFrom(start)), hasQuotes = false)
   }
 
-  /** dart-sass: `_hexColorContents` (stylesheet.dart:2557-2599).
-    * Consumes the contents of a hex color after the `#`, reading individual
-    * hex digits from the scanner.
+  /** dart-sass: `_hexColorContents` (stylesheet.dart:2557-2599). Consumes the contents of a hex color after the `#`, reading individual hex digits from the scanner.
     */
   private def _hexColorContents(start: ssg.sass.util.LineScannerState): ssg.sass.value.SassColor = {
     import ssg.sass.value.{ SassColor, SpanColorFormat, ColorFormat }
@@ -3628,9 +3617,9 @@ abstract class StylesheetParser protected (
     val digit2 = _hexDigit()
     val digit3 = _hexDigit()
 
-    var red:   Int = 0
-    var green: Int = 0
-    var blue:  Int = 0
+    var red:   Int              = 0
+    var green: Int              = 0
+    var blue:  Int              = 0
     var alpha: Nullable[Double] = Nullable.Null
 
     val next = scanner.peekChar()
@@ -3641,7 +3630,7 @@ abstract class StylesheetParser protected (
       blue = (digit3 << 4) + digit3
     } else {
       val digit4 = _hexDigit()
-      val next2 = scanner.peekChar()
+      val next2  = scanner.peekChar()
       if (!(next2 >= 0 && CharCode.isHex(next2))) {
         // #abcd — 4 digits
         red = (digit1 << 4) + digit1
@@ -3670,8 +3659,7 @@ abstract class StylesheetParser protected (
     SassColor.rgbInternal(Nullable(red.toDouble), Nullable(green.toDouble), Nullable(blue.toDouble), Nullable(alphaVal), format)
   }
 
-  /** dart-sass: `_hexDigit` (stylesheet.dart:2613-2615).
-    * Consumes a single hexadecimal digit.
+  /** dart-sass: `_hexDigit` (stylesheet.dart:2613-2615). Consumes a single hexadecimal digit.
     */
   private def _hexDigit(): Int = {
     val c = scanner.peekChar()
@@ -3679,14 +3667,12 @@ abstract class StylesheetParser protected (
     else scanner.error("Expected hex digit.")
   }
 
-  /** dart-sass: `_isHexColor` (stylesheet.dart:2603-2610).
-    * Returns whether [interpolation] is a plain string that can be parsed as
-    * a hex color.
+  /** dart-sass: `_isHexColor` (stylesheet.dart:2603-2610). Returns whether [interpolation] is a plain string that can be parsed as a hex color.
     */
   private def _isHexColor(interpolation: Interpolation): Boolean = {
     val plain = interpolation.asPlain
     if (plain.isEmpty) return false
-    val s = plain.get
+    val s   = plain.get
     val len = s.length
     if (len != 3 && len != 4 && len != 6 && len != 8) return false
     var i = 0
@@ -3849,7 +3835,8 @@ abstract class StylesheetParser protected (
     // Unit
     val unit: Nullable[String] =
       if (scanner.scanChar(CharCode.$percent)) Nullable("%")
-      else if (lookingAtIdentifier() &&
+      else if (
+        lookingAtIdentifier() &&
         // Disallow units beginning with `--`.
         // dart-sass: _number() (stylesheet.dart:2705-2707).
         (scanner.peekChar() != CharCode.$minus || scanner.peekChar(1) != CharCode.$minus)
@@ -3878,7 +3865,7 @@ abstract class StylesheetParser protected (
     */
   private def _importRule(start: ssg.sass.util.LineScannerState): ImportRule = {
     val imports = mutable.ListBuffer.empty[Import]
-    var more = true
+    var more    = true
     while (more) {
       whitespace(consumeNewlines = false)
       val argument = importArgument()
@@ -3916,7 +3903,7 @@ abstract class StylesheetParser protected (
     */
   protected def importArgument(): Import = {
     val start = scanner.state
-    val c = scanner.peekChar()
+    val c     = scanner.peekChar()
     if (c == CharCode.$u || c == CharCode.$U) {
       val url = dynamicUrl()
       whitespace(consumeNewlines = false)
@@ -3948,7 +3935,7 @@ abstract class StylesheetParser protected (
           )
       }
     } else {
-      val url = string()
+      val url     = string()
       val urlSpan = spanFrom(start)
       whitespace(consumeNewlines = false)
       val modifiers = tryImportModifiers()
@@ -3959,9 +3946,9 @@ abstract class StylesheetParser protected (
           modifiers
         )
       } else {
-        try {
+        try
           DynamicImport(parseImportUrl(url), urlSpan)
-        } catch {
+        catch {
           case e: Exception =>
             error(s"Invalid URL: ${e.getMessage}", urlSpan)
         }
@@ -3976,9 +3963,11 @@ abstract class StylesheetParser protected (
   protected def parseImportUrl(url: String): String = {
     // Backwards-compatibility for implementations that allow absolute Windows
     // paths in imports.
-    if (url.length >= 2 && url.charAt(1) == ':' &&
-        Character.isLetter(url.charAt(0)) &&
-        !url.startsWith("/")) {
+    if (
+      url.length >= 2 && url.charAt(1) == ':' &&
+      Character.isLetter(url.charAt(0)) &&
+      !url.startsWith("/")
+    ) {
       // Looks like an absolute Windows path (e.g. C:\foo\bar) — convert to URI.
       return url.replace('\\', '/')
     }
@@ -4018,8 +4007,7 @@ abstract class StylesheetParser protected (
     )
   }
 
-  /** Consumes a sequence of modifiers (such as media or supports queries)
-    * after an import argument.
+  /** Consumes a sequence of modifiers (such as media or supports queries) after an import argument.
     *
     * Returns `Nullable.empty` if there are no modifiers.
     *
@@ -4032,10 +4020,10 @@ abstract class StylesheetParser protected (
       return Nullable.empty
     }
 
-    val start = scanner.state
+    val start  = scanner.state
     val buffer = new InterpolationBuffer()
     boundary[Nullable[Interpolation]] {
-      while (true) {
+      while (true)
         if (_lookingAtInterpolatedIdentifier()) {
           if (!buffer.isEmpty) buffer.writeCharCode(CharCode.$space)
 
@@ -4077,14 +4065,12 @@ abstract class StylesheetParser protected (
         } else {
           break(Nullable(buffer.interpolation(spanFrom(start))))
         }
-      }
       // The while(true) never exits naturally; all paths break.
       Nullable.empty
     }
   }
 
-  /** Consumes the contents of a `supports()` function after an `@import` rule
-    * (but not the function name or parentheses).
+  /** Consumes the contents of a `supports()` function after an `@import` rule (but not the function name or parentheses).
     *
     * dart-sass: `_importSupportsQuery` (stylesheet.dart:1338-1361).
     */
@@ -4104,7 +4090,7 @@ abstract class StylesheetParser protected (
       if (fn.isDefined) return fn.get
 
       val start = scanner.state
-      val name = _rdExpression(consumeNewlines = true)
+      val name  = _rdExpression(consumeNewlines = true)
       scanner.expectChar(CharCode.$colon)
       return SupportsDeclaration(
         name,
@@ -4114,8 +4100,7 @@ abstract class StylesheetParser protected (
     }
   }
 
-  /** Consumes a function call within a `supports()` function after an
-    * `@import` if available.
+  /** Consumes a function call within a `supports()` function after an `@import` if available.
     *
     * dart-sass: `_tryImportSupportsFunction` (stylesheet.dart:1365-1385).
     */
@@ -4123,7 +4108,7 @@ abstract class StylesheetParser protected (
     if (!_lookingAtInterpolatedIdentifier()) return Nullable.empty
 
     val start = scanner.state
-    val name = interpolatedIdentifier()
+    val name  = interpolatedIdentifier()
     assert(
       !Utils.equalsIgnoreCase(name.asPlain, Nullable("not")),
       "\"not\" should have been consumed by scanIdentifier"
@@ -4477,8 +4462,8 @@ abstract class StylesheetParser protected (
     * dart-sass: `_mediaQueryList` (stylesheet.dart:4315-4327).
     */
   protected def _mediaQueryList(): Interpolation = {
-    val start  = scanner.state
-    val buffer = new InterpolationBuffer()
+    val start     = scanner.state
+    val buffer    = new InterpolationBuffer()
     var continue_ = true
     while (continue_) {
       whitespace(consumeNewlines = false)
@@ -4570,12 +4555,11 @@ abstract class StylesheetParser protected (
     return
   }
 
-  /** Consumes one or more `MediaOrInterp` expressions separated by [operator]
-    * and writes them to [buffer].
+  /** Consumes one or more `MediaOrInterp` expressions separated by [operator] and writes them to [buffer].
     *
     * dart-sass: `_mediaLogicSequence` (stylesheet.dart:4404-4416).
     */
-  private def _mediaLogicSequence(buffer: InterpolationBuffer, operator: String): Unit = {
+  private def _mediaLogicSequence(buffer: InterpolationBuffer, operator: String): Unit =
     while (true) {
       _mediaOrInterp(buffer)
       whitespace(consumeNewlines = false)
@@ -4587,20 +4571,18 @@ abstract class StylesheetParser protected (
       buffer.write(operator)
       buffer.writeCharCode(CharCode.$space)
     }
-  }
 
   /** Consumes a `MediaOrInterp` expression and writes it to [buffer].
     *
     * dart-sass: `_mediaOrInterp` (stylesheet.dart:4419-4426).
     */
-  private def _mediaOrInterp(buffer: InterpolationBuffer): Unit = {
+  private def _mediaOrInterp(buffer: InterpolationBuffer): Unit =
     if (scanner.peekChar() == CharCode.$hash) {
       val (expression, span) = singleInterpolation()
       buffer.add(expression, span)
     } else {
       _mediaInParens(buffer)
     }
-  }
 
   /** Consumes a `MediaInParens` expression and writes it to [buffer].
     *
@@ -4670,8 +4652,7 @@ abstract class StylesheetParser protected (
     buffer.writeCharCode(CharCode.$rparen)
   }
 
-  /** Consumes an expression until it reaches a top-level `<`, `>`, or a `=`
-    * that's not `==`.
+  /** Consumes an expression until it reaches a top-level `<`, `>`, or a `=` that's not `==`.
     *
     * dart-sass: `_expressionUntilComparison` (stylesheet.dart:4495-4502).
     */
@@ -5727,7 +5708,7 @@ abstract class StylesheetParser protected (
       // _publicIdentifier() then _argumentInvocation(). A bare `namespace.member`
       // without parentheses is invalid — _argumentInvocation expects `(`.
       val member = _publicIdentifier()
-      val args = _rdArgumentInvocation(start)
+      val args   = _rdArgumentInvocation(start)
       FunctionExpression(member, args, spanFrom(start), Nullable(namespace))
     }
 

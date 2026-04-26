@@ -12,6 +12,10 @@
  *   Idiom: Dart super.protected() → Scala extends SassNumber(value, asSlash);
  *          overrides arithmetic for efficiency (no unit coercion needed)
  *   Audited: 2026-04-05
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/number/unitless.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

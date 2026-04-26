@@ -11,6 +11,10 @@
  *   Convention: Dart abstract base class -> Scala abstract class
  *   Idiom: Private visitor classes -> nested objects with visitor methods;
  *          Dart enum Combinator -> Scala 3 enum
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector.dart, lib/src/ast/selector/combinator.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

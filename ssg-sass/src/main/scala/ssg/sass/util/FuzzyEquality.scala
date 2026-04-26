@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: FuzzyEquality → FuzzyEquality
  *   Convention: Dart Equality[Double] → Scala Equiv[Double]
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/fuzzy_equality.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

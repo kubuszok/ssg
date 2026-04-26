@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: StringExtension → StringUtil extension
  *   Convention: Uses SpanScanner from Phase 0 infrastructure
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/string.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

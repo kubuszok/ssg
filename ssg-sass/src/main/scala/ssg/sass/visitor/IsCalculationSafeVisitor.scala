@@ -11,6 +11,10 @@
  *   Convention: Dart class -> Scala final class
  *   Idiom: codeUnitAtOrNull -> safe charAt with length guard
  *   Audited: 2026-04-17
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/is_calculation_safe.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

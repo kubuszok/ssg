@@ -17,6 +17,10 @@
  *   Convention: Dart abstract interface class -> Scala trait;
  *               Dart final class -> Scala final case class
  *   Idiom: toInterpolation uses InterpolationBuffer with span.before/after/between for fidelity
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/supports_condition.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -4,6 +4,9 @@
  *
  * Re-exports ssg.commons.Nullable into ssg.sass package scope so that
  * all ssg-sass files see Nullable without an explicit import.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -19,7 +19,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 283
  * Covenant-baseline-loc: 440
- * Covenant-baseline-methods: ifFn,typeOfFn,inspectFn,featureExistsFn,variableExistsFn,functionExistsFn,keywordsFn,mixinExistsFn,globalVariableExistsFn,contentExistsFn,calcNameFn,calcArgsFn,acceptsContentFn,moduleVariablesFn,moduleFunctionsFn,moduleMixinsFn,getFunctionFn,getMixinFn,callFn,applyFn,typeName,argName,envFor,lookupFunction,lookupMixin,knownFeatures,moduleMixins,global,moduleOnly,module,MetaFunctions
+ * Covenant-baseline-methods: ifFn,typeOfFn,inspectFn,featureExistsFn,variableExistsFn,functionExistsFn,keywordsFn,mixinExistsFn,globalVariableExistsFn,contentExistsFn,calcNameFn,calcArgsFn,acceptsContentFn,moduleVariablesFn,moduleFunctionsFn,moduleMixinsFn,getFunctionFn,getMixinFn,callFn,applyFn,typeName,argName,lookupFunction,lookupMixin,knownFeatures,moduleMixins,global,moduleOnly,module,MetaFunctions
  * Covenant-dart-reference: lib/src/functions/meta.dart
  * Covenant-verified: 2026-04-08
  *
@@ -253,7 +253,7 @@ object MetaFunctions {
           case other    => Nullable(assertString(other, "module"))
         }
         val normalized = normalizeName(name)
-        val found = CurrentEnvironment.get.fold(false) { env =>
+        val found      = CurrentEnvironment.get.fold(false) { env =>
           env.globalVariableExists(normalized, moduleNs)
         }
         SassBoolean(found)
@@ -515,7 +515,7 @@ object MetaFunctions {
             EvaluationContext.warnForDeprecation(
               Deprecation.CallString,
               "Passing a string to call() is deprecated and will be illegal in " +
-              "Dart Sass 2.0.0.\n\nRecommendation: call(get-function(" + s.text + "))"
+                "Dart Sass 2.0.0.\n\nRecommendation: call(get-function(" + s.text + "))"
             )
             lookupFunction(s.text, SassNull).getOrElse {
               new PlainCssCallable(s.text)

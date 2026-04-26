@@ -10,6 +10,10 @@
  *   Renames: value.dart → Value.scala
  *   Convention: Dart abstract class → Scala abstract class
  *   Idiom: assert* methods throw SassScriptException; selector methods deferred
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -383,8 +387,7 @@ abstract class Value {
 
   /** Returns the CSS string representation.
     *
-    * Ported from dart-sass `Value.toCssString` (value.dart:430):
-    * delegates to `serializeValue(this, quote: quote)`.
+    * Ported from dart-sass `Value.toCssString` (value.dart:430): delegates to `serializeValue(this, quote: quote)`.
     */
   def toCssString(quote: Boolean = true): String =
     ssg.sass.visitor.SerializeVisitor.serializeValue(this, quote = quote)

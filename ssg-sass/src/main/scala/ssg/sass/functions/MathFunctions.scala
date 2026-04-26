@@ -19,7 +19,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 397
  * Covenant-baseline-loc: 490
- * Covenant-baseline-methods: moduleAbsFn,ceilFn,clampFn,cosFn,acosFn,asinFn,atanFn,atan2Fn,sinFn,tanFn,hypotFn,logFn,powFn,sqrtFn,maxFn,minFn,percentageFn,randomFn,roundFn,unitFn,isUnitlessFn,compatibleFn,divFn,floorFn,globalAbsFn,numberFn,singleArgMathFn,numberSqrt,numberSin,numberCos,numberTan,numberAtan,numberAsin,numberAcos,numberAbs,numberLog,numberPow,numberAtan2,radiansToDegrees,withName,global,module,moduleVariables,rng,MathFunctions
+ * Covenant-baseline-methods: moduleAbsFn,ceilFn,clampFn,cosFn,acosFn,asinFn,atanFn,atan2Fn,sinFn,tanFn,hypotFn,logFn,powFn,sqrtFn,maxFn,minFn,percentageFn,randomFn,roundFn,unitFn,isUnitlessFn,compatibleFn,divFn,floorFn,globalAbsFn,numberFn,singleArgMathFn,numberSqrt,numberSin,numberCos,numberTan,numberAtan,numberAsin,numberAcos,numberAbs,numberLog,numberPow,numberAtan2,radiansToDegrees,global,module,moduleVariables,rng,MathFunctions
  * Covenant-dart-reference: lib/src/functions/math.dart
  * Covenant-verified: 2026-04-08
  *

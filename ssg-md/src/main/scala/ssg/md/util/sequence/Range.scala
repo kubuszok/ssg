@@ -17,9 +17,8 @@ package sequence
   */
 class Range protected (val start: Int, val end: Int) {
 
-  protected def this(other: Range) = {
+  protected def this(other: Range) =
     this(other.start, other.end)
-  }
 
   // Kotlin compatibility getters
   def component1(): Int = start

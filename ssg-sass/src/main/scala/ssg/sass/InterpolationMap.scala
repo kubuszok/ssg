@@ -13,6 +13,10 @@
  *          Dart SourceSpanFormatException -> SassFormatException;
  *          Dart MultiSourceSpanFormatException -> MultiSpanSassFormatException;
  *          Dart identical(file, ...) -> eq reference equality via AnyRef
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/interpolation_map.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

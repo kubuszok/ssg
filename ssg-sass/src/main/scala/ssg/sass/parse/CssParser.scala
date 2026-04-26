@@ -21,6 +21,10 @@
  *     preserves source spans on errors, matches the dart-sass user-visible
  *     behavior (plain CSS rejects Sass features with a format error), and
  *     keeps the port in line with the no-op skeleton that preceded it.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/css.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -53,9 +57,9 @@ import ssg.sass.ast.sass.{
   ListExpression,
   LoudComment,
   MapExpression,
-  ParenthesizedExpression,
   MediaRule,
   MixinRule,
+  ParenthesizedExpression,
   ReturnRule,
   SelectorExpression,
   SilentComment,
@@ -89,11 +93,8 @@ class CssParser(
 
   override def plainCss: Boolean = true
 
-  /** dart-sass css.dart: silentComment() — in plain CSS, `//` is never a
-    * comment. Inside expressions, return false so `//` is not consumed
-    * (allowing `1///bar` to parse as value text). Outside expressions,
-    * consume the `//` via the super implementation and then throw, matching
-    * dart-sass's "Silent comments aren't allowed in plain CSS." error.
+  /** dart-sass css.dart: silentComment() — in plain CSS, `//` is never a comment. Inside expressions, return false so `//` is not consumed (allowing `1///bar` to parse as value text). Outside
+    * expressions, consume the `//` via the super implementation and then throw, matching dart-sass's "Silent comments aren't allowed in plain CSS." error.
     */
   override protected def silentComment(): Boolean = {
     if (inExpression) return false
@@ -207,18 +208,13 @@ class CssParser(
     "if"
   )
 
-  /** Overrides the base identifierLike to treat all identifiers as plain
-    * strings in plain CSS context. dart-sass CssParser.identifierLike()
-    * (css.dart:159-209) does NOT convert `null`/`true`/`false` to
-    * NullExpression/BooleanExpression, and does NOT convert color names
-    * to ColorExpression. All non-function identifiers become StringExpression.
+  /** Overrides the base identifierLike to treat all identifiers as plain strings in plain CSS context. dart-sass CssParser.identifierLike() (css.dart:159-209) does NOT convert `null`/`true`/`false`
+    * to NullExpression/BooleanExpression, and does NOT convert color names to ColorExpression. All non-function identifiers become StringExpression.
     *
-    * Function calls use `expressionUntilComma(singleEquals = true)` for
-    * arguments (to allow `=` in IE filter syntax), and disallowed function
-    * names are rejected immediately.
+    * Function calls use `expressionUntilComma(singleEquals = true)` for arguments (to allow `=` in IE filter syntax), and disallowed function names are rejected immediately.
     */
   override protected def _rdIdentifierLike(): Expression = {
-    val start = scanner.state
+    val start      = scanner.state
     val identifier = interpolatedIdentifier()
     // CSS doesn't allow non-plain identifiers
     val plain = identifier.asPlain.getOrElse {
@@ -250,15 +246,17 @@ class CssParser(
     // Uses expressionUntilComma(singleEquals = true) to allow `=` in
     // IE filter syntax (e.g. alpha(opacity=65)).
     val allowEmptySecondArg = lower == "var"
-    val arguments = scala.collection.mutable.ListBuffer.empty[Expression]
+    val arguments           = scala.collection.mutable.ListBuffer.empty[Expression]
     if (!scanner.scanChar(CharCode.$rparen)) {
       import scala.util.boundary, boundary.break
       boundary {
         while (true) {
           whitespace(consumeNewlines = true)
-          if (allowEmptySecondArg &&
+          if (
+            allowEmptySecondArg &&
             arguments.length == 1 &&
-            scanner.peekChar() == CharCode.$rparen) {
+            scanner.peekChar() == CharCode.$rparen
+          ) {
             arguments += StringExpression(Interpolation.plain("", spanFrom(start)))
             break(())
           }

@@ -10,6 +10,10 @@
  *   Renames: clone_css.dart -> CloneCssVisitor.scala
  *   Convention: Dart top-level function cloneCssStylesheet -> companion object method
  *   Idiom: _CloneCssVisitor is private to this file; public API is CloneCssVisitor.cloneCssStylesheet
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/clone_css.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

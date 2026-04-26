@@ -13,6 +13,10 @@
  *     indentation tracking via _peekIndentation / _readIndentation.
  *   Convention: boundary/break for early returns; Nullable[A] for nullable.
  *   Audited: 2026-04-17
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/sass.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -134,8 +138,7 @@ class SassParser(
 
   /** Consumes an import argument for the indented syntax.
     *
-    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs
-    * in addition to quoted strings and `url(...)` syntax.
+    * Unlike SCSS, the indented syntax supports bare (unquoted) import URLs in addition to quoted strings and `url(...)` syntax.
     *
     * dart-sass sass.dart lines 73-116.
     */

@@ -10,6 +10,10 @@
  *   Renames: configuration.dart -> Configuration.scala (merged)
  *   Convention: Dart mutable map -> Scala mutable.Map for in-place remove()
  *   Idiom: ExplicitConfiguration extends Configuration
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/configuration.dart, lib/src/configured_value.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

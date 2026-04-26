@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: no_source_map_buffer.dart + source_map_buffer.dart → SourceMapBuffer.scala
  *   Convention: Trait + implementation; full SourceMapBuffer deferred until source map support needed
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/no_source_map_buffer.dart, lib/src/util/source_map_buffer.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

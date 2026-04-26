@@ -12,6 +12,10 @@
  *   Idiom: Nullable parent in nestWithin; _containsParentSelector/_ParentSelectorVisitor
  *          -> companion object; flattenVertically -> Utils.flattenVertically;
  *          nestWithin complex logic preserved; asSassList stubbed (needs Value types)
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector/list.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

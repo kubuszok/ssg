@@ -13,6 +13,10 @@
  *   Convention: Dart sealed abstract base class + subclasses → Scala abstract class + objects
  *   Idiom: Dart math → scala.math; Dart double? → Nullable[Double]
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/gamut_map_method.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
