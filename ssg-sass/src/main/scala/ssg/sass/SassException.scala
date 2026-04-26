@@ -65,18 +65,24 @@ class SassException(
     val sassStr       = new SassString(toString)
     val cssRepr       = sassStr.toCssString()
     val stringMessage = new StringBuilder()
-    val codePoints    = cssRepr.codePoints().toArray
-    var idx           = 0
-    while (idx < codePoints.length) {
-      val rune = codePoints(idx)
-      if (rune > 0x7f) {
+    var idx = 0
+    while (idx < cssRepr.length) {
+      val ch = cssRepr.charAt(idx)
+      if (Character.isHighSurrogate(ch) && idx + 1 < cssRepr.length && Character.isLowSurrogate(cssRepr.charAt(idx + 1))) {
+        val rune = Character.toCodePoint(ch, cssRepr.charAt(idx + 1))
         stringMessage.append('\\')
         stringMessage.append(Integer.toHexString(rune))
         stringMessage.append(' ')
+        idx += 2
+      } else if (ch.toInt > 0x7f) {
+        stringMessage.append('\\')
+        stringMessage.append(Integer.toHexString(ch.toInt))
+        stringMessage.append(' ')
+        idx += 1
       } else {
-        stringMessage.append(Character.toChars(rune))
+        stringMessage.append(ch)
+        idx += 1
       }
-      idx += 1
     }
 
     val commentBody = commentMessage.split("\n").mkString("\n * ")
