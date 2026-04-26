@@ -26,6 +26,10 @@
  *               Dart final class -> Scala final class
  *   Idiom: InterpolatedSelectorVisitor as forward-reference trait;
  *          Nullable for optional fields
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/interpolated_selector.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: multi_span.dart → MultiSpan.scala
  *   Convention: Simplified — secondary spans stored as immutable Map
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/multi_span.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

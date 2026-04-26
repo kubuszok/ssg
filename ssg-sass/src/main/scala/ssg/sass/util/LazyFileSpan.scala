@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: lazy_file_span.dart → LazyFileSpan.scala
  *   Convention: Lazy delegation to FileSpan
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/lazy_file_span.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

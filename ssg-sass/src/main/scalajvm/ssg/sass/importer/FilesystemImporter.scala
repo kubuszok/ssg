@@ -33,9 +33,8 @@ final class FilesystemImporter private (
 ) extends Importer {
 
   /** Creates an importer that loads files relative to [[loadPath]]. */
-  def this(loadPath: String) = {
+  def this(loadPath: String) =
     this(Nullable(FilePath.of(loadPath).toAbsolute.normalize.pathString), false)
-  }
 
   /** The load path as a string, for backward compatibility. */
   def loadPath: String = _loadPath.getOrElse("")
@@ -108,9 +107,11 @@ final class FilesystemImporter private (
         val uri = java.net.URI.create(url)
         if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
       }
-      java.nio.file.Files.getLastModifiedTime(
-        java.nio.file.Paths.get(path.pathString)
-      ).toMillis
+      java.nio.file.Files
+        .getLastModifiedTime(
+          java.nio.file.Paths.get(path.pathString)
+        )
+        .toMillis
     } catch {
       case _: Throwable => System.currentTimeMillis()
     }
@@ -141,7 +142,7 @@ final class FilesystemImporter private (
   /** Extracts the basename (last path component) from a URL/path string. */
   private def urlBasenameOf(url: String): String = {
     val cleaned = if (url.startsWith("file:")) {
-      try { new java.net.URI(url).getPath }
+      try new java.net.URI(url).getPath
       catch { case _: Throwable => url.stripPrefix("file:") }
     } else url
     val sep = math.max(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'))
@@ -161,7 +162,8 @@ object FilesystemImporter {
 
   /** A [[FilesystemImporter]] that loads files relative to the current working directory.
     *
-    * @deprecated Use [[FilesystemImporter.noLoadPath]] or `new FilesystemImporter(".")` instead.
+    * @deprecated
+    *   Use [[FilesystemImporter.noLoadPath]] or `new FilesystemImporter(".")` instead.
     */
   @deprecated("Use FilesystemImporter.noLoadPath or FilesystemImporter(\".\") instead.", "1.73.0")
   val cwd: FilesystemImporter = new FilesystemImporter(Nullable(FilePath.of(".").toAbsolute.normalize.pathString), true)

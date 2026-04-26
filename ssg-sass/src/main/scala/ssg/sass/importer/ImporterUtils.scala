@@ -11,6 +11,10 @@
  *   Convention: Dart Zone-based context replaced by shared var (single-threaded)
  *   Idiom: _ifInImport, fromImport, canonicalizeContext, inImportRule,
  *          withCanonicalizeContext, isValidUrlScheme
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/importer/utils.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

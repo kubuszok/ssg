@@ -1330,8 +1330,7 @@ object Environment {
 
     /** Returns a map containing [localMap] plus every other-map entry, with `localMap` taking precedence. `localMap` is assumed to already hide private members.
       *
-      * When localMap is a live view and there are no otherMaps, it's returned
-      * directly so that mutations to the underlying mutable map are reflected.
+      * When localMap is a live view and there are no otherMaps, it's returned directly so that mutations to the underlying mutable map are reflected.
       */
     private[sass] def memberMap[V](localMap: Map[String, V], otherMaps: Iterable[Map[String, V]]): Map[String, V] = {
       if (otherMaps.isEmpty) return localMap
@@ -1345,13 +1344,11 @@ object Environment {
     }
   }
 
-  /** A live, read-only view of a mutable Map that hides private members
-    * (names starting with `-` or `_`). Mirrors dart-sass `PublicMemberMapView`.
+  /** A live, read-only view of a mutable Map that hides private members (names starting with `-` or `_`). Mirrors dart-sass `PublicMemberMapView`.
     *
-    * This is NOT a snapshot — reads delegate to the underlying mutable map,
-    * so mutations via `setVariable` are immediately visible.
+    * This is NOT a snapshot — reads delegate to the underlying mutable map, so mutations via `setVariable` are immediately visible.
     */
-  private[sass] final class PublicMemberMapView[V](underlying: mutable.Map[String, V]) extends scala.collection.immutable.AbstractMap[String, V] {
+  final private[sass] class PublicMemberMapView[V](underlying: mutable.Map[String, V]) extends scala.collection.immutable.AbstractMap[String, V] {
     def get(key: String): Option[V] =
       if (Environment.isPrivate(key)) scala.None
       else underlying.get(key)

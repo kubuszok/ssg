@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: supports_rule.dart + modifiable/supports_rule.dart -> CssSupportsRule.scala
  *   Convention: Dart abstract interface class -> Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/supports_rule.dart, lib/src/ast/css/modifiable/supports_rule.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

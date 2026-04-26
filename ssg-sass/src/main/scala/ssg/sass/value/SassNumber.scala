@@ -13,6 +13,10 @@
  *          Dart List<String> → List[String]; Dart null → Nullable.Null;
  *          conversionFactor and constants in companion object
  *   Audited: 2026-04-05
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/number.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

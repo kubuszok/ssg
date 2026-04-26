@@ -10,6 +10,10 @@
  *   Renames: stylesheet_graph.dart -> StylesheetGraph.scala
  *   Convention: Tracks canonical-URL edges and detects import cycles;
  *               callers pass (from, to) pairs via addEdge/wouldCycle.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/stylesheet_graph.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

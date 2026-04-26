@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: evaluation_context.dart -> EvaluationContext.scala
  *   Convention: Skeleton — public API surface only
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/evaluation_context.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

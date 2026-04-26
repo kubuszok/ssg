@@ -27,6 +27,7 @@ final class ColorSpacesSuite extends munit.FunSuite {
   private def num(d: Double): SassNumber = SassNumber(d)
   private def pct(d: Double): SassNumber = SassNumber(d, "%")
   private def str(s: String): SassString = SassString(s, hasQuotes = false)
+
   /** Wrap values into a space-separated list (single $channels argument for modern color functions). */
   private def channels(vs: Value*): SassList = SassList(vs.toList, ListSeparator.Space)
 

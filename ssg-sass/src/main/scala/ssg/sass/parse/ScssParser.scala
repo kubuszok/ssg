@@ -10,6 +10,10 @@
  *   Renames: scss.dart -> ScssParser.scala
  *   Idiom: Minimum viable implementation providing styleRuleSelector,
  *     statement sequencing, and child block parsing.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/scss.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -36,9 +40,7 @@ class ScssParser(
 
   /** Consumes a selector interpolation until `{`.
     *
-    * dart-sass scss.dart line 20: simply delegates to [[almostAnyValue]],
-    * which properly handles escape sequences, `#{...}` expression
-    * interpolation, quoted strings, and comments.
+    * dart-sass scss.dart line 20: simply delegates to [[almostAnyValue]], which properly handles escape sequences, `#{...}` expression interpolation, quoted strings, and comments.
     */
   override protected def styleRuleSelector(): Interpolation = almostAnyValue()
 

@@ -13,6 +13,10 @@
  *               This file exposes the configuration type and a default
  *               instance so callers in `ssg.sass.logger` can construct
  *               one without importing the Logger file directly.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/logger/deprecation_processing.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

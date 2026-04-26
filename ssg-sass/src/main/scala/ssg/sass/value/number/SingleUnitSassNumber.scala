@@ -13,6 +13,10 @@
  *          Dart ?. andThen pattern → Nullable map/getOrElse;
  *          _knownCompatibilities → SassNumber.knownCompatibilities
  *   Audited: 2026-04-05
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/number/single_unit.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

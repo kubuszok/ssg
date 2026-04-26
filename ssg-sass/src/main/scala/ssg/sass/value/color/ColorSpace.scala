@@ -12,6 +12,10 @@
  *   Idiom: Dart Float64List → Array[Double]; extension methods → direct methods;
  *          all 16 space instances in companion object; Dart double? → Nullable[Double]
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/space.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

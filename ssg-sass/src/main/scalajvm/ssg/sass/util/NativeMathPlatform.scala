@@ -14,18 +14,16 @@ package ssg
 package sass
 package util
 
-import java.lang.foreign.{FunctionDescriptor, Linker, ValueLayout}
+import java.lang.foreign.{ FunctionDescriptor, Linker, ValueLayout }
 
 object NativeMathPlatform extends NativeMathOps {
 
-  private val linker0: Linker                             = Linker.nativeLinker()
-  private val lookup0: java.lang.foreign.SymbolLookup     = linker0.defaultLookup()
+  private val linker0: Linker                         = Linker.nativeLinker()
+  private val lookup0: java.lang.foreign.SymbolLookup = linker0.defaultLookup()
 
   /** Bind a native C function `(double) -> double`. */
   private def bind1(name: String): java.lang.invoke.MethodHandle = {
-    val sym = lookup0.find(name).orElseThrow(() =>
-      new UnsupportedOperationException(s"Native C $name() symbol not found")
-    )
+    val sym = lookup0.find(name).orElseThrow(() => new UnsupportedOperationException(s"Native C $name() symbol not found"))
     linker0.downcallHandle(
       sym,
       FunctionDescriptor.of(ValueLayout.JAVA_DOUBLE, ValueLayout.JAVA_DOUBLE)
@@ -34,9 +32,7 @@ object NativeMathPlatform extends NativeMathOps {
 
   /** Bind a native C function `(double, double) -> double`. */
   private def bind2(name: String): java.lang.invoke.MethodHandle = {
-    val sym = lookup0.find(name).orElseThrow(() =>
-      new UnsupportedOperationException(s"Native C $name() symbol not found")
-    )
+    val sym = lookup0.find(name).orElseThrow(() => new UnsupportedOperationException(s"Native C $name() symbol not found"))
     linker0.downcallHandle(
       sym,
       FunctionDescriptor.of(ValueLayout.JAVA_DOUBLE, ValueLayout.JAVA_DOUBLE, ValueLayout.JAVA_DOUBLE)
@@ -45,9 +41,7 @@ object NativeMathPlatform extends NativeMathOps {
 
   /** Bind a native C function `(double, double, double) -> double`. */
   private def bind3(name: String): java.lang.invoke.MethodHandle = {
-    val sym = lookup0.find(name).orElseThrow(() =>
-      new UnsupportedOperationException(s"Native C $name() symbol not found")
-    )
+    val sym = lookup0.find(name).orElseThrow(() => new UnsupportedOperationException(s"Native C $name() symbol not found"))
     linker0.downcallHandle(
       sym,
       FunctionDescriptor.of(

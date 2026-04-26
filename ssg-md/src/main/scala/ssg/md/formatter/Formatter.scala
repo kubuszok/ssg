@@ -330,9 +330,8 @@ object Formatter {
     */
   class Builder(options: Nullable[DataHolder]) extends ssg.md.util.build.BuilderBase[Builder](options) {
 
-    def this() = {
+    def this() =
       this(Nullable.empty)
-    }
 
     if (options.isDefined) {
       loadExtensions()

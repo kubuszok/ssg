@@ -12,6 +12,10 @@
  *   Convention: Dart abstract class -> Scala abstract class; mutable parent via var
  *   Idiom: _children internal list exposed as unmodifiable view via children
  *   Idiom: _IsInvisibleVisitor ported as CssNode.IsInvisibleVisitor extending EveryCssVisitor
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/node.dart, lib/src/ast/css/value.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

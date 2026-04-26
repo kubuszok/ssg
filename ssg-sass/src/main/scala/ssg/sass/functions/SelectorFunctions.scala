@@ -20,7 +20,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 415
  * Covenant-baseline-loc: 340
- * Covenant-baseline-methods: nestFn,appendFn,extendFn,replaceFn,unifyFn,isSuperselectorFn,simpleSelectorsFn,parseFn,withName,asSelectorText,asSelectorList,assertCompoundSelectorArg,prependParent,runExtendPipeline,global,module,SelectorFunctions
+ * Covenant-baseline-methods: nestFn,appendFn,extendFn,replaceFn,unifyFn,isSuperselectorFn,simpleSelectorsFn,parseFn,asSelectorText,asSelectorList,assertCompoundSelectorArg,prependParent,runExtendPipeline,global,module,SelectorFunctions
  * Covenant-dart-reference: lib/src/functions/selector.dart
  * Covenant-verified: 2026-04-08
  *
@@ -69,13 +69,10 @@ object SelectorFunctions {
   // one call can be round-tripped back into a SelectorList by the next.
   // ---------------------------------------------------------------------------
 
-  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's
-    * `Value._selectorStringOrNull`. Returns `None` if the value isn't a valid
-    * selector structure. The rules are:
+  /** Coerce a [[Value]] to a selector text string, mirroring dart-sass's `Value._selectorStringOrNull`. Returns `None` if the value isn't a valid selector structure. The rules are:
     *   - SassString: return its text.
     *   - SassList with slash separator: invalid (None).
-    *   - SassList with comma separator: each element must be a SassString or a
-    *     space-separated SassList whose elements are themselves valid.
+    *   - SassList with comma separator: each element must be a SassString or a space-separated SassList whose elements are themselves valid.
     *   - SassList with space/undecided separator: each element must be a SassString.
     *   - Anything else: invalid (None).
     */
@@ -88,7 +85,7 @@ object SelectorFunctions {
         case ListSeparator.Slash => None
         case ListSeparator.Comma =>
           val parts = items.map {
-            case s: SassString => Some(s.text)
+            case s:   SassString                                                                                   => Some(s.text)
             case sub: SassList if sub.separator == ListSeparator.Space || sub.separator == ListSeparator.Undecided =>
               asSelectorText(sub)
             case _ => None
@@ -98,7 +95,7 @@ object SelectorFunctions {
         case _ => // Space or Undecided
           val parts = items.map {
             case s: SassString => Some(s.text)
-            case _             => None
+            case _ => None
           }
           if (parts.exists(_.isEmpty)) None
           else Some(parts.flatten.mkString(" "))
@@ -177,7 +174,10 @@ object SelectorFunctions {
           val list = asSelectorList(v, "selectors", allowParent = true)
           if (first) {
             // Check for parent selectors with suffixes in the first argument
-            for (complex <- list.components; component <- complex.components) {
+            for {
+              complex <- list.components
+              component <- complex.components
+            }
               component.selector.components.foreach {
                 case ps: ssg.sass.ast.selector.ParentSelector if ps.suffix.isDefined =>
                   throw SassScriptException(
@@ -186,7 +186,6 @@ object SelectorFunctions {
                   )
                 case _ => ()
               }
-            }
           }
           first = false
           list

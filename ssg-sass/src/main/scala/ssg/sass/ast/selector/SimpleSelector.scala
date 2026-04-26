@@ -12,6 +12,10 @@
  *   Convention: Dart abstract base class -> Scala abstract class
  *   Idiom: _subselectorPseudos -> private val in companion;
  *          null returns -> Nullable; addSuffix throws -> same pattern
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector/simple.dart, attribute.dart, class.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

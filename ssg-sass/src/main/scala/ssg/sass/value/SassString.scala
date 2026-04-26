@@ -10,6 +10,10 @@
  *   Renames: string.dart → SassString.scala
  *   Convention: Quoted/unquoted distinction preserved
  *   Idiom: sassLength uses codePointCount for Unicode awareness
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/string.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -107,13 +111,9 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
     case _ => false
   }
 
-  /** CSS representation of this string. For unquoted strings, newlines are
-    * folded to spaces and post-newline whitespace is collapsed (matching
-    * dart-sass `_visitUnquotedString`). For quoted strings dart-sass prefers
-    * double quotes, falling back to single quotes when the text contains a
-    * double quote and no single quote (see `_visitQuotedString` in
-    * `serialize.dart`). Control characters are escaped with `\hh ` hex form;
-    * `\`, and the active quote char are backslash-escaped.
+  /** CSS representation of this string. For unquoted strings, newlines are folded to spaces and post-newline whitespace is collapsed (matching dart-sass `_visitUnquotedString`). For quoted strings
+    * dart-sass prefers double quotes, falling back to single quotes when the text contains a double quote and no single quote (see `_visitQuotedString` in `serialize.dart`). Control characters are
+    * escaped with `\hh ` hex form; `\`, and the active quote char are backslash-escaped.
     */
   override def toCssString(quote: Boolean = true): String =
     if (!hasQuotes || !quote) foldNewlines(text)
@@ -151,15 +151,13 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
       sb.toString()
     }
 
-  /** Fold newlines to a single space and collapse post-newline whitespace,
-    * matching dart-sass `_visitUnquotedString` (serialize.dart:1452-1473).
-    * Returns [s] unchanged if it contains no newlines.
+  /** Fold newlines to a single space and collapse post-newline whitespace, matching dart-sass `_visitUnquotedString` (serialize.dart:1452-1473). Returns [s] unchanged if it contains no newlines.
     */
   private def foldNewlines(s: String): String = {
     if (s.indexOf('\n') < 0) return s
-    val sb = new StringBuilder(s.length)
+    val sb           = new StringBuilder(s.length)
     var afterNewline = false
-    var i = 0
+    var i            = 0
     while (i < s.length) {
       val c = s.charAt(i)
       if (c == '\n') {

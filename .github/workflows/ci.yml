@@ -36,6 +36,9 @@ jobs:
       - name: Test ssg-minify (JVM)
         run: sbt ssg-minify/test
 
+      - name: Test ssg-sass (JVM)
+        run: sbt ssg-sass/test
+
       - name: Test ssg-js (JVM)
         run: sbt ssg-js/test
 
@@ -72,6 +75,9 @@ jobs:
       - name: Test ssg-minify (JS)
         run: sbt ssg-minifyJS/test
 
+      - name: Test ssg-sass (JS)
+        run: sbt ssg-sassJS/test
+
       - name: Test ssg-js (JS)
         run: sbt ssg-jsJS/test
 
@@ -106,6 +112,9 @@ jobs:
 
       - name: Test ssg-minify (Native)
         run: sbt ssg-minifyNative/test
+
+      - name: Test ssg-sass (Native)
+        run: sbt ssg-sassNative/test
 
       - name: Test ssg-js (Native)
         run: sbt ssg-jsNative/test

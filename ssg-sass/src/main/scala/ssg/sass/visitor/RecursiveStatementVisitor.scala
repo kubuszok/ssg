@@ -10,6 +10,10 @@
  *   Renames: recursive_statement.dart -> RecursiveStatementVisitor.scala
  *   Convention: Dart mixin -> Scala trait with default impls
  *   Idiom: Returns Unit; default behavior is to recurse into children
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/recursive_statement.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

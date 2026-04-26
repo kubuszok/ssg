@@ -11,6 +11,10 @@
  *   Convention: Top-level functions → object methods
  *   Idiom: Dart math → scala.math; Dart double → Double
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/space/utils.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

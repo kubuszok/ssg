@@ -18,7 +18,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 122
  * Covenant-baseline-loc: 320
- * Covenant-baseline-methods: unquoteFn,quoteFn,lengthFn,insertFn,indexFn,sliceFn,toUpperCaseFn,toLowerCaseFn,uniqueIdFn,splitFn,strLengthFn,strInsertFn,strIndexFn,strSliceFn,withName,global,module,codepointForIndex,StringFunctions
+ * Covenant-baseline-methods: unquoteFn,quoteFn,lengthFn,insertFn,indexFn,sliceFn,toUpperCaseFn,toLowerCaseFn,uniqueIdFn,splitFn,global,module,codepointForIndex,StringFunctions
  * Covenant-dart-reference: lib/src/functions/string.dart
  * Covenant-verified: 2026-04-08
  *

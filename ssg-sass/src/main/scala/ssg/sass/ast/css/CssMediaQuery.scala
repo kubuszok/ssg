@@ -11,6 +11,10 @@
  *   Convention: Dart named constructors -> companion apply methods
  *   Idiom: Dart sealed class hierarchy -> Scala sealed trait + enum + case class
  *   Idiom: equalsIgnoreCase from Utils
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/media_query.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -206,7 +210,8 @@ final class CssMediaQuery private (
 
 object CssMediaQuery {
 
-  /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes (nested parens, no colon) alone. */
+  /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes (nested parens, no colon) alone.
+    */
   private[sass] def normalizeCondition(cond: String): String = {
     if (!(cond.startsWith("(") && cond.endsWith(")"))) return cond
     val inner = cond.substring(1, cond.length - 1)
@@ -223,11 +228,11 @@ object CssMediaQuery {
   private[sass] def normalizeMediaFeatures(text: String): String = {
     if (!text.contains('(')) return text
     val sb = new StringBuilder()
-    var i = 0
-    while (i < text.length) {
+    var i  = 0
+    while (i < text.length)
       if (text.charAt(i) == '(') {
         var depth = 1
-        var j = i + 1
+        var j     = i + 1
         while (j < text.length && depth > 0) {
           val ch = text.charAt(j)
           if (ch == '(') depth += 1
@@ -240,7 +245,6 @@ object CssMediaQuery {
         sb.append(text.charAt(i))
         i += 1
       }
-    }
     sb.toString()
   }
 

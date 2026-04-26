@@ -10,6 +10,10 @@
  *   Renames: interface/css.dart + interface/modifiable_css.dart -> CssVisitor.scala
  *   Convention: Forward declaration -- methods added as CSS node types are ported
  *   Idiom: ModifiableCssVisitor extends CssVisitor with same signatures
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/interface/css.dart, lib/src/visitor/interface/modifiable_css.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

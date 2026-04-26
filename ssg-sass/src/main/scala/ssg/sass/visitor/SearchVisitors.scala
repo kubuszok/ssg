@@ -14,6 +14,10 @@
  *   Idiom: Dart T? null -> Nullable.empty; Dart null?.andThen -> Nullable flatMap;
  *          Dart list.search(fn) -> _search(list)(fn) via IterableUtil;
  *          Dart ?? -> Nullable orElse
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/selector_search.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

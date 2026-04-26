@@ -10,6 +10,10 @@
  *   Renames: logger.dart + logger/[all].dart -> Logger.scala
  *   Convention: Merged into single file; Dart abstract class -> Scala trait
  *   Idiom: LoggerWithDeprecationType merged into Logger trait
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/logger.dart, lib/src/logger/default.dart, lib/src/logger/stderr.dart, lib/src/logger/tracking.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

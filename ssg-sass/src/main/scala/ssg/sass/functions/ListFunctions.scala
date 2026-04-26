@@ -15,7 +15,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 139
  * Covenant-baseline-loc: 245
- * Covenant-baseline-methods: lengthFn,nthFn,setNthFn,joinFn,appendFn,zipFn,indexFn,separatorFn,isBracketedFn,slashFn,listSeparatorFn,withName,autoStr,global,module,ListFunctions
+ * Covenant-baseline-methods: lengthFn,nthFn,setNthFn,joinFn,appendFn,zipFn,indexFn,separatorFn,isBracketedFn,slashFn,autoStr,global,module,ListFunctions
  * Covenant-dart-reference: lib/src/functions/list.dart
  * Covenant-verified: 2026-04-08
  *

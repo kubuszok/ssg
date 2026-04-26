@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: ListSeparator from list.dart → ListSeparator.scala
  *   Convention: Scala 3 enum
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/list.dart (ListSeparator enum)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

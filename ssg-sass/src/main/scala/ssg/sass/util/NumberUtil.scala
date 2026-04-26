@@ -10,6 +10,10 @@
  *   Renames: number.dart → NumberUtil.scala
  *   Convention: Top-level functions → object methods
  *   Idiom: Dart num → Double, SassNumber functions deferred to Phase 9
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/number.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -11,6 +11,10 @@
  *   Convention: Dart sealed class → Scala class (open for LinearChannel subclass)
  *   Idiom: Dart String? → Nullable[String]; Dart bool? → default parameter
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/channel.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

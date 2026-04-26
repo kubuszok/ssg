@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: public_member_map_view.dart → PublicMemberMapView.scala
  *   Convention: Filters keys starting with - or _ (Sass private members)
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/public_member_map_view.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

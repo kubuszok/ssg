@@ -10,6 +10,10 @@
  *   Renames: stylesheet.dart + modifiable/stylesheet.dart -> CssStylesheet.scala
  *   Convention: Dart class + implements -> Scala trait + concrete impl
  *   Idiom: CssStylesheet.empty uses SourceFile with empty text
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/stylesheet.dart, lib/src/ast/css/modifiable/stylesheet.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

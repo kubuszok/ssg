@@ -10,6 +10,10 @@
  *   Renames: parser.dart -> Parser.scala
  *   Convention: Dart @protected -> Scala protected
  *   Idiom: Tokenizers use boundary/break for early returns
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/parser.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -222,9 +226,9 @@ abstract class Parser protected (
     }
 
     if (if (identifierStart) CharCode.isNameStart(value) else CharCode.isName(value)) {
-      try {
+      try
         new String(Character.toChars(value))
-      } catch {
+      catch {
         case _: IllegalArgumentException =>
           scanner.error("Invalid Unicode code point.", start, scanner.position - start)
       }

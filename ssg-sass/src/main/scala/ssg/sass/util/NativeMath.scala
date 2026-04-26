@@ -8,6 +8,9 @@
  * JavaScript V8, and Scala Native. Since dart-sass spec outputs are generated
  * by the Dart VM (which uses native pow), the JVM platform must call through
  * to the native C pow() to match.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -21,16 +24,15 @@ trait NativeMathOps {
 
   /** Computes `base` raised to the power `exp`, matching the native C library's `pow()` behavior.
     *
-    * On JS and Native, this is equivalent to `scala.math.pow`. On JVM, this calls the native C `pow()` via the Foreign Function & Memory API to avoid the 1-ULP discrepancy in `java.lang.Math.pow` (which uses fdlibm).
+    * On JS and Native, this is equivalent to `scala.math.pow`. On JVM, this calls the native C `pow()` via the Foreign Function & Memory API to avoid the 1-ULP discrepancy in `java.lang.Math.pow`
+    * (which uses fdlibm).
     */
   def pow(base: Double, exp: Double): Double
 
   /** Computes `a * b + c` as a fused multiply-add (single rounding).
     *
-    * The Dart VM JIT may fuse chained `a * b + c` operations into FMA
-    * instructions on x86-64, producing different rounding than separate
-    * multiply and add operations. To match dart-sass spec outputs, we
-    * use native FMA on each platform:
+    * The Dart VM JIT may fuse chained `a * b + c` operations into FMA instructions on x86-64, producing different rounding than separate multiply and add operations. To match dart-sass spec outputs,
+    * we use native FMA on each platform:
     *   - JVM: `java.lang.Math.fma` (uses CPU FMA instruction since JDK 9)
     *   - Native: C `fma()` via scala-native intrinsics
     *   - JS: software emulation (no native FMA available)

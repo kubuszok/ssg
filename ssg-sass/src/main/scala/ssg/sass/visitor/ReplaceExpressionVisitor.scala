@@ -13,6 +13,10 @@
  *          matching the Dart mixin's dual-interface implementation;
  *          visitIfExpression left as pass-through (abstract in Dart mixin)
  *   Audited: 2026-04-17
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/replace_expression.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

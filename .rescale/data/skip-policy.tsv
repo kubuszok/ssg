@@ -53,3 +53,12 @@ ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	shortcuts	(no reason)	
 ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	shortcuts	(no reason)	2026-04-18	dev
 ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	shortcuts	(no reason)	2026-04-18	dev
 ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	shortcuts	(no reason)	2026-04-24	dev
+ssg-sass/src/main/scala/ssg/sass/extend/ExtensionStore.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/ast/selector/SimpleSelector.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/value/color/ColorSpace.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/value/number/ComplexSassNumber.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/Compile.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	shortcuts	(no reason)	2026-04-26	dev

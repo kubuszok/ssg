@@ -14,6 +14,10 @@
  *   Idiom: Legacy accessors (red/hue/...) operate on SassColor by converting
  *          to the appropriate legacy space rather than using the deprecated
  *          accessor methods on SassColor itself.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/functions/color.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -450,11 +454,13 @@ object ColorFunctions {
           // -infinity/infinity for unclamped sides. This correctly handles
           // NaN (clampLikeCss returns lowerBound for NaN).
           case lc: LinearChannel if lc.lowerClamped || lc.upperClamped =>
-            Nullable(clampLikeCss(
-              raw,
-              if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
-              if (lc.upperClamped) lc.max else Double.PositiveInfinity
-            ))
+            Nullable(
+              clampLikeCss(
+                raw,
+                if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
+                if (lc.upperClamped) lc.max else Double.PositiveInfinity
+              )
+            )
           case _ =>
             Nullable(raw)
         }
@@ -641,8 +647,7 @@ object ColorFunctions {
   }
 
   /** Interprets [v] as a typed channel, using percentageOrUnitless with the channel's max value. Returns Nullable.Null for `none`. Clamps channels that have clamped bounds (e.g., lightness in
-    * lab/lch/oklab/oklch).  Used by hwb multi-arg path (via StylesheetParser space-split) and
-    * unit tests that call the function API directly.
+    * lab/lch/oklab/oklch). Used by hwb multi-arg path (via StylesheetParser space-split) and unit tests that call the function API directly.
     */
   @annotation.nowarn("msg=unused private member")
   private def channelOrNone(v: Value, ch: ColorChannel): Nullable[Double] =
@@ -750,11 +755,8 @@ object ColorFunctions {
       )
     )
 
-  /** `color($description)` — constructs a color in an explicit non-legacy color space.
-    * In dart-sass this function only accepts a single `$description` parameter
-    * (a space-separated channel list). The multi-arg form is handled by our
-    * parser pre-splitting space-separated values into positional args, so we
-    * need an overloaded callable with both signatures.
+  /** `color($description)` — constructs a color in an explicit non-legacy color space. In dart-sass this function only accepts a single `$description` parameter (a space-separated channel list). The
+    * multi-arg form is handled by our parser pre-splitting space-separated values into positional args, so we need an overloaded callable with both signatures.
     */
   private val colorFn: BuiltInCallable =
     BuiltInCallable.overloadedFunction(
@@ -764,9 +766,9 @@ object ColorFunctions {
           // Wrap the pre-split positional args back into a space-separated
           // list and route through parseChannels (matching dart-sass which
           // only has the $description single-arg form).
-          val spaceName = args(0)
-          val channels  = args.slice(1, 4)
-          val alpha     = if (args.length >= 5) args(4) else SassNumber(1)
+          val spaceName   = args(0)
+          val channels    = args.slice(1, 4)
+          val alpha       = if (args.length >= 5) args(4) else SassNumber(1)
           val channelList = SassList(spaceName :: channels, ListSeparator.Space)
           val input       = SassList(List(channelList, alpha), ListSeparator.Slash)
           parseChannels("color", input, None, Nullable.empty)
@@ -1304,11 +1306,13 @@ object ColorFunctions {
             // -infinity/infinity for unclamped sides. This correctly handles
             // NaN (clampLikeCss returns lowerBound for NaN).
             case lc: LinearChannel if lc.lowerClamped || lc.upperClamped =>
-              Nullable(clampLikeCss(
-                channelValue,
-                if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
-                if (lc.upperClamped) lc.max else Double.PositiveInfinity
-              ))
+              Nullable(
+                clampLikeCss(
+                  channelValue,
+                  if (lc.lowerClamped) lc.min else Double.NegativeInfinity,
+                  if (lc.upperClamped) lc.max else Double.PositiveInfinity
+                )
+              )
             case _ =>
               Nullable(channelValue)
           }
@@ -1323,8 +1327,7 @@ object ColorFunctions {
 
   /** Create a SassColor from SassNumber channels with unit conversion. Ported from dart-sass `_colorFromChannels`.
     *
-    * For HSL/HWB, the hue uses `angleValue` (which warns for non-angle units instead of throwing),
-    * matching dart-sass's explicit HSL/HWB cases. For all other spaces (including lch/oklch),
+    * For HSL/HWB, the hue uses `angleValue` (which warns for non-angle units instead of throwing), matching dart-sass's explicit HSL/HWB cases. For all other spaces (including lch/oklch),
     * `channelFromValue` is used which throws for non-angle hue units via `coerceValueToUnit`.
     */
   private def colorFromChannels(
@@ -1715,14 +1718,9 @@ object ColorFunctions {
 
   /** Build a SassNumber for a channel value, attaching the channel's associated unit.
     *
-    * Ported from dart-sass `color.channel` (lib/src/functions/color.dart:704-709):
-    * when the channel's associated unit is `%`, the internal value is always
-    * scaled by `* 100 / max` — even when `max == 100`. Although `x * 100 / 100`
-    * is mathematically identity, IEEE 754 double arithmetic can produce a
-    * different bit pattern, and the digit-by-digit `writeRounded` serializer
-    * is sensitive to that difference (e.g. `-392156.4705882353` vs
-    * `-392156.47058823536`). Removing the `max != 100` short-circuit keeps
-    * the output bit-identical to dart-sass.
+    * Ported from dart-sass `color.channel` (lib/src/functions/color.dart:704-709): when the channel's associated unit is `%`, the internal value is always scaled by `* 100 / max` — even when
+    * `max == 100`. Although `x * 100 / 100` is mathematically identity, IEEE 754 double arithmetic can produce a different bit pattern, and the digit-by-digit `writeRounded` serializer is sensitive
+    * to that difference (e.g. `-392156.4705882353` vs `-392156.47058823536`). Removing the `max != 100` short-circuit keeps the output bit-identical to dart-sass.
     */
   private def channelNumber(value: Double, channel: ssg.sass.value.color.ColorChannel): SassNumber =
     channel match {
@@ -1883,9 +1881,8 @@ object ColorFunctions {
 
   /** color.same($color1, $color2) — true if both normalize to the same xyz-d65 value.
     *
-    * dart-sass: `same` (color.dart:714-752). When both colors are in the same
-    * space, channels are compared directly. Otherwise, both are converted to
-    * xyz-d65 with missing channels treated as 0 (`toXyzNoMissing`).
+    * dart-sass: `same` (color.dart:714-752). When both colors are in the same space, channels are compared directly. Otherwise, both are converted to xyz-d65 with missing channels treated as 0
+    * (`toXyzNoMissing`).
     */
   private val sameFn: BuiltInCallable =
     BuiltInCallable.function(
@@ -1896,7 +1893,7 @@ object ColorFunctions {
         val color2 = args(1).assertColor(Nullable("color2"))
 
         /// Converts [color] to the xyz-d65 space without any missing channels.
-        def toXyzNoMissing(color: SassColor): SassColor = {
+        def toXyzNoMissing(color: SassColor): SassColor =
           if ((color.space eq ColorSpace.xyzD65) && !color.hasMissingChannel) {
             color
           } else if (color.space eq ColorSpace.xyzD65) {
@@ -1907,18 +1904,20 @@ object ColorFunctions {
             // channels to 0 without having to create new intermediate color
             // objects.
             color.space.convert(
-              ColorSpace.xyzD65, Nullable(color.channel0), Nullable(color.channel1),
-              Nullable(color.channel2), Nullable(color.alpha)
+              ColorSpace.xyzD65,
+              Nullable(color.channel0),
+              Nullable(color.channel1),
+              Nullable(color.channel2),
+              Nullable(color.alpha)
             )
           }
-        }
 
         val equal =
           if (color1.space eq color2.space) {
             fuzzyEquals(color1.channel0, color2.channel0) &&
-              fuzzyEquals(color1.channel1, color2.channel1) &&
-              fuzzyEquals(color1.channel2, color2.channel2) &&
-              fuzzyEquals(color1.alpha, color2.alpha)
+            fuzzyEquals(color1.channel1, color2.channel1) &&
+            fuzzyEquals(color1.channel2, color2.channel2) &&
+            fuzzyEquals(color1.alpha, color2.alpha)
           } else {
             toXyzNoMissing(color1) == toXyzNoMissing(color2)
           }

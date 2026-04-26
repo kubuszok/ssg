@@ -10,6 +10,10 @@
  *   Renames: comment.dart + modifiable/comment.dart -> CssComment.scala
  *   Convention: Dart abstract interface class -> Scala trait
  *   Idiom: isPreserved checks third character for '!' (index 2)
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/comment.dart, lib/src/ast/css/modifiable/comment.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

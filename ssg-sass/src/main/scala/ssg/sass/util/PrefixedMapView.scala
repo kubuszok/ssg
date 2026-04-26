@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: prefixed_map_view.dart → PrefixedMapView.scala
  *   Convention: Read-only map view adding prefix to keys
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/prefixed_map_view.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

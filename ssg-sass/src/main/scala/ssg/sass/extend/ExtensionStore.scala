@@ -19,6 +19,10 @@
  *          extendList / extendComplex / weaveExtension / substituteInComplex) is
  *          retained as backward-compat adapters until EvaluateVisitor is rewired
  *          to use the dart addExtension + addSelector API.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/extend/extension_store.dart, lib/src/extend/empty_extension_store.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -215,8 +219,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
 
   /** A map from SimpleSelectors to the specificity of their source selectors.
     *
-    * Uses identity semantics (like Dart's `Map.identity()`) so that only the exact
-    * instance stored during extension registration is matched during specificity lookup.
+    * Uses identity semantics (like Dart's `Map.identity()`) so that only the exact instance stored during extension registration is matched during specificity lookup.
     */
   private[extend] val _sourceSpecificity: mutable.Map[SimpleSelector, Int] =
     new java.util.IdentityHashMap[SimpleSelector, Int]().asScala
@@ -226,9 +229,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     * Uses identity semantics (like Dart's `Set.identity()`) so that structurally equal selectors from different rules are not confused.
     */
   private[extend] val _originals: mutable.Set[ComplexSelector] =
-    java.util.Collections.newSetFromMap(
-      new java.util.IdentityHashMap[ComplexSelector, java.lang.Boolean]()
-    ).asScala
+    java.util.Collections
+      .newSetFromMap(
+        new java.util.IdentityHashMap[ComplexSelector, java.lang.Boolean]()
+      )
+      .asScala
 
   // ---------------------------------------------------------------------------
   // Public API

@@ -106,7 +106,7 @@ final class CssParserSuite extends munit.FunSuite {
       Map("evil.css" -> "$oops: red; .a { color: $oops; }")
     )
     val source = """@use "evil.css";"""
-    val ex = intercept[SassRuntimeException] {
+    val ex     = intercept[SassRuntimeException] {
       Compile.compileString(source, importer = Nullable(importer))
     }
     assert(ex.sassMessage.contains("Sass variables aren't allowed in plain CSS"))

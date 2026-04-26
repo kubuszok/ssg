@@ -10,6 +10,10 @@
  *   Renames: utils.dart -> Utils.scala
  *   Convention: Top-level functions -> object methods
  *   Idiom: Some functions moved to CharCode/NumberUtil/MapUtil
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/utils.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

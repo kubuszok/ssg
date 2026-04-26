@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: import.dart + modifiable/import.dart -> CssImport.scala
  *   Convention: Dart abstract interface class -> Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/import.dart, lib/src/ast/css/modifiable/import.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

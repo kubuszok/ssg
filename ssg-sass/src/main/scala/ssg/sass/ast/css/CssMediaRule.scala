@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: media_rule.dart + modifiable/media_rule.dart -> CssMediaRule.scala
  *   Convention: Dart abstract interface class -> Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/media_rule.dart, lib/src/ast/css/modifiable/media_rule.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

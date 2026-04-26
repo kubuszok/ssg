@@ -11,6 +11,10 @@
  *   Convention: Dart final class -> Scala final class
  *   Idiom: Nullable singleSimple; lazy specificity/hasComplicatedSuperselectorSemantics;
  *          isSuperselector delegated to ExtendFunctions
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector/compound.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

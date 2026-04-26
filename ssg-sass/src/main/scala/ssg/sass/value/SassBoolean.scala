@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: boolean.dart → SassBoolean.scala
  *   Convention: Singleton true/false via companion object
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/boolean.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

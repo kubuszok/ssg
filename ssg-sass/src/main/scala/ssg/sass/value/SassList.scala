@@ -10,6 +10,10 @@
  *   Renames: list.dart → SassList.scala
  *   Convention: ListSeparator in separate file
  *   Idiom: Not final — SassArgumentList extends this
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/list.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -67,13 +71,10 @@ class SassList(
 
   /** CSS representation of this list.
     *
-    * dart-sass `Value.toCssString` delegates to `serializeValue(this, quote: quote)`,
-    * which dispatches to the serializer's `visitList` method. This ensures
-    * consistent blank-element filtering, bracket handling, and inspect-mode
-    * wrapping through a single code path.
+    * dart-sass `Value.toCssString` delegates to `serializeValue(this, quote: quote)`, which dispatches to the serializer's `visitList` method. This ensures consistent blank-element filtering, bracket
+    * handling, and inspect-mode wrapping through a single code path.
     *
-    * The override is needed because `Value.toCssString` passes `quote = true` by default
-    * but the `quote` parameter must be forwarded.
+    * The override is needed because `Value.toCssString` passes `quote = true` by default but the `quote` parameter must be forwarded.
     */
   override def toCssString(quote: Boolean = true): String =
     SerializeVisitor.serializeValue(this, quote = quote)

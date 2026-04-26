@@ -10,6 +10,10 @@
  *   Renames: value.dart -> CssValue.scala
  *   Convention: Dart final class -> Scala final case class (without auto-generated copy)
  *   Idiom: Value equality on the wrapped value only (not span)
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/value.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

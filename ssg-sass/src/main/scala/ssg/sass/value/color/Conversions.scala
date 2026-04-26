@@ -11,6 +11,10 @@
  *   Convention: Dart Float64List → Array[Double]
  *   Idiom: Top-level vals → object vals; all matrix constants preserved exactly
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/conversions.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

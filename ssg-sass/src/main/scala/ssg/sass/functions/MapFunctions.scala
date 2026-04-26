@@ -17,7 +17,7 @@
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 113
  * Covenant-baseline-loc: 372
- * Covenant-baseline-methods: getFn,setFn,mergeFn,removeFn,keysFn,valuesFn,hasKeyFn,deepMergeFn,deepRemoveFn,modify,deepMergeImpl,withName,module,global,restAfter,MapFunctions
+ * Covenant-baseline-methods: getFn,setFn,mergeFn,removeFn,keysFn,valuesFn,hasKeyFn,deepMergeFn,deepRemoveFn,modify,deepMergeImpl,module,global,restAfter,MapFunctions
  * Covenant-dart-reference: lib/src/functions/map.dart
  * Covenant-verified: 2026-04-08
  *

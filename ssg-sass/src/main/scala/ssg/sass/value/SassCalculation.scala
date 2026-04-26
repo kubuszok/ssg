@@ -15,6 +15,10 @@
  *          CalculationInterpolation ported as deprecated class;
  *          Dart List.unmodifiable → List (Scala Lists are immutable)
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/calculation.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -131,8 +135,7 @@ object SassCalculation {
       sb.append(" / 1").append(unit)
   }
 
-  /** Returns whether the right-hand operation of a calculation should be
-    * parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
+  /** Returns whether the right-hand operation of a calculation should be parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
     */
   private def parenthesizeCalculationRhs(
     outer: CalculationOperator,
@@ -140,22 +143,21 @@ object SassCalculation {
   ): Boolean = outer match {
     case CalculationOperator.DividedBy => true
     case CalculationOperator.Plus      => false
-    case _ => right == CalculationOperator.Plus || right == CalculationOperator.Minus
+    case _                             => right == CalculationOperator.Plus || right == CalculationOperator.Minus
   }
 
-  /** Wraps a calculation child in parens when necessary, matching dart-sass
-    * `_writeCalculationValue` parenthesization logic.
+  /** Wraps a calculation child in parens when necessary, matching dart-sass `_writeCalculationValue` parenthesization logic.
     */
   private def argumentToCssParenthesized(arg: Any, parentOp: CalculationOperator, isLeft: Boolean): String = {
     val needsParens = if (isLeft) {
       arg match {
         case op: CalculationOperation => op.operator.precedence < parentOp.precedence
-        case _                        => false
+        case _ => false
       }
     } else {
       arg match {
-        case op: CalculationOperation => parenthesizeCalculationRhs(parentOp, op.operator)
-        case n: SassNumber if parentOp == CalculationOperator.DividedBy =>
+        case op: CalculationOperation                                    => parenthesizeCalculationRhs(parentOp, op.operator)
+        case n:  SassNumber if parentOp == CalculationOperator.DividedBy =>
           if (n.value.isFinite) n.hasComplexUnits else n.hasUnits
         case _ => false
       }
@@ -718,8 +720,7 @@ object SassCalculation {
 
   /** Rounds half away from zero, matching Dart's `double.round()` semantics.
     *
-    * Dart: `(-1.5).round() == -2`, `(1.5).round() == 2`
-    * Java: `Math.round(-1.5) == -1`, `Math.round(1.5) == 2`
+    * Dart: `(-1.5).round() == -2`, `(1.5).round() == 2` Java: `Math.round(-1.5) == -1`, `Math.round(1.5) == 2`
     */
   private def _roundHalfAwayFromZero(x: Double): Double =
     if (x < 0) -math.round(-x).toDouble

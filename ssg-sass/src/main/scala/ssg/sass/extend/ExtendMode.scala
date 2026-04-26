@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: mode.dart -> ExtendMode.scala
  *   Convention: Dart enum -> Scala 3 enum extending java.lang.Enum
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/extend/mode.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

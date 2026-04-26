@@ -4,6 +4,9 @@
  *
  * Source span types for error reporting and source map generation.
  * Replaces Dart's `source_span` package (FileSpan, FileLocation, SourceFile).
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

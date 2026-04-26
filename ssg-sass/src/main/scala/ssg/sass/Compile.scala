@@ -12,6 +12,10 @@
  *   Idiom: Dart top-level functions -> Scala 3 object methods.
  *          NodeImporter / isBrowser branches omitted (no JS-specific API).
  *          Async variants omitted (synchronous only).
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/compile.dart, lib/src/compile_result.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

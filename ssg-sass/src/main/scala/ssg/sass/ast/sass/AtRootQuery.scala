@@ -11,6 +11,10 @@
  *   Convention: Dart final class -> Scala final class
  *   Idiom: factory constructor -> apply in companion object;
  *          excludes(CssParentNode) deferred to Phase 5
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/at_root_query.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

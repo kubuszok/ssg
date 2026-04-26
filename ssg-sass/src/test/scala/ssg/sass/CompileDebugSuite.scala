@@ -58,7 +58,7 @@ final class CompileDebugSuite extends munit.FunSuite {
 
   // RC-4: .sass newline inside function parens
   test("RC4: sass function call with newlines inside parens") {
-    val sass = "@use \"sass:list\"\na\n  b: list.append(\n    c d, e)\n"
+    val sass   = "@use \"sass:list\"\na\n  b: list.append(\n    c d, e)\n"
     val result = Compile.compileString(sass, syntax = Syntax.Sass)
     assert(result.css.contains("c d e"), s"css=${result.css}")
   }

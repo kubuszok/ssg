@@ -15,6 +15,10 @@
  *          / parent / pseudo / attribute, plus combinators ` `, `>`, `+`, `~`
  *          and comma-separated lists. Pseudo arguments and attribute bodies
  *          are kept as raw text.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/selector.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -331,7 +335,7 @@ class SelectorParser(
   }
 
   def parseCompoundSelector(): CompoundSelector = {
-    val simples      = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
+    val simples = scala.collection.mutable.ListBuffer.empty[SimpleSelector]
     // dart-sass selector.dart:217-221 / stylesheet.dart:4030-4038:
     // First simple uses default allowParent. Subsequent simples check
     // `_isSimpleSelectorStart` which only includes `&` in plain CSS mode
@@ -343,8 +347,10 @@ class SelectorParser(
     while (continueLoop) {
       val c = peek()
       if (c < 0) continueLoop = false
-      else if (isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '%' || c == '\\' || c == '|' ||
-        (c == '&' && (isFirst || _plainCss))) {
+      else if (
+        isNameStart(c) || c == '*' || c == '#' || c == '.' || c == '[' || c == ':' || c == '%' || c == '\\' || c == '|' ||
+        (c == '&' && (isFirst || _plainCss))
+      ) {
         val allowParentOverride = if (isFirst) None else if (_plainCss) Some(true) else None
         simples += parseSimpleSelector(allowParentOverride)
         isFirst = false
@@ -720,9 +726,8 @@ object SelectorParser {
   /** Pseudo-element selectors that take unadorned selectors as arguments. */
   val selectorPseudoElements: Set[String] = Set("slotted")
 
-  /** Messages produced by plainCss validation checks in the SelectorParser
-    * that should propagate even when parsing is lenient (tryParse).  These
-    * are *intentional* rejections, not "parser can't handle this" failures.
+  /** Messages produced by plainCss validation checks in the SelectorParser that should propagate even when parsing is lenient (tryParse). These are *intentional* rejections, not "parser can't handle
+    * this" failures.
     */
   private val _plainCssValidationMessages: Set[String] = Set(
     "Placeholder selectors aren't allowed in plain CSS.",
@@ -733,10 +738,8 @@ object SelectorParser {
 
   /** Parses [text] as a selector list. Returns `Nullable.Null` on parse error.
     *
-    * When [plainCss] is true, the parser enables plain-CSS validation checks.
-    * SassFormatException from those checks (`%name` selectors, parent
-    * selector suffixes, trailing combinators) are re-thrown instead of
-    * swallowed, so the user sees the intended error message.
+    * When [plainCss] is true, the parser enables plain-CSS validation checks. SassFormatException from those checks (`%name` selectors, parent selector suffixes, trailing combinators) are re-thrown
+    * instead of swallowed, so the user sees the intended error message.
     */
   def tryParse(text: String, plainCss: Boolean = false): Nullable[SelectorList] =
     try Nullable(new SelectorParser(text, plainCss = plainCss).parse())

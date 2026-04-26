@@ -11,6 +11,10 @@
  *   Convention: Dart final class with mixin -> Scala final class extending RecursiveStatementVisitor
  *   Idiom: Mutable Sets accumulated during traversal; result returned as
  *          immutable DependencyReport
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/find_dependencies.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

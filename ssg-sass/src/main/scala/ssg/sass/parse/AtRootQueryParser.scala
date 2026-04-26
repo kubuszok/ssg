@@ -10,6 +10,10 @@
  *   Renames: at_root_query.dart -> AtRootQueryParser.scala
  *   Idiom: Phase 11 — small text-based parser. Accepts the standard
  *          `(with: name name)` and `(without: name name)` forms.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/at_root_query.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -73,9 +77,8 @@ class AtRootQueryParser(
 
   /** Reads either an unquoted identifier or a quoted string value.
     *
-    * Dart-sass parses the @at-root query values as full Sass expressions, so
-    * `(without: "media")` resolves to `media` (quotes stripped). Our parser
-    * captures raw text, so we need to handle quoted values explicitly here.
+    * Dart-sass parses the @at-root query values as full Sass expressions, so `(without: "media")` resolves to `media` (quotes stripped). Our parser captures raw text, so we need to handle quoted
+    * values explicitly here.
     */
   private def readNameOrString(): String = {
     if (pos < text.length) {

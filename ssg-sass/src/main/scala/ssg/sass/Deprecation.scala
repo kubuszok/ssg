@@ -10,6 +10,10 @@
  *   Renames: deprecation.dart -> Deprecation.scala
  *   Convention: Dart enum -> Scala 3 enum; pub_semver -> Version case class
  *   Idiom: Version implements Ordered[Version] for semver comparison
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/deprecation.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

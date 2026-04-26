@@ -10,6 +10,10 @@
  *   Renames: recursive_selector.dart -> RecursiveSelectorVisitor.scala
  *   Convention: Dart mixin -> Scala trait extending SelectorVisitor[Unit]
  *   Idiom: Default impls recurse into nested selectors
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/recursive_selector.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

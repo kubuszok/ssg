@@ -10,6 +10,10 @@
  *   Renames: merged_map_view.dart → MergedMapView.scala
  *   Convention: Dart MapBase → Scala AbstractMap
  *   Idiom: Flattens nested MergedMapViews for O(1) access
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/merged_map_view.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

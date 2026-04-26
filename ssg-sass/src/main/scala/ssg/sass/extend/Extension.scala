@@ -11,6 +11,10 @@
  *   Convention: Dart final class -> Scala final class; List<T>? -> Nullable[List[T]]
  *   Idiom: _extension mutable slot kept as var; Extender uses reference-equality
  *          default; assertCompatibleMediaContext preserved
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/extend/extension.dart, lib/src/extend/merged_extension.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
