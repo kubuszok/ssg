@@ -7,6 +7,10 @@
  * Original source: jekyll-minifier lib/jekyll-minifier.rb
  * Original author: DigitalSparky
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 

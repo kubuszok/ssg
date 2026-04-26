@@ -15,6 +15,10 @@
  *   Renames: make_nested_lookup -> nested Map[String, Set[String]]
  *   Convention: Immutable Map/Set instead of JS predicate functions
  *   Idiom: Shared objectMethods list factored into val
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/native-objects.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

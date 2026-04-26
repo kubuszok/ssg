@@ -8,6 +8,10 @@
  *
  * Migration notes:
  *   Renames: liqp.exceptions → ssg.liquid.exceptions
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/exceptions/ExceededMaxIterationsException.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

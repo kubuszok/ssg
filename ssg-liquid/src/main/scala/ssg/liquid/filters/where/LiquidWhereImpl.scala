@@ -14,6 +14,10 @@
  *
  * Filter the elements of an array to those with a certain property value.
  * By default the target is any truthy value.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/LiquidWhereImpl.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

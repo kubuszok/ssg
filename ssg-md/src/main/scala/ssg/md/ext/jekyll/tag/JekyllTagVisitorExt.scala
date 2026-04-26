@@ -5,6 +5,10 @@
  * Ported from: flexmark-ext-jekyll-tag/src/main/java/com/vladsch/flexmark/ext/jekyll/tag/JekyllTagVisitorExt.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-jekyll-tag/src/main/java/com/vladsch/flexmark/ext/jekyll/tag/JekyllTagVisitorExt.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

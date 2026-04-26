@@ -13,6 +13,10 @@
  *   Renames: figure_out_scope -> figureOutScope, snake_case -> camelCase
  *   Convention: Mutable scope state, TreeWalker-based passes
  *   Idiom: boundary/break replaces JS return, mutable.Map/ArrayBuffer for scope state
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/scope.js (figure_out_scope, lines 204-481)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

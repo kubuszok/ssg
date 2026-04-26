@@ -17,6 +17,10 @@
  *     Core whitespace/comment/zero/hex passes are complete.
  *     See docs/architecture/jekyll-minifier-port.md.
  *   Audited: 2026-04-07 (minor_issues)
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (cssminify2 gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

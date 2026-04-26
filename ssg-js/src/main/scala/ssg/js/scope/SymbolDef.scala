@@ -12,6 +12,10 @@
  *   Renames: SymbolDef (unchanged), snake_case -> camelCase
  *   Convention: Mutable var fields, Any for polymorphic fields (fixed, singleUse)
  *   Idiom: Companion object holds next_id counter, boundary/break for early return
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/scope.js (SymbolDef class, lines 127-194)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

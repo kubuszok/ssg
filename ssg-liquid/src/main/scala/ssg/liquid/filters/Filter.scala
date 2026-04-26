@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.filters → ssg.liquid.filters
  *   Convention: Abstract class extending LValue
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Filter.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

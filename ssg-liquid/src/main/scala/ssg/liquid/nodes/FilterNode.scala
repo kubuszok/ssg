@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Convention: Removed ANTLR ParserRuleContext dependency — line/tokenStartIndex passed directly
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/FilterNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

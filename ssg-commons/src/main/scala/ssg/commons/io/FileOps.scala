@@ -6,6 +6,9 @@
  *
  * On JVM: delegates to java.nio.file.Files
  * On JS/Native: throws UnsupportedOperationException (no file system)
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package commons

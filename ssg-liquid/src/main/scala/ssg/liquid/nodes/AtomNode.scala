@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Idiom: Singleton sentinels as object vals
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/AtomNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

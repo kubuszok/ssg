@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Idiom: for-each with null check, static imports → companion object calls
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/BlockNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

@@ -12,6 +12,10 @@
  *   Renames: json-minify gem → ssg.minify.json.JsonMinifier
  *   Convention: Pure Scala 3, state-machine based, cross-platform
  *   Idiom: No external dependencies, handles // and block comments
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (json-minify gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

@@ -19,6 +19,10 @@
  *     inUseIds, fixed_ids -> fixedIds, var_defs_by_id -> varDefsById
  *   Convention: Object with methods, TreeWalker/TreeTransformer pattern matching
  *   Idiom: boundary/break instead of return, mutable.Map/Set for tracking
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/drop-unused.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

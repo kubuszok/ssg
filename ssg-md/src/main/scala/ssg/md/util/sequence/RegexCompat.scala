@@ -5,6 +5,9 @@
  * Cross-platform regex utilities. Scala Native's re2 engine does not support
  * \Q...\E literal quoting. These helpers manually escape regex metacharacters
  * so patterns compile identically on JVM, Scala.js, and Scala Native.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

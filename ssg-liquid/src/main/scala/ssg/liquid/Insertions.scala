@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp → ssg.liquid
  *   Idiom: Immutable map of Insertion instances
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/Insertions.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

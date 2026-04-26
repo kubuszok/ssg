@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp → ssg.liquid
  *   Idiom: Anonymous class → Scala inner class
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/RenderTransformerDefaultImpl.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

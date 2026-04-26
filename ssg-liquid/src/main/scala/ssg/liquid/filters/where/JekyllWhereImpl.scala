@@ -15,6 +15,10 @@
  * Based on:
  * https://github.com/jekyll/jekyll/blob/master/lib/jekyll/filters.rb
  * https://github.com/jekyll/jekyll/blob/master/test/test_filters.rb
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/JekyllWhereImpl.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

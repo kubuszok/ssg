@@ -13,6 +13,10 @@
  *     (reconstructPattern returns null, parsePart returns empty list).
  *     Ported faithfully — this class is only useful for its cached-pattern
  *     fallback inherited from BasicDateParser.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/date/FuzzyDateDateParser.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

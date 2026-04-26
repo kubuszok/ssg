@@ -10,6 +10,10 @@
  *   Renames: liqp → ssg.liquid
  *   Convention: Uses hand-written lexer/parser instead of ANTLR
  *   Idiom: Simplified API — parse returns Template, render returns String
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/Template.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

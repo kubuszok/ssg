@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast*, static -> isStatic (reserved keyword)
  *   Convention: `extends` -> `superClass` (reserved keyword)
  *   Idiom: computedKey() method on property nodes
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

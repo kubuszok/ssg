@@ -14,6 +14,9 @@
  * }}}
  *
  * Or use the pre-built adapter in the ssg aggregator module.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

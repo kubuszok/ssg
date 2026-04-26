@@ -213,11 +213,19 @@ jobs:
           echo "=== re-scale enforce shortcuts --covenanted ==="
           re-scale enforce shortcuts --covenanted
 
-      - name: enforce verify --all (hard gate)
+      - name: enforce verify --all (hard gate — no missing headers allowed)
         working-directory: ssg
         run: |
           echo "=== re-scale enforce verify --all ==="
-          re-scale enforce verify --all
+          OUTPUT=$(re-scale enforce verify --all 2>&1) || true
+          echo "$OUTPUT"
+          # Hard-fail if ANY file is missing a covenant header.
+          # "shortcuts introduced" failures are tracked by the skip-policy
+          # and enforced separately via `enforce shortcuts --covenanted`.
+          if echo "$OUTPUT" | grep -q "no covenant header"; then
+            echo "::error::Files missing covenant headers — see output above"
+            exit 1
+          fi
 
       - name: enforce stale-stubs (informational)
         working-directory: ssg

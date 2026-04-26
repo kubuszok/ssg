@@ -28,6 +28,10 @@
  *     mayThrowOnAccess with is_strict mode and additional cases (AstObject, AstExpansion,
  *     AstDot, enhanced AstSymbolRef), aborts with SwitchBranch/DefClass/ClassStaticBlock/If/Import.
  *   Audited: 2026-04-12 (pass)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/inference.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

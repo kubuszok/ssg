@@ -25,6 +25,10 @@
  *     is_const_symbol_short_than_init_value -> isConstSymbolShorterThanInitValue
  *   Convention: Object with methods, pattern matching instead of instanceof chains
  *   Idiom: boundary/break instead of return
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/inline.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

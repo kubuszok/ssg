@@ -10,6 +10,10 @@
  *   Renames: com.vladsch.flexmark.ext.enumerated.reference.internal → ssg.md.ext.enumerated.reference.internal
  *   Convention: Scala 3, Nullable[A], no return
  *   Idiom: match instead of switch, boundary/break for early exit
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-enumerated-reference/src/main/java/com/vladsch/flexmark/ext/enumerated/reference/internal/EnumeratedReferenceNodeFormatter.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

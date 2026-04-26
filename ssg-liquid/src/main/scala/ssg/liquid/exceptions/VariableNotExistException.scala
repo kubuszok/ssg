@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.exceptions → ssg.liquid.exceptions
  *   Idiom: val parameter instead of getter
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/exceptions/VariableNotExistException.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

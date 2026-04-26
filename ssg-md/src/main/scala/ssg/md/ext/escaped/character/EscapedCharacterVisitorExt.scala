@@ -5,6 +5,10 @@
  * Ported from: flexmark-ext-escaped-character/src/main/java/com/vladsch/flexmark/ext/escaped/character/EscapedCharacterVisitorExt.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-escaped-character/src/main/java/com/vladsch/flexmark/ext/escaped/character/EscapedCharacterVisitorExt.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

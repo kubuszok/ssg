@@ -9,6 +9,10 @@
  * Migration notes:
  *   Convention: Manual string processing instead of regex with (?s) DOTALL
  *               for cross-platform compatibility (Native lacks (?s) support)
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Strip_HTML.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

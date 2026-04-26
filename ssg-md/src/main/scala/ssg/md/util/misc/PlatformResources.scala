@@ -5,6 +5,9 @@
  * Cross-platform resource loading abstraction.
  * Delegates to PlatformResourcesImpl which has platform-specific implementations
  * in scalajvm/, scalajs/, and scalanative/ source directories.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

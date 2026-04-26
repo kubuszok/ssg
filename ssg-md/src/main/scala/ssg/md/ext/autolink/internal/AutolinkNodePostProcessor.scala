@@ -9,6 +9,10 @@
  * NOTE: The original used org.nibor.autolink for URL detection. This port uses
  * regex-based URL/email detection to avoid the external dependency, making it
  * cross-platform compatible (JVM, JS, Native).
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-autolink/src/main/java/com/vladsch/flexmark/ext/autolink/internal/AutolinkNodePostProcessor.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

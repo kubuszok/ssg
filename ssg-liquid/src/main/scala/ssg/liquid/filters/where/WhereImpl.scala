@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.filters.where → ssg.liquid.filters.where
  *   Convention: Abstract base for where filter implementations
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/WhereImpl.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

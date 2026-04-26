@@ -10,6 +10,10 @@
  *   Renames: liqp.antlr → ssg.liquid.antlr
  *   Convention: Java class → Scala class
  *   Idiom: Returns ResolvedSource(content, sourceName) instead of ANTLR CharStream
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/antlr/LocalFSNameResolver.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

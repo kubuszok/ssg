@@ -11,6 +11,10 @@
  *   Convention: Jekyll-specific URL filter
  *   Idiom: URI normalization with query/anchor split, error handling
  *   Audited: 2026-04-10 — ISS-099 fixed: full URI handling ported from Java
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Relative_Url.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

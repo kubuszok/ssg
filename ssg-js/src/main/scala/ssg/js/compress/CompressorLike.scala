@@ -16,6 +16,10 @@
  *   Renames: find_parent -> findParent, in_boolean_context -> inBooleanContext
  *   Convention: Trait with concrete defaults where possible
  *   Idiom: T | Null instead of undefined/null JS unions
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/index.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

@@ -13,6 +13,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: Mutable var fields, annotations as Int bitfield
  *   Idiom: ArrayBuffer for args/elements/expressions/segments
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

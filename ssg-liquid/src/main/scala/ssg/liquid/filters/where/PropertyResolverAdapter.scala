@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.filters.where → ssg.liquid.filters.where
  *   Convention: Java interface → Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/PropertyResolverAdapter.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

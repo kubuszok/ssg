@@ -9,6 +9,9 @@
  *   DEFAULT: Scans for {{ and {% delimiters, collecting plain text
  *   IN_TAG: Inside {{ }} or {% %}, tokenizes operators/identifiers/literals
  *   IN_RAW: Inside {% raw %}...{% endraw %}, collects raw text
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

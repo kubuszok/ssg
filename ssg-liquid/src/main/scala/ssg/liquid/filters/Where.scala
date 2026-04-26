@@ -23,6 +23,10 @@
  * The differ between them are in how they work with objects and arrays as second argument.
  * And this is rare usage case, and even more, java is not a ruby so we cannot implement
  * exact behavior for these edge cases.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Where.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

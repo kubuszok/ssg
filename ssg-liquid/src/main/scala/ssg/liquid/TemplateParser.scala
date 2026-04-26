@@ -13,6 +13,10 @@
  *   Breaking: Default flavor changed from LIQP to JEKYLL — SSG targets
  *     Jekyll-compatible sites. Users porting from raw liqp who relied on
  *     LIQP flavor semantics should explicitly set .withFlavor(Flavor.LIQP).
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/TemplateParser.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

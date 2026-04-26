@@ -7,6 +7,9 @@
  *
  * Builds LNode AST directly during parsing (no intermediate parse tree).
  * Grammar specification: original-src/liqp/src/main/antlr4/liquid/parser/v4/LiquidParser.g4
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

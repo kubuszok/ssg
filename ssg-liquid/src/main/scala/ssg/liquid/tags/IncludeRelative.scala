@@ -11,6 +11,10 @@
  *   Convention: Resolves includes relative to the current file's root folder
  *   Idiom: Overrides detectSource to resolve via context.getRootFolder()
  *   Audited: 2026-04-10 — ISS-102 fixed: uses getRootFolder() for path resolution
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/tags/IncludeRelative.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

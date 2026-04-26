@@ -27,6 +27,10 @@
  *   Convention: Object with methods, mutable ArrayBuffer manipulation
  *   Idiom: boundary/break instead of return, var CHANGED for iteration
  *   Audited: 2026-04-11 (pass)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/tighten-body.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

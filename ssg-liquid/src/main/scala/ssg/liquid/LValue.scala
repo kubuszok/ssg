@@ -11,6 +11,10 @@
  *   Convention: Abstract class → open class with companion object for statics
  *   Idiom: Pattern matching instead of instanceof chains
  *   Idiom: Temporal methods use runtime class checks to avoid java.time link errors on JS/Native
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/LValue.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

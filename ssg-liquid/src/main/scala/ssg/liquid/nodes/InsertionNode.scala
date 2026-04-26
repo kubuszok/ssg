@@ -8,6 +8,10 @@
  *
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/InsertionNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

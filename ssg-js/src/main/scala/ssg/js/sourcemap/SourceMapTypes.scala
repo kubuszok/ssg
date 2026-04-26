@@ -6,6 +6,10 @@
  *
  * Original source: @jridgewell/source-map (used by terser)
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: @jridgewell/source-map (used by terser)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

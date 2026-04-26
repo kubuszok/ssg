@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Idiom: Nullable Integer → Int with -1 sentinel
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/OutputNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

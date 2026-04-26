@@ -10,6 +10,10 @@
  *   Renames: liqp.tags → ssg.liquid.tags
  *   Convention: Uses NameResolver + Template.parse for template inclusion
  *   Idiom: detectSource hook for subclass override (IncludeRelative)
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/tags/Include.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

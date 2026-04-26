@@ -5,6 +5,10 @@
  * Ported from: flexmark-util-sequence/src/main/java/com/vladsch/flexmark/util/sequence/SequenceUtils.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-util-sequence/src/main/java/com/vladsch/flexmark/util/sequence/SequenceUtils.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

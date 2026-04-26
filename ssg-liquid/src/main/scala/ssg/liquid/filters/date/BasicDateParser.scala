@@ -10,6 +10,10 @@
  *   Renames: liqp.filters.date → ssg.liquid.filters.date
  *   Convention: Abstract Java class → abstract Scala class
  *   Idiom: Uses Nullable[ZonedDateTime] instead of null returns
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/date/BasicDateParser.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

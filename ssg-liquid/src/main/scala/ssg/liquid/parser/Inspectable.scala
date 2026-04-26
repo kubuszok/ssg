@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.parser → ssg.liquid.parser
  *   Convention: Java marker interface → Scala marker trait
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/parser/Inspectable.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

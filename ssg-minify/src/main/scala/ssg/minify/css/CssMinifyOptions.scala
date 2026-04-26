@@ -11,6 +11,10 @@
  * Migration notes:
  *   Renames: cssminify2 gem → ssg.minify.css.CssMinifier
  *   Convention: Immutable case class with sensible defaults
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (cssminify2 gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

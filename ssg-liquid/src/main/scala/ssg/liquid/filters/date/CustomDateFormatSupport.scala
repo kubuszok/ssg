@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.filters.date → ssg.liquid.filters.date
  *   Convention: Java interface → Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/date/CustomDateFormatSupport.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

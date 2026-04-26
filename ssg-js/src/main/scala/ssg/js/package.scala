@@ -7,6 +7,10 @@
  * Original source: terser lib/
  * Original author: Mihai Bazon
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 

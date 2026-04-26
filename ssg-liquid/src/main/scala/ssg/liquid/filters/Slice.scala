@@ -5,6 +5,10 @@
  * Ported from: liqp/src/main/java/liqp/filters/Slice.java
  * Original: Copyright (c) 2012 Bart Kiers
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Slice.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

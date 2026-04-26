@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Convention: Java interface → Scala trait
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/LNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

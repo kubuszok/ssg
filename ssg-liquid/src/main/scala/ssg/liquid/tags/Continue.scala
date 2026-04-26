@@ -8,6 +8,10 @@
  *
  * Migration notes:
  *   Renames: liqp.tags → ssg.liquid.tags
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/tags/Continue.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

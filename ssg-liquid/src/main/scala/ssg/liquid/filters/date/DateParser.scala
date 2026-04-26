@@ -11,6 +11,10 @@
  *     (renamed to avoid clash with ssg.liquid.parser.*)
  *   Convention: Static initializer → companion object val
  *   Idiom: toBeReplaced as immutable Map
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/date/Parser.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

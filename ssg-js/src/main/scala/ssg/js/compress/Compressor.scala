@@ -39,6 +39,10 @@
  *     optimizeDestructuring export check Const/Let.
  *   ISS-144: optimizeBlockStatement canExtractFromIfBlock AstUsing check.
  *   Audited: 2026-04-12 (minor_issues)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/index.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

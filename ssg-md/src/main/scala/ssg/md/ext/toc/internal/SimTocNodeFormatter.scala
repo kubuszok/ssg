@@ -10,6 +10,10 @@
  *   Renames: com.vladsch.flexmark.ext.toc.internal → ssg.md.ext.toc.internal
  *   Convention: Scala 3, Nullable[A], no return
  *   Idiom: match instead of switch, boundary/break for early exit
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-toc/src/main/java/com/vladsch/flexmark/ext/toc/internal/SimTocNodeFormatter.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

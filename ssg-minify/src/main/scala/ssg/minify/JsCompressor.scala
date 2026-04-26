@@ -8,6 +8,9 @@
  * full AST-based JavaScript minification via the Terser engine.
  * A basic fallback (ssg.minify.js.JsMinifier) is also available for
  * comment/whitespace removal without AST parsing.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

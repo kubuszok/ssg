@@ -10,6 +10,10 @@
  *   Renames: com.vladsch.flexmark.ext.attributes.internal → ssg.md.ext.attributes.internal
  *   Convention: Scala 3, Nullable[A], no return
  *   Idiom: match instead of switch, boundary/break for early exit
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-attributes/src/main/java/com/vladsch/flexmark/ext/attributes/internal/AttributesNodeFormatter.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

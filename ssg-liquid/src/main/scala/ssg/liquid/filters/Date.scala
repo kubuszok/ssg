@@ -10,6 +10,10 @@
  *   Renames: liqp.filters → ssg.liquid.filters
  *   Convention: Replaced strftime4j with custom strftime→DateTimeFormatter conversion
  *   Idiom: Cross-platform via scala-java-time polyfill
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Date.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

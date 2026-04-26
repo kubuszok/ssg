@@ -9,6 +9,9 @@
  * instead of case class extractors to avoid ClassCastException on
  * Scala Native (Native's Pattern class doesn't implement Serializable,
  * but NestedNone extends Product with Serializable as a case class).
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

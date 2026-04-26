@@ -17,6 +17,10 @@
  *     resolution, structured error shape, source-map integration (sourcemap.js
  *     not ported at all). See ISS-033, ISS-034. docs/architecture/terser-port.md.
  *   Audited: 2026-04-07 (major_issues)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/minify.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

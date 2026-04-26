@@ -10,6 +10,10 @@
  *   Renames: liqp.exceptions → ssg.liquid.exceptions
  *   Convention: Removed ANTLR-specific constructors (RecognitionException, ParserRuleContext)
  *   Idiom: Scala 3 class, val parameters instead of public fields
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/exceptions/LiquidException.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid
