@@ -203,10 +203,10 @@ final class ColorSpacesSuite extends munit.FunSuite {
     assertEquals(compileDecl(src), "color: lab(50% 20 -30)")
   }
 
-  test("e2e: color.mix(red, blue, $space: oklch) compiles to a non-muddy color") {
+  test("e2e: color.mix(red, blue, $method: oklch) compiles to a non-muddy color") {
     val src =
       """@use "sass:color";
-        |a { color: color.mix(rgb(255, 0, 0), rgb(0, 0, 255), $space: oklch); }""".stripMargin
+        |a { color: color.mix(rgb(255, 0, 0), rgb(0, 0, 255), $method: oklch); }""".stripMargin
     val css = Compile.compileString(src, ssg.sass.visitor.OutputStyle.Compressed).css
     // Must produce a color: declaration. The exact value depends on the
     // oklch midpoint serialized back through rgb; just assert it's a
