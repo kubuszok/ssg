@@ -10,6 +10,10 @@
  *   Renames: liqp → ssg.liquid
  *   Convention: Registry delegates to root context
  *   Idiom: incrementIterations uses registry like original
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/TemplateContext.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

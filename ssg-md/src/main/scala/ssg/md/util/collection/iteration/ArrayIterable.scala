@@ -5,6 +5,10 @@
  * Ported from: flexmark-util-collection/src/main/java/com/vladsch/flexmark/util/collection/iteration/ArrayIterable.java
  * Original: Copyright (c) 2015-2019 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-util-collection/src/main/java/com/vladsch/flexmark/util/collection/iteration/ArrayIterable.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

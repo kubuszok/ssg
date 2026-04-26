@@ -5,6 +5,10 @@
  * Ported from: liqp/src/main/java/liqp/filters/Escape.java
  * Original: Copyright (c) 2012 Bart Kiers
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Escape.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

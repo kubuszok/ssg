@@ -13,6 +13,10 @@
  *   Renames: SourceMap -> SourceMap (same)
  *   Convention: Class instead of generator function
  *   Idiom: Options case class instead of JS defaults() pattern
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/sourcemap.js (149 LOC)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

@@ -10,6 +10,10 @@
  *   Renames: com.vladsch.flexmark.util.misc → ssg.md.util.misc
  *   Convention: Scala 3, Nullable[A], no return
  *   Idiom: boundary/break for early exit
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/ArrayUtils.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

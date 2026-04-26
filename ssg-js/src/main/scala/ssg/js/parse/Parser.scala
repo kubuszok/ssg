@@ -13,6 +13,10 @@
  *   Convention: Mutable state as class vars, boundary/break for early return
  *   Idiom: embed_tokens pattern → embedTokens, JS constructor dispatch → match + new
  *   Audited: 2026-04-04
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/parse.js (parse function, lines 1100-3630)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

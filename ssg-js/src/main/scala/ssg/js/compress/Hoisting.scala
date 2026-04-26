@@ -20,6 +20,10 @@
  *   Convention: Object with methods taking AstScope as first parameter instead of
  *     DEFMETHOD on AST_Scope
  *   Idiom: boundary/break instead of return, mutable.Map instead of JS Map
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/index.js (lines 739-941)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

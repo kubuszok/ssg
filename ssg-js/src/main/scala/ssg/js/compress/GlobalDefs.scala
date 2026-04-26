@@ -17,6 +17,10 @@
  *     to_node -> toNode
  *   Convention: Method dispatch via pattern matching in TreeTransformer
  *   Idiom: boundary/break instead of return, Scala Map instead of JS object
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/global-defs.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

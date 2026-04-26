@@ -10,6 +10,10 @@
  *   Renames: liqp.antlr → ssg.liquid.antlr
  *   Convention: Java interface → Scala trait
  *   Idiom: Returns String content instead of ANTLR CharStream
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/antlr/NameResolver.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

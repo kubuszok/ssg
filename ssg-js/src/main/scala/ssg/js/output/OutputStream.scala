@@ -18,6 +18,10 @@
  *   Convention: PARENS dispatch -> pattern match in needsParens
  *   Idiom: StringBuilder replaces Rope; boundary/break replaces return
  *   Idiom: Source map support omitted (not needed for first version)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/output.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

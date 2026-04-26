@@ -11,6 +11,10 @@
  *   Breaking: Inner class renamed Emoji → EmojiData to avoid clash with
  *     the outer ssg.md.ext.emoji.Emoji node class. All references in
  *     EmojiResolvedShortcut and EmojiShortcuts updated accordingly.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiReference.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

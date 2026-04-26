@@ -16,6 +16,10 @@
  *     accessors for compatibility
  *   Convention: case class with default values instead of JS defaults() helper
  *   Idiom: sealed trait InlineLevel instead of boolean|int union
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/index.js (Compressor constructor)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

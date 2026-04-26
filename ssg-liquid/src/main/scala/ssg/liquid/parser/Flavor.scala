@@ -11,6 +11,10 @@
  *   Convention: Java enum → Scala 3 enum extending java.lang.Enum
  *   Idiom: Extensible configuration bundle — each flavor defines defaults
  *          that can be overridden via TemplateParser.Builder
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/parser/Flavor.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

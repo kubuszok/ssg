@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.filters → ssg.liquid.filters
  *   Idiom: Immutable map of Filter instances
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Filters.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

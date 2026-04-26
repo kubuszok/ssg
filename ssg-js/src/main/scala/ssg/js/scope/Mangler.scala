@@ -13,6 +13,10 @@
  *   Renames: mangle_names -> mangleNames, base54 -> Base54, snake_case -> camelCase
  *   Convention: object methods, boundary/break for labeled continues
  *   Idiom: ArrayBuffer for to_mangle list, mutable.Set for mangled_names
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/scope.js (mangle_names, base54, lines 696-1063)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

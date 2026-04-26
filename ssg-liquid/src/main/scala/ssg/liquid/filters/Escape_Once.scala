@@ -9,6 +9,10 @@
  * Migration notes:
  *   Convention: Replaced negative lookahead regex with manual scan
  *               for cross-platform compatibility (Native lacks lookahead)
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Escape_Once.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

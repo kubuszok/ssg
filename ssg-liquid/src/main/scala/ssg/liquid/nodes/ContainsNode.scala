@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *   Idiom: Java arrays/lists → Scala collections for internal conversion
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/nodes/ContainsNode.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

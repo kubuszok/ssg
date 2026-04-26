@@ -10,6 +10,10 @@
  *   Renames: liqp → ssg.liquid
  *   Idiom: Avoids toPlainString() which is broken on Scala Native.
  *          Uses manual formatting to avoid scientific notation.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/PlainBigDecimal.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

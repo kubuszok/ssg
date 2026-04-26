@@ -8,6 +8,10 @@
  *
  * Migration notes:
  *   Convention: Replaced look-behind regex with manual split for JS compatibility
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Split.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

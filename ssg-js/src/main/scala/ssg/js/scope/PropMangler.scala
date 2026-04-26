@@ -25,6 +25,10 @@
  *     should_mangle -> shouldMangle
  *   Convention: Object with methods, mutable.Set/Map for caches
  *   Idiom: TreeWalker/TreeTransformer, boundary/break instead of return
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/propmangle.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

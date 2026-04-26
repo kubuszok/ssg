@@ -12,6 +12,10 @@
  *   Renames: Jekyll::Compressor → ssg.minify.Minifier
  *   Convention: Stateless facade, pure functions
  *   Idiom: Delegates to HtmlMinifier, CssMinifier, JsMinifier, JsonMinifier
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

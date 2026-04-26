@@ -10,6 +10,10 @@
  * Original source: jekyll-minifier lib/jekyll-minifier.rb (htmlcompressor gem)
  * Original author: DigitalSparky
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (htmlcompressor gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

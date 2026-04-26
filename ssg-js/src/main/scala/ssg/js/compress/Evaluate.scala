@@ -21,6 +21,10 @@
  *   Gap: ISS-165 to ISS-175 edge cases fixed (hasSideEffects checks, HOP guard,
  *     regexp_source_fix, Object.prototype guard, BigInt **, Array/Number methods,
  *     regexp_is_safe, hasOwnProperty.call edge case)
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/evaluate.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

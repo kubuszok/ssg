@@ -13,6 +13,10 @@
  *
  * NOTE: LiquidSupportFromInspectable is in platform-specific directories (scala-jvm, scala-js, scala-native)
  * because reflection APIs are not available on JS/Native.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/parser/LiquidSupport.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

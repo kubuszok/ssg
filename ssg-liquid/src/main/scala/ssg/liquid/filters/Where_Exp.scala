@@ -10,6 +10,10 @@
  *   Renames: liqp.filters → ssg.liquid.filters
  *   Convention: Jekyll-specific filter. Uses Template.parse to evaluate
  *               the expression for each item.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Where_Exp.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

@@ -13,6 +13,10 @@
  *   Renames: makePredicate → Set[String], characters() → string.toSet
  *   Convention: Scala 3 vals, Set/Map instead of JS predicate functions
  *   Idiom: Character.isLetter / Character.getType for Unicode categories
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/parse.js (lines 177-261, 1087-1128)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

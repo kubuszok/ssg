@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.blocks → ssg.liquid.blocks
  *   Idiom: TablerowloopDrop inner class → companion object class
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/blocks/Tablerow.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

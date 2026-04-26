@@ -5,6 +5,10 @@
  * Ported from: flexmark-util-builder/src/main/java/com/vladsch/flexmark/util/builder/BuilderBase.java
  * Original: Copyright (c) 2016-2023 Vladimir Schneider
  * Original license: BSD-2-Clause
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: flexmark-util-builder/src/main/java/com/vladsch/flexmark/util/builder/BuilderBase.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package md

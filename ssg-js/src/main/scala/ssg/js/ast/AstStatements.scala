@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: Mutable var fields, T | Null for nullable
  *   Idiom: ArrayBuffer for body arrays
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

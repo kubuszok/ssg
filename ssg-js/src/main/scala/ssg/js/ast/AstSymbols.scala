@@ -13,6 +13,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: thedef typed as Any (scope analysis assigns SymbolDef)
  *   Idiom: Mutable var fields for scope analysis
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

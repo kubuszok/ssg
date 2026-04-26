@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: Mutable scope analysis fields (variables, enclosed, etc.)
  *   Idiom: mutable.Map for variables/globals, ArrayBuffer for enclosed
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

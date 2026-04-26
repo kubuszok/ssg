@@ -12,6 +12,10 @@
  *   Renames: tokenizer() closure → Tokenizer class, snake_case → camelCase internals
  *   Convention: Mutable state as class vars, boundary/break for early return
  *   Idiom: scala.util.boundary replaces JS return, ArrayBuffer replaces JS []
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/parse.js (tokenizer function, lines 260-1083)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

@@ -11,6 +11,10 @@
  * Migration notes:
  *   Renames: AST_Token → AstToken
  *   Convention: Mutable flags via bitfield, same as Terser
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js (AST_Token class)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

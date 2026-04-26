@@ -26,6 +26,10 @@
  *     make_empty_function -> makeEmptyFunction
  *   Convention: Pattern matching instead of instanceof chains
  *   Idiom: boundary/break instead of return
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/common.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

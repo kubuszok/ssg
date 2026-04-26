@@ -12,6 +12,10 @@
  *
  * Original source: @jridgewell/sourcemap-codec (used by terser via @jridgewell/source-map)
  * Original license: MIT
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: @jridgewell/sourcemap-codec (used by terser via @jridgewell/source-map)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

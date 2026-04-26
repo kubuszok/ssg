@@ -15,6 +15,10 @@
  *     key_size -> keySize, static_size -> staticSize, lambda_modifiers -> lambdaModifiers
  *   Convention: Object with pattern-matching dispatch instead of prototype methods
  *   Idiom: TreeWalker for tree walk with parent tracking
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/size.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

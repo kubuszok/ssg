@@ -23,6 +23,10 @@
  *     ref_once -> refOnce, is_immutable -> isImmutable
  *   Convention: ReduceVarsState class instead of patching TreeWalker prototype
  *   Idiom: boundary/break instead of return, mutable.Map for safe_ids
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/reduce-vars.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

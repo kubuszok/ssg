@@ -12,6 +12,10 @@
  *   Renames: terser gem → ssg.minify.js.JsMinifier (basic implementation)
  *   Convention: Immutable case class with sensible defaults
  *   Idiom: Full Terser port planned as separate ssg-js module
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (terser gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

@@ -15,6 +15,10 @@
  *     AST_* -> Ast*, _children_backwards -> childrenBackwards
  *   Convention: Object with pattern-matching dispatch instead of DEFMETHOD
  *   Idiom: ArrayBuffer stack for iterative tree walk
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/equivalent-to.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

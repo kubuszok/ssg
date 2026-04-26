@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: ArrayBuffer for definitions/imported_names/exported_names
  *   Idiom: T | Null for nullable fields
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

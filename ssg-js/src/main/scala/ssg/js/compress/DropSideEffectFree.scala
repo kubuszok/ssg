@@ -17,6 +17,10 @@
  *     drop_side_effect_free -> dropSideEffectFree
  *   Convention: Object with methods, pattern matching instead of DEFMETHOD
  *   Idiom: boundary/break instead of return, ArrayBuffer trimming
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/drop-side-effect-free.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

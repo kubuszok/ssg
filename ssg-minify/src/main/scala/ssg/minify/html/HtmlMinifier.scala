@@ -17,6 +17,10 @@
  *     (ISS-039). No built-in SSI/JSP/PHP/CDATA preserve presets (ISS-040).
  *     See docs/architecture/jekyll-minifier-port.md.
  *   Audited: 2026-04-07 (minor_issues)
+ *
+ * Covenant: full-port
+ * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb (htmlcompressor gem)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package minify

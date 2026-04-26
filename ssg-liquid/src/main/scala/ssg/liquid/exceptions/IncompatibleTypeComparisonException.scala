@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: liqp.exceptions → ssg.liquid.exceptions
  *   Idiom: Override getMessage as def
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/exceptions/IncompatibleTypeComparisonException.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

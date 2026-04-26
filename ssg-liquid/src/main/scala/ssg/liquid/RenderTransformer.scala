@@ -10,6 +10,10 @@
  *   Renames: liqp → ssg.liquid
  *   Convention: Java interfaces → Scala traits
  *   Idiom: FunctionalInterface → SAM trait
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/RenderTransformer.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

@@ -10,6 +10,10 @@
  *   Renames: liqp.filters.where → ssg.liquid.filters.where
  *   Convention: Java static singleton → Scala object
  *   Idiom: Default adapters for Inspectable and Map registered at init
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/PropertyResolverHelper.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

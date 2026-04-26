@@ -12,6 +12,10 @@
  *   Renames: OutputStream options object -> ssg.js.output.OutputOptions
  *   Convention: Immutable case class with JS-conventional defaults
  *   Idiom: snake_case options from JS -> camelCase in Scala
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/output.js (OutputStream options)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

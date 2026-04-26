@@ -12,6 +12,10 @@
  *   Renames: has_flag -> hasFlag, set_flag -> setFlag, clear_flag -> clearFlag
  *   Convention: Object with val constants instead of exported const
  *   Idiom: Bitwise operations on AstNode.flags field
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/compress/compressor-flags.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

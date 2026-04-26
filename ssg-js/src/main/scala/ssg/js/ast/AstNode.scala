@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast* (e.g., AST_Node -> AstNode)
  *   Convention: Mutable flags/scope fields, trait hierarchy
  *   Idiom: TreeWalker uses ArrayBuffer stack instead of JS array
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js

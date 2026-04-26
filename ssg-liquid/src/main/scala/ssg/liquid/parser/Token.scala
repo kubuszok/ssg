@@ -4,6 +4,9 @@
  *
  * Hand-written token types for the Liquid template language.
  * Replaces ANTLR-generated token vocabulary.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

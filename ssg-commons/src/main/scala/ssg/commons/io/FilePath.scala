@@ -6,6 +6,9 @@
  *
  * On JVM: wraps java.nio.file.Path with full file system access
  * On JS/Native: string-based paths with limited/no file system access
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package commons

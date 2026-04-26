@@ -11,6 +11,10 @@
  *   Convention: Replaced Jackson ObjectMapper with simple JSON serialization
  *
  * NOTE: Simple JSON serialization — no Jackson dependency.
+ *
+ * Covenant: full-port
+ * Covenant-java-reference: liqp/src/main/java/liqp/filters/Json.java
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package liquid

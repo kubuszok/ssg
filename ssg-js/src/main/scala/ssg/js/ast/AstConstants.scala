@@ -12,6 +12,10 @@
  *   Renames: AST_* -> Ast*
  *   Convention: RegExp value stored as RegExpValue(source, flags)
  *   Idiom: Atom nodes are leaf nodes with fixed values
+ *
+ * Covenant: full-port
+ * Covenant-js-reference: terser lib/ast.js
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package js
