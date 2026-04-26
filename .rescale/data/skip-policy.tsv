@@ -62,3 +62,87 @@ ssg-sass/src/main/scala/ssg/sass/util/MergedMapView.scala	shortcuts	(no reason)	
 ssg-sass/src/main/scala/ssg/sass/util/LimitedMapView.scala	shortcuts	(no reason)	2026-04-26	dev
 ssg-sass/src/main/scala/ssg/sass/util/UnprefixedMapView.scala	shortcuts	(no reason)	2026-04-26	dev
 ssg-sass/src/main/scala/ssg/sass/visitor/EvaluateVisitor.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/parse/Parser.scala	shortcuts	(no reason)	2026-04-26	dev
+52  null-cast               private var input:        Tokenizer             = null.asInstanceOf[Tokenizer] // @nowarn — set in parse	shortcuts	(no reason)	2026-04-26	dev
+120  null-cast               private def isToken	shortcuts	(no reason)	2026-04-26	dev
+123  null-cast               private def is	shortcuts	(no reason)	2026-04-26	dev
+158  null-cast               private def unexpected	shortcuts	(no reason)	2026-04-26	dev
+1689  simplified-comment      // Comment manipulation	shortcuts	(no reason)	2026-04-26	dev
+2687  null-cast               private def annotate[T <: AstNode]	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/Inference.scala	shortcuts	(no reason)	2026-04-26	dev
+1380  deferred-comment        // Visit only non-deferred class parts	shortcuts	(no reason)	2026-04-26	dev
+1408  deferred-comment        /** Walk non-deferred class parts	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/parse/Tokenizer.scala	shortcuts	(no reason)	2026-04-26	dev
+801  null-cast	shortcuts	(no reason)	2026-04-26	dev
+805  null-cast	shortcuts	(no reason)	2026-04-26	dev
+880  null-cast               def nextToken	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/ast/AstNode.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/Compressor.scala	shortcuts	(no reason)	2026-04-26	dev
+199  get-or-else-null        def getToplevel: AstToplevel | Null = toplevelNode.getOrElse	shortcuts	(no reason)	2026-04-26	dev
+582  simplified-comment      *   the optimized node	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/scope/ScopeAnalysis.scala	shortcuts	(no reason)	2026-04-26	dev
+391  hack                    // XXX: HACK! Ensure the switch expression gets the correct scope	shortcuts	(no reason)	2026-04-26	dev
+391  xxx                     // XXX: HACK! Ensure the switch expression gets the correct scope	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/formatter/internal/FormatControlProcessor.scala	shortcuts	(no reason)	2026-04-26	dev
+173  get-or-else-null        val lastChild = node.lastChild.getOrElse	shortcuts	(no reason)	2026-04-26	dev
+186  get-or-else-null        node = node.parent.getOrElse	shortcuts	(no reason)	2026-04-26	dev
+190  get-or-else-null        node = node.previous.getOrElse	shortcuts	(no reason)	2026-04-26	dev
+193  get-or-else-null        node = node.previous.getOrElse	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/TightenBody.scala	shortcuts	(no reason)	2026-04-26	dev
+1960  handled-below           // Return null to remove the node	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/DropUnused.scala	shortcuts	(no reason)	2026-04-26	dev
+310  deferred-comment        // If the class references itself	shortcuts	(no reason)	2026-04-26	dev
+846  null-cast               new SymbolDef	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/Hoisting.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/wikilink/WikiNode.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/autolink/internal/AutolinkNodePostProcessor.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/html/HtmlRenderer.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/emoji/internal/EmojiNodeFormatter.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/ast/AstSize.scala	shortcuts	(no reason)	2026-04-26	dev
+81  simplified-comment      /** Check if a node is first in statement position	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/builder/SegmentBuilderBase.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-liquid/src/main/scala/ssg/liquid/filters/Date.scala	shortcuts	(no reason)	2026-04-26	dev
+172  xxx                     if	shortcuts	(no reason)	2026-04-26	dev
+176  xxx                     } else if	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/format/MarkdownParagraph.scala	shortcuts	(no reason)	2026-04-26	dev
+167  get-or-else-null        val inTest: Boolean = SharedDataKeys.RUNNING_TESTS.get	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/parser/internal/DocumentParser.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/LineAppendableImpl.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/collection/OrderedMap.scala	shortcuts	(no reason)	2026-04-26	dev
+70  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+92  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/misc/BitFieldSet.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/Common.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/misc/Utils.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/format/MarkdownTable.scala	shortcuts	(no reason)	2026-04-26	dev
+505  get-or-else-null        fillMissingColumns	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/SegmentedSequenceFull.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/SequenceUtils.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ast/RefNode.scala	shortcuts	(no reason)	2026-04-26	dev
+175  null-cast               if	shortcuts	(no reason)	2026-04-26	dev
+ssg-liquid/src/main/scala/ssg/liquid/LValue.scala	shortcuts	(no reason)	2026-04-26	dev
+290  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-liquid/src/main/scala/ssg/liquid/filters/where/JekyllWhereImpl.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/scope/Mangler.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ast/HtmlEntity.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/formatter/internal/TranslationHandlerImpl.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/jekyll/tag/JekyllTag.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/collection/OrderedMultiMap.scala	shortcuts	(no reason)	2026-04-26	dev
+91  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/collection/MapEntry.scala	shortcuts	(no reason)	2026-04-26	dev
+28  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/typographic/TypographicQuotes.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/ast/Document.scala	shortcuts	(no reason)	2026-04-26	dev
+35  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/parser/core/HtmlBlockParser.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/DropSideEffectFree.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/tables/internal/TableNodeFormatter.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/ext/attributes/internal/AttributesNodeFormatter.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/Range.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-js/src/main/scala/ssg/js/compress/Evaluate.scala	shortcuts	(no reason)	2026-04-26	dev
+287  null-cast               compressor.evaluatedRegexps	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/html/RendererExtension.scala	shortcuts	(no reason)	2026-04-26	dev
+ssg-md/src/main/scala/ssg/md/util/sequence/Escaping.scala	shortcuts	(no reason)	2026-04-26	dev
+79  simplified-comment      /** Simplified Replacer that only handles String-based replacement	shortcuts	(no reason)	2026-04-26	dev
+ssg-liquid/src/main/scala/ssg/liquid/filters/date/CustomDateFormatRegistry.scala	shortcuts	(no reason)	2026-04-26	dev
+63  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
