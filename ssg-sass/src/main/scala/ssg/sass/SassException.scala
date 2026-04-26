@@ -65,7 +65,7 @@ class SassException(
     val sassStr       = new SassString(toString)
     val cssRepr       = sassStr.toCssString()
     val stringMessage = new StringBuilder()
-    var idx = 0
+    var idx           = 0
     while (idx < cssRepr.length) {
       val ch = cssRepr.charAt(idx)
       if (Character.isHighSurrogate(ch) && idx + 1 < cssRepr.length && Character.isLowSurrogate(cssRepr.charAt(idx + 1))) {
