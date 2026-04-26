@@ -14,6 +14,10 @@
  *   Idiom: FilesystemImporter is in src/main/scala-jvm (JVM only) since it
  *          requires java.nio.file. Cross-platform code should use NoOpImporter
  *          or construct their own implementation.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/importer.dart, lib/src/importer/filesystem.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -181,9 +185,9 @@ final class MapImporter(
           // Compute relative path from baseDir to the target URL.
           // Both are absolute paths; find the common prefix and add `..`
           // segments for each remaining component in baseDir.
-          val bdParts   = bd.stripSuffix("/").split("/").toList
-          val urlParts  = cleaned0.split("/").toList
-          var common    = 0
+          val bdParts  = bd.stripSuffix("/").split("/").toList
+          val urlParts = cleaned0.split("/").toList
+          var common   = 0
           while (common < bdParts.length && common < urlParts.length && bdParts(common) == urlParts(common)) common += 1
           val ups       = bdParts.length - common
           val remainder = urlParts.drop(common)

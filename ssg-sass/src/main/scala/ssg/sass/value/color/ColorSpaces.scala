@@ -15,6 +15,10 @@
  *   Idiom: Dart Float64List -> Array[Double]; Dart double? -> Nullable[Double];
  *          Dart null?.andThen -> Nullable map; Dart const -> val
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/space/{all 16 space files}.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

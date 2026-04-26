@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: interface/value.dart → ValueVisitor.scala
  *   Convention: Forward declaration — methods added as value types are ported
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/interface/value.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

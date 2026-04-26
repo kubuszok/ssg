@@ -11,6 +11,10 @@
  *   Convention: Dart top-level final maps -> Scala lazy val Maps
  *   Idiom: SassColor.rgb takes Nullable[Double], so int literals are converted via .toDouble
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/color_names.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

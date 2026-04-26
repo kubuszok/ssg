@@ -13,6 +13,10 @@
  *     CanonicalizeResult case class.
  *   Idiom: Dart's Map.putIfAbsent with lazy callback -> getOrElseUpdate;
  *     Dart Zone-based canonicalize context -> ImporterUtils.withCanonicalizeContext
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/import_cache.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

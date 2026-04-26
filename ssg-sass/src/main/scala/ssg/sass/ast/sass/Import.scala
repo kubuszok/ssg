@@ -13,6 +13,10 @@
  *   Convention: Dart abstract interface class -> Scala trait;
  *               Dart final class -> Scala final case class
  *   Idiom: Nullable for optional fields
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/import.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

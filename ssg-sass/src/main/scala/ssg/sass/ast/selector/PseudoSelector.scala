@@ -11,6 +11,10 @@
  *   Convention: Dart final class -> Scala final class
  *   Idiom: Nullable selector/argument; _isFakePseudoElement -> companion;
  *          charcode comparisons -> CharCode constants
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/selector/pseudo.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -173,8 +177,7 @@ final class PseudoSelector(
           // Port of dart-sass PseudoSelector.isSuperselector fallback:
           //   CompoundSelector([this], span)
           //       .isSuperselector(CompoundSelector([other], span))
-          new CompoundSelector(List(this), span)
-            .isSuperselector(new CompoundSelector(List(other), other.span))
+          new CompoundSelector(List(this), span).isSuperselector(new CompoundSelector(List(other), other.span))
       }
     }
 

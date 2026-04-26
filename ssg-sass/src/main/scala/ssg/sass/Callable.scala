@@ -11,6 +11,10 @@
  *   Renames: callable.dart -> Callable.scala (merged family)
  *   Convention: Skeleton — public API surface only
  *   Idiom: Scala 3 trait + concrete subclasses
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/callable.dart, lib/src/callable/built_in.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

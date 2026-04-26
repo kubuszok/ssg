@@ -15,6 +15,10 @@
  *     visitor records (genLine, genCol, srcIdx, srcLine, srcCol) per emitted
  *     declaration and serializes them as a VLQ-encoded "mappings" string in a
  *     v3 JSON object: {"version":3,"sources":[...],"names":[],"mappings":"..."}.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/serialize.dart (~1300 lines)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
@@ -24,7 +28,24 @@ import ssg.sass.{ ColorNames, MultiSpanSassException, MultiSpanSassScriptExcepti
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaQuery, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
 import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
 import ssg.sass.util.NumberUtil
-import ssg.sass.value.{ CalculationOperation, CalculationOperator, ColorFormat, ListSeparator, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, SpanColorFormat, Value }
+import ssg.sass.value.{
+  CalculationOperation,
+  CalculationOperator,
+  ColorFormat,
+  ListSeparator,
+  SassBoolean,
+  SassCalculation,
+  SassColor,
+  SassFunction,
+  SassList,
+  SassMap,
+  SassMixin,
+  SassNull,
+  SassNumber,
+  SassString,
+  SpanColorFormat,
+  Value
+}
 import ssg.sass.value.color.{ ColorSpace, LinearChannel }
 
 import scala.util.boundary
@@ -42,9 +63,9 @@ final case class SerializeResult(css: String, sourceMap: Nullable[String] = Null
 
 /** A visitor that converts a CSS AST into CSS text. */
 final class SerializeVisitor(
-  val style:     String = OutputStyle.Expanded,
-  val inspect:   Boolean = false,
-  val sourceMap: Boolean = false,
+  val style:         String = OutputStyle.Expanded,
+  val inspect:       Boolean = false,
+  val sourceMap:     Boolean = false,
   private val quote: Boolean = true
 ) extends CssVisitor[Unit] {
 
@@ -80,10 +101,10 @@ final class SerializeVisitor(
   private def isNodeInvisible(node: CssNode): Boolean = {
     if (inspect) return false
     node match {
-      case _: CssDeclaration => false
-      case _: CssImport      => false
-      case c: CssComment     => isCompressed && !c.isPreserved
-      case rule: CssStyleRule =>
+      case _:    CssDeclaration => false
+      case _:    CssImport      => false
+      case c:    CssComment     => isCompressed && !c.isPreserved
+      case rule: CssStyleRule   =>
         // A style rule is invisible if its selector is invisible (all complex
         // selectors contain placeholders or are bogus) OR if all children are
         // invisible. Matches dart-sass _IsInvisibleVisitor.visitCssStyleRule.
@@ -142,18 +163,10 @@ final class SerializeVisitor(
 
   /** Serialize the given stylesheet to CSS text.
     *
-    * If the output contains any non-ASCII code point, a charset prefix is
-    * prepended: `@charset "UTF-8";\n` in expanded mode, or the UTF-8 BOM
-    * (U+FEFF) in compressed mode. Mirrors dart-sass `serialize()` in
-    * lib/src/visitor/serialize.dart. The prefix is NOT tracked in the
-    * source map — dart-sass forwards a `prefix:` parameter to the
-    * SourceMapBuffer's `buildSourceMap` so the first real segment
-    * remains column-0; we approximate this by keeping the source-map
-    * segment table untouched when the prefix is emitted as expanded,
-    * since the prefix ends in a newline and the first real line is
-    * still line 1 in the emitted output. For compressed mode the BOM
-    * is a single char that does not move the column index in source
-    * maps (browsers treat it as a file-level byte marker).
+    * If the output contains any non-ASCII code point, a charset prefix is prepended: `@charset "UTF-8";\n` in expanded mode, or the UTF-8 BOM (U+FEFF) in compressed mode. Mirrors dart-sass
+    * `serialize()` in lib/src/visitor/serialize.dart. The prefix is NOT tracked in the source map — dart-sass forwards a `prefix:` parameter to the SourceMapBuffer's `buildSourceMap` so the first
+    * real segment remains column-0; we approximate this by keeping the source-map segment table untouched when the prefix is emitted as expanded, since the prefix ends in a newline and the first real
+    * line is still line 1 in the emitted output. For compressed mode the BOM is a single char that does not move the column index in source maps (browsers treat it as a file-level byte marker).
     */
   def serialize(node: CssStylesheet): SerializeResult = {
     buffer.clear()
@@ -183,7 +196,7 @@ final class SerializeVisitor(
   private def containsNonAscii(s: String): Boolean = {
     var i = 0
     while (i < s.length) {
-      if (s.charAt(i) > 0x7F) return true
+      if (s.charAt(i) > 0x7f) return true
       i += 1
     }
     false
@@ -304,14 +317,12 @@ final class SerializeVisitor(
   private def requiresSemicolon(node: CssNode): Boolean = node match {
     case p: CssParentNode => p.isChildless
     case _: CssComment    => false
-    case _                => true
+    case _ => true
   }
 
-  /** Whether [node] represents a trailing comment when it appears after
-    * [previous] in a sequence of nodes being serialized.
+  /** Whether [node] represents a trailing comment when it appears after [previous] in a sequence of nodes being serialized.
     *
-    * Note [previous] could be either a sibling of [node] or the parent of
-    * [node], with [node] being the first visible child.
+    * Note [previous] could be either a sibling of [node] or the parent of [node], with [node] being the first visible child.
     *
     * Port of dart-sass `_isTrailingComment` (serialize.dart:1733-1761).
     */
@@ -355,7 +366,7 @@ final class SerializeVisitor(
     buffer.append('{')
     var prePrevious: CssNode | Null = null
     var previous:    CssNode | Null = null
-    for (child <- children) {
+    for (child <- children)
       if (!isNodeInvisible(child)) {
         if (previous != null && requiresSemicolon(previous)) buffer.append(';')
         val precedent: CssNode | Null = if (previous != null) previous else parent
@@ -364,7 +375,7 @@ final class SerializeVisitor(
           // dart-sass uses _withoutIndentation so multi-line trailing comments
           // are not indented at the block level (serialize.dart:1694-1696).
           writeSpace()
-          withoutIndentation { child.accept(this) }
+          withoutIndentation(child.accept(this))
         } else {
           writeLine()
           // Note: dart-sass _visitChildren does NOT check isGroupEnd —
@@ -378,7 +389,6 @@ final class SerializeVisitor(
         prePrevious = previous
         previous = child
       }
-    }
     if (previous != null) {
       if (requiresSemicolon(previous) && !isCompressed) buffer.append(';')
       // Closing the block: write a line feed + outer indentation, unless
@@ -403,9 +413,7 @@ final class SerializeVisitor(
 
   /** Formats a value for emission in a declaration. Applies per-type customizations (color shorthand, named-color preference, compressed-mode number tweaks).
     *
-    * All known Value subtypes are dispatched explicitly. This avoids
-    * falling through to `v.toCssString()` which would re-enter
-    * `serializeValue` and infinite-loop.
+    * All known Value subtypes are dispatched explicitly. This avoids falling through to `v.toCssString()` which would re-enter `serializeValue` and infinite-loop.
     */
   private def formatValue(v: Value): String = v match {
     case c: SassColor       => formatColorDispatch(c)
@@ -420,13 +428,11 @@ final class SerializeVisitor(
     // dart-sass renders `null` as `"null"` in inspect mode (used by
     // `meta.inspect()`) and as an empty string in normal output, since
     // null values are filtered from declaration-value serialization.
-    case SassNull           => if (inspect) "null" else ""
-    case _                  => v.toString
+    case SassNull => if (inspect) "null" else ""
+    case _        => v.toString
   }
 
-  /** Public forwarder so the companion-object `serializeValue` entry
-    * point can reach the private formatter without exposing it to
-    * unrelated consumers.
+  /** Public forwarder so the companion-object `serializeValue` entry point can reach the private formatter without exposing it to unrelated consumers.
     */
   private[visitor] def formatValuePublic(v: Value): String = formatValue(v)
 
@@ -554,8 +560,7 @@ final class SerializeVisitor(
       sb.append(other.toString)
   }
 
-  /** Returns whether the right-hand operation of a calculation should be
-    * parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
+  /** Returns whether the right-hand operation of a calculation should be parenthesized. Ported from dart-sass `_parenthesizeCalculationRhs`.
     */
   private def parenthesizeCalculationRhs(
     outer: CalculationOperator,
@@ -563,7 +568,7 @@ final class SerializeVisitor(
   ): Boolean = outer match {
     case CalculationOperator.DividedBy => true
     case CalculationOperator.Plus      => false
-    case _ => right == CalculationOperator.Plus || right == CalculationOperator.Minus
+    case _                             => right == CalculationOperator.Plus || right == CalculationOperator.Minus
   }
 
   // ---------------------------------------------------------------------------
@@ -584,7 +589,7 @@ final class SerializeVisitor(
 
   /** Main color dispatch — matches dart-sass `visitColor`. */
   private def formatColorDispatch(c: SassColor): String = {
-    val space = c.space
+    val space     = c.space
     val noMissing = !c.isChannel0Missing && !c.isChannel1Missing &&
       !c.isChannel2Missing && !c.isAlphaMissing
 
@@ -615,22 +620,23 @@ final class SerializeVisitor(
       maybeWriteSlashAlpha(sb, c)
       sb.append(')')
       sb.toString()
-    } else if ((space eq ColorSpace.lab) || (space eq ColorSpace.lch) ||
-               (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)) {
+    } else if (
+      (space eq ColorSpace.lab) || (space eq ColorSpace.lch) ||
+      (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)
+    ) {
       formatLabLchColor(c)
     } else {
       writeColorFunction(c)
     }
   }
 
-  /** Dispatches lab/lch/oklab/oklch serialization: color-mix() for out-of-gamut,
-    * function syntax for in-gamut. Matches dart-sass visitColor cases 4-7.
+  /** Dispatches lab/lch/oklab/oklch serialization: color-mix() for out-of-gamut, function syntax for in-gamut. Matches dart-sass visitColor cases 4-7.
     */
   private def formatLabLchColor(c: SassColor): String = {
-    val space = c.space
-    val isOk = (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)
+    val space        = c.space
+    val isOk         = (space eq ColorSpace.oklab) || (space eq ColorSpace.oklch)
     val lightnessMax = if (isOk) 1.0 else 100.0
-    val polar = space.channels(2).isPolarAngle
+    val polar        = space.channels(2).isPolarAngle
 
     // Out-of-gamut conditions that need color-mix() (only when no missing channels)
     val lightnessOutOfGamut = !inspect &&
@@ -650,9 +656,7 @@ final class SerializeVisitor(
 
   /** Writes a legacy color in the shortest compatible format.
     *
-    * Unlike newer color spaces, the three legacy color spaces are interchangeable.
-    * We choose the shortest representation compatible with all browsers.
-    * Ported from dart-sass `_writeLegacyColor`.
+    * Unlike newer color spaces, the three legacy color spaces are interchangeable. We choose the shortest representation compatible with all browsers. Ported from dart-sass `_writeLegacyColor`.
     */
   private def writeLegacyColor(color: SassColor): String = boundary[String] {
     val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
@@ -674,19 +678,21 @@ final class SerializeVisitor(
         }
       }
 
-      val red = numberToString(rgb.channel0)
+      val red   = numberToString(rgb.channel0)
       val green = numberToString(rgb.channel1)
-      val blue = numberToString(rgb.channel2)
+      val blue  = numberToString(rgb.channel2)
 
-      val hsl = color.toSpace(ColorSpace.hsl)
-      val hue = numberToString(hsl.channel0)
+      val hsl        = color.toSpace(ColorSpace.hsl)
+      val hue        = numberToString(hsl.channel0)
       val saturation = numberToString(hsl.channel1)
-      val lightness = numberToString(hsl.channel2)
+      val lightness  = numberToString(hsl.channel2)
 
       val sb = new StringBuilder()
       // Add two characters for HSL for the %s on saturation and lightness.
-      if (red.length + green.length + blue.length <=
-          hue.length + saturation.length + lightness.length + 2) {
+      if (
+        red.length + green.length + blue.length <=
+          hue.length + saturation.length + lightness.length + 2
+      ) {
         sb.append(if (opaque) "rgb(" else "rgba(")
         sb.append(red)
         sb.append(',')
@@ -720,7 +726,7 @@ final class SerializeVisitor(
     if (color.format.isDefined) {
       color.format.get match {
         case ColorFormat.RgbFunction => break(writeRgb(color))
-        case span: SpanColorFormat  => break(span.original)
+        case span: SpanColorFormat => break(span.original)
       }
     }
 
@@ -735,10 +741,10 @@ final class SerializeVisitor(
       if (name.isDefined) break(name.get)
 
       if (canUseHex(rgb)) {
-        val redInt = rgb.channel0.round.toInt
+        val redInt   = rgb.channel0.round.toInt
         val greenInt = rgb.channel1.round.toInt
-        val blueInt = rgb.channel2.round.toInt
-        val sb = new StringBuilder()
+        val blueInt  = rgb.channel2.round.toInt
+        val sb       = new StringBuilder()
         sb.append('#')
         // dart-sass serialize.dart:820-825: expanded mode always uses
         // 6-digit hex. Short 3-digit form is only for compressed mode.
@@ -754,13 +760,12 @@ final class SerializeVisitor(
     if (color.space eq ColorSpace.hwb) writeHsl(color) else writeRgb(color)
   }
 
-  /** Writes color as `hsl(h, s%, l%)` or `hsla(h, s%, l%, a)`.
-    * Ported from dart-sass `_writeHsl`.
+  /** Writes color as `hsl(h, s%, l%)` or `hsla(h, s%, l%, a)`. Ported from dart-sass `_writeHsl`.
     */
   private def writeHsl(color: SassColor): String = {
     val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
-    val hsl = color.toSpace(ColorSpace.hsl)
-    val sb = new StringBuilder()
+    val hsl    = color.toSpace(ColorSpace.hsl)
+    val sb     = new StringBuilder()
     sb.append(if (opaque) "hsl(" else "hsla(")
     writeChannel(sb, Nullable(hsl.channel("hue")))
     sb.append(commaSeparator)
@@ -775,8 +780,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes color as `hwb(h w% b%)`. Only used in inspect mode.
-    * Ported from dart-sass `_writeHwb`.
+  /** Writes color as `hwb(h w% b%)`. Only used in inspect mode. Ported from dart-sass `_writeHwb`.
     */
   private def writeHwb(color: SassColor): String = {
     val sb = new StringBuilder()
@@ -797,13 +801,12 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes color as `rgb(r, g, b)` or `rgba(r, g, b, a)`.
-    * Ported from dart-sass `_writeRgb`.
+  /** Writes color as `rgb(r, g, b)` or `rgba(r, g, b, a)`. Ported from dart-sass `_writeRgb`.
     */
   private def writeRgb(color: SassColor): String = {
     val opaque = NumberUtil.fuzzyEquals(color.alpha, 1)
-    val rgb = color.toSpace(ColorSpace.rgb)
-    val sb = new StringBuilder()
+    val rgb    = color.toSpace(ColorSpace.rgb)
+    val sb     = new StringBuilder()
     sb.append(if (opaque) "rgb(" else "rgba(")
     writeChannel(sb, Nullable(rgb.channel("red")))
     sb.append(commaSeparator)
@@ -818,8 +821,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes lab/lch/oklab/oklch function syntax with relative color for edge cases.
-    * Ported from dart-sass `visitColor` case 7.
+  /** Writes lab/lch/oklab/oklch function syntax with relative color for edge cases. Ported from dart-sass `visitColor` case 7.
     */
   private def writeLabLchFunction(c: SassColor): String = {
     val sb = new StringBuilder()
@@ -830,9 +832,11 @@ final class SerializeVisitor(
 
     // Relative color syntax for out-of-bounds with missing channels
     // (color-mix can't represent `none`, so we fall back to relative syntax)
-    if (!inspect &&
-        (!NumberUtil.fuzzyInRange(c.channel0, 0, 100) ||
-          (polar && NumberUtil.fuzzyLessThan(c.channel1, 0)))) {
+    if (
+      !inspect &&
+      (!NumberUtil.fuzzyInRange(c.channel0, 0, 100) ||
+        (polar && NumberUtil.fuzzyLessThan(c.channel1, 0)))
+    ) {
       sb.append("from ")
       sb.append(if (isCompressed) "red" else "black")
       sb.append(' ')
@@ -855,8 +859,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes `color(space c1 c2 c3 / alpha)` for non-legacy, non-lab/lch spaces.
-    * Ported from dart-sass `_writeColorFunction`.
+  /** Writes `color(space c1 c2 c3 / alpha)` for non-legacy, non-lab/lch spaces. Ported from dart-sass `_writeColorFunction`.
     */
   private def writeColorFunction(color: SassColor): String = {
     val sb = new StringBuilder()
@@ -874,8 +877,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes `color-mix(in space, color(xyz-d65 ...) 100%, black)` for out-of-gamut
-    * lab/lch/oklab/oklch colors. Ported from dart-sass visitColor cases 4-6.
+  /** Writes `color-mix(in space, color(xyz-d65 ...) 100%, black)` for out-of-gamut lab/lch/oklab/oklch colors. Ported from dart-sass visitColor cases 4-6.
     */
   private def writeColorMix(c: SassColor): String = {
     val sb = new StringBuilder()
@@ -893,11 +895,10 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes a channel value, or `none` for missing. Ported from dart-sass `_writeChannel`.
-    * Non-finite values (NaN, Infinity) are wrapped in calc() via the SassNumber path,
-    * matching dart-sass behavior.
+  /** Writes a channel value, or `none` for missing. Ported from dart-sass `_writeChannel`. Non-finite values (NaN, Infinity) are wrapped in calc() via the SassNumber path, matching dart-sass
+    * behavior.
     */
-  private def writeChannel(sb: StringBuilder, ch: Nullable[Double], unit: Nullable[String] = Nullable.Null): Unit = {
+  private def writeChannel(sb: StringBuilder, ch: Nullable[Double], unit: Nullable[String] = Nullable.Null): Unit =
     if (ch.isEmpty) {
       sb.append("none")
     } else {
@@ -914,17 +915,15 @@ final class SerializeVisitor(
         sb.append(formatSassNumber(num))
       }
     }
-  }
 
   /** Writes `/ alpha` if alpha is not 1. Ported from dart-sass `_maybeWriteSlashAlpha`. */
-  private def maybeWriteSlashAlpha(sb: StringBuilder, color: SassColor): Unit = {
+  private def maybeWriteSlashAlpha(sb: StringBuilder, color: SassColor): Unit =
     if (!NumberUtil.fuzzyEquals(color.alpha, 1)) {
       writeOptionalSpace(sb)
       sb.append('/')
       writeOptionalSpace(sb)
       writeChannel(sb, color.alphaOrNull)
     }
-  }
 
   /** Appends a space to sb if not in compressed mode. */
   private def writeOptionalSpace(sb: StringBuilder): Unit =
@@ -942,24 +941,23 @@ final class SerializeVisitor(
   /** Whether [rgb] can be represented as a hexadecimal color. */
   private def canUseHex(rgb: SassColor): Boolean =
     canUseHexForChannel(rgb.channel0) &&
-    canUseHexForChannel(rgb.channel1) &&
-    canUseHexForChannel(rgb.channel2)
+      canUseHexForChannel(rgb.channel1) &&
+      canUseHexForChannel(rgb.channel2)
 
   /** Whether a channel's value can be represented as a two-character hex value. */
   private def canUseHexForChannel(channel: Double): Boolean =
     NumberUtil.fuzzyIsInt(channel) &&
-    NumberUtil.fuzzyGreaterThanOrEquals(channel, 0) &&
-    NumberUtil.fuzzyLessThan(channel, 256)
+      NumberUtil.fuzzyGreaterThanOrEquals(channel, 0) &&
+      NumberUtil.fuzzyLessThan(channel, 256)
 
-  /** If value can be written as a hex code or color name, writes the shortest
-    * form to sb and returns true. Otherwise writes nothing and returns false.
+  /** If value can be written as a hex code or color name, writes the shortest form to sb and returns true. Otherwise writes nothing and returns false.
     */
-  private def tryIntegerRgb(sb: StringBuilder, rgb: SassColor): Boolean = {
+  private def tryIntegerRgb(sb: StringBuilder, rgb: SassColor): Boolean =
     if (!canUseHex(rgb)) false
     else {
-      val redInt = rgb.channel0.round.toInt
+      val redInt   = rgb.channel0.round.toInt
       val greenInt = rgb.channel1.round.toInt
-      val blueInt = rgb.channel2.round.toInt
+      val blueInt  = rgb.channel2.round.toInt
       val shortHex = canUseShortHex(redInt, greenInt, blueInt)
       ColorNames.namesByColor.get(rgb) match {
         case Some(name) if name.length <= (if (shortHex) 4 else 7) =>
@@ -967,9 +965,9 @@ final class SerializeVisitor(
         case _ =>
           if (shortHex) {
             sb.append('#')
-            sb.append(hexCharFor(redInt & 0xF))
-            sb.append(hexCharFor(greenInt & 0xF))
-            sb.append(hexCharFor(blueInt & 0xF))
+            sb.append(hexCharFor(redInt & 0xf))
+            sb.append(hexCharFor(greenInt & 0xf))
+            sb.append(hexCharFor(blueInt & 0xf))
           } else {
             sb.append('#')
             writeHexComponent(sb, redInt)
@@ -979,19 +977,18 @@ final class SerializeVisitor(
       }
       true
     }
-  }
 
   /** Whether color can be represented as a short hex (e.g. `#fff`). */
   private def canUseShortHex(red: Int, green: Int, blue: Int): Boolean =
     isSymmetricalHex(red) && isSymmetricalHex(green) && isSymmetricalHex(blue)
 
   /** Whether a hex pair is symmetrical (e.g. `FF`). */
-  private def isSymmetricalHex(color: Int): Boolean = (color & 0xF) == (color >> 4)
+  private def isSymmetricalHex(color: Int): Boolean = (color & 0xf) == (color >> 4)
 
   /** Emits a color component as a two-character hex pair. */
   private def writeHexComponent(sb: StringBuilder, color: Int): Unit = {
     sb.append(hexCharFor(color >> 4))
-    sb.append(hexCharFor(color & 0xF))
+    sb.append(hexCharFor(color & 0xf))
   }
 
   /** Converts 0-15 to a hex character. */
@@ -1020,9 +1017,9 @@ final class SerializeVisitor(
   /// Folds newlines to a single space, collapses post-newline whitespace to a
   /// single space, and hex-escapes PUA characters in expanded mode.
   private def visitUnquotedString(string: String): String = {
-    val sb = new StringBuilder()
+    val sb           = new StringBuilder()
     var afterNewline = false
-    var i = 0
+    var i            = 0
     while (i < string.length) {
       val c = string.charAt(i)
       if (c == '\n') {
@@ -1067,8 +1064,8 @@ final class SerializeVisitor(
     while (i < text.length) {
       val c = text.charAt(i)
       c match {
-        case '\\'                       => sb.append("\\\\")
-        case _ if c == q                => sb.append('\\'); sb.append(c)
+        case '\\'                                      => sb.append("\\\\")
+        case _ if c == q                               => sb.append('\\'); sb.append(c)
         case _ if (c < 0x20 && c != '\t') || c == 0x7f =>
           // dart-sass serialize.dart:1393-1424 (_visitQuotedString): the
           // list of control characters that get hex-escaped explicitly
@@ -1108,16 +1105,16 @@ final class SerializeVisitor(
     if (isCompressed) return scala.None
 
     // BMP Private Use Area: U+E000-U+F8FF
-    if (codeUnit >= 0xE000 && codeUnit <= 0xF8FF) {
+    if (codeUnit >= 0xe000 && codeUnit <= 0xf8ff) {
       writeEscape(sb, codeUnit, string, i)
       return Some(i)
     }
 
     // High surrogate for Supplementary Private Use Areas:
     // U+DB80-U+DBFF (high surrogates for plane 15-16 PUA)
-    if (codeUnit >= 0xDB80 && codeUnit <= 0xDBFF && string.length > i + 1) {
-      val low = string.charAt(i + 1).toInt
-      val combined = ((codeUnit - 0xD800) << 10) + (low - 0xDC00) + 0x10000
+    if (codeUnit >= 0xdb80 && codeUnit <= 0xdbff && string.length > i + 1) {
+      val low      = string.charAt(i + 1).toInt
+      val combined = ((codeUnit - 0xd800) << 10) + (low - 0xdc00) + 0x10000
       writeEscape(sb, combined, string, i + 1)
       return Some(i + 1)
     }
@@ -1225,9 +1222,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Whether a nested list element needs to be wrapped in parentheses to
-    * disambiguate it from the outer list's separator. Port of dart-sass
-    * `_elementNeedsParens` in serialize.dart.
+  /** Whether a nested list element needs to be wrapped in parentheses to disambiguate it from the outer list's separator. Port of dart-sass `_elementNeedsParens` in serialize.dart.
     */
   private def elementNeedsParens(separator: ListSeparator, value: Value): Boolean = value match {
     case l: SassList =>
@@ -1263,23 +1258,20 @@ final class SerializeVisitor(
         s"(${formatValue(l)})"
       case _ => formatValue(v)
     }
-    val entries = m.contents.map { case (k, v) =>
-      s"${formatEntryPart(k)}:$kvSpacing${formatEntryPart(v)}"
-    }.mkString(sep)
+    val entries = m.contents
+      .map { case (k, v) =>
+        s"${formatEntryPart(k)}:$kvSpacing${formatEntryPart(v)}"
+      }
+      .mkString(sep)
     s"($entries)"
   }
 
   /** Formats a SassNumber for CSS output.
     *
-    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart):
-    * the numeric portion is written via [[writeNumberTo]] (the faithful port
-    * of `_writeNumber`), then the single numerator unit — if any — is
-    * appended. Non-finite values (Infinity/-Infinity/NaN) wrap into
-    * `calc(infinity * 1<unit>)` / `calc(-infinity * 1<unit>)` / `calc(NaN * 1<unit>)`
-    * matching dart-sass `visitCalculation` + `_writeCalculationValue` +
-    * `_writeCalculationUnits`. Complex units (multi-numerator or any
-    * denominator) use the same calc wrapping so the output is a valid
-    * first-class CSS calc() expression.
+    * Ported from dart-sass `_SerializeVisitor.visitNumber` (serialize.dart): the numeric portion is written via [[writeNumberTo]] (the faithful port of `_writeNumber`), then the single numerator unit
+    * — if any — is appended. Non-finite values (Infinity/-Infinity/NaN) wrap into `calc(infinity * 1<unit>)` / `calc(-infinity * 1<unit>)` / `calc(NaN * 1<unit>)` matching dart-sass
+    * `visitCalculation` + `_writeCalculationValue` + `_writeCalculationUnits`. Complex units (multi-numerator or any denominator) use the same calc wrapping so the output is a valid first-class CSS
+    * calc() expression.
     */
   private def formatSassNumber(n: SassNumber): String = {
     // dart-sass serialize.dart:1108-1112 — slash-separated numbers emit
@@ -1296,17 +1288,11 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Wraps a non-finite SassNumber (Infinity / -Infinity / NaN) in a CSS
-    * `calc(...)` expression, mirroring dart-sass
-    * `_writeCalculationValue` for the `SassNumber(value: double(isFinite:
-    * false))` branch.
+  /** Wraps a non-finite SassNumber (Infinity / -Infinity / NaN) in a CSS `calc(...)` expression, mirroring dart-sass `_writeCalculationValue` for the `SassNumber(value: double(isFinite: false))`
+    * branch.
     *
-    * Examples (expanded mode):
-    *   Infinity unitless   -> `calc(infinity)`
-    *   -Infinity unitless  -> `calc(-infinity)`
-    *   NaN unitless        -> `calc(NaN)`
-    *   Infinity px         -> `calc(infinity * 1px)`
-    *   NaN em / s          -> `calc(NaN * 1em / 1s)`
+    * Examples (expanded mode): Infinity unitless -> `calc(infinity)` -Infinity unitless -> `calc(-infinity)` NaN unitless -> `calc(NaN)` Infinity px -> `calc(infinity * 1px)` NaN em / s ->
+    * `calc(NaN * 1em / 1s)`
     */
   private def formatNonFiniteNumber(n: SassNumber): String = {
     val sb = new StringBuilder()
@@ -1320,9 +1306,7 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Wraps a finite SassNumber with complex units (multi-numerator or any
-    * denominator) in a `calc(...)` expression. Mirrors dart-sass
-    * `visitCalculation` + `_writeCalculationValue` for the
+  /** Wraps a finite SassNumber with complex units (multi-numerator or any denominator) in a `calc(...)` expression. Mirrors dart-sass `visitCalculation` + `_writeCalculationValue` for the
     * `SassNumber(hasComplexUnits: true)` branch.
     */
   private def formatComplexUnitNumber(n: SassNumber): String = {
@@ -1340,14 +1324,10 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>`
-    * factors inside a `calc(...)` expression. Port of dart-sass
-    * `_writeCalculationUnits`.
+  /** Appends numerator / denominator units as ` * 1<unit>` / ` / 1<unit>` factors inside a `calc(...)` expression. Port of dart-sass `_writeCalculationUnits`.
     *
-    * In compressed mode the spaces around `*` / `/` are dropped unless the
-    * expression would become ambiguous (dart-sass only drops the space
-    * around `*` for compression; `/` is always surrounded to avoid the
-    * plain CSS division parse).
+    * In compressed mode the spaces around `*` / `/` are dropped unless the expression would become ambiguous (dart-sass only drops the space around `*` for compression; `/` is always surrounded to
+    * avoid the plain CSS division parse).
     */
   private def appendCalculationUnits(
     sb:               StringBuilder,
@@ -1355,12 +1335,10 @@ final class SerializeVisitor(
     denominatorUnits: List[String]
   ): Unit = {
     val space = if (isCompressed) "" else " "
-    for (unit <- numeratorUnits) {
+    for (unit <- numeratorUnits)
       sb.append(space).append('*').append(space).append('1').append(unit)
-    }
-    for (unit <- denominatorUnits) {
+    for (unit <- denominatorUnits)
       sb.append(space).append('/').append(space).append('1').append(unit)
-    }
   }
 
   /** Writes `number` to `sb` without exponent notation and with at most `SassNumber.precision` digits after the decimal point.
@@ -1507,7 +1485,7 @@ final class SerializeVisitor(
     // siblings emit a line feed (or trailing-comment space), and an extra
     // line feed when the previous sibling has `isGroupEnd == true`.
     var previous: CssNode | Null = null
-    for (child <- node.children) {
+    for (child <- node.children)
       if (!isNodeInvisible(child)) {
         if (previous != null) {
           if (requiresSemicolon(previous)) buffer.append(';')
@@ -1527,7 +1505,6 @@ final class SerializeVisitor(
         previous = child
         child.accept(this)
       }
-    }
     if (previous != null && requiresSemicolon(previous) && !isCompressed) {
       buffer.append(';')
     }
@@ -1561,14 +1538,12 @@ final class SerializeVisitor(
     sb.toString()
   }
 
-  /** Writes a list of complex selectors to [sb], using proper comma/line-break
-    * formatting matching dart-sass `visitSelectorList` (serialize.dart:1603-1623).
+  /** Writes a list of complex selectors to [sb], using proper comma/line-break formatting matching dart-sass `visitSelectorList` (serialize.dart:1603-1623).
     *
     * Separators between complex selectors follow the dart-sass rules:
-    * - comma is always emitted
-    * - in expanded mode: if the next complex selector has `lineBreak == true`,
-    *   emit a newline + current indentation; otherwise emit a single space
-    * - in compressed mode: no separator beyond the comma
+    *   - comma is always emitted
+    *   - in expanded mode: if the next complex selector has `lineBreak == true`, emit a newline + current indentation; otherwise emit a single space
+    *   - in compressed mode: no separator beyond the comma
     */
   private def writeSelectorListTo(sb: StringBuilder, complexes: Seq[ComplexSelector]): Unit = {
     var first = true
@@ -1634,19 +1609,14 @@ final class SerializeVisitor(
     }
   }
 
-  /** Writes a compound selector to [sb], filtering out invisible components
-    * from pseudo-selector arguments.
+  /** Writes a compound selector to [sb], filtering out invisible components from pseudo-selector arguments.
     *
-    * Mirrors dart-sass `visitCompoundSelector` / `visitPseudoSelector` in
-    * lib/src/visitor/serialize.dart: if a pseudo-selector's inner selector
-    * list contains `%name` selectors, those are filtered out. If `:not()`
-    * has an entirely invisible inner selector, the whole `:not()` is omitted
-    * (semantically equivalent to `*`). If the compound ends up empty after
-    * filtering, `*` is emitted.
+    * Mirrors dart-sass `visitCompoundSelector` / `visitPseudoSelector` in lib/src/visitor/serialize.dart: if a pseudo-selector's inner selector list contains `%name` selectors, those are filtered
+    * out. If `:not()` has an entirely invisible inner selector, the whole `:not()` is omitted (semantically equivalent to `*`). If the compound ends up empty after filtering, `*` is emitted.
     */
   private def writeCompoundSelectorTo(sb: StringBuilder, compound: ssg.sass.ast.selector.CompoundSelector): Unit = {
     val start = sb.length
-    for (simple <- compound.components) {
+    for (simple <- compound.components)
       simple match {
         case pseudo: ssg.sass.ast.selector.PseudoSelector if pseudo.selector.isDefined =>
           val innerSel = pseudo.selector.get
@@ -1688,18 +1658,14 @@ final class SerializeVisitor(
         case _ =>
           sb.append(simple.toString)
       }
-    }
     // dart-sass: if we emit an empty compound, it's because all components got
     // optimized out because they match all selectors, so we emit `*`.
     if (sb.length == start) sb.append('*')
   }
 
-  /** Writes an attribute selector to [sb] matching dart-sass
-    * `visitAttributeSelector` (serialize.dart:1532-1551).
+  /** Writes an attribute selector to [sb] matching dart-sass `visitAttributeSelector` (serialize.dart:1532-1551).
     *
-    * Uses `Parser.isIdentifier` to decide whether the value can be emitted
-    * bare or needs quoting via `visitQuotedString`. Values starting with `--`
-    * are always quoted for IE11 compatibility.
+    * Uses `Parser.isIdentifier` to decide whether the value can be emitted bare or needs quoting via `visitQuotedString`. Values starting with `--` are always quoted for IE11 compatibility.
     */
   private def writeAttributeSelectorTo(sb: StringBuilder, attribute: ssg.sass.ast.selector.AttributeSelector): Unit = {
     sb.append('[')
@@ -1707,10 +1673,12 @@ final class SerializeVisitor(
     if (attribute.value.isDefined) {
       val value = attribute.value.get
       sb.append(attribute.op.get.text)
-      if (ssg.sass.parse.Parser.isIdentifier(value) &&
-          // Emit identifiers that start with `--` with quotes, because IE11
-          // doesn't consider them to be valid identifiers.
-          !value.startsWith("--")) {
+      if (
+        ssg.sass.parse.Parser.isIdentifier(value) &&
+        // Emit identifiers that start with `--` with quotes, because IE11
+        // doesn't consider them to be valid identifiers.
+        !value.startsWith("--")
+      ) {
         sb.append(value)
         if (attribute.modifier.isDefined) sb.append(' ')
       } else {
@@ -1749,7 +1717,7 @@ final class SerializeVisitor(
       // value text (e.g., ` #ff0066`), so no extra space is added here.
       val raw = node.value.value match {
         case s: SassString => s.text
-        case other         => other.toCssString()
+        case other => other.toCssString()
       }
       if (isCompressed) writeFoldedCustomPropertyValue(raw)
       else writeReindentedCustomPropertyValue(raw, node.name.span)
@@ -1759,9 +1727,9 @@ final class SerializeVisitor(
       // dart-sass serialize.dart:376-398: wraps value serialization in try/catch,
       // converting SassScriptException (which has no span) to SassException
       // (with the declaration value's span).
-      try {
+      try
         buffer.append(formatValue(node.value.value))
-      } catch {
+      catch {
         case error: MultiSpanSassScriptException =>
           throw MultiSpanSassException(
             error.sassMessage,
@@ -1798,9 +1766,8 @@ final class SerializeVisitor(
         buffer.append(' ')
         i += 1
         // Skip following whitespace.
-        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r')) {
+        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r'))
           i += 1
-        }
       }
     }
   }
@@ -1838,7 +1805,7 @@ final class SerializeVisitor(
     var min   = Int.MaxValue
     var saw   = false
     var atEol = true
-    while (i < len) {
+    while (i < len)
       if (atEol) {
         // After a newline: count leading whitespace.
         i += 1 // skip the '\n'
@@ -1862,24 +1829,22 @@ final class SerializeVisitor(
         while (i < len && text.charAt(i) != '\n') i += 1
         atEol = true
       }
-    }
     if (!saw) -1 else min
   }
 
   /** Like `String.trimRight`, but only trims ASCII whitespace.
     *
-    * If `excludeEscape` is `true`, this doesn't trim whitespace included in a CSS
-    * escape (i.e. if the last non-whitespace character is a backslash, the
-    * immediately following whitespace character is preserved as part of the
-    * escape sequence). Ported from dart-sass `trimAsciiRight` / `_lastNonWhitespace`
-    * in utils.dart.
+    * If `excludeEscape` is `true`, this doesn't trim whitespace included in a CSS escape (i.e. if the last non-whitespace character is a backslash, the immediately following whitespace character is
+    * preserved as part of the escape sequence). Ported from dart-sass `trimAsciiRight` / `_lastNonWhitespace` in utils.dart.
     */
   private def trimRight(s: String, excludeEscape: Boolean): String = {
     var end = s.length
-    while (end > 0 && {
-      val c = s.charAt(end - 1)
-      c == ' ' || c == '\t' || c == '\n' || c == '\r'
-    }) end -= 1
+    while (
+      end > 0 && {
+        val c = s.charAt(end - 1)
+        c == ' ' || c == '\t' || c == '\n' || c == '\r'
+      }
+    ) end -= 1
     // dart-sass _lastNonWhitespace: if excludeEscape is true and the last
     // non-whitespace char is a backslash (not at position 0 or s.length-1),
     // include one trailing whitespace char as part of the escape sequence.
@@ -1999,11 +1964,13 @@ final class SerializeVisitor(
     // Space after @media: in compressed mode, only emit when the first
     // query has a modifier, type, or a single "(not ...)" condition.
     val firstQuery = node.queries.head
-    if (!isCompressed ||
-        firstQuery.modifier.isDefined ||
-        firstQuery.type_.isDefined ||
-        (firstQuery.conditions.length == 1 &&
-            firstQuery.conditions.head.startsWith("(not "))) {
+    if (
+      !isCompressed ||
+      firstQuery.modifier.isDefined ||
+      firstQuery.type_.isDefined ||
+      (firstQuery.conditions.length == 1 &&
+        firstQuery.conditions.head.startsWith("(not "))
+    ) {
       buffer.append(' ')
     }
     var first = true
@@ -2032,8 +1999,8 @@ final class SerializeVisitor(
       val cond = query.conditions.head
       buffer.append(cond.substring("(not ".length, cond.length - 1))
     } else {
-      val operator = if (query.conjunction) "and" else "or"
-      val sep = if (isCompressed) s"$operator " else s" $operator "
+      val operator  = if (query.conjunction) "and" else "or"
+      val sep       = if (isCompressed) s"$operator " else s" $operator "
       var firstCond = true
       for (cond <- query.conditions) {
         if (!firstCond) buffer.append(sep)
@@ -2113,14 +2080,10 @@ object SerializeVisitor {
   def serializeCompressed(node: CssStylesheet): SerializeResult =
     new SerializeVisitor(style = OutputStyle.Compressed).serialize(node)
 
-  /** Convert a [[Value]] to its CSS text form using the same formatting
-    * rules the full stylesheet serializer uses for declarations.
+  /** Convert a [[Value]] to its CSS text form using the same formatting rules the full stylesheet serializer uses for declarations.
     *
-    * When `inspect = true`, matches dart-sass's `serializeValue(v,
-    * inspect: true)` entry point used by `meta.inspect()`: nested lists
-    * get their separator-preserving parentheses, empty lists render as
-    * `()`, single-element comma lists as `(x,)`, colors use inspect
-    * representation, etc.
+    * When `inspect = true`, matches dart-sass's `serializeValue(v, inspect: true)` entry point used by `meta.inspect()`: nested lists get their separator-preserving parentheses, empty lists render as
+    * `()`, single-element comma lists as `(x,)`, colors use inspect representation, etc.
     *
     * Ported from dart-sass `serializeValue` in serialize.dart.
     */

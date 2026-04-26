@@ -10,6 +10,10 @@
  * Migration notes:
  *   Renames: result.dart -> ImporterResult.scala (merged)
  *   Convention: Skeleton — Uri modeled as String
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/importer/result.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

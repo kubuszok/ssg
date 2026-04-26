@@ -4,6 +4,9 @@
  *
  * Character code constants and classification utilities for Sass parsing.
  * Replaces Dart's `charcode` package and `util/character.dart`.
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

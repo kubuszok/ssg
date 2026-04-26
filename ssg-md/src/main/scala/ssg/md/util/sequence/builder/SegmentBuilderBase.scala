@@ -25,9 +25,8 @@ abstract class SegmentBuilderBase[S <: SegmentBuilderBase[S]] protected (
 
   val options: Int = _options & (F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
 
-  protected def this() = {
+  protected def this() =
     this(F_INCLUDE_ANCHORS /*| F_TRACK_FIRST256*/ )
-  }
 
   protected var parts:       Array[Int] = SegmentBuilderBase.EMPTY_PARTS
   protected var partsSize:   Int        = 0

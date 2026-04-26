@@ -10,6 +10,10 @@
  *   Renames: at_rule.dart + modifiable/at_rule.dart -> CssAtRule.scala
  *   Convention: Dart abstract interface class -> Scala trait
  *   Idiom: childless parameter renamed from positional to named
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/at_rule.dart, lib/src/ast/css/modifiable/at_rule.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

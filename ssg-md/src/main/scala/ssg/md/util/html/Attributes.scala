@@ -24,13 +24,11 @@ class Attributes(other: Nullable[Attributes]) {
       Nullable.empty
     }
 
-  def this() = {
+  def this() =
     this(Nullable.empty[Attributes])
-  }
 
-  def this(attrs: Attributes) = {
+  def this(attrs: Attributes) =
     this(Nullable(attrs))
-  }
 
   def toMutable: MutableAttributes =
     new MutableAttributes(this)

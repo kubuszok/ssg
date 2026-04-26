@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: unprefixed_map_view.dart → UnprefixedMapView.scala
  *   Convention: Mostly-unmodifiable view; remove() supported for @use with
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/unprefixed_map_view.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

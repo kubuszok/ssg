@@ -12,6 +12,10 @@
  *     inherited Parser.scanner. Preserves `from`/`to` as-is (no normalization),
  *     supports scientific notation (e/E exponents), and `+` prefix for
  *     percentages.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/parse/keyframe_selector.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

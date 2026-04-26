@@ -10,6 +10,10 @@
  *   Renames: node.dart -> AstNode.scala
  *   Convention: Dart abstract interface class -> Scala trait
  *   Idiom: _FakeAstNode -> FakeAstNode private class with lazy callback
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/node.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

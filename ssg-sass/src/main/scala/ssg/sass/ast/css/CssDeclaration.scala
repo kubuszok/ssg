@@ -10,6 +10,10 @@
  *   Renames: declaration.dart + modifiable/declaration.dart -> CssDeclaration.scala
  *   Convention: Dart abstract interface class -> Scala trait
  *   Idiom: Value type from ssg.sass.value.Value; SassString check in constructor
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/declaration.dart, lib/src/ast/css/modifiable/declaration.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -12,6 +12,10 @@
  *   Idiom: Dart factory fromValue ported;
  *          Dart HueInterpolationMethod? → Nullable[HueInterpolationMethod]
  *   Audited: 2026-04-06
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/color/interpolation_method.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

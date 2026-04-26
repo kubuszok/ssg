@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: argument_list.dart → SassArgumentList.scala
  *   Convention: Extends SassList
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/value/argument_list.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -10,6 +10,10 @@
  *   Renames: style_rule.dart + modifiable/style_rule.dart -> CssStyleRule.scala
  *   Convention: SelectorList used for the CSS selector type, matching Dart's CssStyleRule
  *   Idiom: Box[SelectorList] used for mutable selector reference from extension store
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/css/style_rule.dart, lib/src/ast/css/modifiable/style_rule.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -11,6 +11,10 @@
  *   Convention: Dart SourceSpanException -> extends RuntimeException
  *   Idiom: Simplified toCssString (no SassString dependency yet);
  *          diamond hierarchy flattened (MultiSpanSassRuntimeException extends SassRuntimeException)
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/exception.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

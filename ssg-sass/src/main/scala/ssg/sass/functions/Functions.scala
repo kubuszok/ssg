@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: functions.dart -> Functions.scala (barrel)
  *   Convention: Phase 9 — aggregates per-category function lists.
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/functions.dart (barrel)
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

@@ -12,6 +12,10 @@
  *   Idiom: Dart null?.andThen -> Nullable foreach/map;
  *          Dart `for (var x in collection)` -> `for (x <- collection)`;
  *          Dart `is StaticImport` -> `case si: StaticImport`
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/visitor/recursive_ast.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

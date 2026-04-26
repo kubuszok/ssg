@@ -10,6 +10,10 @@
  *   Renames: interpolation.dart -> Interpolation.scala
  *   Convention: Dart final class -> Scala final class
  *   Idiom: contents is List[String | Expression] -> List[Any]; validated at construction
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/interpolation.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

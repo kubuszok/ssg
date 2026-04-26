@@ -4,6 +4,9 @@
  *
  * String scanner with source span tracking for Sass parsing.
  * Replaces Dart's `string_scanner` package (StringScanner, SpanScanner, LineScannerState).
+ *
+ * Covenant: full-port
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

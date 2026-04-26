@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: IterableExtension → IterableUtil extension
  *   Convention: Dart extension → Scala 3 extension
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/iterable.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

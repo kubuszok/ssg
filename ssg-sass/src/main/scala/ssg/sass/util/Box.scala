@@ -9,6 +9,10 @@
  * Migration notes:
  *   Renames: box.dart → Box.scala
  *   Convention: Reference equality via inner ModifiableBox identity
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/box.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

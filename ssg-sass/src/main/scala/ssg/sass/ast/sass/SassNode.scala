@@ -16,6 +16,10 @@
  *            + callable_invocation.dart + configured_variable.dart -> SassNode.scala
  *   Convention: Dart abstract interface class -> Scala trait
  *   Idiom: ConfiguredVariable is a final case class with span helpers
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/ast/sass/node.dart,
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass

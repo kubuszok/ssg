@@ -10,6 +10,10 @@
  *   Renames: MapExtensions → MapUtil extension
  *   Convention: Dart Option typedef → Scala Option
  *   Idiom: getOption is redundant with Scala's Map.get; kept for API compatibility
+ *
+ * Covenant: full-port
+ * Covenant-dart-reference: lib/src/util/map.dart
+ * Covenant-verified: 2026-04-26
  */
 package ssg
 package sass
