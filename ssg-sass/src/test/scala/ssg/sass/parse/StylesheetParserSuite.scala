@@ -135,9 +135,9 @@ final class StylesheetParserSuite extends munit.FunSuite {
   }
 
   test("parses generic @-rules") {
-    val sheet  = parse("""@charset "UTF-8";""")
+    val sheet  = parse("""@page { margin: 1cm; }""")
     val atRule = sheet.children.get.head.asInstanceOf[AtRule]
-    assertEquals(atRule.name.asPlain.get, "charset")
+    assertEquals(atRule.name.asPlain.get, "page")
   }
 
   // --- Expression parser ---

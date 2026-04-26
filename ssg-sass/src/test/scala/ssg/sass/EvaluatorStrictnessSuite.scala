@@ -44,7 +44,7 @@ final class EvaluatorStrictnessSuite extends munit.FunSuite {
   // ISS-028 — slash-div deprecation ------------------------------------------
 
   test("ISS-028: numeric / numeric emits slash-div") {
-    val result = Compile.compileString("a { width: 10px / 2; }")
+    val result = Compile.compileString("$x: 10px; a { width: $x / 2; }")
     assert(
       result.warnings.exists(_.contains("slash-div")) ||
         result.warnings.exists(_.contains("/ for division")),
