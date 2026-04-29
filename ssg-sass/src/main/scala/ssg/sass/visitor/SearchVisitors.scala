@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/visitor/selector_search.dart,
+ * Ported from: lib/src/visitor/selector_search.dart
  *              lib/src/visitor/statement_search.dart,
  *              lib/src/visitor/ast_search.dart
  * Original: Copyright (c) 2019, 2021, 2023 Google Inc.
@@ -16,8 +16,10 @@
  *          Dart ?? -> Nullable orElse
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/visitor/selector_search.dart,
+ * Covenant-dart-reference: lib/src/visitor/selector_search.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

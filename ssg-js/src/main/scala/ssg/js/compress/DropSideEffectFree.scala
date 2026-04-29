@@ -19,8 +19,10 @@
  *   Idiom: boundary/break instead of return, ArrayBuffer trimming
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/drop-side-effect-free.js
+ * Covenant-js-reference: lib/compress/drop-side-effect-free.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1d416afc7c3f4257ac44dacd3f5fa3a72a2be171
  */
 package ssg
 package js

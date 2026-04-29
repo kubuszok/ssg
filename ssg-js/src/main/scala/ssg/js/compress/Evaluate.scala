@@ -23,8 +23,10 @@
  *     regexp_is_safe, hasOwnProperty.call edge case)
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/evaluate.js
+ * Covenant-js-reference: lib/compress/evaluate.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 93d03a33591256b669dc0872c6b0957410dd1e2e
  */
 package ssg
 package js

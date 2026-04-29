@@ -10,8 +10,7 @@
  *   Renames: calculation.dart → SassCalculation.scala
  *   Convention: Dart final class → Scala final class; Dart enum → Scala 3 enum
  *   Idiom: Dart null → Nullable; Dart Object → Any; Dart switch → Scala match;
- *          number_lib functions inlined into companion object (Phase 9 not yet available);
- *          EvaluationContext.warnForDeprecation deferred (abs% deprecation is a no-op for now);
+ *          number_lib functions inlined into companion object;
  *          CalculationInterpolation ported as deprecated class;
  *          Dart List.unmodifiable → List (Scala Lists are immutable)
  *   Audited: 2026-04-06
@@ -19,6 +18,8 @@
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/value/calculation.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

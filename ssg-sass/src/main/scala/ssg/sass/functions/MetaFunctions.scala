@@ -31,7 +31,7 @@
  * module-variables, module-functions, module-mixins, get-function,
  * get-mixin, call, apply.
  *
- * Status: core_functions/meta sass-spec subdir 249→283/489
+ * Spec progress — core_functions/meta sass-spec subdir 249→283/489
  * (50.9%→57.9%, +34 cases). Global +57 cases (4512→4569).
  * Remaining 206 failures are dominated by:
  *   - Parser bugs around `meta.get-function(lighten)` and
@@ -43,6 +43,8 @@
  *   - Binder not producing SassArgumentList for splat args without
  *     named keywords (affects type-of(arglist))
  *   - B004 argument-arity validation (error/too_many_args etc.)
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

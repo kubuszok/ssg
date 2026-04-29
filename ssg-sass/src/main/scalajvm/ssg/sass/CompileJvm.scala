@@ -1,9 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * JVM-only filesystem-aware compile entry point.
- */
+ * JVM-only filesystem-aware compile entry point. */
 package ssg
 package sass
 

@@ -13,8 +13,10 @@
  *   Audited: 2026-04-10 — ISS-099 fixed: full URI handling ported from Java
  *
  * Covenant: full-port
- * Covenant-java-reference: liqp/src/main/java/liqp/filters/Relative_Url.java
+ * Covenant-java-reference: src/main/java/liqp/filters/Relative_Url.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1f0c47e87053f937fde5448cab0963f3379ce4a3
  */
 package ssg
 package liquid

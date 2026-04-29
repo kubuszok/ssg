@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark-util-sequence/src/main/java/com/vladsch/flexmark/util/sequence/builder/PlainSegmentBuilder.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -16,9 +18,9 @@ package util
 package sequence
 package builder
 
-class PlainSegmentBuilder private (options: Int) extends SegmentBuilderBase[PlainSegmentBuilder](options) {
+class PlainSegmentBuilder protected (options: Int) extends SegmentBuilderBase[PlainSegmentBuilder](options) {
 
-  private def this() =
+  protected def this() =
     this(ISegmentBuilder.F_INCLUDE_ANCHORS)
 }
 

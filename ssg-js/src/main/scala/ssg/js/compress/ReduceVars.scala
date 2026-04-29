@@ -25,8 +25,10 @@
  *   Idiom: boundary/break instead of return, mutable.Map for safe_ids
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/reduce-vars.js
+ * Covenant-js-reference: lib/compress/reduce-vars.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 6080510127d6c871ad58ce27c5c6b3045d948baa
  */
 package ssg
 package js

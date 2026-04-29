@@ -51,7 +51,7 @@
  *     with `_modulesByVariable` and the `couldHaveBeenConfigured`
  *     recursive check
  *
- * Status: global sass-spec 4993→5053 (+60 cases). The visitor was
+ * Spec progress — global sass-spec 4993→5053 (+60 cases). The visitor was
  * also updated to use module-based @forward / @import semantics:
  *   - `visitForwardRule` registers the upstream module via
  *     `forwardModule(module, rule)` instead of copying members
@@ -67,6 +67,8 @@
  *     the module's local scope)
  *   - `ForwardedView` show/hide checks moved to PREFIXED keys to
  *     match dart-sass `_forwardedMap`
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

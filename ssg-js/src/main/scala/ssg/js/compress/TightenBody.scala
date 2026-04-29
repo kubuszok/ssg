@@ -29,8 +29,10 @@
  *   Audited: 2026-04-11 (pass)
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/tighten-body.js
+ * Covenant-js-reference: lib/compress/tighten-body.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 6080510127d6c871ad58ce27c5c6b3045d948baa
  */
 package ssg
 package js

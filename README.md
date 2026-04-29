@@ -8,11 +8,11 @@ battle-tested libraries to idiomatic Scala 3.
 
 | Module | Source Library | Language | Purpose | Status |
 |--------|---------------|----------|---------|--------|
-| `ssg-md` | [flexmark-java](https://github.com/vsch/flexmark-java) 0.64.8 | Java | Markdown engine | 1645/1645 tests |
-| `ssg-liquid` | [liqp](https://github.com/bkiers/Liqp) 0.9.2 | Java | Liquid template engine | 280/280 tests |
-| `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) 1.99 | Dart | SASS/SCSS compiler | 13865/13902 sass-spec (99.7%) |
-| `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) | Ruby | HTML/CSS/JS/JSON minification | 113/113 tests |
-| `ssg-js` | [terser](https://github.com/terser/terser) | JavaScript | JavaScript compiler/minifier | 116/116 tests |
+| `ssg-md` | [flexmark-java](https://github.com/vsch/flexmark-java) 0.64.8 | Java | Markdown engine | 5889 tests |
+| `ssg-liquid` | [liqp](https://github.com/bkiers/Liqp) 0.9.2 | Java | Liquid template engine | 863 tests |
+| `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) 1.99.0 | Dart | SASS/SCSS compiler | 13865/13902 sass-spec (99.7%) |
+| `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) 0.2.2 | Ruby | HTML/CSS/JS/JSON minification | 121 tests |
+| `ssg-js` | [terser](https://github.com/terser/terser) 5.46.1 | JavaScript | JavaScript compiler/minifier | 2518 tests |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
 
 All completed modules pass tests on **JVM, Scala.js, and Scala Native**.

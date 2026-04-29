@@ -1,15 +1,8 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Regression for sass-spec libsass-closed-issues/issue_577 and
- * sibling cases (issue_1171/1240/1269/1604): calling list built-ins
- * with fewer positional args than declared (relying on trailing
- * defaults like `$separator: auto`) used to raise
- * IndexOutOfBoundsException because BuiltInCallable dispatch passes
- * positional args verbatim without filling in declared defaults.
- * list.append and list.join now guard trailing default accesses.
- */
+ * Regression for sass-spec libsass-closed-issues/issue_577 and sibling cases (issue_1171/1240/1269/1604): calling list built-ins with fewer positional args than declared (relying on trailing defaults
+ * like `$separator: auto`) used to raise IndexOutOfBoundsException because BuiltInCallable dispatch passes positional args verbatim without filling in declared defaults.
+ * list.append and list.join now guard trailing default accesses. */
 package ssg
 package sass
 

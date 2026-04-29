@@ -14,8 +14,10 @@
  *   Idiom: Bitwise operations on AstNode.flags field
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/compressor-flags.js
+ * Covenant-js-reference: lib/compress/compressor-flags.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 3acc90913aa77c9a152b67950fd62a541ba2b09b
  */
 package ssg
 package js

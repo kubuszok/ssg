@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark/src/main/java/com/vladsch/flexmark/formatter/Formatter.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -337,13 +339,16 @@ object Formatter {
     def this() =
       this(Nullable.empty)
 
-    if (options.isDefined) {
-      loadExtensions()
-    }
-
+    // Field declarations must come before loadExtensions() because in Java field
+    // initializers run before the constructor body, but in Scala the class body IS
+    // the constructor and statements execute in textual order.
     private[formatter] val nodeFormatterFactories: java.util.List[NodeFormatterFactory] = new java.util.ArrayList[NodeFormatterFactory]()
     private[formatter] val linkResolverFactories:  java.util.List[LinkResolverFactory]  = new java.util.ArrayList[LinkResolverFactory]()
     private[formatter] var htmlIdGeneratorFactory: Nullable[HeaderIdGeneratorFactory]   = Nullable.empty
+
+    if (options.isDefined) {
+      loadExtensions()
+    }
 
     override protected def removeApiPoint(apiPoint: AnyRef): Unit =
       apiPoint match {

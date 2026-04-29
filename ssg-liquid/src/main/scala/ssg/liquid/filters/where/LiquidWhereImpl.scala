@@ -16,8 +16,10 @@
  * By default the target is any truthy value.
  *
  * Covenant: full-port
- * Covenant-java-reference: liqp/src/main/java/liqp/filters/where/LiquidWhereImpl.java
+ * Covenant-java-reference: src/main/java/liqp/filters/where/LiquidWhereImpl.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1f0c47e87053f937fde5448cab0963f3379ce4a3
  */
 package ssg
 package liquid

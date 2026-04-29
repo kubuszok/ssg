@@ -1,9 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * JVM-specific implementation of LiquidSupportFromInspectable using Java reflection.
- */
+ * JVM-specific implementation of LiquidSupportFromInspectable using Java reflection. */
 package ssg
 package liquid
 package parser
