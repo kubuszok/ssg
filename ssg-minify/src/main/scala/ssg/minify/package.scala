@@ -9,8 +9,10 @@
  * Original license: MIT
  *
  * Covenant: full-port
- * Covenant-ruby-reference: jekyll-minifier lib/jekyll-minifier.rb
+ * Covenant-ruby-reference: lib/jekyll-minifier.rb
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 5422b3570321668b419ec8271391a029f385c390
  */
 package ssg
 

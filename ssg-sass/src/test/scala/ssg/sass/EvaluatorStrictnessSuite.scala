@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Spec-compliance gaps: ISS-026 mixed-decls, ISS-027 @at-root queries,
- * ISS-028 slash-div deprecation, ISS-033 private-var module config.
- */
+ * Spec-compliance gaps: ISS-026 mixed-decls, ISS-027 @at-root queries, ISS-028 slash-div deprecation, ISS-033 private-var module config. */
 package ssg
 package sass
 

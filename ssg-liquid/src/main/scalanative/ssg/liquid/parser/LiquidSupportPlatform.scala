@@ -1,11 +1,8 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Scala Native stub for LiquidSupportFromInspectable.
  * Reflection is not available on Native, so this returns an empty map.
- * For full functionality, implement LiquidSupport directly on your objects.
- */
+ * For full functionality, implement LiquidSupport directly on your objects. */
 package ssg
 package liquid
 package parser

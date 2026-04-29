@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/ast/selector/simple.dart, attribute.dart, class.dart,
+ * Ported from: lib/src/ast/selector/simple.dart
  *              id.dart, type.dart, universal.dart, parent.dart, placeholder.dart
  * Original: Copyright (c) 2016 Google Inc.
  * Original license: MIT
@@ -14,8 +14,10 @@
  *          null returns -> Nullable; addSuffix throws -> same pattern
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/ast/selector/simple.dart, attribute.dart, class.dart,
+ * Covenant-dart-reference: lib/src/ast/selector/simple.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

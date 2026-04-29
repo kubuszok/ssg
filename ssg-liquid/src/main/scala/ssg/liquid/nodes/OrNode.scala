@@ -10,8 +10,10 @@
  *   Renames: liqp.nodes → ssg.liquid.nodes
  *
  * Covenant: full-port
- * Covenant-java-reference: liqp/src/main/java/liqp/nodes/OrNode.java
+ * Covenant-java-reference: src/main/java/liqp/nodes/OrNode.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1f0c47e87053f937fde5448cab0963f3379ce4a3
  */
 package ssg
 package liquid

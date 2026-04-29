@@ -1,15 +1,9 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Scala.js implementation of platform-specific resource loading.
- * Class.getResourceAsStream is not available on Scala.js, so we use
- * Node.js fs.readFileSync to read resource files from the filesystem.
+ * Class.getResourceAsStream is not available on Scala.js, so we use Node.js fs.readFileSync to read resource files from the filesystem.
  *
- * sbt copies resources to ssg-md/target/js-3/classes/ (main) and
- * ssg-md/target/js-3/test-classes/ (test). When JS tests run via
- * Node.js, the working directory is the project root.
- */
+ * sbt copies resources to ssg-md/target/js-3/classes/ (main) and ssg-md/target/js-3/test-classes/ (test). When JS tests run via Node.js, the working directory is the project root. */
 package ssg
 package md
 package util

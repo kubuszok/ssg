@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Scala Native implementation of NativeMath. Scala Native's math.pow
- * already calls the native C pow(), so we just delegate.
- */
+ * Scala Native implementation of NativeMath. Scala Native's math.pow already calls the native C pow(), so we just delegate. */
 package ssg
 package sass
 package util

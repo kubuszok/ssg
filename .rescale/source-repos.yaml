@@ -1,0 +1,6 @@
+source-repos:
+  flexmark: original-src/flexmark-java
+  liqp: original-src/liqp
+  dart-sass: original-src/dart-sass
+  terser: original-src/terser
+  jekyll-minifier: original-src/jekyll-minifier

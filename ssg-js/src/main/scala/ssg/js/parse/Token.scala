@@ -15,8 +15,10 @@
  *   Idiom: Character.isLetter / Character.getType for Unicode categories
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/parse.js (lines 177-261, 1087-1128)
+ * Covenant-js-reference: lib/parse.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1055a1d79d4dc147317814a8a456209475792175
  */
 package ssg
 package js

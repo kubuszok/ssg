@@ -15,8 +15,10 @@
  *   Idiom: ArrayBuffer for to_mangle list, mutable.Set for mangled_names
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/scope.js (mangle_names, base54, lines 696-1063)
+ * Covenant-js-reference: lib/scope.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 88493d7ca0d708389f5f78f541c4fb48e71d9fe2
  */
 package ssg
 package js

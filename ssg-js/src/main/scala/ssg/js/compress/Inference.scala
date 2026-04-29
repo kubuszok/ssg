@@ -30,8 +30,10 @@
  *   Audited: 2026-04-12 (pass)
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/inference.js
+ * Covenant-js-reference: lib/compress/inference.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 14d81c54b5226108b74345aead0871a4203d68c0
  */
 package ssg
 package js

@@ -21,8 +21,10 @@
  *   Idiom: boundary/break instead of return, mutable.Map/Set for tracking
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/drop-unused.js
+ * Covenant-js-reference: lib/compress/drop-unused.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: b636c3da59f26429580719d4c8f162f4242f9749
  */
 package ssg
 package js

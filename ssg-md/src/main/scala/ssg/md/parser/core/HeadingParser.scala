@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark/src/main/java/com/vladsch/flexmark/parser/core/HeadingParser.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -18,6 +20,7 @@ package core
 import ssg.md.ast.Heading
 import ssg.md.parser.block._
 import ssg.md.util.data.DataHolder
+import ssg.md.util.sequence.mappers.{ SpecialLeadInCharsHandler, SpecialLeadInHandler, SpecialLeadInStartsWithCharsHandler }
 
 import java.util.regex.Pattern
 import scala.jdk.CollectionConverters.*
@@ -42,6 +45,11 @@ class HeadingParser(val level: Int) extends AbstractBlockParser {
 
 object HeadingParser {
 
+  private[core] object HeadingLeadInHandler {
+    val HANDLER_NO_SPACE: SpecialLeadInHandler = SpecialLeadInStartsWithCharsHandler.create('#')
+    val HANDLER_SPACE:    SpecialLeadInHandler = SpecialLeadInCharsHandler.create('#')
+  }
+
   val ATX_HEADING:    Pattern = Pattern.compile("^#{1,6}(?:[ \\t]+|$)")
   val ATX_TRAILING:   Pattern = Pattern.compile("(^|[ \\t])#+[ \\t]*$")
   val SETEXT_HEADING: Pattern = Pattern.compile("^(?:=+|-+)[ \\t]*$")
@@ -65,6 +73,12 @@ object HeadingParser {
     )
 
     override def affectsGlobalScope: Boolean = false
+
+    override def getLeadInHandler(options: DataHolder): Nullable[SpecialLeadInHandler] = {
+      val noAtxSpace = Parser.ESCAPE_HEADING_NO_ATX_SPACE.get(Nullable(options)) || Parser.HEADING_NO_ATX_SPACE.get(Nullable(options))
+      if (noAtxSpace) Nullable(HeadingParser.HeadingLeadInHandler.HANDLER_NO_SPACE)
+      else Nullable(HeadingParser.HeadingLeadInHandler.HANDLER_SPACE)
+    }
 
     override def apply(options: DataHolder): BlockParserFactory = BlockFactory(options)
   }

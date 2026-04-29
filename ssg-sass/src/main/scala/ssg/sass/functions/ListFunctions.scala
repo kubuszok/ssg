@@ -19,12 +19,14 @@
  * Covenant-dart-reference: lib/src/functions/list.dart
  * Covenant-verified: 2026-04-08
  *
- * T002 — Phase 4 task. Status:
+ * T002 — Phase 4 task. Spec progress —
  *   - core_functions/list sass-spec subdir: 129/233 (55.4%) → 139/233 (59.7%)
  *   - Remaining 94 list-subdir failures map to cross-cutting issues:
  *     B004 argument-arity validation, missing HRX import resolution
  *     across utils.scss, list-with-separator unification, and a couple
  *     of new B-tasks worth filing once Phase 4 stabilises.
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

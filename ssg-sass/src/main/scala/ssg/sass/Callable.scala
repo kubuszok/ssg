@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/callable.dart, lib/src/callable/built_in.dart,
+ * Ported from: lib/src/callable.dart
  *              lib/src/callable/plain_css.dart, lib/src/callable/user_defined.dart
  * Original: Copyright (c) 2016 Google Inc.
  * Original license: MIT
@@ -13,8 +13,10 @@
  *   Idiom: Scala 3 trait + concrete subclasses
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/callable.dart, lib/src/callable/built_in.dart,
+ * Covenant-dart-reference: lib/src/callable.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

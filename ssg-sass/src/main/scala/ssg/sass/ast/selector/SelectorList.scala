@@ -11,11 +11,13 @@
  *   Convention: Dart final class -> Scala final class
  *   Idiom: Nullable parent in nestWithin; _containsParentSelector/_ParentSelectorVisitor
  *          -> companion object; flattenVertically -> Utils.flattenVertically;
- *          nestWithin complex logic preserved; asSassList stubbed (needs Value types)
+ *          nestWithin complex logic preserved; asSassList returns SassList
  *
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/ast/selector/list.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

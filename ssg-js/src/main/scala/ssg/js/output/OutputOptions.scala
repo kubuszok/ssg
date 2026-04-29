@@ -14,8 +14,10 @@
  *   Idiom: snake_case options from JS -> camelCase in Scala
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/output.js (OutputStream options)
+ * Covenant-js-reference: lib/output.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 0ed7a2f7254574d3df14827cafd5af6f5133bd2e
  */
 package ssg
 package js

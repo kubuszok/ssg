@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/value/color/gamut_map_method.dart,
+ * Ported from: lib/src/value/color/gamut_map_method.dart
  *              lib/src/value/color/gamut_map_method/clip.dart,
  *              lib/src/value/color/gamut_map_method/local_minde.dart
  * Original: Copyright (c) 2024 Google Inc.
@@ -15,8 +15,10 @@
  *   Audited: 2026-04-06
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/value/color/gamut_map_method.dart,
+ * Covenant-dart-reference: lib/src/value/color/gamut_map_method.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

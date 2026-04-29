@@ -1,20 +1,12 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/importer/node_package.dart
- * Original: Copyright (c) 2017 Google Inc.
+ * Ported from: lib/src/importer/node_package.dart Original: Copyright (c) 2017 Google Inc.
  * Original license: MIT
  *
  * Migration notes:
- *   Renames: node_package.dart -> NodePackageImporter.scala (JVM-only)
- *   Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
- *   Idiom: Walks upward from `entryPoint` to find a `node_modules/<pkg>`
- *          directory and resolves `pkg:` URLs through it. Uses a small
- *          hand-written JSON scanner to extract `sass` / `style` / `main`
- *          string fields from `package.json` (no full JSON parser
- *          dependency).
- */
+ * Renames: node_package.dart -> NodePackageImporter.scala (JVM-only) Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
+ * Idiom: Walks upward from `entryPoint` to find a `node_modules/<pkg>` directory and resolves `pkg:` URLs through it. Uses a small hand-written JSON scanner to extract `sass` / `style` / `main`
+ * string fields from `package.json` (no full JSON parser dependency). */
 package ssg
 package sass
 package importer

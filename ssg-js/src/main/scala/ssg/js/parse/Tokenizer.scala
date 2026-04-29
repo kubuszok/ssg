@@ -14,8 +14,10 @@
  *   Idiom: scala.util.boundary replaces JS return, ArrayBuffer replaces JS []
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/parse.js (tokenizer function, lines 260-1083)
+ * Covenant-js-reference: lib/parse.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1055a1d79d4dc147317814a8a456209475792175
  */
 package ssg
 package js

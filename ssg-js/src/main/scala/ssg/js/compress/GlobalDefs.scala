@@ -19,8 +19,10 @@
  *   Idiom: boundary/break instead of return, Scala Map instead of JS object
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/global-defs.js
+ * Covenant-js-reference: lib/compress/global-defs.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1e111a28643c9ccc91fb9ce51344046e88703f45
  */
 package ssg
 package js

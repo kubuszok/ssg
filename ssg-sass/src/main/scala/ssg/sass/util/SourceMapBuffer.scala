@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/util/no_source_map_buffer.dart, lib/src/util/source_map_buffer.dart
+ * Ported from: lib/src/util/no_source_map_buffer.dart
  * Original: Copyright (c) 2016 Google Inc.
  * Original license: MIT
  *
@@ -11,8 +11,10 @@
  *   Convention: Trait + implementation; full SourceMapBuffer deferred until source map support needed
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/util/no_source_map_buffer.dart, lib/src/util/source_map_buffer.dart
+ * Covenant-dart-reference: lib/src/util/no_source_map_buffer.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

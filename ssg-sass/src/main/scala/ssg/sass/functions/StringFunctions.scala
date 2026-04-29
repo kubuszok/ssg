@@ -22,12 +22,14 @@
  * Covenant-dart-reference: lib/src/functions/string.dart
  * Covenant-verified: 2026-04-08
  *
- * T001 — Phase 2 forcing-function reference port. Status:
+ * T001 — Phase 2 forcing-function reference port. Spec progress —
  *   - core_functions/string sass-spec subdir: 47/155 (30.3%) → 122/155 (78.7%)
  *   - global sass-spec count: 4,157 → 4,237 (+80 net)
  *   - The remaining 33 string-subdir failures are blocked on 7 cross-
  *     cutting issues handled in their own micro-tasks (B001-B007). The
  *     string functions themselves are faithful per dart-sass.
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

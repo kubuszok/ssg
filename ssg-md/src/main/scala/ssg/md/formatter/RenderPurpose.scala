@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark/src/main/java/com/vladsch/flexmark/formatter/RenderPurpose.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md

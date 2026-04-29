@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/extend/extension_store.dart, lib/src/extend/empty_extension_store.dart
+ * Ported from: lib/src/extend/extension_store.dart
  * Original: Copyright (c) 2016, 2019 Google Inc.
  * Original license: MIT
  *
@@ -21,8 +21,10 @@
  *          to use the dart addExtension + addSelector API.
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/extend/extension_store.dart, lib/src/extend/empty_extension_store.dart
+ * Covenant-dart-reference: lib/src/extend/extension_store.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark/src/main/java/com/vladsch/flexmark/parser/core/BlockQuoteParser.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -21,6 +23,7 @@ import ssg.md.parser.block._
 import ssg.md.util.ast.{ BlankLineContainer, Block }
 import ssg.md.util.data.DataHolder
 import ssg.md.util.sequence.BasedSequence
+import ssg.md.util.sequence.mappers.{ SpecialLeadInHandler, SpecialLeadInStartsWithCharsHandler }
 
 import scala.language.implicitConversions
 
@@ -95,6 +98,10 @@ class BlockQuoteParser(options: DataHolder, marker: BasedSequence) extends Abstr
 
 object BlockQuoteParser {
 
+  private[core] object BlockQuoteLeadInHandler {
+    val HANDLER: SpecialLeadInHandler = SpecialLeadInStartsWithCharsHandler.create('>')
+  }
+
   val MARKER_CHAR: Char = '>'
 
   def isMarker(
@@ -149,6 +156,9 @@ object BlockQuoteParser {
     )
 
     override def affectsGlobalScope: Boolean = false
+
+    override def getLeadInHandler(options: DataHolder): Nullable[SpecialLeadInHandler] =
+      Nullable(BlockQuoteParser.BlockQuoteLeadInHandler.HANDLER)
 
     override def apply(options: DataHolder): BlockParserFactory = BlockFactory(options)
   }

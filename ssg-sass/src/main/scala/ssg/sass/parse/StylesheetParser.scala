@@ -20,6 +20,8 @@
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/parse/stylesheet.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass
@@ -3077,38 +3079,8 @@ abstract class StylesheetParser protected (
   protected def statements(statement: () => Nullable[Statement]): List[Statement]
 
   // ===========================================================================
-  // Recursive-descent expression parser (stage 1 scaffold)
+  // Recursive-descent expression parser
   // ===========================================================================
-  //
-  // These `_rd*` methods are a new, true recursive-descent port of the
-  // dart-sass `_expression` / `_singleExpression` machinery in
-  // `lib/src/parse/stylesheet.dart` (around lines 1971-2712). They consume
-  // directly from `scanner` rather than pre-collecting raw text like the
-  // existing `_expression` + `_parseSimpleExpression` pipeline.
-  //
-  // Stage 1 goals:
-  //   - Port the control-flow skeleton: `_expression` loop with comma/space
-  //     list accumulation, operator precedence climbing via an operator
-  //     stack, unary +/-/not, parenthesized expressions, numbers, variables,
-  //     identifier/function calls with namespace.
-  //   - Keep the AST sane on simple inputs (numbers, identifiers, variables,
-  //     strings, function calls, arithmetic, comparison, lists).
-  //   - NOT wired from any call site yet. Live alongside the text-based
-  //     parser. Call sites will be migrated one at a time in stage 2+.
-  //
-  // Stage 1 limitations (text fallbacks where full AST construction is incomplete):
-  //   - `#{...}` interpolation inside expressions is handled by capturing
-  //     the raw text and delegating to `_parseInterpolatedString`.
-  //   - Quoted strings with embedded interpolation use `Interpolation.plain`
-  //     (the interpolation regions are evaluated when the text-based parser
-  //     delegates to `_parseInterpolatedString`).
-  //   - `@supports` / calc-style parsing and special CSS functions are
-  //     handled generically — `_rdFunctionCall` produces a FunctionExpression.
-  //   - Bracketed lists `[a b, c]`, maps, the slash-separator nuance,
-  //     `!important`, `U+` ranges, and the Microsoft `=` operator are
-  //     scheduled for later stages.
-  //   - Hex color literals are parsed as function-ish identifiers only
-  //     when they lex as such; `#abc` lexing is scheduled for a later stage.
 
   /** Discards a value (for readChar() calls whose result is unused). */
   private inline def _rdConsume[A](a: A): Unit = { val _ = a }

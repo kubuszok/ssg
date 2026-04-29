@@ -1,17 +1,11 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/importer/filesystem.dart
- * Original: Copyright (c) 2017 Google Inc.
+ * Ported from: lib/src/importer/filesystem.dart Original: Copyright (c) 2017 Google Inc.
  * Original license: MIT
  *
  * Migration notes:
- *   Renames: filesystem.dart -> FilesystemImporter.scala (JVM-only)
- *   Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
- *   Idiom: Resolves imports via ImporterFileUtils.resolveImportPath,
- *          which tries exact, partial, extended, and index variants.
- */
+ * Renames: filesystem.dart -> FilesystemImporter.scala (JVM-only) Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
+ * Idiom: Resolves imports via ImporterFileUtils.resolveImportPath, which tries exact, partial, extended, and index variants. */
 package ssg
 package sass
 package importer

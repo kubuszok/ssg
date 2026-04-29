@@ -14,8 +14,10 @@
  *   Idiom: Pattern matching instead of instanceof chains
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/utils/first_in_statement.js
+ * Covenant-js-reference: lib/utils/first_in_statement.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bb2e20fd36cf3f621f85c3e5754b301058b0f9e3
  */
 package ssg
 package js

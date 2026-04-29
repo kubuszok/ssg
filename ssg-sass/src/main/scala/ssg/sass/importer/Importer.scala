@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/importer.dart, lib/src/importer/filesystem.dart,
+ * Ported from: lib/src/importer.dart
  *              lib/src/importer/no_op.dart, lib/src/importer/package.dart,
  *              lib/src/importer/node_package.dart
  * Original: Copyright (c) 2017 Google Inc.
@@ -16,8 +16,10 @@
  *          or construct their own implementation.
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/importer.dart, lib/src/importer/filesystem.dart,
+ * Covenant-dart-reference: lib/src/importer.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

@@ -17,8 +17,10 @@
  *   Idiom: Shared objectMethods list factored into val
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/native-objects.js
+ * Covenant-js-reference: lib/compress/native-objects.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 8b966d687395ab493d2c6286cc9dd38650324c11
  */
 package ssg
 package js

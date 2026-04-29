@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/importer/result.dart,
+ * Ported from: lib/src/importer/result.dart
  *              lib/src/importer/canonicalize_context.dart
  * Original: Copyright (c) 2017 Google Inc.
  * Original license: MIT
@@ -12,8 +12,10 @@
  *   Convention: Skeleton — Uri modeled as String
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/importer/result.dart,
+ * Covenant-dart-reference: lib/src/importer/result.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

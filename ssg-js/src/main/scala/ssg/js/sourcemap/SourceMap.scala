@@ -15,8 +15,10 @@
  *   Idiom: Options case class instead of JS defaults() pattern
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/sourcemap.js (149 LOC)
+ * Covenant-js-reference: lib/sourcemap.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 862226f234ed9c7180a8f8abe875b905ff4eacbb
  */
 package ssg
 package js

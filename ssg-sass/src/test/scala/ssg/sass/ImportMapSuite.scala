@@ -1,10 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Cross-platform import tests using the in-memory MapImporter.
- * Runs on JVM, JS, and Native (no java.nio dependency).
- */
+ * Runs on JVM, JS, and Native (no java.nio dependency). */
 package ssg
 package sass
 

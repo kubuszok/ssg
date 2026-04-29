@@ -34,12 +34,14 @@
  *   - simple-selectors: CompoundSelector accessor
  *   - parse: round-trip through the selector parser
  *
- * Status: core_functions/selector sass-spec subdir 2→415/899
+ * Spec progress — core_functions/selector sass-spec subdir 2→415/899
  * (0.2%→46.2%, +413 cases). Global +424 cases (4569→4993).
  * Remaining 484 subdir failures are dominated by the unported
  * `_selectorPseudoIsSuperselector` logic from extend/functions.dart
  * (~200 :is/:not/:has superselector cases) plus nested-selector
  * edge cases. Tracked as B010.
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass
