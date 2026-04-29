@@ -1,10 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * munit adapter for flexmark renderer spec tests.
- * Replaces RendererSpecTest (JUnit4 ComboSpecTestCase subclass).
- */
+ * Replaces RendererSpecTest (JUnit4 ComboSpecTestCase subclass). */
 package ssg
 package md
 package test

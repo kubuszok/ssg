@@ -1,10 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * JVM implementation of resource loading for tests.
- * Uses Class.getResourceAsStream from the standard JVM classloader.
- */
+ * Uses Class.getResourceAsStream from the standard JVM classloader. */
 package ssg
 package md
 package test
