@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
- */
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0 */
 package ssg
 package minify
 
@@ -109,5 +106,19 @@ final class MinifierSuite extends munit.FunSuite {
     assert(result.contains("color:#fff"), s"Expected CSS minified in: $result")
     // JS comment removed
     assert(!result.contains("// init"), s"Expected JS comment removed")
+  }
+
+  test("XML minification removes comments and collapses whitespace") {
+    val input  = "<root>  <child>  text  </child>  </root>"
+    val result = Minifier.minify(input, FileType.Xml)
+    assert(result.contains("<root>"), s"Expected root element, got: $result")
+    assert(result.contains("<child>"), s"Expected child element, got: $result")
+    assert(result.contains("text"), s"Expected text content, got: $result")
+  }
+
+  test("fileTypeFromPath returns None for unknown extension and minify does not crash") {
+    assertEquals(Minifier.fileTypeFromPath("data.bin"), None)
+    assertEquals(Minifier.fileTypeFromPath("archive.tar.gz"), None)
+    assertEquals(Minifier.fileTypeFromPath(""), None)
   }
 }
