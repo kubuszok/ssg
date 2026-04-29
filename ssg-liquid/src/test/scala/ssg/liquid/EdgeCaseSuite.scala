@@ -1,17 +1,9 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: liqp/src/test/java/liqp/ (multiple test files)
- * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
- * Original license: MIT
+ * Ported from: liqp/src/test/java/liqp/ (multiple test files) Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk Original license: MIT
  *
  * Migration notes:
- *   Renames: liqp → ssg.liquid
- *   Convention: munit FunSuite instead of JUnit
- *   Idiom: Edge cases from StatementsTest, IfTest, ForTest, CaseTest,
- *          CycleTest, AssignTest, CaptureTest, LookupNodeTest
- */
+ * Renames: liqp → ssg.liquid Convention: munit FunSuite instead of JUnit Idiom: Edge cases from StatementsTest, IfTest, ForTest, CaseTest, CycleTest, AssignTest, CaptureTest, LookupNodeTest */
 package ssg
 package liquid
 
