@@ -11,8 +11,10 @@
  *   Idiom: Singleton sentinels as object vals
  *
  * Covenant: full-port
- * Covenant-java-reference: liqp/src/main/java/liqp/nodes/AtomNode.java
+ * Covenant-java-reference: src/main/java/liqp/nodes/AtomNode.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 1f0c47e87053f937fde5448cab0963f3379ce4a3
  */
 package ssg
 package liquid

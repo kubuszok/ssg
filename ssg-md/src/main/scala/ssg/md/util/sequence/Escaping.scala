@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark-util-sequence/src/main/java/com/vladsch/flexmark/util/sequence/Escaping.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -66,10 +68,9 @@ object Escaping {
   val HEX_DIGITS: Array[Char] =
     Array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
-  @annotation.nowarn("msg=unused private member") // used by BasedSequence overloads not yet ported
+  @annotation.nowarn("msg=unused private member") // dead code in original Escaping.java too — declared but never used
   private val WHITESPACE: Pattern = Pattern.compile("[ \t\r\n]+")
 
-  @annotation.nowarn("msg=unused private member") // used by BasedSequence overloads not yet ported
   private val COLLAPSE_WHITESPACE: Pattern = Pattern.compile("[ \t]{2,}")
 
   val AMP_BACKSLASH_SET: CharPredicate = CharPredicate.anyOf('\\', '&')
@@ -81,7 +82,7 @@ object Escaping {
     def replace(s: String, sb: StringBuilder): Unit
   }
 
-  private val UNSAFE_CHAR_REPLACER: StringReplacer = new StringReplacer {
+  private val UNSAFE_CHAR_REPLACER: Replacer = new Replacer {
     override def replace(s: String, sb: StringBuilder): Unit =
       s match {
         case "&"  => sb.append("&amp;")
@@ -90,22 +91,33 @@ object Escaping {
         case "\"" => sb.append("&quot;")
         case _    => sb.append(s)
       }
+
+    override def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit = {
+      val s1 = original.subSequence(startIndex, endIndex).toString
+      s1 match {
+        case "&"  => textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf("&amp;", BasedSequence.NULL))
+        case "<"  => textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf("&lt;", BasedSequence.NULL))
+        case ">"  => textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf("&gt;", BasedSequence.NULL))
+        case "\"" => textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf("&quot;", BasedSequence.NULL))
+        case _    => textMapper.addOriginalText(startIndex, endIndex)
+      }
+    }
   }
 
-  @annotation.nowarn("msg=unused private member") // used by BasedSequence overloads not yet ported
-  private val COLLAPSE_WHITESPACE_REPLACER: StringReplacer = new StringReplacer {
+  private val COLLAPSE_WHITESPACE_REPLACER: Replacer = new Replacer {
     override def replace(s: String, sb: StringBuilder): Unit =
       sb.append(" ")
+
+    override def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit =
+      textMapper.addReplacedText(startIndex, endIndex, original.subSequence(startIndex, startIndex + 1))
   }
 
-  private val URL_ENCODE_REPLACER: StringReplacer = new StringReplacer {
+  private val URL_ENCODE_REPLACER: Replacer = new Replacer {
     override def replace(s: String, sb: StringBuilder): Unit =
       if (s.startsWith("%")) {
         if (s.length == 3) {
-          // Already percent-encoded, preserve
           sb.append(s)
         } else {
-          // %25 is the percent-encoding for %
           sb.append("%25")
           sb.underlying.append(s: CharSequence, 1, s.length)
         }
@@ -117,11 +129,50 @@ object Escaping {
           sb.append(HEX_DIGITS(b & 0xf))
         }
       }
+
+    override def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit = {
+      val s = original.subSequence(startIndex, endIndex)
+      if (s.startsWith("%")) {
+        if (s.length() == 3) {
+          textMapper.addOriginalText(startIndex, endIndex)
+        } else {
+          textMapper.addReplacedText(startIndex, startIndex + 1, PrefixedSubSequence.prefixOf("%25", BasedSequence.NULL))
+          textMapper.addOriginalText(startIndex + 1, endIndex)
+        }
+      } else {
+        val bytes  = s.toString.getBytes(StandardCharsets.UTF_8)
+        val sbItem = new java.lang.StringBuilder()
+        for (b <- bytes) {
+          sbItem.append('%')
+          sbItem.append(HEX_DIGITS((b >> 4) & 0xf))
+          sbItem.append(HEX_DIGITS(b & 0xf))
+        }
+        textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf(sbItem.toString, BasedSequence.NULL))
+      }
+    }
+  }
+
+  private val URL_DECODE_REPLACER: Replacer = new Replacer {
+    override def replace(s: String, sb: StringBuilder): Unit = {
+      val urlDecoded = ssg.md.util.misc.Utils.urlDecode(Nullable(s), Nullable.empty)
+      sb.append(urlDecoded)
+    }
+
+    override def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit = {
+      val s       = original.subSequence(startIndex, endIndex)
+      val decoded = ssg.md.util.misc.Utils.urlDecode(Nullable(s.toString), Nullable.empty)
+      textMapper.addReplacedText(startIndex, endIndex, PrefixedSubSequence.prefixOf(decoded, BasedSequence.NULL))
+    }
   }
 
   def escapeHtml(s: CharSequence, preserveEntities: Boolean): String = {
     val p = if (preserveEntities) XML_SPECIAL_OR_ENTITY else XML_SPECIAL_RE
     replaceAll(p, s, UNSAFE_CHAR_REPLACER)
+  }
+
+  def escapeHtml(s: BasedSequence, preserveEntities: Boolean, textMapper: ReplacedTextMapper): BasedSequence = {
+    val p = if (preserveEntities) XML_SPECIAL_OR_ENTITY else XML_SPECIAL_RE
+    replaceAll(p, s, UNSAFE_CHAR_REPLACER, textMapper)
   }
 
   /** Replace entities and backslash escapes with literal characters.
@@ -268,22 +319,14 @@ object Escaping {
   def percentEncodeUrl(s: CharSequence): String =
     replaceAll(ESCAPE_IN_URI, s, URL_ENCODE_REPLACER)
 
-  /** @param s
-    *   string to encode
-    * @return
-    *   encoded string
-    */
+  def percentEncodeUrl(s: BasedSequence, textMapper: ReplacedTextMapper): BasedSequence =
+    replaceAll(ESCAPE_IN_URI, s, URL_ENCODE_REPLACER, textMapper)
+
   def percentDecodeUrl(s: CharSequence): String =
-    replaceAll(
-      ESCAPE_URI_DECODE,
-      s,
-      new StringReplacer {
-        override def replace(s: String, sb: StringBuilder): Unit = {
-          val urlDecoded = ssg.md.util.misc.Utils.urlDecode(Nullable(s), Nullable.empty)
-          sb.append(urlDecoded)
-        }
-      }
-    )
+    replaceAll(ESCAPE_URI_DECODE, s, URL_DECODE_REPLACER)
+
+  def percentDecodeUrl(s: BasedSequence, textMapper: ReplacedTextMapper): BasedSequence =
+    replaceAll(ESCAPE_URI_DECODE, s, URL_DECODE_REPLACER, textMapper)
 
   /** Normalize the link reference id
     *
@@ -393,6 +436,9 @@ object Escaping {
     sb.toString()
   }
 
+  def collapseWhitespace(s: BasedSequence, textMapper: ReplacedTextMapper): BasedSequence =
+    replaceAll(COLLAPSE_WHITESPACE, s, COLLAPSE_WHITESPACE_REPLACER, textMapper)
+
   private def replaceAll(p: Pattern, s: CharSequence, replacer: StringReplacer): String = {
     val matcher = p.matcher(s)
 
@@ -419,8 +465,7 @@ object Escaping {
   // --- BasedSequence+ReplacedTextMapper overloads ---
 
   /** Full Replacer trait handling both String and BasedSequence replacements. */
-  private trait Replacer {
-    def replace(s:        String, sb:                StringBuilder):                                      Unit
+  private trait Replacer extends StringReplacer {
     def replace(original: BasedSequence, startIndex: Int, endIndex: Int, textMapper: ReplacedTextMapper): Unit
   }
 

@@ -20,8 +20,10 @@
  *   Idiom: Source map support omitted (not needed for first version)
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/output.js
+ * Covenant-js-reference: lib/output.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 0ed7a2f7254574d3df14827cafd5af6f5133bd2e
  */
 package ssg
 package js

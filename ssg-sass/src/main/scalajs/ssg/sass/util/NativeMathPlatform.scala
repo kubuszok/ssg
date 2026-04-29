@@ -1,10 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Scala.js implementation of NativeMath. JavaScript's Math.pow already
- * matches the native C pow() behavior, so we just delegate.
- */
+ * Scala.js implementation of NativeMath. JavaScript's Math.pow already matches the native C pow() behavior, so we just delegate. */
 package ssg
 package sass
 package util

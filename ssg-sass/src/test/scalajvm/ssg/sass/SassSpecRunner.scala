@@ -1,44 +1,24 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * JVM-only — sass-spec compliance runner.
  *
- * Walks `original-src/sass-spec/spec/` for `input.scss` files (both
- * loose files on disk and entries inside HRX archives), compiles each
- * via `Compile.compileString`, compares output to the adjacent
- * `output.css`, and prints a summary plus a per-failure log to
- * `ssg-sass/target/sass-spec-failures.txt`.
+ * Walks `original-src/sass-spec/spec/` for `input.scss` files (both loose files on disk and entries inside HRX archives), compiles each via `Compile.compileString`, compares output to the adjacent
+ * `output.css`, and prints a summary plus a per-failure log to `ssg-sass/target/sass-spec-failures.txt`.
  *
- * Multi-file HRX tests are run via an in-memory MapImporter built from
- * sibling entries in the same archive directory, so `@use`/`@forward`/
- * `@import` of archive-local URLs resolves. This is the mechanism that
- * lets forward/use/import/extend subdirs contribute to the measured
- * pass rate.
+ * Multi-file HRX tests are run via an in-memory MapImporter built from sibling entries in the same archive directory, so `@use`/`@forward`/ `@import` of archive-local URLs resolves. This is the
+ * mechanism that lets forward/use/import/extend subdirs contribute to the measured pass rate.
  *
  * ## Modes (system properties)
  *
- * The runner is enabled by `-Dssg.sass.spec=1`. Without the flag the
- * munit test is skipped explicitly (not silently via `assume`).
+ * The runner is enabled by `-Dssg.sass.spec=1`. Without the flag the munit test is skipped explicitly (not silently via `assume`).
  *
- *   -Dssg.sass.spec=1          — enable the runner
- *   -Dssg.sass.spec.strict=1   — fail on any leak category (leaks are
- *                                internal-state escapes, not legitimate
- *                                spec failures)
- *   -Dssg.sass.spec.subdir=P   — filter to cases under the given
- *                                relative-path prefix; require 100%
- *                                strict pass within the filtered set
- *   -Dssg.sass.spec.baseline=F — read baseline TSV from F; fail on any
- *                                regression (case whose recorded
- *                                outcome was Pass/ExpectedErrorOk and
- *                                is now anything else)
- *   -Dssg.sass.spec.snapshot=1 — rewrite the baseline TSV after the run
- *                                (no assertions)
+ * -Dssg.sass.spec=1 — enable the runner
+ * -Dssg.sass.spec.strict=1 — fail on any leak category (leaks are internal-state escapes, not legitimate spec failures)
+ * -Dssg.sass.spec.subdir=P — filter to cases under the given relative-path prefix; require 100% strict pass within the filtered set
+ * -Dssg.sass.spec.baseline=F — read baseline TSV from F; fail on any regression (case whose recorded outcome was Pass/ExpectedErrorOk and is now anything else)
+ * -Dssg.sass.spec.snapshot=1 — rewrite the baseline TSV after the run (no assertions)
  *
- * Baseline TSV format: one case per line, `relPath<TAB>outcome`,
- * outcome is the Outcome enum name (`Pass`, `ExpectedErrorOk`,
- * `Mismatch`, `Error`, `ExpectedErrorMissed`, `MissingExpected`).
- */
+ * Baseline TSV format: one case per line, `relPath<TAB>outcome`, outcome is the Outcome enum name (`Pass`, `ExpectedErrorOk`, `Mismatch`, `Error`, `ExpectedErrorMissed`, `MissingExpected`). */
 package ssg
 package sass
 

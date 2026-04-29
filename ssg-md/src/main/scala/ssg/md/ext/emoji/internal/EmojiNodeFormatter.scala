@@ -9,6 +9,8 @@
  * Covenant: full-port
  * Covenant-java-reference: flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiNodeFormatter.java
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14
  */
 package ssg
 package md
@@ -36,8 +38,7 @@ class EmojiNodeFormatter(options: DataHolder) extends NodeFormatter {
 
   private[internal] def render(node: Emoji, context: NodeFormatterContext, markdown: MarkdownWriter): Unit = {
     markdown.append(node.openingMarker)
-    // TODO: appendNonTranslating not yet ported - using append for now
-    markdown.append(node.text)
+    markdown.appendNonTranslating(node.text)
     markdown.append(node.closingMarker)
   }
 }

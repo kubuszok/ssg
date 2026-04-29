@@ -1,9 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * JVM-only — uses java.nio.file.
- */
+ * JVM-only — uses java.nio.file. */
 package ssg
 package sass
 

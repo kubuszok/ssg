@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/ast/sass/statement.dart,
+ * Ported from: lib/src/ast/sass/statement.dart
  *              lib/src/ast/sass/statement/parent.dart,
  *              lib/src/ast/sass/statement/at_root_rule.dart,
  *              lib/src/ast/sass/statement/at_rule.dart,
@@ -43,8 +43,10 @@
  *          hasDeclarations computed eagerly from children
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/ast/sass/statement.dart,
+ * Covenant-dart-reference: lib/src/ast/sass/statement.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

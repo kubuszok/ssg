@@ -7,7 +7,7 @@
  * Each option controls a specific optimization pass or behavior.
  * Defaults match Terser's `defaults: true` configuration.
  *
- * Ported from: terser lib/compress/index.js (Compressor constructor)
+ * Ported from: terser lib/compress/index.js
  * Original: Copyright (c) 2012 Mihai Bazon
  * Original license: BSD-2-Clause
  *
@@ -18,8 +18,10 @@
  *   Idiom: sealed trait InlineLevel instead of boolean|int union
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/compress/index.js (Compressor constructor)
+ * Covenant-js-reference: lib/compress/index.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 6080510127d6c871ad58ce27c5c6b3045d948baa
  */
 package ssg
 package js

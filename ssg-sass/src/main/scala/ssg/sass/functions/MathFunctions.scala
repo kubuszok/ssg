@@ -33,7 +33,7 @@
  * through the EvaluateVisitor's use-rule handler so `@use "sass:math"`
  * exposes them under the math namespace.
  *
- * Status: core_functions/math sass-spec subdir 248→397/486
+ * Spec progress — core_functions/math sass-spec subdir 248→397/486
  * (51.0%→81.7%, +149 cases). Global +167 cases (4345→4512).
  * Remaining 89 failures are dominated by:
  *   - B009 Infinity/NaN -> calc() wrapping (~60 cases): dart-sass
@@ -43,6 +43,8 @@
  *     error/wrong_name tests across every math built-in.
  *   - Precision edge cases on log/tan near asymptotes (~5 cases).
  *   - HRX multi-file resolution for random.hrx helpers (~4 cases).
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

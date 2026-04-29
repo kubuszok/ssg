@@ -27,8 +27,10 @@
  *   Idiom: TreeWalker/TreeTransformer, boundary/break instead of return
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/propmangle.js
+ * Covenant-js-reference: lib/propmangle.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 6e7323fd4b0e255a06f6d3a2dcd111b8640a9031
  */
 package ssg
 package js

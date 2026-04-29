@@ -15,8 +15,10 @@
  *   Idiom: boundary/break replaces JS return, mutable.Map/ArrayBuffer for scope state
  *
  * Covenant: full-port
- * Covenant-js-reference: terser lib/scope.js (figure_out_scope, lines 204-481)
+ * Covenant-js-reference: lib/scope.js
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: 88493d7ca0d708389f5f78f541c4fb48e71d9fe2
  */
 package ssg
 package js
@@ -285,7 +287,8 @@ private[scope] class ScopeContext(
   var labels = mutable.Map.empty[String, AstLabel]
   var defun:           AstScope         = null.asInstanceOf[AstScope] // @nowarn — null sentinel, set during walk
   var inDestructuring: AstDestructuring = null.asInstanceOf[AstDestructuring] // @nowarn — null sentinel
-  val forScopes = ArrayBuffer.empty[AstScope]
+  val forScopes        = ArrayBuffer.empty[AstScope]
+  private var rootInitialized: Boolean = false
 
   private def pass1Visit(node: AstNode, descend: () => Unit): Any = {
     if (isBlockScope(node)) {
@@ -305,10 +308,19 @@ private[scope] class ScopeContext(
 
     node match {
       case s: AstScope =>
-        s match {
-          case lambda: AstArrow  => initArrowScopeVars(lambda, scope)
-          case lambda: AstLambda => initLambdaScopeVars(lambda, scope)
-          case _ => initScopeVars(s, scope)
+        if (!rootInitialized) {
+          s match {
+            case lambda: AstArrow  => initArrowScopeVars(lambda, parentScopeOpt)
+            case lambda: AstLambda => initLambdaScopeVars(lambda, parentScopeOpt)
+            case _                 => initScopeVars(s, parentScopeOpt)
+          }
+          rootInitialized = true
+        } else {
+          s match {
+            case lambda: AstArrow  => initArrowScopeVars(lambda, scope)
+            case lambda: AstLambda => initLambdaScopeVars(lambda, scope)
+            case _                 => initScopeVars(s, scope)
+          }
         }
         val saveScope  = scope
         val saveDefun  = defun

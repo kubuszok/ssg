@@ -14,6 +14,8 @@
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/util/merged_map_view.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

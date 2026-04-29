@@ -29,7 +29,7 @@
  *   - deep-remove using _modify with addNesting=false
  *   - _modify helper for nested-path mutation
  *
- * Status: core_functions/map sass-spec subdir 91→113/127 (71.7%→89.0%).
+ * Spec progress — core_functions/map sass-spec subdir 91→113/127 (71.7%→89.0%).
  * Remaining 14 failures map to:
  *   - 9 × B004 (argument arity validation: error/wrong_name and
  *     error/too_many_args tests across all six built-ins)
@@ -38,6 +38,8 @@
  *   - 2 × NEW B-task (single-element non-bracketed comma list
  *     rendering: keys/values single-element case shows `(1,)` instead
  *     of `1`)
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

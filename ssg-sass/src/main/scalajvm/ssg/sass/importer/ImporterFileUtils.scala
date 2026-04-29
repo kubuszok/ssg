@@ -1,18 +1,11 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/importer/utils.dart (filesystem-dependent portion)
- * Original: Copyright (c) 2017 Google Inc.
+ * Ported from: lib/src/importer/utils.dart (filesystem-dependent portion) Original: Copyright (c) 2017 Google Inc.
  * Original license: MIT
  *
  * Migration notes:
- *   Renames: utils.dart -> ImporterFileUtils.scala (JVM-only portion)
- *   Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
- *   Idiom: resolveImportPath, tryPath, tryPathWithExtensions,
- *          tryPathAsDirectory, exactlyOne — filesystem operations that
- *          require actual file existence checks.
- */
+ * Renames: utils.dart -> ImporterFileUtils.scala (JVM-only portion) Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
+ * Idiom: resolveImportPath, tryPath, tryPathWithExtensions, tryPathAsDirectory, exactlyOne — filesystem operations that require actual file existence checks. */
 package ssg
 package sass
 package importer

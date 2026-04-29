@@ -2,7 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: lib/src/ast/sass/argument_list.dart,
+ * Ported from: lib/src/ast/sass/argument_list.dart
  *              lib/src/ast/sass/parameter.dart,
  *              lib/src/ast/sass/parameter_list.dart
  * Original: Copyright (c) 2016 Google Inc.
@@ -15,8 +15,10 @@
  *   Idiom: Nullable for optional fields; boundary/break for early return in matches()
  *
  * Covenant: full-port
- * Covenant-dart-reference: lib/src/ast/sass/argument_list.dart,
+ * Covenant-dart-reference: lib/src/ast/sass/argument_list.dart
  * Covenant-verified: 2026-04-26
+ *
+ * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
 package ssg
 package sass

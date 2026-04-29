@@ -1,12 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Exercises the new `_rd*` recursive-descent expression parser scaffold
- * in StylesheetParser. These methods are a staged port of the dart-sass
- * `_expression` / `_singleExpression` machinery and are NOT yet wired
- * into the main parse path — this suite calls them directly.
- */
+ * Exercises the new `_rd*` recursive-descent expression parser scaffold in StylesheetParser. These methods are a staged port of the dart-sass `_expression` / `_singleExpression` machinery and are NOT
+ * yet wired into the main parse path — this suite calls them directly. */
 package ssg
 package sass
 package parse

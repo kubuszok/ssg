@@ -1,9 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Cross-platform tests for the strict plain-CSS parser (ISS-019).
- */
+ * Cross-platform tests for the strict plain-CSS parser (ISS-019). */
 package ssg
 package sass
 
