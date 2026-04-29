@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
- */
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0 */
 package ssg
 package minify
 
@@ -182,5 +179,26 @@ final class CssMinifySuite extends munit.FunSuite {
     assert(result.contains("/* comment */"), s"Expected comment preserved, got: $result")
     assert(result.contains("#ffffff"), s"Expected color not shortened, got: $result")
     assert(result.contains("0px"), s"Expected zero not collapsed, got: $result")
+  }
+
+  test("malformed: unclosed brace") {
+    val input  = "body { color: red"
+    val result = CssMinifier.minify(input)
+    // Should not throw; should return something containing the declaration
+    assert(result.contains("color"), s"Expected content preserved despite unclosed brace, got: $result")
+  }
+
+  test("malformed: invalid selector") {
+    val input  = "### { margin: 0; }"
+    val result = CssMinifier.minify(input)
+    // Should not throw; should handle gracefully
+    assert(result.nonEmpty, s"Expected non-empty result for invalid selector, got: $result")
+  }
+
+  test("malformed: unclosed string") {
+    val input  = "body { content: 'hello }"
+    val result = CssMinifier.minify(input)
+    // Should not throw; should return something
+    assert(result.contains("content"), s"Expected content preserved despite unclosed string, got: $result")
   }
 }

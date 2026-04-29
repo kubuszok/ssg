@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
- */
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0 */
 package ssg
 package minify
 
@@ -127,5 +124,26 @@ final class JsonMinifySuite extends munit.FunSuite {
         |  // trailing comment
         |}""".stripMargin
     assertEquals(JsonMinifier.minify(input), """{"x":1,"y":2}""")
+  }
+
+  test("malformed: trailing comma") {
+    val input  = """{"a": 1,}"""
+    val result = JsonMinifier.minify(input)
+    // Should not throw; should return something containing the data
+    assert(result.contains("\"a\""), s"Expected key preserved despite trailing comma, got: $result")
+  }
+
+  test("malformed: unclosed string") {
+    val input  = """{"a": "hello}"""
+    val result = JsonMinifier.minify(input)
+    // Should not throw; should return something
+    assert(result.nonEmpty, s"Expected non-empty result for unclosed string, got: $result")
+  }
+
+  test("malformed: unclosed array") {
+    val input  = """[1, 2, 3"""
+    val result = JsonMinifier.minify(input)
+    // Should not throw; should return something containing the data
+    assert(result.contains("1"), s"Expected data preserved despite unclosed array, got: $result")
   }
 }

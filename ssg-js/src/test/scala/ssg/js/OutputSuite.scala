@@ -1,7 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
- */
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
+ *
+ * Tests for the OutputStream code generator.
+ * All assertions use assertEquals with exact expected output. */
 package ssg
 package js
 
@@ -24,143 +24,105 @@ final class OutputSuite extends munit.FunSuite {
   // -- Basic round-trip --
 
   test("var declaration") {
-    val result = minify("var x = 1;")
-    assert(result.contains("var"), s"got: $result")
-    assert(result.contains("x"), s"got: $result")
-    assert(result.contains("1"), s"got: $result")
+    assertEquals(minify("var x = 1;"), "var x=1;")
   }
 
   test("let and const") {
-    val result = minify("let a = 1; const b = 2;")
-    assert(result.contains("let"), s"got: $result")
-    assert(result.contains("const"), s"got: $result")
+    assertEquals(minify("let a = 1; const b = 2;"), "let a=1;const b=2;")
   }
 
   test("function declaration") {
-    val result = minify("function foo(a, b) { return a + b; }")
-    assert(result.contains("function"), s"got: $result")
-    assert(result.contains("foo"), s"got: $result")
-    assert(result.contains("return"), s"got: $result")
+    assertEquals(minify("function foo(a, b) { return a + b; }"), "function foo(a,b){return a+b}")
   }
 
   test("arrow function") {
-    val result = minify("var f = (x) => x * 2;")
-    assert(result.contains("=>"), s"got: $result")
+    assertEquals(minify("var f = (x) => x * 2;"), "var f=x=>x*2;")
   }
 
   test("if/else") {
-    val result = minify("if (x) { a(); } else { b(); }")
-    assert(result.contains("if"), s"got: $result")
-    assert(result.contains("else"), s"got: $result")
+    assertEquals(minify("if (x) { a(); } else { b(); }"), "if(x){a()}else{b()}")
   }
 
   test("for loop") {
-    val result = minify("for (var i = 0; i < 10; i++) { x(); }")
-    assert(result.contains("for"), s"got: $result")
+    assertEquals(minify("for (var i = 0; i < 10; i++) { x(); }"), "for(var i=0;i<10;i++){x()}")
   }
 
   test("while loop") {
-    val result = minify("while (x) { y(); }")
-    assert(result.contains("while"), s"got: $result")
+    assertEquals(minify("while (x) { y(); }"), "while(x){y()}")
   }
 
   test("try/catch") {
-    val result = minify("try { x(); } catch (e) { y(); }")
-    assert(result.contains("try"), s"got: $result")
-    assert(result.contains("catch"), s"got: $result")
+    assertEquals(minify("try { x(); } catch (e) { y(); }"), "try{x()}catch(e){y()}")
   }
 
   test("switch") {
-    val result = minify("switch (x) { case 1: a(); break; default: b(); }")
-    assert(result.contains("switch"), s"got: $result")
-    assert(result.contains("case"), s"got: $result")
+    assertEquals(minify("switch (x) { case 1: a(); break; default: b(); }"), "switch(x){case 1:a();break;default:b()}")
   }
 
   // -- Expressions --
 
   test("binary expression") {
-    val result = minify("a + b * c;")
-    assert(result.contains("+"), s"got: $result")
-    assert(result.contains("*"), s"got: $result")
+    assertEquals(minify("a + b * c;"), "a+b*c;")
   }
 
   test("function call") {
-    val result = minify("foo(1, 2, 3);")
-    assert(result.contains("foo"), s"got: $result")
-    assert(result.contains("1"), s"got: $result")
+    assertEquals(minify("foo(1, 2, 3);"), "foo(1,2,3);")
   }
 
   test("member access") {
-    val result = minify("a.b.c;")
-    assert(result.contains("a.b.c"), s"got: $result")
+    assertEquals(minify("a.b.c;"), "a.b.c;")
   }
 
   test("ternary") {
-    val result = minify("x ? a : b;")
-    assert(result.contains("?"), s"got: $result")
-    assert(result.contains(":"), s"got: $result")
+    assertEquals(minify("x ? a : b;"), "x?a:b;")
   }
 
   test("assignment") {
-    val result = minify("x = 1;")
-    assert(result.contains("x=1") || result.contains("x = 1"), s"got: $result")
+    assertEquals(minify("x = 1;"), "x=1;")
   }
 
   // -- Literals --
 
   test("string literal") {
-    val result = minify("1; 'hello';")
-    assert(result.contains("hello"), s"got: $result")
+    assertEquals(minify("1; 'hello';"), "1;\"hello\";")
   }
 
   test("number literal") {
-    val result = minify("42;")
-    assert(result.contains("42"), s"got: $result")
+    assertEquals(minify("42;"), "42;")
   }
 
   test("boolean literals") {
-    val result = minify("true; false;")
-    assert(result.contains("true"), s"got: $result")
-    assert(result.contains("false"), s"got: $result")
+    assertEquals(minify("true; false;"), "true;false;")
   }
 
   test("null") {
-    val result = minify("null;")
-    assert(result.contains("null"), s"got: $result")
+    assertEquals(minify("null;"), "null;")
   }
 
   test("array") {
-    val result = minify("[1, 2, 3];")
-    assert(result.contains("[") && result.contains("]"), s"got: $result")
+    assertEquals(minify("[1, 2, 3];"), "[1,2,3];")
   }
 
   test("object") {
-    val result = minify("({a: 1, b: 2});")
-    assert(result.contains("a") && result.contains("b"), s"got: $result")
+    assertEquals(minify("({a: 1, b: 2});"), "{a:1,b:2};")
   }
 
   // -- ES6+ --
 
   test("template literal") {
-    val result = minify("`hello ${name} world`;")
-    assert(result.contains("`"), s"got: $result")
+    assertEquals(minify("`hello ${name} world`;"), "`hello ${name} world`;")
   }
 
   test("class") {
-    val result = minify("class Foo extends Bar { }")
-    assert(result.contains("class"), s"got: $result")
-    assert(result.contains("Foo"), s"got: $result")
-    assert(result.contains("extends"), s"got: $result")
+    assertEquals(minify("class Foo extends Bar { }"), "class Foo extends Bar{}")
   }
 
   test("import") {
-    val result = minify("import foo from 'bar';")
-    assert(result.contains("import"), s"got: $result")
+    assertEquals(minify("import foo from 'bar';"), "import foo from\"bar\";")
   }
 
   test("export default") {
-    val result = minify("export default 42;")
-    assert(result.contains("export"), s"got: $result")
+    assertEquals(minify("export default 42;"), "export default 42;")
   }
 
   // -- Beautify mode --
@@ -168,8 +130,7 @@ final class OutputSuite extends munit.FunSuite {
   test("beautify produces readable output") {
     val code   = "function foo(a){return a+1}"
     val result = generate(parse(code), OutputOptions(beautify = true))
-    // Beautified should have newlines and indentation
-    assert(result.contains("\n"), s"Expected newlines in beautified output: $result")
+    assertEquals(result, "function foo(a) {\n    return a + 1;\n}")
   }
 
   // -- Real-world --
@@ -180,9 +141,7 @@ final class OutputSuite extends munit.FunSuite {
         |  if (n <= 1) return n;
         |  return fibonacci(n - 1) + fibonacci(n - 2);
         |}""".stripMargin
-    val result = minify(code)
-    assert(result.contains("fibonacci"), s"got: $result")
-    assert(result.contains("return"), s"got: $result")
+    assertEquals(minify(code), "function fibonacci(n){if(n<=1)return n;return fibonacci(n-1)+fibonacci(n-2)}")
   }
 
   test("minified output is shorter than input") {
@@ -192,7 +151,6 @@ final class OutputSuite extends munit.FunSuite {
         |  var   result   =   a   +   b;
         |  return   result;
         |}""".stripMargin
-    val result = minify(code)
-    assert(result.length < code.length, s"Expected minified to be shorter: ${result.length} vs ${code.length}")
+    assertEquals(minify(code), "function add(a,b){var result=a+b;return result}")
   }
 }
