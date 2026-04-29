@@ -1,11 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Ported from: flexmark-test-util/src/main/java/com/vladsch/flexmark/test/util/RenderingTestCase.java
- * Original: Copyright (c) 2016-2023 Vladimir Schneider
- * Original license: BSD-2-Clause
- */
+ * Ported from: flexmark-test-util/src/main/java/com/vladsch/flexmark/test/util/RenderingTestCase.java Original: Copyright (c) 2016-2023 Vladimir Schneider Original license: BSD-2-Clause */
 package ssg
 package md
 package test
@@ -80,9 +75,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
     // default no-op
   }
 
-  /*
-   * Convenience functions for those tests that do not have an example
-   */
+  /* Convenience functions for those tests that do not have an example */
   final protected def assertRendering(source: String, html: String): Unit =
     assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, Nullable.empty))
 

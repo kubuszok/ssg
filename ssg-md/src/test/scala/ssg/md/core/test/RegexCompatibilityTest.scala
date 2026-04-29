@@ -1,11 +1,8 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Tests for cross-platform regex compatibility.
  * Exercises edge cases of patterns that originally used JVM-only regex features:
- * lookaheads, \p{} Unicode categories, character class intersection (&&).
- */
+ * lookaheads, \p{} Unicode categories, character class intersection (&&). */
 package ssg
 package md
 package core

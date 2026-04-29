@@ -1,15 +1,10 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Scala.js implementation of resource loading for tests.
- * Uses Node.js `fs` module to read resource files from the filesystem,
- * since Class.getResourceAsStream is not available on Scala.js.
+ * Uses Node.js `fs` module to read resource files from the filesystem, since Class.getResourceAsStream is not available on Scala.js.
  *
  * sbt copies test resources to ssg-md/target/js-3/test-classes/.
- * When JS tests run via Node.js, the working directory is the project root,
- * so we resolve resource paths relative to that directory.
- */
+ * When JS tests run via Node.js, the working directory is the project root, so we resolve resource paths relative to that directory. */
 package ssg
 package md
 package test

@@ -1,10 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Cross-platform resource loading helper for tests.
- * Delegates to platform-specific ResourceCompatPlatform implementations.
- */
+ * Delegates to platform-specific ResourceCompatPlatform implementations. */
 package ssg
 package md
 package test

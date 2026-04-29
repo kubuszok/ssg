@@ -1,15 +1,9 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * CommonMark spec conformance test — parses the original CommonMark spec.txt files
- * (v0.28, v0.29, v0.30) and measures how many examples the ssg-md parser/renderer
- * handles correctly.
+ * CommonMark spec conformance test — parses the original CommonMark spec.txt files (v0.28, v0.29, v0.30) and measures how many examples the ssg-md parser/renderer handles correctly.
  *
- * This test is informational: it reports pass/fail counts and conformance percentage
- * without failing the build on individual mismatches (flexmark deliberately deviates
- * from CommonMark in several areas).
- */
+ * This test is informational: it reports pass/fail counts and conformance percentage without failing the build on individual mismatches (flexmark deliberately deviates from CommonMark in several
+ * areas). */
 package ssg
 package md
 package core
