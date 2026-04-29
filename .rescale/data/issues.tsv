@@ -433,13 +433,13 @@ ISS-430	ssg-js/src/main/scala/ssg/js/parse/Tokenizer.scala	shortcuts	open	medium
 ISS-431	ssg-js/src/main/scala/ssg/js/scope/Mangler.scala	shortcuts	open	low	[was ISS-120] 1 shortcut hit(s): null-cast	2026-04-10	manual
 ISS-432	ssg-js/src/main/scala/ssg/js/scope/ScopeAnalysis.scala	shortcuts	open	medium	[was ISS-121] 5 shortcut hit(s): null-cast, xxx, hack	2026-04-10	manual
 ISS-433	ssg-js/src/main/scala/ssg/js/scope/SymbolDef.scala	shortcuts	open	low	[was ISS-122] 1 shortcut hit(s): not-yet-comment	2026-04-10	manual
-ISS-434	ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	shortcuts	open	low	[was ISS-123] 1 shortcut hit(s): this-null-arg	2026-04-10	manual
-ISS-435	ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	shortcuts	open	low	[was ISS-124] 1 shortcut hit(s): null-cast	2026-04-10	manual
-ISS-436	ssg-liquid/src/main/scala/ssg/liquid/antlr/NameResolver.scala	shortcuts	open	low	[was ISS-125] 1 shortcut hit(s): unsupported-op	2026-04-10	manual
-ISS-437	ssg-liquid/src/main/scala/ssg/liquid/blocks/Block.scala	shortcuts	open	low	[was ISS-126] 1 shortcut hit(s): this-null-arg	2026-04-10	manual
-ISS-438	ssg-liquid/src/main/scala/ssg/liquid/blocks/For.scala	shortcuts	open	low	[was ISS-127] 1 shortcut hit(s): break-comment	2026-04-10	manual
-ISS-439	ssg-liquid/src/main/scala/ssg/liquid/filters/Filter.scala	shortcuts	open	low	[was ISS-128] 1 shortcut hit(s): this-null-arg	2026-04-10	manual
-ISS-440	ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	shortcuts	open	low	[was ISS-129] 1 shortcut hit(s): this-null-arg	2026-04-10	manual
+ISS-434	ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	shortcuts	resolved	low	[was ISS-123] 1 shortcut hit(s): this-null-arg	2026-04-28	manual
+ISS-435	ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	shortcuts	resolved	low	[was ISS-124] 1 shortcut hit(s): null-cast	2026-04-28	manual
+ISS-436	ssg-liquid/src/main/scala/ssg/liquid/antlr/NameResolver.scala	shortcuts	resolved	low	[was ISS-125] 1 shortcut hit(s): unsupported-op	2026-04-28	manual
+ISS-437	ssg-liquid/src/main/scala/ssg/liquid/blocks/Block.scala	shortcuts	resolved	low	[was ISS-126] 1 shortcut hit(s): this-null-arg	2026-04-28	manual
+ISS-438	ssg-liquid/src/main/scala/ssg/liquid/blocks/For.scala	shortcuts	resolved	low	[was ISS-127] 1 shortcut hit(s): break-comment	2026-04-28	manual
+ISS-439	ssg-liquid/src/main/scala/ssg/liquid/filters/Filter.scala	shortcuts	resolved	low	[was ISS-128] 1 shortcut hit(s): this-null-arg	2026-04-28	manual
+ISS-440	ssg-liquid/src/main/scala/ssg/liquid/tags/Tag.scala	shortcuts	resolved	low	[was ISS-129] 1 shortcut hit(s): this-null-arg	2026-04-28	manual
 ISS-441	ssg-md/src/main/scala/ssg/md/Nullable.scala	shortcuts	open	low	[was ISS-130] 1 shortcut hit(s): null-cast	2026-04-10	manual
 ISS-442	ssg-md/src/main/scala/ssg/md/ast/Heading.scala	shortcuts	open	low	[was ISS-131] 2 shortcut hit(s): for-now-comment, not-yet-comment	2026-04-10	manual
 ISS-443	ssg-md/src/main/scala/ssg/md/ast/HtmlEntity.scala	shortcuts	open	low	[was ISS-132] 1 shortcut hit(s): todo	2026-04-10	manual
