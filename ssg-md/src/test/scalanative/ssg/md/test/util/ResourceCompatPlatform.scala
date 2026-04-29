@@ -1,10 +1,7 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Scala Native implementation of resource loading for tests.
- * Uses Class.getResourceAsStream (available on Scala Native with embedded resources).
- */
+ * Uses Class.getResourceAsStream (available on Scala Native with embedded resources). */
 package ssg
 package md
 package test

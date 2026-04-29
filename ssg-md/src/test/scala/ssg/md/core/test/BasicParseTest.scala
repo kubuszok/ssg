@@ -1,9 +1,6 @@
-/*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * Basic diagnostic test to isolate parser/renderer issues.
- */
+ * Basic diagnostic test to isolate parser/renderer issues. */
 package ssg
 package md
 package core
