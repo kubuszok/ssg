@@ -29,8 +29,11 @@ final class ComboExtEnumeratedReferenceSpecTest extends RendererSpecTestSuite {
 object ComboExtEnumeratedReferenceSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/enumerated/reference/test/ext_enumerated_reference_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboExtEnumeratedReferenceSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
+  val OPTIONS:           DataHolder       = new MutableDataSet()
     .set(TablesExtension.WITH_CAPTION, true)
-    .set(Parser.EXTENSIONS, Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create(), TablesExtension.create()))
+    .set(
+      Parser.EXTENSIONS,
+      Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create(), TablesExtension.create())
+    )
     .toImmutable
 }

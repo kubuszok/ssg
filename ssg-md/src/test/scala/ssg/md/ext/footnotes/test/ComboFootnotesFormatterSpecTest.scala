@@ -20,19 +20,16 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboFootnotesFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboFootnotesFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboFootnotesFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboFootnotesFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Footnotes -", "Issue", "Placement Options -")
+  override def specResource:         ResourceLocation                       = ComboFootnotesFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboFootnotesFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboFootnotesFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Footnotes -", "Issue", "Placement Options -")
 }
 
 object ComboFootnotesFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/footnotes/test/ext_footnotes_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboFootnotesFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(FootnoteExtension.create()))
-    .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(FootnoteExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(FootnoteExtension.FOOTNOTES_KEEP),

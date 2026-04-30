@@ -22,7 +22,7 @@ final class UnicodeSuite extends munit.FunSuite {
     val tests = List(
       "var \\u{0} = \"foo\";",
       "var \\u{10ffff} = \"bar\";",
-      "var \\u000a = \"what's up\";",
+      "var \\u000a = \"what's up\";"
     )
     tests.foreach { code =>
       intercept[Exception] {
@@ -36,7 +36,7 @@ final class UnicodeSuite extends munit.FunSuite {
     val tests = List(
       "var a\\u{0} = \"foo\";",
       "var a\\u{10ffff} = \"bar\";",
-      "var z\\u000a = \"what's up\";",
+      "var z\\u000a = \"what's up\";"
     )
     tests.foreach { code =>
       intercept[Exception] {
@@ -48,11 +48,11 @@ final class UnicodeSuite extends munit.FunSuite {
   // 3. "Should throw error if identifier is a keyword with escape sequences"
   test("should throw error if identifier is a keyword with escape sequences") {
     val tests = List(
-      "var \\u0069\\u006e = \"foo\"",        // in
+      "var \\u0069\\u006e = \"foo\"", // in
       "var \\u0076\\u0061\\u0072 = \"bar\"", // var
       "var \\u{66}\\u{6f}\\u{72} = \"baz\"", // for
-      "var \\u0069\\u{66} = \"foobar\"",     // if
-      "var \\u{73}uper",                      // super
+      "var \\u0069\\u{66} = \"foobar\"", // if
+      "var \\u{73}uper" // super
     )
     tests.foreach { code =>
       intercept[JsParseError] {
@@ -91,7 +91,7 @@ final class UnicodeSuite extends munit.FunSuite {
 
   // 6. "Should not strip quotes for object property name when there is unallowed character"
   test("should not strip quotes for object property name with unallowed character") {
-    val code = "console.log({\"hello\u30FBworld\":123});"
+    val code   = "console.log({\"hello\u30FBworld\":123});"
     val result = Terser.minifyToString(code, noOpt)
     // The mid-dot (U+30FB) is not a valid JS identifier char, so quotes must be preserved
     assertEquals(result, "console.log({\"hello\u30FBworld\":123});")

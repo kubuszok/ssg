@@ -28,27 +28,25 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
     .set(Formatter.MAX_TRAILING_BLANK_LINES, 0)
     .toImmutable
 
-  private val OPTIONS_AS_IS: DataHolder = new MutableDataSet(OPTIONS)
-    .set(AbbreviationExtension.MAKE_MERGED_ABBREVIATIONS_UNIQUE, false)
-    .toImmutable
+  private val OPTIONS_AS_IS: DataHolder = new MutableDataSet(OPTIONS).set(AbbreviationExtension.MAKE_MERGED_ABBREVIATIONS_UNIQUE, false).toImmutable
 
   private val FORMATTER:       Formatter = Formatter.builder(Nullable(OPTIONS)).build()
   private val FORMATTER_AS_IS: Formatter = Formatter.builder(Nullable(OPTIONS_AS_IS)).build()
   private val PARSER:          Parser    = Parser.builder(OPTIONS).build()
 
   private def assertMergedAsIs(expected: String, markdownSources: String*): Unit = {
-    val documents = markdownSources.map(src => PARSER.parse(src)).toArray
+    val documents    = markdownSources.map(src => PARSER.parse(src)).toArray
     val mergedOutput = FORMATTER_AS_IS.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
   private def assertMerged(expected: String, markdownSources: String*): Unit = {
-    val documents = markdownSources.map(src => PARSER.parse(src)).toArray
+    val documents    = markdownSources.map(src => PARSER.parse(src)).toArray
     val mergedOutput = FORMATTER.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
-  private def testIdAttributeAsIs(): Unit = {
+  private def testIdAttributeAsIs(): Unit =
     assertMergedAsIs(
       "*[Abbr]: Abbreviation\n" +
         "\n" +
@@ -67,7 +65,6 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
         "This has an Abbr embedded in it.\n" +
         "\n"
     )
-  }
 
   test("IdAttributeAsIs1") {
     testIdAttributeAsIs()
@@ -78,7 +75,7 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
     testIdAttributeAsIs()
   }
 
-  private def testIdAttributeConflict(): Unit = {
+  private def testIdAttributeConflict(): Unit =
     assertMerged(
       "*[Abbr]: Abbreviation\n" +
         "\n" +
@@ -97,7 +94,6 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
         "This has an Abbr embedded in it.\n" +
         "\n"
     )
-  }
 
   test("IdAttributeConflict1") {
     testIdAttributeConflict()
@@ -108,7 +104,7 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
     testIdAttributeConflict()
   }
 
-  private def testUndefinedIdConflict(): Unit = {
+  private def testUndefinedIdConflict(): Unit =
     assertMerged(
       "*[Abbr]: Abbreviation\n" +
         "\n" +
@@ -131,7 +127,6 @@ final class MergeAbbreviationsSuite extends munit.FunSuite {
         "This has an Abbr embedded in it.\n" +
         "\n"
     )
-  }
 
   test("UndefinedIdConflict1") {
     testUndefinedIdConflict()

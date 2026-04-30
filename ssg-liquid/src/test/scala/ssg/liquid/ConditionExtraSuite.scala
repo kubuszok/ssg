@@ -4,8 +4,7 @@ package liquid
 
 /** Gap-fill tests ported from liqp's ConditionTest.java — 4 missing tests.
   *
-  * Tests that exercise condition expressions via template rendering
-  * (since SSG doesn't expose the internal node API directly).
+  * Tests that exercise condition expressions via template rendering (since SSG doesn't expose the internal node API directly).
   */
 final class ConditionExtraSuite extends munit.FunSuite {
 
@@ -25,8 +24,11 @@ final class ConditionExtraSuite extends munit.FunSuite {
   test("condition: contains works on arrays") {
     val vars = TestHelper.mapOf(
       "array" -> TestHelper.listOf(
-        java.lang.Long.valueOf(1L), java.lang.Long.valueOf(2L), java.lang.Long.valueOf(3L),
-        java.lang.Long.valueOf(4L), java.lang.Long.valueOf(5L)
+        java.lang.Long.valueOf(1L),
+        java.lang.Long.valueOf(2L),
+        java.lang.Long.valueOf(3L),
+        java.lang.Long.valueOf(4L),
+        java.lang.Long.valueOf(5L)
       )
     )
     assertEquals(Template.parse("{% if array contains 0 %}true{% else %}false{% endif %}").render(vars), "false")

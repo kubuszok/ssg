@@ -24,8 +24,7 @@ import java.util.{ HashMap => JHashMap }
 
 /** Tests for the hand-written LiquidParser, adapted from the original ANTLR-based LiquidParserTest.
   *
-  * Each test exercises the same parser rule as the original @Test, but verifies via
-  * parse+render output rather than ANTLR ParseTree.getText().
+  * Each test exercises the same parser rule as the original @Test, but verifies via parse+render output rather than ANTLR ParseTree.getText().
   *
   * 14 tests total, matching the 14 @Test methods in the original.
   */
@@ -37,31 +36,37 @@ final class LiquidParserSuite extends munit.FunSuite {
 
   private def parserWithCustomBlockAndTag(blockName: String, tagName: String): TemplateParser =
     new TemplateParser.Builder()
-      .withBlock(new blocks.Block(blockName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[$blockName:$body]"
+      .withBlock(
+        new blocks.Block(blockName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[$blockName:$body]"
+          }
         }
-      })
-      .withTag(new tags.Tag(tagName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          // Render parameters if any
-          val params = ns.map(n => String.valueOf(n.render(context))).mkString("")
-          if (params.nonEmpty) s"<$tagName:$params>" else s"<$tagName>"
+      )
+      .withTag(
+        new tags.Tag(tagName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            // Render parameters if any
+            val params = ns.map(n => String.valueOf(n.render(context))).mkString("")
+            if (params.nonEmpty) s"<$tagName:$params>" else s"<$tagName>"
+          }
         }
-      })
+      )
       .build()
 
   private def parserWithBlocks(blockNames: String*): TemplateParser = {
     var builder = new TemplateParser.Builder()
     blockNames.foreach { bn =>
       val blockName = bn
-      builder = builder.withBlock(new blocks.Block(blockName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[$blockName:$body]"
+      builder = builder.withBlock(
+        new blocks.Block(blockName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[$blockName:$body]"
+          }
         }
-      })
+      )
     }
     builder.build()
   }
@@ -82,13 +87,16 @@ final class LiquidParserSuite extends munit.FunSuite {
 
   test("custom_tag: tag with parameters") {
     val parser = new TemplateParser.Builder()
-      .withTag(new tags.Tag("mu") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          // Parameters are passed as child nodes
-          val params = ns.map(n => String.valueOf(n.render(context))).mkString(",")
-          s"<mu:$params>"
+      .withTag(
+        new tags.Tag("mu") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            // Parameters are passed as child nodes
+            val params = ns.map(n => String.valueOf(n.render(context))).mkString(",")
+            s"<mu:$params>"
+          }
         }
-      }).build()
+      )
+      .build()
     // {% mu | 42 %} — tag with filter-like parameter
     val result = parser.parse("{% mu 42 %}").render()
     assert(result.contains("mu"), s"Expected mu tag rendering, got: $result")
@@ -99,7 +107,8 @@ final class LiquidParserSuite extends munit.FunSuite {
       .withTag(new tags.Tag("mu") {
         override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
           "<mu:rendered>"
-      }).build()
+      })
+      .build()
     val result = parser.parse("{% mu for foo as bar %}").render()
     assertEquals(result, "<mu:rendered>")
   }
@@ -128,18 +137,22 @@ final class LiquidParserSuite extends munit.FunSuite {
   // NOTE: SSG parser in LAX mode (default) does not raise errors for mismatched end tags.
   test("custom_tag: mismatched end tag — SSG LAX mode ignores".fail) {
     val parser = new TemplateParser.Builder()
-      .withBlock(new blocks.Block("mu") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[mu:$body]"
+      .withBlock(
+        new blocks.Block("mu") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[mu:$body]"
+          }
         }
-      })
-      .withBlock(new blocks.Block("other") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[other:$body]"
+      )
+      .withBlock(
+        new blocks.Block("other") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[other:$body]"
+          }
         }
-      })
+      )
       .build()
     // {% mu %} . {% endother %} — mismatched end tag
     intercept[LiquidException] {
@@ -331,7 +344,7 @@ final class LiquidParserSuite extends munit.FunSuite {
   //    tagStart ForEnd TagEnd
   //  ;
   test("for_array: iterate over array") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
@@ -344,7 +357,7 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("for_array: with limit and offset attributes") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
@@ -360,9 +373,9 @@ final class LiquidParserSuite extends munit.FunSuite {
 
   test("for_array: nested property access in lookup") {
     val vars = new JHashMap[String, Any]()
-    val a = new JHashMap[String, Any]()
-    val b = new JHashMap[String, Any]()
-    val c = new java.util.ArrayList[Any]()
+    val a    = new JHashMap[String, Any]()
+    val b    = new JHashMap[String, Any]()
+    val c    = new java.util.ArrayList[Any]()
     c.add("x")
     c.add("y")
     b.put("c", c)

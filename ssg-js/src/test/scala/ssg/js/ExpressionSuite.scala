@@ -22,10 +22,10 @@ final class ExpressionSuite extends munit.FunSuite {
       "void 5 ** 3",
       "typeof 5 ** 3",
       "delete 5 ** 3",
-      "var a = -(5) ** 3;",
+      "var a = -(5) ** 3;"
     )
     tests.foreach { code =>
-      val ex = intercept[JsParseError] { parse(code) }
+      val ex = intercept[JsParseError](parse(code))
       assert(
         ex.message.matches("""Unexpected token: operator \((?:[!+~-]|void|typeof|delete)\).*"""),
         s"Expected 'Unexpected token: operator' error for: $code, got: ${ex.message}"

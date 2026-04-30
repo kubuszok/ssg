@@ -14,10 +14,10 @@ final class NumberLiteralSuite extends munit.FunSuite {
   test("should not allow legacy octal literals in strict mode") {
     val inputs = List(
       "\"use strict\";00;",
-      "\"use strict\"; var foo = 00;",
+      "\"use strict\"; var foo = 00;"
     )
     inputs.foreach { input =>
-      val ex = intercept[JsParseError] { new Parser().parse(input) }
+      val ex = intercept[JsParseError](new Parser().parse(input))
       assert(
         ex.message.contains("octal") || ex.message.contains("Legacy"),
         s"Expected octal error, got: ${ex.getMessage} for input: $input"

@@ -14,16 +14,12 @@ final class RenderSettingsSuite extends munit.FunSuite {
     new TemplateParser.Builder().withStrictVariables(true).build()
 
   private def parserWithStrictVariablesAndLaxMode(): TemplateParser =
-    new TemplateParser.Builder()
-      .withStrictVariables(true)
-      .withErrorMode(TemplateParser.ErrorMode.LAX)
-      .build()
+    new TemplateParser.Builder().withStrictVariables(true).withErrorMode(TemplateParser.ErrorMode.LAX).build()
 
   private def getRootCause(e: Throwable): Throwable = {
     var cause = e
-    while (cause.getCause != null && cause.getCause != cause) {
+    while (cause.getCause != null && cause.getCause != cause)
       cause = cause.getCause
-    }
     cause
   }
 
@@ -42,9 +38,11 @@ final class RenderSettingsSuite extends munit.FunSuite {
 
   test("strict variables: second undefined variable throws".fail) {
     try {
-      parserWithStrictVariables().parse("{{mu}} {{qwe.asd.zxc}}").render(
-        TestHelper.mapOf("mu" -> "muValue")
-      )
+      parserWithStrictVariables()
+        .parse("{{mu}} {{qwe.asd.zxc}}")
+        .render(
+          TestHelper.mapOf("mu" -> "muValue")
+        )
       fail("Expected VariableNotExistException")
     } catch {
       case ex: RuntimeException =>
@@ -56,16 +54,12 @@ final class RenderSettingsSuite extends munit.FunSuite {
 
   test("strict variables: condition false branch not evaluated") {
     // Variable in untaken branch should not cause exception
-    parserWithStrictVariables()
-      .parse("{% if mu == \"somethingElse\" %}{{ badVariableName }}{% endif %}")
-      .render(TestHelper.mapOf("mu" -> "muValue"))
+    parserWithStrictVariables().parse("{% if mu == \"somethingElse\" %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
   }
 
   test("strict variables: condition true branch evaluates".fail) {
     try {
-      parserWithStrictVariables()
-        .parse("{% if mu == \"muValue\" %}{{ badVariableName }}{% endif %}")
-        .render(TestHelper.mapOf("mu" -> "muValue"))
+      parserWithStrictVariables().parse("{% if mu == \"muValue\" %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
     } catch {
       case ex: RuntimeException =>
@@ -77,9 +71,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
 
   test("strict variables: and operator checks second operand".fail) {
     try {
-      parserWithStrictVariables()
-        .parse("{% if mu == \"muValue\" and checkThis %}{{ badVariableName }}{% endif %}")
-        .render(TestHelper.mapOf("mu" -> "muValue"))
+      parserWithStrictVariables().parse("{% if mu == \"muValue\" and checkThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
     } catch {
       case ex: RuntimeException =>
@@ -90,16 +82,12 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   test("strict variables: and operator short-circuits false first operand") {
-    parserWithStrictVariables()
-      .parse("{% if mu == \"somethingElse\" and doNotCheckThis %}{{ badVariableName }}{% endif %}")
-      .render(TestHelper.mapOf("mu" -> "muValue"))
+    parserWithStrictVariables().parse("{% if mu == \"somethingElse\" and doNotCheckThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
   }
 
   test("strict variables: or operator skips second when first true".fail) {
     try {
-      parserWithStrictVariables()
-        .parse("{% if mu == \"muValue\" or doNotCheckThis %}{{ badVariableName }}{% endif %}")
-        .render(TestHelper.mapOf("mu" -> "muValue"))
+      parserWithStrictVariables().parse("{% if mu == \"muValue\" or doNotCheckThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
     } catch {
       case ex: RuntimeException =>
@@ -111,9 +99,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
 
   test("strict variables: or operator checks second when first false".fail) {
     try {
-      parserWithStrictVariables()
-        .parse("{% if mu == \"somethingElse\" or checkThis %}{{ badVariableName }}{% endif %}")
-        .render(TestHelper.mapOf("mu" -> "muValue"))
+      parserWithStrictVariables().parse("{% if mu == \"somethingElse\" or checkThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
     } catch {
       case ex: RuntimeException =>
@@ -124,7 +110,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   test("lax mode: records errors without throwing") {
-    val parser = parserWithStrictVariablesAndLaxMode()
+    val parser   = parserWithStrictVariablesAndLaxMode()
     val template = parser.parse("{{a}}{{b}}{{c}}")
     assertEquals(template.errors().size(), 0)
 
@@ -136,7 +122,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   test("lax mode: records errors for non-existing variables in loops".fail) {
-    val parser = parserWithStrictVariablesAndLaxMode()
+    val parser   = parserWithStrictVariablesAndLaxMode()
     val template = parser.parse(
       "{% for v in a %}{{v.b}}{% endfor %}" +
         "{% for v in badVariableName %}{{v.b}}{% endfor %}" +
@@ -161,23 +147,25 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   test("environment map configurator") {
-    val secretKey = getClass.getName + ".secretKey"
+    val secretKey         = getClass.getName + ".secretKey"
     val gotEnvironmentMap = new AtomicBoolean(false)
 
     val parser = new TemplateParser.Builder()
-      .withFilter(new filters.Filter("secret") {
-        override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
-          val sb = context.newObjectAppender(3)
-          sb.append(value)
-          sb.append(" ")
-          sb.append(context.getEnvironmentMap.get(secretKey))
-          sb.getResult.asInstanceOf[AnyRef]
+      .withFilter(
+        new filters.Filter("secret") {
+          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+            val sb = context.newObjectAppender(3)
+            sb.append(value)
+            sb.append(" ")
+            sb.append(context.getEnvironmentMap.get(secretKey))
+            sb.getResult.asInstanceOf[AnyRef]
+          }
         }
-      })
-      .withEnvironmentMapConfigurator(env => {
+      )
+      .withEnvironmentMapConfigurator { env =>
         env.put(secretKey, "world")
         gotEnvironmentMap.set(true)
-      })
+      }
       .build()
 
     val template = parser.parse("{{ 'Hello' | secret }}")
@@ -187,9 +175,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   test("custom render transformer") {
-    val parser = new TemplateParser.Builder()
-      .withRenderTransformer(new RenderSettingsSuite.CustomRenderTransformer())
-      .build()
+    val parser   = new TemplateParser.Builder().withRenderTransformer(new RenderSettingsSuite.CustomRenderTransformer()).build()
     val template = parser.parse("{{ 'Hello' }} {{ 'world' }}")
 
     val obj = template.renderToObject()
@@ -216,9 +202,8 @@ object RenderSettingsSuite {
     override def toString: String = {
       val sb = new StringBuilder()
       val it = list.iterator()
-      while (it.hasNext) {
+      while (it.hasNext)
         sb.append(it.next())
-      }
       sb.toString()
     }
   }

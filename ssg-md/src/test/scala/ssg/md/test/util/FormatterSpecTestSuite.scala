@@ -55,20 +55,20 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
 
   override protected def renderHtml(example: SpecExample, options: DataHolder): String = {
     import scala.jdk.CollectionConverters.*
-    val parser    = Parser.builder(options).build()
-    val formatter = Formatter.builder(Nullable(options)).build()
-    val noFileEol     = TestUtils.NO_FILE_EOL.get(options)
-    val trimmedSource = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
+    val parser           = Parser.builder(options).build()
+    val formatter        = Formatter.builder(Nullable(options)).build()
+    val noFileEol        = TestUtils.NO_FILE_EOL.get(options)
+    val trimmedSource    = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
     val originalSequence = BasedSequence.of(trimmedSource)
-    val extractMarkup = TestUtils.extractMarkup(originalSequence)
+    val extractMarkup    = TestUtils.extractMarkup(originalSequence)
     val trackedSequence: BasedSequence = extractMarkup.first.get
     val document = parser.parse(trackedSequence.toString)
 
     val offsets: Array[Int] = extractMarkup.second.get
     if (offsets.length > 0) {
       val trackedOffsets = new java.util.ArrayList[TrackedOffset](offsets.length)
-      val c = FormatterSpecTestSuite.EDIT_OP_CHAR.get(options)
-      val editOp = FormatterSpecTestSuite.EDIT_OP.get(options)
+      val c              = FormatterSpecTestSuite.EDIT_OP_CHAR.get(options)
+      val editOp         = FormatterSpecTestSuite.EDIT_OP.get(options)
 
       for (offset <- offsets) {
         val trackedOffset = TrackedOffset.track(offset, editOp != 0 && c == ' ', editOp > 0, editOp < 0)
@@ -92,13 +92,12 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
         val html = builder.toString
 
         val resolvedOffsets = new Array[Int](trackedOffsets.size())
-        var i = 0
-        for (trackedOffset <- trackedOffsets.asScala) {
+        var i               = 0
+        for (trackedOffset <- trackedOffsets.asScala)
           if (trackedOffset.isResolved) {
             resolvedOffsets(i) = trackedOffset.getIndex
             i += 1
           }
-        }
 
         val finalOffsets = if (i < resolvedOffsets.length) java.util.Arrays.copyOf(resolvedOffsets, i) else resolvedOffsets
 
@@ -142,7 +141,7 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
         val builder: SequenceBuilder = document.chars.getBuilder
         formatter.render(document, builder)
         val html = builder.toString
-        val out = new StringBuilder()
+        val out  = new StringBuilder()
         out.append(html)
         if (trackedSequence eq document.document.chars) {
           TestUtils.appendBanner(out, TestUtils.bannerText("Ranges"), false)
@@ -159,17 +158,14 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
 object FormatterSpecTestSuite {
 
   /** DataKey for SHOW_LINE_RANGES from FormatterTranslationSpecTestBase */
-  val SHOW_LINE_RANGES: DataKey[Boolean]   = new DataKey[Boolean]("SHOW_LINE_RANGES", false)
-  val EDIT_OP_CHAR:     DataKey[Char]      = new DataKey[Char]("EDIT_OP_CHAR", SequenceUtils.NUL)
-  val EDIT_OP:          DataKey[Int]        = new DataKey[Int]("EDIT_OP", 0)
+  val SHOW_LINE_RANGES: DataKey[Boolean] = new DataKey[Boolean]("SHOW_LINE_RANGES", false)
+  val EDIT_OP_CHAR:     DataKey[Char]    = new DataKey[Char]("EDIT_OP_CHAR", SequenceUtils.NUL)
+  val EDIT_OP:          DataKey[Int]     = new DataKey[Int]("EDIT_OP", 0)
 
   private val FIXED_INDENT_OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.FIXED_INDENT).toImmutable
 
   /** Base formatter options: BLANK_LINES_IN_AST=true, HEADING_NO_ATX_SPACE=true (matches original FormatterTranslationSpecTestBase). */
-  val BASE_OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.BLANK_LINES_IN_AST, true)
-    .set(Parser.HEADING_NO_ATX_SPACE, true)
-    .toImmutable
+  val BASE_OPTIONS: DataHolder = new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, true).set(Parser.HEADING_NO_ATX_SPACE, true).toImmutable
 
   /** Base options map (matches original FormatterTranslationSpecTestBase). */
   val BASE_OPTIONS_MAP: ju.Map[String, DataHolder] = {
@@ -185,11 +181,17 @@ object FormatterSpecTestSuite {
     map.put("restore-tracked-spaces", new MutableDataSet().set(Formatter.RESTORE_TRACKED_SPACES, true).toImmutable)
     map.put("multi-line-image-url", new MutableDataSet().set(Parser.PARSE_MULTI_LINE_IMAGE_URLS, true).toImmutable)
 
-    map.put("format-fixed-indent", new MutableDataSet().set(Formatter.FORMATTER_EMULATION_PROFILE, ParserEmulationProfile.FIXED_INDENT).toImmutable)
+    map.put(
+      "format-fixed-indent",
+      new MutableDataSet().set(Formatter.FORMATTER_EMULATION_PROFILE, ParserEmulationProfile.FIXED_INDENT).toImmutable
+    )
     map.put("format-content-after-prefix", new MutableDataSet().set(Formatter.LISTS_ITEM_CONTENT_AFTER_SUFFIX, true).toImmutable)
     map.put("no-list-auto-loose", new MutableDataSet().set(Parser.LISTS_AUTO_LOOSE, false).toImmutable)
     map.put("parse-fixed-indent", FIXED_INDENT_OPTIONS)
-    map.put("format-github", new MutableDataSet().set(Formatter.FORMATTER_EMULATION_PROFILE, ParserEmulationProfile.GITHUB_DOC).toImmutable)
+    map.put(
+      "format-github",
+      new MutableDataSet().set(Formatter.FORMATTER_EMULATION_PROFILE, ParserEmulationProfile.GITHUB_DOC).toImmutable
+    )
     map.put("parse-github", new MutableDataSet().set(Parser.PARSER_EMULATION_PROFILE, ParserEmulationProfile.GITHUB_DOC).toImmutable)
     map.put("max-blank-lines-1", new MutableDataSet().set(Formatter.MAX_BLANK_LINES, 1).toImmutable)
     map.put("max-blank-lines-2", new MutableDataSet().set(Formatter.MAX_BLANK_LINES, 2).toImmutable)
@@ -203,27 +205,54 @@ object FormatterSpecTestSuite {
     map.put("heading-atx", new MutableDataSet().set(Formatter.HEADING_STYLE, HeadingStyle.ATX_PREFERRED).toImmutable)
     map.put("heading-setext", new MutableDataSet().set(Formatter.HEADING_STYLE, HeadingStyle.SETEXT_PREFERRED).toImmutable)
     map.put("setext-no-equalize", new MutableDataSet().set(Formatter.SETEXT_HEADING_EQUALIZE_MARKER, false).toImmutable)
-    map.put("atx-trailing-as-is", new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.AS_IS).toImmutable)
-    map.put("atx-trailing-add", new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.ADD).toImmutable)
-    map.put("atx-trailing-equalize", new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.EQUALIZE).toImmutable)
-    map.put("atx-trailing-remove", new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.REMOVE).toImmutable)
+    map.put(
+      "atx-trailing-as-is",
+      new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.AS_IS).toImmutable
+    )
+    map.put(
+      "atx-trailing-add",
+      new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.ADD).toImmutable
+    )
+    map.put(
+      "atx-trailing-equalize",
+      new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.EQUALIZE).toImmutable
+    )
+    map.put(
+      "atx-trailing-remove",
+      new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.REMOVE).toImmutable
+    )
     map.put("thematic-break", new MutableDataSet().set(Formatter.THEMATIC_BREAK, "*** ** * ** ***").toImmutable)
     map.put("no-block-quote-blank-lines", new MutableDataSet().set(Formatter.BLOCK_QUOTE_BLANK_LINES, false).toImmutable)
     map.put("block-quote-compact", new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_COMPACT).toImmutable)
-    map.put("block-quote-compact-with-space", new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_COMPACT_WITH_SPACE).toImmutable)
+    map.put(
+      "block-quote-compact-with-space",
+      new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_COMPACT_WITH_SPACE).toImmutable
+    )
     map.put("block-quote-spaced", new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_SPACED).toImmutable)
     map.put("indented-code-minimize", new MutableDataSet().set(Formatter.INDENTED_CODE_MINIMIZE_INDENT, true).toImmutable)
     map.put("fenced-code-minimize", new MutableDataSet().set(Formatter.FENCED_CODE_MINIMIZE_INDENT, true).toImmutable)
     map.put("fenced-code-match-closing", new MutableDataSet().set(Formatter.FENCED_CODE_MATCH_CLOSING_MARKER, true).toImmutable)
     map.put("fenced-code-spaced-info", new MutableDataSet().set(Formatter.FENCED_CODE_SPACE_BEFORE_INFO, true).toImmutable)
     map.put("fenced-code-marker-length", new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_LENGTH, 6).toImmutable)
-    map.put("fenced-code-marker-backtick", new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.BACK_TICK).toImmutable)
-    map.put("fenced-code-marker-tilde", new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.TILDE).toImmutable)
+    map.put(
+      "fenced-code-marker-backtick",
+      new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.BACK_TICK).toImmutable
+    )
+    map.put(
+      "fenced-code-marker-tilde",
+      new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.TILDE).toImmutable
+    )
     map.put("list-add-blank-line-before", new MutableDataSet().set(Formatter.LIST_ADD_BLANK_LINE_BEFORE, true).toImmutable)
     map.put("list-no-renumber-items", new MutableDataSet().set(Formatter.LIST_RENUMBER_ITEMS, false).toImmutable)
     map.put("list-reset-first-item", new MutableDataSet().set(Formatter.LIST_RESET_FIRST_ITEM_NUMBER, true).toImmutable)
-    map.put("list-no-delimiter-mismatch-to-new-list", new MutableDataSet().set(Parser.LISTS_DELIMITER_MISMATCH_TO_NEW_LIST, false).toImmutable)
-    map.put("list-no-item-mismatch-to-new-list", new MutableDataSet().set(Parser.LISTS_ITEM_TYPE_MISMATCH_TO_NEW_LIST, false).toImmutable)
+    map.put(
+      "list-no-delimiter-mismatch-to-new-list",
+      new MutableDataSet().set(Parser.LISTS_DELIMITER_MISMATCH_TO_NEW_LIST, false).toImmutable
+    )
+    map.put(
+      "list-no-item-mismatch-to-new-list",
+      new MutableDataSet().set(Parser.LISTS_ITEM_TYPE_MISMATCH_TO_NEW_LIST, false).toImmutable
+    )
     map.put("list-bullet-dash", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.DASH).toImmutable)
     map.put("list-bullet-asterisk", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.ASTERISK).toImmutable)
     map.put("list-bullet-plus", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.PLUS).toImmutable)
@@ -235,14 +264,35 @@ object FormatterSpecTestSuite {
     map.put("list-spacing-loose", new MutableDataSet().set(Formatter.LIST_SPACING, ListSpacing.LOOSE).toImmutable)
     map.put("list-spacing-tight", new MutableDataSet().set(Formatter.LIST_SPACING, ListSpacing.TIGHT).toImmutable)
     map.put("references-as-is", new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.AS_IS).toImmutable)
-    map.put("references-document-top", new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.DOCUMENT_TOP).toImmutable)
-    map.put("references-group-with-first", new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.GROUP_WITH_FIRST).toImmutable)
-    map.put("references-group-with-last", new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.GROUP_WITH_LAST).toImmutable)
-    map.put("references-document-bottom", new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.DOCUMENT_BOTTOM).toImmutable)
+    map.put(
+      "references-document-top",
+      new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.DOCUMENT_TOP).toImmutable
+    )
+    map.put(
+      "references-group-with-first",
+      new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.GROUP_WITH_FIRST).toImmutable
+    )
+    map.put(
+      "references-group-with-last",
+      new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.GROUP_WITH_LAST).toImmutable
+    )
+    map.put(
+      "references-document-bottom",
+      new MutableDataSet().set(Formatter.REFERENCE_PLACEMENT, ElementPlacement.DOCUMENT_BOTTOM).toImmutable
+    )
     map.put("references-sort", new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.SORT).toImmutable)
-    map.put("references-sort-unused-last", new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.SORT_UNUSED_LAST).toImmutable)
-    map.put("references-sort-delete-unused", new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.SORT_DELETE_UNUSED).toImmutable)
-    map.put("references-delete-unused", new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.DELETE_UNUSED).toImmutable)
+    map.put(
+      "references-sort-unused-last",
+      new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.SORT_UNUSED_LAST).toImmutable
+    )
+    map.put(
+      "references-sort-delete-unused",
+      new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.SORT_DELETE_UNUSED).toImmutable
+    )
+    map.put(
+      "references-delete-unused",
+      new MutableDataSet().set(Formatter.REFERENCE_SORT, ElementPlacementSort.DELETE_UNUSED).toImmutable
+    )
     map.put("references-keep-last", new MutableDataSet().set(Parser.REFERENCES_KEEP, KeepType.LAST).toImmutable)
     map.put("image-links-at-start", new MutableDataSet().set(Formatter.KEEP_IMAGE_LINKS_AT_START, true).toImmutable)
     map.put("explicit-links-at-start", new MutableDataSet().set(Formatter.KEEP_EXPLICIT_LINKS_AT_START, true).toImmutable)
@@ -259,17 +309,56 @@ object FormatterSpecTestSuite {
     map.put("formatter-tags-accept-regexp", new MutableDataSet().set(Formatter.FORMATTER_TAGS_ACCEPT_REGEXP, true).toImmutable)
     map.put("formatter-on-tag-alt", new MutableDataSet().set(Formatter.FORMATTER_ON_TAG, "@format:on").toImmutable)
     map.put("formatter-off-tag-alt", new MutableDataSet().set(Formatter.FORMATTER_OFF_TAG, "@format:off").toImmutable)
-    map.put("formatter-on-tag-regex", new MutableDataSet().set(Formatter.FORMATTER_ON_TAG, "^@format:(?:yes|on|true)$").set(Formatter.FORMATTER_TAGS_ACCEPT_REGEXP, true).toImmutable)
-    map.put("formatter-off-tag-regex", new MutableDataSet().set(Formatter.FORMATTER_OFF_TAG, "^@format:(?:no|off|false)$").set(Formatter.FORMATTER_TAGS_ACCEPT_REGEXP, true).toImmutable)
+    map.put(
+      "formatter-on-tag-regex",
+      new MutableDataSet().set(Formatter.FORMATTER_ON_TAG, "^@format:(?:yes|on|true)$").set(Formatter.FORMATTER_TAGS_ACCEPT_REGEXP, true).toImmutable
+    )
+    map.put(
+      "formatter-off-tag-regex",
+      new MutableDataSet().set(Formatter.FORMATTER_OFF_TAG, "^@format:(?:no|off|false)$").set(Formatter.FORMATTER_TAGS_ACCEPT_REGEXP, true).toImmutable
+    )
 
     map.put("list-align-numeric-none", new MutableDataSet().set(Formatter.LIST_ALIGN_NUMERIC, ElementAlignment.NONE).toImmutable)
-    map.put("list-align-numeric-left", new MutableDataSet().set(Formatter.LIST_ALIGN_NUMERIC, ElementAlignment.LEFT_ALIGN).toImmutable)
-    map.put("list-align-numeric-right", new MutableDataSet().set(Formatter.LIST_ALIGN_NUMERIC, ElementAlignment.RIGHT_ALIGN).toImmutable)
-    map.put("link-address-pattern", new MutableDataSet().set(Formatter.LINK_MARKER_COMMENT_PATTERN, Pattern.compile("^\\s*@IGNORE PREVIOUS:.*$")).toImmutable)
+    map.put(
+      "list-align-numeric-left",
+      new MutableDataSet().set(Formatter.LIST_ALIGN_NUMERIC, ElementAlignment.LEFT_ALIGN).toImmutable
+    )
+    map.put(
+      "list-align-numeric-right",
+      new MutableDataSet().set(Formatter.LIST_ALIGN_NUMERIC, ElementAlignment.RIGHT_ALIGN).toImmutable
+    )
+    map.put(
+      "link-address-pattern",
+      new MutableDataSet().set(Formatter.LINK_MARKER_COMMENT_PATTERN, Pattern.compile("^\\s*@IGNORE PREVIOUS:.*$")).toImmutable
+    )
 
-    map.put("margin", new MutableDataSet().set(TestUtils.CUSTOM_OPTION, ((option: String, params: String) => TestUtils.customIntOption(option, Nullable(params), (v: Int) => marginOption(v))): java.util.function.BiFunction[String, String, DataHolder]).toImmutable)
-    map.put("first-prefix", new MutableDataSet().set(TestUtils.CUSTOM_OPTION, ((option: String, params: String) => TestUtils.customStringOption(option, Nullable(params), (v: String) => firstIndentOption(v))): java.util.function.BiFunction[String, String, DataHolder]).toImmutable)
-    map.put("prefix", new MutableDataSet().set(TestUtils.CUSTOM_OPTION, ((option: String, params: String) => TestUtils.customStringOption(option, Nullable(params), (v: String) => indentOption(v))): java.util.function.BiFunction[String, String, DataHolder]).toImmutable)
+    map.put(
+      "margin",
+      new MutableDataSet()
+        .set(
+          TestUtils.CUSTOM_OPTION,
+          ((option: String, params: String) => TestUtils.customIntOption(option, Nullable(params), (v: Int) => marginOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+        )
+        .toImmutable
+    )
+    map.put(
+      "first-prefix",
+      new MutableDataSet()
+        .set(
+          TestUtils.CUSTOM_OPTION,
+          ((option: String, params: String) => TestUtils.customStringOption(option, Nullable(params), (v: String) => firstIndentOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+        )
+        .toImmutable
+    )
+    map.put(
+      "prefix",
+      new MutableDataSet()
+        .set(
+          TestUtils.CUSTOM_OPTION,
+          ((option: String, params: String) => TestUtils.customStringOption(option, Nullable(params), (v: String) => indentOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+        )
+        .toImmutable
+    )
     map
   }
 
@@ -288,9 +377,9 @@ object FormatterSpecTestSuite {
 
   /** Helper to create placement and sort options (mirrors ComboSpecTestCase.placementAndSortOptions). */
   def placementAndSortOptions(
-    keepTypeDataKey:   Nullable[DataKey[KeepType]],
-    placementDataKey:  Nullable[DataKey[ElementPlacement]],
-    sortDataKey:       Nullable[DataKey[ElementPlacementSort]]
+    keepTypeDataKey:  Nullable[DataKey[KeepType]],
+    placementDataKey: Nullable[DataKey[ElementPlacement]],
+    sortDataKey:      Nullable[DataKey[ElementPlacementSort]]
   ): ju.HashMap[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
     keepTypeDataKey.foreach { key =>

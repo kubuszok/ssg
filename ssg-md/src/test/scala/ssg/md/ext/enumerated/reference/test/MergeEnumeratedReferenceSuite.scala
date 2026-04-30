@@ -33,7 +33,7 @@ final class MergeEnumeratedReferenceSuite extends munit.FunSuite {
   private val PARSER:    Parser    = Parser.builder(OPTIONS).build()
 
   private def assertMerged(expected: String, markdownSources: String*): Unit = {
-    val documents = markdownSources.map(src => PARSER.parse(src)).toArray
+    val documents    = markdownSources.map(src => PARSER.parse(src)).toArray
     val mergedOutput = FORMATTER.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
@@ -200,7 +200,7 @@ final class MergeEnumeratedReferenceSuite extends munit.FunSuite {
     )
   }
 
-  private def testHtmlPreservation(): Unit = {
+  private def testHtmlPreservation(): Unit =
     assertMerged(
       "# [#hd1] Heading {style=\"font-size: 26pt\"}\n" +
         "\n" +
@@ -228,7 +228,6 @@ final class MergeEnumeratedReferenceSuite extends munit.FunSuite {
         "[](http://example.com)\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservation1") {
     testHtmlPreservation()
@@ -239,7 +238,7 @@ final class MergeEnumeratedReferenceSuite extends munit.FunSuite {
     testHtmlPreservation()
   }
 
-  private def testHtmlPreservationLink(): Unit = {
+  private def testHtmlPreservationLink(): Unit =
     assertMerged(
       "[](http://example.com)\n" +
         "\n" +
@@ -258,7 +257,6 @@ final class MergeEnumeratedReferenceSuite extends munit.FunSuite {
         "[](http://example.com)\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationLink1") {
     testHtmlPreservationLink()

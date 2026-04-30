@@ -201,10 +201,15 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
     }
 
     // Tests with array variable x = [1, 2, 3, 4, 5]
-    val xVars = TestHelper.mapOf("x" -> TestHelper.listOf(
-      java.lang.Long.valueOf(1L), java.lang.Long.valueOf(2L), java.lang.Long.valueOf(3L),
-      java.lang.Long.valueOf(4L), java.lang.Long.valueOf(5L)
-    ))
+    val xVars = TestHelper.mapOf(
+      "x" -> TestHelper.listOf(
+        java.lang.Long.valueOf(1L),
+        java.lang.Long.valueOf(2L),
+        java.lang.Long.valueOf(3L),
+        java.lang.Long.valueOf(4L),
+        java.lang.Long.valueOf(5L)
+      )
+    )
     val withVarTests: Array[(String, String)] = Array(
       ("{{ x | slice: 1 }}", "2"),
       ("{{ x | slice: 1, 3 }}", "234"),
@@ -236,7 +241,7 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
 
   test("sort: sorts words and numbers") {
     val vars = TestHelper.mapOf(
-      "words"   -> TestHelper.listOf("2", "13", "1"),
+      "words" -> TestHelper.listOf("2", "13", "1"),
       "numbers" -> TestHelper.listOf(java.lang.Long.valueOf(2L), java.lang.Long.valueOf(13L), java.lang.Long.valueOf(1L))
     )
 

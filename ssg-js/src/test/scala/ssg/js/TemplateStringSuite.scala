@@ -23,10 +23,10 @@ final class TemplateStringSuite extends munit.FunSuite {
       // Stress invalid template_cont after expression
       "var foo = `Blablabla ${123 456}`",
       "var foo = `Blub ${123;}`",
-      "var foo = `Bleh ${a b}`",
+      "var foo = `Bleh ${a b}`"
     )
     tests.foreach { code =>
-      val ex = intercept[JsParseError] { parse(code) }
+      val ex = intercept[JsParseError](parse(code))
       assert(
         ex.message.startsWith("Unexpected token: "),
         s"Expected 'Unexpected token' error for: $code, got: ${ex.message}"
@@ -39,7 +39,7 @@ final class TemplateStringSuite extends munit.FunSuite {
     val tests = List(
       "`a\rb`",
       "`a\nb`",
-      "`a\r\nb`",
+      "`a\r\nb`"
     )
     tests.foreach { code =>
       assertEquals(OutputStream.printToString(parse(code)), "`a\\nb`;")

@@ -23,19 +23,16 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboYamlFrontMatterFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboYamlFrontMatterFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboYamlFrontMatterFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboYamlFrontMatterFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Yaml Front Matter -")
+  override def specResource:         ResourceLocation                       = ComboYamlFrontMatterFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboYamlFrontMatterFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboYamlFrontMatterFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Yaml Front Matter -")
 }
 
 object ComboYamlFrontMatterFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/yaml/front/matter/test/ext_yaml_front_matter_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboYamlFrontMatterFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create()))
-    .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(Parser.REFERENCES_KEEP),

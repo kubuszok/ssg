@@ -17,9 +17,17 @@ final class ComboCoreFormatterSpecTest extends FormatterSpecTestSuite {
 
   // Pre-existing bugs: ListSpacing Nullable cast, IndexedIterable cast, heading equalize issues
   override def knownFailurePrefixes: Set[String] = Set(
-    "Block Quotes -", "Format Control -", "Format Conversion -", "Formatter -",
-    "Headings -", "Headings - Prefer ATX -", "Headings - Prefer Setext -",
-    "Issue - 271 -", "Lists -", "MdNav - 770 -", "Reference Placement -"
+    "Block Quotes -",
+    "Format Control -",
+    "Format Conversion -",
+    "Formatter -",
+    "Headings -",
+    "Headings - Prefer ATX -",
+    "Headings - Prefer Setext -",
+    "Issue - 271 -",
+    "Lists -",
+    "MdNav - 770 -",
+    "Reference Placement -"
   )
 }
 

@@ -52,10 +52,8 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   // SSG: EAGER evaluate mode date handling differs
   test("append: append to date type eager".fail) {
     val data   = Collections.singletonMap[String, Any]("a", testTime)
-    val parser = new TemplateParser.Builder()
-      .withEvaluateMode(TemplateParser.EvaluateMode.EAGER)
-      .build()
-    val res = parser.parse("{{ '!' | append: a }}").render(data)
+    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
+    val res    = parser.parse("{{ '!' | append: a }}").render(data)
     assertEquals(res, "!2007-11-01 15:25:00 +0900")
 
     val res2 = parser.parse("{{ a | append: '!' }}").render(data)
@@ -67,10 +65,8 @@ final class FilterMathExtraSuite extends munit.FunSuite {
     val time   = LocalDateTime.of(2020, 1, 1, 12, 59, 59, 999)
     val data   = Collections.singletonMap[String, Any]("a", time)
     val tz     = ZoneId.ofOffset("UTC", ZoneOffset.ofHours(-5))
-    val parser = new TemplateParser.Builder()
-      .withDefaultTimeZone(tz)
-      .build()
-    val res = parser.parse("{{ '!' | append: a }}").render(data)
+    val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
+    val res    = parser.parse("{{ '!' | append: a }}").render(data)
     assertEquals(res, "!2020-01-01 12:59:59 -0500")
 
     val res2 = parser.parse("{{ a | append: '!' }}").render(data)

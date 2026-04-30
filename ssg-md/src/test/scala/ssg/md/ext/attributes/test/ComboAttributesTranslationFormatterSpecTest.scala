@@ -24,26 +24,40 @@ import java.util.{ Arrays, Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboAttributesTranslationFormatterSpecTest extends TranslationFormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboAttributesTranslationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAttributesTranslationFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAttributesTranslationFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Anchor Targets -", "Attributes -", "Attributes on Reference -", "Headings Tests -", "No Previous Sibling -", "Non Text Node Previous Sibling -", "Paragraphs -", "Random Tests -", "TOC -", "Text Node Previous Sibling -")
+  override def specResource:         ResourceLocation                       = ComboAttributesTranslationFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboAttributesTranslationFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboAttributesTranslationFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set(
+    "Anchor Targets -",
+    "Attributes -",
+    "Attributes on Reference -",
+    "Headings Tests -",
+    "No Previous Sibling -",
+    "Non Text Node Previous Sibling -",
+    "Paragraphs -",
+    "Random Tests -",
+    "TOC -",
+    "Text Node Previous Sibling -"
+  )
 }
 
 object ComboAttributesTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/attributes/test/ext_attributes_translation_format_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAttributesTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("anchors", new MutableDataSet()
-      .set(Parser.EXTENSIONS, Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create()))
-      .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
-      .set(HtmlRenderer.RENDER_HEADER_ID, false)
-      .toImmutable
+    map.put(
+      "anchors",
+      new MutableDataSet()
+        .set(
+          Parser.EXTENSIONS,
+          Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create())
+        )
+        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
+        .set(HtmlRenderer.RENDER_HEADER_ID, false)
+        .toImmutable
     )
     map.put("text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true).toImmutable)
     map.put("no-text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, false).toImmutable)

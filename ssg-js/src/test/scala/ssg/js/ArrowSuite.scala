@@ -19,7 +19,7 @@ final class ArrowSuite extends munit.FunSuite {
   test("should not accept holes in object binding patterns") {
     val tests = List("f = ({, , ...x} = [1, 2]) => {};")
     tests.foreach { code =>
-      intercept[JsParseError] { parse(code) }
+      intercept[JsParseError](parse(code))
     }
   }
 
@@ -29,10 +29,10 @@ final class ArrowSuite extends munit.FunSuite {
       "f = foo\n=> 'foo';",
       "f = (foo, bar)\n=> 'foo';",
       "f = ()\n=> 'foo';",
-      "foo((bar)\n=>'baz';);",
+      "foo((bar)\n=>'baz';);"
     )
     tests.foreach { code =>
-      intercept[JsParseError] { parse(code) }
+      intercept[JsParseError](parse(code))
     }
   }
 
@@ -44,10 +44,10 @@ final class ArrowSuite extends munit.FunSuite {
       "typeof x => 0",
       "typeof async x => 0",
       "typeof (x) => null",
-      "typeof async (x) => null",
+      "typeof async (x) => null"
     )
     tests.foreach { code =>
-      intercept[JsParseError] { parse(code) }
+      intercept[JsParseError](parse(code))
     }
   }
 
@@ -76,7 +76,7 @@ final class ArrowSuite extends munit.FunSuite {
   // 6. "Should parse a function containing default assignments in destructuring correctly"
   test("should parse arrow with default assignments in destructuring".fail) {
     // Array destructuring: ([a = 123]) => {}
-    val ast1 = parse("var a = ([a = 123]) => {}")
+    val ast1   = parse("var a = ([a = 123]) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow1.argnames.size, 1)
     val destr1 = arrow1.argnames(0).asInstanceOf[AstDestructuring]
@@ -89,7 +89,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(da1.right.isInstanceOf[AstNumber])
 
     // Object destructuring: ({a = 123}) => {}
-    val ast2 = parse("var a = ({a = 123}) => {}")
+    val ast2   = parse("var a = ({a = 123}) => {}")
     val arrow2 = ast2.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow2.argnames.size, 1)
     val destr2 = arrow2.argnames(0).asInstanceOf[AstDestructuring]
@@ -105,7 +105,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(da2.right.isInstanceOf[AstNumber])
 
     // Object destructuring with explicit key: ({a: a = 123}) => {}
-    val ast3 = parse("var a = ({a: a = 123}) => {}")
+    val ast3   = parse("var a = ({a: a = 123}) => {}")
     val arrow3 = ast3.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow3.argnames.size, 1)
     val destr3 = arrow3.argnames(0).asInstanceOf[AstDestructuring]
@@ -123,7 +123,7 @@ final class ArrowSuite extends munit.FunSuite {
   // 7. "Should parse a function containing default assignments in complex destructuring correctly"
   test("should parse arrow with default assignments in complex destructuring".fail) {
     // ([a, [b = 123]]) => {}
-    val ast1 = parse("var a = ([a, [b = 123]]) => {}")
+    val ast1   = parse("var a = ([a, [b = 123]]) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow1.argnames.size, 1)
     val destr1 = arrow1.argnames(0).asInstanceOf[AstDestructuring]
@@ -138,7 +138,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(nda1.right.isInstanceOf[AstNumber])
 
     // ([a, {b: c = 123}]) => {}
-    val ast2 = parse("var a = ([a, {b: c = 123}]) => {}")
+    val ast2   = parse("var a = ([a, {b: c = 123}]) => {}")
     val arrow2 = ast2.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     val destr2 = arrow2.argnames(0).asInstanceOf[AstDestructuring]
     assert(destr2.isArray)
@@ -150,7 +150,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(okv2.value.isInstanceOf[AstDefaultAssign])
 
     // ({a, b: {b = 123}}) => {}
-    val ast3 = parse("var a = ({a, b: {b = 123}}) => {}")
+    val ast3   = parse("var a = ({a, b: {b = 123}}) => {}")
     val arrow3 = ast3.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     val destr3 = arrow3.argnames(0).asInstanceOf[AstDestructuring]
     assert(!destr3.isArray)
@@ -163,7 +163,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(!nestedDestr3.isArray)
 
     // ({a: {b = 123}}) => {}
-    val ast4 = parse("var a = ({a: {b = 123}}) => {}")
+    val ast4   = parse("var a = ({a: {b = 123}}) => {}")
     val arrow4 = ast4.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     val destr4 = arrow4.argnames(0).asInstanceOf[AstDestructuring]
     assert(!destr4.isArray)
@@ -179,7 +179,7 @@ final class ArrowSuite extends munit.FunSuite {
   // 8. "Should parse spread correctly"
   test("should parse arrow with spread".fail) {
     // (a, b, ...c) => {}
-    val ast1 = parse("var a = (a, b, ...c) => {}")
+    val ast1   = parse("var a = (a, b, ...c) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow1.argnames.size, 3)
     assert(arrow1.argnames(0).isInstanceOf[AstSymbolFunarg])
@@ -188,7 +188,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(arrow1.argnames(2).asInstanceOf[AstExpansion].expression.isInstanceOf[AstSymbolFunarg])
 
     // ([a, b, ...c]) => {}
-    val ast2 = parse("var a = ([a, b, ...c]) => {}")
+    val ast2   = parse("var a = ([a, b, ...c]) => {}")
     val arrow2 = ast2.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     assertEquals(arrow2.argnames.size, 1)
     val destr2 = arrow2.argnames(0).asInstanceOf[AstDestructuring]
@@ -198,7 +198,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(destr2.names(2).isInstanceOf[AstExpansion])
 
     // ([a, b, [c, ...d]]) => {}
-    val ast3 = parse("var a = ([a, b, [c, ...d]]) => {}")
+    val ast3   = parse("var a = ([a, b, [c, ...d]]) => {}")
     val arrow3 = ast3.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     val destr3 = arrow3.argnames(0).asInstanceOf[AstDestructuring]
     assert(destr3.isArray)
@@ -210,7 +210,7 @@ final class ArrowSuite extends munit.FunSuite {
     assert(nested3.names(1).isInstanceOf[AstExpansion])
 
     // ({a: [b, ...c]}) => {}
-    val ast4 = parse("var a = ({a: [b, ...c]}) => {}")
+    val ast4   = parse("var a = ({a: [b, ...c]}) => {}")
     val arrow4 = ast4.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
     val destr4 = arrow4.argnames(0).asInstanceOf[AstDestructuring]
     assert(!destr4.isArray)
@@ -225,7 +225,7 @@ final class ArrowSuite extends munit.FunSuite {
 
   // 9. "Should handle arrow function with bind"
   test("should handle arrow function with bind") {
-    val code = """test(((index) => { console.log(this, index); }).bind(this, 1));"""
+    val code    = """test(((index) => { console.log(this, index); }).bind(this, 1));"""
     val result1 = Terser.minifyToString(code, MinifyOptions(compress = false, mangle = false))
     val result2 = Terser.minifyToString(result1, MinifyOptions(compress = false, mangle = false))
     assertEquals(result2, "test((index=>{console.log(this,index)}).bind(this,1));")
@@ -233,7 +233,7 @@ final class ArrowSuite extends munit.FunSuite {
 
   // 10. "Should handle return of arrow function assignment"
   test("should handle return of arrow function assignment") {
-    val code = "export function foo(x) { bar = () => x; return 2};"
+    val code   = "export function foo(x) { bar = () => x; return 2};"
     val result = Terser.minifyToString(code, MinifyOptions(compress = false, mangle = false))
     // Without compression, the output is just a faithful re-print
     assert(result.contains("bar"), s"got: $result")

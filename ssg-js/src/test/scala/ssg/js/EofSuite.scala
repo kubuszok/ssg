@@ -22,10 +22,10 @@ final class EofSuite extends munit.FunSuite {
 
       // Chop off characters from the end — each should throw
       var remaining = limit
-      var i = input.length - 1
+      var i         = input.length - 1
       while (remaining > 0) {
         val code = input.substring(0, i)
-        intercept[JsParseError] { parse(code) }
+        intercept[JsParseError](parse(code))
         remaining -= 1
         i -= 1
       }

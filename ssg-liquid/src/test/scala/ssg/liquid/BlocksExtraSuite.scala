@@ -144,7 +144,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
   test("for: complex array name with bracket access") {
     val inner = new JHashMap[String, Any]()
     inner.put("Y", "foo")
-    val x = listOf(inner, "test string")
+    val x        = listOf(inner, "test string")
     val rendered = TemplateParser.DEFAULT.parse("{% for x in X[0].Y %}{{forloop.name}}-{{x}}{%endfor%}").render(mapOf("X" -> x))
     assertEquals(rendered, "x-x-foo")
   }
@@ -242,8 +242,8 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // --- testContinueOutOfContext ---
 
   test("for: continue out of context with offset:continue") {
-    val items = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
-    val vars = mapOf("array" -> mapOf("items" -> items))
+    val items  = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
+    val vars   = mapOf("array" -> mapOf("items" -> items))
     val markup = "{%for i in array.items limit:9 %}{%endfor%}{%for i in array.items offset:continue %}{{i}}{%endfor%}" +
       "{{ continue }}"
     assertEquals(render(markup, vars), "0")
@@ -272,13 +272,8 @@ final class BlocksExtraSuite extends munit.FunSuite {
   test("for: cleans up registers after error") {
     val holder = new Template.ContextHolder()
     try {
-      val parser = new TemplateParser.Builder()
-        .withStrictVariables(true)
-        .withErrorMode(TemplateParser.ErrorMode.STRICT)
-        .build()
-      parser.parse("{% for i in (1..2) %}{{ standard_error }}{% endfor %}")
-        .withContextHolder(holder)
-        .render()
+      val parser = new TemplateParser.Builder().withStrictVariables(true).withErrorMode(TemplateParser.ErrorMode.STRICT).build()
+      parser.parse("{% for i in (1..2) %}{{ standard_error }}{% endfor %}").withContextHolder(holder).render()
       fail("Expected an exception")
     } catch {
       case _: Exception => // expected
@@ -859,8 +854,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // capture_detects_bad_syntaxTest
   test("capture: detects bad syntax (no variable name)") {
     intercept[LiquidException] {
-      TemplateParser.DEFAULT.parse("{{ var2 }}{% capture %}{{ var }} foo {% endcapture %}{{ var2 }}{{ var2 }}")
-        .render(mapOf("var" -> "content"))
+      TemplateParser.DEFAULT.parse("{{ var2 }}{% capture %}{{ var }} foo {% endcapture %}{{ var2 }}{{ var2 }}").render(mapOf("var" -> "content"))
     }
   }
 
@@ -1012,8 +1006,8 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // Full applyTest from ForTest.java — many sub-assertions for limit/offset/forloop
   test("for: comprehensive limit, offset, forloop properties") {
     val array = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-    val item = mapOf("quantity" -> java.lang.Integer.valueOf(5))
-    val vars = mapOf("array" -> array, "item" -> item)
+    val item  = mapOf("quantity" -> java.lang.Integer.valueOf(5))
+    val vars  = mapOf("array" -> array, "item" -> item)
 
     // basic iteration
     assertEquals(render("{% for item in array %}{{ item }}{% endfor %}", vars), "12345678910")
@@ -1082,7 +1076,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // pause/resume tests (offset:continue)
   test("for: pause/resume with offset:continue") {
     val items = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
-    val vars = mapOf("array" -> mapOf("items" -> items))
+    val vars  = mapOf("array" -> mapOf("items" -> items))
 
     val markup = "{%for i in array.items limit: 3 %}{{i}}{%endfor%}\n" +
       "next\n" +
@@ -1095,7 +1089,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
 
   test("for: pause/resume with different limits") {
     val items = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
-    val vars = mapOf("array" -> mapOf("items" -> items))
+    val vars  = mapOf("array" -> mapOf("items" -> items))
 
     val markup = "{%for i in array.items limit:3 %}{{i}}{%endfor%}\n" +
       "next\n" +
@@ -1108,7 +1102,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
 
   test("for: pause/resume with big limit") {
     val items = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
-    val vars = mapOf("array" -> mapOf("items" -> items))
+    val vars  = mapOf("array" -> mapOf("items" -> items))
 
     val markup = "{%for i in array.items limit:3 %}{{i}}{%endfor%}\n" +
       "next\n" +
@@ -1121,7 +1115,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
 
   test("for: pause/resume with big offset") {
     val items = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
-    val vars = mapOf("array" -> mapOf("items" -> items))
+    val vars  = mapOf("array" -> mapOf("items" -> items))
 
     val markup = "{%for i in array.items limit:3 %}{{i}}{%endfor%}\n" +
       "next\n" +

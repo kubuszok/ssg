@@ -23,9 +23,7 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   import LiquidSupportSuite.*
 
-  private val EAGER_RENDERING_PARSER: TemplateParser = new TemplateParser.Builder()
-    .withEvaluateMode(TemplateParser.EvaluateMode.EAGER)
-    .build()
+  private val EAGER_RENDERING_PARSER: TemplateParser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
 
   private def getDataAsFoo(foo: Any): JHashMap[String, Any] = {
     val data = new JHashMap[String, Any]()
@@ -232,32 +230,31 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
 /** Companion object with POJO classes used by LiquidSupportSuite.
   *
-  * Defined at top level so getter methods are public and visible to reflection.
-  * Uses Java Bean-style getVal()/setVal() to match the original Java POJOs
-  * (since Scala "val" is a keyword, the field is named val_ internally).
+  * Defined at top level so getter methods are public and visible to reflection. Uses Java Bean-style getVal()/setVal() to match the original Java POJOs (since Scala "val" is a keyword, the field is
+  * named val_ internally).
   */
 object LiquidSupportSuite {
 
   class PojoChild {
-    private var val_ : String = "childOK"
-    def getVal: String = val_
-    def setVal(v: String): Unit = val_ = v
+    private var val_     : String = "childOK"
+    def getVal:            String = val_
+    def setVal(v: String): Unit   = val_ = v
   }
 
   class Pojo {
-    private var val_ : String    = "OK"
-    private var child_ : PojoChild = new PojoChild()
-    def getVal: String = val_
-    def setVal(v: String): Unit = val_ = v
-    def getChild: PojoChild = child_
-    def setChild(c: PojoChild): Unit = child_ = c
+    private var val_          : String    = "OK"
+    private var child_        : PojoChild = new PojoChild()
+    def getVal:                 String    = val_
+    def setVal(v:   String):    Unit      = val_ = v
+    def getChild:               PojoChild = child_
+    def setChild(c: PojoChild): Unit      = child_ = c
   }
 
   class InsPojo extends Pojo with Inspectable
 
   class SuppPojo extends Pojo with LiquidSupport {
     override def toLiquid(): JMap[String, Any] = {
-      val map = new JHashMap[String, Any]()
+      val map   = new JHashMap[String, Any]()
       val child = new JHashMap[String, Any]()
       child.put("val", "SuppChild")
       map.put("child", child)
@@ -275,9 +272,9 @@ object LiquidSupportSuite {
   class FooWrapper extends Foo with Inspectable
 
   class Target extends LiquidSupport {
-    private var val_ : String = scala.compiletime.uninitialized
-    def getVal: String = val_
-    def setVal(v: String): Unit = val_ = v
+    private var val_     : String = scala.compiletime.uninitialized
+    def getVal:            String = val_
+    def setVal(v: String): Unit   = val_ = v
 
     override def toLiquid(): JMap[String, Any] = {
       val data = new JHashMap[String, Any]()

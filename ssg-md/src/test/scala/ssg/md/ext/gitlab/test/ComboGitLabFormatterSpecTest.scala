@@ -20,16 +20,13 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboGitLabFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation     = ComboGitLabFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboGitLabFormatterSpecTest.OPTIONS)
-  override def knownFailurePrefixes: Set[String] = Set("Block Quotes -", "Fenced Code Math -", "Fenced Code Mermaid -", "Inline -", "Inline Math -", "Video Images -")
+  override def specResource:         ResourceLocation     = ComboGitLabFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder] = Nullable(ComboGitLabFormatterSpecTest.OPTIONS)
+  override def knownFailurePrefixes: Set[String]          = Set("Block Quotes -", "Fenced Code Math -", "Fenced Code Mermaid -", "Inline -", "Inline Math -", "Video Images -")
 }
 
 object ComboGitLabFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gitlab/test/ext_gitlab_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboGitLabFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(GitLabExtension.create()))
-    .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(GitLabExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
 }

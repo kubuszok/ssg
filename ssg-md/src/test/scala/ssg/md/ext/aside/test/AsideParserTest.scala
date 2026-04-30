@@ -25,9 +25,8 @@ final class AsideParserTest extends munit.FunSuite {
     val sb       = new StringBuilder()
 
     boundary {
-      for (handler <- handlers) {
+      for (handler <- handlers)
         if (handler.escape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
-      }
       input
     }
   }
@@ -38,9 +37,8 @@ final class AsideParserTest extends munit.FunSuite {
     val sb       = new StringBuilder()
 
     boundary {
-      for (handler <- handlers) {
+      for (handler <- handlers)
         if (handler.unEscape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
-      }
       input
     }
   }

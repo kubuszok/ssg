@@ -28,7 +28,7 @@ final class LineEndingsSuite extends munit.FunSuite {
   // 1. "Should parse LF line endings"
   test("should parse LF line endings") {
     assumeCompressorWorks()
-    val js = "/*!one\n2\n3*///comment\nfunction f(x) {\n if (x)\n//comment\n  return 3;\n}\n"
+    val js     = "/*!one\n2\n3*///comment\nfunction f(x) {\n if (x)\n//comment\n  return 3;\n}\n"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -39,7 +39,7 @@ final class LineEndingsSuite extends munit.FunSuite {
   // 2. "Should parse CR/LF line endings"
   test("should parse CR/LF line endings") {
     assumeCompressorWorks()
-    val js = "/*!one\r\n2\r\n3*///comment\r\nfunction f(x) {\r\n if (x)\r\n//comment\r\n  return 3;\r\n}\r\n"
+    val js     = "/*!one\r\n2\r\n3*///comment\r\nfunction f(x) {\r\n if (x)\r\n//comment\r\n  return 3;\r\n}\r\n"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -50,7 +50,7 @@ final class LineEndingsSuite extends munit.FunSuite {
   // 3. "Should parse CR line endings"
   test("should parse CR line endings") {
     assumeCompressorWorks()
-    val js = "/*!one\r2\r3*///comment\rfunction f(x) {\r if (x)\r//comment\r  return 3;\r}\r"
+    val js     = "/*!one\r2\r3*///comment\rfunction f(x) {\r if (x)\r//comment\r  return 3;\r}\r"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -60,7 +60,7 @@ final class LineEndingsSuite extends munit.FunSuite {
 
   // Parse-only versions that don't need compression
   test("LF line endings: parse succeeds") {
-    val js = "/*!one\n2\n3*///comment\nfunction f(x) {\n if (x)\n//comment\n  return 3;\n}\n"
+    val js     = "/*!one\n2\n3*///comment\nfunction f(x) {\n if (x)\n//comment\n  return 3;\n}\n"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -71,7 +71,7 @@ final class LineEndingsSuite extends munit.FunSuite {
   }
 
   test("CR/LF line endings: parse succeeds") {
-    val js = "/*!one\r\n2\r\n3*///comment\r\nfunction f(x) {\r\n if (x)\r\n//comment\r\n  return 3;\r\n}\r\n"
+    val js     = "/*!one\r\n2\r\n3*///comment\r\nfunction f(x) {\r\n if (x)\r\n//comment\r\n  return 3;\r\n}\r\n"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -81,7 +81,7 @@ final class LineEndingsSuite extends munit.FunSuite {
   }
 
   test("CR line endings: parse succeeds") {
-    val js = "/*!one\r2\r3*///comment\rfunction f(x) {\r if (x)\r//comment\r  return 3;\r}\r"
+    val js     = "/*!one\r2\r3*///comment\rfunction f(x) {\r if (x)\r//comment\r  return 3;\r}\r"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "/^!/"))
@@ -101,7 +101,7 @@ final class LineEndingsSuite extends munit.FunSuite {
       "/\\\r/",
       "/\\\u2028/",
       "/\\\u2029/",
-      "/someRandomTextLike[]()*AndThen\n/",
+      "/someRandomTextLike[]()*AndThen\n/"
     )
     inputs.foreach { input =>
       intercept[JsParseError] {

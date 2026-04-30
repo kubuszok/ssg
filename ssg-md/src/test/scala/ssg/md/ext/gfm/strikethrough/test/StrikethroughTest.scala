@@ -18,10 +18,7 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class StrikethroughTest extends munit.FunSuite {
-  private val OPTIONS: DataHolder = new MutableDataSet()
-    .set(TestUtils.NO_FILE_EOL, false)
-    .set(Parser.EXTENSIONS, Collections.singleton(StrikethroughExtension.create()))
-    .toImmutable
+  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).set(Parser.EXTENSIONS, Collections.singleton(StrikethroughExtension.create())).toImmutable
 
   private val PARSER:   Parser       = Parser.builder(OPTIONS).build()
   private val RENDERER: HtmlRenderer = HtmlRenderer.builder(OPTIONS).build()

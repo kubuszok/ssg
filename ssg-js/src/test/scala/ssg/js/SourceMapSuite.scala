@@ -20,11 +20,10 @@ final class SourceMapSuite extends munit.FunSuite {
 
   private val noOpt = MinifyOptions(compress = false, mangle = false)
 
-  /** Helper: minify code and get the source map data.
-    * Uses filename "0" to match terser's default behavior for unnamed input.
+  /** Helper: minify code and get the source map data. Uses filename "0" to match terser's default behavior for unnamed input.
     */
   private def sourceMap(code: String): SourceMapData | Null = {
-    val sm = new SourceMap(SourceMapOptions())
+    val sm   = new SourceMap(SourceMapOptions())
     val opts = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "0"),
       compress = false,
@@ -58,7 +57,7 @@ final class SourceMapSuite extends munit.FunSuite {
       "    set enabled(x) {",
       "        ;",
       "    }",
-      "});",
+      "});"
     ).mkString("\n")
     val map = sourceMap(code)
     assert(map != null, "Expected non-null source map")
@@ -80,7 +79,7 @@ final class SourceMapSuite extends munit.FunSuite {
   // 5. "Should give correct sourceRoot"
   test("should give correct sourceRoot") {
     val code = "console.log(42);"
-    val sm = new SourceMap(SourceMapOptions(root = "//foo.bar/"))
+    val sm   = new SourceMap(SourceMapOptions(root = "//foo.bar/"))
     val opts = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "0"),
       compress = false,
@@ -104,7 +103,7 @@ final class SourceMapSuite extends munit.FunSuite {
   // In ssg-js, we always return SourceMapData (not JSON string), so this is trivially true
   test("should return source map as object") {
     val code = "console.log(42);"
-    val sm = new SourceMap(SourceMapOptions())
+    val sm   = new SourceMap(SourceMapOptions())
     val opts = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "0"),
       compress = false,
@@ -122,7 +121,7 @@ final class SourceMapSuite extends munit.FunSuite {
   // Same as above — ssg-js is always sync
   test("should return source map from sync minify") {
     val code = "console.log(42);"
-    val sm = new SourceMap(SourceMapOptions())
+    val sm   = new SourceMap(SourceMapOptions())
     val opts = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "0"),
       compress = false,

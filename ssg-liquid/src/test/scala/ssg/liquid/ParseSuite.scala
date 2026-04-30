@@ -146,7 +146,7 @@ final class ParseSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("keywords_as_identifier: comment keyword as identifier") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val inner = new JHashMap[String, Any]()
     inner.put("comment", "content")
     vars.put("var", inner)
@@ -157,7 +157,7 @@ final class ParseSuite extends munit.FunSuite {
   }
 
   test("keywords_as_identifier: end keyword as identifier") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val inner = new JHashMap[String, Any]()
     inner.put("end", "content")
     vars.put("var", inner)
@@ -173,18 +173,13 @@ final class ParseSuite extends munit.FunSuite {
 
   test("stripSpaces: default does not strip") {
     val source = "a \n \n {{ a }} \n \n c"
-    val res = new TemplateParser.Builder()
-      .build()
-      .parse(source).render(mapOf("a" -> "b"))
+    val res    = new TemplateParser.Builder().build().parse(source).render(mapOf("a" -> "b"))
     assertEquals(res, "a \n \n b \n \n c")
   }
 
   test("stripSpaces: false is default") {
     val source = "a \n \n {{ a }} \n \n c"
-    val res = new TemplateParser.Builder()
-      .withStripSpaceAroundTags(false)
-      .build()
-      .parse(source).render(mapOf("a" -> "b"))
+    val res    = new TemplateParser.Builder().withStripSpaceAroundTags(false).build().parse(source).render(mapOf("a" -> "b"))
     assertEquals(res, "a \n \n b \n \n c")
   }
 
@@ -194,10 +189,7 @@ final class ParseSuite extends munit.FunSuite {
   // Original expected: "abc" / "a \n \nb \n c"
   test("stripSpaces: true strips whitespace after tags") {
     val source = "a \n \n {{ a }} \n \n c"
-    val res = new TemplateParser.Builder()
-      .withStripSpaceAroundTags(true)
-      .build()
-      .parse(source).render(mapOf("a" -> "b"))
+    val res    = new TemplateParser.Builder().withStripSpaceAroundTags(true).build().parse(source).render(mapOf("a" -> "b"))
     // SSG lexer strips after tags only: " \n \n " after }} is consumed,
     // but " \n \n " before {{ is kept.
     assertEquals(res, "a \n \n bc")
@@ -205,10 +197,7 @@ final class ParseSuite extends munit.FunSuite {
 
   test("stripSpaces: strip with single line") {
     val source = "a \n \n {{ a }} \n \n c"
-    val res = new TemplateParser.Builder()
-      .withStripSpaceAroundTags(true, true)
-      .build()
-      .parse(source).render(mapOf("a" -> "b"))
+    val res    = new TemplateParser.Builder().withStripSpaceAroundTags(true, true).build().parse(source).render(mapOf("a" -> "b"))
     // SSG lexer strips single-line after tags only
     assertEquals(res, "a \n \n b \n c")
   }

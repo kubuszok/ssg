@@ -18,7 +18,7 @@ final class NoMutateInputSuite extends munit.FunSuite {
   // 1. "does not modify the options object"
   // In Scala, case classes are immutable — this is guaranteed by design.
   test("does not modify the options object") {
-    val sm = new SourceMap(SourceMapOptions())
+    val sm     = new SourceMap(SourceMapOptions())
     val config = MinifyOptions(
       compress = false,
       mangle = false,
@@ -32,7 +32,7 @@ final class NoMutateInputSuite extends munit.FunSuite {
 
   // 2. "does not clobber source maps with a subsequent minification"
   test("does not clobber source maps with subsequent minification") {
-    val sm1 = new SourceMap(SourceMapOptions())
+    val sm1     = new SourceMap(SourceMapOptions())
     val config1 = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "foo.js"),
       compress = false,
@@ -41,7 +41,7 @@ final class NoMutateInputSuite extends munit.FunSuite {
     )
     val fooResult = Terser.minify("\"foo\";", config1)
 
-    val sm2 = new SourceMap(SourceMapOptions())
+    val sm2     = new SourceMap(SourceMapOptions())
     val config2 = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "bar.js"),
       compress = false,
@@ -58,7 +58,9 @@ final class NoMutateInputSuite extends munit.FunSuite {
     assert(barMap != null, "Expected bar source map")
 
     // Source maps should have different mappings (different code produces different maps)
-    assert(fooMap.nn.mappings != barMap.nn.mappings,
-      s"Source maps should have different mappings: foo=${fooMap.nn.mappings}, bar=${barMap.nn.mappings}")
+    assert(
+      fooMap.nn.mappings != barMap.nn.mappings,
+      s"Source maps should have different mappings: foo=${fooMap.nn.mappings}, bar=${barMap.nn.mappings}"
+    )
   }
 }

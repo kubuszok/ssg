@@ -23,20 +23,17 @@ import java.util.{ Arrays, Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboSimTocHtmlFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboSimTocHtmlFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboSimTocHtmlFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboSimTocHtmlFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("As Is -", "No Spacer -", "Remove -", "Spacer -", "Update -")
+  override def specResource:         ResourceLocation                       = ComboSimTocHtmlFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboSimTocHtmlFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboSimTocHtmlFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("As Is -", "No Spacer -", "Remove -", "Spacer -", "Update -")
 }
 
 object ComboSimTocHtmlFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/toc/test/ext_simtoc_formatter_html_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboSimTocHtmlFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.RENDER_HEADER_ID, true)
-    .set(Parser.EXTENSIONS, Collections.singletonList(SimTocExtension.create()))
-    .set(TocExtension.IS_HTML, true)
-    .toImmutable
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(HtmlRenderer.RENDER_HEADER_ID, true).set(Parser.EXTENSIONS, Collections.singletonList(SimTocExtension.create())).set(TocExtension.IS_HTML, true).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
@@ -48,15 +45,27 @@ object ComboSimTocHtmlFormatterSpecTest {
     map.put("sorted", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED).toImmutable)
     map.put("sorted-reversed", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED_REVERSED).toImmutable)
     map.put("with-option-list", new MutableDataSet().set(TocExtension.AST_INCLUDE_OPTIONS, true).toImmutable)
-    map.put("typographic", new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(SimTocExtension.create(), TypographicExtension.create())).toImmutable)
+    map.put(
+      "typographic",
+      new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(SimTocExtension.create(), TypographicExtension.create())).toImmutable
+    )
     map.put("numbered", new MutableDataSet().set(TocExtension.IS_NUMBERED, true).toImmutable)
     map.put("spacer", new MutableDataSet().set(TocExtension.BLANK_LINE_SPACER, true).toImmutable)
     map.put("github", new MutableDataSet().setFrom(ParserEmulationProfile.GITHUB_DOC).toImmutable)
     map.put("div-class", new MutableDataSet().set(TocExtension.DIV_CLASS, "content-class").toImmutable)
     map.put("list-class", new MutableDataSet().set(TocExtension.LIST_CLASS, "list-class").toImmutable)
-    map.put("on-format-as-is", new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.AS_IS).toImmutable)
-    map.put("on-format-remove", new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.REMOVE).toImmutable)
-    map.put("on-format-update", new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.UPDATE).toImmutable)
+    map.put(
+      "on-format-as-is",
+      new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.AS_IS).toImmutable
+    )
+    map.put(
+      "on-format-remove",
+      new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.REMOVE).toImmutable
+    )
+    map.put(
+      "on-format-update",
+      new MutableDataSet().set(TocExtension.FORMAT_UPDATE_ON_FORMAT, SimTocGenerateOnFormat.UPDATE).toImmutable
+    )
     map
   }
 }

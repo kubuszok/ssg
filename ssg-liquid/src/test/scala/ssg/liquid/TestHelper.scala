@@ -21,8 +21,7 @@ object TestHelper {
     l
   }
 
-  /** Minimal JSON string parser for test data. Supports: objects, arrays,
-    * strings, numbers, booleans, null. No escaping or nested whitespace.
+  /** Minimal JSON string parser for test data. Supports: objects, arrays, strings, numbers, booleans, null. No escaping or nested whitespace.
     *
     * This is intentionally a simple test-only parser; do not use in production.
     */
@@ -45,23 +44,23 @@ object TestHelper {
   // ---- Internal JSON parsing ----
 
   private def parseObject(s: String): JHashMap[String, Any] = {
-    val map = new JHashMap[String, Any]()
+    val map   = new JHashMap[String, Any]()
     val inner = s.substring(1, s.length - 1).trim
     if (inner.isEmpty) return map
 
     val tokens = splitTopLevel(inner, ',')
     tokens.foreach { token =>
       val colonIdx = findTopLevelColon(token.trim)
-      val key = token.trim.substring(0, colonIdx).trim
+      val key      = token.trim.substring(0, colonIdx).trim
       val cleanKey = if (key.startsWith("\"")) key.substring(1, key.length - 1) else key
-      val value = token.trim.substring(colonIdx + 1).trim
+      val value    = token.trim.substring(colonIdx + 1).trim
       map.put(cleanKey, parseValue(value))
     }
     map
   }
 
   private def parseArray(s: String): JArrayList[Any] = {
-    val list = new JArrayList[Any]()
+    val list  = new JArrayList[Any]()
     val inner = s.substring(1, s.length - 1).trim
     if (inner.isEmpty) return list
 
@@ -90,10 +89,10 @@ object TestHelper {
   /** Split a string by delimiter, but only at top level (not inside {} [] or "") */
   private def splitTopLevel(s: String, delim: Char): Array[String] = {
     val result = new java.util.ArrayList[String]()
-    var depth = 0
-    var inStr = false
-    var start = 0
-    var i = 0
+    var depth  = 0
+    var inStr  = false
+    var start  = 0
+    var i      = 0
     while (i < s.length) {
       val c = s.charAt(i)
       if (c == '"' && (i == 0 || s.charAt(i - 1) != '\\')) inStr = !inStr
@@ -117,7 +116,7 @@ object TestHelper {
   private def findTopLevelColon(s: String): Int = {
     var depth = 0
     var inStr = false
-    var i = 0
+    var i     = 0
     while (i < s.length) {
       val c = s.charAt(i)
       if (c == '"' && (i == 0 || s.charAt(i - 1) != '\\')) inStr = !inStr

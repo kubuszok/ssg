@@ -6,8 +6,7 @@ import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
 
-/** Tests ported from liqp's filters/JsonTest.java (2), Normalize_WhitespaceTest.java (1),
-  * and FilterTest.java (2) — total 5 tests.
+/** Tests ported from liqp's filters/JsonTest.java (2), Normalize_WhitespaceTest.java (1), and FilterTest.java (2) — total 5 tests.
   */
 final class FilterMiscExtraSuite extends munit.FunSuite {
 
@@ -65,12 +64,16 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("custom filter: textilize filter") {
-    val parser = new TemplateParser.Builder().withFilter(new filters.Filter("textilize") {
-      override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-        val s = super.asString(value, context).trim
-        "<b>" + s.substring(1, s.length - 1) + "</b>"
-      }
-    }).build()
+    val parser = new TemplateParser.Builder()
+      .withFilter(
+        new filters.Filter("textilize") {
+          override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+            val s = super.asString(value, context).trim
+            "<b>" + s.substring(1, s.length - 1) + "</b>"
+          }
+        }
+      )
+      .build()
 
     val template = parser.parse("{{ '*hi*' | textilize }}")
     val rendered = template.render()
@@ -81,20 +84,17 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
   test("flavored filters: normalize_whitespace available in Jekyll but not Liquid".fail) {
     val templateText = "{{ ' a  b   c' | normalize_whitespace }}"
 
-    val template1 = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).build()
-      .parse(templateText)
-    val res = template1.render()
+    val template1 = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).build().parse(templateText)
+    val res       = template1.render()
     assertEquals(res, "a b c")
 
-    val template2 = new TemplateParser.Builder().withFlavor(Flavor.LIQUID).build()
-      .parse(templateText)
+    val template2 = new TemplateParser.Builder().withFlavor(Flavor.LIQUID).build().parse(templateText)
     try {
       template2.render()
       fail("Expected an exception for normalize_whitespace in LIQUID flavor")
     } catch {
       case e: Exception =>
-        assert(e.getMessage.contains("no filter available named: |normalize_whitespace"),
-          s"Unexpected message: ${e.getMessage}")
+        assert(e.getMessage.contains("no filter available named: |normalize_whitespace"), s"Unexpected message: ${e.getMessage}")
     }
   }
 }

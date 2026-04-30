@@ -94,7 +94,7 @@ final class MinifySuite extends munit.FunSuite {
 
   // 14-16. keep_quoted_props tests
   test("keep_quoted_props: preserve quotes in object literals") {
-    val js = "var foo = {\"x\": 1, y: 2, 'z': 3};"
+    val js     = "var foo = {\"x\": 1, y: 2, 'z': 3};"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(keepQuotedProps = true))
@@ -103,7 +103,7 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   test("keep_quoted_props: preserve quote styles when quote_style is 3") {
-    val js = "var foo = {\"x\": 1, y: 2, 'z': 3};"
+    val js     = "var foo = {\"x\": 1, y: 2, 'z': 3};"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(keepQuotedProps = true, quoteStyle = 3))
@@ -112,7 +112,7 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   test("keep_quoted_props: not preserved when disabled") {
-    val js = "var foo = {\"x\": 1, y: 2, 'z': 3};"
+    val js     = "var foo = {\"x\": 1, y: 2, 'z': 3};"
     val result = Terser.minifyToString(
       js,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(keepQuotedProps = false, quoteStyle = 3))
@@ -158,7 +158,7 @@ final class MinifySuite extends munit.FunSuite {
       "var a=1;let a=2;",
       "const a=1;const a=2;",
       "const a=1;var a=2;",
-      "var a=1;const a=2;",
+      "var a=1;const a=2;"
     )
     cases.foreach { code =>
       // Should parse without error when compress=false, mangle=false
@@ -189,7 +189,7 @@ final class MinifySuite extends munit.FunSuite {
       "async function f(x){ for await (e of x) {} }",
       "async function f(x){ for await (const e of x) {} }",
       "async function f(x){ for await (var e of x) {} }",
-      "async function f(x){ for await (let e of x) {} }",
+      "async function f(x){ for await (let e of x) {} }"
     )
     validCases.foreach { code =>
       val result = Terser.minifyToString(code, noOpt)
@@ -204,7 +204,7 @@ final class MinifySuite extends munit.FunSuite {
       "function f(x){ for await (e of x) {} }",
       "function f(x){ for await (var e of x) {} }",
       "function f(x){ for await (const e of x) {} }",
-      "function f(x){ for await (let e of x) {} }",
+      "function f(x){ for await (let e of x) {} }"
     )
     invalidCases.foreach { code =>
       intercept[JsParseError] {
@@ -216,7 +216,7 @@ final class MinifySuite extends munit.FunSuite {
   test("for-await-of: invalid forms in async function") {
     val invalidCases = List(
       "async function f(x){ for await (const e in x) {} }",
-      "async function f(x){ for await (;;) {} }",
+      "async function f(x){ for await (;;) {} }"
     )
     invalidCases.foreach { code =>
       intercept[JsParseError] {
@@ -229,7 +229,7 @@ final class MinifySuite extends munit.FunSuite {
 
   // 4. "Should not mutate options" — Scala uses immutable case classes, but verify explicitly
   test("should not mutate options") {
-    val options = MinifyOptions(compress = false, mangle = false, output = OutputOptions(beautify = true))
+    val options       = MinifyOptions(compress = false, mangle = false, output = OutputOptions(beautify = true))
     val optionsBefore = options.toString
     Terser.minifyToString("x()", options)
     assertEquals(options.toString, optionsBefore, "Options should not be mutated")

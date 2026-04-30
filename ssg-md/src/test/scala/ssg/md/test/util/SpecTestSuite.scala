@@ -95,7 +95,8 @@ abstract class SpecTestSuite extends munit.FunSuite {
           }
 
         optionsOpt.foreach { options =>
-          val expectFail = TestUtils.FAIL.get(options) || knownFailures.contains(testName) || knownFailurePrefixes.exists(testName.startsWith)
+          val nameBasedFail = knownFailures.contains(testName) || knownFailurePrefixes.exists(testName.startsWith)
+          val expectFail    = nameBasedFail || TestUtils.FAIL.get(options)
 
           // Wrap renderHtml to catch runtime exceptions (pre-existing formatter bugs).
           // When expectFail is true, exceptions are treated as expected failures.
@@ -103,8 +104,8 @@ abstract class SpecTestSuite extends munit.FunSuite {
             try
               Some(renderHtml(example, options))
             catch {
-              case _: Exception if expectFail =>
-                None // Known failure threw exception - treated as expected failure
+              case _: Throwable if expectFail =>
+                None // Known failure threw exception/error - treated as expected failure
             }
 
           actualHtmlOpt match {

@@ -22,16 +22,16 @@ import java.util.Arrays
 import scala.language.implicitConversions
 
 final class ComboMacrosFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboMacrosFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboMacrosFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboMacrosFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Macros -")
+  override def specResource:         ResourceLocation                       = ComboMacrosFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboMacrosFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboMacrosFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Macros -")
 }
 
 object ComboMacrosFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/macros/test/ext_macros_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMacrosFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
+  val OPTIONS:           DataHolder       = new MutableDataSet()
     .set(Parser.EXTENSIONS, Arrays.asList(MacrosExtension.create(), GitLabExtension.create(), TablesExtension.create()))
     .set(GitLabExtension.RENDER_BLOCK_MATH, false)
     .set(GitLabExtension.RENDER_BLOCK_MERMAID, false)

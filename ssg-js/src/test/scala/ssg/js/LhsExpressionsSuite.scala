@@ -39,14 +39,14 @@ final class LhsExpressionsSuite extends munit.FunSuite {
     assertEquals(kv.value.asInstanceOf[AstSymbolVar].name, "x")
 
     // Holey destructuring: const [,,third] = [1,2,3]
-    val holeyDef = parse("const [,,third] = [1,2,3]").body(0).asInstanceOf[AstConst].definitions(0).asInstanceOf[AstVarDef]
+    val holeyDef   = parse("const [,,third] = [1,2,3]").body(0).asInstanceOf[AstConst].definitions(0).asInstanceOf[AstVarDef]
     val holeyDestr = holeyDef.name.asInstanceOf[AstDestructuring]
     assert(holeyDestr.names(0).isInstanceOf[AstHole])
     assert(holeyDestr.names(1).isInstanceOf[AstHole])
     assert(holeyDestr.names(2).isInstanceOf[AstSymbolConst])
 
     // Expanding destructuring: var [first, ...rest] = [1,2,3]
-    val expandDef = parse("var [first, ...rest] = [1,2,3]").body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef]
+    val expandDef   = parse("var [first, ...rest] = [1,2,3]").body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef]
     val expandDestr = expandDef.name.asInstanceOf[AstDestructuring]
     assert(expandDestr.names(0).isInstanceOf[AstSymbolVar])
     assert(expandDestr.names(1).isInstanceOf[AstExpansion])
@@ -212,25 +212,25 @@ final class LhsExpressionsSuite extends munit.FunSuite {
   // 11. "Should not allow spread on invalid locations"
   test("should not allow spread on invalid locations — array destructuring") {
     // Spreads are not allowed in destructuring array if not the last element
-    intercept[JsParseError] { parse("[...a, ...b] = [1, 2, 3, 4]") }
+    intercept[JsParseError](parse("[...a, ...b] = [1, 2, 3, 4]"))
 
     // Array spread must be last in destructuring declaration
-    intercept[JsParseError] { parse("let [ ...x, a ] = o;") }
+    intercept[JsParseError](parse("let [ ...x, a ] = o;"))
 
     // Only one spread per destructuring array declaration
-    intercept[JsParseError] { parse("let [ a, ...x, ...y ] = o;") }
+    intercept[JsParseError](parse("let [ a, ...x, ...y ] = o;"))
 
     // Spread in block should not be allowed
-    intercept[JsParseError] { parse("{...a} = foo") }
+    intercept[JsParseError](parse("{...a} = foo"))
   }
 
   // Known parser gap: multiple object rest elements not validated
   test("should not allow spread on invalid locations — object multiple rest".fail) {
-    intercept[JsParseError] { parse("let { a, ...x, ...y } = o;") }
+    intercept[JsParseError](parse("let { a, ...x, ...y } = o;"))
   }
 
   // Known parser gap: Object rest must be last is not validated
   test("should not allow spread on invalid locations — object rest must be last".fail) {
-    intercept[JsParseError] { parse("let { ...x, a } = o;") }
+    intercept[JsParseError](parse("let { ...x, a } = o;"))
   }
 }

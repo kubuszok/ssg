@@ -14,17 +14,13 @@ import java.util.{ HashMap => JHashMap }
 final class IncludeExtraSuite extends munit.FunSuite {
 
   private def parserWith(
-    flavor: Flavor,
+    flavor:         Flavor,
     showExceptions: Boolean,
-    templates: (String, String)*
+    templates:      (String, String)*
   ): TemplateParser = {
     val map = new JHashMap[String, String]()
     templates.foreach { case (name, content) => map.put(name, content) }
-    new TemplateParser.Builder()
-      .withFlavor(flavor)
-      .withNameResolver(new NameResolver.InMemory(map))
-      .withShowExceptionsFromInclude(showExceptions)
-      .build()
+    new TemplateParser.Builder().withFlavor(flavor).withNameResolver(new NameResolver.InMemory(map)).withShowExceptionsFromInclude(showExceptions).build()
   }
 
   // ---------------------------------------------------------------------------
@@ -39,7 +35,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
       "include_read_var" -> "{{ var }}"
     )
     val template = parser.parse("{% include {{ tmpl }} %}")
-    val vars = TestHelper.mapOf("var" -> "TEST", "tmpl" -> "include_read_var")
+    val vars     = TestHelper.mapOf("var" -> "TEST", "tmpl" -> "include_read_var")
     assertEquals(template.render(vars), "TEST")
   }
 
@@ -50,7 +46,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
       "include_read_include_var" -> "{{ include.var }}"
     )
     val template = parser.parse("{% include include_read_include_var var=otherVar %}")
-    val vars = TestHelper.mapOf("otherVar" -> "TEST")
+    val vars     = TestHelper.mapOf("otherVar" -> "TEST")
     assertEquals(template.render(vars), "TEST")
   }
 
@@ -61,7 +57,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
       "include_read_include_var" -> "{{ include.var }}"
     )
     val template = parser.parse("{% include include_read_include_var foo=bar var=otherVar var=\"var\" var=yetAnotherVar %}")
-    val vars = TestHelper.mapOf("otherVar" -> "TEST", "yetAnotherVar" -> "ANOTHER")
+    val vars     = TestHelper.mapOf("otherVar" -> "TEST", "yetAnotherVar" -> "ANOTHER")
     assertEquals(template.render(vars), "ANOTHER")
   }
 
@@ -73,7 +69,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFlavor(Flavor.JEKYLL)
       .withNameResolver(new NameResolver.InMemory(new JHashMap[String, String]() {
-        { put("color", "color: '{{ color }}'\nshape: '{{ shape }}'") }
+        put("color", "color: '{{ color }}'\nshape: '{{ shape }}'")
       }))
       .withShowExceptionsFromInclude(true)
       .withErrorMode(TemplateParser.ErrorMode.STRICT)
@@ -103,7 +99,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
     assertEquals(template.render(), "color: 'blue'\nshape: ''")
 
     val template2 = parser.parse("{% include 'color' with theme.color %}")
-    val vars = TestHelper.mapOf("theme" -> TestHelper.mapOf("color" -> "orange"))
+    val vars      = TestHelper.mapOf("theme" -> TestHelper.mapOf("color" -> "orange"))
     assertEquals(template2.render(vars), "color: 'orange'\nshape: ''")
   }
 
@@ -250,7 +246,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
       "nonexistent_filter_tpl" -> "{{ 'THE_ERROR' | unknown_and_for_sure_enexist_filter }}"
     )
     val template = parser.parse("before{% include 'nonexistent_filter_tpl' %}after")
-    val result = template.render()
+    val result   = template.render()
     assert(!result.contains("THE_ERROR"))
   }
 
@@ -269,13 +265,10 @@ final class IncludeExtraSuite extends munit.FunSuite {
   test("include: error in include fixed with custom filter registration") {
     val map = new JHashMap[String, String]()
     map.put("nonexistent_filter_tpl", "{{ 'THE_ERROR' | unknown_and_for_sure_enexist_filter }}")
-    val parser = new TemplateParser.Builder()
-      .withFlavor(Flavor.JEKYLL)
-      .withNameResolver(new NameResolver.InMemory(map))
-      .withFilter(new filters.Filter("unknown_and_for_sure_enexist_filter") {})
-      .build()
+    val parser =
+      new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new NameResolver.InMemory(map)).withFilter(new filters.Filter("unknown_and_for_sure_enexist_filter") {}).build()
     val template = parser.parse("{% include 'nonexistent_filter_tpl' %}")
-    val result = template.render()
+    val result   = template.render()
     assert(result.contains("THE_ERROR"))
   }
 

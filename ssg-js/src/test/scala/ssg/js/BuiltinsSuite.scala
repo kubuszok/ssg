@@ -21,15 +21,33 @@ final class BuiltinsSuite extends munit.FunSuite {
         |    return [Object,Array,Function,Number,String,Boolean,Error,Math,Date,RegExp,Symbol,Map,Promise,Proxy,Reflect,Set,WeakMap,WeakSet,Float32Array,something];
         |}""".stripMargin
 
-    val result = Terser.minifyToString(code, MinifyOptions(
-      compress = false
-    ))
+    val result = Terser.minifyToString(code,
+                                       MinifyOptions(
+                                         compress = false
+                                       )
+    )
 
     // All builtins should be preserved in output
     val builtins = List(
-      "Object", "Array", "Function", "Number", "String", "Boolean",
-      "Error", "Math", "Date", "RegExp", "Symbol", "Map", "Promise",
-      "Proxy", "Reflect", "Set", "WeakMap", "WeakSet", "Float32Array"
+      "Object",
+      "Array",
+      "Function",
+      "Number",
+      "String",
+      "Boolean",
+      "Error",
+      "Math",
+      "Date",
+      "RegExp",
+      "Symbol",
+      "Map",
+      "Promise",
+      "Proxy",
+      "Reflect",
+      "Set",
+      "WeakMap",
+      "WeakSet",
+      "Float32Array"
     )
     builtins.foreach { builtin =>
       assert(result.contains(builtin), s"Builtin '$builtin' should not be mangled, got: $result")

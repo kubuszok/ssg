@@ -31,12 +31,12 @@ final class MergeFootnotesSuite extends munit.FunSuite {
   private val PARSER:    Parser    = Parser.builder(OPTIONS).build()
 
   private def assertMerged(expected: String, markdownSources: String*): Unit = {
-    val documents = markdownSources.map(src => PARSER.parse(src)).toArray
+    val documents    = markdownSources.map(src => PARSER.parse(src)).toArray
     val mergedOutput = FORMATTER.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
-  private def testIdAttributeConflict(): Unit = {
+  private def testIdAttributeConflict(): Unit =
     assertMerged(
       "text [^footnote] embedded.\n" +
         "\n" +
@@ -59,7 +59,6 @@ final class MergeFootnotesSuite extends munit.FunSuite {
         "    with continuation\n" +
         "\n"
     )
-  }
 
   test("IdAttributeConflict1") {
     testIdAttributeConflict()
@@ -70,7 +69,7 @@ final class MergeFootnotesSuite extends munit.FunSuite {
     testIdAttributeConflict()
   }
 
-  private def testUndefinedIdConflict(): Unit = {
+  private def testUndefinedIdConflict(): Unit =
     assertMerged(
       "text [^footnote] embedded.\n" +
         "\n" +
@@ -97,7 +96,6 @@ final class MergeFootnotesSuite extends munit.FunSuite {
         "    with continuation\n" +
         "\n"
     )
-  }
 
   test("UndefinedIdConflict1") {
     testUndefinedIdConflict()

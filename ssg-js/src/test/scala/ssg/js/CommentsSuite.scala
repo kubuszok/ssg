@@ -40,19 +40,23 @@ final class CommentsSuite extends munit.FunSuite {
   // 1. "Should recognize eol of single line comments"
   test("should recognize eol of single line comments") {
     // On Native, U+2028/U+2029 may not work as line terminators
-    val tests = if (isNative) List(
-      "//Some comment 1\n>",
-      "//Some comment 2\r>",
-      "//Some comment 3\r\n>",
-    ) else List(
-      "//Some comment 1\n>",
-      "//Some comment 2\r>",
-      "//Some comment 3\r\n>",
-      "//Some comment 4\u2028>",
-      "//Some comment 5\u2029>",
-    )
+    val tests =
+      if (isNative)
+        List(
+          "//Some comment 1\n>",
+          "//Some comment 2\r>",
+          "//Some comment 3\r\n>"
+        )
+      else
+        List(
+          "//Some comment 1\n>",
+          "//Some comment 2\r>",
+          "//Some comment 3\r\n>",
+          "//Some comment 4\u2028>",
+          "//Some comment 5\u2029>"
+        )
     tests.foreach { code =>
-      val ex = intercept[JsParseError] { new Parser().parse(code) }
+      val ex = intercept[JsParseError](new Parser().parse(code))
       assert(
         ex.message.contains("Unexpected token") && ex.message.contains(">"),
         s"Expected unexpected > error, got: ${ex.getMessage} for input: ${code.take(20)}"
@@ -68,10 +72,10 @@ final class CommentsSuite extends munit.FunSuite {
       "/*Some comment 2\r\n\r\n\r\n*/\r\n>\n\n\n\n\n\n",
       "/*Some comment 3\r\r\r*/\r>\n\n\n\n\n\n",
       "/*Some comment 4\u2028\u2028\u2028*/\u2028>\n\n\n\n\n\n",
-      "/*Some comment 5\u2029\u2029\u2029*/\u2029>\n\n\n\n\n\n",
+      "/*Some comment 5\u2029\u2029\u2029*/\u2029>\n\n\n\n\n\n"
     )
     tests.foreach { code =>
-      val ex = intercept[JsParseError] { new Parser().parse(code) }
+      val ex = intercept[JsParseError](new Parser().parse(code))
       assert(
         ex.message.contains("Unexpected token") && ex.message.contains(">"),
         s"Expected unexpected > error, got: ${ex.getMessage}"
@@ -116,7 +120,7 @@ final class CommentsSuite extends munit.FunSuite {
       "    function baz() {/* lost comment */}",
       "    // lost comment",
       "}",
-      "// comments right before EOF are lost as well",
+      "// comments right before EOF are lost as well"
     ).mkString("\n")
     val result = Terser.minifyToString(
       code,
@@ -137,7 +141,7 @@ final class CommentsSuite extends munit.FunSuite {
       "",
       "switch (a) {/* foo */}",
       "",
-      "if (a) {/* foo */} else {/* bar */}",
+      "if (a) {/* foo */} else {/* bar */}"
     ).mkString("\n")
     val result = Terser.minifyToString(
       code,
@@ -157,7 +161,7 @@ final class CommentsSuite extends munit.FunSuite {
       "/* foo */\n/* bar */\nx();",
       "/* foo */\n/* bar */ x();",
       "/* foo */ /* bar */\nx();",
-      "/* foo */ /* bar */ x();",
+      "/* foo */ /* bar */ x();"
     )
     cases.foreach { code =>
       val result = Terser.minifyToString(
@@ -170,7 +174,7 @@ final class CommentsSuite extends munit.FunSuite {
 
   // 9. "Should preserve new line before comment without beautify"
   test("should preserve new line before comment without beautify") {
-    val code = "function f(){\n/* foo */bar()}"
+    val code   = "function f(){\n/* foo */bar()}"
     val result = Terser.minifyToString(
       code,
       MinifyOptions(compress = false, mangle = false, output = OutputOptions(comments = "all"))
@@ -211,7 +215,7 @@ final class CommentsSuite extends munit.FunSuite {
   // 14. "Should be able to filter comments by passing regexp"
   test("filter comments by regexp pattern (bang comments)") {
     assumeNotNative()
-    val code = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
+    val code   = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
     val result = parseAndPrint(code, OutputOptions(comments = "/^!/"))
     assert(result.contains("/*!test1*/"), s"Expected /*!test1*/ in: $result")
     assert(result.contains("//!test3"), s"Expected //!test3 in: $result")
@@ -221,7 +225,7 @@ final class CommentsSuite extends munit.FunSuite {
 
   // 15. "Should be able to filter comments with the 'all' option"
   test("filter comments with 'all' option") {
-    val code = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
+    val code   = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
     val result = parseAndPrint(code, OutputOptions(comments = "all"))
     assert(result.contains("/*!test1*/"), s"Expected /*!test1*/ in: $result")
     assert(result.contains("/*test2*/"), s"Expected /*test2*/ in: $result")
@@ -231,7 +235,7 @@ final class CommentsSuite extends munit.FunSuite {
 
   // 16. "Should be able to filter comments with the 'some' option"
   test("filter comments with 'some' option") {
-    val code = "// foo\n/*@preserve*/\n// bar\n/*@license*/\n//@lic two slashes\n/*@cc_on something*/"
+    val code   = "// foo\n/*@preserve*/\n// bar\n/*@license*/\n//@lic two slashes\n/*@cc_on something*/"
     val result = parseAndPrint(code, OutputOptions(comments = "some"))
     assert(result.contains("@preserve"), s"Expected @preserve in: $result")
     assert(result.contains("@license"), s"Expected @license in: $result")
@@ -251,7 +255,7 @@ final class CommentsSuite extends munit.FunSuite {
   // Adding explicit test matching original's exact input/output for completeness.
   test("filter comments by regex in string format") {
     assumeNotNative()
-    val code = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
+    val code   = "/*!test1*/\n/*test2*/\n//!test3\n//test4"
     val result = parseAndPrint(code, OutputOptions(comments = "/^!/"))
     assertEquals(result, "/*!test1*/\n//!test3\n")
   }

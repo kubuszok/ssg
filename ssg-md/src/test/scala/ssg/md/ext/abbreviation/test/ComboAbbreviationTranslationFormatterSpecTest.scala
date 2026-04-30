@@ -20,19 +20,16 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboAbbreviationTranslationFormatterSpecTest extends TranslationFormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboAbbreviationTranslationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAbbreviationTranslationFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAbbreviationTranslationFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Abbreviation -")
+  override def specResource:         ResourceLocation                       = ComboAbbreviationTranslationFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboAbbreviationTranslationFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboAbbreviationTranslationFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Abbreviation -")
 }
 
 object ComboAbbreviationTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/abbreviation/test/ext_abbreviation_translation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAbbreviationTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create()))
-    .set(Parser.UNDERSCORE_DELIMITER_PROCESSOR, false)
-    .toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.UNDERSCORE_DELIMITER_PROCESSOR, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(AbbreviationExtension.ABBREVIATIONS_KEEP),

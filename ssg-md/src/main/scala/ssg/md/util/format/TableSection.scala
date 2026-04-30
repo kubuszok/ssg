@@ -109,7 +109,7 @@ class TableSection(val sectionType: TableSectionType) {
 
   override def toString: String =
     // NOTE: show not simple name but name of container class if any
-    this.getClass.getName.substring(getClass.getPackage.getName.length + 1) + "[" +
+    this.getClass.getSimpleName + "[" +
       "sectionType=" + sectionType +
       ", rows=[\n" + dumpRows() +
       ']'

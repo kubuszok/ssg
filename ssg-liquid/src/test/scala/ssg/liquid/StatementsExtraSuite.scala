@@ -77,7 +77,9 @@ final class StatementsExtraSuite extends munit.FunSuite {
   test("statement: is not collection empty") {
     val vars = TestHelper.mapOf(
       "array" -> TestHelper.listOf(
-        java.lang.Integer.valueOf(1), java.lang.Integer.valueOf(2), java.lang.Integer.valueOf(3)
+        java.lang.Integer.valueOf(1),
+        java.lang.Integer.valueOf(2),
+        java.lang.Integer.valueOf(3)
       )
     )
     assertEquals(

@@ -20,19 +20,16 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboAbbreviationFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboAbbreviationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAbbreviationFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAbbreviationFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Abbreviation -")
+  override def specResource:         ResourceLocation                       = ComboAbbreviationFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboAbbreviationFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboAbbreviationFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Abbreviation -")
 }
 
 object ComboAbbreviationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/abbreviation/test/ext_abbreviation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAbbreviationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create()))
-    .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(AbbreviationExtension.ABBREVIATIONS_KEEP),

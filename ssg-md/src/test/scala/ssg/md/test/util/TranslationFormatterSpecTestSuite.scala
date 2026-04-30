@@ -32,11 +32,8 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
   val DETAILS:     DataKey[Boolean] = new DataKey[Boolean]("DETAILS", SHOW_INTERMEDIATE)
   val AST_DETAILS: DataKey[Boolean] = new DataKey[Boolean]("AST_DETAILS", SHOW_INTERMEDIATE_AST)
 
-  private val TRANSLATION_BASE_OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.HTML_FOR_TRANSLATOR, true)
-    .set(Parser.PARSE_INNER_HTML_COMMENTS, true)
-    .set(Formatter.MAX_TRAILING_BLANK_LINES, 0)
-    .toImmutable
+  private val TRANSLATION_BASE_OPTIONS: DataHolder =
+    new MutableDataSet().set(Parser.HTML_FOR_TRANSLATOR, true).set(Parser.PARSE_INNER_HTML_COMMENTS, true).set(Formatter.MAX_TRAILING_BLANK_LINES, 0).toImmutable
 
   private val translationOptionsMap: ju.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
@@ -48,10 +45,12 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
   override protected def optionsFor(example: SpecExample): DataHolder = {
     val subclassBase = defaultOptions.getOrElse(new MutableDataSet())
     // Merge translation base options with formatter base options and subclass defaults
-    val base = DataSet.aggregate(
-      Nullable(FormatterSpecTestSuite.BASE_OPTIONS),
-      DataSet.aggregate(Nullable(TRANSLATION_BASE_OPTIONS), Nullable(subclassBase))
-    ).toImmutable
+    val base = DataSet
+      .aggregate(
+        Nullable(FormatterSpecTestSuite.BASE_OPTIONS),
+        DataSet.aggregate(Nullable(TRANSLATION_BASE_OPTIONS), Nullable(subclassBase))
+      )
+      .toImmutable
     val optionSet = example.optionsSet
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](FormatterSpecTestSuite.BASE_OPTIONS_MAP)
@@ -73,9 +72,9 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
 
   /** Translate function: swap case, keep certain consonants, keep vowels */
   private def translate(text: CharSequence): CharSequence = {
-    val sb = new StringBuilder()
+    val sb   = new StringBuilder()
     val iMax = text.length
-    var i = 0
+    var i    = 0
     while (i < iMax) {
       val c = text.charAt(i)
 
@@ -106,12 +105,12 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
 
     val noFileEol     = TestUtils.NO_FILE_EOL.get(options)
     val trimmedSource = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
-    val document = parser.parse(trimmedSource).asInstanceOf[Document]
+    val document      = parser.parse(trimmedSource).asInstanceOf[Document]
 
     val showIntermediate    = DETAILS.get(options)
     val showIntermediateAst = AST_DETAILS.get(options)
 
-    val handler = formatter.getTranslationHandler
+    val handler         = formatter.getTranslationHandler
     val formattedOutput = formatter.translationRender(document, handler, RenderPurpose.TRANSLATION_SPANS)
 
     // now need to output translation strings, delimited
@@ -167,8 +166,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
     out.toString
   }
 
-  override protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = {
+  override protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] =
     // Translation tests override AST only when showIntermediateAst is set; for now, no AST
     Nullable.empty
-  }
 }

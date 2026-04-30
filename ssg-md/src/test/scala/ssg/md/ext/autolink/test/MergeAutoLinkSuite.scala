@@ -32,9 +32,8 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
   private val FORMATTER: Formatter = Formatter.builder(Nullable(OPTIONS)).build()
   private val PARSER:    Parser    = Parser.builder(OPTIONS).build()
 
-  private def assertMerged(expected: String, markdownSources: String*): Unit = {
+  private def assertMerged(expected: String, markdownSources: String*): Unit =
     assertMergedWithUrls(expected, null, null, markdownSources*) // @nowarn - null for Java interop compatibility
-  }
 
   private def assertMergedWithUrls(
     expected:         String,
@@ -43,7 +42,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     markdownSources:  String*
   ): Unit = {
     val documents = new Array[Document](markdownSources.length)
-    var i = 0
+    var i         = 0
     while (i < markdownSources.length) {
       documents(i) = PARSER.parse(markdownSources(i))
 
@@ -62,7 +61,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
-  private def testMailLink(): Unit = {
+  private def testMailLink(): Unit =
     assertMerged(
       "test@example.com\n" +
         "\n" +
@@ -73,7 +72,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "test@example.com\n" +
         "\n"
     )
-  }
 
   test("Mail_Link1") {
     testMailLink()
@@ -84,7 +82,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testMailLink()
   }
 
-  private def testMailLink1(): Unit = {
+  private def testMailLink1(): Unit =
     assertMerged(
       "test@example.com\n" +
         "\n" +
@@ -95,7 +93,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "<test@example.com>\n" +
         "\n"
     )
-  }
 
   test("Mail_Link11") {
     testMailLink1()
@@ -106,7 +103,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testMailLink1()
   }
 
-  private def testMailLink2(): Unit = {
+  private def testMailLink2(): Unit =
     assertMerged(
       "<test@example.com>\n" +
         "\n" +
@@ -117,7 +114,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "test@example.com\n" +
         "\n"
     )
-  }
 
   test("Mail_Link21") {
     testMailLink2()
@@ -128,7 +124,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testMailLink2()
   }
 
-  private def testMailLink3(): Unit = {
+  private def testMailLink3(): Unit =
     assertMerged(
       "<test@example.com>\n" +
         "\n" +
@@ -139,7 +135,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "<test@example.com>\n" +
         "\n"
     )
-  }
 
   test("Mail_Link31") {
     testMailLink3()
@@ -150,7 +145,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testMailLink3()
   }
 
-  private def testHtmlPreservationAutoLink0(): Unit = {
+  private def testHtmlPreservationAutoLink0(): Unit =
     assertMerged(
       "http://example.com\n" +
         "\n" +
@@ -161,7 +156,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "http://example.com\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationAutoLink01") {
     testHtmlPreservationAutoLink0()
@@ -172,7 +166,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testHtmlPreservationAutoLink0()
   }
 
-  private def testHtmlPreservationAutoLink1(): Unit = {
+  private def testHtmlPreservationAutoLink1(): Unit =
     assertMerged(
       "<http://example.com>\n" +
         "\n" +
@@ -183,7 +177,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "http://example.com\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationAutoLink11") {
     testHtmlPreservationAutoLink1()
@@ -194,7 +187,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testHtmlPreservationAutoLink1()
   }
 
-  private def testHtmlPreservationAutoLink2(): Unit = {
+  private def testHtmlPreservationAutoLink2(): Unit =
     assertMerged(
       "http://example.com\n" +
         "\n" +
@@ -205,7 +198,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "<http://example.com>\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationAutoLink21") {
     testHtmlPreservationAutoLink2()
@@ -216,7 +208,7 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
     testHtmlPreservationAutoLink2()
   }
 
-  private def testHtmlPreservationAutoLink3(): Unit = {
+  private def testHtmlPreservationAutoLink3(): Unit =
     assertMerged(
       "<http://example.com>\n" +
         "\n" +
@@ -227,7 +219,6 @@ final class MergeAutoLinkSuite extends munit.FunSuite {
       "<http://example.com>\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationAutoLink31") {
     testHtmlPreservationAutoLink3()

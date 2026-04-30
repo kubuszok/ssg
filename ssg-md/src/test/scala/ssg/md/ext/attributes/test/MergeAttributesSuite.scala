@@ -31,12 +31,12 @@ final class MergeAttributesSuite extends munit.FunSuite {
   private val PARSER:    Parser    = Parser.builder(OPTIONS).build()
 
   private def assertMerged(expected: String, markdownSources: String*): Unit = {
-    val documents = markdownSources.map(src => PARSER.parse(src)).toArray
+    val documents    = markdownSources.map(src => PARSER.parse(src)).toArray
     val mergedOutput = FORMATTER.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
-  private def testIdAttributeConflict(): Unit = {
+  private def testIdAttributeConflict(): Unit =
     assertMerged(
       "![Fig](http://example.com/test.png){#fig:test}\n" +
         "\n" +
@@ -55,7 +55,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[Figure](#fig:test).\n" +
         "\n"
     )
-  }
 
   test("IdAttributeConflict1") {
     testIdAttributeConflict()
@@ -66,7 +65,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
     testIdAttributeConflict()
   }
 
-  private def testUndefinedIdConflict(): Unit = {
+  private def testUndefinedIdConflict(): Unit =
     assertMerged(
       "![Fig](http://example.com/test.png){#fig:test}\n" +
         "\n" +
@@ -89,7 +88,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[Figure](#fig:test).\n" +
         "\n"
     )
-  }
 
   test("UndefinedIdConflict1") {
     testUndefinedIdConflict()
@@ -101,7 +99,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
   }
 
   // Header attribute id adjustment
-  private def testAtxHeadingConflict(): Unit = {
+  private def testAtxHeadingConflict(): Unit =
     assertMerged(
       "# Atx Heading\n" +
         "\n" +
@@ -118,7 +116,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[link](#atx-heading)\n" +
         "\n"
     )
-  }
 
   test("AtxHeadingConflict1") {
     testAtxHeadingConflict()
@@ -129,7 +126,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
     testAtxHeadingConflict()
   }
 
-  private def testSetextHeadingConflict(): Unit = {
+  private def testSetextHeadingConflict(): Unit =
     assertMerged(
       "Setext Heading\n" +
         "==============\n" +
@@ -150,7 +147,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[link](#setext-heading)\n" +
         "\n"
     )
-  }
 
   test("SetextHeadingConflict1") {
     testSetextHeadingConflict()
@@ -162,7 +158,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
   }
 
   // Header attribute id adjustment
-  private def testAtxHeadingExplicitConflict(): Unit = {
+  private def testAtxHeadingExplicitConflict(): Unit =
     assertMerged(
       "# Atx Heading {#atx-explicit}\n" +
         "\n" +
@@ -179,7 +175,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[link](#atx-explicit)\n" +
         "\n"
     )
-  }
 
   test("AtxHeadingExplicitConflict1") {
     testAtxHeadingExplicitConflict()
@@ -190,7 +185,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
     testAtxHeadingExplicitConflict()
   }
 
-  private def testSetextHeadingExplicitConflict(): Unit = {
+  private def testSetextHeadingExplicitConflict(): Unit =
     assertMerged(
       "Setext Heading\n" +
         "==============\n" +
@@ -211,7 +206,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[link](#setext-heading)\n" +
         "\n"
     )
-  }
 
   test("SetextHeadingExplicitConflict1") {
     testSetextHeadingExplicitConflict()
@@ -222,7 +216,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
     testSetextHeadingExplicitConflict()
   }
 
-  private def testHtmlPreservation(): Unit = {
+  private def testHtmlPreservation(): Unit =
     assertMerged(
       "# Heading {style=\"font-size: 26pt\"}\n" +
         "\n" +
@@ -246,7 +240,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[](http://example.com)\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservation1") {
     testHtmlPreservation()
@@ -257,7 +250,7 @@ final class MergeAttributesSuite extends munit.FunSuite {
     testHtmlPreservation()
   }
 
-  private def testHtmlPreservationLink(): Unit = {
+  private def testHtmlPreservationLink(): Unit =
     assertMerged(
       "[](http://example.com)\n" +
         "\n" +
@@ -276,7 +269,6 @@ final class MergeAttributesSuite extends munit.FunSuite {
         "[](http://example.com)\n" +
         "\n"
     )
-  }
 
   test("HtmlPreservationLink1") {
     testHtmlPreservationLink()
