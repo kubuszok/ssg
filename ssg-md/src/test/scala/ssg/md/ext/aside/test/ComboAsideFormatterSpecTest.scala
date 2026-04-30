@@ -20,15 +20,13 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboAsideFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation     = ComboAsideFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboAsideFormatterSpecTest.OPTIONS)
-  override def knownFailurePrefixes: Set[String] = Set("Aside -", "Combined -")
+  override def specResource:         ResourceLocation     = ComboAsideFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder] = Nullable(ComboAsideFormatterSpecTest.OPTIONS)
+  override def knownFailurePrefixes: Set[String]          = Set("Aside -", "Combined -")
 }
 
 object ComboAsideFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/aside/test/ext_aside_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAsideFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(AsideExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AsideExtension.create())).toImmutable
 }

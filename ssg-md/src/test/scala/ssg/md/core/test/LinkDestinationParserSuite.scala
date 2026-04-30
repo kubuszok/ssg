@@ -75,7 +75,9 @@ final class LinkDestinationParserSuite extends munit.FunSuite {
   // Jekyll tests
   test("test_Jekyll1")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{macro}}abc"), 0).toString, "{{macro}}abc"))
   test("test_Jekyll2")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ macro }}abc"), 0).toString, "{{ macro }}abc"))
-  test("test_Jekyll3")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{macro1}}ab{{macro2}}c"), 0).toString, "{{macro1}}ab{{macro2}}c"))
+  test("test_Jekyll3")(
+    assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{macro1}}ab{{macro2}}c"), 0).toString, "{{macro1}}ab{{macro2}}c")
+  )
   test("test_Jekyll4") {
     assertEquals(
       jekyllParser.parseLinkDestination(CharSubSequence.of("{{ macro1 }}ab{{ macro2 }}c"), 0).toString,
@@ -87,7 +89,9 @@ final class LinkDestinationParserSuite extends munit.FunSuite {
   test("test_Jekyll7")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ma(cro}}abc)"), 0).toString, "{{ma(cro}}abc"))
   test("test_Jekyll8")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro }}abc)"), 0).toString, "{{ ma(cro }}abc"))
   test("test_Jekyll9")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ma(cro)}}abc)"), 0).toString, "{{ma(cro)}}abc"))
-  test("test_Jekyll10")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) }}abc)"), 0).toString, "{{ ma(cro) }}abc"))
+  test("test_Jekyll10")(
+    assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) }}abc)"), 0).toString, "{{ ma(cro) }}abc")
+  )
   test("test_Jekyll11")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ma(croabc)"), 0).toString, "{{ma(croabc)"))
   test("test_Jekyll12")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ma(croabc))"), 0).toString, "{{ma(croabc)"))
   test("test_Jekyll13")(assertEquals(jekyllParser.parseLinkDestination(CharSubSequence.of("{{ma(cro)abc)"), 0).toString, "{{ma(cro)abc"))
@@ -102,7 +106,9 @@ final class LinkDestinationParserSuite extends munit.FunSuite {
 
   // JekyllSpaces tests
   test("test_JekyllSpaces1")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{macro}}abc"), 0).toString, "{{macro}}abc"))
-  test("test_JekyllSpaces2")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ macro }}abc"), 0).toString, "{{ macro }}abc"))
+  test("test_JekyllSpaces2")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ macro }}abc"), 0).toString, "{{ macro }}abc")
+  )
   test("test_JekyllSpaces3") {
     assertEquals(
       jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{macro1}}ab{{macro2}}c"), 0).toString,
@@ -115,22 +121,52 @@ final class LinkDestinationParserSuite extends munit.FunSuite {
       "{{ macro1 }}ab{{ macro2 }}c"
     )
   }
-  test("test_JekyllSpaces5")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("\\{{macro}}abc"), 0).toString, "\\{{macro}}abc"))
-  test("test_JekyllSpaces6")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("\\{{ macro }}abc"), 0).toString, "\\{{ macro }}abc"))
-  test("test_JekyllSpaces7")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(cro}}abc)"), 0).toString, "{{ma(cro}}abc"))
-  test("test_JekyllSpaces8")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro }}abc)"), 0).toString, "{{ ma(cro }}abc"))
-  test("test_JekyllSpaces9")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(cro)}}abc)"), 0).toString, "{{ma(cro)}}abc"))
-  test("test_JekyllSpaces10")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) }}abc)"), 0).toString, "{{ ma(cro) }}abc"))
+  test("test_JekyllSpaces5")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("\\{{macro}}abc"), 0).toString, "\\{{macro}}abc")
+  )
+  test("test_JekyllSpaces6")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("\\{{ macro }}abc"), 0).toString, "\\{{ macro }}abc")
+  )
+  test("test_JekyllSpaces7")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(cro}}abc)"), 0).toString, "{{ma(cro}}abc")
+  )
+  test("test_JekyllSpaces8")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro }}abc)"), 0).toString, "{{ ma(cro }}abc")
+  )
+  test("test_JekyllSpaces9")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(cro)}}abc)"), 0).toString, "{{ma(cro)}}abc")
+  )
+  test("test_JekyllSpaces10")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) }}abc)"), 0).toString, "{{ ma(cro) }}abc")
+  )
   test("test_JekyllSpaces11")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(croabc)"), 0).toString, "{{ma(croabc)"))
   test("test_JekyllSpaces12")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(croabc))"), 0).toString, "{{ma(croabc)"))
   test("test_JekyllSpaces13")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ma(cro)abc)"), 0).toString, "{{ma(cro)abc"))
-  test("test_JekyllSpaces14")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) abc)"), 0).toString, "{{ ma(cro) abc"))
-  test("test_JekyllSpaces15")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc)"), 0).toString, "({{ma(cro)abc)"))
-  test("test_JekyllSpaces16a")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc)"), 0).toString, "({{ma(cro) abc)"))
-  test("test_JekyllSpaces16b")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ ma(cro) abc)"), 0).toString, "({{ ma(cro) abc)"))
-  test("test_JekyllSpaces17")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc))"), 0).toString, "({{ma(cro)abc)"))
-  test("test_JekyllSpaces18")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc))"), 0).toString, "({{ma(cro) abc)"))
-  test("test_JekyllSpaces19")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc))"), 0).toString, "({{ma(cro)abc)"))
-  test("test_JekyllSpaces20")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc))"), 0).toString, "({{ma(cro) abc)"))
-  test("test_JekyllSpaces21")(assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("(({{ma(cro) abc))"), 0).toString, "(({{ma(cro) abc))"))
+  test("test_JekyllSpaces14")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("{{ ma(cro) abc)"), 0).toString, "{{ ma(cro) abc")
+  )
+  test("test_JekyllSpaces15")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc)"), 0).toString, "({{ma(cro)abc)")
+  )
+  test("test_JekyllSpaces16a")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc)"), 0).toString, "({{ma(cro) abc)")
+  )
+  test("test_JekyllSpaces16b")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ ma(cro) abc)"), 0).toString, "({{ ma(cro) abc)")
+  )
+  test("test_JekyllSpaces17")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc))"), 0).toString, "({{ma(cro)abc)")
+  )
+  test("test_JekyllSpaces18")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc))"), 0).toString, "({{ma(cro) abc)")
+  )
+  test("test_JekyllSpaces19")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro)abc))"), 0).toString, "({{ma(cro)abc)")
+  )
+  test("test_JekyllSpaces20")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("({{ma(cro) abc))"), 0).toString, "({{ma(cro) abc)")
+  )
+  test("test_JekyllSpaces21")(
+    assertEquals(jekyllSpacesParser.parseLinkDestination(CharSubSequence.of("(({{ma(cro) abc))"), 0).toString, "(({{ma(cro) abc))")
+  )
 }

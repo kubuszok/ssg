@@ -23,8 +23,7 @@ import java.util.{ HashMap => JHashMap }
 
 /** Tests for the hand-written LiquidLexer, adapted from the original ANTLR-based LiquidLexerTest.
   *
-  * Each test exercises the same lexer behavior as the original @Test, but verifies via
-  * parse+render output rather than ANTLR token types.
+  * Each test exercises the same lexer behavior as the original @Test, but verifies via parse+render output rather than ANTLR token types.
   *
   * 72 tests total, matching the 72 @Test methods in the original.
   */
@@ -35,18 +34,18 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   private def parserWithStrip(strip: Boolean): TemplateParser =
-    new TemplateParser.Builder()
-      .withStripSpaceAroundTags(strip)
-      .build()
+    new TemplateParser.Builder().withStripSpaceAroundTags(strip).build()
 
   private def parserWithCustomBlock(blockName: String): TemplateParser =
     new TemplateParser.Builder()
-      .withBlock(new blocks.Block(blockName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[$blockName:$body]"
+      .withBlock(
+        new blocks.Block(blockName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[$blockName:$body]"
+          }
         }
-      })
+      )
       .build()
 
   private def parserWithCustomTag(tagName: String): TemplateParser =
@@ -59,12 +58,14 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   private def parserWithCustomBlockAndTag(blockName: String, tagName: String): TemplateParser =
     new TemplateParser.Builder()
-      .withBlock(new blocks.Block(blockName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[$blockName:$body]"
+      .withBlock(
+        new blocks.Block(blockName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[$blockName:$body]"
+          }
         }
-      })
+      )
       .withTag(new tags.Tag(tagName) {
         override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
           s"<$tagName>"
@@ -216,18 +217,22 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // NOTE: SSG parser in LAX mode (default) does not raise errors for mismatched end tags.
   test("MismatchedEndCustomTag: end tag doesn't match start tag — SSG LAX mode ignores".fail) {
     val parser = new TemplateParser.Builder()
-      .withBlock(new blocks.Block("one") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[one:$body]"
+      .withBlock(
+        new blocks.Block("one") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[one:$body]"
+          }
         }
-      })
-      .withBlock(new blocks.Block("bad") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-          val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-          s"[bad:$body]"
+      )
+      .withBlock(
+        new blocks.Block("bad") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
+            s"[bad:$body]"
+          }
         }
-      })
+      )
       .build()
     // {%one%}...{%endbad%} — mismatched end tag
     intercept[LiquidException] {
@@ -349,7 +354,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   Dot       : '.';
   test("Dot: property access") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val inner = new JHashMap[String, Any]()
     inner.put("name", "test")
     vars.put("obj", inner)
@@ -804,7 +809,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   ForStart     : 'for';
   test("ForStart: for tag recognized") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("x")
     vars.put("arr", items)
@@ -832,7 +837,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   In           : 'in';
   test("In: in keyword in for loop") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
@@ -873,7 +878,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   TableStart   : 'tablerow';
   test("TableStart: tablerow tag recognized") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     vars.put("rows", items)
@@ -887,7 +892,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   TableEnd     : 'endtablerow';
   test("TableEnd: endtablerow closes tablerow block") {
-    val vars = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, Any]()
     val items = new java.util.ArrayList[Any]()
     items.add("x")
     vars.put("rows", items)

@@ -22,18 +22,16 @@ import java.util.Arrays
 import scala.language.implicitConversions
 
 final class ComboEnumeratedReferenceTranslationFormatterSpecTest extends TranslationFormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboEnumeratedReferenceTranslationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboEnumeratedReferenceTranslationFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboEnumeratedReferenceTranslationFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Enumerated Reference -")
+  override def specResource:         ResourceLocation                       = ComboEnumeratedReferenceTranslationFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboEnumeratedReferenceTranslationFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboEnumeratedReferenceTranslationFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Enumerated Reference -")
 }
 
 object ComboEnumeratedReferenceTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/enumerated/reference/test/ext_enumerated_reference_translation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboEnumeratedReferenceTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create()))
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create())).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP),

@@ -22,15 +22,19 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
 
   private val content: HashMap[String, String] = {
     val m = new HashMap[String, String]()
-    m.put("test.md", "" +
-      "## Embedded Content\n" +
-      "\n" +
-      "Content\n" +
-      "\n" +
-      "")
-    m.put("test2.md", "" +
-      "Content\n" +
-      "")
+    m.put("test.md",
+          "" +
+            "## Embedded Content\n" +
+            "\n" +
+            "Content\n" +
+            "\n" +
+            ""
+    )
+    m.put("test2.md",
+          "" +
+            "Content\n" +
+            ""
+    )
     m
   }
 
@@ -44,9 +48,7 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
     .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
     .toImmutable
 
-  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(Nullable(OPTIONS))
-    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false)
-    .toImmutable
+  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(Nullable(OPTIONS)).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false).toImmutable
 
   private val EMBEDDING_FORMATTER:     Formatter = Formatter.builder(Nullable(OPTIONS)).build()
   private val NON_EMBEDDING_FORMATTER: Formatter = Formatter.builder(Nullable(NON_EMBEDDING_OPTIONS)).build()
@@ -54,15 +56,16 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
   private val NON_EMBEDDING_PARSER:    Parser    = Parser.builder(NON_EMBEDDING_OPTIONS).build()
 
   private def assertMerged(embedContent: Boolean, expected: String, markdownSources: String*): Unit = {
-    val parser    = if (embedContent) EMBEDDING_PARSER else NON_EMBEDDING_PARSER
-    val formatter = if (embedContent) EMBEDDING_FORMATTER else NON_EMBEDDING_FORMATTER
-    val documents = markdownSources.map(src => parser.parse(src)).toArray
+    val parser       = if (embedContent) EMBEDDING_PARSER else NON_EMBEDDING_PARSER
+    val formatter    = if (embedContent) EMBEDDING_FORMATTER else NON_EMBEDDING_FORMATTER
+    val documents    = markdownSources.map(src => parser.parse(src)).toArray
     val mergedOutput = formatter.mergeRender(documents, 1)
     assertEquals(mergedOutput, expected, "Merged results differ")
   }
 
   test("IdAttributeConflict") {
-    assertMerged(false,
+    assertMerged(
+      false,
       "" +
         "{% include test.md %}\n" +
         "\n" +
@@ -81,7 +84,8 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
   }
 
   test("IdAttributeConflictEmbed") {
-    assertMerged(true,
+    assertMerged(
+      true,
       "" +
         "## Embedded Content\n" +
         "\n" +
@@ -104,7 +108,8 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
   }
 
   test("IdAttributeConflictEmbedInline") {
-    assertMerged(true,
+    assertMerged(
+      true,
       "" +
         "text Content\n" +
         "\n" +

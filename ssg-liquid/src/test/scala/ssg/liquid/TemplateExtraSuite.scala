@@ -19,20 +19,26 @@ final class TemplateExtraSuite extends munit.FunSuite {
   }
 
   test("template: with custom tag") {
-    val parser = new TemplateParser.Builder().withTag(new tags.Tag("custom_tag") {
-      override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = "xxx"
-    }).build()
+    val parser = new TemplateParser.Builder()
+      .withTag(new tags.Tag("custom_tag") {
+        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = "xxx"
+      })
+      .build()
     assertEquals(parser.parse("{% custom_tag %}").render(), "xxx")
   }
 
   test("template: with custom block") {
-    val parser = new TemplateParser.Builder().withBlock(new blocks.Block("custom_uppercase_block") {
-      override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
-        val block = ns(0)
-        val res = block.render(context)
-        if (res != null) res.toString.toUpperCase(Locale.US) else null
-      }
-    }).build()
+    val parser = new TemplateParser.Builder()
+      .withBlock(
+        new blocks.Block("custom_uppercase_block") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+            val block = ns(0)
+            val res   = block.render(context)
+            if (res != null) res.toString.toUpperCase(Locale.US) else null
+          }
+        }
+      )
+      .build()
     assertEquals(
       parser.parse("{% custom_uppercase_block %} some text {% endcustom_uppercase_block %}").render(),
       " SOME TEXT "
@@ -41,21 +47,27 @@ final class TemplateExtraSuite extends munit.FunSuite {
 
   test("template: with custom filter (sum)") {
     assume(PlatformCompat.supportsReflection, "Double.toString formatting differs on JS/Native")
-    val parser = new TemplateParser.Builder().withFilter(new filters.Filter("sum") {
-      override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
-        val numbers = super.asArray(value, context)
-        var sum = 0.0
-        numbers.foreach { obj =>
-          sum += super.asNumber(obj).doubleValue()
+    val parser = new TemplateParser.Builder()
+      .withFilter(
+        new filters.Filter("sum") {
+          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+            val numbers = super.asArray(value, context)
+            var sum     = 0.0
+            numbers.foreach { obj =>
+              sum += super.asNumber(obj).doubleValue()
+            }
+            java.lang.Double.valueOf(sum)
+          }
         }
-        java.lang.Double.valueOf(sum)
-      }
-    }).build()
+      )
+      .build()
 
     val vars = TestHelper.mapOf(
       "numbers" -> TestHelper.listOf(
-        java.lang.Integer.valueOf(1), java.lang.Integer.valueOf(2),
-        java.lang.Integer.valueOf(3), java.lang.Integer.valueOf(4),
+        java.lang.Integer.valueOf(1),
+        java.lang.Integer.valueOf(2),
+        java.lang.Integer.valueOf(3),
+        java.lang.Integer.valueOf(4),
         java.lang.Integer.valueOf(5)
       )
     )

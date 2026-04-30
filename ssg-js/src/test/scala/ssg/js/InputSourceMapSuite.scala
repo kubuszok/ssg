@@ -59,31 +59,36 @@ final class InputSourceMapSuite extends munit.FunSuite {
   test("should preserve unmapped segments in output source map") {
     val generator = new SourceMapGenerator()
 
-    generator.addMapping(SourceMapping(
-      generatedLine = 1,
-      generatedColumn = 0,
-      source = "source.ts",
-      originalLine = 1,
-      originalColumn = 0
-    ))
-    generator.addMapping(SourceMapping(
-      generatedLine = 1,
-      generatedColumn = 37,
-      source = null,
-      originalLine = 0,
-      originalColumn = 0
-    ))
-    generator.addMapping(SourceMapping(
-      generatedLine = 1,
-      generatedColumn = 50,
-      source = "source.ts",
-      originalLine = 2,
-      originalColumn = 0
-    ))
-    generator.setSourceContent("source.ts",
-      "function say(msg) {console.log(msg)};say('hello');\nprocess.exit(1);")
+    generator.addMapping(
+      SourceMapping(
+        generatedLine = 1,
+        generatedColumn = 0,
+        source = "source.ts",
+        originalLine = 1,
+        originalColumn = 0
+      )
+    )
+    generator.addMapping(
+      SourceMapping(
+        generatedLine = 1,
+        generatedColumn = 37,
+        source = null,
+        originalLine = 0,
+        originalColumn = 0
+      )
+    )
+    generator.addMapping(
+      SourceMapping(
+        generatedLine = 1,
+        generatedColumn = 50,
+        source = "source.ts",
+        originalLine = 2,
+        originalColumn = 0
+      )
+    )
+    generator.setSourceContent("source.ts", "function say(msg) {console.log(msg)};say('hello');\nprocess.exit(1);")
 
-    val inputMap = generator.toJSON()
+    val inputMap  = generator.toJSON()
     val inputFile = "function say(msg) {console.log(msg)};say('hello');process.exit(1);"
 
     // Use SourceMap with the generated map as input
@@ -101,7 +106,7 @@ final class InputSourceMapSuite extends munit.FunSuite {
 
   // 5. Additional test: SourceMapConsumer basic functionality
   test("SourceMapConsumer should resolve positions") {
-    val mapData = getMap()
+    val mapData  = getMap()
     val consumer = new SourceMapConsumer(mapData)
     // The map should have "index.js" as a source
     assert(mapData.sources.contains("index.js"))

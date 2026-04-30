@@ -18,7 +18,7 @@ final class AnnotationsSuite extends munit.FunSuite {
 
   // 1. "#__PURE__ — Should add a 'pure' annotation to the AST node"
   test("__PURE__ annotation on call expression") {
-    val ast = parse("/*@__PURE__*/foo.bar.baz();impure()")
+    val ast   = parse("/*@__PURE__*/foo.bar.baz();impure()")
     val call1 = ast.body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstCall]
     val call2 = ast.body(1).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstCall]
     assert(hasAnnotation(call1, Annotations.Pure), "Expected PURE annotation on first call")
