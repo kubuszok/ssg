@@ -17,7 +17,7 @@ final class WithSuite extends munit.FunSuite {
   // 1. "Should throw syntaxError when using with statement in strict mode"
   test("should throw syntax error for with in strict mode") {
     val code = "\"use strict\";\nthrow NotEarlyError;\nwith ({}) { }"
-    val ex = intercept[JsParseError] { parse(code) }
+    val ex   = intercept[JsParseError](parse(code))
     assertEquals(ex.message, "Strict mode may not include a with statement")
   }
 
@@ -27,15 +27,15 @@ final class WithSuite extends munit.FunSuite {
     ScopeAnalysis.figureOutScope(ast)
     assertEquals(ast.usesWith, true)
     // The `with` statement's expression (e) is a SymbolRef whose scope should have usesWith
-    val withSt = ast.body(0).asInstanceOf[AstWith]
+    val withSt  = ast.body(0).asInstanceOf[AstWith]
     val exprSym = withSt.expression.asInstanceOf[AstSymbolRef]
     assert(exprSym.scope != null)
     assertEquals(exprSym.scope.nn.usesWith, true)
     // The body's expression (f(1,2)) — f is a SymbolRef whose scope should have usesWith
     val bodyBlock = withSt.body.asInstanceOf[AstBlockStatement]
-    val callStmt = bodyBlock.body(0).asInstanceOf[AstSimpleStatement]
-    val call = callStmt.body.asInstanceOf[AstCall]
-    val fSym = call.expression.asInstanceOf[AstSymbolRef]
+    val callStmt  = bodyBlock.body(0).asInstanceOf[AstSimpleStatement]
+    val call      = callStmt.body.asInstanceOf[AstCall]
+    val fSym      = call.expression.asInstanceOf[AstSymbolRef]
     assert(fSym.scope != null)
     assertEquals(fSym.scope.nn.usesWith, true)
   }

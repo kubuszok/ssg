@@ -21,19 +21,16 @@ import java.util.Collections
 import scala.language.implicitConversions
 
 final class ComboEnumeratedReferenceFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboEnumeratedReferenceFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboEnumeratedReferenceFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboEnumeratedReferenceFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Enumerated Reference -")
+  override def specResource:         ResourceLocation                       = ComboEnumeratedReferenceFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboEnumeratedReferenceFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboEnumeratedReferenceFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Enumerated Reference -")
 }
 
 object ComboEnumeratedReferenceFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/enumerated/reference/test/ext_enumerated_reference_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboEnumeratedReferenceFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(EnumeratedReferenceExtension.create()))
-    .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(EnumeratedReferenceExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Nullable(EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP),

@@ -287,7 +287,7 @@ private[scope] class ScopeContext(
   var labels = mutable.Map.empty[String, AstLabel]
   var defun:           AstScope         = null.asInstanceOf[AstScope] // @nowarn — null sentinel, set during walk
   var inDestructuring: AstDestructuring = null.asInstanceOf[AstDestructuring] // @nowarn — null sentinel
-  val forScopes        = ArrayBuffer.empty[AstScope]
+  val forScopes = ArrayBuffer.empty[AstScope]
   private var rootInitialized: Boolean = false
 
   private def pass1Visit(node: AstNode, descend: () => Unit): Any = {
@@ -312,14 +312,14 @@ private[scope] class ScopeContext(
           s match {
             case lambda: AstArrow  => initArrowScopeVars(lambda, parentScopeOpt)
             case lambda: AstLambda => initLambdaScopeVars(lambda, parentScopeOpt)
-            case _                 => initScopeVars(s, parentScopeOpt)
+            case _ => initScopeVars(s, parentScopeOpt)
           }
           rootInitialized = true
         } else {
           s match {
             case lambda: AstArrow  => initArrowScopeVars(lambda, scope)
             case lambda: AstLambda => initLambdaScopeVars(lambda, scope)
-            case _                 => initScopeVars(s, scope)
+            case _ => initScopeVars(s, scope)
           }
         }
         val saveScope  = scope

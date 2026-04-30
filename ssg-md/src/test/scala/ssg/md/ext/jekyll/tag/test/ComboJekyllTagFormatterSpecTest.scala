@@ -21,19 +21,16 @@ import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboJekyllTagFormatterSpecTest extends FormatterSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboJekyllTagFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboJekyllTagFormatterSpecTest.OPTIONS)
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboJekyllTagFormatterSpecTest.OPTIONS_MAP
-  override def knownFailurePrefixes: Set[String] = Set("Jekyll Tag -")
+  override def specResource:         ResourceLocation                       = ComboJekyllTagFormatterSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboJekyllTagFormatterSpecTest.OPTIONS)
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboJekyllTagFormatterSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Jekyll Tag -")
 }
 
 object ComboJekyllTagFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/jekyll/tag/test/ext_jekyll_tag_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboJekyllTagFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
-    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false)
-    .toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create())).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false).toImmutable
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

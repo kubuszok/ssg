@@ -93,12 +93,11 @@ final class DirectivesSuite extends munit.FunSuite {
     // After a non-directive statement, strings should NOT be directives
     val ast3 = parse(";\"use strict\"; 1;")
     // The semicolons before "use strict" means it's NOT a directive
-    assert(!ast3.body.exists(_.isInstanceOf[AstDirective]),
-      "Expected no directives when ';' precedes the string")
+    assert(!ast3.body.exists(_.isInstanceOf[AstDirective]), "Expected no directives when ';' precedes the string")
 
     // Function-level directives
     val funcTest = parse("function foo() { \"use strict\";\n return 1; }")
-    val fn = funcTest.body(0).asInstanceOf[AstDefun]
+    val fn       = funcTest.body(0).asInstanceOf[AstDefun]
     assert(fn.body(0).isInstanceOf[AstDirective], "Expected AstDirective in function body")
     assertEquals(fn.body(0).asInstanceOf[AstDirective].value, "use strict")
 
@@ -129,7 +128,7 @@ final class DirectivesSuite extends munit.FunSuite {
       ("'tests'", false),
       ("'tests';   \n", true),
       ("'tests';\n\n", true),
-      ("\n\n\"use strict\";\n\n", true),
+      ("\n\n\"use strict\";\n\n", true)
     )
     tests.foreach { case (prefix, expected) =>
       val out = new OutputStream(OutputOptions())
@@ -148,14 +147,16 @@ final class DirectivesSuite extends munit.FunSuite {
       "\"use strict\";",
       "\"use strict\";;",
       "'use strict';",
-      "console.log('use strict');",
+      "console.log('use strict');"
     ).mkString("")
 
-    val result = Terser.minifyToString(input, MinifyOptions(
-      compress = false,
-      mangle = false,
-      output = OutputOptions(beautify = true, quoteStyle = 3)
-    ))
+    val result = Terser.minifyToString(input,
+                                       MinifyOptions(
+                                         compress = false,
+                                         mangle = false,
+                                         output = OutputOptions(beautify = true, quoteStyle = 3)
+                                       )
+    )
 
     val expected = List(
       "\"use strict\";",
@@ -163,7 +164,7 @@ final class DirectivesSuite extends munit.FunSuite {
       "\"use strict\";",
       "\"use strict\";",
       ";'use strict';",
-      "console.log('use strict');",
+      "console.log('use strict');"
     ).mkString("\n\n")
     assertEquals(result, expected)
   }
@@ -175,7 +176,7 @@ final class DirectivesSuite extends munit.FunSuite {
       ("{\"use\u0020strict\"}", "{\"use strict\"}"),
       ("function foo(){\"use\u0020strict\";}", "function foo(){\"use strict\"}"),
       ("try{\"use\u0020strict\"}catch(e){}finally{\"use\u0020strict\"}", "try{\"use strict\"}catch(e){}finally{\"use strict\"}"),
-      ("if(1){\"use\u0020strict\"} else {\"use strict\"}", "if(1){\"use strict\"}else{\"use strict\"}"),
+      ("if(1){\"use\u0020strict\"} else {\"use strict\"}", "if(1){\"use strict\"}else{\"use strict\"}")
     )
     tests.foreach { case (input, expected) =>
       val result = Terser.minifyToString(input, noOpt)
@@ -185,11 +186,14 @@ final class DirectivesSuite extends munit.FunSuite {
 
   // 6. "Should add double semicolon when relying on automatic semicolon insertion"
   test("should add double semicolon with ASI") {
-    val result = Terser.minifyToString("\"use strict\";\"use\\x20strict\";", MinifyOptions(
-      compress = false,
-      mangle = false,
-      output = OutputOptions(semicolons = false)
-    ))
+    val result = Terser.minifyToString(
+      "\"use strict\";\"use\\x20strict\";",
+      MinifyOptions(
+        compress = false,
+        mangle = false,
+        output = OutputOptions(semicolons = false)
+      )
+    )
     assertEquals(result, "\"use strict\";;\"use strict\"\n")
   }
 
@@ -212,14 +216,16 @@ final class DirectivesSuite extends munit.FunSuite {
       ("\"testing something\";", 3, "\"testing something\";"),
       ("'use strict';", 3, "'use strict';"),
       ("\"'use strict'\";", 3, "\"'use strict'\";"),
-      ("'\"use strict\"';", 3, "'\"use strict\"';"),
+      ("'\"use strict\"';", 3, "'\"use strict\"';")
     )
     tests.foreach { case (input, quoteStyle, expected) =>
-      val result = Terser.minifyToString(input, MinifyOptions(
-        compress = false,
-        mangle = false,
-        output = OutputOptions(quoteStyle = quoteStyle)
-      ))
+      val result = Terser.minifyToString(input,
+                                         MinifyOptions(
+                                           compress = false,
+                                           mangle = false,
+                                           output = OutputOptions(quoteStyle = quoteStyle)
+                                         )
+      )
       assertEquals(result, expected, s"Quote style $quoteStyle mismatch for: $input")
     }
   }
@@ -236,11 +242,11 @@ final class DirectivesSuite extends munit.FunSuite {
   test("should detect implicit usages of strict mode from tree walker".fail) {
     val tests = List(
       ("class foo {bar(){_check_}}", List("use strict"), List("use bar")),
-      ("class foo {bar(){}}_check_", List(), List("use strict", "use bar")),
+      ("class foo {bar(){}}_check_", List(), List("use strict", "use bar"))
     )
 
     tests.foreach { case (input, directives, nonDirectives) =>
-      val ast = parse(input)
+      val ast     = parse(input)
       var checked = false
       var checkWalker: TreeWalker = null.asInstanceOf[TreeWalker] // @nowarn — initialized before use
       checkWalker = new TreeWalker((node, _) => {

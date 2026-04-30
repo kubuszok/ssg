@@ -11,7 +11,7 @@ import ssg.js.parse.{ JsParseError, Parser }
 final class ParserErrorSuite extends munit.FunSuite {
 
   private def assertParseError(code: String, msgContains: String = ""): Unit = {
-    val ex = intercept[JsParseError] { new Parser().parse(code) }
+    val ex = intercept[JsParseError](new Parser().parse(code))
     if (msgContains.nonEmpty) {
       assert(
         ex.message.contains(msgContains),

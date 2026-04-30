@@ -39,7 +39,7 @@ final class DestructuringSuite extends munit.FunSuite {
       "{foo: [abc = 123]}",
       "[...foo]",
       "[...{}]",
-      "[...[]]",
+      "[...[]]"
     )
 
     // For each pattern, parse in different contexts and verify the node types are similar
@@ -47,38 +47,31 @@ final class DestructuringSuite extends munit.FunSuite {
     case class Context(name: String, getNode: AstToplevel => AstNode, generate: String => String)
 
     val contexts = List(
-      Context("lhs",
-        ast => ast.body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstAssign].left,
-        code => s"($code = a)"
-      ),
-      Context("var",
-        ast => ast.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].name,
-        code => s"var $code = a"
-      ),
-      Context("function",
-        ast => ast.body(0).asInstanceOf[AstDefun].argnames(0),
-        code => s"function a($code) {}"
-      ),
-      Context("arrow",
-        ast => ast.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef]
-          .value.asInstanceOf[AstArrow].argnames(0),
+      Context("lhs", ast => ast.body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstAssign].left, code => s"($code = a)"),
+      Context("var", ast => ast.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].name, code => s"var $code = a"),
+      Context("function", ast => ast.body(0).asInstanceOf[AstDefun].argnames(0), code => s"function a($code) {}"),
+      Context(
+        "arrow",
+        ast => ast.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow].argnames(0),
         code => s"var a = ($code) => {}"
-      ),
+      )
     )
 
     def collectNodeTypes(node: AstNode, parentAllowed: Boolean = true): List[String] = {
       val result = ArrayBuffer.empty[String]
-      node.walk(new TreeWalker((n, _) => {
-        n match {
-          case _: AstDefaultAssign if !parentAllowed => true // skip default assign value
-          case sym: AstSymbol =>
-            result += sym.nodeType
-            false
-          case _ =>
-            result += n.nodeType
-            false
-        }
-      }))
+      node.walk(
+        new TreeWalker((n, _) =>
+          n match {
+            case _:   AstDefaultAssign if !parentAllowed => true // skip default assign value
+            case sym: AstSymbol                          =>
+              result += sym.nodeType
+              false
+            case _ =>
+              result += n.nodeType
+              false
+          }
+        )
+      )
       result.toList
     }
 
@@ -86,7 +79,7 @@ final class DestructuringSuite extends munit.FunSuite {
       val results = contexts.map { ctx =>
         val code = ctx.generate(pattern)
         try {
-          val ast = parse(code)
+          val ast  = parse(code)
           val node = ctx.getNode(ast)
           collectNodeTypes(node)
         } catch {
@@ -101,7 +94,7 @@ final class DestructuringSuite extends munit.FunSuite {
       val normalized = results.filter(_.nonEmpty).map { types =>
         types.map {
           case "SymbolRef" | "SymbolVar" | "SymbolFunarg" => "Symbol"
-          case other => other
+          case other                                      => other
         }
       }
       if (normalized.size > 1) {

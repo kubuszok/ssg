@@ -15,7 +15,7 @@ final class StringLiteralSuite extends munit.FunSuite {
   test("should throw if string literal contains a newline") {
     val inputs = List("'\n'", "'\r'", "\"\r\n\"")
     inputs.foreach { input =>
-      val ex = intercept[JsParseError] { new Parser().parse(input) }
+      val ex = intercept[JsParseError](new Parser().parse(input))
       assert(ex.message.contains("Unterminated"), s"Expected unterminated error, got: ${ex.getMessage}")
     }
   }
@@ -34,10 +34,10 @@ final class StringLiteralSuite extends munit.FunSuite {
       "\"use strict\";\nvar foo = \"\\76\";",
       "\"use strict\";\n\"\\1\";",
       "\"use strict\";\n\"\\07\";",
-      "\"use strict\";\n\"\\011\"",
+      "\"use strict\";\n\"\\011\""
     )
     inputs.foreach { input =>
-      val ex = intercept[JsParseError] { new Parser().parse(input) }
+      val ex = intercept[JsParseError](new Parser().parse(input))
       assert(
         ex.message.contains("octal") || ex.message.contains("Legacy"),
         s"Expected octal error, got: ${ex.getMessage}"
@@ -49,7 +49,7 @@ final class StringLiteralSuite extends munit.FunSuite {
   test("should not throw outside strict mode for escaped octal") {
     val tests = List(
       ("\"\\76\";", ";\">\";"),
-      ("\"\\0\"", "\"\\0\";"),
+      ("\"\\0\"", "\"\\0\";")
     )
     tests.foreach { case (input, expected) =>
       val ast    = new Parser().parse(input)

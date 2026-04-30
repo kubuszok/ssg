@@ -17,14 +17,10 @@ final class FunctionSuite extends munit.FunSuite {
   // 1. "Should parse binding patterns correctly"
   test("should parse binding patterns correctly") {
     // Destructurings as arguments
-    val destrFun1 = parse("(function ({a, b}) {})").body(0).asInstanceOf[AstSimpleStatement]
-      .body.asInstanceOf[AstFunction]
-    val destrFun2 = parse("(function ([a, [b]]) {})").body(0).asInstanceOf[AstSimpleStatement]
-      .body.asInstanceOf[AstFunction]
-    val destrFun3 = parse("({a, b}) => null").body(0).asInstanceOf[AstSimpleStatement]
-      .body.asInstanceOf[AstArrow]
-    val destrFun4 = parse("([a, [b]]) => null").body(0).asInstanceOf[AstSimpleStatement]
-      .body.asInstanceOf[AstArrow]
+    val destrFun1 = parse("(function ({a, b}) {})").body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstFunction]
+    val destrFun2 = parse("(function ([a, [b]]) {})").body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstFunction]
+    val destrFun3 = parse("({a, b}) => null").body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstArrow]
+    val destrFun4 = parse("([a, [b]]) => null").body(0).asInstanceOf[AstSimpleStatement].body.asInstanceOf[AstArrow]
 
     assertEquals(destrFun1.argnames.size, 1)
     assertEquals(destrFun2.argnames.size, 1)
@@ -115,21 +111,20 @@ final class FunctionSuite extends munit.FunSuite {
     )
 
     // Invalid destructurings
-    intercept[JsParseError] { parse("(function ( { a, [ b ] } ) { })") }
-    intercept[JsParseError] { parse("(function (1) { })") }
-    intercept[JsParseError] { parse("(function (this) { })") }
-    intercept[JsParseError] { parse("(function ([1]) { })") }
-    intercept[JsParseError] { parse("(function [a] { })") }
+    intercept[JsParseError](parse("(function ( { a, [ b ] } ) { })"))
+    intercept[JsParseError](parse("(function (1) { })"))
+    intercept[JsParseError](parse("(function (this) { })"))
+    intercept[JsParseError](parse("(function ([1]) { })"))
+    intercept[JsParseError](parse("(function [a] { })"))
 
     // generators
     val generatorsDef = parse("function* fn() {}").body(0)
     assertEquals(generatorsDef.asInstanceOf[AstDefun].isGenerator, true)
 
-    intercept[JsParseError] { parse("function* (){ }") }
+    intercept[JsParseError](parse("function* (){ }"))
 
-    val generatorsYieldDef = parse("function* fn() {\nyield remote();\n}").body(0)
-      .asInstanceOf[AstDefun].body(0).asInstanceOf[AstSimpleStatement]
-    val yieldExpr = generatorsYieldDef.body.asInstanceOf[AstYield]
+    val generatorsYieldDef = parse("function* fn() {\nyield remote();\n}").body(0).asInstanceOf[AstDefun].body(0).asInstanceOf[AstSimpleStatement]
+    val yieldExpr          = generatorsYieldDef.body.asInstanceOf[AstYield]
     assertEquals(yieldExpr.isStar, false)
   }
 
@@ -143,10 +138,10 @@ final class FunctionSuite extends munit.FunSuite {
       "var a = function*(...a, b) { return a.join(b) }",
       "var b = function*(a, b, ...c, d) { return c.join(a + b) + d }",
       "function* foo(...a, b) { return a.join(b) }",
-      "function* bar(a, b, ...c, d) { return c.join(a + b) + d }",
+      "function* bar(a, b, ...c, d) { return c.join(a + b) + d }"
     )
     tests.foreach { code =>
-      val ex = intercept[JsParseError] { parse(code) }
+      val ex = intercept[JsParseError](parse(code))
       assert(
         ex.message.contains("Unexpected token"),
         s"Expected 'Unexpected token' for: $code, got: ${ex.message}"
@@ -157,7 +152,7 @@ final class FunctionSuite extends munit.FunSuite {
   // 3. "Should not accept empty parameters after elision"
   // Note: Original uses ecma=5 option; ssg-js doesn't have an ecma option, uses defaults.
   test("should not accept empty parameters after elision") {
-    intercept[JsParseError] { parse("(function(,){})()") }
+    intercept[JsParseError](parse("(function(,){})()"))
   }
 
   // 4. "Should not accept invalid trailing commas"
@@ -170,10 +165,10 @@ final class FunctionSuite extends munit.FunSuite {
       "function f(, ) {}",
       "function f(...p, ) {}",
       "function foo(a, b, , ) {}",
-      """console.log("hello", , );""",
+      """console.log("hello", , );"""
     )
     tests.foreach { code =>
-      intercept[JsParseError] { parse(code) }
+      intercept[JsParseError](parse(code))
     }
   }
 
@@ -181,10 +176,10 @@ final class FunctionSuite extends munit.FunSuite {
   test("should not accept initializer on rest parameter") {
     val tests = List(
       "(function(...a = b){})()",
-      "(function(a, ...b = [c, d]))",
+      "(function(a, ...b = [c, d]))"
     )
     tests.foreach { code =>
-      intercept[JsParseError] { parse(code) }
+      intercept[JsParseError](parse(code))
     }
   }
 
@@ -200,10 +195,10 @@ final class FunctionSuite extends munit.FunSuite {
       "(function(a, ...a){})",
       "(function(a, [a, ...b]){})",
       "(function(a, {b: a, c: [...d]}){})",
-      "(function(a, a, {b: [...c]}){})",
+      "(function(a, a, {b: [...c]}){})"
     )
     duplicateTests.foreach { code =>
-      val ex = intercept[JsParseError] { parse(code) }
+      val ex = intercept[JsParseError](parse(code))
       assert(
         ex.message.matches("Parameter [a-zA-Z]+ was used already"),
         s"Expected 'Parameter X was used already' for: $code, got: ${ex.message}"
@@ -211,6 +206,6 @@ final class FunctionSuite extends munit.FunSuite {
     }
     // This test produces a different error in ssg-js parser (default assignment in destructuring)
     // "(function({a, a = b}))" — parser error about operator = instead of comma
-    intercept[JsParseError] { parse("(function({a, a = b}))") }
+    intercept[JsParseError](parse("(function({a, a = b}))"))
   }
 }

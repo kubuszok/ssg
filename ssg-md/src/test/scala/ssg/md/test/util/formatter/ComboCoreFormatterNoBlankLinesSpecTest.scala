@@ -22,8 +22,15 @@ final class ComboCoreFormatterNoBlankLinesSpecTest extends FormatterSpecTestSuit
   override def defaultOptions: Nullable[DataHolder] = Nullable(ComboCoreFormatterNoBlankLinesSpecTest.OPTIONS)
   // Pre-existing formatter bugs
   override def knownFailurePrefixes: Set[String] = Set(
-    "Block Quotes -", "Empty List Items -", "Format Control -", "Format Conversion -",
-    "Formatter -", "HTML Blocks -", "Headings -", "Lists -", "Reference Placement -"
+    "Block Quotes -",
+    "Empty List Items -",
+    "Format Control -",
+    "Format Conversion -",
+    "Formatter -",
+    "HTML Blocks -",
+    "Headings -",
+    "Lists -",
+    "Reference Placement -"
   )
 }
 

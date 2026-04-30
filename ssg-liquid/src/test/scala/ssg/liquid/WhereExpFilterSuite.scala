@@ -29,9 +29,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
    */
   test("where_exp: return any input that is not an array") {
     val data = TestHelper.mapOf("var" -> "some string")
-    val res = Flavor.JEKYLL.defaultParser()
-      .parse("{{ var | where_exp: \"la\", \"le\" }}")
-      .render(data)
+    val res  = Flavor.JEKYLL.defaultParser().parse("{{ var | where_exp: \"la\", \"le\" }}").render(data)
     assertEquals(res, "some string")
   }
 
@@ -45,8 +43,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
         "b" -> TestHelper.mapOf("color" -> "blue")
       )
     )
-    val res = parse("{{ var | where_exp: \"item\", \"item.color == 'red'\" | map: 'color' }}")
-      .render(data)
+    val res = parse("{{ var | where_exp: \"item\", \"item.color == 'red'\" | map: 'color' }}").render(data)
     assertEquals(res, "red")
   }
 
@@ -54,8 +51,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
    * should "filter objects appropriately"
    */
   test("where_exp: filter objects appropriately") {
-    val res = parse("{{ var | where_exp: \"item\", \"item.color == 'red'\" | size}}")
-      .render(arrayOfObjectsData())
+    val res = parse("{{ var | where_exp: \"item\", \"item.color == 'red'\" | size}}").render(arrayOfObjectsData())
     assertEquals(res, "2")
   }
 
@@ -64,7 +60,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
    */
   test("where_exp: filter objects with or and operators") {
     val data = arrayOfObjectsData()
-    val res = parse(
+    val res  = parse(
       "{% assign a = var | where_exp: \"item\", \"item.color == 'red' or item.size == 'large'\" %}" +
         "{% for i in a %}{{i.color}} - {{i.size}}\n{% endfor %}"
     ).render(data)

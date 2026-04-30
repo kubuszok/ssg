@@ -486,7 +486,7 @@ final class OperatorSuite extends munit.FunSuite {
       ("- a++ - - --b", "-a++- - --b"),
       ("- a++ - - b", "-a++- -b"),
       ("- a++ - - b--", "-a++- -b--"),
-      ("- a++ - - b++", "-a++- -b++"),
+      ("- a++ - - b++", "-a++- -b++")
     )
     tests.foreach { case (input, expected) =>
       val result = OutputStream.printToString(parse(input))
