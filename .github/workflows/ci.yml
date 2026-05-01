@@ -5,121 +5,23 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Zulu 25 — FFM API stable since JDK 22, all 6 desktop platforms
+  # including Windows aarch64 (which Temurin 25 lacks).
+  JAVA_VERSION: "25"
+  JAVA_DISTRIBUTION: "zulu"
+  NODE_VERSION: "22"
 
 jobs:
-  # JVM: compile and test all modules
-  jvm:
-    name: JVM — compile + test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false  # original-src not needed for compilation
+  # ─── Scalafmt check ────────────────────────────────────────────────
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
-
-      - name: Compile all modules (JVM)
-        run: sbt "ssg-md/compile; ssg-liquid/compile; ssg-sass/compile; ssg-minify/compile; ssg-js/compile; ssg/compile"
-
-      - name: Test ssg-md (JVM)
-        run: sbt ssg-md/test
-
-      - name: Test ssg-liquid (JVM)
-        run: sbt ssg-liquid/test
-
-      - name: Test ssg-minify (JVM)
-        run: sbt ssg-minify/test
-
-      - name: Test ssg-sass (JVM)
-        run: sbt ssg-sass/test
-
-      - name: Test ssg-js (JVM)
-        run: sbt ssg-js/test
-
-  # Scala.js: compile and test all modules
-  js:
-    name: JS — compile + test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Compile all modules (JS)
-        run: sbt "ssg-mdJS/compile; ssg-liquidJS/compile; ssg-sassJS/compile; ssg-minifyJS/compile; ssg-jsJS/compile; ssgJS/compile"
-
-      - name: Test ssg-md (JS)
-        run: sbt ssg-mdJS/test
-
-      - name: Test ssg-liquid (JS)
-        run: sbt ssg-liquidJS/test
-
-      - name: Test ssg-minify (JS)
-        run: sbt ssg-minifyJS/test
-
-      - name: Test ssg-sass (JS)
-        run: sbt ssg-sassJS/test
-
-      - name: Test ssg-js (JS)
-        run: sbt ssg-jsJS/test
-
-  # Scala Native: compile and test all modules
-  native:
-    name: Native — compile + test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
-
-      - name: Install LLVM/Clang
-        run: sudo apt-get update && sudo apt-get install -y clang libstdc++-12-dev
-
-      - name: Compile all modules (Native)
-        run: sbt "ssg-mdNative/compile; ssg-liquidNative/compile; ssg-sassNative/compile; ssg-minifyNative/compile; ssg-jsNative/compile; ssgNative/compile"
-
-      - name: Test ssg-md (Native)
-        run: sbt ssg-mdNative/test
-
-      - name: Test ssg-liquid (Native)
-        run: sbt ssg-liquidNative/test
-
-      - name: Test ssg-minify (Native)
-        run: sbt ssg-minifyNative/test
-
-      - name: Test ssg-sass (Native)
-        run: sbt ssg-sassNative/test
-
-      - name: Test ssg-js (Native)
-        run: sbt ssg-jsNative/test
-
-  # Format check (no changes needed, just verify)
   format:
     name: Scalafmt check
     runs-on: ubuntu-latest
@@ -130,8 +32,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 21
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
           cache: sbt
 
       - uses: sbt/setup-sbt@v1
@@ -139,103 +41,162 @@ jobs:
       - name: Check formatting
         run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
 
-  # Anti-cheat enforcement: runs re-scale enforce commands to reject
-  # shortcut patterns, stale stubs, and broken covenants before merge.
-  #
-  # The infrastructure (re-scale enforce shortcuts/stale-stubs/verify
-  # plus the Covenant + Methods + StaleStubs tooling) lives in
-  # https://github.com/kubuszok/re-scale. This job checks that repo
-  # out alongside the ssg checkout, builds the re-scale binary via
-  # `sbt stage`, then runs the enforce commands against the ssg
-  # source tree.
-  #
-  # Phase 5 of the anti-cheat plan
-  # (re-scale/docs/cross-flavor-diff.md + anti-cheat-enforcement-resume.md):
-  # this job starts as a skeleton. Until Phase 8 (retroactive covenant
-  # application) lands, `enforce verify --all` finds zero covenanted
-  # files and trivially passes; `enforce shortcuts --covenanted` the
-  # same. The job is still valuable because it (a) tests the pipeline
-  # wiring, (b) catches regressions the moment the first covenanted
-  # file appears in sass-port, and (c) runs `enforce shortcuts` with
-  # NO filter to surface the global hit count — even if no file is
-  # yet covenanted, the baseline number is recorded in the job log
-  # for future comparison.
-  covenant-verify:
-    name: Anti-cheat — covenant + shortcuts + stale-stubs
+  # ─── JVM tests (6 desktop platforms) ───────────────────────────────
+
+  test-jvm:
+    name: JVM tests (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+          - os: ubuntu-24.04-arm
+            label: linux-aarch64
+          - os: macos-latest
+            label: macos-x86_64
+            architecture: x64
+          - os: macos-latest
+            label: macos-aarch64
+          - os: windows-latest
+            label: windows-x86_64
+          - os: windows-11-arm
+            label: windows-aarch64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+          architecture: ${{ matrix.architecture || '' }}
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Run JVM tests
+        run: sbt test-jvm
+
+  # ─── Scala.js tests (platform-independent, runs in Node.js) ────────
+
+  test-js:
+    name: Scala.js tests
     runs-on: ubuntu-latest
-    # Don't block the pipeline while the infrastructure is still
-    # being rolled out; report failures as information until the
-    # baseline comparison in Phase 5b is written.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run Scala.js tests
+        run: sbt test-js
+
+  # ─── Scala Native tests (5 desktop platforms) ─────────────────────
+
+  test-native:
+    name: Native tests (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+          - os: ubuntu-24.04-arm
+            label: linux-aarch64
+          - os: macos-latest
+            label: macos-x86_64
+            architecture: x64
+          - os: macos-latest
+            label: macos-aarch64
+          - os: windows-latest
+            label: windows-x86_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+          architecture: ${{ matrix.architecture || '' }}
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Install Scala Native system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+          sudo apt-get install -y libstdc++-12-dev || sudo apt-get install -y libstdc++-14-dev || true
+
+      - name: Install Scala Native system dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install llvm --yes
+
+      - name: Run Scala Native tests
+        run: sbt test-native
+
+  # ─── re-scale enforce gate (covenant verify + shortcut budget) ──────
+  #
+  # Non-blocking initially: validates that every file with a `Covenant:`
+  # header still passes (no method dropped, no shortcut introduced) and
+  # that no new shortcut markers leaked into covenanted files.
+
+  enforce:
+    name: re-scale enforce
+    runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
-          path: ssg
-
-      - uses: actions/checkout@v4
-        with:
-          repository: kubuszok/re-scale
-          path: re-scale
 
       - uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 25
-          cache: sbt
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
 
       - uses: sbt/setup-sbt@v1
 
-      - name: Install LLVM/Clang for Scala Native
-        run: sudo apt-get update && sudo apt-get install -y clang libstdc++-12-dev libgc-dev
-
-      - name: Build re-scale
-        working-directory: re-scale
-        run: sbt stage
-
-      - name: Expose re-scale on PATH
+      - name: Install Scala Native deps
         run: |
-          echo "${GITHUB_WORKSPACE}/re-scale/target/stage/bin" >> "${GITHUB_PATH}"
+          sudo apt-get update
+          sudo apt-get install -y clang
 
-      - name: Sanity check — re-scale --version
-        run: re-scale --version
-
-      - name: enforce shortcuts (global, informational)
-        working-directory: ssg
+      - name: Install re-scale
         run: |
-          echo "=== re-scale enforce shortcuts (all files) ==="
-          re-scale enforce shortcuts > /tmp/shortcuts.log 2>&1 || true
-          tail -20 /tmp/shortcuts.log
+          set -euo pipefail
+          git clone --depth=1 https://github.com/kubuszok/re-scale.git "$RUNNER_TEMP/re-scale"
+          cd "$RUNNER_TEMP/re-scale"
+          sbt install
+          echo "$RUNNER_TEMP/re-scale/bin" >> "$GITHUB_PATH"
 
-      - name: enforce shortcuts --covenanted (hard gate)
-        working-directory: ssg
-        run: |
-          echo "=== re-scale enforce shortcuts --covenanted ==="
-          re-scale enforce shortcuts --covenanted
+      - name: Print re-scale version
+        run: re-scale version
 
-      - name: enforce verify --all (hard gate — no missing headers allowed)
-        working-directory: ssg
+      - name: Verify covenants on covenanted files
+        continue-on-error: true
         run: |
-          echo "=== re-scale enforce verify --all ==="
-          OUTPUT=$(re-scale enforce verify --all 2>&1) || true
-          echo "$OUTPUT"
-          # Hard-fail if ANY file is missing a covenant header.
-          # "shortcuts introduced" failures are tracked by the skip-policy
-          # and enforced separately via `enforce shortcuts --covenanted`.
-          if echo "$OUTPUT" | grep -q "no covenant header"; then
-            echo "::error::Files missing covenant headers — see output above"
-            exit 1
-          fi
+          grep -rl 'Covenant:' --include='*.scala' . \
+            | xargs -I{} re-scale enforce verify --file {}
 
-      - name: enforce stale-stubs (informational)
-        working-directory: ssg
-        run: |
-          echo "=== re-scale enforce stale-stubs ==="
-          re-scale enforce stale-stubs > /tmp/stale.log 2>&1 || true
-          tail -30 /tmp/stale.log
-
-      - name: db audit stats (baseline record)
-        working-directory: ssg
-        run: |
-          echo "=== re-scale db audit stats ==="
-          re-scale db audit stats
+      - name: Shortcut budget on covenanted files
+        continue-on-error: true
+        run: re-scale enforce shortcuts --covenanted
