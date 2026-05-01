@@ -1,6 +1,8 @@
 // linters
 addSbtPlugin("org.scalameta"    % "sbt-scalafmt"       % "2.5.4")
 addSbtPlugin("ch.epfl.scala"    % "sbt-scalafix"       % "0.14.6")
+// coverage
+addSbtPlugin("org.scoverage"    % "sbt-scoverage"      % "2.4.4")
 // cross-compilation
 addSbtPlugin("com.eed3si9n"     % "sbt-projectmatrix"  % "0.11.0")
 addSbtPlugin("org.scala-js"     % "sbt-scalajs"        % "1.21.0")
