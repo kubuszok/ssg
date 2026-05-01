@@ -70,18 +70,20 @@ final class FilesystemImporter private (
     }
 
     resolved.map { r =>
-      // Canonicalize the resolved path
-      val fp = FilePath.of(r).toAbsolute.normalize
-      fp.pathString
+      java.nio.file.Paths.get(r).toAbsolutePath.normalize.toUri.toString
     }
   }
 
+  private def urlToPath(url: String): FilePath =
+    if (url.startsWith("file:")) {
+      ssg.commons.io.FilePathPlatform.fromNioPath(java.nio.file.Paths.get(new java.net.URI(url)))
+    } else {
+      FilePath.of(url)
+    }
+
   def load(url: String): Nullable[ImporterResult] =
     try {
-      val path: FilePath = {
-        val uri = java.net.URI.create(url)
-        if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
-      }
+      val path = urlToPath(url)
       if (!FileOps.exists(path) || !FileOps.isRegularFile(path)) {
         Nullable.empty
       } else {
@@ -97,10 +99,7 @@ final class FilesystemImporter private (
   /** Returns the modification time of the file at [[url]]. */
   override def modificationTime(url: String): Long =
     try {
-      val path: FilePath = {
-        val uri = java.net.URI.create(url)
-        if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
-      }
+      val path = urlToPath(url)
       java.nio.file.Files
         .getLastModifiedTime(
           java.nio.file.Paths.get(path.pathString)
