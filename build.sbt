@@ -147,3 +147,19 @@ addCommandAlias("test-native",
     "ssg-minifyNative/test", "ssg-jsNative/test"
   ).mkString("; ")
 )
+
+// ── Coverage alias (JVM-only) ────────────────────────────────────────
+// Scala 3 coverage instrumentation is incompatible with JS/Native runtimes
+// (java.io.FileWriter references). Only run on JVM projects via test-jvm.
+// Strips -Werror to avoid false-positive warnings from instrumented code.
+
+addCommandAlias("test-coverage",
+  List(
+    "coverage",
+    """set ThisBuild / scalacOptions -= "-Werror"""",
+    "test-jvm",
+    "coverageReport",
+    "coverageAggregate",
+    "coverageOff"
+  ).mkString("; ")
+)

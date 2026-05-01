@@ -77,8 +77,18 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
-      - name: Run JVM tests
-        run: sbt test-jvm
+      - name: Run JVM tests with coverage
+        run: sbt test-coverage
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: target/scala-3.8.2/scoverage-report/scoverage.xml
+          flags: ${{ matrix.label }}
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # ─── Scala.js tests (platform-independent, runs in Node.js) ────────
 
