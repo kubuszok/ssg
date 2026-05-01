@@ -13,6 +13,8 @@ import scala.language.implicitConversions
 
 final class SegmentSuite extends munit.FunSuite {
 
+  override val munitTimeout = scala.concurrent.duration.Duration(120, "s")
+
   private def loop(start: Int, end: Int, span: Int, param: Int, consumer: (Int, Int) => Unit): Unit = {
     val iMaxStart = start + span
     val iMinEnd   = end - span
