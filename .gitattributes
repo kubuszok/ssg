@@ -1,0 +1,3 @@
+# Force LF line endings for all text files — prevents CRLF conversion
+# on Windows from breaking resource-loading tests (admonition SVGs, etc.)
+* text=auto eol=lf
