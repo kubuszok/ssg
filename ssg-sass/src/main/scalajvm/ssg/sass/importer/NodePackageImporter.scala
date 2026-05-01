@@ -165,12 +165,16 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     }
   }
 
+  private def urlToPath(url: String): FilePath =
+    if (url.startsWith("file:")) {
+      ssg.commons.io.FilePathPlatform.fromNioPath(java.nio.file.Paths.get(new java.net.URI(url)))
+    } else {
+      FilePath.of(url)
+    }
+
   def load(url: String): Nullable[ImporterResult] =
     try {
-      val path: FilePath = {
-        val uri = java.net.URI.create(url)
-        if (uri.getScheme == "file") FilePath.of(uri.getPath) else FilePath.of(url)
-      }
+      val path = urlToPath(url)
       if (!FileOps.exists(path) || !FileOps.isRegularFile(path)) {
         Nullable.empty
       } else {
