@@ -124,3 +124,26 @@ val ssg = (projectMatrix in file("ssg"))
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
+// ── Test aggregation aliases ─────────────────────────────────────────
+
+addCommandAlias("test-jvm",
+  List(
+    "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
+    "ssg-minify/test", "ssg-js/test"
+  ).mkString("; ")
+)
+
+addCommandAlias("test-js",
+  List(
+    "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
+    "ssg-minifyJS/test", "ssg-jsJS/test"
+  ).mkString("; ")
+)
+
+addCommandAlias("test-native",
+  List(
+    "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
+    "ssg-minifyNative/test", "ssg-jsNative/test"
+  ).mkString("; ")
+)
