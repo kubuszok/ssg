@@ -44,3 +44,4 @@ scripts/data/*.lock
 ## OS-Specific
 .DS_Store
 Thumbs.db
+node_modules/
