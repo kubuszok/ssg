@@ -1,6 +1,10 @@
 ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
+val treeSitterProvidersVersion = "d4426012b81520b936ef611663424f1b5936f19d-SNAPSHOT"
+val multiarchCoreVersion       = "0.1.2"
+ThisBuild / resolvers += "Maven Central Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
+
 // --- Common utilities (cross-platform abstractions) ---
 
 val `ssg-commons` = (projectMatrix in file("ssg-commons"))
@@ -108,6 +112,46 @@ val `ssg-js` = (projectMatrix in file("ssg-js"))
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
+// --- Syntax highlighting (tree-sitter) ---
+
+val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-highlight",
+    libraryDependencies ++= Seq(
+      "com.kubuszok" % "tree-sitter-queries" % treeSitterProvidersVersion,
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .dependsOn(`ssg-commons`, `ssg-md`)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings ++ Seq(
+    libraryDependencies ++= Seq(
+      "com.kubuszok" % "pnm-provider-tree-sitter-desktop" % treeSitterProvidersVersion,
+      "com.kubuszok" %% "multiarch-core" % multiarchCoreVersion
+    )
+  ))
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
+    libraryDependencies += "com.kubuszok" % "wasm-provider-tree-sitter" % treeSitterProvidersVersion,
+    scalaJSLinkerConfig ~= { _.withModuleKind(org.scalajs.linker.interface.ModuleKind.CommonJSModule) },
+    Test / jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(
+      org.scalajs.jsenv.nodejs.NodeJSEnv.Config()
+        .withEnv(Map("TREE_SITTER_WASM_DIR" -> sys.env.getOrElse("TREE_SITTER_WASM_DIR", "/tmp/ts-wasm")))
+    )
+  ))
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++
+    _root_.multiarch.sbt.NativeProviderPlugin.projectSettings ++ Seq(
+    libraryDependencies += "com.kubuszok" % "sn-provider-tree-sitter" % treeSitterProvidersVersion,
+    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig := {
+      val c = scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig.value
+      val cppLib = if (System.getProperty("os.name", "").toLowerCase.contains("mac")) "-lc++" else "-lstdc++"
+      c.withEmbedResources(true)
+        .withResourceIncludePatterns(Seq("**.scm"))
+        .withLinkingOptions(c.linkingOptions ++ Seq(cppLib))
+    }
+  ))
+
 // --- Aggregator module ---
 
 val ssg = (projectMatrix in file("ssg"))
@@ -120,7 +164,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`)
+  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-highlight`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -130,21 +174,21 @@ val ssg = (projectMatrix in file("ssg"))
 addCommandAlias("test-jvm",
   List(
     "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
-    "ssg-minify/test", "ssg-js/test"
+    "ssg-minify/test", "ssg-js/test", "ssg-highlight/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-js",
   List(
     "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
-    "ssg-minifyJS/test", "ssg-jsJS/test"
+    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-highlightJS/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-native",
   List(
     "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
-    "ssg-minifyNative/test", "ssg-jsNative/test"
+    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-highlightNative/test"
   ).mkString("; ")
 )
 

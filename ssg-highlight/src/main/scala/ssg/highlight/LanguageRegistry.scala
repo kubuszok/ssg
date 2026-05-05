@@ -1,0 +1,120 @@
+/* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0 */
+package ssg
+package highlight
+
+object LanguageRegistry {
+
+  private val grammarToQueryDir: Map[String, String] = Map(
+    "bash" -> "bash",
+    "c" -> "c",
+    "cpp" -> "cpp",
+    "c_sharp" -> "c-sharp",
+    "css" -> "css",
+    "go" -> "go",
+    "html" -> "html",
+    "java" -> "java",
+    "javascript" -> "javascript",
+    "json" -> "json",
+    "markdown" -> "markdown",
+    "python" -> "python",
+    "regex" -> "regex",
+    "ruby" -> "ruby",
+    "rust" -> "rust",
+    "scala" -> "scala",
+    "sql" -> "sql",
+    "toml" -> "toml",
+    "typescript" -> "typescript",
+    "tsx" -> "typescript",
+    "yaml" -> "yaml",
+    "cmake" -> "cmake",
+    "dockerfile" -> "dockerfile",
+    "dtd" -> "dtd",
+    "elixir" -> "elixir",
+    "erlang" -> "erlang",
+    "haskell" -> "haskell",
+    "julia" -> "julia",
+    "kotlin" -> "kotlin",
+    "lua" -> "lua",
+    "make" -> "make",
+    "ocaml" -> "ocaml",
+    "ocaml_interface" -> "ocaml_interface",
+    "php" -> "php",
+    "php_only" -> "php",
+    "r" -> "r",
+    "swift" -> "swift",
+    "vim" -> "vim",
+    "xml" -> "xml",
+    "zig" -> "zig",
+    "arduino" -> "arduino",
+    "bicep" -> "bicep",
+    "cairo" -> "cairo",
+    "cpon" -> "cpon",
+    "cuda" -> "cuda",
+    "embedded_template" -> "embedded_template",
+    "func" -> "func",
+    "gitattributes" -> "gitattributes",
+    "glsl" -> "glsl",
+    "gosum" -> "gosum",
+    "hare" -> "hare",
+    "jsdoc" -> "jsdoc",
+    "kconfig" -> "kconfig",
+    "kdl" -> "kdl",
+    "luadoc" -> "luadoc",
+    "luap" -> "luap",
+    "luau" -> "luau",
+    "objc" -> "objc",
+    "odin" -> "odin",
+    "po" -> "po",
+    "pony" -> "pony",
+    "printf" -> "printf",
+    "properties" -> "properties",
+    "puppet" -> "puppet",
+    "qmldir" -> "qmldir",
+    "requirements" -> "requirements",
+    "ron" -> "ron",
+    "scss" -> "scss",
+    "squirrel" -> "squirrel",
+    "starlark" -> "starlark",
+    "svelte" -> "svelte",
+    "ungrammar" -> "ungrammar",
+    "yuck" -> "yuck"
+  )
+
+  private val aliases: Map[String, String] = Map(
+    "js" -> "javascript",
+    "ts" -> "typescript",
+    "yml" -> "yaml",
+    "sh" -> "bash",
+    "zsh" -> "bash",
+    "c++" -> "cpp",
+    "c#" -> "c_sharp",
+    "csharp" -> "c_sharp",
+    "rb" -> "ruby",
+    "py" -> "python",
+    "rs" -> "rust",
+    "kt" -> "kotlin",
+    "ex" -> "elixir",
+    "erl" -> "erlang",
+    "hs" -> "haskell",
+    "jl" -> "julia",
+    "ml" -> "ocaml",
+    "mli" -> "ocaml_interface",
+    "makefile" -> "make",
+    "Makefile" -> "make",
+    "Dockerfile" -> "dockerfile",
+    "objective-c" -> "objc",
+    "objectivec" -> "objc",
+    "sass" -> "scss",
+    "bzl" -> "starlark",
+    "requirements.txt" -> "requirements"
+  )
+
+  def resolveGrammar(language: String): Option[String] = {
+    val grammar = aliases.getOrElse(language, language)
+    if (grammarToQueryDir.contains(grammar)) Some(grammar)
+    else None
+  }
+
+  def queryDir(grammarName: String): Option[String] =
+    grammarToQueryDir.get(grammarName)
+}
