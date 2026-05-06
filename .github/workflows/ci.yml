@@ -112,8 +112,34 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Extract WASM and query files for tree-sitter
+        run: |
+          sbt 'ssg-highlightJS/update'
+          WASM_JAR=$(find ~/Library/Caches/Coursier ~/.cache/coursier ~/.ivy2 \
+            -name "wasm-provider-tree-sitter-*.jar" \
+            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
+          QUERY_JAR=$(find ~/Library/Caches/Coursier ~/.cache/coursier ~/.ivy2 \
+            -name "tree-sitter-queries-*.jar" \
+            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
+          mkdir -p /tmp/ts-wasm/queries
+          if [ -n "$WASM_JAR" ]; then
+            echo "WASM JAR: $WASM_JAR"
+            cd /tmp/ts-wasm && jar xf "$WASM_JAR" wasm/ && mv wasm/* . && rmdir wasm
+            echo "Extracted $(ls grammars/*.wasm 2>/dev/null | wc -l) grammar WASM files"
+          else
+            echo "::warning::wasm-provider-tree-sitter JAR not found"
+          fi
+          if [ -n "$QUERY_JAR" ]; then
+            echo "Query JAR: $QUERY_JAR"
+            cd /tmp/ts-wasm && jar xf "$QUERY_JAR" queries/ && echo "Extracted $(find queries -name highlights.scm | wc -l) query files"
+          else
+            echo "::warning::tree-sitter-queries JAR not found"
+          fi
+
       - name: Run Scala.js tests
         run: sbt test-js
+        env:
+          TREE_SITTER_WASM_DIR: /tmp/ts-wasm
 
   # ─── Scala Native tests (5 desktop platforms) ─────────────────────
 
@@ -153,8 +179,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang
-          sudo apt-get install -y libstdc++-12-dev || sudo apt-get install -y libstdc++-14-dev || true
+          sudo apt-get install -y clang libc++-dev
 
       - name: Install Scala Native system dependencies (Windows)
         if: runner.os == 'Windows'

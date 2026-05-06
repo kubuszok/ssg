@@ -1,9 +1,8 @@
 ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
-val treeSitterProvidersVersion = "d4426012b81520b936ef611663424f1b5936f19d-SNAPSHOT"
+val treeSitterProvidersVersion = "0.1.0"
 val multiarchCoreVersion       = "0.1.2"
-ThisBuild / resolvers += "Maven Central Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
 // --- Common utilities (cross-platform abstractions) ---
 
@@ -143,12 +142,8 @@ val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++
     _root_.multiarch.sbt.NativeProviderPlugin.projectSettings ++ Seq(
     libraryDependencies += "com.kubuszok" % "sn-provider-tree-sitter" % treeSitterProvidersVersion,
-    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig := {
-      val c = scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig.value
-      val cppLib = if (System.getProperty("os.name", "").toLowerCase.contains("mac")) "-lc++" else "-lstdc++"
-      c.withEmbedResources(true)
-        .withResourceIncludePatterns(Seq("**.scm"))
-        .withLinkingOptions(c.linkingOptions ++ Seq(cppLib))
+    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
+      _.withResourceIncludePatterns(Seq("**.scm"))
     }
   ))
 

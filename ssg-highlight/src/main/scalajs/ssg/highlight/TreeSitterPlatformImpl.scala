@@ -79,7 +79,13 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
         .toSeq
     } catch {
       case e: Exception =>
-        js.Dynamic.global.console.error(s"highlight($grammarName) subprocess failed: ${e.getMessage}")
+        val stderr =
+          try
+            e.asInstanceOf[js.Dynamic].stderr.asInstanceOf[js.UndefOr[String]].toOption.getOrElse("")
+          catch { case _: Exception => "" }
+        js.Dynamic.global.process.stderr.write(
+          s"[tree-sitter] highlight($grammarName) subprocess failed: ${e.getMessage}\n${if (stderr.nonEmpty) s"  stderr: $stderr\n" else ""}"
+        )
         Seq.empty
     }
   }
