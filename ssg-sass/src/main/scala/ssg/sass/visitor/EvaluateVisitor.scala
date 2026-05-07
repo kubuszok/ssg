@@ -260,7 +260,12 @@ final class EvaluateVisitor(
 
   /** The current lexical environment. Variables and (eventually) functions and mixins live here. Pre-populated with all global built-in functions.
     */
-  private var _environment: Environment = Environment.withBuiltins()
+  private var _environment: Environment = {
+    val env = Environment.withBuiltins()
+    for (fn <- ssg.sass.functions.MetaFunctions.runtimeFunctions)
+      env.setFunction(fn.withDeprecationWarning("meta"))
+    env
+  }
 
   /** Whether we're currently evaluating a `@supports` declaration. When true, calculations are not reduced to plain numbers.
     */

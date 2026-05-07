@@ -51,7 +51,7 @@ import scala.language.implicitConversions
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
 import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, ParentSelector, SelectorList, SimpleSelector, TypeSelector, UniversalSelector }
-import ssg.sass.extend.{ ExtendMode, Extension, MutableExtensionStore }
+import ssg.sass.extend.ExtensionStore
 import ssg.sass.parse.SelectorParser
 import ssg.sass.util.FileSpan
 import ssg.sass.value.{ ListSeparator, SassBoolean, SassList, SassNull, SassString, Value }
@@ -170,24 +170,20 @@ object SelectorFunctions {
           throw SassScriptException("$selectors: At least one selector must be passed.")
         var first  = true
         val parsed = raw.map { v =>
-          // dart-sass 1.99 allows `&` in the first selector (sass-spec commit
-          // 39c45e727: "Update tests to allow a top-level &"), but still
-          // rejects `&` with a suffix in the first selector.
           val list = asSelectorList(v, "selectors", allowParent = true)
           if (first) {
-            // Check for parent selectors with suffixes in the first argument
-            for {
-              complex <- list.components
-              component <- complex.components
-            }
-              component.selector.components.foreach {
-                case ps: ssg.sass.ast.selector.ParentSelector if ps.suffix.isDefined =>
-                  throw SassScriptException(
-                    "A top-level selector may not contain a parent selector with a suffix.",
-                    Some("selectors")
-                  )
-                case _ => ()
+            list.components.foreach { complex =>
+              complex.components.foreach { component =>
+                component.selector.components.foreach {
+                  case ps: ssg.sass.ast.selector.ParentSelector if ps.suffix.isDefined =>
+                    throw SassScriptException(
+                      "A top-level selector may not contain a parent selector with a suffix.",
+                      Some("selectors")
+                    )
+                  case _ => ()
+                }
               }
+            }
           }
           first = false
           list
@@ -276,7 +272,10 @@ object SelectorFunctions {
         selector.assertNotBogus(Nullable("selector"))
         target.assertNotBogus(Nullable("extendee"))
         source.assertNotBogus(Nullable("extender"))
-        runExtendPipeline(selector, target, source, ExtendMode.AllTargets).asSassList
+        ExtensionStore.extend(
+          selector, source, target,
+          EvaluationContext.current.get.currentCallableSpan
+        ).asSassList
       }
     )
 
@@ -291,46 +290,12 @@ object SelectorFunctions {
         selector.assertNotBogus(Nullable("selector"))
         target.assertNotBogus(Nullable("original"))
         source.assertNotBogus(Nullable("replacement"))
-        runExtendPipeline(selector, target, source, ExtendMode.Replace).asSassList
+        ExtensionStore.replace(
+          selector, source, target,
+          EvaluationContext.current.get.currentCallableSpan
+        ).asSassList
       }
     )
-
-  /** Runs the AST-level extend pipeline for `selector-extend` and `selector-replace` against a throwaway [[MutableExtensionStore]]. Each simple selector in the target compound list gets an extension
-    * recorded; the result is the combined selector list after extension.
-    */
-  /** Runs the AST-level extend pipeline for `selector-extend` and `selector-replace` against a throwaway [[MutableExtensionStore]].
-    *
-    * Port of dart-sass `ExtensionStore._extendOrReplace`. Each target complex is processed SEQUENTIALLY: the result of extending with one target feeds into the next, matching the dart-sass loop:
-    * {{{
-    *   for (var complex in targets.components) {
-    *     selector = extender._extendList(selector, { ... }, null);
-    *   }
-    * }}}
-    */
-  private def runExtendPipeline(
-    selector: SelectorList,
-    target:   SelectorList,
-    source:   SelectorList,
-    mode:     ExtendMode
-  ): SelectorList = {
-    val store = new MutableExtensionStore(mode)
-    if (!selector.isInvisible) store.addOriginals(selector.components)
-    var result = selector
-    for (complex <- target.components) {
-      if (complex.components.length != 1)
-        throw SassScriptException(s"Can't extend complex selector $complex.")
-      val compound = complex.components.head.selector
-      // Build the per-target extensions map
-      val extsMap: Map[SimpleSelector, Map[ComplexSelector, Extension]] =
-        compound.components.iterator.map { simple =>
-          simple -> source.components.iterator.map { ext =>
-            ext -> Extension(ext, simple, selector.span, optional = true)
-          }.toMap
-        }.toMap
-      result = store._extendList(result, extsMap)
-    }
-    result
-  }
 
   // ---------------------------------------------------------------------------
   // `selector-unify($selector1, $selector2)` / `unify($selector1, $selector2)`
