@@ -40,14 +40,14 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
   override def isBlank: Boolean = !hasQuotes && text.isEmpty
 
   override def isSpecialNumber: Boolean =
-    if (hasQuotes || text.length < 4) false
+    if (hasQuotes || text.length < 6) false
     else startsWithIgnoreCase(text, "calc(") || startsWithIgnoreCase(text, "var(") ||
       startsWithIgnoreCase(text, "env(") || startsWithIgnoreCase(text, "min(") ||
       startsWithIgnoreCase(text, "max(") || startsWithIgnoreCase(text, "clamp(") ||
       startsWithIgnoreCase(text, "attr(") || startsWithIgnoreCase(text, "if(")
 
   override def isSpecialVariable: Boolean =
-    if (hasQuotes || text.length < 4) false
+    if (hasQuotes || text.length < 6) false
     else startsWithIgnoreCase(text, "attr(") || startsWithIgnoreCase(text, "if(") ||
       startsWithIgnoreCase(text, "var(")
 

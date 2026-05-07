@@ -633,8 +633,8 @@ abstract class StylesheetParser protected (
           warnings += ParseTimeWarning(
             Nullable(Deprecation.WithPrivate),
             spanFrom(cvStart),
-            s"$$$$varName is a private variable and can't be configured with @use.\n\n" +
-              "More info and automated migrator: https://sass-lang.com/d/with-private"
+            "Configuring private variables is deprecated.\n" +
+              "This will be an error in Dart Sass 2.0.0."
           )
         }
         if (configBuf.exists(_.name == varName)) {
@@ -740,8 +740,8 @@ abstract class StylesheetParser protected (
           warnings += ParseTimeWarning(
             Nullable(Deprecation.WithPrivate),
             spanFrom(cvStart),
-            s"$$$$varName is a private variable and can't be configured with @forward.\n\n" +
-              "More info and automated migrator: https://sass-lang.com/d/with-private"
+            "Configuring private variables is deprecated.\n" +
+              "This will be an error in Dart Sass 2.0.0."
           )
         }
         if (fwdConfigBuf.exists(_.name == varName)) {
@@ -5153,15 +5153,19 @@ abstract class StylesheetParser protected (
             val args      = _rdArgumentInvocation(start)
             val finalArgs = _rdMaybeUnpackColorArgs(plain, args)
             return if (finalArgs.positional.length == 3 && finalArgs.named.isEmpty) {
-              val ifSpan = spanFrom(start)
+              val ifSpan     = spanFrom(start)
+              val expression = LegacyIfExpression(finalArgs, ifSpan)
+              val suggestionText = expression.modernSuggestion.fold("") { s =>
+                s"Suggestion: $s\n\n"
+              }
               warnings += ParseTimeWarning(
                 Nullable(Deprecation.IfFunction),
                 ifSpan,
-                "The Sass if($condition, $if-true, $if-false) function is deprecated.\n\n" +
-                  "Use the @if at-rule or the new CSS if() function instead.\n\n" +
-                  "More info and automated migrator: https://sass-lang.com/d/if-function"
+                "The Sass if() syntax is deprecated in favor of the modern CSS syntax.\n\n" +
+                  suggestionText +
+                  "More info: https://sass-lang.com/d/if-function"
               )
-              LegacyIfExpression(finalArgs, ifSpan)
+              expression
             } else {
               FunctionExpression(plain, finalArgs, spanFrom(start))
             }
@@ -5271,7 +5275,41 @@ abstract class StylesheetParser protected (
         buffer.writeCharCode(CharCode.$rparen)
         Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
 
-      case "expression" if scanner.scanChar(CharCode.$lparen) =>
+      case "expression" if vendored && scanner.scanChar(CharCode.$lparen) =>
+        val buffer = new InterpolationBuffer()
+        buffer.write(name)
+        buffer.writeCharCode(CharCode.$lparen)
+        val beforeArg        = scanner.state
+        var invalidSassScript = false
+        var nonCssSassScript  = false
+        try {
+          val argument = _rdExpression()
+          nonCssSassScript = !argument.accept(new ssg.sass.visitor.IsPlainCssVisitor(allowInterpolation = true))
+        } catch {
+          case _: Exception => invalidSassScript = true
+        }
+        scanner.state = beforeArg
+        val value = _rdInterpolatedDeclarationValue(allowEmpty = true)
+        buffer.addInterpolation(value)
+        scanner.expectChar(CharCode.$rparen)
+        buffer.writeCharCode(CharCode.$rparen)
+        if (invalidSassScript || nonCssSassScript) {
+          val suggestion = StringExpression(value, hasQuotes = true).asInterpolation()
+          warnings += ParseTimeWarning(
+            Nullable(Deprecation.FunctionName),
+            spanFrom(start),
+            s"Vendor-prefixed $normalized() functions will no longer " +
+              "have special parsing in a future release of Dart Sass. " +
+              "Once that happens, this argument will " +
+              (if (invalidSassScript) "be parsed as SassScript. "
+               else "no longer be valid syntax. ") +
+              s"To preserve current behavior:\n\n$name(#{$suggestion})\n\n" +
+              "More info: https://sass-lang.com/d/function-name"
+          )
+        }
+        Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
+
+      case "expression" if !vendored && scanner.scanChar(CharCode.$lparen) =>
         val buffer = new InterpolationBuffer()
         buffer.write(name)
         buffer.writeCharCode(CharCode.$lparen)
@@ -5304,10 +5342,16 @@ abstract class StylesheetParser protected (
         scanner.expectChar(CharCode.$rparen)
         buffer.writeCharCode(CharCode.$rparen)
         if (vendored) {
+          val suggestion = StringExpression(
+            buffer.interpolation(spanFrom(start)),
+            hasQuotes = true
+          ).asInterpolation()
           warnings += ParseTimeWarning(
             Nullable(Deprecation.FunctionName),
             spanFrom(start),
-            "Vendor-prefixed progid:...() functions will no longer be supported in a future release of Dart Sass.\n\n" +
+            "Vendor-prefixed progid:...() functions will no longer be " +
+              "supported in a future release of Dart Sass. To preserve " +
+              s"current behavior:\n\n#{$suggestion}\n\n" +
               "More info: https://sass-lang.com/d/function-name"
           )
         }
@@ -5617,6 +5661,17 @@ abstract class StylesheetParser protected (
     val beginningOfContents = scanner.state
     if (!scanner.scanChar(CharCode.$lparen)) return Nullable.empty
 
+    var invalidSassScript = false
+    if (vendored) {
+      val beforeArg = scanner.state
+      try {
+        _rdExpression()
+      } catch {
+        case _: Exception => invalidSassScript = true
+      }
+      scanner.state = beforeArg
+    }
+
     whitespaceWithoutComments(consumeNewlines = true)
 
     // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
@@ -5636,11 +5691,18 @@ abstract class StylesheetParser protected (
           buffer.add(expr, span)
         } else if (c == CharCode.$rparen) {
           buffer.writeCharCode(scanner.readChar())
-          if (vendored) {
+          if (vendored && invalidSassScript) {
+            val suggestion = StringExpression(
+              buffer.interpolation(spanFrom(start)),
+              hasQuotes = true
+            ).asInterpolation()
             warnings += ParseTimeWarning(
               Nullable(Deprecation.FunctionName),
               spanFrom(start),
-              s"Vendor-prefixed $name() is deprecated and will be removed in a future release.\n\n" +
+              s"Vendor-prefixed url() functions will no longer have " +
+                "special parsing in a future release of Dart Sass. Once " +
+                "that happens, this argument will be parsed as SassScript. " +
+                s"To preserve current behavior:\n\n$name(#{$suggestion})\n\n" +
                 "More info: https://sass-lang.com/d/function-name"
             )
           }
@@ -5857,6 +5919,7 @@ abstract class StylesheetParser protected (
     val namedSpans = mutable.LinkedHashMap.empty[String, FileSpan]
     var rest:        Nullable[Expression] = Nullable.empty
     var keywordRest: Nullable[Expression] = Nullable.empty
+    var emittedRestDeprecation = false
 
     boundary {
       while (_lookingAtExpression()) {
@@ -5872,6 +5935,16 @@ abstract class StylesheetParser protected (
             val value = expressionUntilComma(singleEquals = !mixin)
             named.put(ve.name, value)
             namedSpans.put(ve.name, ve.span.expand(value.span))
+
+            if (rest.isDefined && !emittedRestDeprecation) {
+              emittedRestDeprecation = true
+              warnings += ParseTimeWarning(
+                Nullable(Deprecation.MisplacedRest),
+                ve.span,
+                "Named arguments must come before rest arguments.\n" +
+                  "This will be an error in Dart Sass 2.0.0."
+              )
+            }
 
           case _ if scanner.scanChar(CharCode.$dot) =>
             // Rest argument: `expr...`
@@ -5894,6 +5967,16 @@ abstract class StylesheetParser protected (
 
           case _ =>
             positional += expression
+
+            if (rest.isDefined && !emittedRestDeprecation) {
+              emittedRestDeprecation = true
+              warnings += ParseTimeWarning(
+                Nullable(Deprecation.MisplacedRest),
+                expression.span,
+                "Positional arguments must come before rest arguments.\n" +
+                  "This will be an error in Dart Sass 2.0.0."
+              )
+            }
         }
 
         whitespace(consumeNewlines = true)

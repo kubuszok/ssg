@@ -24,12 +24,12 @@ package importer
 /** The result of importing a Sass stylesheet, as returned by [[Importer.load]].
   */
 final class ImporterResult(
-  val contents:     String,
-  val sourceMapUrl: Nullable[String],
-  val syntax:       Syntax
+  val contents:        String,
+  private val _sourceMapUrl: Nullable[String],
+  val syntax:          Syntax
 ) {
 
-  sourceMapUrl.foreach { url =>
+  _sourceMapUrl.foreach { url =>
     val colonIdx = url.indexOf(':')
     if (colonIdx <= 0) {
       throw new IllegalArgumentException(
@@ -37,6 +37,11 @@ final class ImporterResult(
       )
     }
   }
+
+  def sourceMapUrl: String =
+    _sourceMapUrl.getOrElse {
+      "data:application/octet-stream;utf-8," + ImporterResult.percentEncode(contents)
+    }
 
   override def toString: String = s"ImporterResult(syntax=$syntax, ${contents.length} chars)"
 }
@@ -48,6 +53,25 @@ object ImporterResult {
     syntax:       Syntax = Syntax.Scss,
     sourceMapUrl: Nullable[String] = Nullable.empty
   ): ImporterResult = new ImporterResult(contents, sourceMapUrl, syntax)
+
+  private val HexChars = "0123456789ABCDEF"
+
+  private[importer] def percentEncode(s: String): String = {
+    val bytes = s.getBytes("UTF-8")
+    val sb    = new StringBuilder(bytes.length * 3)
+    for (b <- bytes) {
+      val c = b & 0xff
+      if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+        c == '-' || c == '_' || c == '.' || c == '~') {
+        sb.append(c.toChar)
+      } else {
+        sb.append('%')
+        sb.append(HexChars.charAt(c >> 4))
+        sb.append(HexChars.charAt(c & 0xf))
+      }
+    }
+    sb.toString
+  }
 }
 
 /** Contextual information used by importers' `canonicalize` method.
