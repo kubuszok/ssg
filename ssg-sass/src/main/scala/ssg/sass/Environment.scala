@@ -1258,10 +1258,10 @@ object Environment {
     val transitivelyContainsExtensions: Boolean =
       !extensionStore.isEmpty || env._allModules.exists(_.transitivelyContainsExtensions)
 
-    def setVariable(name: String, value: Value): Unit =
+    def setVariable(name: String, value: Value, nodeWithSpan: Nullable[ssg.sass.util.FileSpan] = Nullable.Null): Unit =
       _modulesByVariable.get(name) match {
         case Some(m) =>
-          m.setVariable(name, value)
+          m.setVariable(name, value, nodeWithSpan)
         case None =>
           if (!env._variables(0).contains(name))
             throw SassScriptException(s"Undefined variable: $$$name")

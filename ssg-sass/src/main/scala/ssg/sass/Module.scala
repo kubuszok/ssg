@@ -23,6 +23,7 @@ package sass
 import scala.language.implicitConversions
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.css.{ CssComment, CssStylesheet }
+import ssg.sass.util.FileSpan
 import ssg.sass.ast.sass.ForwardRule
 import ssg.sass.extend.ExtensionStore
 import ssg.sass.value.Value
@@ -91,7 +92,7 @@ trait Module[T <: Callable] {
   ///
   /// Throws a [SassScriptException] if this module doesn't define a variable
   /// named [name].
-  def setVariable(name: String, value: Value): Unit
+  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[FileSpan] = Nullable.Null): Unit
 
   /// Whether this module exposes no members or CSS.
   def isEmpty: Boolean =
@@ -148,7 +149,7 @@ final class BuiltInModule[T <: Callable](
   def transitivelyContainsExtensions: Boolean = false
 
   // dart-sass built_in.dart:53-58: built-in module variables are read-only.
-  def setVariable(name: String, value: Value): Unit = {
+  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[FileSpan] = Nullable.Null): Unit = {
     if (!variables.contains(name))
       throw SassScriptException("Undefined variable.")
     throw SassScriptException("Cannot modify built-in variable.")
@@ -224,7 +225,7 @@ final class ForwardedView[T <: Callable](
   def transitivelyContainsExtensions: Boolean                          = inner.transitivelyContainsExtensions
 
   /// Port of dart-sass `ForwardedModuleView.setVariable`.
-  def setVariable(name: String, value: Value): Unit = {
+  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[FileSpan] = Nullable.Null): Unit = {
     // dart-sass: if `shownVariables` is set and doesn't contain this name, reject.
     shownVariables.foreach { shown =>
       if (!shown.contains(name))
@@ -242,7 +243,7 @@ final class ForwardedView[T <: Callable](
         throw SassScriptException("Undefined variable.")
       unprefixed = name.substring(p.length)
     }
-    inner.setVariable(unprefixed, value)
+    inner.setVariable(unprefixed, value, nodeWithSpan)
   }
 
   /// Port of dart-sass `ForwardedModuleView.cloneCss`.
@@ -384,10 +385,10 @@ final class ShadowedView[T <: Callable](
     variables.isEmpty && functions.isEmpty && mixins.isEmpty && css.children.isEmpty
 
   /// Port of dart-sass `ShadowedModuleView.setVariable`.
-  def setVariable(name: String, value: Value): Unit =
+  def setVariable(name: String, value: Value, nodeWithSpan: Nullable[FileSpan] = Nullable.Null): Unit =
     if (!variables.contains(name))
       throw SassScriptException("Undefined variable.")
-    else inner.setVariable(name, value)
+    else inner.setVariable(name, value, nodeWithSpan)
 
   /// Port of dart-sass `ShadowedModuleView.cloneCss`.
   /// Preserves the shadow sets when cloning, wrapping the cloned inner.

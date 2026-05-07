@@ -979,6 +979,16 @@ final class EvaluateVisitor(
       forImport = forImport
     )
     canonResult.flatMap { cr =>
+      val colonIdx = cr.canonicalUrl.indexOf(':')
+      val hasScheme = colonIdx > 0 && (cr.canonicalUrl.indexOf('/') < 0 || cr.canonicalUrl.indexOf('/') > colonIdx)
+      if (!hasScheme) {
+        _logger.warnForDeprecation(
+          Deprecation.RelativeCanonical,
+          s"Importer ${cr.importer} canonicalized $url to ${cr.canonicalUrl}.\n" +
+            "Relative canonical URLs are deprecated and will eventually be " +
+            "disallowed."
+        )
+      }
       // Make sure we record the canonical URL as "loaded" even if the
       // actual load fails, because watchers should watch it to see if it
       // changes in a way that allows the load to succeed.

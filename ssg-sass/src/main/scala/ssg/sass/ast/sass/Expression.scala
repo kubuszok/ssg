@@ -641,6 +641,23 @@ final case class LegacyIfExpression(
 ) extends Expression
     with CallableInvocation {
 
+  def modernSuggestion: Nullable[String] = {
+    val args = arguments
+    if (args.positional.length == 3 && args.named.isEmpty && args.rest.isEmpty) {
+      val condition = args.positional(0)
+      val ifTrue    = args.positional(1)
+      val ifFalse   = args.positional(2)
+      ifFalse match {
+        case _: NullExpression => Nullable(s"if(sass($condition): $ifTrue)")
+        case _ =>
+          ifTrue match {
+            case _: NullExpression => Nullable(s"if(not sass($condition): $ifFalse)")
+            case _                 => Nullable(s"if(sass($condition): $ifTrue; else: $ifFalse)")
+          }
+      }
+    } else Nullable.Null
+  }
+
   def accept[T](visitor: ExpressionVisitor[T]): T =
     visitor.visitLegacyIfExpression(this)
 

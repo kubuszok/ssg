@@ -319,17 +319,16 @@ final class SassColor private (
   ): SassColor = {
     if (!isLegacy) {
       throw SassScriptException(
-        "color.changeRgb() is only supported for legacy colors."
+        "color.changeRgb() is only supported for legacy colors. Please use " +
+          "color.changeChannels() instead with an explicit $space argument."
       )
     }
-    SassColor
-      .rgb(
-        Nullable(red.getOrElse(this.red)),
-        Nullable(green.getOrElse(this.green)),
-        Nullable(blue.getOrElse(this.blue)),
-        Nullable(alpha.getOrElse(this.alpha))
-      )
-      .toSpace(this.space)
+    SassColor.rgb(
+      Nullable(red.getOrElse(this.red)),
+      Nullable(green.getOrElse(this.green)),
+      Nullable(blue.getOrElse(this.blue)),
+      Nullable(alpha.getOrElse(this.alpha))
+    )
   }
 
   @deprecated("Use changeChannels with explicit $space argument", "1.0.0")
@@ -341,7 +340,8 @@ final class SassColor private (
   ): SassColor = {
     if (!isLegacy) {
       throw SassScriptException(
-        "color.changeHwb() is only supported for legacy colors."
+        "color.changeHsl() is only supported for legacy colors. Please use " +
+          "color.changeChannels() instead with an explicit $space argument."
       )
     }
     SassColor
