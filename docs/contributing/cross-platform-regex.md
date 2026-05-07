@@ -195,7 +195,7 @@ uses backreferences, lookahead, or Unicode properties.
 
 All regex-dependent code is tested on all 3 platforms:
 ```
-ssg-dev test unit --all --module <module>
+re-scale test unit --all --module <module>
 ```
 
 The `ssg-md` module has a dedicated `RegexCompatibilityTest` suite

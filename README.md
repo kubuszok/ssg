@@ -13,6 +13,8 @@ battle-tested libraries to idiomatic Scala 3.
 | `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) 1.99.0 | Dart | SASS/SCSS compiler | 13865/13902 sass-spec (99.7%) |
 | `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) 0.2.2 | Ruby | HTML/CSS/JS/JSON minification | 121 tests |
 | `ssg-js` | [terser](https://github.com/terser/terser) 5.46.1 | JavaScript | JavaScript compiler/minifier | 2518 tests |
+| `ssg-highlight` | [tree-sitter](https://github.com/tree-sitter/tree-sitter) | C/Rust | Syntax highlighting | 73 grammars |
+| `ssg-commons` | — | — | Shared cross-platform utilities | — |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
 
 All completed modules pass tests on **JVM, Scala.js, and Scala Native**.
@@ -99,15 +101,25 @@ Ports Terser (fork of UglifyJS) — a full JavaScript compiler with:
 Usage: `ssg.js.Terser.minifyToString("var x = 1 + 2;")` or integrate
 with ssg-minify via `ssg.TerserJsCompressorAdapter`.
 
+### ssg-highlight (Syntax Highlighting)
+
+Tree-sitter-based syntax highlighting supporting 73 programming language
+grammars. Unlike the other modules (which are source-level ports),
+ssg-highlight wraps tree-sitter via platform-specific FFI: JEP 454
+(Panama) on JVM, WASM bindings on Scala.js, and direct C interop on
+Scala Native.
+
 ## Project Structure
 
 ```
 ssg/
+├── ssg-commons/     Shared cross-platform utilities
 ├── ssg-md/          Markdown engine (flexmark-java port)
 ├── ssg-liquid/      Liquid template engine (liqp port)
 ├── ssg-sass/        SASS/SCSS compiler (dart-sass port)
 ├── ssg-minify/      HTML/CSS/JS/JSON minification (jekyll-minifier port)
 ├── ssg-js/          JavaScript compiler/minifier (Terser port)
+├── ssg-highlight/   Syntax highlighting (tree-sitter, 73 grammars)
 ├── ssg/             Aggregator module
 ├── original-src/    Reference sources (git submodules, not compiled)
 ├── .rescale/        re-scale project config + data
@@ -136,5 +148,6 @@ original licenses:
 | dart-sass | MIT | 2016 Google Inc. |
 | jekyll-minifier | MIT | 2014-2024 DigitalSparky |
 | terser | BSD 2-Clause | 2012 Mihai Bazon |
+| tree-sitter | MIT | 2018 Max Brunsfeld |
 
 See [LICENSE](LICENSE) for full third-party notices.

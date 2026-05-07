@@ -248,7 +248,7 @@ gaps that block ssg-md from being a 1:1 functional replacement of flexmark-java.
   in `ssg-md/src/test/resources` against actual loaders in
   `ssg-md/src/test/scala`.
 - **Audit DB**: cross-check that files with confirmed gaps are reflected in
-  `ssg-dev db audit`.
+  `re-scale db audit`.
 
 ### LOC Ratio (measured)
 
@@ -405,7 +405,7 @@ runner that compares rendered output against expected sections.
 
 ### Audit DB cross-check
 
-Current audit DB state (from `ssg-dev db audit stats`):
+Current audit DB state (from `re-scale db audit stats`):
 
 - 419 of ~790 production files audited (53%)
 - 387 pass / 32 minor / 0 major

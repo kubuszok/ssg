@@ -45,9 +45,8 @@ Every row in `skip-policy.tsv` must have:
 
 ## Enforcement
 
-`ssg-dev port skip verify` checks every row has a `category`,
-`justification`, and `decided_by`. It is run as part of the CI gate
-(Phase 5). Future enhancements (Phase 4 follow-up):
+`re-scale enforce skip-policy` validates the skip-policy database. Future
+enhancements:
 
 - Walk every file in `original-src/<lib>/<lib>/...` and confirm each has
   either a corresponding Scala port or a skip-policy row. Any file with
@@ -59,9 +58,8 @@ Every row in `skip-policy.tsv` must have:
 ## CLI
 
 ```
-ssg-dev port skip list [--library L] [--category C]
-ssg-dev port skip add <original-path> <category> <justification>
-ssg-dev port skip verify
+re-scale enforce skip-policy list
+re-scale enforce skip-policy add <path> <tool>
 ```
 
 ## Migration from per-library port docs

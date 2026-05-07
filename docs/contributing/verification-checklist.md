@@ -9,7 +9,7 @@ Use this checklist after converting any file to Scala 3.
 - [ ] Original license noted
 
 ## 2. Compilation
-- [ ] Zero errors on `ssg-dev build compile --module <module>`
+- [ ] Zero errors on `re-scale build compile --module <module>`
 - [ ] Zero warnings (warnings are fatal with `-Werror`)
 - [ ] Compiles on JVM
 - [ ] Compiles on Scala.js (if applicable)
@@ -38,10 +38,10 @@ Use this checklist after converting any file to Scala 3.
 ## 6. Testing
 - [ ] Tests ported if original had them
 - [ ] MUnit test suite created
-- [ ] Tests pass on JVM: `ssg-dev test unit --jvm --module <module>`
+- [ ] Tests pass on JVM: `re-scale test unit --jvm --module <module>`
 
 ## 7. Status Update
-- [ ] Migration database updated: `ssg-dev db migration set <path> --status ai_converted`
+- [ ] Migration database updated: `re-scale db migration set <path> --status ai_converted`
 
 ## 8. Documentation
 - [ ] Migration notes block in header comment
