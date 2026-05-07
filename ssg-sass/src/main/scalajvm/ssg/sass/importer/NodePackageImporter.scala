@@ -28,6 +28,8 @@ import scala.language.implicitConversions
   */
 final class NodePackageImporter(val entryPoint: String) extends Importer {
 
+  override def isNonCanonicalScheme(scheme: String): Boolean = scheme == "pkg"
+
   private val Prefix = "pkg:"
   private val rootPath: FilePath = FilePath.of(entryPoint).toAbsolute.normalize
 
@@ -142,6 +144,15 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     }
 
   def canonicalize(url: String): Nullable[String] = {
+    if (url.startsWith(Prefix)) {
+      val path = url.substring(Prefix.length)
+      if (path.startsWith("/"))
+        throw new IllegalArgumentException("A pkg: URL's path must not begin with /.")
+      if (path.isEmpty)
+        throw new IllegalArgumentException("A pkg: URL must not have an empty path.")
+      if (url.contains('?') || url.contains('#'))
+        throw new IllegalArgumentException("A pkg: URL must not have a query or fragment.")
+    }
     val parsed = parsePkgUrl(url)
     if (parsed.isEmpty) Nullable.empty
     else {
