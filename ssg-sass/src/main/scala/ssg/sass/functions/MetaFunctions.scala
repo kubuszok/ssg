@@ -212,13 +212,10 @@ object MetaFunctions {
       args =>
         args(0) match {
           case al: SassArgumentList =>
-            // dart-sass uses unquoted (`quotes: false`) string keys.
             val entries = al.keywords.iterator.map { case (k, v) =>
               (SassString(k, hasQuotes = false): Value) -> v
             }.toList
             SassMap(ListMap.from(entries))
-          case _: SassList =>
-            SassMap.empty
           case other =>
             throw SassScriptException(s"$$args: $other is not an argument list.")
         }
@@ -586,26 +583,36 @@ object MetaFunctions {
     */
   val moduleMixins: List[Callable] = List(applyFn)
 
-  /** Globally available meta built-ins. In dart-sass the shared meta functions and the evaluator-defined meta functions are all wrapped with `.withDeprecationWarning('meta')`. The `if` function is
-    * the only meta global that does NOT get the deprecation wrapper (it lives in the barrel `globalFunctions` list, not in `_shared` or `metaFunctions`).
+  /** Globally available meta built-ins. Matches dart-sass `_shared` (meta.dart)
+    * wrapped with `.withDeprecationWarning('meta')`, plus `ifFn` which lives
+    * in the barrel `globalFunctions` list without a deprecation wrapper.
     */
   val global: List[Callable] = List(
     ifFn,
-    typeOfFn.withDeprecationWarning("meta"),
-    inspectFn.withDeprecationWarning("meta"),
     featureExistsFn.withDeprecationWarning("meta"),
-    variableExistsFn.withDeprecationWarning("meta"),
-    functionExistsFn.withDeprecationWarning("meta"),
-    keywordsFn.withDeprecationWarning("meta"),
-    mixinExistsFn.withDeprecationWarning("meta"),
-    globalVariableExistsFn.withDeprecationWarning("meta"),
-    contentExistsFn.withDeprecationWarning("meta"),
-    moduleVariablesFn.withDeprecationWarning("meta"),
-    moduleFunctionsFn.withDeprecationWarning("meta"),
-    moduleMixinsFn.withDeprecationWarning("meta"),
-    getFunctionFn.withDeprecationWarning("meta"),
-    getMixinFn.withDeprecationWarning("meta"),
-    callFn.withDeprecationWarning("meta")
+    inspectFn.withDeprecationWarning("meta"),
+    typeOfFn.withDeprecationWarning("meta"),
+    keywordsFn.withDeprecationWarning("meta")
+  )
+
+  /** Runtime-context functions that dart-sass defines in the evaluator
+    * (evaluate.dart lines 386-600) rather than in meta.dart. These require
+    * access to the current environment (via `CurrentEnvironment`) and are
+    * registered as globals by the evaluator with deprecation wrappers,
+    * plus added to the `sass:meta` module without wrappers.
+    */
+  val runtimeFunctions: List[BuiltInCallable] = List(
+    variableExistsFn,
+    globalVariableExistsFn,
+    functionExistsFn,
+    mixinExistsFn,
+    contentExistsFn,
+    moduleVariablesFn,
+    moduleFunctionsFn,
+    moduleMixinsFn,
+    getFunctionFn,
+    getMixinFn,
+    callFn
   )
 
   /** Functions exposed only under `sass:meta` (not as globals). */
@@ -615,5 +622,12 @@ object MetaFunctions {
     acceptsContentFn
   )
 
-  def module: List[Callable] = global ::: moduleOnly
+  /** All functions for the `sass:meta` module. Includes shared functions
+    * (without deprecation wrappers since they're accessed via the module),
+    * runtime-context functions, and module-only functions.
+    */
+  def module: List[Callable] =
+    List(featureExistsFn, inspectFn, typeOfFn, keywordsFn) :::
+      runtimeFunctions :::
+      moduleOnly
 }
