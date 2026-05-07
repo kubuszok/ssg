@@ -87,7 +87,11 @@ final class BuiltInCallable(
   val isOverloaded: Boolean = false,
   /** All overload signatures (non-empty only when [[isOverloaded]] is true). Used by the evaluator to find the right overload for named-arg binding.
     */
-  val allSignatures: List[String] = Nil
+  val allSignatures: List[String] = Nil,
+  /** Parsed overloads: each entry is a (ParameterList, Callback) tuple.
+    * Non-empty only when [[isOverloaded]] is true. Port of dart-sass `_overloads`.
+    */
+  val overloads: List[(ParameterList, List[Value] => Value)] = Nil
 ) extends Callable {
 
   /** Positional parameter names and their optional default-expression text, derived from the textual [[signature]] (e.g. `"$color, $amount: 1"` → `List(("color", None), ("amount", Some("1")))`).
@@ -163,10 +167,23 @@ final class BuiltInCallable(
     }
   }
 
+  /** Selects the overload matching the given call-site shape.
+    * Port of dart-sass `BuiltInCallable.callbackFor`.
+    */
+  def callbackFor(positional: Int, names: Set[String]): (ParameterList, List[Value] => Value) = {
+    if (overloads.nonEmpty) {
+      overloads.find(_._1.matches(positional, names)).getOrElse {
+        overloads.last
+      }
+    } else {
+      (parameters.getOrElse(ParameterList.parse(s"@function $name($signature) {")), callback)
+    }
+  }
+
   /** Returns a copy of this callable with the given [newName]. Port of dart-sass `BuiltInCallable.withName`.
     */
   def withName(newName: String): BuiltInCallable =
-    new BuiltInCallable(newName, parameters, callback, acceptsContent, signature, isOverloaded)
+    new BuiltInCallable(newName, parameters, callback, acceptsContent, signature, isOverloaded, allSignatures, overloads)
 
   /** Returns a copy of this callable that emits a deprecation warning directing users to the module form of the function. Port of dart-sass `BuiltInCallable.withDeprecationWarning`.
     */
@@ -177,7 +194,7 @@ final class BuiltInCallable(
       BuiltInCallable.warnForGlobalBuiltIn(module, effectiveName)
       origCallback(args)
     }
-    new BuiltInCallable(name, parameters, wrappedCallback, acceptsContent, signature, isOverloaded)
+    new BuiltInCallable(name, parameters, wrappedCallback, acceptsContent, signature, isOverloaded, allSignatures, overloads)
   }
 
   override def toString: String = s"BuiltInCallable($name)"
@@ -206,22 +223,26 @@ object BuiltInCallable {
   ): BuiltInCallable =
     BuiltInCallable(name, Nullable(parameters), callback, acceptsContent)
 
-  def function(name: String, arguments: String, callback: List[Value] => Value): BuiltInCallable =
-    BuiltInCallable(name, Nullable.empty, callback, signature = arguments)
+  def function(name: String, arguments: String, callback: List[Value] => Value): BuiltInCallable = {
+    val params = ParameterList.parse(s"@function $name($arguments) {")
+    BuiltInCallable(name, Nullable(params), callback, signature = arguments)
+  }
 
   def mixin(
     name:           String,
     arguments:      String,
     callback:       List[Value] => Value,
     acceptsContent: Boolean = false
-  ): BuiltInCallable =
+  ): BuiltInCallable = {
+    val params = ParameterList.parse(s"@mixin $name($arguments) {")
     BuiltInCallable(
       name,
-      Nullable.empty,
+      Nullable(params),
       args => { callback(args); ssg.sass.value.SassNull },
       acceptsContent,
       signature = arguments
     )
+  }
 
   /** Builds a built-in callable that dispatches by arity.
     *
@@ -240,70 +261,91 @@ object BuiltInCallable {
     name:      String,
     overloads: Map[String, List[Value] => Value]
   ): BuiltInCallable = {
-    // Pre-compute (declaredCount, hasRest, callback) for each overload.
-    final case class _Entry(arity: Int, hasRest: Boolean, callback: List[Value] => Value)
-    val entries: List[_Entry] = overloads.toList.map { case (signature, cb) =>
-      val trimmed = signature.trim
-      val parts   =
-        if (trimmed.isEmpty) Nil
-        else {
-          val buf     = scala.collection.mutable.ListBuffer.empty[String]
-          val current = new StringBuilder()
-          var depth   = 0
-          var i       = 0
-          while (i < trimmed.length) {
-            val c = trimmed.charAt(i)
-            if (c == '(' || c == '[') { depth += 1; current.append(c) }
-            else if (c == ')' || c == ']') { depth -= 1; current.append(c) }
-            else if (c == ',' && depth == 0) {
-              buf += current.toString().trim
-              current.setLength(0)
-            } else current.append(c)
-            i += 1
-          }
-          if (current.nonEmpty) buf += current.toString().trim
-          buf.toList
-        }
-      val hasRest = parts.lastOption.exists(_.endsWith("..."))
-      val arity   = if (hasRest) parts.length - 1 else parts.length
-      _Entry(arity, hasRest, cb)
-    }
+    val parsedOverloads: List[(ParameterList, List[Value] => Value)] =
+      overloads.toList.map { case (signature, cb) =>
+        val params =
+          try ParameterList.parse(s"@function $name($signature) {")
+          catch { case _: Exception => _fallbackParseSignature(name, signature) }
+        (params, cb)
+      }
 
     val dispatch: List[Value] => Value = args => {
       val n = args.length
-      // 1. Exact arity match (non-rest preferred).
-      val exact = entries.find(e => !e.hasRest && e.arity == n)
-      // 2. Non-rest overload with more params (defaulted tail).
-      val widened = exact.orElse(entries.filter(e => !e.hasRest && e.arity > n).sortBy(_.arity).headOption)
-      // 3. Rest-parameter overload accepting at least `n` positional args.
-      val resty = widened.orElse(entries.find(e => e.hasRest && e.arity <= n))
-      resty match {
-        case Some(e) => e.callback(args)
-        case None    =>
+      parsedOverloads.find(_._1.matches(n, Set.empty))
+        .orElse(parsedOverloads.find(_._1.restParameter.isDefined))
+        .map(_._2(args))
+        .getOrElse {
           throw new IllegalArgumentException(
             s"No overload of $name matches ${args.length} argument(s)"
           )
-      }
+        }
     }
 
-    // Pick the canonical signature for named-arg binding. We want the
-    // signature with the MOST individually-named parameter slots so a
-    // call like `fn($a: x, $b: y)` can bind every name. Both rest-shaped
-    // (`$map, $key, $keys...`) and non-rest (`$map`) signatures are
-    // candidates — for rest-shaped, only the slots BEFORE the splat
-    // count, since `$keys...` doesn't declare a unique name. The
-    // signature with the most named slots wins; ties are broken by
-    // preferring non-rest (which is also the more constrained shape).
+    val candidates = overloads.keys.toList
     def namedSlotCount(sig: String): Int = {
       val parts = sig.split(',').map(_.trim)
       parts.count(p => p.startsWith("$") && !p.endsWith("..."))
     }
-    val candidates = overloads.keys.toList
     val canonicalSig: String =
       if (candidates.isEmpty) ""
       else
-        candidates.map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1)).sortBy(t => (-t._2, -t._3)).head._1
-    BuiltInCallable(name, Nullable.empty, dispatch, signature = canonicalSig, isOverloaded = true, allSignatures = candidates)
+        candidates
+          .map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1))
+          .sortBy(t => (-t._2, -t._3))
+          .head._1
+    val canonicalParams =
+      try ParameterList.parse(s"@function $name($canonicalSig) {")
+      catch { case _: Exception => _fallbackParseSignature(name, canonicalSig) }
+    BuiltInCallable(
+      name,
+      Nullable(canonicalParams),
+      dispatch,
+      signature = canonicalSig,
+      isOverloaded = true,
+      allSignatures = candidates,
+      overloads = parsedOverloads
+    )
+  }
+
+  private def _fallbackParseSignature(name: String, signature: String): ParameterList = {
+    val trimmed = signature.trim
+    if (trimmed.isEmpty) return ParameterList.empty(util.FileSpan.synthetic("<built-in>"))
+    val parts = scala.collection.mutable.ListBuffer.empty[String]
+    val buf   = new StringBuilder()
+    var depth = 0
+    var i     = 0
+    while (i < trimmed.length) {
+      val c = trimmed.charAt(i)
+      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+      else buf.append(c)
+      i += 1
+    }
+    if (buf.nonEmpty) parts += buf.toString().trim
+    val partList = parts.toList
+    val hasRest  = partList.lastOption.exists(_.endsWith("..."))
+    val effective = if (hasRest) partList.init else partList
+    val params = effective.flatMap { raw =>
+      val nameRaw = raw.indexOf(':') match {
+        case -1  => raw
+        case idx => raw.substring(0, idx).trim
+      }
+      if (nameRaw.startsWith("$")) {
+        val pname = nameRaw.substring(1).replace('_', '-')
+        val defaultValue: Nullable[ast.sass.Expression] =
+          if (raw.indexOf(':') >= 0) Nullable(ast.sass.StringExpression.plain("0", util.FileSpan.synthetic("<default>")))
+          else Nullable.empty
+        Some(new ast.sass.Parameter(pname, util.FileSpan.synthetic("<built-in>"), defaultValue))
+      } else None
+    }
+    val restParam: Nullable[String] =
+      if (hasRest) partList.last.replace("...", "").trim match {
+        case s if s.startsWith("$") => Nullable(s.substring(1).replace('_', '-'))
+        case _                      => Nullable.empty
+      }
+      else Nullable.empty
+    new ParameterList(params, util.FileSpan.synthetic("<built-in>"), restParam)
   }
 }
 
