@@ -149,12 +149,8 @@ object ListFunctions {
             )
         }
 
-        // Use SassList directly (rather than withListContents) so the
-        // receiver may be a map or other list-coercible value, not just
-        // a SassList. dart-sass's `withListContents` requires a SassList
-        // receiver but the spec accepts maps via asList.
         val newList = list.asList :+ value
-        SassList(newList, separator, brackets = list.hasBrackets)
+        list.withListContents(newList, separator = Nullable(separator))
       }
     )
 

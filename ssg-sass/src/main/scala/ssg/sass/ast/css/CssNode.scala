@@ -26,7 +26,7 @@ package css
 
 import ssg.sass.Nullable
 import ssg.sass.Nullable.*
-import ssg.sass.visitor.{ CssVisitor, EveryCssVisitor }
+import ssg.sass.visitor.{ CssVisitor, EveryCssVisitor, SerializeVisitor }
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -64,6 +64,8 @@ abstract class CssNode extends AstNode {
   /** Whether this node will be invisible when loud comments are stripped. */
   def isInvisibleHidingComments: Boolean =
     accept(CssNode.IsInvisibleVisitor(includeBogus = true, includeComments = true))
+
+  override def toString: String = SerializeVisitor.serializeCssNode(this)
 }
 
 object CssNode {

@@ -44,7 +44,7 @@ final class MultiSpan(
     new MultiSpan(primary.subspan(startOffset, endOffset), primaryLabel, secondarySpans)
 
   /** Formats an error message including all secondary spans. */
-  def message(msg: String): String = {
+  def message(msg: String, color: Boolean = false): String = {
     val sb = new StringBuilder()
     sb.append(primary.message(msg))
     for ((span, label) <- secondarySpans) {
@@ -55,13 +55,33 @@ final class MultiSpan(
   }
 
   /** Highlights the primary span with secondary spans labeled. */
-  def highlight(): String = {
+  def highlight(color: Boolean = false): String = {
     val sb = new StringBuilder()
     sb.append(primary.highlight())
     for ((span, label) <- secondarySpans) {
       sb.append("\n")
       sb.append(s"$label: ${span.highlight()}")
     }
+    sb.toString()
+  }
+
+  /** Highlights multiple spans at once with labels. Delegates to highlight(). */
+  def highlightMultiple(primaryLabel: String, secondaryLabels: Map[FileSpan, String], color: Boolean = false): String = {
+    val sb = new StringBuilder()
+    sb.append(s"$primaryLabel: ${primary.highlight()}")
+    for ((span, label) <- secondaryLabels) {
+      sb.append("\n")
+      sb.append(s"$label: ${span.highlight()}")
+    }
+    sb.toString()
+  }
+
+  /** Formats a message with multiple span labels. */
+  def messageMultiple(msg: String, primaryLabel: String, secondaryLabels: Map[FileSpan, String], color: Boolean = false): String = {
+    val sb = new StringBuilder()
+    sb.append(primary.message(msg))
+    sb.append("\n")
+    sb.append(highlightMultiple(primaryLabel, secondaryLabels, color))
     sb.toString()
   }
 

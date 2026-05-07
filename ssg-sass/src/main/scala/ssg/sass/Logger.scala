@@ -57,7 +57,7 @@ object Logger {
   val quiet: Logger = QuietLogger
 
   /** The default logger (prints to stderr without colors). */
-  val default: Logger = StderrLogger(color = false)
+  val default: Logger = StderrLogger(color = System.console() != null)
 }
 
 /** A logger that emits no messages. */

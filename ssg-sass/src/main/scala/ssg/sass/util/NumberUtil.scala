@@ -9,7 +9,7 @@
  * Migration notes:
  *   Renames: number.dart → NumberUtil.scala
  *   Convention: Top-level functions → object methods
- *   Idiom: Dart num → Double, SassNumber functions deferred to Phase 9
+ *   Idiom: Dart num → Double
  *
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/util/number.dart

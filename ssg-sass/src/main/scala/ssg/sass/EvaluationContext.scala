@@ -19,7 +19,6 @@
 package ssg
 package sass
 
-import ssg.sass.ast.AstNode
 import ssg.sass.util.FileSpan
 
 /// An interface that exposes information about the current Sass evaluation.
@@ -28,9 +27,6 @@ import ssg.sass.util.FileSpan
 /// new zone variable for each piece of information.
 trait EvaluationContext {
 
-  /** Returns the AST node being evaluated, for use in error messages. */
-  def currentCallableNode: AstNode
-
   /// Returns the span for the currently executing callable.
   ///
   /// For normal exception reporting, this should be avoided in favor of
@@ -38,7 +34,7 @@ trait EvaluationContext {
   /// that require spans.
   ///
   /// Throws a [StateError] if there isn't a callable being invoked.
-  def currentCallableSpan: FileSpan = currentCallableNode.span
+  def currentCallableSpan: FileSpan
 
   /// Prints a warning message associated with the current `@import` or function
   /// call.

@@ -419,8 +419,7 @@ object MathFunctions {
         val number1 = args(0)
         val number2 = args(1)
         if (!number1.isInstanceOf[SassNumber] || !number2.isInstanceOf[SassNumber]) {
-          EvaluationContext.warnForDeprecation(
-            Deprecation.SlashDiv,
+          EvaluationContext.warn(
             "math.div() will only support number arguments in a future release.\n" +
               "Use list.slash() instead for a slash separator."
           )
@@ -480,22 +479,7 @@ object MathFunctions {
     roundFn.withDeprecationWarning("math"),
     unitFn.withDeprecationWarning("math"),
     compatibleFn.withDeprecationWarning("math").withName("comparable"),
-    isUnitlessFn.withDeprecationWarning("math").withName("unitless"),
-    // These math functions are registered globally as a workaround: in dart-sass
-    // they are dispatched by the evaluator's special-case calc path, not as
-    // global built-ins. Once EvaluateVisitor handles top-level sqrt()/sin()/
-    // cos()/etc. through calc evaluation, these entries can be removed.
-    sqrtFn,
-    sinFn,
-    cosFn,
-    tanFn,
-    asinFn,
-    acosFn,
-    atanFn,
-    logFn,
-    powFn,
-    clampFn,
-    hypotFn
+    isUnitlessFn.withDeprecationWarning("math").withName("unitless")
   )
 
   /** Members of the `sass:math` module. Mirrors dart-sass `module`. */

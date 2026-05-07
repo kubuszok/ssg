@@ -61,6 +61,10 @@ final class ArgumentList(
 ) extends SassNode {
 
   assert(rest.isDefined || keywordRest.isEmpty)
+  assert(
+    named.keys.toSeq == namedSpans.keys.toSeq,
+    s"named keys ${named.keys.toSeq} must match namedSpans keys ${namedSpans.keys.toSeq}"
+  )
 
   /** Returns whether this invocation passes no arguments. */
   def isEmpty: Boolean =
@@ -292,4 +296,10 @@ object ParameterList {
   /** Creates a declaration that declares no parameters. */
   def empty(span: FileSpan): ParameterList =
     new ParameterList(Nil, span)
+
+  /** Parses a parameter list from a declaration source like `@function name($a, $b: 1) {}`. */
+  def parse(source: String): ParameterList = {
+    val (params, _) = new ssg.sass.parse.ScssParser(source).parseParameterList()
+    params
+  }
 }

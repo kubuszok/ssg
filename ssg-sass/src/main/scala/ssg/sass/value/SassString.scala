@@ -23,6 +23,7 @@ package value
 
 import ssg.sass.{ Nullable, SassScriptException }
 import ssg.sass.Nullable.*
+import ssg.sass.Utils.startsWithIgnoreCase
 import ssg.sass.visitor.ValueVisitor
 
 import scala.language.implicitConversions
@@ -39,22 +40,16 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
   override def isBlank: Boolean = !hasQuotes && text.isEmpty
 
   override def isSpecialNumber: Boolean =
-    if (hasQuotes) false
-    else {
-      val lower = text.toLowerCase
-      lower.startsWith("calc(") || lower.startsWith("var(") ||
-      lower.startsWith("env(") || lower.startsWith("min(") ||
-      lower.startsWith("max(") || lower.startsWith("clamp(") ||
-      lower.startsWith("attr(") || lower.startsWith("if(")
-    }
+    if (hasQuotes || text.length < 4) false
+    else startsWithIgnoreCase(text, "calc(") || startsWithIgnoreCase(text, "var(") ||
+      startsWithIgnoreCase(text, "env(") || startsWithIgnoreCase(text, "min(") ||
+      startsWithIgnoreCase(text, "max(") || startsWithIgnoreCase(text, "clamp(") ||
+      startsWithIgnoreCase(text, "attr(") || startsWithIgnoreCase(text, "if(")
 
   override def isSpecialVariable: Boolean =
-    if (hasQuotes) false
-    else {
-      val lower = text.toLowerCase
-      lower.startsWith("attr(") || lower.startsWith("if(") ||
-      lower.startsWith("var(")
-    }
+    if (hasQuotes || text.length < 4) false
+    else startsWithIgnoreCase(text, "attr(") || startsWithIgnoreCase(text, "if(") ||
+      startsWithIgnoreCase(text, "var(")
 
   override def accept[T](visitor: ValueVisitor[T]): T = visitor.visitString(this)
 
@@ -63,13 +58,13 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
   /** Throws if this string is unquoted. */
   def assertQuoted(name: Nullable[String] = Nullable.Null): Unit =
     if (!hasQuotes) {
-      throw SassScriptException(s"Expected $this to be quoted.", name.toOption)
+      throw SassScriptException(s"Expected $this to be a quoted string.", name.toOption)
     }
 
   /** Throws if this string is quoted. */
   def assertUnquoted(name: Nullable[String] = Nullable.Null): Unit =
     if (hasQuotes) {
-      throw SassScriptException(s"Expected $this to be unquoted.", name.toOption)
+      throw SassScriptException(s"Expected $this to be an unquoted string.", name.toOption)
     }
 
   /** Converts a 1-based Sass index to a 0-based code unit index.

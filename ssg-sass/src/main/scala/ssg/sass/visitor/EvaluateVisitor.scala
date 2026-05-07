@@ -176,8 +176,8 @@ final class EvaluateVisitor(
   // EvaluationContext — deprecation / warning emission
   // ---------------------------------------------------------------------------
 
-  override def currentCallableNode: ssg.sass.ast.AstNode =
-    _callableNode.getOrElse {
+  override def currentCallableSpan: ssg.sass.util.FileSpan =
+    _callableNode.map(_.span).getOrElse {
       throw new IllegalStateException("No Sass callable is currently being evaluated.")
     }
 
@@ -3022,20 +3022,16 @@ final class EvaluateVisitor(
     val value   = node.expression.accept(this)
     val message = value match {
       case s: SassString => s.text
-      case other => other.toCssString(quote = false)
+      case other => _serialize(other, node.expression, quote = true)
     }
-    _logger.warn(message)
+    _logger.warn(message, trace = Nullable(_stackTrace(Nullable(node.span))))
     _warnings += s"WARNING: $message"
     SassNull
   }
 
   override def visitErrorRule(node: ErrorRule): Value = {
-    val value   = node.expression.accept(this)
-    val message = value match {
-      case s: SassString => s.text
-      case other => other.toCssString(quote = false)
-    }
-    throw SassException(message, node.span)
+    val value = node.expression.accept(this)
+    throw _exception(value.toString, Nullable(node.span))
   }
 
   override def visitSilentComment(node: SilentComment): Value = SassNull

@@ -602,7 +602,7 @@ object ExtendFunctions {
 
       // Note(nweiz): there may be a way to do this without the extra allocations
       // from appending a bogus base component to both lists.
-      val bogusSpan = FileSpan.synthetic("")
+      val bogusSpan = FileSpan.bogusSpan
       val base      = new ComplexSelectorComponent(
         new CompoundSelector(List(new PlaceholderSelector("<temp>", bogusSpan)), bogusSpan),
         Nil,

@@ -148,7 +148,7 @@ object SimpleSelector {
     // Unify names
     val name: Nullable[String] =
       if (name1 == name2 || name2.isEmpty) name1
-      else if (name1.isEmpty) name2
+      else if (name1.isEmpty || name1.exists(_ == "*")) name2
       else return None // incompatible names
 
     val sp = selector1.span

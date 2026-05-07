@@ -24,7 +24,7 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.sass.ForwardRule
-import ssg.sass.util.{ FileLocation, FileSpan, LimitedMapView, SourceFile, UnprefixedMapView }
+import ssg.sass.util.{ LimitedMapView, UnprefixedMapView }
 import ssg.sass.value.Value
 
 /// A set of variables meant to configure a module by overriding its
@@ -116,13 +116,11 @@ class Configuration private[sass] (
 
   /** Throws a [[SassException]] if any values remain — i.e. for values that weren't used by the module. Implicit configurations are ignored: an unused forwarded `with` clause is not an error.
     */
-  def throwErrorForUnknownVariables(): Unit = {
+  def throwErrorForUnknownVariables(nodeWithSpan: Nullable[ssg.sass.util.FileSpan] = Nullable.empty): Unit = {
     if (isImplicit || _values.isEmpty) return
     val names  = _values.keys.toList.sorted.map("$" + _).mkString(", ")
     val plural = if (_values.size == 1) "variable" else "variables"
-    val file   = new SourceFile(Nullable.empty, "")
-    val loc    = FileLocation(file, 0, 0, 0)
-    val span   = FileSpan(file, loc, loc)
+    val span   = nodeWithSpan.getOrElse(ssg.sass.util.FileSpan.bogusSpan)
     throw new SassException(
       s"$names was not declared with !default in the @used module (no such configurable $plural).",
       span
