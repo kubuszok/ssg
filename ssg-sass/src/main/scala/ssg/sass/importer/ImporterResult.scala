@@ -29,6 +29,15 @@ final class ImporterResult(
   val syntax:       Syntax
 ) {
 
+  sourceMapUrl.foreach { url =>
+    val colonIdx = url.indexOf(':')
+    if (colonIdx <= 0) {
+      throw new IllegalArgumentException(
+        s"sourceMapUrl must be absolute, was: $url"
+      )
+    }
+  }
+
   override def toString: String = s"ImporterResult(syntax=$syntax, ${contents.length} chars)"
 }
 

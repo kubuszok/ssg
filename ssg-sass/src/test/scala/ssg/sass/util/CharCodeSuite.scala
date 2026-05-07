@@ -98,11 +98,13 @@ final class CharCodeSuite extends munit.FunSuite {
     assertEquals(CharCode.hexCharFor(15), 'f'.toInt)
   }
 
-  test("opposite returns matching brackets") {
+  test("opposite returns closing bracket for opening bracket") {
     assertEquals(CharCode.opposite('('.toInt), ')'.toInt)
-    assertEquals(CharCode.opposite(')'.toInt), '('.toInt)
     assertEquals(CharCode.opposite('['.toInt), ']'.toInt)
     assertEquals(CharCode.opposite('{'.toInt), '}'.toInt)
+    intercept[IllegalArgumentException] { CharCode.opposite(')'.toInt) }
+    intercept[IllegalArgumentException] { CharCode.opposite(']'.toInt) }
+    intercept[IllegalArgumentException] { CharCode.opposite('}'.toInt) }
   }
 
   test("case conversion works") {

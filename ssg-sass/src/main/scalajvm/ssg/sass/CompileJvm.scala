@@ -15,7 +15,7 @@ object CompileFile {
 
   /** Compile a Sass/SCSS file at the given path. The file's parent directory becomes the load path for `@import`/`@use` resolution.
     */
-  def compile(path: String, style: String = OutputStyle.Expanded): CompileResult = {
+  def compile(path: String, style: OutputStyle = OutputStyle.Expanded): CompileResult = {
     val file     = FilePath.of(path).toAbsolute
     val source   = FileOps.readString(file)
     val loadPath = file.parent.map(_.pathString).getOrElse(".")

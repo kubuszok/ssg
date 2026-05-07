@@ -310,6 +310,50 @@ final class SassColor private (
       .toSpace(this.space)
   }
 
+  @deprecated("Use changeChannels with explicit $space argument", "1.0.0")
+  def changeRgb(
+    red:   Option[Double] = None,
+    green: Option[Double] = None,
+    blue:  Option[Double] = None,
+    alpha: Option[Double] = None
+  ): SassColor = {
+    if (!isLegacy) {
+      throw SassScriptException(
+        "color.changeRgb() is only supported for legacy colors."
+      )
+    }
+    SassColor
+      .rgb(
+        Nullable(red.getOrElse(this.red)),
+        Nullable(green.getOrElse(this.green)),
+        Nullable(blue.getOrElse(this.blue)),
+        Nullable(alpha.getOrElse(this.alpha))
+      )
+      .toSpace(this.space)
+  }
+
+  @deprecated("Use changeChannels with explicit $space argument", "1.0.0")
+  def changeHwb(
+    hue:       Option[Double] = None,
+    whiteness: Option[Double] = None,
+    blackness: Option[Double] = None,
+    alpha:     Option[Double] = None
+  ): SassColor = {
+    if (!isLegacy) {
+      throw SassScriptException(
+        "color.changeHwb() is only supported for legacy colors."
+      )
+    }
+    SassColor
+      .hwb(
+        Nullable(hue.getOrElse(this.hue)),
+        Nullable(whiteness.getOrElse(this.whiteness)),
+        Nullable(blackness.getOrElse(this.blackness)),
+        Nullable(alpha.getOrElse(this.alpha))
+      )
+      .toSpace(this.space)
+  }
+
   /** Changes one or more of this color's channels and returns the result. */
   def changeChannels(
     newValues: Map[String, Double],

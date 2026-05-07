@@ -112,7 +112,7 @@ object ColorFunctions {
     */
   private def functionString(name: String, arguments: Iterable[Value]): SassString =
     SassString(
-      name + "(" + arguments.map(_.toCssString(quote = false)).mkString(", ") + ")",
+      name + "(" + arguments.map(_.toCssString()).mkString(", ") + ")",
       hasQuotes = false
     )
 
@@ -1811,7 +1811,7 @@ object ColorFunctions {
         val channelName = channelStr.text
         val spaceOpt    = if (args.length >= 3) optSpace(args(2)) else None
         val viewed      = spaceOpt.fold(color)(sp => color.toSpace(sp))
-        SassBoolean(viewed.isChannelPowerless(channelName))
+        SassBoolean(viewed.isChannelPowerless(channelName, colorName = Nullable("color"), channelArgName = Nullable("channel")))
       }
     )
 
@@ -1830,7 +1830,7 @@ object ColorFunctions {
           )
         }
         val channelName = channelStr.text
-        SassBoolean(color.isChannelMissing(channelName))
+        SassBoolean(color.isChannelMissing(channelName, colorName = Nullable("color"), channelArgName = Nullable("channel")))
       }
     )
 

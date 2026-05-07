@@ -273,6 +273,9 @@ object SelectorFunctions {
         val selector = asSelectorList(args(0), "selector")
         val target   = asSelectorList(args(1), "extendee")
         val source   = asSelectorList(args(2), "extender")
+        selector.assertNotBogus(Nullable("selector"))
+        target.assertNotBogus(Nullable("extendee"))
+        source.assertNotBogus(Nullable("extender"))
         runExtendPipeline(selector, target, source, ExtendMode.AllTargets).asSassList
       }
     )
@@ -285,6 +288,9 @@ object SelectorFunctions {
         val selector = asSelectorList(args(0), "selector")
         val target   = asSelectorList(args(1), "original")
         val source   = asSelectorList(args(2), "replacement")
+        selector.assertNotBogus(Nullable("selector"))
+        target.assertNotBogus(Nullable("original"))
+        source.assertNotBogus(Nullable("replacement"))
         runExtendPipeline(selector, target, source, ExtendMode.Replace).asSassList
       }
     )
@@ -338,6 +344,8 @@ object SelectorFunctions {
       { args =>
         val selector1 = asSelectorList(args(0), "selector1")
         val selector2 = asSelectorList(args(1), "selector2")
+        selector1.assertNotBogus(Nullable("selector1"))
+        selector2.assertNotBogus(Nullable("selector2"))
         val unified   = selector1.unify(selector2)
         if (unified.isEmpty) SassNull
         else unified.get.asSassList
@@ -356,6 +364,8 @@ object SelectorFunctions {
       { args =>
         val sup = asSelectorList(args(0), "super")
         val sub = asSelectorList(args(1), "sub")
+        sup.assertNotBogus(Nullable("super"))
+        sub.assertNotBogus(Nullable("sub"))
         SassBoolean(sup.isSuperselector(sub))
       }
     )

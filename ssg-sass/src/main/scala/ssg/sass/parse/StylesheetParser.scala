@@ -629,6 +629,17 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val cvStart = scanner.state
         val varName = variableName()
+        if (varName.startsWith("-")) {
+          warnings += ParseTimeWarning(
+            Nullable(Deprecation.WithPrivate),
+            spanFrom(cvStart),
+            s"$$$$varName is a private variable and can't be configured with @use.\n\n" +
+              "More info and automated migrator: https://sass-lang.com/d/with-private"
+          )
+        }
+        if (configBuf.exists(_.name == varName)) {
+          error(s"The same variable may only be configured once.", spanFrom(cvStart))
+        }
         whitespace(consumeNewlines = true)
         scanner.expectChar(CharCode.$colon)
         whitespace(consumeNewlines = true)
@@ -725,6 +736,17 @@ abstract class StylesheetParser protected (
         whitespace(consumeNewlines = true)
         val cvStart = scanner.state
         val varName = variableName()
+        if (varName.startsWith("-")) {
+          warnings += ParseTimeWarning(
+            Nullable(Deprecation.WithPrivate),
+            spanFrom(cvStart),
+            s"$$$$varName is a private variable and can't be configured with @forward.\n\n" +
+              "More info and automated migrator: https://sass-lang.com/d/with-private"
+          )
+        }
+        if (fwdConfigBuf.exists(_.name == varName)) {
+          error(s"The same variable may only be configured once.", spanFrom(cvStart))
+        }
         whitespace(consumeNewlines = true)
         scanner.expectChar(CharCode.$colon)
         whitespace(consumeNewlines = true)
@@ -3012,6 +3034,21 @@ abstract class StylesheetParser protected (
     numExpr.unit.fold(SassNumber(numExpr.value))(u => SassNumber(numExpr.value, u))
   }
 
+  /** Parses the contents as a parameter list (expects `@rule name(params) {}`). */
+  def parseParameterList(): (ParameterList, List[ParseTimeWarning]) =
+    wrapSpanFormatException { () =>
+      scanner.expectChar(CharCode.$at)
+      identifier()
+      whitespace(consumeNewlines = true)
+      identifier()
+      val start  = scanner.state
+      val params = _parseParameterList(start)
+      whitespace(consumeNewlines = true)
+      scanner.expectChar(CharCode.$lbrace)
+      scanner.expectDone()
+      (params, warnings.toList)
+    }
+
   /** Parses the contents as a single variable declaration. */
   def parseVariableDeclaration(): (VariableDeclaration, List[ParseTimeWarning]) =
     wrapSpanFormatException { () =>
@@ -3160,7 +3197,31 @@ abstract class StylesheetParser protected (
           if (slashish) BinaryOperationExpression(operator, left, right, allowsSlash = true)
           else {
             allowSlash = false
-            BinaryOperationExpression(operator, left, right)
+            val expr = BinaryOperationExpression(operator, left, right)
+            if (operator == BinaryOperator.Plus || operator == BinaryOperator.Minus) {
+              val rightStart = right.span.start.offset
+              val leftEnd    = left.span.end.offset
+              if (
+                rightStart > 0 && leftEnd < scanner.string.length &&
+                scanner.string.charAt(rightStart - 1) == operator.operator.charAt(0) &&
+                CharCode.isWhitespace(scanner.string.charAt(leftEnd))
+              ) {
+                warnings += ParseTimeWarning(
+                  Nullable(Deprecation.StrictUnary),
+                  expr.span,
+                  s"This operation is parsed as:\n\n" +
+                    s"    $left ${operator.operator} $right\n\n" +
+                    s"but you may have intended it to mean:\n\n" +
+                    s"    $left (${operator.operator}$right)\n\n" +
+                    s"Add a space after ${operator.operator} to clarify that it's " +
+                    s"meant to be a binary operation, or wrap\n" +
+                    s"it in parentheses to make it a unary operation. This will be " +
+                    s"an error in future\nversions of Sass.\n\n" +
+                    s"More info and automated migrator: https://sass-lang.com/d/strict-unary"
+                )
+              }
+            }
+            expr
           }
         )
       }
@@ -3533,8 +3594,13 @@ abstract class StylesheetParser protected (
   private def _rdSelector(): SelectorExpression = {
     val start = scanner.state
     scanner.expectChar(CharCode.$ampersand)
-    // If & is followed by name characters, it's a suffix selector (&-foo)
-    // and the suffix is handled at the selector level, not expression level.
+    if (scanner.peekChar() == CharCode.$ampersand) {
+      warnings += ParseTimeWarning(
+        Nullable.empty,
+        spanFrom(start),
+        "In Sass, \"&&\" means two copies of the parent selector. You probably want to use \"and\" instead."
+      )
+    }
     SelectorExpression(spanFrom(start))
   }
 
@@ -5007,6 +5073,37 @@ abstract class StylesheetParser protected (
     result
   }
 
+  /** Wraps child parsing with style rule context tracking and empty-children warning for indented syntax. */
+  protected def _withStyleRuleChildren[T](
+    nodeWithSpan: ssg.sass.ast.AstNode,
+    start:        ssg.sass.util.LineScannerState,
+    create:       (List[Statement], FileSpan) => T
+  ): T = {
+    val wasInStyleRule = _inStyleRule
+    _inStyleRule = true
+    val kids = _children()
+    val span = spanFrom(start)
+    if (indented && kids.isEmpty) {
+      warnings += ParseTimeWarning(
+        Nullable.empty,
+        nodeWithSpan.span,
+        "This selector doesn't have any properties and won't be rendered."
+      )
+    }
+    _inStyleRule = wasInStyleRule
+    val result = create(kids, span)
+    whitespaceWithoutComments(consumeNewlines = false)
+    result
+  }
+
+  /** Wraps a parser call with span-format-exception handling and expectDone. */
+  protected def _parseSingleProduction[T](production: () => T): T =
+    wrapSpanFormatException { () =>
+      val result = production()
+      scanner.expectDone()
+      result
+    }
+
   /** dart-sass: `interpolatedString` — delegates to the faithful port above.
     */
   protected def _rdString(): StringExpression = interpolatedString()
@@ -5056,7 +5153,15 @@ abstract class StylesheetParser protected (
             val args      = _rdArgumentInvocation(start)
             val finalArgs = _rdMaybeUnpackColorArgs(plain, args)
             return if (finalArgs.positional.length == 3 && finalArgs.named.isEmpty) {
-              LegacyIfExpression(finalArgs, spanFrom(start))
+              val ifSpan = spanFrom(start)
+              warnings += ParseTimeWarning(
+                Nullable(Deprecation.IfFunction),
+                ifSpan,
+                "The Sass if($condition, $if-true, $if-false) function is deprecated.\n\n" +
+                  "Use the @if at-rule or the new CSS if() function instead.\n\n" +
+                  "More info and automated migrator: https://sass-lang.com/d/if-function"
+              )
+              LegacyIfExpression(finalArgs, ifSpan)
             } else {
               FunctionExpression(plain, finalArgs, spanFrom(start))
             }
@@ -5198,6 +5303,14 @@ abstract class StylesheetParser protected (
         buffer.addInterpolation(_rdInterpolatedDeclarationValue(allowEmpty = true))
         scanner.expectChar(CharCode.$rparen)
         buffer.writeCharCode(CharCode.$rparen)
+        if (vendored) {
+          warnings += ParseTimeWarning(
+            Nullable(Deprecation.FunctionName),
+            spanFrom(start),
+            "Vendor-prefixed progid:...() functions will no longer be supported in a future release of Dart Sass.\n\n" +
+              "More info: https://sass-lang.com/d/function-name"
+          )
+        }
         Nullable(StringExpression(buffer.interpolation(spanFrom(start))))
 
       case "url" =>
@@ -5523,6 +5636,14 @@ abstract class StylesheetParser protected (
           buffer.add(expr, span)
         } else if (c == CharCode.$rparen) {
           buffer.writeCharCode(scanner.readChar())
+          if (vendored) {
+            warnings += ParseTimeWarning(
+              Nullable(Deprecation.FunctionName),
+              spanFrom(start),
+              s"Vendor-prefixed $name() is deprecated and will be removed in a future release.\n\n" +
+                "More info: https://sass-lang.com/d/function-name"
+            )
+          }
           return Nullable(buffer.interpolation(spanFrom(start)))
         } else if (
           c == CharCode.$exclamation || c == CharCode.$percent ||

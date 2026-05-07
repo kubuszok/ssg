@@ -111,7 +111,7 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext pushes/pops a current context") {
     final class StubCtx(label: String) extends EvaluationContext {
-      def currentCallableNode:                                                       ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
+      def currentCallableSpan:                                                       ssg.sass.util.FileSpan = ssg.sass.util.FileSpan.bogusSpan
       def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit                 = ()
       override def toString:                                                         String               = s"Stub($label)"
     }
@@ -135,7 +135,7 @@ final class ModuleInfraSuite extends munit.FunSuite {
 
   test("EvaluationContext.withContext restores the previous context on exception") {
     final class StubCtx extends EvaluationContext {
-      def currentCallableNode:                                                       ssg.sass.ast.AstNode = null.asInstanceOf[ssg.sass.ast.AstNode] // @nowarn — null for stub
+      def currentCallableSpan:                                                       ssg.sass.util.FileSpan = ssg.sass.util.FileSpan.bogusSpan
       def warn(message: String, deprecation: Nullable[Deprecation] = Nullable.Null): Unit                 = ()
     }
     val ctx = new StubCtx

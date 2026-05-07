@@ -44,6 +44,9 @@ final class LazyFileSpan(builder: () => FileSpan) {
   def before(inner:        FileSpan):                 FileSpan         = span.before(inner)
   def after(inner:         FileSpan):                 FileSpan         = span.after(inner)
   def contains(target:     FileSpan):                 Boolean          = span.contains(target)
+  def context:                                        String           = span.context
+  def compareTo(other:     FileSpan):                 Int              = span.compareTo(other)
+  def union(other:         FileSpan):                 FileSpan         = span.union(other)
 
   override def toString: String = span.toString
 }

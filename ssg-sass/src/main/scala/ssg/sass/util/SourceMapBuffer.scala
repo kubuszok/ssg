@@ -86,7 +86,7 @@ final class SourceMapBuffer extends SassBuffer {
   }
 
   override def forSpan[T](span: FileSpan)(callback: => T): T = {
-    if (!inSpan) entries += ((span, _line, _column))
+    entries += ((span, _line, _column))
     val wasInSpan = inSpan
     inSpan = true
     val result = callback

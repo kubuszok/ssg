@@ -49,7 +49,7 @@ object Compile {
     */
   def compileString(
     source:              String,
-    style:               String = OutputStyle.Expanded,
+    style:               OutputStyle = OutputStyle.Expanded,
     importer:            Nullable[Importer] = Nullable.empty,
     sourceMap:           Boolean = false,
     syntax:              Syntax = Syntax.Scss,
@@ -108,7 +108,7 @@ object Compile {
     */
   def compile(
     path:                String,
-    style:               String = OutputStyle.Expanded,
+    style:               OutputStyle = OutputStyle.Expanded,
     syntax:              Nullable[Syntax] = Nullable.empty,
     logger:              Nullable[Logger] = Nullable.empty,
     importCache:         Nullable[ImportCache] = Nullable.empty,
@@ -135,7 +135,7 @@ object Compile {
     importCache: Nullable[ImportCache],
     importer:    Importer,
     functions:   Nullable[Iterable[Callable]],
-    style:       String,
+    style:       OutputStyle,
     quietDeps:   Boolean,
     sourceMap:   Boolean,
     charset:     Boolean

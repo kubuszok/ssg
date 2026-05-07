@@ -61,7 +61,15 @@ final class Interpolation(
           throw new IllegalArgumentException(
             "contents may not contain adjacent Strings."
           )
+        } else if (i < spans.length && spans(i).isDefined) {
+          throw new IllegalArgumentException(
+            s"spans may not have a value for string elements (at index $i)."
+          )
         }
+      } else if (i >= spans.length || spans(i).isEmpty) {
+        throw new IllegalArgumentException(
+          s"spans must have a value for expression elements (at index $i)."
+        )
       }
       i += 1
     }

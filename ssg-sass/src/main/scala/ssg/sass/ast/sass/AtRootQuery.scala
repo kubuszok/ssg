@@ -48,6 +48,17 @@ final class AtRootQuery(
   /** Returns whether `this` excludes an at-rule with the given [name]. */
   def excludesName(name: String): Boolean =
     (_all || names.contains(name)) != include
+
+  /** Returns whether `this` excludes [node]. */
+  def excludes(node: ssg.sass.ast.css.CssParentNode): Boolean =
+    if (_all) !include
+    else node match {
+      case _: ssg.sass.ast.css.CssStyleRule    => excludesStyleRules
+      case _: ssg.sass.ast.css.CssMediaRule    => excludesName("media")
+      case _: ssg.sass.ast.css.CssSupportsRule => excludesName("supports")
+      case r: ssg.sass.ast.css.CssAtRule       => excludesName(r.name.value.toLowerCase)
+      case _                                   => false
+    }
 }
 
 object AtRootQuery {
@@ -56,4 +67,7 @@ object AtRootQuery {
     * achieve the same by including "rule" in names.
     */
   val defaultQuery: AtRootQuery = new AtRootQuery(Set("rule"), include = false)
+
+  def parse(contents: String): AtRootQuery =
+    ssg.sass.parse.AtRootQueryParser.parseQuery(contents)
 }

@@ -88,7 +88,7 @@ abstract class SassNumber protected (
 
   /** Returns value as an Int, if it's an integer value according to isInt. Throws a SassScriptException if value isn't an integer.
     */
-  override def assertInt(name: Nullable[String]): Int = {
+  def assertInt(name: Nullable[String] = Nullable.Null): Int = {
     val integer = fuzzyAsInt(value)
     if (integer.isDefined) integer.get
     else throw SassScriptException(s"$this is not an int.", name.toOption)
@@ -234,6 +234,10 @@ abstract class SassNumber protected (
   /** A shorthand for coerceValue with only one numerator unit. */
   def coerceValueToUnit(unit: String, name: Nullable[String] = Nullable.Null): Double =
     coerceValue(List(unit), Nil, name)
+
+  @deprecated("Use coerceValue instead", "1.0.0")
+  def valueInUnits(newNumerators: List[String], newDenominators: List[String]): Double =
+    coerceValue(newNumerators, newDenominators)
 
   /** Returns a copy of this number, coerced to the same units as other. Unlike convertToMatch, treats unitless numbers as convertible to/from all units.
     */
@@ -404,7 +408,7 @@ abstract class SassNumber protected (
       throw SassScriptException(s"""Undefined operation "$this <= $other".""")
   }
 
-  override def modulo(other: Value): Value = other match {
+  override def modulo(other: Value): SassNumber = other match {
     case n: SassNumber =>
       withValue(coerceUnits(n, moduloLikeSass))
     case _ =>
