@@ -127,4 +127,4 @@ These rules apply when converting Java source files (from flexmark-java, liqp) t
 - Remove all `implements` (use `with`)
 - Ensure no bare `null` usage
 - Ensure no `return` statements
-- Run `ssg-dev quality scan` to verify
+- Run `re-scale enforce shortcuts` to verify

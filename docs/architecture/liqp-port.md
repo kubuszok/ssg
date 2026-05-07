@@ -106,7 +106,7 @@ Procedure (same as ssg-md):
 1. **LOC ratio** — `original-src/liqp/src/main/java/**/*.java` vs `ssg-liquid/src/main/scala/ssg/liquid/**/*.scala`. Expected scala/java ratio ≈ 0.85–1.0 (matches ssg-md baseline).
 2. **Stub sweep** over `ssg-liquid/src/main/scala`.
 3. **Spec coverage** — liqp ships its own test fixtures plus the Shopify Liquid spec. Verify every fixture is loaded by an ssg-liquid runner. The Shopify Liquid reference test suite should become the conformance target.
-4. **Audit DB** — `ssg-dev db audit set ... --status minor_issues|major_issues` for each gap; major gaps → `ssg-dev db issues add`.
+4. **Audit DB** — `re-scale db audit set ... --status minor_issues|major_issues` for each gap; major gaps → `re-scale db issues add`.
 
 ### Definition of done
 
