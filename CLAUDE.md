@@ -13,6 +13,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | dart-sass | Dart | `ssg-sass` | SASS/SCSS compiler |
 | jekyll-minifier | Ruby | `ssg-minify` | HTML/JS/CSS/JSON minification |
 | terser | JavaScript | `ssg-js` | JavaScript compiler/minifier |
+| tree-sitter | C/Rust | `ssg-highlight` | Syntax highlighting (73 grammars) |
 
 ## Build Rules
 
@@ -36,12 +37,14 @@ Scala.js, and Scala Native — without external binary dependencies.
 
 | Directory | Purpose |
 |-----------|---------|
+| `ssg-commons/` | Shared cross-platform utilities |
 | `ssg-md/` | Markdown engine (flexmark-java port) |
 | `ssg-liquid/` | Liquid template engine (liqp port) |
 | `ssg-sass/` | SASS/SCSS compiler (dart-sass port) |
 | `ssg-minify/` | HTML/JS/CSS/JSON minification (jekyll-minifier port) |
 | `ssg-js/` | JavaScript compiler/minifier (Terser port) |
-| `ssg/` | Aggregator module (depends on all 4 above) |
+| `ssg-highlight/` | Syntax highlighting (tree-sitter, 73 grammars) |
+| `ssg/` | Aggregator module (depends on all above) |
 | `.rescale/` | Per-project re-scale config + data |
 | `.rescale/data/` | TSV databases (migration, issues, audit, skip-policy, sass-spec-baseline, port-tasks) |
 | `.rescale/claude-hooks.yaml` | (optional) per-project hook overrides |
@@ -52,6 +55,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `original-src/liqp/` | Local liqp reference |
 | `original-src/dart-sass/` | Local dart-sass reference |
 | `original-src/jekyll-minifier/` | Local jekyll-minifier reference |
+| `original-src/terser/` | Local terser reference |
 | `docs/` | Architecture, conversion guides |
 | `project/` | sbt build configuration |
 
@@ -94,18 +98,6 @@ the Scala Native binary, and adds `bin/` to PATH for the session.
 | `re-scale runner <name> [--mode MODE] [args...]` | Dispatch a runner from `.rescale/runners.yaml` |
 
 Use `re-scale db` for all migration/issues/audit queries — never read TSVs by hand.
-
-### Sass-port workflow note
-
-The legacy `ssg-dev port list/next/baseline/done/blocker/note/snapshot/report`
-task workflow (driven by `.rescale/data/port-tasks.tsv` and the SassSpec
-runner) is sass-port-specific and **not** in re-scale's core. The TSV
-files have been moved to `.rescale/data/` for consistency, but until
-either (a) a `re-scale tasks` generic task module ships or (b) the
-sass-spec workflow gets wired through `.rescale/runners.yaml`, the
-sass-port branch will need to either work around it manually or build
-its own thin wrapper. See `re-scale/docs/cross-flavor-diff.md` for
-the rationale.
 
 ## Bash Restrictions
 
@@ -164,6 +156,9 @@ Path mappings for each library:
 | jekyll-minifier | `original-src/jekyll-minifier/lib/` | `ssg-minify/src/main/scala/ssg/minify/` |
 | terser | `original-src/terser/lib/` | `ssg-js/src/main/scala/ssg/js/` |
 
+`ssg-highlight` wraps tree-sitter via FFI (not a source-level port) and has
+no original-src mapping. `ssg-commons` contains SSG-native shared utilities.
+
 **Never fetch from GitHub** — always use the local submodule copies.
 
 ## Audit System
@@ -180,13 +175,8 @@ Each audited file gets a `Migration notes:` block in its header comment.
 
 All porting work MUST use the **implement → audit → fix → re-audit** loop.
 Never consider porting work "done" after a single implementation pass.
-
-### Agents
-
-| Agent | File | Role | Can edit code? |
-|-------|------|------|---------------|
-| `port-implementer` | `.claude/agents/port-implementer.md` | Ports original code to Scala 3 | Yes |
-| `port-auditor` | `.claude/agents/port-auditor.md` | Compares port against original, finds gaps | No (read-only + issues DB) |
+Use the `re-scale:port-implementer` and `re-scale:port-auditor` agents
+(available as skills) to execute this workflow.
 
 ### The loop
 

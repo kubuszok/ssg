@@ -27,7 +27,7 @@ Quick-reference for the current state of the flexmark-java → `ssg-md` port.
 | AST nodes | `ssg.md.ast` + `ssg.md.ast.util` | ~68 | 624/624 CommonMark |
 | Parser | `ssg.md.parser.*` | ~68 | 624/624 CommonMark |
 | HTML Renderer | `ssg.md.html.*` | ~39 | 624/624 CommonMark |
-| Formatter | `ssg.md.formatter.*` | ~26 | Ported, untested |
+| Formatter | `ssg.md.formatter.*` | ~26 | Ported, tested |
 
 ### Extensions — All Ported & Tested
 
@@ -71,9 +71,9 @@ See [flexmark-port.md](flexmark-port.md) for reasons.
 
 | Platform | Tests | Status |
 |----------|-------|--------|
-| JVM | 1645/1645 | 100% |
-| Scala Native | 1645/1645 | 100% |
-| Scala.js | Compiles | Test linking blocked (resource loading) |
+| JVM | 5889/5889 | 100% |
+| Scala Native | 5889/5889 | 100% |
+| Scala.js | 5889/5889 | 100% |
 
 ## Known Technical Debt
 
