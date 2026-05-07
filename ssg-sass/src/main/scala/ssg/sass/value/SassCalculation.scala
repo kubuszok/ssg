@@ -520,7 +520,8 @@ object SassCalculation {
     numberOrStep:         Nullable[Any],
     step:                 Nullable[Any],
     inLegacySassFunction: Nullable[String],
-    warn:                 Nullable[(String, Nullable[Deprecation]) => Unit]
+    warn:                 Nullable[(String, Nullable[Deprecation]) => Unit],
+    span:                 Nullable[ssg.sass.util.FileSpan] = Nullable.empty
   ): Value = {
     val simplifiedStrategy = _simplify(strategyOrNumber)
     val simplifiedNumberOrStep: Nullable[Any] = numberOrStep.map(_simplify)
@@ -1006,8 +1007,7 @@ final case class CalculationOperation(
 ) {
 
   override def toString: String =
-    // Basic toString; full serialization postponed until serializer is ported
-    s"$left ${operator.operator} $right"
+    SassCalculation.argumentToCss(this)
 }
 
 /** An enumeration of possible operators for CalculationOperation. */

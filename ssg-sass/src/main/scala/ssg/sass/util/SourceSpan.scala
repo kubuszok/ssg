@@ -243,6 +243,29 @@ final case class FileSpan(
       start.offset <= target.start.offset &&
       end.offset >= target.end.offset
 
+  /** The source text of the line containing [start]. */
+  def context: String = {
+    val text     = file.getText(0)
+    val lineStart = text.lastIndexOf('\n', math.max(0, start.offset - 1)) + 1
+    val lineEnd   = text.indexOf('\n', start.offset)
+    text.substring(lineStart, if (lineEnd < 0) text.length else lineEnd)
+  }
+
+  /** Compares this span to [other] by start offset, then by length. */
+  def compareTo(other: FileSpan): Int = {
+    val c = Integer.compare(start.offset, other.start.offset)
+    if (c != 0) c else Integer.compare(length, other.length)
+  }
+
+  /** Returns a span that covers both this and [other]. */
+  def union(other: FileSpan): FileSpan = {
+    if (sourceUrl != other.sourceUrl)
+      throw new IllegalArgumentException(s"$this and $other are in different files.")
+    val newStart = math.min(start.offset, other.start.offset)
+    val newEnd   = math.max(end.offset, other.end.offset)
+    file.span(newStart, newEnd)
+  }
+
   override def toString: String = {
     val name = file.url.getOrElse("<unknown>")
     s"FileSpan($name:${start.line + 1}:${start.column + 1}-${end.line + 1}:${end.column + 1})"
@@ -250,6 +273,9 @@ final case class FileSpan(
 }
 
 object FileSpan {
+
+  /** A span with no real source location, used as a placeholder where a span is required but none exists. */
+  val bogusSpan: FileSpan = synthetic("")
 
   /** Creates a synthetic span with no real source location. */
   def synthetic(text: String): FileSpan = {

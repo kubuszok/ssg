@@ -215,7 +215,13 @@ object BuiltInCallable {
     callback:       List[Value] => Value,
     acceptsContent: Boolean = false
   ): BuiltInCallable =
-    BuiltInCallable(name, Nullable.empty, callback, acceptsContent, signature = arguments)
+    BuiltInCallable(
+      name,
+      Nullable.empty,
+      args => { callback(args); ssg.sass.value.SassNull },
+      acceptsContent,
+      signature = arguments
+    )
 
   /** Builds a built-in callable that dispatches by arity.
     *

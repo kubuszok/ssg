@@ -218,12 +218,8 @@ object MetaFunctions {
             }.toList
             SassMap(ListMap.from(entries))
           case _: SassList =>
-            // ssg-sass's binder sometimes converts SassArgumentList to a
-            // plain SassList for positional-only rest calls. Until the
-            // binder is fixed, fall back to an empty map.
             SassMap.empty
           case other =>
-            // dart-sass: `$args: X is not an argument list.`
             throw SassScriptException(s"$$args: $other is not an argument list.")
         }
     )

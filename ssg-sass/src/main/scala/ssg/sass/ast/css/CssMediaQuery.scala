@@ -212,6 +212,10 @@ final class CssMediaQuery private (
 
 object CssMediaQuery {
 
+  /** Parses [text] as a comma-separated list of media queries. */
+  def parseList(text: String): List[CssMediaQuery] =
+    ssg.sass.parse.MediaQueryParser.parseList(text)
+
   /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes (nested parens, no colon) alone.
     */
   private[sass] def normalizeCondition(cond: String): String = {

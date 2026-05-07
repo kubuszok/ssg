@@ -204,15 +204,18 @@ object CharCode {
   /** Converts a value 0-9 to a digit character code. */
   def decimalCharFor(number: Int): Int = $0 + number
 
-  /** Returns the closing bracket for an opening bracket, and vice versa. */
+  /** Returns the closing bracket for an opening bracket.
+    *
+    * Assumes [c] is a left-hand brace-like character.
+    */
   def opposite(c: Int): Int = c match {
     case `$lparen`   => $rparen
-    case `$rparen`   => $lparen
     case `$lbracket` => $rbracket
-    case `$rbracket` => $lbracket
     case `$lbrace`   => $rbrace
-    case `$rbrace`   => $lbrace
-    case _           => throw new IllegalArgumentException(s"Not a bracket: ${c.toChar}")
+    case _ =>
+      throw new IllegalArgumentException(
+        s"'${c.toChar}' isn't a brace-like character."
+      )
   }
 
   /** Converts an ASCII character to uppercase. */

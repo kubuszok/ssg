@@ -281,7 +281,17 @@ final class ImportCache(
           // already an absolute path or has a scheme, use it directly.
           val effectiveUrl =
             if (hasScheme(canonicalUrl) || canonicalUrl.startsWith("/")) canonicalUrl
-            else originalUrl.fold(canonicalUrl)(orig => canonicalUrl)
+            else {
+              if (originalUrl.isDefined) {
+                logger.foreach(_.warnForDeprecation(
+                  Deprecation.RelativeCanonical,
+                  "Importer $importer canonicalized $originalUrl to the relative URL $canonicalUrl.\n" +
+                    "Relative canonical URLs are deprecated and will be removed in a future release.\n\n" +
+                    "More info: https://sass-lang.com/d/relative-canonical"
+                ))
+              }
+              originalUrl.fold(canonicalUrl)(orig => canonicalUrl)
+            }
 
           // Pick the parser based on the importer's declared syntax
           // (falling back to the canonical URL's extension when the

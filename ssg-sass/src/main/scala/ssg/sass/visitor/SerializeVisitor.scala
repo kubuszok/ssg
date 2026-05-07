@@ -28,7 +28,7 @@ package visitor
 
 import ssg.sass.{ ColorNames, MultiSpanSassException, MultiSpanSassScriptException, Nullable, SassException, SassScriptException }
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaQuery, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
-import ssg.sass.ast.selector.{ ComplexSelector, SelectorList }
+import ssg.sass.ast.selector.{ AttributeSelector, ClassSelector, ComplexSelector, CompoundSelector, IDSelector, ParentSelector, PlaceholderSelector, PseudoSelector, SelectorList, SelectorVisitor, TypeSelector, UniversalSelector }
 import ssg.sass.util.NumberUtil
 import ssg.sass.value.{
   CalculationOperation,
@@ -53,11 +53,21 @@ import ssg.sass.value.color.{ ColorSpace, LinearChannel }
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Output style for serialization: "expanded" (default, multi-line) or "compressed" (single-line, no whitespace).
-  */
-object OutputStyle {
-  val Expanded:   String = "expanded"
-  val Compressed: String = "compressed"
+/** Output style for serialization. */
+enum OutputStyle extends java.lang.Enum[OutputStyle] {
+  case Expanded, Compressed
+}
+
+/** Line feed format for CSS output. */
+enum LineFeed extends java.lang.Enum[LineFeed] {
+  case Cr, CrLf, Lf, LfCr
+
+  def text: String = this match {
+    case Cr   => "\r"
+    case CrLf => "\r\n"
+    case Lf   => "\n"
+    case LfCr => "\n\r"
+  }
 }
 
 /** Result of serializing a CSS AST: the CSS text plus an optional source map. */
@@ -65,11 +75,11 @@ final case class SerializeResult(css: String, sourceMap: Nullable[String] = Null
 
 /** A visitor that converts a CSS AST into CSS text. */
 final class SerializeVisitor(
-  val style:         String = OutputStyle.Expanded,
+  val style:         OutputStyle = OutputStyle.Expanded,
   val inspect:       Boolean = false,
   val sourceMap:     Boolean = false,
   private val quote: Boolean = true
-) extends CssVisitor[Unit] {
+) extends CssVisitor[Unit] with ValueVisitor[Unit] with SelectorVisitor[Unit] {
 
   private val buffer = new StringBuilder()
   private var indentLevel: Int = 0
@@ -170,7 +180,7 @@ final class SerializeVisitor(
     * real segment remains column-0; we approximate this by keeping the source-map segment table untouched when the prefix is emitted as expanded, since the prefix ends in a newline and the first real
     * line is still line 1 in the emitted output. For compressed mode the BOM is a single char that does not move the column index in source maps (browsers treat it as a file-level byte marker).
     */
-  def serialize(node: CssStylesheet): SerializeResult = {
+  def serialize(node: CssStylesheet, charset: Boolean = true): SerializeResult = {
     buffer.clear()
     indentLevel = 0
     genLine = 0
@@ -186,7 +196,7 @@ final class SerializeVisitor(
     if (!isCompressed && buffer.nonEmpty) buffer.append('\n')
     val css = buffer.toString()
     val prefix: String =
-      if (containsNonAscii(css) && !css.startsWith("@charset")) {
+      if (charset && containsNonAscii(css)) {
         if (isCompressed) "\uFEFF" else "@charset \"UTF-8\";\n"
       } else ""
     val mapJson: Nullable[String] =
@@ -437,6 +447,41 @@ final class SerializeVisitor(
   /** Public forwarder so the companion-object `serializeValue` entry point can reach the private formatter without exposing it to unrelated consumers.
     */
   private[visitor] def formatValuePublic(v: Value): String = formatValue(v)
+
+  // ---------------------------------------------------------------------------
+  // ValueVisitor[Unit] implementation
+  // Each method writes to `buffer` directly.
+  // ---------------------------------------------------------------------------
+
+  override def visitBoolean(value: SassBoolean): Unit =
+    buffer.append(value.value.toString)
+
+  override def visitCalculation(value: SassCalculation): Unit =
+    buffer.append(formatCalculation(value))
+
+  override def visitColor(value: SassColor): Unit =
+    buffer.append(formatColorDispatch(value))
+
+  override def visitFunction(value: SassFunction): Unit =
+    buffer.append(formatFunction(value))
+
+  override def visitList(value: SassList): Unit =
+    buffer.append(formatList(value))
+
+  override def visitMap(value: SassMap): Unit =
+    buffer.append(formatMap(value))
+
+  override def visitMixin(value: SassMixin): Unit =
+    buffer.append(formatMixin(value))
+
+  override def visitNull(): Unit =
+    if (inspect) buffer.append("null")
+
+  override def visitNumber(value: SassNumber): Unit =
+    buffer.append(formatSassNumber(value))
+
+  override def visitString(value: SassString): Unit =
+    buffer.append(formatString(value))
 
   // ---------------------------------------------------------------------------
   // visitFunction / visitMixin
@@ -817,7 +862,7 @@ final class SerializeVisitor(
     writeChannel(sb, Nullable(rgb.channel("blue")))
     if (!opaque) {
       sb.append(commaSeparator)
-      writeChannel(sb, Nullable(color.alpha))
+      writeNumberTo(sb, color.alpha)
     }
     sb.append(')')
     sb.toString()
@@ -1247,8 +1292,8 @@ final class SerializeVisitor(
     if (!inspect) {
       throw SassScriptException(s"$m isn't a valid CSS value.")
     }
-    val sep       = if (isCompressed) "," else ", "
-    val kvSpacing = if (isCompressed) "" else " "
+    val sep       = ", "
+    val kvSpacing = " "
     // In inspect mode, wrap key/value sub-lists whose separator would
     // be ambiguous with the outer comma-separated map layout (e.g.
     // `((1, 2): 3)` vs `(1, 2: 3)`). Port of dart-sass's
@@ -1696,6 +1741,80 @@ final class SerializeVisitor(
     sb.append(']')
   }
 
+  // ---------------------------------------------------------------------------
+  // SelectorVisitor[Unit] implementation
+  // Each method writes to `buffer` directly.
+  // ---------------------------------------------------------------------------
+
+  override def visitSelectorList(list: SelectorList): Unit = {
+    val complexes = if (inspect) list.components else list.components.filterNot(_.isInvisible)
+    writeSelectorListTo(buffer, complexes)
+  }
+
+  override def visitComplexSelector(complex: ComplexSelector): Unit =
+    writeComplexSelectorTo(buffer, complex)
+
+  override def visitCompoundSelector(compound: CompoundSelector): Unit =
+    writeCompoundSelectorTo(buffer, compound)
+
+  override def visitAttributeSelector(attribute: AttributeSelector): Unit =
+    writeAttributeSelectorTo(buffer, attribute)
+
+  override def visitClassSelector(klass: ClassSelector): Unit = {
+    buffer.append('.')
+    buffer.append(klass.name)
+  }
+
+  override def visitIDSelector(id: IDSelector): Unit = {
+    buffer.append('#')
+    buffer.append(id.name)
+  }
+
+  override def visitParentSelector(parent: ParentSelector): Unit = {
+    buffer.append('&')
+    parent.suffix.foreach(s => buffer.append(s))
+  }
+
+  override def visitPlaceholderSelector(placeholder: PlaceholderSelector): Unit = {
+    buffer.append('%')
+    buffer.append(placeholder.name)
+  }
+
+  override def visitPseudoSelector(pseudo: PseudoSelector): Unit = {
+    if (pseudo.selector.isDefined) {
+      val sel = pseudo.selector.get
+      if (pseudo.name == "not" && sel.isInvisible) return
+    }
+    buffer.append(if (pseudo.isSyntacticClass) ":" else "::")
+    buffer.append(pseudo.name)
+    if (pseudo.argument.isDefined || pseudo.selector.isDefined) {
+      buffer.append('(')
+      pseudo.argument.foreach { arg =>
+        buffer.append(arg)
+        if (pseudo.selector.isDefined) buffer.append(' ')
+      }
+      pseudo.selector.foreach { sel =>
+        val complexes = if (inspect) sel.components else sel.components.filterNot(_.isInvisible)
+        if (complexes.nonEmpty) writeSelectorListTo(buffer, complexes)
+      }
+      buffer.append(')')
+    }
+  }
+
+  override def visitTypeSelector(tpe: TypeSelector): Unit = {
+    buffer.append(tpe.name.toString)
+  }
+
+  override def visitUniversalSelector(universal: UniversalSelector): Unit = {
+    universal.namespace.foreach { ns =>
+      buffer.append(ns)
+      buffer.append('|')
+    }
+    buffer.append('*')
+  }
+
+  // ---------------------------------------------------------------------------
+
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
     // Record one mapping for the property name and a second for the value
     // so debuggers can highlight either side of the `name: value;` pair.
@@ -1767,8 +1886,8 @@ final class SerializeVisitor(
       } else {
         buffer.append(' ')
         i += 1
-        // Skip following whitespace.
-        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r'))
+        // Skip following whitespace (space, tab, LF, CR, form-feed).
+        while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t' || text.charAt(i) == '\n' || text.charAt(i) == '\r' || text.charAt(i) == '\f'))
           i += 1
       }
     }
@@ -1916,11 +2035,8 @@ final class SerializeVisitor(
   override def visitCssComment(node: CssComment): Unit = {
     // In compressed mode, only preserve /*! comments
     if (isCompressed && !node.isPreserved) return
-    // dart-sass serialize.dart:200-202: strip sourceMappingURL and sourceURL comments
-    if (node.text.startsWith("/*# source")) {
-      val lower = node.text.toLowerCase
-      if (lower.startsWith("/*# sourcemappingurl=") || lower.startsWith("/*# sourceurl=")) return
-    }
+    // dart-sass serialize.dart:200-202: strip sourceMappingURL and sourceURL comments (case-sensitive)
+    if (node.text.startsWith("/*# sourceMappingURL=") || node.text.startsWith("/*# sourceURL=")) return
 
     // dart-sass serialize.dart:204-217: multi-line comment reindentation.
     // When a loud comment spans multiple lines and is inside an indented
@@ -1932,14 +2048,15 @@ final class SerializeVisitor(
     // (writeChildrenIn / visitCssStylesheet), so we only handle internal
     // reindentation here.
     val minIndent = minimumIndentation(node.text)
-    if (minIndent != Int.MaxValue && minIndent >= 0) {
-      // The comment has newlines with indented content; reindent relative
-      // to the current indentation and the comment's original start column.
-      val effectiveMinIndent = math.min(minIndent, node.span.start.column)
-      writeWithIndent(node.text, effectiveMinIndent)
-    } else {
-      // Single-line comment or no indented content: emit verbatim.
+    if (minIndent == Int.MaxValue) {
+      // No newlines: emit verbatim.
       buffer.append(node.text)
+    } else {
+      // Multi-line comment: reindent relative to the current indentation.
+      val effectiveMinIndent =
+        if (minIndent == -1) node.span.start.column
+        else math.min(minIndent, node.span.start.column)
+      writeWithIndent(node.text, effectiveMinIndent)
     }
   }
 
@@ -2078,9 +2195,23 @@ object SerializeVisitor {
   def serialize(node: CssStylesheet): SerializeResult =
     new SerializeVisitor().serialize(node)
 
+  /** Serialize a single [[CssNode]] in inspect mode, for use in `CssNode.toString`. */
+  def serializeCssNode(node: CssNode): String = {
+    val visitor = new SerializeVisitor(inspect = true)
+    node.accept(visitor)
+    visitor.buffer.toString()
+  }
+
   /** Serialize compressed (minified). */
   def serializeCompressed(node: CssStylesheet): SerializeResult =
     new SerializeVisitor(style = OutputStyle.Compressed).serialize(node)
+
+  /** Serialize a [[SelectorList]] to CSS text. */
+  def serializeSelector(selector: SelectorList, inspect: Boolean = false): String = {
+    val visitor = new SerializeVisitor(inspect = inspect)
+    selector.accept(visitor)
+    visitor.buffer.toString()
+  }
 
   /** Convert a [[Value]] to its CSS text form using the same formatting rules the full stylesheet serializer uses for declarations.
     *
@@ -2091,7 +2222,8 @@ object SerializeVisitor {
     */
   def serializeValue(value: Value, inspect: Boolean = false, quote: Boolean = true): String = {
     val visitor = new SerializeVisitor(inspect = inspect, quote = quote)
-    visitor.formatValuePublic(value)
+    value.accept(visitor)
+    visitor.buffer.toString()
   }
 
   /** Renders `number` in the way dart-sass does before [[removeExponent]] runs.

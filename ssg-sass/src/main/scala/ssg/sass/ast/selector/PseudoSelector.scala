@@ -164,7 +164,7 @@ final class PseudoSelector(
 
   override def isSuperselector(other: SimpleSelector): Boolean =
     if (super.isSuperselector(other)) true
-    else if (selector.isEmpty) this == other
+    else if (selector.isEmpty) false
     else {
       val sel = selector.get
       other match {

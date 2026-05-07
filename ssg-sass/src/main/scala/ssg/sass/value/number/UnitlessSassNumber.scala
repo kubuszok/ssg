@@ -135,7 +135,7 @@ final class UnitlessSassNumber(
     case _ => super.lessThanOrEquals(other)
   }
 
-  override def modulo(other: Value): Value = other match {
+  override def modulo(other: Value): SassNumber = other match {
     case n: SassNumber => n.withValue(moduloLikeSass(value, n.value))
     case _ => super.modulo(other)
   }

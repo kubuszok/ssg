@@ -101,6 +101,10 @@ abstract class Expression extends SassNode {
   /** Calls the appropriate visit method on [visitor]. */
   def accept[T](visitor: ExpressionVisitor[T]): T
 
+  /** Returns whether this is valid plain CSS (no Sass-specific constructs). */
+  def isPlainCss: Boolean =
+    accept(new ssg.sass.visitor.IsPlainCssVisitor())
+
   /** If this expression is valid interpolated plain CSS, returns the equivalent of parsing its source as an interpolated unknown value.
     *
     * Otherwise, returns empty.
@@ -139,6 +143,15 @@ abstract class Expression extends SassNode {
       }
     case _: VariableExpression => true
     case _ => false
+  }
+}
+
+object Expression {
+
+  /** Parses an expression from [source]. */
+  def parse(source: String): Expression = {
+    val (expr, _) = new ssg.sass.parse.ScssParser(source).parseExpression()
+    expr
   }
 }
 
