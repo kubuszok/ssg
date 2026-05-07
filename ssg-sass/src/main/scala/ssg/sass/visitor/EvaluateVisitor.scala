@@ -1452,15 +1452,18 @@ final class EvaluateVisitor(
   }
 
   override def visitLegacyIfExpression(node: LegacyIfExpression): Value = {
-    // Three-argument macro form of `if($condition, $if-true, $if-false)`.
-    // dart-sass uses _evaluateMacroArguments + _withoutSlash to strip slash
-    // info from the result (evaluate.dart:2981-2993).
     val positional = node.arguments.positional
-    if (positional.length < 3) {
-      throw SassScriptException("Missing arguments to if().")
-    }
-    val condition = positional(0).accept(this)
-    val result    = if (condition.isTruthy) positional(1) else positional(2)
+    val named      = node.arguments.named
+
+    val condition = if (positional.nonEmpty) positional(0)
+                    else named.getOrElse("condition",
+                      throw SassScriptException("Missing argument $condition."))
+    val ifTrue = positional.lift(1).orElse(named.get("if-true")).getOrElse(
+      throw SassScriptException("Missing argument $if-true."))
+    val ifFalse = positional.lift(2).orElse(named.get("if-false")).getOrElse(
+      throw SassScriptException("Missing argument $if-false."))
+
+    val result = if (condition.accept(this).isTruthy) ifTrue else ifFalse
     _withoutSlash(result.accept(this), _expressionNode(result))
   }
 
