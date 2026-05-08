@@ -22,18 +22,18 @@ package util
 
 /** Trait for CSS output buffers, with optional source map tracking. */
 trait SassBuffer {
-  def write(obj:          Any):                            Unit
-  def writeCharCode(code: Int):                            Unit
-  def writeln(obj:        Any = ""):                       Unit
-  def writeAll(objs:      Iterable[Any], sep: String = ""): Unit = write(objs.mkString(sep))
-  def forSpan[T](span:    FileSpan)(callback: => T):       T
-  def length:                                              Int
-  def isEmpty:                                             Boolean
-  def isNotEmpty:                                          Boolean = !isEmpty
-  override def toString:                                   String
+  def write(obj:          Any):                             Unit
+  def writeCharCode(code: Int):                             Unit
+  def writeln(obj:        Any = ""):                        Unit
+  def writeAll(objs:      Iterable[Any], sep: String = ""): Unit    = write(objs.mkString(sep))
+  def forSpan[T](span:    FileSpan)(callback: => T):        T
+  def length:                                               Int
+  def isEmpty:                                              Boolean
+  def isNotEmpty:                                           Boolean = !isEmpty
+  override def toString:                                    String
 
-  final def append(obj: Any): SassBuffer = { write(obj); this }
-  final def append(c: Char): SassBuffer = { writeCharCode(c.toInt); this }
+  final def append(obj: Any):  SassBuffer = { write(obj); this }
+  final def append(c:   Char): SassBuffer = { writeCharCode(c.toInt); this }
 }
 
 /** A buffer that outputs CSS without tracking source maps. */
@@ -51,6 +51,10 @@ final class NoSourceMapBuffer extends SassBuffer {
   }
 
   override def forSpan[T](span: FileSpan)(callback: => T): T = callback
+
+  def clear():                             Unit   = throw new UnsupportedOperationException("NoSourceMapBuffer.clear()")
+  def buildSourceMap(prefix: String = ""): String =
+    throw new UnsupportedOperationException("NoSourceMapBuffer.buildSourceMap()")
 
   override def length: Int = buffer.length
 
@@ -75,7 +79,7 @@ final class SourceMapBuffer extends SassBuffer {
 
   override def write(obj: Any): Unit = {
     val str = obj.toString
-    var i = 0
+    var i   = 0
     while (i < str.length) {
       if (str.charAt(i) == '\n') _writeLine()
       else _column += 1
@@ -96,9 +100,8 @@ final class SourceMapBuffer extends SassBuffer {
     writeCharCode(CharCode.$lf)
   }
 
-  override def writeAll(objs: Iterable[Any], sep: String = ""): Unit = {
+  override def writeAll(objs: Iterable[Any], sep: String = ""): Unit =
     write(objs.mkString(sep))
-  }
 
   def clear(): Unit =
     throw new UnsupportedOperationException("SourceMapBuffer.clear() is not supported.")
@@ -107,9 +110,8 @@ final class SourceMapBuffer extends SassBuffer {
     _addEntry(span)
     val wasInSpan = _inSpan
     _inSpan = true
-    val result = callback
-    _inSpan = wasInSpan
-    result
+    try callback
+    finally _inSpan = wasInSpan
   }
 
   private def _addEntry(span: FileSpan): Unit = {
@@ -145,28 +147,25 @@ final class SourceMapBuffer extends SassBuffer {
 
   override def toString: String = buffer.toString()
 
-  /** Returns the collected source map entries as a list of
-    * (sourceUrl, sourceLine, sourceCol, targetLine, targetCol) tuples.
+  /** Returns the collected source map entries as a list of (sourceUrl, sourceLine, sourceCol, targetLine, targetCol) tuples.
     */
   def sourceMapEntries: List[(Nullable[String], Int, Int, Int, Int)] = _entries.toList
 
   /** Builds a VLQ-encoded source map JSON string.
     *
-    * Port of dart-sass `buildSourceMap()`. The optional [prefix] adjusts
-    * target positions — useful when the CSS output is prepended with
-    * a string not tracked by this buffer.
+    * Port of dart-sass `buildSourceMap()`. The optional [prefix] adjusts target positions — useful when the CSS output is prepended with a string not tracked by this buffer.
     */
   def buildSourceMap(prefix: String = ""): String = {
     val prefixLines   = prefix.count(_ == '\n')
     val prefixLastCol = prefix.length - prefix.lastIndexOf('\n') - 1
 
-    val sources     = scala.collection.mutable.LinkedHashMap.empty[String, Int]
+    val sources      = scala.collection.mutable.LinkedHashMap.empty[String, Int]
     val mappingLines = scala.collection.mutable.ArrayBuffer.empty[scala.collection.mutable.ArrayBuffer[(Int, Int, Int, Int)]]
 
     for ((srcUrl, srcLine, srcCol, tgtLine, tgtCol) <- _entries) {
       val adjustedLine = tgtLine + prefixLines
       val adjustedCol  = if (tgtLine == 0) tgtCol + prefixLastCol else tgtCol
-      val srcIdx = srcUrl.fold(-1) { url =>
+      val srcIdx       = srcUrl.fold(-1) { url =>
         sources.getOrElseUpdate(url, sources.size)
       }
       if (srcIdx >= 0) {
@@ -177,7 +176,7 @@ final class SourceMapBuffer extends SassBuffer {
     }
 
     val mappingsStr = new StringBuilder()
-    var prevGenCol = 0; var prevSrcIdx = 0; var prevSrcLine = 0; var prevSrcCol = 0
+    var prevGenCol  = 0; var prevSrcIdx = 0; var prevSrcLine = 0; var prevSrcCol = 0
     for (lineIdx <- mappingLines.indices) {
       if (lineIdx > 0) mappingsStr.append(';')
       prevGenCol = 0
@@ -185,10 +184,10 @@ final class SourceMapBuffer extends SassBuffer {
       for (segIdx <- segs.indices) {
         if (segIdx > 0) mappingsStr.append(',')
         val (genCol, srcIdx, srcLine, srcCol) = segs(segIdx)
-        _vlqEncode(mappingsStr, genCol - prevGenCol);       prevGenCol = genCol
-        _vlqEncode(mappingsStr, srcIdx - prevSrcIdx);       prevSrcIdx = srcIdx
-        _vlqEncode(mappingsStr, srcLine - prevSrcLine);     prevSrcLine = srcLine
-        _vlqEncode(mappingsStr, srcCol - prevSrcCol);       prevSrcCol = srcCol
+        _vlqEncode(mappingsStr, genCol - prevGenCol); prevGenCol = genCol
+        _vlqEncode(mappingsStr, srcIdx - prevSrcIdx); prevSrcIdx = srcIdx
+        _vlqEncode(mappingsStr, srcLine - prevSrcLine); prevSrcLine = srcLine
+        _vlqEncode(mappingsStr, srcCol - prevSrcCol); prevSrcCol = srcCol
       }
     }
 
@@ -200,7 +199,7 @@ final class SourceMapBuffer extends SassBuffer {
   private val VlqChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
   private def _vlqEncode(sb: StringBuilder, value: Int): Unit = {
-    var v = if (value < 0) ((-value) << 1) | 1 else value << 1
+    var v        = if (value < 0) ((-value) << 1) | 1 else value << 1
     var continue = true
     while (continue) {
       var digit = v & 0x1f

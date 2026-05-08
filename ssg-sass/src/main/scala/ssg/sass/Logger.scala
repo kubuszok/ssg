@@ -56,8 +56,8 @@ object Logger {
   /** A logger that silently ignores all messages. */
   val quiet: Logger = QuietLogger
 
-  /** The default logger (prints to stderr without colors). */
-  val default: Logger = StderrLogger(color = System.console() != null)
+  /** The default logger, with color chosen based on terminal support. */
+  val default: Logger = StderrLogger(color = ssg.sass.util.TerminalPlatform.supportsColor)
 }
 
 /** A logger that emits no messages. */

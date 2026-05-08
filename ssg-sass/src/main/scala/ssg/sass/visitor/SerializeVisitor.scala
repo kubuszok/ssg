@@ -28,7 +28,20 @@ package visitor
 
 import ssg.sass.{ ColorNames, MultiSpanSassException, MultiSpanSassScriptException, Nullable, SassException, SassScriptException }
 import ssg.sass.ast.css.{ CssAtRule, CssComment, CssDeclaration, CssImport, CssKeyframeBlock, CssMediaQuery, CssMediaRule, CssNode, CssParentNode, CssStyleRule, CssStylesheet, CssSupportsRule }
-import ssg.sass.ast.selector.{ AttributeSelector, ClassSelector, ComplexSelector, CompoundSelector, IDSelector, ParentSelector, PlaceholderSelector, PseudoSelector, SelectorList, SelectorVisitor, TypeSelector, UniversalSelector }
+import ssg.sass.ast.selector.{
+  AttributeSelector,
+  ClassSelector,
+  ComplexSelector,
+  CompoundSelector,
+  IDSelector,
+  ParentSelector,
+  PlaceholderSelector,
+  PseudoSelector,
+  SelectorList,
+  SelectorVisitor,
+  TypeSelector,
+  UniversalSelector
+}
 import ssg.sass.util.NumberUtil
 import ssg.sass.value.{
   CalculationOperation,
@@ -79,7 +92,9 @@ final class SerializeVisitor(
   val inspect:       Boolean = false,
   val sourceMap:     Boolean = false,
   private val quote: Boolean = true
-) extends CssVisitor[Unit] with ValueVisitor[Unit] with SelectorVisitor[Unit] {
+) extends CssVisitor[Unit]
+    with ValueVisitor[Unit]
+    with SelectorVisitor[Unit] {
 
   private val buffer: ssg.sass.util.SassBuffer =
     if (sourceMap) new ssg.sass.util.SourceMapBuffer()
@@ -125,11 +140,16 @@ final class SerializeVisitor(
     }
   }
 
-  /** Records a source-map entry for the given span.
-    * Port of dart-sass `_for` (serialize.dart:1675).
-    */
-  @inline private def recordMapping(span: ssg.sass.util.FileSpan): Unit =
-    if (span != null) buffer.forSpan(span)(())
+  /// Runs [callback] and associates all text written within it with
+  /// [node.span].
+  /// Port of dart-sass `_for` (serialize.dart:1675).
+  private def _for[T](node: ssg.sass.ast.AstNode)(callback: => T): T =
+    buffer.forSpan(node.span)(callback)
+
+  /// Writes [value]'s value with the associated source span.
+  /// Port of dart-sass `_write` (serialize.dart:1678-1679).
+  private def _writeCssValue(value: ssg.sass.ast.css.CssValue[String]): Unit =
+    _for(value)(buffer.write(value.value))
 
   /** Serialize the given stylesheet to CSS text.
     *
@@ -149,7 +169,7 @@ final class SerializeVisitor(
       } else ""
     val mapJson: Nullable[String] = buffer match {
       case smb: ssg.sass.util.SourceMapBuffer => Nullable(smb.buildSourceMap(prefix))
-      case _                                  => Nullable.empty[String]
+      case _ => Nullable.empty[String]
     }
     SerializeResult(prefix + css, sourceMap = mapJson)
   }
@@ -1438,8 +1458,9 @@ final class SerializeVisitor(
   }
 
   override def visitCssStyleRule(node: CssStyleRule): Unit = {
-    recordMapping(node.span)
-    buffer.append(formatSelectorList(node.selector))
+    _for(node.selector) {
+      buffer.append(formatSelectorList(node.selector))
+    }
     writeSpace()
     writeChildrenIn(node, node.children)
   }
@@ -1687,9 +1708,8 @@ final class SerializeVisitor(
     }
   }
 
-  override def visitTypeSelector(tpe: TypeSelector): Unit = {
+  override def visitTypeSelector(tpe: TypeSelector): Unit =
     buffer.append(tpe.name.toString)
-  }
 
   override def visitUniversalSelector(universal: UniversalSelector): Unit = {
     universal.namespace.foreach { ns =>
@@ -1702,40 +1722,37 @@ final class SerializeVisitor(
   // ---------------------------------------------------------------------------
 
   override def visitCssDeclaration(node: CssDeclaration): Unit = {
-    // Record one mapping for the property name and a second for the value
-    // so debuggers can highlight either side of the `name: value;` pair.
     // dart-sass: visitCssDeclaration does NOT emit a trailing `;`. The
     // separator is emitted by `_visitChildren` via `requiresSemicolon`
     // before the next sibling, or after the final child if non-compressed.
-    recordMapping(node.span)
-    buffer.append(node.name.value)
+    _writeCssValue(node.name)
     buffer.append(':')
-    // Stage 3: custom property formatting.
-    // dart-sass `visitCssDeclaration`: when `parsedAsSassScript == false`
-    // (a CSS custom property whose value was preserved as raw text), the
-    // value is emitted via `_writeFoldedValue` (compressed) or
-    // `_writeReindentedValue` (expanded) — NOT via the SassScript value
-    // formatter. Custom properties have no leading space; their raw text
-    // already includes the right whitespace.
+
+    // If `node` is a custom property that was parsed as a normal Sass-syntax
+    // property (such as `#{--foo}: ...`), we serialize its value using the
+    // normal Sass property logic as well.
     if (!node.parsedAsSassScript) {
       // dart-sass `visitCssDeclaration`: custom property values are emitted
       // raw via `_writeFoldedValue` (compressed) or `_writeReindentedValue`
       // (expanded). The parser preserves leading whitespace as part of the
       // value text (e.g., ` #ff0066`), so no extra space is added here.
-      val raw = node.value.value match {
-        case s: SassString => s.text
-        case other => other.toCssString()
+      _for(node.value) {
+        val raw = node.value.value match {
+          case s: SassString => s.text
+          case other => other.toCssString()
+        }
+        if (isCompressed) writeFoldedCustomPropertyValue(raw)
+        else writeReindentedCustomPropertyValue(raw, node.name.span)
       }
-      if (isCompressed) writeFoldedCustomPropertyValue(raw)
-      else writeReindentedCustomPropertyValue(raw, node.name.span)
     } else {
       writeSpace()
-      recordMapping(node.span)
       // dart-sass serialize.dart:376-398: wraps value serialization in try/catch,
       // converting SassScriptException (which has no span) to SassException
       // (with the declaration value's span).
       try
-        buffer.append(formatValue(node.value.value))
+        buffer.forSpan(node.valueSpanForMap) {
+          buffer.append(formatValue(node.value.value))
+        }
       catch {
         case error: MultiSpanSassScriptException =>
           throw MultiSpanSassException(
@@ -1919,70 +1936,74 @@ final class SerializeVisitor(
   }
 
   override def visitCssComment(node: CssComment): Unit = {
+    // Preserve comments that start with `/*!`.
     // In compressed mode, only preserve /*! comments
     if (isCompressed && !node.isPreserved) return
     // dart-sass serialize.dart:200-202: strip sourceMappingURL and sourceURL comments (case-sensitive)
+    // Ignore sourceMappingURL and sourceURL comments.
     if (node.text.startsWith("/*# sourceMappingURL=") || node.text.startsWith("/*# sourceURL=")) return
 
-    // dart-sass serialize.dart:204-217: multi-line comment reindentation.
-    // When a loud comment spans multiple lines and is inside an indented
-    // block in expanded mode, reindent the body using minimumIndentation
-    // and writeWithIndent so the output aligns with the current nesting
-    // level.
-    //
-    // Note: indentation before the comment text is emitted by the caller
-    // (writeChildrenIn / visitCssStylesheet), so we only handle internal
-    // reindentation here.
-    val minIndent = minimumIndentation(node.text)
-    if (minIndent == Int.MaxValue) {
-      // No newlines: emit verbatim.
-      buffer.append(node.text)
-    } else {
-      // Multi-line comment: reindent relative to the current indentation.
-      val effectiveMinIndent =
-        if (minIndent == -1) node.span.start.column
-        else math.min(minIndent, node.span.start.column)
-      writeWithIndent(node.text, effectiveMinIndent)
+    _for(node) {
+      // dart-sass serialize.dart:204-217: multi-line comment reindentation.
+      // When a loud comment spans multiple lines and is inside an indented
+      // block in expanded mode, reindent the body using minimumIndentation
+      // and writeWithIndent so the output aligns with the current nesting
+      // level.
+      //
+      // Note: indentation before the comment text is emitted by the caller
+      // (writeChildrenIn / visitCssStylesheet), so we only handle internal
+      // reindentation here.
+      val minIndent = minimumIndentation(node.text)
+      if (minIndent == Int.MaxValue) {
+        // No newlines: emit verbatim.
+        buffer.append(node.text)
+      } else {
+        // Multi-line comment: reindent relative to the current indentation.
+        val effectiveMinIndent =
+          if (minIndent == -1) node.span.start.column
+          else math.min(minIndent, node.span.start.column)
+        writeWithIndent(node.text, effectiveMinIndent)
+      }
     }
   }
 
   override def visitCssAtRule(node: CssAtRule): Unit = {
-    buffer.append('@')
-    buffer.append(node.name.value)
-    node.value.foreach { v =>
-      buffer.append(' ')
-      buffer.append(v.value)
+    _for(node) {
+      buffer.append('@')
+      _writeCssValue(node.name)
+      node.value.foreach { v =>
+        buffer.append(' ')
+        _writeCssValue(v)
+      }
     }
-    if (node.isChildless) {
-      // Childless at-rules: dart-sass `_visitChildren` is not called, and a
-      // semicolon is emitted by the surrounding context via `requiresSemicolon`.
-      // We don't append `;` here.
-    } else {
+    if (!node.isChildless) {
       writeSpace()
       writeChildrenIn(node, node.children)
     }
   }
 
   override def visitCssMediaRule(node: CssMediaRule): Unit = {
-    buffer.append("@media")
-    // Port of dart-sass visitCssMediaRule / _visitMediaQuery.
-    // Space after @media: in compressed mode, only emit when the first
-    // query has a modifier, type, or a single "(not ...)" condition.
-    val firstQuery = node.queries.head
-    if (
-      !isCompressed ||
-      firstQuery.modifier.isDefined ||
-      firstQuery.type_.isDefined ||
-      (firstQuery.conditions.length == 1 &&
-        firstQuery.conditions.head.startsWith("(not "))
-    ) {
-      buffer.append(' ')
-    }
-    var first = true
-    for (query <- node.queries) {
-      if (!first) buffer.append(if (isCompressed) "," else ", ")
-      first = false
-      _visitMediaQuery(query)
+    _for(node) {
+      buffer.append("@media")
+      // Port of dart-sass visitCssMediaRule / _visitMediaQuery.
+      // Space after @media: in compressed mode, only emit when the first
+      // query has a modifier, type, or a single "(not ...)" condition.
+      val firstQuery = node.queries.head
+      if (
+        !isCompressed ||
+        firstQuery.modifier.isDefined ||
+        firstQuery.type_.isDefined ||
+        (firstQuery.conditions.length == 1 &&
+          firstQuery.conditions.head.startsWith("(not "))
+      ) {
+        buffer.append(' ')
+      }
+      var first = true
+      for (query <- node.queries) {
+        if (!first) buffer.append(if (isCompressed) "," else ", ")
+        first = false
+        _visitMediaQuery(query)
+      }
     }
     writeSpace()
     writeChildrenIn(node, node.children)
@@ -2016,31 +2037,36 @@ final class SerializeVisitor(
   }
 
   override def visitCssSupportsRule(node: CssSupportsRule): Unit = {
-    buffer.append("@supports")
-    // dart-sass serialize.dart:340-351: in compressed mode, omit the space
-    // after `@supports` when the condition starts with `(`.
-    val condText = node.condition.value
-    if (isCompressed && condText.nonEmpty && condText.charAt(0) == '(') {
-      // no space needed — the `(` is unambiguous
-    } else {
-      buffer.append(' ')
+    _for(node) {
+      buffer.append("@supports")
+      // dart-sass serialize.dart:340-351: in compressed mode, omit the space
+      // after `@supports` when the condition starts with `(`.
+      val condText = node.condition.value
+      if (isCompressed && condText.nonEmpty && condText.charAt(0) == '(') {
+        // no space needed — the `(` is unambiguous
+      } else {
+        buffer.append(' ')
+      }
+      _writeCssValue(node.condition)
     }
-    buffer.append(condText)
     writeSpace()
     writeChildrenIn(node, node.children)
   }
 
-  override def visitCssImport(node: CssImport): Unit = {
+  override def visitCssImport(node: CssImport): Unit =
     // dart-sass: visitCssImport does NOT emit a trailing `;`. The separator
     // is supplied by `_visitChildren` via `requiresSemicolon`.
-    buffer.append("@import")
-    writeSpace()
-    writeImportUrl(node.url.value)
-    node.modifiers.foreach { m =>
+    _for(node) {
+      buffer.append("@import")
       writeSpace()
-      buffer.append(m.value)
+      _for(node.url) {
+        writeImportUrl(node.url.value)
+      }
+      node.modifiers.foreach { m =>
+        writeSpace()
+        buffer.append(m.value)
+      }
     }
-  }
 
   /// Writes [url], which is an import's URL, to the buffer.
   ///
@@ -2069,7 +2095,9 @@ final class SerializeVisitor(
 
   override def visitCssKeyframeBlock(node: CssKeyframeBlock): Unit = {
     // dart-sass serialize.dart:296-302: uses _commaSeparator (`, ` expanded, `,` compressed)
-    buffer.append(node.selector.value.mkString(commaSeparator))
+    _for(node.selector) {
+      buffer.append(node.selector.value.mkString(commaSeparator))
+    }
     writeSpace()
     writeChildrenIn(node, node.children)
   }

@@ -220,7 +220,7 @@ final class SerializeVisitorSuite extends munit.FunSuite {
   }
 
   test("SourceMapBuffer buildSourceMap produces valid JSON with VLQ mappings") {
-    val smb = new ssg.sass.util.SourceMapBuffer()
+    val smb  = new ssg.sass.util.SourceMapBuffer()
     val span = ssg.sass.util.FileSpan.synthetic("test")
     smb.forSpan(span) {
       smb.write("a { color: red; }")

@@ -52,13 +52,14 @@ final class AtRootQuery(
   /** Returns whether `this` excludes [node]. */
   def excludes(node: ssg.sass.ast.css.CssParentNode): Boolean =
     if (_all) !include
-    else node match {
-      case _: ssg.sass.ast.css.CssStyleRule    => excludesStyleRules
-      case _: ssg.sass.ast.css.CssMediaRule    => excludesName("media")
-      case _: ssg.sass.ast.css.CssSupportsRule => excludesName("supports")
-      case r: ssg.sass.ast.css.CssAtRule       => excludesName(r.name.value.toLowerCase)
-      case _                                   => false
-    }
+    else
+      node match {
+        case _: ssg.sass.ast.css.CssStyleRule    => excludesStyleRules
+        case _: ssg.sass.ast.css.CssMediaRule    => excludesName("media")
+        case _: ssg.sass.ast.css.CssSupportsRule => excludesName("supports")
+        case r: ssg.sass.ast.css.CssAtRule       => excludesName(r.name.value.toLowerCase)
+        case _ => false
+      }
 }
 
 object AtRootQuery {

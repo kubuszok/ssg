@@ -29,6 +29,24 @@ package importer
   */
 trait Importer {
 
+  /** The URL of the stylesheet that contains the current load.
+    *
+    * This is only available from within calls to [[canonicalize]], and only for non-canonical-scheme URLs or relative URLs. Accessing it marks the result as non-cacheable.
+    *
+    * Subclasses should only access this from within calls to [[canonicalize]]. Outside of that context, its value is undefined and subject to change.
+    *
+    * Port of dart-sass `AsyncImporter.containingUrl` (importer/async.dart).
+    */
+  final def containingUrl: Nullable[String] =
+    ImporterUtils.containingUrlOrEmpty
+
+  /** The canonicalize context of the stylesheet that caused the current [[canonicalize]] invocation.
+    *
+    * Subclasses should only access this from within calls to [[canonicalize]]. Outside of that context, its value is undefined and subject to change.
+    */
+  final def canonicalizeContext: CanonicalizeContext =
+    ImporterUtils.canonicalizeContext
+
   /** Canonicalizes [url] to an absolute URL, or returns `Nullable.empty` if this importer doesn't recognize it.
     */
   def canonicalize(url: String): Nullable[String]
