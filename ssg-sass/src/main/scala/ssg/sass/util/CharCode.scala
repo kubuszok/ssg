@@ -212,7 +212,7 @@ object CharCode {
     case `$lparen`   => $rparen
     case `$lbracket` => $rbracket
     case `$lbrace`   => $rbrace
-    case _ =>
+    case _           =>
       throw new IllegalArgumentException(
         s"'${c.toChar}' isn't a brace-like character."
       )

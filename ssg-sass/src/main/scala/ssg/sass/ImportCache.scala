@@ -438,9 +438,7 @@ object ImportCache {
 
   /** Converts the user's importers and loadPaths into a single list of importers.
     *
-    * Port of dart-sass `_toImporters` (import_cache.dart:119-135). Converts
-    * each loadPath to an importer via [loadPathImporter], and reads SASS_PATH
-    * environment variable for additional paths.
+    * Port of dart-sass `_toImporters` (import_cache.dart:119-135). Converts each loadPath to an importer via [loadPathImporter], and reads SASS_PATH environment variable for additional paths.
     */
   private[sass] def toImporters(
     importers:        List[Importer],
@@ -448,14 +446,15 @@ object ImportCache {
     loadPathImporter: String => Importer = _ => Importer.noOp
   ): List[Importer] = {
     val fromLoadPaths = loadPaths.map(loadPathImporter)
-    val fromSassPath = try {
-      sys.env.get("SASS_PATH").toList.flatMap { paths =>
-        val sep = if (sys.props.getOrElse("os.name", "").toLowerCase.contains("win")) ";" else ":"
-        paths.split(sep).toList.filter(_.nonEmpty).map(loadPathImporter)
+    val fromSassPath  =
+      try
+        sys.env.get("SASS_PATH").toList.flatMap { paths =>
+          val sep = if (sys.props.getOrElse("os.name", "").toLowerCase.contains("win")) ";" else ":"
+          paths.split(sep).toList.filter(_.nonEmpty).map(loadPathImporter)
+        }
+      catch {
+        case _: SecurityException => Nil
       }
-    } catch {
-      case _: SecurityException => Nil
-    }
     importers ::: fromLoadPaths ::: fromSassPath
   }
 }

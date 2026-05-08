@@ -652,7 +652,7 @@ final case class LegacyIfExpression(
         case _ =>
           ifTrue match {
             case _: NullExpression => Nullable(s"if(not sass($condition): $ifFalse)")
-            case _                 => Nullable(s"if(sass($condition): $ifTrue; else: $ifFalse)")
+            case _ => Nullable(s"if(sass($condition): $ifTrue; else: $ifFalse)")
           }
       }
     } else Nullable.Null
@@ -662,6 +662,14 @@ final case class LegacyIfExpression(
     visitor.visitLegacyIfExpression(this)
 
   override def toString: String = s"if$arguments"
+}
+
+object LegacyIfExpression {
+
+  /** The declaration of `if()`, as though it were a normal function. */
+  val declaration: ParameterList = ParameterList.parse(
+    raw"@function if($$condition, $$if-true, $$if-false) {"
+  )
 }
 
 // ===========================================================================

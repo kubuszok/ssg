@@ -984,4 +984,3 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   }
 
 }
-

@@ -36,8 +36,7 @@ object Functions {
       SelectorFunctions.global :::
       StringFunctions.global
 
-  /** All globally available callables including runtime-context meta functions.
-    * Used as a fallback lookup in bare environments (e.g. `_execute`).
+  /** All globally available callables including runtime-context meta functions. Used as a fallback lookup in bare environments (e.g. `_execute`).
     */
   private lazy val _allGlobal: List[Callable] =
     global ::: MetaFunctions.runtimeFunctions.map(_.withDeprecationWarning("meta"))

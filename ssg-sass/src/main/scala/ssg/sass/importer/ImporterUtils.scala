@@ -48,6 +48,14 @@ object ImporterUtils {
   def fromImport: Boolean =
     _canonicalizeContext.fold(false)(_.fromImport)
 
+  /** Returns the containing URL if a canonicalize context is active, or empty if no context is set. This is safe to call from any context, unlike [[canonicalizeContext]] which throws outside a
+    * canonicalize call.
+    *
+    * Used by [[Importer.containingUrl]] to support importers that access containingUrl without crashing when called directly (e.g. in tests).
+    */
+  def containingUrlOrEmpty: Nullable[String] =
+    _canonicalizeContext.flatMap(_.containingUrl)
+
   /** The CanonicalizeContext of the current load. */
   def canonicalizeContext: CanonicalizeContext =
     _canonicalizeContext.fold {
