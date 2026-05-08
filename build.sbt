@@ -2,7 +2,8 @@ ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
 val treeSitterProvidersVersion = "0.1.0"
-val multiarchCoreVersion       = "0.1.2"
+val multiarchCoreVersion       = "1.0-0.1.2-3-gba7ffe4-SNAPSHOT"
+ThisBuild / resolvers += "Maven Central Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
 // --- Common utilities (cross-platform abstractions) ---
 
