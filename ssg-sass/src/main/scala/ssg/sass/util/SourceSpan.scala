@@ -245,7 +245,7 @@ final case class FileSpan(
 
   /** The source text of the line containing [start]. */
   def context: String = {
-    val text     = file.getText(0)
+    val text      = file.getText(0)
     val lineStart = text.lastIndexOf('\n', math.max(0, start.offset - 1)) + 1
     val lineEnd   = text.indexOf('\n', start.offset)
     text.substring(lineStart, if (lineEnd < 0) text.length else lineEnd)

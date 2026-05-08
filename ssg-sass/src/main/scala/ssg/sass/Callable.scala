@@ -88,8 +88,7 @@ final class BuiltInCallable(
   /** All overload signatures (non-empty only when [[isOverloaded]] is true). Used by the evaluator to find the right overload for named-arg binding.
     */
   val allSignatures: List[String] = Nil,
-  /** Parsed overloads: each entry is a (ParameterList, Callback) tuple.
-    * Non-empty only when [[isOverloaded]] is true. Port of dart-sass `_overloads`.
+  /** Parsed overloads: each entry is a (ParameterList, Callback) tuple. Non-empty only when [[isOverloaded]] is true. Port of dart-sass `_overloads`.
     */
   val overloads: List[(ParameterList, List[Value] => Value)] = Nil
 ) extends Callable {
@@ -167,21 +166,22 @@ final class BuiltInCallable(
     }
   }
 
-  /** Selects the overload matching the given call-site shape.
-    * Port of dart-sass `BuiltInCallable.callbackFor`.
+  /** Selects the overload matching the given call-site shape. Port of dart-sass `BuiltInCallable.callbackFor`.
     */
-  def callbackFor(positional: Int, names: Set[String]): (ParameterList, List[Value] => Value) = {
+  def callbackFor(positional: Int, names: Set[String]): (ParameterList, List[Value] => Value) =
     if (overloads.nonEmpty) {
       import scala.util.boundary, boundary.break
       boundary {
-        var fuzzyMatch: (ParameterList, List[Value] => Value) = null
-        var minMismatchDistance: Int = Int.MaxValue
+        var fuzzyMatch:          (ParameterList, List[Value] => Value) = null
+        var minMismatchDistance: Int                                   = Int.MaxValue
         for (overload <- overloads) {
           if (overload._1.matches(positional, names)) break(overload)
           val mismatchDistance = overload._1.parameters.length - positional
-          if (minMismatchDistance == Int.MaxValue ||
+          if (
+            minMismatchDistance == Int.MaxValue ||
             math.abs(mismatchDistance) < math.abs(minMismatchDistance) ||
-            (math.abs(mismatchDistance) == math.abs(minMismatchDistance) && mismatchDistance >= 0)) {
+            (math.abs(mismatchDistance) == math.abs(minMismatchDistance) && mismatchDistance >= 0)
+          ) {
             minMismatchDistance = mismatchDistance
             fuzzyMatch = overload
           }
@@ -192,7 +192,6 @@ final class BuiltInCallable(
     } else {
       (parameters.getOrElse(ParameterList.parse(s"@function $name($signature) {")), callback)
     }
-  }
 
   /** Returns a copy of this callable with the given [newName]. Port of dart-sass `BuiltInCallable.withName`.
     */
@@ -285,14 +284,11 @@ object BuiltInCallable {
 
     val dispatch: List[Value] => Value = args => {
       val n = args.length
-      parsedOverloads.find(_._1.matches(n, Set.empty))
-        .orElse(parsedOverloads.find(_._1.restParameter.isDefined))
-        .map(_._2(args))
-        .getOrElse {
-          throw new IllegalArgumentException(
-            s"No overload of $name matches ${args.length} argument(s)"
-          )
-        }
+      parsedOverloads.find(_._1.matches(n, Set.empty)).orElse(parsedOverloads.find(_._1.restParameter.isDefined)).map(_._2(args)).getOrElse {
+        throw new IllegalArgumentException(
+          s"No overload of $name matches ${args.length} argument(s)"
+        )
+      }
     }
 
     val candidates = overloads.keys.toList
@@ -303,10 +299,7 @@ object BuiltInCallable {
     val canonicalSig: String =
       if (candidates.isEmpty) ""
       else
-        candidates
-          .map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1))
-          .sortBy(t => (-t._2, -t._3))
-          .head._1
+        candidates.map(sig => (sig, namedSlotCount(sig), if (sig.trim.endsWith("...")) 0 else 1)).sortBy(t => (-t._2, -t._3)).head._1
     val canonicalParams =
       try ParameterList.parse(s"@function $name($canonicalSig) {")
       catch { case _: Exception => _fallbackParseSignature(name, canonicalSig) }
@@ -337,10 +330,10 @@ object BuiltInCallable {
       i += 1
     }
     if (buf.nonEmpty) parts += buf.toString().trim
-    val partList = parts.toList
-    val hasRest  = partList.lastOption.exists(_.endsWith("..."))
+    val partList  = parts.toList
+    val hasRest   = partList.lastOption.exists(_.endsWith("..."))
     val effective = if (hasRest) partList.init else partList
-    val params = effective.flatMap { raw =>
+    val params    = effective.flatMap { raw =>
       val nameRaw = raw.indexOf(':') match {
         case -1  => raw
         case idx => raw.substring(0, idx).trim

@@ -24,9 +24,9 @@ package importer
 /** The result of importing a Sass stylesheet, as returned by [[Importer.load]].
   */
 final class ImporterResult(
-  val contents:        String,
+  val contents:              String,
   private val _sourceMapUrl: Nullable[String],
-  val syntax:          Syntax
+  val syntax:                Syntax
 ) {
 
   _sourceMapUrl.foreach { url =>
@@ -61,8 +61,10 @@ object ImporterResult {
     val sb    = new StringBuilder(bytes.length * 3)
     for (b <- bytes) {
       val c = b & 0xff
-      if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-        c == '-' || c == '_' || c == '.' || c == '~') {
+      if (
+        (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+        c == '-' || c == '_' || c == '.' || c == '~'
+      ) {
         sb.append(c.toChar)
       } else {
         sb.append('%')

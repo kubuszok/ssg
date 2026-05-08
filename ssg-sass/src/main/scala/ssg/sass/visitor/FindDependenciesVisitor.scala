@@ -61,8 +61,8 @@ final class FindDependenciesVisitor extends RecursiveStatementVisitor {
   override def visitIfRule(node:                        IfRule):              Unit = ()
   override def visitWhileRule(node:                     WhileRule):           Unit = ()
   override protected def visitCallableDeclaration(node: CallableDeclaration): Unit = ()
-  def visitInterpolation(interpolation: Interpolation):     Unit = ()
-  def visitSupportsCondition(condition: SupportsCondition): Unit = ()
+  def visitInterpolation(interpolation:                 Interpolation):       Unit = ()
+  def visitSupportsCondition(condition:                 SupportsCondition):   Unit = ()
 
   override def visitUseRule(node: UseRule): Unit =
     if (node.url.getScheme != "sass") {
