@@ -40,7 +40,7 @@ final class ImporterResult(
 
   def sourceMapUrl: String =
     _sourceMapUrl.getOrElse {
-      "data:application/octet-stream;utf-8," + ImporterResult.percentEncode(contents)
+      "data:text/plain;charset=utf-8," + ImporterResult.percentEncode(contents)
     }
 
   override def toString: String = s"ImporterResult(syntax=$syntax, ${contents.length} chars)"

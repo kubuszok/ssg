@@ -4655,7 +4655,7 @@ final class EvaluateVisitor(
           s"Only $nParams $posWord${argWord} allowed, but $nPass $wasWord passed."
         )
       }
-      if (declared.keywordRestParameter.isEmpty && namedUsed < named.size) {
+      if (declared.restParameter.isEmpty && namedUsed < named.size) {
         val declaredNames = params.iterator.map(_.name).toSet
         val unknown       = named.keysIterator.filter(k => !declaredNames.contains(k)).toList
         val word          = if (unknown.length == 1) "parameter" else "parameters"
@@ -4712,15 +4712,6 @@ final class EvaluateVisitor(
           restSeparator
         )
       _environment.setLocalVariable(restName, restValue)
-    }
-    // Bind the keyword-rest parameter to a map of leftover keyword args.
-    declared.keywordRestParameter.foreach { kwName =>
-      val declaredNames = params.iterator.map(_.name).toSet
-      val leftover      = named.filter { case (k, _) => !declaredNames.contains(k) }
-      val entries       = leftover.iterator.map { case (k, v) =>
-        (ssg.sass.value.SassString(k, hasQuotes = false): ssg.sass.value.Value) -> v
-      }.toList
-      _environment.setLocalVariable(kwName, ssg.sass.value.SassMap(ListMap.from(entries)))
     }
   }
 

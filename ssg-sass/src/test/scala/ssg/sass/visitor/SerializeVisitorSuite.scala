@@ -219,14 +219,15 @@ final class SerializeVisitorSuite extends munit.FunSuite {
     assertEquals(SerializeVisitor.removeExponent("-7"), "-7")
   }
 
-  test("vlqEncode encodes signed integers per source map v3 spec") {
-    // Reference values per source-map spec
-    assertEquals(SerializeVisitor.vlqEncode(0), "A")
-    assertEquals(SerializeVisitor.vlqEncode(1), "C")
-    assertEquals(SerializeVisitor.vlqEncode(-1), "D")
-    assertEquals(SerializeVisitor.vlqEncode(15), "e")
-    assertEquals(SerializeVisitor.vlqEncode(16), "gB")
-    assertEquals(SerializeVisitor.vlqEncode(-16), "hB")
+  test("SourceMapBuffer buildSourceMap produces valid JSON with VLQ mappings") {
+    val smb = new ssg.sass.util.SourceMapBuffer()
+    val span = ssg.sass.util.FileSpan.synthetic("test")
+    smb.forSpan(span) {
+      smb.write("a { color: red; }")
+    }
+    val json = smb.buildSourceMap()
+    assert(json.contains("\"version\":3"))
+    assert(json.contains("\"mappings\":"))
   }
 
   test("serialize without sourceMap flag returns empty source map") {

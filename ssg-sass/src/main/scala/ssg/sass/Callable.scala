@@ -172,8 +172,22 @@ final class BuiltInCallable(
     */
   def callbackFor(positional: Int, names: Set[String]): (ParameterList, List[Value] => Value) = {
     if (overloads.nonEmpty) {
-      overloads.find(_._1.matches(positional, names)).getOrElse {
-        overloads.last
+      import scala.util.boundary, boundary.break
+      boundary {
+        var fuzzyMatch: (ParameterList, List[Value] => Value) = null
+        var minMismatchDistance: Int = Int.MaxValue
+        for (overload <- overloads) {
+          if (overload._1.matches(positional, names)) break(overload)
+          val mismatchDistance = overload._1.parameters.length - positional
+          if (minMismatchDistance == Int.MaxValue ||
+            math.abs(mismatchDistance) < math.abs(minMismatchDistance) ||
+            (math.abs(mismatchDistance) == math.abs(minMismatchDistance) && mismatchDistance >= 0)) {
+            minMismatchDistance = mismatchDistance
+            fuzzyMatch = overload
+          }
+        }
+        if (fuzzyMatch != null) fuzzyMatch
+        else throw new IllegalStateException(s"BuiltInCallable $name may not have empty overloads.")
       }
     } else {
       (parameters.getOrElse(ParameterList.parse(s"@function $name($signature) {")), callback)
@@ -189,12 +203,12 @@ final class BuiltInCallable(
     */
   def withDeprecationWarning(module: String, newName: String = ""): BuiltInCallable = {
     val effectiveName = if (newName.nonEmpty) newName else name
-    val origCallback  = callback
-    val wrappedCallback: List[Value] => Value = { args =>
+    def wrap(cb: List[Value] => Value): List[Value] => Value = { args =>
       BuiltInCallable.warnForGlobalBuiltIn(module, effectiveName)
-      origCallback(args)
+      cb(args)
     }
-    new BuiltInCallable(name, parameters, wrappedCallback, acceptsContent, signature, isOverloaded, allSignatures, overloads)
+    val wrappedOverloads = overloads.map { case (pl, cb) => (pl, wrap(cb)) }
+    new BuiltInCallable(name, parameters, wrap(callback), acceptsContent, signature, isOverloaded, allSignatures, wrappedOverloads)
   }
 
   override def toString: String = s"BuiltInCallable($name)"
