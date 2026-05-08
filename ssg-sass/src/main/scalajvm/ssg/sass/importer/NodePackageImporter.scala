@@ -37,6 +37,8 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     if (!url.startsWith("pkg:")) return Nullable.empty
 
     val path = url.substring(4)
+    if (path.startsWith("//"))
+      throw new IllegalArgumentException("A pkg: URL must not have a host, port, username or password.")
     if (path.isEmpty)
       throw new IllegalArgumentException("A pkg: URL must not have an empty path.")
     if (path.startsWith("/"))
@@ -44,14 +46,30 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     if (url.contains('?') || url.contains('#'))
       throw new IllegalArgumentException("A pkg: URL must not have a query or fragment.")
 
+    // dart-sass node_package.dart:46-48: use containingUrl when available
+    // so that relative pkg: lookups start from the importing file's directory.
+    val baseDirectory: String = {
+      val cu = containingUrl
+      if (cu.isDefined && cu.get.startsWith("file:")) {
+        val filePath = ssg.commons.io.FilePathPlatform.fromNioPath(
+          java.nio.file.Paths.get(new java.net.URI(cu.get))
+        )
+        filePath.parent.map(_.pathString).getOrElse(_entryPointDirectory)
+      } else {
+        _entryPointDirectory
+      }
+    }
+
     val (packageName, subpath) = _packageNameAndSubpath(path)
 
-    if (packageName.startsWith(".") || packageName.contains("\\") || packageName.contains("%") ||
-      (packageName.startsWith("@") && !packageName.contains("/"))) {
+    if (
+      packageName.startsWith(".") || packageName.contains("\\") || packageName.contains("%") ||
+      (packageName.startsWith("@") && !packageName.contains("/"))
+    ) {
       return Nullable.empty
     }
 
-    val packageRoot = _resolvePackageRoot(packageName, _entryPointDirectory)
+    val packageRoot = _resolvePackageRoot(packageName, baseDirectory)
     if (packageRoot == null) return Nullable.empty
 
     val jsonPath = FilePath.of(packageRoot).resolve("package.json")
@@ -85,15 +103,15 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       case None => ()
     }
 
+    val fs = new FilesystemImporter(packageRoot)
     if (subpath.isEmpty) {
       _resolvePackageRootValues(packageRoot, manifestMap) match {
-        case Some(p) => return Nullable(_toFileUri(p))
+        case Some(p) => return fs.canonicalize(p)
         case None    => return Nullable.empty
       }
     }
 
-    val subpathInRoot = FilePath.of(packageRoot).resolve(subpath.get).pathString
-    new FilesystemImporter(packageRoot).canonicalize(subpathInRoot)
+    fs.canonicalize(subpath.get)
   }
 
   def load(url: String): Nullable[ImporterResult] =
@@ -105,7 +123,7 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       else {
         val contents = FileOps.readString(path)
         val pathStr  = path.pathString
-        val syntax =
+        val syntax   =
           if (pathStr.endsWith(".sass")) Syntax.Sass
           else if (pathStr.endsWith(".css")) Syntax.Css
           else Syntax.Scss
@@ -120,12 +138,12 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
   // ---------------------------------------------------------------------------
 
   private def _toFileUri(path: String): String = {
-    val normalized = FilePath.of(path).toAbsolute.normalize.pathString
+    val normalized = FilePath.of(path).toAbsolute.normalize.pathString.replace('\\', '/')
     "file://" + (if (normalized.startsWith("/")) normalized else "/" + normalized)
   }
 
   private def _packageNameAndSubpath(specifier: String): (String, Option[String]) = {
-    val parts = specifier.split('/').toList
+    val parts        = specifier.split('/').toList
     val (name, rest) =
       if (parts.head.startsWith("@") && parts.length >= 2)
         (parts.head + "/" + parts(1), parts.drop(2))
@@ -151,17 +169,17 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
   private def _resolvePackageRootValues(
     packageRoot: String,
     manifest:    Map[String, JsonValue]
-  ): Option[String] = {
-    manifest.get("sass").flatMap(_.asString).filter(v => ValidExtensions.exists(v.endsWith)).map { v =>
-      FilePath.of(packageRoot).resolve(v).pathString
-    }.orElse {
-      manifest.get("style").flatMap(_.asString).filter(v => ValidExtensions.exists(v.endsWith)).map { v =>
-        FilePath.of(packageRoot).resolve(v).pathString
+  ): Option[String] =
+    manifest
+      .get("sass")
+      .flatMap(_.asString)
+      .filter(v => ValidExtensions.exists(v.endsWith))
+      .orElse {
+        manifest.get("style").flatMap(_.asString).filter(v => ValidExtensions.exists(v.endsWith))
       }
-    }.orElse {
-      ImporterFileUtils.resolveImportPath(FilePath.of(packageRoot).resolve("index").pathString).toOption
-    }
-  }
+      .orElse {
+        Some("index")
+      }
 
   private def _resolvePackageExports(
     packageRoot: String,
@@ -180,27 +198,23 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       case None    => ()
     }
 
-    if (subpath.isDefined && {
-          val sp  = subpath.get
-          val dot = sp.lastIndexOf('.')
-          dot >= 0 && ValidExtensions.contains(sp.substring(dot))
-        }) return None
+    if (subpath.isDefined && subpath.get.lastIndexOf('.') >= 0) return None
 
     val indexVariants = _exportsToCheck(subpath, addIndex = true)
     _nodePackageExportsResolve(packageRoot, indexVariants, exports, subpath, packageName)
   }
 
   private def _nodePackageExportsResolve(
-    packageRoot:    String,
+    packageRoot:     String,
     subpathVariants: List[Option[String]],
-    exports:        JsonValue,
-    subpath:        Option[String],
-    packageName:    String
+    exports:         JsonValue,
+    subpath:         Option[String],
+    packageName:     String
   ): Option[String] = {
     exports match {
       case JsonValue.Obj(map) =>
         val hasPaths      = map.keys.exists(_.startsWith("."))
-        val hasConditions  = map.keys.exists(!_.startsWith("."))
+        val hasConditions = map.keys.exists(!_.startsWith("."))
         if (hasPaths && hasConditions)
           throw new IllegalArgumentException(
             s"`exports` in $packageName can not have both conditions and paths at the same level.\n" +
@@ -230,7 +244,7 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
                 else if (patternTrailer.isEmpty || (matchKey.endsWith(patternTrailer) && matchKey.length >= expansionKey.length)) {
                   map.get(expansionKey).flatMap {
                     case JsonValue.Null => None
-                    case target =>
+                    case target         =>
                       val patternMatch = matchKey.substring(patternBase.length, matchKey.length - patternTrailer.length)
                       _packageTargetResolve(variant, target, packageRoot, Some(patternMatch))
                   }
@@ -271,17 +285,18 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       throw new IllegalArgumentException(s"Export '$s' must be a path relative to the package root at '$packageRoot'.")
     case JsonValue.Str(s) if patternMatch.isDefined =>
       val replaced = s.replaceFirst("\\*", patternMatch.get)
-      val path = FilePath.of(packageRoot).resolve(replaced).normalize.pathString
+      val path     = FilePath.of(packageRoot).resolve(replaced).normalize.pathString
       if (FileOps.exists(FilePath.of(path))) Some(path) else None
     case JsonValue.Str(s) =>
       Some(FilePath.of(packageRoot).resolve(s).pathString)
     case JsonValue.Obj(map) =>
       map.view.flatMap { case (key, value) =>
         if (!Set("sass", "style", "default").contains(key)) None
-        else value match {
-          case JsonValue.Null => None
-          case v              => _packageTargetResolve(subpath, v, packageRoot, patternMatch)
-        }
+        else
+          value match {
+            case JsonValue.Null => None
+            case v              => _packageTargetResolve(subpath, v, packageRoot, patternMatch)
+          }
       }.headOption
     case JsonValue.Arr(Nil) => None
     case JsonValue.Arr(arr) =>
@@ -290,16 +305,16 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
         case v              => _packageTargetResolve(subpath, v, packageRoot, patternMatch)
       }.headOption
     case JsonValue.Null => None
-    case other =>
+    case other          =>
       throw new IllegalArgumentException(s"Invalid 'exports' value $other in ${FilePath.of(packageRoot).resolve("package.json").pathString}.")
   }
 
   private def _getMainExport(exports: JsonValue): Option[JsonValue] = exports match {
-    case s: JsonValue.Str      => Some(s)
-    case a: JsonValue.Arr      => Some(a)
+    case s: JsonValue.Str => Some(s)
+    case a: JsonValue.Arr => Some(a)
     case JsonValue.Obj(map) if !map.keys.exists(_.startsWith(".")) => Some(exports)
-    case JsonValue.Obj(map)    => map.get(".").filter(_ != JsonValue.Null)
-    case _                     => None
+    case JsonValue.Obj(map)                                        => map.get(".").filter(_ != JsonValue.Null)
+    case _                                                         => None
   }
 
   private def _exportsToCheck(subpath: Option[String], addIndex: Boolean): List[Option[String]] = {
@@ -347,21 +362,21 @@ private[importer] object JsonValue {
 
   def parse(json: String): JsonValue = {
     var pos = 0
-    def peek(): Char = if (pos < json.length) json.charAt(pos) else 0
+    def peek():    Char = if (pos < json.length) json.charAt(pos) else 0
     def advance(): Char = { val c = json.charAt(pos); pos += 1; c }
-    def skipWs(): Unit = while (pos < json.length && json.charAt(pos).isWhitespace) pos += 1
+    def skipWs():  Unit = while (pos < json.length && json.charAt(pos).isWhitespace) pos += 1
 
     def parseValue(): JsonValue = {
       skipWs()
       peek() match {
-        case '"'                            => parseString()
-        case '{'                            => parseObject()
-        case '['                            => parseArray()
-        case 't'                            => expect("true"); Bool(true)
-        case 'f'                            => expect("false"); Bool(false)
-        case 'n'                            => expect("null"); Null
-        case c if c == '-' || c.isDigit     => parseNumber()
-        case c                              => throw new IllegalArgumentException(s"Unexpected char '$c' at position $pos")
+        case '"'                        => parseString()
+        case '{'                        => parseObject()
+        case '['                        => parseArray()
+        case 't'                        => expect("true"); Bool(true)
+        case 'f'                        => expect("false"); Bool(false)
+        case 'n'                        => expect("null"); Null
+        case c if c == '-' || c.isDigit => parseNumber()
+        case c                          => throw new IllegalArgumentException(s"Unexpected char '$c' at position $pos")
       }
     }
 
@@ -405,7 +420,9 @@ private[importer] object JsonValue {
       if (peek() == '-') pos += 1
       while (pos < json.length && json.charAt(pos).isDigit) pos += 1
       if (pos < json.length && json.charAt(pos) == '.') { pos += 1; while (pos < json.length && json.charAt(pos).isDigit) pos += 1 }
-      if (pos < json.length && (json.charAt(pos) == 'e' || json.charAt(pos) == 'E')) { pos += 1; if (pos < json.length && (json.charAt(pos) == '+' || json.charAt(pos) == '-')) pos += 1; while (pos < json.length && json.charAt(pos).isDigit) pos += 1 }
+      if (pos < json.length && (json.charAt(pos) == 'e' || json.charAt(pos) == 'E')) {
+        pos += 1; if (pos < json.length && (json.charAt(pos) == '+' || json.charAt(pos) == '-')) pos += 1; while (pos < json.length && json.charAt(pos).isDigit) pos += 1
+      }
       Num(json.substring(start, pos).toDouble)
     }
 
@@ -422,7 +439,8 @@ private[importer] object JsonValue {
           skipWs()
           fields(key) = parseValue()
           skipWs()
-          if (peek() == ',') { advance(); more = true } else more = false
+          if (peek() == ',') { advance(); more = true }
+          else more = false
         }
       }
       advance() // skip }
@@ -439,7 +457,8 @@ private[importer] object JsonValue {
           skipWs()
           items += parseValue()
           skipWs()
-          if (peek() == ',') { advance(); more = true } else more = false
+          if (peek() == ',') { advance(); more = true }
+          else more = false
         }
       }
       advance() // skip ]

@@ -53,7 +53,7 @@ package functions
 import scala.language.implicitConversions
 
 import ssg.sass.{ BuiltInCallable, Callable, CurrentCallableInvoker, CurrentEnvironment, CurrentMixinInvoker, Nullable, PlainCssCallable, SassScriptException, UserDefinedCallable }
-import ssg.sass.ast.sass.MixinRule
+import ssg.sass.ast.sass.{ ArgumentList => AstArgumentList, MixinRule, ValueExpression }
 import ssg.sass.value.{ SassArgumentList, SassBoolean, SassCalculation, SassColor, SassFunction, SassList, SassMap, SassMixin, SassNull, SassNumber, SassString, Value }
 import ssg.sass.value.ListSeparator
 import ssg.sass.visitor.SerializeVisitor
@@ -492,54 +492,104 @@ object MetaFunctions {
       }
     )
 
+  /** Constructs a synthetic [[AstArgumentList]] AST node from a [[SassArgumentList]], matching dart-sass evaluate.dart:547-562. The entire SassArgumentList is wrapped as a `rest` ValueExpression, and
+    * any keyword arguments are additionally wrapped as a `keywordRest` SassMap ValueExpression.
+    *
+    * This synthetic node goes through `_evaluateArguments` which properly unpacks the rest (SassArgumentList -> positional + keywords) and the keywordRest (SassMap -> named args), then through the
+    * full binding pipeline (ParameterList.verify, default values, rest assembly).
+    */
+  private def buildSyntheticArgumentList(
+    sassArgs:     SassArgumentList,
+    callableSpan: ssg.sass.util.FileSpan
+  ): AstArgumentList =
+    new AstArgumentList(
+      positional = Nil,
+      named = Map.empty,
+      namedSpans = Map.empty,
+      span = callableSpan,
+      rest = Nullable(ValueExpression(sassArgs, callableSpan)),
+      keywordRest =
+        if (sassArgs.keywords.isEmpty) Nullable.empty
+        else
+          Nullable(
+            ValueExpression(
+              SassMap(
+                ListMap.from(
+                  sassArgs.keywords.iterator.map { case (name, value) =>
+                    (SassString(name, hasQuotes = false): Value) -> value
+                  }
+                )
+              ),
+              callableSpan
+            )
+          )
+    )
+
+  // dart-sass: evaluate.dart:540-599
+  // The `call` function is defined in the evaluator (not in meta.dart) because
+  // it needs access to `_runFunctionCallable` and the evaluator's environment.
+  // SSG concentrates it in MetaFunctions and threads the active evaluator
+  // through `CurrentCallableInvoker`.
   private val callFn: BuiltInCallable =
     BuiltInCallable.function(
       "call",
       "$function, $args...",
       { args =>
-        if (args.isEmpty)
-          throw SassScriptException("call() requires a function argument.")
-        // First argument is the function: a SassFunction or — for legacy
-        // Sass — a plain string function name resolved against the active env.
-        val callable: Callable = args.head match {
-          case f: SassFunction => f.callable
-          case s: SassString   =>
-            // dart-sass: passing a string to call() is deprecated. If the
-            // function is found, use it; otherwise, fall back to a plain CSS
-            // function call (emit e.g. `missing(...)` as CSS).
-            EvaluationContext.warnForDeprecation(
-              Deprecation.CallString,
-              "Passing a string to call() is deprecated and will be illegal in " +
-                "Dart Sass 2.0.0.\n\nRecommendation: call(get-function(" + s.text + "))"
-            )
-            lookupFunction(s.text, SassNull).getOrElse {
-              new PlainCssCallable(s.text)
-            }
-          case other =>
-            throw SassScriptException(s"call() expected a function, got: $other")
-        }
-        // Remaining args: if a single SassArgumentList was passed (the
-        // common `$args...` rest case), splat its positional + keyword
-        // entries; otherwise treat as plain positional list.
-        val rest                = args.tail
-        val (positional, named) = rest match {
-          case (al: SassArgumentList) :: Nil =>
-            (al.asList, ListMap.from(al.keywords))
-          case (sl: SassList) :: Nil =>
-            (sl.asList, ListMap.empty[String, Value])
-          case other => (other, ListMap.empty[String, Value])
-        }
-        CurrentCallableInvoker.get.fold[Value] {
-          // No active visitor — only built-in callables can be invoked
-          // through their callback directly.
-          callable match {
-            case bic: BuiltInCallable => bic.callback(positional)
-            case _ => throw SassScriptException("meta.call requires an active evaluation context.")
+        val function = args(0)
+        val sassArgs = args(1).asInstanceOf[SassArgumentList]
+
+        // dart-sass: `var callableNode = _callableNode!;`
+        // In SSG, the evaluator sets _callableNode before invoking any
+        // built-in callback, so currentCallableSpan reflects the `call()`
+        // invocation site.
+        val callableSpan = EvaluationContext.current.fold(
+          ssg.sass.util.FileSpan.synthetic("call()")
+        )(_.currentCallableSpan)
+
+        // dart-sass (evaluate.dart:547-562): construct a synthetic
+        // ArgumentList AST node. The entire SassArgumentList is passed
+        // as the `rest` expression, and any keyword arguments are
+        // additionally wrapped as a keywordRest SassMap expression.
+        // This goes through _evaluateArguments which properly unpacks
+        // the rest (SassArgumentList -> positional + keywords) and the
+        // keywordRest (SassMap -> named args), then through the full
+        // binding pipeline (ParameterList.verify, default values, rest
+        // assembly).
+        val invocation = buildSyntheticArgumentList(sassArgs, callableSpan)
+
+        if (function.isInstanceOf[SassString]) {
+          // dart-sass (evaluate.dart:564-580): passing a string to call()
+          // is deprecated. Construct a FunctionExpression and visit it.
+          // In SSG, we resolve the function name and dispatch through
+          // the invoker, which handles plain CSS fallback for unknown names.
+          val s = function.asInstanceOf[SassString]
+          EvaluationContext.warnForDeprecation(
+            Deprecation.CallString,
+            "Passing a string to call() is deprecated and will be illegal in " +
+              "Dart Sass 2.0.0.\n\nRecommendation: call(get-function(" + s.text + "))"
+          )
+          val callable: Callable = lookupFunction(s.text, SassNull).getOrElse {
+            new PlainCssCallable(s.text)
           }
-        }(invoker => invoker(callable, positional, named))
+          CurrentCallableInvoker.get.fold[Value] {
+            throw SassScriptException("meta.call requires an active evaluation context.")
+          }(invoker => invoker(callable, invocation))
+        } else {
+          // dart-sass (evaluate.dart:582-598): extract the Callable from
+          // the SassFunction value and dispatch through _runFunctionCallable.
+          val callable = function.assertFunction("function").callable
+          CurrentCallableInvoker.get.fold[Value] {
+            throw SassScriptException("meta.call requires an active evaluation context.")
+          }(invoker => invoker(callable, invocation))
+        }
       }
     )
 
+  // dart-sass: evaluate.dart:646-683
+  // The `apply` mixin is defined in the evaluator (not in meta.dart) because
+  // it needs access to `_applyMixin` and the evaluator's environment.
+  // SSG concentrates it in MetaFunctions and threads the active evaluator
+  // through `CurrentMixinInvoker`.
   private val applyFn: BuiltInCallable =
     BuiltInCallable.mixin(
       "apply",
@@ -558,20 +608,27 @@ object MetaFunctions {
           case other =>
             throw SassScriptException(s"apply() expected a mixin, got: $other")
         }
-        // Remaining args: splat a single trailing SassArgumentList, same as
-        // meta.call does for functions.
-        val rest                = args.tail
-        val (positional, named) = rest match {
-          case (al: SassArgumentList) :: Nil =>
-            (al.asList, ListMap.from(al.keywords))
-          case (sl: SassList) :: Nil =>
-            (sl.asList, ListMap.empty[String, Value])
-          case other => (other, ListMap.empty[String, Value])
-        }
+        // dart-sass (evaluate.dart:654-660): construct a synthetic
+        // ArgumentList AST node, same pattern as call() but without
+        // keywordRest (dart-sass apply uses rest only).
+        val sassArgs     = args(1).asInstanceOf[SassArgumentList]
+        val callableSpan = EvaluationContext.current.fold(
+          ssg.sass.util.FileSpan.synthetic("apply()")
+        )(_.currentCallableSpan)
+        // dart-sass: apply does not include keywordRest — the keywords
+        // from the SassArgumentList are unpacked by _evaluateArguments
+        // through the rest arg's SassArgumentList.keywords path.
+        val invocation = new AstArgumentList(
+          positional = Nil,
+          named = Map.empty,
+          namedSpans = Map.empty,
+          span = callableSpan,
+          rest = Nullable(ValueExpression(sassArgs, callableSpan))
+        )
         CurrentMixinInvoker.get.fold[Value] {
           throw SassScriptException("meta.apply requires an active evaluation context.")
         } { invoker =>
-          invoker(callable, positional, named)
+          invoker(callable, invocation)
           // Mixins emit statements; meta.apply itself returns null.
           SassNull
         }
@@ -583,9 +640,8 @@ object MetaFunctions {
     */
   val moduleMixins: List[Callable] = List(applyFn)
 
-  /** Globally available meta built-ins. Matches dart-sass `_shared` (meta.dart)
-    * wrapped with `.withDeprecationWarning('meta')`, plus `ifFn` which lives
-    * in the barrel `globalFunctions` list without a deprecation wrapper.
+  /** Globally available meta built-ins. Matches dart-sass `_shared` (meta.dart) wrapped with `.withDeprecationWarning('meta')`, plus `ifFn` which lives in the barrel `globalFunctions` list without a
+    * deprecation wrapper.
     */
   val global: List[Callable] = List(
     ifFn,
@@ -595,11 +651,8 @@ object MetaFunctions {
     keywordsFn.withDeprecationWarning("meta")
   )
 
-  /** Runtime-context functions that dart-sass defines in the evaluator
-    * (evaluate.dart lines 386-600) rather than in meta.dart. These require
-    * access to the current environment (via `CurrentEnvironment`) and are
-    * registered as globals by the evaluator with deprecation wrappers,
-    * plus added to the `sass:meta` module without wrappers.
+  /** Runtime-context functions that dart-sass defines in the evaluator (evaluate.dart lines 386-600) rather than in meta.dart. These require access to the current environment (via
+    * `CurrentEnvironment`) and are registered as globals by the evaluator with deprecation wrappers, plus added to the `sass:meta` module without wrappers.
     */
   val runtimeFunctions: List[BuiltInCallable] = List(
     variableExistsFn,
@@ -622,9 +675,7 @@ object MetaFunctions {
     acceptsContentFn
   )
 
-  /** All functions for the `sass:meta` module. Includes shared functions
-    * (without deprecation wrappers since they're accessed via the module),
-    * runtime-context functions, and module-only functions.
+  /** All functions for the `sass:meta` module. Includes shared functions (without deprecation wrappers since they're accessed via the module), runtime-context functions, and module-only functions.
     */
   def module: List[Callable] =
     List(featureExistsFn, inspectFn, typeOfFn, keywordsFn) :::

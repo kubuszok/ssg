@@ -4155,8 +4155,8 @@ abstract class StylesheetParser protected (
             val args      = _rdArgumentInvocation(start)
             val finalArgs = _rdMaybeUnpackColorArgs(plain, args)
             return if (finalArgs.positional.length == 3 && finalArgs.named.isEmpty) {
-              val ifSpan     = spanFrom(start)
-              val expression = LegacyIfExpression(finalArgs, ifSpan)
+              val ifSpan         = spanFrom(start)
+              val expression     = LegacyIfExpression(finalArgs, ifSpan)
               val suggestionText = expression.modernSuggestion.fold("") { s =>
                 s"Suggestion: $s\n\n"
               }
@@ -4281,7 +4281,7 @@ abstract class StylesheetParser protected (
         val buffer = new InterpolationBuffer()
         buffer.write(name)
         buffer.writeCharCode(CharCode.$lparen)
-        val beforeArg        = scanner.state
+        val beforeArg         = scanner.state
         var invalidSassScript = false
         var nonCssSassScript  = false
         try {
@@ -4666,9 +4666,9 @@ abstract class StylesheetParser protected (
     var invalidSassScript = false
     if (vendored) {
       val beforeArg = scanner.state
-      try {
+      try
         _rdExpression()
-      } catch {
+      catch {
         case _: Exception => invalidSassScript = true
       }
       scanner.state = beforeArg

@@ -272,10 +272,14 @@ object SelectorFunctions {
         selector.assertNotBogus(Nullable("selector"))
         target.assertNotBogus(Nullable("extendee"))
         source.assertNotBogus(Nullable("extender"))
-        ExtensionStore.extend(
-          selector, source, target,
-          EvaluationContext.current.get.currentCallableSpan
-        ).asSassList
+        ExtensionStore
+          .extend(
+            selector,
+            source,
+            target,
+            EvaluationContext.current.get.currentCallableSpan
+          )
+          .asSassList
       }
     )
 
@@ -290,10 +294,14 @@ object SelectorFunctions {
         selector.assertNotBogus(Nullable("selector"))
         target.assertNotBogus(Nullable("original"))
         source.assertNotBogus(Nullable("replacement"))
-        ExtensionStore.replace(
-          selector, source, target,
-          EvaluationContext.current.get.currentCallableSpan
-        ).asSassList
+        ExtensionStore
+          .replace(
+            selector,
+            source,
+            target,
+            EvaluationContext.current.get.currentCallableSpan
+          )
+          .asSassList
       }
     )
 
@@ -311,7 +319,7 @@ object SelectorFunctions {
         val selector2 = asSelectorList(args(1), "selector2")
         selector1.assertNotBogus(Nullable("selector1"))
         selector2.assertNotBogus(Nullable("selector2"))
-        val unified   = selector1.unify(selector2)
+        val unified = selector1.unify(selector2)
         if (unified.isEmpty) SassNull
         else unified.get.asSassList
       }

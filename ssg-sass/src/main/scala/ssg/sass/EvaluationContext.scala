@@ -128,11 +128,17 @@ object CurrentEnvironment {
 
 /** Holds a callback for invoking a [[Callable]] from outside the [[ssg.sass.visitor.EvaluateVisitor]]. Set by the visitor on entry so built-in `meta.call` / `meta.apply` functions can dispatch
   * arbitrary callables (built-in or user-defined) without an explicit visitor reference. Same single-`var` rationale as [[CurrentEnvironment]].
+  *
+  * dart-sass: `call()` constructs a synthetic `ArgumentList` AST node containing `ValueExpression` wrappers around the already-evaluated values, then dispatches through `_runFunctionCallable` which
+  * calls `_evaluateArguments` + the full binding pipeline (`ParameterList.verify`, default values, rest assembly, keyword rest handling). The invoker type reflects this: it accepts an AST
+  * `ArgumentList` rather than pre-extracted positional/named lists, so the evaluator's full argument binding pipeline is exercised.
   */
 object CurrentCallableInvoker {
 
-  /** A function that invokes a [[Callable]] with positional + named args. */
-  type Invoker = (Callable, List[ssg.sass.value.Value], scala.collection.immutable.ListMap[String, ssg.sass.value.Value]) => ssg.sass.value.Value
+  /** A function that invokes a [[Callable]] with a synthetic [[ssg.sass.ast.sass.ArgumentList]] AST node. The evaluator's implementation runs `_evaluateArguments` on the AST node, then dispatches
+    * through the standard built-in / user-defined / plain-CSS callable pipeline.
+    */
+  type Invoker = (Callable, ssg.sass.ast.sass.ArgumentList) => ssg.sass.value.Value
 
   private var _invoker: Nullable[Invoker] = Nullable.empty
 
@@ -147,11 +153,14 @@ object CurrentCallableInvoker {
 
 /** Holds a callback for invoking a mixin [[Callable]] from outside the [[ssg.sass.visitor.EvaluateVisitor]]. Set by the visitor on entry so built-in `meta.apply` can run a mixin body against the
   * current statement-visitor parent node. Same single-`var` rationale as [[CurrentEnvironment]].
+  *
+  * dart-sass: `apply()` constructs a synthetic `ArgumentList` AST node and dispatches through `_applyMixin`, analogous to how `call()` dispatches through `_runFunctionCallable`.
   */
 object CurrentMixinInvoker {
 
-  /** A function that invokes a mixin [[Callable]] with positional + named args. */
-  type Invoker = (Callable, List[ssg.sass.value.Value], scala.collection.immutable.ListMap[String, ssg.sass.value.Value]) => Unit
+  /** A function that invokes a mixin [[Callable]] with a synthetic [[ssg.sass.ast.sass.ArgumentList]] AST node, plus the `@content` block from the enclosing `@include` site (if any).
+    */
+  type Invoker = (Callable, ssg.sass.ast.sass.ArgumentList) => Unit
 
   private var _invoker: Nullable[Invoker] = Nullable.empty
 

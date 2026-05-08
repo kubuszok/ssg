@@ -560,7 +560,7 @@ final class Environment private (
     global:       Boolean = false
   ): Unit = {
     if (namespace.isDefined) {
-      _getModule(namespace.get).setVariable(name, value)
+      _getModule(namespace.get).setVariable(name, value, nodeWithSpan.map(_.span))
       return
     }
 
@@ -579,7 +579,7 @@ final class Environment private (
             m => if (m.variables.contains(name)) Nullable(m) else Nullable.empty
           )
         if (moduleWithName.isDefined) {
-          moduleWithName.get.setVariable(name, value)
+          moduleWithName.get.setVariable(name, value, nodeWithSpan.map(_.span))
           return
         }
       }
@@ -601,7 +601,7 @@ final class Environment private (
         while (j >= 0) {
           val m = bucket(j)
           if (m.variables.contains(name)) {
-            m.setVariable(name, value)
+            m.setVariable(name, value, nodeWithSpan.map(_.span))
             return
           }
           j -= 1

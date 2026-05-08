@@ -522,13 +522,13 @@ final class EvaluateVisitor(
 
     val savedCur = ssg.sass.CurrentEnvironment.set(Nullable(_environment))
     val savedInv = ssg.sass.CurrentCallableInvoker.set(
-      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) => _invokeCallable(c, pos, named))
+      Nullable((c: Callable, argList: ssg.sass.ast.sass.ArgumentList) => _runFunctionCallable(argList, c))
     )
     val savedMixinInv = ssg.sass.CurrentMixinInvoker.set(
-      Nullable((c: Callable, pos: List[Value], named: ListMap[String, Value]) =>
+      Nullable((c: Callable, argList: ssg.sass.ast.sass.ArgumentList) =>
         // dart-sass: meta.apply reads _environment.content so that the @content
         // block from the @include site is forwarded to the inner mixin.
-        _invokeMixinCallable(c, pos, named, _environment.content)
+        _runMixinCallable(argList, c, _environment.content)
       )
     )
     try
@@ -984,7 +984,7 @@ final class EvaluateVisitor(
       forImport = forImport
     )
     canonResult.flatMap { cr =>
-      val colonIdx = cr.canonicalUrl.indexOf(':')
+      val colonIdx  = cr.canonicalUrl.indexOf(':')
       val hasScheme = colonIdx > 0 && (cr.canonicalUrl.indexOf('/') < 0 || cr.canonicalUrl.indexOf('/') > colonIdx)
       if (!hasScheme) {
         _logger.warnForDeprecation(
@@ -1106,9 +1106,10 @@ final class EvaluateVisitor(
       )
     }
 
-  /** Invokes a [[Callable]] (built-in or user-defined function) with the given arguments. Used by `meta.call` to dispatch a `SassFunction`'s underlying callable. Mixin invocation is not supported
-    * here.
+  /** Invokes a [[Callable]] (built-in or user-defined function) with pre-evaluated arguments. Retained for internal use by visitInterpolatedFunctionExpression and similar paths that already have
+    * positional/named values without an AST ArgumentList. The main entry point for meta.call() is now [[_runFunctionCallable]].
     */
+  @annotation.nowarn("msg=unused private member")
   private def _invokeCallable(callable: Callable, positional: List[Value], named: ListMap[String, Value]): Value =
     ssg.sass.AliasedCallable.unwrap(callable) match {
       case bic: BuiltInCallable =>
@@ -1160,6 +1161,83 @@ final class EvaluateVisitor(
       case other =>
         throw SassScriptException(s"Callable type not supported by meta.call: $other")
     }
+
+  /** Evaluates [arguments] as applied to [callable].
+    *
+    * Port of dart-sass `_runFunctionCallable` (evaluate.dart:3602-3672). Dispatches through the full argument-evaluation + binding pipeline: `_evaluateArguments` -> arity check -> named-arg merge ->
+    * default padding -> rest assembly -> callback invocation (for built-ins) or environment closure + parameter binding (for user-defined functions).
+    *
+    * This is the entry point used by `meta.call()` via [[ssg.sass.CurrentCallableInvoker]].
+    */
+  private def _runFunctionCallable(
+    arguments: ssg.sass.ast.sass.ArgumentList,
+    callable:  Callable
+  ): Value =
+    ssg.sass.AliasedCallable.unwrap(callable) match {
+      case bic: BuiltInCallable =>
+        val (positional, named, _) = _evaluateArguments(arguments)
+        _checkBuiltInArity(bic, positional, named)
+        val merged =
+          if (named.isEmpty) positional
+          else _mergeBuiltInNamedArgs(bic, positional, named)
+        val padded0     = _padBuiltInPositional(bic, merged)
+        val (padded, _) = _collectBuiltInRestArgs(bic, padded0, named)
+        // dart-sass: _withoutSlash strips slash-separated info from
+        // the result of built-in function calls (evaluate.dart:3609).
+        _addExceptionSpan(arguments, bic.callback(padded)).withoutSlash
+      case ud: UserDefinedCallable[?] =>
+        ud.declaration match {
+          case fr: ssg.sass.ast.sass.FunctionRule =>
+            val (positional, named, splatSep) = _evaluateArguments(arguments)
+            ud.environment match {
+              case env: Environment =>
+                _withEnvironment(env.closure()) {
+                  _runUserDefinedFunction(fr, positional, named, splatSep)
+                }
+              case _ =>
+                _runUserDefinedFunction(fr, positional, named, splatSep)
+            }
+          case _ =>
+            throw SassScriptException(s"Callable ${callable.name} is not a function.")
+        }
+      case pcc: PlainCssCallable =>
+        // dart-sass: _runFunctionCallable for PlainCssCallable produces a
+        // plain CSS function call string, e.g. `round(0.6)`.
+        if (arguments.named.nonEmpty || arguments.keywordRest.isDefined) {
+          throw SassScriptException("Plain CSS functions don't support keyword arguments.")
+        }
+        val sb = new StringBuilder()
+        sb.append(pcc.name)
+        sb.append('(')
+        var first = true
+        for (arg <- arguments.positional) {
+          if (!first) sb.append(", ")
+          first = false
+          sb.append(_evaluateToCss(arg))
+        }
+        arguments.rest.foreach { restExpr =>
+          val rest = restExpr.accept(this)
+          if (!first) sb.append(", ")
+          sb.append(rest.toCssString())
+        }
+        sb.append(')')
+        new ssg.sass.value.SassString(sb.toString(), hasQuotes = false)
+      case other =>
+        throw SassScriptException(s"Callable type not supported: $other")
+    }
+
+  /** Evaluates [arguments] as applied to a mixin [callable].
+    *
+    * Port of dart-sass `_applyMixin` dispatch path used by `meta.apply()`. This is the entry point used by `meta.apply()` via [[ssg.sass.CurrentMixinInvoker]].
+    */
+  private def _runMixinCallable(
+    arguments: ssg.sass.ast.sass.ArgumentList,
+    callable:  Callable,
+    content:   Nullable[UserDefinedCallable[Environment]]
+  ): Unit = {
+    val (positional, named, splatSep) = _evaluateArguments(arguments)
+    _invokeMixinCallable(callable, positional, named, content, splatSep)
+  }
 
   /** Switches the active environment, keeping [[CurrentEnvironment]] in sync so built-in callables (e.g. `mixin-exists`) introspect the right scope.
     */
@@ -1452,16 +1530,13 @@ final class EvaluateVisitor(
   }
 
   override def visitLegacyIfExpression(node: LegacyIfExpression): Value = {
-    val positional = node.arguments.positional
-    val named      = node.arguments.named
+    val (positional, named) = _evaluateMacroArguments(node)
+    _verifyArguments(positional.length, named, LegacyIfExpression.declaration, node)
 
-    val condition = if (positional.nonEmpty) positional(0)
-                    else named.getOrElse("condition",
-                      throw SassScriptException("Missing argument $condition."))
-    val ifTrue = positional.lift(1).orElse(named.get("if-true")).getOrElse(
-      throw SassScriptException("Missing argument $if-true."))
-    val ifFalse = positional.lift(2).orElse(named.get("if-false")).getOrElse(
-      throw SassScriptException("Missing argument $if-false."))
+    // ignore: prefer_is_empty
+    val condition = positional.lift(0).getOrElse(named("condition"))
+    val ifTrue    = positional.lift(1).getOrElse(named("if-true"))
+    val ifFalse   = positional.lift(2).getOrElse(named("if-false"))
 
     val result = if (condition.accept(this).isTruthy) ifTrue else ifFalse
     _withoutSlash(result.accept(this), _expressionNode(result))
@@ -4505,6 +4580,7 @@ final class EvaluateVisitor(
     * For a [[UserDefinedCallable]] backed by a [[MixinRule]], binds parameters in a fresh environment snapshot and runs the body. For a content-accepting [[BuiltInCallable]], invokes its callback
     * with the positional args. Any other callable shape raises a [[SassScriptException]].
     */
+  @annotation.nowarn("msg=unused private member") // default value for splatSep
   private def _invokeMixinCallable(
     callable:   Callable,
     positional: List[Value],
@@ -5164,6 +5240,134 @@ final class EvaluateVisitor(
     }
     (positionalBuf.toList, named, separator)
   }
+
+  /** Evaluates the arguments in [invocation] only as much as necessary to separate out positional and named arguments.
+    *
+    * Returns the arguments as expressions so that they can be lazily evaluated for macros such as `if()`.
+    *
+    * Port of dart-sass `_evaluateMacroArguments` (evaluate.dart:3862-3926).
+    */
+  private def _evaluateMacroArguments(
+    invocation: ssg.sass.ast.sass.CallableInvocation
+  ): (List[Expression], Map[String, Expression]) = {
+    import scala.util.boundary, boundary.break
+
+    boundary[(List[Expression], Map[String, Expression])] {
+      val restArgs_ = invocation.arguments.rest
+      if (restArgs_.isEmpty) {
+        break((invocation.arguments.positional, invocation.arguments.named))
+      }
+      val restArgs = restArgs_.get
+
+      val positional      = scala.collection.mutable.ListBuffer.from(invocation.arguments.positional)
+      val named           = scala.collection.mutable.LinkedHashMap.from(invocation.arguments.named)
+      val rest            = restArgs.accept(this)
+      val restNodeForSpan = _expressionNode(restArgs)
+      rest match {
+        case map: ssg.sass.value.SassMap =>
+          _addRestMap(
+            named,
+            map,
+            invocation,
+            (value: Value) => ValueExpression(value, restArgs.span)
+          )
+        case list: ssg.sass.value.SassList =>
+          positional ++= list.asList.map { (value: Value) =>
+            ValueExpression(
+              _withoutSlash(value, restNodeForSpan),
+              restArgs.span
+            )
+          }
+          list match {
+            case argList: ssg.sass.value.SassArgumentList =>
+              argList.keywords.foreach { (key, value) =>
+                named(key) = ValueExpression(
+                  _withoutSlash(value, restNodeForSpan),
+                  restArgs.span
+                )
+              }
+            case _ => ()
+          }
+        case _ =>
+          positional += ValueExpression(
+            _withoutSlash(rest, restNodeForSpan),
+            restArgs.span
+          )
+      }
+
+      val keywordRestArgs_ = invocation.arguments.keywordRest
+      if (keywordRestArgs_.isEmpty) break((positional.toList, named.toMap))
+      val keywordRestArgs = keywordRestArgs_.get
+
+      val keywordRest            = keywordRestArgs.accept(this)
+      val keywordRestNodeForSpan = _expressionNode(keywordRestArgs)
+      keywordRest match {
+        case map: ssg.sass.value.SassMap =>
+          _addRestMap(
+            named,
+            map,
+            invocation,
+            (value: Value) =>
+              ValueExpression(
+                _withoutSlash(value, keywordRestNodeForSpan),
+                keywordRestArgs.span
+              )
+          )
+          (positional.toList, named.toMap)
+        case _ =>
+          throw _exception(
+            s"Variable keyword arguments must be a map (was $keywordRest).",
+            Nullable(keywordRestArgs.span)
+          )
+      }
+    }
+  }
+
+  /** Adds the values in [map] to [values].
+    *
+    * Throws a [SassRuntimeException] associated with [nodeWithSpan]'s source span if any [map] keys aren't strings.
+    *
+    * If [convert] is passed, that's used to convert the map values to the value type for [values]. Otherwise, the [Value]s are used as-is.
+    *
+    * This takes an [AstNode] rather than a [FileSpan] so it can avoid calling [AstNode.span] if the span isn't required, since some nodes need to do real work to manufacture a source span.
+    *
+    * Port of dart-sass `_addRestMap` (evaluate.dart:3939-3957).
+    */
+  private def _addRestMap[T](
+    values:       scala.collection.mutable.Map[String, T],
+    map:          ssg.sass.value.SassMap,
+    nodeWithSpan: ssg.sass.ast.AstNode,
+    convert:      Value => T
+  ): Unit = {
+    val expressionNode = _expressionNode(nodeWithSpan)
+    map.contents.foreach { (key, value) =>
+      key match {
+        case s: ssg.sass.value.SassString =>
+          values(s.text) = convert(_withoutSlash(value, expressionNode))
+        case _ =>
+          throw _exception(
+            s"Variable keyword argument map must have string keys.\n" +
+              s"$key is not a string in $map.",
+            Nullable(nodeWithSpan.span)
+          )
+      }
+    }
+  }
+
+  /** Throws a [SassRuntimeException] if [positional] and [named] aren't valid when applied to [parameters].
+    *
+    * Port of dart-sass `_verifyArguments` (evaluate.dart:3961-3970).
+    */
+  private def _verifyArguments(
+    positional:   Int,
+    named:        Map[String, ?],
+    parameters:   ssg.sass.ast.sass.ParameterList,
+    nodeWithSpan: ssg.sass.ast.AstNode
+  ): Unit =
+    _addExceptionSpan(
+      nodeWithSpan,
+      parameters.verify(positional, named.keySet)
+    )
 
   // ===========================================================================
   // CssVisitor — plain CSS evaluation

@@ -102,9 +102,9 @@ final class CharCodeSuite extends munit.FunSuite {
     assertEquals(CharCode.opposite('('.toInt), ')'.toInt)
     assertEquals(CharCode.opposite('['.toInt), ']'.toInt)
     assertEquals(CharCode.opposite('{'.toInt), '}'.toInt)
-    intercept[IllegalArgumentException] { CharCode.opposite(')'.toInt) }
-    intercept[IllegalArgumentException] { CharCode.opposite(']'.toInt) }
-    intercept[IllegalArgumentException] { CharCode.opposite('}'.toInt) }
+    intercept[IllegalArgumentException](CharCode.opposite(')'.toInt))
+    intercept[IllegalArgumentException](CharCode.opposite(']'.toInt))
+    intercept[IllegalArgumentException](CharCode.opposite('}'.toInt))
   }
 
   test("case conversion works") {
