@@ -16,3 +16,6 @@
 [submodule "original-src/sass-spec"]
 	path = original-src/sass-spec
 	url = https://github.com/sass/sass-spec.git
+[submodule "original-src/katex"]
+	path = original-src/katex
+	url = https://github.com/KaTeX/KaTeX.git
