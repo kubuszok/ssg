@@ -146,3 +146,34 @@ ssg-md/src/main/scala/ssg/md/util/sequence/Escaping.scala	shortcuts	(no reason)	
 79  simplified-comment      /** Simplified Replacer that only handles String-based replacement	shortcuts	(no reason)	2026-04-26	dev
 ssg-liquid/src/main/scala/ssg/liquid/filters/date/CustomDateFormatRegistry.scala	shortcuts	(no reason)	2026-04-26	dev
 63  unsupported-op          throw new UnsupportedOperationException	shortcuts	(no reason)	2026-04-26	dev
+ssg-katex/src/main/scala/ssg/katex/build/BuildCommon.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/build/BuildHTML.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/build/BuildMathML.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/build/Delimiter.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/data/FontMetrics.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/data/Macros.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/data/Symbols.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/data/UnicodeScripts.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/data/Units.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/environments/ArrayEnv.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/environments/CdEnv.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/environments/EnvironmentDef.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/ArrowFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/DefFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/DelimsizingFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/EnvironmentFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/FunctionDef.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/HorizBraceFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/KernFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/MclassFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/OpFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/SizingFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/StylingFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/functions/TagFunc.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/parse/Lexer.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/parse/MacroExpander.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/parse/ParseNode.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/parse/Parser.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/tree/DomTree.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/main/scala/ssg/katex/tree/VirtualNode.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-katex/src/test/scala/ssg/katex/KaTeXSpecSuite.scala	shortcuts	(no reason)	2026-05-09	dev

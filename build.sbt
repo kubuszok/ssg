@@ -112,6 +112,23 @@ val `ssg-js` = (projectMatrix in file("ssg-js"))
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
+// --- Math typesetting (KaTeX port) ---
+
+val `ssg-katex` = (projectMatrix in file("ssg-katex"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-katex",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .dependsOn(`ssg-commons`)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
 // --- Syntax highlighting (tree-sitter) ---
 
 val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
@@ -160,7 +177,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-highlight`)
+  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-highlight`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -170,21 +187,21 @@ val ssg = (projectMatrix in file("ssg"))
 addCommandAlias("test-jvm",
   List(
     "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
-    "ssg-minify/test", "ssg-js/test", "ssg-highlight/test"
+    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-highlight/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-js",
   List(
     "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
-    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-highlightJS/test"
+    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-highlightJS/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-native",
   List(
     "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
-    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-highlightNative/test"
+    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-highlightNative/test"
   ).mkString("; ")
 )
 
