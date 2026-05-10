@@ -13,6 +13,8 @@ battle-tested libraries to idiomatic Scala 3.
 | `ssg-sass` | [dart-sass](https://github.com/sass/dart-sass) 1.99.0 | Dart | SASS/SCSS compiler | 13865/13902 sass-spec (99.7%) |
 | `ssg-minify` | [jekyll-minifier](https://github.com/digitalsparky/jekyll-minifier) 0.2.2 | Ruby | HTML/CSS/JS/JSON minification | 121 tests |
 | `ssg-js` | [terser](https://github.com/terser/terser) 5.46.1 | JavaScript | JavaScript compiler/minifier | 2518 tests |
+| `ssg-katex` | [KaTeX](https://github.com/KaTeX/KaTeX) 0.16.45 | TypeScript | Math typesetting engine | 648 tests |
+| `ssg-mermaid` | [Mermaid](https://github.com/mermaid-js/mermaid) 11.0.0 | TypeScript | Diagramming engine (31 types) | 543 tests |
 | `ssg-highlight` | [tree-sitter](https://github.com/tree-sitter/tree-sitter) | C/Rust | Syntax highlighting | 73 grammars |
 | `ssg-commons` | — | — | Shared cross-platform utilities | — |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
@@ -101,6 +103,37 @@ Ports Terser (fork of UglifyJS) — a full JavaScript compiler with:
 Usage: `ssg.js.Terser.minifyToString("var x = 1 + 2;")` or integrate
 with ssg-minify via `ssg.TerserJsCompressorAdapter`.
 
+### ssg-katex (Math Typesetting)
+
+Ports KaTeX — the fast LaTeX math typesetting library — to Scala 3.
+Server-side rendering: LaTeX expression in, HTML+MathML string out.
+
+Key features:
+- Full LaTeX parser with macro expansion (180+ built-in macros)
+- 57 parse node types, 45 function implementations (fractions, roots, accents, etc.)
+- HTML output builder with font metrics and delimiter sizing
+- MathML output for accessibility
+- 42 environment implementations (array, matrix, aligned, cases, CD, etc.)
+
+Usage: `ssg.katex.KaTeX.renderToString("\\frac{1}{2}")`
+
+### ssg-mermaid (Diagramming Engine)
+
+Ports Mermaid — the text-based diagramming library — to Scala 3.
+Server-side SVG rendering: diagram text in, SVG string out.
+
+Key features:
+- All 31 diagram types: flowchart, sequence, class, state, ER, pie, gantt,
+  timeline, mindmap, git graph, architecture, and 20 more
+- Custom SVG builder replacing D3.js (no browser DOM required)
+- dagre Sugiyama graph layout algorithm (rank assignment, crossing
+  minimization, coordinate assignment)
+- 12 node shapes, 7 curve types, 9 arrow markers
+- 4 themes (default, dark, forest, neutral)
+- Hand-written parsers for all 31 diagram grammars (replacing Jison/Langium)
+
+Usage: `ssg.mermaid.Mermaid.render("graph TD\\n    A-->B")`
+
 ### ssg-highlight (Syntax Highlighting)
 
 Tree-sitter-based syntax highlighting supporting 73 programming language
@@ -119,6 +152,8 @@ ssg/
 ├── ssg-sass/        SASS/SCSS compiler (dart-sass port)
 ├── ssg-minify/      HTML/CSS/JS/JSON minification (jekyll-minifier port)
 ├── ssg-js/          JavaScript compiler/minifier (Terser port)
+├── ssg-katex/       Math typesetting engine (KaTeX port)
+├── ssg-mermaid/     Diagramming engine (Mermaid port, 31 diagram types)
 ├── ssg-highlight/   Syntax highlighting (tree-sitter, 73 grammars)
 ├── ssg/             Aggregator module
 ├── original-src/    Reference sources (git submodules, not compiled)
@@ -148,6 +183,8 @@ original licenses:
 | dart-sass | MIT | 2016 Google Inc. |
 | jekyll-minifier | MIT | 2014-2024 DigitalSparky |
 | terser | BSD 2-Clause | 2012 Mihai Bazon |
+| KaTeX | MIT | Khan Academy |
+| Mermaid | MIT | Knut Sveidqvist |
 | tree-sitter | MIT | 2018 Max Brunsfeld |
 
 See [LICENSE](LICENSE) for full third-party notices.

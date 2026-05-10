@@ -29,16 +29,10 @@ import scala.util.boundary.break
 
 import ssg.commons.Nullable
 import ssg.katex.ParseError
-import ssg.katex.data.{Measurement, SpacingData, Units}
+import ssg.katex.data.{ Measurement, SpacingData, Units }
 import ssg.katex.functions.FunctionDef
 import ssg.katex.parse.AnyParseNode
-import ssg.katex.tree.{
-  Anchor,
-  DocumentFragment,
-  DomSpan,
-  HtmlDomNode,
-  Span
-}
+import ssg.katex.tree.{ Anchor, DocumentFragment, DomSpan, HtmlDomNode, Span }
 
 object BuildHTML {
 
@@ -46,10 +40,18 @@ object BuildHTML {
   // depending on their surroundings. See TeXbook pg. 442-446, Rules 5 and 6,
   // and the text before Rule 19.
   private val binLeftCanceller: Set[String] = Set(
-    "leftmost", "mbin", "mopen", "mrel", "mop", "mpunct"
+    "leftmost",
+    "mbin",
+    "mopen",
+    "mrel",
+    "mop",
+    "mpunct"
   )
   private val binRightCanceller: Set[String] = Set(
-    "rightmost", "mrel", "mclose", "mpunct"
+    "rightmost",
+    "mrel",
+    "mclose",
+    "mpunct"
   )
 
   private val styleMap: Map[String, Style] = Map(
@@ -70,30 +72,26 @@ object BuildHTML {
     "minner" -> "minner"
   )
 
-  /**
-   * Take a list of nodes, build them in order, and return a list of the built
-   * nodes. documentFragments are flattened into their contents, so the
-   * returned list contains no fragments. `isRealGroup` is true if `expression`
-   * is a real group (no atoms will be added on either side), as opposed to
-   * a partial group (e.g. one created by \color). `surrounding` is an array
-   * consisting type of nodes that will be added to the left and right.
-   */
+  /** Take a list of nodes, build them in order, and return a list of the built nodes. documentFragments are flattened into their contents, so the returned list contains no fragments. `isRealGroup` is
+    * true if `expression` is a real group (no atoms will be added on either side), as opposed to a partial group (e.g. one created by \color). `surrounding` is an array consisting type of nodes that
+    * will be added to the left and right.
+    */
   def buildExpression(
-      expression: Array[AnyParseNode],
-      options: Options,
-      isRealGroup: Boolean,
-      isRoot: Boolean = false,
-      surrounding: (Nullable[String], Nullable[String]) = (Nullable.Null, Nullable.Null)
+    expression:  Array[AnyParseNode],
+    options:     Options,
+    isRealGroup: Boolean,
+    isRoot:      Boolean = false,
+    surrounding: (Nullable[String], Nullable[String]) = (Nullable.Null, Nullable.Null)
   ): ArrayBuffer[HtmlDomNode] = boundary {
     // Parse expressions into `groups`.
     val groups = ArrayBuffer.empty[HtmlDomNode]
-    var i = 0
+    var i      = 0
     while (i < expression.length) {
       val output = buildGroup(expression(i), options)
       output match {
         case frag: DocumentFragment[?] =>
           val children = frag.children
-          var j = 0
+          var j        = 0
           while (j < children.length) {
             groups += children(j).asInstanceOf[HtmlDomNode]
             j += 1
@@ -119,18 +117,15 @@ object BuildHTML {
       if (node.nodeType == "sizing") {
         glueOptions = options.havingSize(node.asInstanceOf[ssg.katex.parse.ParseNodeSizing].size)
       } else if (node.nodeType == "styling") {
-        glueOptions = options.havingStyle(
-          styleMap(node.asInstanceOf[ssg.katex.parse.ParseNodeStyling].style.value))
+        glueOptions = options.havingStyle(styleMap(node.asInstanceOf[ssg.katex.parse.ParseNodeStyling].style.value))
       }
     }
 
     // Dummy spans for determining spacings between surrounding atoms.
     // If `expression` has no atoms on the left or right, class "leftmost"
     // or "rightmost", respectively, is used to indicate it.
-    val dummyPrev = BuildCommon.makeSpan(
-      ArrayBuffer(surrounding._1.getOrElse("leftmost")), ArrayBuffer.empty, Nullable(options))
-    val dummyNext = BuildCommon.makeSpan(
-      ArrayBuffer(surrounding._2.getOrElse("rightmost")), ArrayBuffer.empty, Nullable(options))
+    val dummyPrev = BuildCommon.makeSpan(ArrayBuffer(surrounding._1.getOrElse("leftmost")), ArrayBuffer.empty, Nullable(options))
+    val dummyNext = BuildCommon.makeSpan(ArrayBuffer(surrounding._2.getOrElse("rightmost")), ArrayBuffer.empty, Nullable(options))
 
     // TODO: These code assumes that a node's math class is the first element
     // of its `classes` array. A later cleanup should ensure this, for
@@ -139,48 +134,60 @@ object BuildHTML {
     // Before determining what spaces to insert, perform bin cancellation.
     // Binary operators change to ordinary symbols in some contexts.
     val isRootFlag = isRoot
-    traverseNonSpaceNodes(groups, (node, prev) => {
-      // In JS, accessing classes[0] on an empty array yields undefined,
-      // which silently makes all comparisons false. Guard here.
-      if (prev.classes.nonEmpty && node.classes.nonEmpty) {
-        val prevType = prev.classes(0)
-        val nodeType = node.classes(0)
-        if (prevType == "mbin" && binRightCanceller.contains(nodeType)) {
-          prev.classes(0) = "mord"
-        } else if (nodeType == "mbin" && binLeftCanceller.contains(prevType)) {
-          node.classes(0) = "mord"
+    traverseNonSpaceNodes(
+      groups,
+      (node, prev) => {
+        // In JS, accessing classes[0] on an empty array yields undefined,
+        // which silently makes all comparisons false. Guard here.
+        if (prev.classes.nonEmpty && node.classes.nonEmpty) {
+          val prevType = prev.classes(0)
+          val nodeType = node.classes(0)
+          if (prevType == "mbin" && binRightCanceller.contains(nodeType)) {
+            prev.classes(0) = "mord"
+          } else if (nodeType == "mbin" && binLeftCanceller.contains(prevType)) {
+            node.classes(0) = "mord"
+          }
         }
-      }
-      Nullable.Null
-    }, dummyPrev, dummyNext, isRootFlag)
+        Nullable.Null
+      },
+      dummyPrev,
+      dummyNext,
+      isRootFlag
+    )
 
-    traverseNonSpaceNodes(groups, (node, prev) => {
-      val prevType = getTypeOfDomTree(Nullable(prev))
-      val nodeType = getTypeOfDomTree(Nullable(node))
+    traverseNonSpaceNodes(
+      groups,
+      (node, prev) => {
+        val prevType = getTypeOfDomTree(Nullable(prev))
+        val nodeType = getTypeOfDomTree(Nullable(node))
 
-      // 'mtight' indicates that the node is script or scriptscript style.
-      val space: Nullable[Measurement] = if (prevType.isDefined && nodeType.isDefined) {
-        if (node.hasClass("mtight")) {
-          SpacingData.tightSpacings.get(prevType.get).flatMap(_.get(nodeType.get)) match {
-            case Some(m) => Nullable(m)
-            case None => Nullable.Null
+        // 'mtight' indicates that the node is script or scriptscript style.
+        val space: Nullable[Measurement] = if (prevType.isDefined && nodeType.isDefined) {
+          if (node.hasClass("mtight")) {
+            SpacingData.tightSpacings.get(prevType.get).flatMap(_.get(nodeType.get)) match {
+              case Some(m) => Nullable(m)
+              case None    => Nullable.Null
+            }
+          } else {
+            SpacingData.spacings.get(prevType.get).flatMap(_.get(nodeType.get)) match {
+              case Some(m) => Nullable(m)
+              case None    => Nullable.Null
+            }
           }
         } else {
-          SpacingData.spacings.get(prevType.get).flatMap(_.get(nodeType.get)) match {
-            case Some(m) => Nullable(m)
-            case None => Nullable.Null
-          }
+          Nullable.Null
         }
-      } else {
-        Nullable.Null
-      }
 
-      if (space.isDefined) { // Insert glue (spacing) after the `prev`.
-        Nullable(BuildCommon.makeGlue(space.get, glueOptions))
-      } else {
-        Nullable.Null
-      }
-    }, dummyPrev, dummyNext, isRootFlag)
+        if (space.isDefined) { // Insert glue (spacing) after the `prev`.
+          Nullable(BuildCommon.makeGlue(space.get, glueOptions))
+        } else {
+          Nullable.Null
+        }
+      },
+      dummyPrev,
+      dummyNext,
+      isRootFlag
+    )
 
     groups
   }
@@ -191,11 +198,11 @@ object BuildHTML {
   // function to insert after it. `next` is a node that will be added to the right.
   // Used for bin cancellation and inserting spacings.
   private def traverseNonSpaceNodes(
-      nodes: ArrayBuffer[HtmlDomNode],
-      callback: (HtmlDomNode, HtmlDomNode) => Nullable[HtmlDomNode],
-      prevNodeInit: HtmlDomNode,
-      next: HtmlDomNode,
-      isRoot: Boolean
+    nodes:        ArrayBuffer[HtmlDomNode],
+    callback:     (HtmlDomNode, HtmlDomNode) => Nullable[HtmlDomNode],
+    prevNodeInit: HtmlDomNode,
+    next:         HtmlDomNode,
+    isRoot:       Boolean
   ): Unit = {
     var prevNode = prevNodeInit
     var prevInsertAfter: Nullable[(HtmlDomNode) => Unit] = Nullable.Null
@@ -205,16 +212,16 @@ object BuildHTML {
 
     var i = 0
     while (i < nodes.length) {
-      val node = nodes(i)
+      val node         = nodes(i)
       val partialGroup = checkPartialGroup(node)
 
       if (partialGroup.isDefined) { // Recursive DFS
         // TODO(ts): make nodes a $ReadOnlyArray by returning a new array
-        val pg = partialGroup.get
+        val pg         = partialGroup.get
         val pgChildren = pg match {
           case f: DocumentFragment[?] => ArrayBuffer.from(f.children.map(_.asInstanceOf[HtmlDomNode]))
-          case a: Anchor => ArrayBuffer.from(a.children)
-          case s: Span[?] => ArrayBuffer.from(s.children.map(_.asInstanceOf[HtmlDomNode]))
+          case a: Anchor              => ArrayBuffer.from(a.children)
+          case s: Span[?]             => ArrayBuffer.from(s.children.map(_.asInstanceOf[HtmlDomNode]))
           case _ => ArrayBuffer.empty[HtmlDomNode]
         }
         traverseNonSpaceNodesInner(pgChildren, callback, prevNode, prevInsertAfter, isRoot) match {
@@ -247,10 +254,10 @@ object BuildHTML {
           prevNode = BuildCommon.makeSpan(ArrayBuffer("leftmost")) // treat like beginning of line
         }
         val capturedI = i
-        prevInsertAfter = Nullable((n: HtmlDomNode) => {
+        prevInsertAfter = Nullable { (n: HtmlDomNode) =>
           nodes.insert(capturedI + 1, n)
           i += 1
-        })
+        }
         i += 1
       }
     }
@@ -261,30 +268,29 @@ object BuildHTML {
 
   // Inner traversal helper that handles children of partial groups
   private def traverseNonSpaceNodesInner(
-      nodes: ArrayBuffer[HtmlDomNode],
-      callback: (HtmlDomNode, HtmlDomNode) => Nullable[HtmlDomNode],
-      prevNodeInit: HtmlDomNode,
-      prevInsertAfterInit: Nullable[(HtmlDomNode) => Unit],
-      isRoot: Boolean
+    nodes:               ArrayBuffer[HtmlDomNode],
+    callback:            (HtmlDomNode, HtmlDomNode) => Nullable[HtmlDomNode],
+    prevNodeInit:        HtmlDomNode,
+    prevInsertAfterInit: Nullable[(HtmlDomNode) => Unit],
+    isRoot:              Boolean
   ): (HtmlDomNode, Nullable[(HtmlDomNode) => Unit]) = {
-    var prevNode = prevNodeInit
+    var prevNode        = prevNodeInit
     var prevInsertAfter = prevInsertAfterInit
 
     var i = 0
     while (i < nodes.length) {
-      val node = nodes(i)
+      val node         = nodes(i)
       val partialGroup = checkPartialGroup(node)
 
       if (partialGroup.isDefined) {
-        val pg = partialGroup.get
+        val pg         = partialGroup.get
         val pgChildren = pg match {
           case f: DocumentFragment[?] => ArrayBuffer.from(f.children.map(_.asInstanceOf[HtmlDomNode]))
-          case a: Anchor => ArrayBuffer.from(a.children)
-          case s: Span[?] => ArrayBuffer.from(s.children.map(_.asInstanceOf[HtmlDomNode]))
+          case a: Anchor              => ArrayBuffer.from(a.children)
+          case s: Span[?]             => ArrayBuffer.from(s.children.map(_.asInstanceOf[HtmlDomNode]))
           case _ => ArrayBuffer.empty[HtmlDomNode]
         }
-        val (newPrev, newInsert) = traverseNonSpaceNodesInner(
-          pgChildren, callback, prevNode, prevInsertAfter, isRoot)
+        val (newPrev, newInsert) = traverseNonSpaceNodesInner(pgChildren, callback, prevNode, prevInsertAfter, isRoot)
         prevNode = newPrev
         prevInsertAfter = newInsert
       } else {
@@ -308,9 +314,7 @@ object BuildHTML {
           prevNode = BuildCommon.makeSpan(ArrayBuffer("leftmost"))
         }
         val capturedI = i
-        prevInsertAfter = Nullable((n: HtmlDomNode) => {
-          nodes.insert(capturedI + 1, n)
-        })
+        prevInsertAfter = Nullable((n: HtmlDomNode) => nodes.insert(capturedI + 1, n))
       }
       i += 1
     }
@@ -320,20 +324,19 @@ object BuildHTML {
 
   // Check if given node is a partial group, i.e., does not affect spacing around.
   private def checkPartialGroup(
-      node: HtmlDomNode
-  ): Nullable[HtmlDomNode] = {
+    node: HtmlDomNode
+  ): Nullable[HtmlDomNode] =
     node match {
-      case _: DocumentFragment[?] => Nullable(node)
-      case _: Anchor => Nullable(node)
+      case _: DocumentFragment[?]                => Nullable(node)
+      case _: Anchor                             => Nullable(node)
       case s: Span[?] if s.hasClass("enclosing") => Nullable(node)
       case _ => Nullable.Null
     }
-  }
 
   // Return the outermost node of a domTree.
   private def getOutermostNode(
-      node: HtmlDomNode,
-      side: String // "left" | "right"
+    node: HtmlDomNode,
+    side: String // "left" | "right"
   ): HtmlDomNode = {
     val partialGroup = checkPartialGroup(node)
     partialGroup.fold {
@@ -341,8 +344,8 @@ object BuildHTML {
     } { pg =>
       val children: IndexedSeq[HtmlDomNode] = pg match {
         case f: DocumentFragment[?] => f.children.map(_.asInstanceOf[HtmlDomNode])
-        case a: Anchor => a.children.toIndexedSeq
-        case s: Span[?] => s.children.map(_.asInstanceOf[HtmlDomNode]).toIndexedSeq
+        case a: Anchor              => a.children.toIndexedSeq
+        case s: Span[?]             => s.children.map(_.asInstanceOf[HtmlDomNode]).toIndexedSeq
         case _ => IndexedSeq.empty
       }
       if (children.nonEmpty) {
@@ -360,8 +363,8 @@ object BuildHTML {
   // Return math atom class (mclass) of a domTree.
   // If `side` is given, it will get the type of the outermost node at given side.
   def getTypeOfDomTree(
-      node: Nullable[HtmlDomNode],
-      side: Nullable[String] = Nullable.Null
+    node: Nullable[HtmlDomNode],
+    side: Nullable[String] = Nullable.Null
   ): Nullable[String] = boundary {
     if (node.isEmpty) {
       break(Nullable.Null)
@@ -376,7 +379,7 @@ object BuildHTML {
       val className = n.classes(0)
       DomEnum.get(className) match {
         case Some(dt) => Nullable(dt)
-        case None => Nullable.Null
+        case None     => Nullable.Null
       }
     } else {
       Nullable.Null
@@ -384,28 +387,25 @@ object BuildHTML {
   }
 
   def makeNullDelimiter(
-      options: Options,
-      classes: Array[String]
+    options: Options,
+    classes: Array[String]
   ): DomSpan = {
     val moreClasses = ArrayBuffer("nulldelimiter") ++ options.baseSizingClasses()
     BuildCommon.makeSpan(ArrayBuffer.from(classes) ++ moreClasses)
   }
 
-  /**
-   * buildGroup is the function that takes a group and calls the correct groupType
-   * function for it. It also handles the interaction of size and style changes
-   * between parents and children.
-   */
+  /** buildGroup is the function that takes a group and calls the correct groupType function for it. It also handles the interaction of size and style changes between parents and children.
+    */
   def buildGroup(
-      group: Nullable[AnyParseNode],
-      options: Options,
-      baseOptions: Nullable[Options] = Nullable.Null
+    group:       Nullable[AnyParseNode],
+    options:     Options,
+    baseOptions: Nullable[Options] = Nullable.Null
   ): HtmlDomNode = boundary {
     if (group.isEmpty) {
       break(BuildCommon.makeSpan())
     }
 
-    val g = group.get
+    val g             = group.get
     val groupBuilders = FunctionDef._htmlGroupBuilders
 
     if (groupBuilders.contains(g.nodeType)) {
@@ -417,9 +417,7 @@ object BuildHTML {
       // If the size changed between the parent and the current group, account
       // for that size difference.
       if (baseOptions.isDefined && options.size != baseOptions.get.size) {
-        groupNode = BuildCommon.makeSpan(
-          ArrayBuffer.from(options.sizingClasses(baseOptions.get)),
-          ArrayBuffer(groupNode), Nullable(options))
+        groupNode = BuildCommon.makeSpan(ArrayBuffer.from(options.sizingClasses(baseOptions.get)), ArrayBuffer(groupNode), Nullable(options))
 
         val multiplier =
           options.sizeMultiplier / baseOptions.get.sizeMultiplier
@@ -430,20 +428,16 @@ object BuildHTML {
 
       groupNode
     } else {
-      throw new ParseError(
-        "Got group of unknown type: '" + g.nodeType + "'")
+      throw new ParseError("Got group of unknown type: '" + g.nodeType + "'")
     }
   }
 
-  /**
-   * Combine an array of HTML DOM nodes (e.g., the output of `buildExpression`)
-   * into an unbreakable HTML node of class .base, with proper struts to
-   * guarantee correct vertical extent.  `buildHTML` calls this repeatedly to
-   * make up the entire expression as a sequence of unbreakable units.
-   */
+  /** Combine an array of HTML DOM nodes (e.g., the output of `buildExpression`) into an unbreakable HTML node of class .base, with proper struts to guarantee correct vertical extent. `buildHTML`
+    * calls this repeatedly to make up the entire expression as a sequence of unbreakable units.
+    */
   private def buildHTMLUnbreakable(
-      children: ArrayBuffer[HtmlDomNode],
-      options: Options
+    children: ArrayBuffer[HtmlDomNode],
+    options:  Options
   ): DomSpan = {
     // Compute height and depth of this chunk.
     val body = BuildCommon.makeSpan(ArrayBuffer("base"), children, Nullable(options))
@@ -465,10 +459,8 @@ object BuildHTML {
     body
   }
 
-  /**
-   * Take an entire parse tree, and build it into an appropriate set of HTML
-   * nodes.
-   */
+  /** Take an entire parse tree, and build it into an appropriate set of HTML nodes.
+    */
   def buildHTML(tree: Array[AnyParseNode], options: Options): DomSpan = {
     var treeNodes = tree
     // Strip off outer tag wrapper for processing below.
@@ -498,18 +490,22 @@ object BuildHTML {
     // enclosed in {...} and not part of an \over construction)."
 
     var parts = ArrayBuffer.empty[HtmlDomNode]
-    var i = 0
+    var i     = 0
     while (i < expression.length) {
       parts += expression(i)
-      if (expression(i).hasClass("mbin") ||
-          expression(i).hasClass("mrel") ||
-          expression(i).hasClass("allowbreak")) {
+      if (
+        expression(i).hasClass("mbin") ||
+        expression(i).hasClass("mrel") ||
+        expression(i).hasClass("allowbreak")
+      ) {
         // Put any post-operator glue on same line as operator.
         // Watch for \nobreak along the way, and stop at \newline.
         var nobreak = false
-        while (i < expression.length - 1 &&
-               expression(i + 1).hasClass("mspace") &&
-               !expression(i + 1).hasClass("newline")) {
+        while (
+          i < expression.length - 1 &&
+          expression(i + 1).hasClass("mspace") &&
+          !expression(i + 1).hasClass("newline")
+        ) {
           i += 1
           parts += expression(i)
           if (expression(i).hasClass("nobreak")) {

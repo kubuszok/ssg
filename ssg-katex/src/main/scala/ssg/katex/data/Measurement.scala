@@ -14,7 +14,6 @@ package ssg
 package katex
 package data
 
-/**
- * A measurement value: a number paired with a TeX unit string.
- */
+/** A measurement value: a number paired with a TeX unit string.
+  */
 final case class Measurement(number: Double, unit: String)

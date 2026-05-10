@@ -9,7 +9,7 @@
 package ssg
 package katex
 
-import ssg.katex.data.{Macros, Symbols}
+import ssg.katex.data.{ Macros, Symbols }
 
 class DupSpecSuite extends KaTeXTestSuite {
 
@@ -27,10 +27,8 @@ class DupSpecSuite extends KaTeXTestSuite {
       val mathSymbol = Symbols.mathMap.get(macroName)
       val textSymbol = Symbols.textMap.get(macroName)
 
-      assert(mathSymbol.isEmpty,
-        s"macro $macroName should not shadow a math symbol")
-      assert(textSymbol.isEmpty,
-        s"macro $macroName should not shadow a text symbol")
+      assert(mathSymbol.isEmpty, s"macro $macroName should not shadow a math symbol")
+      assert(textSymbol.isEmpty, s"macro $macroName should not shadow a text symbol")
     }
   }
 }

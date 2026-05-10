@@ -17,49 +17,42 @@ package ssg
 package katex
 package data
 
-import java.text.Normalizer
+// Uses platform-specific UnicodeNormalize.nfc() instead of java.text.Normalizer
+// (java.text.Normalizer is not available on Scala.js or Scala Native)
 
-/**
- * Maps NFC-normalized Unicode characters (single codepoint) back to
- * their decomposed base letter + combining accent(s).
- *
- * In the original JS, this is computed at module load time by iterating
- * over letters and accents, composing them, normalizing to NFC, and
- * keeping only the results that collapse to a single character.
- * We reproduce the same algorithm here.
- */
+/** Maps NFC-normalized Unicode characters (single codepoint) back to their decomposed base letter + combining accent(s).
+  *
+  * In the original JS, this is computed at module load time by iterating over letters and accents, composing them, normalizing to NFC, and keeping only the results that collapse to a single
+  * character. We reproduce the same algorithm here.
+  */
 object UnicodeSymbols {
 
   private val letters: String =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
       "αβγδεϵζηθϑικλμνξοπϖρϱςστυφϕχψωΓΔΘΛΞΠΣΥΦΨΩ"
 
-  /**
-   * The computed mapping from NFC-normalized single characters back to
-   * their decomposed letter + accent(s) representation.
-   */
+  /** The computed mapping from NFC-normalized single characters back to their decomposed letter + accent(s) representation.
+    */
   lazy val unicodeSymbols: Map[String, String] = {
-    val result = scala.collection.mutable.Map.empty[String, String]
+    val result     = scala.collection.mutable.Map.empty[String, String]
     val accentKeys = UnicodeAccents.unicodeAccents.keys.toArray
 
-    for (letter <- letters.map(_.toString)) {
+    for (letter <- letters.map(_.toString))
       for (accent <- accentKeys) {
-        val combined = letter + accent
-        val normalized = Normalizer.normalize(combined, Normalizer.Form.NFC)
+        val combined   = letter + accent
+        val normalized = UnicodeNormalize.nfc(combined)
         if (normalized.length == 1) {
           result(normalized) = combined
         }
-        for (accent2 <- accentKeys) {
+        for (accent2 <- accentKeys)
           if (accent != accent2) {
-            val combined2 = combined + accent2
-            val normalized2 = Normalizer.normalize(combined2, Normalizer.Form.NFC)
+            val combined2   = combined + accent2
+            val normalized2 = UnicodeNormalize.nfc(combined2)
             if (normalized2.length == 1) {
               result(normalized2) = combined2
             }
           }
-        }
       }
-    }
 
     result.toMap
   }

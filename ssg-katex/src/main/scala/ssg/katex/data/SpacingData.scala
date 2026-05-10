@@ -14,14 +14,13 @@ package ssg
 package katex
 package data
 
-/**
- * Describes spaces between different classes of atoms.
- */
+/** Describes spaces between different classes of atoms.
+  */
 object SpacingData {
 
-  private val thinspace: Measurement = Measurement(3, "mu")
+  private val thinspace:   Measurement = Measurement(3, "mu")
   private val mediumspace: Measurement = Measurement(4, "mu")
-  private val thickspace: Measurement = Measurement(5, "mu")
+  private val thickspace:  Measurement = Measurement(5, "mu")
 
   // Making the type below exact with all optional fields doesn't work due to
   // - https://github.com/facebook/flow/issues/4582
@@ -29,12 +28,10 @@ object SpacingData {
   // However, since *all* fields are optional, $Shape<> works as suggested in 5688
   // above.
 
-  /**
-   * Spacing relationships for display and text styles.
-   *
-   * The outer key is the left atom type, the inner key is the right atom type,
-   * and the value is the measurement of space to insert between them.
-   */
+  /** Spacing relationships for display and text styles.
+    *
+    * The outer key is the left atom type, the inner key is the right atom type, and the value is the measurement of space to insert between them.
+    */
   val spacings: Map[String, Map[String, Measurement]] = Map(
     "mord" -> Map(
       "mop" -> thinspace,
@@ -87,9 +84,8 @@ object SpacingData {
     )
   )
 
-  /**
-   * Spacing relationships for script and scriptscript styles.
-   */
+  /** Spacing relationships for script and scriptscript styles.
+    */
   val tightSpacings: Map[String, Map[String, Measurement]] = Map(
     "mord" -> Map(
       "mop" -> thinspace

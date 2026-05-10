@@ -17,26 +17,24 @@ package functions
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildMathML }
 import ssg.katex.parse._
 import ssg.katex.tree.MathNode
 
 object SymbolsOpFunc {
 
-  def register(): Unit = {
+  def register(): Unit =
     FunctionDef.defineFunctionBuilders(
       nodeType = "atom",
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeAtom]
+      htmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeAtom]
         val opts = options.asInstanceOf[Options]
-        BuildCommon.mathsym(
-          g.text, g.mode, opts, ArrayBuffer("m" + g.family))
-      }),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeAtom]
+        BuildCommon.mathsym(g.text, g.mode, opts, ArrayBuffer("m" + g.family))
+      },
+      mathmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeAtom]
         val opts = options.asInstanceOf[Options]
-        val node = new MathNode(
-          "mo", ArrayBuffer(BuildMathML.makeText(g.text, g.mode)))
+        val node = new MathNode("mo", ArrayBuffer(BuildMathML.makeText(g.text, g.mode)))
         if (g.family == "bin") {
           val variant = BuildMathML.getVariant(g, opts)
           if (variant.isDefined && variant.get == FontVariant.BoldItalic) {
@@ -50,7 +48,6 @@ object SymbolsOpFunc {
           node.setAttribute("stretchy", "false")
         }
         node
-      })
+      }
     )
-  }
 }

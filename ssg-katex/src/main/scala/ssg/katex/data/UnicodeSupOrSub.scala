@@ -16,9 +16,8 @@ package data
 
 import scala.util.matching.Regex
 
-/**
- * Helpers for Parser handling of Unicode (sub|super)script characters.
- */
+/** Helpers for Parser handling of Unicode (sub|super)script characters.
+  */
 object UnicodeSupOrSub {
 
   val unicodeSubRegEx: Regex =

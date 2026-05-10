@@ -15,23 +15,18 @@ package ssg
 package katex
 package data
 
-/**
- * Minimal trait for the options parameter needed by calculateSize.
- * The full Options class is not yet ported; this trait defines the
- * subset of its API that calculateSize requires.
- */
+/** Minimal trait for the options parameter needed by calculateSize. The full Options class is not yet ported; this trait defines the subset of its API that calculateSize requires.
+  */
 trait OptionsLike {
-  def fontMetrics(): FontMetrics
-  def sizeMultiplier: Double
-  def maxSize: Double
-  def style: ssg.katex.Style
+  def fontMetrics():                       FontMetrics
+  def sizeMultiplier:                      Double
+  def maxSize:                             Double
+  def style:                               ssg.katex.Style
   def havingStyle(style: ssg.katex.Style): OptionsLike
 }
 
-/**
- * This file does conversion between units.  In particular, it provides
- * calculateSize to convert other units into ems.
- */
+/** This file does conversion between units. In particular, it provides calculateSize to convert other units into ems.
+  */
 object Units {
 
   // This table gives the number of TeX pts in one of each *absolute* TeX unit.
@@ -41,19 +36,19 @@ object Units {
   private val ptPerUnit: Map[String, Double] = Map(
     // https://en.wikibooks.org/wiki/LaTeX/Lengths and
     // https://tex.stackexchange.com/a/8263
-    "pt" -> 1.0,                // TeX point
-    "mm" -> (7227.0 / 2540.0),  // millimeter
-    "cm" -> (7227.0 / 254.0),   // centimeter
-    "in" -> 72.27,              // inch
-    "bp" -> (803.0 / 800.0),    // big (PostScript) points
-    "pc" -> 12.0,               // pica
-    "dd" -> (1238.0 / 1157.0),  // didot
+    "pt" -> 1.0, // TeX point
+    "mm" -> (7227.0 / 2540.0), // millimeter
+    "cm" -> (7227.0 / 254.0), // centimeter
+    "in" -> 72.27, // inch
+    "bp" -> (803.0 / 800.0), // big (PostScript) points
+    "pc" -> 12.0, // pica
+    "dd" -> (1238.0 / 1157.0), // didot
     "cc" -> (14856.0 / 1157.0), // cicero (12 didot)
-    "nd" -> (685.0 / 642.0),    // new didot
-    "nc" -> (1370.0 / 107.0),   // new cicero (12 new didot)
-    "sp" -> (1.0 / 65536.0),    // scaled point (TeX's internal smallest unit)
+    "nd" -> (685.0 / 642.0), // new didot
+    "nc" -> (1370.0 / 107.0), // new cicero (12 new didot)
+    "sp" -> (1.0 / 65536.0), // scaled point (TeX's internal smallest unit)
     // https://tex.stackexchange.com/a/41371
-    "px" -> (803.0 / 800.0)     // \pdfpxdimen defaults to 1 bp in pdfTeX and LuaTeX
+    "px" -> (803.0 / 800.0) // \pdfpxdimen defaults to 1 bp in pdfTeX and LuaTeX
   )
 
   // Dictionary of relative units, for fast validity testing.
@@ -63,21 +58,15 @@ object Units {
     "mu" -> true
   )
 
-  /**
-   * Determine whether the specified unit (either a string defining the unit
-   * or a "size" parse node containing a unit field) is valid.
-   */
-  def validUnit(unit: String): Boolean = {
+  /** Determine whether the specified unit (either a string defining the unit or a "size" parse node containing a unit field) is valid.
+    */
+  def validUnit(unit: String): Boolean =
     ptPerUnit.contains(unit) || relativeUnit.contains(unit) || unit == "ex"
-  }
 
-  /**
-   * Determine whether the specified unit (either a string defining the unit
-   * or a "size" parse node containing a unit field) is valid.
-   */
-  def validUnit(measurement: Measurement): Boolean = {
+  /** Determine whether the specified unit (either a string defining the unit or a "size" parse node containing a unit field) is valid.
+    */
+  def validUnit(measurement: Measurement): Boolean =
     validUnit(measurement.unit)
-  }
 
   /*
    * Convert a "size" parse node (with numeric "number" and string "unit" fields,
@@ -88,9 +77,9 @@ object Units {
     val scale: Double =
       if (ptPerUnit.contains(sizeValue.unit)) {
         // Absolute units
-        ptPerUnit(sizeValue.unit) /      // Convert unit to pt
+        ptPerUnit(sizeValue.unit) / // Convert unit to pt
           options.fontMetrics().ptPerEm / // Convert pt to CSS em
-          options.sizeMultiplier          // Unscale to make absolute units
+          options.sizeMultiplier // Unscale to make absolute units
       } else if (sizeValue.unit == "mu") {
         // `mu` units scale with scriptstyle/scriptscriptstyle.
         options.fontMetrics().cssEmPerMu
@@ -128,10 +117,8 @@ object Units {
     Math.min(sizeValue.number * scale, options.maxSize)
   }
 
-  /**
-   * Round `n` to 4 decimal places, or to the nearest 1/10,000th em. See
-   * https://github.com/KaTeX/KaTeX/pull/2460.
-   */
+  /** Round `n` to 4 decimal places, or to the nearest 1/10,000th em. See https://github.com/KaTeX/KaTeX/pull/2460.
+    */
   def makeEm(n: Double): String = {
     val rounded = Math.round(n * 10000.0).toDouble / 10000.0
     // Remove trailing zeros for clean output matching +n.toFixed(4)

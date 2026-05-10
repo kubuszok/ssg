@@ -17,18 +17,13 @@ package data
 
 import ssg.commons.Nullable
 
-/**
- * Accent entry containing the text mode LaTeX command and optionally
- * the math mode LaTeX command.
- */
+/** Accent entry containing the text mode LaTeX command and optionally the math mode LaTeX command.
+  */
 final case class AccentEntry(text: String, math: Nullable[String])
 
-/**
- * Mapping of Unicode accent characters to their LaTeX equivalent in text and
- * math mode (when they exist).
- * This exports a CommonJS module, allowing to be required in unicodeSymbols
- * without transpiling.
- */
+/** Mapping of Unicode accent characters to their LaTeX equivalent in text and math mode (when they exist). This exports a CommonJS module, allowing to be required in unicodeSymbols without
+  * transpiling.
+  */
 object UnicodeAccents {
 
   val unicodeAccents: Map[String, AccentEntry] = Map(

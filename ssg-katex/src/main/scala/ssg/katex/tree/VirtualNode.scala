@@ -26,28 +26,26 @@ import scala.collection.mutable.ArrayBuffer
 
 // To ensure that all nodes have compatible signatures for these methods.
 trait VirtualNode {
-  def toNode(): InMemoryNode
+  def toNode():   InMemoryNode
   def toMarkup(): String
 }
 
-/**
- * This node represents a document fragment, which contains elements, but when
- * placed into the DOM doesn't have any representation itself. It only contains
- * children and doesn't have any DOM node properties.
- */
+/** This node represents a document fragment, which contains elements, but when placed into the DOM doesn't have any representation itself. It only contains children and doesn't have any DOM node
+  * properties.
+  */
 class DocumentFragment[ChildType <: VirtualNode](
-    val children: IndexedSeq[ChildType]
-) extends HtmlDomNode with MathDomNode {
+  val children: IndexedSeq[ChildType]
+) extends HtmlDomNode
+    with MathDomNode {
 
-  var classes: ArrayBuffer[String] = ArrayBuffer.empty
-  var height: Double = 0.0
-  var depth: Double = 0.0
-  var maxFontSize: Double = 0.0
-  var style: CssStyle = CssStyle()         // Never used; needed for satisfying interface.
+  var classes:     ArrayBuffer[String] = ArrayBuffer.empty
+  var height:      Double              = 0.0
+  var depth:       Double              = 0.0
+  var maxFontSize: Double              = 0.0
+  var style:       CssStyle            = CssStyle() // Never used; needed for satisfying interface.
 
-  def hasClass(className: String): Boolean = {
+  def hasClass(className: String): Boolean =
     classes.contains(className)
-  }
 
   /** Convert the fragment into a node. */
   def toNode(): InMemoryNode = {
@@ -76,16 +74,13 @@ class DocumentFragment[ChildType <: VirtualNode](
     markup.toString
   }
 
-  /**
-   * Converts the math node into a string, similar to innerText. Applies to
-   * MathDomNode's only.
-   */
-  def toText(): String = {
+  /** Converts the math node into a string, similar to innerText. Applies to MathDomNode's only.
+    */
+  def toText(): String =
     // To avoid this, we would subclass documentFragment separately for
     // MathML, but polyfills for subclassing is expensive per PR 1469.
     // TODO(ts): Only works for ChildType = MathDomNode.
     children.map { child =>
       child.asInstanceOf[MathDomNode].toText()
     }.mkString
-  }
 }

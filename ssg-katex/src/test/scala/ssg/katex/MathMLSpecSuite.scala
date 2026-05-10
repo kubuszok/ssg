@@ -42,7 +42,7 @@ class MathMLSpecSuite extends KaTeXTestSuite {
     val fullMarkup = built.toMarkup()
     // The MathML is inside <math>...</math>
     val mathStart = fullMarkup.indexOf("<math")
-    val mathEnd = fullMarkup.indexOf("</math>") + "</math>".length
+    val mathEnd   = fullMarkup.indexOf("</math>") + "</math>".length
     if (mathStart >= 0 && mathEnd > mathStart) {
       fullMarkup.substring(mathStart, mathEnd)
     } else {
@@ -85,21 +85,27 @@ class MathMLSpecSuite extends KaTeXTestSuite {
 
   test("should use <munderover> for large operators") {
     val markup = getMathML("\\displaystyle\\sum_a^b")
-    assert(markup.contains("<munderover>") || markup.contains("<mover>") || markup.contains("<munder>"),
-      s"Missing <munderover/mover/munder> in: $markup")
+    assert(
+      markup.contains("<munderover>") || markup.contains("<mover>") || markup.contains("<munder>"),
+      s"Missing <munderover/mover/munder> in: $markup"
+    )
   }
 
   test("should use <msupsub> for integrals") {
     val markup = getMathML("\\displaystyle\\int_a^b + \\oiint_a^b + \\oiiint_a^b")
     // Integrals should use subscript/superscript, not underover
-    assert(markup.contains("<msubsup>") || markup.contains("<msub>") || markup.contains("<msup>"),
-      s"Missing <msubsup/msub/msup> for integral in: $markup")
+    assert(
+      markup.contains("<msubsup>") || markup.contains("<msub>") || markup.contains("<msup>"),
+      s"Missing <msubsup/msub/msup> for integral in: $markup"
+    )
   }
 
   test("should use <msupsub> for regular operators") {
     val markup = getMathML("\\textstyle\\sum_a^b")
-    assert(markup.contains("<msubsup>") || markup.contains("<msub>") || markup.contains("<msup>"),
-      s"Missing <msubsup/msub/msup> for textstyle sum in: $markup")
+    assert(
+      markup.contains("<msubsup>") || markup.contains("<msub>") || markup.contains("<msup>"),
+      s"Missing <msubsup/msub/msup> for textstyle sum in: $markup"
+    )
   }
 
   test("should output \\limsup correctly in \\textstyle") {
@@ -110,7 +116,7 @@ class MathMLSpecSuite extends KaTeXTestSuite {
 
   test("should output \\limsup in displaymode correctly") {
     val settings = new Settings(displayMode = true)
-    val mathml = getMathML("\\limsup_{x \\rightarrow \\infty}", settings)
+    val mathml   = getMathML("\\limsup_{x \\rightarrow \\infty}", settings)
     assert(mathml.contains("lim"), s"Missing 'lim' in: $mathml")
     assert(mathml.contains("sup"), s"Missing 'sup' in: $mathml")
   }
@@ -122,10 +128,8 @@ class MathMLSpecSuite extends KaTeXTestSuite {
 
   test("should wrap \\vcenter in <mrow> inside relation operators") {
     val mathml = getMathML("\\mathrel{\\vcenter{\\frac{a}{b}}}")
-    assert(mathml.contains("<mo><mrow><mpadded") || mathml.contains("<mo><mrow>"),
-      s"Expected <mo><mrow> wrapping, got: $mathml")
-    assert(!mathml.contains("<mo><mpadded"),
-      s"Should not have <mo><mpadded directly in: $mathml")
+    assert(mathml.contains("<mo><mrow><mpadded") || mathml.contains("<mo><mrow>"), s"Expected <mo><mrow> wrapping, got: $mathml")
+    assert(!mathml.contains("<mo><mpadded"), s"Should not have <mo><mpadded directly in: $mathml")
   }
 
   test("should size delimiters correctly") {
@@ -135,20 +139,18 @@ class MathMLSpecSuite extends KaTeXTestSuite {
 
   test("should use <menclose> for colorbox") {
     val markup = getMathML("\\colorbox{red}{b}")
-    assert(markup.contains("<menclose") || markup.contains("<mpadded"),
-      s"Missing <menclose> or <mpadded> for colorbox in: $markup")
+    assert(markup.contains("<menclose") || markup.contains("<mpadded"), s"Missing <menclose> or <mpadded> for colorbox in: $markup")
   }
 
   test("should build the CD environment properly") {
     val displaySettings = new Settings(displayMode = true, strict = StrictSetting.BoolValue(false))
-    val mathml = getMathML("\\begin{CD} A @>a>> B\\\\ @VVbV @VVcV\\\\ C @>d>> D \\end{CD}", displaySettings)
+    val mathml          = getMathML("\\begin{CD} A @>a>> B\\\\ @VVbV @VVcV\\\\ C @>d>> D \\end{CD}", displaySettings)
     assert(mathml.contains("<mtable"), s"Missing <mtable> in CD: $mathml")
   }
 
   test("should set href attribute for href appropriately") {
     val markup = getMathML("\\href{http://example.org}{\\alpha}", new Settings(trust = TrustSetting.BoolValue(true)))
-    assert(markup.contains("href=\"http://example.org\"") || markup.contains("href"),
-      s"Missing href attribute in: $markup")
+    assert(markup.contains("href=\"http://example.org\"") || markup.contains("href"), s"Missing href attribute in: $markup")
     // Second call just verifying no crash
     getMathML("p \\Vdash \\beta \\href{http://example.org}{+ \\alpha} \\times \\gamma")
   }
@@ -179,14 +181,12 @@ class MathMLSpecSuite extends KaTeXTestSuite {
   test("accents turn into <mover accent=\"true\"> in MathML") {
     // Note: unicodeTextInMathMode is specific to the original test, handled by nonstrict
     val markup = getMathML("über fiancée", nonstrictSettings)
-    assert(markup.contains("<mover") || markup.contains("accent"),
-      s"Missing <mover accent=true> in: $markup")
+    assert(markup.contains("<mover") || markup.contains("accent"), s"Missing <mover accent=true> in: $markup")
   }
 
   test("tags use <mlabeledtr>") {
     val markup = getMathML("\\tag{hi} x+y^2", new Settings(displayMode = true))
-    assert(markup.contains("<mlabeledtr>") || markup.contains("<mtr>"),
-      s"Missing <mlabeledtr> in: $markup")
+    assert(markup.contains("<mlabeledtr>") || markup.contains("<mtr>"), s"Missing <mlabeledtr> in: $markup")
   }
 
   test("normal spaces render normally") {
@@ -199,25 +199,30 @@ class MathMLSpecSuite extends KaTeXTestSuite {
       "\\,\\thinspace\\:\\>\\medspace\\;\\thickspace" +
         "\\!\\negthinspace\\negmedspace\\negthickspace" +
         "\\mkern1mu\\mkern3mu\\mkern4mu\\mkern5mu" +
-        "\\mkern-1mu\\mkern-3mu\\mkern-4mu\\mkern-5mu")
+        "\\mkern-1mu\\mkern-3mu\\mkern-4mu\\mkern-5mu"
+    )
     // The original KaTeX renders special spaces as <mtext> with Unicode space
     // characters, not as <mspace> elements.
     assert(markup.contains("<mtext>"), s"Missing <mtext> for special spaces in: $markup")
   }
 
   test("ligatures render properly") {
-    val markup = getMathML("\\text{```Hi----'''}" +
-      "--\\texttt{```Hi----'''}" +
-      "\\text{\\tt ```Hi----'''}")
+    val markup = getMathML(
+      "\\text{```Hi----'''}" +
+        "--\\texttt{```Hi----'''}" +
+        "\\text{\\tt ```Hi----'''}"
+    )
     // Just verify it renders without crashing
     assert(markup.nonEmpty, "Ligature markup should not be empty")
   }
 
   test("\\text fonts become mathvariant") {
-    val markup = getMathML("\\text{" +
-      "roman\\textit{italic\\textbf{bold italic}}\\textbf{bold}" +
-      "\\textsf{ss\\textit{italic\\textbf{bold italic}}\\textbf{bold}}" +
-      "\\texttt{tt\\textit{italic\\textbf{bold italic}}\\textbf{bold}}}")
+    val markup = getMathML(
+      "\\text{" +
+        "roman\\textit{italic\\textbf{bold italic}}\\textbf{bold}" +
+        "\\textsf{ss\\textit{italic\\textbf{bold italic}}\\textbf{bold}}" +
+        "\\texttt{tt\\textit{italic\\textbf{bold italic}}\\textbf{bold}}}"
+    )
     // Just verify it renders without crash; original checks variants
     assert(markup.nonEmpty, "text font markup should not be empty")
   }

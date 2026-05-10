@@ -22,10 +22,8 @@ package functions
 import scala.util.boundary
 import scala.util.boundary.break
 
-/**
- * Include this to ensure that all functions are defined.
- * Call `Functions.registerAll()` once at startup.
- */
+/** Include this to ensure that all functions are defined. Call `Functions.registerAll()` once at startup.
+  */
 object Functions {
 
   @volatile private var registered: Boolean = false

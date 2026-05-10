@@ -15,10 +15,8 @@ package ssg
 package katex
 package data
 
-/**
- * This file provides support to domTree and delimiter.
- * It's a storehouse of path geometry for SVG images.
- */
+/** This file provides support to domTree and delimiter. It's a storehouse of path geometry for SVG images.
+  */
 object SvgGeometry {
 
   // In all paths below, the viewBox-to-em scale is 1000:1.
@@ -54,10 +52,10 @@ object SvgGeometry {
         / /
        / /\
       / / surd
-  */
+   */
 
   // sqrtMain path geometry is from glyph U221A in the font KaTeX Main
-  private def sqrtMain(extraVinculum: Double, hLinePad: Int): String = {
+  private def sqrtMain(extraVinculum: Double, hLinePad: Int): String =
     s"""M95,${(622 + extraVinculum + hLinePad).toInt}
 c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
 c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
@@ -70,10 +68,9 @@ H400000v${(40 + extraVinculum).toInt}H845.2724
 s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
 c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
 M${(834 + extraVinculum).toInt} ${hLinePad}h400000v${(40 + extraVinculum).toInt}h-400000z"""
-  }
 
   // size1 is from glyph U221A in the font KaTeX_Size1-Regular
-  private def sqrtSize1(extraVinculum: Double, hLinePad: Int): String = {
+  private def sqrtSize1(extraVinculum: Double, hLinePad: Int): String =
     s"""M263,${(601 + extraVinculum + hLinePad).toInt}c0.7,0,18,39.7,52,119
 c34,79.3,68.167,158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120
 c340,-704.7,510.7,-1060.3,512,-1067
@@ -85,10 +82,9 @@ c-22.3,46.7,-33.8,70.3,-34.5,71c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1
 s-109,-253,-109,-253c-72.7,-168,-109.3,-252,-110,-252c-10.7,8,-22,16.7,-34,26
 c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26s76,-59,76,-59s76,-60,76,-60z
 M${(1001 + extraVinculum).toInt} ${hLinePad}h400000v${(40 + extraVinculum).toInt}h-400000z"""
-  }
 
   // size2 is from glyph U221A in the font KaTeX_Size2-Regular
-  private def sqrtSize2(extraVinculum: Double, hLinePad: Int): String = {
+  private def sqrtSize2(extraVinculum: Double, hLinePad: Int): String =
     s"""M983 ${(10 + extraVinculum + hLinePad).toInt}
 l${extraVinculum / 3.13} -${extraVinculum}
 c4,-6.7,10,-10,18,-10 H400000v${(40 + extraVinculum).toInt}
@@ -99,10 +95,9 @@ c26.7,-32.7,52,-63,76,-91s52,-60,52,-60s208,722,208,722
 c56,-175.3,126.3,-397.3,211,-666c84.7,-268.7,153.8,-488.2,207.5,-658.5
 c53.7,-170.3,84.5,-266.8,92.5,-289.5z
 M${(1001 + extraVinculum).toInt} ${hLinePad}h400000v${(40 + extraVinculum).toInt}h-400000z"""
-  }
 
   // size3 is from glyph U221A in the font KaTeX_Size3-Regular
-  private def sqrtSize3(extraVinculum: Double, hLinePad: Int): String = {
+  private def sqrtSize3(extraVinculum: Double, hLinePad: Int): String =
     s"""M424,${(2398 + extraVinculum + hLinePad).toInt}
 c-1.3,-0.7,-38.5,-172,-111.5,-514c-73,-342,-109.8,-513.3,-110.5,-514
 c0,-2,-10.7,14.3,-32,49c-4.7,7.3,-9.8,15.7,-15.5,25c-5.7,9.3,-9.8,16,-12.5,20
@@ -114,10 +109,9 @@ s-87.3,378.7,-272.6,1166c-185.3,787.3,-279.3,1182.3,-282,1185
 c-2,6,-10,9,-24,9
 c-8,0,-12,-0.7,-12,-2z M${(1001 + extraVinculum).toInt} ${hLinePad}
 h400000v${(40 + extraVinculum).toInt}h-400000z"""
-  }
 
   // size4 is from glyph U221A in the font KaTeX_Size4-Regular
-  private def sqrtSize4(extraVinculum: Double, hLinePad: Int): String = {
+  private def sqrtSize4(extraVinculum: Double, hLinePad: Int): String =
     s"""M473,${(2713 + extraVinculum + hLinePad).toInt}
 c339.3,-1799.3,509.3,-2700,510,-2702 l${extraVinculum / 5.298} -${extraVinculum}
 c3.3,-7.3,9.3,-11,18,-11 H400000v${(40 + extraVinculum).toInt}H1017.7
@@ -126,7 +120,6 @@ c-8,0,-12,-0.7,-12,-2c0,-1.3,-5.3,-32,-16,-92c-50.7,-293.3,-119.7,-693.3,-207,-1
 c0,-1.3,-5.3,8.7,-16,30c-10.7,21.3,-21.3,42.7,-32,64s-16,33,-16,33s-26,-26,-26,-26
 s76,-153,76,-153s77,-151,77,-151c0.7,0.7,35.7,202,105,604c67.3,400.7,102,602.7,104,
 606zM${(1001 + extraVinculum).toInt} ${hLinePad}h400000v${(40 + extraVinculum).toInt}H1017.7z"""
-  }
 
   def phasePath(y: Int): String = {
     val x = y / 2 // x coordinate at top of angle
@@ -161,7 +154,7 @@ c-4-3.333-8.333-7.667-13 -13l-13-13l77-155 77-156c66 199.333 139 419.667
     }
   }
 
-  def innerPath(name: String, height: Int): String = {
+  def innerPath(name: String, height: Int): String =
     // The inner part of stretchy tall delimiters
     name match {
       case "⎜" =>
@@ -186,7 +179,6 @@ c-4-3.333-8.333-7.667-13 -13l-13-13l77-155 77-156c66 199.333 139 419.667
           doubleBrushStroke(s"M478 0 H521 V$height H478z")
       case _ => ""
     }
-  }
 
   // The doubleleftarrow geometry is from glyph U+21D0 in the font KaTeX Main
   lazy val path: Map[String, String] = Map(
@@ -501,7 +493,7 @@ c-2,2.7,-1,9.7,3,21c15.3,42,36.7,81.8,64,119.5c27.3,37.7,58,69.2,92,94.5z
 M500 241 v40 H399408 v-40z M500 435 v40 H400000 v-40z"""
   )
 
-  def tallDelim(label: String, midHeight: Int): String = {
+  def tallDelim(label: String, midHeight: Int): String =
     label match {
       case "lbrack" =>
         s"""M403 1759 V84 H666 V0 H319 V1759 v$midHeight v1759 h347 v-84
@@ -555,5 +547,4 @@ l0,-${midHeight + 144}c-2,-159.3,-10,-310.7,-24,-454c-53.3,-528,-210,-949.7,
         // We should not ever get here.
         throw new Error("Unknown stretchy delimiter.")
     }
-  }
 }

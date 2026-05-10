@@ -17,7 +17,7 @@ package functions
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.parse._
 
 object TextFunc {
@@ -62,45 +62,53 @@ object TextFunc {
     }
   }
 
-  def register(): Unit = {
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "text",
-      names = Array(
-        // Font families
-        "\\text", "\\textrm", "\\textsf", "\\texttt", "\\textnormal",
-        // Font weights
-        "\\textbf", "\\textmd",
-        // Font Shapes
-        "\\textit", "\\textup", "\\emph"
-      ),
-      props = FunctionPropSpec(
-        numArgs = 1,
-        argTypes = Nullable(Array(ArgType.TextMode)),
-        allowedInArgument = true,
-        allowedInText = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val body = args(0)
-        ParseNodeText(
-          mode = parser.mode,
-          body = FunctionDef.ordargument(body),
-          font = Nullable(context.funcName)
-        )
-      }),
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeText]
-        val opts = options.asInstanceOf[Options]
-        val newOptions = optionsWithFont(g, opts)
-        val inner = BuildHTML.buildExpression(g.body, newOptions, isRealGroup = true)
-        BuildCommon.makeSpan(ArrayBuffer("mord", "text"), inner, Nullable(newOptions))
-      }),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeText]
-        val opts = options.asInstanceOf[Options]
-        val newOptions = optionsWithFont(g, opts)
-        BuildMathML.buildExpressionRow(g.body, newOptions)
-      })
-    ))
-  }
+  def register(): Unit =
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "text",
+        names = Array(
+          // Font families
+          "\\text",
+          "\\textrm",
+          "\\textsf",
+          "\\texttt",
+          "\\textnormal",
+          // Font weights
+          "\\textbf",
+          "\\textmd",
+          // Font Shapes
+          "\\textit",
+          "\\textup",
+          "\\emph"
+        ),
+        props = FunctionPropSpec(
+          numArgs = 1,
+          argTypes = Nullable(Array(ArgType.TextMode)),
+          allowedInArgument = true,
+          allowedInText = true
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val body   = args(0)
+          ParseNodeText(
+            mode = parser.mode,
+            body = FunctionDef.ordargument(body),
+            font = Nullable(context.funcName)
+          )
+        },
+        htmlBuilder = Nullable { (group, options) =>
+          val g          = group.asInstanceOf[ParseNodeText]
+          val opts       = options.asInstanceOf[Options]
+          val newOptions = optionsWithFont(g, opts)
+          val inner      = BuildHTML.buildExpression(g.body, newOptions, isRealGroup = true)
+          BuildCommon.makeSpan(ArrayBuffer("mord", "text"), inner, Nullable(newOptions))
+        },
+        mathmlBuilder = Nullable { (group, options) =>
+          val g          = group.asInstanceOf[ParseNodeText]
+          val opts       = options.asInstanceOf[Options]
+          val newOptions = optionsWithFont(g, opts)
+          BuildMathML.buildExpressionRow(g.body, newOptions)
+        }
+      )
+    )
 }

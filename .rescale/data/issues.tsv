@@ -941,3 +941,38 @@ ISS-938	ssg-katex/src/main/scala/ssg/katex/parse/Lexer.scala	regex	open	minor	VE
 ISS-939	ssg-katex/src/main/scala/ssg/katex/parse/Lexer.scala	doc	open	minor	COMMENT_UNICODE_RANGE_DROPPED: Line 56 comment says 'does not match the BMP private use area -' but the original (Lexer.ts line 28) says 'does not match the BMP private use area \uE000-\uF8FF'. The Unicode range was dropped from the comment.	2026-05-09	manual
 ISS-940	ssg-katex/src/main/scala/ssg/katex/parse/ParseNode.scala	type-mismatch	open	minor	SIZING_SIZE_TYPE: ParseNodeSizing.size is typed as Double (line 669) but the original (parseNode.ts line 436) uses 'size: number' which in context is always an integer (1-10 sizing levels). Should be Int for fidelity with the original semantics, matching how ParseNodeDelimsizing.size is already Int (line 393).	2026-05-09	manual
 ISS-941	ssg-katex/src/main/scala/ssg/katex/functions/FunctionDef.scala	api-signature	open	minor	DEFINE_FUNCTION_BUILDERS_MATHML_OPTIONAL: defineFunctionBuilders at line 226 makes mathmlBuilder optional (Nullable.Null default) but the original (defineFunction.ts line 196-201) requires mathmlBuilder as a mandatory parameter. While this doesn't cause runtime errors since the internal defineFunction handles Nullable, it weakens the API contract.	2026-05-09	manual
+ISS-942	ssg-mermaid/src/main/scala/ssg/mermaid/layout/graph/PriorityQueue.scala	correctness	resolved	critical	Heap index arithmetic off-by-one: heapify uses 2*i instead of 2*i+1 for left child (line 122), decrease uses idx>>1 instead of (idx-1)>>1 for parent (line 147). Both produce incorrect heap operations for 0-based arrays, breaking priority queue behavior.	2026-05-10	manual
+ISS-943	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/DagreLayout.scala	completeness	resolved	critical	Missing 7 of 27 layout pipeline phases: injectEdgeLabelProxies, normalizeRanks, assignRankMinMax, removeEdgeLabelProxies, normalize.run call, parentDummyChains module, addBorderSegments module, removeBorderNodes. Also Nesting.cleanup is at phase 18 instead of phase 8. Without these, edges spanning multiple ranks have no dummy nodes, edge labels are not positioned via ranking, compound graph borders are not handled.	2026-05-10	manual
+ISS-944	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Rank.scala	correctness	resolved	major	feasibleTree creates duplicate edge then overwrites (lines 112-114). calcCutValue and exchangeEdges overload minRank/maxRank fields for low/lim tree numbering, destroying rank data. exchangeEdges uses incorrect rank shifting instead of original updateRanks preorder traversal. Need dedicated low/lim fields and faithful updateRanks port.	2026-05-10	manual
+ISS-945	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Order.scala	completeness	resolved	major	Missing 5 of 8 original order module files: barycenter.js, sort-subgraph.js, resolve-conflicts.js, sort.js, build-layer-graph.js, add-subgraph-constraints.js (total ~425 LOC). Port uses simplified direct barycenter sort that cannot handle compound graph subgraph constraints. LOC ratio 0.35.	2026-05-10	manual
+ISS-946	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Normalize.scala	correctness	resolved	major	undo does not restore original edges via g.setEdge(edgeObj, origLabel). Missing dummyChains field in GraphLabel. run does not record chain heads. Walk-based point collection may double-process shared dummy nodes.	2026-05-10	manual
+ISS-947	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Nesting.scala	completeness	resolved	major	Missing treeDepths (nesting-graph.js:100-112), sumWeights (nesting-graph.js:117-125), and proper nesting edge weight formula (height + sumWeights + 1). Uses hardcoded weight=0 which causes ordering to incorrectly prioritize nesting edges.	2026-05-10	manual
+ISS-948	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/DagreUtil.scala	convention	resolved	minor	Uses return statement at line 135 (buildLayerMatrix). Missing successorWeights, predecessorWeights, normalizeRanks functions from original dagre/util.js.	2026-05-10	manual
+ISS-949	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/DagreUtil.scala	convention	resolved	open	high	2026-05-10	manual
+ISS-950	ssg-mermaid/src/main/scala/ssg/mermaid/layout/graph/Graph.scala	convention	resolved	open	high	2026-05-10	manual
+ISS-951	ssg-mermaid/src/main/scala/ssg/mermaid/svg/SvgMarkup.scala	correctness	resolved	open	low	2026-05-10	manual
+ISS-952	ssg-mermaid/src/main/scala/ssg/mermaid/parse/ParserBase.scala	correctness	resolved	open	low	2026-05-10	manual
+ISS-953	ssg-mermaid/src/main/scala/ssg/mermaid/theme/ThemeVariables.scala	completeness	resolved	open	medium	2026-05-10	manual
+ISS-954	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/	convention	resolved	open	high	2026-05-10	manual
+ISS-955	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/	convention	resolved	open	medium	2026-05-10	manual
+ISS-956	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/flowchart/FlowchartDb.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-957	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/flowchart/FlowchartStyles.scala	incomplete-port	resolved	open	low	2026-05-10	manual
+ISS-958	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/flowchart/FlowchartParser.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-959	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/sequence/SequenceDb.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-960	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/sequence/SequenceRenderer.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-961	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/class_/ClassDb.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-962	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/state/StateDb.scala	incomplete-port	resolved	open	high	2026-05-10	manual
+ISS-963	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/gantt/GanttDb.scala	incomplete-port	resolved	open	high	2026-05-10	manual
+ISS-964	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/c4/C4Db.scala	incomplete-port	resolved	open	high	2026-05-10	manual
+ISS-965	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/er/ErRenderer.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-966	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/architecture/	convention	resolved	open	low	2026-05-10	manual
+ISS-967	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/kanban/	convention	resolved	open	low	2026-05-10	manual
+ISS-968	ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/radar/	convention	resolved	open	low	2026-05-10	manual
+ISS-969	ssg-mermaid/src/test/scala/ssg/mermaid/diagrams/class_/ClassDiagramSuite.scala	missing-coverage	resolved	open	high	2026-05-10	manual
+ISS-970	ssg-mermaid/src/test/scala/ssg/mermaid/diagrams/xychart/XyChartDiagramSuite.scala	missing-coverage	resolved	open	medium	2026-05-10	manual
+ISS-971	ssg-mermaid/src/test/scala/ssg/mermaid/diagrams/mindmap/MindmapDiagramSuite.scala	missing-coverage	resolved	open	medium	2026-05-10	manual
+ISS-972	ssg-mermaid/src/test/scala/ssg/mermaid/diagrams/block/BlockDiagramSuite.scala	missing-coverage	resolved	open	medium	2026-05-10	manual
+ISS-973	ssg-mermaid/src/test/scala/ssg/mermaid/diagrams/quadrant/QuadrantDiagramSuite.scala	missing-coverage	resolved	open	medium	2026-05-10	manual
+ISS-974	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Order.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-975	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/Nesting.scala	incomplete-port	resolved	open	medium	2026-05-10	manual
+ISS-976	ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/DagreLayout.scala	incomplete-port	resolved	open	medium	2026-05-10	manual

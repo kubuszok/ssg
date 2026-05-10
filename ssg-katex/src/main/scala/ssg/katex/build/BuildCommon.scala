@@ -26,28 +26,12 @@ import scala.util.boundary
 import scala.util.boundary.break
 
 import ssg.commons.Nullable
-import ssg.katex.data.{CharacterMetrics, FontMetrics, Measurement, Symbols, Units, WideCharacter}
+import ssg.katex.data.{ CharacterMetrics, FontMetrics, Measurement, Symbols, Units, WideCharacter }
 import ssg.katex.parse.AnyParseNode
-import ssg.katex.tree.{
-  Anchor,
-  CssStyle,
-  DocumentFragment,
-  DomSpan,
-  DomTree,
-  HtmlDomNode,
-  HtmlDocumentFragment,
-  PathNode,
-  Span,
-  SvgChildNode,
-  SvgNode,
-  SvgSpan,
-  SymbolNode,
-  VirtualNode
-}
+import ssg.katex.tree.{ Anchor, CssStyle, DocumentFragment, DomSpan, DomTree, HtmlDocumentFragment, HtmlDomNode, PathNode, Span, SvgChildNode, SvgNode, SvgSpan, SymbolNode, VirtualNode }
 
-/**
- * Entry for the fontMap lookup table.
- */
+/** Entry for the fontMap lookup table.
+  */
 final case class FontMapEntry(variant: FontVariant, fontName: String)
 
 // VList types
@@ -57,22 +41,22 @@ sealed trait VListChild {
 }
 
 final case class VListElem(
-    elem: HtmlDomNode,
-    marginLeft: Nullable[String] = Nullable.Null,
-    marginRight: Nullable[String] = Nullable.Null,
-    wrapperClasses: Array[String] = Array.empty,
-    wrapperStyle: CssStyle = CssStyle()
+  elem:           HtmlDomNode,
+  marginLeft:     Nullable[String] = Nullable.Null,
+  marginRight:    Nullable[String] = Nullable.Null,
+  wrapperClasses: Array[String] = Array.empty,
+  wrapperStyle:   CssStyle = CssStyle()
 ) extends VListChild {
   def childType: String = "elem"
 }
 
 final case class VListElemAndShift(
-    elem: HtmlDomNode,
-    shift: Double,
-    marginLeft: Nullable[String] = Nullable.Null,
-    marginRight: Nullable[String] = Nullable.Null,
-    wrapperClasses: Array[String] = Array.empty,
-    wrapperStyle: CssStyle = CssStyle()
+  elem:           HtmlDomNode,
+  shift:          Double,
+  marginLeft:     Nullable[String] = Nullable.Null,
+  marginRight:    Nullable[String] = Nullable.Null,
+  wrapperClasses: Array[String] = Array.empty,
+  wrapperStyle:   CssStyle = CssStyle()
 ) extends VListChild {
   def childType: String = "elem"
 }
@@ -89,7 +73,7 @@ sealed trait VListParam
 object VListParam {
   // Each child contains how much it should be shifted downward.
   final case class IndividualShift(
-      children: Array[VListElemAndShift]
+    children: Array[VListElemAndShift]
   ) extends VListParam
 
   // "top": The positionData specifies the topmost point of the vlist (note this
@@ -100,30 +84,28 @@ object VListParam {
   //          away from the baseline of the first child which MUST be an
   //          "elem". Positive values move downwards.
   final case class Positioned(
-      positionType: String, // "top" | "bottom" | "shift"
-      positionData: Double,
-      children: Array[VListChild]
+    positionType: String, // "top" | "bottom" | "shift"
+    positionData: Double,
+    children:     Array[VListChild]
   ) extends VListParam
 
   // The vlist is positioned so that its baseline is aligned with the baseline
   // of the first child which MUST be an "elem". This is equivalent to "shift"
   // with positionData=0.
   final case class FirstBaseline(
-      children: Array[VListChild]
+    children: Array[VListChild]
   ) extends VListParam
 }
 
 object BuildCommon {
 
-  /**
-   * Looks up the given symbol in fontMetrics, after applying any symbol
-   * replacements defined in symbol.js
-   */
+  /** Looks up the given symbol in fontMetrics, after applying any symbol replacements defined in symbol.js
+    */
   private def lookupSymbol(
-      value: String,
-      // TODO(#963): Use a union type for this.
-      fontName: String,
-      mode: Mode
+    value: String,
+    // TODO(#963): Use a union type for this.
+    fontName: String,
+    mode:     Mode
   ): (String, Nullable[CharacterMetrics]) = {
     var v = value
     // Replace the value with its replaced value from symbol.js
@@ -138,22 +120,17 @@ object BuildCommon {
     (v, FontMetrics.getCharacterMetrics(v, fontName, mode))
   }
 
-  /**
-   * Makes a symbolNode after translation via the list of symbols in symbols.js.
-   * Correctly pulls out metrics for the character, and optionally takes a list of
-   * classes to be attached to the node.
-   *
-   * TODO: make argument order closer to makeSpan
-   * TODO: add a separate argument for math class (e.g. `mop`, `mbin`), which
-   * should if present come first in `classes`.
-   * TODO(#953): Make `options` mandatory and always pass it in.
-   */
+  /** Makes a symbolNode after translation via the list of symbols in symbols.js. Correctly pulls out metrics for the character, and optionally takes a list of classes to be attached to the node.
+    *
+    * TODO: make argument order closer to makeSpan TODO: add a separate argument for math class (e.g. `mop`, `mbin`), which should if present come first in `classes`. TODO(#953): Make `options`
+    * mandatory and always pass it in.
+    */
   def makeSymbol(
-      value: String,
-      fontName: String,
-      mode: Mode,
-      options: Nullable[Options] = Nullable.Null,
-      classes: ArrayBuffer[String] = ArrayBuffer.empty
+    value:    String,
+    fontName: String,
+    mode:     Mode,
+    options:  Nullable[Options] = Nullable.Null,
+    classes:  ArrayBuffer[String] = ArrayBuffer.empty
   ): SymbolNode = {
     val (lookupValue, metrics) = lookupSymbol(value, fontName, mode)
 
@@ -167,9 +144,7 @@ object BuildCommon {
       if (mode == Mode.Text || options.exists(_.font == "mathit")) {
         italic = 0
       }
-      new SymbolNode(
-        lookupValue, m.height, m.depth, italic, m.skew,
-        m.width, classes.clone())
+      new SymbolNode(lookupValue, m.height, m.depth, italic, m.skew, m.width, classes.clone())
     }
 
     options.foreach { opts =>
@@ -186,16 +161,14 @@ object BuildCommon {
     symbolNode
   }
 
-  /**
-   * Makes a symbol in Main-Regular or AMS-Regular.
-   * Used for rel, bin, open, close, inner, and punct.
-   */
+  /** Makes a symbol in Main-Regular or AMS-Regular. Used for rel, bin, open, close, inner, and punct.
+    */
   def mathsym(
-      value: String,
-      mode: Mode,
-      options: Options,
-      classes: ArrayBuffer[String] = ArrayBuffer.empty
-  ): SymbolNode = {
+    value:   String,
+    mode:    Mode,
+    options: Options,
+    classes: ArrayBuffer[String] = ArrayBuffer.empty
+  ): SymbolNode =
     // Decide what font to render the symbol in by its entry in the symbols
     // table.
     // Have a special case for when the value = \ because the \ is used as a
@@ -203,49 +176,44 @@ object BuildCommon {
     // text ordinal and is therefore not present as a symbol in the symbols
     // table for text, as well as a special case for boldsymbol because it
     // can be used for bold + and -
-    if (options.font == "boldsymbol" &&
-        lookupSymbol(value, "Main-Bold", mode)._2.isDefined) {
-      makeSymbol(value, "Main-Bold", mode, Nullable(options),
-        classes ++ ArrayBuffer("mathbf"))
+    if (
+      options.font == "boldsymbol" &&
+      lookupSymbol(value, "Main-Bold", mode)._2.isDefined
+    ) {
+      makeSymbol(value, "Main-Bold", mode, Nullable(options), classes ++ ArrayBuffer("mathbf"))
     } else if (value == "\\" || Symbols(mode)(value).font == "main") {
       makeSymbol(value, "Main-Regular", mode, Nullable(options), classes)
     } else {
-      makeSymbol(
-        value, "AMS-Regular", mode, Nullable(options),
-        classes ++ ArrayBuffer("amsrm"))
+      makeSymbol(value, "AMS-Regular", mode, Nullable(options), classes ++ ArrayBuffer("amsrm"))
     }
-  }
 
-  /**
-   * Determines which of the two font names (Main-Bold and Math-BoldItalic) and
-   * corresponding style tags (mathbf or boldsymbol) to use for font "boldsymbol",
-   * depending on the symbol.  Use this function instead of fontMap for font
-   * "boldsymbol".
-   */
+  /** Determines which of the two font names (Main-Bold and Math-BoldItalic) and corresponding style tags (mathbf or boldsymbol) to use for font "boldsymbol", depending on the symbol. Use this
+    * function instead of fontMap for font "boldsymbol".
+    */
   private def boldsymbol(
-      value: String,
-      mode: Mode,
-      options: Options,
-      classes: ArrayBuffer[String],
-      ordType: String // "mathord" | "textord"
-  ): (String, String) = { // (fontName, fontClass)
-    if (ordType != "textord" &&
-        lookupSymbol(value, "Math-BoldItalic", mode)._2.isDefined) {
+    value:   String,
+    mode:    Mode,
+    options: Options,
+    classes: ArrayBuffer[String],
+    ordType: String // "mathord" | "textord"
+  ): (String, String) = // (fontName, fontClass)
+    if (
+      ordType != "textord" &&
+      lookupSymbol(value, "Math-BoldItalic", mode)._2.isDefined
+    ) {
       ("Math-BoldItalic", "boldsymbol")
     } else {
       // Some glyphs do not exist in Math-BoldItalic so we need to use
       // Main-Bold instead.
       ("Main-Bold", "mathbf")
     }
-  }
 
-  /**
-   * Makes either a mathord or textord in the correct font and color.
-   */
+  /** Makes either a mathord or textord in the correct font and color.
+    */
   def makeOrd(
-      group: AnyParseNode,
-      options: Options,
-      ordType: String // "mathord" | "textord"
+    group:   AnyParseNode,
+    options: Options,
+    ordType: String // "mathord" | "textord"
   ): HtmlDomNode = {
     val mode = group.mode
     val text: String = group match {
@@ -256,23 +224,22 @@ object BuildCommon {
     val classes = ArrayBuffer("mord")
 
     // Math mode or Old font (i.e. \rm)
-    val isFont = mode == Mode.Math || (mode == Mode.Text && options.font.nonEmpty)
+    val isFont       = mode == Mode.Math || (mode == Mode.Text && options.font.nonEmpty)
     val fontOrFamily = if (isFont) options.font else options.fontFamily
 
     boundary[HtmlDomNode] {
-      var wideFontName = ""
+      var wideFontName  = ""
       var wideFontClass = ""
-      if (text.length > 0 && text.charAt(0).toInt == 0xD835) {
+      if (text.length > 0 && text.charAt(0).toInt == 0xd835) {
         val (wfn, wfc) = WideCharacter.wideCharacterFont(text, mode)
         wideFontName = wfn
         wideFontClass = wfc
       }
       if (wideFontName.nonEmpty) {
         // surrogate pairs get special treatment
-        break(makeSymbol(text, wideFontName, mode, Nullable(options),
-          classes ++ ArrayBuffer(wideFontClass)))
+        break(makeSymbol(text, wideFontName, mode, Nullable(options), classes ++ ArrayBuffer(wideFontClass)))
       } else if (fontOrFamily.nonEmpty) {
-        var fontName = ""
+        var fontName    = ""
         var fontClasses = ArrayBuffer.empty[String]
         if (fontOrFamily == "boldsymbol") {
           val (fn, fc) = boldsymbol(text, mode, options, classes, ordType)
@@ -282,22 +249,21 @@ object BuildCommon {
           fontName = fontMap(fontOrFamily).fontName
           fontClasses = ArrayBuffer(fontOrFamily)
         } else {
-          fontName = retrieveTextFontName(fontOrFamily, options.fontWeight,
-            options.fontShape)
+          fontName = retrieveTextFontName(fontOrFamily, options.fontWeight, options.fontShape)
           fontClasses = ArrayBuffer(fontOrFamily, options.fontWeight, options.fontShape)
         }
 
         if (lookupSymbol(text, fontName, mode)._2.isDefined) {
-          break(makeSymbol(text, fontName, mode, Nullable(options),
-            classes ++ fontClasses))
-        } else if (Symbols.ligatures.contains(text) &&
-            fontName.length >= 10 && fontName.substring(0, 10) == "Typewriter") {
+          break(makeSymbol(text, fontName, mode, Nullable(options), classes ++ fontClasses))
+        } else if (
+          Symbols.ligatures.contains(text) &&
+          fontName.length >= 10 && fontName.substring(0, 10) == "Typewriter"
+        ) {
           // Deconstruct ligatures in monospace fonts (\texttt, \tt).
           val parts = ArrayBuffer.empty[HtmlDomNode]
-          var i = 0
+          var i     = 0
           while (i < text.length) {
-            parts += makeSymbol(text.charAt(i).toString, fontName, mode,
-              Nullable(options), classes ++ fontClasses)
+            parts += makeSymbol(text.charAt(i).toString, fontName, mode, Nullable(options), classes ++ fontClasses)
             i += 1
           }
           break(makeFragment(parts))
@@ -306,30 +272,20 @@ object BuildCommon {
 
       // Makes a symbol in the default font for mathords and textords.
       if (ordType == "mathord") {
-        makeSymbol(text, "Math-Italic", mode, Nullable(options),
-          classes ++ ArrayBuffer("mathnormal"))
+        makeSymbol(text, "Math-Italic", mode, Nullable(options), classes ++ ArrayBuffer("mathnormal"))
       } else if (ordType == "textord") {
         val symbolMap = Symbols(mode)
         val font: String = if (symbolMap.contains(text)) symbolMap(text).font else ""
         if (font == "ams") {
-          val fn = retrieveTextFontName("amsrm", options.fontWeight,
-            options.fontShape)
-          makeSymbol(
-            text, fn, mode, Nullable(options),
-            classes ++ ArrayBuffer("amsrm", options.fontWeight, options.fontShape))
+          val fn = retrieveTextFontName("amsrm", options.fontWeight, options.fontShape)
+          makeSymbol(text, fn, mode, Nullable(options), classes ++ ArrayBuffer("amsrm", options.fontWeight, options.fontShape))
         } else if (font == "main" || font.isEmpty) {
-          val fn = retrieveTextFontName("textrm", options.fontWeight,
-            options.fontShape)
-          makeSymbol(
-            text, fn, mode, Nullable(options),
-            classes ++ ArrayBuffer(options.fontWeight, options.fontShape))
+          val fn = retrieveTextFontName("textrm", options.fontWeight, options.fontShape)
+          makeSymbol(text, fn, mode, Nullable(options), classes ++ ArrayBuffer(options.fontWeight, options.fontShape))
         } else { // fonts added by plugins
-          val fn = retrieveTextFontName(font, options.fontWeight,
-            options.fontShape)
+          val fn = retrieveTextFontName(font, options.fontWeight, options.fontShape)
           // We add font name as a css class
-          makeSymbol(
-            text, fn, mode, Nullable(options),
-            classes ++ ArrayBuffer(fn, options.fontWeight, options.fontShape))
+          makeSymbol(text, fn, mode, Nullable(options), classes ++ ArrayBuffer(fn, options.fontWeight, options.fontShape))
         }
       } else {
         throw new Error("unexpected type: " + ordType + " in makeOrd")
@@ -337,16 +293,16 @@ object BuildCommon {
     }
   }
 
-  /**
-   * Returns true if subsequent symbolNodes have the same classes, skew, maxFont,
-   * and styles. For mathnormal text, the left node must also have zero italic
-   * correction so we don't lose spacing between combined glyphs.
-   */
+  /** Returns true if subsequent symbolNodes have the same classes, skew, maxFont, and styles. For mathnormal text, the left node must also have zero italic correction so we don't lose spacing between
+    * combined glyphs.
+    */
   private def canCombine(prev: SymbolNode, next: SymbolNode): Boolean = boundary {
-    if (DomTree.createClass(prev.classes) != DomTree.createClass(next.classes)
-        || prev.skew != next.skew
-        || prev.maxFontSize != next.maxFontSize
-        || (prev.italic != 0 && prev.hasClass("mathnormal"))) {
+    if (
+      DomTree.createClass(prev.classes) != DomTree.createClass(next.classes)
+      || prev.skew != next.skew
+      || prev.maxFontSize != next.maxFontSize
+      || (prev.italic != 0 && prev.hasClass("mathnormal"))
+    ) {
       break(false)
     }
 
@@ -369,10 +325,8 @@ object BuildCommon {
     true
   }
 
-  /**
-   * Combine consecutive domTree.symbolNodes into a single symbolNode.
-   * Note: this function mutates the argument.
-   */
+  /** Combine consecutive domTree.symbolNodes into a single symbolNode. Note: this function mutates the argument.
+    */
   def tryCombineChars(chars: ArrayBuffer[HtmlDomNode]): ArrayBuffer[HtmlDomNode] = {
     var i = 0
     while (i < chars.length - 1) {
@@ -394,16 +348,14 @@ object BuildCommon {
     chars
   }
 
-  /**
-   * Calculate the height, depth, and maxFontSize of an element based on its
-   * children.
-   */
+  /** Calculate the height, depth, and maxFontSize of an element based on its children.
+    */
   private def sizeElementFromChildren(
-      elem: HtmlDomNode,
-      children: collection.Seq[? <: VirtualNode & HtmlDomNode]
+    elem:     HtmlDomNode,
+    children: collection.Seq[? <: VirtualNode & HtmlDomNode]
   ): Unit = {
-    var height = 0.0
-    var depth = 0.0
+    var height      = 0.0
+    var depth       = 0.0
     var maxFontSize = 0.0
 
     var i = 0
@@ -426,19 +378,16 @@ object BuildCommon {
     elem.maxFontSize = maxFontSize
   }
 
-  /**
-   * Makes a span with the given list of classes, list of children, and options.
-   *
-   * TODO(#953): Ensure that `options` is always provided (currently some call
-   * sites don't pass it) and make the type below mandatory.
-   * TODO: add a separate argument for math class (e.g. `mop`, `mbin`), which
-   * should if present come first in `classes`.
-   */
+  /** Makes a span with the given list of classes, list of children, and options.
+    *
+    * TODO(#953): Ensure that `options` is always provided (currently some call sites don't pass it) and make the type below mandatory. TODO: add a separate argument for math class (e.g. `mop`,
+    * `mbin`), which should if present come first in `classes`.
+    */
   def makeSpan(
-      classes: ArrayBuffer[String] = ArrayBuffer.empty,
-      children: ArrayBuffer[HtmlDomNode] = ArrayBuffer.empty,
-      options: Nullable[Options] = Nullable.Null,
-      style: CssStyle = CssStyle()
+    classes:  ArrayBuffer[String] = ArrayBuffer.empty,
+    children: ArrayBuffer[HtmlDomNode] = ArrayBuffer.empty,
+    options:  Nullable[Options] = Nullable.Null,
+    style:    CssStyle = CssStyle()
   ): DomSpan = {
     val span = new Span[HtmlDomNode](classes, children, options, style)
 
@@ -450,16 +399,16 @@ object BuildCommon {
   // SVG one is simpler -- doesn't require height, depth, max-font setting.
   // This is also a separate method for typesafety.
   def makeSvgSpan(
-      classes: ArrayBuffer[String] = ArrayBuffer.empty,
-      children: ArrayBuffer[SvgNode] = ArrayBuffer.empty,
-      options: Nullable[Options] = Nullable.Null,
-      style: CssStyle = CssStyle()
+    classes:  ArrayBuffer[String] = ArrayBuffer.empty,
+    children: ArrayBuffer[SvgNode] = ArrayBuffer.empty,
+    options:  Nullable[Options] = Nullable.Null,
+    style:    CssStyle = CssStyle()
   ): SvgSpan = new Span[SvgNode](classes, children, options, style)
 
   def makeLineSpan(
-      className: String,
-      options: Options,
-      thickness: Nullable[Double] = Nullable.Null
+    className: String,
+    options:   Options,
+    thickness: Nullable[Double] = Nullable.Null
   ): DomSpan = {
     val line = makeSpan(ArrayBuffer(className), ArrayBuffer.empty, Nullable(options))
     line.height = Math.max(
@@ -471,15 +420,13 @@ object BuildCommon {
     line
   }
 
-  /**
-   * Makes an anchor with the given href, list of classes, list of children,
-   * and options.
-   */
+  /** Makes an anchor with the given href, list of classes, list of children, and options.
+    */
   def makeAnchor(
-      href: String,
-      classes: ArrayBuffer[String],
-      children: ArrayBuffer[HtmlDomNode],
-      options: Options
+    href:     String,
+    classes:  ArrayBuffer[String],
+    children: ArrayBuffer[HtmlDomNode],
+    options:  Options
   ): Anchor = {
     val anchor = new Anchor(href, classes, children, options)
 
@@ -488,11 +435,10 @@ object BuildCommon {
     anchor
   }
 
-  /**
-   * Makes a document fragment with the given list of children.
-   */
+  /** Makes a document fragment with the given list of children.
+    */
   def makeFragment(
-      children: ArrayBuffer[HtmlDomNode]
+    children: ArrayBuffer[HtmlDomNode]
   ): HtmlDocumentFragment = {
     val fragment = new DocumentFragment[HtmlDomNode](children.toIndexedSeq)
 
@@ -501,26 +447,23 @@ object BuildCommon {
     fragment
   }
 
-  /**
-   * Wraps group in a span if it's a document fragment, allowing to apply classes
-   * and styles
-   */
+  /** Wraps group in a span if it's a document fragment, allowing to apply classes and styles
+    */
   def wrapFragment(
-      group: HtmlDomNode,
-      options: Options
-  ): HtmlDomNode = {
+    group:   HtmlDomNode,
+    options: Options
+  ): HtmlDomNode =
     group match {
       case _: DocumentFragment[?] =>
         makeSpan(ArrayBuffer.empty, ArrayBuffer(group), Nullable(options))
       case _ => group
     }
-  }
 
   // Computes the updated `children` list and the overall depth.
   //
   // This helper function for makeVList makes it easier to enforce type safety by
   // allowing early exits (returns) in the logic.
-  private def getVListChildrenAndDepth(params: VListParam): (Array[VListChild], Double) = {
+  private def getVListChildrenAndDepth(params: VListParam): (Array[VListChild], Double) =
     params match {
       case VListParam.IndividualShift(oldChildren) =>
         val children = ArrayBuffer.empty[VListChild]
@@ -528,15 +471,15 @@ object BuildCommon {
 
         // Add in kerns to the list of params.children to get each element to be
         // shifted to the correct specified shift
-        val depth = -oldChildren(0).shift - oldChildren(0).elem.depth
+        val depth   = -oldChildren(0).shift - oldChildren(0).elem.depth
         var currPos = depth
-        var i = 1
+        var i       = 1
         while (i < oldChildren.length) {
           val diff = -oldChildren(i).shift - currPos -
-              oldChildren(i).elem.depth
+            oldChildren(i).elem.depth
           val size = diff -
-              (oldChildren(i - 1).elem.height +
-               oldChildren(i - 1).elem.depth)
+            (oldChildren(i - 1).elem.height +
+              oldChildren(i - 1).elem.depth)
 
           currPos = currPos + diff
           children += VListKern(size)
@@ -552,11 +495,11 @@ object BuildCommon {
             // We always start at the bottom, so calculate the bottom by adding up
             // all the sizes
             var bottom = positionData
-            var i = 0
+            var i      = 0
             while (i < paramChildren.length) {
               paramChildren(i) match {
                 case VListKern(s) => bottom -= s
-                case e: VListElem => bottom -= e.elem.height + e.elem.depth
+                case e: VListElem         => bottom -= e.elem.height + e.elem.depth
                 case e: VListElemAndShift => bottom -= e.elem.height + e.elem.depth
               }
               i += 1
@@ -589,14 +532,11 @@ object BuildCommon {
             throw new Error("First child must have type \"elem\".")
         }
     }
-  }
 
-  /**
-   * Makes a vertical list by stacking elements and kerns on top of each other.
-   * Allows for many different ways of specifying the positioning method.
-   *
-   * See VListParam documentation above.
-   */
+  /** Makes a vertical list by stacking elements and kerns on top of each other. Allows for many different ways of specifying the positioning method.
+    *
+    * See VListParam documentation above.
+    */
   def makeVList(params: VListParam, options: Options): DomSpan = {
     val (children, depth) = getVListChildrenAndDepth(params)
 
@@ -608,7 +548,7 @@ object BuildCommon {
     // be positioned precisely without worrying about font ascent and
     // line-height.
     var pstrutSize = 0.0
-    var i = 0
+    var i          = 0
     while (i < children.length) {
       children(i) match {
         case e: VListElem =>
@@ -625,9 +565,9 @@ object BuildCommon {
 
     // Create a new list of actual children at the correct offsets
     val realChildren = ArrayBuffer.empty[HtmlDomNode]
-    var minPos = depth
-    var maxPos = depth
-    var currPos = depth
+    var minPos       = depth
+    var maxPos       = depth
+    var currPos      = depth
     i = 0
     while (i < children.length) {
       children(i) match {
@@ -636,8 +576,8 @@ object BuildCommon {
 
         case child: VListElem =>
           val elem = child.elem
-          val cls = ArrayBuffer.from(child.wrapperClasses)
-          val sty = child.wrapperStyle
+          val cls  = ArrayBuffer.from(child.wrapperClasses)
+          val sty  = child.wrapperStyle
 
           val childWrap = makeSpan(cls, ArrayBuffer(pstrut, elem), Nullable.Null, sty)
           childWrap.style = childWrap.style.copy(
@@ -655,8 +595,8 @@ object BuildCommon {
 
         case child: VListElemAndShift =>
           val elem = child.elem
-          val cls = ArrayBuffer.from(child.wrapperClasses)
-          val sty = child.wrapperStyle
+          val cls  = ArrayBuffer.from(child.wrapperClasses)
+          val sty  = child.wrapperStyle
 
           val childWrap = makeSpan(cls, ArrayBuffer(pstrut, elem), Nullable.Null, sty)
           childWrap.style = childWrap.style.copy(
@@ -690,14 +630,13 @@ object BuildCommon {
       // contenteditable mode only, treats that span as if it contains some
       // text content. And that min-height over-rides our desired height.
       // So we put another empty span inside the depth strut span.
-      val emptySpan = makeSpan()
+      val emptySpan  = makeSpan()
       val depthStrut = makeSpan(ArrayBuffer("vlist"), ArrayBuffer[HtmlDomNode](emptySpan))
       depthStrut.style = depthStrut.style.copy(height = Nullable(Units.makeEm(-minPos)))
 
       // Safari wants the first row to have inline content; otherwise it
       // puts the bottom of the *second* row on the baseline.
-      val topStrut = makeSpan(ArrayBuffer("vlist-s"),
-        ArrayBuffer[HtmlDomNode](new SymbolNode("​")))
+      val topStrut = makeSpan(ArrayBuffer("vlist-s"), ArrayBuffer[HtmlDomNode](new SymbolNode("​")))
 
       ArrayBuffer(
         makeSpan(ArrayBuffer("vlist-r"), ArrayBuffer[HtmlDomNode](vlist, topStrut)),
@@ -729,16 +668,16 @@ object BuildCommon {
 
   // Takes font options, and returns the appropriate fontLookup name
   private def retrieveTextFontName(
-      fontFamily: String,
-      fontWeight: String,
-      fontShape: String
+    fontFamily: String,
+    fontWeight: String,
+    fontShape:  String
   ): String = {
     val baseFontName = fontFamily match {
-      case "amsrm" => "AMS"
+      case "amsrm"  => "AMS"
       case "textrm" => "Main"
       case "textsf" => "SansSerif"
       case "texttt" => "Typewriter"
-      case other => other // use fonts added by a plugin
+      case other    => other // use fonts added by a plugin
     }
 
     val fontStylesName =
@@ -750,11 +689,10 @@ object BuildCommon {
     s"$baseFontName-$fontStylesName"
   }
 
-  /**
-   * Maps TeX font commands to objects containing:
-   * - variant: string used for "mathvariant" attribute in buildMathML.js
-   * - fontName: the "style" parameter to fontMetrics.getCharacterMetrics
-   */
+  /** Maps TeX font commands to objects containing:
+    *   - variant: string used for "mathvariant" attribute in buildMathML.js
+    *   - fontName: the "style" parameter to fontMetrics.getCharacterMetrics
+    */
   // A map between tex font commands an MathML mathvariant attribute values
   val fontMap: Map[String, FontMapEntry] = Map(
     // styles
@@ -779,8 +717,8 @@ object BuildCommon {
 
   val svgData: Map[String, (String, Double, Double)] = Map(
     //   path, width, height
-    "vec" -> ("vec", 0.471, 0.714),                // values from the font glyph
-    "oiintSize1" -> ("oiintSize1", 0.957, 0.499),  // oval to overlay the integrand
+    "vec" -> ("vec", 0.471, 0.714), // values from the font glyph
+    "oiintSize1" -> ("oiintSize1", 0.957, 0.499), // oval to overlay the integrand
     "oiintSize2" -> ("oiintSize2", 1.472, 0.659),
     "oiiintSize1" -> ("oiiintSize1", 1.304, 0.499),
     "oiiintSize2" -> ("oiiintSize2", 1.98, 0.659)
@@ -789,8 +727,8 @@ object BuildCommon {
   def staticSvg(value: String, options: Options): SvgSpan = {
     // Create a span with inline SVG for the element.
     val (pathName, width, height) = svgData(value)
-    val path = new PathNode(pathName)
-    val svgNode = new SvgNode(
+    val path                      = new PathNode(pathName)
+    val svgNode                   = new SvgNode(
       ArrayBuffer[SvgChildNode](path),
       scala.collection.mutable.LinkedHashMap(
         "width" -> Units.makeEm(width),

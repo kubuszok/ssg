@@ -17,14 +17,12 @@ import scala.language.implicitConversions
 
 import ssg.commons.Nullable
 
-/**
- * Lexing or parsing positional information for error reporting.
- * This object is immutable.
- */
+/** Lexing or parsing positional information for error reporting. This object is immutable.
+  */
 final case class SourceLocation(
-    lexer: LexerInterface, // Lexer holding the input string.
-    start: Int,            // Start offset, zero-based inclusive.
-    end: Int               // End offset, zero-based exclusive.
+  lexer: LexerInterface, // Lexer holding the input string.
+  start: Int, // Start offset, zero-based inclusive.
+  end:   Int // End offset, zero-based exclusive.
 )
 
 object SourceLocation {
@@ -34,22 +32,21 @@ object SourceLocation {
     def loc: Nullable[SourceLocation]
   }
 
-  /**
-   * Merges two `SourceLocation`s from location providers, given they are
-   * provided in order of appearance.
-   * - Returns the first one's location if only the second is not provided.
-   * - Returns a merged range of the first and the last if both are provided
-   *   and their lexers match.
-   * - Otherwise, returns null.
-   */
+  /** Merges two `SourceLocation`s from location providers, given they are provided in order of appearance.
+    *   - Returns the first one's location if only the second is not provided.
+    *   - Returns a merged range of the first and the last if both are provided and their lexers match.
+    *   - Otherwise, returns null.
+    */
   def range(
-      first: Nullable[HasLoc],
-      second: Nullable[HasLoc]
-  ): Nullable[SourceLocation] = {
+    first:  Nullable[HasLoc],
+    second: Nullable[HasLoc]
+  ): Nullable[SourceLocation] =
     if (second.isEmpty) {
       first.flatMap(_.loc)
-    } else if (first.isEmpty || first.flatMap(_.loc).isEmpty || second.flatMap(_.loc).isEmpty ||
-        (first.get.loc.get.lexer ne second.get.loc.get.lexer)) {
+    } else if (
+      first.isEmpty || first.flatMap(_.loc).isEmpty || second.flatMap(_.loc).isEmpty ||
+      (first.get.loc.get.lexer ne second.get.loc.get.lexer)
+    ) {
       Nullable.Null
     } else {
       SourceLocation(
@@ -58,5 +55,4 @@ object SourceLocation {
         second.get.loc.get.end
       )
     }
-  }
 }

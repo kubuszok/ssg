@@ -26,15 +26,14 @@ import ssg.katex.tree.DomSpan
 
 object BuildTree {
 
-  private def optionsFromSettings(settings: Settings): Options = {
+  private def optionsFromSettings(settings: Settings): Options =
     new Options(
       style = if (settings.displayMode) Style.DISPLAY else Style.TEXT,
       maxSize = settings.maxSize,
       minRuleThickness = settings.minRuleThickness
     )
-  }
 
-  private def displayWrap(node: DomSpan, settings: Settings): DomSpan = {
+  private def displayWrap(node: DomSpan, settings: Settings): DomSpan =
     if (settings.displayMode) {
       val classes = ArrayBuffer("katex-display")
       if (settings.leqno) {
@@ -47,12 +46,11 @@ object BuildTree {
     } else {
       node
     }
-  }
 
   def buildTree(
-      tree: Array[AnyParseNode],
-      expression: String,
-      settings: Settings
+    tree:       Array[AnyParseNode],
+    expression: String,
+    settings:   Settings
   ): DomSpan = {
     val options = optionsFromSettings(settings)
     if (settings.output == "mathml") {
@@ -60,15 +58,11 @@ object BuildTree {
     } else {
       val katexNode: DomSpan = if (settings.output == "html") {
         val htmlNode = BuildHTML.buildHTML(tree, options)
-        BuildCommon.makeSpan(
-          ArrayBuffer("katex"), ArrayBuffer[ssg.katex.tree.HtmlDomNode](htmlNode))
+        BuildCommon.makeSpan(ArrayBuffer("katex"), ArrayBuffer[ssg.katex.tree.HtmlDomNode](htmlNode))
       } else {
-        val mathMLNode = BuildMathML.buildMathML(tree, expression, options,
-          settings.displayMode, false)
-        val htmlNode = BuildHTML.buildHTML(tree, options)
-        BuildCommon.makeSpan(
-          ArrayBuffer("katex"),
-          ArrayBuffer[ssg.katex.tree.HtmlDomNode](mathMLNode, htmlNode))
+        val mathMLNode = BuildMathML.buildMathML(tree, expression, options, settings.displayMode, false)
+        val htmlNode   = BuildHTML.buildHTML(tree, options)
+        BuildCommon.makeSpan(ArrayBuffer("katex"), ArrayBuffer[ssg.katex.tree.HtmlDomNode](mathMLNode, htmlNode))
       }
 
       displayWrap(katexNode, settings)
@@ -76,14 +70,13 @@ object BuildTree {
   }
 
   def buildHTMLTree(
-      tree: Array[AnyParseNode],
-      expression: String,
-      settings: Settings
+    tree:       Array[AnyParseNode],
+    expression: String,
+    settings:   Settings
   ): DomSpan = {
-    val options = optionsFromSettings(settings)
-    val htmlNode = BuildHTML.buildHTML(tree, options)
-    val katexNode = BuildCommon.makeSpan(
-      ArrayBuffer("katex"), ArrayBuffer[ssg.katex.tree.HtmlDomNode](htmlNode))
+    val options   = optionsFromSettings(settings)
+    val htmlNode  = BuildHTML.buildHTML(tree, options)
+    val katexNode = BuildCommon.makeSpan(ArrayBuffer("katex"), ArrayBuffer[ssg.katex.tree.HtmlDomNode](htmlNode))
     displayWrap(katexNode, settings)
   }
 }

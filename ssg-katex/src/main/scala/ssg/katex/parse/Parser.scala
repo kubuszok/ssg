@@ -50,24 +50,9 @@ import scala.util.boundary
 import scala.util.boundary.break
 
 import ssg.commons.Nullable
-import ssg.katex.{
-  BreakToken,
-  Mode,
-  ParseError,
-  Settings,
-  SourceLocation,
-  Token
-}
-import ssg.katex.data.{
-  Measurement,
-  Symbols,
-  UnicodeAccents,
-  UnicodeScripts,
-  UnicodeSupOrSub,
-  UnicodeSymbols,
-  Units
-}
-import ssg.katex.functions.{FunctionContext, FunctionDef, FunctionSpec}
+import ssg.katex.{ BreakToken, Mode, ParseError, Settings, SourceLocation, Token }
+import ssg.katex.data.{ Measurement, Symbols, UnicodeAccents, UnicodeScripts, UnicodeSupOrSub, UnicodeSymbols, Units }
+import ssg.katex.functions.{ FunctionContext, FunctionDef, FunctionSpec }
 import ssg.katex.environments.EnvSpec
 
 class Parser(input: String, val settings: Settings) {
@@ -84,32 +69,24 @@ class Parser(input: String, val settings: Settings) {
 
   var nextToken: Nullable[Token] = Nullable.Null
 
-  /**
-   * Checks a result to make sure it has the right type, and throws an
-   * appropriate error otherwise.
-   */
+  /** Checks a result to make sure it has the right type, and throws an appropriate error otherwise.
+    */
   def expect(text: String, consume: Boolean = true): Unit = {
     if (fetch().text != text) {
-      throw new ParseError(
-        s"Expected '$text', got '${fetch().text}'", Nullable(fetch()))
+      throw new ParseError(s"Expected '$text', got '${fetch().text}'", Nullable(fetch()))
     }
     if (consume) {
       this.consume()
     }
   }
 
-  /**
-   * Discards the current lookahead token, considering it consumed.
-   */
-  def consume(): Unit = {
+  /** Discards the current lookahead token, considering it consumed.
+    */
+  def consume(): Unit =
     nextToken = Nullable.Null
-  }
 
-  /**
-   * Return the current lookahead token, or if there isn't one (at the
-   * beginning, or if the previous lookahead token was consume()d),
-   * fetch the next token as the new lookahead token and return it.
-   */
+  /** Return the current lookahead token, or if there isn't one (at the beginning, or if the previous lookahead token was consume()d), fetch the next token as the new lookahead token and return it.
+    */
   def fetch(): Token = {
     if (nextToken.isEmpty) {
       nextToken = Nullable(gullet.expandNextToken())
@@ -117,17 +94,15 @@ class Parser(input: String, val settings: Settings) {
     nextToken.get
   }
 
-  /**
-   * Switches between "text" and "math" modes.
-   */
+  /** Switches between "text" and "math" modes.
+    */
   def switchMode(newMode: Mode): Unit = {
     mode = newMode
     gullet.switchMode(newMode)
   }
 
-  /**
-   * Main parsing function, which parses an entire input.
-   */
+  /** Main parsing function, which parses an entire input.
+    */
   def parse(): Array[AnyParseNode] = {
     if (!settings.globalGroup) {
       // Create a group namespace for the math expression.
@@ -156,16 +131,13 @@ class Parser(input: String, val settings: Settings) {
 
       result
 
-    // Close any leftover groups in case of a parse error.
-    } finally {
+      // Close any leftover groups in case of a parse error.
+    } finally
       gullet.endGroups()
-    }
   }
 
-  /**
-   * Fully parse a separate sequence of tokens as a separate job.
-   * Tokens should be specified in reverse order, as in a MacroDefinition.
-   */
+  /** Fully parse a separate sequence of tokens as a separate job. Tokens should be specified in reverse order, as in a MacroDefinition.
+    */
   def subparse(tokens: Array[Token]): Array[AnyParseNode] = {
     // Save the next token from the current job.
     val oldToken = nextToken
@@ -183,20 +155,15 @@ class Parser(input: String, val settings: Settings) {
     result
   }
 
-  /**
-   * Parses an "expression", which is a list of atoms.
-   *
-   * `breakOnInfix`: Should the parsing stop when we hit infix nodes? This
-   *                 happens when functions have higher precedence than infix
-   *                 nodes in implicit parses.
-   *
-   * `breakOnTokenText`: The text of the token that the expression should end
-   *                     with, or `null` if something else should end the
-   *                     expression.
-   */
+  /** Parses an "expression", which is a list of atoms.
+    *
+    * `breakOnInfix`: Should the parsing stop when we hit infix nodes? This happens when functions have higher precedence than infix nodes in implicit parses.
+    *
+    * `breakOnTokenText`: The text of the token that the expression should end with, or `null` if something else should end the expression.
+    */
   def parseExpression(
-      breakOnInfix: Boolean,
-      breakOnTokenText: Nullable[String] = Nullable.Null
+    breakOnInfix:     Boolean,
+    breakOnTokenText: Nullable[String] = Nullable.Null
   ): Array[AnyParseNode] = {
     val body = mutable.ArrayBuffer.empty[AnyParseNode]
     // Keep adding atoms to the body until we can't parse any more atoms (either
@@ -212,8 +179,10 @@ class Parser(input: String, val settings: Settings) {
         continue = false
       } else if (breakOnTokenText.isDefined && lex.text == breakOnTokenText.get) {
         continue = false
-      } else if (breakOnInfix && FunctionDef._functions.contains(lex.text) &&
-          FunctionDef._functions(lex.text).infix) {
+      } else if (
+        breakOnInfix && FunctionDef._functions.contains(lex.text) &&
+        FunctionDef._functions(lex.text).infix
+      ) {
         continue = false
       } else {
         val atom = parseAtom(breakOnTokenText)
@@ -233,13 +202,10 @@ class Parser(input: String, val settings: Settings) {
     handleInfixNodes(body.toArray)
   }
 
-  /**
-   * Rewrites infix operators such as \over with corresponding commands such
-   * as \frac.
-   *
-   * There can only be one infix operator per group.  If there's more than one
-   * then the expression is ambiguous.  This can be resolved by adding {}.
-   */
+  /** Rewrites infix operators such as \over with corresponding commands such as \frac.
+    *
+    * There can only be one infix operator per group. If there's more than one then the expression is ambiguous. This can be resolved by adding {}.
+    */
   def handleInfixNodes(body: Array[AnyParseNode]): Array[AnyParseNode] = boundary {
     var overIndex = -1
     var funcName: String = ""
@@ -252,7 +218,8 @@ class Parser(input: String, val settings: Settings) {
           val infixToken = node.asInstanceOf[ParseNodeInfix].token
           throw new ParseError(
             "only one infix operator per group",
-            if (infixToken.isDefined) Nullable(infixToken.get: SourceLocation.HasLoc) else Nullable.Null)
+            if (infixToken.isDefined) Nullable(infixToken.get: SourceLocation.HasLoc) else Nullable.Null
+          )
         }
         overIndex = i
         funcName = node.asInstanceOf[ParseNodeInfix].replaceWith
@@ -280,8 +247,7 @@ class Parser(input: String, val settings: Settings) {
 
       val node =
         if (funcName == "\\\\abovefrac") {
-          callFunction(funcName,
-            Array(numerNode, body(overIndex), denomNode), Array.empty)
+          callFunction(funcName, Array(numerNode, body(overIndex), denomNode), Array.empty)
         } else {
           callFunction(funcName, Array(numerNode, denomNode), Array.empty)
         }
@@ -291,14 +257,13 @@ class Parser(input: String, val settings: Settings) {
     }
   }
 
-  /**
-   * Handle a subscript or superscript with nice errors.
-   */
+  /** Handle a subscript or superscript with nice errors.
+    */
   def handleSupSubscript(
-      name: String // For error reporting.
+    name: String // For error reporting.
   ): AnyParseNode = {
     val symbolToken = fetch()
-    val symbol = symbolToken.text
+    val symbol      = symbolToken.text
     consume()
     consumeSpaces() // ignore spaces before sup/subscript argument
 
@@ -315,18 +280,14 @@ class Parser(input: String, val settings: Settings) {
     }
 
     if (group.isEmpty) {
-      throw new ParseError(
-        "Expected group after '" + symbol + "'",
-        Nullable(symbolToken))
+      throw new ParseError("Expected group after '" + symbol + "'", Nullable(symbolToken))
     }
 
     group.get
   }
 
-  /**
-   * Converts the textual input of an unsupported command into a text node
-   * contained within a color node whose color is determined by errorColor
-   */
+  /** Converts the textual input of an unsupported command into a text node contained within a color node whose color is determined by errorColor
+    */
   def formatUnsupportedCmd(text: String): UnsupportedCmdParseNode = {
     val textordArray = mutable.ArrayBuffer.empty[AnyParseNode]
 
@@ -349,9 +310,8 @@ class Parser(input: String, val settings: Settings) {
     colorNode
   }
 
-  /**
-   * Parses a group with optional super/subscripts.
-   */
+  /** Parses a group with optional super/subscripts.
+    */
   def parseAtom(breakOnTokenText: Nullable[String] = Nullable.Null): Nullable[AnyParseNode] = boundary {
     // The body of an atom is an implicit group, so that things like
     // \left(x\right)^2 work correctly.
@@ -371,7 +331,7 @@ class Parser(input: String, val settings: Settings) {
     // Note that base may be empty (i.e. null) at this point.
 
     var superscript: Nullable[AnyParseNode] = Nullable.Null
-    var subscript: Nullable[AnyParseNode] = Nullable.Null
+    var subscript:   Nullable[AnyParseNode] = Nullable.Null
     var continue = true
     while (continue) {
       // Guaranteed in math mode, so eat any spaces first.
@@ -393,9 +353,7 @@ class Parser(input: String, val settings: Settings) {
             opNode.limits = lex.text == "\\limits"
           }
         } else {
-          throw new ParseError(
-            "Limit controls must follow a math operator",
-            Nullable(lex))
+          throw new ParseError("Limit controls must follow a math operator", Nullable(lex))
         }
         consume()
       } else if (lex.text == "^") {
@@ -440,7 +398,7 @@ class Parser(input: String, val settings: Settings) {
         // We treat these similarly to the unicode-math package.
         // So we render a string of Unicode (sub|super)scripts the
         // same as a (sub|super)script of regular characters.
-        val isSub = UnicodeSupOrSub.unicodeSubRegEx.findFirstIn(lex.text).isDefined
+        val isSub        = UnicodeSupOrSub.unicodeSubRegEx.findFirstIn(lex.text).isDefined
         val subsupTokens = mutable.ArrayBuffer.empty[Token]
         subsupTokens.addOne(new Token(UnicodeSupOrSub.uSubsAndSups(lex.text)))
         consume()
@@ -487,15 +445,14 @@ class Parser(input: String, val settings: Settings) {
     }
   }
 
-  /**
-   * Parses an entire function, including its base and all of its arguments.
-   */
+  /** Parses an entire function, including its base and all of its arguments.
+    */
   def parseFunction(
-      breakOnTokenText: Nullable[String] = Nullable.Null,
-      name: Nullable[String] = Nullable.Null // For determining its context
+    breakOnTokenText: Nullable[String] = Nullable.Null,
+    name:             Nullable[String] = Nullable.Null // For determining its context
   ): Nullable[AnyParseNode] = boundary {
-    val token = fetch()
-    val func = token.text
+    val token       = fetch()
+    val func        = token.text
     val funcDataOpt = FunctionDef._functions.get(func)
     if (funcDataOpt.isEmpty) {
       break(Nullable.Null)
@@ -504,30 +461,28 @@ class Parser(input: String, val settings: Settings) {
     consume() // consume command token
 
     if (name.isDefined && name.get != "atom" && !funcData.allowedInArgument) {
-      throw new ParseError(
-        "Got function '" + func + "' with no arguments" +
-        (if (name.isDefined) " as " + name.get else ""), Nullable(token))
+      throw new ParseError("Got function '" + func + "' with no arguments" +
+                             (if (name.isDefined) " as " + name.get else ""),
+                           Nullable(token)
+      )
     } else if (mode == Mode.Text && !funcData.allowedInText) {
-      throw new ParseError(
-        "Can't use function '" + func + "' in text mode", Nullable(token))
+      throw new ParseError("Can't use function '" + func + "' in text mode", Nullable(token))
     } else if (mode == Mode.Math && !funcData.allowedInMath) {
-      throw new ParseError(
-        "Can't use function '" + func + "' in math mode", Nullable(token))
+      throw new ParseError("Can't use function '" + func + "' in math mode", Nullable(token))
     }
 
     val parsed = parseArguments(func, funcData)
     Nullable(callFunction(func, parsed._1, parsed._2, Nullable(token), breakOnTokenText))
   }
 
-  /**
-   * Call a function handler with a suitable context and arguments.
-   */
+  /** Call a function handler with a suitable context and arguments.
+    */
   def callFunction(
-      name: String,
-      args: Array[AnyParseNode],
-      optArgs: Array[Nullable[AnyParseNode]],
-      token: Nullable[Token] = Nullable.Null,
-      breakOnTokenText: Nullable[String] = Nullable.Null
+    name:             String,
+    args:             Array[AnyParseNode],
+    optArgs:          Array[Nullable[AnyParseNode]],
+    token:            Nullable[Token] = Nullable.Null,
+    breakOnTokenText: Nullable[String] = Nullable.Null
   ): AnyParseNode = {
     val breakToken: Nullable[BreakToken] = breakOnTokenText.flatMap { txt =>
       BreakToken.values.find(_.value == txt).map(v => Nullable(v)).getOrElse(Nullable.Null)
@@ -546,19 +501,18 @@ class Parser(input: String, val settings: Settings) {
     }
   }
 
-  /**
-   * Parses the arguments of a function or environment
-   */
+  /** Parses the arguments of a function or environment
+    */
   def parseArguments(
-      func: String, // Should look like "\name" or "\begin{name}".
-      funcData: FunctionSpec
+    func:     String, // Should look like "\name" or "\begin{name}".
+    funcData: FunctionSpec
   ): (Array[AnyParseNode], Array[Nullable[AnyParseNode]]) = boundary {
     val totalArgs = funcData.numArgs + funcData.numOptionalArgs
     if (totalArgs == 0) {
       break((Array.empty[AnyParseNode], Array.empty[Nullable[AnyParseNode]]))
     }
 
-    val args = mutable.ArrayBuffer.empty[AnyParseNode]
+    val args    = mutable.ArrayBuffer.empty[AnyParseNode]
     val optArgs = mutable.ArrayBuffer.empty[Nullable[AnyParseNode]]
 
     var i = 0
@@ -571,9 +525,11 @@ class Parser(input: String, val settings: Settings) {
         }
       val isOptional = i < funcData.numOptionalArgs
 
-      if ((funcData.primitive && argType.isEmpty) ||
-          // \sqrt expands into primitive if optional argument doesn't exist
-          (funcData.nodeType == "sqrt" && i == 1 && (optArgs.isEmpty || optArgs(0).isEmpty))) {
+      if (
+        (funcData.primitive && argType.isEmpty) ||
+        // \sqrt expands into primitive if optional argument doesn't exist
+        (funcData.nodeType == "sqrt" && i == 1 && (optArgs.isEmpty || optArgs(0).isEmpty))
+      ) {
         argType = Nullable("primitive")
       }
 
@@ -593,8 +549,8 @@ class Parser(input: String, val settings: Settings) {
 
   /** Overload for EnvSpec. */
   def parseArguments(
-      func: String,
-      envData: EnvSpec
+    func:    String,
+    envData: EnvSpec
   ): (Array[AnyParseNode], Array[Nullable[AnyParseNode]]) = boundary {
     // Convert EnvSpec to something we can use
     val totalArgs = envData.numArgs + envData.numOptionalArgs
@@ -602,7 +558,7 @@ class Parser(input: String, val settings: Settings) {
       break((Array.empty[AnyParseNode], Array.empty[Nullable[AnyParseNode]]))
     }
 
-    val args = mutable.ArrayBuffer.empty[AnyParseNode]
+    val args    = mutable.ArrayBuffer.empty[AnyParseNode]
     val optArgs = mutable.ArrayBuffer.empty[Nullable[AnyParseNode]]
 
     var i = 0
@@ -629,13 +585,12 @@ class Parser(input: String, val settings: Settings) {
     (args.toArray, optArgs.toArray)
   }
 
-  /**
-   * Parses a group when the mode is changing.
-   */
+  /** Parses a group when the mode is changing.
+    */
   def parseGroupOfType(
-      name: String,
-      argType: Nullable[String],
-      optional: Boolean
+    name:     String,
+    argType:  Nullable[String],
+    optional: Boolean
   ): Nullable[AnyParseNode] = {
     val tp = argType.getOrElse("")
     tp match {
@@ -657,21 +612,25 @@ class Parser(input: String, val settings: Settings) {
         // \hbox, which is like \text but switching to \textstyle size.
         val group = parseArgumentGroup(optional, Nullable(Mode.Text))
         if (group.isDefined) {
-          Nullable(ParseNodeStyling(
-            mode = group.get.mode,
-            body = Array(group.get),
-            style = StyleStr.TextStyle // simulate \textstyle
-          ))
+          Nullable(
+            ParseNodeStyling(
+              mode = group.get.mode,
+              body = Array(group.get),
+              style = StyleStr.TextStyle // simulate \textstyle
+            )
+          )
         } else {
           Nullable.Null
         }
       case "raw" =>
         val token = parseStringGroup("raw", optional)
         if (token.isDefined) {
-          Nullable(ParseNodeRaw(
-            mode = Mode.Text,
-            string = token.get.text
-          ))
+          Nullable(
+            ParseNodeRaw(
+              mode = Mode.Text,
+              string = token.get.text
+            )
+          )
         } else {
           Nullable.Null
         }
@@ -688,33 +647,27 @@ class Parser(input: String, val settings: Settings) {
         val r = parseArgumentGroup(optional)
         if (r.isDefined) Nullable(r.get) else Nullable.Null
       case _ =>
-        throw new ParseError(
-          "Unknown group type as " + name, Nullable(fetch()))
+        throw new ParseError("Unknown group type as " + name, Nullable(fetch()))
     }
   }
 
-  /**
-   * Discard any space tokens, fetching the next non-space token.
-   */
-  def consumeSpaces(): Unit = {
-    while (fetch().text == " ") {
+  /** Discard any space tokens, fetching the next non-space token.
+    */
+  def consumeSpaces(): Unit =
+    while (fetch().text == " ")
       consume()
-    }
-  }
 
-  /**
-   * Parses a group, essentially returning the string formed by the
-   * brace-enclosed tokens plus some position information.
-   */
+  /** Parses a group, essentially returning the string formed by the brace-enclosed tokens plus some position information.
+    */
   def parseStringGroup(
-      modeName: String, // Used to describe the mode in error messages.
-      optional: Boolean
+    modeName: String, // Used to describe the mode in error messages.
+    optional: Boolean
   ): Nullable[Token] = boundary {
     val argToken = gullet.scanArgument(optional)
     if (argToken.isEmpty) {
       break(Nullable.Null)
     }
-    var str = ""
+    var str     = ""
     var nextTok = fetch()
     while (nextTok.text != "EOF") {
       str += nextTok.text
@@ -727,19 +680,16 @@ class Parser(input: String, val settings: Settings) {
     Nullable(result)
   }
 
-  /**
-   * Parses a regex-delimited group: the largest sequence of tokens
-   * whose concatenated strings match `regex`. Returns the string
-   * formed by the tokens plus some position information.
-   */
+  /** Parses a regex-delimited group: the largest sequence of tokens whose concatenated strings match `regex`. Returns the string formed by the tokens plus some position information.
+    */
   def parseRegexGroup(
-      regex: scala.util.matching.Regex,
-      modeName: String // Used to describe the mode in error messages.
+    regex:    scala.util.matching.Regex,
+    modeName: String // Used to describe the mode in error messages.
   ): Token = {
     val firstToken = fetch()
-    var lastToken = firstToken
-    var str = ""
-    var nextTok = fetch()
+    var lastToken  = firstToken
+    var str        = ""
+    var nextTok    = fetch()
     while (nextTok.text != "EOF" && regex.findFirstIn(str + nextTok.text).isDefined) {
       lastToken = nextTok
       str += lastToken.text
@@ -747,23 +697,20 @@ class Parser(input: String, val settings: Settings) {
       nextTok = fetch()
     }
     if (str == "") {
-      throw new ParseError(
-        "Invalid " + modeName + ": '" + firstToken.text + "'",
-        Nullable(firstToken))
+      throw new ParseError("Invalid " + modeName + ": '" + firstToken.text + "'", Nullable(firstToken))
     }
     firstToken.range(lastToken, str)
   }
 
-  /**
-   * Parses a color description.
-   */
+  /** Parses a color description.
+    */
   def parseColorGroup(optional: Boolean): Nullable[ParseNodeColorToken] = boundary {
     val res = parseStringGroup("color", optional)
     if (res.isEmpty) {
       break(Nullable.Null)
     }
     val colorRegex = "^(#[a-fA-F0-9]{3,4}|#[a-fA-F0-9]{6}|#[a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-zA-Z]+)$".r
-    val matchOpt = colorRegex.findFirstMatchIn(res.get.text)
+    val matchOpt   = colorRegex.findFirstMatchIn(res.get.text)
     if (matchOpt.isEmpty) {
       throw new ParseError("Invalid color: '" + res.get.text + "'", Nullable(res.get))
     }
@@ -775,23 +722,23 @@ class Parser(input: String, val settings: Settings) {
       color = "#" + color
     }
 
-    Nullable(ParseNodeColorToken(
-      mode = mode,
-      color = color
-    ))
+    Nullable(
+      ParseNodeColorToken(
+        mode = mode,
+        color = color
+      )
+    )
   }
 
-  /**
-   * Parses a size specification, consisting of magnitude and unit.
-   */
+  /** Parses a size specification, consisting of magnitude and unit.
+    */
   def parseSizeGroup(optional: Boolean): Nullable[ParseNodeSize] = boundary {
     var res: Nullable[Token] = Nullable.Null
     var isBlank = false
     // don't expand before parseStringGroup
     gullet.consumeSpaces()
     if (!optional && gullet.future().text != "{") {
-      res = Nullable(parseRegexGroup(
-        "^[-+]? *(?:$|\\d+|\\d+\\.\\d*|\\.\\d*) *[a-z]{0,2} *$".r, "size"))
+      res = Nullable(parseRegexGroup("^[-+]? *(?:$|\\d+|\\d+\\.\\d*|\\.\\d*) *[a-z]{0,2} *$".r, "size"))
     } else {
       res = parseStringGroup("size", optional)
     }
@@ -803,32 +750,34 @@ class Parser(input: String, val settings: Settings) {
       // affect \kern, \hspace, etc. It will capture the mandatory arguments
       // to \genfrac and \above.
       res.get.text = "0pt" // Enable \above{}
-      isBlank = true       // This is here specifically for \genfrac
+      isBlank = true // This is here specifically for \genfrac
     }
     val sizeRegex = "([-+]?) *(\\d+(?:\\.\\d*)?|\\.\\d+) *([a-z]{2})".r
-    val matchOpt = sizeRegex.findFirstMatchIn(res.get.text)
+    val matchOpt  = sizeRegex.findFirstMatchIn(res.get.text)
     if (matchOpt.isEmpty) {
       throw new ParseError("Invalid size: '" + res.get.text + "'", Nullable(res.get))
     }
-    val m = matchOpt.get
+    val m      = matchOpt.get
     val number = (m.group(1) + m.group(2)).toDouble // sign + magnitude, cast to number
-    val unit = m.group(3)
-    val data = Measurement(number, unit)
+    val unit   = m.group(3)
+    val data   = Measurement(number, unit)
     if (!Units.validUnit(data)) {
       throw new ParseError("Invalid unit: '" + data.unit + "'", Nullable(res.get))
     }
 
-    break(Nullable(ParseNodeSize(
-      mode = mode,
-      value = data,
-      isBlank = isBlank
-    )))
+    break(
+      Nullable(
+        ParseNodeSize(
+          mode = mode,
+          value = data,
+          isBlank = isBlank
+        )
+      )
+    )
   }
 
-  /**
-   * Parses an URL, checking escaped letters and allowed protocols,
-   * and setting the catcode of % as an active character (as in \hyperref).
-   */
+  /** Parses an URL, checking escaped letters and allowed protocols, and setting the catcode of % as an active character (as in \hyperref).
+    */
   def parseUrlGroup(optional: Boolean): Nullable[ParseNodeUrl] = boundary {
     gullet.lexer.setCatcode("%", 13) // active character
     gullet.lexer.setCatcode("~", 12) // other character
@@ -843,18 +792,19 @@ class Parser(input: String, val settings: Settings) {
     // "undefined" behaviour, and keep them as-is. Some browser will
     // replace backslashes with forward slashes.
     val url = res.get.text.replaceAll("\\\\([#$%&~_^{}])", "$1")
-    Nullable(ParseNodeUrl(
-      mode = mode,
-      url = url
-    ))
+    Nullable(
+      ParseNodeUrl(
+        mode = mode,
+        url = url
+      )
+    )
   }
 
-  /**
-   * Parses an argument with the mode specified.
-   */
+  /** Parses an argument with the mode specified.
+    */
   def parseArgumentGroup(
-      optional: Boolean,
-      modeOverride: Nullable[Mode] = Nullable.Null
+    optional:     Boolean,
+    modeOverride: Nullable[Mode] = Nullable.Null
   ): Nullable[ParseNodeOrdgroup] = boundary {
     val argToken = gullet.scanArgument(optional)
     if (argToken.isEmpty) {
@@ -882,18 +832,15 @@ class Parser(input: String, val settings: Settings) {
     Nullable(result)
   }
 
-  /**
-   * Parses an ordinary group, which is either a single nucleus (like "x")
-   * or an expression in braces (like "{x+y}") or an implicit group, a group
-   * that starts at the current position, and ends right before a higher explicit
-   * group ends, or at EOF.
-   */
+  /** Parses an ordinary group, which is either a single nucleus (like "x") or an expression in braces (like "{x+y}") or an implicit group, a group that starts at the current position, and ends right
+    * before a higher explicit group ends, or at EOF.
+    */
   def parseGroup(
-      name: String, // For error reporting.
-      breakOnTokenText: Nullable[String] = Nullable.Null
+    name:             String, // For error reporting.
+    breakOnTokenText: Nullable[String] = Nullable.Null
   ): Nullable[AnyParseNode] = boundary {
     val firstToken = fetch()
-    val text = firstToken.text
+    val text       = firstToken.text
 
     var result: Nullable[AnyParseNode] = Nullable.Null
     // Try to parse an open brace or \begingroup
@@ -904,19 +851,21 @@ class Parser(input: String, val settings: Settings) {
       gullet.beginGroup()
       // If we get a brace, parse an expression
       val expression = parseExpression(false, Nullable(groupEnd))
-      val lastToken = fetch()
+      val lastToken  = fetch()
       expect(groupEnd) // Check that we got a matching closing brace
       gullet.endGroup()
-      result = Nullable(ParseNodeOrdgroup(
-        mode = mode,
-        loc = SourceLocation.range(Nullable(firstToken), Nullable(lastToken)),
-        body = expression,
-        // A group formed by \begingroup...\endgroup is a semi-simple group
-        // which doesn't affect spacing in math mode, i.e., is transparent.
-        // https://tex.stackexchange.com/questions/1930/when-should-one-
-        // use-begingroup-instead-of-bgroup
-        semisimple = if (text == "\\begingroup") Nullable(true) else Nullable.Null
-      ))
+      result = Nullable(
+        ParseNodeOrdgroup(
+          mode = mode,
+          loc = SourceLocation.range(Nullable(firstToken), Nullable(lastToken)),
+          body = expression,
+          // A group formed by \begingroup...\endgroup is a semi-simple group
+          // which doesn't affect spacing in math mode, i.e., is transparent.
+          // https://tex.stackexchange.com/questions/1930/when-should-one-
+          // use-begingroup-instead-of-bgroup
+          semisimple = if (text == "\\begingroup") Nullable(true) else Nullable.Null
+        )
+      )
     } else {
       // If there exists a function with this name, parse the function.
       // Otherwise, just return a nucleus
@@ -924,11 +873,12 @@ class Parser(input: String, val settings: Settings) {
       if (result.isEmpty) {
         result = parseSymbol()
       }
-      if (result.isEmpty && text.nonEmpty && text.charAt(0) == '\\' &&
-          !MacroExpander.implicitCommands.contains(text)) {
+      if (
+        result.isEmpty && text.nonEmpty && text.charAt(0) == '\\' &&
+        !MacroExpander.implicitCommands.contains(text)
+      ) {
         if (settings.throwOnError) {
-          throw new ParseError(
-            "Undefined control sequence: " + text, Nullable(firstToken))
+          throw new ParseError("Undefined control sequence: " + text, Nullable(firstToken))
         }
         result = Nullable(formatUnsupportedCmd(text))
         consume()
@@ -937,14 +887,9 @@ class Parser(input: String, val settings: Settings) {
     break(result)
   }
 
-  /**
-   * Form ligature-like combinations of characters for text mode.
-   * This includes inputs like "--", "---", "``" and "''".
-   * The result will simply replace multiple textord nodes with a single
-   * character in each value by a single textord node having multiple
-   * characters in its value.  The representation is still ASCII source.
-   * The group will be modified in place.
-   */
+  /** Form ligature-like combinations of characters for text mode. This includes inputs like "--", "---", "``" and "''". The result will simply replace multiple textord nodes with a single character
+    * in each value by a single textord node having multiple characters in its value. The representation is still ASCII source. The group will be modified in place.
+    */
   def formLigatures(group: mutable.ArrayBuffer[AnyParseNode]): Unit = {
     var n = group.length - 1
     var i = 0
@@ -954,7 +899,7 @@ class Parser(input: String, val settings: Settings) {
         i += 1
       } else {
         val aNode = a.asInstanceOf[ParseNodeTextord]
-        val v = aNode.text
+        val v     = aNode.text
         if (i + 1 >= group.length) {
           i += 1
         } else {
@@ -968,38 +913,46 @@ class Parser(input: String, val settings: Settings) {
                 val afterNext = group(i + 2)
                 if (afterNext.nodeType == "textord" && afterNext.asInstanceOf[ParseNodeTextord].text == "-") {
                   group.remove(i, 3)
-                  group.insert(i, ParseNodeTextord(
-                    mode = Mode.Text,
-                    loc = SourceLocation.range(Nullable(a), Nullable(afterNext)),
-                    text = "---"
-                  ))
+                  group.insert(i,
+                               ParseNodeTextord(
+                                 mode = Mode.Text,
+                                 loc = SourceLocation.range(Nullable(a), Nullable(afterNext)),
+                                 text = "---"
+                               )
+                  )
                   n -= 2
                 } else {
                   group.remove(i, 2)
-                  group.insert(i, ParseNodeTextord(
-                    mode = Mode.Text,
-                    loc = SourceLocation.range(Nullable(a), Nullable(next)),
-                    text = "--"
-                  ))
+                  group.insert(i,
+                               ParseNodeTextord(
+                                 mode = Mode.Text,
+                                 loc = SourceLocation.range(Nullable(a), Nullable(next)),
+                                 text = "--"
+                               )
+                  )
                   n -= 1
                 }
               } else {
                 group.remove(i, 2)
-                group.insert(i, ParseNodeTextord(
-                  mode = Mode.Text,
-                  loc = SourceLocation.range(Nullable(a), Nullable(next)),
-                  text = "--"
-                ))
+                group.insert(i,
+                             ParseNodeTextord(
+                               mode = Mode.Text,
+                               loc = SourceLocation.range(Nullable(a), Nullable(next)),
+                               text = "--"
+                             )
+                )
                 n -= 1
               }
             }
             if ((v == "'" || v == "`") && nextNode.text == v) {
               group.remove(i, 2)
-              group.insert(i, ParseNodeTextord(
-                mode = Mode.Text,
-                loc = SourceLocation.range(Nullable(a), Nullable(next)),
-                text = v + v
-              ))
+              group.insert(i,
+                           ParseNodeTextord(
+                             mode = Mode.Text,
+                             loc = SourceLocation.range(Nullable(a), Nullable(next)),
+                             text = v + v
+                           )
+              )
               n -= 1
             }
             i += 1
@@ -1009,17 +962,15 @@ class Parser(input: String, val settings: Settings) {
     }
   }
 
-  /**
-   * Parse a single symbol out of the string. Here, we handle single character
-   * symbols and special functions like \verb.
-   */
+  /** Parse a single symbol out of the string. Here, we handle single character symbols and special functions like \verb.
+    */
   def parseSymbol(): Nullable[AnyParseNode] = boundary {
     val nucleus = fetch()
-    var text = nucleus.text
+    var text    = nucleus.text
 
     if ("^\\\\verb[^a-zA-Z]".r.findFirstIn(text).isDefined) {
       consume()
-      var arg = text.substring(5)
+      var arg  = text.substring(5)
       val star = arg.nonEmpty && arg.charAt(0) == '*'
       if (star) {
         arg = arg.substring(1)
@@ -1040,19 +991,29 @@ class Parser(input: String, val settings: Settings) {
     }
     // At this point, we should have a symbol, possibly with accents.
     // First expand any accented base symbol according to unicodeSymbols.
-    if (text.nonEmpty && UnicodeSymbols.unicodeSymbols.contains(text.charAt(0).toString) &&
-        !Symbols.getSymbol(mode, text.charAt(0).toString).isDefined) {
+    if (
+      text.nonEmpty && UnicodeSymbols.unicodeSymbols.contains(text.charAt(0).toString) &&
+      !Symbols.getSymbol(mode, text.charAt(0).toString).isDefined
+    ) {
       // This behavior is not strict (XeTeX-compatible) in math mode.
-      if (settings.strict.isInstanceOf[StrictSetting.BoolValue] &&
-          settings.strict.asInstanceOf[StrictSetting.BoolValue].value &&
-          mode == Mode.Math) {
-        settings.reportNonstrict("unicodeTextInMathMode",
+      if (
+        settings.strict.isInstanceOf[StrictSetting.BoolValue] &&
+        settings.strict.asInstanceOf[StrictSetting.BoolValue].value &&
+        mode == Mode.Math
+      ) {
+        settings.reportNonstrict(
+          "unicodeTextInMathMode",
           s"Accented Unicode text character \"${text.charAt(0)}\" used in " +
-          "math mode", Nullable(nucleus))
+            "math mode",
+          Nullable(nucleus)
+        )
       } else if (settings.strict.isInstanceOf[StrictSetting.StringValue] && mode == Mode.Math) {
-        settings.reportNonstrict("unicodeTextInMathMode",
+        settings.reportNonstrict(
+          "unicodeTextInMathMode",
           s"Accented Unicode text character \"${text.charAt(0)}\" used in " +
-          "math mode", Nullable(nucleus))
+            "math mode",
+          Nullable(nucleus)
+        )
       }
       text = UnicodeSymbols.unicodeSymbols(text.charAt(0).toString) + text.substring(1)
     }
@@ -1070,20 +1031,25 @@ class Parser(input: String, val settings: Settings) {
     var symbol: Nullable[AnyParseNode] = Nullable.Null
     val symbolInfo = Symbols.getSymbol(mode, text)
     if (symbolInfo.isDefined) {
-      val strict = settings.strict
+      val strict   = settings.strict
       val isStrict = strict match {
-        case StrictSetting.BoolValue(b) => b
-        case StrictSetting.StringValue(_) => true
+        case StrictSetting.BoolValue(b)     => b
+        case StrictSetting.StringValue(_)   => true
         case StrictSetting.FunctionValue(_) => true
       }
-      if (isStrict && mode == Mode.Math &&
-          Symbols.extraLatin.contains(text.charAt(0))) {
-        settings.reportNonstrict("unicodeTextInMathMode",
+      if (
+        isStrict && mode == Mode.Math &&
+        Symbols.extraLatin.contains(text.charAt(0))
+      ) {
+        settings.reportNonstrict(
+          "unicodeTextInMathMode",
           s"Latin-1/Unicode text character \"${text.charAt(0)}\" used in " +
-          "math mode", Nullable(nucleus))
+            "math mode",
+          Nullable(nucleus)
+        )
       }
       val group = symbolInfo.get.group
-      val loc = SourceLocation.range(Nullable(nucleus), Nullable.Null)
+      val loc   = SourceLocation.range(Nullable(nucleus), Nullable.Null)
       val s: SymbolParseNode =
         if (Symbols.ATOMS.contains(group)) {
           // TODO(ts)
@@ -1097,31 +1063,32 @@ class Parser(input: String, val settings: Settings) {
         } else {
           // TODO(ts)
           group match {
-            case "mathord"       => ParseNodeMathord(mode = mode, loc = loc, text = text)
-            case "textord"       => ParseNodeTextord(mode = mode, loc = loc, text = text)
-            case "spacing"       => ParseNodeSpacing(mode = mode, loc = loc, text = text)
-            case "accent-token"  => ParseNodeAccentToken(mode = mode, loc = loc, text = text)
-            case "op-token"      => ParseNodeOpToken(mode = mode, loc = loc, text = text)
-            case _               => ParseNodeTextord(mode = mode, loc = loc, text = text) // fallback
+            case "mathord"      => ParseNodeMathord(mode = mode, loc = loc, text = text)
+            case "textord"      => ParseNodeTextord(mode = mode, loc = loc, text = text)
+            case "spacing"      => ParseNodeSpacing(mode = mode, loc = loc, text = text)
+            case "accent-token" => ParseNodeAccentToken(mode = mode, loc = loc, text = text)
+            case "op-token"     => ParseNodeOpToken(mode = mode, loc = loc, text = text)
+            case _              => ParseNodeTextord(mode = mode, loc = loc, text = text) // fallback
           }
         }
       // TODO(ts)
       symbol = Nullable(s)
     } else if (text.nonEmpty && text.charAt(0).toInt >= 0x80) { // no symbol for e.g. ^
       val isStrict = settings.strict match {
-        case StrictSetting.BoolValue(b) => b
-        case StrictSetting.StringValue(_) => true
+        case StrictSetting.BoolValue(b)     => b
+        case StrictSetting.StringValue(_)   => true
         case StrictSetting.FunctionValue(_) => true
       }
       if (isStrict) {
         if (!UnicodeScripts.supportedCodepoint(text.charAt(0).toInt)) {
-          settings.reportNonstrict("unknownSymbol",
+          settings.reportNonstrict(
+            "unknownSymbol",
             s"Unrecognized Unicode character \"${text.charAt(0)}\"" +
-            s" (${text.charAt(0).toInt})", Nullable(nucleus))
+              s" (${text.charAt(0).toInt})",
+            Nullable(nucleus)
+          )
         } else if (mode == Mode.Math) {
-          settings.reportNonstrict("unicodeTextInMathMode",
-            s"Unicode text character \"${text.charAt(0)}\" used in math mode",
-            Nullable(nucleus))
+          settings.reportNonstrict("unicodeTextInMathMode", s"Unicode text character \"${text.charAt(0)}\" used in math mode", Nullable(nucleus))
         }
       }
       // All nonmathematical Unicode characters are rendered as if they
@@ -1131,11 +1098,13 @@ class Parser(input: String, val settings: Settings) {
       // this makes it more difficult for getCharacterMetrics() to
       // distinguish Unicode characters without metrics and those for
       // which we want to simulate the letter M.
-      symbol = Nullable(ParseNodeTextord(
-        mode = Mode.Text,
-        loc = SourceLocation.range(Nullable(nucleus), Nullable.Null),
-        text = text
-      ))
+      symbol = Nullable(
+        ParseNodeTextord(
+          mode = Mode.Text,
+          loc = SourceLocation.range(Nullable(nucleus), Nullable.Null),
+          text = text
+        )
+      )
     } else {
       break(Nullable.Null) // EOF, ^, _, {, }, etc.
     }
@@ -1143,9 +1112,9 @@ class Parser(input: String, val settings: Settings) {
     // Transform combining characters into accents
     if (matchOpt.isDefined) {
       val matchStr = matchOpt.get.matched
-      var idx = 0
+      var idx      = 0
       while (idx < matchStr.length) {
-        val accent = matchStr.charAt(idx).toString
+        val accent      = matchStr.charAt(idx).toString
         val accentEntry = UnicodeAccents.unicodeAccents.get(accent)
         if (accentEntry.isEmpty) {
           throw new ParseError(s"Unknown accent ' $accent'", Nullable(nucleus))
@@ -1158,19 +1127,19 @@ class Parser(input: String, val settings: Settings) {
             Nullable(accentEntry.get.text)
         }
         if (command.isEmpty) {
-          throw new ParseError(
-            s"Accent $accent unsupported in ${mode.value} mode",
-            Nullable(nucleus))
+          throw new ParseError(s"Accent $accent unsupported in ${mode.value} mode", Nullable(nucleus))
         }
-        symbol = Nullable(ParseNodeAccent(
-          mode = mode,
-          loc = SourceLocation.range(Nullable(nucleus), Nullable.Null),
-          label = command.get,
-          isStretchy = Nullable(false),
-          isShifty = Nullable(true),
-          // TODO(ts)
-          base = symbol.get
-        ))
+        symbol = Nullable(
+          ParseNodeAccent(
+            mode = mode,
+            loc = SourceLocation.range(Nullable(nucleus), Nullable.Null),
+            label = command.get,
+            isStretchy = Nullable(false),
+            isShifty = Nullable(true),
+            // TODO(ts)
+            base = symbol.get
+          )
+        )
         idx += 1
       }
     }
