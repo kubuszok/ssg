@@ -16,11 +16,9 @@ package katex
 
 import scala.util.matching.Regex
 
-/**
- * Interface required to break circular dependency between Token, Lexer, and
- * ParseError.
- */
+/** Interface required to break circular dependency between Token, Lexer, and ParseError.
+  */
 trait LexerInterface {
-  def input: String
+  def input:      String
   def tokenRegex: Regex
 }

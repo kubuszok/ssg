@@ -19,19 +19,20 @@ import ssg.katex.parse._
 
 object RelaxFunc {
 
-  def register(): Unit = {
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "internal",
-      names = Array("\\relax"),
-      props = FunctionPropSpec(
-        numArgs = 0,
-        allowedInText = true,
-        allowedInArgument = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        ParseNodeInternal(mode = parser.mode)
-      })
-    ))
-  }
+  def register(): Unit =
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "internal",
+        names = Array("\\relax"),
+        props = FunctionPropSpec(
+          numArgs = 0,
+          allowedInText = true,
+          allowedInArgument = true
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          ParseNodeInternal(mode = parser.mode)
+        }
+      )
+    )
 }

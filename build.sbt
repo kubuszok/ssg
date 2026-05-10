@@ -129,6 +129,28 @@ val `ssg-katex` = (projectMatrix in file("ssg-katex"))
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
+// --- Diagramming engine (Mermaid port) ---
+
+val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-mermaid",
+    libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
+      "org.scalameta"      %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta"      %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .dependsOn(`ssg-commons`)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
+  ))
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++ Seq(
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
+  ))
+
 // --- Syntax highlighting (tree-sitter) ---
 
 val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
@@ -177,7 +199,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-highlight`)
+  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-highlight`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -187,21 +209,21 @@ val ssg = (projectMatrix in file("ssg"))
 addCommandAlias("test-jvm",
   List(
     "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
-    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-highlight/test"
+    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-mermaid/test", "ssg-highlight/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-js",
   List(
     "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
-    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-highlightJS/test"
+    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-mermaidJS/test", "ssg-highlightJS/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-native",
   List(
     "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
-    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-highlightNative/test"
+    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-mermaidNative/test", "ssg-highlightNative/test"
   ).mkString("; ")
 )
 

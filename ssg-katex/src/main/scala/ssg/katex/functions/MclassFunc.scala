@@ -18,22 +18,22 @@ package functions
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.parse._
 import ssg.katex.tree.MathNode
-import ssg.katex.util.{Utils => KatexUtils}
+import ssg.katex.util.{ Utils => KatexUtils }
 
 object MclassFunc {
 
   private val htmlBuilder: HtmlBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeMclass]
-    val opts = options.asInstanceOf[Options]
+    val g        = group.asInstanceOf[ParseNodeMclass]
+    val opts     = options.asInstanceOf[Options]
     val elements = BuildHTML.buildExpression(g.body, opts, isRealGroup = true)
     BuildCommon.makeSpan(ArrayBuffer(g.mclass), elements, Nullable(opts))
   }
 
   private val mathmlBuilder: MathMLBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeMclass]
+    val g    = group.asInstanceOf[ParseNodeMclass]
     val opts = options.asInstanceOf[Options]
     var node: MathNode = new MathNode("mrow") // overwritten below in all branches
     val inner = BuildMathML.buildExpression(g.body, opts)
@@ -101,90 +101,101 @@ object MclassFunc {
 
   def register(): Unit = {
     // Math class commands except \mathop
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "mclass",
-      names = Array(
-        "\\mathord", "\\mathbin", "\\mathrel", "\\mathopen",
-        "\\mathclose", "\\mathpunct", "\\mathinner"
-      ),
-      props = FunctionPropSpec(
-        numArgs = 1,
-        primitive = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val body = args(0)
-        ParseNodeMclass(
-          mode = parser.mode,
-          mclass = "m" + context.funcName.substring(5), // TODO(kevinb): don't prefix with 'm'
-          body = FunctionDef.ordargument(body),
-          isCharacterBox = KatexUtils.isCharacterBox(body)
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "mclass",
+        names = Array(
+          "\\mathord",
+          "\\mathbin",
+          "\\mathrel",
+          "\\mathopen",
+          "\\mathclose",
+          "\\mathpunct",
+          "\\mathinner"
+        ),
+        props = FunctionPropSpec(
+          numArgs = 1,
+          primitive = true
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val body   = args(0)
+          ParseNodeMclass(
+            mode = parser.mode,
+            mclass = "m" + context.funcName.substring(5), // TODO(kevinb): don't prefix with 'm'
+            body = FunctionDef.ordargument(body),
+            isCharacterBox = KatexUtils.isCharacterBox(body)
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // \@binrel{x}{y} renders like y but as mbin/mrel/mord if x is mbin/mrel/mord.
     // This is equivalent to \binrel@{x}\binrel@@{y} in AMSTeX.
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "mclass",
-      names = Array("\\@binrel"),
-      props = FunctionPropSpec(numArgs = 2),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        ParseNodeMclass(
-          mode = parser.mode,
-          mclass = binrelClass(args(0)),
-          body = FunctionDef.ordargument(args(1)),
-          isCharacterBox = KatexUtils.isCharacterBox(args(1))
-        )
-      })
-    ))
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "mclass",
+        names = Array("\\@binrel"),
+        props = FunctionPropSpec(numArgs = 2),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          ParseNodeMclass(
+            mode = parser.mode,
+            mclass = binrelClass(args(0)),
+            body = FunctionDef.ordargument(args(1)),
+            isCharacterBox = KatexUtils.isCharacterBox(args(1))
+          )
+        }
+      )
+    )
 
     // Build a relation or stacked op by placing one symbol on top of another
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "mclass",
-      names = Array("\\stackrel", "\\overset", "\\underset"),
-      props = FunctionPropSpec(numArgs = 2),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val baseArg = args(1)
-        val shiftedArg = args(0)
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "mclass",
+        names = Array("\\stackrel", "\\overset", "\\underset"),
+        props = FunctionPropSpec(numArgs = 2),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser     = context.parser.asInstanceOf[Parser]
+          val baseArg    = args(1)
+          val shiftedArg = args(0)
 
-        val mclass = if (context.funcName != "\\stackrel") {
-          // LaTeX applies \binrel spacing to \overset and \underset.
-          binrelClass(baseArg)
-        } else {
-          "mrel" // for \stackrel
-        }
+          val mclass = if (context.funcName != "\\stackrel") {
+            // LaTeX applies \binrel spacing to \overset and \underset.
+            binrelClass(baseArg)
+          } else {
+            "mrel" // for \stackrel
+          }
 
-        val baseOp = ParseNodeOp(
-          mode = baseArg.mode,
-          limits = true,
-          alwaysHandleSupSub = Nullable(true),
-          parentIsSupSub = false,
-          symbol = false,
-          suppressBaseShift = Nullable(context.funcName != "\\stackrel"),
-          body = Nullable(FunctionDef.ordargument(baseArg))
-        )
+          val baseOp = ParseNodeOp(
+            mode = baseArg.mode,
+            limits = true,
+            alwaysHandleSupSub = Nullable(true),
+            parentIsSupSub = false,
+            symbol = false,
+            suppressBaseShift = Nullable(context.funcName != "\\stackrel"),
+            body = Nullable(FunctionDef.ordargument(baseArg))
+          )
 
-        val supsub = ParseNodeSupsub(
-          mode = shiftedArg.mode,
-          base = Nullable(baseOp),
-          sup = if (context.funcName == "\\underset") Nullable.Null else Nullable(shiftedArg),
-          sub = if (context.funcName == "\\underset") Nullable(shiftedArg) else Nullable.Null
-        )
+          val supsub = ParseNodeSupsub(
+            mode = shiftedArg.mode,
+            base = Nullable(baseOp),
+            sup = if (context.funcName == "\\underset") Nullable.Null else Nullable(shiftedArg),
+            sub = if (context.funcName == "\\underset") Nullable(shiftedArg) else Nullable.Null
+          )
 
-        ParseNodeMclass(
-          mode = parser.mode,
-          mclass = mclass,
-          body = Array(supsub),
-          isCharacterBox = KatexUtils.isCharacterBox(supsub)
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          ParseNodeMclass(
+            mode = parser.mode,
+            mclass = mclass,
+            body = Array(supsub),
+            isCharacterBox = KatexUtils.isCharacterBox(supsub)
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
   }
 }

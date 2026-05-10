@@ -27,26 +27,25 @@ package environments
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML, VListElemAndShift, VListParam}
-import ssg.katex.data.{Measurement, Units}
-import ssg.katex.functions.{FunctionDef, FunctionDefSpec, FunctionPropSpec, HtmlBuilder, MathMLBuilder}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML, VListElemAndShift, VListParam }
+import ssg.katex.data.{ Measurement, Units }
+import ssg.katex.functions.{ FunctionDef, FunctionDefSpec, FunctionPropSpec, HtmlBuilder, MathMLBuilder }
 import ssg.katex.parse._
-import ssg.katex.tree.{DomSpan, HtmlDomNode, MathDomNode, MathNode}
+import ssg.katex.tree.{ DomSpan, HtmlDomNode, MathDomNode, MathNode }
 
-/**
- * Configuration options for parseArray.
- */
+/** Configuration options for parseArray.
+  */
 final case class ParseArrayConfig(
-    hskipBeforeAndAfter: Nullable[Boolean] = Nullable.Null,
-    addJot: Nullable[Boolean] = Nullable.Null,
-    cols: Nullable[Array[AlignSpec]] = Nullable.Null,
-    arraystretch: Nullable[Double] = Nullable.Null,
-    colSeparationType: Nullable[ColSeparationType] = Nullable.Null,
-    autoTag: Nullable[Boolean] = Nullable.Null, // null/undefined = no tags, Some(true) = auto, Some(false) = manual
-    singleRow: Boolean = false,
-    emptySingleRow: Boolean = false,
-    maxNumCols: Nullable[Int] = Nullable.Null,
-    leqno: Nullable[Boolean] = Nullable.Null
+  hskipBeforeAndAfter: Nullable[Boolean] = Nullable.Null,
+  addJot:              Nullable[Boolean] = Nullable.Null,
+  cols:                Nullable[Array[AlignSpec]] = Nullable.Null,
+  arraystretch:        Nullable[Double] = Nullable.Null,
+  colSeparationType:   Nullable[ColSeparationType] = Nullable.Null,
+  autoTag:             Nullable[Boolean] = Nullable.Null, // null/undefined = no tags, Some(true) = auto, Some(false) = manual
+  singleRow:           Boolean = false,
+  emptySingleRow:      Boolean = false,
+  maxNumCols:          Nullable[Int] = Nullable.Null,
+  leqno:               Nullable[Boolean] = Nullable.Null
 )
 
 object ArrayEnv {
@@ -75,8 +74,10 @@ object ArrayEnv {
   private def validateAmsEnvironmentContext(context: EnvContext): Unit = {
     val settings = context.parser.asInstanceOf[Parser].settings
     if (!settings.displayMode) {
-      throw new ParseError(s"{${context.envName}} can be used only in" +
-        " display mode.")
+      throw new ParseError(
+        s"{${context.envName}} can be used only in" +
+          " display mode."
+      )
     }
   }
 
@@ -87,25 +88,21 @@ object ArrayEnv {
   // * true: Automatic equation numbering, overridable by \tag
   // * false: Tags allowed on each row, but no automatic numbering
   // This function *doesn't* work with the "split" environment name.
-  private def getAutoTag(name: String): Nullable[Boolean] = {
+  private def getAutoTag(name: String): Nullable[Boolean] =
     if (!name.contains("ed")) {
       Nullable(!name.contains("*"))
     } else {
       // return undefined
       Nullable.Null
     }
-  }
 
-  /**
-   * Parse the body of the environment, with rows delimited by \\ and
-   * columns delimited by &, and create a nested list in row-major order
-   * with one group per cell.  If given an optional argument style
-   * ("text", "display", etc.), then each cell is cast into that style.
-   */
+  /** Parse the body of the environment, with rows delimited by \\ and columns delimited by &, and create a nested list in row-major order with one group per cell. If given an optional argument style
+    * ("text", "display", etc.), then each cell is cast into that style.
+    */
   def parseArray(
-      parser: Parser,
-      config: ParseArrayConfig,
-      style: Nullable[StyleStr]
+    parser: Parser,
+    config: ParseArrayConfig,
+    style:  Nullable[StyleStr]
   ): ParseNodeArray = {
     parser.gullet.beginGroup()
     if (!config.singleRow) {
@@ -132,10 +129,10 @@ object ArrayEnv {
     // Start group for first cell
     parser.gullet.beginGroup()
 
-    var row = ArrayBuffer.empty[AnyParseNode]
+    var row  = ArrayBuffer.empty[AnyParseNode]
     val body = ArrayBuffer.empty[Array[AnyParseNode]]
     body += Array.empty[AnyParseNode] // placeholder for first row (removed at end)
-    val rowGaps = ArrayBuffer.empty[Nullable[Measurement]]
+    val rowGaps         = ArrayBuffer.empty[Nullable[Measurement]]
     val hLinesBeforeRow = ArrayBuffer.empty[Array[Boolean]]
     val tags: Nullable[ArrayBuffer[Either[Boolean, Array[AnyParseNode]]]] =
       if (config.autoTag.isDefined) Nullable(ArrayBuffer.empty) else Nullable.Null
@@ -143,28 +140,27 @@ object ArrayEnv {
     // amsmath uses \global\@eqnswtrue and \global\@eqnswfalse to represent
     // whether this row should have an equation number.  Simulate this with
     // a \@eqnsw macro set to 1 or 0.
-    def beginRow(): Unit = {
+    def beginRow(): Unit =
       if (config.autoTag.isDefined && config.autoTag.get) {
         parser.gullet.macros.set("\\@eqnsw", Nullable(MacroDefinition.StringDef("1")), global = true)
       }
-    }
-    def endRow(): Unit = {
+    def endRow(): Unit =
       tags.foreach { t =>
         if (parser.gullet.macros.get("\\df@tag").isDefined) {
           t += Right(parser.subparse(Array(new Token("\\df@tag"))))
           parser.gullet.macros.set("\\df@tag", Nullable.Null, global = true)
         } else {
           val eqnswIsOne = parser.gullet.macros.get("\\@eqnsw") match {
-            case v if v.isDefined => v.get match {
-              case MacroDefinition.StringDef(s) => s == "1"
-              case _ => false
-            }
+            case v if v.isDefined =>
+              v.get match {
+                case MacroDefinition.StringDef(s) => s == "1"
+                case _                            => false
+              }
             case _ => false
           }
           t += Left(config.autoTag.isDefined && config.autoTag.get && eqnswIsOne)
         }
       }
-    }
     beginRow()
 
     // Test for \hline at the top of the array.
@@ -173,8 +169,7 @@ object ArrayEnv {
     var continue = true
     while (continue) {
       // Parse each cell in its own group (namespace)
-      val cellBody = parser.parseExpression(false,
-        if (config.singleRow) Nullable("\\end") else Nullable("\\\\"))
+      val cellBody = parser.parseExpression(false, if (config.singleRow) Nullable("\\end") else Nullable("\\\\"))
       parser.gullet.endGroup()
       parser.gullet.beginGroup()
       var cell: AnyParseNode = ParseNodeOrdgroup(
@@ -194,12 +189,13 @@ object ArrayEnv {
         if (config.maxNumCols.isDefined && row.length == config.maxNumCols.get) {
           if (config.singleRow || config.colSeparationType.isDefined) {
             // {equation} or {split}
-            throw new ParseError("Too many tab characters: &",
-              parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
+            throw new ParseError("Too many tab characters: &", parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
           } else {
             // {array} environment
-            parser.settings.reportNonstrict("textEnv", "Too few columns " +
-              "specified in the {array} column argument.")
+            parser.settings.reportNonstrict("textEnv",
+                                            "Too few columns " +
+                                              "specified in the {array} column argument."
+            )
           }
         }
         parser.consume()
@@ -209,11 +205,13 @@ object ArrayEnv {
         // the last line is empty.  However, AMS environments keep the
         // empty row if it's the only one.
         // NOTE: Currently, `cell` is the last item added into `row`.
-        if (row.length == 1 && cell.nodeType == "styling" &&
-            cell.asInstanceOf[ParseNodeStyling].body.length == 1 &&
-            cell.asInstanceOf[ParseNodeStyling].body(0).nodeType == "ordgroup" &&
-            cell.asInstanceOf[ParseNodeStyling].body(0).asInstanceOf[ParseNodeOrdgroup].body.length == 0 &&
-            (body.length > 1 || !config.emptySingleRow)) {
+        if (
+          row.length == 1 && cell.nodeType == "styling" &&
+          cell.asInstanceOf[ParseNodeStyling].body.length == 1 &&
+          cell.asInstanceOf[ParseNodeStyling].body(0).nodeType == "ordgroup" &&
+          cell.asInstanceOf[ParseNodeStyling].body(0).asInstanceOf[ParseNodeOrdgroup].body.length == 0 &&
+          (body.length > 1 || !config.emptySingleRow)
+        ) {
           // Note: body.length > 1 because we have the first null placeholder + any earlier rows
           // Actually body has the null placeholder at index 0, plus any rows. But in JS
           // body starts with [row] then body.pop() removes the last element. Here we
@@ -238,9 +236,8 @@ object ArrayEnv {
           // Let's add empty hlines to fill up
         }
         // Add trailing hlines
-        while (hLinesBeforeRow.length < body.length + 1) {
+        while (hLinesBeforeRow.length < body.length + 1)
           hLinesBeforeRow += Array.empty[Boolean]
-        }
         continue = false
       } else if (next == "\\\\") {
         parser.consume()
@@ -263,8 +260,7 @@ object ArrayEnv {
         row = ArrayBuffer.empty[AnyParseNode]
         beginRow()
       } else {
-        throw new ParseError("Expected & or \\\\ or \\cr or \\end",
-          parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
+        throw new ParseError("Expected & or \\\\ or \\cr or \\end", parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
       }
     }
 
@@ -297,32 +293,31 @@ object ArrayEnv {
 
   // Decides on a style for cells in an array according to whether the given
   // environment name starts with the letter 'd'.
-  private def dCellStyle(envName: String): StyleStr = {
+  private def dCellStyle(envName: String): StyleStr =
     if (envName.startsWith("d")) {
       StyleStr.Display
     } else {
       StyleStr.TextStyle
     }
-  }
 
   private val htmlBuilder: HtmlBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeArray]
-    val opts = options.asInstanceOf[Options]
-    var r = 0
-    var c = 0
-    val nr = g.body.length
+    val g               = group.asInstanceOf[ParseNodeArray]
+    val opts            = options.asInstanceOf[Options]
+    var r               = 0
+    var c               = 0
+    val nr              = g.body.length
     val hLinesBeforeRow = g.hLinesBeforeRow
-    var nc = 0
-    val bodyArr = new Array[ArrayWithRowInfo](nr)
-    val hlines = ArrayBuffer.empty[HlineInfo]
-    val ruleThickness = Math.max(
+    var nc              = 0
+    val bodyArr         = new Array[ArrayWithRowInfo](nr)
+    val hlines          = ArrayBuffer.empty[HlineInfo]
+    val ruleThickness   = Math.max(
       // From LaTeX \showthe\arrayrulewidth. Equals 0.04 em.
       opts.fontMetrics().arrayRuleWidth,
       opts.minRuleThickness // User override.
     )
 
     // Horizontal spacing
-    val pt = 1.0 / opts.fontMetrics().ptPerEm
+    val pt          = 1.0 / opts.fontMetrics().ptPerEm
     var arraycolsep = 5.0 * pt // default value, i.e. \arraycolsep in article.cls
     if (g.colSeparationType.isDefined && g.colSeparationType.get == "small") {
       // We're in a {smallmatrix}. Default column space is \thickspace,
@@ -343,10 +338,10 @@ object ArrayEnv {
       }
     // Default \jot from ltmath.dtx
     // TODO(edemaine): allow overriding \jot via \setlength (#687)
-    val jot = 3 * pt
-    val arrayskip = g.arraystretch * baselineskip
+    val jot           = 3 * pt
+    val arrayskip     = g.arraystretch * baselineskip
     val arstrutHeight = 0.7 * arrayskip // \strutbox in ltfsstrc.dtx and
-    val arstrutDepth = 0.3 * arrayskip  // \@arstrutbox in lttab.dtx
+    val arstrutDepth  = 0.3 * arrayskip // \@arstrutbox in lttab.dtx
 
     var totalHeight = 0.0
 
@@ -365,9 +360,9 @@ object ArrayEnv {
 
     r = 0
     while (r < g.body.length) {
-      val inrow = g.body(r)
+      val inrow  = g.body(r)
       var height = arstrutHeight // \@array adds an \@arstrut
-      var depth = arstrutDepth   // to each row (via the template)
+      var depth  = arstrutDepth // to each row (via the template)
 
       if (nc < inrow.length) {
         nc = inrow.length
@@ -425,28 +420,29 @@ object ArrayEnv {
     val cols = ArrayBuffer.empty[HtmlDomNode]
     var colSep: DomSpan = BuildCommon.makeSpan() // overwritten below before use
     var colDescrNum = 0
-    val tagSpans = ArrayBuffer.empty[VListElemAndShift]
+    val tagSpans    = ArrayBuffer.empty[VListElemAndShift]
 
-    if (g.tags.isDefined && g.tags.get.exists {
-      case Left(b) => b
-      case Right(_) => true
-    }) {
+    if (
+      g.tags.isDefined && g.tags.get.exists {
+        case Left(b)  => b
+        case Right(_) => true
+      }
+    ) {
       // An environment with manual tags and/or automatic equation numbers.
       // Create node(s), the latter of which trigger CSS counter increment.
       r = 0
       while (r < nr) {
-        val rw = bodyArr(r)
+        val rw    = bodyArr(r)
         val shift = rw.pos - offset
-        val tag = g.tags.get(r)
+        val tag   = g.tags.get(r)
         val tagSpan: DomSpan = tag match {
-          case Left(true) =>  // automatic numbering
+          case Left(true) => // automatic numbering
             BuildCommon.makeSpan(ArrayBuffer("eqn-num"), ArrayBuffer.empty, Nullable(opts))
           case Left(false) =>
             // \nonumber/\notag or starred environment
             BuildCommon.makeSpan(ArrayBuffer.empty, ArrayBuffer.empty, Nullable(opts))
-          case Right(tagNodes) =>  // manual \tag
-            BuildCommon.makeSpan(ArrayBuffer.empty,
-              BuildHTML.buildExpression(tagNodes, opts, true), Nullable(opts))
+          case Right(tagNodes) => // manual \tag
+            BuildCommon.makeSpan(ArrayBuffer.empty, BuildHTML.buildExpression(tagNodes, opts, true), Nullable(opts))
         }
         tagSpan.depth = rw.depth
         tagSpan.height = rw.height
@@ -464,7 +460,7 @@ object ArrayEnv {
         if (colDescrNum < colDescriptions.length) Nullable(colDescriptions(colDescrNum))
         else Nullable.Null
 
-      var currentDescr = colDescr
+      var currentDescr   = colDescr
       var firstSeparator = true
       while (currentDescr.isDefined && currentDescr.get.isInstanceOf[AlignSpec.Separator]) {
         val sep = currentDescr.get.asInstanceOf[AlignSpec.Separator]
@@ -472,13 +468,12 @@ object ArrayEnv {
         // between them.
         if (!firstSeparator) {
           colSep = BuildCommon.makeSpan(ArrayBuffer("arraycolsep"), ArrayBuffer.empty)
-          colSep.style = colSep.style.copy(width =
-            Nullable(Units.makeEm(opts.fontMetrics().doubleRuleSep)))
+          colSep.style = colSep.style.copy(width = Nullable(Units.makeEm(opts.fontMetrics().doubleRuleSep)))
           cols += colSep
         }
 
         if (sep.separator == "|" || sep.separator == ":") {
-          val lineType = if (sep.separator == "|") "solid" else "dashed"
+          val lineType  = if (sep.separator == "|") "solid" else "dashed"
           val separator = BuildCommon.makeSpan(ArrayBuffer("vertical-separator"), ArrayBuffer.empty, Nullable(opts))
           separator.style = separator.style.copy(
             height = Nullable(Units.makeEm(totalHeight)),
@@ -488,14 +483,12 @@ object ArrayEnv {
           )
           val vertShift = totalHeight - offset
           if (vertShift != 0) {
-            separator.style = separator.style.copy(
-              verticalAlign = Nullable(Units.makeEm(-vertShift)))
+            separator.style = separator.style.copy(verticalAlign = Nullable(Units.makeEm(-vertShift)))
           }
 
           cols += separator
         } else {
-          throw new ParseError(
-            "Invalid separator type: " + sep.separator)
+          throw new ParseError("Invalid separator type: " + sep.separator)
         }
 
         colDescrNum += 1
@@ -512,10 +505,12 @@ object ArrayEnv {
       } else {
         var sepwidth = 0.0
         if (c > 0 || (g.hskipBeforeAndAfter.isDefined && g.hskipBeforeAndAfter.get)) {
-          sepwidth = currentDescr.map {
-            case AlignSpec.Align(_, pregap, _) => pregap
-            case _ => arraycolsep
-          }.getOrElse(arraycolsep)
+          sepwidth = currentDescr
+            .map {
+              case AlignSpec.Align(_, pregap, _) => pregap
+              case _                             => arraycolsep
+            }
+            .getOrElse(arraycolsep)
           if (sepwidth != 0) {
             colSep = BuildCommon.makeSpan(ArrayBuffer("arraycolsep"), ArrayBuffer.empty)
             colSep.style = colSep.style.copy(width = Nullable(Units.makeEm(sepwidth)))
@@ -527,7 +522,7 @@ object ArrayEnv {
         r = 0
         while (r < nr) {
           val rowInfo = bodyArr(r)
-          val elem = if (c < rowInfo.elems.length) rowInfo.elems(c) else null
+          val elem    = if (c < rowInfo.elems.length) rowInfo.elems(c) else null
           if (elem != null) { // @nowarn — checking array element
             val shift = rowInfo.pos - offset
             elem.depth = rowInfo.depth
@@ -541,10 +536,12 @@ object ArrayEnv {
           VListParam.IndividualShift(colElems.toArray),
           opts
         )
-        val colAlign = currentDescr.map {
-          case AlignSpec.Align(align, _, _) => align
-          case _ => "c"
-        }.getOrElse("c")
+        val colAlign = currentDescr
+          .map {
+            case AlignSpec.Align(align, _, _) => align
+            case _                            => "c"
+          }
+          .getOrElse("c")
         val colSpan = BuildCommon.makeSpan(
           ArrayBuffer("col-align-" + colAlign),
           ArrayBuffer[HtmlDomNode](colVList)
@@ -552,10 +549,12 @@ object ArrayEnv {
         cols += colSpan
 
         if (c < nc - 1 || (g.hskipBeforeAndAfter.isDefined && g.hskipBeforeAndAfter.get)) {
-          sepwidth = currentDescr.map {
-            case AlignSpec.Align(_, _, postgap) => postgap
-            case _ => arraycolsep
-          }.getOrElse(arraycolsep)
+          sepwidth = currentDescr
+            .map {
+              case AlignSpec.Align(_, _, postgap) => postgap
+              case _                              => arraycolsep
+            }
+            .getOrElse(arraycolsep)
           if (sepwidth != 0) {
             colSep = BuildCommon.makeSpan(ArrayBuffer("arraycolsep"), ArrayBuffer.empty)
             colSep.style = colSep.style.copy(width = Nullable(Units.makeEm(sepwidth)))
@@ -571,13 +570,13 @@ object ArrayEnv {
 
     // Add \hline(s), if any.
     if (hlines.nonEmpty) {
-      val line = BuildCommon.makeLineSpan("hline", opts, Nullable(ruleThickness))
-      val dashes = BuildCommon.makeLineSpan("hdashline", opts, Nullable(ruleThickness))
+      val line       = BuildCommon.makeLineSpan("hline", opts, Nullable(ruleThickness))
+      val dashes     = BuildCommon.makeLineSpan("hdashline", opts, Nullable(ruleThickness))
       val vListElems = ArrayBuffer[VListElemAndShift](
         VListElemAndShift(elem = tableBody, shift = 0)
       )
       while (hlines.nonEmpty) {
-        val hline = hlines.remove(hlines.length - 1)
+        val hline     = hlines.remove(hlines.length - 1)
         val lineShift = hline.pos - offset
         if (hline.isDashed) {
           vListElems += VListElemAndShift(elem = dashes, shift = lineShift)
@@ -611,23 +610,22 @@ object ArrayEnv {
   )
 
   private val mathmlBuilder: MathMLBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeArray]
+    val g    = group.asInstanceOf[ParseNodeArray]
     val opts = options.asInstanceOf[Options]
-    val tbl = ArrayBuffer.empty[MathDomNode]
+    val tbl  = ArrayBuffer.empty[MathDomNode]
     val glue = new MathNode("mtd", ArrayBuffer.empty, ArrayBuffer("mtr-glue"))
-    val tag = new MathNode("mtd", ArrayBuffer.empty, ArrayBuffer("mml-eqn-num"))
-    var i = 0
+    val tag  = new MathNode("mtd", ArrayBuffer.empty, ArrayBuffer("mml-eqn-num"))
+    var i    = 0
     while (i < g.body.length) {
-      val rw = g.body(i)
+      val rw  = g.body(i)
       val row = ArrayBuffer.empty[MathDomNode]
-      var j = 0
+      var j   = 0
       while (j < rw.length) {
-        row += new MathNode("mtd",
-          ArrayBuffer(BuildMathML.buildGroup(rw(j), opts)))
+        row += new MathNode("mtd", ArrayBuffer(BuildMathML.buildGroup(rw(j), opts)))
         j += 1
       }
       val hasTag = g.tags.isDefined && i < g.tags.get.length && (g.tags.get(i) match {
-        case Left(b) => b
+        case Left(b)  => b
         case Right(_) => true
       })
       if (hasTag) {
@@ -665,15 +663,15 @@ object ArrayEnv {
     // MathML table lines go only between cells.
     // To place a line on an edge we'll use <menclose>, if necessary.
     var menclose = ""
-    var align = ""
+    var align    = ""
 
     if (g.cols.isDefined && g.cols.get.length > 0) {
       // Find column alignment, column spacing, and  vertical lines.
-      val colsArr = g.cols.get
-      var columnLines = ""
+      val colsArr          = g.cols.get
+      var columnLines      = ""
       var prevTypeWasAlign = false
-      var iStart = 0
-      var iEnd = colsArr.length
+      var iStart           = 0
+      var iEnd             = colsArr.length
 
       if (colsArr(0).isInstanceOf[AlignSpec.Separator]) {
         menclose += "top "
@@ -718,7 +716,7 @@ object ArrayEnv {
         case "align" =>
           val colsArr = g.cols.getOrElse(Array.empty[AlignSpec])
           var spacing = ""
-          var si = 1
+          var si      = 1
           while (si < colsArr.length) {
             spacing += (if (si % 2 != 0) "0em " else "1em ")
             si += 1
@@ -738,7 +736,7 @@ object ArrayEnv {
     }
 
     // Address \hline and \hdashline
-    var rowLines = ""
+    var rowLines  = ""
     val hlinesArr = g.hLinesBeforeRow
 
     menclose += (if (hlinesArr(0).length > 0) "left " else "")
@@ -782,8 +780,9 @@ object ArrayEnv {
       val separationType: ColSeparationType =
         if (context.envName.contains("at")) "alignat" else "align"
       val isSplit = context.envName == "split"
-      val parser = context.parser.asInstanceOf[Parser]
-      val res = parseArray(parser,
+      val parser  = context.parser.asInstanceOf[Parser]
+      val res     = parseArray(
+        parser,
         ParseArrayConfig(
           cols = Nullable(cols.toArray), // will be replaced below
           addJot = Nullable(true),
@@ -806,18 +805,17 @@ object ArrayEnv {
       // cell in each row (starting with second cell) so that operators become
       // binary.  This behavior is implemented in amsmath's \start@aligned.
       var numMaths = 0
-      var numCols = 0
+      var numCols  = 0
       val emptyGroup: ParseNodeOrdgroup = ParseNodeOrdgroup(
         mode = context.mode,
         body = Array.empty
       )
       if (args.nonEmpty && args(0) != null && args(0).nodeType == "ordgroup") { // @nowarn — null check for interop
-        val og = args(0).asInstanceOf[ParseNodeOrdgroup]
+        val og   = args(0).asInstanceOf[ParseNodeOrdgroup]
         var arg0 = ""
-        var ai = 0
+        var ai   = 0
         while (ai < og.body.length) {
-          val textord = ParseNode.assertNodeType(Nullable(og.body(ai)), "textord")
-              .asInstanceOf[ParseNodeTextord]
+          val textord = ParseNode.assertNodeType(Nullable(og.body(ai)), "textord").asInstanceOf[ParseNodeTextord]
           arg0 += textord.text
           ai += 1
         }
@@ -829,20 +827,18 @@ object ArrayEnv {
         var ri = 1
         while (ri < row.length) {
           // Modify ordgroup node within styling node
-          val styling = ParseNode.assertNodeType(Nullable(row(ri)), "styling")
-              .asInstanceOf[ParseNodeStyling]
-          val ordgroup = ParseNode.assertNodeType(Nullable(styling.body(0)), "ordgroup")
-              .asInstanceOf[ParseNodeOrdgroup]
+          val styling  = ParseNode.assertNodeType(Nullable(row(ri)), "styling").asInstanceOf[ParseNodeStyling]
+          val ordgroup = ParseNode.assertNodeType(Nullable(styling.body(0)), "ordgroup").asInstanceOf[ParseNodeOrdgroup]
           ordgroup.body = Array(emptyGroup) ++ ordgroup.body
           ri += 2
         }
         if (!isAligned) { // Case 1
           val curMaths = row.length / 2
           if (numMaths < curMaths) {
-            throw new ParseError(
-              "Too many math in a row: " +
-              s"expected $numMaths, but got $curMaths",
-              Nullable(row(0)))
+            throw new ParseError("Too many math in a row: " +
+                                   s"expected $numMaths, but got $curMaths",
+                                 Nullable(row(0))
+            )
           }
         } else if (numCols < row.length) { // Case 2
           numCols = row.length
@@ -853,10 +849,10 @@ object ArrayEnv {
       // In aligned mode, we add one \qquad between columns;
       // otherwise we add nothing.
       val finalCols = new Array[AlignSpec](numCols)
-      var ci = 0
+      var ci        = 0
       while (ci < numCols) {
         var colAlign = "r"
-        var pregap = 0.0
+        var pregap   = 0.0
         if (ci % 2 == 1) {
           colAlign = "l"
         } else if (ci > 0 && isAligned) { // "aligned" mode.
@@ -879,191 +875,198 @@ object ArrayEnv {
     // is part of the source2e.pdf file of LaTeX2e source documentation.
     // {darray} is an {array} environment where cells are set in \displaystyle,
     // as defined in nccmath.sty.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("array", "darray"),
-      props = EnvProps(
-        numArgs = 1
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        // Since no types are specified above, the two possibilities are
-        // - The argument is wrapped in {} or [], in which case Parser's
-        //   parseGroup() returns an "ordgroup" wrapping some symbol node.
-        // - The argument is a bare symbol node.
-        val symNode = ParseNode.checkSymbolNodeType(Nullable(args(0)))
-        val colalign: Array[AnyParseNode] =
-          if (symNode.isDefined) Array(args(0))
-          else ParseNode.assertNodeType(Nullable(args(0)), "ordgroup")
-            .asInstanceOf[ParseNodeOrdgroup].body
-        val colsArr: Array[AlignSpec] = colalign.map { nde =>
-          val node = ParseNode.assertSymbolNodeType(Nullable(nde))
-          val ca = node.text
-          if ("lcr".contains(ca)) {
-            AlignSpec.Align(align = ca)
-          } else if (ca == "|") {
-            AlignSpec.Separator(separator = "|")
-          } else if (ca == ":") {
-            AlignSpec.Separator(separator = ":")
-          } else {
-            throw new ParseError("Unknown column alignment: " + ca, Nullable(nde))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("array", "darray"),
+        props = EnvProps(
+          numArgs = 1
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          // Since no types are specified above, the two possibilities are
+          // - The argument is wrapped in {} or [], in which case Parser's
+          //   parseGroup() returns an "ordgroup" wrapping some symbol node.
+          // - The argument is a bare symbol node.
+          val symNode = ParseNode.checkSymbolNodeType(Nullable(args(0)))
+          val colalign: Array[AnyParseNode] =
+            if (symNode.isDefined) Array(args(0))
+            else ParseNode.assertNodeType(Nullable(args(0)), "ordgroup").asInstanceOf[ParseNodeOrdgroup].body
+          val colsArr: Array[AlignSpec] = colalign.map { nde =>
+            val node = ParseNode.assertSymbolNodeType(Nullable(nde))
+            val ca   = node.text
+            if ("lcr".contains(ca)) {
+              AlignSpec.Align(align = ca)
+            } else if (ca == "|") {
+              AlignSpec.Separator(separator = "|")
+            } else if (ca == ":") {
+              AlignSpec.Separator(separator = ":")
+            } else {
+              throw new ParseError("Unknown column alignment: " + ca, Nullable(nde))
+            }
           }
-        }
-        val config = ParseArrayConfig(
-          cols = Nullable(colsArr),
-          hskipBeforeAndAfter = Nullable(true), // \@preamble in lttab.dtx
-          maxNumCols = Nullable(colsArr.length)
-        )
-        parseArray(parser, config, Nullable(dCellStyle(context.envName)))
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          val config = ParseArrayConfig(
+            cols = Nullable(colsArr),
+            hskipBeforeAndAfter = Nullable(true), // \@preamble in lttab.dtx
+            maxNumCols = Nullable(colsArr.length)
+          )
+          parseArray(parser, config, Nullable(dCellStyle(context.envName)))
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // The matrix environments of amsmath builds on the array environment
     // of LaTeX, which is discussed above.
     // The mathtools package adds starred versions of the same environments.
     // These have an optional argument to choose left|center|right justification.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array(
-        "matrix",
-        "pmatrix",
-        "bmatrix",
-        "Bmatrix",
-        "vmatrix",
-        "Vmatrix",
-        "matrix*",
-        "pmatrix*",
-        "bmatrix*",
-        "Bmatrix*",
-        "vmatrix*",
-        "Vmatrix*"
-      ),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val delimitersMap: Map[String, Nullable[Array[String]]] = Map(
-          "matrix"  -> Nullable.Null,
-          "pmatrix" -> Nullable(Array("(", ")")),
-          "bmatrix" -> Nullable(Array("[", "]")),
-          "Bmatrix" -> Nullable(Array("\\{", "\\}")),
-          "vmatrix" -> Nullable(Array("|", "|")),
-          "Vmatrix" -> Nullable(Array("\\Vert", "\\Vert"))
-        )
-        val baseName = context.envName.replace("*", "")
-        val delimiters = delimitersMap(baseName)
-        // \hskip -\arraycolsep in amsmath
-        var colAlign = "c"
-        var payload = ParseArrayConfig(
-          hskipBeforeAndAfter = Nullable(false),
-          cols = Nullable(Array(AlignSpec.Align(align = colAlign)))
-        )
-        if (context.envName.endsWith("*")) {
-          // It's one of the mathtools starred functions.
-          // Parse the optional alignment argument.
-          parser.consumeSpaces()
-          if (parser.fetch().text == "[") {
-            parser.consume()
-            parser.consumeSpaces()
-            colAlign = parser.fetch().text
-            if (!"lcr".contains(colAlign)) {
-              throw new ParseError("Expected l or c or r",
-                parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
-            }
-            parser.consume()
-            parser.consumeSpaces()
-            parser.expect("]")
-            parser.consume()
-            payload = payload.copy(
-              cols = Nullable(Array(AlignSpec.Align(align = colAlign)))
-            )
-          }
-        }
-        val res: ParseNodeArray =
-          parseArray(parser, payload, Nullable(dCellStyle(context.envName)))
-        // Populate cols with the correct number of column alignment specs.
-        val numColsInRes = if (res.body.isEmpty) 0 else res.body.map(_.length).max
-        res.cols = Nullable(Array.fill(Math.max(0, numColsInRes))(
-          AlignSpec.Align(align = colAlign)
-        ))
-        if (delimiters.isDefined) {
-          val d = delimiters.get
-          ParseNodeLeftright(
-            mode = context.mode,
-            body = Array(res),
-            left = d(0),
-            right = d(1),
-            rightColor = Nullable.Null // \right uninfluenced by \color in array
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array(
+          "matrix",
+          "pmatrix",
+          "bmatrix",
+          "Bmatrix",
+          "vmatrix",
+          "Vmatrix",
+          "matrix*",
+          "pmatrix*",
+          "bmatrix*",
+          "Bmatrix*",
+          "vmatrix*",
+          "Vmatrix*"
+        ),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          val delimitersMap: Map[String, Nullable[Array[String]]] = Map(
+            "matrix" -> Nullable.Null,
+            "pmatrix" -> Nullable(Array("(", ")")),
+            "bmatrix" -> Nullable(Array("[", "]")),
+            "Bmatrix" -> Nullable(Array("\\{", "\\}")),
+            "vmatrix" -> Nullable(Array("|", "|")),
+            "Vmatrix" -> Nullable(Array("\\Vert", "\\Vert"))
           )
-        } else {
-          res
-        }
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
-
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("smallmatrix"),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val payload = ParseArrayConfig(arraystretch = Nullable(0.5))
-        val res = parseArray(parser, payload, Nullable(StyleStr.Script))
-        res.colSeparationType = Nullable("small")
-        res
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
-
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("subarray"),
-      props = EnvProps(
-        numArgs = 1
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        // Parsing of {subarray} is similar to {array}
-        val symNode = ParseNode.checkSymbolNodeType(Nullable(args(0)))
-        val colalign: Array[AnyParseNode] =
-          if (symNode.isDefined) Array(args(0))
-          else ParseNode.assertNodeType(Nullable(args(0)), "ordgroup")
-            .asInstanceOf[ParseNodeOrdgroup].body
-        val colsArr: Array[AlignSpec] = colalign.map { nde =>
-          val node = ParseNode.assertSymbolNodeType(Nullable(nde))
-          val ca = node.text
-          // {subarray} only recognizes "l" & "c"
-          if ("lc".contains(ca)) {
-            AlignSpec.Align(align = ca)
-          } else {
-            throw new ParseError("Unknown column alignment: " + ca, Nullable(nde))
+          val baseName   = context.envName.replace("*", "")
+          val delimiters = delimitersMap(baseName)
+          // \hskip -\arraycolsep in amsmath
+          var colAlign = "c"
+          var payload  = ParseArrayConfig(
+            hskipBeforeAndAfter = Nullable(false),
+            cols = Nullable(Array(AlignSpec.Align(align = colAlign)))
+          )
+          if (context.envName.endsWith("*")) {
+            // It's one of the mathtools starred functions.
+            // Parse the optional alignment argument.
+            parser.consumeSpaces()
+            if (parser.fetch().text == "[") {
+              parser.consume()
+              parser.consumeSpaces()
+              colAlign = parser.fetch().text
+              if (!"lcr".contains(colAlign)) {
+                throw new ParseError("Expected l or c or r", parser.nextToken.asInstanceOf[Nullable[SourceLocation.HasLoc]])
+              }
+              parser.consume()
+              parser.consumeSpaces()
+              parser.expect("]")
+              parser.consume()
+              payload = payload.copy(
+                cols = Nullable(Array(AlignSpec.Align(align = colAlign)))
+              )
+            }
           }
-        }
-        if (colsArr.length > 1) {
-          throw new ParseError("{subarray} can contain only one column")
-        }
-        val payload = ParseArrayConfig(
-          cols = Nullable(colsArr),
-          hskipBeforeAndAfter = Nullable(false),
-          arraystretch = Nullable(0.5)
-        )
-        val res = parseArray(parser, payload, Nullable(StyleStr.Script))
-        if (res.body.length > 0 && res.body(0).length > 1) {
-          throw new ParseError("{subarray} can contain only one column")
-        }
-        res
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          val res: ParseNodeArray =
+            parseArray(parser, payload, Nullable(dCellStyle(context.envName)))
+          // Populate cols with the correct number of column alignment specs.
+          val numColsInRes = if (res.body.isEmpty) 0 else res.body.map(_.length).max
+          res.cols = Nullable(
+            Array.fill(Math.max(0, numColsInRes))(
+              AlignSpec.Align(align = colAlign)
+            )
+          )
+          if (delimiters.isDefined) {
+            val d = delimiters.get
+            ParseNodeLeftright(
+              mode = context.mode,
+              body = Array(res),
+              left = d(0),
+              right = d(1),
+              rightColor = Nullable.Null // \right uninfluenced by \color in array
+            )
+          } else {
+            res
+          }
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
+
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("smallmatrix"),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser  = context.parser.asInstanceOf[Parser]
+          val payload = ParseArrayConfig(arraystretch = Nullable(0.5))
+          val res     = parseArray(parser, payload, Nullable(StyleStr.Script))
+          res.colSeparationType = Nullable("small")
+          res
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
+
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("subarray"),
+        props = EnvProps(
+          numArgs = 1
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          // Parsing of {subarray} is similar to {array}
+          val symNode = ParseNode.checkSymbolNodeType(Nullable(args(0)))
+          val colalign: Array[AnyParseNode] =
+            if (symNode.isDefined) Array(args(0))
+            else ParseNode.assertNodeType(Nullable(args(0)), "ordgroup").asInstanceOf[ParseNodeOrdgroup].body
+          val colsArr: Array[AlignSpec] = colalign.map { nde =>
+            val node = ParseNode.assertSymbolNodeType(Nullable(nde))
+            val ca   = node.text
+            // {subarray} only recognizes "l" & "c"
+            if ("lc".contains(ca)) {
+              AlignSpec.Align(align = ca)
+            } else {
+              throw new ParseError("Unknown column alignment: " + ca, Nullable(nde))
+            }
+          }
+          if (colsArr.length > 1) {
+            throw new ParseError("{subarray} can contain only one column")
+          }
+          val payload = ParseArrayConfig(
+            cols = Nullable(colsArr),
+            hskipBeforeAndAfter = Nullable(false),
+            arraystretch = Nullable(0.5)
+          )
+          val res = parseArray(parser, payload, Nullable(StyleStr.Script))
+          if (res.body.length > 0 && res.body(0).length > 1) {
+            throw new ParseError("{subarray} can contain only one column")
+          }
+          res
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // A cases environment (in amsmath.sty) is almost equivalent to
     // \def\arraystretch{1.2}%
@@ -1071,51 +1074,55 @@ object ArrayEnv {
     // {dcases} is a {cases} environment where cells are set in \displaystyle,
     // as defined in mathtools.sty.
     // {rcases} is another mathtools environment. It's brace is on the right side.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array(
-        "cases",
-        "dcases",
-        "rcases",
-        "drcases"
-      ),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val payload = ParseArrayConfig(
-          arraystretch = Nullable(1.2),
-          cols = Nullable(Array(
-            AlignSpec.Align(
-              align = "l",
-              pregap = 0,
-              // TODO(kevinb) get the current style.
-              // For now we use the metrics for TEXT style which is what we were
-              // doing before.  Before attempting to get the current style we
-              // should look at TeX's behavior especially for \over and matrices.
-              postgap = 1.0 /* 1em quad */
-            ),
-            AlignSpec.Align(
-              align = "l",
-              pregap = 0,
-              postgap = 0
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array(
+          "cases",
+          "dcases",
+          "rcases",
+          "drcases"
+        ),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser  = context.parser.asInstanceOf[Parser]
+          val payload = ParseArrayConfig(
+            arraystretch = Nullable(1.2),
+            cols = Nullable(
+              Array(
+                AlignSpec.Align(
+                  align = "l",
+                  pregap = 0,
+                  // TODO(kevinb) get the current style.
+                  // For now we use the metrics for TEXT style which is what we were
+                  // doing before.  Before attempting to get the current style we
+                  // should look at TeX's behavior especially for \over and matrices.
+                  postgap = 1.0 /* 1em quad */
+                ),
+                AlignSpec.Align(
+                  align = "l",
+                  pregap = 0,
+                  postgap = 0
+                )
+              )
             )
-          ))
-        )
-        val res: ParseNodeArray =
-          parseArray(parser, payload, Nullable(dCellStyle(context.envName)))
-        ParseNodeLeftright(
-          mode = context.mode,
-          body = Array(res),
-          left = if (context.envName.contains("r")) "." else "\\{",
-          right = if (context.envName.contains("r")) "\\}" else ".",
-          rightColor = Nullable.Null
-        )
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          )
+          val res: ParseNodeArray =
+            parseArray(parser, payload, Nullable(dCellStyle(context.envName)))
+          ParseNodeLeftright(
+            mode = context.mode,
+            body = Array(res),
+            left = if (context.envName.contains("r")) "." else "\\{",
+            right = if (context.envName.contains("r")) "\\}" else ".",
+            rightColor = Nullable.Null
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // In the align environment, one uses ampersands, &, to specify number of
     // columns in each row, and to locate spacing between each column.
@@ -1123,123 +1130,132 @@ object ArrayEnv {
     // The alignedat environment can be used in math mode.
     // Note that we assume \nomallineskiplimit to be zero,
     // so that \strut@ is the same as \strut.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("align", "align*", "aligned", "split"),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = alignedHandler,
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("align", "align*", "aligned", "split"),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = alignedHandler,
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // A gathered environment is like an array environment with one centered
     // column, but where rows are considered lines so get \jot line spacing
     // and contents are set in \displaystyle.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("gathered", "gather", "gather*"),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        if (gatherEnvironments.contains(context.envName)) {
-          validateAmsEnvironmentContext(context)
-        }
-        val config = ParseArrayConfig(
-          cols = Nullable(Array(AlignSpec.Align(align = "c"))),
-          addJot = Nullable(true),
-          colSeparationType = Nullable("gather"),
-          autoTag = getAutoTag(context.envName),
-          emptySingleRow = true,
-          leqno = Nullable(parser.settings.leqno)
-        )
-        parseArray(parser, config, Nullable(StyleStr.Display))
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("gathered", "gather", "gather*"),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          if (gatherEnvironments.contains(context.envName)) {
+            validateAmsEnvironmentContext(context)
+          }
+          val config = ParseArrayConfig(
+            cols = Nullable(Array(AlignSpec.Align(align = "c"))),
+            addJot = Nullable(true),
+            colSeparationType = Nullable("gather"),
+            autoTag = getAutoTag(context.envName),
+            emptySingleRow = true,
+            leqno = Nullable(parser.settings.leqno)
+          )
+          parseArray(parser, config, Nullable(StyleStr.Display))
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // alignat environment is like an align environment, but one must explicitly
     // specify maximum number of columns in each row, and can adjust spacing between
     // each columns.
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("alignat", "alignat*", "alignedat"),
-      props = EnvProps(
-        numArgs = 1
-      ),
-      handler = alignedHandler,
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("alignat", "alignat*", "alignedat"),
+        props = EnvProps(
+          numArgs = 1
+        ),
+        handler = alignedHandler,
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("equation", "equation*"),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        validateAmsEnvironmentContext(context)
-        val config = ParseArrayConfig(
-          autoTag = getAutoTag(context.envName),
-          emptySingleRow = true,
-          singleRow = true,
-          maxNumCols = Nullable(1),
-          leqno = Nullable(parser.settings.leqno)
-        )
-        parseArray(parser, config, Nullable(StyleStr.Display))
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("equation", "equation*"),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          validateAmsEnvironmentContext(context)
+          val config = ParseArrayConfig(
+            autoTag = getAutoTag(context.envName),
+            emptySingleRow = true,
+            singleRow = true,
+            maxNumCols = Nullable(1),
+            leqno = Nullable(parser.settings.leqno)
+          )
+          parseArray(parser, config, Nullable(StyleStr.Display))
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
-    EnvironmentDef.defineEnvironment(EnvDefSpec(
-      nodeType = "array",
-      names = Array("CD"),
-      props = EnvProps(
-        numArgs = 0
-      ),
-      handler = (context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        validateAmsEnvironmentContext(context)
-        CdEnv.parseCD(parser)
-      },
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    EnvironmentDef.defineEnvironment(
+      EnvDefSpec(
+        nodeType = "array",
+        names = Array("CD"),
+        props = EnvProps(
+          numArgs = 0
+        ),
+        handler = (context, args, optArgs) => {
+          val parser = context.parser.asInstanceOf[Parser]
+          validateAmsEnvironmentContext(context)
+          CdEnv.parseCD(parser)
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // Macros
     MacroDef.defineMacro("\\nonumber", MacroDefinition.StringDef("\\gdef\\@eqnsw{0}"))
     MacroDef.defineMacro("\\notag", MacroDefinition.StringDef("\\nonumber"))
 
     // Catch \hline outside array environment
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "text", // Doesn't matter what this is.
-      names = Array("\\hline", "\\hdashline"),
-      props = FunctionPropSpec(
-        numArgs = 0,
-        allowedInText = true,
-        allowedInMath = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        throw new ParseError(
-          s"${context.funcName} valid only within array environment")
-      })
-    ))
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "text", // Doesn't matter what this is.
+        names = Array("\\hline", "\\hdashline"),
+        props = FunctionPropSpec(
+          numArgs = 0,
+          allowedInText = true,
+          allowedInMath = true
+        ),
+        handler = Nullable((context, args, optArgs) => throw new ParseError(s"${context.funcName} valid only within array environment"))
+      )
+    )
   }
 
   // Helper types for the HTML builder
-  private final case class HlineInfo(pos: Double, isDashed: Boolean)
+  final private case class HlineInfo(pos: Double, isDashed: Boolean)
 
-  private final class ArrayWithRowInfo(
-      val elems: Array[HtmlDomNode],
-      val height: Double,
-      val depth: Double,
-      var pos: Double
+  final private class ArrayWithRowInfo(
+    val elems:  Array[HtmlDomNode],
+    val height: Double,
+    val depth:  Double,
+    var pos:    Double
   )
 }

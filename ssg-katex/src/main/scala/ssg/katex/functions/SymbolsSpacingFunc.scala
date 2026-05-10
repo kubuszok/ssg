@@ -20,7 +20,7 @@ import ssg.commons.Nullable
 import ssg.katex.ParseError
 import ssg.katex.build.BuildCommon
 import ssg.katex.parse._
-import ssg.katex.tree.{MathNode, TextNode}
+import ssg.katex.tree.{ MathNode, TextNode }
 
 object SymbolsSpacingFunc {
 
@@ -43,13 +43,13 @@ object SymbolsSpacingFunc {
     "\\nobreakspace" -> "nobreak"
   )
 
-  def register(): Unit = {
+  def register(): Unit =
     // ParseNode<"spacing"> created in Parser.js from the "spacing" symbol Groups in
     // src/symbols.js.
     FunctionDef.defineFunctionBuilders(
       nodeType = "spacing",
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeSpacing]
+      htmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeSpacing]
         val opts = options.asInstanceOf[Options]
         if (regularSpace.contains(g.text)) {
           val className = regularSpace(g.text)
@@ -61,32 +61,26 @@ object SymbolsSpacingFunc {
             ord.asInstanceOf[tree.SymbolNode].classes += className
             ord
           } else {
-            BuildCommon.makeSpan(ArrayBuffer("mspace", className),
-              ArrayBuffer(BuildCommon.mathsym(g.text, g.mode, opts)),
-              Nullable(opts))
+            BuildCommon.makeSpan(ArrayBuffer("mspace", className), ArrayBuffer(BuildCommon.mathsym(g.text, g.mode, opts)), Nullable(opts))
           }
         } else if (cssSpace.contains(g.text)) {
           // Spaces based on just a CSS class.
-          BuildCommon.makeSpan(
-            ArrayBuffer("mspace", cssSpace(g.text)),
-            ArrayBuffer.empty, Nullable(opts))
+          BuildCommon.makeSpan(ArrayBuffer("mspace", cssSpace(g.text)), ArrayBuffer.empty, Nullable(opts))
         } else {
           throw new ParseError(s"""Unknown type of space "${g.text}"""")
         }
-      }),
-      mathmlBuilder = Nullable((group, options) => {
+      },
+      mathmlBuilder = Nullable { (group, options) =>
         val g = group.asInstanceOf[ParseNodeSpacing]
 
         if (regularSpace.contains(g.text)) {
-          new MathNode(
-            "mtext", ArrayBuffer(new TextNode(" ")))
+          new MathNode("mtext", ArrayBuffer(new TextNode(" ")))
         } else if (cssSpace.contains(g.text)) {
           // CSS-based MathML spaces (\nobreak, \allowbreak) are ignored
           new MathNode("mspace")
         } else {
           throw new ParseError(s"""Unknown type of space "${g.text}"""")
         }
-      })
+      }
     )
-  }
 }

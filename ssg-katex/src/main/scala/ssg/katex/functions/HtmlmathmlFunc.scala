@@ -15,41 +15,44 @@ package katex
 package functions
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.parse._
 
 object HtmlmathmlFunc {
 
-  def register(): Unit = {
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "htmlmathml",
-      names = Array("\\html@mathml"),
-      props = FunctionPropSpec(
-        numArgs = 2,
-        allowedInArgument = true,
-        allowedInText = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        ParseNodeHtmlmathml(
-          mode = parser.mode,
-          html = FunctionDef.ordargument(args(0)),
-          mathml = FunctionDef.ordargument(args(1))
-        )
-      }),
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeHtmlmathml]
-        val opts = options.asInstanceOf[Options]
-        val elements = BuildHTML.buildExpression(
-          g.html, opts, isRealGroup = false
-        )
-        BuildCommon.makeFragment(elements)
-      }),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeHtmlmathml]
-        val opts = options.asInstanceOf[Options]
-        BuildMathML.buildExpressionRow(g.mathml, opts)
-      })
-    ))
-  }
+  def register(): Unit =
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "htmlmathml",
+        names = Array("\\html@mathml"),
+        props = FunctionPropSpec(
+          numArgs = 2,
+          allowedInArgument = true,
+          allowedInText = true
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          ParseNodeHtmlmathml(
+            mode = parser.mode,
+            html = FunctionDef.ordargument(args(0)),
+            mathml = FunctionDef.ordargument(args(1))
+          )
+        },
+        htmlBuilder = Nullable { (group, options) =>
+          val g        = group.asInstanceOf[ParseNodeHtmlmathml]
+          val opts     = options.asInstanceOf[Options]
+          val elements = BuildHTML.buildExpression(
+            g.html,
+            opts,
+            isRealGroup = false
+          )
+          BuildCommon.makeFragment(elements)
+        },
+        mathmlBuilder = Nullable { (group, options) =>
+          val g    = group.asInstanceOf[ParseNodeHtmlmathml]
+          val opts = options.asInstanceOf[Options]
+          BuildMathML.buildExpressionRow(g.mathml, opts)
+        }
+      )
+    )
 }

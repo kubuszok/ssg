@@ -32,161 +32,142 @@ import ssg.katex.parse.AnyParseNode
 
 /** Context provided to function handlers for error messages. */
 final case class FunctionContext(
-    funcName: String,
-    parser: AnyRef, // Parser — not yet ported
-    token: Nullable[Token] = Nullable.Null,
-    breakOnTokenText: Nullable[BreakToken] = Nullable.Null
+  funcName:         String,
+  parser:           AnyRef, // Parser — not yet ported
+  token:            Nullable[Token] = Nullable.Null,
+  breakOnTokenText: Nullable[BreakToken] = Nullable.Null
 )
 
-/**
- * Function handler: takes context, args, optional args; returns a parse node.
- */
+/** Function handler: takes context, args, optional args; returns a parse node.
+  */
 type FunctionHandler =
   (FunctionContext, Array[AnyParseNode], Array[Nullable[AnyParseNode]]) => AnyParseNode
 
-/**
- * HTML builder: takes a parse node and options, returns an HTML DOM node.
- * Placeholder — actual type will be refined when DOM tree types are ported.
- */
-type HtmlBuilder = (AnyParseNode, AnyRef /* Options */) => AnyRef /* HtmlDomNode */
+/** HTML builder: takes a parse node and options, returns an HTML DOM node. Placeholder — actual type will be refined when DOM tree types are ported.
+  */
+type HtmlBuilder = (AnyParseNode, AnyRef /* Options */ ) => AnyRef /* HtmlDomNode */
 
-/**
- * MathML builder: takes a parse node and options, returns a MathML DOM node.
- * Placeholder — actual type will be refined when MathML tree types are ported.
- */
-type MathMLBuilder = (AnyParseNode, AnyRef /* Options */) => AnyRef /* MathDomNode */
+/** MathML builder: takes a parse node and options, returns a MathML DOM node. Placeholder — actual type will be refined when MathML tree types are ported.
+  */
+type MathMLBuilder = (AnyParseNode, AnyRef /* Options */ ) => AnyRef /* MathDomNode */
 
-/**
- * More general version of `HtmlBuilder` for nodes (e.g. \sum, accent types)
- * whose presence impacts super/subscripting. In this case, ParseNode<"supsub">
- * delegates its HTML building to the HtmlBuilder corresponding to these nodes.
- */
-type HtmlBuilderSupSub = (AnyParseNode, AnyRef /* Options */) => AnyRef /* HtmlDomNode */
+/** More general version of `HtmlBuilder` for nodes (e.g. \sum, accent types) whose presence impacts super/subscripting. In this case, ParseNode<"supsub"> delegates its HTML building to the
+  * HtmlBuilder corresponding to these nodes.
+  */
+type HtmlBuilderSupSub = (AnyParseNode, AnyRef /* Options */ ) => AnyRef /* HtmlDomNode */
 
-/**
- * Properties that control how the functions are parsed.
- */
+/** Properties that control how the functions are parsed.
+  */
 final case class FunctionPropSpec(
-    // The number of arguments the function takes.
-    numArgs: Int,
+  // The number of arguments the function takes.
+  numArgs: Int,
 
-    // An array corresponding to each argument of the function, giving the
-    // type of argument that should be parsed. Its length should be equal
-    // to `numOptionalArgs + numArgs`, and types for optional arguments
-    // should appear before types for mandatory arguments.
-    argTypes: Nullable[Array[ArgType]] = Nullable.Null,
+  // An array corresponding to each argument of the function, giving the
+  // type of argument that should be parsed. Its length should be equal
+  // to `numOptionalArgs + numArgs`, and types for optional arguments
+  // should appear before types for mandatory arguments.
+  argTypes: Nullable[Array[ArgType]] = Nullable.Null,
 
-    // Whether it expands to a single token or a braced group of tokens.
-    // If it's grouped, it can be used as an argument to primitive commands,
-    // such as \sqrt (without the optional argument) and super/subscript.
-    allowedInArgument: Boolean = false,
+  // Whether it expands to a single token or a braced group of tokens.
+  // If it's grouped, it can be used as an argument to primitive commands,
+  // such as \sqrt (without the optional argument) and super/subscript.
+  allowedInArgument: Boolean = false,
 
-    // Whether or not the function is allowed inside text mode
-    // (default false)
-    allowedInText: Boolean = false,
+  // Whether or not the function is allowed inside text mode
+  // (default false)
+  allowedInText: Boolean = false,
 
-    // Whether or not the function is allowed inside math mode
-    // (default true)
-    allowedInMath: Boolean = true,
+  // Whether or not the function is allowed inside math mode
+  // (default true)
+  allowedInMath: Boolean = true,
 
-    // (optional) The number of optional arguments the function
-    // should parse. If the optional arguments aren't found,
-    // `null` will be passed to the handler in their place.
-    // (default 0)
-    numOptionalArgs: Int = 0,
+  // (optional) The number of optional arguments the function
+  // should parse. If the optional arguments aren't found,
+  // `null` will be passed to the handler in their place.
+  // (default 0)
+  numOptionalArgs: Int = 0,
 
-    // Must be true if the function is an infix operator.
-    infix: Boolean = false,
+  // Must be true if the function is an infix operator.
+  infix: Boolean = false,
 
-    // Whether or not the function is a TeX primitive.
-    primitive: Boolean = false
+  // Whether or not the function is a TeX primitive.
+  primitive: Boolean = false
 )
 
-/**
- * Final function spec for use at parse time.
- * This is almost identical to `FunctionPropSpec`, except it
- * 1. includes the function handler, and
- * 2. requires all arguments except argTypes.
- * It is generated by `defineFunction()` below.
- */
+/** Final function spec for use at parse time. This is almost identical to `FunctionPropSpec`, except it
+  *   1. includes the function handler, and
+  *   2. requires all arguments except argTypes. It is generated by `defineFunction()` below.
+  */
 final case class FunctionSpec(
-    nodeType: String, // Need to use the type to avoid error. See NOTES below.
-    numArgs: Int,
-    argTypes: Nullable[Array[ArgType]] = Nullable.Null,
-    allowedInArgument: Boolean = false,
-    allowedInText: Boolean = false,
-    allowedInMath: Boolean = true,
-    numOptionalArgs: Int = 0,
-    infix: Boolean = false,
-    primitive: Boolean = false,
+  nodeType:          String, // Need to use the type to avoid error. See NOTES below.
+  numArgs:           Int,
+  argTypes:          Nullable[Array[ArgType]] = Nullable.Null,
+  allowedInArgument: Boolean = false,
+  allowedInText:     Boolean = false,
+  allowedInMath:     Boolean = true,
+  numOptionalArgs:   Int = 0,
+  infix:             Boolean = false,
+  primitive:         Boolean = false,
 
-    // FLOW TYPE NOTES: Doing either one of the following two
-    //
-    // - removing the NODETYPE type parameter in FunctionSpec above;
-    // - using ?FunctionHandler<NODETYPE> below;
-    //
-    // results in a confusing flow typing error:
-    //   "string literal `styling`. This type is incompatible with..."
-    // pointing to the definition of `defineFunction` and finishing with
-    //   "some incompatible instantiation of `NODETYPE`"
-    //
-    // Having FunctionSpec<NODETYPE> above and FunctionHandler<*> below seems to
-    // circumvent this error. This is not harmful for catching errors since
-    // _functions is typed FunctionSpec<*> (it stores all TeX function specs).
+  // FLOW TYPE NOTES: Doing either one of the following two
+  //
+  // - removing the NODETYPE type parameter in FunctionSpec above;
+  // - using ?FunctionHandler<NODETYPE> below;
+  //
+  // results in a confusing flow typing error:
+  //   "string literal `styling`. This type is incompatible with..."
+  // pointing to the definition of `defineFunction` and finishing with
+  //   "some incompatible instantiation of `NODETYPE`"
+  //
+  // Having FunctionSpec<NODETYPE> above and FunctionHandler<*> below seems to
+  // circumvent this error. This is not harmful for catching errors since
+  // _functions is typed FunctionSpec<*> (it stores all TeX function specs).
 
-    // Must be specified unless it's handled directly in the parser.
-    handler: Nullable[FunctionHandler] = Nullable.Null
+  // Must be specified unless it's handled directly in the parser.
+  handler: Nullable[FunctionHandler] = Nullable.Null
 )
 
-/**
- * Specification for defining a function (before it is registered).
- */
+/** Specification for defining a function (before it is registered).
+  */
 final case class FunctionDefSpec(
-    // Unique string to differentiate parse nodes.
-    // Also determines the type of the value returned by `handler`.
-    nodeType: String,
+  // Unique string to differentiate parse nodes.
+  // Also determines the type of the value returned by `handler`.
+  nodeType: String,
 
-    // The first argument to defineFunction is a single name or a list of names.
-    // All functions named in such a list will share a single implementation.
-    names: Array[String],
+  // The first argument to defineFunction is a single name or a list of names.
+  // All functions named in such a list will share a single implementation.
+  names: Array[String],
 
-    // Properties that control how the functions are parsed.
-    props: FunctionPropSpec,
+  // Properties that control how the functions are parsed.
+  props: FunctionPropSpec,
 
-    // The handler is called to handle these functions and their arguments and
-    // returns a `ParseNode`.
-    handler: Nullable[FunctionHandler] = Nullable.Null,
+  // The handler is called to handle these functions and their arguments and
+  // returns a `ParseNode`.
+  handler: Nullable[FunctionHandler] = Nullable.Null,
 
-    // This function returns an object representing the DOM structure to be
-    // created when rendering the defined LaTeX function.
-    // This should not modify the `ParseNode`.
-    htmlBuilder: Nullable[HtmlBuilder] = Nullable.Null,
+  // This function returns an object representing the DOM structure to be
+  // created when rendering the defined LaTeX function.
+  // This should not modify the `ParseNode`.
+  htmlBuilder: Nullable[HtmlBuilder] = Nullable.Null,
 
-    // This function returns an object representing the MathML structure to be
-    // created when rendering the defined LaTeX function.
-    // This should not modify the `ParseNode`.
-    mathmlBuilder: Nullable[MathMLBuilder] = Nullable.Null
+  // This function returns an object representing the MathML structure to be
+  // created when rendering the defined LaTeX function.
+  // This should not modify the `ParseNode`.
+  mathmlBuilder: Nullable[MathMLBuilder] = Nullable.Null
 )
 
 object FunctionDef {
 
-  /**
-   * All registered functions.
-   * `functions.js` just exports this same dictionary again and makes it public.
-   * `Parser.js` requires this dictionary.
-   */
+  /** All registered functions. `functions.js` just exports this same dictionary again and makes it public. `Parser.js` requires this dictionary.
+    */
   val _functions: mutable.Map[String, FunctionSpec] = mutable.Map.empty
 
-  /**
-   * All HTML builders. Should be only used in the `define*` and the `build*ML`
-   * functions.
-   */
+  /** All HTML builders. Should be only used in the `define*` and the `build*ML` functions.
+    */
   val _htmlGroupBuilders: mutable.Map[String, HtmlBuilder] = mutable.Map.empty
 
-  /**
-   * All MathML builders. Should be only used in the `define*` and the `build*ML`
-   * functions.
-   */
+  /** All MathML builders. Should be only used in the `define*` and the `build*ML` functions.
+    */
   val _mathmlGroupBuilders: mutable.Map[String, MathMLBuilder] = mutable.Map.empty
 
   def defineFunction(spec: FunctionDefSpec): Unit = {
@@ -218,39 +199,36 @@ object FunctionDef {
     }
   }
 
-  /**
-   * Use this to register only the HTML and MathML builders for a function (e.g.
-   * if the function's ParseNode is generated in Parser.js rather than via a
-   * stand-alone handler provided to `defineFunction`).
-   */
+  /** Use this to register only the HTML and MathML builders for a function (e.g. if the function's ParseNode is generated in Parser.js rather than via a stand-alone handler provided to
+    * `defineFunction`).
+    */
   def defineFunctionBuilders(
-      nodeType: String,
-      htmlBuilder: Nullable[HtmlBuilder] = Nullable.Null,
-      mathmlBuilder: Nullable[MathMLBuilder] = Nullable.Null
-  ): Unit = {
-    defineFunction(FunctionDefSpec(
-      nodeType = nodeType,
-      names = Array.empty,
-      props = FunctionPropSpec(numArgs = 0),
-      handler = Nullable[FunctionHandler]((_, _, _) => throw new Error("Should never be called.")),
-      htmlBuilder = htmlBuilder,
-      mathmlBuilder = mathmlBuilder
-    ))
-  }
+    nodeType:      String,
+    htmlBuilder:   Nullable[HtmlBuilder] = Nullable.Null,
+    mathmlBuilder: Nullable[MathMLBuilder] = Nullable.Null
+  ): Unit =
+    defineFunction(
+      FunctionDefSpec(
+        nodeType = nodeType,
+        names = Array.empty,
+        props = FunctionPropSpec(numArgs = 0),
+        handler = Nullable[FunctionHandler]((_, _, _) => throw new Error("Should never be called.")),
+        htmlBuilder = htmlBuilder,
+        mathmlBuilder = mathmlBuilder
+      )
+    )
 
-  def normalizeArgument(arg: AnyParseNode): AnyParseNode = {
+  def normalizeArgument(arg: AnyParseNode): AnyParseNode =
     arg match {
       case og: ssg.katex.parse.ParseNodeOrdgroup if og.body.length == 1 => og.body(0)
       case _ => arg
     }
-  }
 
   // Since the corresponding buildHTML/buildMathML function expects a
   // list of elements, we normalize for different kinds of arguments
-  def ordargument(arg: AnyParseNode): Array[AnyParseNode] = {
+  def ordargument(arg: AnyParseNode): Array[AnyParseNode] =
     arg match {
       case og: ssg.katex.parse.ParseNodeOrdgroup => og.body
       case _ => Array(arg)
     }
-  }
 }

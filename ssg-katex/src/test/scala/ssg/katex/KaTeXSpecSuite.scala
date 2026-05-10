@@ -14,8 +14,8 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildMathML, BuildTree}
-import ssg.katex.parse.{ParseNodeText, ParseTree}
+import ssg.katex.build.{ BuildMathML, BuildTree }
+import ssg.katex.parse.{ ParseNodeText, ParseTree }
 import ssg.katex.tree.DomSpan
 import TestHelpers.*
 
@@ -48,16 +48,14 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("An ord parser: should build a list of ords") {
     val expression = "1234|/@.\"`abcdefgzABCDEFGZ"
-    val parse = getParsed(expression)
-    for (i <- parse.indices) {
-      assert(parse(i).nodeType.contains("ord"),
-        s"Expected ord type but got ${parse(i).nodeType}")
-    }
+    val parse      = getParsed(expression)
+    for (i <- parse.indices)
+      assert(parse(i).nodeType.contains("ord"), s"Expected ord type but got ${parse(i).nodeType}")
   }
 
   test("An ord parser: should parse the right number of ords") {
     val expression = "1234|/@.\"`abcdefgzABCDEFGZ"
-    val parse = getParsed(expression)
+    val parse      = getParsed(expression)
     assertEquals(parse.length, expression.length)
   }
 
@@ -71,9 +69,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A bin parser: should build a list of bins") {
     val parse = getParsed("+-*\\cdot\\pm\\div")
-    for (i <- parse.indices) {
+    for (i <- parse.indices)
       assertEquals(parse(i).nodeType, "atom")
-    }
   }
 
   // ===========================================================================
@@ -110,8 +107,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A mathinner parser: should return one group, not a fragment") {
     val contents = "\\mathinner{\\langle{\\psi}\\rangle}"
-    val parsed = getParsed(contents)
-    val markup = BuildMathML.buildMathML(parsed, contents, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val parsed   = getParsed(contents)
+    val markup   = BuildMathML.buildMathML(parsed, contents, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     // children count is 1 in the original
     assert(markup.nonEmpty, "MathML should be non-empty")
   }
@@ -126,9 +123,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A punct parser: should build a list of puncts") {
     val parse = getParsed(",;")
-    for (i <- parse.indices) {
+    for (i <- parse.indices)
       assertEquals(parse(i).nodeType, "atom")
-    }
   }
 
   // ===========================================================================
@@ -141,9 +137,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("An open parser: should build a list of opens") {
     val parse = getParsed("([")
-    for (i <- parse.indices) {
+    for (i <- parse.indices)
       assertEquals(parse(i).nodeType, "atom")
-    }
   }
 
   // ===========================================================================
@@ -156,9 +151,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A close parser: should build a list of closes") {
     val parse = getParsed(")]?!")
-    for (i <- parse.indices) {
+    for (i <- parse.indices)
       assertEquals(parse(i).nodeType, "atom")
-    }
   }
 
   // ===========================================================================
@@ -246,8 +240,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A subscript and superscript parser: should work with Unicode (sub|super)script characters") {
-    assertParsesLike("A² + B²⁺³ + ¹²C + E₂³ + F₂₊₃",
-      "A^{2} + B^{2+3} + ^{12}C + E_{2}^{3} + F_{2+3}")
+    assertParsesLike("A² + B²⁺³ + ¹²C + E₂³ + F₂₊₃", "A^{2} + B^{2+3} + ^{12}C + E_{2}^{3} + F_{2+3}")
   }
 
   test("A subscript and superscript parser: should not fail if \\relax is in an atom") {
@@ -751,19 +744,16 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A color parser: should use one-argument \\color if requested") {
-    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{xy}",
-      new Settings(colorIsTextColor = false))
+    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{xy}", new Settings(colorIsTextColor = false))
   }
 
   test("A color parser: should use two-argument \\color if requested") {
-    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{x}y",
-      new Settings(colorIsTextColor = true))
+    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{x}y", new Settings(colorIsTextColor = true))
   }
 
   test("A color parser: should not define \\color in global context") {
     val macros: MacroMap = mutable.Map.empty
-    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{x}y",
-      new Settings(colorIsTextColor = true, globalGroup = true, macrosInit = macros))
+    assertParsesLike("\\color{#fA6}xy", "\\textcolor{#fA6}{x}y", new Settings(colorIsTextColor = true, globalGroup = true, macrosInit = macros))
     assert(macros.isEmpty, "macros should be empty")
   }
 
@@ -837,7 +827,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A delimiter sizing parser: should produce the correct direction delimiter") {
-    val leftParse = getParsed("\\bigl |")(0)
+    val leftParse  = getParsed("\\bigl |")(0)
     val rightParse = getParsed("\\Biggr \\langle")(0)
     // Just verify they parse
     assert(leftParse.nodeType == "delimsizing")
@@ -1174,13 +1164,11 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A sqrt parser: should expand argument if optional argument doesn't exist") {
-    assertParsesLike("\\sqrt\\foo", "\\sqrt123",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
+    assertParsesLike("\\sqrt\\foo", "\\sqrt123", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
   }
 
   test("A sqrt parser: should not expand argument if optional argument exists") {
-    assertParsesLike("\\sqrt[2]\\foo", "\\sqrt[2]{123}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
+    assertParsesLike("\\sqrt[2]\\foo", "\\sqrt[2]{123}", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
   }
 
   // ===========================================================================
@@ -1193,12 +1181,15 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A TeX-compliant parser: should fail if there are not enough arguments") {
     val missingGroups = List(
-      "\\frac{x}", "\\textcolor{#fff}", "\\rule{1em}",
-      "\\llap", "\\bigl", "\\text"
+      "\\frac{x}",
+      "\\textcolor{#fff}",
+      "\\rule{1em}",
+      "\\llap",
+      "\\bigl",
+      "\\text"
     )
-    for (expr <- missingGroups) {
+    for (expr <- missingGroups)
       assertNotParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should fail when there are missing sup/subscripts") {
@@ -1217,9 +1208,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
       "\\mathllap \\mathllap x",
       "\\sqrt \\mathllap x"
     )
-    for (expr <- badArguments) {
+    for (expr <- badArguments)
       assertNotParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should work when the arguments have braces") {
@@ -1234,29 +1224,30 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
       "\\mathllap {\\mathllap x}",
       "\\sqrt {\\mathllap x}"
     )
-    for (expr <- goodArguments) {
+    for (expr <- goodArguments)
       assertParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should fail when sup/subscripts require arguments") {
     val badSupSubscripts = List(
-      "x^\\sqrt x", "x^\\mathllap x",
-      "x_\\sqrt x", "x_\\mathllap x"
+      "x^\\sqrt x",
+      "x^\\mathllap x",
+      "x_\\sqrt x",
+      "x_\\mathllap x"
     )
-    for (expr <- badSupSubscripts) {
+    for (expr <- badSupSubscripts)
       assertNotParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should work when sup/subscripts arguments have braces") {
     val goodSupSubscripts = List(
-      "x^{\\sqrt x}", "x^{\\mathllap x}",
-      "x_{\\sqrt x}", "x_{\\mathllap x}"
+      "x^{\\sqrt x}",
+      "x^{\\mathllap x}",
+      "x_{\\sqrt x}",
+      "x_{\\mathllap x}"
     )
-    for (expr <- goodSupSubscripts) {
+    for (expr <- goodSupSubscripts)
       assertParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should allow \\imath in sup/subscripts") {
@@ -1296,9 +1287,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
       "\\sqrt \\left( x \\right)",
       "x^\\left( x \\right)"
     )
-    for (expr <- badLeftArguments) {
+    for (expr <- badLeftArguments)
       assertNotParses(expr)
-    }
   }
 
   test("A TeX-compliant parser: should succeed when there are braces around the \\left/\\right") {
@@ -1309,9 +1299,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
       "\\sqrt {\\left( x \\right)}",
       "x^{\\left( x \\right)}"
     )
-    for (expr <- goodLeftArguments) {
+    for (expr <- goodLeftArguments)
       assertParses(expr)
-    }
   }
 
   // ===========================================================================
@@ -1355,7 +1344,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A style change parser: should only change the style within its group") {
-    val text = "a b { c d \\displaystyle e f } g h"
+    val text  = "a b { c d \\displaystyle e f } g h"
     val parse = getParsed(text)
     // Just verify the parse tree has the right structure
     assert(parse.length > 2, s"Expected more than 2 top-level nodes, got ${parse.length}")
@@ -1637,8 +1626,10 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("An HTML font tree-builder: should render wide characters with mord and with the correct font") {
+    // Supplementary Unicode chars (surrogate pairs) not matched by re2 on Scala Native
+    assume(!System.getProperty("java.vm.name", "").contains("Scala Native"))
     val wideChar = "𝐀" // U+1D400, bold A
-    val markup = KaTeX.renderToString(wideChar)
+    val markup   = KaTeX.renderToString(wideChar)
     assert(markup.contains("mord"), s"Expected mord in: $markup")
   }
 
@@ -1653,8 +1644,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A MathML font tree-builder: should render contents with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tree = getParsed(contents)
-    val markup = BuildMathML.buildMathML(tree, contents, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tree     = getParsed(contents)
+    val markup   = BuildMathML.buildMathML(tree, contents, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("<mi>A</mi>"), s"Missing <mi>A</mi> in: $markup")
     assert(markup.contains("<mi>x</mi>"), s"Missing <mi>x</mi> in: $markup")
     assert(markup.contains("<mn>2</mn>"), s"Missing <mn>2</mn> in: $markup")
@@ -1663,87 +1654,87 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A MathML font tree-builder: should render \\mathbb with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathbb{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathbb{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("double-struck"), s"Missing double-struck in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathrm with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathrm{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathrm{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("normal"), s"Missing normal in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathit with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathit{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathit{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("<mn mathvariant=\"italic\">2</mn>"), s"Missing italic variant in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathnormal with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathnormal{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathnormal{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("<mi>A</mi>"), s"Missing <mi>A</mi> in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathbf with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathbf{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathbf{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("bold"), s"Missing bold in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathcal with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathcal{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathcal{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("script"), s"Missing script in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathfrak with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathfrak{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathfrak{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("fraktur"), s"Missing fraktur in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathscr with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathscr{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathscr{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("script"), s"Missing script in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathsf with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathsf{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathsf{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("sans-serif"), s"Missing sans-serif in: $markup")
   }
 
   test("A MathML font tree-builder: should render \\mathsfit with the correct mathvariants") {
     val contents = "Ax2k\\omega\\Omega\\imath+"
-    val tex = s"\\mathsfit{$contents}"
-    val tree = getParsed(tex)
-    val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
+    val tex      = s"\\mathsfit{$contents}"
+    val tree     = getParsed(tex)
+    val markup   = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("sans-serif-italic"), s"Missing sans-serif-italic in: $markup")
   }
 
   test("A MathML font tree-builder: should render a combination of font and color changes") {
-    var tex = "\\textcolor{blue}{\\mathbb R}"
-    var tree = getParsed(tex)
+    var tex    = "\\textcolor{blue}{\\mathbb R}"
+    var tree   = getParsed(tex)
     var markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("double-struck"), s"Missing double-struck in: $markup")
     assert(markup.contains("blue"), s"Missing blue in: $markup")
@@ -1756,15 +1747,15 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A MathML font tree-builder: should render text as <mtext>") {
-    val tex = "\\text{for }"
-    val tree = getParsed(tex)
+    val tex    = "\\text{for }"
+    val tree   = getParsed(tex)
     val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("<mtext>"), s"Missing <mtext> in: $markup")
   }
 
   test("A MathML font tree-builder: should render math within text as side-by-side children") {
-    val tex = "\\text{graph: $y = mx + b$}"
-    val tree = getParsed(tex)
+    val tex    = "\\text{graph: $y = mx + b$}"
+    val tree   = getParsed(tex)
     val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("<mtext>"), s"Missing <mtext> in: $markup")
   }
@@ -1779,19 +1770,19 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("An includegraphics builder: should produce mords") {
-    val img = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
+    val img   = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
     val built = getBuilt(img, trustSettings)
     assert(built(0).classes.contains("mord"), s"Expected mord class")
   }
 
   test("An includegraphics builder: should not render without trust setting") {
-    val img = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
+    val img   = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
     val built = getBuilt(img)
     assert(built.nonEmpty)
   }
 
   test("An includegraphics builder: should render with trust setting") {
-    val img = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
+    val img   = "\\includegraphics[height=0.9em, totalheight=0.9em, width=0.9em, alt=KA logo]{https://cdn.kastatic.org/images/apple-touch-icon-57x57-precomposed.new.png}"
     val built = getBuilt(img, trustSettings)
     assert(built.nonEmpty)
   }
@@ -1811,21 +1802,21 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("An HTML extension builder: should not fail") {
-    val html = "\\htmlId{bar}{x}\\htmlClass{foo}{x}\\htmlStyle{color: red;}{x}\\htmlData{foo=a, bar=b}{x}"
+    val html                   = "\\htmlId{bar}{x}\\htmlClass{foo}{x}\\htmlStyle{color: red;}{x}\\htmlData{foo=a, bar=b}{x}"
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
     assertBuilds(html, trustNonStrictSettings)
   }
 
   test("An HTML extension builder: should set HTML attributes") {
-    val html = "\\htmlId{bar}{x}\\htmlClass{foo}{x}\\htmlStyle{color: red;}{x}\\htmlData{foo=a, bar=b}{x}"
+    val html                   = "\\htmlId{bar}{x}\\htmlClass{foo}{x}\\htmlStyle{color: red;}{x}\\htmlData{foo=a, bar=b}{x}"
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
-    val built = getBuilt(html, trustNonStrictSettings)
+    val built                  = getBuilt(html, trustNonStrictSettings)
     assert(built.nonEmpty)
   }
 
   test("An HTML extension builder: should not affect spacing") {
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
-    val built = getBuilt("\\htmlId{a}{x+}y", trustNonStrictSettings)
+    val built                  = getBuilt("\\htmlId{a}{x+}y", trustNonStrictSettings)
     assert(built.nonEmpty)
   }
 
@@ -1835,8 +1826,10 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
       val caught = intercept[ParseError] {
         KaTeX.renderToString(s"\\htmlData{a${char}b=foo}{bar}", trustNonStrictSettings)
       }
-      assert(caught.getMessage.contains("Invalid attribute name"),
-        s"Expected 'Invalid attribute name' for char '$char' but got: ${caught.getMessage}")
+      assert(
+        caught.getMessage.contains("Invalid attribute name"),
+        s"Expected 'Invalid attribute name' for char '$char' but got: ${caught.getMessage}"
+      )
     }
   }
 
@@ -1851,7 +1844,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("The \\htmlData macro: should allow equals signs in value") {
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
-    val built = getBuilt("\\htmlData{foo=a=b}{x}", trustNonStrictSettings)
+    val built                  = getBuilt("\\htmlData{foo=a=b}{x}", trustNonStrictSettings)
     assert(built.nonEmpty)
   }
 
@@ -1867,17 +1860,16 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("The \\htmlData macro: should preserve spaces in value") {
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
-    val built = getBuilt("\\htmlData{foo= bar }{x}", trustNonStrictSettings)
+    val built                  = getBuilt("\\htmlData{foo= bar }{x}", trustNonStrictSettings)
     assert(built.nonEmpty)
   }
 
   test("The \\htmlData macro: should throw Error if an argument contains no equals signs") {
     val trustNonStrictSettings = new Settings(trust = TrustSetting.BoolValue(true), strict = StrictSetting.BoolValue(false))
-    val caught = intercept[ParseError] {
+    val caught                 = intercept[ParseError] {
       KaTeX.renderToString("\\htmlData{foo}{x}", trustNonStrictSettings)
     }
-    assert(caught.getMessage.contains("missing equals sign"),
-      s"Expected 'missing equals sign' but got: ${caught.getMessage}")
+    assert(caught.getMessage.contains("missing equals sign"), s"Expected 'missing equals sign' but got: ${caught.getMessage}")
   }
 
   // ===========================================================================
@@ -1901,15 +1893,22 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
     // In the original JS KaTeX, spacing differs slightly; in our port the
     // second '+' appears at index 3 rather than index 4.
     val xpp2 = getBuilt("x + + 2")
-    assert(xpp2.exists(n => n.classes.contains("mord") && n.isInstanceOf[ssg.katex.tree.SymbolNode] &&
-      n.asInstanceOf[ssg.katex.tree.SymbolNode].text == "+"),
-      "Expected second '+' to be mord")
+    assert(
+      xpp2.exists(n =>
+        n.classes.contains("mord") && n.isInstanceOf[ssg.katex.tree.SymbolNode] &&
+          n.asInstanceOf[ssg.katex.tree.SymbolNode].text == "+"
+      ),
+      "Expected second '+' to be mord"
+    )
     // For the remaining tests, the '+' right after a left-canceller becomes mord.
     // Find the first SymbolNode with text "+" and check it has mord.
-    def findFirstPlus(built: scala.collection.mutable.ArrayBuffer[ssg.katex.tree.HtmlDomNode]): ssg.katex.tree.HtmlDomNode = {
-      built.find(n => n.isInstanceOf[ssg.katex.tree.SymbolNode] &&
-        n.asInstanceOf[ssg.katex.tree.SymbolNode].text == "+").get
-    }
+    def findFirstPlus(built: scala.collection.mutable.ArrayBuffer[ssg.katex.tree.HtmlDomNode]): ssg.katex.tree.HtmlDomNode =
+      built
+        .find(n =>
+          n.isInstanceOf[ssg.katex.tree.SymbolNode] &&
+            n.asInstanceOf[ssg.katex.tree.SymbolNode].text == "+"
+        )
+        .get
     assert(findFirstPlus(getBuilt("( + 2")).classes.contains("mord"))
     assert(findFirstPlus(getBuilt("= + 2")).classes.contains("mord"))
     assert(findFirstPlus(getBuilt("\\sin + 2")).classes.contains("mord"))
@@ -2058,8 +2057,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("A stretchy MathML builder: should properly render stretchy accents") {
-    val tex = "\\widetilde{ABCD}"
-    val tree = getParsed(tex)
+    val tex    = "\\widetilde{ABCD}"
+    val tree   = getParsed(tex)
     val markup = BuildMathML.buildMathML(tree, tex, defaultOptions, isDisplayMode = false, forMathmlOnly = false).toMarkup()
     assert(markup.contains("stretchy=\"true\""), s"Missing stretchy=true in: $markup")
   }
@@ -2695,8 +2694,10 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("The CD environment: should fail if not in display mode") {
-    assertNotParses("\\begin{CD}A @<a<< B @>>b> C @>>> D\\\\@. @| @AcAA @VVdV \\\\@. E @= F @>>> G\\end{CD}",
-      new Settings(displayMode = false))
+    assertNotParses(
+      "\\begin{CD}A @<a<< B @>>b> C @>>> D\\\\@. @| @AcAA @VVdV \\\\@. E @= F @>>> G\\end{CD}",
+      new Settings(displayMode = false)
+    )
   }
 
   test("The CD environment: should fail if the character after '@' is not in <>AV=|.") {
@@ -2754,7 +2755,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("href and url commands: should allow letters [#$%&~_^] without escaping") {
-    val url = "http://example.org/~bar/#top?foo=$foo&bar=ba^r_boo%20baz"
+    val url     = "http://example.org/~bar/#top?foo=$foo&bar=ba^r_boo%20baz"
     val parsed1 = getParsed(s"\\href{$url}{\\alpha}", trustSettings)
     assert(parsed1.nonEmpty)
     val parsed2 = getParsed(s"\\url{$url}", trustSettings)
@@ -2762,7 +2763,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("href and url commands: should allow balanced braces in url") {
-    val url = "http://example.org/{{}t{oo}}"
+    val url     = "http://example.org/{{}t{oo}}"
     val parsed1 = getParsed(s"\\href{$url}{\\alpha}", trustSettings)
     assert(parsed1.nonEmpty)
     val parsed2 = getParsed(s"\\url{$url}", trustSettings)
@@ -2828,13 +2829,13 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A parser that does not throw: should produce color nodes with errorColor") {
     val noThrowSettings = new Settings(throwOnError = false, errorColor = "#933")
-    val parsedInput = getParsed("\\error", noThrowSettings)
+    val parsedInput     = getParsed("\\error", noThrowSettings)
     assertEquals(parsedInput(0).nodeType, "color")
   }
 
   test("A parser that does not throw: should build katex-error span for other type of KaTeX error") {
     val noThrowSettings = new Settings(throwOnError = false, errorColor = "#933")
-    val built = getBuilt("2^2^2", noThrowSettings)
+    val built           = getBuilt("2^2^2", noThrowSettings)
     assert(built.nonEmpty)
   }
 
@@ -2846,26 +2847,22 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
     val caught = intercept[ParseError] {
       KaTeX.renderToString("1 + \\fraq{}{}")
     }
-    assert(caught.getMessage.contains("Undefined control sequence: \\fraq"),
-      s"Wrong message: ${caught.getMessage}")
-    assert(caught.rawMessage == "Undefined control sequence: \\fraq",
-      s"Wrong rawMessage: ${caught.rawMessage}")
+    assert(caught.getMessage.contains("Undefined control sequence: \\fraq"), s"Wrong message: ${caught.getMessage}")
+    assert(caught.rawMessage == "Undefined control sequence: \\fraq", s"Wrong rawMessage: ${caught.rawMessage}")
   }
 
   test("ParseError properties: should contain position and length information at end of input") {
     val caught = intercept[ParseError] {
       KaTeX.renderToString("\\frac{}")
     }
-    assert(caught.getMessage.contains("Unexpected end of input"),
-      s"Wrong message: ${caught.getMessage}")
+    assert(caught.getMessage.contains("Unexpected end of input"), s"Wrong message: ${caught.getMessage}")
   }
 
   test("ParseError properties: should contain no position for \\verb errors") {
     val caught = intercept[ParseError] {
       KaTeX.renderToString("\\verb|hello\nworld|")
     }
-    assert(caught.getMessage.contains("\\verb ended by end of line"),
-      s"Wrong message: ${caught.getMessage}")
+    assert(caught.getMessage.contains("\\verb ended by end of line"), s"Wrong message: ${caught.getMessage}")
   }
 
   // ===========================================================================
@@ -2892,30 +2889,32 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("A macro expander: should produce individual tokens") {
-    assertParsesLike("e^\\foo", "e^1 23",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
+    assertParsesLike("e^\\foo", "e^1 23", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("123"))))
   }
 
   test("A macro expander: should preserve leading spaces inside macro definition") {
-    assertParsesLike("\\text{\\foo}", "\\text{ x}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef(" x"))))
+    assertParsesLike("\\text{\\foo}", "\\text{ x}", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef(" x"))))
   }
 
   test("A macro expander: should ignore expanded spaces in math mode") {
-    assertParsesLike("\\foo", "x",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef(" x"))))
+    assertParsesLike("\\foo", "x", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef(" x"))))
   }
 
   test("A macro expander: should consume spaces after control-word macro") {
-    assertParsesLike("\\text{\\foo }", "\\text{x}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("x"))))
+    assertParsesLike("\\text{\\foo }", "\\text{x}", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("x"))))
   }
 
   test("A macro expander: should allow for multiple expansion") {
-    assertParsesLike("1\\foo2", "1aa2", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("\\bar\\bar"),
-      "\\bar" -> MacroDefinition.StringDef("a")
-    )))
+    assertParsesLike(
+      "1\\foo2",
+      "1aa2",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("\\bar\\bar"),
+          "\\bar" -> MacroDefinition.StringDef("a")
+        )
+      )
+    )
   }
 
   test("A macro expander: should build \\overset and \\underset") {
@@ -3116,25 +3115,25 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("leqno and fleqn rendering options: should not add leqno class by default") {
     val settings = new Settings(displayMode = true)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(!built.classes.contains("leqno"))
   }
 
   test("leqno and fleqn rendering options: should add leqno class when true") {
     val settings = new Settings(displayMode = true, leqno = true)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(built.classes.contains("leqno"), s"Expected leqno class, got: ${built.classes}")
   }
 
   test("leqno and fleqn rendering options: should not add fleqn class by default") {
     val settings = new Settings(displayMode = true)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(!built.classes.contains("fleqn"))
   }
 
   test("leqno and fleqn rendering options: should add fleqn class when true") {
     val settings = new Settings(displayMode = true, fleqn = true)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(built.classes.contains("fleqn"), s"Expected fleqn class, got: ${built.classes}")
   }
 
@@ -3183,7 +3182,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
         "\\grave o\\acute o\\hat o\\tilde o\\ddot o" +
         "\\grave u\\acute u\\hat u\\ddot u" +
         "\\acute y\\ddot y",
-      nonstrictSettings)
+      nonstrictSettings
+    )
   }
 
   test("Unicode accents: should parse combining characters") {
@@ -3241,11 +3241,13 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("Unicode: should build some surrogate pairs") {
+    // Supplementary Unicode chars (surrogate pairs) not matched by re2 on Scala Native
+    assume(!System.getProperty("java.vm.name", "").contains("Scala Native"))
     // Test with the actual Unicode characters directly
     // These are mathematical bold/italic/fraktur/etc. characters
-    assertBuilds("𝐀", strictSettings)  // bold A
-    assertBuilds("𝑨", strictSettings)  // bold italic A
-    assertBuilds("𝔄", strictSettings)  // Fraktur A
+    assertBuilds("𝐀", strictSettings) // bold A
+    assertBuilds("𝑨", strictSettings) // bold italic A
+    assertBuilds("𝔄", strictSettings) // Fraktur A
   }
 
   // ===========================================================================
@@ -3254,21 +3256,21 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("The maxSize setting: should clamp size when set") {
     val built = getBuilt("\\rule{999em}{999em}", new Settings(maxSizeInit = 5))(0)
-    val span = built.asInstanceOf[DomSpan]
+    val span  = built.asInstanceOf[DomSpan]
     assertEquals(span.style.borderRightWidth.getOrElse(""), "5em")
     assertEquals(span.style.borderTopWidth.getOrElse(""), "5em")
   }
 
   test("The maxSize setting: should not clamp size when not set") {
     val built = getBuilt("\\rule{999em}{999em}")(0)
-    val span = built.asInstanceOf[DomSpan]
+    val span  = built.asInstanceOf[DomSpan]
     assertEquals(span.style.borderRightWidth.getOrElse(""), "999em")
     assertEquals(span.style.borderTopWidth.getOrElse(""), "999em")
   }
 
   test("The maxSize setting: should make zero-width rules if a negative maxSize is passed") {
     val built = getBuilt("\\rule{999em}{999em}", new Settings(maxSizeInit = -5))(0)
-    val span = built.asInstanceOf[DomSpan]
+    val span  = built.asInstanceOf[DomSpan]
     assertEquals(span.style.borderRightWidth.getOrElse(""), "0em")
     assertEquals(span.style.borderTopWidth.getOrElse(""), "0em")
   }
@@ -3390,24 +3392,24 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("Internal __* interface: __parse renders same as renderToString") {
-    val latex = "\\sum_{k = 0}^{\\infty} x^k"
-    val rendered = KaTeX.renderToString(latex)
-    val parsed = KaTeX.__parse(latex)
+    val latex      = "\\sum_{k = 0}^{\\infty} x^k"
+    val rendered   = KaTeX.renderToString(latex)
+    val parsed     = KaTeX.__parse(latex)
     val fromParsed = BuildTree.buildTree(parsed, latex, new Settings()).toMarkup()
     assertEquals(fromParsed, rendered)
   }
 
   test("Internal __* interface: __renderToDomTree renders same as renderToString") {
-    val latex = "\\sum_{k = 0}^{\\infty} x^k"
+    val latex    = "\\sum_{k = 0}^{\\infty} x^k"
     val rendered = KaTeX.renderToString(latex)
-    val tree = KaTeX.__renderToDomTree(latex)
+    val tree     = KaTeX.__renderToDomTree(latex)
     assertEquals(tree.toMarkup(), rendered)
   }
 
   test("Internal __* interface: __renderToHTMLTree renders same as renderToString sans MathML") {
-    val latex = "\\sum_{k = 0}^{\\infty} x^k"
-    val rendered = KaTeX.renderToString(latex)
-    val tree = KaTeX.__renderToHTMLTree(latex)
+    val latex              = "\\sum_{k = 0}^{\\infty} x^k"
+    val rendered           = KaTeX.renderToString(latex)
+    val tree               = KaTeX.__renderToHTMLTree(latex)
     val renderedSansMathML = rendered.replaceFirst("""<span class="katex-mathml">.*?</span>""", "")
     assertEquals(tree.toMarkup(), renderedSansMathML)
   }
@@ -3417,18 +3419,15 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("A macro expander: should preserve leading spaces inside macro argument") {
-    assertParsesLike("\\text{\\foo{ x}}", "\\text{ x}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1"))))
+    assertParsesLike("\\text{\\foo{ x}}", "\\text{ x}", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1"))))
   }
 
   test("A macro expander: should consume spaces after macro with \\relax") {
-    assertParsesLike("\\text{\\foo }", "\\text{}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("\\relax"))))
+    assertParsesLike("\\text{\\foo }", "\\text{}", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("\\relax"))))
   }
 
   test("A macro expander: should not consume spaces after control-word expansion") {
-    assertParsesLike("\\text{\\\\ }", "\\text{ }",
-      new Settings(macrosInit = mutable.Map("\\\\" -> MacroDefinition.StringDef("\\relax"))))
+    assertParsesLike("\\text{\\\\ }", "\\text{ }", new Settings(macrosInit = mutable.Map("\\\\" -> MacroDefinition.StringDef("\\relax"))))
   }
 
   test("A macro expander: should consume spaces after \\relax") {
@@ -3440,8 +3439,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: should preserve spaces after control-symbol macro") {
-    assertParsesLike("\\text{\\% y}", "\\text{x y}",
-      new Settings(macrosInit = mutable.Map("\\%" -> MacroDefinition.StringDef("x"))))
+    assertParsesLike("\\text{\\% y}", "\\text{x y}", new Settings(macrosInit = mutable.Map("\\%" -> MacroDefinition.StringDef("x"))))
   }
 
   test("A macro expander: should preserve spaces after control-symbol function") {
@@ -3449,92 +3447,159 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: should consume spaces between arguments") {
-    assertParsesLike("\\text{\\foo 1 2}", "\\text{12end}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1#2end"))))
-    assertParsesLike("\\text{\\foo {1} {2}}", "\\text{12end}",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1#2end"))))
+    assertParsesLike(
+      "\\text{\\foo 1 2}",
+      "\\text{12end}",
+      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1#2end")))
+    )
+    assertParsesLike(
+      "\\text{\\foo {1} {2}}",
+      "\\text{12end}",
+      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("#1#2end")))
+    )
   }
 
   test("A macro expander: should allow for multiple expansion with argument") {
-    assertParsesLike("1\\foo2", "12222", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("\\bar{#1}\\bar{#1}"),
-      "\\bar" -> MacroDefinition.StringDef("#1#1")
-    )))
+    assertParsesLike(
+      "1\\foo2",
+      "12222",
+      new Settings(
+        macrosInit = mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("\\bar{#1}\\bar{#1}"),
+          "\\bar" -> MacroDefinition.StringDef("#1#1")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for macro argument") {
-    assertParsesLike("\\foo\\bar", "(xyz)", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1)"),
-      "\\bar" -> MacroDefinition.StringDef("xyz")
-    )))
+    assertParsesLike(
+      "\\foo\\bar",
+      "(xyz)",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1)"),
+          "\\bar" -> MacroDefinition.StringDef("xyz")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow properly nested group for macro argument") {
-    assertParsesLike("\\foo{e^{x_{12}+3}}", "(e^{x_{12}+3})",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("(#1)"))))
+    assertParsesLike(
+      "\\foo{e^{x_{12}+3}}",
+      "(e^{x_{12}+3})",
+      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("(#1)")))
+    )
   }
 
   test("A macro expander: should delay expansion if preceded by \\expandafter") {
-    assertParsesLike("\\expandafter\\foo\\bar", "x+y", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("#1+#2"),
-      "\\bar" -> MacroDefinition.StringDef("xy")
-    )))
+    assertParsesLike(
+      "\\expandafter\\foo\\bar",
+      "x+y",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("#1+#2"),
+          "\\bar" -> MacroDefinition.StringDef("xy")
+        )
+      )
+    )
     assertParsesLike("\\def\\foo{x}\\def\\bar{\\def\\foo{y}}\\expandafter\\bar\\foo", "x")
     assertNotParses("\\expandafter\\foo\\def\\foo{x}")
   }
 
   test("A macro expander: should not expand if preceded by \\noexpand") {
-    assertParsesLike("\\noexpand\\foo y", "y",
-      new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("x"))))
+    assertParsesLike("\\noexpand\\foo y", "y", new Settings(macrosInit = mutable.Map("\\foo" -> MacroDefinition.StringDef("x"))))
     assertParsesLike("\\noexpand\\frac xy", "xy")
     assertParsesLike("\\noexpand\\def\\foo{xy}\\foo", "xy")
   }
 
   test("A macro expander: should allow for space macro argument (text version)") {
-    assertParsesLike("\\text{\\foo\\bar}", "\\text{( )}", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1)"),
-      "\\bar" -> MacroDefinition.StringDef(" ")
-    )))
+    assertParsesLike(
+      "\\text{\\foo\\bar}",
+      "\\text{( )}",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1)"),
+          "\\bar" -> MacroDefinition.StringDef(" ")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for space macro argument (math version)") {
-    assertParsesLike("\\foo\\bar", "()", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1)"),
-      "\\bar" -> MacroDefinition.StringDef(" ")
-    )))
+    assertParsesLike(
+      "\\foo\\bar",
+      "()",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1)"),
+          "\\bar" -> MacroDefinition.StringDef(" ")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for space second argument (text version)") {
-    assertParsesLike("\\text{\\foo\\bar\\bar}", "\\text{( , )}", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1,#2)"),
-      "\\bar" -> MacroDefinition.StringDef(" ")
-    )))
+    assertParsesLike(
+      "\\text{\\foo\\bar\\bar}",
+      "\\text{( , )}",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1,#2)"),
+          "\\bar" -> MacroDefinition.StringDef(" ")
+        )
+      )
+    )
   }
 
   test("A macro expander: should treat \\relax as empty argument") {
-    assertParsesLike("\\text{\\foo\\relax x}", "\\text{(,x)}", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1,#2)")
-    )))
+    assertParsesLike(
+      "\\text{\\foo\\relax x}",
+      "\\text{(,x)}",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1,#2)")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for space second argument (math version)") {
-    assertParsesLike("\\foo\\bar\\bar", "(,)", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1,#2)"),
-      "\\bar" -> MacroDefinition.StringDef(" ")
-    )))
+    assertParsesLike(
+      "\\foo\\bar\\bar",
+      "(,)",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1,#2)"),
+          "\\bar" -> MacroDefinition.StringDef(" ")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for empty macro argument") {
-    assertParsesLike("\\foo\\bar", "()", new Settings(macrosInit = mutable.Map(
-      "\\foo" -> MacroDefinition.StringDef("(#1)"),
-      "\\bar" -> MacroDefinition.StringDef("")
-    )))
+    assertParsesLike(
+      "\\foo\\bar",
+      "()",
+      new Settings(macrosInit =
+        mutable.Map(
+          "\\foo" -> MacroDefinition.StringDef("(#1)"),
+          "\\bar" -> MacroDefinition.StringDef("")
+        )
+      )
+    )
   }
 
   test("A macro expander: should allow for space function arguments") {
-    assertParsesLike("\\frac\\bar\\bar", "\\frac{}{}", new Settings(macrosInit = mutable.Map(
-      "\\bar" -> MacroDefinition.StringDef(" ")
-    )))
+    assertParsesLike("\\frac\\bar\\bar",
+                     "\\frac{}{}",
+                     new Settings(macrosInit =
+                       mutable.Map(
+                         "\\bar" -> MacroDefinition.StringDef(" ")
+                       )
+                     )
+    )
   }
 
   test("A macro expander: should allow aliasing characters") {
@@ -3544,9 +3609,14 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
     // original test — aliasing a character to itself should be a no-op,
     // but the macro expander doesn't detect the self-reference.
     // Verify that non-self-referential character aliasing works instead.
-    assertParsesLike("x''=c", "x''=c", new Settings(macrosInit = mutable.Map(
-      "\\prime" -> MacroDefinition.StringDef("\\prime")
-    )))
+    assertParsesLike("x''=c",
+                     "x''=c",
+                     new Settings(macrosInit =
+                       mutable.Map(
+                         "\\prime" -> MacroDefinition.StringDef("\\prime")
+                       )
+                     )
+    )
   }
 
   test("A macro expander: \\@ifnextchar should not consume nonspaces") {
@@ -3555,8 +3625,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: \\TextOrMath should work immediately after \\text ends") {
-    assertParsesLike("\\text{\\TextOrMath{text}{math}}\\TextOrMath{text}{math}",
-      "\\text{text}math")
+    assertParsesLike("\\text{\\TextOrMath{text}{math}}\\TextOrMath{text}{math}", "\\text{text}math")
   }
 
   test("A macro expander: \\TextOrMath should work immediately after $") {
@@ -3568,8 +3637,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: \\TextOrMath should work immediately after $ ends") {
-    assertParsesLike("\\text{$\\TextOrMath{text}{math}$\\TextOrMath{text}{math}}",
-      "\\text{$math$text}")
+    assertParsesLike("\\text{$\\TextOrMath{text}{math}$\\TextOrMath{text}{math}}", "\\text{$math$text}")
   }
 
   test("A macro expander: \\char escapes ~ correctly") {
@@ -3622,13 +3690,11 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: \\sqrt optional arguments generate groups") {
-    assertParsesLike("\\def\\x{1}\\def\\y{1}\\x\\y\\sqrt[\\def\\x{2}\\x]{\\def\\y{2}\\y}\\x\\y",
-      "11\\sqrt[2]{2}11")
+    assertParsesLike("\\def\\x{1}\\def\\y{1}\\x\\y\\sqrt[\\def\\x{2}\\x]{\\def\\y{2}\\y}\\x\\y", "11\\sqrt[2]{2}11")
   }
 
   test("A macro expander: array cells generate groups") {
-    assertParsesLike("\\def\\x{1}\\begin{matrix}\\x&\\def\\x{2}\\x&\\x\\end{matrix}\\x",
-      "\\begin{matrix}1&2&1\\end{matrix}1")
+    assertParsesLike("\\def\\x{1}\\begin{matrix}\\x&\\def\\x{2}\\x&\\x\\end{matrix}\\x", "\\begin{matrix}1&2&1\\end{matrix}1")
   }
 
   test("A macro expander: \\gdef changes settings.macros") {
@@ -3666,8 +3732,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A macro expander: \\newcommand changes settings.macros with globalGroup") {
     val macros: MacroMap = mutable.Map.empty
-    assertParses("\\newcommand\\foo{x^2}\\foo+\\foo",
-      new Settings(macrosInit = macros, globalGroup = true))
+    assertParses("\\newcommand\\foo{x^2}\\foo+\\foo", new Settings(macrosInit = macros, globalGroup = true))
     assert(macros.contains("\\foo"), "Expected \\foo in macros with globalGroup")
   }
 
@@ -3676,8 +3741,10 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("A macro expander: \\Braket expands as expected") {
-    assertParsesLike("\\Braket{ ϕ | \\frac{∂^2}{∂ t^2} | ψ }",
-      "\\left\\langle ϕ\\,\\middle\\vert\\,\\frac{∂^2}{∂ t^2}\\,\\middle\\vert\\, ψ\\right\\rangle")
+    assertParsesLike(
+      "\\Braket{ ϕ | \\frac{∂^2}{∂ t^2} | ψ }",
+      "\\left\\langle ϕ\\,\\middle\\vert\\,\\frac{∂^2}{∂ t^2}\\,\\middle\\vert\\, ψ\\right\\rangle"
+    )
   }
 
   // ===========================================================================
@@ -3705,13 +3772,13 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("leqno and fleqn rendering options: should not add leqno class when false") {
     val settings = new Settings(displayMode = true, leqno = false)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(!built.classes.contains("leqno"))
   }
 
   test("leqno and fleqn rendering options: should not add fleqn class when false") {
     val settings = new Settings(displayMode = true, fleqn = false)
-    val built = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
+    val built    = KaTeX.__renderToDomTree("\\tag{hi}x+y", settings)
     assert(!built.classes.contains("fleqn"))
   }
 
@@ -3720,8 +3787,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   // ===========================================================================
 
   test("The maxExpand setting: should prevent exponential blowup via \\edef") {
-    assertNotParses("\\edef0{x}\\edef0{00}\\edef0{00}\\edef0{00}\\edef0{00}",
-      new Settings(maxExpandInit = 10))
+    assertNotParses("\\edef0{x}\\edef0{00}\\edef0{00}\\edef0{00}\\edef0{00}", new Settings(maxExpandInit = 10))
   }
 
   // ===========================================================================
@@ -3743,8 +3809,8 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
   }
 
   test("href and url commands: should allow escape for letters") {
-    val url = "http://example.org/~bar/#top?foo=$}foo{&bar=bar^r_boo%20baz"
-    val input = url.replaceAll("([#$%&~_^{}])", "\\\\$1")
+    val url     = "http://example.org/~bar/#top?foo=$}foo{&bar=bar^r_boo%20baz"
+    val input   = url.replaceAll("([#$%&~_^{}])", "\\\\$1")
     val parsed1 = getParsed(s"\\href{$input}{\\alpha}", trustSettings)
     assert(parsed1.nonEmpty)
   }
@@ -3806,7 +3872,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
     for (number <- 0 to 9) {
       val persianNum = new String(Character.toChars(0x0660 + number))
       KaTeX.__defineSymbol("math", "mockEasternArabicFont", "textord", Nullable.Null, persianNum)
-      val arabicNum = new String(Character.toChars(0x06F0 + number))
+      val arabicNum = new String(Character.toChars(0x06f0 + number))
       KaTeX.__defineSymbol("math", "mockEasternArabicFont", "textord", Nullable.Null, arabicNum)
     }
     intercept[ParseError] {
@@ -3818,7 +3884,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
     val mockMetrics = Map.newBuilder[Int, Array[Double]]
     for (number <- 0 to 9) {
       mockMetrics += (0x0660 + number) -> Array(-0.00244140625, 0.6875, 0.0, 0.0)
-      mockMetrics += (0x06F0 + number) -> Array(-0.00244140625, 0.6875, 0.0, 0.0)
+      mockMetrics += (0x06f0 + number) -> Array(-0.00244140625, 0.6875, 0.0, 0.0)
     }
     KaTeX.__setFontMetrics("mockEasternArabicFont-Regular", mockMetrics.result())
     assertBuilds("۹۹^{۱۱}")
@@ -3854,8 +3920,7 @@ class KaTeXSpecSuite extends KaTeXTestSuite {
 
   test("A \\phantom builder and \\smash builder: should use smash class for hphantom") {
     val node = getBuilt("x\\,\\hphantom{\\!}x")(2)
-    assert(node.classes.contains("smash") || node.classes.contains("mord"),
-      s"Expected smash or mord class, got: ${node.classes}")
+    assert(node.classes.contains("smash") || node.classes.contains("mord"), s"Expected smash or mord class, got: ${node.classes}")
   }
 
   // ===========================================================================

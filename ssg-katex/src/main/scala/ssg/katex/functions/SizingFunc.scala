@@ -15,19 +15,19 @@ package katex
 package functions
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.data.Units
 import ssg.katex.parse._
-import ssg.katex.tree.{HtmlDocumentFragment, MathNode}
+import ssg.katex.tree.{ HtmlDocumentFragment, MathNode }
 
 object SizingFunc {
 
   def sizingGroup(
-      value: Array[AnyParseNode],
-      options: Options,
-      baseOptions: Options
+    value:       Array[AnyParseNode],
+    options:     Options,
+    baseOptions: Options
   ): HtmlDocumentFragment = {
-    val inner = BuildHTML.buildExpression(value, options, isRealGroup = false)
+    val inner      = BuildHTML.buildExpression(value, options, isRealGroup = false)
     val multiplier = options.sizeMultiplier / baseOptions.sizeMultiplier
 
     // Add size-resetting classes to the inner list and set maxFontSize
@@ -53,12 +53,21 @@ object SizingFunc {
   }
 
   private val sizeFuncs = Array(
-    "\\tiny", "\\sixptsize", "\\scriptsize", "\\footnotesize", "\\small",
-    "\\normalsize", "\\large", "\\Large", "\\LARGE", "\\huge", "\\Huge"
+    "\\tiny",
+    "\\sixptsize",
+    "\\scriptsize",
+    "\\footnotesize",
+    "\\small",
+    "\\normalsize",
+    "\\large",
+    "\\Large",
+    "\\LARGE",
+    "\\huge",
+    "\\Huge"
   )
 
   val htmlBuilder: HtmlBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeSizing]
+    val g    = group.asInstanceOf[ParseNodeSizing]
     val opts = options.asInstanceOf[Options]
     // Handle sizing operators like \Huge. Real TeX doesn't actually allow
     // these functions inside of math expressions, so we do some special
@@ -67,43 +76,44 @@ object SizingFunc {
     sizingGroup(g.body, newOptions, opts)
   }
 
-  def register(): Unit = {
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "sizing",
-      names = sizeFuncs,
-      props = FunctionPropSpec(
-        numArgs = 0,
-        allowedInText = true
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val body = parser.parseExpression(false, context.breakOnTokenText.map(_.value))
+  def register(): Unit =
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "sizing",
+        names = sizeFuncs,
+        props = FunctionPropSpec(
+          numArgs = 0,
+          allowedInText = true
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val body   = parser.parseExpression(false, context.breakOnTokenText.map(_.value))
 
-        ParseNodeSizing(
-          mode = parser.mode,
-          // Figure out what size to use based on the list of functions above
-          size = sizeFuncs.indexOf(context.funcName) + 1,
-          body = body
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeSizing]
-        val opts = options.asInstanceOf[Options]
-        val newOptions = opts.havingSize(g.size)
-        val inner = BuildMathML.buildExpression(g.body, newOptions)
+          ParseNodeSizing(
+            mode = parser.mode,
+            // Figure out what size to use based on the list of functions above
+            size = sizeFuncs.indexOf(context.funcName) + 1,
+            body = body
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable { (group, options) =>
+          val g          = group.asInstanceOf[ParseNodeSizing]
+          val opts       = options.asInstanceOf[Options]
+          val newOptions = opts.havingSize(g.size)
+          val inner      = BuildMathML.buildExpression(g.body, newOptions)
 
-        val node = new MathNode("mstyle", inner)
+          val node = new MathNode("mstyle", inner)
 
-        // TODO(emily): This doesn't produce the correct size for nested size
-        // changes, because we don't keep state of what style we're currently
-        // in, so we can't reset the size to normal before changing it.  Now
-        // that we're passing an options parameter we should be able to fix
-        // this.
-        node.setAttribute("mathsize", Units.makeEm(newOptions.sizeMultiplier))
+          // TODO(emily): This doesn't produce the correct size for nested size
+          // changes, because we don't keep state of what style we're currently
+          // in, so we can't reset the size to normal before changing it.  Now
+          // that we're passing an options parameter we should be able to fix
+          // this.
+          node.setAttribute("mathsize", Units.makeEm(newOptions.sizeMultiplier))
 
-        node
-      })
-    ))
-  }
+          node
+        }
+      )
+    )
 }

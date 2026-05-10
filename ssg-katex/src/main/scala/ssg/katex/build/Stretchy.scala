@@ -29,16 +29,7 @@ import scala.util.boundary.break
 import ssg.commons.Nullable
 import ssg.katex.data.Units
 import ssg.katex.parse.AnyParseNode
-import ssg.katex.tree.{
-  HtmlDomNode,
-  LineNode,
-  MathDomNode,
-  MathNode,
-  PathNode,
-  SvgChildNode,
-  SvgNode,
-  TextNode
-}
+import ssg.katex.tree.{ HtmlDomNode, LineNode, MathDomNode, MathNode, PathNode, SvgChildNode, SvgNode, TextNode }
 
 object Stretchy {
 
@@ -82,8 +73,8 @@ object Stretchy {
     "xlongequal" -> "=",
     "xtofrom" -> "⇄",
     "xrightleftarrows" -> "⇄",
-    "xrightequilibrium" -> "⇌",  // Not a perfect match.
-    "xleftequilibrium" -> "⇋",   // None better available.
+    "xrightequilibrium" -> "⇌", // Not a perfect match.
+    "xleftequilibrium" -> "⇋", // None better available.
     "\\cdrightarrow" -> "→",
     "\\cdleftarrow" -> "←",
     "\\cdlongequal" -> "="
@@ -136,10 +127,10 @@ object Stretchy {
   // For single-path entries, the 4th element is the alignment.
   // For multi-path entries, the 4th element is absent.
   final case class KatexImageData(
-      paths: Array[String],
-      minWidth: Double,
-      height: Int,
-      align: Nullable[String] = Nullable.Null
+    paths:    Array[String],
+    minWidth: Double,
+    height:   Int,
+    align:    Nullable[String] = Nullable.Null
   )
 
   private val katexImagesData: Map[String, KatexImageData] = Map(
@@ -197,13 +188,12 @@ object Stretchy {
   private val wideAccentLabels: Set[String] =
     Set("widehat", "widecheck", "widetilde", "utilde")
 
-  /**
-   * Build the SVG span for a stretchy element.
-   */
+  /** Build the SVG span for a stretchy element.
+    */
   private def buildSvgSpan(
-      label: String,
-      base: AnyParseNode,
-      options: Options
+    label:   String,
+    base:    AnyParseNode,
+    options: Options
   ): (HtmlDomNode, Double, Double) = boundary { // (span, minWidth, height)
     val viewBoxWidth = 400000 // default
     if (wideAccentLabels.contains(label)) {
@@ -216,9 +206,9 @@ object Stretchy {
       }
 
       var viewBoxH = 0
-      var vbw = viewBoxWidth
+      var vbw      = viewBoxWidth
       var pathName = ""
-      var h = 0.0
+      var h        = 0.0
 
       if (numChars > 5) {
         if (label == "widehat" || label == "widecheck") {
@@ -242,7 +232,7 @@ object Stretchy {
           pathName = "tilde" + imgIndex
         }
       }
-      val path = new PathNode(pathName)
+      val path    = new PathNode(pathName)
       val svgNode = new SvgNode(
         ArrayBuffer[SvgChildNode](path),
         LinkedHashMap(
@@ -256,29 +246,26 @@ object Stretchy {
       (span, 0.0, h)
 
     } else {
-      val data = katexImagesData(label)
-      val paths = data.paths
-      val minWidth = data.minWidth
+      val data          = katexImagesData(label)
+      val paths         = data.paths
+      val minWidth      = data.minWidth
       val viewBoxHeight = data.height
-      val h = viewBoxHeight.toDouble / 1000
+      val h             = viewBoxHeight.toDouble / 1000
 
-      val numSvgChildren = paths.length
+      val numSvgChildren         = paths.length
       val (widthClasses, aligns) = if (numSvgChildren == 1) {
         val align1 = data.align.getOrElse("xMinYMin")
         (Array("hide-tail"), Array(align1))
       } else if (numSvgChildren == 2) {
-        (Array("halfarrow-left", "halfarrow-right"),
-         Array("xMinYMin", "xMaxYMin"))
+        (Array("halfarrow-left", "halfarrow-right"), Array("xMinYMin", "xMaxYMin"))
       } else if (numSvgChildren == 3) {
-        (Array("brace-left", "brace-center", "brace-right"),
-         Array("xMinYMin", "xMidYMin", "xMaxYMin"))
+        (Array("brace-left", "brace-center", "brace-right"), Array("xMinYMin", "xMidYMin", "xMaxYMin"))
       } else {
-        throw new Error(
-          s"Correct katexImagesData or update code here to support $numSvgChildren children.")
+        throw new Error(s"Correct katexImagesData or update code here to support $numSvgChildren children.")
       }
 
       val spans = ArrayBuffer.empty[HtmlDomNode]
-      var i = 0
+      var i     = 0
       while (i < numSvgChildren) {
         val path = new PathNode(paths(i))
 
@@ -292,8 +279,7 @@ object Stretchy {
           )
         )
 
-        val span = BuildCommon.makeSvgSpan(
-          ArrayBuffer(widthClasses(i)), ArrayBuffer(svgNode), Nullable(options))
+        val span = BuildCommon.makeSvgSpan(ArrayBuffer(widthClasses(i)), ArrayBuffer(svgNode), Nullable(options))
         if (numSvgChildren == 1) {
           break((span, minWidth, h))
         } else {
@@ -303,26 +289,25 @@ object Stretchy {
         i += 1
       }
 
-      (BuildCommon.makeSpan(ArrayBuffer("stretchy"), spans, Nullable(options)),
-       minWidth, h)
+      (BuildCommon.makeSpan(ArrayBuffer("stretchy"), spans, Nullable(options)), minWidth, h)
     }
   }
 
   def stretchySvg(
-      group: AnyParseNode,
-      options: Options
+    group:   AnyParseNode,
+    options: Options
   ): HtmlDomNode = {
     // Create a span with inline SVG for the element.
     val label = group match {
-      case a: ssg.katex.parse.ParseNodeAccent => a.label.substring(1)
+      case a: ssg.katex.parse.ParseNodeAccent      => a.label.substring(1)
       case a: ssg.katex.parse.ParseNodeAccentUnder => a.label.substring(1)
-      case a: ssg.katex.parse.ParseNodeXArrow => a.label.substring(1)
-      case a: ssg.katex.parse.ParseNodeHorizBrace => a.label.substring(1)
+      case a: ssg.katex.parse.ParseNodeXArrow      => a.label.substring(1)
+      case a: ssg.katex.parse.ParseNodeHorizBrace  => a.label.substring(1)
       case _ => throw new Error("stretchySvg called on unsupported node type")
     }
 
     val base = group match {
-      case a: ssg.katex.parse.ParseNodeAccent => a.base
+      case a: ssg.katex.parse.ParseNodeAccent      => a.base
       case a: ssg.katex.parse.ParseNodeAccentUnder => a.base
       case _ => group
     }
@@ -341,11 +326,11 @@ object Stretchy {
   }
 
   def stretchyEnclose(
-      inner: HtmlDomNode,
-      label: String,
-      topPad: Double,
-      bottomPad: Double,
-      options: Options
+    inner:     HtmlDomNode,
+    label:     String,
+    topPad:    Double,
+    bottomPad: Double,
+    options:   Options
   ): HtmlDomNode = {
     // Return an image span for \cancel, \bcancel, \xcancel, \fbox, or \angl
     val totalHeight = inner.height + inner.depth + topPad + bottomPad
@@ -368,29 +353,35 @@ object Stretchy {
 
       val lines = ArrayBuffer.empty[SvgChildNode]
       if (label.matches("^[bx]cancel$")) {
-        lines += new LineNode(LinkedHashMap(
-          "x1" -> "0",
-          "y1" -> "0",
-          "x2" -> "100%",
-          "y2" -> "100%",
-          "stroke-width" -> "0.046em"
-        ))
+        lines += new LineNode(
+          LinkedHashMap(
+            "x1" -> "0",
+            "y1" -> "0",
+            "x2" -> "100%",
+            "y2" -> "100%",
+            "stroke-width" -> "0.046em"
+          )
+        )
       }
 
       if (label.matches("^x?cancel$")) {
-        lines += new LineNode(LinkedHashMap(
-          "x1" -> "0",
-          "y1" -> "100%",
-          "x2" -> "100%",
-          "y2" -> "0",
-          "stroke-width" -> "0.046em"
-        ))
+        lines += new LineNode(
+          LinkedHashMap(
+            "x1" -> "0",
+            "y1" -> "100%",
+            "x2" -> "100%",
+            "y2" -> "0",
+            "stroke-width" -> "0.046em"
+          )
+        )
       }
 
-      val svgNode = new SvgNode(lines, LinkedHashMap(
-        "width" -> "100%",
-        "height" -> Units.makeEm(totalHeight)
-      ))
+      val svgNode = new SvgNode(lines,
+                                LinkedHashMap(
+                                  "width" -> "100%",
+                                  "height" -> Units.makeEm(totalHeight)
+                                )
+      )
 
       BuildCommon.makeSvgSpan(ArrayBuffer.empty, ArrayBuffer(svgNode), Nullable(options))
     }

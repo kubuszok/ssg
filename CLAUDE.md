@@ -14,6 +14,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | jekyll-minifier | Ruby | `ssg-minify` | HTML/JS/CSS/JSON minification |
 | terser | JavaScript | `ssg-js` | JavaScript compiler/minifier |
 | KaTeX | TypeScript | `ssg-katex` | Math typesetting engine |
+| Mermaid | TypeScript | `ssg-mermaid` | Diagramming engine (31 diagram types) |
 | tree-sitter | C/Rust | `ssg-highlight` | Syntax highlighting (73 grammars) |
 
 ## Build Rules
@@ -45,6 +46,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `ssg-minify/` | HTML/JS/CSS/JSON minification (jekyll-minifier port) |
 | `ssg-js/` | JavaScript compiler/minifier (Terser port) |
 | `ssg-katex/` | Math typesetting engine (KaTeX port) |
+| `ssg-mermaid/` | Diagramming engine (Mermaid port) |
 | `ssg-highlight/` | Syntax highlighting (tree-sitter, 73 grammars) |
 | `ssg/` | Aggregator module (depends on all above) |
 | `.rescale/` | Per-project re-scale config + data |
@@ -59,6 +61,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `original-src/jekyll-minifier/` | Local jekyll-minifier reference |
 | `original-src/terser/` | Local terser reference |
 | `original-src/katex/` | Local KaTeX reference |
+| `original-src/mermaid/` | Local Mermaid reference |
 | `docs/` | Architecture, conversion guides |
 | `project/` | sbt build configuration |
 
@@ -159,6 +162,7 @@ Path mappings for each library:
 | jekyll-minifier | `original-src/jekyll-minifier/lib/` | `ssg-minify/src/main/scala/ssg/minify/` |
 | terser | `original-src/terser/lib/` | `ssg-js/src/main/scala/ssg/js/` |
 | KaTeX | `original-src/katex/src/` | `ssg-katex/src/main/scala/ssg/katex/` |
+| Mermaid | `original-src/mermaid/packages/mermaid/src/` | `ssg-mermaid/src/main/scala/ssg/mermaid/` |
 
 `ssg-highlight` wraps tree-sitter via FFI (not a source-level port) and has
 no original-src mapping. `ssg-commons` contains SSG-native shared utilities.

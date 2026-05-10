@@ -20,11 +20,11 @@ package functions
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.MacroDef
 import ssg.katex.functions.utils.AssembleSupSub
 import ssg.katex.parse._
-import ssg.katex.tree.{MathDomNode, MathNode, SpaceNode, SymbolNode, TextNode}
+import ssg.katex.tree.{ MathDomNode, MathNode, SpaceNode, SymbolNode, TextNode }
 
 object OperatornameFunc {
 
@@ -61,8 +61,7 @@ object OperatornameFunc {
       }
 
       // Consolidate function names into symbol characters.
-      val expression = BuildHTML.buildExpression(
-        body, opts.withFont("mathrm"), isRealGroup = true)
+      val expression = BuildHTML.buildExpression(body, opts.withFont("mathrm"), isRealGroup = true)
 
       var i = 0
       while (i < expression.length) {
@@ -82,36 +81,32 @@ object OperatornameFunc {
     }
 
     if (hasLimits) {
-      AssembleSupSub.assembleSupSub(base, supGroup, subGroup, opts,
-        opts.style, 0, 0)
+      AssembleSupSub.assembleSupSub(base, supGroup, subGroup, opts, opts.style, 0, 0)
     } else {
       base
     }
   }
 
   private val mathmlBuilder: MathMLBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeOperatorname]
+    val g    = group.asInstanceOf[ParseNodeOperatorname]
     val opts = options.asInstanceOf[Options]
     // The steps taken here are similar to the html version.
-    var expression: ArrayBuffer[MathDomNode] = BuildMathML.buildExpression(
-      g.body, opts.withFont("mathrm"))
+    var expression: ArrayBuffer[MathDomNode] = BuildMathML.buildExpression(g.body, opts.withFont("mathrm"))
 
     // Is expression a string or has it something like a fraction?
     var isAllString = true // default
-    var i = 0
+    var i           = 0
     while (i < expression.length) {
       val node = expression(i)
       node match {
-        case _: SpaceNode => // Do nothing
-        case mn: MathNode =>
+        case _:  SpaceNode => // Do nothing
+        case mn: MathNode  =>
           mn.nodeType match {
             case "mi" | "mn" | "mspace" | "mtext" => // Do nothing yet.
-            case "mo" =>
+            case "mo"                             =>
               val child = mn.children(0)
               if (mn.children.length == 1 && child.isInstanceOf[TextNode]) {
-                val replaced = child.asInstanceOf[TextNode].text
-                  .replace("−", "-")
-                  .replace("∗", "*")
+                val replaced = child.asInstanceOf[TextNode].text.replace("−", "-").replace("∗", "*")
                 mn.children(0) = new TextNode(replaced)
               } else {
                 isAllString = false
@@ -136,8 +131,7 @@ object OperatornameFunc {
 
     // ⁡ is the same as &ApplyFunction;
     // ref: https://www.w3schools.com/charsets/ref_html_entities_a.asp
-    val operator = new MathNode("mo",
-      ArrayBuffer(BuildMathML.makeText("⁡", Mode.Text)))
+    val operator = new MathNode("mo", ArrayBuffer(BuildMathML.makeText("⁡", Mode.Text)))
 
     if (g.parentIsSupSub) {
       new MathNode("mrow", ArrayBuffer(identifier, operator))
@@ -149,26 +143,27 @@ object OperatornameFunc {
   def register(): Unit = {
     // \operatorname
     // amsopn.dtx: \mathop{#1\kern\z@\operator@font#3}\newmcodes@
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "operatorname",
-      names = Array("\\operatorname@", "\\operatornamewithlimits"),
-      props = FunctionPropSpec(numArgs = 1),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val body = args(0)
-        ParseNodeOperatorname(
-          mode = parser.mode,
-          body = FunctionDef.ordargument(body),
-          alwaysHandleSupSub = (context.funcName == "\\operatornamewithlimits"),
-          limits = false,
-          parentIsSupSub = false
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "operatorname",
+        names = Array("\\operatorname@", "\\operatornamewithlimits"),
+        props = FunctionPropSpec(numArgs = 1),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val body   = args(0)
+          ParseNodeOperatorname(
+            mode = parser.mode,
+            body = FunctionDef.ordargument(body),
+            alwaysHandleSupSub = context.funcName == "\\operatornamewithlimits",
+            limits = false,
+            parentIsSupSub = false
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
-    MacroDef.defineMacro("\\operatorname",
-      MacroDefinition.StringDef("\\@ifstar\\operatornamewithlimits\\operatorname@"))
+    MacroDef.defineMacro("\\operatorname", MacroDefinition.StringDef("\\@ifstar\\operatornamewithlimits\\operatorname@"))
   }
 }

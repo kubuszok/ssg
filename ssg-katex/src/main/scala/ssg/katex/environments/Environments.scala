@@ -22,10 +22,8 @@ package environments
 import scala.util.boundary
 import scala.util.boundary.break
 
-/**
- * Include this to ensure that all environments are defined.
- * Call `Environments.registerAll()` once at startup.
- */
+/** Include this to ensure that all environments are defined. Call `Environments.registerAll()` once at startup.
+  */
 object Environments {
 
   @volatile private var registered: Boolean = false

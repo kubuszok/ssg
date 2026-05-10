@@ -21,31 +21,27 @@ package tree
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.LinkedHashMap
 
-/**
- * A platform-independent in-memory DOM node.
- *
- * Replaces browser APIs like document.createElement, document.createTextNode,
- * and document.createDocumentFragment with a simple data structure.
- */
+/** A platform-independent in-memory DOM node.
+  *
+  * Replaces browser APIs like document.createElement, document.createTextNode, and document.createDocumentFragment with a simple data structure.
+  */
 class InMemoryNode private (
-    val nodeType: InMemoryNode.NodeType,
-    val tagName: String,
-    val namespace: String
+  val nodeType:  InMemoryNode.NodeType,
+  val tagName:   String,
+  val namespace: String
 ) {
 
-  var className: String = ""
-  var textContent: String = ""
-  val attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
-  val children: ArrayBuffer[InMemoryNode] = ArrayBuffer.empty
-  val style: LinkedHashMap[String, String] = LinkedHashMap.empty
+  var className:   String                        = ""
+  var textContent: String                        = ""
+  val attributes:  LinkedHashMap[String, String] = LinkedHashMap.empty
+  val children:    ArrayBuffer[InMemoryNode]     = ArrayBuffer.empty
+  val style:       LinkedHashMap[String, String] = LinkedHashMap.empty
 
-  def setAttribute(name: String, value: String): Unit = {
+  def setAttribute(name: String, value: String): Unit =
     attributes(name) = value
-  }
 
-  def appendChild(child: InMemoryNode): Unit = {
+  def appendChild(child: InMemoryNode): Unit =
     children += child
-  }
 }
 
 object InMemoryNode {
@@ -57,14 +53,12 @@ object InMemoryNode {
   }
 
   /** Create an element node (analogous to document.createElement). */
-  def element(tagName: String): InMemoryNode = {
+  def element(tagName: String): InMemoryNode =
     new InMemoryNode(NodeType.Element, tagName, "")
-  }
 
   /** Create a namespaced element node (analogous to document.createElementNS). */
-  def elementNS(namespace: String, tagName: String): InMemoryNode = {
+  def elementNS(namespace: String, tagName: String): InMemoryNode =
     new InMemoryNode(NodeType.Element, tagName, namespace)
-  }
 
   /** Create a text node (analogous to document.createTextNode). */
   def text(content: String): InMemoryNode = {
@@ -74,7 +68,6 @@ object InMemoryNode {
   }
 
   /** Create a document fragment (analogous to document.createDocumentFragment). */
-  def fragment(): InMemoryNode = {
+  def fragment(): InMemoryNode =
     new InMemoryNode(NodeType.Fragment, "", "")
-  }
 }

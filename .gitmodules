@@ -19,3 +19,6 @@
 [submodule "original-src/katex"]
 	path = original-src/katex
 	url = https://github.com/KaTeX/KaTeX.git
+[submodule "original-src/mermaid"]
+	path = original-src/mermaid
+	url = https://github.com/mermaid-js/mermaid.git

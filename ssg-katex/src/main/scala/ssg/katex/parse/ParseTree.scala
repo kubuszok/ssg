@@ -21,19 +21,17 @@ package katex
 package parse
 
 import ssg.commons.Nullable
-import ssg.katex.{ParseError, Settings, Token}
+import ssg.katex.{ ParseError, Settings, Token }
 
-/**
- * Provides a single function for parsing an expression using a Parser.
- */
+/** Provides a single function for parsing an expression using a Parser.
+  */
 object ParseTree {
 
-  /**
-   * Parses an expression using a Parser, then returns the parsed result.
-   */
+  /** Parses an expression using a Parser, then returns the parsed result.
+    */
   def parseTree(
-      toParse: String,
-      settings: Settings
+    toParse:  String,
+    settings: Settings
   ): Array[AnyParseNode] = {
     val parser = new Parser(toParse, settings)
 
@@ -52,11 +50,13 @@ object ParseTree {
       if (!settings.displayMode) {
         throw new ParseError("\\tag works only in display equations")
       }
-      tree = Array(ParseNodeTag(
-        mode = Mode.Text,
-        body = tree,
-        tag = parser.subparse(Array(new Token("\\df@tag")))
-      ))
+      tree = Array(
+        ParseNodeTag(
+          mode = Mode.Text,
+          body = tree,
+          tag = parser.subparse(Array(new Token("\\df@tag")))
+        )
+      )
     }
 
     tree

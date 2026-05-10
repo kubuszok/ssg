@@ -30,14 +30,12 @@ package data
 
 import ssg.commons.Nullable
 
-/**
- * Symbol info: font, group, and optional replacement character.
- */
+/** Symbol info: font, group, and optional replacement character.
+  */
 final case class SymbolInfo(font: String, group: String, replace: Nullable[String])
 
-/**
- * The symbol table. Maps mode -> name -> SymbolInfo.
- */
+/** The symbol table. Maps mode -> name -> SymbolInfo.
+  */
 object Symbols {
 
   // Some of these have a "-token" suffix since these are also used as `ParseNode`
@@ -75,37 +73,34 @@ object Symbols {
   private val mathSymbols: scala.collection.mutable.Map[String, SymbolInfo] = mathMap
   private val textSymbols: scala.collection.mutable.Map[String, SymbolInfo] = textMap
 
-  private def symbolsForMode(mode: String): scala.collection.mutable.Map[String, SymbolInfo] = {
+  private def symbolsForMode(mode: String): scala.collection.mutable.Map[String, SymbolInfo] =
     if (mode == "math") mathSymbols else textSymbols
-  }
 
   /** Look up a symbol by mode and name, returning Nullable. */
   def getSymbol(mode: Mode, name: String): Nullable[SymbolInfo] = {
     val m = if (mode == Mode.Math) mathSymbols else textSymbols
     m.get(name) match {
       case Some(info) => Nullable(info)
-      case None => Nullable.Null
+      case None       => Nullable.Null
     }
   }
 
   /** Get the symbols map for a given mode. */
-  def apply(mode: Mode): scala.collection.mutable.Map[String, SymbolInfo] = {
+  def apply(mode: Mode): scala.collection.mutable.Map[String, SymbolInfo] =
     if (mode == Mode.Math) mathSymbols else textSymbols
-  }
 
   /** Get the symbols map for a given mode string. */
-  def apply(mode: String): scala.collection.mutable.Map[String, SymbolInfo] = {
+  def apply(mode: String): scala.collection.mutable.Map[String, SymbolInfo] =
     symbolsForMode(mode)
-  }
 
   /** `acceptUnicodeChar = true` is only applicable if `replace` is set. */
   def defineSymbol(
-      mode: String,
-      font: String,
-      group: String,
-      replace: Nullable[String],
-      name: String,
-      acceptUnicodeChar: Boolean = false
+    mode:              String,
+    font:              String,
+    group:             String,
+    replace:           Nullable[String],
+    name:              String,
+    acceptUnicodeChar: Boolean = false
   ): Unit = {
     val info = SymbolInfo(font, group, replace)
     symbolsForMode(mode)(name) = info
@@ -124,18 +119,18 @@ object Symbols {
 
   // fonts:
   private val main = "main"
-  private val ams = "ams"
+  private val ams  = "ams"
 
   // groups:
-  private val accent = "accent-token"
-  private val bin = "bin"
-  private val close = "close"
-  private val inner = "inner"
+  private val accent  = "accent-token"
+  private val bin     = "bin"
+  private val close   = "close"
+  private val inner   = "inner"
   private val mathord = "mathord"
-  private val op = "op-token"
-  private val open = "open"
-  private val punct = "punct"
-  private val rel = "rel"
+  private val op      = "op-token"
+  private val open    = "open"
+  private val punct   = "punct"
+  private val rel     = "rel"
   private val spacing = "spacing"
   private val textord = "textord"
 
@@ -770,18 +765,18 @@ object Symbols {
     defineSymbol(textMode, main, textord, Nullable("Æ"), "\\AE", true)
     defineSymbol(textMode, main, textord, Nullable("Œ"), "\\OE", true)
     defineSymbol(textMode, main, textord, Nullable("Ø"), "\\O", true)
-    defineSymbol(textMode, main, accent, Nullable("ˊ"), "\\'")   // acute
-    defineSymbol(textMode, main, accent, Nullable("ˋ"), "\\`")   // grave
-    defineSymbol(textMode, main, accent, Nullable("ˆ"), "\\^")   // circumflex
-    defineSymbol(textMode, main, accent, Nullable("˜"), "\\~")   // tilde
-    defineSymbol(textMode, main, accent, Nullable("ˉ"), "\\=")   // macron
-    defineSymbol(textMode, main, accent, Nullable("˘"), "\\u")   // breve
-    defineSymbol(textMode, main, accent, Nullable("˙"), "\\.")   // dot above
-    defineSymbol(textMode, main, accent, Nullable("¸"), "\\c")   // cedilla
-    defineSymbol(textMode, main, accent, Nullable("˚"), "\\r")   // ring above
-    defineSymbol(textMode, main, accent, Nullable("ˇ"), "\\v")   // caron
-    defineSymbol(textMode, main, accent, Nullable("¨"), "\\\"")  // diaeresis
-    defineSymbol(textMode, main, accent, Nullable("˝"), "\\H")   // double acute
+    defineSymbol(textMode, main, accent, Nullable("ˊ"), "\\'") // acute
+    defineSymbol(textMode, main, accent, Nullable("ˋ"), "\\`") // grave
+    defineSymbol(textMode, main, accent, Nullable("ˆ"), "\\^") // circumflex
+    defineSymbol(textMode, main, accent, Nullable("˜"), "\\~") // tilde
+    defineSymbol(textMode, main, accent, Nullable("ˉ"), "\\=") // macron
+    defineSymbol(textMode, main, accent, Nullable("˘"), "\\u") // breve
+    defineSymbol(textMode, main, accent, Nullable("˙"), "\\.") // dot above
+    defineSymbol(textMode, main, accent, Nullable("¸"), "\\c") // cedilla
+    defineSymbol(textMode, main, accent, Nullable("˚"), "\\r") // ring above
+    defineSymbol(textMode, main, accent, Nullable("ˇ"), "\\v") // caron
+    defineSymbol(textMode, main, accent, Nullable("¨"), "\\\"") // diaeresis
+    defineSymbol(textMode, main, accent, Nullable("˝"), "\\H") // double acute
     defineSymbol(textMode, main, accent, Nullable("◯"), "\\textcircled") // \bigcirc glyph
 
     defineSymbol(textMode, main, textord, Nullable("–"), "--", true)

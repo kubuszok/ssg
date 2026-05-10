@@ -27,53 +27,51 @@ import scala.util.boundary
 import scala.util.boundary.break
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, VListChild, VListElem, VListKern, VListParam}
+import ssg.katex.build.{ BuildCommon, BuildHTML, VListChild, VListElem, VListKern, VListParam }
 import ssg.katex.data.Units
 import ssg.katex.parse.AnyParseNode
-import ssg.katex.tree.{DomSpan, HtmlDomNode}
-import ssg.katex.util.{Utils => KatexUtils}
+import ssg.katex.tree.{ DomSpan, HtmlDomNode }
+import ssg.katex.util.{ Utils => KatexUtils }
 
 // For an operator with limits, assemble the base, sup, and sub into a span.
 
 object AssembleSupSub {
 
   def assembleSupSub(
-      baseIn: HtmlDomNode,
-      supGroup: Nullable[AnyParseNode],
-      subGroup: Nullable[AnyParseNode],
-      options: Options,
-      style: Style,
-      slant: Double,
-      baseShift: Double
+    baseIn:    HtmlDomNode,
+    supGroup:  Nullable[AnyParseNode],
+    subGroup:  Nullable[AnyParseNode],
+    options:   Options,
+    style:     Style,
+    slant:     Double,
+    baseShift: Double
   ): DomSpan = boundary {
-    val base = BuildCommon.makeSpan(ArrayBuffer.empty, ArrayBuffer(baseIn))
+    val base                 = BuildCommon.makeSpan(ArrayBuffer.empty, ArrayBuffer(baseIn))
     val subIsSingleCharacter = subGroup.isDefined && KatexUtils.isCharacterBox(subGroup.get)
     var sub: Nullable[(HtmlDomNode, Double)] = Nullable.Null
     var sup: Nullable[(HtmlDomNode, Double)] = Nullable.Null
     // We manually have to handle the superscripts and subscripts. This,
     // aside from the kern calculations, is copied from supsub.
     if (supGroup.isDefined) {
-      val elem = BuildHTML.buildGroup(
-        supGroup.get, options.havingStyle(style.sup()), Nullable(options))
+      val elem = BuildHTML.buildGroup(supGroup.get, options.havingStyle(style.sup()), Nullable(options))
 
-      sup = Nullable((
-        elem,
-        Math.max(
-          options.fontMetrics().bigOpSpacing1,
-          options.fontMetrics().bigOpSpacing3 - elem.depth)
-      ))
+      sup = Nullable(
+        (
+          elem,
+          Math.max(options.fontMetrics().bigOpSpacing1, options.fontMetrics().bigOpSpacing3 - elem.depth)
+        )
+      )
     }
 
     if (subGroup.isDefined) {
-      val elem = BuildHTML.buildGroup(
-        subGroup.get, options.havingStyle(style.sub()), Nullable(options))
+      val elem = BuildHTML.buildGroup(subGroup.get, options.havingStyle(style.sub()), Nullable(options))
 
-      sub = Nullable((
-        elem,
-        Math.max(
-          options.fontMetrics().bigOpSpacing2,
-          options.fontMetrics().bigOpSpacing4 - elem.height)
-      ))
+      sub = Nullable(
+        (
+          elem,
+          Math.max(options.fontMetrics().bigOpSpacing2, options.fontMetrics().bigOpSpacing4 - elem.height)
+        )
+      )
     }
 
     // Build the final group as a vlist of the possible subscript, base,
@@ -81,56 +79,65 @@ object AssembleSupSub {
     val finalGroup: DomSpan = if (sup.isDefined && sub.isDefined) {
       val (supElem, supKern) = sup.get
       val (subElem, subKern) = sub.get
-      val bottom = options.fontMetrics().bigOpSpacing5 +
+      val bottom             = options.fontMetrics().bigOpSpacing5 +
         subElem.height + subElem.depth +
         subKern +
         base.depth + baseShift
 
-      BuildCommon.makeVList(VListParam.Positioned(
-        positionType = "bottom",
-        positionData = bottom,
-        children = Array(
-          VListKern(options.fontMetrics().bigOpSpacing5),
-          VListElem(elem = subElem, marginLeft = Nullable(Units.makeEm(-slant))),
-          VListKern(subKern),
-          VListElem(elem = base),
-          VListKern(supKern),
-          VListElem(elem = supElem, marginLeft = Nullable(Units.makeEm(slant))),
-          VListKern(options.fontMetrics().bigOpSpacing5)
-        )
-      ), options)
+      BuildCommon.makeVList(
+        VListParam.Positioned(
+          positionType = "bottom",
+          positionData = bottom,
+          children = Array(
+            VListKern(options.fontMetrics().bigOpSpacing5),
+            VListElem(elem = subElem, marginLeft = Nullable(Units.makeEm(-slant))),
+            VListKern(subKern),
+            VListElem(elem = base),
+            VListKern(supKern),
+            VListElem(elem = supElem, marginLeft = Nullable(Units.makeEm(slant))),
+            VListKern(options.fontMetrics().bigOpSpacing5)
+          )
+        ),
+        options
+      )
     } else if (sub.isDefined) {
       val (subElem, subKern) = sub.get
-      val top = base.height - baseShift
+      val top                = base.height - baseShift
 
       // Shift the limits by the slant of the symbol. Note
       // that we are supposed to shift the limits by 1/2 of the slant,
       // but since we are centering the limits adding a full slant of
       // margin will shift by 1/2 that.
-      BuildCommon.makeVList(VListParam.Positioned(
-        positionType = "top",
-        positionData = top,
-        children = Array(
-          VListKern(options.fontMetrics().bigOpSpacing5),
-          VListElem(elem = subElem, marginLeft = Nullable(Units.makeEm(-slant))),
-          VListKern(subKern),
-          VListElem(elem = base)
-        )
-      ), options)
+      BuildCommon.makeVList(
+        VListParam.Positioned(
+          positionType = "top",
+          positionData = top,
+          children = Array(
+            VListKern(options.fontMetrics().bigOpSpacing5),
+            VListElem(elem = subElem, marginLeft = Nullable(Units.makeEm(-slant))),
+            VListKern(subKern),
+            VListElem(elem = base)
+          )
+        ),
+        options
+      )
     } else if (sup.isDefined) {
       val (supElem, supKern) = sup.get
-      val bottom = base.depth + baseShift
+      val bottom             = base.depth + baseShift
 
-      BuildCommon.makeVList(VListParam.Positioned(
-        positionType = "bottom",
-        positionData = bottom,
-        children = Array(
-          VListElem(elem = base),
-          VListKern(supKern),
-          VListElem(elem = supElem, marginLeft = Nullable(Units.makeEm(slant))),
-          VListKern(options.fontMetrics().bigOpSpacing5)
-        )
-      ), options)
+      BuildCommon.makeVList(
+        VListParam.Positioned(
+          positionType = "bottom",
+          positionData = bottom,
+          children = Array(
+            VListElem(elem = base),
+            VListKern(supKern),
+            VListElem(elem = supElem, marginLeft = Nullable(Units.makeEm(slant))),
+            VListKern(options.fontMetrics().bigOpSpacing5)
+          )
+        ),
+        options
+      )
     } else {
       // This case probably shouldn't occur (this would mean the
       // supsub was sending us a group with no superscript or

@@ -22,22 +22,21 @@ import scala.util.matching.Regex
 import scala.language.implicitConversions
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildHTML, BuildMathML, Stretchy, VListChild, VListElem, VListKern, VListParam}
+import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML, Stretchy, VListChild, VListElem, VListKern, VListParam }
 import ssg.katex.data.Units
 import ssg.katex.parse._
-import ssg.katex.tree.{CssStyle, DomSpan, HtmlDomNode, MathNode, SymbolNode}
-import ssg.katex.util.{Utils => KatexUtils}
+import ssg.katex.tree.{ CssStyle, DomSpan, HtmlDomNode, MathNode, SymbolNode }
+import ssg.katex.util.{ Utils => KatexUtils }
 
 object AccentFunc {
 
-  private def getBaseSymbol(group: HtmlDomNode): Nullable[SymbolNode] = {
+  private def getBaseSymbol(group: HtmlDomNode): Nullable[SymbolNode] =
     group match {
-      case sn: SymbolNode => Nullable(sn)
+      case sn: SymbolNode                                    => Nullable(sn)
       case ds: DomSpan @unchecked if ds.children.length == 1 =>
         getBaseSymbol(ds.children(0))
       case _ => Nullable.Null
     }
-  }
 
   // NOTE: Unlike most `htmlBuilder`s, this one handles not only "accent", but
   // also "supsub" since an accent can affect super/subscripting.
@@ -45,7 +44,7 @@ object AccentFunc {
     val opts = options.asInstanceOf[Options]
     // Accents are handled in the TeXbook pg. 443, rule 12.
     var supSubGroup: Nullable[DomSpan] = Nullable.Null
-    val group: ParseNodeAccent = if (grp != null && grp.nodeType == "supsub") {
+    val group:       ParseNodeAccent   = if (grp != null && grp.nodeType == "supsub") {
       val supsub = grp.asInstanceOf[ParseNodeSupsub]
       // If our base is a character box, and we have superscripts and
       // subscripts, the supsub will defer to us. In particular, we want
@@ -113,8 +112,8 @@ object AccentFunc {
         (BuildCommon.staticSvg("vec", opts), BuildCommon.svgData("vec")._2)
       } else {
         val textordNode = ParseNodeTextord(mode = group.mode, text = group.label)
-        val a = BuildCommon.makeOrd(textordNode, opts, "textord")
-        val accentSym = a.asInstanceOf[SymbolNode]
+        val a           = BuildCommon.makeOrd(textordNode, opts, "textord")
+        val accentSym   = a.asInstanceOf[SymbolNode]
         // Remove the italic correction of the accent, because it only serves to
         // shift the accent over to a place we don't want.
         accentSym.italic = 0
@@ -130,7 +129,7 @@ object AccentFunc {
       // "Full" accents expand the width of the resulting symbol to be
       // at least the width of the accent, and overlap directly onto the
       // character without any vertical offset.
-      val accentFull = (group.label == "\\textcircled")
+      val accentFull = group.label == "\\textcircled"
       if (accentFull) {
         accentBody.asInstanceOf[DomSpan].classes += "accent-full"
         clearance = body.height
@@ -147,44 +146,49 @@ object AccentFunc {
         left -= width / 2
       }
 
-      accentBody.asInstanceOf[DomSpan].style = accentBody.asInstanceOf[DomSpan].style
-        .copy(left = Nullable(Units.makeEm(left)))
+      accentBody.asInstanceOf[DomSpan].style = accentBody.asInstanceOf[DomSpan].style.copy(left = Nullable(Units.makeEm(left)))
 
       // \textcircled uses the \bigcirc glyph, so it needs some
       // vertical adjustment to match LaTeX.
       if (group.label == "\\textcircled") {
-        accentBody.asInstanceOf[DomSpan].style = accentBody.asInstanceOf[DomSpan].style
-          .copy(top = Nullable(".2em"))
+        accentBody.asInstanceOf[DomSpan].style = accentBody.asInstanceOf[DomSpan].style.copy(top = Nullable(".2em"))
       }
 
       accentBody = BuildCommon.makeVList(VListParam.FirstBaseline(
-        children = Array(
-          VListElem(elem = body),
-          VListKern(-clearance),
-          VListElem(elem = accentBody)
-        )
-      ), opts)
+                                           children = Array(
+                                             VListElem(elem = body),
+                                             VListKern(-clearance),
+                                             VListElem(elem = accentBody)
+                                           )
+                                         ),
+                                         opts
+      )
 
     } else {
       accentBody = Stretchy.stretchySvg(group, opts)
 
       val wStyle: Nullable[CssStyle] = if (skew > 0) {
-        Nullable(CssStyle(
-          width = Nullable(s"calc(100% - ${Units.makeEm(2 * skew)})"),
-          marginLeft = Nullable(Units.makeEm(2 * skew))
-        ))
-      } else Nullable.Null
-
-      accentBody = BuildCommon.makeVList(VListParam.FirstBaseline(
-        children = Array(
-          VListElem(elem = body),
-          VListElem(
-            elem = accentBody,
-            wrapperClasses = wStyle.fold(Array.empty[String])(_ => Array("svg-align")),
-            wrapperStyle = wStyle.getOrElse(CssStyle())
+        Nullable(
+          CssStyle(
+            width = Nullable(s"calc(100% - ${Units.makeEm(2 * skew)})"),
+            marginLeft = Nullable(Units.makeEm(2 * skew))
           )
         )
-      ), opts)
+      } else Nullable.Null
+
+      accentBody = BuildCommon.makeVList(
+        VListParam.FirstBaseline(
+          children = Array(
+            VListElem(elem = body),
+            VListElem(
+              elem = accentBody,
+              wrapperClasses = wStyle.fold(Array.empty[String])(_ => Array("svg-align")),
+              wrapperStyle = wStyle.getOrElse(CssStyle())
+            )
+          )
+        ),
+        opts
+      )
     }
 
     val accentWrap =
@@ -210,97 +214,135 @@ object AccentFunc {
   }
 
   val mathmlBuilder: MathMLBuilder = (group, options) => {
-    val g = group.asInstanceOf[ParseNodeAccent]
-    val opts = options.asInstanceOf[Options]
+    val g          = group.asInstanceOf[ParseNodeAccent]
+    val opts       = options.asInstanceOf[Options]
     val accentNode =
       if (g.isStretchy.getOrElse(false))
         Stretchy.stretchyMathML(g.label)
       else
         new MathNode("mo", ArrayBuffer(BuildMathML.makeText(g.label, g.mode)))
 
-    val node = new MathNode(
-      "mover",
-      ArrayBuffer(BuildMathML.buildGroup(g.base, opts), accentNode))
+    val node = new MathNode("mover", ArrayBuffer(BuildMathML.buildGroup(g.base, opts), accentNode))
 
     node.setAttribute("accent", "true")
 
     node
   }
 
-  private val NON_STRETCHY_ACCENT_REGEX: Regex = (
-    Array("\\\\acute", "\\\\grave", "\\\\ddot", "\\\\tilde", "\\\\bar", "\\\\breve",
-      "\\\\check", "\\\\hat", "\\\\vec", "\\\\dot", "\\\\mathring")
-      .mkString("|")
-  ).r
+  private val NON_STRETCHY_ACCENT_REGEX: Regex =
+    Array(
+      "\\\\acute",
+      "\\\\grave",
+      "\\\\ddot",
+      "\\\\tilde",
+      "\\\\bar",
+      "\\\\breve",
+      "\\\\check",
+      "\\\\hat",
+      "\\\\vec",
+      "\\\\dot",
+      "\\\\mathring"
+    ).mkString("|").r
 
   def register(): Unit = {
     // Accents
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "accent",
-      names = Array(
-        "\\acute", "\\grave", "\\ddot", "\\tilde", "\\bar", "\\breve",
-        "\\check", "\\hat", "\\vec", "\\dot", "\\mathring", "\\widecheck",
-        "\\widehat", "\\widetilde", "\\overrightarrow", "\\overleftarrow",
-        "\\Overrightarrow", "\\overleftrightarrow", "\\overgroup",
-        "\\overlinesegment", "\\overleftharpoon", "\\overrightharpoon"
-      ),
-      props = FunctionPropSpec(numArgs = 1),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val base = FunctionDef.normalizeArgument(args(0))
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "accent",
+        names = Array(
+          "\\acute",
+          "\\grave",
+          "\\ddot",
+          "\\tilde",
+          "\\bar",
+          "\\breve",
+          "\\check",
+          "\\hat",
+          "\\vec",
+          "\\dot",
+          "\\mathring",
+          "\\widecheck",
+          "\\widehat",
+          "\\widetilde",
+          "\\overrightarrow",
+          "\\overleftarrow",
+          "\\Overrightarrow",
+          "\\overleftrightarrow",
+          "\\overgroup",
+          "\\overlinesegment",
+          "\\overleftharpoon",
+          "\\overrightharpoon"
+        ),
+        props = FunctionPropSpec(numArgs = 1),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val base   = FunctionDef.normalizeArgument(args(0))
 
-        val isStretchy = !NON_STRETCHY_ACCENT_REGEX.findFirstIn(context.funcName).isDefined
-        val isShifty = !isStretchy ||
-          context.funcName == "\\widehat" ||
-          context.funcName == "\\widetilde" ||
-          context.funcName == "\\widecheck"
+          val isStretchy = !NON_STRETCHY_ACCENT_REGEX.findFirstIn(context.funcName).isDefined
+          val isShifty   = !isStretchy ||
+            context.funcName == "\\widehat" ||
+            context.funcName == "\\widetilde" ||
+            context.funcName == "\\widecheck"
 
-        ParseNodeAccent(
-          mode = parser.mode,
-          label = context.funcName,
-          isStretchy = Nullable(isStretchy),
-          isShifty = Nullable(isShifty),
-          base = base
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          ParseNodeAccent(
+            mode = parser.mode,
+            label = context.funcName,
+            isStretchy = Nullable(isStretchy),
+            isShifty = Nullable(isShifty),
+            base = base
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
 
     // Text-mode accents
-    FunctionDef.defineFunction(FunctionDefSpec(
-      nodeType = "accent",
-      names = Array(
-        "\\'", "\\`", "\\^", "\\~", "\\=", "\\u", "\\.", "\\\"",
-        "\\c", "\\r", "\\H", "\\v", "\\textcircled"
-      ),
-      props = FunctionPropSpec(
-        numArgs = 1,
-        allowedInText = true,
-        allowedInMath = true, // unless in strict mode
-        argTypes = Nullable(Array(ArgType.Primitive))
-      ),
-      handler = Nullable((context, args, optArgs) => {
-        val parser = context.parser.asInstanceOf[Parser]
-        val base = args(0)
-        var mode = parser.mode
+    FunctionDef.defineFunction(
+      FunctionDefSpec(
+        nodeType = "accent",
+        names = Array(
+          "\\'",
+          "\\`",
+          "\\^",
+          "\\~",
+          "\\=",
+          "\\u",
+          "\\.",
+          "\\\"",
+          "\\c",
+          "\\r",
+          "\\H",
+          "\\v",
+          "\\textcircled"
+        ),
+        props = FunctionPropSpec(
+          numArgs = 1,
+          allowedInText = true,
+          allowedInMath = true, // unless in strict mode
+          argTypes = Nullable(Array(ArgType.Primitive))
+        ),
+        handler = Nullable { (context, args, optArgs) =>
+          val parser = context.parser.asInstanceOf[Parser]
+          val base   = args(0)
+          var mode   = parser.mode
 
-        if (mode == Mode.Math) {
-          parser.settings.reportNonstrict("mathVsTextAccents",
-            s"LaTeX's accent ${context.funcName} works only in text mode")
-          mode = Mode.Text
-        }
+          if (mode == Mode.Math) {
+            parser.settings.reportNonstrict("mathVsTextAccents", s"LaTeX's accent ${context.funcName} works only in text mode")
+            mode = Mode.Text
+          }
 
-        ParseNodeAccent(
-          mode = mode,
-          label = context.funcName,
-          isStretchy = Nullable(false),
-          isShifty = Nullable(true),
-          base = base
-        )
-      }),
-      htmlBuilder = Nullable(htmlBuilder),
-      mathmlBuilder = Nullable(mathmlBuilder)
-    ))
+          ParseNodeAccent(
+            mode = mode,
+            label = context.funcName,
+            isStretchy = Nullable(false),
+            isShifty = Nullable(true),
+            base = base
+          )
+        },
+        htmlBuilder = Nullable(htmlBuilder),
+        mathmlBuilder = Nullable(mathmlBuilder)
+      )
+    )
   }
 }

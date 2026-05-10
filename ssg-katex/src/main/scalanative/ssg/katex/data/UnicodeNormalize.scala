@@ -1,0 +1,117 @@
+/*
+ * Copyright (c) 2026 SSG contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Scala Native implementation of Unicode NFC normalization.
+ * Uses a lookup table for base letter + combining accent composition.
+ */
+package ssg
+package katex
+package data
+
+object UnicodeNormalize {
+
+  def nfc(s: String): String =
+    if (s.length <= 1) {
+      s
+    } else {
+      val len = s.length
+      // Extract codepoints without Java streams
+      val cp1     = s.codePointAt(0)
+      val offset1 = Character.charCount(cp1)
+      if (offset1 >= len) {
+        s
+      } else {
+        val cp2     = s.codePointAt(offset1)
+        val offset2 = offset1 + Character.charCount(cp2)
+        if (offset2 >= len) {
+          // Two codepoints
+          val composed = composeTwo(cp1, cp2)
+          if (composed != 0) new String(Character.toChars(composed)) else s
+        } else {
+          // Three+ codepoints — try composing first two, then result + third
+          val cp3   = s.codePointAt(offset2)
+          val first = composeTwo(cp1, cp2)
+          if (first != 0) {
+            val second = composeTwo(first, cp3)
+            if (second != 0) new String(Character.toChars(second)) else s
+          } else {
+            s
+          }
+        }
+      }
+    }
+
+  private def composeTwo(base: Int, combining: Int): Int =
+    (base, combining) match {
+      case (0x41, 0x300) => 0xc0 // À
+      case (0x45, 0x300) => 0xc8 // È
+      case (0x49, 0x300) => 0xcc // Ì
+      case (0x4f, 0x300) => 0xd2 // Ò
+      case (0x55, 0x300) => 0xd9 // Ù
+      case (0x61, 0x300) => 0xe0 // à
+      case (0x65, 0x300) => 0xe8 // è
+      case (0x69, 0x300) => 0xec // ì
+      case (0x6f, 0x300) => 0xf2 // ò
+      case (0x75, 0x300) => 0xf9 // ù
+      case (0x41, 0x301) => 0xc1 // Á
+      case (0x45, 0x301) => 0xc9 // É
+      case (0x49, 0x301) => 0xcd // Í
+      case (0x4f, 0x301) => 0xd3 // Ó
+      case (0x55, 0x301) => 0xda // Ú
+      case (0x59, 0x301) => 0xdd // Ý
+      case (0x61, 0x301) => 0xe1 // á
+      case (0x65, 0x301) => 0xe9 // é
+      case (0x69, 0x301) => 0xed // í
+      case (0x6f, 0x301) => 0xf3 // ó
+      case (0x75, 0x301) => 0xfa // ú
+      case (0x79, 0x301) => 0xfd // ý
+      case (0x41, 0x302) => 0xc2 // Â
+      case (0x45, 0x302) => 0xca // Ê
+      case (0x49, 0x302) => 0xce // Î
+      case (0x4f, 0x302) => 0xd4 // Ô
+      case (0x55, 0x302) => 0xdb // Û
+      case (0x61, 0x302) => 0xe2 // â
+      case (0x65, 0x302) => 0xea // ê
+      case (0x69, 0x302) => 0xee // î
+      case (0x6f, 0x302) => 0xf4 // ô
+      case (0x75, 0x302) => 0xfb // û
+      case (0x41, 0x303) => 0xc3 // Ã
+      case (0x4e, 0x303) => 0xd1 // Ñ
+      case (0x4f, 0x303) => 0xd5 // Õ
+      case (0x61, 0x303) => 0xe3 // ã
+      case (0x6e, 0x303) => 0xf1 // ñ
+      case (0x6f, 0x303) => 0xf5 // õ
+      case (0x41, 0x308) => 0xc4 // Ä
+      case (0x45, 0x308) => 0xcb // Ë
+      case (0x49, 0x308) => 0xcf // Ï
+      case (0x4f, 0x308) => 0xd6 // Ö
+      case (0x55, 0x308) => 0xdc // Ü
+      case (0x61, 0x308) => 0xe4 // ä
+      case (0x65, 0x308) => 0xeb // ë
+      case (0x69, 0x308) => 0xef // ï
+      case (0x6f, 0x308) => 0xf6 // ö
+      case (0x75, 0x308) => 0xfc // ü
+      case (0x79, 0x308) => 0xff // ÿ
+      case (0x41, 0x30a) => 0xc5 // Å
+      case (0x61, 0x30a) => 0xe5 // å
+      case (0x43, 0x327) => 0xc7 // Ç
+      case (0x63, 0x327) => 0xe7 // ç
+      case (0x41, 0x304) => 0x100 // Ā
+      case (0x61, 0x304) => 0x101 // ā
+      case (0x45, 0x304) => 0x112 // Ē
+      case (0x65, 0x304) => 0x113 // ē
+      case (0x49, 0x304) => 0x12a // Ī
+      case (0x69, 0x304) => 0x12b // ī
+      case (0x4f, 0x304) => 0x14c // Ō
+      case (0x6f, 0x304) => 0x14d // ō
+      case (0x55, 0x304) => 0x16a // Ū
+      case (0x75, 0x304) => 0x16b // ū
+      case (0x49, 0x307) => 0x130 // İ
+      case (0x53, 0x30c) => 0x160 // Š
+      case (0x73, 0x30c) => 0x161 // š
+      case (0x5a, 0x30c) => 0x17d // Ž
+      case (0x7a, 0x30c) => 0x17e // ž
+      case _             => 0
+    }
+}

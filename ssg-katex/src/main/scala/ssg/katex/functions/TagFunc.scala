@@ -29,24 +29,34 @@ object TagFunc {
     padNode
   }
 
-  def register(): Unit = {
+  def register(): Unit =
     FunctionDef.defineFunctionBuilders(
       nodeType = "tag",
       mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeTag]
-        val opts = options.asInstanceOf[Options]
-        val table = new MathNode("mtable", ArrayBuffer(
-          new MathNode("mtr", ArrayBuffer(
-            pad(),
-            new MathNode("mtd", ArrayBuffer(
-              BuildMathML.buildExpressionRow(g.body, opts)
-            )),
-            pad(),
-            new MathNode("mtd", ArrayBuffer(
-              BuildMathML.buildExpressionRow(g.tag, opts)
-            ))
-          ))
-        ))
+        val g     = group.asInstanceOf[ParseNodeTag]
+        val opts  = options.asInstanceOf[Options]
+        val table = new MathNode(
+          "mtable",
+          ArrayBuffer(
+            new MathNode(
+              "mtr",
+              ArrayBuffer(
+                pad(),
+                new MathNode("mtd",
+                             ArrayBuffer(
+                               BuildMathML.buildExpressionRow(g.body, opts)
+                             )
+                ),
+                pad(),
+                new MathNode("mtd",
+                             ArrayBuffer(
+                               BuildMathML.buildExpressionRow(g.tag, opts)
+                             )
+                )
+              )
+            )
+          )
+        )
         table.setAttribute("width", "100%")
         table
 
@@ -59,5 +69,4 @@ object TagFunc {
         // need to rewrite the way this function is called.
       })
     )
-  }
 }

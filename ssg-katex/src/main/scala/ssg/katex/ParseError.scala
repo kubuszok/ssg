@@ -17,18 +17,15 @@ package katex
 
 import ssg.commons.Nullable
 
-/**
- * This is the ParseError class, which is the main error thrown by KaTeX
- * functions when something has gone wrong. This is used to distinguish internal
- * errors from errors in the expression that the user provided.
- *
- * If possible, a caller should provide a Token or ParseNode with information
- * about where in the source string the problem occurred.
- */
+/** This is the ParseError class, which is the main error thrown by KaTeX functions when something has gone wrong. This is used to distinguish internal errors from errors in the expression that the
+  * user provided.
+  *
+  * If possible, a caller should provide a Token or ParseNode with information about where in the source string the problem occurred.
+  */
 class ParseError(
-    /** The underlying error message without any context added. */
-    val rawMessage: String,
-    token: Nullable[SourceLocation.HasLoc] = Nullable.Null
+  /** The underlying error message without any context added. */
+  val rawMessage: String,
+  token:          Nullable[SourceLocation.HasLoc] = Nullable.Null
 ) extends Exception(ParseError.buildMessage(rawMessage, token)) {
 
   /** Error start position based on passed-in Token or ParseNode. */
@@ -41,10 +38,10 @@ class ParseError(
 object ParseError {
 
   private def buildMessage(
-      message: String,
-      token: Nullable[SourceLocation.HasLoc]
+    message: String,
+    token:   Nullable[SourceLocation.HasLoc]
   ): String = {
-    var error = "KaTeX parse error: " + message
+    var error  = "KaTeX parse error: " + message
     val locOpt = token.flatMap(_.loc)
     locOpt.foreach { loc =>
       if (loc.start <= loc.end) {
@@ -55,7 +52,7 @@ object ParseError {
 
         // Prepend some information
         val start = loc.start
-        val end = loc.end
+        val end   = loc.end
         if (start == input.length) {
           error += " at end of input: "
         } else {
@@ -65,7 +62,7 @@ object ParseError {
         // Underline token in question using combining underscores
         // U+0332 COMBINING LOW LINE
         val combiningUnderscore = "̲"
-        val underlined = input.slice(start, end).map(ch => ch.toString + combiningUnderscore).mkString
+        val underlined          = input.slice(start, end).map(ch => ch.toString + combiningUnderscore).mkString
 
         // Extract some context from the input and add it to the error
         val left =
@@ -87,20 +84,18 @@ object ParseError {
   }
 
   private def computePosition(
-      token: Nullable[SourceLocation.HasLoc]
-  ): Nullable[Int] = {
+    token: Nullable[SourceLocation.HasLoc]
+  ): Nullable[Int] =
     token.flatMap(_.loc).flatMap { loc =>
       if (loc.start <= loc.end) Nullable(loc.start)
       else Nullable.Null
     }
-  }
 
   private def computeLength(
-      token: Nullable[SourceLocation.HasLoc]
-  ): Nullable[Int] = {
+    token: Nullable[SourceLocation.HasLoc]
+  ): Nullable[Int] =
     token.flatMap(_.loc).flatMap { loc =>
       if (loc.start <= loc.end) Nullable(loc.end - loc.start)
       else Nullable.Null
     }
-  }
 }

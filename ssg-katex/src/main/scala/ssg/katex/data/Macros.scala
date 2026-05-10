@@ -21,43 +21,48 @@ package katex
 package data
 
 import ssg.commons.Nullable
-import ssg.katex.{
-  MacroContextInterface,
-  MacroDef,
-  MacroDefinition,
-  MacroExpansion,
-  Mode,
-  ParseError,
-  Token
-}
+import ssg.katex.{ MacroContextInterface, MacroDef, MacroDefinition, MacroExpansion, Mode, ParseError, Token }
 import ssg.katex.functions.FunctionDef
 
-/**
- * Predefined macros for KaTeX. All macros are registered at class-loading
- * time via the `registerAll()` call at the bottom of this object.
- */
+/** Predefined macros for KaTeX. All macros are registered at class-loading time via the `registerAll()` call at the bottom of this object.
+  */
 object Macros {
 
   // Helper: register a string macro
-  private def defineMacro(name: String, body: String): Unit = {
+  private def defineMacro(name: String, body: String): Unit =
     MacroDef.defineMacro(name, MacroDefinition.StringDef(body))
-  }
 
   // Helper: register a function macro
   private def defineMacroFn(
-      name: String,
-      body: MacroContextInterface => String | MacroExpansion
-  ): Unit = {
+    name: String,
+    body: MacroContextInterface => String | MacroExpansion
+  ): Unit =
     MacroDef.defineMacro(name, MacroDefinition.FunctionDef(body))
-  }
 
   // Lookup table for parsing numbers in base 8 through 16
   private val digitToNumber: Map[String, Int] = Map(
-    "0" -> 0, "1" -> 1, "2" -> 2, "3" -> 3, "4" -> 4,
-    "5" -> 5, "6" -> 6, "7" -> 7, "8" -> 8, "9" -> 9,
-    "a" -> 10, "A" -> 10, "b" -> 11, "B" -> 11,
-    "c" -> 12, "C" -> 12, "d" -> 13, "D" -> 13,
-    "e" -> 14, "E" -> 14, "f" -> 15, "F" -> 15
+    "0" -> 0,
+    "1" -> 1,
+    "2" -> 2,
+    "3" -> 3,
+    "4" -> 4,
+    "5" -> 5,
+    "6" -> 6,
+    "7" -> 7,
+    "8" -> 8,
+    "9" -> 9,
+    "a" -> 10,
+    "A" -> 10,
+    "b" -> 11,
+    "B" -> 11,
+    "c" -> 12,
+    "C" -> 12,
+    "d" -> 13,
+    "D" -> 13,
+    "e" -> 14,
+    "E" -> 14,
+    "f" -> 15,
+    "F" -> 15
   )
 
   //////////////////////////////////////////////////////////////////////
@@ -65,33 +70,36 @@ object Macros {
   // \renewcommand{\macro}[args]{definition}
   // TODO: Optional arguments: \newcommand{\macro}[args][default]{definition}
   private def newcommand(
-      context: MacroContextInterface,
-      existsOK: Boolean,
-      nonexistsOK: Boolean,
-      skipIfExists: Boolean
+    context:      MacroContextInterface,
+    existsOK:     Boolean,
+    nonexistsOK:  Boolean,
+    skipIfExists: Boolean
   ): String = {
     var arg = context.consumeArg().tokens
     if (arg.length != 1) {
-      throw new ParseError(
-        "\\newcommand's first argument must be a macro name")
+      throw new ParseError("\\newcommand's first argument must be a macro name")
     }
     val name = arg(0).text
 
     val exists = context.isDefined(name)
     if (exists && !existsOK) {
-      throw new ParseError(s"\\newcommand{$name} attempting to redefine " +
-        s"$name; use \\renewcommand")
+      throw new ParseError(
+        s"\\newcommand{$name} attempting to redefine " +
+          s"$name; use \\renewcommand"
+      )
     }
     if (!exists && !nonexistsOK) {
-      throw new ParseError(s"\\renewcommand{$name} when command $name " +
-        "does not yet exist; use \\newcommand")
+      throw new ParseError(
+        s"\\renewcommand{$name} when command $name " +
+          "does not yet exist; use \\newcommand"
+      )
     }
 
     var numArgs = 0
     arg = context.consumeArg().tokens
     if (arg.length == 1 && arg(0).text == "[") {
       var argText = ""
-      var token = context.expandNextToken()
+      var token   = context.expandNextToken()
       while (token.text != "]" && token.text != "EOF") {
         // TODO: Should properly expand arg, e.g., ignore {}s
         argText += token.text
@@ -106,12 +114,16 @@ object Macros {
 
     if (!(exists && skipIfExists)) {
       // Final arg is the expansion of the macro
-      context.macros.set(name, Nullable(MacroDefinition.ExpansionDef(
-        MacroExpansion(
-          tokens = arg,
-          numArgs = numArgs
-        )
-      )))
+      context.macros.set(name,
+                         Nullable(
+                           MacroDefinition.ExpansionDef(
+                             MacroExpansion(
+                               tokens = arg,
+                               numArgs = numArgs
+                             )
+                           )
+                         )
+      )
     }
     ""
   }
@@ -200,15 +212,14 @@ object Macros {
     "," -> true
   )
 
-  /**
-   * Helper for braket macros.
-   */
+  /** Helper for braket macros.
+    */
   private def braketHelper(one: Boolean)(context: MacroContextInterface): MacroExpansion = {
-    val left = context.consumeArg().tokens
-    val middle = context.consumeArg().tokens
-    val middleDouble = context.consumeArg().tokens
-    val right = context.consumeArg().tokens
-    val oldMiddle = context.macros.get("|")
+    val left            = context.consumeArg().tokens
+    val middle          = context.consumeArg().tokens
+    val middleDouble    = context.consumeArg().tokens
+    val right           = context.consumeArg().tokens
+    val oldMiddle       = context.macros.get("|")
     val oldMiddleDouble = context.macros.get("\\|")
     context.macros.beginGroup()
     val midMacro = (double: Boolean) => {
@@ -240,7 +251,7 @@ object Macros {
     if (middleDouble.length > 0) {
       context.macros.set("\\|", Nullable(MacroDefinition.FunctionDef(midMacro(true))))
     }
-    val arg = context.consumeArg().tokens
+    val arg      = context.consumeArg().tokens
     val expanded = context.expandTokens(
       right ++ arg ++ left // reversed
     )
@@ -251,64 +262,78 @@ object Macros {
     )
   }
 
-  /**
-   * Register all predefined macros. Called once at class-loading time.
-   */
+  /** Register all predefined macros. Called once at class-loading time.
+    */
   def registerAll(): Unit = {
     //////////////////////////////////////////////////////////////////////
     // macro tools
 
-    defineMacroFn("\\noexpand", (context: MacroContextInterface) => {
-      // The expansion is the token itself; but that token is interpreted
-      // as if its meaning were '\relax' if it is a control sequence that
-      // would ordinarily be expanded by TeX's expansion rules.
-      val t = context.popToken()
-      if (context.isExpandable(t.text)) {
-        t.noexpand = Nullable(true)
-        t.treatAsRelax = Nullable(true)
+    defineMacroFn(
+      "\\noexpand",
+      (context: MacroContextInterface) => {
+        // The expansion is the token itself; but that token is interpreted
+        // as if its meaning were '\relax' if it is a control sequence that
+        // would ordinarily be expanded by TeX's expansion rules.
+        val t = context.popToken()
+        if (context.isExpandable(t.text)) {
+          t.noexpand = Nullable(true)
+          t.treatAsRelax = Nullable(true)
+        }
+        MacroExpansion(tokens = Array(t), numArgs = 0): (String | MacroExpansion)
       }
-      MacroExpansion(tokens = Array(t), numArgs = 0): (String | MacroExpansion)
-    })
+    )
 
-    defineMacroFn("\\expandafter", (context: MacroContextInterface) => {
-      // TeX first reads the token that comes immediately after \expandafter,
-      // without expanding it; let's call this token t. Then TeX reads the
-      // token that comes after t (and possibly more tokens, if that token
-      // has an argument), replacing it by its expansion. Finally TeX puts
-      // t back in front of that expansion.
-      val t = context.popToken()
-      context.expandOnce(true) // expand only an expandable token
-      MacroExpansion(tokens = Array(t), numArgs = 0): (String | MacroExpansion)
-    })
+    defineMacroFn(
+      "\\expandafter",
+      (context: MacroContextInterface) => {
+        // TeX first reads the token that comes immediately after \expandafter,
+        // without expanding it; let's call this token t. Then TeX reads the
+        // token that comes after t (and possibly more tokens, if that token
+        // has an argument), replacing it by its expansion. Finally TeX puts
+        // t back in front of that expansion.
+        val t = context.popToken()
+        context.expandOnce(true) // expand only an expandable token
+        MacroExpansion(tokens = Array(t), numArgs = 0): (String | MacroExpansion)
+      }
+    )
 
     // LaTeX's \@firstoftwo{#1}{#2} expands to #1, skipping #2
     // TeX source: \long\def\@firstoftwo#1#2{#1}
-    defineMacroFn("\\@firstoftwo", (context: MacroContextInterface) => {
-      val args = context.consumeArgs(2)
-      MacroExpansion(tokens = args(0), numArgs = 0): (String | MacroExpansion)
-    })
+    defineMacroFn(
+      "\\@firstoftwo",
+      (context: MacroContextInterface) => {
+        val args = context.consumeArgs(2)
+        MacroExpansion(tokens = args(0), numArgs = 0): (String | MacroExpansion)
+      }
+    )
 
     // LaTeX's \@secondoftwo{#1}{#2} expands to #2, skipping #1
     // TeX source: \long\def\@secondoftwo#1#2{#2}
-    defineMacroFn("\\@secondoftwo", (context: MacroContextInterface) => {
-      val args = context.consumeArgs(2)
-      MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
-    })
+    defineMacroFn(
+      "\\@secondoftwo",
+      (context: MacroContextInterface) => {
+        val args = context.consumeArgs(2)
+        MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
+      }
+    )
 
     // LaTeX's \@ifnextchar{#1}{#2}{#3} looks ahead to the next (unexpanded)
     // symbol that isn't a space, consuming any spaces but not consuming the
     // first nonspace character.  If that nonspace character matches #1, then
     // the macro expands to #2; otherwise, it expands to #3.
-    defineMacroFn("\\@ifnextchar", (context: MacroContextInterface) => {
-      val args = context.consumeArgs(3) // symbol, if, else
-      context.consumeSpaces()
-      val nextToken = context.future()
-      if (args(0).length == 1 && args(0)(0).text == nextToken.text) {
-        MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
-      } else {
-        MacroExpansion(tokens = args(2), numArgs = 0): (String | MacroExpansion)
+    defineMacroFn(
+      "\\@ifnextchar",
+      (context: MacroContextInterface) => {
+        val args = context.consumeArgs(3) // symbol, if, else
+        context.consumeSpaces()
+        val nextToken = context.future()
+        if (args(0).length == 1 && args(0)(0).text == nextToken.text) {
+          MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
+        } else {
+          MacroExpansion(tokens = args(2), numArgs = 0): (String | MacroExpansion)
+        }
       }
-    })
+    )
 
     // LaTeX's \@ifstar{#1}{#2} looks ahead to the next (unexpanded) symbol.
     // If it is `*`, then it consumes the symbol, and the macro expands to #1;
@@ -317,14 +342,17 @@ object Macros {
     defineMacro("\\@ifstar", "\\@ifnextchar *{\\@firstoftwo{#1}}")
 
     // LaTeX's \TextOrMath{#1}{#2} expands to #1 in text mode, #2 in math mode
-    defineMacroFn("\\TextOrMath", (context: MacroContextInterface) => {
-      val args = context.consumeArgs(2)
-      if (context.mode == Mode.Text) {
-        MacroExpansion(tokens = args(0), numArgs = 0): (String | MacroExpansion)
-      } else {
-        MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
+    defineMacroFn(
+      "\\TextOrMath",
+      (context: MacroContextInterface) => {
+        val args = context.consumeArgs(2)
+        if (context.mode == Mode.Text) {
+          MacroExpansion(tokens = args(0), numArgs = 0): (String | MacroExpansion)
+        } else {
+          MacroExpansion(tokens = args(1), numArgs = 0): (String | MacroExpansion)
+        }
       }
-    })
+    )
 
     // TeX \char makes a literal character (catcode 12) using the following forms:
     // (see The TeXBook, p. 43)
@@ -335,81 +363,92 @@ object Macros {
     //   \char`\x  -- character that cannot be written (e.g. %)
     // These all refer to characters from the font, so we turn them into special
     // calls to a function \@char dealt with in the Parser.
-    defineMacroFn("\\char", (context: MacroContextInterface) => {
-      var token = context.popToken()
-      var base: Int = 0
-      var number: Int = 0
-      if (token.text == "'") {
-        base = 8
-        token = context.popToken()
-      } else if (token.text == "\"") {
-        base = 16
-        token = context.popToken()
-      } else if (token.text == "`") {
-        token = context.popToken()
-        if (token.text.nonEmpty && token.text.charAt(0) == '\\') {
-          number = token.text.charAt(1).toInt
-        } else if (token.text == "EOF") {
-          throw new ParseError("\\char` missing argument")
-        } else {
-          number = token.text.charAt(0).toInt
-        }
-      } else {
-        base = 10
-      }
-      if (base > 0) {
-        // Parse a number in the given base, starting with first `token`.
-        val d = digitToNumber.getOrElse(token.text, -1)
-        if (d == -1 || d >= base) {
-          throw new ParseError(s"Invalid base-$base digit ${token.text}")
-        }
-        number = d
-        var continue = true
-        while (continue) {
-          val digit = digitToNumber.getOrElse(context.future().text, -1)
-          if (digit != -1 && digit < base) {
-            number *= base
-            number += digit
-            context.popToken()
+    defineMacroFn(
+      "\\char",
+      (context: MacroContextInterface) => {
+        var token = context.popToken()
+        var base:   Int = 0
+        var number: Int = 0
+        if (token.text == "'") {
+          base = 8
+          token = context.popToken()
+        } else if (token.text == "\"") {
+          base = 16
+          token = context.popToken()
+        } else if (token.text == "`") {
+          token = context.popToken()
+          if (token.text.nonEmpty && token.text.charAt(0) == '\\') {
+            number = token.text.charAt(1).toInt
+          } else if (token.text == "EOF") {
+            throw new ParseError("\\char` missing argument")
           } else {
-            continue = false
+            number = token.text.charAt(0).toInt
+          }
+        } else {
+          base = 10
+        }
+        if (base > 0) {
+          // Parse a number in the given base, starting with first `token`.
+          val d = digitToNumber.getOrElse(token.text, -1)
+          if (d == -1 || d >= base) {
+            throw new ParseError(s"Invalid base-$base digit ${token.text}")
+          }
+          number = d
+          var continue = true
+          while (continue) {
+            val digit = digitToNumber.getOrElse(context.future().text, -1)
+            if (digit != -1 && digit < base) {
+              number *= base
+              number += digit
+              context.popToken()
+            } else {
+              continue = false
+            }
           }
         }
+        s"\\@char{$number}": (String | MacroExpansion)
       }
-      s"\\@char{$number}": (String | MacroExpansion)
-    })
+    )
 
     // \newcommand{\macro}[args]{definition}
     // \renewcommand{\macro}[args]{definition}
     // \providecommand{\macro}[args]{definition}
-    defineMacroFn("\\newcommand",
-      (context) => newcommand(context, false, true, false): (String | MacroExpansion))
-    defineMacroFn("\\renewcommand",
-      (context) => newcommand(context, true, false, false): (String | MacroExpansion))
-    defineMacroFn("\\providecommand",
-      (context) => newcommand(context, true, true, true): (String | MacroExpansion))
+    defineMacroFn("\\newcommand", context => newcommand(context, false, true, false): (String | MacroExpansion))
+    defineMacroFn("\\renewcommand", context => newcommand(context, true, false, false): (String | MacroExpansion))
+    defineMacroFn("\\providecommand", context => newcommand(context, true, true, true): (String | MacroExpansion))
 
     // terminal (console) tools
-    defineMacroFn("\\message", (context: MacroContextInterface) => {
-      val arg = context.consumeArgs(1)(0)
-      // eslint-disable-next-line no-console
-      println(arg.reverse.map(_.text).mkString)
-      "": (String | MacroExpansion)
-    })
-    defineMacroFn("\\errmessage", (context: MacroContextInterface) => {
-      val arg = context.consumeArgs(1)(0)
-      // eslint-disable-next-line no-console
-      System.err.println(arg.reverse.map(_.text).mkString)
-      "": (String | MacroExpansion)
-    })
-    defineMacroFn("\\show", (context: MacroContextInterface) => {
-      val tok = context.popToken()
-      val name = tok.text
-      // eslint-disable-next-line no-console
-      println(s"$tok ${context.macros.get(name)} ${FunctionDef._functions.get(name)} " +
-        s"${Symbols.math.get(name)} ${Symbols.text.get(name)}")
-      "": (String | MacroExpansion)
-    })
+    defineMacroFn(
+      "\\message",
+      (context: MacroContextInterface) => {
+        val arg = context.consumeArgs(1)(0)
+        // eslint-disable-next-line no-console
+        println(arg.reverse.map(_.text).mkString)
+        "": (String | MacroExpansion)
+      }
+    )
+    defineMacroFn(
+      "\\errmessage",
+      (context: MacroContextInterface) => {
+        val arg = context.consumeArgs(1)(0)
+        // eslint-disable-next-line no-console
+        System.err.println(arg.reverse.map(_.text).mkString)
+        "": (String | MacroExpansion)
+      }
+    )
+    defineMacroFn(
+      "\\show",
+      (context: MacroContextInterface) => {
+        val tok  = context.popToken()
+        val name = tok.text
+        // eslint-disable-next-line no-console
+        println(
+          s"$tok ${context.macros.get(name)} ${FunctionDef._functions.get(name)} " +
+            s"${Symbols.math.get(name)} ${Symbols.text.get(name)}"
+        )
+        "": (String | MacroExpansion)
+      }
+    )
 
     //////////////////////////////////////////////////////////////////////
     // Grouping
@@ -436,13 +475,11 @@ object Macros {
     // \DeclareRobustCommand{\copyright}{%
     //    \ifmmode{\nfss@text{\textcopyright}}\else\textcopyright\fi}
     defineMacro("\\textcopyright", "\\html@mathml{\\textcircled{c}}{\\char`©}")
-    defineMacro("\\copyright",
-      "\\TextOrMath{\\textcopyright}{\\text{\\textcopyright}}")
-    defineMacro("\\textregistered",
-      "\\html@mathml{\\textcircled{\\scriptsize R}}{\\char`®}")
+    defineMacro("\\copyright", "\\TextOrMath{\\textcopyright}{\\text{\\textcopyright}}")
+    defineMacro("\\textregistered", "\\html@mathml{\\textcircled{\\scriptsize R}}{\\char`®}")
 
     // Characters omitted from Unicode range 1D400-1D7FF
-    defineMacro("ℬ", "\\mathscr{B}")  // script
+    defineMacro("ℬ", "\\mathscr{B}") // script
     defineMacro("ℰ", "\\mathscr{E}")
     defineMacro("ℱ", "\\mathscr{F}")
     defineMacro("ℋ", "\\mathscr{H}")
@@ -450,7 +487,7 @@ object Macros {
     defineMacro("ℒ", "\\mathscr{L}")
     defineMacro("ℳ", "\\mathscr{M}")
     defineMacro("ℛ", "\\mathscr{R}")
-    defineMacro("ℭ", "\\mathfrak{C}")  // Fraktur
+    defineMacro("ℭ", "\\mathfrak{C}") // Fraktur
     defineMacro("ℌ", "\\mathfrak{H}")
     defineMacro("ℨ", "\\mathfrak{Z}")
 
@@ -473,8 +510,10 @@ object Macros {
     // It's thus treated like a \mathrel, but defined by a symbol that has zero
     // width but extends to the right.  We use \rlap to get that spacing.
     // For MathML we write U+0338 here. buildMathML.js will then do the overlay.
-    defineMacro("\\not", "\\html@mathml{\\mathrel{\\mathrlap\\@not}\\nobreak}" +
-      "{\\char\"338}")
+    defineMacro("\\not",
+                "\\html@mathml{\\mathrel{\\mathrlap\\@not}\\nobreak}" +
+                  "{\\char\"338}"
+    )
 
     // Negated symbols from base/fontmath.ltx:
     // \def\neq{\not=} \let\ne=\neq
@@ -484,29 +523,33 @@ object Macros {
     defineMacro("\\neq", "\\html@mathml{\\mathrel{\\not=}}{\\mathrel{\\char`≠}}")
     defineMacro("\\ne", "\\neq")
     defineMacro("≠", "\\neq")
-    defineMacro("\\notin", "\\html@mathml{\\mathrel{{\\in}\\mathllap{/\\mskip1mu}}}" +
-                           "{\\mathrel{\\char`∉}}")
+    defineMacro("\\notin",
+                "\\html@mathml{\\mathrel{{\\in}\\mathllap{/\\mskip1mu}}}" +
+                  "{\\mathrel{\\char`∉}}"
+    )
     defineMacro("∉", "\\notin")
 
     // Unicode stacked relations
-    defineMacro("≘", "\\html@mathml{" +
-      "\\mathrel{=\\kern{-1em}\\raisebox{0.4em}{$\\scriptsize\\frown$}}" +
-      "}{\\mathrel{\\char`≘}}")
-    defineMacro("≙",
-      "\\html@mathml{\\stackrel{\\tiny\\wedge}{=}}{\\mathrel{\\char`≘}}")
-    defineMacro("≚",
-      "\\html@mathml{\\stackrel{\\tiny\\vee}{=}}{\\mathrel{\\char`≚}}")
+    defineMacro("≘",
+                "\\html@mathml{" +
+                  "\\mathrel{=\\kern{-1em}\\raisebox{0.4em}{$\\scriptsize\\frown$}}" +
+                  "}{\\mathrel{\\char`≘}}"
+    )
+    defineMacro("≙", "\\html@mathml{\\stackrel{\\tiny\\wedge}{=}}{\\mathrel{\\char`≘}}")
+    defineMacro("≚", "\\html@mathml{\\stackrel{\\tiny\\vee}{=}}{\\mathrel{\\char`≚}}")
     defineMacro("≛",
-      "\\html@mathml{\\stackrel{\\scriptsize\\star}{=}}" +
-      "{\\mathrel{\\char`≛}}")
+                "\\html@mathml{\\stackrel{\\scriptsize\\star}{=}}" +
+                  "{\\mathrel{\\char`≛}}"
+    )
     defineMacro("≝",
-      "\\html@mathml{\\stackrel{\\tiny\\mathrm{def}}{=}}" +
-      "{\\mathrel{\\char`≝}}")
+                "\\html@mathml{\\stackrel{\\tiny\\mathrm{def}}{=}}" +
+                  "{\\mathrel{\\char`≝}}"
+    )
     defineMacro("≞",
-      "\\html@mathml{\\stackrel{\\tiny\\mathrm{m}}{=}}" +
-      "{\\mathrel{\\char`≞}}")
-    defineMacro("≟",
-      "\\html@mathml{\\stackrel{\\tiny?}{=}}{\\mathrel{\\char`≟}}")
+                "\\html@mathml{\\stackrel{\\tiny\\mathrm{m}}{=}}" +
+                  "{\\mathrel{\\char`≞}}"
+    )
+    defineMacro("≟", "\\html@mathml{\\stackrel{\\tiny?}{=}}{\\mathrel{\\char`≟}}")
 
     // Misc Unicode
     defineMacro("⟂", "\\perp")
@@ -554,13 +597,15 @@ object Macros {
     defineMacro("\\varPsi", "\\mathit{\\Psi}")
     defineMacro("\\varOmega", "\\mathit{\\Omega}")
 
-    //\newcommand{\substack}[1]{\subarray{c}#1\endsubarray}
+    // \newcommand{\substack}[1]{\subarray{c}#1\endsubarray}
     defineMacro("\\substack", "\\begin{subarray}{c}#1\\end{subarray}")
 
     // \renewcommand{\colon}{\nobreak\mskip2mu\mathpunct{}\nonscript
     // \mkern-\thinmuskip{:}\mskip6muplus1mu\relax}
-    defineMacro("\\colon", "\\nobreak\\mskip2mu\\mathpunct{}" +
-      "\\mathchoice{\\mkern-3mu}{\\mkern-3mu}{}{}{:}\\mskip6mu\\relax")
+    defineMacro("\\colon",
+                "\\nobreak\\mskip2mu\\mathpunct{}" +
+                  "\\mathchoice{\\mkern-3mu}{\\mkern-3mu}{}{}{:}\\mskip6mu\\relax"
+    )
 
     // \newcommand{\boxed}[1]{\fbox{\m@th$\displaystyle#1$}}
     defineMacro("\\boxed", "\\fbox{$\\displaystyle{#1}$}")
@@ -579,54 +624,66 @@ object Macros {
     defineMacro("\\ddddot", "{\\overset{\\raisebox{-0.1ex}{\\normalsize ....}}{#1}}")
 
     // AMSMath's automatic \dots, based on \mdots@@ macro.
-    defineMacroFn("\\dots", (context: MacroContextInterface) => {
-      // TODO: If used in text mode, should expand to \textellipsis.
-      // However, in KaTeX, \textellipsis and \ldots behave the same
-      // (in text mode), and it's unlikely we'd see any of the math commands
-      // that affect the behavior of \dots when in text mode.  So fine for now
-      // (until we support \ifmmode ... \else ... \fi).
-      var thedots = "\\dotso"
-      val next = context.expandAfterFuture().text
-      if (dotsByToken.contains(next)) {
-        thedots = dotsByToken(next)
-      } else if (next.length >= 4 && next.substring(0, 4) == "\\not") {
-        thedots = "\\dotsb"
-      } else if (Symbols.math.contains(next)) {
-        if (dotsbGroups.contains(Symbols.math(next).group)) {
+    defineMacroFn(
+      "\\dots",
+      (context: MacroContextInterface) => {
+        // TODO: If used in text mode, should expand to \textellipsis.
+        // However, in KaTeX, \textellipsis and \ldots behave the same
+        // (in text mode), and it's unlikely we'd see any of the math commands
+        // that affect the behavior of \dots when in text mode.  So fine for now
+        // (until we support \ifmmode ... \else ... \fi).
+        var thedots = "\\dotso"
+        val next    = context.expandAfterFuture().text
+        if (dotsByToken.contains(next)) {
+          thedots = dotsByToken(next)
+        } else if (next.length >= 4 && next.substring(0, 4) == "\\not") {
           thedots = "\\dotsb"
+        } else if (Symbols.math.contains(next)) {
+          if (dotsbGroups.contains(Symbols.math(next).group)) {
+            thedots = "\\dotsb"
+          }
+        }
+        thedots: (String | MacroExpansion)
+      }
+    )
+
+    defineMacroFn(
+      "\\dotso",
+      (context: MacroContextInterface) => {
+        val next = context.future().text
+        if (spaceAfterDots.contains(next)) {
+          "\\ldots\\,": (String | MacroExpansion)
+        } else {
+          "\\ldots": (String | MacroExpansion)
         }
       }
-      thedots: (String | MacroExpansion)
-    })
+    )
 
-    defineMacroFn("\\dotso", (context: MacroContextInterface) => {
-      val next = context.future().text
-      if (spaceAfterDots.contains(next)) {
-        ("\\ldots\\,"): (String | MacroExpansion)
-      } else {
-        ("\\ldots"): (String | MacroExpansion)
+    defineMacroFn(
+      "\\dotsc",
+      (context: MacroContextInterface) => {
+        val next = context.future().text
+        // \dotsc uses \extra@ but not \extrap@, instead specially checking for
+        // ';' and '.', but doesn't check for ','.
+        if (spaceAfterDots.contains(next) && next != ",") {
+          "\\ldots\\,": (String | MacroExpansion)
+        } else {
+          "\\ldots": (String | MacroExpansion)
+        }
       }
-    })
+    )
 
-    defineMacroFn("\\dotsc", (context: MacroContextInterface) => {
-      val next = context.future().text
-      // \dotsc uses \extra@ but not \extrap@, instead specially checking for
-      // ';' and '.', but doesn't check for ','.
-      if (spaceAfterDots.contains(next) && next != ",") {
-        ("\\ldots\\,"): (String | MacroExpansion)
-      } else {
-        ("\\ldots"): (String | MacroExpansion)
+    defineMacroFn(
+      "\\cdots",
+      (context: MacroContextInterface) => {
+        val next = context.future().text
+        if (spaceAfterDots.contains(next)) {
+          "\\@cdots\\,": (String | MacroExpansion)
+        } else {
+          "\\@cdots": (String | MacroExpansion)
+        }
       }
-    })
-
-    defineMacroFn("\\cdots", (context: MacroContextInterface) => {
-      val next = context.future().text
-      if (spaceAfterDots.contains(next)) {
-        ("\\@cdots\\,"): (String | MacroExpansion)
-      } else {
-        ("\\@cdots"): (String | MacroExpansion)
-      }
-    })
+    )
 
     defineMacro("\\dotsb", "\\cdots")
     defineMacro("\\dotsm", "\\cdots")
@@ -687,12 +744,15 @@ object Macros {
     // \tag@in@display form of \tag
     defineMacro("\\tag", "\\@ifstar\\tag@literal\\tag@paren")
     defineMacro("\\tag@paren", "\\tag@literal{({#1})}")
-    defineMacroFn("\\tag@literal", (context: MacroContextInterface) => {
-      if (context.macros.get("\\df@tag").isDefined) {
-        throw new ParseError("Multiple \\tag")
+    defineMacroFn(
+      "\\tag@literal",
+      (context: MacroContextInterface) => {
+        if (context.macros.get("\\df@tag").isDefined) {
+          throw new ParseError("Multiple \\tag")
+        }
+        "\\gdef\\df@tag{\\text{#1}}": (String | MacroExpansion)
       }
-      ("\\gdef\\df@tag{\\text{#1}}"): (String | MacroExpansion)
-    })
+    )
 
     // \renewcommand{\bmod}{\nonscript\mskip-\medmuskip\mkern5mu\mathbin
     //   {\operator@font mod}\penalty900
@@ -703,16 +763,22 @@ object Macros {
     // \newcommand{\mod}[1]{\allowbreak\if@display\mkern18mu
     //   \else\mkern12mu\fi{\operator@font mod}\,\,#1}
     // TODO: math mode should use \medmuskip = 4mu plus 2mu minus 4mu
-    defineMacro("\\bmod",
+    defineMacro(
+      "\\bmod",
       "\\mathchoice{\\mskip1mu}{\\mskip1mu}{\\mskip5mu}{\\mskip5mu}" +
-      "\\mathbin{\\rm mod}" +
-      "\\mathchoice{\\mskip1mu}{\\mskip1mu}{\\mskip5mu}{\\mskip5mu}")
-    defineMacro("\\pod", "\\allowbreak" +
-      "\\mathchoice{\\mkern18mu}{\\mkern8mu}{\\mkern8mu}{\\mkern8mu}(#1)")
+        "\\mathbin{\\rm mod}" +
+        "\\mathchoice{\\mskip1mu}{\\mskip1mu}{\\mskip5mu}{\\mskip5mu}"
+    )
+    defineMacro("\\pod",
+                "\\allowbreak" +
+                  "\\mathchoice{\\mkern18mu}{\\mkern8mu}{\\mkern8mu}{\\mkern8mu}(#1)"
+    )
     defineMacro("\\pmod", "\\pod{{\\rm mod}\\mkern6mu#1}")
-    defineMacro("\\mod", "\\allowbreak" +
-      "\\mathchoice{\\mkern18mu}{\\mkern12mu}{\\mkern12mu}{\\mkern12mu}" +
-      "{\\rm mod}\\,\\,#1")
+    defineMacro("\\mod",
+                "\\allowbreak" +
+                  "\\mathchoice{\\mkern18mu}{\\mkern12mu}{\\mkern12mu}{\\mkern12mu}" +
+                  "{\\rm mod}\\,\\,#1"
+    )
 
     //////////////////////////////////////////////////////////////////////
     // LaTeX source2e
@@ -726,9 +792,11 @@ object Macros {
     // TODO: Doesn't normally work in math mode because \@ fails.  KaTeX doesn't
     // support \@ yet, so that's omitted, and we add \text so that the result
     // doesn't look funny in math mode.
-    defineMacro("\\TeX", "\\textrm{\\html@mathml{" +
-      "T\\kern-.1667em\\raisebox{-.5ex}{E}\\kern-.125emX" +
-      "}{TeX}}")
+    defineMacro("\\TeX",
+                "\\textrm{\\html@mathml{" +
+                  "T\\kern-.1667em\\raisebox{-.5ex}{E}\\kern-.125emX" +
+                  "}{TeX}}"
+    )
 
     // Compute \LaTeX logo raise amount
     // This code aligns the top of the A with the T (from the perspective of TeX's
@@ -736,18 +804,24 @@ object Macros {
     // We compute the corresponding \raisebox when A is rendered in \normalsize
     // \scriptstyle, which has a scale factor of 0.7 (see Options.js).
     val mainRegularData = FontMetricsData.metricMap("Main-Regular")
-    val tHeight = mainRegularData('T'.toInt)(1)
-    val aHeight = mainRegularData('A'.toInt)(1)
-    val latexRaiseA = Units.makeEm(tHeight - 0.7 * aHeight)
+    val tHeight         = mainRegularData('T'.toInt)(1)
+    val aHeight         = mainRegularData('A'.toInt)(1)
+    val latexRaiseA     = Units.makeEm(tHeight - 0.7 * aHeight)
 
-    defineMacro("\\LaTeX", "\\textrm{\\html@mathml{" +
-      s"L\\kern-.36em\\raisebox{$latexRaiseA}{\\scriptstyle A}" +
-      "\\kern-.15em\\TeX}{LaTeX}}")
+    defineMacro(
+      "\\LaTeX",
+      "\\textrm{\\html@mathml{" +
+        s"L\\kern-.36em\\raisebox{$latexRaiseA}{\\scriptstyle A}" +
+        "\\kern-.15em\\TeX}{LaTeX}}"
+    )
 
     // New KaTeX logo based on tweaking LaTeX logo
-    defineMacro("\\KaTeX", "\\textrm{\\html@mathml{" +
-      s"K\\kern-.17em\\raisebox{$latexRaiseA}{\\scriptstyle A}" +
-      "\\kern-.15em\\TeX}{KaTeX}}")
+    defineMacro(
+      "\\KaTeX",
+      "\\textrm{\\html@mathml{" +
+        s"K\\kern-.17em\\raisebox{$latexRaiseA}{\\scriptstyle A}" +
+        "\\kern-.15em\\TeX}{KaTeX}}"
+    )
 
     // \DeclareRobustCommand\hspace{\@ifstar\@hspacer\@hspace}
     // \def\@hspace#1{\hskip  #1\relax}
@@ -760,70 +834,105 @@ object Macros {
     //////////////////////////////////////////////////////////////////////
     // mathtools.sty
 
-    //\providecommand\ordinarycolon{:}
+    // \providecommand\ordinarycolon{:}
     defineMacro("\\ordinarycolon", ":")
-    //\def\vcentcolon{\mathrel{\mathop\ordinarycolon}}
-    //TODO(edemaine): Not yet centered. Fix via \raisebox or #726
+    // \def\vcentcolon{\mathrel{\mathop\ordinarycolon}}
+    // TODO(edemaine): Not yet centered. Fix via \raisebox or #726
     defineMacro("\\vcentcolon", "\\mathrel{\\mathop\\ordinarycolon}")
     // \providecommand*\dblcolon{\vcentcolon\mathrel{\mkern-.9mu}\vcentcolon}
-    defineMacro("\\dblcolon", "\\html@mathml{" +
-      "\\mathrel{\\vcentcolon\\mathrel{\\mkern-.9mu}\\vcentcolon}}" +
-      "{\\mathop{\\char\"2237}}")
+    defineMacro(
+      "\\dblcolon",
+      "\\html@mathml{" +
+        "\\mathrel{\\vcentcolon\\mathrel{\\mkern-.9mu}\\vcentcolon}}" +
+        "{\\mathop{\\char\"2237}}"
+    )
     // \providecommand*\coloneqq{\vcentcolon\mathrel{\mkern-1.2mu}=}
-    defineMacro("\\coloneqq", "\\html@mathml{" +
-      "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}=}}" +
-      "{\\mathop{\\char\"2254}}") // :=
+    defineMacro("\\coloneqq",
+                "\\html@mathml{" +
+                  "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}=}}" +
+                  "{\\mathop{\\char\"2254}}"
+    ) // :=
     // \providecommand*\Coloneqq{\dblcolon\mathrel{\mkern-1.2mu}=}
-    defineMacro("\\Coloneqq", "\\html@mathml{" +
-      "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}=}}" +
-      "{\\mathop{\\char\"2237\\char\"3d}}")
+    defineMacro("\\Coloneqq",
+                "\\html@mathml{" +
+                  "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}=}}" +
+                  "{\\mathop{\\char\"2237\\char\"3d}}"
+    )
     // \providecommand*\coloneq{\vcentcolon\mathrel{\mkern-1.2mu}\mathrel{-}}
-    defineMacro("\\coloneq", "\\html@mathml{" +
-      "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\mathrel{-}}}" +
-      "{\\mathop{\\char\"3a\\char\"2212}}")
+    defineMacro(
+      "\\coloneq",
+      "\\html@mathml{" +
+        "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\mathrel{-}}}" +
+        "{\\mathop{\\char\"3a\\char\"2212}}"
+    )
     // \providecommand*\Coloneq{\dblcolon\mathrel{\mkern-1.2mu}\mathrel{-}}
-    defineMacro("\\Coloneq", "\\html@mathml{" +
-      "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\mathrel{-}}}" +
-      "{\\mathop{\\char\"2237\\char\"2212}}")
+    defineMacro(
+      "\\Coloneq",
+      "\\html@mathml{" +
+        "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\mathrel{-}}}" +
+        "{\\mathop{\\char\"2237\\char\"2212}}"
+    )
     // \providecommand*\eqqcolon{=\mathrel{\mkern-1.2mu}\vcentcolon}
-    defineMacro("\\eqqcolon", "\\html@mathml{" +
-      "\\mathrel{=\\mathrel{\\mkern-1.2mu}\\vcentcolon}}" +
-      "{\\mathop{\\char\"2255}}") // =:
+    defineMacro("\\eqqcolon",
+                "\\html@mathml{" +
+                  "\\mathrel{=\\mathrel{\\mkern-1.2mu}\\vcentcolon}}" +
+                  "{\\mathop{\\char\"2255}}"
+    ) // =:
     // \providecommand*\Eqqcolon{=\mathrel{\mkern-1.2mu}\dblcolon}
-    defineMacro("\\Eqqcolon", "\\html@mathml{" +
-      "\\mathrel{=\\mathrel{\\mkern-1.2mu}\\dblcolon}}" +
-      "{\\mathop{\\char\"3d\\char\"2237}}")
+    defineMacro("\\Eqqcolon",
+                "\\html@mathml{" +
+                  "\\mathrel{=\\mathrel{\\mkern-1.2mu}\\dblcolon}}" +
+                  "{\\mathop{\\char\"3d\\char\"2237}}"
+    )
     // \providecommand*\eqcolon{\mathrel{-}\mathrel{\mkern-1.2mu}\vcentcolon}
-    defineMacro("\\eqcolon", "\\html@mathml{" +
-      "\\mathrel{\\mathrel{-}\\mathrel{\\mkern-1.2mu}\\vcentcolon}}" +
-      "{\\mathop{\\char\"2239}}")
+    defineMacro(
+      "\\eqcolon",
+      "\\html@mathml{" +
+        "\\mathrel{\\mathrel{-}\\mathrel{\\mkern-1.2mu}\\vcentcolon}}" +
+        "{\\mathop{\\char\"2239}}"
+    )
     // \providecommand*\Eqcolon{\mathrel{-}\mathrel{\mkern-1.2mu}\dblcolon}
-    defineMacro("\\Eqcolon", "\\html@mathml{" +
-      "\\mathrel{\\mathrel{-}\\mathrel{\\mkern-1.2mu}\\dblcolon}}" +
-      "{\\mathop{\\char\"2212\\char\"2237}}")
+    defineMacro(
+      "\\Eqcolon",
+      "\\html@mathml{" +
+        "\\mathrel{\\mathrel{-}\\mathrel{\\mkern-1.2mu}\\dblcolon}}" +
+        "{\\mathop{\\char\"2212\\char\"2237}}"
+    )
     // \providecommand*\colonapprox{\vcentcolon\mathrel{\mkern-1.2mu}\approx}
-    defineMacro("\\colonapprox", "\\html@mathml{" +
-      "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\approx}}" +
-      "{\\mathop{\\char\"3a\\char\"2248}}")
+    defineMacro(
+      "\\colonapprox",
+      "\\html@mathml{" +
+        "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\approx}}" +
+        "{\\mathop{\\char\"3a\\char\"2248}}"
+    )
     // \providecommand*\Colonapprox{\dblcolon\mathrel{\mkern-1.2mu}\approx}
-    defineMacro("\\Colonapprox", "\\html@mathml{" +
-      "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\approx}}" +
-      "{\\mathop{\\char\"2237\\char\"2248}}")
+    defineMacro(
+      "\\Colonapprox",
+      "\\html@mathml{" +
+        "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\approx}}" +
+        "{\\mathop{\\char\"2237\\char\"2248}}"
+    )
     // \providecommand*\colonsim{\vcentcolon\mathrel{\mkern-1.2mu}\sim}
-    defineMacro("\\colonsim", "\\html@mathml{" +
-      "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\sim}}" +
-      "{\\mathop{\\char\"3a\\char\"223c}}")
+    defineMacro(
+      "\\colonsim",
+      "\\html@mathml{" +
+        "\\mathrel{\\vcentcolon\\mathrel{\\mkern-1.2mu}\\sim}}" +
+        "{\\mathop{\\char\"3a\\char\"223c}}"
+    )
     // \providecommand*\Colonsim{\dblcolon\mathrel{\mkern-1.2mu}\sim}
-    defineMacro("\\Colonsim", "\\html@mathml{" +
-      "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\sim}}" +
-      "{\\mathop{\\char\"2237\\char\"223c}}")
+    defineMacro(
+      "\\Colonsim",
+      "\\html@mathml{" +
+        "\\mathrel{\\dblcolon\\mathrel{\\mkern-1.2mu}\\sim}}" +
+        "{\\mathop{\\char\"2237\\char\"223c}}"
+    )
 
     // Some Unicode characters are implemented with macros to mathtools functions.
-    defineMacro("∷", "\\dblcolon")  // ::
-    defineMacro("∹", "\\eqcolon")  // -:
-    defineMacro("≔", "\\coloneqq")  // :=
-    defineMacro("≕", "\\eqqcolon")  // =:
-    defineMacro("⩴", "\\Coloneqq")  // ::=
+    defineMacro("∷", "\\dblcolon") // ::
+    defineMacro("∹", "\\eqcolon") // -:
+    defineMacro("≔", "\\coloneqq") // :=
+    defineMacro("≕", "\\eqqcolon") // =:
+    defineMacro("⩴", "\\Coloneqq") // ::=
 
     //////////////////////////////////////////////////////////////////////
     // colonequals.sty
@@ -845,14 +954,10 @@ object Macros {
     defineMacro("\\coloncolonsim", "\\Colonsim")
 
     // Additional macros, implemented by analogy with mathtools definitions:
-    defineMacro("\\simcolon",
-      "\\mathrel{\\sim\\mathrel{\\mkern-1.2mu}\\vcentcolon}")
-    defineMacro("\\simcoloncolon",
-      "\\mathrel{\\sim\\mathrel{\\mkern-1.2mu}\\dblcolon}")
-    defineMacro("\\approxcolon",
-      "\\mathrel{\\approx\\mathrel{\\mkern-1.2mu}\\vcentcolon}")
-    defineMacro("\\approxcoloncolon",
-      "\\mathrel{\\approx\\mathrel{\\mkern-1.2mu}\\dblcolon}")
+    defineMacro("\\simcolon", "\\mathrel{\\sim\\mathrel{\\mkern-1.2mu}\\vcentcolon}")
+    defineMacro("\\simcoloncolon", "\\mathrel{\\sim\\mathrel{\\mkern-1.2mu}\\dblcolon}")
+    defineMacro("\\approxcolon", "\\mathrel{\\approx\\mathrel{\\mkern-1.2mu}\\vcentcolon}")
+    defineMacro("\\approxcoloncolon", "\\mathrel{\\approx\\mathrel{\\mkern-1.2mu}\\dblcolon}")
 
     // Present in newtxmath, pxfonts and txfonts
     defineMacro("\\notni", "\\html@mathml{\\not\\ni}{\\mathrel{\\char`∌}}")
@@ -890,22 +995,30 @@ object Macros {
     //////////////////////////////////////////////////////////////////////
     // stmaryrd and semantic
 
-    defineMacro("\\llbracket", "\\html@mathml{" +
-      "\\mathopen{[\\mkern-3.2mu[}}" +
-      "{\\mathopen{\\char`⟦}}")
-    defineMacro("\\rrbracket", "\\html@mathml{" +
-      "\\mathclose{]\\mkern-3.2mu]}}" +
-      "{\\mathclose{\\char`⟧}}")
+    defineMacro("\\llbracket",
+                "\\html@mathml{" +
+                  "\\mathopen{[\\mkern-3.2mu[}}" +
+                  "{\\mathopen{\\char`⟦}}"
+    )
+    defineMacro("\\rrbracket",
+                "\\html@mathml{" +
+                  "\\mathclose{]\\mkern-3.2mu]}}" +
+                  "{\\mathclose{\\char`⟧}}"
+    )
 
     defineMacro("⟦", "\\llbracket") // blackboard bold [
     defineMacro("⟧", "\\rrbracket") // blackboard bold ]
 
-    defineMacro("\\lBrace", "\\html@mathml{" +
-      "\\mathopen{\\{\\mkern-3.2mu[}}" +
-      "{\\mathopen{\\char`⦃}}")
-    defineMacro("\\rBrace", "\\html@mathml{" +
-      "\\mathclose{]\\mkern-3.2mu\\}}}" +
-      "{\\mathclose{\\char`⦄}}")
+    defineMacro("\\lBrace",
+                "\\html@mathml{" +
+                  "\\mathopen{\\{\\mkern-3.2mu[}}" +
+                  "{\\mathopen{\\char`⦃}}"
+    )
+    defineMacro("\\rBrace",
+                "\\html@mathml{" +
+                  "\\mathclose{]\\mkern-3.2mu\\}}}" +
+                  "{\\mathclose{\\char`⦄}}"
+    )
 
     defineMacro("⦃", "\\lBrace") // blackboard bold {
     defineMacro("⦄", "\\rBrace") // blackboard bold }
@@ -915,10 +1028,13 @@ object Macros {
 
     // The stmaryrd function `\minuso` provides a "Plimsoll" symbol that
     // superimposes the characters \circ and \mathminus. Used in chemistry.
-    defineMacro("\\minuso", "\\mathbin{\\html@mathml{" +
-      "{\\mathrlap{\\mathchoice{\\kern{0.145em}}{\\kern{0.145em}}" +
-      "{\\kern{0.1015em}}{\\kern{0.0725em}}\\circ}{-}}}" +
-      "{\\char`⦵}}")
+    defineMacro(
+      "\\minuso",
+      "\\mathbin{\\html@mathml{" +
+        "{\\mathrlap{\\mathchoice{\\kern{0.145em}}{\\kern{0.145em}}" +
+        "{\\kern{0.1015em}}{\\kern{0.0725em}}\\circ}{-}}}" +
+        "{\\char`⦵}}"
+    )
     defineMacro("⦵", "\\minuso")
 
     //////////////////////////////////////////////////////////////////////
@@ -1007,14 +1123,18 @@ object Macros {
     defineMacro("\\Bra", "\\left\\langle#1\\right|")
     defineMacro("\\Ket", "\\left|#1\\right\\rangle")
 
-    defineMacroFn("\\bra@ket", (ctx) => braketHelper(false)(ctx): (String | MacroExpansion))
-    defineMacroFn("\\bra@set", (ctx) => braketHelper(true)(ctx): (String | MacroExpansion))
-    defineMacro("\\Braket", "\\bra@ket{\\left\\langle}" +
-      "{\\,\\middle\\vert\\,}{\\,\\middle\\vert\\,}{\\right\\rangle}")
-    defineMacro("\\Set", "\\bra@set{\\left\\{\\:}" +
-      "{\\;\\middle\\vert\\;}{\\;\\middle\\Vert\\;}{\\:\\right\\}}")
+    defineMacroFn("\\bra@ket", ctx => braketHelper(false)(ctx): (String | MacroExpansion))
+    defineMacroFn("\\bra@set", ctx => braketHelper(true)(ctx): (String | MacroExpansion))
+    defineMacro("\\Braket",
+                "\\bra@ket{\\left\\langle}" +
+                  "{\\,\\middle\\vert\\,}{\\,\\middle\\vert\\,}{\\right\\rangle}"
+    )
+    defineMacro("\\Set",
+                "\\bra@set{\\left\\{\\:}" +
+                  "{\\;\\middle\\vert\\;}{\\;\\middle\\Vert\\;}{\\:\\right\\}}"
+    )
     defineMacro("\\set", "\\bra@set{\\{\\,}{\\mid}{}{\\,\\}}")
-      // has no support for special || or \|
+    // has no support for special || or \|
 
     //////////////////////////////////////////////////////////////////////
     // actuarialangle.dtx

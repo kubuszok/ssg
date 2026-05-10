@@ -22,17 +22,12 @@ import scala.util.boundary.break
 
 import ssg.commons.Nullable
 
-/**
- * Each script or script family has a name and an array of blocks.
- * Each block is an array of two numbers which specify the start and
- * end points (inclusive) of a block of Unicode codepoints.
- */
+/** Each script or script family has a name and an array of blocks. Each block is an array of two numbers which specify the start and end points (inclusive) of a block of Unicode codepoints.
+  */
 final case class Script(name: String, blocks: Array[Array[Int]])
 
-/**
- * Unicode block data for the families of scripts we support in \text{}.
- * Scripts only need to appear here if they do not have font metrics.
- */
+/** Unicode block data for the families of scripts we support in \text{}. Scripts only need to appear here if they do not have font metrics.
+  */
 object UnicodeScripts {
 
   val scriptData: Array[Script] = Array(
@@ -42,7 +37,7 @@ object UnicodeScripts {
       name = "latin",
       blocks = Array(
         Array(0x0100, 0x024f), // Latin Extended-A and Latin Extended-B
-        Array(0x0300, 0x036f)  // Combining Diacritical marks
+        Array(0x0300, 0x036f) // Combining Diacritical marks
       )
     ),
     Script(
@@ -87,7 +82,7 @@ object UnicodeScripts {
       blocks = Array(
         Array(0x3000, 0x30ff), // CJK symbols and punctuation, Hiragana, Katakana
         Array(0x4e00, 0x9faf), // CJK ideograms
-        Array(0xff00, 0xff60)  // Fullwidth punctuation
+        Array(0xff00, 0xff60) // Fullwidth punctuation
         // TODO: add halfwidth Katakana and Romanji glyphs
       )
     ),
@@ -98,23 +93,18 @@ object UnicodeScripts {
     )
   )
 
-  /**
-   * A flattened version of all the supported blocks in a single array.
-   * This is an optimization to make supportedCodepoint() fast.
-   */
-  private lazy val allBlocks: Array[Int] = {
+  /** A flattened version of all the supported blocks in a single array. This is an optimization to make supportedCodepoint() fast.
+    */
+  private lazy val allBlocks: Array[Int] =
     scriptData.flatMap(s => s.blocks.flatMap(b => b))
-  }
 
-  /**
-   * Given a codepoint, return the name of the script or script family
-   * it is from, or null if it is not part of a known block
-   */
+  /** Given a codepoint, return the name of the script or script family it is from, or null if it is not part of a known block
+    */
   def scriptFromCodepoint(codepoint: Int): Nullable[String] = boundary {
     var i = 0
     while (i < scriptData.length) {
       val script = scriptData(i)
-      var j = 0
+      var j      = 0
       while (j < script.blocks.length) {
         val block = script.blocks(j)
         if (codepoint >= block(0) && codepoint <= block(1)) {
@@ -127,17 +117,13 @@ object UnicodeScripts {
     Nullable.Null
   }
 
-  /**
-   * Given a codepoint, return true if it falls within one of the
-   * scripts or script families defined above and false otherwise.
-   *
-   * Micro benchmarks shows that this is faster than
-   * /[　-ヿ一-龯＀-｠가-힯ऀ-႟]/.test()
-   * in Firefox, Chrome and Node.
-   */
+  /** Given a codepoint, return true if it falls within one of the scripts or script families defined above and false otherwise.
+    *
+    * Micro benchmarks shows that this is faster than /[　-ヿ一-龯＀-｠가-힯ऀ-႟]/.test() in Firefox, Chrome and Node.
+    */
   def supportedCodepoint(codepoint: Int): Boolean = boundary {
     val blocks = allBlocks
-    var i = 0
+    var i      = 0
     while (i < blocks.length) {
       if (codepoint >= blocks(i) && codepoint <= blocks(i + 1)) {
         break(true)

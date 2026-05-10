@@ -1071,3 +1071,40 @@ ssg-sass/src/main/scala/ssg/sass/visitor/SearchVisitors.scala	visitor	minor_issu
 ssg-sass/src/main/scala/ssg/sass/visitor/SerializeVisitor.scala	visitor	major_issues	yes	2026-04-06	406 vs 1883 LoC (22%). Most severe LoC gap of the core visitors. Expanded + compressed styles, all 9 visit methods, !important, short hex/named-color collapse, SassNumber trailing-zero stripping, rgba legacy, SassCalculation rendering, minimal v3 source maps (per-rule/decl, base64 VLQ). Honest gaps: no sourcesContent/sourceRoot/file, per-node (not per-token) mapping granularity, no @import propagation of maps, missing many dart-sass edge cases around whitespace/comment preservation, compressed-mode micro-optimizations, unicode-range, supports modern syntax edge cases, CSS nesting selector rendering nuances.	
 ssg-sass/src/main/scala/ssg/sass/visitor/SourceInterpolationVisitor.scala	visitor	minor_issues	no	2026-04-06	Skeleton visitor; bodies stubbed	
 ssg-sass/src/main/scala/ssg/sass/visitor/ValueVisitor.scala	visitor	pass	no	2026-04-05	Forward declaration. Visit methods for all value types.	
+ssg-mermaid/src/main/scala/ssg/mermaid/svg/	mermaid	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/color/	mermaid	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/layout/graph/	layout	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/layout/dagre/	layout	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/render/shapes/	render	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/render/edges/	render	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/theme/	mermaid	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/flowchart/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/sequence/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/class_/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/state/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/gantt/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/c4/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/er/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/pie/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/timeline/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/journey/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/mindmap/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/git/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/xychart/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/quadrant/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/requirement/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/sankey/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/block/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/architecture/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/packet/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/radar/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/kanban/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/venn/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/ishikawa/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/cynefin/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/eventmodeling/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/treeview/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/treemap/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/wardley/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/info/	diagrams	pass	no	2026-05-10		
+ssg-mermaid/src/main/scala/ssg/mermaid/diagrams/error_/	diagrams	pass	no	2026-05-10		

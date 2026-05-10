@@ -35,7 +35,7 @@ import scala.util.matching.Regex
 
 import ssg.commons.Nullable
 import ssg.katex.ParseError
-import ssg.katex.data.{SvgGeometry, UnicodeScripts, Units}
+import ssg.katex.data.{ SvgGeometry, UnicodeScripts, Units }
 import ssg.katex.util.Utils
 
 // Making the type below exact with all optional fields doesn't work due to
@@ -46,29 +46,29 @@ import ssg.katex.util.Utils
 // This type does not include all CSS properties. Additional properties should
 // be added as needed.
 final case class CssStyle(
-    backgroundColor: Nullable[String] = Nullable.Null,
-    borderBottomWidth: Nullable[String] = Nullable.Null,
-    borderColor: Nullable[String] = Nullable.Null,
-    borderRightStyle: Nullable[String] = Nullable.Null,
-    borderRightWidth: Nullable[String] = Nullable.Null,
-    borderTopWidth: Nullable[String] = Nullable.Null,
-    borderStyle: Nullable[String] = Nullable.Null,
-    borderWidth: Nullable[String] = Nullable.Null,
-    bottom: Nullable[String] = Nullable.Null,
-    color: Nullable[String] = Nullable.Null,
-    height: Nullable[String] = Nullable.Null,
-    left: Nullable[String] = Nullable.Null,
-    margin: Nullable[String] = Nullable.Null,
-    marginLeft: Nullable[String] = Nullable.Null,
-    marginRight: Nullable[String] = Nullable.Null,
-    marginTop: Nullable[String] = Nullable.Null,
-    minWidth: Nullable[String] = Nullable.Null,
-    paddingLeft: Nullable[String] = Nullable.Null,
-    position: Nullable[String] = Nullable.Null,
-    textShadow: Nullable[String] = Nullable.Null,
-    top: Nullable[String] = Nullable.Null,
-    width: Nullable[String] = Nullable.Null,
-    verticalAlign: Nullable[String] = Nullable.Null
+  backgroundColor:   Nullable[String] = Nullable.Null,
+  borderBottomWidth: Nullable[String] = Nullable.Null,
+  borderColor:       Nullable[String] = Nullable.Null,
+  borderRightStyle:  Nullable[String] = Nullable.Null,
+  borderRightWidth:  Nullable[String] = Nullable.Null,
+  borderTopWidth:    Nullable[String] = Nullable.Null,
+  borderStyle:       Nullable[String] = Nullable.Null,
+  borderWidth:       Nullable[String] = Nullable.Null,
+  bottom:            Nullable[String] = Nullable.Null,
+  color:             Nullable[String] = Nullable.Null,
+  height:            Nullable[String] = Nullable.Null,
+  left:              Nullable[String] = Nullable.Null,
+  margin:            Nullable[String] = Nullable.Null,
+  marginLeft:        Nullable[String] = Nullable.Null,
+  marginRight:       Nullable[String] = Nullable.Null,
+  marginTop:         Nullable[String] = Nullable.Null,
+  minWidth:          Nullable[String] = Nullable.Null,
+  paddingLeft:       Nullable[String] = Nullable.Null,
+  position:          Nullable[String] = Nullable.Null,
+  textShadow:        Nullable[String] = Nullable.Null,
+  top:               Nullable[String] = Nullable.Null,
+  width:             Nullable[String] = Nullable.Null,
+  verticalAlign:     Nullable[String] = Nullable.Null
 ) {
 
   /** Iterate over all non-null (name, value) pairs in camelCase form. */
@@ -99,41 +99,40 @@ final case class CssStyle(
   }
 
   /** True if no CSS properties are set. */
-  def isEmpty: Boolean = {
+  def isEmpty: Boolean =
     backgroundColor.isEmpty &&
-    borderBottomWidth.isEmpty &&
-    borderColor.isEmpty &&
-    borderRightStyle.isEmpty &&
-    borderRightWidth.isEmpty &&
-    borderTopWidth.isEmpty &&
-    borderStyle.isEmpty &&
-    borderWidth.isEmpty &&
-    bottom.isEmpty &&
-    color.isEmpty &&
-    height.isEmpty &&
-    left.isEmpty &&
-    margin.isEmpty &&
-    marginLeft.isEmpty &&
-    marginRight.isEmpty &&
-    marginTop.isEmpty &&
-    minWidth.isEmpty &&
-    paddingLeft.isEmpty &&
-    position.isEmpty &&
-    textShadow.isEmpty &&
-    top.isEmpty &&
-    width.isEmpty &&
-    verticalAlign.isEmpty
-  }
+      borderBottomWidth.isEmpty &&
+      borderColor.isEmpty &&
+      borderRightStyle.isEmpty &&
+      borderRightWidth.isEmpty &&
+      borderTopWidth.isEmpty &&
+      borderStyle.isEmpty &&
+      borderWidth.isEmpty &&
+      bottom.isEmpty &&
+      color.isEmpty &&
+      height.isEmpty &&
+      left.isEmpty &&
+      margin.isEmpty &&
+      marginLeft.isEmpty &&
+      marginRight.isEmpty &&
+      marginTop.isEmpty &&
+      minWidth.isEmpty &&
+      paddingLeft.isEmpty &&
+      position.isEmpty &&
+      textShadow.isEmpty &&
+      top.isEmpty &&
+      width.isEmpty &&
+      verticalAlign.isEmpty
 
   def nonEmpty: Boolean = !isEmpty
 }
 
 trait HtmlDomNode extends VirtualNode {
-  var classes: ArrayBuffer[String]
-  var height: Double
-  var depth: Double
+  var classes:     ArrayBuffer[String]
+  var height:      Double
+  var depth:       Double
   var maxFontSize: Double
-  var style: CssStyle
+  var style:       CssStyle
   def hasClass(className: String): Boolean
 }
 
@@ -142,7 +141,7 @@ type DomSpan = Span[HtmlDomNode]
 // Span wrapping an SVG node.
 type SvgSpan = Span[SvgNode]
 
-type SvgChildNode = PathNode | LineNode
+type SvgChildNode         = PathNode | LineNode
 type HtmlDocumentFragment = DocumentFragment[HtmlDomNode]
 
 /** Trait for nodes that carry attributes (Span, Anchor). */
@@ -157,33 +156,25 @@ private[tree] trait ChildBearing {
 
 object DomTree {
 
-  /**
-   * Create an HTML className based on a list of classes. In addition to joining
-   * with spaces, we also remove empty classes.
-   */
-  def createClass(classes: collection.Seq[String]): String = {
+  /** Create an HTML className based on a list of classes. In addition to joining with spaces, we also remove empty classes.
+    */
+  def createClass(classes: collection.Seq[String]): String =
     classes.filter(_.nonEmpty).mkString(" ")
-  }
 
-  /**
-   * https://w3c.github.io/html-reference/syntax.html#syntax-attributes
-   *
-   * > Attribute Names must consist of one or more characters
-   * other than the space characters, U+0000 NULL,
-   * '"', "'", ">", "/", "=", the control characters,
-   * and any characters that are not defined by Unicode.
-   */
+  /** https://w3c.github.io/html-reference/syntax.html#syntax-attributes
+    *
+    * > Attribute Names must consist of one or more characters other than the space characters, U+0000 NULL, '"', "'", ">", "/", "=", the control characters, and any characters that are not defined by
+    * Unicode.
+    */
   private val invalidAttributeNameRegex: Regex = """[\s"'>/=\x00-\x1f]""".r
 
-  /**
-   * Initialize common node fields (classes, attributes, height, depth,
-   * maxFontSize, style) and apply options if present.
-   */
+  /** Initialize common node fields (classes, attributes, height, depth, maxFontSize, style) and apply options if present.
+    */
   private[tree] def initNode(
-      node: HtmlDomNode & AttributedNode,
-      classes: ArrayBuffer[String],
-      options: Nullable[Options],
-      style: CssStyle
+    node:    HtmlDomNode & AttributedNode,
+    classes: ArrayBuffer[String],
+    options: Nullable[Options],
+    style:   CssStyle
   ): Unit = {
     node.classes = classes
     node.attributes = LinkedHashMap.empty
@@ -202,12 +193,11 @@ object DomTree {
     }
   }
 
-  /**
-   * Convert into an HTML node
-   */
+  /** Convert into an HTML node
+    */
   private[tree] def toInMemoryNode(
-      data: HtmlDomNode & AttributedNode & ChildBearing,
-      tagName: String
+    data:    HtmlDomNode & AttributedNode & ChildBearing,
+    tagName: String
   ): InMemoryNode = {
     val node = InMemoryNode.element(tagName)
 
@@ -226,7 +216,7 @@ object DomTree {
 
     // Append the children, also as HTML nodes
     val children = data.virtualChildren
-    var i = 0
+    var i        = 0
     while (i < children.length) {
       node.appendChild(children(i).toNode())
       i += 1
@@ -235,12 +225,11 @@ object DomTree {
     node
   }
 
-  /**
-   * Convert into an HTML markup string
-   */
+  /** Convert into an HTML markup string
+    */
   private[tree] def toMarkup(
-      data: HtmlDomNode & AttributedNode & ChildBearing,
-      tagName: String
+    data:    HtmlDomNode & AttributedNode & ChildBearing,
+    tagName: String
   ): String = {
     val markup = new StringBuilder
     markup.append('<')
@@ -285,7 +274,7 @@ object DomTree {
 
     // Add the markup of the children, also as markup
     val children = data.virtualChildren
-    var i = 0
+    var i        = 0
     while (i < children.length) {
       markup.append(children(i).toMarkup())
       i += 1
@@ -298,108 +287,90 @@ object DomTree {
     markup.toString
   }
 
-  /**
-   * Assert that the given node is a SymbolNode.
-   */
-  def assertSymbolDomNode(group: HtmlDomNode): SymbolNode = {
+  /** Assert that the given node is a SymbolNode.
+    */
+  def assertSymbolDomNode(group: HtmlDomNode): SymbolNode =
     group match {
       case s: SymbolNode => s
       case _ => throw new Error(s"Expected symbolNode but got ${group.toString}.")
     }
-  }
 
-  /**
-   * Assert that the given node is a Span.
-   */
-  def assertSpan(group: HtmlDomNode): Span[HtmlDomNode] = {
+  /** Assert that the given node is a Span.
+    */
+  def assertSpan(group: HtmlDomNode): Span[HtmlDomNode] =
     group match {
       case s: Span[?] => s.asInstanceOf[Span[HtmlDomNode]]
       case _ => throw new Error(s"Expected span<HtmlDomNode> but got ${group.toString}.")
     }
-  }
 
-  /**
-   * Whether an HtmlDomNode has HtmlDomNode children.
-   * HtmlDomNode is a base type representing a union of
-   * SymbolNode, SvgSpan, DomSpan, Anchor, and documentFragment.
-   * In the last three cases, the children are HtmlDomNode[].
-   */
-  def hasHtmlDomChildren(node: HtmlDomNode): Boolean = {
+  /** Whether an HtmlDomNode has HtmlDomNode children. HtmlDomNode is a base type representing a union of SymbolNode, SvgSpan, DomSpan, Anchor, and documentFragment. In the last three cases, the
+    * children are HtmlDomNode[].
+    */
+  def hasHtmlDomChildren(node: HtmlDomNode): Boolean =
     node.isInstanceOf[Span[?]] ||
-    node.isInstanceOf[Anchor] ||
-    node.isInstanceOf[DocumentFragment[?]]
-  }
+      node.isInstanceOf[Anchor] ||
+      node.isInstanceOf[DocumentFragment[?]]
 }
 
-/**
- * This node represents a span node, with a className, a list of children, and
- * an inline style. It also contains information about its height, depth, and
- * maxFontSize.
- *
- * Represents two types with different uses: SvgSpan to wrap an SVG and DomSpan
- * otherwise. This typesafety is important when HTML builders access a span's
- * children.
- */
+/** This node represents a span node, with a className, a list of children, and an inline style. It also contains information about its height, depth, and maxFontSize.
+  *
+  * Represents two types with different uses: SvgSpan to wrap an SVG and DomSpan otherwise. This typesafety is important when HTML builders access a span's children.
+  */
 class Span[ChildType <: VirtualNode](
-    classesInit: ArrayBuffer[String] = ArrayBuffer.empty,
-    childrenInit: ArrayBuffer[ChildType] = ArrayBuffer.empty,
-    options: Nullable[Options] = Nullable.Null,
-    styleInit: CssStyle = CssStyle()
-) extends HtmlDomNode with AttributedNode with ChildBearing {
+  classesInit:  ArrayBuffer[String] = ArrayBuffer.empty,
+  childrenInit: ArrayBuffer[ChildType] = ArrayBuffer.empty,
+  options:      Nullable[Options] = Nullable.Null,
+  styleInit:    CssStyle = CssStyle()
+) extends HtmlDomNode
+    with AttributedNode
+    with ChildBearing {
 
-  var classes: ArrayBuffer[String] = classesInit
-  var attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
-  var height: Double = 0.0
-  var depth: Double = 0.0
-  var maxFontSize: Double = 0.0
-  var style: CssStyle = styleInit
-  var children: ArrayBuffer[ChildType] = childrenInit
-  var width: Nullable[Double] = Nullable.Null
+  var classes:     ArrayBuffer[String]           = classesInit
+  var attributes:  LinkedHashMap[String, String] = LinkedHashMap.empty
+  var height:      Double                        = 0.0
+  var depth:       Double                        = 0.0
+  var maxFontSize: Double                        = 0.0
+  var style:       CssStyle                      = styleInit
+  var children:    ArrayBuffer[ChildType]        = childrenInit
+  var width:       Nullable[Double]              = Nullable.Null
 
   DomTree.initNode(this, classes, options, style)
 
   def virtualChildren: collection.Seq[VirtualNode] = children
 
-  /**
-   * Sets an arbitrary attribute on the span. Warning: use this wisely. Not
-   * all browsers support attributes the same, and having too many custom
-   * attributes is probably bad.
-   */
-  def setAttribute(attribute: String, value: String): Unit = {
+  /** Sets an arbitrary attribute on the span. Warning: use this wisely. Not all browsers support attributes the same, and having too many custom attributes is probably bad.
+    */
+  def setAttribute(attribute: String, value: String): Unit =
     attributes(attribute) = value
-  }
 
-  def hasClass(className: String): Boolean = {
+  def hasClass(className: String): Boolean =
     classes.contains(className)
-  }
 
-  def toNode(): InMemoryNode = {
+  def toNode(): InMemoryNode =
     DomTree.toInMemoryNode(this, "span")
-  }
 
-  def toMarkup(): String = {
+  def toMarkup(): String =
     DomTree.toMarkup(this, "span")
-  }
 }
 
-/**
- * This node represents an anchor (<a>) element with a hyperlink.  See `span`
- * for further details.
- */
+/** This node represents an anchor (<a>) element with a hyperlink. See `span` for further details.
+  */
 class Anchor(
-    href: String,
-    classesInit: ArrayBuffer[String],
-    childrenInit: ArrayBuffer[HtmlDomNode],
-    options: Options
-) extends HtmlDomNode with AttributedNode with ChildBearing {
+  href:         String,
+  classesInit:  ArrayBuffer[String],
+  childrenInit: ArrayBuffer[HtmlDomNode],
+  options:      Options
+) extends HtmlDomNode
+    with AttributedNode
+    with ChildBearing {
 
-  var classes: ArrayBuffer[String] = classesInit
-  var attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
-  var height: Double = 0.0
-  var depth: Double = 0.0
-  var maxFontSize: Double = 0.0
-  var style: CssStyle = CssStyle()
-  var children: ArrayBuffer[HtmlDomNode] =
+  var classes:     ArrayBuffer[String]           = classesInit
+  var attributes:  LinkedHashMap[String, String] = LinkedHashMap.empty
+  var height:      Double                        = 0.0
+  var depth:       Double                        = 0.0
+  var maxFontSize: Double                        = 0.0
+  var style:       CssStyle                      = CssStyle()
+  var children:    ArrayBuffer[HtmlDomNode]      =
     if (childrenInit != null) childrenInit else ArrayBuffer.empty // @nowarn -- null safety at API boundary
 
   DomTree.initNode(this, classes, Nullable(options), style)
@@ -407,41 +378,35 @@ class Anchor(
 
   def virtualChildren: collection.Seq[VirtualNode] = children
 
-  def setAttribute(attribute: String, value: String): Unit = {
+  def setAttribute(attribute: String, value: String): Unit =
     attributes(attribute) = value
-  }
 
-  def hasClass(className: String): Boolean = {
+  def hasClass(className: String): Boolean =
     classes.contains(className)
-  }
 
-  def toNode(): InMemoryNode = {
+  def toNode(): InMemoryNode =
     DomTree.toInMemoryNode(this, "a")
-  }
 
-  def toMarkup(): String = {
+  def toMarkup(): String =
     DomTree.toMarkup(this, "a")
-  }
 }
 
-/**
- * This node represents an image embed (<img>) element.
- */
+/** This node represents an image embed (<img>) element.
+  */
 class Img(
-    val src: String,
-    val alt: String,
-    styleInit: CssStyle
+  val src:   String,
+  val alt:   String,
+  styleInit: CssStyle
 ) extends HtmlDomNode {
 
-  var classes: ArrayBuffer[String] = ArrayBuffer("mord")
-  var height: Double = 0.0
-  var depth: Double = 0.0
-  var maxFontSize: Double = 0.0
-  var style: CssStyle = styleInit
+  var classes:     ArrayBuffer[String] = ArrayBuffer("mord")
+  var height:      Double              = 0.0
+  var depth:       Double              = 0.0
+  var maxFontSize: Double              = 0.0
+  var style:       CssStyle            = styleInit
 
-  def hasClass(className: String): Boolean = {
+  def hasClass(className: String): Boolean =
     classes.contains(className)
-  }
 
   def toNode(): InMemoryNode = {
     val node = InMemoryNode.element("img")
@@ -485,38 +450,36 @@ class Img(
 }
 
 private val iCombinations: Map[String, String] = Map(
-  "î" -> "ı̂",  // î -> dotless-i + combining circumflex
-  "ï" -> "ı̈",  // ï -> dotless-i + combining diaeresis
-  "í" -> "ı́",  // í -> dotless-i + combining acute
+  "î" -> "ı̂", // î -> dotless-i + combining circumflex
+  "ï" -> "ı̈", // ï -> dotless-i + combining diaeresis
+  "í" -> "ı́", // í -> dotless-i + combining acute
   // "ī" -> "ı̄", // ī -> enable when we add Extended Latin
-  "ì" -> "ı̀"   // ì -> dotless-i + combining grave
+  "ì" -> "ı̀" // ì -> dotless-i + combining grave
 )
 
-/**
- * A symbol node contains information about a single symbol. It either renders
- * to a single text node, or a span with a single text node in it, depending on
- * whether it has CSS classes, styles, or needs italic correction.
- */
+/** A symbol node contains information about a single symbol. It either renders to a single text node, or a span with a single text node in it, depending on whether it has CSS classes, styles, or
+  * needs italic correction.
+  */
 class SymbolNode(
-    textInit: String,
-    heightInit: Double = 0.0,
-    depthInit: Double = 0.0,
-    italicInit: Double = 0.0,
-    skewInit: Double = 0.0,
-    widthInit: Double = 0.0,
-    classesInit: ArrayBuffer[String] = ArrayBuffer.empty,
-    styleInit: CssStyle = CssStyle()
+  textInit:    String,
+  heightInit:  Double = 0.0,
+  depthInit:   Double = 0.0,
+  italicInit:  Double = 0.0,
+  skewInit:    Double = 0.0,
+  widthInit:   Double = 0.0,
+  classesInit: ArrayBuffer[String] = ArrayBuffer.empty,
+  styleInit:   CssStyle = CssStyle()
 ) extends HtmlDomNode {
 
-  var text: String = textInit
-  var height: Double = heightInit
-  var depth: Double = depthInit
-  var italic: Double = italicInit
-  var skew: Double = skewInit
-  var width: Double = widthInit
-  var classes: ArrayBuffer[String] = classesInit
-  var style: CssStyle = styleInit
-  var maxFontSize: Double = 0.0
+  var text:        String              = textInit
+  var height:      Double              = heightInit
+  var depth:       Double              = depthInit
+  var italic:      Double              = italicInit
+  var skew:        Double              = skewInit
+  var width:       Double              = widthInit
+  var classes:     ArrayBuffer[String] = classesInit
+  var style:       CssStyle            = styleInit
+  var maxFontSize: Double              = 0.0
 
   // Mark text from non-Latin scripts with specific classes so that we
   // can specify which fonts to use.  This allows us to render these
@@ -536,14 +499,11 @@ class SymbolNode(
     }
   }
 
-  def hasClass(className: String): Boolean = {
+  def hasClass(className: String): Boolean =
     classes.contains(className)
-  }
 
-  /**
-   * Creates a text node or span from a symbol node. Note that a span is only
-   * created if it is needed.
-   */
+  /** Creates a text node or span from a symbol node. Note that a span is only created if it is needed.
+    */
   def toNode(): InMemoryNode = {
     val textNode = InMemoryNode.text(text)
     var span: Nullable[InMemoryNode] = Nullable.Null
@@ -573,9 +533,8 @@ class SymbolNode(
     }
   }
 
-  /**
-   * Creates markup for a symbol node.
-   */
+  /** Creates markup for a symbol node.
+    */
   def toMarkup(): String = {
     // TODO(alpert): More duplication than I'd like from
     // span.prototype.toMarkup and symbolNode.prototype.toNode...
@@ -624,17 +583,16 @@ class SymbolNode(
   }
 }
 
-/**
- * SVG nodes are used to render stretchy wide elements.
- */
+/** SVG nodes are used to render stretchy wide elements.
+  */
 class SvgNode(
-    val children: ArrayBuffer[SvgChildNode] = ArrayBuffer.empty,
-    val attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
+  val children:   ArrayBuffer[SvgChildNode] = ArrayBuffer.empty,
+  val attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
 ) extends VirtualNode {
 
   def toNode(): InMemoryNode = {
     val svgNS = "http://www.w3.org/2000/svg"
-    val node = InMemoryNode.elementNS(svgNS, "svg")
+    val node  = InMemoryNode.elementNS(svgNS, "svg")
 
     // Apply attributes
     attributes.foreach { case (attr, value) =>
@@ -685,13 +643,13 @@ class SvgNode(
 }
 
 class PathNode(
-    val pathName: String,
-    val alternate: Nullable[String] = Nullable.Null  // Used only for \sqrt, \phase, & tall delims
+  val pathName:  String,
+  val alternate: Nullable[String] = Nullable.Null // Used only for \sqrt, \phase, & tall delims
 ) extends VirtualNode {
 
   def toNode(): InMemoryNode = {
     val svgNS = "http://www.w3.org/2000/svg"
-    val node = InMemoryNode.elementNS(svgNS, "path")
+    val node  = InMemoryNode.elementNS(svgNS, "path")
 
     alternate.fold {
       node.setAttribute("d", SvgGeometry.path(pathName))
@@ -702,22 +660,21 @@ class PathNode(
     node
   }
 
-  def toMarkup(): String = {
+  def toMarkup(): String =
     alternate.fold {
       s"""<path d="${Utils.escape(SvgGeometry.path(pathName))}"/>"""
     } { alt =>
       s"""<path d="${Utils.escape(alt)}"/>"""
     }
-  }
 }
 
 class LineNode(
-    val attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
+  val attributes: LinkedHashMap[String, String] = LinkedHashMap.empty
 ) extends VirtualNode {
 
   def toNode(): InMemoryNode = {
     val svgNS = "http://www.w3.org/2000/svg"
-    val node = InMemoryNode.elementNS(svgNS, "line")
+    val node  = InMemoryNode.elementNS(svgNS, "line")
 
     // Apply attributes
     attributes.foreach { case (attr, value) =>

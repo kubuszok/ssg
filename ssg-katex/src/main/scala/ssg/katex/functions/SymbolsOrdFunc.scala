@@ -17,7 +17,7 @@ package functions
 import scala.collection.mutable.ArrayBuffer
 
 import ssg.commons.Nullable
-import ssg.katex.build.{BuildCommon, BuildMathML}
+import ssg.katex.build.{ BuildCommon, BuildMathML }
 import ssg.katex.parse._
 import ssg.katex.tree.MathNode
 
@@ -32,37 +32,35 @@ object SymbolsOrdFunc {
   def register(): Unit = {
     FunctionDef.defineFunctionBuilders(
       nodeType = "mathord",
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeMathord]
+      htmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeMathord]
         val opts = options.asInstanceOf[Options]
         BuildCommon.makeOrd(g, opts, "mathord")
-      }),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeMathord]
+      },
+      mathmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeMathord]
         val opts = options.asInstanceOf[Options]
-        val node = new MathNode(
-          "mi",
-          ArrayBuffer(BuildMathML.makeText(g.text, g.mode, Nullable(opts))))
+        val node = new MathNode("mi", ArrayBuffer(BuildMathML.makeText(g.text, g.mode, Nullable(opts))))
 
         val variant = BuildMathML.getVariant(g, opts).fold("italic")(_.value)
         if (variant != defaultVariant.getOrElse(node.nodeType, "")) {
           node.setAttribute("mathvariant", variant)
         }
         node
-      })
+      }
     )
 
     FunctionDef.defineFunctionBuilders(
       nodeType = "textord",
-      htmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeTextord]
+      htmlBuilder = Nullable { (group, options) =>
+        val g    = group.asInstanceOf[ParseNodeTextord]
         val opts = options.asInstanceOf[Options]
         BuildCommon.makeOrd(g, opts, "textord")
-      }),
-      mathmlBuilder = Nullable((group, options) => {
-        val g = group.asInstanceOf[ParseNodeTextord]
-        val opts = options.asInstanceOf[Options]
-        val text = BuildMathML.makeText(g.text, g.mode, Nullable(opts))
+      },
+      mathmlBuilder = Nullable { (group, options) =>
+        val g       = group.asInstanceOf[ParseNodeTextord]
+        val opts    = options.asInstanceOf[Options]
+        val text    = BuildMathML.makeText(g.text, g.mode, Nullable(opts))
         val variant = BuildMathML.getVariant(g, opts).fold("normal")(_.value)
 
         val node: MathNode = if (g.mode == Mode.Text) {
@@ -79,7 +77,7 @@ object SymbolsOrdFunc {
         }
 
         node
-      })
+      }
     )
   }
 }
