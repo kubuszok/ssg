@@ -22,13 +22,13 @@ package flowchart
 
 import ssg.commons.Nullable
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
-import ssg.mermaid.layout.graph.Graph
+import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
+import ssg.graphs.commons.layout.graph.Graph
 import ssg.mermaid.render.clusters.{ ClusterConfig, ClusterRenderer }
 import ssg.mermaid.render.edges.{ ArrowMarkers, EdgeRenderer, EdgeStyle, MarkerType }
 import ssg.mermaid.render.shapes.{ ShapeConfig, ShapeRegistry }
 import ssg.mermaid.render.text.TextMetrics
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 import scala.collection.mutable

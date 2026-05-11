@@ -1,0 +1,6 @@
+digraph G {
+  "Node A" -> "Node B";
+  "Node B" -> "Node C (special)";
+  "Node A" [label="First\nNode"];
+  "Node C (special)" [label="Last \"Node\""];
+}
