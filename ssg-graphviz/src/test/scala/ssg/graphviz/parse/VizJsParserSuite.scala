@@ -18,7 +18,7 @@ final class VizJsParserSuite extends FunSuite {
     DotParser(tokens).parse()
   }
 
-  // --- 1. Minimal graph ---
+  // --- 1. Empty graph ---
 
   test("vizjs: minimal graph") {
     val g = parse("graph {}")
