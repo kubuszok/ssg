@@ -1,0 +1,17 @@
+graph ER {
+  node [shape=box]; course; institute; student;
+  node [shape=ellipse]; name0; name1; name2; code; grade; number;
+  node [shape=diamond,style=filled,color=lightgrey]; "C-I"; "S-C"; "S-I";
+  name0 -- course;
+  code -- course;
+  course -- "C-I";
+  "C-I" -- institute;
+  institute -- name1;
+  institute -- "S-I";
+  "S-I" -- student;
+  student -- grade;
+  student -- name2;
+  student -- number;
+  student -- "S-C";
+  "S-C" -- course;
+}

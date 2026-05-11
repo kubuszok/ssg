@@ -21,7 +21,7 @@ package diagrams
 package quadrant
 
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 /** Renders a quadrant chart diagram to SVG. */

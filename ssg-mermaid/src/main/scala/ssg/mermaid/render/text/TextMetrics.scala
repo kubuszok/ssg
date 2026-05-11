@@ -20,7 +20,7 @@ package mermaid
 package render
 package text
 
-import ssg.mermaid.svg.BBox
+import ssg.graphs.commons.svg.BBox
 
 import scala.util.boundary
 import scala.util.boundary.break

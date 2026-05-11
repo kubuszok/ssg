@@ -1,0 +1,11 @@
+digraph G {
+  node [shape=box];
+  a; b;
+  node [shape=circle];
+  c; d;
+  edge [color=red];
+  a -> b;
+  edge [color=blue];
+  c -> d;
+  a -> c;
+}

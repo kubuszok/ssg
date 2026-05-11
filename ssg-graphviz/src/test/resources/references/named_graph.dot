@@ -1,0 +1,6 @@
+digraph MyGraph {
+  rankdir=LR;
+  label="My Graph Title";
+  fontsize=20;
+  a -> b -> c;
+}

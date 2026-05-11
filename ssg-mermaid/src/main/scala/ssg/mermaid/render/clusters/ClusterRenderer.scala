@@ -22,7 +22,7 @@ package clusters
 
 import ssg.mermaid.render.labels.{ LabelRenderer, LabelStyle }
 import ssg.mermaid.render.text.TextMetrics
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 
 /** Renders cluster (subgraph) containers as SVG elements.
   *

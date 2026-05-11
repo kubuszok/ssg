@@ -14,7 +14,7 @@ package diagrams
 package info
 
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 /** Renders an info (version display) diagram to SVG. */

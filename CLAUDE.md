@@ -16,6 +16,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | KaTeX | TypeScript | `ssg-katex` | Math typesetting engine |
 | Mermaid | TypeScript | `ssg-mermaid` | Diagramming engine (31 diagram types) |
 | tree-sitter | C/Rust | `ssg-highlight` | Syntax highlighting (73 grammars) |
+| Graphviz DOT | — | `ssg-graphviz` | DOT graph rendering (4 layout engines) |
 
 ## Build Rules
 
@@ -40,6 +41,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | Directory | Purpose |
 |-----------|---------|
 | `ssg-commons/` | Shared cross-platform utilities |
+| `ssg-graphs-commons/` | Shared graph layout + SVG infrastructure (dagre, spring, circular, radial) |
 | `ssg-md/` | Markdown engine (flexmark-java port) |
 | `ssg-liquid/` | Liquid template engine (liqp port) |
 | `ssg-sass/` | SASS/SCSS compiler (dart-sass port) |
@@ -47,6 +49,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `ssg-js/` | JavaScript compiler/minifier (Terser port) |
 | `ssg-katex/` | Math typesetting engine (KaTeX port) |
 | `ssg-mermaid/` | Diagramming engine (Mermaid port) |
+| `ssg-graphviz/` | Graphviz DOT renderer (4 layout engines) |
 | `ssg-highlight/` | Syntax highlighting (tree-sitter, 73 grammars) |
 | `ssg/` | Aggregator module (depends on all above) |
 | `.rescale/` | Per-project re-scale config + data |
@@ -166,6 +169,10 @@ Path mappings for each library:
 
 `ssg-highlight` wraps tree-sitter via FFI (not a source-level port) and has
 no original-src mapping. `ssg-commons` contains SSG-native shared utilities.
+`ssg-graphs-commons` contains graph layout algorithms (dagre, spring, circular,
+radial) and SVG infrastructure extracted from ssg-mermaid, shared by ssg-mermaid
+and ssg-graphviz. `ssg-graphviz` implements DOT language parsing and rendering
+(not a port of an external library — original SSG implementation).
 
 **Never fetch from GitHub** — always use the local submodule copies.
 

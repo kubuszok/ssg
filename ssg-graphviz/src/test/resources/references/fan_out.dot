@@ -1,0 +1,5 @@
+digraph G {
+  root -> a; root -> b; root -> c; root -> d; root -> e;
+  root -> f; root -> g; root -> h; root -> i; root -> j;
+  a -> leaf1; b -> leaf2; c -> leaf3; d -> leaf4; e -> leaf5;
+}
