@@ -21,10 +21,10 @@ package diagrams
 package state
 
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
-import ssg.mermaid.layout.graph.Graph
+import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
+import ssg.graphs.commons.layout.graph.Graph
 import ssg.mermaid.render.text.TextMetrics
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 /** Renders a state diagram to SVG.

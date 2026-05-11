@@ -16,6 +16,8 @@ battle-tested libraries to idiomatic Scala 3.
 | `ssg-katex` | [KaTeX](https://github.com/KaTeX/KaTeX) 0.16.45 | TypeScript | Math typesetting engine | 648 tests |
 | `ssg-mermaid` | [Mermaid](https://github.com/mermaid-js/mermaid) 11.0.0 | TypeScript | Diagramming engine (31 types) | 543 tests |
 | `ssg-highlight` | [tree-sitter](https://github.com/tree-sitter/tree-sitter) | C/Rust | Syntax highlighting | 73 grammars |
+| `ssg-graphviz` | — | — | Graphviz DOT renderer (4 layout engines) | 99 tests |
+| `ssg-graphs-commons` | — | — | Shared graph layout + SVG infrastructure | — |
 | `ssg-commons` | — | — | Shared cross-platform utilities | — |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
 
@@ -134,6 +136,22 @@ Key features:
 
 Usage: `ssg.mermaid.Mermaid.render("graph TD\\n    A-->B")`
 
+### ssg-graphviz (Graphviz DOT Renderer)
+
+Server-side Graphviz DOT rendering: DOT text in, SVG string out.
+Original SSG implementation (not a port of an external library),
+reusing the graph layout and SVG infrastructure from ssg-graphs-commons.
+
+Key features:
+- Full DOT language parser (recursive descent, 13 grammar productions)
+- 4 layout engines: dot (dagre/Sugiyama hierarchical), neato (Kamada-Kawai
+  spring/force-directed), circo (circular), twopi (radial tree)
+- Node shapes: ellipse, box/rect, circle, diamond, plaintext
+- DOT attribute support: styling, labels, colors, fonts, rankdir
+- Arrow markers for directed graphs, dashed/dotted edge styles
+
+Usage: `ssg.graphviz.Graphviz.render("digraph { A -> B -> C }")`
+
 ### ssg-highlight (Syntax Highlighting)
 
 Tree-sitter-based syntax highlighting supporting 73 programming language
@@ -146,16 +164,18 @@ Scala Native.
 
 ```
 ssg/
-├── ssg-commons/     Shared cross-platform utilities
-├── ssg-md/          Markdown engine (flexmark-java port)
-├── ssg-liquid/      Liquid template engine (liqp port)
-├── ssg-sass/        SASS/SCSS compiler (dart-sass port)
-├── ssg-minify/      HTML/CSS/JS/JSON minification (jekyll-minifier port)
-├── ssg-js/          JavaScript compiler/minifier (Terser port)
-├── ssg-katex/       Math typesetting engine (KaTeX port)
-├── ssg-mermaid/     Diagramming engine (Mermaid port, 31 diagram types)
-├── ssg-highlight/   Syntax highlighting (tree-sitter, 73 grammars)
-├── ssg/             Aggregator module
+├── ssg-commons/        Shared cross-platform utilities
+├── ssg-graphs-commons/ Shared graph layout + SVG infrastructure
+├── ssg-md/             Markdown engine (flexmark-java port)
+├── ssg-liquid/         Liquid template engine (liqp port)
+├── ssg-sass/           SASS/SCSS compiler (dart-sass port)
+├── ssg-minify/         HTML/CSS/JS/JSON minification (jekyll-minifier port)
+├── ssg-js/             JavaScript compiler/minifier (Terser port)
+├── ssg-katex/          Math typesetting engine (KaTeX port)
+├── ssg-mermaid/        Diagramming engine (Mermaid port, 31 diagram types)
+├── ssg-graphviz/       Graphviz DOT renderer (4 layout engines)
+├── ssg-highlight/      Syntax highlighting (tree-sitter, 73 grammars)
+├── ssg/                Aggregator module
 ├── original-src/    Reference sources (git submodules, not compiled)
 ├── .rescale/        re-scale project config + data
 ├── docs/            Architecture and conversion guides
@@ -186,5 +206,7 @@ original licenses:
 | KaTeX | MIT | Khan Academy |
 | Mermaid | MIT | Knut Sveidqvist |
 | tree-sitter | MIT | 2018 Max Brunsfeld |
+| dagre/graphlib | MIT | Chris Pettitt |
+| D3 curves | ISC | Mike Bostock |
 
 See [LICENSE](LICENSE) for full third-party notices.

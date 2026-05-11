@@ -22,7 +22,7 @@ package er
 
 import ssg.mermaid.MermaidConfig
 import ssg.mermaid.render.text.TextMetrics
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 import scala.collection.mutable

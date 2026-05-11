@@ -21,6 +21,23 @@ val `ssg-commons` = (projectMatrix in file("ssg-commons"))
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
+// --- Graph layout and SVG infrastructure (shared) ---
+
+val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-graphs-commons",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .dependsOn(`ssg-commons`)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
 // --- Markdown engine (flexmark-java port) ---
 
 val `ssg-md` = (projectMatrix in file("ssg-md"))
@@ -142,7 +159,7 @@ val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
       "org.scalameta"      %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`)
+  .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
@@ -150,6 +167,23 @@ val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++ Seq(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
   ))
+
+// --- Graphviz DOT renderer ---
+
+val `ssg-graphviz` = (projectMatrix in file("ssg-graphviz"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-graphviz",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
 // --- Syntax highlighting (tree-sitter) ---
 
@@ -199,7 +233,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-highlight`)
+  .dependsOn(`ssg-commons`, `ssg-graphs-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-graphviz`, `ssg-highlight`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -208,22 +242,22 @@ val ssg = (projectMatrix in file("ssg"))
 
 addCommandAlias("test-jvm",
   List(
-    "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
-    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-mermaid/test", "ssg-highlight/test"
+    "ssg-graphs-commons/test", "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
+    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-mermaid/test", "ssg-graphviz/test", "ssg-highlight/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-js",
   List(
-    "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
-    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-mermaidJS/test", "ssg-highlightJS/test"
+    "ssg-graphs-commonsJS/test", "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
+    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-mermaidJS/test", "ssg-graphvizJS/test", "ssg-highlightJS/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-native",
   List(
-    "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
-    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-mermaidNative/test", "ssg-highlightNative/test"
+    "ssg-graphs-commonsNative/test", "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
+    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-mermaidNative/test", "ssg-graphvizNative/test", "ssg-highlightNative/test"
   ).mkString("; ")
 )
 

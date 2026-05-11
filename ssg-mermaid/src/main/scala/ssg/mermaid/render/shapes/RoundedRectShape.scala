@@ -20,7 +20,7 @@ package mermaid
 package render
 package shapes
 
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 
 /** Renders a rounded rectangle shape for flowchart nodes.
   *

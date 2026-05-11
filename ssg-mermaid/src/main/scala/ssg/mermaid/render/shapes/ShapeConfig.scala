@@ -19,7 +19,7 @@ package mermaid
 package render
 package shapes
 
-import ssg.mermaid.layout.dagre.Point
+import ssg.graphs.commons.layout.dagre.Point
 
 /** Configuration for rendering a single shape node.
   *
@@ -73,6 +73,6 @@ final case class ShapeConfig(
   *   function that computes where a line from an external point meets the shape boundary
   */
 final case class ShapeResult(
-  shapeGroup:  ssg.mermaid.svg.SvgBuilder,
+  shapeGroup:  ssg.graphs.commons.svg.SvgBuilder,
   intersectFn: Point => Point
 )

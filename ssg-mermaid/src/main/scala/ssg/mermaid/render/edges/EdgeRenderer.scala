@@ -21,8 +21,9 @@ package render
 package edges
 
 import ssg.commons.Nullable
-import ssg.mermaid.layout.dagre.Point
-import ssg.mermaid.svg.{ PathData, SvgBuilder }
+import ssg.graphs.commons.layout.dagre.Point
+import ssg.graphs.commons.render.Curves
+import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
 
 /** Renders edge paths (connections between nodes) as SVG `<path>` elements.
   *

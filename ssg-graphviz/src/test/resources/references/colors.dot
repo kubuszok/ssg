@@ -1,0 +1,10 @@
+digraph G {
+  node [style=filled]
+  a [fillcolor=green]
+  b [fillcolor="#FF0000"]
+  c [fillcolor=yellow, fontcolor=blue]
+  d [color=red]
+  a -> b [color=red]
+  b -> c [color=blue]
+  c -> d [color="#00FF00"]
+}

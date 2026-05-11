@@ -20,7 +20,7 @@ package mermaid
 package render
 package edges
 
-import ssg.mermaid.svg.{ PathData, SvgBuilder }
+import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
 
 /** Arrow marker type identifiers.
   *

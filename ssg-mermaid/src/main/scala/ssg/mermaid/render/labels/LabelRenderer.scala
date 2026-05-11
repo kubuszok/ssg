@@ -21,7 +21,7 @@ package render
 package labels
 
 import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
-import ssg.mermaid.svg.{ BBox, SvgBuilder }
+import ssg.graphs.commons.svg.{ BBox, SvgBuilder }
 
 /** Renders text labels as SVG elements.
   *

@@ -16,7 +16,7 @@ package diagrams
 package c4
 
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 import scala.collection.mutable

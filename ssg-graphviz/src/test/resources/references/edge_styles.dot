@@ -1,0 +1,8 @@
+digraph G {
+  a -> b [style=bold]
+  a -> c [style=dashed]
+  a -> d [style=dotted]
+  a -> e [dir=both]
+  a -> f [dir=back]
+  a -> g [dir=none]
+}

@@ -20,8 +20,9 @@ package mermaid
 package render
 package shapes
 
-import ssg.mermaid.layout.dagre.Point
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.layout.dagre.Point
+import ssg.graphs.commons.render.Intersect
+import ssg.graphs.commons.svg.SvgBuilder
 
 /** Renders an ellipse shape for flowchart nodes.
   *

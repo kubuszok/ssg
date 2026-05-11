@@ -21,7 +21,7 @@ package diagrams
 package xychart
 
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.svg.SvgBuilder
+import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 /** Renders an XY chart diagram to SVG. */
