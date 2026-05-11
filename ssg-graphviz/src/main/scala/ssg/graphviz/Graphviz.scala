@@ -7,7 +7,7 @@
 package ssg
 package graphviz
 
-import ssg.graphviz.parse.{DotGraph, DotParser, DotScanner}
+import ssg.graphviz.parse.{ DotGraph, DotParser, DotScanner }
 import ssg.graphviz.render.DotRenderer
 
 object Graphviz {

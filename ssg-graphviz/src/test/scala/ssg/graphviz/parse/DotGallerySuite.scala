@@ -24,41 +24,36 @@ final class DotGallerySuite extends FunSuite {
     Graphviz.render(input, neatoConfig)
 
   /** Count all DotNodeStmt in a flat or nested statement list. */
-  private def countNodes(stmts: Seq[DotStmt]): Int = {
+  private def countNodes(stmts: Seq[DotStmt]): Int =
     stmts.foldLeft(0) { (acc, s) =>
       s match {
-        case _: DotNodeStmt                => acc + 1
-        case DotSubgraphStmt(_, subStmts)  => acc + countNodes(subStmts)
-        case _                             => acc
+        case _: DotNodeStmt => acc + 1
+        case DotSubgraphStmt(_, subStmts) => acc + countNodes(subStmts)
+        case _                            => acc
       }
     }
-  }
 
   /** Count all DotEdgeStmt in a flat or nested statement list. */
-  private def countEdges(stmts: Seq[DotStmt]): Int = {
+  private def countEdges(stmts: Seq[DotStmt]): Int =
     stmts.foldLeft(0) { (acc, s) =>
       s match {
-        case _: DotEdgeStmt                => acc + 1
-        case DotSubgraphStmt(_, subStmts)  => acc + countEdges(subStmts)
-        case _                             => acc
+        case _: DotEdgeStmt => acc + 1
+        case DotSubgraphStmt(_, subStmts) => acc + countEdges(subStmts)
+        case _                            => acc
       }
     }
-  }
 
   /** Count all DotSubgraphStmt (top-level only) in a statement list. */
-  private def countSubgraphs(stmts: Seq[DotStmt]): Int = {
+  private def countSubgraphs(stmts: Seq[DotStmt]): Int =
     stmts.count(_.isInstanceOf[DotSubgraphStmt])
-  }
 
   /** Count all DotAttrStmt in a statement list. */
-  private def countAttrStmts(stmts: Seq[DotStmt]): Int = {
+  private def countAttrStmts(stmts: Seq[DotStmt]): Int =
     stmts.count(_.isInstanceOf[DotAttrStmt])
-  }
 
   /** Count all DotAssignStmt in a statement list. */
-  private def countAssigns(stmts: Seq[DotStmt]): Int = {
+  private def countAssigns(stmts: Seq[DotStmt]): Int =
     stmts.count(_.isInstanceOf[DotAssignStmt])
-  }
 
   // ===== 1. Empty graph =====================================================
 
@@ -149,7 +144,7 @@ final class DotGallerySuite extends FunSuite {
   }
 
   test("gallery 5 render: directed cycle has 4 paths") {
-    val svg = render(dot5)
+    val svg       = render(dot5)
     val pathCount = "<path".r.findAllMatchIn(svg).size
     // 4 edge paths + 1 arrowhead path in <defs> = 5
     assertEquals(pathCount, 5)
@@ -158,19 +153,18 @@ final class DotGallerySuite extends FunSuite {
   // ===== 6. Self-loop and weighted edges ====================================
 
   private val dot6 = """digraph {
-    |  a -> b [label="0.2",weight="0.2"];
-    |  a -> c [label="0.4",weight="0.4"];
-    |  c -> b [label="0.6",weight="0.6"];
-    |  e -> e [label="0.1",weight="0.1"];
-    |  e -> b [label="0.7",weight="0.7"];
-    |}""".stripMargin
+                       |  a -> b [label="0.2",weight="0.2"];
+                       |  a -> c [label="0.4",weight="0.4"];
+                       |  c -> b [label="0.6",weight="0.6"];
+                       |  e -> e [label="0.1",weight="0.1"];
+                       |  e -> b [label="0.7",weight="0.7"];
+                       |}""".stripMargin
 
   test("gallery 6 parse: self-loop and weighted edges") {
     val g = parse(dot6)
     assertEquals(countEdges(g.stmts), 5)
     // Find the self-loop edge (e -> e)
-    val selfLoop = g.stmts.collect { case e: DotEdgeStmt => e }
-      .find(e => e.nodes(0).id == "e" && e.nodes(1).id == "e")
+    val selfLoop = g.stmts.collect { case e: DotEdgeStmt => e }.find(e => e.nodes(0).id == "e" && e.nodes(1).id == "e")
     assert(selfLoop.isDefined, "Self-loop e -> e should be present")
     assertEquals(selfLoop.get.attrs.size, 2)
     assertEquals(selfLoop.get.attrs.find(_.key == "label").get.value, "0.1")
@@ -185,24 +179,24 @@ final class DotGallerySuite extends FunSuite {
   // ===== 7. Clusters with styling ===========================================
 
   private val dot7 = """digraph G {
-    |  subgraph cluster_0 {
-    |    style=filled; color=lightgrey;
-    |    node [style=filled,color=white];
-    |    a0 -> a1 -> a2 -> a3;
-    |    label = "process #1";
-    |  }
-    |  subgraph cluster_1 {
-    |    node [style=filled];
-    |    b0 -> b1 -> b2 -> b3;
-    |    label = "process #2";
-    |    color=blue
-    |  }
-    |  start -> a0; start -> b0;
-    |  a1 -> b3; b2 -> a3;
-    |  a3 -> a0; a3 -> end; b3 -> end;
-    |  start [shape=Mdiamond];
-    |  end [shape=Msquare];
-    |}""".stripMargin
+                       |  subgraph cluster_0 {
+                       |    style=filled; color=lightgrey;
+                       |    node [style=filled,color=white];
+                       |    a0 -> a1 -> a2 -> a3;
+                       |    label = "process #1";
+                       |  }
+                       |  subgraph cluster_1 {
+                       |    node [style=filled];
+                       |    b0 -> b1 -> b2 -> b3;
+                       |    label = "process #2";
+                       |    color=blue
+                       |  }
+                       |  start -> a0; start -> b0;
+                       |  a1 -> b3; b2 -> a3;
+                       |  a3 -> a0; a3 -> end; b3 -> end;
+                       |  start [shape=Mdiamond];
+                       |  end [shape=Msquare];
+                       |}""".stripMargin
 
   test("gallery 7 parse: clusters with styling") {
     val g = parse(dot7)
@@ -240,24 +234,24 @@ final class DotGallerySuite extends FunSuite {
   // ===== 8. FSM with rankdir=LR =============================================
 
   private val dot8 = """digraph finite_state_machine {
-    |  rankdir=LR;
-    |  node [shape = doublecircle]; 0 3 4 8;
-    |  node [shape = circle];
-    |  0 -> 2 [label = "SS(B)"];
-    |  0 -> 1 [label = "SS(S)"];
-    |  1 -> 3 [label = "S($end)"];
-    |  2 -> 6 [label = "SS(b)"];
-    |  2 -> 5 [label = "SS(a)"];
-    |  2 -> 4 [label = "S(A)"];
-    |  5 -> 7 [label = "S(b)"];
-    |  5 -> 5 [label = "S(a)"];
-    |  6 -> 6 [label = "S(b)"];
-    |  6 -> 5 [label = "S(a)"];
-    |  7 -> 8 [label = "S(b)"];
-    |  7 -> 5 [label = "S(a)"];
-    |  8 -> 6 [label = "S(b)"];
-    |  8 -> 5 [label = "S(a)"];
-    |}""".stripMargin
+                       |  rankdir=LR;
+                       |  node [shape = doublecircle]; 0 3 4 8;
+                       |  node [shape = circle];
+                       |  0 -> 2 [label = "SS(B)"];
+                       |  0 -> 1 [label = "SS(S)"];
+                       |  1 -> 3 [label = "S($end)"];
+                       |  2 -> 6 [label = "SS(b)"];
+                       |  2 -> 5 [label = "SS(a)"];
+                       |  2 -> 4 [label = "S(A)"];
+                       |  5 -> 7 [label = "S(b)"];
+                       |  5 -> 5 [label = "S(a)"];
+                       |  6 -> 6 [label = "S(b)"];
+                       |  6 -> 5 [label = "S(a)"];
+                       |  7 -> 8 [label = "S(b)"];
+                       |  7 -> 5 [label = "S(a)"];
+                       |  8 -> 6 [label = "S(b)"];
+                       |  8 -> 5 [label = "S(a)"];
+                       |}""".stripMargin
 
   test("gallery 8 parse: FSM with rankdir=LR") {
     val g = parse(dot8)
@@ -283,12 +277,12 @@ final class DotGallerySuite extends FunSuite {
   // ===== 9. All node shapes =================================================
 
   private val dot9 = """digraph G {
-    |  a [shape=box]; b [shape=ellipse]; c [shape=circle];
-    |  d [shape=diamond]; e [shape=plaintext]; f [shape=point];
-    |  g [shape=triangle]; h [shape=pentagon]; i [shape=hexagon];
-    |  j [shape=rect]; k [shape=rectangle]; l [shape=none];
-    |  a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l
-    |}""".stripMargin
+                       |  a [shape=box]; b [shape=ellipse]; c [shape=circle];
+                       |  d [shape=diamond]; e [shape=plaintext]; f [shape=point];
+                       |  g [shape=triangle]; h [shape=pentagon]; i [shape=hexagon];
+                       |  j [shape=rect]; k [shape=rectangle]; l [shape=none];
+                       |  a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l
+                       |}""".stripMargin
 
   test("gallery 9 parse: all node shapes") {
     val g = parse(dot9)
@@ -315,13 +309,13 @@ final class DotGallerySuite extends FunSuite {
   // ===== 10. Edge styles ====================================================
 
   private val dot10 = """digraph G {
-    |  a -> b [style=bold]
-    |  a -> c [style=dashed]
-    |  a -> d [style=dotted]
-    |  a -> e [dir=both]
-    |  a -> f [dir=back]
-    |  a -> g [dir=none]
-    |}""".stripMargin
+                        |  a -> b [style=bold]
+                        |  a -> c [style=dashed]
+                        |  a -> d [style=dotted]
+                        |  a -> e [dir=both]
+                        |  a -> f [dir=back]
+                        |  a -> g [dir=none]
+                        |}""".stripMargin
 
   test("gallery 10 parse: edge styles") {
     val g = parse(dot10)
@@ -341,15 +335,15 @@ final class DotGallerySuite extends FunSuite {
   // ===== 11. Colors =========================================================
 
   private val dot11 = """digraph G {
-    |  node [style=filled]
-    |  a [fillcolor=green]
-    |  b [fillcolor="#FF0000"]
-    |  c [fillcolor=yellow, fontcolor=blue]
-    |  d [color=red]
-    |  a -> b [color=red]
-    |  b -> c [color=blue]
-    |  c -> d [color="#00FF00"]
-    |}""".stripMargin
+                        |  node [style=filled]
+                        |  a [fillcolor=green]
+                        |  b [fillcolor="#FF0000"]
+                        |  c [fillcolor=yellow, fontcolor=blue]
+                        |  d [color=red]
+                        |  a -> b [color=red]
+                        |  b -> c [color=blue]
+                        |  c -> d [color="#00FF00"]
+                        |}""".stripMargin
 
   test("gallery 11 parse: colors") {
     val g = parse(dot11)
@@ -374,10 +368,10 @@ final class DotGallerySuite extends FunSuite {
   // ===== 12. Strict graph deduplication =====================================
 
   private val dot12 = """strict graph {
-    |  a -- b
-    |  a -- b
-    |  b -- a
-    |}""".stripMargin
+                        |  a -- b
+                        |  a -- b
+                        |  b -- a
+                        |}""".stripMargin
 
   test("gallery 12 parse: strict graph") {
     val g = parse(dot12)
@@ -396,11 +390,11 @@ final class DotGallerySuite extends FunSuite {
   // ===== 13. Named graph with assignment ====================================
 
   private val dot13 = """digraph MyGraph {
-    |  rankdir=LR;
-    |  label="My Graph Title";
-    |  fontsize=20;
-    |  a -> b -> c;
-    |}""".stripMargin
+                        |  rankdir=LR;
+                        |  label="My Graph Title";
+                        |  fontsize=20;
+                        |  a -> b -> c;
+                        |}""".stripMargin
 
   test("gallery 13 parse: named graph with assignments") {
     val g = parse(dot13)
@@ -424,17 +418,17 @@ final class DotGallerySuite extends FunSuite {
   // ===== 14. Nested subgraphs ===============================================
 
   private val dot14 = """digraph G {
-    |  subgraph cluster_outer {
-    |    label="Outer";
-    |    subgraph cluster_inner {
-    |      label="Inner";
-    |      a -> b;
-    |    }
-    |    c -> d;
-    |  }
-    |  e -> a;
-    |  d -> e;
-    |}""".stripMargin
+                        |  subgraph cluster_outer {
+                        |    label="Outer";
+                        |    subgraph cluster_inner {
+                        |      label="Inner";
+                        |      a -> b;
+                        |    }
+                        |    c -> d;
+                        |  }
+                        |  e -> a;
+                        |  d -> e;
+                        |}""".stripMargin
 
   test("gallery 14 parse: nested subgraphs") {
     val g = parse(dot14)
@@ -463,22 +457,22 @@ final class DotGallerySuite extends FunSuite {
   // ===== 15. Entity-Relation diagram ========================================
 
   private val dot15 = """graph ER {
-    |  node [shape=box]; course; institute; student;
-    |  node [shape=ellipse]; name0; name1; name2; code; grade; number;
-    |  node [shape=diamond,style=filled,color=lightgrey]; "C-I"; "S-C"; "S-I";
-    |  name0 -- course;
-    |  code -- course;
-    |  course -- "C-I";
-    |  "C-I" -- institute;
-    |  institute -- name1;
-    |  institute -- "S-I";
-    |  "S-I" -- student;
-    |  student -- grade;
-    |  student -- name2;
-    |  student -- number;
-    |  student -- "S-C";
-    |  "S-C" -- course;
-    |}""".stripMargin
+                        |  node [shape=box]; course; institute; student;
+                        |  node [shape=ellipse]; name0; name1; name2; code; grade; number;
+                        |  node [shape=diamond,style=filled,color=lightgrey]; "C-I"; "S-C"; "S-I";
+                        |  name0 -- course;
+                        |  code -- course;
+                        |  course -- "C-I";
+                        |  "C-I" -- institute;
+                        |  institute -- name1;
+                        |  institute -- "S-I";
+                        |  "S-I" -- student;
+                        |  student -- grade;
+                        |  student -- name2;
+                        |  student -- number;
+                        |  student -- "S-C";
+                        |  "S-C" -- course;
+                        |}""".stripMargin
 
   test("gallery 15 parse: ER diagram") {
     val g = parse(dot15)
@@ -509,13 +503,13 @@ final class DotGallerySuite extends FunSuite {
   // ===== 16. Process states =================================================
 
   private val dot16 = """graph G {
-    |  run -- intr; intr -- runbl; runbl -- run;
-    |  run -- kernel; kernel -- zombie; kernel -- sleep;
-    |  kernel -- runmem; sleep -- swap;
-    |  swap -- runswap; runswap -- new;
-    |  runswap -- runmem; new -- runmem;
-    |  sleep -- runmem;
-    |}""".stripMargin
+                        |  run -- intr; intr -- runbl; runbl -- run;
+                        |  run -- kernel; kernel -- zombie; kernel -- sleep;
+                        |  kernel -- runmem; sleep -- swap;
+                        |  swap -- runswap; runswap -- new;
+                        |  runswap -- runmem; new -- runmem;
+                        |  sleep -- runmem;
+                        |}""".stripMargin
 
   test("gallery 16 parse: process states") {
     val g = parse(dot16)
@@ -535,22 +529,22 @@ final class DotGallerySuite extends FunSuite {
   // ===== 17. Complex cluster with cross-edges ===============================
 
   private val dot17 = """digraph G {
-    |  subgraph cluster_0 {
-    |    style=filled; color=lightgrey;
-    |    a0 -> a1 -> a2;
-    |  }
-    |  subgraph cluster_1 {
-    |    color=blue;
-    |    b0 -> b1 -> b2;
-    |  }
-    |  subgraph cluster_2 {
-    |    color=red;
-    |    c0 -> c1 -> c2;
-    |  }
-    |  a0 -> b0; b0 -> c0;
-    |  a2 -> b2; b2 -> c2;
-    |  a1 -> c1;
-    |}""".stripMargin
+                        |  subgraph cluster_0 {
+                        |    style=filled; color=lightgrey;
+                        |    a0 -> a1 -> a2;
+                        |  }
+                        |  subgraph cluster_1 {
+                        |    color=blue;
+                        |    b0 -> b1 -> b2;
+                        |  }
+                        |  subgraph cluster_2 {
+                        |    color=red;
+                        |    c0 -> c1 -> c2;
+                        |  }
+                        |  a0 -> b0; b0 -> c0;
+                        |  a2 -> b2; b2 -> c2;
+                        |  a1 -> c1;
+                        |}""".stripMargin
 
   test("gallery 17 parse: complex clusters with cross-edges") {
     val g = parse(dot17)
@@ -581,22 +575,22 @@ final class DotGallerySuite extends FunSuite {
   // ===== 18. Multiple default attribute statements ==========================
 
   private val dot18 = """digraph G {
-    |  node [shape=box];
-    |  a; b;
-    |  node [shape=circle];
-    |  c; d;
-    |  edge [color=red];
-    |  a -> b;
-    |  edge [color=blue];
-    |  c -> d;
-    |  a -> c;
-    |}""".stripMargin
+                        |  node [shape=box];
+                        |  a; b;
+                        |  node [shape=circle];
+                        |  c; d;
+                        |  edge [color=red];
+                        |  a -> b;
+                        |  edge [color=blue];
+                        |  c -> d;
+                        |  a -> c;
+                        |}""".stripMargin
 
   test("gallery 18 parse: multiple default attribute statements") {
     val g = parse(dot18)
     assertEquals(countAttrStmts(g.stmts), 4) // 2 node + 2 edge
-    assertEquals(countNodes(g.stmts), 4)      // a, b, c, d
-    assertEquals(countEdges(g.stmts), 3)      // a->b, c->d, a->c
+    assertEquals(countNodes(g.stmts), 4) // a, b, c, d
+    assertEquals(countEdges(g.stmts), 3) // a->b, c->d, a->c
     val attrStmts = g.stmts.collect { case a: DotAttrStmt => a }
     assertEquals(attrStmts(0).target, DotAttrTarget.Node)
     assertEquals(attrStmts(0).attrs.head.value, "box")
@@ -617,11 +611,11 @@ final class DotGallerySuite extends FunSuite {
   // ===== 19. Quoted identifiers with special characters =====================
 
   private val dot19 = """digraph G {
-    |  "Node A" -> "Node B";
-    |  "Node B" -> "Node C (special)";
-    |  "Node A" [label="First\nNode"];
-    |  "Node C (special)" [label="Last \"Node\""];
-    |}""".stripMargin
+                        |  "Node A" -> "Node B";
+                        |  "Node B" -> "Node C (special)";
+                        |  "Node A" [label="First\nNode"];
+                        |  "Node C (special)" [label="Last \"Node\""];
+                        |}""".stripMargin
 
   test("gallery 19 parse: quoted identifiers with special characters") {
     val g = parse(dot19)
@@ -633,7 +627,7 @@ final class DotGallerySuite extends FunSuite {
     assertEquals(edges(1).nodes(0).id, "Node B")
     assertEquals(edges(1).nodes(1).id, "Node C (special)")
     val nodeStmts = g.stmts.collect { case n: DotNodeStmt => n }
-    val nodeA = nodeStmts.find(_.id.id == "Node A").get
+    val nodeA     = nodeStmts.find(_.id.id == "Node A").get
     assertEquals(nodeA.attrs.head.value, "First\nNode")
     val nodeC = nodeStmts.find(_.id.id == "Node C (special)").get
     assertEquals(nodeC.attrs.head.value, "Last \"Node\"")
@@ -649,10 +643,10 @@ final class DotGallerySuite extends FunSuite {
   // ===== 20. Large fan-out ==================================================
 
   private val dot20 = """digraph G {
-    |  root -> a; root -> b; root -> c; root -> d; root -> e;
-    |  root -> f; root -> g; root -> h; root -> i; root -> j;
-    |  a -> leaf1; b -> leaf2; c -> leaf3; d -> leaf4; e -> leaf5;
-    |}""".stripMargin
+                        |  root -> a; root -> b; root -> c; root -> d; root -> e;
+                        |  root -> f; root -> g; root -> h; root -> i; root -> j;
+                        |  a -> leaf1; b -> leaf2; c -> leaf3; d -> leaf4; e -> leaf5;
+                        |}""".stripMargin
 
   test("gallery 20 parse: large fan-out") {
     val g = parse(dot20)

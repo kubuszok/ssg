@@ -8,7 +8,7 @@ package layout
 
 import munit.FunSuite
 
-import ssg.graphs.commons.layout.dagre.{EdgeLabel, NodeLabel}
+import ssg.graphs.commons.layout.dagre.{ EdgeLabel, NodeLabel }
 import ssg.graphs.commons.layout.graph.Graph
 import ssg.graphs.commons.layout.spring.SpringLayout
 import ssg.graphs.commons.layout.circular.CircularLayout
@@ -56,13 +56,12 @@ final class LayoutSuite extends FunSuite {
     g
   }
 
-  private def emptyGraph(): Graph[NodeLabel, EdgeLabel] = {
+  private def emptyGraph(): Graph[NodeLabel, EdgeLabel] =
     new Graph[NodeLabel, EdgeLabel](
       isDirected = true,
       isMultigraph = false,
       isCompound = false
     )
-  }
 
   private def disconnectedGraph(): Graph[NodeLabel, EdgeLabel] = {
     val g = new Graph[NodeLabel, EdgeLabel](
@@ -142,9 +141,9 @@ final class LayoutSuite extends FunSuite {
   test("spring: nodes are spread apart") {
     val g = simpleGraph()
     SpringLayout.layout(g)
-    val a = g.node("A")
-    val b = g.node("B")
-    val c = g.node("C")
+    val a        = g.node("A")
+    val b        = g.node("B")
+    val c        = g.node("C")
     val allSameX = a.x == b.x && b.x == c.x
     val allSameY = a.y == b.y && b.y == c.y
     assert(!(allSameX && allSameY), "Nodes should be spread apart, not all at the same point")
@@ -161,9 +160,8 @@ final class LayoutSuite extends FunSuite {
       math.sqrt(nl.x * nl.x + nl.y * nl.y)
     }
     val meanDist = dists.sum / dists.length
-    for (d <- dists) {
+    for (d <- dists)
       assertEqualsDouble(d, meanDist, meanDist * 0.01)
-    }
   }
 
   test("circular: single node at center") {
@@ -196,7 +194,7 @@ final class LayoutSuite extends FunSuite {
     val g = simpleGraph()
     RadialLayout.layout(g)
     val root = g.nodes().head
-    val nl = g.node(root)
+    val nl   = g.node(root)
     assertEqualsDouble(nl.x, 0.0, 0.001)
     assertEqualsDouble(nl.y, 0.0, 0.001)
   }
@@ -204,19 +202,18 @@ final class LayoutSuite extends FunSuite {
   test("radial: children farther from center") {
     val g = simpleGraph()
     RadialLayout.layout(g)
-    val root = g.nodes().head
-    val rootNl = g.node(root)
-    val rootDist = math.sqrt(rootNl.x * rootNl.x + rootNl.y * rootNl.y)
+    val root         = g.nodes().head
+    val rootNl       = g.node(root)
+    val rootDist     = math.sqrt(rootNl.x * rootNl.x + rootNl.y * rootNl.y)
     var foundFarther = false
-    for (id <- g.nodes()) {
+    for (id <- g.nodes())
       if (id != root) {
-        val nl = g.node(id)
+        val nl   = g.node(id)
         val dist = math.sqrt(nl.x * nl.x + nl.y * nl.y)
         if (dist > rootDist + 1.0) {
           foundFarther = true
         }
       }
-    }
     assert(foundFarther, "Children should be placed on outer ring")
   }
 

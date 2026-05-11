@@ -10,8 +10,8 @@ package render
 
 import scala.collection.mutable
 
-import ssg.graphs.commons.layout.dagre.{DagreLayout, EdgeLabel, NodeLabel, Point}
-import ssg.graphs.commons.layout.graph.{EdgeObj, Graph}
+import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, NodeLabel, Point }
+import ssg.graphs.commons.layout.graph.{ EdgeObj, Graph }
 import ssg.graphs.commons.layout.spring.SpringLayout
 import ssg.graphs.commons.layout.circular.CircularLayout
 import ssg.graphs.commons.layout.radial.RadialLayout
@@ -48,8 +48,8 @@ object DotRenderer {
 
   /** Collects default node/edge attrs and graph attrs from DOT statements. */
   private def collectDotAttrs(dot: DotGraph): DotAttrs = {
-    val nodeDefaults = mutable.LinkedHashMap.empty[String, String]
-    val edgeDefaults = mutable.LinkedHashMap.empty[String, String]
+    val nodeDefaults  = mutable.LinkedHashMap.empty[String, String]
+    val edgeDefaults  = mutable.LinkedHashMap.empty[String, String]
     val nodeOverrides = mutable.LinkedHashMap.empty[String, mutable.LinkedHashMap[String, String]]
     val edgeOverrides = mutable.LinkedHashMap.empty[String, mutable.LinkedHashMap[String, String]]
     collectStmts(dot.stmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides)
@@ -62,7 +62,7 @@ object DotRenderer {
     edgeDefaults:  mutable.LinkedHashMap[String, String],
     nodeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
     edgeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]]
-  ): Unit = {
+  ): Unit =
     stmts.foreach {
       case DotAttrStmt(DotAttrTarget.Node, attrs) =>
         attrs.foreach(a => nodeDefaults(a.key) = a.value)
@@ -78,7 +78,7 @@ object DotRenderer {
           nodes.sliding(2).foreach { pair =>
             if (pair.size == 2) {
               val key = pair(0).id + "->" + pair(1).id
-              val m = edgeOverrides.getOrElseUpdate(key, mutable.LinkedHashMap.empty)
+              val m   = edgeOverrides.getOrElseUpdate(key, mutable.LinkedHashMap.empty)
               attrs.foreach(a => m(a.key) = a.value)
             }
           }
@@ -87,9 +87,8 @@ object DotRenderer {
         collectStmts(subStmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides)
       case _ => ()
     }
-  }
 
-  private final case class DotAttrs(
+  final private case class DotAttrs(
     nodeDefaults:  mutable.LinkedHashMap[String, String],
     edgeDefaults:  mutable.LinkedHashMap[String, String],
     nodeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
@@ -127,10 +126,10 @@ object DotRenderer {
     var maxX = Double.MinValue
     var maxY = Double.MinValue
     for (id <- nodes) {
-      val nl = g.node(id)
-      val left = nl.x - nl.width / 2.0
-      val top = nl.y - nl.height / 2.0
-      val right = nl.x + nl.width / 2.0
+      val nl     = g.node(id)
+      val left   = nl.x - nl.width / 2.0
+      val top    = nl.y - nl.height / 2.0
+      val right  = nl.x + nl.width / 2.0
       val bottom = nl.y + nl.height / 2.0
       if (left < minX) { minX = left }
       if (top < minY) { minY = top }
@@ -138,17 +137,17 @@ object DotRenderer {
       if (bottom > maxY) { maxY = bottom }
     }
 
-    val marginX = config.marginX
-    val marginY = config.marginY
-    val svgWidth = maxX - minX + 2 * marginX
+    val marginX   = config.marginX
+    val marginY   = config.marginY
+    val svgWidth  = maxX - minX + 2 * marginX
     val svgHeight = maxY - minY + 2 * marginY
 
     val viewBox = s"0 0 ${formatNumber(svgWidth)} ${formatNumber(svgHeight)}"
-    val svg = SvgBuilder.createSvg(svgWidth, svgHeight, viewBox)
+    val svg     = SvgBuilder.createSvg(svgWidth, svgHeight, viewBox)
 
     // Arrow marker definition for directed graphs
     if (dot.isDirected) {
-      val defs = svg.append("defs")
+      val defs   = svg.append("defs")
       val marker = defs.append("marker")
       marker.attr("id", "arrowhead")
       marker.attr("viewBox", "0 0 10 10")
@@ -192,8 +191,7 @@ object DotRenderer {
 
   // -- Graph label rendering ---------------------------------------------------
 
-  /** Renders the graph-level `label` attribute as a text element at the bottom of the SVG.
-    * Also emits a `<title>` element with the graph name (if present) for accessibility.
+  /** Renders the graph-level `label` attribute as a text element at the bottom of the SVG. Also emits a `<title>` element with the graph name (if present) for accessibility.
     */
   private def renderGraphLabel(
     content:   SvgBuilder,
@@ -211,8 +209,8 @@ object DotRenderer {
     }
 
     // Collect the graph-level label from assign statements
-    val graphLabel = dot.stmts.collectFirst {
-      case DotAssignStmt("label", v) => v
+    val graphLabel = dot.stmts.collectFirst { case DotAssignStmt("label", v) =>
+      v
     }
     graphLabel.foreach { labelText =>
       val text = content.append("text")
@@ -240,22 +238,15 @@ object DotRenderer {
 
     // Resolve shape: node-specific override > default node attrs > config default
     val nodeAttrs = dotAttrs.nodeOverrides.getOrElse(id, mutable.LinkedHashMap.empty)
-    val shape = nodeAttrs
-      .getOrElse("shape", dotAttrs.nodeDefaults.getOrElse("shape", config.defaultNodeShape))
+    val shape     = nodeAttrs.getOrElse("shape", dotAttrs.nodeDefaults.getOrElse("shape", config.defaultNodeShape))
 
     // Resolve styling attributes
-    val fillColor = nodeAttrs
-      .getOrElse("fillcolor", dotAttrs.nodeDefaults.getOrElse("fillcolor", "none"))
-    val strokeColor = nodeAttrs
-      .getOrElse("color", dotAttrs.nodeDefaults.getOrElse("color", "#333"))
-    val fontColor = nodeAttrs
-      .getOrElse("fontcolor", dotAttrs.nodeDefaults.getOrElse("fontcolor", "#333"))
-    val fontSizeStr = nodeAttrs
-      .getOrElse("fontsize", dotAttrs.nodeDefaults.getOrElse("fontsize", config.fontSize.toString))
-    val fontName = nodeAttrs
-      .getOrElse("fontname", dotAttrs.nodeDefaults.getOrElse("fontname", config.fontName))
-    val styleAttr = nodeAttrs
-      .getOrElse("style", dotAttrs.nodeDefaults.getOrElse("style", ""))
+    val fillColor   = nodeAttrs.getOrElse("fillcolor", dotAttrs.nodeDefaults.getOrElse("fillcolor", "none"))
+    val strokeColor = nodeAttrs.getOrElse("color", dotAttrs.nodeDefaults.getOrElse("color", "#333"))
+    val fontColor   = nodeAttrs.getOrElse("fontcolor", dotAttrs.nodeDefaults.getOrElse("fontcolor", "#333"))
+    val fontSizeStr = nodeAttrs.getOrElse("fontsize", dotAttrs.nodeDefaults.getOrElse("fontsize", config.fontSize.toString))
+    val fontName    = nodeAttrs.getOrElse("fontname", dotAttrs.nodeDefaults.getOrElse("fontname", config.fontName))
+    val styleAttr   = nodeAttrs.getOrElse("style", dotAttrs.nodeDefaults.getOrElse("style", ""))
 
     // Resolve label text
     val labelText = nodeAttrs.getOrElse("label", nl.label)
@@ -275,7 +266,7 @@ object DotRenderer {
         applyStrokeDash(rect, styleAttr)
 
       case "circle" =>
-        val r = math.max(w, h) / 2.0
+        val r    = math.max(w, h) / 2.0
         val circ = nodeG.append("circle")
         circ.attr("cx", nl.x)
         circ.attr("cy", nl.y)
@@ -317,8 +308,8 @@ object DotRenderer {
           case "octagon"  => 8
           case _          => 6 // default polygon is hexagon
         }
-        val rx = w / 2.0
-        val ry = h / 2.0
+        val rx  = w / 2.0
+        val ry  = h / 2.0
         val pts = (0 until sides).map { i =>
           val angle = 2.0 * math.Pi * i / sides - math.Pi / 2.0
           s"${formatNumber(nl.x + rx * math.cos(angle))},${formatNumber(nl.y + ry * math.sin(angle))}"
@@ -330,7 +321,7 @@ object DotRenderer {
         applyStrokeDash(poly, styleAttr)
 
       case "point" =>
-        val r = math.min(w, h) / 6.0
+        val r    = math.min(w, h) / 6.0
         val circ = nodeG.append("circle")
         circ.attr("cx", nl.x)
         circ.attr("cy", nl.y)
@@ -340,8 +331,8 @@ object DotRenderer {
 
       case "cylinder" =>
         // Cylinder rendered as rect with top/bottom elliptic caps
-        val rx = w / 2.0
-        val capH = h / 6.0
+        val rx    = w / 2.0
+        val capH  = h / 6.0
         val bodyH = h - 2.0 * capH
         // Body rectangle
         val rect = nodeG.append("rect")
@@ -374,8 +365,8 @@ object DotRenderer {
         ()
 
       case _ => // ellipse (default)
-        val rx = w / 2.0
-        val ry = h / 2.0
+        val rx  = w / 2.0
+        val ry  = h / 2.0
         val ell = nodeG.append("ellipse")
         ell.attr("cx", nl.x)
         ell.attr("cy", nl.y)
@@ -414,12 +405,10 @@ object DotRenderer {
     edgeG.attr("class", "edge")
 
     // Resolve styling
-    val edgeKey = edgeObj.v + "->" + edgeObj.w
+    val edgeKey       = edgeObj.v + "->" + edgeObj.w
     val edgeOverrides = dotAttrs.edgeOverrides.getOrElse(edgeKey, mutable.LinkedHashMap.empty)
-    val strokeColor = edgeOverrides
-      .getOrElse("color", dotAttrs.edgeDefaults.getOrElse("color", "#333"))
-    val styleAttr = edgeOverrides
-      .getOrElse("style", dotAttrs.edgeDefaults.getOrElse("style", ""))
+    val strokeColor   = edgeOverrides.getOrElse("color", dotAttrs.edgeDefaults.getOrElse("color", "#333"))
+    val styleAttr     = edgeOverrides.getOrElse("style", dotAttrs.edgeDefaults.getOrElse("style", ""))
 
     val srcLabel = g.node(edgeObj.v)
     val tgtLabel = g.node(edgeObj.w)
@@ -432,7 +421,7 @@ object DotRenderer {
     }
 
     val pathData = Curves.linear(points)
-    val path = edgeG.append("path")
+    val path     = edgeG.append("path")
     path.attr("d", pathData.toString)
     path.attr("fill", "none")
     path.attr("stroke", strokeColor)
@@ -442,8 +431,7 @@ object DotRenderer {
     }
 
     // Edge label (if present)
-    val edgeLabelText = edgeOverrides
-      .getOrElse("label", dotAttrs.edgeDefaults.getOrElse("label", ""))
+    val edgeLabelText = edgeOverrides.getOrElse("label", dotAttrs.edgeDefaults.getOrElse("label", ""))
     if (edgeLabelText.nonEmpty && el.x != 0.0 && el.y != 0.0) {
       val text = edgeG.append("text")
       text.attr("x", el.x)
@@ -458,7 +446,7 @@ object DotRenderer {
   // -- Style helpers ----------------------------------------------------------
 
   /** Applies stroke-dasharray for DOT `style=dashed`, `style=dotted`, or `style=invis`. */
-  private def applyStrokeDash(builder: SvgBuilder, style: String): Unit = {
+  private def applyStrokeDash(builder: SvgBuilder, style: String): Unit =
     if (style.contains("invis")) {
       builder.attr("visibility", "hidden")
     } else if (style.contains("dashed")) {
@@ -466,5 +454,4 @@ object DotRenderer {
     } else if (style.contains("dotted")) {
       builder.attr("stroke-dasharray", "1,2")
     }
-  }
 }

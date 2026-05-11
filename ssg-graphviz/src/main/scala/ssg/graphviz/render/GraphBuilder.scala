@@ -33,7 +33,7 @@ object GraphBuilder {
       isCompound = true
     )
     val graphLabel = new GraphLabel()
-    val ctx = new BuildContext(g, graphLabel)
+    val ctx        = new BuildContext(g, graphLabel)
 
     dot.stmts.foreach(stmt => processStmt(stmt, ctx, None))
 
@@ -42,7 +42,7 @@ object GraphBuilder {
     g
   }
 
-  private final class BuildContext(
+  final private class BuildContext(
     val graph:            Graph[NodeLabel, EdgeLabel],
     val graphLabel:       GraphLabel,
     val defaultNodeAttrs: mutable.Map[String, String] = mutable.LinkedHashMap.empty,
@@ -50,7 +50,7 @@ object GraphBuilder {
     val graphAttrs:       mutable.Map[String, String] = mutable.LinkedHashMap.empty
   )
 
-  private def processStmt(stmt: DotStmt, ctx: BuildContext, parentSubgraph: Option[String]): Unit = {
+  private def processStmt(stmt: DotStmt, ctx: BuildContext, parentSubgraph: Option[String]): Unit =
     stmt match {
       case DotNodeStmt(id, attrs) =>
         ensureNode(id.id, ctx, parentSubgraph)
@@ -80,7 +80,6 @@ object GraphBuilder {
       case DotAssignStmt(key, value) =>
         ctx.graphAttrs(key) = value
     }
-  }
 
   private def ensureNode(id: String, ctx: BuildContext, parentSubgraph: Option[String]): Unit = {
     if (!ctx.graph.hasNode(id)) {
@@ -106,7 +105,7 @@ object GraphBuilder {
     }
   }
 
-  private def applyNodeAttrs(id: String, attrs: Seq[DotAttr], ctx: BuildContext): Unit = {
+  private def applyNodeAttrs(id: String, attrs: Seq[DotAttr], ctx: BuildContext): Unit =
     if (attrs.nonEmpty) {
       val label = ctx.graph.node(id)
       attrs.foreach(a => applySingleNodeAttr(label, a.key, a.value))
@@ -122,9 +121,8 @@ object GraphBuilder {
         parseDoubleSafe(a.value).foreach(v => label.height = v * 72.0)
       }
     }
-  }
 
-  private def applySingleNodeAttr(label: NodeLabel, key: String, value: String): Unit = {
+  private def applySingleNodeAttr(label: NodeLabel, key: String, value: String): Unit =
     key match {
       case "label"   => label.label = value
       case "width"   => parseDoubleSafe(value).foreach(v => label.width = v * 72.0)
@@ -132,7 +130,6 @@ object GraphBuilder {
       case "padding" => parseDoubleSafe(value).foreach(v => label.padding = v)
       case _         => () // Unhandled attributes are silently ignored
     }
-  }
 
   private def applyEdgeAttrs(edgeLabel: EdgeLabel, attrs: Seq[DotAttr], ctx: BuildContext): Unit = {
     ctx.defaultEdgeAttrs.foreach { (k, v) =>
@@ -141,18 +138,17 @@ object GraphBuilder {
     attrs.foreach(a => applySingleEdgeAttr(edgeLabel, a.key, a.value))
   }
 
-  private def applySingleEdgeAttr(label: EdgeLabel, key: String, value: String): Unit = {
+  private def applySingleEdgeAttr(label: EdgeLabel, key: String, value: String): Unit =
     key match {
-      case "weight"  => parseDoubleSafe(value).foreach(v => label.weight = v)
-      case "minlen"  => parseIntSafe(value).foreach(v => label.minlen = v)
-      case "label"   =>
+      case "weight" => parseDoubleSafe(value).foreach(v => label.weight = v)
+      case "minlen" => parseIntSafe(value).foreach(v => label.minlen = v)
+      case "label"  =>
         val textWidth = estimateTextWidth(value)
         label.width = textWidth
         label.height = DefaultFontSize + LabelPaddingY
       case "labelpos" => label.labelpos = value
       case _          => () // Unhandled attributes are silently ignored
     }
-  }
 
   private def applyGraphAttrs(attrs: mutable.Map[String, String], graphLabel: GraphLabel): Unit = {
     attrs.get("rankdir").foreach(v => graphLabel.rankdir = v.toUpperCase)
@@ -172,7 +168,7 @@ object GraphBuilder {
     // Strip HTML tags for width estimation
     val stripped = boundary {
       if (!text.contains('<')) { break(text) }
-      val sb = new StringBuilder
+      val sb    = new StringBuilder
       var inTag = false
       text.foreach { ch =>
         if (ch == '<') { inTag = true }
@@ -184,13 +180,11 @@ object GraphBuilder {
     stripped.length * DefaultCharWidth
   }
 
-  private def parseDoubleSafe(s: String): Option[Double] = {
-    try { Some(s.toDouble) }
+  private def parseDoubleSafe(s: String): Option[Double] =
+    try Some(s.toDouble)
     catch { case _: NumberFormatException => None }
-  }
 
-  private def parseIntSafe(s: String): Option[Int] = {
-    try { Some(s.toInt) }
+  private def parseIntSafe(s: String): Option[Int] =
+    try Some(s.toInt)
     catch { case _: NumberFormatException => None }
-  }
 }

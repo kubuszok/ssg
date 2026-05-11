@@ -14,8 +14,8 @@ package spring
 
 import scala.collection.mutable
 
-import ssg.graphs.commons.layout.dagre.{EdgeLabel, NodeLabel, Point}
-import ssg.graphs.commons.layout.graph.{Graph, GraphAlgorithms}
+import ssg.graphs.commons.layout.dagre.{ EdgeLabel, NodeLabel, Point }
+import ssg.graphs.commons.layout.graph.{ Graph, GraphAlgorithms }
 
 object SpringLayout {
 
@@ -102,15 +102,13 @@ object SpringLayout {
     height:  Double
   ): Unit = {
     val idxOf = mutable.HashMap.empty[String, Int]
-    for (i <- nodeIds.indices) {
+    for (i <- nodeIds.indices)
       idxOf(nodeIds(i)) = i
-    }
 
     // All-pairs shortest paths via Floyd-Warshall on the component subgraph
     val dist = Array.fill(n, n)(Double.PositiveInfinity)
-    for (i <- 0 until n) {
+    for (i <- 0 until n)
       dist(i)(i) = 0.0
-    }
     for (e <- g.edges()) {
       val vi = idxOf.get(e.v)
       val wi = idxOf.get(e.w)
@@ -119,7 +117,11 @@ object SpringLayout {
         dist(wi.get)(vi.get) = 1.0
       }
     }
-    for (k <- 0 until n; i <- 0 until n; j <- 0 until n) {
+    for {
+      k <- 0 until n
+      i <- 0 until n
+      j <- 0 until n
+    } {
       val through = dist(i)(k) + dist(k)(j)
       if (through < dist(i)(j)) {
         dist(i)(j) = through
@@ -133,13 +135,15 @@ object SpringLayout {
     val d         = Array.ofDim[Double](n, n)
     val k         = Array.ofDim[Double](n, n)
     val kStrength = 1.0
-    for (i <- 0 until n; j <- 0 until n) {
+    for {
+      i <- 0 until n
+      j <- 0 until n
+    }
       if (i != j) {
         val pathLen = if (dist(i)(j).isInfinite) scala.math.sqrt(n.toDouble) else dist(i)(j)
         d(i)(j) = pathLen * idealL
         k(i)(j) = kStrength / (d(i)(j) * d(i)(j))
       }
-    }
 
     // Initial circular placement
     val posX   = new Array[Double](n)
@@ -195,7 +199,7 @@ object SpringLayout {
   ): Double = {
     var dEdX = 0.0
     var dEdY = 0.0
-    for (i <- 0 until n) {
+    for (i <- 0 until n)
       if (i != m) {
         val dx   = posX(m) - posX(i)
         val dy   = posY(m) - posY(i)
@@ -206,7 +210,6 @@ object SpringLayout {
           dEdY += common * dy
         }
       }
-    }
     scala.math.sqrt(dEdX * dEdX + dEdY * dEdY)
   }
 
@@ -229,7 +232,7 @@ object SpringLayout {
       var d2EdY2 = 0.0
       var d2EdXY = 0.0
 
-      for (i <- 0 until n) {
+      for (i <- 0 until n)
         if (i != m) {
           val dx     = posX(m) - posX(i)
           val dy     = posY(m) - posY(i)
@@ -247,7 +250,6 @@ object SpringLayout {
             d2EdXY += kmidi * dx * dy / dCubed
           }
         }
-      }
 
       val det = d2EdX2 * d2EdY2 - d2EdXY * d2EdXY
       if (scala.math.abs(det) > 1e-10) {
@@ -262,12 +264,11 @@ object SpringLayout {
     }
   }
 
-  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit = {
+  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit =
     for (e <- g.edges()) {
       val label = g.edge(e)
       val src   = g.node(e.v)
       val tgt   = g.node(e.w)
       label.points = Array(Point(src.x, src.y), Point(tgt.x, tgt.y))
     }
-  }
 }

@@ -68,7 +68,7 @@ final class VizJsRenderSuite extends FunSuite {
   // --- 6. Self-loop renders ---
 
   test("vizjs render: self-loop graph") {
-    val svg = render("digraph { a -> a }")
+    val svg       = render("digraph { a -> a }")
     val pathCount = "<path".r.findAllMatchIn(svg).size
     assert(pathCount >= 1, "Self-loop should have at least 1 path")
     assert(svg.contains("<text"), "Should have at least 1 text element")
@@ -125,21 +125,21 @@ final class VizJsRenderSuite extends FunSuite {
 
   test("vizjs render: Neato layout engine") {
     val config = GraphvizConfig(engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
     assert(svg.contains("<svg"), "Neato should produce SVG")
     assert(svg.contains("<path"), "Neato should render edges")
   }
 
   test("vizjs render: Circo layout engine") {
     val config = GraphvizConfig(engine = LayoutEngine.Circo)
-    val svg = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
     assert(svg.contains("<svg"), "Circo should produce SVG")
     assert(svg.contains("<path"), "Circo should render edges")
   }
 
   test("vizjs render: Twopi layout engine") {
     val config = GraphvizConfig(engine = LayoutEngine.Twopi)
-    val svg = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c; c -> a }", config)
     assert(svg.contains("<svg"), "Twopi should produce SVG")
     assert(svg.contains("<path"), "Twopi should render edges")
   }
@@ -210,8 +210,8 @@ final class VizJsRenderSuite extends FunSuite {
 
   test("vizjs render: deterministic output") {
     val input = "digraph { a -> b; b -> c; a -> c }"
-    val svg1 = render(input)
-    val svg2 = render(input)
+    val svg1  = render(input)
+    val svg2  = render(input)
     assertEquals(svg1, svg2, "Two renders of the same input should produce identical SVG")
   }
 }

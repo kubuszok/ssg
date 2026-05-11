@@ -57,7 +57,7 @@ class DotScanner(input: String) {
     ch
   }
 
-  private def skipWhitespaceAndComments(): Unit = {
+  private def skipWhitespaceAndComments(): Unit =
     boundary {
       while (pos < input.length) {
         val ch = peek()
@@ -74,25 +74,22 @@ class DotScanner(input: String) {
         }
       }
     }
-  }
 
-  private def skipLineComment(): Unit = {
+  private def skipLineComment(): Unit =
     boundary {
-      while (pos < input.length) {
+      while (pos < input.length)
         if (advance() == '\n') {
           break(())
         }
-      }
     }
-  }
 
   private def skipBlockComment(): Unit = {
     val startLine = line
-    val startCol = col
+    val startCol  = col
     advance() // /
     advance() // *
     boundary {
-      while (pos < input.length) {
+      while (pos < input.length)
         if (peek() == '*' && pos + 1 < input.length && input.charAt(pos + 1) == '/') {
           advance() // *
           advance() // /
@@ -100,7 +97,6 @@ class DotScanner(input: String) {
         } else {
           advance()
         }
-      }
     }
     if (pos >= input.length) {
       throw new IllegalArgumentException(
@@ -111,8 +107,8 @@ class DotScanner(input: String) {
 
   private def nextToken(): Token = {
     val startLine = line
-    val startCol = col
-    val ch = peek()
+    val startCol  = col
+    val ch        = peek()
 
     ch match {
       case '{' =>
@@ -259,7 +255,7 @@ class DotScanner(input: String) {
 
   private def readHtmlString(startLine: Int, startCol: Int): Token = {
     advance() // opening <
-    val sb = new StringBuilder
+    val sb    = new StringBuilder
     var depth = 1
     boundary {
       while (pos < input.length) {

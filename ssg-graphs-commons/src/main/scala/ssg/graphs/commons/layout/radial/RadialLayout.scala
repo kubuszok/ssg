@@ -16,8 +16,8 @@ import scala.collection.mutable
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.graphs.commons.layout.dagre.{EdgeLabel, NodeLabel, Point}
-import ssg.graphs.commons.layout.graph.{Graph, GraphAlgorithms}
+import ssg.graphs.commons.layout.dagre.{ EdgeLabel, NodeLabel, Point }
+import ssg.graphs.commons.layout.graph.{ Graph, GraphAlgorithms }
 
 object RadialLayout {
 
@@ -82,14 +82,13 @@ object RadialLayout {
       val succs     = g.successors(v).fold(Array.empty[String])(identity)
       val preds     = g.predecessors(v).fold(Array.empty[String])(identity)
       val neighbors = (succs ++ preds).distinct
-      for (w <- neighbors) {
+      for (w <- neighbors)
         if (nodeSet.contains(w) && !depth.contains(w)) {
           depth(w) = depth(v) + 1
           bfsChildren.getOrElseUpdate(v, mutable.ArrayBuffer.empty) += w
           bfsChildren(w) = mutable.ArrayBuffer.empty
           queue += w
         }
-      }
     }
 
     // Compute subtree sizes for wedge allocation
@@ -103,7 +102,7 @@ object RadialLayout {
     g:       Graph[NodeLabel, EdgeLabel],
     nodeIds: Array[String],
     nodeSet: mutable.HashSet[String]
-  ): String = {
+  ): String =
     boundary {
       for (v <- nodeIds) {
         val preds = g.predecessors(v).fold(Array.empty[String])(identity)
@@ -113,7 +112,6 @@ object RadialLayout {
       }
       nodeIds(0)
     }
-  }
 
   private def computeSubtreeSize(
     v:           String,
@@ -122,9 +120,8 @@ object RadialLayout {
   ): Int = {
     val children = bfsChildren.getOrElse(v, mutable.ArrayBuffer.empty)
     var size     = 1
-    for (child <- children) {
+    for (child <- children)
       size += computeSubtreeSize(child, bfsChildren, subtreeSize)
-    }
     subtreeSize(v) = size
     size
   }
@@ -163,12 +160,11 @@ object RadialLayout {
     }
   }
 
-  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit = {
+  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit =
     for (e <- g.edges()) {
       val label = g.edge(e)
       val src   = g.node(e.v)
       val tgt   = g.node(e.w)
       label.points = Array(Point(src.x, src.y), Point(tgt.x, tgt.y))
     }
-  }
 }

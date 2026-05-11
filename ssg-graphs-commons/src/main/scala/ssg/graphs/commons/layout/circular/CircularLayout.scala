@@ -11,7 +11,7 @@ package commons
 package layout
 package circular
 
-import ssg.graphs.commons.layout.dagre.{EdgeLabel, NodeLabel, Point}
+import ssg.graphs.commons.layout.dagre.{ EdgeLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph
 
 object CircularLayout {
@@ -52,12 +52,11 @@ object CircularLayout {
     inCount + outCount
   }
 
-  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit = {
+  private def setEdgePoints(g: Graph[NodeLabel, EdgeLabel]): Unit =
     for (e <- g.edges()) {
       val label = g.edge(e)
       val src   = g.node(e.v)
       val tgt   = g.node(e.w)
       label.points = Array(Point(src.x, src.y), Point(tgt.x, tgt.y))
     }
-  }
 }

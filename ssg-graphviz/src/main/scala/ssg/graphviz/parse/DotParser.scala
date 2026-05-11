@@ -17,7 +17,7 @@ class DotParser(tokens: Array[Token]) {
   private var pos: Int = 0
 
   def parse(): DotGraph = {
-    val strict = matchKeyword("strict")
+    val strict    = matchKeyword("strict")
     val graphType =
       if (matchKeyword("digraph")) { DotGraphType.Digraph }
       else {
@@ -102,7 +102,7 @@ class DotParser(tokens: Array[Token]) {
   }
 
   private def parseAttrStmt(): DotAttrStmt = {
-    val t = advance()
+    val t      = advance()
     val target = t.value.toLowerCase match {
       case "graph" => DotAttrTarget.Graph
       case "node"  => DotAttrTarget.Node
@@ -129,7 +129,7 @@ class DotParser(tokens: Array[Token]) {
 
   private def parseEdgeStmtFromId(firstId: String): DotEdgeStmt = {
     val nodeId = parseNodeIdFromString(firstId)
-    val nodes = ArrayBuffer[DotNodeId](nodeId)
+    val nodes  = ArrayBuffer[DotNodeId](nodeId)
     boundary {
       while (isEdgeOp(peek())) {
         advance() // -> or --
@@ -223,7 +223,7 @@ class DotParser(tokens: Array[Token]) {
 
   /** Parse port and compass from subsequent colon-delimited tokens. */
   private def parseNodeIdFromString(id: String): DotNodeId = {
-    var port: Option[String] = None
+    var port:    Option[String] = None
     var compass: Option[String] = None
     if (peek().tpe == TokenType.Colon) {
       advance() // :
@@ -244,20 +244,18 @@ class DotParser(tokens: Array[Token]) {
 
   private def isCompassPoint(s: String): Boolean = s match {
     case "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "c" | "_" => true
-    case _                                                               => false
+    case _                                                             => false
   }
 
   // -- Token helpers --
 
-  private def peek(): Token = {
+  private def peek(): Token =
     if (pos < tokens.length) { tokens(pos) }
     else { Token(TokenType.Eof, "", 0, 0) }
-  }
 
-  private def lookahead(): Token = {
+  private def lookahead(): Token =
     if (pos + 1 < tokens.length) { tokens(pos + 1) }
     else { Token(TokenType.Eof, "", 0, 0) }
-  }
 
   private def advance(): Token = {
     val t = tokens(pos)
@@ -338,11 +336,9 @@ class DotParser(tokens: Array[Token]) {
     }
   }
 
-  private def skipSemicolons(): Unit = {
+  private def skipSemicolons(): Unit =
     boundary {
-      while (peek().tpe == TokenType.Semicolon) {
+      while (peek().tpe == TokenType.Semicolon)
         advance()
-      }
     }
-  }
 }

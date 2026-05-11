@@ -25,21 +25,21 @@ final class ComprehensiveRenderSuite extends FunSuite {
   // --- viz-js render tests ---
 
   test("vizjs: default graph/node/edge attributes via config - defaultNodeShape box") {
-    val config = GraphvizConfig(defaultNodeShape = "box", engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a; b; a -> b }", config)
+    val config    = GraphvizConfig(defaultNodeShape = "box", engine = LayoutEngine.Neato)
+    val svg       = Graphviz.render("digraph { a; b; a -> b }", config)
     val rectCount = "<rect".r.findAllMatchIn(svg).size
     assertEquals(rectCount, 2, "Config defaultNodeShape=box should make all nodes render as <rect>")
   }
 
   test("vizjs: config fontName overrides node font") {
     val config = GraphvizConfig(fontName = "monospace", engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a }", config)
+    val svg    = Graphviz.render("digraph { a }", config)
     assert(svg.contains("font-family=\"monospace\""), "Config fontName should apply to node labels")
   }
 
   test("vizjs: config fontSize overrides node font size") {
     val config = GraphvizConfig(fontSize = 24.0, engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a }", config)
+    val svg    = Graphviz.render("digraph { a }", config)
     assert(svg.contains("font-size=\"24"), "Config fontSize should apply to node labels")
   }
 
@@ -61,7 +61,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("vizjs: image attribute parses correctly") {
     // Image attributes are parsed as node attributes (even if the renderer ignores them)
-    val g = parse("""digraph { a [image="test.png"] }""")
+    val g    = parse("""digraph { a [image="test.png"] }""")
     val node = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotNodeStmt]
     assertEquals(node.attrs.size, 1)
     assertEquals(node.attrs(0).key, "image")
@@ -77,7 +77,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("vizjs: ambiguous number parsing") {
     // DOT allows numeric IDs; test that a dot-separated value works as attribute
-    val g = parse("""graph { a [width=1.5] }""")
+    val g    = parse("""graph { a [width=1.5] }""")
     val node = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotNodeStmt]
     assertEquals(node.attrs(0).value, "1.5")
   }
@@ -94,7 +94,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
         }
       }
     }"""
-    val g = parse(dot)
+    val g   = parse(dot)
     // Navigate to deepest level
     val c0 = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotSubgraphStmt]
     assertEquals(c0.id, Some("cluster_0"))
@@ -121,7 +121,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("vizjs graph-objects: subgraph with only attributes") {
-    val g = parse("""digraph { subgraph cluster_attrs { style=filled; color=lightgrey; label="Only Attrs" } a }""")
+    val g   = parse("""digraph { subgraph cluster_attrs { style=filled; color=lightgrey; label="Only Attrs" } a }""")
     val sub = g.stmts(0).asInstanceOf[ssg.graphviz.parse.DotSubgraphStmt]
     assertEquals(sub.id, Some("cluster_attrs"))
     // style=filled, color=lightgrey, label="Only Attrs" -> 3 assign stmts
@@ -130,7 +130,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("vizjs graph-objects: subgraph with edges but no explicit nodes") {
-    val g = parse("digraph { subgraph cluster_edges { a -> b; b -> c } }")
+    val g   = parse("digraph { subgraph cluster_edges { a -> b; b -> c } }")
     val sub = g.stmts(0).asInstanceOf[ssg.graphviz.parse.DotSubgraphStmt]
     assertEquals(sub.stmts.size, 2) // 2 edge statements
     // Nodes a, b, c are implicitly created by edges
@@ -166,7 +166,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("hpcc: Neato engine produces non-empty SVG") {
     val config = GraphvizConfig(engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a -> b; b -> c }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
     assert(svg.contains(">a</text>"))
@@ -174,7 +174,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("hpcc: Circo engine produces non-empty SVG") {
     val config = GraphvizConfig(engine = LayoutEngine.Circo)
-    val svg = Graphviz.render("digraph { a -> b; b -> c }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
     assert(svg.contains(">a</text>"))
@@ -182,7 +182,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("hpcc: Twopi engine produces non-empty SVG") {
     val config = GraphvizConfig(engine = LayoutEngine.Twopi)
-    val svg = Graphviz.render("digraph { a -> b; b -> c }", config)
+    val svg    = Graphviz.render("digraph { a -> b; b -> c }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
     assert(svg.contains(">a</text>"))
@@ -234,7 +234,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("hpcc: different engines produce different layouts for same graph") {
-    val dot = "digraph { a -> b; b -> c; c -> a; d -> a; d -> c }"
+    val dot      = "digraph { a -> b; b -> c; c -> a; d -> a; d -> c }"
     val svgNeato = Graphviz.render(dot, GraphvizConfig(engine = LayoutEngine.Neato))
     val svgCirco = Graphviz.render(dot, GraphvizConfig(engine = LayoutEngine.Circo))
     val svgTwopi = Graphviz.render(dot, GraphvizConfig(engine = LayoutEngine.Twopi))
@@ -335,7 +335,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("d3 render: rankdir=LR assignment is parsed") {
-    val g = parse("""digraph { rankdir="LR"; a -> b }""")
+    val g       = parse("""digraph { rankdir="LR"; a -> b }""")
     val assigns = g.stmts.collect { case a: ssg.graphviz.parse.DotAssignStmt => a }
     assert(assigns.exists(a => a.key == "rankdir" && a.value == "LR"))
   }
@@ -356,7 +356,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("d3 render: image node parses correctly") {
-    val g = parse("""digraph { a[image="images/first.png"]; b; a -> b }""")
+    val g     = parse("""digraph { a[image="images/first.png"]; b; a -> b }""")
     val nodeA = g.stmts.collect { case n: ssg.graphviz.parse.DotNodeStmt => n }.find(_.id.id == "a").get
     assertEquals(nodeA.attrs.find(_.key == "image").get.value, "images/first.png")
   }
@@ -380,7 +380,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("d3 render: cluster styling with label (subgraph assign)") {
-    val dot = """digraph {
+    val dot     = """digraph {
       subgraph cluster_0 {
         style=filled;
         color=lightgrey;
@@ -389,7 +389,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
       }
       c -> a
     }"""
-    val g = parse(dot)
+    val g       = parse(dot)
     val cluster = g.stmts(0).asInstanceOf[ssg.graphviz.parse.DotSubgraphStmt]
     assertEquals(cluster.id, Some("cluster_0"))
     // Verify the label assign exists in the subgraph
@@ -419,13 +419,12 @@ final class ComprehensiveRenderSuite extends FunSuite {
   test("d3 render: large graph stress - 20+ nodes") {
     val nodes = (1 to 25).map(i => s"n$i").mkString("; ")
     val edges = (1 to 24).map(i => s"n$i -> n${i + 1}").mkString("; ")
-    val dot = s"digraph { $nodes; $edges }"
-    val svg = render(dot)
+    val dot   = s"digraph { $nodes; $edges }"
+    val svg   = render(dot)
     assert(svg.contains("<svg"))
     // Verify all 25 nodes are present as text labels
-    for (i <- 1 to 25) {
+    for (i <- 1 to 25)
       assert(svg.contains(s">n$i</text>"), s"Node n$i should appear in SVG")
-    }
     val pathCount = "<path".r.findAllMatchIn(svg).size
     // 24 edges + 1 arrowhead = 25
     assertEquals(pathCount, 25, "Should have 24 edge paths + 1 arrowhead path")
@@ -433,13 +432,12 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("d3 render: large graph fan-out stress") {
     val edges = (1 to 20).map(i => s"hub -> n$i").mkString("; ")
-    val dot = s"digraph { $edges }"
-    val svg = render(dot)
+    val dot   = s"digraph { $edges }"
+    val svg   = render(dot)
     assert(svg.contains("<svg"))
     assert(svg.contains(">hub</text>"))
-    for (i <- 1 to 20) {
+    for (i <- 1 to 20)
       assert(svg.contains(s">n$i</text>"), s"Node n$i should appear in SVG")
-    }
   }
 
   // --- edge cases ---
@@ -471,7 +469,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
 
   test("edge case: very long node label") {
     val longLabel = "This is a very long label that should still render correctly in the SVG output"
-    val svg = render(s"""digraph { a [label="$longLabel"] }""")
+    val svg       = render(s"""digraph { a [label="$longLabel"] }""")
     assert(svg.contains(longLabel), "Long label should appear in SVG output")
     assert(svg.contains("<svg"))
   }
@@ -498,7 +496,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("edge case: bare attribute without value") {
-    val g = parse("digraph { a [fixedsize] }")
+    val g    = parse("digraph { a [fixedsize] }")
     val node = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotNodeStmt]
     assertEquals(node.attrs.size, 1)
     assertEquals(node.attrs(0).key, "fixedsize")
@@ -569,7 +567,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("edge case: edge dir=none parsed correctly") {
-    val g = parse("""digraph { a -> b [dir=none] }""")
+    val g    = parse("""digraph { a -> b [dir=none] }""")
     val edge = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotEdgeStmt]
     assertEquals(edge.attrs.find(_.key == "dir").get.value, "none")
   }
@@ -653,7 +651,7 @@ final class ComprehensiveRenderSuite extends FunSuite {
   }
 
   test("edge case: string concatenation in label") {
-    val g = parse("""digraph { a [label="hello" + " " + "world"] }""")
+    val g    = parse("""digraph { a [label="hello" + " " + "world"] }""")
     val node = g.stmts.head.asInstanceOf[ssg.graphviz.parse.DotNodeStmt]
     assertEquals(node.attrs(0).value, "hello world")
     val svg = render("""digraph { a [label="hello" + " " + "world"] }""")
@@ -692,9 +690,9 @@ digraph { a -> b }"""
     val svg1 = render("digraph { a }")
     val svg5 = render("digraph { a; b; c; d; e }")
     // Extract viewBox width from both
-    val vbRe = """viewBox="0 0 ([0-9.]+) ([0-9.]+)"""".r
-    val vb1 = vbRe.findFirstMatchIn(svg1).get
-    val vb5 = vbRe.findFirstMatchIn(svg5).get
+    val vbRe   = """viewBox="0 0 ([0-9.]+) ([0-9.]+)"""".r
+    val vb1    = vbRe.findFirstMatchIn(svg1).get
+    val vb5    = vbRe.findFirstMatchIn(svg5).get
     val width1 = vb1.group(1).toDouble
     val width5 = vb5.group(1).toDouble
     // 5-node graph should be at least as wide as 1-node graph
@@ -703,7 +701,7 @@ digraph { a -> b }"""
 
   test("edge case: config with custom margins") {
     val config = GraphvizConfig(marginX = 50.0, marginY = 50.0, engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a -> b }", config)
+    val svg    = Graphviz.render("digraph { a -> b }", config)
     assert(svg.contains("<svg"))
     // Extract viewBox and verify it has non-zero dimensions
     assert(svg.contains("viewBox=\"0 0"))
@@ -711,7 +709,7 @@ digraph { a -> b }"""
 
   test("edge case: config with custom node and rank separation") {
     val config = GraphvizConfig(nodeSep = 100.0, rankSep = 100.0, engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { a -> b -> c }", config)
+    val svg    = Graphviz.render("digraph { a -> b -> c }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains(">a</text>"))
     assert(svg.contains(">c</text>"))

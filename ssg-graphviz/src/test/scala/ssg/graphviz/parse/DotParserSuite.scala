@@ -73,21 +73,21 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: node with quoted id") {
-    val g = parse("""digraph { "node 1" -> "node 2" }""")
+    val g    = parse("""digraph { "node 1" -> "node 2" }""")
     val edge = g.stmts.head.asInstanceOf[DotEdgeStmt]
     assertEquals(edge.nodes(0).id, "node 1")
     assertEquals(edge.nodes(1).id, "node 2")
   }
 
   test("parse: node with port in node stmt") {
-    val g = parse("digraph { A:port1 [shape=box] }")
+    val g    = parse("digraph { A:port1 [shape=box] }")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.id.id, "A")
     assertEquals(node.id.port, Some("port1"))
   }
 
   test("parse: node with compass in node stmt") {
-    val g = parse("digraph { A:n [shape=box] }")
+    val g    = parse("digraph { A:n [shape=box] }")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.id.id, "A")
     assertEquals(node.id.compass, Some("n"))
@@ -104,7 +104,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: edge with attributes") {
-    val g = parse("""digraph { A -> B [label="edge", color=red] }""")
+    val g    = parse("""digraph { A -> B [label="edge", color=red] }""")
     val edge = g.stmts.head.asInstanceOf[DotEdgeStmt]
     assertEquals(edge.attrs.size, 2)
     assertEquals(edge.attrs(0), DotAttr("label", "edge"))
@@ -121,7 +121,7 @@ final class DotParserSuite extends FunSuite {
   // --- Attribute statements ---
 
   test("parse: graph attributes") {
-    val g = parse("digraph { graph [rankdir=LR] }")
+    val g    = parse("digraph { graph [rankdir=LR] }")
     val attr = g.stmts.head.asInstanceOf[DotAttrStmt]
     assertEquals(attr.target, DotAttrTarget.Graph)
     assertEquals(attr.attrs.size, 1)
@@ -129,7 +129,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: default node attributes") {
-    val g = parse("digraph { node [shape=box] }")
+    val g    = parse("digraph { node [shape=box] }")
     val attr = g.stmts.head.asInstanceOf[DotAttrStmt]
     assertEquals(attr.target, DotAttrTarget.Node)
     assertEquals(attr.attrs.head.key, "shape")
@@ -137,7 +137,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: default edge attributes") {
-    val g = parse("digraph { edge [color=blue] }")
+    val g    = parse("digraph { edge [color=blue] }")
     val attr = g.stmts.head.asInstanceOf[DotAttrStmt]
     assertEquals(attr.target, DotAttrTarget.Edge)
     assertEquals(attr.attrs.head.key, "color")
@@ -145,7 +145,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: assignment statement") {
-    val g = parse("digraph { rankdir=LR }")
+    val g      = parse("digraph { rankdir=LR }")
     val assign = g.stmts.head.asInstanceOf[DotAssignStmt]
     assertEquals(assign.key, "rankdir")
     assertEquals(assign.value, "LR")
@@ -170,7 +170,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: nested subgraphs") {
-    val g = parse("digraph { subgraph cluster_0 { subgraph cluster_1 { A } } }")
+    val g        = parse("digraph { subgraph cluster_0 { subgraph cluster_1 { A } } }")
     val outerSub = g.stmts.head.asInstanceOf[DotSubgraphStmt]
     assertEquals(outerSub.id, Some("cluster_0"))
     val innerSub = outerSub.stmts.head.asInstanceOf[DotSubgraphStmt]
@@ -190,7 +190,7 @@ final class DotParserSuite extends FunSuite {
   // --- Complex cases ---
 
   test("parse: multiple attribute lists") {
-    val g = parse("digraph { A [shape=box][color=red] }")
+    val g    = parse("digraph { A [shape=box][color=red] }")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.attrs.size, 2)
     assertEquals(node.attrs(0), DotAttr("shape", "box"))
@@ -226,13 +226,13 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: quoted strings with escapes") {
-    val g = parse("""digraph { A [label="hello \"world\""] }""")
+    val g    = parse("""digraph { A [label="hello \"world\""] }""")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.attrs(0).value, "hello \"world\"")
   }
 
   test("parse: numeric ids") {
-    val g = parse("digraph { 0 -> 1 -> 2 }")
+    val g    = parse("digraph { 0 -> 1 -> 2 }")
     val edge = g.stmts.head.asInstanceOf[DotEdgeStmt]
     assertEquals(edge.nodes.map(_.id), Seq("0", "1", "2"))
   }
@@ -318,7 +318,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("scan: number tokens") {
-    val tokens = DotScanner("digraph { A [width=1.5] }").scan()
+    val tokens   = DotScanner("digraph { A [width=1.5] }").scan()
     val numToken = tokens.find(_.tpe == TokenType.Number)
     assert(numToken.isDefined)
     assertEquals(numToken.get.value, "1.5")
@@ -341,7 +341,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: node with port and compass in node stmt") {
-    val g = parse("digraph { A:port1:n [shape=box] }")
+    val g    = parse("digraph { A:port1:n [shape=box] }")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.id.id, "A")
     assertEquals(node.id.port, Some("port1"))
@@ -358,7 +358,7 @@ final class DotParserSuite extends FunSuite {
   }
 
   test("parse: bare attribute value in attr list") {
-    val g = parse("digraph { A [fixedsize] }")
+    val g    = parse("digraph { A [fixedsize] }")
     val node = g.stmts.head.asInstanceOf[DotNodeStmt]
     assertEquals(node.attrs.size, 1)
     assertEquals(node.attrs(0).key, "fixedsize")

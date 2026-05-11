@@ -71,21 +71,21 @@ final class GraphvizRendererSuite extends FunSuite {
 
   test("render: neato engine (spring)") {
     val config = GraphvizConfig(engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { A -> B -> C }", config)
+    val svg    = Graphviz.render("digraph { A -> B -> C }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
   }
 
   test("render: circo engine (circular)") {
     val config = GraphvizConfig(engine = LayoutEngine.Circo)
-    val svg = Graphviz.render("digraph { A -> B -> C }", config)
+    val svg    = Graphviz.render("digraph { A -> B -> C }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
   }
 
   test("render: twopi engine (radial)") {
     val config = GraphvizConfig(engine = LayoutEngine.Twopi)
-    val svg = Graphviz.render("digraph { A -> B -> C }", config)
+    val svg    = Graphviz.render("digraph { A -> B -> C }", config)
     assert(svg.contains("<svg"))
     assert(svg.contains("<path"))
   }
@@ -196,7 +196,7 @@ final class GraphvizRendererSuite extends FunSuite {
   }
 
   test("render: default node attributes apply to all nodes") {
-    val svg = render("digraph { node [shape=box]; A; B; C }")
+    val svg       = render("digraph { node [shape=box]; A; B; C }")
     val rectCount = "<rect".r.findAllMatchIn(svg).size
     assertEquals(rectCount, 3)
   }
@@ -220,8 +220,8 @@ final class GraphvizRendererSuite extends FunSuite {
 
   test("render: same input produces same output") {
     val input = "digraph { A -> B; B -> C; C -> A }"
-    val svg1 = render(input)
-    val svg2 = render(input)
+    val svg1  = render(input)
+    val svg2  = render(input)
     assertEquals(svg1, svg2)
   }
 
@@ -241,19 +241,19 @@ final class GraphvizRendererSuite extends FunSuite {
 
   test("render: custom font name in config") {
     val config = GraphvizConfig(fontName = "Courier", engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { A }", config)
+    val svg    = Graphviz.render("digraph { A }", config)
     assert(svg.contains("font-family=\"Courier\""))
   }
 
   test("render: custom font size in config") {
     val config = GraphvizConfig(fontSize = 18.0, engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { A }", config)
+    val svg    = Graphviz.render("digraph { A }", config)
     assert(svg.contains("font-size=\"18"))
   }
 
   test("render: custom default node shape in config") {
     val config = GraphvizConfig(defaultNodeShape = "box", engine = LayoutEngine.Neato)
-    val svg = Graphviz.render("digraph { A }", config)
+    val svg    = Graphviz.render("digraph { A }", config)
     assert(svg.contains("<rect"))
   }
 

@@ -38,63 +38,63 @@ final class ReferenceComparisonSuite extends FunSuite {
 
   // -- DOT inputs (identical to DotGallerySuite) --------------------------------
 
-  private val dot1  = "digraph G { }"
-  private val dot2  = "digraph G { a }"
-  private val dot3  = "digraph G { Hello -> World }"
-  private val dot4  = "graph { a -- b; b -- c; a -- c; d -- c; e -- c; e -- a; }"
-  private val dot5  = "digraph { a -> b; b -> c; c -> d; d -> a; }"
-  private val dot6  = """digraph {
-                        |  a -> b [label="0.2",weight="0.2"];
-                        |  a -> c [label="0.4",weight="0.4"];
-                        |  c -> b [label="0.6",weight="0.6"];
-                        |  e -> e [label="0.1",weight="0.1"];
-                        |  e -> b [label="0.7",weight="0.7"];
-                        |}""".stripMargin
-  private val dot7  = """digraph G {
-                        |  subgraph cluster_0 {
-                        |    style=filled; color=lightgrey;
-                        |    node [style=filled,color=white];
-                        |    a0 -> a1 -> a2 -> a3;
-                        |    label = "process #1";
-                        |  }
-                        |  subgraph cluster_1 {
-                        |    node [style=filled];
-                        |    b0 -> b1 -> b2 -> b3;
-                        |    label = "process #2";
-                        |    color=blue
-                        |  }
-                        |  start -> a0; start -> b0;
-                        |  a1 -> b3; b2 -> a3;
-                        |  a3 -> a0; a3 -> end; b3 -> end;
-                        |  start [shape=Mdiamond];
-                        |  end [shape=Msquare];
-                        |}""".stripMargin
-  private val dot8  = """digraph finite_state_machine {
-                        |  rankdir=LR;
-                        |  node [shape = doublecircle]; 0 3 4 8;
-                        |  node [shape = circle];
-                        |  0 -> 2 [label = "SS(B)"];
-                        |  0 -> 1 [label = "SS(S)"];
-                        |  1 -> 3 [label = "S($end)"];
-                        |  2 -> 6 [label = "SS(b)"];
-                        |  2 -> 5 [label = "SS(a)"];
-                        |  2 -> 4 [label = "S(A)"];
-                        |  5 -> 7 [label = "S(b)"];
-                        |  5 -> 5 [label = "S(a)"];
-                        |  6 -> 6 [label = "S(b)"];
-                        |  6 -> 5 [label = "S(a)"];
-                        |  7 -> 8 [label = "S(b)"];
-                        |  7 -> 5 [label = "S(a)"];
-                        |  8 -> 6 [label = "S(b)"];
-                        |  8 -> 5 [label = "S(a)"];
-                        |}""".stripMargin
-  private val dot9  = """digraph G {
-                        |  a [shape=box]; b [shape=ellipse]; c [shape=circle];
-                        |  d [shape=diamond]; e [shape=plaintext]; f [shape=point];
-                        |  g [shape=triangle]; h [shape=pentagon]; i [shape=hexagon];
-                        |  j [shape=rect]; k [shape=rectangle]; l [shape=none];
-                        |  a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l
-                        |}""".stripMargin
+  private val dot1 = "digraph G { }"
+  private val dot2 = "digraph G { a }"
+  private val dot3 = "digraph G { Hello -> World }"
+  private val dot4 = "graph { a -- b; b -- c; a -- c; d -- c; e -- c; e -- a; }"
+  private val dot5 = "digraph { a -> b; b -> c; c -> d; d -> a; }"
+  private val dot6 = """digraph {
+                       |  a -> b [label="0.2",weight="0.2"];
+                       |  a -> c [label="0.4",weight="0.4"];
+                       |  c -> b [label="0.6",weight="0.6"];
+                       |  e -> e [label="0.1",weight="0.1"];
+                       |  e -> b [label="0.7",weight="0.7"];
+                       |}""".stripMargin
+  private val dot7 = """digraph G {
+                       |  subgraph cluster_0 {
+                       |    style=filled; color=lightgrey;
+                       |    node [style=filled,color=white];
+                       |    a0 -> a1 -> a2 -> a3;
+                       |    label = "process #1";
+                       |  }
+                       |  subgraph cluster_1 {
+                       |    node [style=filled];
+                       |    b0 -> b1 -> b2 -> b3;
+                       |    label = "process #2";
+                       |    color=blue
+                       |  }
+                       |  start -> a0; start -> b0;
+                       |  a1 -> b3; b2 -> a3;
+                       |  a3 -> a0; a3 -> end; b3 -> end;
+                       |  start [shape=Mdiamond];
+                       |  end [shape=Msquare];
+                       |}""".stripMargin
+  private val dot8 = """digraph finite_state_machine {
+                       |  rankdir=LR;
+                       |  node [shape = doublecircle]; 0 3 4 8;
+                       |  node [shape = circle];
+                       |  0 -> 2 [label = "SS(B)"];
+                       |  0 -> 1 [label = "SS(S)"];
+                       |  1 -> 3 [label = "S($end)"];
+                       |  2 -> 6 [label = "SS(b)"];
+                       |  2 -> 5 [label = "SS(a)"];
+                       |  2 -> 4 [label = "S(A)"];
+                       |  5 -> 7 [label = "S(b)"];
+                       |  5 -> 5 [label = "S(a)"];
+                       |  6 -> 6 [label = "S(b)"];
+                       |  6 -> 5 [label = "S(a)"];
+                       |  7 -> 8 [label = "S(b)"];
+                       |  7 -> 5 [label = "S(a)"];
+                       |  8 -> 6 [label = "S(b)"];
+                       |  8 -> 5 [label = "S(a)"];
+                       |}""".stripMargin
+  private val dot9 = """digraph G {
+                       |  a [shape=box]; b [shape=ellipse]; c [shape=circle];
+                       |  d [shape=diamond]; e [shape=plaintext]; f [shape=point];
+                       |  g [shape=triangle]; h [shape=pentagon]; i [shape=hexagon];
+                       |  j [shape=rect]; k [shape=rectangle]; l [shape=none];
+                       |  a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l
+                       |}""".stripMargin
   private val dot10 = """digraph G {
                         |  a -> b [style=bold]
                         |  a -> c [style=dashed]
@@ -203,21 +203,17 @@ final class ReferenceComparisonSuite extends FunSuite {
 
   // -- Gallery specification ----------------------------------------------------
 
-  /** Each gallery entry: DOT input, reference SVG resource name, directed flag,
-    * number of cluster subgraphs (used to adjust node counts), and known
-    * label differences between our renderer and Graphviz.
+  /** Each gallery entry: DOT input, reference SVG resource name, directed flag, number of cluster subgraphs (used to adjust node counts), and known label differences between our renderer and
+    * Graphviz.
     *
-    * @param refOnlyLabels  labels present in the reference SVG but absent from
-    *                       ours (e.g. edge labels suppressed by spring layout,
-    *                       or node labels for shape=none which Graphviz shows
-    *                       but our renderer suppresses)
-    * @param ourOnlyLabels  labels present in our SVG but absent from the
-    *                       reference (e.g. cluster IDs that our GraphBuilder
-    *                       creates as nodes but Graphviz does not render)
-    * @param clusterLabelMap  maps cluster IDs in our output to the `label`
-    *                         attribute values that Graphviz renders instead
+    * @param refOnlyLabels
+    *   labels present in the reference SVG but absent from ours (e.g. edge labels suppressed by spring layout, or node labels for shape=none which Graphviz shows but our renderer suppresses)
+    * @param ourOnlyLabels
+    *   labels present in our SVG but absent from the reference (e.g. cluster IDs that our GraphBuilder creates as nodes but Graphviz does not render)
+    * @param clusterLabelMap
+    *   maps cluster IDs in our output to the `label` attribute values that Graphviz renders instead
     */
-  private final case class GalleryEntry(
+  final private case class GalleryEntry(
     name:            String,
     dot:             String,
     refFile:         String,
@@ -237,35 +233,215 @@ final class ReferenceComparisonSuite extends FunSuite {
   private val crossEdgeClusterIds = Set("cluster_0", "cluster_1", "cluster_2")
 
   private val gallery: Seq[GalleryEntry] = Seq(
-    GalleryEntry("empty",             dot1,  "empty.svg",             isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("single_node",       dot2,  "single_node.svg",       isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("hello_world",       dot3,  "hello_world.svg",       isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("undirected",        dot4,  "undirected.svg",        isDirected = false, clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("cycle",             dot5,  "cycle.svg",             isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("self_loop",         dot6,  "self_loop.svg",         isDirected = true,  clusterCount = 0, refOnlyLabels = selfLoopEdgeLabels,  ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("clusters",          dot7,  "clusters.svg",          isDirected = true,  clusterCount = 2, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map("cluster_0" -> "process #1", "cluster_1" -> "process #2")),
-    GalleryEntry("fsm",               dot8,  "fsm.svg",              isDirected = true,  clusterCount = 0, refOnlyLabels = fsmEdgeLabels,       ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
+    GalleryEntry(
+      "empty",
+      dot1,
+      "empty.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "single_node",
+      dot2,
+      "single_node.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "hello_world",
+      dot3,
+      "hello_world.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "undirected",
+      dot4,
+      "undirected.svg",
+      isDirected = false,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "cycle",
+      dot5,
+      "cycle.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "self_loop",
+      dot6,
+      "self_loop.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = selfLoopEdgeLabels,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "clusters",
+      dot7,
+      "clusters.svg",
+      isDirected = true,
+      clusterCount = 2,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map("cluster_0" -> "process #1", "cluster_1" -> "process #2")
+    ),
+    GalleryEntry(
+      "fsm",
+      dot8,
+      "fsm.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = fsmEdgeLabels,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
     // Node "l" has shape=none: Graphviz renders the label, our renderer suppresses text for none shapes
     // Node "f" has shape=point: Graphviz renders the label, our renderer suppresses text for point shapes
-    GalleryEntry("shapes",            dot9,  "shapes.svg",            isDirected = true,  clusterCount = 0, refOnlyLabels = Set("l", "f"),       ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("edge_styles",       dot10, "edge_styles.svg",       isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("colors",            dot11, "colors.svg",            isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("strict",            dot12, "strict.svg",            isDirected = false, clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("named_graph",       dot13, "named_graph.svg",       isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("nested_subgraphs",  dot14, "nested_subgraphs.svg",  isDirected = true,  clusterCount = 2, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map("cluster_outer" -> "Outer", "cluster_inner" -> "Inner")),
-    GalleryEntry("er_diagram",        dot15, "er_diagram.svg",        isDirected = false, clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("process_states",    dot16, "process_states.svg",    isDirected = false, clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
+    GalleryEntry(
+      "shapes",
+      dot9,
+      "shapes.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set("l", "f"),
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "edge_styles",
+      dot10,
+      "edge_styles.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "colors",
+      dot11,
+      "colors.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "strict",
+      dot12,
+      "strict.svg",
+      isDirected = false,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "named_graph",
+      dot13,
+      "named_graph.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "nested_subgraphs",
+      dot14,
+      "nested_subgraphs.svg",
+      isDirected = true,
+      clusterCount = 2,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map("cluster_outer" -> "Outer", "cluster_inner" -> "Inner")
+    ),
+    GalleryEntry(
+      "er_diagram",
+      dot15,
+      "er_diagram.svg",
+      isDirected = false,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "process_states",
+      dot16,
+      "process_states.svg",
+      isDirected = false,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
     // cross_edges clusters have no `label` attribute; our renderer emits cluster IDs as text labels
-    GalleryEntry("cross_edges",       dot17, "cross_edges.svg",       isDirected = true,  clusterCount = 3, refOnlyLabels = Set.empty,           ourOnlyLabels = crossEdgeClusterIds,   clusterLabelMap = Map.empty),
-    GalleryEntry("multi_defaults",    dot18, "multi_defaults.svg",    isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("quoted_ids",        dot19, "quoted_ids.svg",        isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty),
-    GalleryEntry("fan_out",           dot20, "fan_out.svg",           isDirected = true,  clusterCount = 0, refOnlyLabels = Set.empty,           ourOnlyLabels = Set.empty,             clusterLabelMap = Map.empty)
+    GalleryEntry(
+      "cross_edges",
+      dot17,
+      "cross_edges.svg",
+      isDirected = true,
+      clusterCount = 3,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = crossEdgeClusterIds,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "multi_defaults",
+      dot18,
+      "multi_defaults.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "quoted_ids",
+      dot19,
+      "quoted_ids.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    ),
+    GalleryEntry(
+      "fan_out",
+      dot20,
+      "fan_out.svg",
+      isDirected = true,
+      clusterCount = 0,
+      refOnlyLabels = Set.empty,
+      ourOnlyLabels = Set.empty,
+      clusterLabelMap = Map.empty
+    )
   )
 
   // -- SVG structure extraction -------------------------------------------------
 
   /** Structural info extracted from an SVG for comparison purposes. */
-  private final case class SvgStructure(
+  final private case class SvgStructure(
     nodeCount:    Int,
     edgeCount:    Int,
     textLabels:   Set[String],
@@ -278,19 +454,16 @@ final class ReferenceComparisonSuite extends FunSuite {
   private val refNodeGroupRe = """class="node"""".r
   private val refEdgeGroupRe = """class="edge"""".r
   // Match text content inside <text> elements.
-  private val refTextRe      = """>([^<]+)</text>""".r
+  private val refTextRe = """>([^<]+)</text>""".r
   // Graphviz directed-edge arrowheads use <polygon fill="black"> inside
   // edge groups; this distinguishes directed from undirected graphs.
-  private val refArrowRe     = """<polygon\s+fill="black"[^/]*/?>""".r
+  private val refArrowRe = """<polygon\s+fill="black"[^/]*/?>""".r
 
   /** Extracts structural info from a Graphviz-generated reference SVG. */
   private def extractRefStructure(svg: String): SvgStructure = {
     val nodeCount = refNodeGroupRe.findAllMatchIn(svg).size
     val edgeCount = refEdgeGroupRe.findAllMatchIn(svg).size
-    val labels = refTextRe.findAllMatchIn(svg)
-      .map(_.group(1).trim)
-      .filter(_.nonEmpty)
-      .toSet
+    val labels    = refTextRe.findAllMatchIn(svg).map(_.group(1).trim).filter(_.nonEmpty).toSet
     val hasArrows = refArrowRe.findFirstIn(svg).isDefined
     SvgStructure(nodeCount, edgeCount, labels, hasArrows)
   }
@@ -307,10 +480,7 @@ final class ReferenceComparisonSuite extends FunSuite {
   private def extractOurStructure(svg: String): SvgStructure = {
     val nodeCount = ourNodeGroupRe.findAllMatchIn(svg).size
     val edgeCount = ourEdgeGroupRe.findAllMatchIn(svg).size
-    val labels = ourTextRe.findAllMatchIn(svg)
-      .map(_.group(1).trim)
-      .filter(_.nonEmpty)
-      .toSet
+    val labels    = ourTextRe.findAllMatchIn(svg).map(_.group(1).trim).filter(_.nonEmpty).toSet
     val hasArrows = ourMarkerRe.findFirstIn(svg).isDefined
     SvgStructure(nodeCount, edgeCount, labels, hasArrows)
   }
@@ -327,27 +497,19 @@ final class ReferenceComparisonSuite extends FunSuite {
     val stream = getClass.getResourceAsStream("/references/" + fileName)
     assert(stream != null, s"Reference SVG not found on classpath: /references/$fileName")
     val src = Source.fromInputStream(stream, "UTF-8")
-    try src.mkString finally src.close()
+    try src.mkString
+    finally src.close()
   }
 
   /** Normalizes HTML entities in extracted text labels for comparison. */
-  private def normalizeLabel(s: String): String = {
-    s.replace("&quot;", "\"")
-      .replace("&amp;", "&")
-      .replace("&lt;", "<")
-      .replace("&gt;", ">")
-      .replace("&#45;", "-")
-      .replace("&#39;", "'")
-  }
+  private def normalizeLabel(s: String): String =
+    s.replace("&quot;", "\"").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#45;", "-").replace("&#39;", "'")
 
-  /** Splits multi-line labels into individual lines for comparison.
-    * Graphviz renders `label="First\nNode"` as two separate <text>
-    * elements ("First" and "Node"), while our renderer emits one
-    * <text> with `"First\nNode"`.  Splitting on `\n` normalizes both.
+  /** Splits multi-line labels into individual lines for comparison. Graphviz renders `label="First\nNode"` as two separate <text> elements ("First" and "Node"), while our renderer emits one <text>
+    * with `"First\nNode"`. Splitting on `\n` normalizes both.
     */
-  private def splitLabels(labels: Set[String]): Set[String] = {
+  private def splitLabels(labels: Set[String]): Set[String] =
     labels.flatMap(_.split('\n').map(_.trim).filter(_.nonEmpty))
-  }
 
   // -- Tests --------------------------------------------------------------------
 
@@ -358,10 +520,10 @@ final class ReferenceComparisonSuite extends FunSuite {
     // (for compound layout parent tracking).  We account for this by
     // subtracting the known cluster count from our total.
     test(s"ref-compare ${entry.name}: same node count") {
-      val refSvg = readReference(entry.refFile)
-      val refStruct = extractRefStructure(refSvg)
-      val ourSvg = renderOurs(entry.dot)
-      val ourStruct = extractOurStructure(ourSvg)
+      val refSvg           = readReference(entry.refFile)
+      val refStruct        = extractRefStructure(refSvg)
+      val ourSvg           = renderOurs(entry.dot)
+      val ourStruct        = extractOurStructure(ourSvg)
       val adjustedOurNodes = ourStruct.nodeCount - entry.clusterCount
       assertEquals(
         adjustedOurNodes,
@@ -372,9 +534,9 @@ final class ReferenceComparisonSuite extends FunSuite {
 
     // --- Edge count ---
     test(s"ref-compare ${entry.name}: same edge count") {
-      val refSvg = readReference(entry.refFile)
+      val refSvg    = readReference(entry.refFile)
       val refStruct = extractRefStructure(refSvg)
-      val ourSvg = renderOurs(entry.dot)
+      val ourSvg    = renderOurs(entry.dot)
       val ourStruct = extractOurStructure(ourSvg)
       assertEquals(
         ourStruct.edgeCount,
@@ -392,17 +554,17 @@ final class ReferenceComparisonSuite extends FunSuite {
     //   - clusterLabelMap: cluster IDs remapped to their label values
     //   - multi-line labels split into lines (splitLabels)
     test(s"ref-compare ${entry.name}: same text labels") {
-      val refSvg = readReference(entry.refFile)
+      val refSvg    = readReference(entry.refFile)
       val refStruct = extractRefStructure(refSvg)
-      val ourSvg = renderOurs(entry.dot)
+      val ourSvg    = renderOurs(entry.dot)
       val ourStruct = extractOurStructure(ourSvg)
 
       // Normalize HTML entities
-      val rawRef = refStruct.textLabels.map(normalizeLabel)
+      val rawRef  = refStruct.textLabels.map(normalizeLabel)
       val rawOurs = ourStruct.textLabels.map(normalizeLabel)
 
       // Remove known-different labels from each side
-      val filteredRef = rawRef -- entry.refOnlyLabels
+      val filteredRef  = rawRef -- entry.refOnlyLabels
       val filteredOurs = rawOurs -- entry.ourOnlyLabels
 
       // Replace cluster IDs with their label values to match Graphviz
@@ -411,7 +573,7 @@ final class ReferenceComparisonSuite extends FunSuite {
       }
 
       // Split multi-line labels for fair comparison
-      val normalizedRef = splitLabels(filteredRef)
+      val normalizedRef  = splitLabels(filteredRef)
       val normalizedOurs = splitLabels(mappedOurs)
 
       assertEquals(
@@ -423,10 +585,10 @@ final class ReferenceComparisonSuite extends FunSuite {
 
     // --- Arrow markers ---
     test(s"ref-compare ${entry.name}: arrow markers consistent with graph type") {
-      val ourSvg = renderOurs(entry.dot)
+      val ourSvg    = renderOurs(entry.dot)
       val ourStruct = extractOurStructure(ourSvg)
       if (entry.isDirected) {
-        val refSvg = readReference(entry.refFile)
+        val refSvg    = readReference(entry.refFile)
         val refStruct = extractRefStructure(refSvg)
         if (refStruct.edgeCount > 0) {
           assert(
