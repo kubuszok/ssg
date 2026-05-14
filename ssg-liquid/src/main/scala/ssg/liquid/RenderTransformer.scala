@@ -20,6 +20,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 /** Handles the conversion of objects during template rendering.
   *
   * Implementations may optimize how objects are appended/serialized, and when exceptions are thrown if the final result would be too long.
@@ -34,8 +36,8 @@ trait RenderTransformer {
   /** Creates a new ObjectAppender.Controller for the given TemplateContext. */
   def newObjectAppender(context: TemplateContext, estimatedNumberOfAppends: Int): RenderTransformer.ObjectAppender.Controller
 
-  /** Transforms an object to a representation suitable for calling toString() on during the render phase. */
-  def transformObject(context: TemplateContext, obj: Any): Any
+  /** Transforms a DataView to a representation suitable for calling toString() on during the render phase. */
+  def transformObject(context: TemplateContext, obj: DataView): DataView
 }
 
 object RenderTransformer {

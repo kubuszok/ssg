@@ -30,9 +30,10 @@ val `ssg-data-commons` = (projectMatrix in file("ssg-data-commons"))
   .settings(
     name := "ssg-data-commons",
     libraryDependencies ++= Seq(
-      "com.kubuszok"  %%% "hearth"            % hearthVersion,
-      "org.scalameta" %%% "munit"             % SsgSettings.versions.munit % Test,
-      "org.scalameta" %%% "munit-scalacheck"  % SsgSettings.versions.munitScalacheck % Test
+      "com.kubuszok"      %%% "hearth"            % hearthVersion,
+      "io.github.cquiroz" %%% "scala-java-time"   % "2.6.0",
+      "org.scalameta"     %%% "munit"             % SsgSettings.versions.munit % Test,
+      "org.scalameta"     %%% "munit-scalacheck"  % SsgSettings.versions.munitScalacheck % Test
     ),
     libraryDependencies += compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % hearthVersion)
   )

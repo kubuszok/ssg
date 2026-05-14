@@ -27,7 +27,7 @@ import ssg.commons.io.{ FileOps, FilePath }
 import ssg.liquid.antlr.NameResolver
 import ssg.liquid.filters.{ Filter, Filters }
 import ssg.liquid.filters.date.{ BasicDateParser, DateParser }
-import ssg.liquid.parser.{ Flavor, LiquidSupport, LiquidSupportPlatform }
+import ssg.liquid.parser.Flavor
 
 import java.time.ZoneId
 import java.util.{ ArrayList, Locale, Map => JMap }
@@ -120,31 +120,6 @@ final class TemplateParser(
     )
     val root = liquidParser.parse()
     new Template(this, root, input.length.toLong, location)
-  }
-
-  /** Evaluates an object, converting Inspectable objects to LiquidSupport.
-    *
-    * LiquidSupport objects return their own toLiquid() directly. Inspectable objects (and other objects) are converted via reflection-based field/getter introspection.
-    */
-  def evaluate(variable: Any): LiquidSupport =
-    variable match {
-      case ls: LiquidSupport => ls
-      case dv: data.DataView => new DataViewLiquidSupport(dv)
-      case _ => new LiquidSupportPlatform.LiquidSupportFromInspectable(variable)
-    }
-
-  private class DataViewLiquidSupport(dv: data.DataView) extends LiquidSupport {
-    override def toLiquid(): java.util.Map[String, Any] =
-      if (dv.isNull) new java.util.HashMap[String, Any]()
-      else
-        dv.view match {
-          case _: scala.collection.immutable.VectorMap[?, ?] =>
-            DataViewBridge.unwrapMap(dv.asMap.get)
-          case _ =>
-            val m = new java.util.HashMap[String, Any]()
-            m.put("value", DataViewBridge.unwrap(dv))
-            m
-        }
   }
 }
 

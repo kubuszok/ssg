@@ -16,20 +16,22 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "divided_by" filter — division. */
 class Divided_By extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-    var v: Any = value
-    if (v == null) {
-      v = 0L
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+    var v: DataView = value
+    if (v.isNull) {
+      v = DataView.from(0L)
     }
     checkParams(params, 1)
-    val rhsObj = params(0)
+    val rhsObj: DataView = params(0)
     if (canBeInteger(v) && canBeInteger(rhsObj)) {
-      asNumber(v).longValue() / asNumber(rhsObj).longValue()
+      DataView.from(asNumber(v).longValue() / asNumber(rhsObj).longValue())
     } else {
-      asNumber(v).doubleValue() / asNumber(rhsObj).doubleValue()
+      DataView.from(asNumber(v).doubleValue() / asNumber(rhsObj).doubleValue())
     }
   }
 }

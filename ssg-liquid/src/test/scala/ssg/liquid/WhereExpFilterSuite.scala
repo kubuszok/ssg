@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
@@ -14,7 +16,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
 
   private def L(v: Long): java.lang.Long = java.lang.Long.valueOf(v)
 
-  private def arrayOfObjectsData(): JHashMap[String, Any] =
+  private def arrayOfObjectsData(): JHashMap[String, DataView] =
     TestHelper.mapOf(
       "var" -> TestHelper.listOf(
         TestHelper.mapOf("color" -> "teal", "size" -> "large"),
@@ -131,7 +133,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
     assertEquals(rendered, "345")
   }
 
-  private def objectWithGroupsData(): JHashMap[String, Any] =
+  private def objectWithGroupsData(): JHashMap[String, DataView] =
     TestHelper.mapOf(
       "var" -> TestHelper.listOf(
         TestHelper.mapOf("id" -> "a", "groups" -> TestHelper.listOf(L(1), L(2))),

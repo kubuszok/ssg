@@ -2,6 +2,7 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
 import ssg.liquid.antlr.NameResolver
 import ssg.liquid.parser.Flavor
 
@@ -29,10 +30,12 @@ final class IncludeRelativeSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFlavor(Flavor.LIQUID)
       .withNameResolver(new NameResolver.InMemory(map))
-      .withTag(new tags.Tag("include_relative") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
-          "World"
-      })
+      .withTag(
+        new tags.Tag("include_relative") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from("World")
+        }
+      )
       .withShowExceptionsFromInclude(false)
       .build()
     val template = parser.parse("Hello {% include_relative 'world.liquid' %}!")
@@ -47,16 +50,18 @@ final class IncludeRelativeSuite extends munit.FunSuite {
       .withNameResolver(new NameResolver.InMemory(map))
       .withBlock(
         new blocks.Block("another") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val blockNode = ns(ns.length - 1)
-            "[" + super.asString(blockNode.render(context), context) + "]"
+            DataView.from("[" + super.asString(blockNode.render(context), context) + "]")
           }
         }
       )
-      .withBlock(new blocks.Block("include_relative") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
-          "World"
-      })
+      .withBlock(
+        new blocks.Block("include_relative") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from("World")
+        }
+      )
       .withShowExceptionsFromInclude(false)
       .build()
 

@@ -2,9 +2,11 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.Flavor
 
-import java.util.{ ArrayList => JArrayList, HashMap => JHashMap }
+import java.util.{ HashMap => JHashMap }
 
 final class WhereFilterSuite extends munit.FunSuite {
 
@@ -18,17 +20,11 @@ final class WhereFilterSuite extends munit.FunSuite {
   private val liquidParser: TemplateParser =
     new TemplateParser.Builder().withFlavor(Flavor.LIQP).build()
 
-  private def makeItem(pairs: (String, Any)*): JHashMap[String, Any] = {
-    val map = new JHashMap[String, Any]()
-    pairs.foreach { case (k, v) => map.put(k, v) }
-    map
-  }
+  private def makeItem(pairs: (String, Any)*): JHashMap[String, DataView] =
+    TestHelper.mapOf(pairs*)
 
-  private def makeList(items: Any*): JArrayList[Any] = {
-    val list = new JArrayList[Any]()
-    items.foreach(list.add)
-    list
-  }
+  private def makeList(items: Any*): DataView =
+    TestHelper.listOf(items*)
 
   // ---------------------------------------------------------------------------
   // Jekyll-style where (2-param: property, value)
@@ -40,8 +36,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("color" -> "blue", "name" -> "berry"),
       makeItem("color" -> "red", "name" -> "cherry")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign reds = items | where: 'color', 'red' %}{{ reds | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "apple,cherry")
   }
@@ -51,8 +47,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("color" -> "red", "name" -> "apple"),
       makeItem("color" -> "blue", "name" -> "berry")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign greens = items | where: 'color', 'green' %}{{ greens | size }}").render(vars)
     assertEquals(result, "0")
   }
@@ -62,8 +58,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("color" -> "red", "name" -> "apple"),
       makeItem("name" -> "mystery") // no "color" key
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign nils = items | where: 'color', nil %}{{ nils | size }}").render(vars)
     assertEquals(result, "1")
   }
@@ -73,8 +69,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("name" -> "apple"),
       makeItem("color" -> "blue", "name" -> "berry")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign blues = items | where: 'color', 'blue' %}{{ blues | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "berry")
   }
@@ -91,8 +87,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("score" -> "10", "name" -> "low"),
       makeItem("score" -> "42", "name" -> "also-high")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     // The string "42" is coerced to Double 42.0, so comparing with string "42" won't match
     // because parseSortInput turns "42" into 42.0, and comparePropertyVsTarget calls asString
     // on the target. So "42" matches the string representation of 42.0 which is "42.0"
@@ -114,14 +110,14 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("status" -> "published", "title" -> "Post B"),
       makeItem("status" -> "draft", "title" -> "Post C")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign drafts = items | where: 'status', 'draft' %}{{ drafts | map: 'title' | join: ',' }}").render(vars)
     assertEquals(result, "Post A,Post C")
   }
 
   test("jekyll where: null input returns empty string") {
-    val vars   = new JHashMap[String, Any]()
+    val vars   = new JHashMap[String, DataView]()
     val result = jekyllParser.parse("{% assign res = nothing | where: 'key', 'val' %}{{ res }}").render(vars)
     assertEquals(result, "")
   }
@@ -130,16 +126,16 @@ final class WhereFilterSuite extends munit.FunSuite {
     val items = makeList(
       makeItem("type" -> "fruit", "name" -> "banana")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign fruits = items | where: 'type', 'fruit' %}{{ fruits | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "banana")
   }
 
   test("jekyll where: empty array returns empty") {
     val items = makeList()
-    val vars  = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars  = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = jekyllParser.parse("{% assign res = items | where: 'key', 'val' %}{{ res | size }}").render(vars)
     assertEquals(result, "0")
   }
@@ -154,8 +150,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("featured" -> java.lang.Boolean.FALSE, "name" -> "B"),
       makeItem("featured" -> java.lang.Boolean.TRUE, "name" -> "C")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = liquidParser.parse("{% assign featured = items | where: 'featured' %}{{ featured | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "A,C")
   }
@@ -165,8 +161,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("tag" -> "a", "name" -> "X"),
       makeItem("name" -> "Y") // no "tag" key
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = liquidParser.parse("{% assign tagged = items | where: 'tag' %}{{ tagged | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "X")
   }
@@ -181,8 +177,8 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("color" -> "blue", "name" -> "berry"),
       makeItem("color" -> "red", "name" -> "cherry")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = liquidParser.parse("{% assign reds = items | where: 'color', 'red' %}{{ reds | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "apple,cherry")
   }
@@ -193,16 +189,16 @@ final class WhereFilterSuite extends munit.FunSuite {
       makeItem("count" -> java.lang.Integer.valueOf(5), "name" -> "B"),
       makeItem("count" -> java.lang.Integer.valueOf(3), "name" -> "C")
     )
-    val vars = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = liquidParser.parse("{% assign threes = items | where: 'count', 3 %}{{ threes | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "A,C")
   }
 
   test("liquid where: empty array returns empty array") {
     val items = makeList()
-    val vars  = new JHashMap[String, Any]()
-    vars.put("items", items)
+    val vars  = new JHashMap[String, DataView]()
+    vars.put("items", TestHelper.dv(items))
     val result = liquidParser.parse("{% assign res = items | where: 'key' %}{{ res | size }}").render(vars)
     assertEquals(result, "0")
   }
@@ -212,13 +208,13 @@ final class WhereFilterSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("jekyll where: map values treated as collection") {
-    val map   = new JHashMap[String, Any]()
+    val map   = new JHashMap[String, DataView]()
     val item1 = makeItem("color" -> "red", "name" -> "a")
     val item2 = makeItem("color" -> "blue", "name" -> "b")
-    map.put("x", item1)
-    map.put("y", item2)
-    val vars = new JHashMap[String, Any]()
-    vars.put("data", map)
+    map.put("x", TestHelper.dv(item1))
+    map.put("y", TestHelper.dv(item2))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("data", TestHelper.dv(map))
     val result = jekyllParser.parse("{% assign reds = data | where: 'color', 'red' %}{{ reds | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "a")
   }
@@ -229,16 +225,16 @@ final class WhereFilterSuite extends munit.FunSuite {
 
   test("liquid where: map input is wrapped in array") {
     val map  = makeItem("status" -> "active", "name" -> "item1")
-    val vars = new JHashMap[String, Any]()
-    vars.put("data", map)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("data", TestHelper.dv(map))
     val result = liquidParser.parse("{% assign res = data | where: 'status', 'active' %}{{ res | map: 'name' | join: ',' }}").render(vars)
     assertEquals(result, "item1")
   }
 
   test("liquid where: map with non-matching value returns empty") {
     val map  = makeItem("status" -> "inactive", "name" -> "item1")
-    val vars = new JHashMap[String, Any]()
-    vars.put("data", map)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("data", TestHelper.dv(map))
     val result = liquidParser.parse("{% assign res = data | where: 'status', 'active' %}{{ res | size }}").render(vars)
     assertEquals(result, "0")
   }

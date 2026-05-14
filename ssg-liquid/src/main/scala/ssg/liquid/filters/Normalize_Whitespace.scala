@@ -16,16 +16,18 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.util.regex.Pattern
 
 class Normalize_Whitespace extends Filter("normalize_whitespace") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    if (value == null) {
-      ""
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+    if (value.isNull) {
+      DataView.from("")
     } else {
       val string = value.toString.trim()
-      Normalize_Whitespace.pattern.matcher(string).replaceAll(" ")
+      DataView.from(Normalize_Whitespace.pattern.matcher(string).replaceAll(" "))
     }
 }
 

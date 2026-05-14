@@ -20,6 +20,9 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
+import java.time.temporal.TemporalAccessor
 import java.util.{ ArrayList, List => JList }
 
 import scala.util.boundary
@@ -34,7 +37,7 @@ class BlockNode extends LNode {
 
   def getChildren: JList[LNode] = new ArrayList[LNode](children)
 
-  override def render(context: TemplateContext): Any = boundary {
+  override def render(context: TemplateContext): DataView = boundary {
     val builder = context.newObjectAppender(children.size())
     var i       = 0
     while (i < children.size()) {
@@ -45,21 +48,14 @@ class BlockNode extends LNode {
       // For example, the tag {% # inline comment %} is considered "empty".
       if (node != null) {
         val value = node.render(context)
-        if (value != null) {
-          if ((value.asInstanceOf[AnyRef] eq LValue.BREAK) || (value.asInstanceOf[AnyRef] eq LValue.CONTINUE)) {
+        if (!value.isNull) {
+          if ((value eq DataView.BREAK) || (value eq DataView.CONTINUE)) {
             break(value)
           } else {
-            value match {
-              case list: JList[?] =>
-                val it = list.iterator()
-                while (it.hasNext)
-                  builder.append(postprocess(it.next(), context))
-              case arr: Array[?] =>
-                var j = 0
-                while (j < arr.length) {
-                  builder.append(postprocess(arr(j), context))
-                  j += 1
-                }
+            value.view match {
+              case v: Vector[?] =>
+                val vec = v.asInstanceOf[Vector[DataView]]
+                vec.foreach(dv => builder.append(postprocess(dv, context)))
               case _ =>
                 builder.append(postprocess(value, context))
             }
@@ -67,14 +63,14 @@ class BlockNode extends LNode {
         }
       }
     }
-    builder.getResult
+    DataView.from(builder.getResult.toString)
   }
 
-  private def postprocess(value: Any, context: TemplateContext): Any =
-    if (LValue.isTemporal(value)) {
+  private def postprocess(value: DataView, context: TemplateContext): Any =
+    if (!value.isNull && value.view.isInstanceOf[TemporalAccessor]) {
       val time = LValue.asRubyDate(value, context)
       LValue.rubyDateTimeFormat.format(time)
     } else {
-      value
+      value.toString
     }
 }

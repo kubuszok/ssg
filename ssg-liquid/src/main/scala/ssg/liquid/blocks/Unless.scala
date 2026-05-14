@@ -6,10 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.blocks → ssg.liquid.blocks
- *   Idiom: boundary/break for early return
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/blocks/Unless.java
  * Covenant-verified: 2026-04-26
@@ -20,15 +16,15 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
 
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Mirror of if statement — renders if condition is false. */
 class Unless extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any =
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView =
     boundary {
       var i = 0
       while (i < nodes.length - 1) {
@@ -39,6 +35,6 @@ class Unless extends Block {
         }
         i += 2
       }
-      ""
+      DataView.from("")
     }
 }

@@ -16,22 +16,24 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "minus" filter — subtraction. */
 class Minus extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-    var v: Any = value
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+    var v: DataView = value
     if (!isNumber(v)) {
-      v = 0
+      v = DataView.from(0L)
     }
     checkParams(params, 1)
     val rhsObj = params(0)
     if (canBeInteger(v) && canBeInteger(rhsObj)) {
-      asNumber(v).longValue() - asNumber(rhsObj).longValue()
+      DataView.from(asNumber(v).longValue() - asNumber(rhsObj).longValue())
     } else {
       val first  = PlainBigDecimal(asNumber(v).toString)
       val second = PlainBigDecimal(asNumber(rhsObj).toString)
-      LValue.asFormattedNumber(first.subtract(second))
+      DataView.from(LValue.asFormattedNumber(first.subtract(second)))
     }
   }
 }

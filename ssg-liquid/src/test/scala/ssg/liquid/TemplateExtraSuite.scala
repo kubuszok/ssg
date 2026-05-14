@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.Locale
 
 /** Gap-fill tests ported from liqp's TemplateTest.java — 5 missing tests. */
@@ -20,9 +22,11 @@ final class TemplateExtraSuite extends munit.FunSuite {
 
   test("template: with custom tag") {
     val parser = new TemplateParser.Builder()
-      .withTag(new tags.Tag("custom_tag") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = "xxx"
-      })
+      .withTag(
+        new tags.Tag("custom_tag") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = DataView.from("xxx")
+        }
+      )
       .build()
     assertEquals(parser.parse("{% custom_tag %}").render(), "xxx")
   }
@@ -31,10 +35,10 @@ final class TemplateExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("custom_uppercase_block") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val block = ns(0)
             val res   = block.render(context)
-            if (res != null) res.toString.toUpperCase(Locale.US) else null
+            DataView.from(super.asString(res, context).toUpperCase(Locale.US))
           }
         }
       )
@@ -50,13 +54,13 @@ final class TemplateExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {
-          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
             val numbers = super.asArray(value, context)
             var sum     = 0.0
             numbers.foreach { obj =>
               sum += super.asNumber(obj).doubleValue()
             }
-            java.lang.Double.valueOf(sum)
+            DataView.from(sum)
           }
         }
       )

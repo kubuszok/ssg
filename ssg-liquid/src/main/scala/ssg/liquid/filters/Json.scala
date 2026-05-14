@@ -22,15 +22,17 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.time.temporal.TemporalAccessor
 import java.util.{ Collection => JCollection, Map => JMap }
 
 /** Serializes a value to JSON. */
 class Json extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     try
-      Json.toJson(value)
+      DataView.from(Json.toJson(value))
     catch {
       case e: Exception =>
         context.addError(e)
@@ -47,6 +49,7 @@ object Json {
   def toJson(value: Any): String =
     value match {
       case null => "null"
+      case dv:  DataView                                    => toJsonDataView(dv)
       case b:   Boolean                                     => b.toString
       case n:   java.lang.Double if n.isNaN || n.isInfinite => "null"
       case n:   java.lang.Float if n.isNaN || n.isInfinite  => "null"
@@ -80,6 +83,33 @@ object Json {
         sb.append("}").toString()
       case other => quoteString(other.toString)
     }
+
+  private def toJsonDataView(dv: DataView): String =
+    if (dv.isNull) "null"
+    else
+      dv.view match {
+        case b:  Boolean                                     => b.toString
+        case n:  java.lang.Double if n.isNaN || n.isInfinite => "null"
+        case n:  java.lang.Float if n.isNaN || n.isInfinite  => "null"
+        case n:  Number                                      => n.toString
+        case ta: TemporalAccessor                            => quoteString(ta.toString)
+        case s:  String                                      => quoteString(s)
+        case v:  Vector[?]                                   =>
+          v.asInstanceOf[Vector[DataView]].map(toJsonDataView).mkString("[", ",", "]")
+        case m: scala.collection.immutable.VectorMap[?, ?] =>
+          val map   = m.asInstanceOf[scala.collection.immutable.VectorMap[String, DataView]]
+          val sb    = new StringBuilder("{")
+          var first = true
+          map.foreach { case (k, v) =>
+            if (!first) sb.append(",")
+            sb.append(quoteString(k))
+            sb.append(":")
+            sb.append(toJsonDataView(v))
+            first = false
+          }
+          sb.append("}").toString()
+        case other => quoteString(String.valueOf(other))
+      }
 
   private def quoteString(s: String): String = {
     val sb = new StringBuilder("\"")

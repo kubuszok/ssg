@@ -19,6 +19,7 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
 
 import java.util.Locale
@@ -37,5 +38,5 @@ abstract class Insertion(_name: String) extends LValue {
   val name: String = if (_name != null) _name else getClass.getSimpleName.toLowerCase(Locale.ENGLISH)
 
   /** Renders this insertion with the given context and child nodes. */
-  def render(context: TemplateContext, nodes: Array[LNode]): Any
+  def render(context: TemplateContext, nodes: Array[LNode]): DataView
 }

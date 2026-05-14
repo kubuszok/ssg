@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Truncatewords extends Filter {
 
   /*
@@ -23,9 +25,9 @@ class Truncatewords extends Filter {
    *
    * Truncate a string down to x words
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (value == null) {
-      ""
+      DataView.from("")
     } else {
       val text           = asString(value, context)
       val words          = text.split("\\s+")
@@ -41,9 +43,9 @@ class Truncatewords extends Filter {
       }
 
       if (length >= words.length) {
-        text
+        DataView.from(text)
       } else {
-        join(words, length) + truncateString
+        DataView.from(join(words, length) + truncateString)
       }
     }
 

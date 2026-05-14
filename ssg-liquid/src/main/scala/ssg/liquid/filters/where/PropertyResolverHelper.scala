@@ -9,7 +9,7 @@
  * Migration notes:
  *   Renames: liqp.filters.where → ssg.liquid.filters.where
  *   Convention: Java static singleton → Scala object
- *   Idiom: Default adapters for Inspectable and Map registered at init
+ *   Idiom: Default adapters for DataView and VectorMap registered at init
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/filters/where/PropertyResolverHelper.java
@@ -23,24 +23,21 @@ package filters
 package where
 
 import ssg.data.DataView
-import ssg.liquid.parser.Inspectable
 
-import java.util.{ ArrayList, Map => JMap }
+import java.util.ArrayList
 
+import scala.collection.immutable.VectorMap
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Holds the chain of property resolver adapters.
-  *
-  * Default resolvers handle `Inspectable` (via `TemplateParser.evaluate`) and `Map` (direct lookup).
-  */
+/** Holds the chain of property resolver adapters. */
 class PropertyResolverHelper {
   private val propertyResolverAdapters: ArrayList[PropertyResolverAdapter] = new ArrayList()
 
   def add(one: PropertyResolverAdapter): Unit =
     propertyResolverAdapters.add(one)
 
-  def findFor(target: Any): PropertyResolverAdapter = boundary {
+  def findFor(target: DataView): PropertyResolverAdapter = boundary {
     var i = 0
     while (i < propertyResolverAdapters.size()) {
       val e = propertyResolverAdapters.get(i)
@@ -56,45 +53,21 @@ object PropertyResolverHelper {
   val INSTANCE: PropertyResolverHelper = {
     val helper = new PropertyResolverHelper()
 
+    // Default resolver for DataView maps
     helper.add(
       new PropertyResolverAdapter {
-        private val lValue:                                                                LValue = new LValue {}
-        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any    = {
-          val dv  = input.asInstanceOf[DataView]
+        private val lValue:                                                                          LValue   = new LValue {}
+        override def getItemProperty(context: TemplateContext, input: DataView, property: DataView): DataView = {
           val key = lValue.asString(property, context)
-          dv.asMap.fold(null: Any) { m =>
+          input.asMap.fold(DataView.nil) { m =>
             m.get(key) match {
-              case Some(inner) => DataViewBridge.unwrap(inner)
-              case None        => null
+              case Some(inner) => inner
+              case None        => DataView.nil
             }
           }
         }
-        override def support(target: Any): Boolean =
-          target.isInstanceOf[DataView]
-      }
-    )
-
-    // default resolver for Inspectable type
-    // allow Inspectable items to be inspected via "where" filter
-    helper.add(
-      new PropertyResolverAdapter {
-        // dummy LValue for accessing helper method #asString
-        private val lValue:                                                                LValue = new LValue {}
-        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any    = {
-          val evaluated = context.parser.evaluate(input)
-          evaluated.toLiquid().get(lValue.asString(property, context))
-        }
-        override def support(target: Any): Boolean =
-          target.isInstanceOf[Inspectable]
-      }
-    )
-
-    helper.add(
-      new PropertyResolverAdapter {
-        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any =
-          input.asInstanceOf[JMap[?, ?]].get(property)
-        override def support(target: Any): Boolean =
-          target.isInstanceOf[JMap[?, ?]]
+        override def support(target: DataView): Boolean =
+          !target.isNull && target.view.isInstanceOf[VectorMap[?, ?]]
       }
     )
 

@@ -20,9 +20,11 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Strip_HTML extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     var html = asString(value, context)
     // Remove block-level elements: <script>...</script>, <style>...</style>, <!--...-->
     html = Strip_HTML.removeBlocks(html, "<script", "</script>")
@@ -30,7 +32,7 @@ class Strip_HTML extends Filter {
     html = Strip_HTML.removeComments(html)
     // Remove remaining HTML tags: <...>
     html = Strip_HTML.removeTags(html)
-    html
+    DataView.from(html)
   }
 }
 

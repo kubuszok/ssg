@@ -8,7 +8,7 @@
  *
  * Migration notes:
  *   Renames: liqp.nodes → ssg.liquid.nodes
- *   Idiom: Singleton sentinels as object vals
+ *   Idiom: Singleton sentinels as DataView.EMPTY/DataView.BLANK
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/nodes/AtomNode.java
@@ -20,26 +20,24 @@ package ssg
 package liquid
 package nodes
 
-class AtomNode(private val value: Any) extends LNode {
+import ssg.data.DataView
 
-  override def render(context: TemplateContext): Any = value
+class AtomNode(private val value: DataView) extends LNode {
+
+  override def render(context: TemplateContext): DataView = value
 }
 
 object AtomNode {
 
   /** Sentinel for Liquid's `empty` keyword. */
-  val EMPTY: AtomNode = new AtomNode(new Object() {
-    override def toString: String = ""
-  })
+  val EMPTY: AtomNode = new AtomNode(DataView.EMPTY)
 
   /** Sentinel for Liquid's `blank` keyword. */
-  val BLANK: AtomNode = new AtomNode(new Object() {
-    override def toString: String = ""
-  })
+  val BLANK: AtomNode = new AtomNode(DataView.BLANK)
 
-  /** Returns true if the object is the EMPTY sentinel. */
-  def isEmpty(o: Any): Boolean = o.asInstanceOf[AnyRef] eq EMPTY.value.asInstanceOf[AnyRef]
+  /** Returns true if the DataView is the EMPTY sentinel. */
+  def isEmpty(o: DataView): Boolean = o eq DataView.EMPTY
 
-  /** Returns true if the object is the BLANK sentinel. */
-  def isBlank(o: Any): Boolean = o.asInstanceOf[AnyRef] eq BLANK.value.asInstanceOf[AnyRef]
+  /** Returns true if the DataView is the BLANK sentinel. */
+  def isBlank(o: DataView): Boolean = o eq DataView.BLANK
 }

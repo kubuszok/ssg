@@ -65,8 +65,7 @@ final class StatementsExtraSuite extends munit.FunSuite {
     )
   }
 
-  // SSG: `== empty` comparison for collections not yet supported
-  test("statement: is collection empty".fail) {
+  test("statement: is collection empty") {
     val vars = TestHelper.mapOf("array" -> TestHelper.listOf())
     assertEquals(
       Template.parse(" {% if array == empty %} true {% else %} false {% endif %} ").render(vars),

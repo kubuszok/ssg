@@ -16,32 +16,26 @@ package ssg
 package liquid
 package filters
 
-import ssg.liquid.parser.Inspectable
+import ssg.data.DataView
 
 /** Liquid "size" filter — return the size of an array or string. */
 class Size extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-    var v: Any = value
-    v match {
-      case insp: Inspectable =>
-        val evaluated = context.parser.evaluate(insp)
-        v = evaluated.toLiquid()
-      case _ => // no-op
-    }
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+    val v: DataView = value
     if (isMap(v)) {
-      asMap(v).size()
+      DataView.from(asMap(v).size)
     } else if (isArray(v)) {
-      asArray(v, context).length
+      DataView.from(asArray(v, context).size)
     } else if (isString(v)) {
-      asString(v, context).length()
+      DataView.from(asString(v, context).length())
     } else if (isNumber(v)) {
       // we're only using 64 bit longs, no BigIntegers or the like.
       // So just return 8 (the number of bytes in a long).
-      8
+      DataView.from(8)
     } else {
       // boolean or nil
-      0
+      DataView.from(0)
     }
   }
 }

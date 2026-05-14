@@ -2,9 +2,9 @@
 package ssg
 package liquid
 
-import ssg.liquid.parser.{ Inspectable, LiquidSupport }
+import ssg.data.DataView
 
-import java.util.{ Collections, HashMap => JHashMap, Map => JMap }
+import java.util.{ HashMap => JHashMap }
 
 /** Tests ported from liqp's ReadmeSamplesTest.java — 11 tests.
   *
@@ -41,31 +41,30 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
 
   test("readme: map example") {
     val template = new TemplateParser.Builder().build().parse("hi {{name}}")
-    val map      = new JHashMap[String, Any]()
-    map.put("name", "tobi")
+    val map      = new JHashMap[String, DataView]()
+    map.put("name", TestHelper.dv("tobi"))
     val rendered = template.render(map)
     assertEquals(rendered, "hi tobi")
   }
 
   // SSG: Inspectable public field access may differ
-  test("readme: inspectable".fail) {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
+  // Converted from render(Inspectable) to render(Map) since DataView rewrite removed reflection path
+  test("readme: inspectable (converted to DataView)") {
     val template = Template.parse("hi {{name}}")
-    val rendered = template.render(new ReadmeSamplesSuite.MyParams())
+    val rendered = template.render(TestHelper.mapOf("name" -> "tobi"))
     assertEquals(rendered, "hi tobi")
   }
 
   test("readme: liquid support") {
     val template = Template.parse("hi {{name}}")
-    val myLazy   = new ReadmeSamplesSuite.MyLazy()
-    val rendered = template.render(myLazy.toLiquid())
+    val rendered = template.render(TestHelper.mapOf("name" -> "tobi"))
     assertEquals(rendered, "hi tobi")
   }
 
   // SSG: EAGER mode object access differs
   test("readme: eager mode".fail) {
     assume(PlatformCompat.supportsReflection, "EAGER mode requires reflection (JVM-only)")
-    val data   = Collections.singletonMap[String, Any]("a", new ReadmeSamplesSuite.ValHolder())
+    val data   = TestHelper.mapOf("a" -> new ReadmeSamplesSuite.ValHolder())
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
     val res    = parser.parse("hi {{a.val}}").render(data)
     assertEquals(res, "hi tobi")
@@ -75,9 +74,9 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("b") {
-          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
             val text = super.asString(value, context)
-            text.replaceAll("\\*(\\w(.*?\\w)?)\\*", "<strong>$1</strong>")
+            DataView.from(text.replaceAll("\\*(\\w(.*?\\w)?)\\*", "<strong>$1</strong>"))
           }
         }
       )
@@ -93,7 +92,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("repeat") {
-          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
             val text    = super.asString(value, context)
             var times   = if (params.length == 0) 1 else super.asNumber(params(0)).intValue()
             val builder = new StringBuilder()
@@ -101,7 +100,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
               builder.append(text)
               times -= 1
             }
-            builder.toString()
+            DataView.from(builder.toString())
           }
         }
       )
@@ -116,13 +115,13 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {
-          override def apply(value: Any, context: TemplateContext, params: Array[Any]): AnyRef = {
+          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
             val numbers = super.asArray(value, context)
             var sum     = 0.0
             numbers.foreach { obj =>
               sum += super.asNumber(obj).doubleValue()
             }
-            java.lang.Double.valueOf(sum)
+            DataView.from(sum)
           }
         }
       )
@@ -145,7 +144,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("loop") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             var n       = super.asNumber(ns(0).render(context)).intValue()
             val block   = ns(1)
             val builder = new StringBuilder()
@@ -153,7 +152,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
               builder.append(super.asString(block.render(context), context))
               n -= 1
             }
-            builder.toString()
+            DataView.from(builder.toString())
           }
         }
       )
@@ -175,14 +174,16 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
 
 object ReadmeSamplesSuite {
 
-  class MyParams extends Inspectable {
-    @SuppressWarnings(Array("unused"))
-    val name: String = "tobi"
+  // MyParams was an Inspectable — converted to produce DataView maps
+  // since the DataView rewrite removed reflection-based introspection.
+  class MyParams {
+    val name:          String                     = "tobi"
+    def toDataViewMap: JHashMap[String, DataView] = TestHelper.mapOf("name" -> name)
   }
 
-  class MyLazy extends LiquidSupport {
-    override def toLiquid(): JMap[String, Any] =
-      Collections.singletonMap("name", "tobi": Any)
+  // MyLazy was a LiquidSupport — converted to produce DataView maps directly.
+  class MyLazy {
+    def toDataViewMap: JHashMap[String, DataView] = TestHelper.mapOf("name" -> "tobi")
   }
 
   class ValHolder {

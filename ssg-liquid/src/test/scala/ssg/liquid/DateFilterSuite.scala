@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.time.ZoneId
 import java.util.{ HashMap => JHashMap }
 
@@ -123,8 +125,8 @@ final class DateFilterSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("date filter: epoch timestamp 0 formats to 1970") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%Y-%m-%d' }}").render(vars)
@@ -133,8 +135,8 @@ final class DateFilterSuite extends munit.FunSuite {
 
   test("date filter: epoch timestamp 1710505200 formats correctly") {
     // 1710505200 = 2024-03-15T15:00:00Z
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%Y-%m-%d' }}").render(vars)
@@ -142,8 +144,8 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp as integer") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Integer.valueOf(0))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Integer.valueOf(0)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%Y' }}").render(vars)
@@ -151,8 +153,8 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp with %F composite") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%F' }}").render(vars)
@@ -160,8 +162,8 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp with %T composite") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%T' }}").render(vars)
@@ -169,8 +171,8 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp with %D composite") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val result = parser.parse("{{ ts | date: '%D' }}").render(vars)
@@ -178,9 +180,9 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp with individual directives") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     // 1710504000 = 2024-03-15T12:00:00Z (exactly noon UTC)
-    vars.put("ts", java.lang.Long.valueOf(1710504000L))
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710504000L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     assertEquals(parser.parse("{{ ts | date: '%Y' }}").render(vars), "2024")
@@ -192,32 +194,32 @@ final class DateFilterSuite extends munit.FunSuite {
   }
 
   test("date filter: epoch timestamp with %B full month name") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     assertEquals(parser.parse("{{ ts | date: '%B' }}").render(vars), "March")
   }
 
   test("date filter: epoch timestamp with %a abbreviated weekday") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     assertEquals(parser.parse("{{ ts | date: '%a' }}").render(vars), "Fri")
   }
 
   test("date filter: epoch timestamp with %A full weekday") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     assertEquals(parser.parse("{{ ts | date: '%A' }}").render(vars), "Friday")
   }
 
   test("date filter: epoch timestamp with %y two-digit year") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val tz     = ZoneId.of("UTC")
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     assertEquals(parser.parse("{{ ts | date: '%y' }}").render(vars), "24")
@@ -246,16 +248,16 @@ final class DateFilterSuite extends munit.FunSuite {
   test("date filter: custom DateParser via Builder") {
     val customParser = new filters.date.DateParser()
     val parser       = new TemplateParser.Builder().withDateParser(customParser).build()
-    val vars         = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(1710505200L))
+    val vars         = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
     val result = parser.parse("{{ ts | date: '%F' }}").render(vars)
     // Not UTC, so we just check it matches a date pattern
     assert(result.matches("\\d{4}-\\d{2}-\\d{2}"), s"Expected yyyy-MM-dd format, got: $result")
   }
 
   test("date filter: default time zone affects epoch rendering") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val utcParser = new TemplateParser.Builder().withDefaultTimeZone(ZoneId.of("UTC")).build()
     val result    = utcParser.parse("{{ ts | date: '%Y-%m-%d' }}").render(vars)
     assertEquals(result, "1970-01-01")
@@ -263,8 +265,8 @@ final class DateFilterSuite extends munit.FunSuite {
 
   test("date filter: different time zones produce different hour results") {
     // Epoch 0 = 1970-01-01T00:00:00Z. In UTC the hour is 00, in UTC+5 the hour is 05.
-    val vars = new JHashMap[String, Any]()
-    vars.put("ts", java.lang.Long.valueOf(0L))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(0L)))
     val utcParser = new TemplateParser.Builder().withDefaultTimeZone(ZoneId.of("UTC")).build()
     val utcResult = utcParser.parse("{{ ts | date: '%H' }}").render(vars)
     assertEquals(utcResult, "00")

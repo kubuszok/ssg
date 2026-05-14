@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 
 final class LiquidSuite extends munit.FunSuite {
@@ -16,40 +18,40 @@ final class LiquidSuite extends munit.FunSuite {
   }
 
   test("parse and render variable output") {
-    val vars = new HashMap[String, Any]()
-    vars.put("name", "Liquid")
+    val vars = new HashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("Liquid"))
     val template = Template.parse("Hello, {{ name }}!")
     assertEquals(template.render(vars), "Hello, Liquid!")
   }
 
   test("parse and render with filter") {
-    val vars = new HashMap[String, Any]()
-    vars.put("name", "world")
+    val vars = new HashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("world"))
     val template = Template.parse("{{ name | upcase }}")
     assertEquals(template.render(vars), "WORLD")
   }
 
   test("parse and render if tag") {
-    val vars = new HashMap[String, Any]()
-    vars.put("show", java.lang.Boolean.TRUE)
+    val vars = new HashMap[String, DataView]()
+    vars.put("show", TestHelper.dv(java.lang.Boolean.TRUE))
     val template = Template.parse("{% if show %}visible{% endif %}")
     assertEquals(template.render(vars), "visible")
   }
 
   test("parse and render if/else tag") {
-    val vars = new HashMap[String, Any]()
-    vars.put("show", java.lang.Boolean.FALSE)
+    val vars = new HashMap[String, DataView]()
+    vars.put("show", TestHelper.dv(java.lang.Boolean.FALSE))
     val template = Template.parse("{% if show %}yes{% else %}no{% endif %}")
     assertEquals(template.render(vars), "no")
   }
 
   test("parse and render for loop") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
     items.add("c")
-    vars.put("items", items)
+    vars.put("items", TestHelper.dv(items))
     val template = Template.parse("{% for item in items %}{{ item }}{% endfor %}")
     assertEquals(template.render(vars), "abc")
   }
@@ -60,31 +62,31 @@ final class LiquidSuite extends munit.FunSuite {
   }
 
   test("parse and render multiple filters") {
-    val vars = new HashMap[String, Any]()
-    vars.put("msg", "hello world")
+    val vars = new HashMap[String, DataView]()
+    vars.put("msg", TestHelper.dv("hello world"))
     val template = Template.parse("{{ msg | upcase | truncate: 5 }}")
     assertEquals(template.render(vars), "HE...")
   }
 
   test("parse and render nested property access") {
-    val vars = new HashMap[String, Any]()
-    val user = new HashMap[String, Any]()
-    user.put("name", "Alice")
-    vars.put("user", user)
+    val vars = new HashMap[String, DataView]()
+    val user = new HashMap[String, DataView]()
+    user.put("name", TestHelper.dv("Alice"))
+    vars.put("user", TestHelper.dv(user))
     val template = Template.parse("{{ user.name }}")
     assertEquals(template.render(vars), "Alice")
   }
 
   test("parse and render unless tag") {
-    val vars = new HashMap[String, Any]()
-    vars.put("hidden", java.lang.Boolean.FALSE)
+    val vars = new HashMap[String, DataView]()
+    vars.put("hidden", TestHelper.dv(java.lang.Boolean.FALSE))
     val template = Template.parse("{% unless hidden %}shown{% endunless %}")
     assertEquals(template.render(vars), "shown")
   }
 
   test("parse and render case/when tag") {
-    val vars = new HashMap[String, Any]()
-    vars.put("color", "blue")
+    val vars = new HashMap[String, DataView]()
+    vars.put("color", TestHelper.dv("blue"))
     val template = Template.parse("{% case color %}{% when 'red' %}R{% when 'blue' %}B{% else %}?{% endcase %}")
     assertEquals(template.render(vars), "B")
   }
@@ -105,23 +107,23 @@ final class LiquidSuite extends munit.FunSuite {
   }
 
   test("parse and render comparison operators") {
-    val vars = new HashMap[String, Any]()
-    vars.put("a", java.lang.Integer.valueOf(5))
-    vars.put("b", java.lang.Integer.valueOf(3))
+    val vars = new HashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(java.lang.Integer.valueOf(5)))
+    vars.put("b", TestHelper.dv(java.lang.Integer.valueOf(3)))
     val template = Template.parse("{% if a > b %}yes{% endif %}")
     assertEquals(template.render(vars), "yes")
   }
 
   test("parse and render contains operator") {
-    val vars = new HashMap[String, Any]()
-    vars.put("msg", "hello world")
+    val vars = new HashMap[String, DataView]()
+    vars.put("msg", TestHelper.dv("hello world"))
     val template = Template.parse("{% if msg contains 'world' %}found{% endif %}")
     assertEquals(template.render(vars), "found")
   }
 
   test("parse and render math filters") {
-    val vars = new HashMap[String, Any]()
-    vars.put("price", java.lang.Integer.valueOf(10))
+    val vars = new HashMap[String, DataView]()
+    vars.put("price", TestHelper.dv(java.lang.Integer.valueOf(10)))
     val template = Template.parse("{{ price | plus: 5 }}")
     assertEquals(template.render(vars), "15")
   }
@@ -132,8 +134,8 @@ final class LiquidSuite extends munit.FunSuite {
   }
 
   test("parse and render size filter") {
-    val vars = new HashMap[String, Any]()
-    vars.put("name", "hello")
+    val vars = new HashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("hello"))
     val template = Template.parse("{{ name | size }}")
     assertEquals(template.render(vars), "5")
   }

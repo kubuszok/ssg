@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.Flavor
 
 import java.util.{ Arrays, Collections, LinkedHashSet }
@@ -32,7 +34,7 @@ final class NodeExtraSuite extends munit.FunSuite {
   test("block node: custom tag with block") {
     val parser = new TemplateParser.Builder()
       .withBlock(new blocks.Block("testtag") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = null
+        override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = DataView.nil
       })
       .build()
     parser.parse("{% testtag %} {% endtesttag %}").render()
@@ -110,7 +112,7 @@ final class NodeExtraSuite extends munit.FunSuite {
 
   test("output node: date with filter") {
     assume(PlatformCompat.supportsReflection, "LocalDateTime handling may differ on non-JVM")
-    val vars = Collections.singletonMap[String, Any]("a", java.time.LocalDateTime.parse("2011-12-03T10:15:30"))
+    val vars = Collections.singletonMap[String, DataView]("a", TestHelper.dv(java.time.LocalDateTime.parse("2011-12-03T10:15:30")))
     val res  = Template.parse("{{ a | truncate: 13 }}").render(vars)
     assertEquals(res, "2011-12-03...")
   }
@@ -165,9 +167,9 @@ final class NodeExtraSuite extends munit.FunSuite {
   }
 
   test("lookup: collection access by index") {
-    val vars = Collections.singletonMap[String, Any](
+    val vars = Collections.singletonMap[String, DataView](
       "data",
-      new LinkedHashSet[Any](Arrays.asList("hello", "world"))
+      TestHelper.dv(new LinkedHashSet[Any](Arrays.asList("hello", "world")))
     )
     assertEquals(Template.parse("Hello {{data[1]}}").render(vars), "Hello world")
   }
@@ -178,7 +180,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[-2]}}")
         .render(
-          Collections.singletonMap[String, Any]("data", new LinkedHashSet[Any](Arrays.asList("hello", "world")))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(new LinkedHashSet[Any](Arrays.asList("hello", "world"))))
         ),
       "Hello hello"
     )
@@ -187,7 +189,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[-2]}}")
         .render(
-          Collections.singletonMap[String, Any]("data", Arrays.asList("hello", "world"))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(Arrays.asList("hello", "world")))
         ),
       "Hello hello"
     )
@@ -196,7 +198,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[-2]}}")
         .render(
-          Collections.singletonMap[String, Any]("data", Array("hello", "world"))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(Array("hello", "world")))
         ),
       "Hello hello"
     )
@@ -207,7 +209,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[99] | default: 'default'}}")
         .render(
-          Collections.singletonMap[String, Any]("data", new LinkedHashSet[Any](Arrays.asList("hello", "world")))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(new LinkedHashSet[Any](Arrays.asList("hello", "world"))))
         ),
       "Hello default"
     )
@@ -215,7 +217,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[99] | default: 'default'}}")
         .render(
-          Collections.singletonMap[String, Any]("data", Arrays.asList("hello", "world"))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(Arrays.asList("hello", "world")))
         ),
       "Hello default"
     )
@@ -223,7 +225,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[99] | default: 'default'}}")
         .render(
-          Collections.singletonMap[String, Any]("data", Array("hello", "world"))
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv(Array("hello", "world")))
         ),
       "Hello default"
     )
@@ -231,7 +233,7 @@ final class NodeExtraSuite extends munit.FunSuite {
       Template
         .parse("Hello {{data[99] | default: 'default'}}")
         .render(
-          Collections.singletonMap[String, Any]("data", "123")
+          Collections.singletonMap[String, DataView]("data", TestHelper.dv("123"))
         ),
       "Hello default"
     )

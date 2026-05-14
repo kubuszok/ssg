@@ -18,8 +18,8 @@ object DataViewBridge {
     else
       dv.view match {
         case m: VectorMap[?, ?] => unwrapMap(m.asInstanceOf[VectorMap[String, DataView]])
-        case v: Vector[?]      => unwrapVector(v.asInstanceOf[Vector[DataView]])
-        case other              => other
+        case v: Vector[?]       => unwrapVector(v.asInstanceOf[Vector[DataView]])
+        case other => other
       }
 
   def unwrapMap(m: VectorMap[String, DataView]): JMap[String, Any] = {

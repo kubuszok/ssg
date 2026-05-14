@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class H extends Filter {
 
   /*
@@ -23,7 +25,7 @@ class H extends Filter {
    *
    * Alias for: escape
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     H.escapeFilter.apply(value, context, params)
 }
 

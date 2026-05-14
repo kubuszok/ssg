@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.util.regex.Pattern
 
 class Remove_First extends Filter {
@@ -25,12 +27,12 @@ class Remove_First extends Filter {
    *
    * remove the first occurrences of a substring
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val original = asString(value, context)
     val needle   = get(0, params)
-    if (needle == null) {
+    if (needle.isNull) {
       throw new RuntimeException("invalid pattern: " + needle)
     }
-    original.replaceFirst(Pattern.quote(String.valueOf(needle)), "")
+    DataView.from(original.replaceFirst(Pattern.quote(asString(needle, context)), ""))
   }
 }

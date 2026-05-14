@@ -16,26 +16,26 @@ package ssg
 package liquid
 package filters
 
-import java.util.Arrays
+import ssg.data.DataView
 
 /** Liquid "slice" filter — returns a substring or sub-array. */
 class Slice extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     checkParams(params, 1, 2)
 
     if (!canBeInteger(params(0))) {
       throw new RuntimeException("Liquid error: invalid integer")
     }
 
-    var array:  Array[Any] = null
-    var string: String     = null
+    var array:  Vector[DataView] = null
+    var string: String           = null
     var offset = asNumber(params(0)).intValue()
     var length = 1
 
     if (isArray(value)) {
       array = asArray(value, context)
-      val totalLength = array.length
+      val totalLength = array.size
 
       if (params.length > 1) {
         if (!canBeInteger(params(1))) {
@@ -51,9 +51,9 @@ class Slice extends Filter {
         length = totalLength - offset
       }
       if (offset > totalLength || offset < 0) {
-        ""
+        DataView.from("")
       } else {
-        Arrays.copyOfRange(array.asInstanceOf[Array[AnyRef]], offset, offset + length)
+        DataView.from(array.slice(offset, offset + length))
       }
     } else {
       string = asString(value, context)
@@ -73,9 +73,9 @@ class Slice extends Filter {
         length = totalLength - offset
       }
       if (offset > totalLength || offset < 0) {
-        ""
+        DataView.from("")
       } else {
-        string.substring(offset, offset + length)
+        DataView.from(string.substring(offset, offset + length))
       }
     }
   }

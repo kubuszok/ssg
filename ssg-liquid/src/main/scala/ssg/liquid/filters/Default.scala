@@ -16,9 +16,11 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Default extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (params == null || params.length == 0) {
       value
     } else if (isFalsy(value, context)) {

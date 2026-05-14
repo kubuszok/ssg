@@ -6,10 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.filters.where → ssg.liquid.filters.where
- *   Convention: Abstract base for where filter implementations
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/filters/where/WhereImpl.java
  * Covenant-verified: 2026-04-26
@@ -21,14 +17,12 @@ package liquid
 package filters
 package where
 
-/** Abstract base for where filter implementations.
-  *
-  * Subclasses implement Jekyll-style or Liquid-style where semantics.
-  */
+import ssg.data.DataView
+
 abstract class WhereImpl(
   protected val context:        TemplateContext,
   protected val resolverHelper: PropertyResolverHelper
 ) extends LValue {
 
-  def apply(value: Any, params: Array[Any]): Any
+  def apply(value: DataView, params: Array[DataView]): DataView
 }

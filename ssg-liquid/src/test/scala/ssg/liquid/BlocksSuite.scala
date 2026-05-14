@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 import java.util.ArrayList
 
@@ -52,8 +54,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("if: boolean variable") {
-    val vars = new HashMap[String, Any]()
-    vars.put("var", java.lang.Boolean.TRUE)
+    val vars = new HashMap[String, DataView]()
+    vars.put("var", TestHelper.dv(java.lang.Boolean.TRUE))
     assertEquals(
       Template.parse("{% if var %} YES {% endif %}").render(vars),
       " YES "
@@ -61,10 +63,10 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("if: elsif matching") {
-    val vars = new HashMap[String, Any]()
-    val user = new HashMap[String, Any]()
-    user.put("name", "Tobi")
-    vars.put("user", user)
+    val vars = new HashMap[String, DataView]()
+    val user = new HashMap[String, DataView]()
+    user.put("name", TestHelper.dv("Tobi"))
+    vars.put("user", TestHelper.dv(user))
     assertEquals(
       Template.parse("{% if user.name == 'tobi' %}A{% elsif user.name == 'Tobi' %}B{% endif %}").render(vars),
       "B"
@@ -72,10 +74,10 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("if: elsif with else fallthrough") {
-    val vars = new HashMap[String, Any]()
-    val user = new HashMap[String, Any]()
-    user.put("name", "Tobi")
-    vars.put("user", user)
+    val vars = new HashMap[String, DataView]()
+    val user = new HashMap[String, DataView]()
+    user.put("name", TestHelper.dv("Tobi"))
+    vars.put("user", TestHelper.dv(user))
     assertEquals(
       Template.parse("{% if user.name == 'tobi' %}A{% elsif user.name == 'TOBI' %}B{% else %}C{% endif %}").render(vars),
       "C"
@@ -90,9 +92,9 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("if: nested if blocks") {
-    val vars = new HashMap[String, Any]()
-    vars.put("a", java.lang.Boolean.TRUE)
-    vars.put("b", java.lang.Boolean.TRUE)
+    val vars = new HashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(java.lang.Boolean.TRUE))
+    vars.put("b", TestHelper.dv(java.lang.Boolean.TRUE))
     assertEquals(
       Template.parse("{% if a %}{% if b %}AB{% endif %}{% endif %}").render(vars),
       "AB"
@@ -125,12 +127,12 @@ final class BlocksSuite extends munit.FunSuite {
 
   // TODO: pre-existing bug — forloop.index not resolved inside unless
   test("unless: in loop with nil and false") {
-    val vars    = new HashMap[String, Any]()
+    val vars    = new HashMap[String, DataView]()
     val choices = new ArrayList[Any]()
     choices.add(java.lang.Integer.valueOf(1))
     choices.add(null)
     choices.add(java.lang.Boolean.FALSE)
-    vars.put("choices", choices)
+    vars.put("choices", TestHelper.dv(choices))
     assertEquals(
       Template.parse("{% for i in choices %}{% unless i %}{{ forloop.index }}{% endunless %}{% endfor %}").render(vars),
       "23"
@@ -140,8 +142,8 @@ final class BlocksSuite extends munit.FunSuite {
   // ===== case/when =====
 
   test("case: basic matching") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", java.lang.Integer.valueOf(2))
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv(java.lang.Integer.valueOf(2)))
     assertEquals(
       Template.parse("{% case condition %}{% when 1 %} its 1 {% when 2 %} its 2 {% endcase %}").render(vars),
       " its 2 "
@@ -149,8 +151,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("case: no match produces empty") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", java.lang.Integer.valueOf(3))
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv(java.lang.Integer.valueOf(3)))
     assertEquals(
       Template.parse("{% case condition %}{% when 1 %} its 1 {% when 2 %} its 2 {% endcase %}").render(vars),
       ""
@@ -158,8 +160,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("case: with else") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", java.lang.Integer.valueOf(6))
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv(java.lang.Integer.valueOf(6)))
     assertEquals(
       Template.parse("{% case condition %}{% when 5 %} hit {% else %} else {% endcase %}").render(vars),
       " else "
@@ -167,8 +169,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("case: string matching") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", "string here")
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv("string here"))
     assertEquals(
       Template.parse("{% case condition %}{% when \"string here\" %} hit {% endcase %}").render(vars),
       " hit "
@@ -176,8 +178,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("case: or in when") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", java.lang.Integer.valueOf(2))
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv(java.lang.Integer.valueOf(2)))
     assertEquals(
       Template.parse("{% case condition %}{% when 1 or 2 %} hit {% endcase %}").render(vars),
       " hit "
@@ -185,8 +187,8 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("case: comma in when") {
-    val vars = new HashMap[String, Any]()
-    vars.put("condition", java.lang.Integer.valueOf(2))
+    val vars = new HashMap[String, DataView]()
+    vars.put("condition", TestHelper.dv(java.lang.Integer.valueOf(2)))
     assertEquals(
       Template.parse("{% case condition %}{% when 1, 2 %} hit {% endcase %}").render(vars),
       " hit "
@@ -196,12 +198,12 @@ final class BlocksSuite extends munit.FunSuite {
   // ===== for =====
 
   test("for: basic array iteration") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add("a")
     array.add("b")
     array.add("c")
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{{item}}{% endfor %}").render(vars),
       "abc"
@@ -223,14 +225,14 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: limit parameter") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(4))
     array.add(java.lang.Integer.valueOf(5))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array limit:2 %}{{item}}{% endfor %}").render(vars),
       "12"
@@ -238,14 +240,14 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: offset parameter") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(4))
     array.add(java.lang.Integer.valueOf(5))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array offset:2 %}{{item}}{% endfor %}").render(vars),
       "345"
@@ -253,11 +255,11 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: limit and offset combined") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     for (i <- 1 to 10)
       array.add(java.lang.Integer.valueOf(i))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for i in array limit:4 offset:2 %}{{ i }}{%endfor%}").render(vars),
       "3456"
@@ -265,12 +267,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.index") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{{ forloop.index }}{% endfor %}").render(vars),
       "123"
@@ -278,12 +280,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.index0") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%} {{forloop.index0}} {%endfor%}").render(vars),
       " 0  1  2 "
@@ -291,12 +293,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.first") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{% if forloop.first %}First{% endif %}{% endfor %}").render(vars),
       "First"
@@ -304,12 +306,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.last") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%} {{forloop.last}} {%endfor%}").render(vars),
       " false  false  true "
@@ -317,12 +319,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.length") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%} {{forloop.index}}/{{forloop.length}} {%endfor%}").render(vars),
       " 1/3  2/3  3/3 "
@@ -330,12 +332,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.rindex") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%} {{forloop.rindex}} {%endfor%}").render(vars),
       " 3  2  1 "
@@ -343,12 +345,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: reversed") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array reversed %}{{item}}{%endfor%}").render(vars),
       "321"
@@ -356,14 +358,14 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: break exits loop early") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(4))
     array.add(java.lang.Integer.valueOf(5))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{% if item == 4 %}{% break %}{% endif %}{{item}}{% endfor %}").render(vars),
       "123"
@@ -371,14 +373,14 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: continue skips iteration") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(4))
     array.add(java.lang.Integer.valueOf(5))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{% if item == 3 %}{% continue %}{% endif %}{{item}}{% endfor %}").render(vars),
       "1245"
@@ -386,9 +388,9 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for/else: renders else when array is empty") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%}+{%else%}-{%endfor%}").render(vars),
       "-"
@@ -396,12 +398,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for/else: renders body when array has items") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%}+{%else%}-{%endfor%}").render(vars),
       "+++"
@@ -409,7 +411,7 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: nested for loops") {
-    val vars   = new HashMap[String, Any]()
+    val vars   = new HashMap[String, DataView]()
     val outer  = new ArrayList[Any]()
     val inner1 = new ArrayList[Any]()
     inner1.add(java.lang.Integer.valueOf(1))
@@ -423,7 +425,7 @@ final class BlocksSuite extends munit.FunSuite {
     outer.add(inner1)
     outer.add(inner2)
     outer.add(inner3)
-    vars.put("array", outer)
+    vars.put("array", TestHelper.dv(outer))
     assertEquals(
       Template.parse("{%for item in array%}{%for i in item%}{{ i }}{%endfor%}{%endfor%}").render(vars),
       "123456"
@@ -431,12 +433,12 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("for: forloop.first with if") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%}{% if forloop.first %}+{% else %}-{% endif %}{%endfor%}").render(vars),
       "+--"
@@ -542,12 +544,12 @@ final class BlocksSuite extends munit.FunSuite {
   // ===== tablerow =====
 
   test("tablerow: basic table row generation") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     val rendered = Template.parse("{% tablerow item in array %}{{item}}{% endtablerow %}").render(vars)
     assert(rendered.contains("<tr"))
     assert(rendered.contains("<td"))
@@ -557,13 +559,13 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("tablerow: cols parameter") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(4))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     val rendered = Template.parse("{% tablerow item in array cols:2 %}{{item}}{% endtablerow %}").render(vars)
     assert(rendered.contains("<tr class=\"row1\">"))
     assert(rendered.contains("<tr class=\"row2\">"))
@@ -572,7 +574,7 @@ final class BlocksSuite extends munit.FunSuite {
   // ===== ifchanged =====
 
   test("ifchanged: only outputs when value changes") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(1))
@@ -580,7 +582,7 @@ final class BlocksSuite extends munit.FunSuite {
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%}{%ifchanged%}{{item}}{% endifchanged %}{%endfor%}").render(vars),
       "123"
@@ -588,13 +590,13 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("ifchanged: all same values") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(1))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{%for item in array%}{%ifchanged%}{{item}}{% endifchanged %}{%endfor%}").render(vars),
       "1"
@@ -681,11 +683,11 @@ final class BlocksSuite extends munit.FunSuite {
   // ===== break/continue in for loops =====
 
   test("break: stops for loop") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     for (i <- 1 to 5)
       array.add(java.lang.Integer.valueOf(i))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{% if item == 3 %}{% break %}{% endif %}{{ item }}{% endfor %}").render(vars),
       "12"
@@ -693,11 +695,11 @@ final class BlocksSuite extends munit.FunSuite {
   }
 
   test("continue: skips current iteration in for loop") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     for (i <- 1 to 5)
       array.add(java.lang.Integer.valueOf(i))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% for item in array %}{% if item == 2 %}{% continue %}{% endif %}{{ item }}{% endfor %}").render(vars),
       "1345"

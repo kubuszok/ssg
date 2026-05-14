@@ -19,8 +19,10 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 class AndNode(private val lhs: LNode, private val rhs: LNode) extends LValue with LNode {
 
-  override def render(context: TemplateContext): Any =
-    asBoolean(lhs.render(context)) && asBoolean(rhs.render(context))
+  override def render(context: TemplateContext): DataView =
+    DataView.from(asBoolean(lhs.render(context)) && asBoolean(rhs.render(context)))
 }

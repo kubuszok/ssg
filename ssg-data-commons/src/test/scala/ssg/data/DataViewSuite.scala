@@ -64,8 +64,8 @@ class DataViewSuite extends munit.FunSuite {
 
   test("DataView wraps Vector") {
     val inner = Vector(DataView(1), DataView(2), DataView(3))
-    val dv = DataView(inner)
-    val v = dv.asVector.get
+    val dv    = DataView(inner)
+    val v     = dv.asVector.get
     assertEquals(v.length, 3)
     assertEquals(v(0).asInt.get, 1)
     assertEquals(v(1).asInt.get, 2)
@@ -74,8 +74,8 @@ class DataViewSuite extends munit.FunSuite {
 
   test("DataView wraps VectorMap") {
     val map = VectorMap("a" -> DataView(1), "b" -> DataView("hello"))
-    val dv = DataView(map)
-    val m = dv.asMap.get
+    val dv  = DataView(map)
+    val m   = dv.asMap.get
     assertEquals(m("a").asInt.get, 1)
     assertEquals(m("b").asString.get, "hello")
   }
@@ -92,7 +92,7 @@ class DataViewSuite extends munit.FunSuite {
 
   test("DataView lazy evaluation") {
     var evaluated = false
-    val dv = DataView {
+    val dv        = DataView {
       evaluated = true
       42
     }
@@ -103,7 +103,7 @@ class DataViewSuite extends munit.FunSuite {
 
   test("DataView lazy evaluation happens only once") {
     var count = 0
-    val dv = DataView {
+    val dv    = DataView {
       count += 1
       "hello"
     }

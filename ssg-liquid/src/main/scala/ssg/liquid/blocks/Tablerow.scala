@@ -6,10 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.blocks → ssg.liquid.blocks
- *   Idiom: TablerowloopDrop inner class → companion object class
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/blocks/Tablerow.java
  * Covenant-verified: 2026-04-26
@@ -20,16 +16,16 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
-import ssg.liquid.parser.LiquidSupport
 
-import java.util
 import java.util.{ HashMap, Map => JMap }
 
-/** HTML table iteration with <tr> and <td> elements. */
+import scala.collection.immutable.VectorMap
+
 class Tablerow extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
     val valueName  = asString(nodes(0).render(context), context)
     var collection = asArray(nodes(1).render(context), context)
     val block      = nodes(2)
@@ -40,17 +36,17 @@ class Tablerow extends Block {
     val offset = attributes.get(Tablerow.OFFSET).intValue()
 
     if (offset != 0) {
-      if (collection.length > 0 && offset < collection.length) {
-        collection = util.Arrays.copyOfRange(collection.asInstanceOf[Array[AnyRef]], offset, collection.length).asInstanceOf[Array[Any]]
+      if (collection.nonEmpty && offset < collection.size) {
+        collection = collection.drop(offset)
       } else {
-        collection = Array.empty[Any]
+        collection = Vector.empty
       }
     }
 
     val nestedContext    = context.newChildContext()
-    val total            = Math.min(collection.length, limit)
+    val total            = Math.min(collection.size, limit)
     val tablerowloopDrop = new Tablerow.TablerowloopDrop(total, cols)
-    nestedContext.put(Tablerow.TABLEROWLOOP, tablerowloopDrop)
+    nestedContext.put(Tablerow.TABLEROWLOOP, tablerowloopDrop.toDataView())
 
     val builder = context.newObjectAppender(total * 5)
     if (total == 0) {
@@ -81,6 +77,7 @@ class Tablerow extends Block {
           c = 0
         }
         tablerowloopDrop.increment()
+        nestedContext.put(Tablerow.TABLEROWLOOP, tablerowloopDrop.toDataView())
         i += 1
         c += 1
       }
@@ -89,22 +86,24 @@ class Tablerow extends Block {
     nestedContext.remove(Tablerow.TABLEROWLOOP)
     nestedContext.remove(valueName)
 
-    builder.getResult
+    DataView.from(builder.getResult.toString)
   }
 
-  private def getAttributes(collection: Array[Any], fromIndex: Int, context: TemplateContext, tokens: Array[LNode]): JMap[String, Integer] = {
+  private def getAttributes(collection: Vector[DataView], fromIndex: Int, context: TemplateContext, tokens: Array[LNode]): JMap[String, Integer] = {
     val attributes = new HashMap[String, Integer]()
-    attributes.put(Tablerow.COLS, Integer.valueOf(collection.length))
+    attributes.put(Tablerow.COLS, Integer.valueOf(collection.size))
     attributes.put(Tablerow.LIMIT, Integer.valueOf(Int.MaxValue))
     attributes.put(Tablerow.OFFSET, Integer.valueOf(0))
 
     var i = fromIndex
     while (i < tokens.length) {
       val attribute = asArray(tokens(i).render(context), context)
-      try
-        attributes.put(asString(attribute(0), context), Integer.valueOf(asNumber(attribute(1)).intValue()))
-      catch {
-        case _: Exception => // just ignore incorrect attributes
+      if (attribute.size >= 2) {
+        try
+          attributes.put(asString(attribute(0), context), Integer.valueOf(asNumber(attribute(1)).intValue()))
+        catch {
+          case _: Exception => // just ignore incorrect attributes
+        }
       }
       i += 1
     }
@@ -131,26 +130,26 @@ object Tablerow {
   private val COL_LAST     = "col_last"
   private val ROW          = "row"
 
-  class TablerowloopDrop(private val length: Long, private val cols: Long) extends LiquidSupport {
+  class TablerowloopDrop(private val length: Long, private val cols: Long) {
     private var row:   Long = 1
     private var col:   Long = 1
     private var index: Long = 0
-    private val tablerowloopContext = new HashMap[String, Any]()
 
-    override def toLiquid(): JMap[String, Any] = {
-      tablerowloopContext.put(LENGTH, java.lang.Long.valueOf(length))
-      tablerowloopContext.put(INDEX0, java.lang.Long.valueOf(index))
-      tablerowloopContext.put(INDEX, java.lang.Long.valueOf(index + 1))
-      tablerowloopContext.put(RINDEX0, java.lang.Long.valueOf(length - index - 1))
-      tablerowloopContext.put(RINDEX, java.lang.Long.valueOf(length - index))
-      tablerowloopContext.put(FIRST, java.lang.Boolean.valueOf(index == 0))
-      tablerowloopContext.put(LAST, java.lang.Boolean.valueOf(index == length - 1))
-      tablerowloopContext.put(COL0, java.lang.Long.valueOf(col - 1))
-      tablerowloopContext.put(COL, java.lang.Long.valueOf(col))
-      tablerowloopContext.put(COL_FIRST, java.lang.Boolean.valueOf(col == 1))
-      tablerowloopContext.put(COL_LAST, java.lang.Boolean.valueOf(col == cols))
-      tablerowloopContext.put(ROW, java.lang.Long.valueOf(row))
-      tablerowloopContext
+    def toDataView(): DataView = {
+      var m = VectorMap.empty[String, DataView]
+      m = m.updated(LENGTH, DataView.from(length))
+      m = m.updated(INDEX0, DataView.from(index))
+      m = m.updated(INDEX, DataView.from(index + 1))
+      m = m.updated(RINDEX0, DataView.from(length - index - 1))
+      m = m.updated(RINDEX, DataView.from(length - index))
+      m = m.updated(FIRST, DataView.from(index == 0))
+      m = m.updated(LAST, DataView.from(index == length - 1))
+      m = m.updated(COL0, DataView.from(col - 1))
+      m = m.updated(COL, DataView.from(col))
+      m = m.updated(COL_FIRST, DataView.from(col == 1))
+      m = m.updated(COL_LAST, DataView.from(col == cols))
+      m = m.updated(ROW, DataView.from(row))
+      DataView.from(m)
     }
 
     def increment(): Unit = {

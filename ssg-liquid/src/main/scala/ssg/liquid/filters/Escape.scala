@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Escape extends Filter {
 
   /*
@@ -23,8 +25,8 @@ class Escape extends Filter {
    *
    * escape a string
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val str = asString(value, context)
-    str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+    DataView.from(str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;"))
   }
 }

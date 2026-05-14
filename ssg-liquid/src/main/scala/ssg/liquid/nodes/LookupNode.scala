@@ -22,10 +22,10 @@ package nodes
 
 import ssg.data.DataView
 import ssg.liquid.exceptions.VariableNotExistException
-import ssg.liquid.parser.{ Inspectable, LiquidSupport }
 
-import java.util.{ ArrayList, Collection => JCollection, List => JList, Map => JMap }
+import java.util.ArrayList
 
+import scala.collection.immutable.VectorMap
 import scala.util.boundary
 import scala.util.boundary.break
 
@@ -36,20 +36,20 @@ class LookupNode(private val id: String) extends LNode {
   def add(indexable: LookupNode.Indexable): Unit =
     indexes.add(indexable)
 
-  override def render(context: TemplateContext): Any = {
-    var value: Any = null
-
+  override def render(context: TemplateContext): DataView = {
     // Check if there's a [var] lookup, AST: ^(LOOKUP Id["@var"])
     val realId = if (id.startsWith("@")) {
-      String.valueOf(context.get(id.substring(1)))
+      context.get(id.substring(1)).toString
     } else {
       id
     }
 
+    var value: DataView = DataView.nil
+
     if (context.containsKey(realId)) {
       value = context.get(realId)
     }
-    if (value == null) {
+    if (value.isNull) {
       val environmentMap = context.getEnvironmentMap
       if (environmentMap.containsKey(realId)) {
         value = environmentMap.get(realId)
@@ -62,11 +62,7 @@ class LookupNode(private val id: String) extends LNode {
       i += 1
     }
 
-    if (value.isInstanceOf[DataView]) {
-      value = DataViewBridge.unwrap(value.asInstanceOf[DataView])
-    }
-
-    if (value == null && context.parser.strictVariables) {
+    if (value.isNull && context.parser.strictVariables) {
       val e = new VariableNotExistException(getVariableName)
       context.addError(e)
       if (context.getErrorMode == TemplateParser.ErrorMode.STRICT) {
@@ -103,88 +99,42 @@ object LookupNode {
 
   /** Interface for property/index access on Liquid values. */
   trait Indexable {
-    def get(value: Any, context: TemplateContext): Any
+    def get(value: DataView, context: TemplateContext): DataView
   }
 
   /** Hash (property) access: value.property */
   class Hash(private val hash: String) extends Indexable {
 
-    override def get(value: Any, context: TemplateContext): Any = boundary {
-      if (value == null) {
-        break(null)
+    override def get(value: DataView, context: TemplateContext): DataView = boundary {
+      if (value.isNull) {
+        break(DataView.nil)
       }
 
-      if (value.isInstanceOf[DataView]) {
-        break(getFromDataView(value.asInstanceOf[DataView], context))
-      }
-
-      if (hash == "size") {
-        value match {
-          case col: JCollection[?] => break(col.size())
-          case map: JMap[?, ?]     =>
-            break(if (map.containsKey(hash)) map.get(hash) else map.size())
-          case insp: Inspectable =>
-            val evaluated = context.parser.evaluate(insp)
-            val map       = evaluated.toLiquid()
-            break(if (map.containsKey(hash)) map.get(hash) else map.size())
-          case arr: Array[?]     => break(arr.length)
-          case cs:  CharSequence => break(cs.length())
-          case _ => // fall through
-        }
-      } else if (hash == "first") {
-        value match {
-          case list: JList[?] => break(if (list.isEmpty) null else list.get(0))
-          case arr:  Array[?] => break(if (arr.length == 0) null else arr(0))
-          case _ => // fall through
-        }
-      } else if (hash == "last") {
-        value match {
-          case list: JList[?] => break(if (list.isEmpty) null else list.get(list.size() - 1))
-          case arr:  Array[?] => break(if (arr.length == 0) null else arr(arr.length - 1))
-          case _ => // fall through
-        }
-      }
-
-      value match {
-        case map: JMap[?, ?] =>
-          map.get(hash)
-        case ls: LiquidSupport =>
-          ls.toLiquid().get(hash)
-        case insp: Inspectable =>
-          val evaluated = context.parser.evaluate(insp)
-          val map       = evaluated.toLiquid()
-          map.get(hash)
-        case ctx: TemplateContext =>
-          ctx.get(hash)
-        case _ =>
-          null
-      }
-    }
-
-    private def getFromDataView(dv: DataView, context: TemplateContext): Any = {
-      if (dv.isNull) return null
-      dv.view match {
-        case m: scala.collection.immutable.VectorMap[?, ?] =>
-          val map = m.asInstanceOf[scala.collection.immutable.VectorMap[String, DataView]]
+      value.view match {
+        case m: VectorMap[?, ?] =>
+          val map = m.asInstanceOf[VectorMap[String, DataView]]
           if (hash == "size") {
-            if (map.contains(hash)) DataViewBridge.unwrap(map(hash))
-            else map.size
+            if (map.contains(hash)) break(map(hash))
+            else break(DataView.from(map.size))
           } else {
             map.get(hash) match {
-              case Some(inner) => DataViewBridge.unwrap(inner)
-              case None        => null
+              case Some(inner) => break(inner)
+              case None        => break(DataView.nil)
             }
           }
         case v: Vector[?] =>
           val vec = v.asInstanceOf[Vector[DataView]]
           hash match {
-            case "size"  => vec.size
-            case "first" => if (vec.isEmpty) null else DataViewBridge.unwrap(vec.head)
-            case "last"  => if (vec.isEmpty) null else DataViewBridge.unwrap(vec.last)
-            case _       => null
+            case "size"  => break(DataView.from(vec.size))
+            case "first" => break(if (vec.isEmpty) DataView.nil else vec.head)
+            case "last"  => break(if (vec.isEmpty) DataView.nil else vec.last)
+            case _       => break(DataView.nil)
           }
+        case s: String =>
+          if (hash == "size") break(DataView.from(s.length()))
+          else break(DataView.nil)
         case _ =>
-          null
+          break(DataView.nil)
       }
     }
 
@@ -194,64 +144,42 @@ object LookupNode {
   /** Index access: value[expression] */
   class Index(private val expression: LNode, private val text: String) extends Indexable {
 
-    override def get(value: Any, context: TemplateContext): Any = boundary {
-      if (value == null) {
-        break(null)
+    override def get(value: DataView, context: TemplateContext): DataView = boundary {
+      if (value.isNull) {
+        break(DataView.nil)
       }
 
       val key = expression.render(context)
 
-      key match {
-        case n: Number =>
-          var index = n.intValue()
-          value match {
-            case arr: Array[?] =>
-              val size = arr.length
-              if (index >= size) break(null)
-              if (index < 0) {
-                index = size + index
-                if (index < 0) break(null)
-              }
-              arr(index)
-            case list: JList[?] =>
-              val size = list.size()
-              if (index >= size) break(null)
-              if (index < 0) {
-                index = size + index
-                if (index < 0) break(null)
-              }
-              list.get(index)
-            case col: JCollection[?] =>
-              val size = col.size()
-              if (index >= size) break(null)
-              if (index < 0) {
-                index = size + index
-                if (index < 0) break(null)
-              }
-              var i     = 0
-              var found = false
-              var result: Any = null
-              val it = col.iterator()
-              while (it.hasNext && !found) {
-                val obj = it.next()
-                if (i == index) {
-                  result = obj
-                  found = true
+      // Check if key is a number for index access
+      if (!key.isNull) {
+        key.view match {
+          case _: (Short | Int | Long | Float | Double | java.math.BigDecimal) =>
+            val n     = key.view.asInstanceOf[Number]
+            var index = n.intValue()
+            value.view match {
+              case v: Vector[?] =>
+                val vec  = v.asInstanceOf[Vector[DataView]]
+                val size = vec.size
+                if (index >= size) break(DataView.nil)
+                if (index < 0) {
+                  index = size + index
+                  if (index < 0) break(DataView.nil)
                 }
-                i += 1
-              }
-              result
-            case _ =>
-              null
-          }
+                break(vec(index))
+              case _ =>
+                break(DataView.nil)
+            }
+          case _ => // fall through to hash-style access
+        }
+      }
+
+      // String key — hash-style access on maps
+      value.view match {
+        case _: Vector[?] => DataView.nil // arrays don't support string key access
         case _ =>
-          // hashes only work on maps, not on arrays/lists
-          value match {
-            case _: Array[?] | _: JList[?] => null
-            case _                         =>
-              val hash = String.valueOf(key)
-              new Hash(hash).get(value, context)
-          }
+          val hashStr = key.toString
+          new Hash(hashStr).get(value, context)
       }
     }
 

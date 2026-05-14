@@ -16,8 +16,10 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Downcase extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    asString(value, context).toLowerCase()
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+    DataView.from(asString(value, context).toLowerCase())
 }

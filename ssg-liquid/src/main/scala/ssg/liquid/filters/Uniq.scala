@@ -16,16 +16,21 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ Arrays, LinkedHashSet }
+import ssg.data.DataView
 
 /** Liquid "uniq" filter — removes duplicate elements from an array. */
 class Uniq extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
-      val set = new LinkedHashSet[Any](Arrays.asList(asArray(value, context)*))
-      set.toArray()
+      val array = asArray(value, context)
+      var seen  = Vector.empty[DataView]
+      for (dv <- array)
+        if (!seen.exists(s => LValue.areEqual(s, dv))) {
+          seen = seen :+ dv
+        }
+      DataView.from(seen)
     }
 }

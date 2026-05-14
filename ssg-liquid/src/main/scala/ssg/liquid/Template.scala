@@ -21,8 +21,8 @@ package ssg
 package liquid
 
 import ssg.commons.io.FilePath
+import ssg.data.DataView
 import ssg.liquid.nodes.BlockNode
-import ssg.liquid.parser.Inspectable
 
 import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap }
 
@@ -52,52 +52,28 @@ final class Template(
     else templateContext.errors()
 
   /** Renders this template with the given variables and returns the result as a String. */
-  def render(variables: JMap[String, Any]): String =
-    String.valueOf(renderToObject(variables))
+  def render(variables: JMap[String, DataView]): String =
+    renderToObject(variables).toString
 
   /** Renders this template with no variables. */
   def render(): String =
-    render(new HashMap[String, Any]())
-
-  /** Renders this template with an Inspectable object. */
-  def render(obj: Inspectable): String =
-    renderToObject(obj).toString
-
-  /** Renders this template with an Inspectable object, returning the raw result. */
-  def renderToObject(obj: Inspectable): Any = {
-    val evaluated = templateParser.evaluate(obj)
-    val map       = evaluated.toLiquid()
-    renderToObject(map)
-  }
+    render(new HashMap[String, DataView]())
 
   /** Renders this template with no variables, returning the raw result. */
-  def renderToObject(): Any =
-    renderToObject(new HashMap[String, Any]())
+  def renderToObject(): DataView =
+    renderToObject(new HashMap[String, DataView]())
 
   /** Renders this template and returns the raw result object.
     *
     * Enforces `limitMaxTemplateSizeBytes` (pre-render) and `limitMaxRenderTimeMillis` (elapsed time after render).
     */
-  def renderToObject(variables: JMap[String, Any]): Any = {
+  def renderToObject(variables: JMap[String, DataView]): DataView = {
     if (templateSize > templateParser.limitMaxTemplateSizeBytes) {
       throw new RuntimeException(s"template exceeds the max of ${templateParser.limitMaxTemplateSizeBytes} bytes")
     }
 
-    val evaluatedVars: JMap[String, Any] = templateParser.evaluateMode match {
-      case TemplateParser.EvaluateMode.EAGER =>
-        val evaluated = new LinkedHashMap[String, Any]()
-        val iter      = variables.entrySet().iterator()
-        while (iter.hasNext) {
-          val entry = iter.next()
-          val value = entry.getValue
-          val ls    = templateParser.evaluate(value)
-          evaluated.put(entry.getKey, ls.toLiquid())
-        }
-        evaluated
-      case _ =>
-        // LAZY: pass variables through as-is (converted on demand during rendering)
-        variables
-    }
+    // In DataView mode, EAGER evaluation is a no-op — DataView values pass through as-is
+    val evaluatedVars: JMap[String, DataView] = variables
 
     this.templateContext = newRootContext(evaluatedVars)
     setRootFolderRegistry(templateContext, sourceLocation)
@@ -123,11 +99,11 @@ final class Template(
   }
 
   /** Renders with an existing parent context (used by include tags). */
-  def renderToObjectUnguarded(variables: JMap[String, Any], parentContext: TemplateContext, isInclude: Boolean): Any = {
+  def renderToObjectUnguarded(variables: JMap[String, DataView], parentContext: TemplateContext, isInclude: Boolean): DataView = {
     val context = if (isInclude) {
-      parentContext.newChildContext(new LinkedHashMap[String, Any](variables))
+      parentContext.newChildContext(new LinkedHashMap[String, DataView](variables))
     } else {
-      newRootContext(new LinkedHashMap[String, Any](variables))
+      newRootContext(new LinkedHashMap[String, DataView](variables))
     }
 
     setRootFolderRegistry(context, sourceLocation)
@@ -140,17 +116,19 @@ final class Template(
   }
 
   /** Renders without guards — no size or time checks. */
-  def renderUnguarded(variables: JMap[String, Any]): String =
+  def renderUnguarded(variables: JMap[String, DataView]): String =
     renderToObjectUnguarded(variables).toString
 
   /** Renders without guards, returning the raw result. */
-  def renderToObjectUnguarded(variables: JMap[String, Any]): Any =
+  def renderToObjectUnguarded(variables: JMap[String, DataView]): DataView =
     renderToObjectUnguarded(variables, null, true)
 
-  private def newRootContext(variables: JMap[String, Any]): TemplateContext = {
+  private def newRootContext(variables: JMap[String, DataView]): TemplateContext = {
     val context      = new TemplateContext(templateParser, variables)
     val configurator = templateParser.environmentMapConfigurator
     if (configurator != null) {
+      // The configurator expects JMap[String, AnyRef] — but now we use JMap[String, DataView].
+      // We pass the environment map as-is; the configurator must work with DataView values.
       configurator.accept(context.getEnvironmentMap.asInstanceOf[JMap[String, AnyRef]])
     }
     context

@@ -20,9 +20,9 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.LiquidException
 
-import java.math.BigDecimal
 import java.util.{ ArrayList, List => JList }
 
 class OutputNode(
@@ -37,8 +37,8 @@ class OutputNode(
   def addFilter(filter: FilterNode): Unit =
     filters.add(filter)
 
-  override def render(context: TemplateContext): Any = {
-    var value: Any = expression.render(context)
+  override def render(context: TemplateContext): DataView = {
+    var value: DataView = expression.render(context)
 
     var i = 0
     while (i < filters.size()) {
@@ -56,11 +56,16 @@ class OutputNode(
       }
     }
 
-    value match {
-      case bd: BigDecimal if !bd.isInstanceOf[PlainBigDecimal] =>
-        PlainBigDecimal(bd.toString)
-      case _ =>
-        value
+    // Ensure BigDecimals get wrapped as PlainBigDecimal
+    if (!value.isNull) {
+      value.view match {
+        case bd: java.math.BigDecimal if !bd.isInstanceOf[PlainBigDecimal] =>
+          DataView.from(PlainBigDecimal(bd.toString))
+        case _ =>
+          value
+      }
+    } else {
+      value
     }
   }
 }

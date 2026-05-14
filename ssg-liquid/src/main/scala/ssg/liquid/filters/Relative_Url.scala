@@ -6,12 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.filters → ssg.liquid.filters
- *   Convention: Jekyll-specific URL filter
- *   Idiom: URI normalization with query/anchor split, error handling
- *   Audited: 2026-04-10 — ISS-099 fixed: full URI handling ported from Java
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/filters/Relative_Url.java
  * Covenant-verified: 2026-04-26
@@ -22,29 +16,23 @@ package ssg
 package liquid
 package filters
 
-import ssg.liquid.parser.{ Inspectable, LiquidSupport }
+import ssg.data.DataView
 
 import java.net.{ URI, URISyntaxException }
-import java.util.{ Collections, Map => JMap }
 
-/** Converts a path to a relative URL using the site's baseurl.
-  *
-  * This filter requires a `baseurl` parameter (from `site.baseurl`) that will be used as base for building the relative URL. Handles URI normalization, query/anchor splitting, and error modes.
-  *
-  * Jekyll-specific filter.
-  */
+import scala.collection.immutable.VectorMap
+
 class Relative_Url extends Filter() {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val valAsString = asString(value, context)
 
-    // fast exit for valid absolute urls
     if (isValidAbsoluteUrl(valAsString)) {
-      valAsString
+      DataView.from(valAsString)
     } else {
-      val siteMap = objectToMap(context.get(Relative_Url.site), context)
-      val baseUrl = asString(siteMap.get(Relative_Url.baseurl), context)
-      getRelativeUrl(context, baseUrl, valAsString)
+      val siteMap = dvToMap(context.get(Relative_Url.site))
+      val baseUrl = siteMap.get(Relative_Url.baseurl).map(dv => asString(dv, context)).getOrElse("")
+      DataView.from(getRelativeUrl(context, baseUrl, valAsString))
     }
   }
 
@@ -53,11 +41,10 @@ class Relative_Url extends Filter() {
     if (!valAsString.startsWith("/")) {
       valAsString = "/" + valAsString
     }
-    val baseUrlString0 = asString(baseUrl, context)
-    if (baseUrlString0.isEmpty) {
+    if (baseUrl.isEmpty) {
       valAsString
     } else {
-      var baseUrlString = baseUrlString0
+      var baseUrlString = baseUrl
       if (!baseUrlString.startsWith("/")) {
         baseUrlString = "/" + baseUrlString
       }
@@ -101,20 +88,13 @@ class Relative_Url extends Filter() {
     }
   }
 
-  protected def objectToMap(configRoot0: Any, context: TemplateContext): JMap[String, Any] = {
-    var configRoot = configRoot0
-    configRoot match {
-      case _: Inspectable =>
-        val evaluated: LiquidSupport = context.parser.evaluate(configRoot)
-        configRoot = evaluated.toLiquid()
-      case _ =>
-    }
-    if (isMap(configRoot)) {
-      asMap(configRoot)
-    } else {
-      Collections.emptyMap()
-    }
-  }
+  protected def dvToMap(dv: DataView): VectorMap[String, DataView] =
+    if (dv.isNull) VectorMap.empty
+    else
+      dv.view match {
+        case m: VectorMap[?, ?] => m.asInstanceOf[VectorMap[String, DataView]]
+        case _ => VectorMap.empty
+      }
 
   protected def isValidAbsoluteUrl(valAsString: String): Boolean =
     try {

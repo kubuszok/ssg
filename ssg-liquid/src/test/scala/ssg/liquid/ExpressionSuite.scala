@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 import java.util.ArrayList
 
@@ -70,8 +72,8 @@ final class ExpressionSuite extends munit.FunSuite {
   // ===== Variable comparisons =====
 
   test("variable equality: var == 'hello' with var='hello'") {
-    val vars = new HashMap[String, Any]()
-    vars.put("var", "hello")
+    val vars = new HashMap[String, DataView]()
+    vars.put("var", TestHelper.dv("hello"))
     assertEquals(
       Template.parse("{% if var == 'hello' %}true{% endif %}").render(vars),
       "true"
@@ -95,12 +97,12 @@ final class ExpressionSuite extends munit.FunSuite {
   }
 
   test("contains: array contains element") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add(java.lang.Integer.valueOf(1))
     array.add(java.lang.Integer.valueOf(2))
     array.add(java.lang.Integer.valueOf(3))
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% if array contains 2 %}true{% endif %}").render(vars),
       "true"

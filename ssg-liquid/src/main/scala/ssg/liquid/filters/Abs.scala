@@ -16,18 +16,20 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "abs" filter.
   *
   * Everything that is not a number causes this filter to return 0.
   */
 class Abs extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (isInteger(value) || canBeInteger(value)) {
-      Math.abs(asNumber(value).longValue())
+      DataView.from(Math.abs(asNumber(value).longValue()))
     } else if (isNumber(value) || canBeDouble(value)) {
-      LValue.asFormattedNumber(PlainBigDecimal(asNumber(value).toString).abs())
+      DataView.from(LValue.asFormattedNumber(PlainBigDecimal(asNumber(value).toString).abs()))
     } else {
-      0
+      DataView.from(0)
     }
 }

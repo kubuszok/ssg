@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
@@ -10,14 +12,14 @@ import java.util.{ HashMap => JHashMap }
 final class AbsoluteUrlFilterSuite extends munit.FunSuite {
 
   // site.baseurl and site.config.url
-  private def getData(siteUrl: Any, baseurl: String): JHashMap[String, Any] = {
-    val siteMap = new JHashMap[String, Any]()
-    siteMap.put("baseurl", baseurl)
-    val config: JHashMap[String, Any] = new JHashMap[String, Any]()
-    config.put("url", siteUrl)
-    siteMap.put("config", config)
-    val result = new JHashMap[String, Any]()
-    result.put("site", siteMap)
+  private def getData(siteUrl: Any, baseurl: String): JHashMap[String, DataView] = {
+    val siteMap = new JHashMap[String, DataView]()
+    siteMap.put("baseurl", TestHelper.dv(baseurl))
+    val config: JHashMap[String, DataView] = new JHashMap[String, DataView]()
+    config.put("url", TestHelper.dv(siteUrl))
+    siteMap.put("config", TestHelper.dv(config))
+    val result = new JHashMap[String, DataView]()
+    result.put("site", TestHelper.dv(siteMap))
     result
   }
 

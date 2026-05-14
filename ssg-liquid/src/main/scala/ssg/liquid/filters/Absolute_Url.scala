@@ -22,6 +22,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.net.URI
 
 /** Converts a path to an absolute URL using the site's url and baseurl.
@@ -30,20 +32,20 @@ import java.net.URI
   */
 class Absolute_Url extends Relative_Url {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val valAsString = asString(value, context)
     if (isValidAbsoluteUrl(valAsString)) {
-      valAsString
+      DataView.from(valAsString)
     } else {
       val configRoot  = context.get(Relative_Url.site)
-      val siteMap     = objectToMap(configRoot, context)
-      val baseUrl     = asString(siteMap.get(Relative_Url.baseurl), context)
-      val siteConfig  = siteMap.get(Absolute_Url.config)
-      val configs     = objectToMap(siteConfig, context)
-      val siteUrl     = asString(configs.get(Absolute_Url.url), context)
+      val siteMap     = dvToMap(configRoot)
+      val baseUrl     = siteMap.get(Relative_Url.baseurl).map(dv => asString(dv, context)).getOrElse("")
+      val siteConfig  = siteMap.getOrElse(Absolute_Url.config, DataView.nil)
+      val configs     = dvToMap(siteConfig)
+      val siteUrl     = configs.get(Absolute_Url.url).map(dv => asString(dv, context)).getOrElse("")
       val relativeUrl = getRelativeUrl(context, baseUrl, valAsString)
       if ("" == siteUrl) {
-        relativeUrl
+        DataView.from(relativeUrl)
       } else {
         var res =
           if ((siteUrl != null && siteUrl.endsWith("/")) && "/" == relativeUrl) siteUrl
@@ -55,14 +57,14 @@ class Absolute_Url extends Relative_Url {
           if (valAsString.endsWith("/") && !res.endsWith("/")) {
             res = res + "/"
           }
-          res
+          DataView.from(res)
         } catch {
           case e: Exception =>
             context.addError(e)
             if (context.getErrorMode == TemplateParser.ErrorMode.STRICT) {
               throw new RuntimeException(e)
             }
-            res
+            DataView.from(res)
         }
       }
     }

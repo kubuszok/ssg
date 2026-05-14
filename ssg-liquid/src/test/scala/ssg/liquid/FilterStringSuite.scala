@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 
 final class FilterStringSuite extends munit.FunSuite {
@@ -77,36 +79,36 @@ final class FilterStringSuite extends munit.FunSuite {
   // strip_html
 
   test("strip_html removes script tags") {
-    val vars = new HashMap[String, Any]()
-    vars.put("html", "<script>alert('hi')</script>text")
+    val vars = new HashMap[String, DataView]()
+    vars.put("html", TestHelper.dv("<script>alert('hi'))</script>text"))
     assertEquals(Template.parse("{{ html | strip_html }}").render(vars), "text")
   }
 
   test("strip_html removes style tags") {
-    val vars = new HashMap[String, Any]()
-    vars.put("html", "<style>body{}</style>text")
+    val vars = new HashMap[String, DataView]()
+    vars.put("html", TestHelper.dv("<style>body{}</style>text"))
     assertEquals(Template.parse("{{ html | strip_html }}").render(vars), "text")
   }
 
   test("strip_html removes regular tags") {
-    val vars = new HashMap[String, Any]()
-    vars.put("html", "<p>hello</p>")
+    val vars = new HashMap[String, DataView]()
+    vars.put("html", TestHelper.dv("<p>hello</p>"))
     assertEquals(Template.parse("{{ html | strip_html }}").render(vars), "hello")
   }
 
   // strip_newlines
 
   test("strip_newlines removes line breaks") {
-    val vars = new HashMap[String, Any]()
-    vars.put("text", "a\r\nb\nc")
+    val vars = new HashMap[String, DataView]()
+    vars.put("text", TestHelper.dv("a\r\nb\nc"))
     assertEquals(Template.parse("{{ text | strip_newlines }}").render(vars), "abc")
   }
 
   // newline_to_br
 
   test("newline_to_br") {
-    val vars = new HashMap[String, Any]()
-    vars.put("text", "a\nb")
+    val vars = new HashMap[String, DataView]()
+    vars.put("text", TestHelper.dv("a\nb"))
     val result = Template.parse("{{ text | newline_to_br }}").render(vars)
     assert(result.contains("<br />"), s"Expected <br /> in: $result")
   }

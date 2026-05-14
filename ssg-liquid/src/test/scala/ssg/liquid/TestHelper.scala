@@ -2,48 +2,81 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
+import java.time.temporal.TemporalAccessor
 import java.util.{ ArrayList => JArrayList, HashMap => JHashMap }
+
+import scala.collection.immutable.VectorMap
 
 /** Shared test utility methods. */
 object TestHelper {
 
-  /** Builds a JHashMap from key-value pairs. */
-  def mapOf(pairs: (String, Any)*): JHashMap[String, Any] = {
-    val m = new JHashMap[String, Any]()
-    pairs.foreach { case (k, v) => m.put(k, v) }
+  /** Wraps an Any value into a DataView. */
+  def dv(value: Any): DataView = value match {
+    case null => DataView.nil
+    case d:  DataView             => d
+    case b:  Boolean              => DataView.from(b)
+    case s:  Short                => DataView.from(s)
+    case i:  Int                  => DataView.from(i)
+    case l:  Long                 => DataView.from(l)
+    case f:  Float                => DataView.from(f)
+    case d:  Double               => DataView.from(d)
+    case s:  String               => DataView.from(s)
+    case bd: java.math.BigDecimal => DataView.from(bd)
+    case ta: TemporalAccessor     => DataView.from(ta)
+    case v:  Vector[?]            => DataView.from(v.map(e => dv(e)))
+    case m:  VectorMap[?, ?]      => DataView.from(m.asInstanceOf[VectorMap[String, DataView]])
+    case m:  java.util.Map[?, ?]  =>
+      var vm = VectorMap.empty[String, DataView]
+      val it = m.entrySet().iterator()
+      while (it.hasNext) {
+        val e = it.next()
+        vm = vm.updated(String.valueOf(e.getKey), dv(e.getValue))
+      }
+      DataView.from(vm)
+    case c: java.util.Collection[?] =>
+      val vec = Vector.newBuilder[DataView]
+      val it  = c.iterator()
+      while (it.hasNext) vec += dv(it.next())
+      DataView.from(vec.result())
+    case a: Array[?] =>
+      DataView.from(a.map(e => dv(e)).toVector)
+    case other => DataView.from(String.valueOf(other))
+  }
+
+  /** Builds a JHashMap[String, DataView] from key-value pairs. Values are auto-wrapped. */
+  def mapOf(pairs: (String, Any)*): JHashMap[String, DataView] = {
+    val m = new JHashMap[String, DataView]()
+    pairs.foreach { case (k, v) => m.put(k, dv(v)) }
     m
   }
 
-  /** Builds a JArrayList from elements. */
-  def listOf(items: Any*): JArrayList[Any] = {
-    val l = new JArrayList[Any]()
-    items.foreach(l.add)
-    l
-  }
+  /** Builds a DataView vector from elements. Values are auto-wrapped. */
+  def listOf(items: Any*): DataView =
+    DataView.from(items.map(dv).toVector)
 
-  /** Minimal JSON string parser for test data. Supports: objects, arrays, strings, numbers, booleans, null. No escaping or nested whitespace.
-    *
-    * This is intentionally a simple test-only parser; do not use in production.
-    */
-  def parseJson(json: String): Any = {
+  /** Minimal JSON string parser for test data. Returns DataView. */
+  def parseJson(json: String): DataView = {
     val trimmed = json.trim
-    if (trimmed.startsWith("{")) parseObject(trimmed)
-    else if (trimmed.startsWith("[")) parseArray(trimmed)
-    else if (trimmed.startsWith("\"")) trimmed.substring(1, trimmed.length - 1)
-    else if (trimmed == "true") java.lang.Boolean.TRUE
-    else if (trimmed == "false") java.lang.Boolean.FALSE
-    else if (trimmed == "null" || trimmed == "nil") null
-    else if (trimmed.contains(".")) java.lang.Double.valueOf(trimmed)
-    else java.lang.Long.valueOf(trimmed)
+    dv(parseJsonRaw(trimmed))
   }
 
-  /** Parse a JSON object string into a JHashMap. */
-  def parseJsonObject(json: String): JHashMap[String, Any] =
-    parseObject(json.trim).asInstanceOf[JHashMap[String, Any]]
+  /** Parse a JSON object string into a JHashMap[String, DataView]. */
+  def parseJsonObject(json: String): JHashMap[String, DataView] = {
+    val raw = parseObjectRaw(json.trim)
+    val m   = new JHashMap[String, DataView]()
+    val it  = raw.entrySet().iterator()
+    while (it.hasNext) {
+      val e = it.next()
+      m.put(e.getKey, dv(e.getValue))
+    }
+    m
+  }
 
   // ---- Internal JSON parsing ----
 
-  private def parseObject(s: String): JHashMap[String, Any] = {
+  private def parseObjectRaw(s: String): JHashMap[String, Any] = {
     val map   = new JHashMap[String, Any]()
     val inner = s.substring(1, s.length - 1).trim
     if (inner.isEmpty) return map
@@ -59,7 +92,7 @@ object TestHelper {
     map
   }
 
-  private def parseArray(s: String): JArrayList[Any] = {
+  private def parseArrayRaw(s: String): JArrayList[Any] = {
     val list  = new JArrayList[Any]()
     val inner = s.substring(1, s.length - 1).trim
     if (inner.isEmpty) return list
@@ -69,10 +102,12 @@ object TestHelper {
     list
   }
 
+  private def parseJsonRaw(s: String): Any = parseValue(s)
+
   private def parseValue(s: String): Any = {
     val t = s.trim
-    if (t.startsWith("{")) parseObject(t)
-    else if (t.startsWith("[")) parseArray(t)
+    if (t.startsWith("{")) parseObjectRaw(t)
+    else if (t.startsWith("[")) parseArrayRaw(t)
     else if (t.startsWith("\"")) t.substring(1, t.length - 1)
     else if (t == "true") java.lang.Boolean.TRUE
     else if (t == "false") java.lang.Boolean.FALSE
@@ -80,7 +115,6 @@ object TestHelper {
     else if (t.contains(".")) java.lang.Double.valueOf(t)
     else {
       val v = java.lang.Long.valueOf(t)
-      // Return Integer for small values to match liqp expectations
       if (v >= Int.MinValue && v <= Int.MaxValue) java.lang.Long.valueOf(v)
       else v
     }

@@ -20,7 +20,9 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ Arrays, Locale }
+import ssg.data.DataView
+
+import java.util.Locale
 
 /** Base class for Liquid filters.
   *
@@ -36,26 +38,26 @@ abstract class Filter(_name: String) extends LValue {
   val name: String = if (_name != null) _name else getClass.getSimpleName.toLowerCase(Locale.ENGLISH)
 
   /** Applies the filter on the 'value', with the given 'context'. */
-  def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = value
+  def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = value
 
   /** Check the number of parameters and throw an exception if needed. */
-  final def checkParams(params: Array[Any], expected: Int): Unit =
+  final def checkParams(params: Array[DataView], expected: Int): Unit =
     if (params == null || params.length != expected) {
       val actual = if (params == null) 1 else params.length + 1
       throw new RuntimeException(s"Liquid error: wrong number of arguments (given $actual for ${expected + 1})")
     }
 
-  final def checkParams(params: Array[Any], min: Int, max: Int): Unit =
+  final def checkParams(params: Array[DataView], min: Int, max: Int): Unit =
     if (params == null || params.length < min || params.length > max) {
       val actual = if (params == null) 1 else params.length + 1
       throw new RuntimeException(s"Liquid error: wrong number of arguments (given $actual expected ${min + 1}..${max + 1})")
     }
 
   /** Returns a value at a specific index from an array of parameters. */
-  protected def get(index: Int, params: Array[Any]): Any = {
+  protected def get(index: Int, params: Array[DataView]): DataView = {
     if (index >= params.length) {
       throw new RuntimeException(
-        s"error in filter '$name': cannot get param index: $index from: ${Arrays.toString(params.asInstanceOf[Array[AnyRef]])}"
+        s"error in filter '$name': cannot get param index: $index from: ${params.mkString("[", ", ", "]")}"
       )
     }
     params(index)

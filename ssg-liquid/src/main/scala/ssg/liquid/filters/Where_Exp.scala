@@ -21,7 +21,7 @@ package ssg
 package liquid
 package filters
 
-import ssg.liquid.parser.Inspectable
+import ssg.data.DataView
 
 import java.util.ArrayList
 
@@ -31,21 +31,14 @@ import java.util.ArrayList
   */
 class Where_Exp extends Filter("where_exp") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-    var items: Array[Any] = null
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+    var items: Vector[DataView] = null
 
     if (isArray(value)) {
       items = asArray(value, context)
     }
-    if (items == null && value.isInstanceOf[Inspectable]) {
-      val evaluated = context.parser.evaluate(value)
-      val liquid    = evaluated.toLiquid()
-      if (isMap(liquid)) {
-        items = asMap(liquid).values().toArray
-      }
-    }
     if (items == null && isMap(value)) {
-      items = asMap(value).values().toArray
+      items = asMap(value).values.toVector
     }
 
     if (items == null) {
@@ -58,17 +51,20 @@ class Where_Exp extends Filter("where_exp") {
       val exprParser   = new TemplateParser.Builder(context.parser).withEvaluateInOutputTag(true).build()
       val exprTemplate = exprParser.parse("{{ " + strExpression + " }}")
 
-      val result = new ArrayList[Any]()
+      val result = new ArrayList[DataView]()
       for (item <- items)
         if (matchCondition(context, item, varName, exprTemplate)) {
           result.add(item)
         }
-      result
+      DataView.from {
+        import scala.jdk.CollectionConverters._
+        result.asScala.toVector
+      }
     }
   }
 
-  private def matchCondition(context: TemplateContext, item: Any, varName: String, expression: Template): Boolean = {
-    val vars = java.util.Collections.singletonMap[String, Any](varName, item)
+  private def matchCondition(context: TemplateContext, item: DataView, varName: String, expression: Template): Boolean = {
+    val vars = java.util.Collections.singletonMap[String, DataView](varName, item)
     "true" == String.valueOf(expression.renderToObjectUnguarded(vars, context, false))
   }
 }

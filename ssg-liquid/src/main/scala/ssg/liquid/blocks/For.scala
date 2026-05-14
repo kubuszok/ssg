@@ -21,38 +21,31 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.{ AtomNode, BlockNode, LNode }
-import ssg.liquid.parser.LiquidSupport
 
-import java.util
-import java.util.{ ArrayDeque, ArrayList, Collections, HashMap, List => JList, Map => JMap }
+import java.util.{ ArrayDeque, HashMap, List => JList, Map => JMap }
 
+import scala.collection.immutable.VectorMap
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Liquid for loop tag.
-  *
-  * Documentation: https://shopify.dev/docs/themes/liquid/reference/tags/iteration-tags https://shopify.github.io/liquid/tags/iteration/
-  */
+/** Liquid for loop tag. */
 class For extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
-    // The first node denotes whether this is a for-tag over an array or a range.
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
     val array = asBoolean(nodes(0).render(context))
 
     val id       = asString(nodes(1).render(context), context)
-    val tagName  = id + "-" + nodes(5).render(context)
+    val tagName  = id + "-" + nodes(5).render(context).toString
     val reversed = asBoolean(nodes(6).render(context))
 
-    // Each for tag has its own context that keeps track of its own variables (scope)
     val nestedContext = context.newChildContext()
 
     val rendered =
       if (array) renderArray(id, nestedContext, tagName, reversed, nodes)
       else renderRange(id, nestedContext, tagName, reversed, nodes)
 
-    // When context.renderSettings.raiseExceptionsInStrictMode=false,
-    // don't allow nested errors to be lost
     val nestedErrors = nestedContext.errors()
     var i            = 0
     while (i < nestedErrors.size()) {
@@ -63,71 +56,61 @@ class For extends Block {
     rendered
   }
 
-  private def renderArray(id: String, context: TemplateContext, tagName: String, reversed: Boolean, tokens: Array[LNode]): Any = boundary {
-    var data: Any = tokens(2).render(context)
-    if (AtomNode.isEmpty(data) || "".equals(data)) {
-      data = new ArrayList[Any]()
+  private def renderArray(id: String, context: TemplateContext, tagName: String, reversed: Boolean, tokens: Array[LNode]): DataView = boundary {
+    var data: DataView = tokens(2).render(context)
+    if (AtomNode.isEmpty(data) || data.toString == "") {
+      data = DataView.from(Vector.empty[DataView])
     }
 
-    // attributes start from index 7
     val attributes = getAttributes(7, context, tagName, tokens)
 
     val from  = attributes.get(For.OFFSET).intValue()
     val limit = attributes.get(For.LIMIT).intValue()
 
-    if (data.isInstanceOf[ssg.data.DataView]) {
-      data = DataViewBridge.unwrap(data.asInstanceOf[ssg.data.DataView])
+    // Convert map to array of key-value pairs
+    if (isMap(data)) {
+      data = DataView.from(mapAsVector(asMap(data)))
     }
-    if (data.isInstanceOf[parser.Inspectable]) {
-      val evaluated = context.parser.evaluate(data)
-      data = evaluated.toLiquid()
-    }
-    if (data.isInstanceOf[JMap[?, ?]]) {
-      data = mapAsArray(data.asInstanceOf[JMap[?, ?]])
-    }
+
     val array = asArray(data, context)
 
     val block              = tokens(3)
     val blockIfEmptyOrNull = tokens(4)
 
-    if (array == null || array.length == 0) {
-      break(if (blockIfEmptyOrNull == null) null else blockIfEmptyOrNull.render(context))
+    if (array.isEmpty) {
+      break(if (blockIfEmptyOrNull == null) DataView.nil else blockIfEmptyOrNull.render(context))
     }
 
-    val to            = if (limit > -1) Math.min(from + limit, array.length) else array.length
-    val effectiveFrom = Math.min(from, array.length)
+    val to            = if (limit > -1) Math.min(from + limit, array.size) else array.size
+    val effectiveFrom = Math.min(from, array.size)
     val length        = to - effectiveFrom
 
-    var arrayList: JList[Any] = util.Arrays.asList(array*).subList(effectiveFrom, to)
+    var arrayList = array.slice(effectiveFrom, to)
     if (reversed) {
-      val listCopy = new ArrayList[Any](arrayList)
-      Collections.reverse(listCopy)
-      arrayList = listCopy
+      arrayList = arrayList.reverse
     }
 
-    // now the current offset and limit is known, so set "continue" lexem
     val registry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_FOR)
     registry.put(tagName, java.lang.Integer.valueOf(effectiveFrom + length))
 
     val forLoopDrop = createLoopDropInArrayDeque(context, tagName, length)
 
-    val builder = context.newObjectAppender(arrayList.size())
-    try {
-      val it = arrayList.iterator()
-      while (it.hasNext) {
-        val o = it.next()
+    val builder = context.newObjectAppender(arrayList.size)
+    try
+      for (o <- arrayList) {
         context.incrementIterations()
         context.put(id, o)
         val isBreak = renderForLoopBody(context, builder, block.asInstanceOf[BlockNode].getChildren)
         forLoopDrop.increment()
+        context.put(For.FORLOOP, forLoopDrop.toDataView())
         if (isBreak) {
-          break(builder.getResult)
+          break(DataView.from(builder.getResult.toString))
         }
       }
-    } finally
+    finally
       popLoopDropFromArrayDeque(context)
 
-    builder.getResult
+    DataView.from(builder.getResult.toString)
   }
 
   private def createLoopDropInArrayDeque(context: TemplateContext, tagName: String, length: Int): For.ForLoopDrop = {
@@ -135,7 +118,7 @@ class For extends Block {
     val parent      = if (!stack.isEmpty) stack.peek() else null
     val forLoopDrop = new For.ForLoopDrop(tagName, length, parent)
     stack.push(forLoopDrop)
-    context.put(For.FORLOOP, forLoopDrop)
+    context.put(For.FORLOOP, forLoopDrop.toDataView())
     forLoopDrop
   }
 
@@ -157,20 +140,15 @@ class For extends Block {
       val node  = children.get(i)
       val value = node.render(context)
 
-      if (value != null) {
-        if (value.asInstanceOf[AnyRef] eq LValue.CONTINUE) {
-          // break from inner loop: equals continue outer loop
+      if (!value.isNull) {
+        if (value eq DataView.CONTINUE) {
           break(false)
         }
-        if (value.asInstanceOf[AnyRef] eq LValue.BREAK) {
+        if (value eq DataView.BREAK) {
           isBreak = true
         } else if (isArray(value)) {
-          val arr = asArray(value, context)
-          var j   = 0
-          while (j < arr.length) {
-            builder.append(arr(j))
-            j += 1
-          }
+          val vec = asArray(value, context)
+          vec.foreach(dv => builder.append(dv.toString))
         } else {
           builder.append(asAppendableObject(value, context))
         }
@@ -180,8 +158,7 @@ class For extends Block {
     isBreak
   }
 
-  private def renderRange(id: String, context: TemplateContext, tagName: String, reversed: Boolean, tokens: Array[LNode]): Any = boundary {
-    // attributes start from index 7
+  private def renderRange(id: String, context: TemplateContext, tagName: String, reversed: Boolean, tokens: Array[LNode]): DataView = boundary {
     val attributes = getAttributes(7, context, tagName, tokens)
 
     val offset = attributes.get(For.OFFSET).intValue()
@@ -193,7 +170,7 @@ class For extends Block {
     val to          = asNumber(tokens(3).render(context)).intValue()
     val effectiveTo =
       if (limit < 0) to
-      else Math.min(to, from + limit - 1) // 1 because ranges right is inclusive
+      else Math.min(to, from + limit - 1)
 
     val length = to - from
 
@@ -208,18 +185,19 @@ class For extends Block {
           else i
 
         context.incrementIterations()
-        context.put(id, java.lang.Integer.valueOf(realI))
+        context.put(id, DataView.from(realI))
         val isBreak = renderForLoopBody(context, builder, block.asInstanceOf[BlockNode].getChildren)
         forLoopDrop.increment()
+        context.put(For.FORLOOP, forLoopDrop.toDataView())
         if (isBreak) {
-          break(builder.getResult)
+          break(DataView.from(builder.getResult.toString))
         }
         i += 1
       }
     } finally
       popLoopDropFromArrayDeque(context)
 
-    builder.getResult
+    DataView.from(builder.getResult.toString)
   }
 
   @SuppressWarnings(Array("unchecked"))
@@ -245,13 +223,13 @@ class For extends Block {
       val token     = tokens(i)
       val attribute = asArray(token.render(context), context)
       // offset:continue
-      if (For.OFFSET.equals(asString(attribute(0), context)) && (attribute(1).asInstanceOf[AnyRef] eq LValue.CONTINUE)) {
+      if (attribute.size >= 2 && For.OFFSET.equals(asString(attribute(0), context)) && (attribute(1) eq DataView.CONTINUE)) {
         val offsets: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_FOR)
         val v = offsets.get(tagName)
         if (v != null) {
           attributes.put(For.OFFSET, v.asInstanceOf[Integer])
         }
-      } else {
+      } else if (attribute.size >= 2) {
         try
           attributes.put(asString(attribute(0), context), Integer.valueOf(asNumber(attribute(1)).intValue()))
         catch {
@@ -279,26 +257,25 @@ object For {
   private val NAME       = "name"
   private val PARENTLOOP = "parentloop"
 
-  class ForLoopDrop(forName: String, private val length: Int, private val parentloop: ForLoopDrop) extends LiquidSupport {
-    private val map = new HashMap[String, Any]()
+  class ForLoopDrop(forName: String, private val length: Int, private val parentloop: ForLoopDrop) {
     private var index: Int = 0
 
-    map.put(NAME, forName)
-
-    override def toLiquid(): JMap[String, Any] = {
-      map.put(LENGTH, Integer.valueOf(length))
-      map.put(INDEX, Integer.valueOf(index + 1))
-      map.put(INDEX0, Integer.valueOf(index))
-      map.put(RINDEX, Integer.valueOf(length - index))
-      map.put(RINDEX0, Integer.valueOf(length - index - 1))
+    def toDataView(): DataView = {
+      var m = VectorMap.empty[String, DataView]
+      m = m.updated(NAME, DataView.from(forName))
+      m = m.updated(LENGTH, DataView.from(length))
+      m = m.updated(INDEX, DataView.from(index + 1))
+      m = m.updated(INDEX0, DataView.from(index))
+      m = m.updated(RINDEX, DataView.from(length - index))
+      m = m.updated(RINDEX0, DataView.from(length - index - 1))
       val first = index == 0
       val last  = index == length - 1
-      map.put(FIRST, java.lang.Boolean.valueOf(first))
-      map.put(LAST, java.lang.Boolean.valueOf(last))
+      m = m.updated(FIRST, DataView.from(first))
+      m = m.updated(LAST, DataView.from(last))
       if (parentloop != null) {
-        map.put(PARENTLOOP, parentloop)
+        m = m.updated(PARENTLOOP, parentloop.toDataView())
       }
-      map
+      DataView.from(m)
     }
 
     def increment(): Unit =

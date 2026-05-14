@@ -2,6 +2,7 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.{ ExceededMaxIterationsException, VariableNotExistException }
 import ssg.liquid.filters.Filter
 import ssg.liquid.nodes.LNode
@@ -62,8 +63,8 @@ final class ProtectionSuite extends munit.FunSuite {
 
   test("custom filter - registered via Builder") {
     val customFilter = new Filter("shout") {
-      override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-        String.valueOf(value).toUpperCase() + "!!!"
+      override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+        DataView.from(super.asString(value, context).toUpperCase() + "!!!")
     }
     val parser   = new TemplateParser.Builder().withFilter(customFilter).build()
     val template = parser.parse("{{ 'hello' | shout }}")
@@ -72,8 +73,8 @@ final class ProtectionSuite extends munit.FunSuite {
 
   test("custom tag - registered via Builder") {
     val customTag = new Tag("greeting") {
-      override def render(context: TemplateContext, nodes: Array[LNode]): Any =
-        "Hello, World!"
+      override def render(context: TemplateContext, nodes: Array[LNode]): DataView =
+        DataView.from("Hello, World!")
     }
     val parser   = new TemplateParser.Builder().withTag(customTag).build()
     val template = parser.parse("{% greeting %}")

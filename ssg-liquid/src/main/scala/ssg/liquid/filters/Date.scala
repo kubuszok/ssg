@@ -21,6 +21,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import ssg.liquid.filters.date.{ CustomDateFormatRegistry, CustomDateFormatSupport, DateParser }
 
 import java.time.{ Instant, ZonedDateTime }
@@ -38,7 +40,7 @@ class Date extends Filter("date") {
     CustomDateFormatRegistry.add(typeSupport)
   }
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val locale = context.parser.locale
 
     var effectiveValue = value
@@ -70,7 +72,7 @@ class Date extends Filter("date") {
         } else {
           val javaPattern = Date.strftimeToJava(format)
           val formatter   = DateTimeFormatter.ofPattern(javaPattern, locale)
-          formatter.format(compatibleDate)
+          DataView.from(formatter.format(compatibleDate))
         }
       }
     } catch {

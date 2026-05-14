@@ -6,9 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.blocks → ssg.liquid.blocks
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/blocks/Capture.java
  * Covenant-verified: 2026-04-26
@@ -19,18 +16,17 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
 
-/** Block tag that captures text into a variable. */
 class Capture extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
     val id    = asString(nodes(0).render(context), context)
     val block = nodes(1)
 
-    // Capture causes variable to be saved "globally"
     context.put(id, block.render(context), true)
 
-    null
+    DataView.nil
   }
 }

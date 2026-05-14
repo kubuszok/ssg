@@ -16,16 +16,18 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "join" filter — joins elements of an array with a separator. */
 class Join extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    if (value == null) {
-      ""
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+    if (value.isNull) {
+      DataView.from("")
     } else {
       val array = asArray(value, context)
-      if (array.length == 0) {
-        ""
+      if (array.isEmpty) {
+        DataView.from("")
       } else {
         val builder = context.newObjectAppender(array.length)
         val glue    = if (params.length == 0) " " else asString(get(0, params), context)
@@ -37,7 +39,7 @@ class Join extends Filter {
           }
           i += 1
         }
-        builder.getResult
+        DataView.from(builder.getResult.toString)
       }
     }
 }

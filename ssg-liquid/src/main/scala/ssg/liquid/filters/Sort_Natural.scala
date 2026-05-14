@@ -16,12 +16,14 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.util.{ ArrayList, Arrays, Collections, Comparator }
 
 /** Liquid "sort_natural" filter — sorts elements case-insensitively. */
 class Sort_Natural extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
@@ -34,6 +36,9 @@ class Sort_Natural extends Filter {
             String.valueOf(o1).compareToIgnoreCase(String.valueOf(o2))
         }
       )
-      list.toArray()
+      DataView.from {
+        import scala.jdk.CollectionConverters._
+        list.asScala.toVector.map(s => DataView.from(String.valueOf(s)))
+      }
     }
 }

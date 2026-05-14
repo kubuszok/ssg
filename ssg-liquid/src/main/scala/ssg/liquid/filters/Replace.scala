@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Replace extends Filter {
 
   /*
@@ -23,20 +25,20 @@ class Replace extends Filter {
    *
    * Replace occurrences of a string with another
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val original = asString(value, context)
     val needle   = get(0, params)
-    if (needle == null) {
+    if (needle.isNull) {
       throw new RuntimeException("invalid pattern: " + needle)
     }
     var replacement = ""
     if (params.length >= 2) {
       val obj = get(1, params)
-      if (obj == null) {
+      if (obj.isNull) {
         throw new RuntimeException("invalid replacement: " + needle)
       }
       replacement = asString(get(1, params), context)
     }
-    original.replace(String.valueOf(needle), String.valueOf(replacement))
+    DataView.from(original.replace(asString(needle, context), replacement))
   }
 }

@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 import java.util.ArrayList
 
@@ -17,10 +19,10 @@ final class AdvancedSuite extends munit.FunSuite {
   }
 
   test("variable with property and filter: user.name | upcase") {
-    val vars = new HashMap[String, Any]()
-    val user = new HashMap[String, Any]()
-    user.put("name", "alice")
-    vars.put("user", user)
+    val vars = new HashMap[String, DataView]()
+    val user = new HashMap[String, DataView]()
+    user.put("name", TestHelper.dv("alice"))
+    vars.put("user", TestHelper.dv(user))
     assertEquals(
       Template.parse("{{ user.name | upcase }}").render(vars),
       "ALICE"
@@ -30,12 +32,12 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Array access =====
 
   test("array index access: array[1]") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add("a")
     array.add("b")
     array.add("c")
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{{ array[1] }}").render(vars),
       "b"
@@ -43,12 +45,12 @@ final class AdvancedSuite extends munit.FunSuite {
   }
 
   test("array negative index: array[-1]") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add("a")
     array.add("b")
     array.add("c")
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{{ array[-1] }}").render(vars),
       "c"
@@ -58,15 +60,15 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Nested for loops =====
 
   test("nested for loops with inner variable") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val outer = new ArrayList[Any]()
     outer.add(java.lang.Integer.valueOf(1))
     outer.add(java.lang.Integer.valueOf(2))
     val inner = new ArrayList[Any]()
     inner.add("x")
     inner.add("y")
-    vars.put("outer", outer)
-    vars.put("inner", inner)
+    vars.put("outer", TestHelper.dv(outer))
+    vars.put("inner", TestHelper.dv(inner))
     assertEquals(
       Template.parse("{% for a in outer %}{% for b in inner %}{{a}}{{b}} {% endfor %}{% endfor %}").render(vars),
       "1x 1y 2x 2y "
@@ -101,9 +103,9 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Empty checks =====
 
   test("empty check: size filter on empty array") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% if array.size == 0 %}yes{% endif %}").render(vars),
       "yes"
@@ -111,11 +113,11 @@ final class AdvancedSuite extends munit.FunSuite {
   }
 
   test("empty check: size filter on non-empty array") {
-    val vars  = new HashMap[String, Any]()
+    val vars  = new HashMap[String, DataView]()
     val array = new ArrayList[Any]()
     array.add("a")
     array.add("b")
-    vars.put("array", array)
+    vars.put("array", TestHelper.dv(array))
     assertEquals(
       Template.parse("{% if array.size == 2 %}yes{% endif %}").render(vars),
       "yes"
@@ -125,8 +127,8 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Whitespace tolerance =====
 
   test("whitespace in tags: extra spaces in output tags") {
-    val vars = new HashMap[String, Any]()
-    vars.put("name", "hi")
+    val vars = new HashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("hi"))
     assertEquals(
       Template.parse("{{  name  }}").render(vars),
       "hi"
@@ -170,8 +172,8 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Case with variable =====
 
   test("case with variable: matching red") {
-    val vars = new HashMap[String, Any]()
-    vars.put("color", "red")
+    val vars = new HashMap[String, DataView]()
+    vars.put("color", TestHelper.dv("red"))
     assertEquals(
       Template.parse("{% case color %}{% when 'red' %}danger{% when 'blue' %}info{% endcase %}").render(vars),
       "danger"
@@ -190,9 +192,9 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Empty for loop =====
 
   test("empty for loop: no output for empty array") {
-    val vars       = new HashMap[String, Any]()
+    val vars       = new HashMap[String, DataView]()
     val emptyArray = new ArrayList[Any]()
-    vars.put("empty_array", emptyArray)
+    vars.put("empty_array", TestHelper.dv(emptyArray))
     assertEquals(
       Template.parse("{% for item in empty_array %}x{% endfor %}").render(vars),
       ""
@@ -211,12 +213,12 @@ final class AdvancedSuite extends munit.FunSuite {
   // ===== Chained property access =====
 
   test("chained property access: site.data.title") {
-    val vars = new HashMap[String, Any]()
-    val data = new HashMap[String, Any]()
-    data.put("title", "My Site")
-    val site = new HashMap[String, Any]()
-    site.put("data", data)
-    vars.put("site", site)
+    val vars = new HashMap[String, DataView]()
+    val data = new HashMap[String, DataView]()
+    data.put("title", TestHelper.dv("My Site"))
+    val site = new HashMap[String, DataView]()
+    site.put("data", TestHelper.dv(data))
+    vars.put("site", TestHelper.dv(site))
     assertEquals(
       Template.parse("{{ site.data.title }}").render(vars),
       "My Site"

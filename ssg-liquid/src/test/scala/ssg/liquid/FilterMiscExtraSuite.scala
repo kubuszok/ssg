@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
@@ -22,10 +24,10 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
 
   test("json: object input should be stringified") {
     val template = Template.parse("{{ obj | json }}")
-    val map      = new JHashMap[String, Any]()
-    val nested   = new JHashMap[String, Any]()
-    nested.put("key", "value")
-    map.put("obj", nested)
+    val map      = new JHashMap[String, DataView]()
+    val nested   = new JHashMap[String, DataView]()
+    nested.put("key", TestHelper.dv("value"))
+    map.put("obj", TestHelper.dv(nested))
     val rendered = template.render(map)
     assertEquals(rendered, "{\"key\":\"value\"}")
   }
@@ -52,8 +54,8 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
     )
 
     cases.foreach { case (expected, input, description) =>
-      val vars = new JHashMap[String, Any]()
-      vars.put("v", input)
+      val vars = new JHashMap[String, DataView]()
+      vars.put("v", TestHelper.dv(input))
       val result = parser.parse("{{ v | normalize_whitespace }}").render(vars)
       assertEquals(result, expected, s"$description: input='$input'")
     }
@@ -67,9 +69,9 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("textilize") {
-          override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
             val s = super.asString(value, context).trim
-            "<b>" + s.substring(1, s.length - 1) + "</b>"
+            DataView.from("<b>" + s.substring(1, s.length - 1) + "</b>")
           }
         }
       )
