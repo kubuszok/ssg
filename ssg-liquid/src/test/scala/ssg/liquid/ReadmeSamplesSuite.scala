@@ -63,7 +63,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
 
   // SSG: EAGER mode object access differs
   test("readme: eager mode".fail) {
-    assume(PlatformCompat.supportsReflection, "EAGER mode requires reflection (JVM-only)")
+    assume(PlatformCompat.isJVM, "EAGER mode requires reflection (JVM-only)")
     val data   = TestHelper.mapOf("a" -> new ReadmeSamplesSuite.ValHolder())
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
     val res    = parser.parse("hi {{a.val}}").render(data)
@@ -111,7 +111,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
   }
 
   test("readme: filter can be anything (sum)") {
-    assume(PlatformCompat.supportsReflection, "Double.toString formatting differs on JS/Native")
+    assume(PlatformCompat.isJVM, "Double.toString formatting differs on JS/Native")
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {

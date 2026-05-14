@@ -3,5 +3,5 @@ package ssg
 package liquid
 
 private[liquid] object PlatformCompatImpl {
-  val supportsReflection: Boolean = false
+  val isJVM: Boolean = false
 }

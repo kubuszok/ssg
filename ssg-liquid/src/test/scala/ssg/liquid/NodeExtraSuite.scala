@@ -111,7 +111,7 @@ final class NodeExtraSuite extends munit.FunSuite {
   }
 
   test("output node: date with filter") {
-    assume(PlatformCompat.supportsReflection, "LocalDateTime handling may differ on non-JVM")
+    assume(PlatformCompat.isJVM, "LocalDateTime handling may differ on non-JVM")
     val vars = Collections.singletonMap[String, DataView]("a", TestHelper.dv(java.time.LocalDateTime.parse("2011-12-03T10:15:30")))
     val res  = Template.parse("{{ a | truncate: 13 }}").render(vars)
     assertEquals(res, "2011-12-03...")

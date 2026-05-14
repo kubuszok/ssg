@@ -144,7 +144,7 @@ final class AbsoluteUrlFilterSuite extends munit.FunSuite {
    * should "transform the input URL to a string"
    */
   test("absolute_url: transform input URL to string") {
-    assume(PlatformCompat.supportsReflection, "Requires toString() dispatch via reflection (JVM-only)")
+    assume(PlatformCompat.isJVM, "Requires toString() dispatch via reflection (JVM-only)")
     val template = jekyllParser.parse("{{ '/my-page.html' | absolute_url }}")
     val data     = getData(new Object() {
                          override def toString: String = "http://example.org"

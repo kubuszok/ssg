@@ -79,7 +79,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("divided_by: float division") {
-    assume(PlatformCompat.supportsReflection, "Float division formatting differs on JS/Native")
+    assume(PlatformCompat.isJVM, "Float division formatting differs on JS/Native")
     assertNumEquals("{{ 8 | divided_by: 3. }}", String.valueOf(8 / 3.0))
     assertNumEquals("{{ 8 | divided_by: 3.0 }}", String.valueOf(8 / 3.0))
     assertNumEquals("{{ 8 | divided_by: 2.0 }}", "4.0")

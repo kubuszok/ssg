@@ -52,7 +52,7 @@ final class InsertionSuite extends munit.FunSuite {
   }
 
   test("insertion: custom tag") {
-    assume(PlatformCompat.supportsReflection, "Double.toString formatting differs on JS/Native")
+    assume(PlatformCompat.isJVM, "Double.toString formatting differs on JS/Native")
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("twice") {
@@ -68,7 +68,7 @@ final class InsertionSuite extends munit.FunSuite {
   }
 
   test("insertion: custom tag parameters") {
-    assume(PlatformCompat.supportsReflection, "Double.toString formatting differs on JS/Native")
+    assume(PlatformCompat.isJVM, "Double.toString formatting differs on JS/Native")
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("multiply") {

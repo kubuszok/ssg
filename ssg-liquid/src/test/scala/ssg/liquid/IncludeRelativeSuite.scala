@@ -70,7 +70,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
   }
 
   test("include_relative: simple case in Jekyll flavor") {
-    assume(PlatformCompat.supportsReflection, "Filesystem includes require JVM")
+    assume(PlatformCompat.isJVM, "Filesystem includes require JVM")
     val map = new JHashMap[String, String]()
     map.put("world.liquid", "World")
     map.put("hello.liquid", "Hello {% include_relative 'world.liquid' %}!")
