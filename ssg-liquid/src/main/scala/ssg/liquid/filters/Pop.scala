@@ -16,7 +16,7 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ ArrayList, Collections }
+import ssg.data.DataView
 
 /** Liquid "pop" filter — returns a new array with the last item(s) removed.
   *
@@ -24,7 +24,7 @@ import java.util.{ ArrayList, Collections }
   */
 class Pop extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
@@ -40,13 +40,13 @@ class Pop extends Filter {
           throw new RuntimeException("pop supports up to 1 parameter")
       }
 
-      val list          = asList(value, context)
-      val remainingSize = list.size() - numPop
+      val vec           = asArray(value, context)
+      val remainingSize = vec.size - numPop
 
       if (remainingSize <= 0) {
-        Collections.emptyList()
+        DataView.from(Vector.empty[DataView])
       } else {
-        new ArrayList[Any](list.subList(0, remainingSize))
+        DataView.from(vec.take(remainingSize))
       }
     }
 }

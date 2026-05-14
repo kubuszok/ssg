@@ -19,16 +19,20 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 class NEqNode(lhs: LNode, rhs: LNode) extends ComparingExpressionNode(lhs, rhs, false) {
 
-  override protected def doCompare(a: Any, b: Any, strictTypedExpressions: Boolean): Any =
-    if (a.isInstanceOf[Boolean] && b.isInstanceOf[Boolean]) {
-      a != b
-    } else if (a.isInstanceOf[Boolean]) {
-      true
-    } else if (b.isInstanceOf[Boolean]) {
-      true
-    } else {
-      !LValue.areEqual(a, b)
-    }
+  override protected def doCompare(a: DataView, b: DataView, strictTypedExpressions: Boolean): DataView =
+    DataView.from(
+      if (!a.isNull && a.view.isInstanceOf[Boolean] && !b.isNull && b.view.isInstanceOf[Boolean]) {
+        a.view != b.view
+      } else if (!a.isNull && a.view.isInstanceOf[Boolean]) {
+        true
+      } else if (!b.isNull && b.view.isInstanceOf[Boolean]) {
+        true
+      } else {
+        !LValue.areEqual(a, b)
+      }
+    )
 }

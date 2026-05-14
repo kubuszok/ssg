@@ -6,9 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.tags → ssg.liquid.tags
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/tags/Increment.java
  * Covenant-verified: 2026-04-26
@@ -19,24 +16,24 @@ package ssg
 package liquid
 package tags
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
 
-/** Creates a new number variable, and increases its value by 1 every time increment is called on the variable. The counter's initial value is 0.
-  */
 class Increment extends Tag {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
     var value    = 0L
     val variable = asString(nodes(0).render(context), context)
 
     val environmentMap = context.getEnvironmentMap
     if (environmentMap.containsKey(variable)) {
-      value = environmentMap.get(variable).asInstanceOf[Long]
+      val stored = environmentMap.get(variable)
+      value = stored.asLong.getOrElse(0L)
     }
 
     val nextValue = value + 1L
-    environmentMap.put(variable, java.lang.Long.valueOf(nextValue))
+    environmentMap.put(variable, DataView.from(nextValue))
 
-    java.lang.Long.valueOf(value)
+    DataView.from(value)
   }
 }

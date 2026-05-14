@@ -20,6 +20,8 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 /** Denotes a node in the AST the parser creates from the input source. */
 trait LNode {
 
@@ -28,7 +30,7 @@ trait LNode {
     * @param context
     *   the context (variables) with which this node should be rendered.
     * @return
-    *   an object denoting the rendered AST.
+    *   a DataView denoting the rendered AST.
     */
-  def render(context: TemplateContext): Any
+  def render(context: TemplateContext): DataView
 }

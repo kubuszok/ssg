@@ -12,8 +12,10 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.LiquidException
-import ssg.liquid.parser.Inspectable
+
+import scala.collection.immutable.VectorMap
 
 import java.util.{ ArrayList => JArrayList, HashMap => JHashMap }
 
@@ -26,20 +28,14 @@ final class BlocksExtraSuite extends munit.FunSuite {
   private def render(template: String): String =
     TemplateParser.DEFAULT.parse(template).render()
 
-  private def render(template: String, vars: JHashMap[String, Any]): String =
+  private def render(template: String, vars: JHashMap[String, DataView]): String =
     TemplateParser.DEFAULT.parse(template).render(vars)
 
-  private def mapOf(pairs: (String, Any)*): JHashMap[String, Any] = {
-    val m = new JHashMap[String, Any]()
-    pairs.foreach { case (k, v) => m.put(k, v) }
-    m
-  }
+  private def mapOf(pairs: (String, Any)*): JHashMap[String, DataView] =
+    TestHelper.mapOf(pairs*)
 
-  private def listOf(items: Any*): JArrayList[Any] = {
-    val l = new JArrayList[Any]()
-    items.foreach(l.add)
-    l
-  }
+  private def listOf(items: Any*): DataView =
+    TestHelper.listOf(items*)
 
   // ===========================================================================
   // ForTest.java — missing tests
@@ -142,8 +138,8 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // NOTE: SSG forloop.name reports "x-x" instead of "x-X[0].Y"
   // because the SSG for implementation stores loop names differently
   test("for: complex array name with bracket access") {
-    val inner = new JHashMap[String, Any]()
-    inner.put("Y", "foo")
+    val inner = new JHashMap[String, DataView]()
+    inner.put("Y", TestHelper.dv("foo"))
     val x        = listOf(inner, "test string")
     val rendered = TemplateParser.DEFAULT.parse("{% for x in X[0].Y %}{{forloop.name}}-{{x}}{%endfor%}").render(mapOf("X" -> x))
     assertEquals(rendered, "x-x-foo")
@@ -218,9 +214,9 @@ final class BlocksExtraSuite extends munit.FunSuite {
    * 'hash' => {'a' => 'AAA', 'b' => 'BBB'}
    */
   test("for: iterating over hash map") {
-    val hash = new JHashMap[String, Any]()
-    hash.put("a", "AAA")
-    hash.put("b", "BBB")
+    val hash = new JHashMap[String, DataView]()
+    hash.put("a", TestHelper.dv("AAA"))
+    hash.put("b", TestHelper.dv("BBB"))
     val rendered = render("{% for item in hash %}{{ item[0] }} is {{ item[1] }};{% endfor %}", mapOf("hash" -> hash))
     assertEquals(rendered, "a is AAA;b is BBB;")
   }
@@ -228,10 +224,10 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // --- shouldProperlyUseMapAfterFirstOnArrayOfMaps ---
 
   test("for: map filter after first on array of maps") {
-    val m1 = new JHashMap[String, Any]()
-    m1.put("rating", java.lang.Double.valueOf(4.5))
-    val m2 = new JHashMap[String, Any]()
-    m2.put("rating", java.lang.Double.valueOf(7.2))
+    val m1 = new JHashMap[String, DataView]()
+    m1.put("rating", TestHelper.dv(java.lang.Double.valueOf(4.5)))
+    val m2 = new JHashMap[String, DataView]()
+    m2.put("rating", TestHelper.dv(java.lang.Double.valueOf(7.2)))
     val x = listOf(m1, m2)
     assertEquals(
       render("{{ x | first | map: 'rating' }}", mapOf("x" -> x)),
@@ -331,7 +327,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
   }
 
   test("if: from variable — foo empty hash bar is falsy") {
-    assertEquals(render("{% if foo.bar %} NO {% endif %}", mapOf("foo" -> new JHashMap[String, Any]())), "")
+    assertEquals(render("{% if foo.bar %} NO {% endif %}", mapOf("foo" -> new JHashMap[String, DataView]())), "")
   }
 
   test("if: from variable — foo null is falsy") {
@@ -355,7 +351,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
   }
 
   test("if: from variable — empty hash is truthy") {
-    assertEquals(render("{% if var %} YES {% endif %}", mapOf("var" -> new JHashMap[String, Any]())), " YES ")
+    assertEquals(render("{% if var %} YES {% endif %}", mapOf("var" -> new JHashMap[String, DataView]())), " YES ")
   }
 
   test("if: from variable — empty array is truthy") {
@@ -389,7 +385,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
 
   test("if: from variable — foo.bar empty hash is truthy") {
     assertEquals(
-      render("{% if foo.bar %} YES {% endif %}", mapOf("foo" -> mapOf("bar" -> new JHashMap[String, Any]()))),
+      render("{% if foo.bar %} YES {% endif %}", mapOf("foo" -> mapOf("bar" -> new JHashMap[String, DataView]()))),
       " YES "
     )
   }
@@ -448,7 +444,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
 
   test("if: from variable — foo empty hash with else goes to else") {
     assertEquals(
-      render("{% if foo.bar %} NO {% else %} YES {% endif %}", mapOf("foo" -> new JHashMap[String, Any]())),
+      render("{% if foo.bar %} NO {% else %} YES {% endif %}", mapOf("foo" -> new JHashMap[String, DataView]())),
       " YES "
     )
   }
@@ -559,11 +555,11 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // TablerowTest.java — missing tests (all from applyTest)
   // ===========================================================================
 
-  private val tablerowJson: JHashMap[String, Any] = {
+  private val tablerowJson: JHashMap[String, DataView] = {
     val products = new JArrayList[Any]()
     for (name <- Seq("a", "b", "c", "d", "e", "f", "g", "h")) {
-      val p = new JHashMap[String, Any]()
-      p.put("name", name)
+      val p = new JHashMap[String, DataView]()
+      p.put("name", TestHelper.dv(name))
       products.add(p)
     }
     mapOf("products" -> products)
@@ -1061,12 +1057,8 @@ final class BlocksExtraSuite extends munit.FunSuite {
   // for with drop_value_range (Inspectable)
   // NOTE: SSG Inspectable introspection uses getXxx() methods, not Scala val fields.
   // Anonymous classes with val fields aren't visible via getFields()/getMethods().
-  test("for: with drop value range (Inspectable)") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
-    val foobar = new Inspectable {
-      @scala.annotation.nowarn("msg=unused private member") // accessed via reflection
-      def getValue: Int = 3
-    }
+  test("for: with drop value range (DataView)") {
+    val foobar = DataView.from(VectorMap("value" -> DataView.from(3)))
     assertEquals(
       render("{%for item in (1..foobar.value) %} {{item}} {%endfor%}", mapOf("foobar" -> foobar)),
       " 1  2  3 "

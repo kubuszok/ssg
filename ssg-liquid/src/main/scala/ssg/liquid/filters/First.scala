@@ -16,10 +16,12 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "first" filter — get the first element of an array. */
 class First extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val array = asArray(value, context)
     if (array.length == 0) null else array(0)
   }

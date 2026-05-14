@@ -20,53 +20,44 @@ package ssg
 package liquid
 package nodes
 
-import ssg.liquid.parser.{ Inspectable, LiquidSupport }
-
-import java.util.{ ArrayList, Arrays, List => JList }
+import ssg.data.DataView
 
 class ContainsNode(private val lhs: LNode, private val rhs: LNode) extends LValue with LNode {
 
-  override def render(context: TemplateContext): Any = {
-    var collection: Any = lhs.render(context)
-    var needle:     Any = rhs.render(context)
+  override def render(context: TemplateContext): DataView = {
+    var collection: DataView = lhs.render(context)
+    val needle:     DataView = rhs.render(context)
 
-    if (collection.isInstanceOf[Inspectable]) {
-      val evaluated: LiquidSupport = context.parser.evaluate(collection)
-      collection = evaluated.toLiquid()
-    }
-
+    // If collection is a map, use its keys
     if (isMap(collection)) {
-      collection = asMap(collection).keySet().toArray
+      val map = asMap(collection)
+      collection = DataView.from(map.keys.toVector.map(DataView.from(_)))
     }
 
     if (isArray(collection)) {
       val array           = asArray(collection, context)
-      val finalCollection = toSingleNumberType(Arrays.asList(array*))
-      needle = toSingleNumberType(needle)
-      finalCollection.contains(needle)
+      val finalCollection = array.map(toSingleNumberType)
+      val needleNorm      = toSingleNumberType(needle)
+      DataView.from(finalCollection.exists(dv => dvEquals(dv, needleNorm)))
     } else if (isString(collection)) {
-      asString(collection, context).contains(asString(needle, context))
+      DataView.from(asString(collection, context).contains(asString(needle, context)))
     } else {
-      false
+      DataView.from(false)
     }
   }
 
-  private def toSingleNumberType(needle: Any): Any =
-    needle match {
-      case n: Number => LValue.asFormattedNumber(PlainBigDecimal(n.toString))
-      case other => other
-    }
+  private def dvEquals(a: DataView, b: DataView): Boolean =
+    if (a.isNull && b.isNull) true
+    else if (a.isNull || b.isNull) false
+    else a.view == b.view
 
-  private def toSingleNumberType(asList: JList[?]): JList[Any] = {
-    val res = new ArrayList[Any](asList.size())
-    val it  = asList.iterator()
-    while (it.hasNext) {
-      val item = it.next()
-      item match {
-        case n: Number => res.add(LValue.asFormattedNumber(PlainBigDecimal(n.toString)))
-        case other => res.add(other)
+  private def toSingleNumberType(dv: DataView): DataView =
+    if (dv.isNull) dv
+    else
+      dv.view match {
+        case _: (Short | Int | Long | Float | Double | java.math.BigDecimal) =>
+          val n = dv.view.asInstanceOf[Number]
+          DataView.from(LValue.asFormattedNumber(PlainBigDecimal(n.toString)))
+        case _ => dv
       }
-    }
-    res
-  }
 }

@@ -16,21 +16,16 @@ package ssg
 package liquid
 package filters
 
-import java.util.ArrayList
+import ssg.data.DataView
 
 /** Liquid "compact" filter — removes null elements from an array. */
 class Compact extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
-      val values    = asArray(value, context)
-      val compacted = new ArrayList[Any]()
-      for (obj <- values)
-        if (obj != null) {
-          compacted.add(obj)
-        }
-      compacted.toArray()
+      val values = asArray(value, context)
+      DataView.from(values.filter(!_.isNull))
     }
 }

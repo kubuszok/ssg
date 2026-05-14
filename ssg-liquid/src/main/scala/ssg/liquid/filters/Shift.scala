@@ -16,7 +16,7 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ ArrayList, Collections }
+import ssg.data.DataView
 
 /** Liquid "shift" filter — returns a new array with the first item(s) removed.
   *
@@ -24,7 +24,7 @@ import java.util.{ ArrayList, Collections }
   */
 class Shift extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
@@ -40,12 +40,12 @@ class Shift extends Filter {
           throw new RuntimeException("shift supports up to 1 parameter")
       }
 
-      val list = asList(value, context)
-      val size = list.size()
+      val vec  = asArray(value, context)
+      val size = vec.size
       if (shiftIndex >= size) {
-        Collections.emptyList()
+        DataView.from(Vector.empty[DataView])
       } else {
-        new ArrayList[Any](list.subList(shiftIndex, size))
+        DataView.from(vec.drop(shiftIndex))
       }
     }
 }

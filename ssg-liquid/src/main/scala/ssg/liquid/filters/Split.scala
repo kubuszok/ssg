@@ -19,19 +19,21 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.util.regex.Pattern
 
 class Split extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val original = asString(value, context)
     if (original.isEmpty) {
-      new Array[String](0)
+      DataView.from(Vector.empty[DataView])
     } else {
       val delimiter = asString(get(0, params), context)
       if (delimiter.isEmpty) {
         // Empty delimiter: return the whole string as a single-element array
-        Array(original)
+        DataView.from(Vector(DataView.from(original)))
       } else {
         // Split preserving trailing empties (limit = -1), cross-platform (no look-behind)
         val parts = original.split(Pattern.quote(delimiter), -1)
@@ -39,9 +41,9 @@ class Split extends Filter {
         // Look-behinds aren't supported on Scala Native (re2), so we strip the leading
         // empty string in post-processing instead.
         if (parts.length > 0 && parts(0).isEmpty) {
-          java.util.Arrays.copyOfRange(parts, 1, parts.length)
+          DataView.from(parts.drop(1).map(DataView.from(_)).toVector)
         } else {
-          parts
+          DataView.from(parts.map(DataView.from(_)).toVector)
         }
       }
     }

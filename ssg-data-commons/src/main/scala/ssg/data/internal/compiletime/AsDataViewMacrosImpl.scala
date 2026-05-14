@@ -17,18 +17,13 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
   private lazy val asDataViewCtor: Type.Ctor1[AsDataView] = Type.Ctor1.of[AsDataView]
 
   private lazy val ignoredImplicits: Seq[UntypedMethod] =
-    Type
-      .of[AsDataView.type]
-      .asUntyped
-      .methods
-      .collect { case method if method.name == "derived" => method }
-      .toSeq
+    Type.of[AsDataView.type].asUntyped.methods.collect { case method if method.name == "derived" => method }.toSeq
 
   private object DVTypes {
     lazy val DataView: Type[DataView] = Type.of[DataView]
   }
 
-  private var stdExtLoaded: Boolean = false
+  private var stdExtLoaded:         Boolean   = false
   private def ensureStdExtLoaded(): MIO[Unit] =
     if (stdExtLoaded) MIO.pure(())
     else
@@ -68,7 +63,7 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
       .runToExprOrFail(
         "AsDataView.derived",
         infoRendering = DontRender,
-        errorRendering = DontRender,
+        errorRendering = DontRender
       ) { (_, errors) =>
         val errorsRendered = errors.map(e => "  - " + e.getMessage).mkString("\n")
         s"AsDataView.derived[${Type[A].prettyPrint}] failed:\n$errorsRendered"
@@ -89,10 +84,11 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
       HandleWideningRule,
       HandleOptionRule,
       HandleNullableRule,
-      HandleCollectionRule,
       HandleMapRule,
+      HandleCollectionRule,
       HandleSingletonRule,
       HandleCaseClassRule,
+      HandleJavaBeanRule,
       HandleEnumRule
     )(_[A](value)).flatMap {
       case Right(result) =>
@@ -102,12 +98,14 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
           if (reasons.isEmpty) s"  - ${rule.name}: not applicable"
           else s"  - ${rule.name}: ${reasons.mkString(", ")}"
         }.toList
-        MIO.fail(new RuntimeException(
-          s"Cannot derive AsDataView[${Type[A].prettyPrint}]:\n${reasonsStrings.mkString("\n")}"
-        ))
+        MIO.fail(
+          new RuntimeException(
+            s"Cannot derive AsDataView[${Type[A].prettyPrint}]:\n${reasonsStrings.mkString("\n")}"
+          )
+        )
     }
 
-  private abstract class AsDataViewRule(val name: String) extends Rule {
+  abstract private class AsDataViewRule(val name: String) extends Rule {
     def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]]
   }
 
@@ -142,12 +140,20 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
   private object HandlePrimitiveRule extends AsDataViewRule("handle primitive types") {
     def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] = {
       val t = Type[A]
-      if (t =:= Type.of[Boolean] || t =:= Type.of[Short] || t =:= Type.of[Int] ||
-          t =:= Type.of[Long] || t =:= Type.of[Float] || t =:= Type.of[Double] ||
-          t =:= Type.of[String] || t =:= Type.of[java.math.BigDecimal]) {
-        MIO.pure(Rule.matched(Expr.quote {
-          DataView(Expr.splice(value).asInstanceOf[Boolean | Short | Int | Long | Float | Double | String | java.math.BigDecimal | Vector[DataView] | VectorMap[String, DataView]])
-        }))
+      if (
+        t =:= Type.of[Boolean] || t =:= Type.of[Short] || t =:= Type.of[Int] ||
+        t =:= Type.of[Long] || t =:= Type.of[Float] || t =:= Type.of[Double] ||
+        t =:= Type.of[String] || t =:= Type.of[java.math.BigDecimal]
+      ) {
+        MIO.pure(
+          Rule.matched(
+            Expr.quote {
+              DataView(
+                Expr.splice(value).asInstanceOf[Boolean | Short | Int | Long | Float | Double | String | java.math.BigDecimal | Vector[DataView] | VectorMap[String, DataView]]
+              )
+            }
+          )
+        )
       } else {
         MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} is not a DataView-primitive type"))
       }
@@ -177,16 +183,20 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
         case IsOption(isOption) =>
           import isOption.Underlying as Item
           implicit val dvT: Type[DataView] = DVTypes.DataView
-          val result: Expr[DataView] = isOption.value.fold[DataView](value)(
+          val result:       Expr[DataView] = isOption.value.fold[DataView](value)(
             Expr.quote(DataView.nil),
-            { (itemExpr: Expr[Item]) =>
-              MIO.scoped { runSafe =>
-                runSafe(deriveConversion[Item](itemExpr))
-              }.unsafe.runSync._2.fold(
-                errors => Environment.reportErrorAndAbort(errors.head.getMessage),
-                identity
-              )
-            }
+            (itemExpr: Expr[Item]) =>
+              MIO
+                .scoped { runSafe =>
+                  runSafe(deriveConversion[Item](itemExpr))
+                }
+                .unsafe
+                .runSync
+                ._2
+                .fold(
+                  errors => Environment.reportErrorAndAbort(errors.head.getMessage),
+                  identity
+                )
           )
           MIO.pure(Rule.matched(result))
         case _ =>
@@ -195,11 +205,8 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
   }
 
   private object HandleNullableRule extends AsDataViewRule("handle Nullable types") {
-    def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] = {
-      // Nullable[X] is an opaque type alias, so Type[A] won't directly match
-      // For now, yield — Nullable handling can be added when needed
-      MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} is not a recognized Nullable type"))
-    }
+    def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] =
+      MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} — Nullable is an opaque type, use fold/map to convert manually"))
   }
 
   private object HandleCollectionRule extends AsDataViewRule("handle collection types") {
@@ -226,7 +233,39 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
 
   private object HandleMapRule extends AsDataViewRule("handle map types") {
     def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] =
-      MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} — map derivation not yet implemented"))
+      Type[A] match {
+        case IsMap(isMap) =>
+          import isMap.Underlying as Pair
+          import isMap.value.Key as K
+          import isMap.value.Value as V
+          if (!(isMap.value.Key =:= Type.of[String])) {
+            MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} key type ${isMap.value.Key.prettyPrint} is not String"))
+          } else {
+            MIO.scoped { runSafe =>
+              val valueConverter: Expr[V => DataView] = Expr.quote { (v: V) =>
+                val _ = v
+                Expr.splice {
+                  runSafe(deriveConversion[V](Expr.quote(v)))
+                }
+              }
+              val iterableExpr: Expr[Iterable[Pair]] = isMap.value.asIterable(value)
+              Rule.matched(
+                Expr.quote {
+                  var builder = VectorMap.empty[String, DataView]
+                  Expr.splice(iterableExpr).foreach { pair =>
+                    val _ = pair
+                    val k = Expr.splice(isMap.value.key(Expr.quote(pair))).asInstanceOf[String]
+                    val v = Expr.splice(isMap.value.value(Expr.quote(pair)))
+                    builder = builder.updated(k, Expr.splice(valueConverter)(v))
+                  }
+                  DataView(builder)
+                }
+              )
+            }
+          }
+        case _ =>
+          MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} is not a map type"))
+      }
   }
 
   private object HandleSingletonRule extends AsDataViewRule("handle singleton types") {
@@ -252,10 +291,10 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
       }
 
     private def deriveCaseClassConversion[A: Type](
-        cc: CaseClass[A],
-        value: Expr[A]
+      cc:    CaseClass[A],
+      value: Expr[A]
     ): MIO[Expr[DataView]] = {
-      val fieldValues = cc.caseFieldValuesAt(value)
+      val fieldValues  = cc.caseFieldValuesAt(value)
       val fieldEntries = fieldValues.toList
 
       fieldEntries
@@ -264,6 +303,52 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
           accMIO.flatMap { acc =>
             deriveConversion[FieldType](fieldExpr.value.asInstanceOf[Expr[FieldType]]).map { dvExpr =>
               acc :+ (fieldName -> dvExpr)
+            }
+          }
+        }
+        .map { entries =>
+          entries.foldRight(Expr.quote(VectorMap.empty[String, DataView])) { case ((name, dvExpr), accExpr) =>
+            Expr.quote {
+              Expr.splice(accExpr).updated(Expr.splice(Expr(name)), Expr.splice(dvExpr))
+            }
+          } match {
+            case mapExpr =>
+              Expr.quote {
+                DataView(Expr.splice(mapExpr))
+              }
+          }
+        }
+    }
+  }
+
+  private object HandleJavaBeanRule extends AsDataViewRule("handle Java Bean types") {
+    def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] =
+      JavaBean.parse[A].toEither match {
+        case Right(jb) =>
+          deriveJavaBeanConversion[A](jb, value).map(Rule.matched)
+        case Left(reason) =>
+          MIO.pure(Rule.yielded(reason))
+      }
+
+    private def deriveJavaBeanConversion[A: Type](
+      jb:    JavaBean[A],
+      value: Expr[A]
+    ): MIO[Expr[DataView]] = {
+      val getters = jb.beanGetters
+
+      getters
+        .foldLeft(MIO.pure(List.empty[(String, Expr[DataView])])) { case (accMIO, getter) =>
+          val method = getter.value
+          val name   = method.javaAccessorName.getOrElse(method.name)
+          accMIO.flatMap { acc =>
+            method.apply(value, Map.empty) match {
+              case Right(getterResult) =>
+                import method.Returned as ReturnType
+                deriveConversion[ReturnType](getterResult).map { dvExpr =>
+                  acc :+ (name -> dvExpr)
+                }
+              case Left(error) =>
+                MIO.fail(new RuntimeException(s"Failed to call getter $name: $error"))
             }
           }
         }
@@ -292,8 +377,8 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
       }
 
     private def deriveEnumConversion[A: Type](
-        enumm: Enum[A],
-        value: Expr[A]
+      enumm: Enum[A],
+      value: Expr[A]
     ): MIO[Expr[DataView]] = {
       implicit val dvT: Type[DataView] = DVTypes.DataView
 
@@ -304,10 +389,12 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
         }
         .flatMap {
           case Some(expr) => MIO.pure(expr)
-          case None =>
-            MIO.fail(new RuntimeException(
-              s"Failed to derive enum match for ${Type[A].prettyPrint}"
-            ))
+          case None       =>
+            MIO.fail(
+              new RuntimeException(
+                s"Failed to derive enum match for ${Type[A].prettyPrint}"
+              )
+            )
         }
     }
   }

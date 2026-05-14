@@ -6,10 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.blocks → ssg.liquid.blocks
- *   Idiom: boundary/break for early return
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/blocks/Case.java
  * Covenant-verified: 2026-04-26
@@ -20,19 +16,15 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.{ BlockNode, LNode }
 
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Standard case/when/else block. */
 class Case extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
-    //        ^(CASE condition           var
-    //            ^(WHEN term+ block)    1,2,3  b1
-    //            ^(ELSE block?))               b2
-
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
     val condition = nodes(0).render(context)
 
     boundary {
@@ -41,12 +33,10 @@ class Case extends Block {
         var node = nodes(i)
 
         if (i == nodes.length - 1 && node.isInstanceOf[BlockNode]) {
-          // this must be the trailing (optional) else-block
           break(node.render(context))
         } else {
           var hit = false
 
-          // Iterate through the list of terms and stop when we encounter a BlockNode
           while (!node.isInstanceOf[BlockNode]) {
             val whenExpressionValue = node.render(context)
             if (LValue.areEqual(condition, whenExpressionValue)) {
@@ -62,7 +52,7 @@ class Case extends Block {
         }
         i += 1
       }
-      null
+      DataView.nil
     }
   }
 }

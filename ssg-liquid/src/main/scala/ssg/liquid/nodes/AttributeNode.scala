@@ -19,8 +19,10 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 class AttributeNode(private val key: LNode, private val value: LNode) extends LNode {
 
-  override def render(context: TemplateContext): Any =
-    Array[Any](key.render(context), value.render(context))
+  override def render(context: TemplateContext): DataView =
+    DataView.from(Vector[DataView](key.render(context), value.render(context)))
 }

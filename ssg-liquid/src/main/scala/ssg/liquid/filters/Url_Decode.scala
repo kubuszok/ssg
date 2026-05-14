@@ -16,13 +16,15 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.net.URLDecoder
 
 class Url_Decode extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     try
-      URLDecoder.decode(asString(value, context), "UTF-8")
+      DataView.from(URLDecoder.decode(asString(value, context), "UTF-8"))
     catch {
       case _: Exception => value
     }

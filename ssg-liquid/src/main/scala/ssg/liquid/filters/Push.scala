@@ -16,7 +16,10 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.util.ArrayList
+import scala.jdk.CollectionConverters._
 
 /** Liquid "push" filter — returns a new array with the given item(s) added to the end.
   *
@@ -24,17 +27,17 @@ import java.util.ArrayList
   */
 class Push extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else if (params.length == 0) {
       value
     } else {
-      val valueList = asList(value, context)
-      val paramList = asList(params, context)
-      val list      = new ArrayList[Any](valueList.size() + paramList.size())
-      list.addAll(valueList)
-      list.addAll(paramList)
-      list
+      val valueList = asArray(value, context)
+      val paramList = params.toVector
+      val combined  = new ArrayList[DataView]()
+      valueList.foreach(combined.add)
+      paramList.foreach(combined.add)
+      DataView.from(combined.asScala.toVector)
     }
 }

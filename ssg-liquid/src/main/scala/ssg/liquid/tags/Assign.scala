@@ -6,9 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.tags → ssg.liquid.tags
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/tags/Assign.java
  * Covenant-verified: 2026-04-26
@@ -19,15 +16,15 @@ package ssg
 package liquid
 package tags
 
+import ssg.data.DataView
 import ssg.liquid.nodes.{ FilterNode, LNode }
 
-/** Assigns some value to a variable. */
 class Assign extends Tag {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
-    val id         = String.valueOf(nodes(0).render(context))
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
+    val id         = nodes(0).render(context).toString
     val expression = nodes(1)
-    var value: Any = expression.render(context)
+    var value: DataView = expression.render(context)
 
     var i = 2
     while (i < nodes.length) {
@@ -36,9 +33,8 @@ class Assign extends Tag {
       i += 1
     }
 
-    // Assign causes variable to be saved "globally"
     context.put(id, value, true)
 
-    ""
+    DataView.from("")
   }
 }

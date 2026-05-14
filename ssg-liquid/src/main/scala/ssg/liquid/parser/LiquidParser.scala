@@ -15,6 +15,7 @@ package ssg
 package liquid
 package parser
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.LiquidException
 import ssg.liquid.nodes._
 
@@ -114,7 +115,7 @@ final class LiquidParser(
   /** Parses plain text into an AtomNode. */
   private def parseTextNode(): LNode = {
     val t = consume(TokenType.TEXT)
-    new AtomNode(t.value)
+    new AtomNode(DataView.from(t.value))
   }
 
   // --- Output parsing ---
@@ -237,7 +238,7 @@ final class LiquidParser(
     val expr = parseExpr()
 
     val nodes = new ArrayList[LNode]()
-    nodes.add(new AtomNode(id))
+    nodes.add(new AtomNode(DataView.from(id)))
     nodes.add(expr)
 
     while (check(TokenType.PIPE))
@@ -271,7 +272,7 @@ final class LiquidParser(
       consume(TokenType.TAG_START)
       advance() // consume ELSE
       consume(TokenType.TAG_END)
-      nodes.add(new AtomNode(true)) // always-true condition for else
+      nodes.add(new AtomNode(DataView.from(true))) // always-true condition for else
       nodes.add(parseBlock())
     }
 
@@ -300,7 +301,7 @@ final class LiquidParser(
       consume(TokenType.TAG_START)
       advance() // consume ELSE
       consume(TokenType.TAG_END)
-      nodes.add(new AtomNode(false))
+      nodes.add(new AtomNode(DataView.from(false)))
       nodes.add(parseBlock())
     }
 
@@ -364,8 +365,8 @@ final class LiquidParser(
     // Check for range: (from..to)
     if (check(TokenType.OPAR)) {
       // Range: for i in (1..10)
-      nodes.add(new AtomNode(false)) // isArray = false
-      nodes.add(new AtomNode(id))
+      nodes.add(new AtomNode(DataView.from(false))) // isArray = false
+      nodes.add(new AtomNode(DataView.from(id)))
       advance() // consume (
       val from = parseExpr()
       consume(TokenType.DOTDOT)
@@ -385,14 +386,14 @@ final class LiquidParser(
       val block = parseBlock()
 
       nodes.add(block) // index 4 for range
-      nodes.add(new AtomNode(id)) // index 5: lookup text
-      nodes.add(new AtomNode(reversed)) // index 6
+      nodes.add(new AtomNode(DataView.from(id))) // index 5: lookup text
+      nodes.add(new AtomNode(DataView.from(reversed))) // index 6
       for (attr <- attrs) nodes.add(attr)
     } else {
       // Array: for item in collection
       val lookup = parseLookup()
-      nodes.add(new AtomNode(true)) // isArray = true
-      nodes.add(new AtomNode(id))
+      nodes.add(new AtomNode(DataView.from(true))) // isArray = true
+      nodes.add(new AtomNode(DataView.from(id)))
       nodes.add(lookup)
 
       // Check for reversed
@@ -416,10 +417,10 @@ final class LiquidParser(
 
       nodes.add(block) // index 3
       nodes.add(elseBlock) // index 4 (may be null)
-      nodes.add(new AtomNode(peek().value)) // index 5: lookup text (approximate)
-      nodes.add(new AtomNode(reversed)) // index 6
+      nodes.add(new AtomNode(DataView.from(peek().value))) // index 5: lookup text (approximate)
+      nodes.add(new AtomNode(DataView.from(reversed))) // index 6
       // Re-insert at index 5 the lookup text
-      nodes.set(5, new AtomNode(id))
+      nodes.set(5, new AtomNode(DataView.from(id)))
       for (attr <- attrs) nodes.add(attr)
     }
 
@@ -442,16 +443,16 @@ final class LiquidParser(
         consume(TokenType.COLON)
         if (key == "offset" && check(TokenType.CONTINUE)) {
           advance() // consume continue
-          attrs.addOne(new AttributeNode(new AtomNode(key), new AtomNode(LValue.CONTINUE)))
+          attrs.addOne(new AttributeNode(new AtomNode(DataView.from(key)), new AtomNode(DataView.CONTINUE)))
         } else {
-          attrs.addOne(new AttributeNode(new AtomNode(key), parseExpr()))
+          attrs.addOne(new AttributeNode(new AtomNode(DataView.from(key)), parseExpr()))
         }
       } else {
         // Unknown attribute
         val attrKey = peek().value
         advance()
         consume(TokenType.COLON)
-        attrs.addOne(new AttributeNode(new AtomNode(attrKey), parseExpr()))
+        attrs.addOne(new AttributeNode(new AtomNode(DataView.from(attrKey)), parseExpr()))
       }
     }
     attrs
@@ -465,7 +466,7 @@ final class LiquidParser(
     val lookup = parseLookup()
 
     val nodes = new ArrayList[LNode]()
-    nodes.add(new AtomNode(id))
+    nodes.add(new AtomNode(DataView.from(id)))
     nodes.add(lookup)
 
     // Attributes (cols, limit, offset)
@@ -473,7 +474,7 @@ final class LiquidParser(
       val key = peek().value
       advance()
       consume(TokenType.COLON)
-      nodes.add(new AttributeNode(new AtomNode(key), parseExpr()))
+      nodes.add(new AttributeNode(new AtomNode(DataView.from(key)), parseExpr()))
     }
 
     consume(TokenType.TAG_END)
@@ -506,7 +507,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(id), block))
+    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(DataView.from(id)), block))
   }
 
   /** comment_tag: {% comment %} ... {% endcomment %} */
@@ -544,14 +545,14 @@ final class LiquidParser(
           consume(TokenType.TAG_START)
           advance() // consume RAW (endraw)
           consume(TokenType.TAG_END)
-          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString()))))
+          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString())))))
         }
       }
       sb.append(t.value)
       advance()
     }
 
-    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString())))
+    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString()))))
   }
 
   /** cycle_tag: {% cycle group: expr, expr, ... %} */
@@ -602,7 +603,7 @@ final class LiquidParser(
         // Read until whitespace/tag end
         consumeId()
       }
-      nodes.add(new AtomNode(fileName))
+      nodes.add(new AtomNode(DataView.from(fileName)))
 
       // key=value params
       while (isIdLike(peek().tokenType) && !check(TokenType.TAG_END)) {
@@ -628,7 +629,7 @@ final class LiquidParser(
     } else {
       consumeId()
     }
-    nodes.add(new AtomNode(fileName))
+    nodes.add(new AtomNode(DataView.from(fileName)))
 
     // key=value params
     while (isIdLike(peek().tokenType) && !check(TokenType.TAG_END)) {
@@ -704,7 +705,7 @@ final class LiquidParser(
     if (insertion != null) {
       new InsertionNode(insertion, params)
     } else {
-      new AtomNode("") // unknown tag, produce empty
+      new AtomNode(DataView.from("")) // unknown tag, produce empty
     }
   }
 
@@ -716,9 +717,9 @@ final class LiquidParser(
     consume(TokenType.TAG_END)
 
     if (insertion != null) {
-      new InsertionNode(insertion, Array[LNode](new AtomNode(varName)))
+      new InsertionNode(insertion, Array[LNode](new AtomNode(DataView.from(varName))))
     } else {
-      new AtomNode("")
+      new AtomNode(DataView.from(""))
     }
   }
 
@@ -738,7 +739,7 @@ final class LiquidParser(
     if (insertion != null) {
       new InsertionNode(insertion, params)
     } else {
-      new AtomNode("") // unknown tag
+      new AtomNode(DataView.from("")) // unknown tag
     }
   }
 
@@ -810,22 +811,22 @@ final class LiquidParser(
     t.tokenType match {
       case TokenType.DOUBLE_NUM =>
         advance()
-        new AtomNode(java.lang.Double.valueOf(t.value))
+        new AtomNode(DataView.from(java.lang.Double.parseDouble(t.value)))
       case TokenType.LONG_NUM =>
         advance()
-        new AtomNode(java.lang.Long.valueOf(t.value))
+        new AtomNode(DataView.from(java.lang.Long.parseLong(t.value)))
       case TokenType.STR =>
         advance()
-        new AtomNode(t.value)
+        new AtomNode(DataView.from(t.value))
       case TokenType.TRUE =>
         advance()
-        new AtomNode(java.lang.Boolean.TRUE)
+        new AtomNode(DataView.from(true))
       case TokenType.FALSE =>
         advance()
-        new AtomNode(java.lang.Boolean.FALSE)
+        new AtomNode(DataView.from(false))
       case TokenType.NIL =>
         advance()
-        new AtomNode(null)
+        new AtomNode(DataView.nil)
       case TokenType.EMPTY =>
         // Could be a lookup or the empty sentinel
         if (pos + 1 < tokens.size() && (tokens.get(pos + 1).tokenType == TokenType.DOT || tokens.get(pos + 1).tokenType == TokenType.OBR)) {
@@ -848,7 +849,7 @@ final class LiquidParser(
         } else {
           // Error recovery: return empty atom
           advance()
-          new AtomNode(t.value)
+          new AtomNode(DataView.from(t.value))
         }
     }
   }
@@ -880,7 +881,7 @@ final class LiquidParser(
           val indexExpr = parseExpr()
           consume(TokenType.CBR) // consume ]
           val indexText = indexExpr match {
-            case atom: AtomNode => String.valueOf(atom.render(null))
+            case atom: AtomNode => atom.render(null).toString
             case _ => "?"
           }
           lookup.add(new LookupNode.Index(indexExpr, indexText))

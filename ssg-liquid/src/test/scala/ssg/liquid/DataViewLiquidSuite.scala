@@ -16,17 +16,14 @@ class DataViewLiquidSuite extends munit.FunSuite {
   private val EAGER_PARSER: TemplateParser =
     new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
 
-  private def render(template: String, vars: JHashMap[String, Any]): String =
+  private def render(template: String, vars: JHashMap[String, DataView]): String =
     TemplateParser.DEFAULT.parse(template).render(vars)
 
-  private def renderEager(template: String, vars: JHashMap[String, Any]): String =
+  private def renderEager(template: String, vars: JHashMap[String, DataView]): String =
     EAGER_PARSER.parse(template).render(vars)
 
-  private def varsOf(pairs: (String, Any)*): JHashMap[String, Any] = {
-    val m = new JHashMap[String, Any]()
-    pairs.foreach { case (k, v) => m.put(k, v) }
-    m
-  }
+  private def varsOf(pairs: (String, Any)*): JHashMap[String, DataView] =
+    TestHelper.mapOf(pairs*)
 
   // --- Scalar DataView in template variables ---
 
@@ -43,31 +40,39 @@ class DataViewLiquidSuite extends munit.FunSuite {
   // --- DataView map as structured object ---
 
   test("DataView: render map properties") {
-    val person = DataView(VectorMap[String, DataView](
-      "name" -> DataView("Bob"),
-      "age"  -> DataView(25)
-    ))
+    val person = DataView(
+      VectorMap[String, DataView](
+        "name" -> DataView("Bob"),
+        "age" -> DataView(25)
+      )
+    )
     val vars = varsOf("person" -> person)
     assertEquals(render("{{person.name}} is {{person.age}}", vars), "Bob is 25")
   }
 
   test("DataView: nested map access") {
-    val child = DataView(VectorMap[String, DataView](
-      "val" -> DataView("childOK")
-    ))
-    val parent = DataView(VectorMap[String, DataView](
-      "child" -> child
-    ))
+    val child = DataView(
+      VectorMap[String, DataView](
+        "val" -> DataView("childOK")
+      )
+    )
+    val parent = DataView(
+      VectorMap[String, DataView](
+        "child" -> child
+      )
+    )
     val vars = varsOf("foo" -> parent)
     assertEquals(render("{{foo.child.val}}", vars), "childOK")
   }
 
   test("DataView: map size property") {
-    val m = DataView(VectorMap[String, DataView](
-      "a" -> DataView(1),
-      "b" -> DataView(2),
-      "c" -> DataView(3)
-    ))
+    val m = DataView(
+      VectorMap[String, DataView](
+        "a" -> DataView(1),
+        "b" -> DataView(2),
+        "c" -> DataView(3)
+      )
+    )
     val vars = varsOf("obj" -> m)
     assertEquals(render("{{obj.size}}", vars), "3")
   }
@@ -81,10 +86,12 @@ class DataViewLiquidSuite extends munit.FunSuite {
   }
 
   test("DataView: for loop over vector of maps") {
-    val products = DataView(Vector(
-      DataView(VectorMap[String, DataView]("title" -> DataView("Apple"), "price" -> DataView(1))),
-      DataView(VectorMap[String, DataView]("title" -> DataView("Banana"), "price" -> DataView(2)))
-    ))
+    val products = DataView(
+      Vector(
+        DataView(VectorMap[String, DataView]("title" -> DataView("Apple"), "price" -> DataView(1))),
+        DataView(VectorMap[String, DataView]("title" -> DataView("Banana"), "price" -> DataView(2)))
+      )
+    )
     val vars = varsOf("products" -> products)
     assertEquals(
       render("{% for p in products %}{{p.title}}:{{p.price}} {% endfor %}", vars),
@@ -95,21 +102,27 @@ class DataViewLiquidSuite extends munit.FunSuite {
   // --- DataView with EAGER mode ---
 
   test("DataView: EAGER mode with map") {
-    val foo = DataView(VectorMap[String, DataView](
-      "a" -> DataView("A"),
-      "b" -> DataView("B")
-    ))
+    val foo = DataView(
+      VectorMap[String, DataView](
+        "a" -> DataView("A"),
+        "b" -> DataView("B")
+      )
+    )
     val vars = varsOf("foo" -> foo)
     assertEquals(renderEager("{{foo.a}}{{foo.b}}", vars), "AB")
   }
 
   test("DataView: EAGER mode with nested map") {
-    val child = DataView(VectorMap[String, DataView](
-      "val" -> DataView("childOK")
-    ))
-    val parent = DataView(VectorMap[String, DataView](
-      "child" -> child
-    ))
+    val child = DataView(
+      VectorMap[String, DataView](
+        "val" -> DataView("childOK")
+      )
+    )
+    val parent = DataView(
+      VectorMap[String, DataView](
+        "child" -> child
+      )
+    )
     val vars = varsOf("foo" -> parent)
     assertEquals(renderEager("{{foo.child.val}}", vars), "childOK")
   }
@@ -117,12 +130,16 @@ class DataViewLiquidSuite extends munit.FunSuite {
   // --- DataView with map filter ---
 
   test("DataView: map filter on DataView") {
-    val child = DataView(VectorMap[String, DataView](
-      "val" -> DataView("filtered")
-    ))
-    val parent = DataView(VectorMap[String, DataView](
-      "child" -> child
-    ))
+    val child = DataView(
+      VectorMap[String, DataView](
+        "val" -> DataView("filtered")
+      )
+    )
+    val parent = DataView(
+      VectorMap[String, DataView](
+        "child" -> child
+      )
+    )
     val vars = varsOf("foo" -> parent)
     assertEquals(render("{{ foo | map: 'child' | map: 'val' }}", vars), "filtered")
   }

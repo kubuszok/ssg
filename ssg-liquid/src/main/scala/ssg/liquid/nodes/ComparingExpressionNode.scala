@@ -20,19 +20,14 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 import java.math.BigDecimal
 
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Base class for comparison expression nodes.
-  *
-  * Expressions are two kinds:
-  *   - relative (>, >=, <, <=) — different types cannot be compared
-  *   - equality (==, <>, !=) — looser rules
-  *
-  * Ruby is strictly typed for comparisons, so comparing string '98' and number 97 will raise an exception in strict mode.
-  */
+/** Base class for comparison expression nodes. */
 abstract class ComparingExpressionNode(
   protected val lhs:    LNode,
   protected val rhs:    LNode,
@@ -40,21 +35,21 @@ abstract class ComparingExpressionNode(
 ) extends LValue
     with LNode {
 
-  override def render(context: TemplateContext): Any = boundary {
-    var a: Any = lhs.render(context)
-    var b: Any = rhs.render(context)
+  override def render(context: TemplateContext): DataView = boundary {
+    var a: DataView = lhs.render(context)
+    var b: DataView = rhs.render(context)
 
     if (LValue.isTemporal(a)) {
-      a = LValue.asRubyDate(a, context)
+      a = DataView.from(LValue.asRubyDate(a, context))
     }
     if (LValue.isTemporal(b)) {
-      b = LValue.asRubyDate(b, context)
+      b = DataView.from(LValue.asRubyDate(b, context))
     }
-    if (a.isInstanceOf[Number]) {
-      a = asStrictNumber(a.asInstanceOf[Number])
+    if (!a.isNull && a.view.isInstanceOf[Number]) {
+      a = DataView.from(asStrictNumber(a))
     }
-    if (b.isInstanceOf[Number]) {
-      b = asStrictNumber(b.asInstanceOf[Number])
+    if (!b.isNull && b.view.isInstanceOf[Number]) {
+      b = DataView.from(asStrictNumber(b))
     }
 
     val strictTypedExpressions =
@@ -64,27 +59,27 @@ abstract class ComparingExpressionNode(
     if (relative) {
       val common = relativeCompareCommonRules(a, b, strictTypedExpressions)
       if (common.isDefined) {
-        break(common.get)
+        break(DataView.from(common.get))
       }
       if (!strictTypedExpressions) {
-        if (a.isInstanceOf[Boolean]) {
-          a = booleanToNumber(a.asInstanceOf[Boolean])
+        if (!a.isNull && a.view.isInstanceOf[Boolean]) {
+          a = DataView.from(booleanToNumber(a.view.asInstanceOf[Boolean]))
         }
-        if (b.isInstanceOf[Boolean]) {
-          b = booleanToNumber(b.asInstanceOf[Boolean])
+        if (!b.isNull && b.view.isInstanceOf[Boolean]) {
+          b = DataView.from(booleanToNumber(b.view.asInstanceOf[Boolean]))
         }
-        if (a == null) {
-          a = BigDecimal.ZERO
+        if (a.isNull) {
+          a = DataView.from(BigDecimal.ZERO)
         }
-        if (b == null) {
-          b = BigDecimal.ZERO
+        if (b.isNull) {
+          b = DataView.from(BigDecimal.ZERO)
         }
       }
     }
     if (!strictTypedExpressions) {
-      if ((a.isInstanceOf[Number] && canBeNumber(b)) || (b.isInstanceOf[Number] && canBeNumber(a))) {
-        a = asStrictNumber(a)
-        b = asStrictNumber(b)
+      if ((!a.isNull && a.view.isInstanceOf[Number] && canBeNumber(b)) || (!b.isNull && b.view.isInstanceOf[Number] && canBeNumber(a))) {
+        a = DataView.from(asStrictNumber(a))
+        b = DataView.from(asStrictNumber(b))
       }
     }
     doCompare(a, b, strictTypedExpressions)
@@ -93,15 +88,13 @@ abstract class ComparingExpressionNode(
   private def booleanToNumber(a: Boolean): BigDecimal =
     if (a) BigDecimal.ONE else BigDecimal.ZERO
 
-  protected def doCompare(a: Any, b: Any, strictTypedExpressions: Boolean): Any
+  protected def doCompare(a: DataView, b: DataView, strictTypedExpressions: Boolean): DataView
 
-  protected def relativeCompareCommonRules(a: Any, b: Any, strictTypedExpressions: Boolean): Option[Any] =
+  protected def relativeCompareCommonRules(a: DataView, b: DataView, strictTypedExpressions: Boolean): Option[Boolean] =
     if (strictTypedExpressions) {
-      if (a.isInstanceOf[Boolean] || b.isInstanceOf[Boolean]) {
-        // relative comparing with boolean should be false all the time
+      if ((!a.isNull && a.view.isInstanceOf[Boolean]) || (!b.isNull && b.view.isInstanceOf[Boolean])) {
         Some(false)
-      } else if (a == null || b == null) {
-        // relative comparing with null should be false all the time
+      } else if (a.isNull || b.isNull) {
         Some(false)
       } else {
         None

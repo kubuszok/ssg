@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.parser.{ Flavor, Inspectable }
 
 import java.util.{ HashMap => JHashMap }
@@ -10,11 +12,11 @@ import java.util.{ HashMap => JHashMap }
 final class RelativeUrlFilterSuite extends munit.FunSuite {
 
   // site.baseurl
-  private def getData(s: String): JHashMap[String, Any] = {
-    val siteMap = new JHashMap[String, Any]()
-    siteMap.put("baseurl", s)
-    val result = new JHashMap[String, Any]()
-    result.put("site", siteMap)
+  private def getData(s: String): JHashMap[String, DataView] = {
+    val siteMap = new JHashMap[String, DataView]()
+    siteMap.put("baseurl", TestHelper.dv(s))
+    val result = new JHashMap[String, DataView]()
+    result.put("site", TestHelper.dv(siteMap))
     result
   }
 
@@ -55,9 +57,9 @@ final class RelativeUrlFilterSuite extends munit.FunSuite {
    * should "be ok with a nil 'baseurl'"
    */
   test("relative_url: be ok with a nil baseurl") {
-    val data = new JHashMap[String, Any]()
-    data.put("baseurl", null)
-    val res = jekyllParser().parse("{{ 'about/my_favorite_page/' | relative_url }}").render(data)
+    val data = new JHashMap[String, DataView]()
+    data.put("baseurl", TestHelper.dv(null))
+    val res = jekyllParser().parse("{{ 'about/my_favorite_page/' | relative_url }}").render(TestHelper.mapOf())
     assertEquals(res, "/about/my_favorite_page/")
   }
 
@@ -102,9 +104,9 @@ final class RelativeUrlFilterSuite extends munit.FunSuite {
   // SSG: Inspectable field access for relative_url filter differs
   test("relative_url: transform the input baseurl to a string".fail) {
     assume(PlatformCompat.supportsReflection, "Requires Inspectable reflection (JVM-only)")
-    val data = new JHashMap[String, Any]()
-    data.put("site", new RelativeUrlFilterSuite.SiteWithBaseurl())
-    val res = jekyllParser().parse("{{ '/my-page.html' | relative_url }}").render(data)
+    val data = new JHashMap[String, DataView]()
+    data.put("site", TestHelper.dv(new RelativeUrlFilterSuite.SiteWithBaseurl()))
+    val res = jekyllParser().parse("{{ '/my-page.html' | relative_url }}").render(TestHelper.mapOf())
     assertEquals(res, "/baseurl/my-page.html")
   }
 

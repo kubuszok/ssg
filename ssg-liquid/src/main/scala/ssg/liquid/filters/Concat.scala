@@ -16,21 +16,18 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ ArrayList, Arrays }
+import ssg.data.DataView
 
 /** Liquid "concat" filter — concatenates two arrays. */
 class Concat extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     checkParams(params, 1)
     if (!isArray(params(0))) {
       throw new RuntimeException("Liquid error: concat filter requires an array argument")
     }
-    val allValues = new ArrayList[Any]()
-    if (isArray(value)) {
-      allValues.addAll(Arrays.asList(asArray(value, context)*))
-    }
-    allValues.addAll(Arrays.asList(asArray(params(0), context)*))
-    allValues.toArray()
+    val left  = asArray(value, context)
+    val right = asArray(params(0), context)
+    DataView.from(left ++ right)
   }
 }

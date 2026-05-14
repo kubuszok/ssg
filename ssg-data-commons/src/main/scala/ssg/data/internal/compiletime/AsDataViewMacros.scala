@@ -10,9 +10,7 @@ import hearth.MacroCommonsScala3
 
 import scala.quoted.*
 
-final private[data] class AsDataViewMacros(q: Quotes)
-    extends MacroCommonsScala3(using q),
-      AsDataViewMacrosImpl
+final private[data] class AsDataViewMacros(q: Quotes) extends MacroCommonsScala3(using q), AsDataViewMacrosImpl
 
 private[data] object AsDataViewMacros {
 

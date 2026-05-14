@@ -20,6 +20,7 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.ExceededMaxIterationsException
 
 import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap }
@@ -31,30 +32,30 @@ import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap
 class TemplateContext(
   val parser:             TemplateParser,
   protected var parent:   TemplateContext,
-  private var variables:  JMap[String, Any],
+  private var variables:  JMap[String, DataView],
   private val errorsList: JList[Exception]
 ) {
 
   // Environment map and registry live on the root context only
-  private var environmentMap: JMap[String, Any] = scala.compiletime.uninitialized
-  private var registry:       JMap[String, Any] = scala.compiletime.uninitialized
+  private var environmentMap: JMap[String, DataView] = scala.compiletime.uninitialized
+  private var registry:       JMap[String, Any]      = scala.compiletime.uninitialized
 
-  def this(parser: TemplateParser, variables: JMap[String, Any]) =
-    this(parser, null, new LinkedHashMap[String, Any](variables), new ArrayList[Exception]())
+  def this(parser: TemplateParser, variables: JMap[String, DataView]) =
+    this(parser, null, new LinkedHashMap[String, DataView](variables), new ArrayList[Exception]())
 
   def this(parser: TemplateParser) =
-    this(parser, new LinkedHashMap[String, Any]())
+    this(parser, new LinkedHashMap[String, DataView]())
 
   /** Creates a child context for nested scopes. */
   private def this(parentCtx: TemplateContext) =
-    this(parentCtx.parser, parentCtx, new LinkedHashMap[String, Any](), parentCtx.errorsList)
+    this(parentCtx.parser, parentCtx, new LinkedHashMap[String, DataView](), parentCtx.errorsList)
 
   /** Creates a new child context for nested scopes (blocks, loops). */
   def newChildContext(): TemplateContext =
     new TemplateContext(this)
 
   /** Creates a new child context with initial variables. */
-  def newChildContext(variablesForChild: JMap[String, Any]): TemplateContext = {
+  def newChildContext(variablesForChild: JMap[String, DataView]): TemplateContext = {
     val child = new TemplateContext(this)
     child.variables = variablesForChild
     child
@@ -65,37 +66,41 @@ class TemplateContext(
     parser.renderTransformer.newObjectAppender(this, estimatedNumberOfAppends)
 
   /** Gets a variable value from this context or parent contexts. */
-  def get(key: String): Any = {
+  def get(key: String): DataView = {
     val value = variables.get(key)
     if (value != null) {
       value
     } else if (parent != null) {
       parent.get(key)
     } else {
-      null
+      DataView.nil
     }
   }
 
   /** Puts a variable in this context. */
-  def put(key: String, value: Any): Any =
-    variables.put(key, value)
+  def put(key: String, value: DataView): DataView = {
+    val prev = variables.put(key, value)
+    if (prev != null) prev else DataView.nil
+  }
 
   /** Puts a variable, optionally in the root context. */
-  def put(key: String, value: Any, inRootContext: Boolean): Any =
+  def put(key: String, value: DataView, inRootContext: Boolean): DataView =
     if (!inRootContext || parent == null) {
-      variables.put(key, value)
+      val prev = variables.put(key, value)
+      if (prev != null) prev else DataView.nil
     } else {
       parent.put(key, value, inRootContext)
     }
 
   /** Removes a variable from this context or parent contexts. */
-  def remove(key: String): Any =
+  def remove(key: String): DataView =
     if (variables.containsKey(key)) {
-      variables.remove(key)
+      val prev = variables.remove(key)
+      if (prev != null) prev else DataView.nil
     } else if (parent != null) {
       parent.remove(key)
     } else {
-      null
+      DataView.nil
     }
 
   /** Checks if a variable exists in this context or parent contexts. */
@@ -103,15 +108,15 @@ class TemplateContext(
     variables.containsKey(key) || (parent != null && parent.containsKey(key))
 
   /** Returns the variables in this context (copy). */
-  def getVariables: JMap[String, Any] = new LinkedHashMap[String, Any](variables)
+  def getVariables: JMap[String, DataView] = new LinkedHashMap[String, DataView](variables)
 
   /** Returns the environment map (delegates to root context). */
-  def getEnvironmentMap: JMap[String, Any] =
+  def getEnvironmentMap: JMap[String, DataView] =
     if (parent != null) {
       parent.getEnvironmentMap
     } else {
       if (environmentMap == null) {
-        environmentMap = new HashMap[String, Any]()
+        environmentMap = new HashMap[String, DataView]()
       }
       environmentMap
     }

@@ -17,6 +17,7 @@ package liquid
 package parser
 package test
 
+import ssg.data.DataView
 import ssg.liquid.{ Template, TemplateParser }
 import ssg.liquid.exceptions.LiquidException
 
@@ -38,18 +39,18 @@ final class LiquidParserSuite extends munit.FunSuite {
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[$blockName:$body]"
+            DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
         }
       )
       .withTag(
         new tags.Tag(tagName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             // Render parameters if any
-            val params = ns.map(n => String.valueOf(n.render(context))).mkString("")
-            if (params.nonEmpty) s"<$tagName:$params>" else s"<$tagName>"
+            val params = ns.map(n => super.asString(n.render(context), context)).mkString("")
+            DataView.from(if (params.nonEmpty) s"<$tagName:$params>" else s"<$tagName>")
           }
         }
       )
@@ -61,9 +62,9 @@ final class LiquidParserSuite extends munit.FunSuite {
       val blockName = bn
       builder = builder.withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[$blockName:$body]"
+            DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
         }
       )
@@ -89,10 +90,10 @@ final class LiquidParserSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("mu") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             // Parameters are passed as child nodes
-            val params = ns.map(n => String.valueOf(n.render(context))).mkString(",")
-            s"<mu:$params>"
+            val params = ns.map(n => super.asString(n.render(context), context)).mkString(",")
+            DataView.from(s"<mu:$params>")
           }
         }
       )
@@ -104,10 +105,12 @@ final class LiquidParserSuite extends munit.FunSuite {
 
   test("custom_tag: tag with multiple parameters") {
     val parser = new TemplateParser.Builder()
-      .withTag(new tags.Tag("mu") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
-          "<mu:rendered>"
-      })
+      .withTag(
+        new tags.Tag("mu") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from("<mu:rendered>")
+        }
+      )
       .build()
     val result = parser.parse("{% mu for foo as bar %}").render()
     assertEquals(result, "<mu:rendered>")
@@ -139,17 +142,17 @@ final class LiquidParserSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("mu") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[mu:$body]"
+            DataView.from(s"[mu:${super.asString(body, context)}]")
           }
         }
       )
       .withBlock(
         new blocks.Block("other") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[other:$body]"
+            DataView.from(s"[other:${super.asString(body, context)}]")
           }
         }
       )
@@ -241,8 +244,8 @@ final class LiquidParserSuite extends munit.FunSuite {
   //  : tagStart UnlessStart expr TagEnd block else_tag? tagStart UnlessEnd TagEnd
   //  ;
   test("unless_tag: unless false renders body") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("something", false)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("something", TestHelper.dv(false))
     assertEquals(
       Template.parse("{% unless something %}a{% endunless %}").render(vars),
       "a"
@@ -250,8 +253,8 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("unless_tag: unless true with else renders else") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("something", true)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("something", TestHelper.dv(true))
     assertEquals(
       Template.parse("{% unless something %}a{% else %}b{% endunless %}").render(vars),
       "b"
@@ -266,8 +269,8 @@ final class LiquidParserSuite extends munit.FunSuite {
   //  : tagStart CaseStart expr TagEnd other? when_tag+ else_tag? tagStart CaseEnd TagEnd
   //  ;
   test("case_tag: single when match") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 1L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(1L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}a{% endcase %}").render(vars),
       "a"
@@ -275,15 +278,15 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("case_tag: with leading content between case and when") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 1L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(1L))
     val result = Template.parse("{% case x %}...{% when 1 %}a{% endcase %}").render(vars)
     assert(result.contains("a"), s"Expected 'a' in result, got: $result")
   }
 
   test("case_tag: multiple when clauses") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 2L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(2L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}a{% when 2 %}b{% endcase %}").render(vars),
       "b"
@@ -291,8 +294,8 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("case_tag: with else fallback") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 3L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(3L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}a{% when 2 %}b{% else %}c{% endcase %}").render(vars),
       "c"
@@ -344,12 +347,12 @@ final class LiquidParserSuite extends munit.FunSuite {
   //    tagStart ForEnd TagEnd
   //  ;
   test("for_array: iterate over array") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
     items.add("c")
-    vars.put("array", items)
+    vars.put("array", TestHelper.dv(items))
     assertEquals(
       Template.parse("{% for item in array %}{{ item }}{% endfor %}").render(vars),
       "abc"
@@ -357,14 +360,14 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("for_array: with limit and offset attributes") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
     items.add("c")
     items.add("d")
     items.add("e")
-    vars.put("array", items)
+    vars.put("array", TestHelper.dv(items))
     assertEquals(
       Template.parse("{% for i in array limit:2 offset:1 %}{{i}}{% endfor %}").render(vars),
       "bc"
@@ -372,15 +375,15 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("for_array: nested property access in lookup") {
-    val vars = new JHashMap[String, Any]()
-    val a    = new JHashMap[String, Any]()
-    val b    = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
+    val a    = new JHashMap[String, DataView]()
+    val b    = new JHashMap[String, DataView]()
     val c    = new java.util.ArrayList[Any]()
     c.add("x")
     c.add("y")
-    b.put("c", c)
-    a.put("b", b)
-    vars.put("a", a)
+    b.put("c", TestHelper.dv(c))
+    a.put("b", TestHelper.dv(b))
+    vars.put("a", TestHelper.dv(a))
     assertEquals(
       Template.parse("{% for item in a.b.c %}{{ item }}{% endfor %}").render(vars),
       "xy"
@@ -397,10 +400,10 @@ final class LiquidParserSuite extends munit.FunSuite {
   //    tagStart ForEnd TagEnd
   //  ;
   test("for_range: basic range") {
-    val vars = new JHashMap[String, Any]()
-    val item = new JHashMap[String, Any]()
-    item.put("quantity", 3L)
-    vars.put("item", item)
+    val vars = new JHashMap[String, DataView]()
+    val item = new JHashMap[String, DataView]()
+    item.put("quantity", TestHelper.dv(3L))
+    vars.put("item", TestHelper.dv(item))
     assertEquals(
       Template.parse("{% for i in (1 .. item.quantity) %}{{ i }}{% endfor %}").render(vars),
       "123"
@@ -408,10 +411,10 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("for_range: with offset attribute") {
-    val vars = new JHashMap[String, Any]()
-    val item = new JHashMap[String, Any]()
-    item.put("quantity", 5L)
-    vars.put("item", item)
+    val vars = new JHashMap[String, DataView]()
+    val item = new JHashMap[String, DataView]()
+    item.put("quantity", TestHelper.dv(5L))
+    vars.put("item", TestHelper.dv(item))
     assertEquals(
       Template.parse("{% for i in (1 .. item.quantity) offset:2 %}{{ i }}{% endfor %}").render(vars),
       "345"
@@ -426,11 +429,11 @@ final class LiquidParserSuite extends munit.FunSuite {
   //  : tagStart TableStart Id In lookup attribute* TagEnd block tagStart TableEnd TagEnd
   //  ;
   test("table_tag: basic tablerow") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     val rows = new java.util.ArrayList[Any]()
     rows.add("a")
     rows.add("b")
-    vars.put("rows", rows)
+    vars.put("rows", TestHelper.dv(rows))
     val result = Template.parse("{% tablerow r in rows %}{{r}}{% endtablerow %}").render(vars)
     // tablerow produces HTML table rows with <tr><td> elements
     assert(result.contains("a"), s"Expected 'a' in tablerow output, got: $result")
@@ -438,12 +441,12 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("table_tag: tablerow with attribute") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     val rows = new java.util.ArrayList[Any]()
     rows.add("a")
     rows.add("b")
     rows.add("c")
-    vars.put("rows", rows)
+    vars.put("rows", TestHelper.dv(rows))
     val result = Template.parse("{% tablerow r in rows cols:2 %}{{r}}{% endtablerow %}").render(vars)
     assert(result.contains("a"), s"Expected 'a' in tablerow output, got: $result")
   }
@@ -491,8 +494,8 @@ final class LiquidParserSuite extends munit.FunSuite {
   }
 
   test("include_tag: include with variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("variable", "test.html")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("variable", TestHelper.dv("test.html"))
     val result =
       try
         Template.parse("{% include variable %}").render(vars)

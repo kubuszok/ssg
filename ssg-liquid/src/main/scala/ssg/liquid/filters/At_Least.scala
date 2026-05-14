@@ -16,10 +16,12 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "at_least" filter — limits a number to a minimum value. */
 class At_Least extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (params == null || params.length == 0) {
       value
     } else if (!isNumber(value) || !isNumber(params(0))) {
@@ -28,9 +30,9 @@ class At_Least extends Filter {
       val numberValue = asNumber(value)
       val paramValue  = asNumber(params(0))
       if (numberValue.doubleValue() < paramValue.doubleValue()) {
-        paramValue
+        DataView.from(paramValue.doubleValue())
       } else {
-        numberValue
+        DataView.from(numberValue.doubleValue())
       }
     }
 }

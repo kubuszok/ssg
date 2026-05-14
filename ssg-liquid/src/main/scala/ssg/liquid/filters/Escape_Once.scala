@@ -20,10 +20,12 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Escapes HTML without double-escaping existing entities. */
 class Escape_Once extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val str = asString(value, context)
     val sb  = new java.lang.StringBuilder(str.length())
     var i   = 0
@@ -54,7 +56,7 @@ class Escape_Once extends Filter {
         i += 1
       }
     }
-    sb.toString()
+    DataView.from(sb.toString())
   }
 
   /** Returns the end index of an HTML entity starting at pos, or -1 if not an entity. */

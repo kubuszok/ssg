@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.antlr.NameResolver
 import ssg.liquid.parser.Flavor
 
@@ -31,8 +33,8 @@ final class IncludeSuite extends munit.FunSuite {
   test("include: included template can access parent variables") {
     val parser   = parserWith("greeting" -> "Hello {{ name }}!")
     val template = parser.parse("{% include 'greeting' %}")
-    val vars     = new HashMap[String, Any]()
-    vars.put("name", "World")
+    val vars     = new HashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("World"))
     assertEquals(template.render(vars), "Hello World!")
   }
 
@@ -69,20 +71,20 @@ final class IncludeSuite extends munit.FunSuite {
   test("include: include with if in included template") {
     val parser   = parserWith("conditional" -> "{% if show %}visible{% endif %}")
     val template = parser.parse("{% include 'conditional' %}")
-    val vars     = new HashMap[String, Any]()
-    vars.put("show", java.lang.Boolean.TRUE)
+    val vars     = new HashMap[String, DataView]()
+    vars.put("show", TestHelper.dv(java.lang.Boolean.TRUE))
     assertEquals(template.render(vars), "visible")
   }
 
   test("include: include with for loop in included template") {
     val parser   = parserWith("list" -> "{% for item in items %}{{ item }}{% endfor %}")
     val template = parser.parse("{% include 'list' %}")
-    val vars     = new HashMap[String, Any]()
+    val vars     = new HashMap[String, DataView]()
     val items    = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
     items.add("c")
-    vars.put("items", items)
+    vars.put("items", TestHelper.dv(items))
     assertEquals(template.render(vars), "abc")
   }
 

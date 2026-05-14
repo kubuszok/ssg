@@ -2,14 +2,16 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.HashMap
 
 /** Regression tests for Native-specific issues (possessive quantifiers). */
 final class FilterStringBisectSuite extends munit.FunSuite {
 
   test("strip_newlines with \\r\\n on Native") {
-    val vars = new HashMap[String, Any]()
-    vars.put("text", "a\r\nb\nc")
+    val vars = new HashMap[String, DataView]()
+    vars.put("text", TestHelper.dv("a\r\nb\nc"))
     assertEquals(Template.parse("{{ text | strip_newlines }}").render(vars), "abc")
   }
 

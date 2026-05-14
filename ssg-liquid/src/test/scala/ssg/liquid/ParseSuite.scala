@@ -11,6 +11,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import ssg.liquid.exceptions.LiquidException
 
 import java.util.{ HashMap => JHashMap }
@@ -113,9 +115,9 @@ final class ParseSuite extends munit.FunSuite {
    * end
    */
   test("meaningless_parens: parenthesized condition works") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("b", "bar")
-    vars.put("c", "baz")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("b", TestHelper.dv("bar"))
+    vars.put("c", TestHelper.dv("baz"))
     val markup = "a == 'foo' or (b == 'bar' and c == 'baz') or false"
     assertEquals(
       TemplateParser.DEFAULT.parse("{% if " + markup + " %} YES {% endif %}").render(vars),
@@ -146,10 +148,10 @@ final class ParseSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("keywords_as_identifier: comment keyword as identifier") {
-    val vars  = new JHashMap[String, Any]()
-    val inner = new JHashMap[String, Any]()
-    inner.put("comment", "content")
-    vars.put("var", inner)
+    val vars  = new JHashMap[String, DataView]()
+    val inner = new JHashMap[String, DataView]()
+    inner.put("comment", TestHelper.dv("content"))
+    vars.put("var", TestHelper.dv(inner))
     assertEquals(
       TemplateParser.DEFAULT.parse("var2:{{var2}} {%assign var2 = var.comment%} var2:{{var2}}").render(vars),
       "var2:  var2:content"
@@ -157,10 +159,10 @@ final class ParseSuite extends munit.FunSuite {
   }
 
   test("keywords_as_identifier: end keyword as identifier") {
-    val vars  = new JHashMap[String, Any]()
-    val inner = new JHashMap[String, Any]()
-    inner.put("end", "content")
-    vars.put("var", inner)
+    val vars  = new JHashMap[String, DataView]()
+    val inner = new JHashMap[String, DataView]()
+    inner.put("end", TestHelper.dv("content"))
+    vars.put("var", TestHelper.dv(inner))
     assertEquals(
       TemplateParser.DEFAULT.parse("var2:{{var2}} {%assign var2 = var.end%} var2:{{var2}}").render(vars),
       "var2:  var2:content"
@@ -206,9 +208,6 @@ final class ParseSuite extends munit.FunSuite {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  private def mapOf(pairs: (String, Any)*): JHashMap[String, Any] = {
-    val m = new JHashMap[String, Any]()
-    pairs.foreach { case (k, v) => m.put(k, v) }
-    m
-  }
+  private def mapOf(pairs: (String, Any)*): JHashMap[String, DataView] =
+    TestHelper.mapOf(pairs*)
 }

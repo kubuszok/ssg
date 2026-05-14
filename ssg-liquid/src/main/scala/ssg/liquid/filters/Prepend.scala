@@ -16,8 +16,10 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Prepend extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    asString(get(0, params), context) + asString(value, context)
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+    DataView.from(asString(get(0, params), context) + asString(value, context))
 }

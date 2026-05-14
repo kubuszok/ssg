@@ -21,12 +21,14 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.math.BigDecimal
 import java.time.{ Instant, LocalDate, LocalDateTime, LocalTime, OffsetDateTime, ZoneId, ZonedDateTime }
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ ChronoField, TemporalAccessor, TemporalQueries }
-import java.util
-import java.util.{ Collection => JCollection, List => JList, Map => JMap }
+
+import scala.collection.immutable.VectorMap
 
 /** An abstract class the Filter and Tag classes extend.
   *
@@ -34,241 +36,214 @@ import java.util.{ Collection => JCollection, List => JList, Map => JMap }
   */
 abstract class LValue {
 
-  /** Returns this value as an array. If a value is already an array, it is cast to an Object[], if it's a java.util.Collection, it is converted to an array and in all other cases, value is simply
-    * returned as an Object[] with a single value in it. This function treats Map as a single element.
+  /** Returns this value as a Vector[DataView]. If a value is already a vector, it is returned directly. If it's a VectorMap, it is converted via mapAsVector. Otherwise, value is wrapped in a
+    * single-element Vector.
     */
-  def asArray(value: Any, context: TemplateContext): Array[Any] =
-    if (value == null) {
-      Array.empty[Any]
+  def asArray(value: DataView, context: TemplateContext): Vector[DataView] =
+    if (value.isNull) {
+      Vector.empty
     } else
-      value match {
-        case arr: Array[?]       => arr.asInstanceOf[Array[Any]]
-        case col: JCollection[?] => col.toArray.asInstanceOf[Array[Any]]
-        case _ =>
-          if (LValue.isTemporal(value)) {
-            LValue.temporalAsArray(value)
-          } else {
-            Array[Any](value)
-          }
-      }
-
-  /** Returns value as a java.util.List. */
-  def asList(value: Any, context: TemplateContext): JList[?] =
-    if (value == null) {
-      util.Collections.emptyList()
-    } else
-      value match {
-        case list: JList[?]       => list
-        case col:  JCollection[?] => new util.ArrayList(col)
-        case arr:  Array[?]       => util.Arrays.asList(arr*)
-        case _ =>
-          if (LValue.isTemporal(value)) {
-            val arr = LValue.temporalAsArray(value)
-            util.Arrays.asList(arr*)
-          } else {
-            util.Collections.singletonList(value)
-          }
+      value.view match {
+        case v:  Vector[?]        => v.asInstanceOf[Vector[DataView]]
+        case m:  VectorMap[?, ?]  => mapAsVector(m.asInstanceOf[VectorMap[String, DataView]])
+        case ta: TemporalAccessor =>
+          LValue.temporalAsVector(ta)
+        case _ => Vector(value)
       }
 
   /** Convert value to a boolean. Note that only nil and false are false, all other values are true. */
-  def asBoolean(value: Any): Boolean =
-    value match {
-      case null => false
-      case b: Boolean => b
-      case _ => true
-    }
+  def asBoolean(value: DataView): Boolean =
+    if (value.isNull) false
+    else
+      value.view match {
+        case b: Boolean => b
+        case _ => true
+      }
 
   /** Returns value as a Number. Strings will be coerced into either a Long or Double. */
-  def asNumber(value: Any): Number =
-    value match {
-      case null => java.lang.Long.valueOf(0L)
-      case n: Number => n
-      case other =>
-        val str = String.valueOf(other).trim()
-        if (str.matches("\\d+")) java.lang.Long.valueOf(str)
-        else java.lang.Double.valueOf(str)
-    }
+  def asNumber(value: DataView): Number =
+    if (value.isNull) java.lang.Long.valueOf(0L)
+    else
+      value.view match {
+        case s:  Short      => java.lang.Short.valueOf(s)
+        case i:  Int        => java.lang.Integer.valueOf(i)
+        case l:  Long       => java.lang.Long.valueOf(l)
+        case f:  Float      => java.lang.Float.valueOf(f)
+        case d:  Double     => java.lang.Double.valueOf(d)
+        case bd: BigDecimal => bd
+        case _ =>
+          val str = value.toString.trim()
+          if (str.matches("\\d+")) java.lang.Long.valueOf(str)
+          else java.lang.Double.valueOf(str)
+      }
 
   /** Returns value as a strict BigDecimal number. */
-  def asStrictNumber(number: Any): BigDecimal =
-    if (number == null) {
+  def asStrictNumber(number: DataView): BigDecimal =
+    if (number.isNull) {
       null
     } else
-      number match {
+      number.view match {
         case pbd: PlainBigDecimal => pbd
         case _ => PlainBigDecimal(number.toString.trim())
       }
 
   /** Returns value as a String. */
-  def asString(value: Any, context: TemplateContext): String =
-    if (value == null) {
+  def asString(value: DataView, context: TemplateContext): String =
+    if (value.isNull) {
       ""
-    } else if (LValue.isTemporal(value)) {
-      LValue.temporalToString(value)
-    } else if (!isArray(value)) {
-      String.valueOf(value)
-    } else {
-      val array   = asArray(value, context)
-      val builder = new StringBuilder()
-      for (obj <- array)
-        builder.append(asString(obj, context))
-      builder.toString()
-    }
+    } else
+      value.view match {
+        case ta: TemporalAccessor =>
+          LValue.temporalToString(ta)
+        case v: Vector[?] =>
+          val vec     = v.asInstanceOf[Vector[DataView]]
+          val builder = new StringBuilder()
+          vec.foreach(dv => builder.append(asString(dv, context)))
+          builder.toString()
+        case other => String.valueOf(other)
+      }
 
   /** Returns value as an object appendable to ObjectAppender. */
-  def asAppendableObject(value: Any, context: TemplateContext): Any =
-    if (value == null) {
+  def asAppendableObject(value: DataView, context: TemplateContext): Any =
+    if (value.isNull) {
       ""
-    } else if (LValue.isTemporal(value)) {
-      LValue.temporalToString(value)
-    } else if (!isArray(value)) {
-      value
-    } else {
-      val array   = asArray(value, context)
-      val builder = context.newObjectAppender(array.length)
-      for (obj <- array)
-        builder.append(asAppendableObject(obj, context))
-      builder.getResult
-    }
-
-  /** Returns true iff value is an array or a java.util.Collection. */
-  def isArray(value: Any): Boolean =
-    value != null && (value.isInstanceOf[Array[?]] || value.isInstanceOf[JCollection[?]])
-
-  /** Returns true iff value is a whole number (Integer or Long). */
-  def isInteger(value: Any): Boolean =
-    value.isInstanceOf[Long] || value.isInstanceOf[Integer]
-
-  /** Returns true iff value is a Number. */
-  def isNumber(value: Any): Boolean =
-    if (value == null) {
-      false
-    } else if (value.isInstanceOf[Number]) {
-      true
-    } else {
-      val str = String.valueOf(value).trim()
-      if (str.matches("\\d+")) {
-        true
-      } else {
-        try {
-          java.lang.Double.parseDouble(str)
-          true
-        } catch {
-          case _: Exception => false
-        }
+    } else
+      value.view match {
+        case ta: TemporalAccessor =>
+          LValue.temporalToString(ta)
+        case v: Vector[?] =>
+          val vec     = v.asInstanceOf[Vector[DataView]]
+          val builder = context.newObjectAppender(vec.size)
+          vec.foreach(dv => builder.append(asAppendableObject(dv, context)))
+          builder.getResult
+        case _ => value.toString
       }
-    }
 
-  /** Returns true iff value is a String (CharSequence). */
-  def isString(value: Any): Boolean =
-    value != null && value.isInstanceOf[CharSequence]
+  /** Returns true iff value is a Vector (array). */
+  def isArray(value: DataView): Boolean =
+    !value.isNull && value.view.isInstanceOf[Vector[?]]
 
-  def isTruthy(value: Any, context: TemplateContext): Boolean = !isFalsy(value, context)
+  /** Returns true iff value is a whole number (Int or Long). */
+  def isInteger(value: DataView): Boolean =
+    if (value.isNull) false
+    else
+      value.view match {
+        case _: Int | _: Long => true
+        case _                => false
+      }
 
-  def isFalsy(value: Any, context: TemplateContext): Boolean =
-    if (value == null) {
+  /** Returns true iff value is a Number type. */
+  def isNumber(value: DataView): Boolean =
+    if (value.isNull) {
+      false
+    } else
+      value.view match {
+        case _: (Short | Int | Long | Float | Double | BigDecimal) => true
+        case _ =>
+          val str = value.toString.trim()
+          if (str.matches("\\d+")) {
+            true
+          } else {
+            try {
+              java.lang.Double.parseDouble(str)
+              true
+            } catch {
+              case _: Exception => false
+            }
+          }
+      }
+
+  /** Returns true iff value is a String. */
+  def isString(value: DataView): Boolean =
+    !value.isNull && value.view.isInstanceOf[String]
+
+  def isTruthy(value: DataView, context: TemplateContext): Boolean = !isFalsy(value, context)
+
+  def isFalsy(value: DataView, context: TemplateContext): Boolean =
+    if (value.isNull) {
       true
     } else
-      value match {
-        case b:  Boolean      => !b
-        case cs: CharSequence => cs.length() == 0
-        case m:  JMap[?, ?]   => m.isEmpty
-        case _ =>
-          if (isArray(value)) asArray(value, context).length == 0
-          else false
+      value.view match {
+        case b: Boolean         => !b
+        case s: String          => s.length() == 0
+        case m: VectorMap[?, ?] => m.isEmpty
+        case v: Vector[?]       => v.isEmpty
+        case _ => false
       }
 
-  def canBeInteger(value: Any): Boolean = String.valueOf(value).trim().matches("-?\\d+")
+  def canBeInteger(value: DataView): Boolean = String.valueOf(value.view).trim().matches("-?\\d+")
 
-  def canBeDouble(value: Any): Boolean = String.valueOf(value).trim().matches("-?\\d+(\\.\\d*)?")
+  def canBeDouble(value: DataView): Boolean = String.valueOf(value.view).trim().matches("-?\\d+(\\.\\d*)?")
 
-  def canBeNumber(value: Any): Boolean =
-    if (value == null) false
+  def canBeNumber(value: DataView): Boolean =
+    if (value.isNull) false
     else canBeInteger(value) || canBeDouble(value)
 
-  def isMap(value: Any): Boolean = value.isInstanceOf[JMap[?, ?]]
+  def isMap(value: DataView): Boolean =
+    !value.isNull && value.view.isInstanceOf[VectorMap[?, ?]]
 
-  def asMap(value: Any): JMap[String, Any] = value.asInstanceOf[JMap[String, Any]]
+  def asMap(value: DataView): VectorMap[String, DataView] =
+    value.asMap.getOrElse(VectorMap.empty)
 
-  /** Introspects a Map as an array of [key, value] pairs. */
-  protected def mapAsArray(value: JMap[?, ?]): Array[Any] = {
-    val keyValuePairs = new util.ArrayList[Array[Any]]()
-    val it            = value.entrySet().iterator()
-    while (it.hasNext) {
-      val entry = it.next()
-      keyValuePairs.add(Array[Any](entry.getKey, entry.getValue))
+  /** Introspects a VectorMap as a Vector of [key, value] pairs. */
+  protected def mapAsVector(value: VectorMap[String, DataView]): Vector[DataView] =
+    value.toVector.map { case (k, v) =>
+      DataView(Vector[DataView](DataView.from(k), v))
     }
-    keyValuePairs.toArray.asInstanceOf[Array[Any]]
-  }
 }
 
 object LValue {
 
-  /** Sentinel value for break statements in loops. */
-  val BREAK: LValue = new LValue {
-    override def toString: String = ""
-  }
-
-  /** Sentinel value for continue statements in loops. */
-  val CONTINUE: LValue = new LValue {
-    override def toString: String = ""
-  }
-
   /** Returns true iff a and b are equals, where (int) 1 is equal to (double) 1.0 */
-  def areEqual(a: Any, b: Any): Boolean =
-    if (a.asInstanceOf[AnyRef] eq b.asInstanceOf[AnyRef]) {
+  def areEqual(a: DataView, b: DataView): Boolean =
+    if (a eq b) {
       true
-    } else if (a == null || b == null) {
-      false
+    } else if (a.isNull || b.isNull) {
+      a.isNull && b.isNull
     } else
-      (a, b) match {
+      (a.view, b.view) match {
         case (na: Number, nb: Number) =>
           val delta = na.doubleValue() - nb.doubleValue()
           Math.abs(delta) < 0.00000000001
         case _ =>
           if (isEmpty(a) && isEmpty(b)) true
-          else a == b
+          else a.view == b.view
       }
 
-  private def isEmpty(value: Any): Boolean =
-    if (value == null) true
+  private def isEmpty(value: DataView): Boolean =
+    if (value.isNull) true
     else
-      value match {
-        case cs:  CharSequence   => cs.length() == 0
-        case col: JCollection[?] => col.isEmpty
-        case m:   JMap[?, ?]     => m.isEmpty
-        case arr: Array[?]       => arr.length == 0
+      value.view match {
+        case s: String          => s.length() == 0
+        case v: Vector[?]       => v.isEmpty
+        case m: VectorMap[?, ?] => m.isEmpty
         case _ => false
       }
 
   // sample: 2007-11-01 15:25:00 +0900
   val rubyDateTimeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XX")
 
-  /** Checks if a value is a temporal type. */
-  def isTemporal(value: Any): Boolean =
-    value.isInstanceOf[TemporalAccessor]
+  /** Checks if a DataView contains a temporal type. */
+  def isTemporal(value: DataView): Boolean =
+    !value.isNull && value.view.isInstanceOf[TemporalAccessor]
 
-  /** Converts a temporal value to a string using Ruby date format.
-    *
-    * Partial temporals (LocalDate, Instant, etc.) are first converted to ZonedDateTime so that the Ruby format string can be fully resolved.
-    */
-  def temporalToString(value: Any): String =
-    value match {
-      case zdt: ZonedDateTime    => rubyDateTimeFormat.format(zdt)
-      case ta:  TemporalAccessor =>
+  /** Converts a temporal value to a string using Ruby date format. */
+  def temporalToString(ta: TemporalAccessor): String =
+    ta match {
+      case zdt: ZonedDateTime => rubyDateTimeFormat.format(zdt)
+      case _ =>
         val zdt = toZonedDateTime(ta, ZoneId.systemDefault())
         if (zdt != null) rubyDateTimeFormat.format(zdt)
-        else value.toString
-      case _ => value.toString
+        else ta.toString
     }
 
   // https://apidock.com/ruby/Time/to_a
-  // Returns a ten-element array of values for time:
+  // Returns a ten-element vector of values for time:
   // [sec, min, hour, day, month, year, wday, yday, isdst, zone]
-  def temporalAsArray(value: Any): Array[Any] = {
-    val time = toZonedDateTime(value, ZoneId.systemDefault())
+  def temporalAsVector(ta: TemporalAccessor): Vector[DataView] = {
+    val time = toZonedDateTime(ta, ZoneId.systemDefault())
     if (time == null) {
-      Array[Any](value)
+      Vector(DataView.from(ta))
     } else {
       val sec   = time.get(ChronoField.SECOND_OF_MINUTE)
       val min   = time.getMinute
@@ -280,45 +255,55 @@ object LValue {
       val yday  = time.get(ChronoField.DAY_OF_YEAR)
       val isdst = time.getZone.getRules.isDaylightSavings(time.toInstant)
       val zone  = time.getZone.getId
-      Array[Any](sec, min, hour, day, month, year, wday, yday, isdst, zone)
+      Vector(
+        DataView.from(sec),
+        DataView.from(min),
+        DataView.from(hour),
+        DataView.from(day),
+        DataView.from(month),
+        DataView.from(year),
+        DataView.from(wday),
+        DataView.from(yday),
+        DataView.from(isdst),
+        DataView.from(zone)
+      )
     }
   }
 
   /** Keeps an original temporal type as is. */
-  def asTemporal(value: Any, context: TemplateContext): TemporalAccessor =
-    value match {
-      case ta: TemporalAccessor => ta
-      case _ =>
-        throw new UnsupportedOperationException(
-          s"Cannot convert ${if (value == null) "null" else value.getClass.getName} to TemporalAccessor"
-        )
-    }
+  def asTemporal(value: DataView, context: TemplateContext): TemporalAccessor =
+    if (value.isNull) {
+      throw new UnsupportedOperationException("Cannot convert null to TemporalAccessor")
+    } else
+      value.view match {
+        case ta: TemporalAccessor => ta
+        case _ =>
+          throw new UnsupportedOperationException(
+            s"Cannot convert ${value.view.getClass.getName} to TemporalAccessor"
+          )
+      }
 
-  /** Ruby has a single date type, and its equivalent is ZonedDateTime.
-    *
-    * Follows Ruby rules: if some datetime part is missing, the default is taken from `now` with the system default zone.
-    */
-  def asRubyDate(value: Any, context: TemplateContext): ZonedDateTime = {
+  /** Ruby has a single date type, and its equivalent is ZonedDateTime. */
+  def asRubyDate(value: DataView, context: TemplateContext): ZonedDateTime = {
     val defaultZone = ZoneId.systemDefault()
-    value match {
-      case ta: TemporalAccessor => toZonedDateTime(ta, defaultZone)
-      case _ => ZonedDateTime.now(defaultZone)
-    }
+    if (value.isNull) ZonedDateTime.now(defaultZone)
+    else
+      value.view match {
+        case ta: TemporalAccessor => toZonedDateTime(ta, defaultZone)
+        case _ => ZonedDateTime.now(defaultZone)
+      }
   }
 
-  /** Converts a TemporalAccessor to ZonedDateTime, filling in missing parts from `now` at the given default zone.
-    *
-    * Ported from: liqp/filters/date/BasicDateParser#getZonedDateTimeFromTemporalAccessor
-    */
-  private def toZonedDateTime(value: Any, defaultZone: ZoneId): ZonedDateTime =
-    value match {
+  /** Converts a TemporalAccessor to ZonedDateTime, filling in missing parts from `now`. */
+  private def toZonedDateTime(ta: TemporalAccessor, defaultZone: ZoneId): ZonedDateTime =
+    ta match {
       case null => ZonedDateTime.now(defaultZone)
-      case zdt:  ZonedDateTime    => zdt
-      case inst: Instant          => ZonedDateTime.ofInstant(inst, defaultZone)
-      case odt:  OffsetDateTime   => odt.toZonedDateTime
-      case ldt:  LocalDateTime    => ldt.atZone(defaultZone)
-      case ld:   LocalDate        => ld.atStartOfDay(defaultZone)
-      case ta:   TemporalAccessor =>
+      case zdt:  ZonedDateTime  => zdt
+      case inst: Instant        => ZonedDateTime.ofInstant(inst, defaultZone)
+      case odt:  OffsetDateTime => odt.toZonedDateTime
+      case ldt:  LocalDateTime  => ldt.atZone(defaultZone)
+      case ld:   LocalDate      => ld.atStartOfDay(defaultZone)
+      case _ =>
         val zoneId = ta.query(TemporalQueries.zone())
         if (zoneId == null) {
           val date =
@@ -345,7 +330,6 @@ object LValue {
             }
           now.atZone(zoneId)
         }
-      case _ => null
     }
 
   def isBlank(string: String): Boolean =
@@ -367,24 +351,17 @@ object LValue {
   private def isWhitespace(c: Int): Boolean =
     c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r'
 
-  /** Mimic ruby's BigDecimal.to_f with standard java capabilities. Ensures at least 1 decimal place (e.g., 5.0 not 5).
-    *
-    * Original: bd.setScale(Math.max(1, bd.stripTrailingZeros().scale()), RoundingMode.UNNECESSARY) We avoid stripTrailingZeros().scale() which is unreliable on Native, and instead strip trailing
-    * zeros from the string representation directly.
-    */
+  /** Mimic ruby's BigDecimal.to_f with standard java capabilities. Ensures at least 1 decimal place (e.g., 5.0 not 5). */
   def asFormattedNumber(bd: BigDecimal): BigDecimal = {
     val s = bd.toString
     if (s.contains('.')) {
-      // Strip trailing zeros from the fractional part, but keep at least one digit after '.'
       val dotIdx   = s.indexOf('.')
       val intPart  = s.substring(0, dotIdx)
       var fracPart = s.substring(dotIdx + 1)
-      // Remove trailing zeros
       while (fracPart.length > 1 && fracPart.charAt(fracPart.length - 1) == '0')
         fracPart = fracPart.substring(0, fracPart.length - 1)
       PlainBigDecimal(intPart + "." + fracPart)
     } else {
-      // No decimal point — add .0
       PlainBigDecimal(s + ".0")
     }
   }

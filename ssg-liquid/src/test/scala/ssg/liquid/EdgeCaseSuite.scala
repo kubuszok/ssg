@@ -7,6 +7,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.{ ArrayList => JArrayList, HashMap => JHashMap }
 
 class EdgeCaseSuite extends munit.FunSuite {
@@ -18,7 +20,7 @@ class EdgeCaseSuite extends munit.FunSuite {
   private def render(template: String): String =
     Template.parse(template).render()
 
-  private def render(template: String, vars: JHashMap[String, Any]): String =
+  private def render(template: String, vars: JHashMap[String, DataView]): String =
     Template.parse(template).render(vars)
 
   // ---------------------------------------------------------------------------
@@ -50,8 +52,8 @@ class EdgeCaseSuite extends munit.FunSuite {
   }
 
   test("comparison: variable to string") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("var1", "hello")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("var1", TestHelper.dv("hello"))
     assertEquals(render("{% if var1 == 'hello' %}true{% else %}false{% endif %}", vars), "true")
   }
 
@@ -72,15 +74,15 @@ class EdgeCaseSuite extends munit.FunSuite {
   }
 
   test("if: variable starting with 'and'") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("android", "phone")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("android", TestHelper.dv("phone"))
     assertEquals(render("{% if android == 'phone' %}yes{% endif %}", vars), "yes")
   }
 
   test("if: hash miss returns falsy") {
-    val user = new JHashMap[String, Any]()
-    val vars = new JHashMap[String, Any]()
-    vars.put("user", user)
+    val user = new JHashMap[String, DataView]()
+    val vars = new JHashMap[String, DataView]()
+    vars.put("user", TestHelper.dv(user))
     assertEquals(render("{% if user.name %}yes{% else %}no{% endif %}", vars), "no")
   }
 
@@ -89,8 +91,8 @@ class EdgeCaseSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("for: range with variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("n", Integer.valueOf(3))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("n", TestHelper.dv(Integer.valueOf(3)))
     assertEquals(render("{% for i in (1..n) %}{{ i }}{% endfor %}", vars), "123")
   }
 
@@ -101,8 +103,8 @@ class EdgeCaseSuite extends munit.FunSuite {
     array.add(Integer.valueOf(3))
     array.add(Integer.valueOf(4))
     array.add(Integer.valueOf(5))
-    val vars = new JHashMap[String, Any]()
-    vars.put("array", array)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("array", TestHelper.dv(array))
     val tmpl = "{% for i in array limit:2 %}{{ i }}{% endfor %}-{% for i in array limit:2 offset:continue %}{{ i }}{% endfor %}"
     assertEquals(render(tmpl, vars), "12-34")
   }
@@ -112,14 +114,14 @@ class EdgeCaseSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("case: else when no match") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", "z")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv("z"))
     assertEquals(render("{% case x %}{% when 'a' %}A{% else %}other{% endcase %}", vars), "other")
   }
 
   test("case: multiple when values using or") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", "b")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv("b"))
     assertEquals(render("{% case x %}{% when 'a' or 'b' %}AB{% endcase %}", vars), "AB")
   }
 
@@ -147,8 +149,8 @@ class EdgeCaseSuite extends munit.FunSuite {
   }
 
   test("assign: from variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("name", "world")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("world"))
     assertEquals(render("{% assign greeting = name %}{{ greeting }}", vars), "world")
   }
 
@@ -169,8 +171,8 @@ class EdgeCaseSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("lookup: size of string") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("s", "hello")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("s", TestHelper.dv("hello"))
     assertEquals(render("{{ s.size }}", vars), "5")
   }
 
@@ -179,8 +181,8 @@ class EdgeCaseSuite extends munit.FunSuite {
     a.add(Integer.valueOf(1))
     a.add(Integer.valueOf(2))
     a.add(Integer.valueOf(3))
-    val vars = new JHashMap[String, Any]()
-    vars.put("a", a)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(a))
     assertEquals(render("{{ a.size }}", vars), "3")
   }
 
@@ -189,8 +191,8 @@ class EdgeCaseSuite extends munit.FunSuite {
     a.add(Integer.valueOf(10))
     a.add(Integer.valueOf(20))
     a.add(Integer.valueOf(30))
-    val vars = new JHashMap[String, Any]()
-    vars.put("a", a)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(a))
     assertEquals(render("{{ a.first }}", vars), "10")
   }
 
@@ -199,18 +201,18 @@ class EdgeCaseSuite extends munit.FunSuite {
     a.add(Integer.valueOf(10))
     a.add(Integer.valueOf(20))
     a.add(Integer.valueOf(30))
-    val vars = new JHashMap[String, Any]()
-    vars.put("a", a)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(a))
     assertEquals(render("{{ a.last }}", vars), "30")
   }
 
   test("lookup: nested map access") {
-    val user = new JHashMap[String, Any]()
-    user.put("name", "Alice")
-    val data = new JHashMap[String, Any]()
-    data.put("user", user)
-    val vars = new JHashMap[String, Any]()
-    vars.put("data", data)
+    val user = new JHashMap[String, DataView]()
+    user.put("name", TestHelper.dv("Alice"))
+    val data = new JHashMap[String, DataView]()
+    data.put("user", TestHelper.dv(user))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("data", TestHelper.dv(data))
     assertEquals(render("{{ data.user.name }}", vars), "Alice")
   }
 
@@ -243,8 +245,8 @@ class EdgeCaseSuite extends munit.FunSuite {
     a.add(Integer.valueOf(1))
     a.add(Integer.valueOf(2))
     a.add(Integer.valueOf(3))
-    val vars = new JHashMap[String, Any]()
-    vars.put("a", a)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("a", TestHelper.dv(a))
     assertEquals(render("{{ a }}", vars), "123")
   }
 }

@@ -16,18 +16,15 @@ package ssg
 package liquid
 package filters
 
-import java.util.{ ArrayList, Arrays, Collections }
+import ssg.data.DataView
 
 /** Liquid "reverse" filter — reverses the order of items in an array. */
 class Reverse extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isArray(value)) {
       value
     } else {
-      val values = asArray(value, context)
-      val list   = new ArrayList[Any](Arrays.asList(values*))
-      Collections.reverse(list)
-      list.toArray()
+      DataView.from(asArray(value, context).reverse)
     }
 }

@@ -19,13 +19,12 @@ package ssg
 package liquid
 package nodes
 
-import java.util.{ HashMap, Map => JMap }
+import ssg.data.DataView
+
+import scala.collection.immutable.VectorMap
 
 class KeyValueNode(val key: String, val value: LNode) extends LNode {
 
-  override def render(context: TemplateContext): Any = {
-    val map: JMap[String, Any] = new HashMap[String, Any]()
-    map.put(key, value.render(context))
-    map
-  }
+  override def render(context: TemplateContext): DataView =
+    DataView.from(VectorMap(key -> value.render(context)))
 }

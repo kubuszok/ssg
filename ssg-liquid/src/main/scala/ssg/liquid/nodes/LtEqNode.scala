@@ -19,18 +19,24 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.IncompatibleTypeComparisonException
 
 class LtEqNode(lhs: LNode, rhs: LNode) extends ComparingExpressionNode(lhs, rhs, true) {
 
-  override protected def doCompare(a: Any, b: Any, strictTypedExpressions: Boolean): Any =
-    if (a.isInstanceOf[Comparable[?]] && a.getClass.isInstance(b)) {
-      a.asInstanceOf[Comparable[Any]].compareTo(b) <= 0
-    } else if (b.isInstanceOf[Comparable[?]] && b.getClass.isInstance(a)) {
-      b.asInstanceOf[Comparable[Any]].compareTo(a) > 0
-    } else if (strictTypedExpressions) {
-      throw new IncompatibleTypeComparisonException(a, b)
-    } else {
-      false
-    }
+  override protected def doCompare(a: DataView, b: DataView, strictTypedExpressions: Boolean): DataView = {
+    val av = if (a.isNull) null else a.view
+    val bv = if (b.isNull) null else b.view
+    DataView.from(
+      if (av.isInstanceOf[Comparable[?]] && av.getClass.isInstance(bv)) {
+        av.asInstanceOf[Comparable[Any]].compareTo(bv) <= 0
+      } else if (bv.isInstanceOf[Comparable[?]] && bv.getClass.isInstance(av)) {
+        bv.asInstanceOf[Comparable[Any]].compareTo(av) > 0
+      } else if (strictTypedExpressions) {
+        throw new IncompatibleTypeComparisonException(av, bv)
+      } else {
+        false
+      }
+    )
+  }
 }

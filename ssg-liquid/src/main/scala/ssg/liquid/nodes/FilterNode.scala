@@ -20,6 +20,7 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
 import ssg.liquid.filters.Filter
 
 import java.util.{ ArrayList, List => JList }
@@ -36,21 +37,21 @@ class FilterNode(
     params.add(param)
 
   /** Applies this filter to the given value. Called by OutputNode during rendering. */
-  def apply(value: Any, context: TemplateContext): Any =
+  def apply(value: DataView, context: TemplateContext): DataView =
     try {
-      val paramValues = new ArrayList[Any]()
+      val paramValues = new Array[DataView](params.size())
       var i           = 0
       while (i < params.size()) {
-        paramValues.add(params.get(i).render(context))
+        paramValues(i) = params.get(i).render(context)
         i += 1
       }
-      filter.apply(value, context, paramValues.toArray)
+      filter.apply(value, context, paramValues)
     } catch {
       case e: Exception =>
         throw new RuntimeException(s"error on line $line, index $tokenStartIndex: ${e.getMessage}", e)
     }
 
-  override def render(context: TemplateContext): Any =
+  override def render(context: TemplateContext): DataView =
     throw new RuntimeException("cannot render a filter")
 }
 

@@ -20,14 +20,16 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import java.math.{ BigDecimal, RoundingMode }
 
 /** Liquid "round" filter — rounds to the nearest integer or specified decimal places. */
 class Round extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!canBeDouble(value)) {
-      0
+      DataView.from(0)
     } else {
       val number = asNumber(value).doubleValue()
       var scale  = 0
@@ -37,6 +39,6 @@ class Round extends Filter {
       }
 
       val bd = new BigDecimal(number.toString).setScale(scale, RoundingMode.HALF_UP)
-      PlainBigDecimal(bd)
+      DataView.from(PlainBigDecimal(bd))
     }
 }

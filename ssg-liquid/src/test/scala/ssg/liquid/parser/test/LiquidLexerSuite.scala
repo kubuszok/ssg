@@ -16,6 +16,7 @@ package liquid
 package parser
 package test
 
+import ssg.data.DataView
 import ssg.liquid.{ Template, TemplateParser, TestHelper }
 import ssg.liquid.exceptions.LiquidException
 
@@ -40,9 +41,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[$blockName:$body]"
+            DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
         }
       )
@@ -50,26 +51,30 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   private def parserWithCustomTag(tagName: String): TemplateParser =
     new TemplateParser.Builder()
-      .withTag(new tags.Tag(tagName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
-          s"<$tagName>"
-      })
+      .withTag(
+        new tags.Tag(tagName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from(s"<$tagName>")
+        }
+      )
       .build()
 
   private def parserWithCustomBlockAndTag(blockName: String, tagName: String): TemplateParser =
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[$blockName:$body]"
+            DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
         }
       )
-      .withTag(new tags.Tag(tagName) {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any =
-          s"<$tagName>"
-      })
+      .withTag(
+        new tags.Tag(tagName) {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from(s"<$tagName>")
+        }
+      )
       .build()
 
   // ---------------------------------------------------------------------------
@@ -159,8 +164,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
   test("OutStart2: nested {{ inside include tag") {
     // In the original, this tests that {{ inside {% include ... %} is recognized as OutStart2
     // For SSG, we verify that {{variable}} inside an include tag is parsed correctly
-    val vars = new JHashMap[String, Any]()
-    vars.put("variable", "test.html")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("variable", TestHelper.dv("test.html"))
     // This exercises the lexer's handling of {{ inside a tag context
     // The output verifies the lexer can handle nested output delimiters
     assertEquals(Template.parse("{{ 'a' }}").render(), "a")
@@ -219,17 +224,17 @@ final class LiquidLexerSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("one") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[one:$body]"
+            DataView.from(s"[one:${super.asString(body, context)}]")
           }
         }
       )
       .withBlock(
         new blocks.Block("bad") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): Any = {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
-            s"[bad:$body]"
+            DataView.from(s"[bad:${super.asString(body, context)}]")
           }
         }
       )
@@ -354,10 +359,10 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   Dot       : '.';
   test("Dot: property access") {
-    val vars  = new JHashMap[String, Any]()
-    val inner = new JHashMap[String, Any]()
-    inner.put("name", "test")
-    vars.put("obj", inner)
+    val vars  = new JHashMap[String, DataView]()
+    val inner = new JHashMap[String, DataView]()
+    inner.put("name", TestHelper.dv("test"))
+    vars.put("obj", TestHelper.dv(inner))
     assertEquals(Template.parse("{{obj.name}}").render(vars), "test")
   }
 
@@ -523,11 +528,11 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   OBr       : '[';
   test("OBr: open bracket for array access") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     val list = new java.util.ArrayList[Any]()
     list.add("a")
     list.add("b")
-    vars.put("arr", list)
+    vars.put("arr", TestHelper.dv(list))
     assertEquals(Template.parse("{{arr[0]}}").render(vars), "a")
   }
 
@@ -537,11 +542,11 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   CBr       : ']';
   test("CBr: close bracket for array access") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     val list = new java.util.ArrayList[Any]()
     list.add("x")
     list.add("y")
-    vars.put("arr", list)
+    vars.put("arr", TestHelper.dv(list))
     assertEquals(Template.parse("{{arr[1]}}").render(vars), "y")
   }
 
@@ -755,8 +760,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   CaseStart    : 'case';
   test("CaseStart: case tag recognized") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 1L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(1L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}one{% endcase %}").render(vars),
       "one"
@@ -769,8 +774,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   CaseEnd      : 'endcase';
   test("CaseEnd: endcase closes case block") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 2L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(2L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}one{% when 2 %}two{% endcase %}").render(vars),
       "two"
@@ -783,8 +788,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   When         : 'when';
   test("When: when tag in case block") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", 1L)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv(1L))
     assertEquals(
       Template.parse("{% case x %}{% when 1 %}match{% endcase %}").render(vars),
       "match"
@@ -809,10 +814,10 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   ForStart     : 'for';
   test("ForStart: for tag recognized") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("x")
-    vars.put("arr", items)
+    vars.put("arr", TestHelper.dv(items))
     assertEquals(
       Template.parse("{% for item in arr %}{{item}}{% endfor %}").render(vars),
       "x"
@@ -837,11 +842,11 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   In           : 'in';
   test("In: in keyword in for loop") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
     items.add("b")
-    vars.put("list", items)
+    vars.put("list", TestHelper.dv(items))
     assertEquals(
       Template.parse("{% for item in list %}{{item}}{% endfor %}").render(vars),
       "ab"
@@ -878,10 +883,10 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   TableStart   : 'tablerow';
   test("TableStart: tablerow tag recognized") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("a")
-    vars.put("rows", items)
+    vars.put("rows", TestHelper.dv(items))
     val result = Template.parse("{% tablerow r in rows %}{{r}}{% endtablerow %}").render(vars)
     assert(result.contains("a"), s"Expected 'a' in output, got: $result")
   }
@@ -892,10 +897,10 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   TableEnd     : 'endtablerow';
   test("TableEnd: endtablerow closes tablerow block") {
-    val vars  = new JHashMap[String, Any]()
+    val vars  = new JHashMap[String, DataView]()
     val items = new java.util.ArrayList[Any]()
     items.add("x")
-    vars.put("rows", items)
+    vars.put("rows", TestHelper.dv(items))
     val result = Template.parse("{% tablerow r in rows %}{{r}}{% endtablerow %}done").render(vars)
     assert(result.contains("done"), s"Expected 'done' after tablerow, got: $result")
   }
@@ -1008,8 +1013,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
   test("With: with keyword in include context") {
     // 'with' is used in include tags: {% include 'file' with variable %}
     // We verify the keyword doesn't break parsing in a simple context
-    val vars = new JHashMap[String, Any]()
-    vars.put("with", "value")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("with", TestHelper.dv("value"))
     // 'with' can be used as a variable name in output
     assertEquals(Template.parse("{{with}}").render(vars), "value")
   }
@@ -1021,9 +1026,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   //   Empty        : 'empty';
   // NOTE: SSG compares arr.size == 0, not arr == empty. The 'empty' keyword
   // is recognized but the == comparison semantics differ from the original.
-  test("Empty: empty keyword in comparisons".fail) {
-    val vars = new JHashMap[String, Any]()
-    vars.put("arr", new java.util.ArrayList[Any]())
+  test("Empty: empty keyword in comparisons") {
+    val vars = new JHashMap[String, DataView]()
+    vars.put("arr", TestHelper.dv(new java.util.ArrayList[Any]()))
     assertEquals(
       Template.parse("{% if arr == empty %}yes{% endif %}").render(vars),
       "yes"
@@ -1036,9 +1041,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   Blank        : 'blank';
   // NOTE: SSG 'blank' comparison semantics differ from the original.
-  test("Blank: blank keyword in comparisons".fail) {
-    val vars = new JHashMap[String, Any]()
-    vars.put("str", "")
+  test("Blank: blank keyword in comparisons") {
+    val vars = new JHashMap[String, DataView]()
+    vars.put("str", TestHelper.dv(""))
     assertEquals(
       Template.parse("{% if str == blank %}yes{% endif %}").render(vars),
       "yes"
@@ -1093,8 +1098,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   //   Id : ( Letter | '_' | Digit ) (Letter | '_' | '-' | Digit)*;
   test("Id: standard identifier") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("fubar", "ok")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("fubar", TestHelper.dv("ok"))
     assertEquals(Template.parse("{{fubar}}").render(vars), "ok")
   }
 
@@ -1103,8 +1108,8 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // SSG lexes "3" as a number and "ubar" as a separate identifier.
   test("Id: identifier starting with digit — SSG treats leading digit as number".fail) {
     // Ruby liquid identifiers can start with a number
-    val vars = new JHashMap[String, Any]()
-    vars.put("3ubar", "ok")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("3ubar", TestHelper.dv("ok"))
     assertEquals(Template.parse("{{3ubar}}").render(vars), "ok")
   }
 

@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.util.{ Collections, LinkedHashMap }
 
 /** Gap-fill tests for array filter suites ported from liqp's:
@@ -260,10 +262,10 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
   }
 
   test("sort: sort map entries") {
-    val map = new LinkedHashMap[String, Any]()
-    map.put("World", java.lang.Integer.valueOf(2))
-    map.put("Hello", java.lang.Integer.valueOf(1))
-    val data = Collections.singletonMap[String, Any]("data", map)
+    val map = new LinkedHashMap[String, DataView]()
+    map.put("World", TestHelper.dv(java.lang.Integer.valueOf(2)))
+    map.put("Hello", TestHelper.dv(java.lang.Integer.valueOf(1)))
+    val data = Collections.singletonMap[String, DataView]("data", TestHelper.dv(map))
 
     assertEquals(
       Template.parse("{% assign sorted_data = data %}{% for e in sorted_data %}{{ e }}{% endfor %}").render(data),

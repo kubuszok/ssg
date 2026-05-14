@@ -2,7 +2,9 @@
 package ssg
 package liquid
 
-import ssg.liquid.parser.{ Flavor, Inspectable }
+import ssg.data.DataView
+
+import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
 
@@ -50,45 +52,45 @@ final class TemplateSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("render(Map): single string variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("name", "World")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("World"))
     assertEquals(Template.parse("Hello, {{ name }}!").render(vars), "Hello, World!")
   }
 
   test("render(Map): multiple variables") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("first", "John")
-    vars.put("last", "Doe")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("first", TestHelper.dv("John"))
+    vars.put("last", TestHelper.dv("Doe"))
     assertEquals(Template.parse("{{ first }} {{ last }}").render(vars), "John Doe")
   }
 
   test("render(Map): integer variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("count", java.lang.Integer.valueOf(42))
+    val vars = new JHashMap[String, DataView]()
+    vars.put("count", TestHelper.dv(java.lang.Integer.valueOf(42)))
     assertEquals(Template.parse("Count: {{ count }}").render(vars), "Count: 42")
   }
 
   test("render(Map): boolean variable") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("flag", java.lang.Boolean.TRUE)
+    val vars = new JHashMap[String, DataView]()
+    vars.put("flag", TestHelper.dv(java.lang.Boolean.TRUE))
     assertEquals(Template.parse("Flag: {{ flag }}").render(vars), "Flag: true")
   }
 
   test("render(Map): nested map variable") {
-    val vars  = new JHashMap[String, Any]()
-    val inner = new JHashMap[String, Any]()
-    inner.put("city", "London")
-    vars.put("address", inner)
+    val vars  = new JHashMap[String, DataView]()
+    val inner = new JHashMap[String, DataView]()
+    inner.put("city", TestHelper.dv("London"))
+    vars.put("address", TestHelper.dv(inner))
     assertEquals(Template.parse("{{ address.city }}").render(vars), "London")
   }
 
   test("render(Map): undefined variable renders empty") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     assertEquals(Template.parse("Hello {{ name }}!").render(vars), "Hello !")
   }
 
   test("render(Map): empty map") {
-    val vars = new JHashMap[String, Any]()
+    val vars = new JHashMap[String, DataView]()
     assertEquals(Template.parse("Static text").render(vars), "Static text")
   }
 
@@ -96,34 +98,30 @@ final class TemplateSuite extends munit.FunSuite {
   // render(Inspectable) — JVM-only (requires reflection)
   // ---------------------------------------------------------------------------
 
-  test("render(Inspectable): extracts getter fields") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
-    val data     = new TemplateSuite.NameAgeData()
+  // Converted from render(Inspectable) to render(Map) since DataView rewrite removed reflection path.
+  test("render(DataView map): extracts named fields") {
+    val data     = TestHelper.mapOf("name" -> "Alice", "age" -> 30)
     val template = Template.parse("{{ name }} is {{ age }}")
     val result   = template.render(data)
     assertEquals(result, "Alice is 30")
   }
 
-  test("render(Inspectable): public fields are accessible") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
-    // Public fields are extracted by LiquidSupportFromInspectable
-    val data     = new TemplateSuite.TitleData()
+  test("render(DataView map): property access") {
+    val data     = TestHelper.mapOf("title" -> "Engineer")
     val template = Template.parse("Title: {{ title }}")
     val result   = template.render(data)
     assertEquals(result, "Title: Engineer")
   }
 
-  test("render(Inspectable): isX boolean getters") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
-    val data     = new TemplateSuite.ActiveData()
+  test("render(DataView map): boolean value in condition") {
+    val data     = TestHelper.mapOf("active" -> true)
     val template = Template.parse("{% if active %}yes{% else %}no{% endif %}")
     val result   = template.render(data)
     assertEquals(result, "yes")
   }
 
-  test("render(Inspectable): empty Inspectable yields no variables") {
-    // This test passes on all platforms since empty map is returned on non-JVM
-    val data     = new TemplateSuite.EmptyData()
+  test("render(DataView map): empty map yields no variables") {
+    val data     = TestHelper.mapOf()
     val template = Template.parse("{{ missing }}")
     val result   = template.render(data)
     assertEquals(result, "")
@@ -159,8 +157,8 @@ final class TemplateSuite extends munit.FunSuite {
     val holder   = new Template.ContextHolder()
     val template = Template.parse("Hello {{ name }}")
     template.withContextHolder(holder)
-    val vars = new JHashMap[String, Any]()
-    vars.put("name", "World")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("World"))
     template.render(vars)
     val ctx = holder.getContext
     assert(ctx != null, "ContextHolder should have a non-null context after render")
@@ -170,11 +168,11 @@ final class TemplateSuite extends munit.FunSuite {
     val holder   = new Template.ContextHolder()
     val template = Template.parse("{{ greeting }}")
     template.withContextHolder(holder)
-    val vars = new JHashMap[String, Any]()
-    vars.put("greeting", "hi")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("greeting", TestHelper.dv("hi"))
     template.render(vars)
     val ctx = holder.getContext
-    assertEquals(ctx.get("greeting"), "hi")
+    assertEquals(ctx.get("greeting").toString, "hi")
   }
 
   test("ContextHolder: null before render") {
@@ -223,8 +221,8 @@ final class TemplateSuite extends munit.FunSuite {
 
   test("evaluateMode LAZY: variables passed through as-is") {
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.LAZY).build()
-    val vars   = new JHashMap[String, Any]()
-    vars.put("name", "Lazy")
+    val vars   = new JHashMap[String, DataView]()
+    vars.put("name", TestHelper.dv("Lazy"))
     val result = parser.parse("{{ name }}").render(vars)
     assertEquals(result, "Lazy")
   }
@@ -239,8 +237,8 @@ final class TemplateSuite extends munit.FunSuite {
     // Simple string values get introspected (not just passed through), so the
     // rendered output differs from LAZY mode for plain strings.
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
-    val vars   = new JHashMap[String, Any]()
-    vars.put("count", java.lang.Integer.valueOf(42))
+    val vars   = new JHashMap[String, DataView]()
+    vars.put("count", TestHelper.dv(java.lang.Integer.valueOf(42)))
     // Integer values get introspected — the result may differ from raw "42",
     // but the template should render without exceptions
     val result = parser.parse("rendered").render(vars)
@@ -249,10 +247,10 @@ final class TemplateSuite extends munit.FunSuite {
 
   test("evaluateMode LAZY: nested map works") {
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.LAZY).build()
-    val vars   = new JHashMap[String, Any]()
-    val inner  = new JHashMap[String, Any]()
-    inner.put("x", "deep")
-    vars.put("data", inner)
+    val vars   = new JHashMap[String, DataView]()
+    val inner  = new JHashMap[String, DataView]()
+    inner.put("x", TestHelper.dv("deep"))
+    vars.put("data", TestHelper.dv(inner))
     val result = parser.parse("{{ data.x }}").render(vars)
     assertEquals(result, "deep")
   }
@@ -315,8 +313,8 @@ final class TemplateSuite extends munit.FunSuite {
   }
 
   test("renderToObject with Map: returns renderable result") {
-    val vars = new JHashMap[String, Any]()
-    vars.put("x", "test")
+    val vars = new JHashMap[String, DataView]()
+    vars.put("x", TestHelper.dv("test"))
     val template = Template.parse("{{ x }}")
     val result   = String.valueOf(template.renderToObject(vars))
     assertEquals(result, "test")
@@ -328,10 +326,10 @@ final class TemplateSuite extends munit.FunSuite {
 
   test("template reuse: same template rendered multiple times with different vars") {
     val template = Template.parse("Hello, {{ name }}!")
-    val vars1    = new JHashMap[String, Any]()
-    vars1.put("name", "Alice")
-    val vars2 = new JHashMap[String, Any]()
-    vars2.put("name", "Bob")
+    val vars1    = new JHashMap[String, DataView]()
+    vars1.put("name", TestHelper.dv("Alice"))
+    val vars2 = new JHashMap[String, DataView]()
+    vars2.put("name", TestHelper.dv("Bob"))
     assertEquals(template.render(vars1), "Hello, Alice!")
     assertEquals(template.render(vars2), "Hello, Bob!")
   }
@@ -343,25 +341,5 @@ final class TemplateSuite extends munit.FunSuite {
   }
 }
 
-/** Test data classes for Inspectable tests.
-  *
-  * Defined as top-level classes so that getter methods are public (anonymous classes inside test methods have private members that the compiler flags as unused under -Wunused:privates).
-  */
-object TemplateSuite {
-
-  class NameAgeData extends Inspectable {
-    def getName: String = "Alice"
-    def getAge:  Int    = 30
-  }
-
-  class TitleData extends Inspectable {
-    @scala.beans.BeanProperty
-    var title: String = "Engineer"
-  }
-
-  class ActiveData extends Inspectable {
-    def isActive: Boolean = true
-  }
-
-  class EmptyData extends Inspectable
-}
+// DataView rewrite: Inspectable-based test data classes removed.
+// Tests now use TestHelper.mapOf() directly.

@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Remove extends Filter {
 
   /*
@@ -23,12 +25,12 @@ class Remove extends Filter {
    *
    * remove a substring
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val original = asString(value, context)
     val needle   = get(0, params)
-    if (needle == null) {
+    if (needle.isNull) {
       throw new RuntimeException("invalid pattern: " + needle)
     }
-    original.replace(String.valueOf(needle), "")
+    DataView.from(original.replace(asString(needle, context), ""))
   }
 }

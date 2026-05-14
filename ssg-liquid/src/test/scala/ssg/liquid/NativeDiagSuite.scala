@@ -2,10 +2,12 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 /** Diagnostic suite — verifies cross-platform correctness with lenient assertions. */
 final class NativeDiagSuite extends munit.FunSuite {
 
-  private def assertRendered(label: String, template: String, expected: String, vars: java.util.HashMap[String, Any] = new java.util.HashMap[String, Any]()): Unit =
+  private def assertRendered(label: String, template: String, expected: String, vars: java.util.HashMap[String, DataView] = new java.util.HashMap[String, DataView]()): Unit =
     try {
       val result = Template.parse(template).render(vars)
       assertEquals(result, expected, s"$label failed")
@@ -19,14 +21,14 @@ final class NativeDiagSuite extends munit.FunSuite {
   }
 
   test("diag: strip_html script tag") {
-    val m = new java.util.HashMap[String, Any]()
-    m.put("html", "<script>x</script>text")
+    val m = new java.util.HashMap[String, DataView]()
+    m.put("html", TestHelper.dv("<script>x</script>text"))
     assertRendered("strip_html script", "{{ html | strip_html }}", "text", m)
   }
 
   test("diag: strip_html style tag") {
-    val m = new java.util.HashMap[String, Any]()
-    m.put("html", "<style>x</style>text")
+    val m = new java.util.HashMap[String, DataView]()
+    m.put("html", TestHelper.dv("<style>x</style>text"))
     assertRendered("strip_html style", "{{ html | strip_html }}", "text", m)
   }
 

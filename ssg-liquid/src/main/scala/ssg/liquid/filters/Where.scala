@@ -34,6 +34,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 import ssg.liquid.filters.where.{ JekyllWhereImpl, LiquidWhereImpl, PropertyResolverHelper, WhereImpl }
 
 /** Filters an array of objects by a property value.
@@ -42,7 +44,7 @@ import ssg.liquid.filters.where.{ JekyllWhereImpl, LiquidWhereImpl, PropertyReso
   */
 class Where extends Filter("where") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
     val delegate: WhereImpl =
       if (context.parser.liquidStyleWhere) {
         checkParams(params, 1, 2)

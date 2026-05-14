@@ -17,44 +17,31 @@ package liquid
 package filters
 
 import ssg.data.DataView
-import ssg.liquid.parser.Inspectable
 
-import java.util.{ ArrayList, Map => JMap }
+import scala.collection.immutable.VectorMap
 
-/** Liquid "map" filter — extracts a property from each element of an array.
-  *
-  * Renamed to MapFilter to avoid conflict with scala.collection.Map.
-  */
+/** Liquid "map" filter — extracts a property from each element of an array. */
 class MapFilter extends Filter("map") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
-    val effectiveValue = value match {
-      case dv: DataView => DataViewBridge.unwrap(dv)
-      case other => other
-    }
-    if (effectiveValue == null) {
-      ""
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
+    if (value.isNull) {
+      DataView.from("")
     } else {
-      val list  = new ArrayList[Any]()
-      val array = asArray(effectiveValue, context)
-      val key   = asString(get(0, params), context)
-
-      for (obj <- array) {
-        val map: JMap[?, ?] = obj match {
-          case dv: DataView =>
-            DataViewBridge.unwrapMap(dv.asMap.getOrElse(scala.collection.immutable.VectorMap.empty))
-          case insp: Inspectable =>
-            val evaluated = context.parser.evaluate(insp)
-            evaluated.toLiquid()
-          case m: JMap[?, ?] => m
-          case _ => obj.asInstanceOf[JMap[?, ?]]
-        }
-        val v = map.get(key)
-        if (v != null) {
-          list.add(v)
-        }
+      val array = value.view match {
+        case _: VectorMap[?, ?] => Vector(value)
+        case _ => asArray(value, context)
       }
-      list.toArray(new Array[AnyRef](list.size()))
+      val key = asString(get(0, params), context)
+
+      val result = array.flatMap { dv =>
+        if (dv.isNull) None
+        else
+          dv.view match {
+            case m: VectorMap[?, ?] =>
+              m.asInstanceOf[VectorMap[String, DataView]].get(key)
+            case _ => None
+          }
+      }
+      DataView.from(result)
     }
-  }
 }

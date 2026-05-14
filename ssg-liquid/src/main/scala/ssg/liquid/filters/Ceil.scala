@@ -16,13 +16,15 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 /** Liquid "ceil" filter — rounds up to the nearest integer. */
 class Ceil extends Filter {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (!isNumber(value)) {
       value
     } else {
-      Math.ceil(asNumber(value).doubleValue()).toLong
+      DataView.from(Math.ceil(asNumber(value).doubleValue()).toLong)
     }
 }

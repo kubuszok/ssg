@@ -6,10 +6,6 @@
  * Original: Copyright (c) 2012 Bart Kiers, 2022 Vasyl Khrystiuk
  * Original license: MIT
  *
- * Migration notes:
- *   Renames: liqp.blocks → ssg.liquid.blocks
- *   Idiom: Inner class → companion object class
- *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/blocks/Cycle.java
  * Covenant-verified: 2026-04-26
@@ -20,27 +16,31 @@ package ssg
 package liquid
 package blocks
 
+import ssg.data.DataView
 import ssg.liquid.nodes.LNode
 
 import java.util.{ ArrayList, List => JList, Map => JMap }
 
-/** Cycle is usually used within a loop to alternate between values, like colors or DOM classes. */
 class Cycle extends Block {
 
-  override def render(context: TemplateContext, nodes: Array[LNode]): Any = {
-    // collect all the variants to the list first
-    val elements = new ArrayList[Any]()
+  override def render(context: TemplateContext, nodes: Array[LNode]): DataView = {
+    val elements = new ArrayList[DataView]()
     var i        = 1
     while (i < nodes.length) {
       elements.add(nodes(i).render(context))
       i += 1
     }
 
-    // The group-name is either the first token-expression, or if that is
-    // null (indicating there is no name), give it the name as stringified parameters
     val groupName =
-      if (nodes(0) == null) asString(elements, context)
-      else asString(nodes(0).render(context), context)
+      if (nodes(0) == null) {
+        val sb = new StringBuilder()
+        var j  = 0
+        while (j < elements.size()) {
+          sb.append(asString(elements.get(j), context))
+          j += 1
+        }
+        sb.toString()
+      } else asString(nodes(0).render(context), context)
 
     val cycleRegistry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_CYCLE)
 
@@ -61,9 +61,9 @@ object Cycle {
   final private class CycleGroup(private val sizeFirstCycle: Int) {
     private var currentIndex: Int = 0
 
-    def next(elements: JList[Any]): Any = {
+    def next(elements: JList[DataView]): DataView = {
       val obj =
-        if (currentIndex >= elements.size()) ""
+        if (currentIndex >= elements.size()) DataView.from("")
         else elements.get(currentIndex)
 
       currentIndex += 1

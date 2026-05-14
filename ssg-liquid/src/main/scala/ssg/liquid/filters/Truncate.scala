@@ -16,6 +16,8 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
+
 class Truncate extends Filter {
 
   /*
@@ -23,9 +25,9 @@ class Truncate extends Filter {
    *
    * Truncate a string down to x characters
    */
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
+  override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView =
     if (value == null) {
-      ""
+      DataView.from("")
     } else {
       val text           = asString(value, context)
       var length         = 50
@@ -41,16 +43,16 @@ class Truncate extends Filter {
 
       // If the entire string fits untruncated, return the string.
       if (length >= text.length()) {
-        text
+        DataView.from(text)
       }
       // If the 'marker' takes up all the space, output the marker (even if
       // it's longer than the requested length).
       else if (truncateString.length() >= length) {
-        truncateString
+        DataView.from(truncateString)
       } else {
         // Otherwise, output as much text as will fit.
         val remainingChars = length - truncateString.length()
-        text.substring(0, remainingChars) + truncateString
+        DataView.from(text.substring(0, remainingChars) + truncateString)
       }
     }
 }

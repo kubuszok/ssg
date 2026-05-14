@@ -19,6 +19,8 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
+
 import java.util.{ List => JList }
 
 class InsertionNode(
@@ -40,6 +42,6 @@ class InsertionNode(
     throw new IllegalArgumentException("no tag available named: " + tagName)
   }
 
-  override def render(context: TemplateContext): Any =
+  override def render(context: TemplateContext): DataView =
     insertion.render(context, tokens)
 }

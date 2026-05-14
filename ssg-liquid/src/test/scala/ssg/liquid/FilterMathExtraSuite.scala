@@ -2,6 +2,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 import java.time.{ LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime }
 import java.util.Collections
 
@@ -41,7 +43,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   )
 
   test("append: append to date type") {
-    val data = Collections.singletonMap[String, Any]("a", testTime)
+    val data = Collections.singletonMap[String, DataView]("a", TestHelper.dv(testTime))
     val res  = Template.parse("{{ a | append: '!' }}").render(data)
     assertEquals(res, "2007-11-01 15:25:00 +0900!")
 
@@ -49,9 +51,8 @@ final class FilterMathExtraSuite extends munit.FunSuite {
     assertEquals(res2, "!2007-11-01 15:25:00 +0900")
   }
 
-  // SSG: EAGER evaluate mode date handling differs
-  test("append: append to date type eager".fail) {
-    val data   = Collections.singletonMap[String, Any]("a", testTime)
+  test("append: append to date type eager") {
+    val data   = Collections.singletonMap[String, DataView]("a", TestHelper.dv(testTime))
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
     val res    = parser.parse("{{ '!' | append: a }}").render(data)
     assertEquals(res, "!2007-11-01 15:25:00 +0900")
@@ -63,7 +64,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   // SSG: LocalDateTime formatting with timezone offset differs
   test("append: append to date type with default timezone set".fail) {
     val time   = LocalDateTime.of(2020, 1, 1, 12, 59, 59, 999)
-    val data   = Collections.singletonMap[String, Any]("a", time)
+    val data   = Collections.singletonMap[String, DataView]("a", TestHelper.dv(time))
     val tz     = ZoneId.ofOffset("UTC", ZoneOffset.ofHours(-5))
     val parser = new TemplateParser.Builder().withDefaultTimeZone(tz).build()
     val res    = parser.parse("{{ '!' | append: a }}").render(data)
@@ -133,7 +134,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   }
 
   test("minus: minus with date returns number") {
-    val data = Collections.singletonMap[String, Any]("a", LocalDateTime.now())
+    val data = Collections.singletonMap[String, DataView]("a", TestHelper.dv(LocalDateTime.now()))
     val res  = Template.parse("{{ a | minus: 1 }}").render(data)
     assertEquals(res, "-1")
   }

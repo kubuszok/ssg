@@ -19,6 +19,8 @@
 package ssg
 package liquid
 
+import ssg.data.DataView
+
 /** The default RenderTransformer.
   *
   * Objects are converted to CharSequence, and appended to a StringBuilder where necessary. The resulting object is always transformed to String.
@@ -28,8 +30,8 @@ object RenderTransformerDefaultImpl extends RenderTransformer {
   override def newObjectAppender(context: TemplateContext, estimatedNumberOfAppends: Int): RenderTransformer.ObjectAppender.Controller =
     new DefaultController(context)
 
-  override def transformObject(context: TemplateContext, obj: Any): Any =
-    String.valueOf(obj)
+  override def transformObject(context: TemplateContext, obj: DataView): DataView =
+    DataView.from(obj.toString)
 
   final private class DefaultController(context: TemplateContext) extends RenderTransformer.ObjectAppender.Controller {
     private var result: CharSequence  = ""
@@ -38,7 +40,7 @@ object RenderTransformerDefaultImpl extends RenderTransformer {
 
     override def getResult: Any = {
       checkLength()
-      RenderTransformerDefaultImpl.transformObject(context, result)
+      result.toString
     }
 
     override def append(obj: Any): Unit =
