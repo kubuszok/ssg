@@ -75,6 +75,9 @@ class For extends Block {
     val from  = attributes.get(For.OFFSET).intValue()
     val limit = attributes.get(For.LIMIT).intValue()
 
+    if (data.isInstanceOf[ssg.data.DataView]) {
+      data = DataViewBridge.unwrap(data.asInstanceOf[ssg.data.DataView])
+    }
     if (data.isInstanceOf[parser.Inspectable]) {
       val evaluated = context.parser.evaluate(data)
       data = evaluated.toLiquid()
