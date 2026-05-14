@@ -20,6 +20,7 @@ package ssg
 package liquid
 package nodes
 
+import ssg.data.DataView
 import ssg.liquid.exceptions.VariableNotExistException
 import ssg.liquid.parser.{ Inspectable, LiquidSupport }
 
@@ -59,6 +60,10 @@ class LookupNode(private val id: String) extends LNode {
     while (i < indexes.size()) {
       value = indexes.get(i).get(value, context)
       i += 1
+    }
+
+    if (value.isInstanceOf[DataView]) {
+      value = DataViewBridge.unwrap(value.asInstanceOf[DataView])
     }
 
     if (value == null && context.parser.strictVariables) {
@@ -109,6 +114,10 @@ object LookupNode {
         break(null)
       }
 
+      if (value.isInstanceOf[DataView]) {
+        break(getFromDataView(value.asInstanceOf[DataView], context))
+      }
+
       if (hash == "size") {
         value match {
           case col: JCollection[?] => break(col.size())
@@ -147,6 +156,33 @@ object LookupNode {
           map.get(hash)
         case ctx: TemplateContext =>
           ctx.get(hash)
+        case _ =>
+          null
+      }
+    }
+
+    private def getFromDataView(dv: DataView, context: TemplateContext): Any = {
+      if (dv.isNull) return null
+      dv.view match {
+        case m: scala.collection.immutable.VectorMap[?, ?] =>
+          val map = m.asInstanceOf[scala.collection.immutable.VectorMap[String, DataView]]
+          if (hash == "size") {
+            if (map.contains(hash)) DataViewBridge.unwrap(map(hash))
+            else map.size
+          } else {
+            map.get(hash) match {
+              case Some(inner) => DataViewBridge.unwrap(inner)
+              case None        => null
+            }
+          }
+        case v: Vector[?] =>
+          val vec = v.asInstanceOf[Vector[DataView]]
+          hash match {
+            case "size"  => vec.size
+            case "first" => if (vec.isEmpty) null else DataViewBridge.unwrap(vec.head)
+            case "last"  => if (vec.isEmpty) null else DataViewBridge.unwrap(vec.last)
+            case _       => null
+          }
         case _ =>
           null
       }

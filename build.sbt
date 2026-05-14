@@ -3,6 +3,7 @@ ThisBuild / version      := "0.1.0-SNAPSHOT"
 
 val treeSitterProvidersVersion = "0.1.0"
 val multiarchCoreVersion       = "0.2.0"
+val hearthVersion              = "0.3.0-29-g05da355-SNAPSHOT"
 ThisBuild / resolvers += "Maven Central Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
 
 // --- Common utilities (cross-platform abstractions) ---
@@ -17,6 +18,25 @@ val `ssg-commons` = (projectMatrix in file("ssg-commons"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
+// --- Data view abstractions (shared) ---
+
+val `ssg-data-commons` = (projectMatrix in file("ssg-data-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-data-commons",
+    libraryDependencies ++= Seq(
+      "com.kubuszok"  %%% "hearth"            % hearthVersion,
+      "org.scalameta" %%% "munit"             % SsgSettings.versions.munit % Test,
+      "org.scalameta" %%% "munit-scalacheck"  % SsgSettings.versions.munitScalacheck % Test
+    ),
+    libraryDependencies += compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % hearthVersion)
+  )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -69,7 +89,7 @@ val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "org.scalameta"      %%% "munit-scalacheck"   % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
     libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
@@ -233,7 +253,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-commons`, `ssg-graphs-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-graphviz`, `ssg-highlight`)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-graphviz`, `ssg-highlight`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -242,21 +262,21 @@ val ssg = (projectMatrix in file("ssg"))
 
 addCommandAlias("test-jvm",
   List(
-    "ssg-graphs-commons/test", "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
+    "ssg-data-commons/test", "ssg-graphs-commons/test", "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
     "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-mermaid/test", "ssg-graphviz/test", "ssg-highlight/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-js",
   List(
-    "ssg-graphs-commonsJS/test", "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
+    "ssg-data-commonsJS/test", "ssg-graphs-commonsJS/test", "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
     "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-mermaidJS/test", "ssg-graphvizJS/test", "ssg-highlightJS/test"
   ).mkString("; ")
 )
 
 addCommandAlias("test-native",
   List(
-    "ssg-graphs-commonsNative/test", "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
+    "ssg-data-commonsNative/test", "ssg-graphs-commonsNative/test", "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
     "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-mermaidNative/test", "ssg-graphvizNative/test", "ssg-highlightNative/test"
   ).mkString("; ")
 )

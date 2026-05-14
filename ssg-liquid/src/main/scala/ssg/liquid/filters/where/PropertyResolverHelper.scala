@@ -22,6 +22,7 @@ package liquid
 package filters
 package where
 
+import ssg.data.DataView
 import ssg.liquid.parser.Inspectable
 
 import java.util.{ ArrayList, Map => JMap }
@@ -54,6 +55,24 @@ object PropertyResolverHelper {
 
   val INSTANCE: PropertyResolverHelper = {
     val helper = new PropertyResolverHelper()
+
+    helper.add(
+      new PropertyResolverAdapter {
+        private val lValue:                                                                LValue = new LValue {}
+        override def getItemProperty(context: TemplateContext, input: Any, property: Any): Any    = {
+          val dv  = input.asInstanceOf[DataView]
+          val key = lValue.asString(property, context)
+          dv.asMap.fold(null: Any) { m =>
+            m.get(key) match {
+              case Some(inner) => DataViewBridge.unwrap(inner)
+              case None        => null
+            }
+          }
+        }
+        override def support(target: Any): Boolean =
+          target.isInstanceOf[DataView]
+      }
+    )
 
     // default resolver for Inspectable type
     // allow Inspectable items to be inspected via "where" filter

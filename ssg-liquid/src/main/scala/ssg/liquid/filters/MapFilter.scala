@@ -16,6 +16,7 @@ package ssg
 package liquid
 package filters
 
+import ssg.data.DataView
 import ssg.liquid.parser.Inspectable
 
 import java.util.{ ArrayList, Map => JMap }
@@ -26,16 +27,22 @@ import java.util.{ ArrayList, Map => JMap }
   */
 class MapFilter extends Filter("map") {
 
-  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any =
-    if (value == null) {
+  override def apply(value: Any, context: TemplateContext, params: Array[Any]): Any = {
+    val effectiveValue = value match {
+      case dv: DataView => DataViewBridge.unwrap(dv)
+      case other => other
+    }
+    if (effectiveValue == null) {
       ""
     } else {
       val list  = new ArrayList[Any]()
-      val array = asArray(value, context)
+      val array = asArray(effectiveValue, context)
       val key   = asString(get(0, params), context)
 
       for (obj <- array) {
         val map: JMap[?, ?] = obj match {
+          case dv: DataView =>
+            DataViewBridge.unwrapMap(dv.asMap.getOrElse(scala.collection.immutable.VectorMap.empty))
           case insp: Inspectable =>
             val evaluated = context.parser.evaluate(insp)
             evaluated.toLiquid()
@@ -49,4 +56,5 @@ class MapFilter extends Filter("map") {
       }
       list.toArray(new Array[AnyRef](list.size()))
     }
+  }
 }
