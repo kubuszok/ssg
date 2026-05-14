@@ -57,7 +57,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testLookupNode1c: SuppPojo with default rendering → "SuppChild"
   test("lookupNode 1c: SuppPojo with default rendering returns SuppChild") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     assertOldRender("{{foo.child.val}}", getDataAsFoo(new SuppPojo()), "SuppChild")
   }
 
@@ -77,7 +76,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testLookupNode2c: SuppPojo with eager rendering → "SuppChild"
   test("lookupNode 2c: SuppPojo with eager rendering returns SuppChild") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     assertEagerRender("{{foo.child.val}}", getDataAsFoo(new SuppPojo()), "SuppChild")
   }
 
@@ -123,7 +121,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testMapFilter2c: SuppPojo with map filter in eager mode → "SuppChild"
   test("mapFilter 2c: SuppPojo with eager map filter returns SuppChild") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     assertEagerRender("{{ foo | map: 'child' | map: 'val' }}", getDataAsFoo(new SuppPojo()), "SuppChild")
   }
 
@@ -146,7 +143,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testLookupNodeSize1c: SuppPojo.child.size with default rendering → "1"
   test("lookupNodeSize 1c: SuppPojo child size with default returns 1") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     assertOldRender("{{foo.child.size}}", getDataAsFoo(new SuppPojo()), "1")
   }
 
@@ -166,7 +162,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testLookupNodeSize2c: SuppPojo.child.size with eager rendering → "1"
   test("lookupNodeSize 2c: SuppPojo child size with eager returns 1") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     assertEagerRender("{{foo.child.size}}", getDataAsFoo(new SuppPojo()), "1")
   }
 
@@ -207,7 +202,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // testLiquidSupport: Target with LiquidSupport returns "OK" regardless of set value
   test("testLiquidSupport: LiquidSupport target renders toLiquid value") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     val inspect = new Target()
     inspect.setVal("not this")
     val vars = new JHashMap[String, Any]()
@@ -218,7 +212,6 @@ final class LiquidSupportSuite extends munit.FunSuite {
 
   // renderLiquidSupportWithNewRenderingSettings: Target with eager rendering → "OK"
   test("renderLiquidSupportWithNewRenderingSettings: eager mode also uses toLiquid") {
-    assume(PlatformCompat.supportsReflection, "Inspectable requires reflection (JVM-only)")
     val inspect = new Target()
     inspect.setVal("not this")
     val vars = new JHashMap[String, Any]()
