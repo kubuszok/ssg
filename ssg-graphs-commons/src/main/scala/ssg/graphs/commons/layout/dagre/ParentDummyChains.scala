@@ -22,7 +22,7 @@ package dagre
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.layout.graph.Graph
 
 object ParentDummyChains {

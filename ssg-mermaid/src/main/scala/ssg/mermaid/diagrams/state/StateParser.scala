@@ -20,7 +20,7 @@ package mermaid
 package diagrams
 package state
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.mermaid.parse.{ ParseException, Scanner }
 
 import scala.util.boundary

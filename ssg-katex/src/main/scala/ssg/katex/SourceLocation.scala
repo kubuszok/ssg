@@ -15,7 +15,7 @@ package katex
 
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Lexing or parsing positional information for error reporting. This object is immutable.
   */

@@ -25,7 +25,7 @@ package parse
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.data.{ Measurement, Symbols }
 
 // ParseNode's corresponding to Symbol `Group`s in symbols.ts.

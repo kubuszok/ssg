@@ -18,7 +18,7 @@
 package ssg
 package mermaid
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.svg.SvgBuilder
 
 /** Accessibility (a11y) functions, types, helpers.

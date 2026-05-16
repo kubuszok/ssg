@@ -20,7 +20,7 @@ package mermaid
 package render
 package edges
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.layout.dagre.Point
 import ssg.graphs.commons.render.Curves
 import ssg.graphs.commons.svg.{ PathData, SvgBuilder }

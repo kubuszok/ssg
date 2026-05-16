@@ -20,7 +20,7 @@ package ssg
 package katex
 package parse
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.{ ParseError, Settings, Token }
 
 /** Provides a single function for parsing an expression using a Parser.

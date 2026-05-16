@@ -22,7 +22,7 @@ import scala.util.boundary
 import scala.util.boundary.break
 import scala.util.matching.Regex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 trait SettingsLike {
   def reportNonstrict(errorCode: String, errorMsg: String): Unit

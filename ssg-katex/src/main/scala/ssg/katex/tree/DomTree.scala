@@ -33,7 +33,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.LinkedHashMap
 import scala.util.matching.Regex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.ParseError
 import ssg.katex.data.{ SvgGeometry, UnicodeScripts, Units }
 import ssg.katex.util.Utils

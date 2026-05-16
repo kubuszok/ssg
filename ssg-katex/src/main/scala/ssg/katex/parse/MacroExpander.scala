@@ -24,7 +24,7 @@ import scala.collection.mutable
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.{ MacroArg, MacroContextInterface, MacroDefinition, MacroExpansion, Mode, Namespace, ParseError, Settings, SourceLocation, Token }
 import ssg.katex.data.Symbols
 import ssg.katex.functions.FunctionDef

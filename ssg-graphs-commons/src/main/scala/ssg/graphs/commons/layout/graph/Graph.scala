@@ -33,7 +33,7 @@ package graph
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** A directed multigraph with compound graph (parent/child) support.
   *

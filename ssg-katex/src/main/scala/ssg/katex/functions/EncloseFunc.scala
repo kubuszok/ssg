@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML, Stretchy, VListElemAndShift, VListParam }
 import ssg.katex.data.{ Measurement, SvgGeometry, Units }
 import ssg.katex.parse._

@@ -25,7 +25,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 - **Braces required** (`-no-indent`): `{}` for all `trait`, `class`, `enum`, method defs
 - **Split packages**: `package ssg` / `package md` / `package core` (never flat)
 - **No `return`**: use `scala.util.boundary`/`break`
-- **No `null`**: use `Nullable[A]` opaque type. **Never use `orNull`** except at Java interop boundaries (requires `@nowarn` + comment)
+- **No `null`**: use `Nullable[A]` opaque type (from `lowlevel.Nullable` in lls). **Never use `orNull`** except at Java interop boundaries (requires `@nowarn` + comment)
 - **No comment removal**: preserve all original comments
 - **No `scala.Enumeration`**: use Scala 3 `enum`, preferably `extends java.lang.Enum`
 - **Case classes must be `final`**: all `case class` declarations require `final`
@@ -40,7 +40,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 
 | Directory | Purpose |
 |-----------|---------|
-| `ssg-commons/` | Shared cross-platform utilities |
+| `ssg-commons/` | Shared cross-platform utilities. Depends on [lls](https://github.com/kubuszok/lls) for `lowlevel.*` types (Nullable, MkArray, ArrayView, collections). |
 | `ssg-graphs-commons/` | Shared graph layout + SVG infrastructure (dagre, spring, circular, radial) |
 | `ssg-md/` | Markdown engine (flexmark-java port) |
 | `ssg-liquid/` | Liquid template engine (liqp port) |

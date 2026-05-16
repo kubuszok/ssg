@@ -20,7 +20,7 @@ package data
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Each script or script family has a name and an array of blocks. Each block is an array of two numbers which specify the start and end points (inclusive) of a block of Unicode codepoints.
   */

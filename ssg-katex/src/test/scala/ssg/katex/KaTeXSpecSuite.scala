@@ -13,7 +13,7 @@ package katex
 import scala.collection.mutable
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildMathML, BuildTree }
 import ssg.katex.parse.{ ParseNodeText, ParseTree }
 import ssg.katex.tree.DomSpan

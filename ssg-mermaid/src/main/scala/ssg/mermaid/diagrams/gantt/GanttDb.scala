@@ -20,7 +20,7 @@ package mermaid
 package diagrams
 package gantt
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

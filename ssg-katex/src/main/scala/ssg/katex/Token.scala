@@ -15,7 +15,7 @@ package katex
 
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** The resulting token returned from `lex`.
   *

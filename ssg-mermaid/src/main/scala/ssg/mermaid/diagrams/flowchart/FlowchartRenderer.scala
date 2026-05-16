@@ -20,7 +20,7 @@ package mermaid
 package diagrams
 package flowchart
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph

@@ -1,6 +1,7 @@
 ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
+val llsVersion                 = "99e8f4be1069fc69313f9055deec6e68b0c40cf6-SNAPSHOT"
 val treeSitterProvidersVersion = "0.1.0"
 val multiarchCoreVersion       = "0.2.0"
 val hearthVersion              = "0.3.0-29-g05da355-SNAPSHOT"
@@ -14,6 +15,7 @@ val `ssg-commons` = (projectMatrix in file("ssg-commons"))
   .settings(
     name := "ssg-commons",
     libraryDependencies ++= Seq(
+      "com.kubuszok"  %%% "lls"              % llsVersion,
       "org.scalameta" %%% "munit"            % "1.2.3" % Test,
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )

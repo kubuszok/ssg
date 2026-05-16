@@ -17,7 +17,7 @@ package commons
 package layout
 package dagre
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.layout.graph.Graph
 
 object DagreLayout {
