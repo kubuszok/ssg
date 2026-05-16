@@ -18,7 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.BuildCommon
 import ssg.katex.data.Units
 import ssg.katex.parse._

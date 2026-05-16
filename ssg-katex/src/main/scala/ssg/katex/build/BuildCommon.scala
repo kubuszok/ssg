@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.data.{ CharacterMetrics, FontMetrics, Measurement, Symbols, Units, WideCharacter }
 import ssg.katex.parse.AnyParseNode
 import ssg.katex.tree.{ Anchor, CssStyle, DocumentFragment, DomSpan, DomTree, HtmlDocumentFragment, HtmlDomNode, PathNode, Span, SvgChildNode, SvgNode, SvgSpan, SymbolNode, VirtualNode }

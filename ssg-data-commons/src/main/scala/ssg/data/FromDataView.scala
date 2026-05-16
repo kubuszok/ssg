@@ -5,7 +5,7 @@
 package ssg
 package data
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 trait FromDataView[A] {
 

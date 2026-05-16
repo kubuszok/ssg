@@ -26,7 +26,7 @@ import scala.collection.mutable
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Graph algorithms operating on [[Graph]] instances.
   *

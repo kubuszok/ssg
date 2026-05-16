@@ -18,7 +18,7 @@ import scala.util.boundary.break
 import munit.Assertions.*
 import munit.FunSuite
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.parse.{ AnyParseNode, ParseTree }
 import ssg.katex.tree.{ DomSpan, HtmlDomNode, Span }
 

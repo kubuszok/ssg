@@ -26,7 +26,7 @@ package environments
 
 import scala.collection.mutable.ArrayBuffer
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML, VListElemAndShift, VListParam }
 import ssg.katex.data.{ Measurement, Units }
 import ssg.katex.functions.{ FunctionDef, FunctionDefSpec, FunctionPropSpec, HtmlBuilder, MathMLBuilder }

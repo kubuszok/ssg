@@ -22,7 +22,7 @@
 package ssg
 package katex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildCommon, BuildTree }
 import ssg.katex.data.Macros
 import ssg.katex.environments.Environments

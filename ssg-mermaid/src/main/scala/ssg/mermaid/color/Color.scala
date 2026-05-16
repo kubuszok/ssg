@@ -19,7 +19,7 @@ package ssg
 package mermaid
 package color
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 import scala.util.boundary
 import scala.util.boundary.break

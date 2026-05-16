@@ -22,7 +22,7 @@ package mermaid
 package diagrams
 package sequence
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.mermaid.{ MermaidConfig, SequenceConfig }
 import ssg.mermaid.render.text.TextMetrics
 import ssg.graphs.commons.svg.SvgBuilder

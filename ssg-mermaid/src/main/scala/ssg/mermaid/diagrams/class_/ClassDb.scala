@@ -22,7 +22,7 @@ package mermaid
 package diagrams
 package class_
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 import scala.collection.mutable
 import scala.util.boundary

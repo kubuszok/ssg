@@ -15,7 +15,7 @@ package ssg
 package katex
 package functions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildHTML, BuildMathML }
 import ssg.katex.parse._
 import ssg.katex.util.{ Utils => KatexUtils }

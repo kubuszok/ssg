@@ -19,7 +19,7 @@ package graphs
 package commons
 package svg
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 import scala.collection.mutable.{ ArrayBuffer, LinkedHashMap }
 

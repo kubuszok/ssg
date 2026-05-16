@@ -23,7 +23,7 @@ package katex
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Public-facing options for the KaTeX rendering API.
   *

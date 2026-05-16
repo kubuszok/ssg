@@ -21,7 +21,7 @@ import scala.collection.mutable
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.layout.graph.{ EdgeObj, Graph, GraphAlgorithms }
 
 object Rank {

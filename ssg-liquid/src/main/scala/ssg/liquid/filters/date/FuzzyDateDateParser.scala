@@ -25,7 +25,7 @@ package liquid
 package filters
 package date
 
-import ssg.liquid.Nullable
+import lowlevel.Nullable
 
 import java.time.{ ZoneId, ZonedDateTime }
 import java.util.{ ArrayList, Locale }

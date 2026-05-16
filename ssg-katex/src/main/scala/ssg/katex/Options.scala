@@ -21,7 +21,7 @@
 package ssg
 package katex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.data.{ FontMetrics, OptionsLike }
 
 // In these types, "" (empty string) means "no change".

@@ -15,7 +15,7 @@
 package ssg
 package katex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** This is the ParseError class, which is the main error thrown by KaTeX functions when something has gone wrong. This is used to distinguish internal errors from errors in the expression that the
   * user provided.

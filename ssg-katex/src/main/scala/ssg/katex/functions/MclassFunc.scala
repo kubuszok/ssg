@@ -17,7 +17,7 @@ package functions
 
 import scala.collection.mutable.ArrayBuffer
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.parse._
 import ssg.katex.tree.MathNode

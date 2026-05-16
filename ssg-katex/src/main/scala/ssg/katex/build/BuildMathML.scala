@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.ParseError
 import ssg.katex.data.{ FontMetrics, Symbols }
 import ssg.katex.functions.FunctionDef

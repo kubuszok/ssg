@@ -19,7 +19,7 @@ import scala.util.boundary
 import scala.util.boundary.break
 import scala.util.matching.Regex
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.parse.AnyParseNode
 
 /** This file contains a list of utility functions which are useful in other files.

@@ -42,7 +42,7 @@ import scala.collection.mutable.LinkedHashMap
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.ParseError
 import ssg.katex.data.{ CharacterMetrics, FontMetrics, FontMetricsData, SvgGeometry, Symbols, Units }
 import ssg.katex.tree.{ DomSpan, HtmlDomNode, PathNode, SvgChildNode, SvgNode, SvgSpan, SymbolNode }

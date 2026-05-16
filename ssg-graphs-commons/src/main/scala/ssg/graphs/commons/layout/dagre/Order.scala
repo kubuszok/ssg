@@ -18,7 +18,7 @@ package dagre
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.layout.graph.{ EdgeObj, Graph }
 
 object Order {

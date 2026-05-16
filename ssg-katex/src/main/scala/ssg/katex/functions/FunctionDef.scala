@@ -24,7 +24,7 @@ package functions
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.parse.AnyParseNode
 
 // Forward-declare placeholder traits for types not yet ported.

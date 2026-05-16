@@ -21,7 +21,7 @@ import scala.util.matching.Regex
 
 import scala.language.implicitConversions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML, Stretchy, VListChild, VListElem, VListKern, VListParam }
 import ssg.katex.data.Units
 import ssg.katex.parse._

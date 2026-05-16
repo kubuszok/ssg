@@ -15,7 +15,7 @@ package ssg
 package katex
 package data
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Accent entry containing the text mode LaTeX command and optionally the math mode LaTeX command.
   */

@@ -23,7 +23,7 @@ package environments
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.parse.AnyParseNode
 import ssg.katex.functions.{ FunctionDef, HtmlBuilder, MathMLBuilder }
 
