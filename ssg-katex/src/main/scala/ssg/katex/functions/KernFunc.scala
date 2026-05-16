@@ -14,7 +14,7 @@ package ssg
 package katex
 package functions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.StrictSetting
 import ssg.katex.build.BuildCommon
 import ssg.katex.data.Units

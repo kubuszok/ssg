@@ -18,7 +18,7 @@
 package ssg
 package mermaid
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Top-level Mermaid configuration.
   *

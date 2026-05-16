@@ -19,7 +19,7 @@ package mermaid
 package render
 package edges
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Configuration for rendering an edge (connection between nodes).
   *

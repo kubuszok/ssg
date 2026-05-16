@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.{ ParseError, StrictSetting }
 import ssg.katex.build.{ BuildCommon, BuildHTML, BuildMathML }
 import ssg.katex.parse._

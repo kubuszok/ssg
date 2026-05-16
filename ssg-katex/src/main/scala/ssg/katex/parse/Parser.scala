@@ -49,7 +49,7 @@ import scala.collection.mutable
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.{ BreakToken, Mode, ParseError, Settings, SourceLocation, Token }
 import ssg.katex.data.{ Measurement, Symbols, UnicodeAccents, UnicodeScripts, UnicodeSupOrSub, UnicodeSymbols, Units }
 import ssg.katex.functions.{ FunctionContext, FunctionDef, FunctionSpec }

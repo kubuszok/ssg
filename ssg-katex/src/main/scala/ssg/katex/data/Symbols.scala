@@ -28,7 +28,7 @@ package ssg
 package katex
 package data
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Symbol info: font, group, and optional replacement character.
   */

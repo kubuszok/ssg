@@ -26,7 +26,7 @@ import scala.collection.mutable.LinkedHashMap
 import scala.util.boundary
 import scala.util.boundary.break
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.data.Units
 import ssg.katex.parse.AnyParseNode
 import ssg.katex.tree.{ HtmlDomNode, LineNode, MathDomNode, MathNode, PathNode, SvgChildNode, SvgNode, TextNode }

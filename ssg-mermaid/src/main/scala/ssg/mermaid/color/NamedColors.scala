@@ -19,7 +19,7 @@ package ssg
 package mermaid
 package color
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** CSS named color lookup.
   *

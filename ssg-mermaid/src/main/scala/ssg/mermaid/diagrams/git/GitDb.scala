@@ -20,7 +20,7 @@ package mermaid
 package diagrams
 package git
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 import scala.collection.mutable
 

@@ -15,7 +15,7 @@ package ssg
 package katex
 package functions
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.ParseError
 import ssg.katex.environments.{ EnvContext, EnvironmentDef }
 import ssg.katex.parse._

@@ -16,7 +16,7 @@ package functions
 
 import scala.collection.mutable.ArrayBuffer
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.ParseError
 import ssg.katex.build.BuildCommon
 import ssg.katex.parse._

@@ -182,8 +182,8 @@ class TextNode(val text: String) extends MathDomNode {
   */
 class SpaceNode(val width: Double) extends MathDomNode {
 
-  val character: ssg.commons.Nullable[String] = {
-    import ssg.commons.Nullable
+  val character: lowlevel.Nullable[String] = {
+    import lowlevel.Nullable
     // See https://www.w3.org/TR/2000/WD-MathML2-20000328/chapter6.html
     // for a table of space-like characters.  We use Unicode
     // representations instead of &LongNames; as it's not clear how to

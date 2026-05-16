@@ -24,7 +24,7 @@ package katex
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** A `Namespace` refers to a space of nameable things like macros or lengths, which can be `set` either globally or local to a nested group, using an undo stack similar to how TeX implements this
   * functionality. Performance-wise, `get` and local `set` take constant time, while global `set` takes time proportional to the depth of group nesting.

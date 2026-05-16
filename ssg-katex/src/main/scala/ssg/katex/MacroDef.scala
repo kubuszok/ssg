@@ -23,7 +23,7 @@ package katex
 
 import scala.collection.mutable
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Provides context to macros defined by functions. Implemented by MacroExpander.
   */

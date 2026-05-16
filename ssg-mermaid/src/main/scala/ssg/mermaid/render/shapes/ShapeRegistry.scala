@@ -20,7 +20,7 @@ package mermaid
 package render
 package shapes
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.graphs.commons.svg.SvgBuilder
 
 /** Registry that maps shape names to their render functions.

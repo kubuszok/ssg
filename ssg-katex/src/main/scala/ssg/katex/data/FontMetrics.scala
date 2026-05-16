@@ -17,7 +17,7 @@ package ssg
 package katex
 package data
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** Character metrics for a single glyph: depth, height, italic correction, skew (kern from the character to the corresponding \skewchar), and width.
   */

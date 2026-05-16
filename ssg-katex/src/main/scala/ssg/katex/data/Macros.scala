@@ -20,7 +20,7 @@ package ssg
 package katex
 package data
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 import ssg.katex.{ MacroContextInterface, MacroDef, MacroDefinition, MacroExpansion, Mode, ParseError, Token }
 import ssg.katex.functions.FunctionDef
 

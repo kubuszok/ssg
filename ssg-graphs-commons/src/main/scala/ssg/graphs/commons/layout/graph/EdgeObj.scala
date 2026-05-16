@@ -21,7 +21,7 @@ package commons
 package layout
 package graph
 
-import ssg.commons.Nullable
+import lowlevel.Nullable
 
 /** An edge object that uniquely identifies an edge in a [[Graph]].
   *
