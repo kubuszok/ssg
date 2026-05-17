@@ -1,7 +1,9 @@
+import sbtwelcome.UsefulTask
+
 ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
-val llsVersion                 = "99e8f4be1069fc69313f9055deec6e68b0c40cf6-SNAPSHOT"
+val llsVersion                 = "0.1.0"
 val treeSitterProvidersVersion = "0.1.0"
 val multiarchCoreVersion       = "0.2.0"
 val hearthVersion              = "0.3.0-29-g05da355-SNAPSHOT"
@@ -260,6 +262,31 @@ val ssg = (projectMatrix in file("ssg"))
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
+// ── Root project (welcome + aggregation) ─────────────────────────────
+
+lazy val root = (project in file("."))
+  .enablePlugins(KubuszokRootPlugin)
+  .settings(
+    name := "ssg-root",
+    publish / skip := true,
+    logo :=
+      s"""SSG ${version.value} for Scala ${SsgSettings.scalaVersion} x (JVM, Scala.js, Scala Native)
+         |
+         |This build uses sbt-projectmatrix:
+         | - Scala JVM adds no suffix to a project name seen in build.sbt
+         | - Scala.js adds the "JS" suffix to a project name seen in build.sbt
+         | - Scala Native adds the "Native" suffix to a project name seen in build.sbt
+         |""".stripMargin,
+    usefulTasks := Seq(
+      UsefulTask("test-jvm", "Run all JVM unit tests").noAlias,
+      UsefulTask("test-js", "Run all Scala.js unit tests").noAlias,
+      UsefulTask("test-native", "Run all Scala Native unit tests").noAlias,
+      UsefulTask("test-coverage", "Run JVM tests with coverage").noAlias,
+      UsefulTask("compile", "Compile everything").noAlias,
+      UsefulTask("scalafmtAll", "Format all sources").noAlias
+    )
+  )
 
 // ── Test aggregation aliases ─────────────────────────────────────────
 
