@@ -130,40 +130,6 @@ final class SassColor private (
   def hasMissingChannel: Boolean =
     isChannel0Missing || isChannel1Missing || isChannel2Missing || isAlphaMissing
 
-  // --- Legacy accessors (deprecated) ---
-
-  /** This color's red channel, between 0 and 255 (rounded). */
-  @deprecated("Use channel() instead.", "always")
-  def red: Int = _legacyChannel(ColorSpace.rgb, "red").round.toInt
-
-  /** This color's green channel, between 0 and 255 (rounded). */
-  @deprecated("Use channel() instead.", "always")
-  def green: Int = _legacyChannel(ColorSpace.rgb, "green").round.toInt
-
-  /** This color's blue channel, between 0 and 255 (rounded). */
-  @deprecated("Use channel() instead.", "always")
-  def blue: Int = _legacyChannel(ColorSpace.rgb, "blue").round.toInt
-
-  /** This color's hue, between 0 and 360. */
-  @deprecated("Use channel() instead.", "always")
-  def hue: Double = _legacyChannel(ColorSpace.hsl, "hue")
-
-  /** This color's saturation, a percentage between 0 and 100. */
-  @deprecated("Use channel() instead.", "always")
-  def saturation: Double = _legacyChannel(ColorSpace.hsl, "saturation")
-
-  /** This color's lightness, a percentage between 0 and 100. */
-  @deprecated("Use channel() instead.", "always")
-  def lightness: Double = _legacyChannel(ColorSpace.hsl, "lightness")
-
-  /** This color's whiteness, a percentage between 0 and 100. */
-  @deprecated("Use channel() instead.", "always")
-  def whiteness: Double = _legacyChannel(ColorSpace.hwb, "whiteness")
-
-  /** This color's blackness, a percentage between 0 and 100. */
-  @deprecated("Use channel() instead.", "always")
-  def blackness: Double = _legacyChannel(ColorSpace.hwb, "blackness")
-
   // --- Channel lookup ---
 
   /** Returns the value of the given channel in this color. */
@@ -302,53 +268,9 @@ final class SassColor private (
     }
     SassColor
       .hsl(
-        Nullable(hue.getOrElse(this.hue)),
-        Nullable(saturation.getOrElse(this.saturation)),
-        Nullable(lightness.getOrElse(this.lightness)),
-        Nullable(alpha.getOrElse(this.alpha))
-      )
-      .toSpace(this.space)
-  }
-
-  @deprecated("Use changeChannels with explicit $space argument", "1.0.0")
-  def changeRgb(
-    red:   Option[Double] = None,
-    green: Option[Double] = None,
-    blue:  Option[Double] = None,
-    alpha: Option[Double] = None
-  ): SassColor = {
-    if (!isLegacy) {
-      throw SassScriptException(
-        "color.changeRgb() is only supported for legacy colors. Please use " +
-          "color.changeChannels() instead with an explicit $space argument."
-      )
-    }
-    SassColor.rgb(
-      Nullable(red.getOrElse(this.red)),
-      Nullable(green.getOrElse(this.green)),
-      Nullable(blue.getOrElse(this.blue)),
-      Nullable(alpha.getOrElse(this.alpha))
-    )
-  }
-
-  @deprecated("Use changeChannels with explicit $space argument", "1.0.0")
-  def changeHwb(
-    hue:       Option[Double] = None,
-    whiteness: Option[Double] = None,
-    blackness: Option[Double] = None,
-    alpha:     Option[Double] = None
-  ): SassColor = {
-    if (!isLegacy) {
-      throw SassScriptException(
-        "color.changeHsl() is only supported for legacy colors. Please use " +
-          "color.changeChannels() instead with an explicit $space argument."
-      )
-    }
-    SassColor
-      .hwb(
-        Nullable(hue.getOrElse(this.hue)),
-        Nullable(whiteness.getOrElse(this.whiteness)),
-        Nullable(blackness.getOrElse(this.blackness)),
+        Nullable(hue.getOrElse(_legacyChannel(ColorSpace.hsl, "hue"))),
+        Nullable(saturation.getOrElse(_legacyChannel(ColorSpace.hsl, "saturation"))),
+        Nullable(lightness.getOrElse(_legacyChannel(ColorSpace.hsl, "lightness"))),
         Nullable(alpha.getOrElse(this.alpha))
       )
       .toSpace(this.space)

@@ -1328,7 +1328,6 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_publicIdentifier` (stylesheet.dart:4796-4800).
     */
-  @scala.annotation.nowarn("msg=unused private member")
   private def _publicIdentifier(): String = {
     val start  = scanner.state
     val result = identifier()
@@ -3395,7 +3394,6 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_lookingAtPotentialPropertyHack` (stylesheet.dart:4723-4727).
     */
-  @annotation.nowarn("msg=unused private member") // scaffolding: used when property hack parsing is ported
   private def _lookingAtPotentialPropertyHack(): Boolean = {
     val c = scanner.peekChar()
     c == CharCode.$colon || c == CharCode.$asterisk || c == CharCode.$dot ||

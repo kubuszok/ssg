@@ -106,15 +106,6 @@ object CharSubSequence {
     of(charSequence, startIndex, charSequence.length())
   }
 
-  @deprecated("Use BasedSequence.of() for creating based sequences", "")
-  def of(chars: Array[Char], startIndex: Int, endIndex: Int): CharSubSequence = {
-    assert(startIndex >= 0 && startIndex <= endIndex && endIndex <= chars.length)
-    val useChars = new Array[Char](chars.length)
-    System.arraycopy(chars, 0, useChars, 0, chars.length)
-    if (startIndex == 0 && endIndex == chars.length) new CharSubSequence(useChars, 0)
-    else new CharSubSequence(useChars, 0).subSequence(startIndex, endIndex)
-  }
-
   private def of(charSequence: CharSequence, startIndex: Int, endIndex: Int): CharSubSequence = {
     assert(startIndex >= 0 && startIndex <= endIndex && endIndex <= charSequence.length())
 

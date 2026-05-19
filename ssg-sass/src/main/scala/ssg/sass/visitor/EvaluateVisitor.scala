@@ -668,7 +668,6 @@ final class EvaluateVisitor(
   /// from the source span.
   ///
   /// Port of dart-sass `_execute` (evaluate.dart:889-1003).
-  @annotation.nowarn("msg=unused") // default params used by _loadModule callers
   private def _execute(
     executeImporter: Nullable[Importer],
     stylesheet:      Stylesheet,
@@ -2456,7 +2455,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_expressionNode` (evaluate.dart:4483-4500).
     */
-  @annotation.nowarn("msg=unused") // called via _addExceptionSpan in _loadModule
   private def _expressionNode(expression: ssg.sass.ast.AstNode): ssg.sass.ast.AstNode =
     expression match {
       case ve: VariableExpression =>
@@ -2473,7 +2471,6 @@ final class EvaluateVisitor(
     *
     * Port of dart-sass `_getErrorMessage` (evaluate.dart:4786-4795).
     */
-  @annotation.nowarn("msg=unused private member") // utility available for future error reporting
   private def _getErrorMessage(error: Throwable): String = error match {
     case e: Error => e.toString
     case e =>

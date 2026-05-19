@@ -36,7 +36,8 @@ class RichSequenceImpl private (val charSequence: CharSequence)
   override def nullSequence(): RichSequence = RichSequence.NULL
 
   override def sequenceOf(charSequence: Nullable[CharSequence], startIndex: Int, endIndex: Int): RichSequence =
-    RichSequenceImpl.of(charSequence, startIndex, endIndex)
+    if (!charSequence.isDefined) RichSequence.NULL
+    else RichSequence.of(charSequence.get, startIndex, endIndex)
 
   @SuppressWarnings(Array("unchecked"))
   override def getBuilder[B <: ISequenceBuilder[B, RichSequence]]: B =
@@ -70,18 +71,4 @@ object RichSequenceImpl {
       case _ => RichSequence.NULL
     }
 
-  @deprecated("Use RichSequence.of", "")
-  def of(charSequence: Nullable[CharSequence]): RichSequence =
-    if (!charSequence.isDefined) RichSequence.NULL
-    else RichSequence.of(charSequence.get, 0, charSequence.get.length())
-
-  @deprecated("Use RichSequence.of", "")
-  def of(charSequence: Nullable[CharSequence], startIndex: Int): RichSequence =
-    if (!charSequence.isDefined) RichSequence.NULL
-    else RichSequence.of(charSequence.get, startIndex, charSequence.get.length())
-
-  @deprecated("Use RichSequence.of", "")
-  def of(charSequence: Nullable[CharSequence], startIndex: Int, endIndex: Int): RichSequence =
-    if (!charSequence.isDefined) RichSequence.NULL
-    else RichSequence.of(charSequence.get, startIndex, endIndex)
 }

@@ -18,7 +18,6 @@ package util
 package html
 
 import ssg.md.util.misc.Immutable
-import ssg.md.util.sequence.SequenceUtils
 
 trait Attribute extends Immutable[Attribute, MutableAttribute] {
   def name:               String
@@ -89,6 +88,4 @@ object Attribute {
     set
   }
 
-  @deprecated("Use SequenceUtils.NUL", "")
-  val NUL: Char = SequenceUtils.NUL
 }

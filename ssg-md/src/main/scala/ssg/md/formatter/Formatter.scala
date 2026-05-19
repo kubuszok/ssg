@@ -219,15 +219,6 @@ object Formatter {
     */
   val FORMAT_FLAGS: DataKey[Int] = new DataKey[Int]("FORMAT_FLAGS", LineAppendable.F_TRIM_LEADING_WHITESPACE | LineAppendable.F_TRIM_LEADING_EOL)
 
-  @deprecated("Use LineAppendable.F_CONVERT_TABS", "0.60")
-  val FORMAT_CONVERT_TABS: Int = LineAppendable.F_CONVERT_TABS
-  @deprecated("Use LineAppendable.F_COLLAPSE_WHITESPACE", "0.60")
-  val FORMAT_COLLAPSE_WHITESPACE: Int = LineAppendable.F_COLLAPSE_WHITESPACE
-  @deprecated("Use LineAppendable.F_TRIM_TRAILING_WHITESPACE", "0.60")
-  val FORMAT_SUPPRESS_TRAILING_WHITESPACE: Int = LineAppendable.F_TRIM_TRAILING_WHITESPACE
-  @deprecated("Use LineAppendable.F_FORMAT_ALL", "0.60")
-  val FORMAT_ALL_OPTIONS: Int = LineAppendable.F_FORMAT_ALL
-
   val GENERATE_HEADER_ID:       DataKey[Boolean] = new DataKey[Boolean]("GENERATE_HEADER_ID", false)
   val MAX_BLANK_LINES:          DataKey[Int]     = SharedDataKeys.FORMATTER_MAX_BLANK_LINES
   val MAX_TRAILING_BLANK_LINES: DataKey[Int]     = SharedDataKeys.FORMATTER_MAX_TRAILING_BLANK_LINES
@@ -314,11 +305,6 @@ object Formatter {
   val RESTORE_TRACKED_SPACES: DataKey[Boolean]             = new DataKey[Boolean]("RESTORE_END_SPACES", false)
   val DOCUMENT_FIRST_PREFIX:  DataKey[CharSequence]        = new DataKey[CharSequence]("DOCUMENT_FIRST_PREFIX", BasedSequence.NULL)
   val DOCUMENT_PREFIX:        DataKey[CharSequence]        = new DataKey[CharSequence]("DOCUMENT_PREFIX", BasedSequence.NULL)
-
-  @deprecated("Use SETEXT_HEADING_EQUALIZE_MARKER", "0.62")
-  val SETEXT_HEADER_EQUALIZE_MARKER: DataKey[Boolean] = SETEXT_HEADING_EQUALIZE_MARKER
-  @deprecated("Use ATX_HEADING_TRAILING_MARKER", "0.62")
-  val ATX_HEADER_TRAILING_MARKER: DataKey[EqualizeTrailingMarker] = ATX_HEADING_TRAILING_MARKER
 
   def builder(): Builder = new Builder()
 

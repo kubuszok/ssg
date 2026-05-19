@@ -11,7 +11,6 @@
  *   Convention: Dart final class → Scala final class; Dart enum → Scala 3 enum
  *   Idiom: Dart null → Nullable; Dart Object → Any; Dart switch → Scala match;
  *          number_lib functions inlined into companion object;
- *          CalculationInterpolation ported as deprecated class;
  *          Dart List.unmodifiable → List (Scala Lists are immutable)
  *   Audited: 2026-04-06
  *
@@ -813,8 +812,6 @@ object SassCalculation {
   /** Simplifies a calculation argument. */
   private def _simplify(arg: Any): Any = arg match {
     case _: SassNumber | _: CalculationOperation => arg
-    case interp: CalculationInterpolation =>
-      SassString(s"(${interp.value})", hasQuotes = false)
     case s: SassString if !s.hasQuotes => s
     case s: SassString                 =>
       throw SassScriptException(s"Quoted string $s can't be used in a calculation.")
@@ -1032,21 +1029,3 @@ enum CalculationOperator(
   override def toString: String = displayName
 }
 
-/** A deprecated representation of a string injected into a SassCalculation using interpolation.
-  *
-  * This only exists for backwards-compatibility with an older version of Dart Sass. It's now equivalent to creating a SassString whose value is wrapped in parentheses.
-  */
-@deprecated("Use SassString instead.", "always")
-final class CalculationInterpolation(private val _value: String) {
-
-  def value: String = _value
-
-  override def equals(other: Any): Boolean = other match {
-    case o: CalculationInterpolation => value == o.value
-    case _ => false
-  }
-
-  override def hashCode(): Int = value.hashCode
-
-  override def toString: String = value
-}

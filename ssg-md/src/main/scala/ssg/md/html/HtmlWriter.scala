@@ -162,7 +162,7 @@ class HtmlWriter private (
 
   def srcPos(startOffset: Int, endOffset: Int): HtmlWriter = {
     if (startOffset <= endOffset && context.isDefined && context.get.getHtmlOptions.sourcePositionAttribute.nonEmpty) {
-      super.attr(context.get.getHtmlOptions.sourcePositionAttribute, startOffset + "-" + endOffset)
+      super.attr(context.get.getHtmlOptions.sourcePositionAttribute, s"$startOffset-$endOffset")
     }
     this
   }

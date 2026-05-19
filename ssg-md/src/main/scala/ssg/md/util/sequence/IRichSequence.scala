@@ -285,9 +285,6 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
   def countLeading(chars:    CharPredicate, startIndex: Int, endIndex: Int): Int
   def countLeadingNot(chars: CharPredicate, startIndex: Int, endIndex: Int): Int
 
-  @deprecated("Use CharPredicate.anyOf(...)", "")
-  def countLeading(c: Char): Int = countLeading(CharPredicate.anyOf(c))
-
   def countTrailing(chars:    CharPredicate):                                 Int
   def countTrailingNot(chars: CharPredicate):                                 Int
   def countTrailing(chars:    CharPredicate, startIndex: Int):                Int
@@ -337,20 +334,11 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
   def countTrailingWhitespace(startIndex:    Int, fromIndex: Int): Int
   def countTrailingNotWhitespace(startIndex: Int, fromIndex: Int): Int
 
-  @deprecated("Use countLeadingSpaceTab()", "")
-  def countLeading(): Int = countLeadingSpaceTab()
-
-  @deprecated("Use countLeadingSpaceTab()", "")
-  def countTrailing(): Int = countLeadingSpaceTab()
-
   def countOfSpaceTab():    Int
   def countOfNotSpaceTab(): Int
 
   def countOfWhitespace():    Int
   def countOfNotWhitespace(): Int
-
-  @deprecated("Use countOfAny(CharPredicate.anyOf(c))", "")
-  def countOf(c: Char): Int = countOfAny(CharPredicate.anyOf(c))
 
   def countOfAny(chars:    CharPredicate):                                 Int
   def countOfAnyNot(chars: CharPredicate):                                 Int
@@ -464,9 +452,6 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
   def nullIfStartsWith(matches:    CharSequence*): T
   def nullIfNotStartsWith(matches: CharSequence*): T
 
-  @deprecated("Use nullIfNotStartsWith", "")
-  def nullIfStartsWithNot(matches: CharSequence*): T = nullIfNotStartsWith(matches*)
-
   def nullIfEndsWith(matches:                CharSequence*):                   T
   def nullIfNotEndsWith(matches:             CharSequence*):                   T
   def nullIfStartsWithIgnoreCase(matches:    CharSequence*):                   T
@@ -478,21 +463,12 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
   def nullIfEndsWith(ignoreCase:             Boolean, matches: CharSequence*): T
   def nullIfNotEndsWith(ignoreCase:          Boolean, matches: CharSequence*): T
 
-  @deprecated("Use nullIfNotEndsWith", "")
-  def nullIfEndsWithNot(matches: CharSequence*): T = nullIfNotEndsWith(matches*)
-
   // ---- EOL helpers ----
 
   def eolEndLength(): Int
 
-  @deprecated("Use eolEndLength()", "")
-  def eolStartLength(): Int = eolEndLength()
-
   def eolEndLength(eolEnd:     Int): Int
   def eolStartLength(eolStart: Int): Int
-
-  @deprecated("Use eolStartLength(eolStart)", "")
-  def eolLength(eolStart: Int): Int = eolStartLength(eolStart)
 
   def eolEndRange(eolEnd:     Int): Range
   def eolStartRange(eolStart: Int): Range
@@ -644,9 +620,6 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
 
   def insert(index: Int, chars: CharSequence): T
 
-  @deprecated("Use insert(index, chars) instead", "")
-  def insert(chars: CharSequence, index: Int): T = insert(index, chars)
-
   def delete(startIndex:  Int, endIndex:         Int):                            T
   def replace(startIndex: Int, endIndex:         Int, replacement: CharSequence): T
   def replace(find:       CharSequence, replace: CharSequence):                   T
@@ -670,15 +643,6 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
   def split(delimiter:     CharSequence, limit: Int, flags: Int, trimChars: Nullable[CharPredicate]): Array[T]
   def split(delimiter:     CharSequence, limit: Int, flags: Int):                                     Array[T]
   def split(delimiter:     CharSequence):                                                             Array[T]
-
-  @deprecated("Use split(delimiter.toString, limit, flags, null)", "")
-  def split(delimiter: Char, limit: Int, flags: Int): Array[T] = split(Character.toString(delimiter), limit, flags, Nullable.empty[CharPredicate])
-
-  @deprecated("Use split(delimiter.toString, limit, 0, null)", "")
-  def split(delimiter: Char, limit: Int): Array[T] = split(Character.toString(delimiter), limit, 0, Nullable.empty[CharPredicate])
-
-  @deprecated("Use split(delimiter.toString, 0, 0, null)", "")
-  def split(delimiter: Char): Array[T] = split(Character.toString(delimiter), 0, 0, Nullable.empty[CharPredicate])
 
   def splitList(delimiter: CharSequence, limit:         Int, includeDelims: Boolean, trimChars: Nullable[CharPredicate]): ju.List[T]
   def splitList(delimiter: CharSequence, includeDelims: Boolean, trimChars: Nullable[CharPredicate]):                     ju.List[T]
@@ -747,13 +711,7 @@ trait IRichSequence[T <: IRichSequence[T]] extends CharSequence with Comparable[
 
   def lineColumnAtIndex(index: Int): Pair[Integer, Integer]
 
-  @deprecated("Use lineColumnAtIndex(index)", "")
-  def getLineColumnAtIndex(index: Int): Pair[Integer, Integer] = lineColumnAtIndex(index)
-
   def columnAtIndex(index: Int): Int
-
-  @deprecated("Use columnAtIndex(index)", "")
-  def getColumnAtIndex(index: Int): Int = columnAtIndex(index)
 
   /** Safe, if index out of range returns '\0'
     *

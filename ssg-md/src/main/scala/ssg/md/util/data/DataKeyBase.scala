@@ -73,17 +73,6 @@ abstract class DataKeyBase[T](
         .asInstanceOf[T]
     }
 
-  /** @param holder
-    *   data holder
-    * @return
-    *   return default value if holder is null, current value in holder or compute a new value
-    * @deprecated
-    *   use get
-    */
-  @deprecated("use get", "0.50.x")
-  final def getFrom(holder: Nullable[DataHolder]): T =
-    get(holder)
-
   override def toString: String =
     if (defaultValue != null) {
       "NullableDataKey<" + defaultValue.asInstanceOf[AnyRef].getClass.getSimpleName + "> " + name
