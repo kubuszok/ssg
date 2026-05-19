@@ -213,11 +213,4 @@ object SegmentedSequenceFull {
     )
   }
 
-  @deprecated("Use BasedSequence.getBuilder and SequenceBuilder.addAll or SegmentedSequence.create", "")
-  def of(basedSequence: BasedSequence, segments: java.lang.Iterable[? <: BasedSequence]): BasedSequence =
-    SegmentedSequence.create(basedSequence, segments)
-
-  @deprecated("Use SegmentedSequence.create", "")
-  def of(segments: BasedSequence*): BasedSequence =
-    SegmentedSequence.create(segments*)
 }

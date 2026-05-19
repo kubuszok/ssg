@@ -317,10 +317,6 @@ trait LineAppendable extends Appendable with java.lang.Iterable[LineInfo] {
   def toSequence(): CharSequence =
     toSequence(Integer.MAX_VALUE, Integer.MAX_VALUE, true)
 
-  @deprecated("Use appendTo with explicit parameters", "")
-  def appendTo[T <: Appendable](out: T, maxTrailingBlankLines: Int): T =
-    appendTo(out, Integer.MAX_VALUE, maxTrailingBlankLines)
-
   def appendTo[T <: Appendable](out: T, withPrefixes: Boolean, maxBlankLines: Int, maxTrailingBlankLines: Int, startLine: Int, endLine: Int): T
 
   def appendTo[T <: Appendable](out: T, maxBlankLines: Int, maxTrailingBlankLines: Int, startLine: Int, endLine: Int): T =
@@ -393,17 +389,6 @@ object LineAppendable {
   val F_PREFIX_PRE_FORMATTED:     Int = BitFieldSet.intMask(O_PREFIX_PRE_FORMATTED)
   val F_FORMAT_ALL:               Int = F_CONVERT_TABS | F_COLLAPSE_WHITESPACE | F_TRIM_TRAILING_WHITESPACE | F_TRIM_LEADING_WHITESPACE | F_TRIM_LEADING_EOL
   val F_WHITESPACE_REMOVAL:       Int = F_COLLAPSE_WHITESPACE | F_TRIM_TRAILING_WHITESPACE | F_TRIM_LEADING_WHITESPACE
-
-  // Deprecated constants — use F_ prefixed constants
-  @deprecated("Use F_CONVERT_TABS", "") val CONVERT_TABS:                                                                       Int = F_CONVERT_TABS
-  @deprecated("Use F_COLLAPSE_WHITESPACE", "") val COLLAPSE_WHITESPACE:                                                         Int = F_COLLAPSE_WHITESPACE
-  @deprecated("Use F_TRIM_TRAILING_WHITESPACE", "") val TRIM_TRAILING_WHITESPACE:                                               Int = F_TRIM_TRAILING_WHITESPACE
-  @deprecated("Use F_PASS_THROUGH", "") val PASS_THROUGH:                                                                       Int = F_PASS_THROUGH
-  @deprecated("ALLOW_LEADING_WHITESPACE is now inverted and named F_TRIM_LEADING_WHITESPACE", "") val ALLOW_LEADING_WHITESPACE: Int = 0
-  @deprecated("Use F_TRIM_LEADING_WHITESPACE", "") val TRIM_LEADING_WHITESPACE:                                                 Int = F_TRIM_LEADING_WHITESPACE
-  @deprecated("ALLOW_LEADING_EOL is now inverted and named F_TRIM_LEADING_EOL", "") val ALLOW_LEADING_EOL:                      Int = 0
-  @deprecated("Use F_PREFIX_PRE_FORMATTED", "") val PREFIX_PRE_FORMATTED:                                                       Int = F_PREFIX_PRE_FORMATTED
-  @deprecated("Use F_FORMAT_ALL", "") val FORMAT_ALL:                                                                           Int = F_FORMAT_ALL
 
   def toOptionSet(options: Int): BitFieldSet[Options] =
     BitFieldSet.of(classOf[Options], options)

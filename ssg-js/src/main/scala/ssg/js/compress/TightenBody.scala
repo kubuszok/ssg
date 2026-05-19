@@ -1333,40 +1333,28 @@ object TightenBody {
     val candidates = ArrayBuffer.empty[ArrayBuffer[AstNode]]
     var statIndex  = statements.size
 
-    // Variables used during scanning (some only used in full implementation)
-    // @nowarn annotations suppress warnings for vars used in simplified implementation
-    @annotation.nowarn("msg=local variable")
     var abort = false
-    @annotation.nowarn("msg=local variable")
     var hit = false
-    @annotation.nowarn("msg=local variable")
     var hitIndex = 0
     var hitStack = ArrayBuffer.empty[AstNode]
     var candidate: AstNode          = null.asInstanceOf[AstNode]
     var valueDef:  SymbolDef | Null = null
-    @annotation.nowarn("msg=local variable")
     var stopAfter: AstNode | Null = null
-    @annotation.nowarn("msg=local variable")
     var stopIfHit: AstNode | Null                  = null
     var lhs:       AstNode | Null                  = null
     var lvalues:   mutable.Map[String, LValueInfo] = mutable.Map.empty
-    @annotation.nowarn("msg=local variable")
     var lhsLocal    = false
     var sideEffects = false
-    @annotation.nowarn("msg=local variable")
     var replaceAll = false
-    @annotation.nowarn("msg=local variable")
     var mayThrowFlag = false
     var funarg       = false
     var replaced     = 0
-    @annotation.nowarn("msg=local variable")
     var canReplace = false
 
     /** Info about an lvalue reference. */
     final case class LValueInfo(d: SymbolDef, modified: Boolean)
 
     /** Check if any lvalue shadows a variable in the given scope. */
-    @annotation.nowarn("msg=unused local definition")
     def shadows(myScope: AstScope | Null): Boolean =
       boundary[Boolean] {
         if (myScope == null) break(false)
@@ -1546,7 +1534,6 @@ object TightenBody {
     }
 
     /** Check if symbol may be modified from outside the current scope. */
-    @annotation.nowarn("msg=unused local definition")
     def mayModify(sym: AstNode): Boolean =
       sym match {
         case _:   AstDestructuring => true
@@ -1566,7 +1553,6 @@ object TightenBody {
       }
 
     /** Check for side effects external to the current scope. */
-    @annotation.nowarn("msg=unused")
     def sideEffectsExternal(node: AstNode, isLhsArg: Boolean = false): Boolean =
       node match {
         case a: AstAssign => sideEffectsExternal(a.left.nn, isLhsArg = true)

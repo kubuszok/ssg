@@ -74,7 +74,6 @@ object TocExtension {
 
   // format options
   val FORMAT_UPDATE_ON_FORMAT: DataKey[SimTocGenerateOnFormat] = new DataKey[SimTocGenerateOnFormat]("FORMAT_UPDATE_ON_FORMAT", SimTocGenerateOnFormat.UPDATE)
-  @annotation.nowarn("msg=null")
   val FORMAT_OPTIONS: DataKey[TocOptions] = new DataKey[TocOptions](
     "FORMAT_OPTIONS",
     TocOptions.fromOptions(null, false),

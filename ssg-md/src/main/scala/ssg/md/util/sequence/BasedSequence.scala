@@ -219,12 +219,6 @@ trait BasedSequence extends IRichSequence[BasedSequence], BasedOptionsHolder {
   def extendByAnyNot(charSet:      CharPredicate):                BasedSequence
   def extendByOneOfAnyNot(charSet: CharPredicate):                BasedSequence
 
-  @deprecated("Use extendByAnyNot", "")
-  def extendToAny(charSet: CharPredicate, maxCount: Int): BasedSequence = extendByAnyNot(charSet, maxCount)
-
-  @deprecated("Use extendByAnyNot", "")
-  def extendToAny(charSet: CharPredicate): BasedSequence = extendByAnyNot(charSet)
-
   /** Extend in contained based sequence */
   def extendToEndOfLine(eolChars:   CharPredicate, includeEol: Boolean): BasedSequence
   def extendToEndOfLine(eolChars:   CharPredicate):                      BasedSequence

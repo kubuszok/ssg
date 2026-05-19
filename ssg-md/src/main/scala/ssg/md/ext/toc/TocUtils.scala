@@ -19,7 +19,7 @@ package toc
 
 import ssg.md.Nullable
 import ssg.md.ast.Heading
-import ssg.md.ast.util.TextCollectingVisitor
+import ssg.md.util.ast.TextCollectingVisitor
 import ssg.md.ext.toc.internal.{ SimTocOptionsParser, TocOptions, TocOptionsParser }
 import ssg.md.formatter.MarkdownWriter
 import ssg.md.html.{ HtmlRenderer, HtmlWriter }
@@ -49,7 +49,6 @@ object TocUtils {
     out.toString
   }
 
-  @annotation.nowarn("msg=null")
   def getSimTocPrefix(options: TocOptions, defaultOptions: TocOptions): String = {
     val out = new DelimitedBuilder(" ")
     out.append("[TOC").mark()
@@ -79,7 +78,6 @@ object TocUtils {
     out.toString
   }
 
-  @annotation.nowarn("msg=null")
   def markdownHeaderTexts(headings: ju.List[Heading], tocOptions: TocOptions): Pair[ju.List[Heading], ju.List[String]] = {
     val headingContents = new ju.ArrayList[String](headings.size())
     val isReversed      = tocOptions.listType == TocOptions.ListType.SORTED_REVERSED || tocOptions.listType == TocOptions.ListType.FLAT_REVERSED
@@ -91,7 +89,6 @@ object TocUtils {
     val it = headings.iterator()
     while (it.hasNext) {
       val heading = it.next()
-      @annotation.nowarn("msg=deprecated")
       val headingText = if (tocOptions.isTextOnly || needText) new TextCollectingVisitor().collectAndGetText(heading) else ""
 
       val headingContent =
@@ -141,7 +138,6 @@ object TocUtils {
     new Pair[ju.List[Heading], ju.List[String]](Nullable(resultHeadings), Nullable(headingContents.asInstanceOf[ju.List[String]]))
   }
 
-  @annotation.nowarn("msg=null")
   def renderTocContent(markdown: MarkdownWriter, options: TocOptions, defaultOptions: TocOptions, headings: ju.List[Heading], headingTexts: ju.List[String]): Unit = {
     if (headings.isEmpty) return // @nowarn - early return in utility method
 
@@ -293,7 +289,6 @@ object TocUtils {
     filtered
   }
 
-  @annotation.nowarn("msg=null")
   def htmlHeadingTexts(context: NodeRendererContext, headings: ju.List[Heading], tocOptions: TocOptions): Pair[ju.List[Heading], ju.List[String]] = {
     val headingContents = new ju.ArrayList[String](headings.size())
     val isReversed      = tocOptions.listType == TocOptions.ListType.SORTED_REVERSED || tocOptions.listType == TocOptions.ListType.FLAT_REVERSED
@@ -352,7 +347,6 @@ object TocUtils {
     new Pair[ju.List[Heading], ju.List[String]](Nullable(resultHeadings), Nullable(headingContents.asInstanceOf[ju.List[String]]))
   }
 
-  @annotation.nowarn("msg=null")
   def renderHtmlToc(out: HtmlWriter, sourceText: BasedSequence, headings: ju.List[Integer], headingTexts: ju.List[String], headingRefIds: ju.List[String], tocOptions: TocOptions): Unit = {
     if (headings.size() > 0 && ((sourceText ne BasedSequence.NULL) || tocOptions.title.trim.nonEmpty)) {
       if (sourceText ne BasedSequence.NULL) out.srcPos(sourceText)
@@ -489,7 +483,6 @@ object TocUtils {
   }
 
   private def getHeadingText(header: Heading): String = {
-    @annotation.nowarn("msg=deprecated")
     val text = new TextCollectingVisitor().collectAndGetText(header)
     Escaping.escapeHtml(text, false)
   }
