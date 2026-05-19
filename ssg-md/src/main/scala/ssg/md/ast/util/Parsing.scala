@@ -211,7 +211,7 @@ class Parsing(val options: DataHolder) {
       patternTypeFlags.withHtmlTranslator(),
       entry =>
         Pattern.compile(
-          '^' + ("(?:" + OPENTAG + "|" + CLOSETAG + "|" + HTMLCOMMENT +
+          "^" + ("(?:" + OPENTAG + "|" + CLOSETAG + "|" + HTMLCOMMENT +
             "|" + PROCESSINGINSTRUCTION + "|" + DECLARATION + "|" + CDATA +
             (if (htmlForTranslator) "|<(?:" + translationHtmlInlineTagPattern + ")>|</(?:" + translationHtmlInlineTagPattern + ")>" else "") + ")"),
           Pattern.CASE_INSENSITIVE
@@ -273,8 +273,6 @@ object Parsing {
   private val ST_EXCLUDED_0_TO_SPACE_NO_IDI  = "\u0000-\u0020"
   private val ST_ADDITIONAL_CHARS_IDI        = "\u001f"
   private val ST_ADDITIONAL_CHARS_NO_IDI     = ""
-  private val ST_ADDITIONAL_CHARS_SET_IDI    = "[\u001f]"
-  private val ST_ADDITIONAL_CHARS_SET_NO_IDI = ""
 
   val ST_HTMLCOMMENT:           String = "<!---->|<!--(?:-?[^>-])(?:-?[^-])*-->"
   val ST_PROCESSINGINSTRUCTION: String = "[<][?].*?[?][>]"
@@ -490,7 +488,7 @@ object Parsing {
   private val ST_PUNCTUATION_OPEN_ONLY  = Pattern.compile("^[" + ST_ASCII_OPEN_PUNCTUATION + "]")
   private val ST_PUNCTUATION_CLOSE_ONLY = Pattern.compile("^[" + ST_ASCII_CLOSE_PUNCTUATION + "]")
 
-  private val ST_ESCAPABLE    = Pattern.compile('^' + Escaping.ESCAPABLE)
+  private val ST_ESCAPABLE    = Pattern.compile("^" + Escaping.ESCAPABLE)
   private val ST_TICKS        = Pattern.compile("`+")
   private val ST_TICKS_HERE   = Pattern.compile("^`+")
   private val ST_SPNL         = Pattern.compile("^(?:[ \t])*(?:" + ST_EOL + "(?:[ \t])*)?")
@@ -590,8 +588,8 @@ object Parsing {
   private val ST_REG_CHAR_SP_PARENS_IDI    = "[^\\\\" + ST_EXCLUDED_0_TO_SPACE_IDI + "]| "
   private val ST_REG_CHAR_SP_PARENS_NO_IDI = "[^\\\\" + ST_EXCLUDED_0_TO_SPACE_NO_IDI + "]| "
 
-  private val ST_ENTITY_HERE_IDI    = Pattern.compile('^' + ST_ENTITY_IDI, Pattern.CASE_INSENSITIVE)
-  private val ST_ENTITY_HERE_NO_IDI = Pattern.compile('^' + ST_ENTITY_NO_IDI, Pattern.CASE_INSENSITIVE)
+  private val ST_ENTITY_HERE_IDI    = Pattern.compile("^" + ST_ENTITY_IDI, Pattern.CASE_INSENSITIVE)
+  private val ST_ENTITY_HERE_NO_IDI = Pattern.compile("^" + ST_ENTITY_NO_IDI, Pattern.CASE_INSENSITIVE)
 
   private val cachedPatterns: ju.HashMap[String, ju.HashMap[PatternTypeFlags, Pattern]] = new ju.HashMap()
 
@@ -682,27 +680,6 @@ object Parsing {
       result
     }
   }
-
-  /** @deprecated
-    *   in version (0.62.2), to be removed
-    */
-  @deprecated("to be removed", "0.62.2")
-  def EXCLUDED_0_TO_SPACE(intellijDummyIdentifier: Boolean): String =
-    if (intellijDummyIdentifier) ST_EXCLUDED_0_TO_SPACE_IDI else ST_EXCLUDED_0_TO_SPACE_NO_IDI
-
-  /** @deprecated
-    *   in version (0.62.2), to be removed
-    */
-  @deprecated("to be removed", "0.62.2")
-  def ADDITIONAL_CHARS(intellijDummyIdentifier: Boolean): String =
-    if (intellijDummyIdentifier) ST_ADDITIONAL_CHARS_IDI else ST_ADDITIONAL_CHARS_NO_IDI
-
-  /** @deprecated
-    *   in version (0.62.2), to be removed
-    */
-  @deprecated("to be removed", "0.62.2")
-  def ADDITIONAL_CHARS_SET(intellijDummyIdentifier: Boolean, quantifier: String): String =
-    if (intellijDummyIdentifier) ST_ADDITIONAL_CHARS_SET_IDI + quantifier else ST_ADDITIONAL_CHARS_SET_NO_IDI
 
   def columnsToNextTabStop(column: Int): Int =
     // Tab stop is 4

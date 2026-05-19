@@ -76,6 +76,22 @@ object ColorFunctions {
 
   /** Returns the implementation of a deprecated channel accessor function. Ported from dart-sass `_channelFunction`.
     */
+  /** Returns a getter that converts the color to the given space and reads the channel, throwing for non-legacy colors.
+    *
+    * This replaces the deprecated SassColor legacy accessors (red, green, blue, hue, saturation, lightness, whiteness, blackness) while preserving the same non-legacy error behavior.
+    */
+  private def legacyChannelGetter(space: ColorSpace, channelName: String, round: Boolean = false): SassColor => Double =
+    (c: SassColor) => {
+      if (!c.isLegacy) {
+        throw SassScriptException(
+          s"color.$channelName() is only supported for legacy colors. Please use " +
+            "color.channel() instead with an explicit $$space argument."
+        )
+      }
+      val value = c.toSpace(space).channel(channelName)
+      if (round) value.round.toDouble else value
+    }
+
   private def channelFunction(
     channelName: String,
     space:       ColorSpace,
@@ -784,13 +800,13 @@ object ColorFunctions {
   // --- Accessors ---
   // Ported from dart-sass `_channelFunction` instantiations in `global` and `module`.
 
-  private val redFn:   BuiltInCallable = channelFunction("red", ColorSpace.rgb, (c: SassColor) => c.red.toDouble, isGlobal = true)
-  private val greenFn: BuiltInCallable = channelFunction("green", ColorSpace.rgb, (c: SassColor) => c.green.toDouble, isGlobal = true)
-  private val blueFn:  BuiltInCallable = channelFunction("blue", ColorSpace.rgb, (c: SassColor) => c.blue.toDouble, isGlobal = true)
+  private val redFn:   BuiltInCallable = channelFunction("red", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "red", round = true), isGlobal = true)
+  private val greenFn: BuiltInCallable = channelFunction("green", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "green", round = true), isGlobal = true)
+  private val blueFn:  BuiltInCallable = channelFunction("blue", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "blue", round = true), isGlobal = true)
 
-  private val hueFn:        BuiltInCallable = channelFunction("hue", ColorSpace.hsl, (c: SassColor) => c.hue, unit = Some("deg"), isGlobal = true)
-  private val saturationFn: BuiltInCallable = channelFunction("saturation", ColorSpace.hsl, (c: SassColor) => c.saturation, unit = Some("%"), isGlobal = true)
-  private val lightnessFn:  BuiltInCallable = channelFunction("lightness", ColorSpace.hsl, (c: SassColor) => c.lightness, unit = Some("%"), isGlobal = true)
+  private val hueFn:        BuiltInCallable = channelFunction("hue", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "hue"), unit = Some("deg"), isGlobal = true)
+  private val saturationFn: BuiltInCallable = channelFunction("saturation", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "saturation"), unit = Some("%"), isGlobal = true)
+  private val lightnessFn:  BuiltInCallable = channelFunction("lightness", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "lightness"), unit = Some("%"), isGlobal = true)
 
   /** Global `alpha()` function with multi-arg Microsoft filter detection. Ported from dart-sass `alpha` overloaded function (lines 327-366).
     */
@@ -895,7 +911,7 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(lightness = Some(clampLikeCss(color.lightness + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"lighten() is deprecated. ${suggestScaleAndAdjust(color, amount.value, "lightness")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -917,7 +933,7 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(lightness = Some(clampLikeCss(color.lightness - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"darken() is deprecated. ${suggestScaleAndAdjust(color, -amount.value, "lightness")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -950,7 +966,7 @@ object ColorFunctions {
                 "color.adjust() instead with an explicit $space argument."
             )
           }
-          val result = color.changeHsl(saturation = Some(clampLikeCss(color.saturation + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+          val result = color.changeHsl(saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
           EvaluationContext.warnForDeprecation(
             Deprecation.ColorFunctions,
             s"saturate() is deprecated. ${suggestScaleAndAdjust(color, amount.value, "saturation")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -973,7 +989,7 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(saturation = Some(clampLikeCss(color.saturation - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"desaturate() is deprecated. ${suggestScaleAndAdjust(color, -amount.value, "saturation")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -1000,7 +1016,7 @@ object ColorFunctions {
           Deprecation.ColorFunctions,
           s"adjust-hue() is deprecated. Suggestion:\n\ncolor.adjust($$color, $$hue: ${suggestedValue.toCssString()})\n\nMore info: https://sass-lang.com/d/color-functions"
         )
-        color.changeHsl(hue = Some(color.hue + degrees))
+        color.changeHsl(hue = Some(color.toSpace(ColorSpace.hsl).channel("hue") + degrees))
       }
     )
 
@@ -2031,12 +2047,12 @@ object ColorFunctions {
     )
 
   // Module-scope channel functions (without global deprecation flag)
-  private val moduleRedFn:        BuiltInCallable = channelFunction("red", ColorSpace.rgb, (c: SassColor) => c.red.toDouble)
-  private val moduleGreenFn:      BuiltInCallable = channelFunction("green", ColorSpace.rgb, (c: SassColor) => c.green.toDouble)
-  private val moduleBlueFn:       BuiltInCallable = channelFunction("blue", ColorSpace.rgb, (c: SassColor) => c.blue.toDouble)
-  private val moduleHueFn:        BuiltInCallable = channelFunction("hue", ColorSpace.hsl, (c: SassColor) => c.hue, unit = Some("deg"))
-  private val moduleSaturationFn: BuiltInCallable = channelFunction("saturation", ColorSpace.hsl, (c: SassColor) => c.saturation, unit = Some("%"))
-  private val moduleLightnessFn:  BuiltInCallable = channelFunction("lightness", ColorSpace.hsl, (c: SassColor) => c.lightness, unit = Some("%"))
+  private val moduleRedFn:        BuiltInCallable = channelFunction("red", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "red", round = true))
+  private val moduleGreenFn:      BuiltInCallable = channelFunction("green", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "green", round = true))
+  private val moduleBlueFn:       BuiltInCallable = channelFunction("blue", ColorSpace.rgb, legacyChannelGetter(ColorSpace.rgb, "blue", round = true))
+  private val moduleHueFn:        BuiltInCallable = channelFunction("hue", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "hue"), unit = Some("deg"))
+  private val moduleSaturationFn: BuiltInCallable = channelFunction("saturation", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "saturation"), unit = Some("%"))
+  private val moduleLightnessFn:  BuiltInCallable = channelFunction("lightness", ColorSpace.hsl, legacyChannelGetter(ColorSpace.hsl, "lightness"), unit = Some("%"))
 
   private val moduleGrayscaleFn: BuiltInCallable =
     BuiltInCallable.function(
@@ -2174,8 +2190,8 @@ object ColorFunctions {
         }
       )
     ),
-    channelFunction("whiteness", ColorSpace.hwb, (c: SassColor) => c.whiteness, unit = Some("%")),
-    channelFunction("blackness", ColorSpace.hwb, (c: SassColor) => c.blackness, unit = Some("%")),
+    channelFunction("whiteness", ColorSpace.hwb, legacyChannelGetter(ColorSpace.hwb, "whiteness"), unit = Some("%")),
+    channelFunction("blackness", ColorSpace.hwb, legacyChannelGetter(ColorSpace.hwb, "blackness"), unit = Some("%")),
     // ### Opacity
     removedColorFunction("opacify", "alpha"),
     removedColorFunction("fade-in", "alpha"),

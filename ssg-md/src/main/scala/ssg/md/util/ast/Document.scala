@@ -118,7 +118,6 @@ class Document(options: Nullable[DataHolder], chars: BasedSequence) extends Bloc
 }
 
 object Document {
-  @scala.annotation.nowarn("msg=deprecated") // null needed for bootstrap Document.NULL
   val NULL: Document = new Document(Nullable.empty, BasedSequence.NULL)
 
   def merge(dataHolders: DataHolder*): MutableDataSet = MutableDataSet.merge(dataHolders*)

@@ -135,15 +135,4 @@ object SubSequence {
         case cs => new SubSequence(cs)
       }
 
-  @deprecated("Use BasedSequence.of", "")
-  def of(charSequence: Nullable[CharSequence]): BasedSequence =
-    BasedSequence.of(charSequence)
-
-  @deprecated("Use BasedSequence.of", "")
-  def of(charSequence: Nullable[CharSequence], startIndex: Int): BasedSequence =
-    BasedSequence.of(charSequence).subSequence(startIndex, if (!charSequence.isDefined) 0 else charSequence.get.length())
-
-  @deprecated("Use BasedSequence.of", "")
-  def of(charSequence: Nullable[CharSequence], startIndex: Int, endIndex: Int): BasedSequence =
-    BasedSequence.of(charSequence).subSequence(startIndex, endIndex)
 }

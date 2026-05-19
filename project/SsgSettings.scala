@@ -20,8 +20,7 @@ object SsgSettings {
       "-Wimplausible-patterns",
       "-Wrecurse-with-default",
       "-Wenum-comment-discard",
-      "-Wunused:imports,privates,locals,patvars,nowarn",
-      "-Wconf:cat=deprecation:info"
+      "-Wunused:imports,privates,locals,patvars,nowarn"
     ),
     testFrameworks += new TestFramework("munit.Framework")
   )

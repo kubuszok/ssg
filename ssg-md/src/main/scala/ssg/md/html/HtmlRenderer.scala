@@ -207,34 +207,12 @@ object HtmlRenderer {
   val MAX_TRAILING_BLANK_LINES: DataKey[Int] = SharedDataKeys.RENDERER_MAX_TRAILING_BLANK_LINES
   val MAX_BLANK_LINES:          DataKey[Int] = SharedDataKeys.RENDERER_MAX_BLANK_LINES
 
-  // Use LineFormattingAppendable values instead
-  @deprecated("Use LineAppendable.F_CONVERT_TABS", "0.60")
-  val CONVERT_TABS: Int = LineAppendable.F_CONVERT_TABS
-  @deprecated("Use LineAppendable.F_COLLAPSE_WHITESPACE", "0.60")
-  val COLLAPSE_WHITESPACE: Int = LineAppendable.F_COLLAPSE_WHITESPACE
-  @deprecated("Use LineAppendable.F_TRIM_TRAILING_WHITESPACE", "0.60")
-  val SUPPRESS_TRAILING_WHITESPACE: Int = LineAppendable.F_TRIM_TRAILING_WHITESPACE
-  @deprecated("Use LineAppendable.F_PASS_THROUGH", "0.60")
-  val PASS_THROUGH: Int = LineAppendable.F_PASS_THROUGH
-  @deprecated("Use LineAppendable.F_FORMAT_ALL", "0.60")
-  val FORMAT_ALL: Int = LineAppendable.F_FORMAT_ALL
-
   /** Stores pairs of equivalent renderer types to allow extensions to resolve types not known to them
     *
     * Pair contains: rendererType, equivalentType
     */
   val RENDERER_TYPE_EQUIVALENCE: DataKey[List[Pair[String, String]]] =
     new DataKey[List[Pair[String, String]]]("RENDERER_TYPE_EQUIVALENCE", List.empty)
-
-  // Use LineFormattingAppendable values instead
-  @deprecated("Use LineAppendable.F_CONVERT_TABS", "0.60")
-  val FORMAT_CONVERT_TABS: Int = LineAppendable.F_CONVERT_TABS
-  @deprecated("Use LineAppendable.F_COLLAPSE_WHITESPACE", "0.60")
-  val FORMAT_COLLAPSE_WHITESPACE: Int = LineAppendable.F_COLLAPSE_WHITESPACE
-  @deprecated("Use LineAppendable.F_TRIM_TRAILING_WHITESPACE", "0.60")
-  val FORMAT_SUPPRESS_TRAILING_WHITESPACE: Int = LineAppendable.F_TRIM_TRAILING_WHITESPACE
-  @deprecated("Use LineAppendable.F_FORMAT_ALL", "0.60")
-  val FORMAT_ALL_OPTIONS: Int = LineAppendable.F_FORMAT_ALL
 
   // Experimental, not tested
   val TRACKED_OFFSETS: DataKey[List[TrackedOffset]] =

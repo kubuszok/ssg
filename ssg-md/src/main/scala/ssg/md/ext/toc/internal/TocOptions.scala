@@ -341,7 +341,6 @@ object TocOptions {
   }
 
   /** Normalizing factory matching the original Java main constructor. */
-  @annotation.nowarn("msg=null")
   def create(
     levels:                Int,
     isHtml:                Boolean,
@@ -387,7 +386,6 @@ object TocOptions {
   }
 
   /** Constructor from DataHolder, matching original `TocOptions(DataHolder, boolean)`. */
-  @annotation.nowarn("msg=null")
   def fromOptions(options: DataHolder, isSimToc: Boolean): TocOptions = {
     val t        = TocExtension.TITLE.get(options)
     val titleStr = if (t == null) { if (isSimToc) DEFAULT_TITLE else "" }

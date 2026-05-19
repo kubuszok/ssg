@@ -153,14 +153,6 @@ final class FilesystemImporter private (
 
 object FilesystemImporter {
 
-  /** A [[FilesystemImporter]] that loads files relative to the current working directory.
-    *
-    * @deprecated
-    *   Use [[FilesystemImporter.noLoadPath]] or `new FilesystemImporter(".")` instead.
-    */
-  @deprecated("Use FilesystemImporter.noLoadPath or FilesystemImporter(\".\") instead.", "1.73.0")
-  val cwd: FilesystemImporter = new FilesystemImporter(Nullable(FilePath.of(".").toAbsolute.normalize.pathString), true)
-
   /** Creates an importer that _only_ loads absolute `file:` URLs and URLs relative to the current file.
     */
   val noLoadPath: FilesystemImporter = new FilesystemImporter(Nullable.empty, false)

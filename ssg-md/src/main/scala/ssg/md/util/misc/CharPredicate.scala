@@ -126,13 +126,6 @@ object CharPredicate {
   val OCTAL_DIGITS:            CharPredicate = (value: Int) => value >= '0' && value <= '7'
   val BINARY_DIGITS:           CharPredicate = (value: Int) => value >= '0' && value <= '1'
 
-  @deprecated("Use NONE instead", "0.1.0")
-  val FALSE: CharPredicate = NONE
-  @deprecated("Use ALL instead", "0.1.0")
-  val TRUE: CharPredicate = ALL
-  @deprecated("Use SPACE_TAB_NUL instead", "0.1.0")
-  val SPACE_TAB_OR_NUL: CharPredicate = SPACE_TAB_NUL
-
   def standardOrAnyOf(c1: Char): CharPredicate =
     if (SPACE.test(c1)) SPACE
     else if (EOL.test(c1)) EOL

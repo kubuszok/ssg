@@ -126,15 +126,4 @@ object PrefixedSubSequence {
   def prefixOf(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int, endIndex: Int): PrefixedSubSequence =
     new PrefixedSubSequence(prefix, baseSeq, startIndex, endIndex)
 
-  @deprecated("Use prefixOf", "")
-  def of(prefix: CharSequence, baseSeq: BasedSequence): PrefixedSubSequence =
-    prefixOf(prefix, baseSeq)
-
-  @deprecated("Use prefixOf", "")
-  def of(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int): PrefixedSubSequence =
-    prefixOf(prefix, baseSeq, startIndex)
-
-  @deprecated("Use prefixOf", "")
-  def of(prefix: CharSequence, baseSeq: BasedSequence, startIndex: Int, endIndex: Int): PrefixedSubSequence =
-    prefixOf(prefix, baseSeq, startIndex, endIndex)
 }

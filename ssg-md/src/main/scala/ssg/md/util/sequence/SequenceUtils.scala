@@ -54,56 +54,6 @@ object SequenceUtils {
   val NBSP_CHARS:      String = Character.toString(NBSP)
   val WHITESPACE_NBSP: String = " \t\r\n\u00A0"
 
-  /** @deprecated
-    *   use CharPredicate fields directly
-    */
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val SPACE_SET: CharPredicate = CharPredicate.SPACE
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val TAB_SET: CharPredicate = CharPredicate.TAB
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val EOL_SET: CharPredicate = CharPredicate.EOL
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val SPACE_TAB_SET: CharPredicate = CharPredicate.SPACE_TAB
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val SPACE_TAB_NBSP_SET: CharPredicate = CharPredicate.SPACE_TAB_NBSP
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val SPACE_TAB_EOL_SET: CharPredicate = CharPredicate.SPACE_TAB_EOL
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val SPACE_EOL_SET: CharPredicate = CharPredicate.WHITESPACE
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val ANY_EOL_SET: CharPredicate = CharPredicate.ANY_EOL
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val WHITESPACE_SET: CharPredicate = CharPredicate.WHITESPACE
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val WHITESPACE_NBSP_SET: CharPredicate = CharPredicate.WHITESPACE_NBSP
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val BACKSLASH_SET: CharPredicate = CharPredicate.BACKSLASH
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val US_SET: CharPredicate = (value: Int) => value == US
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val HASH_SET: CharPredicate = CharPredicate.HASH
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val DECIMAL_DIGITS: CharPredicate = CharPredicate.HASH
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val HEXADECIMAL_DIGITS: CharPredicate = CharPredicate.HASH
-  @deprecated("use CharPredicate fields directly", "0.1.0")
-  val OCTAL_DIGITS: CharPredicate = CharPredicate.HASH
-
-  /** @deprecated
-    *   use new names instead
-    */
-  @deprecated("use new names instead", "0.1.0")
-  val LSEP: Char = LS
-  @deprecated("use new names instead", "0.1.0")
-  val EOL_CHARS: String = ANY_EOL
-  @deprecated("use new names instead", "0.1.0")
-  val WHITESPACE_NO_EOL_CHARS: String = SPACE_TAB
-  @deprecated("use new names instead", "0.1.0")
-  val WHITESPACE_CHARS: String = WHITESPACE
-  @deprecated("use new names instead", "0.1.0")
-  val WHITESPACE_NBSP_CHARS: String = WHITESPACE_NBSP
-
   val SPLIT_INCLUDE_DELIMS:      Int = 1 // include delimiters as part of the split out part
   val SPLIT_TRIM_PARTS:          Int = 2 // trim split parts
   val SPLIT_SKIP_EMPTY:          Int = 4 // skip empty trimmed parts

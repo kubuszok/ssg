@@ -98,13 +98,4 @@ object RepeatedSequence {
   def repeatOf(chars: CharSequence, startIndex: Int, endIndex: Int): CharSequence =
     new RepeatedSequence(chars, startIndex, endIndex)
 
-  @deprecated("Use repeatOf instead", "0.1.0")
-  def of(c: Char, count: Int): CharSequence = repeatOf(c, count)
-
-  @deprecated("Use repeatOf instead", "0.1.0")
-  def of(chars: CharSequence, count: Int): CharSequence = repeatOf(chars, count)
-
-  @deprecated("Use repeatOf instead", "0.1.0")
-  def of(chars: CharSequence, startIndex: Int, endIndex: Int): CharSequence =
-    repeatOf(chars, startIndex, endIndex)
 }

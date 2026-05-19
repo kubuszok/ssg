@@ -101,46 +101,35 @@ class SegmentOffsetTree private[tree] (
     out.toString
   }
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def hasPreviousAnchor(pos: Int): Boolean = false
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def previousAnchorOffset(pos: Int): Int = 0
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def aggrLength(pos: Int): Int =
     // NOTE: used by toString() so can only deprecate
     super.aggrLength(pos)
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def findSegmentPos(index: Int): Nullable[SegmentTreePos] =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def findSegment(index: Int, baseSeq: BasedSequence, hint: Nullable[Segment]): Nullable[Segment] =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def findSegment(index: Int, startPos: Int, endPos: Int, baseSeq: BasedSequence, hint: Nullable[Segment]): Nullable[Segment] =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def getSegmentRange(startIndex: Int, endIndex: Int, startPos: Int, endPos: Int, baseSeq: BasedSequence, hint: Nullable[Segment]): SegmentTreeRange =
     super.getSegmentRange(startIndex, endIndex, startPos, endPos, baseSeq, hint)
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def addSegments(builder: IBasedSegmentBuilder[?], treeRange: SegmentTreeRange): Unit =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def addSegments(builder: IBasedSegmentBuilder[?], startIndex: Int, endIndex: Int, startOffset: Int, endOffset: Int, startPos: Int, endPos: Int): Unit =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def findSegmentPos(index: Int, startPos: Int, endPos: Int): Nullable[SegmentTreePos] =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 
-  @deprecated("Method in SegmentOffsetTree should not be used", "")
   override def getPrevAnchor(pos: Int, baseSeq: BasedSequence): Nullable[Segment] =
     throw new IllegalStateException("Method in SegmentOffsetTree should not be used")
 }
