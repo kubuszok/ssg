@@ -5354,7 +5354,6 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     * ISS-143 fix: Add ===null||===undefined compound form check. This matches the original `is_nullish_check` function that handles both `foo == null` and `foo === null || foo === undefined`
     * patterns.
     */
-  @annotation.nowarn("msg=unused private member") // used by optimizeConditional expansion (Batch 4)
   private def isNullishCheck(check: AstNode, checkSubject: AstNode): Boolean = {
     // Early exit if check_subject may throw
     if (hasSideEffects(checkSubject, this)) return false // @nowarn

@@ -114,18 +114,6 @@ class BitFieldSet[E <: java.lang.Enum[E]] private (
     oldElements != elements
   }
 
-  /** Set all bit fields to values in mask
-    *
-    * @param mask
-    *   bit fields values
-    * @return
-    *   true if any field values were modified
-    * @deprecated
-    *   use [[setAll]]
-    */
-  @deprecated("use setAll", "0.1.0")
-  def replaceAll(mask: Long): Boolean = setAll(mask)
-
   def setAll(mask: Long): Boolean = {
     val allValues = -1L >>> -totalBits
     if ((mask & ~allValues) != 0) {

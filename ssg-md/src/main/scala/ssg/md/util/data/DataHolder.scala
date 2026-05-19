@@ -28,17 +28,6 @@ trait DataHolder extends MutableDataSetter {
 
   def contains(key: DataKeyBase[?]): Boolean
 
-  /** @param key
-    *   data key
-    * @tparam T
-    *   Type returned by key
-    * @return
-    *   Use key.get(dataHolder) instead
-    */
-  @deprecated("use key.get(dataHolder) instead", "0.50.x")
-  def get[T](key: DataKey[T]): T =
-    key.get(Nullable(this))
-
   override def setIn(dataHolder: MutableDataHolder): MutableDataHolder =
     dataHolder.setAll(this)
 

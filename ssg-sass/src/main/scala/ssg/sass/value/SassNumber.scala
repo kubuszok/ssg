@@ -235,10 +235,6 @@ abstract class SassNumber protected (
   def coerceValueToUnit(unit: String, name: Nullable[String] = Nullable.Null): Double =
     coerceValue(List(unit), Nil, name)
 
-  @deprecated("Use coerceValue instead", "1.0.0")
-  def valueInUnits(newNumerators: List[String], newDenominators: List[String]): Double =
-    coerceValue(newNumerators, newDenominators)
-
   /** Returns a copy of this number, coerced to the same units as other. Unlike convertToMatch, treats unitless numbers as convertible to/from all units.
     */
   def coerceToMatch(

@@ -84,8 +84,6 @@ object GitLabExtension {
   val VIDEO_IMAGE_CLASS:            DataKey[String]        = new DataKey[String]("VIDEO_IMAGE_CLASS", "video-container")
   val VIDEO_IMAGE_LINK_TEXT_FORMAT: DataKey[String]        = new DataKey[String]("VIDEO_IMAGE_LINK_TEXT_FORMAT", "Download '%s'")
 
-  @deprecated("use HtmlRenderer.FENCED_CODE_LANGUAGE_DELIMITERS instead", "")
-  val BLOCK_INFO_DELIMITERS:  DataKey[String] = HtmlRenderer.FENCED_CODE_LANGUAGE_DELIMITERS
   val VIDEO_IMAGE_EXTENSIONS: DataKey[String] = new DataKey[String]("VIDEO_IMAGE_EXTENSIONS", "mp4,m4v,mov,webm,ogv")
 
   def create(): GitLabExtension = new GitLabExtension()

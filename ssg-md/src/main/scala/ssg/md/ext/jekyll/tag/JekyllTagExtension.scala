@@ -78,9 +78,5 @@ object JekyllTagExtension {
     new ssg.md.util.data.NotNullValueSupplier[JList[JekyllTag]] { override def get: JList[JekyllTag] = new ArrayList[JekyllTag]() }
   )
 
-  /** @deprecated not used nor needed */
-  @deprecated("not used nor needed", "2020/04/17")
-  val ENABLE_RENDERING: DataKey[Boolean] = new DataKey[Boolean]("ENABLE_RENDERING", false)
-
   def create(): JekyllTagExtension = new JekyllTagExtension()
 }

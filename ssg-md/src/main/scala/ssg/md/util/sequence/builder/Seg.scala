@@ -87,9 +87,9 @@ final class Seg private (val start: Int, val end: Int) {
 
       if (isRepeatedTextEnd && length > 1) {
         if (isFirst256Start) {
-          "a:" + (length + "x'" + escapeJavaString(Nullable(charSequence.subSequence(0, 1))) + "'")
+          "a:" + (length.toString + "x'" + escapeJavaString(Nullable(charSequence.subSequence(0, 1))) + "'")
         } else {
-          "" + (length + "x'" + escapeJavaString(Nullable(charSequence.subSequence(0, 1))) + "'")
+          "" + (length.toString + "x'" + escapeJavaString(Nullable(charSequence.subSequence(0, 1))) + "'")
         }
       } else {
         val chars =
