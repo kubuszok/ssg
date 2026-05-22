@@ -88,7 +88,7 @@ object TocUtils {
 
     val it = headings.iterator()
     while (it.hasNext) {
-      val heading = it.next()
+      val heading     = it.next()
       val headingText = if (tocOptions.isTextOnly || needText) new TextCollectingVisitor().collectAndGetText(heading) else ""
 
       val headingContent =
