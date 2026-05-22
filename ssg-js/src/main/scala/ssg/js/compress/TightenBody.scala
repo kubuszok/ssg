@@ -1333,23 +1333,23 @@ object TightenBody {
     val candidates = ArrayBuffer.empty[ArrayBuffer[AstNode]]
     var statIndex  = statements.size
 
-    var abort = false
-    var hit = false
+    var abort    = false
+    var hit      = false
     var hitIndex = 0
     var hitStack = ArrayBuffer.empty[AstNode]
-    var candidate: AstNode          = null.asInstanceOf[AstNode]
-    var valueDef:  SymbolDef | Null = null
-    var stopAfter: AstNode | Null = null
+    var candidate: AstNode                         = null.asInstanceOf[AstNode]
+    var valueDef:  SymbolDef | Null                = null
+    var stopAfter: AstNode | Null                  = null
     var stopIfHit: AstNode | Null                  = null
     var lhs:       AstNode | Null                  = null
     var lvalues:   mutable.Map[String, LValueInfo] = mutable.Map.empty
-    var lhsLocal    = false
-    var sideEffects = false
-    var replaceAll = false
+    var lhsLocal     = false
+    var sideEffects  = false
+    var replaceAll   = false
     var mayThrowFlag = false
     var funarg       = false
     var replaced     = 0
-    var canReplace = false
+    var canReplace   = false
 
     /** Info about an lvalue reference. */
     final case class LValueInfo(d: SymbolDef, modified: Boolean)

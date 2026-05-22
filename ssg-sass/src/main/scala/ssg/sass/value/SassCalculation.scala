@@ -1028,4 +1028,3 @@ enum CalculationOperator(
 
   override def toString: String = displayName
 }
-
