@@ -15,6 +15,7 @@ concurrency:
 env:
   # Zulu 25 — FFM API stable since JDK 22, all 6 desktop platforms
   # including Windows aarch64 (which Temurin 25 lacks).
+  JVM_VERSION: "zulu:25"
   JAVA_VERSION: "25"
   JAVA_DISTRIBUTION: "zulu"
   NODE_VERSION: "22"
@@ -30,13 +31,10 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/setup-java@v4
+      - uses: coursier/setup-action@v3.0.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
+          jvm: ${{ env.JVM_VERSION }}
+          apps: sbt
 
       - name: Check formatting
         run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
@@ -78,13 +76,13 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: Run JVM tests with coverage
-        run: sbt test-coverage
+        run: sbt ci-jvm-3
 
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v5
         with:
-          files: target/scala-3.8.2/scoverage-report/scoverage.xml
+          files: target/scala-3.8.3/scoverage-report/scoverage.xml
           flags: ${{ matrix.label }}
           fail_ci_if_error: false
         env:
@@ -100,13 +98,10 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/setup-java@v4
+      - uses: coursier/setup-action@v3.0.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
+          jvm: ${{ env.JVM_VERSION }}
+          apps: sbt
 
       - uses: actions/setup-node@v4
         with:
@@ -137,7 +132,7 @@ jobs:
           fi
 
       - name: Run Scala.js tests
-        run: sbt test-js
+        run: sbt ci-js-3
         env:
           TREE_SITTER_WASM_DIR: /tmp/ts-wasm
 
@@ -186,7 +181,7 @@ jobs:
         run: choco install llvm --yes
 
       - name: Run Scala Native tests
-        run: sbt test-native
+        run: sbt ci-native-3
 
   # ─── re-scale enforce gate (covenant verify + shortcut budget) ──────
   #
@@ -203,12 +198,10 @@ jobs:
         with:
           submodules: false
 
-      - uses: actions/setup-java@v4
+      - uses: coursier/setup-action@v3.0.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - uses: sbt/setup-sbt@v1
+          jvm: ${{ env.JVM_VERSION }}
+          apps: sbt
 
       - name: Install Scala Native deps
         run: |
