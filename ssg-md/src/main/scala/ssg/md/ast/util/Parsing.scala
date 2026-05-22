@@ -269,10 +269,10 @@ object Parsing {
     "\\((" + ST_ESCAPED_CHAR + "|[^)\\x00])*\\))"
   private val ST_LINK_TITLE = Pattern.compile("^" + ST_LINK_TITLE_STRING)
 
-  private val ST_EXCLUDED_0_TO_SPACE_IDI     = "\u0000-\u001e\u0020"
-  private val ST_EXCLUDED_0_TO_SPACE_NO_IDI  = "\u0000-\u0020"
-  private val ST_ADDITIONAL_CHARS_IDI        = "\u001f"
-  private val ST_ADDITIONAL_CHARS_NO_IDI     = ""
+  private val ST_EXCLUDED_0_TO_SPACE_IDI    = "\u0000-\u001e\u0020"
+  private val ST_EXCLUDED_0_TO_SPACE_NO_IDI = "\u0000-\u0020"
+  private val ST_ADDITIONAL_CHARS_IDI       = "\u001f"
+  private val ST_ADDITIONAL_CHARS_NO_IDI    = ""
 
   val ST_HTMLCOMMENT:           String = "<!---->|<!--(?:-?[^>-])(?:-?[^-])*-->"
   val ST_PROCESSINGINSTRUCTION: String = "[<][?].*?[?][>]"

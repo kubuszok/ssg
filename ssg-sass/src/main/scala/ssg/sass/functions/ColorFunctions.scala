@@ -911,7 +911,9 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(
+          lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100))
+        )
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"lighten() is deprecated. ${suggestScaleAndAdjust(color, amount.value, "lightness")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -933,7 +935,9 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(
+          lightness = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("lightness") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100))
+        )
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"darken() is deprecated. ${suggestScaleAndAdjust(color, -amount.value, "lightness")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -966,7 +970,9 @@ object ColorFunctions {
                 "color.adjust() instead with an explicit $space argument."
             )
           }
-          val result = color.changeHsl(saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+          val result = color.changeHsl(
+            saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") + amount.valueInRange(0, 100, Nullable("amount")), 0, 100))
+          )
           EvaluationContext.warnForDeprecation(
             Deprecation.ColorFunctions,
             s"saturate() is deprecated. ${suggestScaleAndAdjust(color, amount.value, "saturation")}\n\nMore info: https://sass-lang.com/d/color-functions"
@@ -989,7 +995,9 @@ object ColorFunctions {
               "color.adjust() instead with an explicit $space argument."
           )
         }
-        val result = color.changeHsl(saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100)))
+        val result = color.changeHsl(
+          saturation = Some(clampLikeCss(color.toSpace(ColorSpace.hsl).channel("saturation") - amount.valueInRange(0, 100, Nullable("amount")), 0, 100))
+        )
         EvaluationContext.warnForDeprecation(
           Deprecation.ColorFunctions,
           s"desaturate() is deprecated. ${suggestScaleAndAdjust(color, -amount.value, "saturation")}\n\nMore info: https://sass-lang.com/d/color-functions"
