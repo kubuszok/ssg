@@ -1,267 +1,334 @@
 import sbtwelcome.UsefulTask
+import commandmatrix.extra.*
+import kubuszok.sbt._
+import kubuszok.sbt.KubuszokPlugin.autoImport._
 
-ThisBuild / organization := "dev.ssg"
-ThisBuild / version      := "0.1.0-SNAPSHOT"
+// Versions
 
-val llsVersion                 = "0.1.0"
-val treeSitterProvidersVersion = "0.1.0"
-val multiarchCoreVersion       = "0.2.0"
-val hearthVersion              = "0.3.0-29-g05da355-SNAPSHOT"
-ThisBuild / resolvers += "Maven Central Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
+val versions = new {
+  // Versions we are publishing for.
+  val scala3 = "3.8.3"
+
+  // Which versions should be cross-compiled for publishing.
+  val scalas = List(scala3)
+  val platforms = List(VirtualAxis.jvm, VirtualAxis.js, VirtualAxis.native)
+
+  // Dependencies
+  val hearth              = "0.3.0-29-g05da355-SNAPSHOT"
+  val lls                 = "0.1.0"
+  val scalaJavaLocales    = "1.5.4"
+  val scalaJavaTime       = "2.6.0"
+
+  // Multiarch
+  val multiarch           = "0.2.0"
+  val treeSitterProviders = "0.1.0"
+
+  // Tests
+  val munit           = "1.2.3"
+  val munitScalacheck = "1.0.0"
+}
+
+val dev = new DevProperties(
+  scala213 = None,
+  scala3 = Some(versions.scala3),
+  platforms = versions.platforms
+)
+
+lazy val al = new Aliases(
+  published = Seq(
+    `ssg-commons`,
+    `ssg-data-commons`,
+    `ssg-graphs-commons`,
+    `ssg-graphviz`,
+    `ssg-highlight`,
+    `ssg-js`,
+    `ssg-katex`,
+    `ssg-liquid`,
+    `ssg-md`,
+    `ssg-mermaid`,
+    `ssg-minify`,
+    `ssg-sass`
+  ),
+  compileOnly = Seq(
+    ssg
+  )
+)
+
+val commonSettings = Seq(
+  MatrixAction.ForAll.Configure(_.settings(
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-feature",
+      "-no-indent",
+      "-Werror",
+      "-Wimplausible-patterns",
+      "-Wrecurse-with-default",
+      "-Wenum-comment-discard",
+      "-Wunused:imports,privates,locals,patvars,nowarn"
+    ),
+    libraryDependencies ++= Seq(
+      "org.scalameta"     %%% "munit"             % versions.munit % Test,
+      "org.scalameta"     %%% "munit-scalacheck"  % versions.munitScalacheck % Test
+    ),
+    resolvers += Resolver.mavenLocal,
+    testFrameworks += new TestFramework("munit.Framework")
+  )),
+  MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(
+    fork := true,
+    // Enable native access for the Foreign Function & Memory API (JEP 454),
+    // used by NativeMathPlatform to call the native C pow() for exact
+    // floating-point parity with dart-sass / JavaScript Math.pow.
+    javaOptions += "--enable-native-access=ALL-UNNAMED"
+  )),
+  MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
+    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
+      _.withEmbedResources(true).withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
+    }
+  ))
+)
+
+val publishSettings = Seq(
+  organization := "com.kubuszok",
+  homepage := Some(url("https://github.com/kubuszok/ssg")),
+  organizationHomepage := Some(url("https://kubuszok.com")),
+  licenses := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")),
+  scmInfo := Some(
+    ScmInfo(
+      url("https://github.com/kubuszok/ssg/"),
+      "scm:git:git@github.com:kubuszok/ssg.git"
+    )
+  ),
+  startYear := Some(2026),
+  developers := List(
+    Developer("MateuszKubuszok", "Mateusz Kubuszok", "", url("https://github.com/MateuszKubuszok"))
+  ),
+  pomExtra := (
+    <issueManagement>
+      <system>GitHub issues</system>
+      <url>https://github.com/kubuszok/ssg/issues</url>
+    </issueManagement>
+  ),
+  projectType := ProjectType.ScalaLibrary
+)
+
+val noPublishSettings =
+  Seq(projectType := ProjectType.NonPublished)
+
+val mimaSettings = Seq(
+  mimaPreviousArtifacts := Set(),
+  mimaFailOnNoPrevious := false
+)
 
 // --- Common utilities (cross-platform abstractions) ---
 
-val `ssg-commons` = (projectMatrix in file("ssg-commons"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val `ssg-commons` = (projectMatrix in file("ssg-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-commons",
     libraryDependencies ++= Seq(
-      "com.kubuszok"  %%% "lls"              % llsVersion,
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+      "com.kubuszok"  %%% "lls" % versions.lls,
     )
   )
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+  .settings(publishSettings)
+  .settings(mimaSettings)
 
 // --- Data view abstractions (shared) ---
 
-val `ssg-data-commons` = (projectMatrix in file("ssg-data-commons"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val `ssg-data-commons` = (projectMatrix in file("ssg-data-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-data-commons",
     libraryDependencies ++= Seq(
-      "com.kubuszok"      %%% "hearth"            % hearthVersion,
-      "io.github.cquiroz" %%% "scala-java-time"   % "2.6.0",
-      "org.scalameta"     %%% "munit"             % SsgSettings.versions.munit % Test,
-      "org.scalameta"     %%% "munit-scalacheck"  % SsgSettings.versions.munitScalacheck % Test
+      "com.kubuszok"      %%% "hearth"            % versions.hearth,
+      "io.github.cquiroz" %%% "scala-java-time"   % versions.scalaJavaTime
     ),
-    libraryDependencies += compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % hearthVersion)
+    libraryDependencies += compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % versions.hearth)
   )
+  .settings(publishSettings)
+  .settings(mimaSettings)
   .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
 // --- Graph layout and SVG infrastructure (shared) ---
 
-val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-graphs-commons",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
+    name := "ssg-graphs-commons"
   )
+  .settings(publishSettings)
+  .settings(mimaSettings)
   .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- Markdown engine (flexmark-java port) ---
-
-val `ssg-md` = (projectMatrix in file("ssg-md"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-md",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- Liquid template engine (liqp port) ---
-
-val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-liquid",
-    libraryDependencies ++= Seq(
-      "io.github.cquiroz" %%% "scala-java-time"    % "2.6.0",
-      "io.github.cquiroz" %%% "scala-java-locales" % "1.5.4",
-      "org.scalameta"      %%% "munit"              % "1.2.3" % Test,
-      "org.scalameta"      %%% "munit-scalacheck"   % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`, `ssg-data-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
-  ))
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++ Seq(
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
-  ))
-
-// --- SASS/SCSS compiler (dart-sass port) ---
-
-val `ssg-sass` = (projectMatrix in file("ssg-sass"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-sass",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- Web asset minification (jekyll-minifier port) ---
-
-val `ssg-minify` = (projectMatrix in file("ssg-minify"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-minify",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- JavaScript compiler/minifier (Terser port) ---
-
-val `ssg-js` = (projectMatrix in file("ssg-js"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-js",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- Math typesetting (KaTeX port) ---
-
-val `ssg-katex` = (projectMatrix in file("ssg-katex"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-katex",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
-
-// --- Diagramming engine (Mermaid port) ---
-
-val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
-  .settings(
-    name := "ssg-mermaid",
-    libraryDependencies ++= Seq(
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalameta"      %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta"      %%% "munit-scalacheck" % "1.0.0" % Test
-    )
-  )
-  .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
-  ))
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++ Seq(
-    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
-  ))
 
 // --- Graphviz DOT renderer ---
 
-val `ssg-graphviz` = (projectMatrix in file("ssg-graphviz"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val `ssg-graphviz` = (projectMatrix in file("ssg-graphviz"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-graphviz",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
+    name := "ssg-graphviz"
   )
+  .settings(publishSettings)
+  .settings(mimaSettings)
   .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
 
 // --- Syntax highlighting (tree-sitter) ---
 
-val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
+    MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(
+      libraryDependencies ++= Seq(
+        "com.kubuszok" % "pnm-provider-tree-sitter-desktop" % versions.treeSitterProviders,
+        "com.kubuszok" %% "multiarch-core"                  % versions.multiarch
+      )
+    )),
+    MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      libraryDependencies += "com.kubuszok" % "wasm-provider-tree-sitter" % versions.treeSitterProviders,
+      scalaJSLinkerConfig ~= { _.withModuleKind(org.scalajs.linker.interface.ModuleKind.CommonJSModule) },
+      Test / jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(
+        org.scalajs.jsenv.nodejs.NodeJSEnv.Config()
+          .withEnv(Map("TREE_SITTER_WASM_DIR" -> sys.env.getOrElse("TREE_SITTER_WASM_DIR", "/tmp/ts-wasm")))
+      )
+    )),
+    // TODO: check if _root_.multiarch.sbt.NativeProviderPlugin.projectSettings is necessary for this to work
+    MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
+      (_root_.multiarch.sbt.NativeProviderPlugin.projectSettings ++ Seq(
+        libraryDependencies += "com.kubuszok" % "sn-provider-tree-sitter" % versions.treeSitterProviders,
+        scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
+          _.withResourceIncludePatterns(Seq("**.scm"))
+        }
+      )) *
+    ))
+  )) *)
   .settings(
     name := "ssg-highlight",
     libraryDependencies ++= Seq(
-      "com.kubuszok" % "tree-sitter-queries" % treeSitterProvidersVersion,
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+      "com.kubuszok" % "tree-sitter-queries" % versions.treeSitterProviders
     )
   )
+  .settings(publishSettings)
+  .settings(mimaSettings)
   .dependsOn(`ssg-commons`, `ssg-md`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings ++ Seq(
+
+// --- JavaScript compiler/minifier (Terser port) ---
+
+lazy val `ssg-js` = (projectMatrix in file("ssg-js"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-js"
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`)
+
+// --- Math typesetting (KaTeX port) ---
+
+lazy val `ssg-katex` = (projectMatrix in file("ssg-katex"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-katex"
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`)
+
+// --- Liquid template engine (liqp port) ---
+
+lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
+    MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+    )),
+    MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
+      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+    ))
+  )) *)
+  .settings(
+    name := "ssg-liquid",
     libraryDependencies ++= Seq(
-      "com.kubuszok" % "pnm-provider-tree-sitter-desktop" % treeSitterProvidersVersion,
-      "com.kubuszok" %% "multiarch-core" % multiarchCoreVersion
+      "io.github.cquiroz" %%% "scala-java-time"    % versions.scalaJavaTime,
+      "io.github.cquiroz" %%% "scala-java-locales" % versions.scalaJavaLocales
     )
-  ))
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
-    libraryDependencies += "com.kubuszok" % "wasm-provider-tree-sitter" % treeSitterProvidersVersion,
-    scalaJSLinkerConfig ~= { _.withModuleKind(org.scalajs.linker.interface.ModuleKind.CommonJSModule) },
-    Test / jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(
-      org.scalajs.jsenv.nodejs.NodeJSEnv.Config()
-        .withEnv(Map("TREE_SITTER_WASM_DIR" -> sys.env.getOrElse("TREE_SITTER_WASM_DIR", "/tmp/ts-wasm")))
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`)
+
+// --- Markdown engine (flexmark-java port) ---
+
+lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-md"
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`)
+
+// --- Diagramming engine (Mermaid port) ---
+
+lazy val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
+    MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+    )),
+    MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
+      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+    ))
+  )) *)
+  .settings(
+    name := "ssg-mermaid",
+    libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time"  % versions.scalaJavaTime
     )
-  ))
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++
-    _root_.multiarch.sbt.NativeProviderPlugin.projectSettings ++ Seq(
-    libraryDependencies += "com.kubuszok" % "sn-provider-tree-sitter" % treeSitterProvidersVersion,
-    scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
-      _.withResourceIncludePatterns(Seq("**.scm"))
-    }
-  ))
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
+
+// --- Web asset minification (jekyll-minifier port) ---
+
+lazy val `ssg-minify` = (projectMatrix in file("ssg-minify"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-minify"
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`)
+
+// --- SASS/SCSS compiler (dart-sass port) ---
+
+lazy val `ssg-sass` = (projectMatrix in file("ssg-sass"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-sass"
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`)
 
 // --- Aggregator module ---
 
-val ssg = (projectMatrix in file("ssg"))
-  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
-  .settings(SsgSettings.commonSettings *)
+lazy val ssg = (projectMatrix in file("ssg"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg",
-    libraryDependencies ++= Seq(
-      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
-      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
-    )
+    name := "ssg"
   )
-  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`, `ssg-katex`, `ssg-mermaid`, `ssg-graphviz`, `ssg-highlight`)
-  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-graphviz`, `ssg-highlight`, `ssg-js`, `ssg-katex`, `ssg-liquid`, `ssg-md`, `ssg-mermaid`, `ssg-minify`, `ssg-sass`)
 
 // ── Root project (welcome + aggregation) ─────────────────────────────
 
@@ -269,60 +336,37 @@ lazy val root = (project in file("."))
   .enablePlugins(KubuszokRootPlugin)
   .settings(
     name := "ssg-root",
-    publish / skip := true,
     logo :=
-      s"""SSG ${version.value} for Scala ${SsgSettings.scalaVersion} x (JVM, Scala.js, Scala Native)
+      s"""SSG ${version.value} for Scala ${versions.scala3} x (Scala JVM, Scala.js $scalaJSVersion, Scala Native $nativeVersion)
          |
          |This build uses sbt-projectmatrix:
          | - Scala JVM adds no suffix to a project name seen in build.sbt
          | - Scala.js adds the "JS" suffix to a project name seen in build.sbt
          | - Scala Native adds the "Native" suffix to a project name seen in build.sbt
+         |
+         |When working with IntelliJ or Scala Metals, edit dev.properties to control which platform you're currently working with.
+         |
+         |Library depends on artifacts developed in:
+         | - https://github.com/kubuszok/lls
+         | - https://github.com/kubuszok/ssg-native-providers
+         |When working with them, it might be necessary to create PRs and test the SNAPSHOTs published before merging all changes.
          |""".stripMargin,
-    usefulTasks := Seq(
-      UsefulTask("test-jvm", "Run all JVM unit tests").noAlias,
-      UsefulTask("test-js", "Run all Scala.js unit tests").noAlias,
-      UsefulTask("test-native", "Run all Scala Native unit tests").noAlias,
-      UsefulTask("test-coverage", "Run JVM tests with coverage").noAlias,
-      UsefulTask("compile", "Compile everything").noAlias,
+    usefulTasks := al.usefulTasks(extra = Seq(
       UsefulTask("scalafmtAll", "Format all sources").noAlias
-    )
+    ))
   )
-
-// ── Test aggregation aliases ─────────────────────────────────────────
-
-addCommandAlias("test-jvm",
-  List(
-    "ssg-data-commons/test", "ssg-graphs-commons/test", "ssg-md/test", "ssg-liquid/test", "ssg-sass/test",
-    "ssg-minify/test", "ssg-js/test", "ssg-katex/test", "ssg-mermaid/test", "ssg-graphviz/test", "ssg-highlight/test"
-  ).mkString("; ")
-)
-
-addCommandAlias("test-js",
-  List(
-    "ssg-data-commonsJS/test", "ssg-graphs-commonsJS/test", "ssg-mdJS/test", "ssg-liquidJS/test", "ssg-sassJS/test",
-    "ssg-minifyJS/test", "ssg-jsJS/test", "ssg-katexJS/test", "ssg-mermaidJS/test", "ssg-graphvizJS/test", "ssg-highlightJS/test"
-  ).mkString("; ")
-)
-
-addCommandAlias("test-native",
-  List(
-    "ssg-data-commonsNative/test", "ssg-graphs-commonsNative/test", "ssg-mdNative/test", "ssg-liquidNative/test", "ssg-sassNative/test",
-    "ssg-minifyNative/test", "ssg-jsNative/test", "ssg-katexNative/test", "ssg-mermaidNative/test", "ssg-graphvizNative/test", "ssg-highlightNative/test"
-  ).mkString("; ")
-)
-
-// ── Coverage alias (JVM-only) ────────────────────────────────────────
-// Scala 3 coverage instrumentation is incompatible with JS/Native runtimes
-// (java.io.FileWriter references). Only run on JVM projects via test-jvm.
-// Strips -Werror to avoid false-positive warnings from instrumented code.
-
-addCommandAlias("test-coverage",
-  List(
-    "coverage",
-    """set ThisBuild / scalacOptions -= "-Werror"""",
-    "test-jvm",
-    "coverageReport",
-    "coverageAggregate",
-    "coverageOff"
-  ).mkString("; ")
-)
+  .aggregate(`ssg-commons`.projectRefs *)
+  .aggregate(`ssg-data-commons`.projectRefs *)
+  .aggregate(`ssg-graphs-commons`.projectRefs *)
+  .aggregate(`ssg-graphviz`.projectRefs *)
+  .aggregate(`ssg-highlight`.projectRefs *)
+  .aggregate(`ssg-js`.projectRefs *)
+  .aggregate(`ssg-katex`.projectRefs *)
+  .aggregate(`ssg-liquid`.projectRefs *)
+  .aggregate(`ssg-md`.projectRefs *)
+  .aggregate(`ssg-mermaid`.projectRefs *)
+  .aggregate(`ssg-minify`.projectRefs *)
+  .aggregate(`ssg-sass`.projectRefs *)
+  .aggregate(ssg.projectRefs *)
+  .settings(noPublishSettings)
+  .settings(mimaSettings)

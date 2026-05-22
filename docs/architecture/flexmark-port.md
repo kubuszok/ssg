@@ -5,7 +5,7 @@ Post-mortem documentation for the flexmark-java → `ssg-md` porting effort.
 ## Overview
 
 **Source**: flexmark-java 0.64.8 (Java, BSD-2-Clause)
-**Target**: `ssg-md` module (Scala 3.8.2, cross-platform: JVM, Scala.js, Scala Native)
+**Target**: `ssg-md` module (Scala 3.8.3, cross-platform: JVM, Scala.js, Scala Native)
 **Result**: ~790+ production files, 1645/1645 tests passing on JVM and Scala Native
 
 ## What Was Ported

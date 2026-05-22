@@ -7,7 +7,7 @@ Load the cross-platform settings reference.
 $READ docs/architecture/cross-platform-settings.md
 
 Key settings:
-- Scala 3.8.2
+- Scala 3.8.3
 - sbt 1.12.6
 - sbt-projectmatrix 0.11.0
 - sbt-scalajs 1.20.2

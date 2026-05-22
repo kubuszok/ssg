@@ -4,6 +4,9 @@ A cross-platform Scala 3 static site generator targeting JVM, Scala.js, and
 Scala Native — without external binary dependencies. Built by porting
 battle-tested libraries to idiomatic Scala 3.
 
+> [!warning]
+> Work in progress - components are ported from other languages, but have not yet been composed into a working static site generator.
+
 ## Modules
 
 | Module | Source Library | Language | Purpose | Status |
@@ -25,7 +28,7 @@ All completed modules pass tests on **JVM, Scala.js, and Scala Native**.
 
 ## Building
 
-Requires: JDK 21+, sbt 1.12+, Scala 3.8.2
+Requires: JDK 21+, sbt 1.12+, Scala 3.8.3
 
 ```bash
 # Compile all modules on default (JVM) platform
@@ -210,3 +213,11 @@ original licenses:
 | D3 curves | ISC | Mike Bostock |
 
 See [LICENSE](LICENSE) for full third-party notices.
+
+## AI-Assisted Development
+
+The Java/JavaScript/Ruby/Dart-to-Scala 3 port was performed primarily using AI code generation tools
+(Anthropic Claude Code). All AI-generated code was reviewed, tested, and audited
+against the original sources by the project maintainer. Each ported file
+contains a header comment documenting its original source, migration notes, and
+audit date.

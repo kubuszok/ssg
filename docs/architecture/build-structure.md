@@ -38,7 +38,7 @@ Total: 24 sbt subprojects (8 modules x 3 platforms).
 
 Defined in `project/SsgSettings.scala`:
 
-- `scalaVersion`: 3.8.2
+- `scalaVersion`: 3.8.3
 - `commonSettings`: Compiler flags, test framework, dependencies
 - `jvmSettings`: Fork enabled
 - `jsSettings`: Scala.js configuration
