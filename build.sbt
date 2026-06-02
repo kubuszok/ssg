@@ -25,7 +25,7 @@ val versions = new {
 
   // Tests
   val munit           = "1.2.3"
-  val munitScalacheck = "1.0.0"
+  val munitScalacheck = "1.3.0"
 }
 
 val dev = new DevProperties(
