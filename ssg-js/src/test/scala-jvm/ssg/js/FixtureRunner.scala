@@ -25,9 +25,7 @@ object FixtureRunner {
 
   /** Run a single fixture.
     *
-    * Note: Previously used CompletableFuture with timeout, but that requires
-    * threading support which isn't available on Scala Native. Running
-    * synchronously is simpler and works cross-platform.
+    * Note: Previously used CompletableFuture with timeout, but that requires threading support which isn't available on Scala Native. Running synchronously is simpler and works cross-platform.
     */
   def run(fixture: CompressFixture): FixtureResult =
     try runUnsafe(fixture)
