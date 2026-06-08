@@ -14,7 +14,7 @@ val versions = new {
   val platforms = List(VirtualAxis.jvm, VirtualAxis.js, VirtualAxis.native)
 
   // Dependencies
-  val hearth              = "0.3.0-49-g68e1781-SNAPSHOT"
+  val hearth              = "0.3.0-108-g4bed139-SNAPSHOT"
   val lls                 = "0.1.0"
   val scalaJavaLocales    = "1.5.4"
   val scalaJavaTime       = "2.6.0"
