@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: target/scala-3.8.3/scoverage-report/scoverage.xml
           flags: ${{ matrix.label }}
