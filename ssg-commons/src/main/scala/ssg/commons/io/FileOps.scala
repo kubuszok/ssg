@@ -4,8 +4,11 @@
  *
  * Cross-platform file operations.
  *
- * On JVM: delegates to java.nio.file.Files
- * On JS/Native: throws UnsupportedOperationException (no file system)
+ * On JVM and Scala Native: delegates to java.nio.file.Files.
+ * On Scala.js: delegates to Node's fs module (synchronous APIs); when running in a browser
+ * (no `require`), the operations are unavailable and `isSupported` reports false.
+ * A missing-file read still fails on every platform — it surfaces as a NoSuchFile signal on
+ * JVM/Native and as a JavaScript error on Node — rather than returning empty.
  *
  * Covenant: full-port
  * Covenant-verified: 2026-04-26
@@ -18,43 +21,43 @@ import java.nio.charset.{ Charset, StandardCharsets }
 
 /** Cross-platform file operations.
   *
-  * File I/O is only available on JVM. JS and Native implementations throw UnsupportedOperationException.
+  * Supported on JVM, Scala Native, and Scala.js (under Node). In a browser, where Node's fs module is absent, file I/O is unavailable and [[isSupported]] reports false.
   */
 object FileOps {
 
-  /** Reads all bytes from a file. JVM-only. */
+  /** Reads all bytes from a file. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def readAllBytes(path: FilePath): Array[Byte] =
     FileOpsPlatform.readAllBytes(path)
 
-  /** Reads a file as a string using UTF-8. JVM-only. */
+  /** Reads a file as a string using UTF-8. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def readString(path: FilePath): String =
     readString(path, StandardCharsets.UTF_8)
 
-  /** Reads a file as a string. JVM-only. */
+  /** Reads a file as a string. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def readString(path: FilePath, charset: Charset): String =
     new String(readAllBytes(path), charset)
 
-  /** Writes bytes to a file. JVM-only. */
+  /** Writes bytes to a file. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def writeBytes(path: FilePath, bytes: Array[Byte]): Unit =
     FileOpsPlatform.writeBytes(path, bytes)
 
-  /** Writes a string to a file using UTF-8. JVM-only. */
+  /** Writes a string to a file using UTF-8. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def writeString(path: FilePath, content: String): Unit =
     writeString(path, content, StandardCharsets.UTF_8)
 
-  /** Writes a string to a file. JVM-only. */
+  /** Writes a string to a file. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def writeString(path: FilePath, content: String, charset: Charset): Unit =
     writeBytes(path, content.getBytes(charset))
 
-  /** Checks if a file exists. JVM-only. */
+  /** Checks if a file exists. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def exists(path: FilePath): Boolean =
     FileOpsPlatform.exists(path)
 
-  /** Checks if the path is a directory. JVM-only. */
+  /** Checks if the path is a directory. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def isDirectory(path: FilePath): Boolean =
     FileOpsPlatform.isDirectory(path)
 
-  /** Checks if the path is a regular file. JVM-only. */
+  /** Checks if the path is a regular file. Supported on JVM, Scala Native, and Scala.js (under Node). */
   def isRegularFile(path: FilePath): Boolean =
     FileOpsPlatform.isRegularFile(path)
 
