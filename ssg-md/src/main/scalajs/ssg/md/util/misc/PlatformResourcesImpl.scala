@@ -3,7 +3,14 @@
  * Scala.js implementation of platform-specific resource loading.
  * Class.getResourceAsStream is not available on Scala.js, so we use Node.js fs.readFileSync to read resource files from the filesystem.
  *
- * sbt copies resources to ssg-md/target/js-3/classes/ (main) and ssg-md/target/js-3/test-classes/ (test). When JS tests run via Node.js, the working directory is the project root. */
+ * sbt copies resources to ssg-md/target/js-3/classes/ (main) and ssg-md/target/js-3/test-classes/ (test). When JS tests run via Node.js, the working directory is the project root.
+ *
+ * ISS-979: the fs-based lookup above only works inside the SSG repository tree (it resolves paths relative to the
+ * process working directory). For published artifacts / different working directories / browser bundles every lookup
+ * would otherwise come back empty. ssg-md's MAIN runtime resources (entities.properties, EmojiReference.txt, admonition
+ * assets, images) are therefore embedded at build time into the generated EmbeddedResources object (see
+ * project/EmbeddedResourcesGen.scala) and consulted FIRST. The fs fallback is retained so the in-repo spec-test suites,
+ * which load TEST resources through the same mechanism, keep working from the repository tree. */
 package ssg
 package md
 package util
@@ -33,17 +40,26 @@ object PlatformResourcesImpl {
   )
 
   def getResourceAsStream(cls: Class[?], path: String): Nullable[InputStream] = {
-    val cleanPath = if (path.startsWith("/")) path.substring(1) else path
-    boundary[Nullable[InputStream]] {
-      var i = 0
-      while (i < baseDirs.length) {
-        val result = tryReadFile(baseDirs(i), cleanPath)
-        if (result.isDefined) {
-          break(result)
+    // ISS-979: build-time-embedded main resources first — works regardless of the working directory.
+    val absPath = if (path.startsWith("/")) path else "/" + path
+    EmbeddedResources.resources.get(absPath) match {
+      case Some(thunk) =>
+        Nullable(new ByteArrayInputStream(thunk()): InputStream)
+      case None =>
+        // Fallback: Node fs lookup relative to the working directory, used by the in-repo spec-test
+        // suites that load TEST resources (not embedded) from the repository tree.
+        val cleanPath = if (path.startsWith("/")) path.substring(1) else path
+        boundary[Nullable[InputStream]] {
+          var i = 0
+          while (i < baseDirs.length) {
+            val result = tryReadFile(baseDirs(i), cleanPath)
+            if (result.isDefined) {
+              break(result)
+            }
+            i += 1
+          }
+          Nullable.empty[InputStream]
         }
-        i += 1
-      }
-      Nullable.empty[InputStream]
     }
   }
 

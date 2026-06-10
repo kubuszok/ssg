@@ -8,6 +8,7 @@ project/*
 !project/plugins.sbt
 !project/build.properties
 !project/SsgSettings.scala
+!project/EmbeddedResourcesGen.scala
 target/
 .sbt/
 

@@ -262,9 +262,22 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
 
 // --- Markdown engine (flexmark-java port) ---
 
+// Generates ssg.md.util.misc.EmbeddedResources for the Scala.js platform (see project/EmbeddedResourcesGen.scala).
+// Class.getResourceAsStream is not available on Scala.js, so PlatformResourcesImpl (scalajs) loads runtime
+// resources from this build-time-embedded map first, falling back to Node fs only for development/in-repo lookups.
 lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
-  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
+    MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      Compile / sourceGenerators += Def.task {
+        val resourceDir = (Compile / sourceDirectory).value / "resources"
+        val outFile     = (Compile / sourceManaged).value / "ssg" / "md" / "util" / "misc" / "EmbeddedResources.scala"
+        val log         = streams.value.log
+        EmbeddedResourcesGen.generate(resourceDir, outFile, log)
+        Seq(outFile)
+      }.taskValue
+    ))
+  )) *)
   .settings(
     name := "ssg-md"
   )
