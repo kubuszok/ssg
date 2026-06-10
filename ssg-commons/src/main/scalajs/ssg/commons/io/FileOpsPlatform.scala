@@ -20,6 +20,12 @@
  *  - A missing-file read throws on JVM as java.nio.file.NoSuchFileException; on Node, readFileSync throws an
  *    ENOENT error that surfaces to Scala as scala.scalajs.js.JavaScriptException. Both propagate (no swallow),
  *    matching the JVM contract that reading an absent file fails rather than returning empty.
+ *  - isDirectory/isRegularFile use a single statSync (no existsSync pre-check) so there is no window in which the
+ *    entry can vanish between two calls (e.g. an external process under watch mode). When statSync fails because the
+ *    entry is absent or its attributes cannot be read, the answer is false — exactly the JVM reference behavior:
+ *    java.nio.file.Files.isDirectory/isRegularFile are documented to "return false if the file does not exist or it
+ *    cannot be determined whether the file is a directory [/regular file]". The catch is that JVM-parity semantic,
+ *    not a swallowed operation failure: it is the type-of-entry question answering "no" for an unreadable entry.
  */
 package ssg
 package commons
@@ -67,12 +73,28 @@ private[io] object FileOpsPlatform {
     fs.existsSync(path.pathString).asInstanceOf[Boolean]
 
   def isDirectory(path: FilePath): Boolean =
-    fs.existsSync(path.pathString).asInstanceOf[Boolean] &&
+    // Single statSync, no existsSync pre-check: there is no window in which the entry can be removed between two
+    // calls. When statSync fails because the entry is absent or its attributes are unreadable (Node surfaces ENOENT /
+    // ENOTDIR / EACCES as js.JavaScriptException), the answer is false — the JVM-parity semantic of
+    // java.nio.file.Files.isDirectory, which "returns false if the file does not exist or it cannot be determined
+    // whether the file is a directory". This is the type-of-entry question answering "no", not a swallowed operation.
+    try
       fs.statSync(path.pathString).isDirectory().asInstanceOf[Boolean]
+    catch {
+      case _: js.JavaScriptException => false
+    }
 
   def isRegularFile(path: FilePath): Boolean =
-    fs.existsSync(path.pathString).asInstanceOf[Boolean] &&
+    // Single statSync, no existsSync pre-check: there is no window in which the entry can be removed between two
+    // calls. When statSync fails because the entry is absent or its attributes are unreadable (Node surfaces ENOENT /
+    // ENOTDIR / EACCES as js.JavaScriptException), the answer is false — the JVM-parity semantic of
+    // java.nio.file.Files.isRegularFile, which "returns false if the file does not exist or it cannot be determined
+    // whether the file is a regular file". This is the type-of-entry question answering "no", not a swallowed operation.
+    try
       fs.statSync(path.pathString).isFile().asInstanceOf[Boolean]
+    catch {
+      case _: js.JavaScriptException => false
+    }
 
   /** True when the entry at `p`, examined without dereferencing, is a directory (a directory symlink reports false, matching the JVM `Files.isDirectory(_, NOFOLLOW_LINKS)` used by the reference
     * impl).
