@@ -22,10 +22,12 @@ Execute ONE iteration of the §7 protocol:
    `fix/ISS-NNN-<slug>`: it writes the red test (name contains the ISS id,
    expected values cited from the original source), runs it, confirms it
    fails for the issue's stated reason, and commits it as the branch's FIRST
-   commit (red-sha). If it cannot make the test fail, the issue may be
-   stale — adjudicate instead of fixing anyway. (Plan §6 red-commit
-   protocol; low-risk categories may skip this and rely on stash-based
-   proof-of-red.)
+   commit (red-sha). The red test MUST be committed as a scalafmt fixpoint
+   (run the fmt pipeline before committing; ISS-1130 — an auto-format hook
+   reflows non-fixpoint files and would violate C16 red-commit integrity).
+   If it cannot make the test fail, the issue may be stale — adjudicate
+   instead of fixing anyway. (Plan §6 red-commit protocol; low-risk
+   categories may skip this and rely on stash-based proof-of-red.)
 
    Then dispatch an IMPLEMENTER subagent — ALWAYS with `model: "opus"`
    (Opus 4.8; the override takes precedence over agent-definition defaults):
