@@ -35,7 +35,7 @@ class IncludeRelative extends Include("include_relative") {
     *
     * Uses `context.getRootFolder()` to determine the base path. Falls back to the current working directory if the root folder is not set.
     *
-    * JVM-only: requires file system access via FileOps.
+    * Requires file system access via FileOps: supported on JVM, Scala Native, and Scala.js (under Node).
     */
   override protected def detectSource(context: TemplateContext, includeResource: String): NameResolver.ResolvedSource = {
     var rootPath = context.getRootFolder

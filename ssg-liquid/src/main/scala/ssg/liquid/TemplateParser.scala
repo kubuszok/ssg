@@ -67,7 +67,7 @@ final class TemplateParser(
 
   /** Parses a Liquid template from a file path, recording sourceLocation for include_relative.
     *
-    * JVM-only: requires file system access via FileOps.
+    * Requires file system access via FileOps: supported on JVM, Scala Native, and Scala.js (under Node).
     */
   def parse(path: FilePath): Template = {
     val input = FileOps.readString(path)
@@ -76,7 +76,7 @@ final class TemplateParser(
 
   /** Parses a Liquid template from a File.
     *
-    * JVM-only: requires file system access.
+    * Requires file system access: supported on JVM, Scala Native, and Scala.js (under Node).
     */
   def parse(file: java.io.File): Template =
     parse(FilePath.of(file.getPath))
