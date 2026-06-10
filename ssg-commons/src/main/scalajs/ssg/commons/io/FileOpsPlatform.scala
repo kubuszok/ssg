@@ -74,6 +74,70 @@ private[io] object FileOpsPlatform {
     fs.existsSync(path.pathString).asInstanceOf[Boolean] &&
       fs.statSync(path.pathString).isFile().asInstanceOf[Boolean]
 
+  /** True when the entry at `p`, examined without dereferencing, is a directory (a directory symlink reports false, matching the JVM `Files.isDirectory(_, NOFOLLOW_LINKS)` used by the reference
+    * impl).
+    */
+  private def isDirNoFollow(p: String): Boolean =
+    fs.lstatSync(p).isDirectory().asInstanceOf[Boolean]
+
+  /** Immediate children, sorted by path string for deterministic output across platforms. Node readdirSync throws ENOENT for a missing path and ENOTDIR for a non-directory path, both propagated (no
+    * swallow), matching the missing / non-directory contract of the JVM reference.
+    */
+  def list(path: FilePath): List[FilePath] = {
+    val names = fs.readdirSync(path.pathString).asInstanceOf[js.Array[String]]
+    names.toList.map(path.resolve).sortBy(_.pathString)
+  }
+
+  /** Recursive pre-order descent mirroring the JVM reference: each level via [[list]] (sorted), directory before its contents, directory symlinks not descended into (lstat tests the link, not its
+    * target).
+    */
+  def walkTree(path: FilePath): List[FilePath] = {
+    val builder = List.newBuilder[FilePath]
+    def descend(dir: FilePath): Unit =
+      list(dir).foreach { child =>
+        builder += child
+        if (isDirNoFollow(child.pathString)) descend(child)
+      }
+    descend(path)
+    builder.result()
+  }
+
+  /** Nested, idempotent directory creation (recursive=true returns normally when the path already exists, the Node analogue of Files.createDirectories).
+    */
+  def createDirectories(path: FilePath): Unit =
+    fs.mkdirSync(path.pathString, js.Dynamic.literal(recursive = true)): Unit
+
+  /** Byte-exact file copy; copyFileSync overwrites the destination by default (static-asset rebuild, per the design). */
+  def copy(from: FilePath, to: FilePath): Unit =
+    fs.copyFileSync(from.pathString, to.pathString): Unit
+
+  /** Removes a file or an entire tree; a missing path is a no-op. Symlinks are deleted as links — a directory symlink is unlinked directly (its target is never descended into), giving the clean-build
+    * safety property (design Q13). The tree is walked and removed by hand rather than via fs.rmSync(recursive) so the symlink rule is explicit and identical to the JVM and Native implementations.
+    */
+  def deleteRecursively(path: FilePath): Unit = {
+    val p = path.pathString
+    if (lexists(p)) {
+      if (isDirNoFollow(p)) {
+        list(path).foreach(deleteRecursively)
+        fs.rmdirSync(p): Unit
+      } else {
+        fs.unlinkSync(p): Unit
+      }
+    }
+  }
+
+  /** Presence test that does not dereference: an lstatSync that succeeds means an entry is there (a regular file, a directory, or a symlink — even one whose target is gone), while a missing path
+    * makes Node throw an ENOENT error surfaced as js.JavaScriptException. This is detection only (it answers "is something here to remove?"); it never swallows a failure of an operation actually
+    * being performed. existsSync is unsuitable because it follows the link and would report false for a present-but-dangling symlink, defeating the no-follow delete contract.
+    */
+  private def lexists(p: String): Boolean =
+    try {
+      fs.lstatSync(p): Unit
+      true
+    } catch {
+      case _: js.JavaScriptException => false
+    }
+
   /** True when Node's fs module is actually available (Node runtime); false in a browser where `require` is absent. */
   lazy val isSupported: Boolean =
     try {
