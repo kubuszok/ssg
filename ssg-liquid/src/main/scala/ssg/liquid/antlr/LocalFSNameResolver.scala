@@ -28,7 +28,7 @@ import scala.util.boundary.break
 
 /** Resolves template names to file contents from the local filesystem.
   *
-  * JVM-only: uses ssg.commons.io for path resolution and file reading.
+  * Uses ssg.commons.io for path resolution and file reading: supported on JVM, Scala Native, and Scala.js (under Node).
   *
   * If the name is an absolute path, it is used directly. Otherwise, the name is resolved relative to the configured root directory. If the name does not contain a dot (no extension), the default
   * extension `.liquid` is appended.
