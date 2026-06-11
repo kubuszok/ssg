@@ -165,8 +165,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
     assertEquals(rendered, "abd")
   }
 
-  // SSG: where_exp variable access from outer scope not yet supported
-  test("where_exp: should access global variables".fail) {
+  test("where_exp: should access global variables") {
     val data = TestHelper.mapOf(
       "var" -> TestHelper.listOf(
         TestHelper.mapOf("key" -> L(1), "marker" -> "wrong"),
@@ -179,7 +178,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
     assertEquals(res, "good")
   }
 
-  test("where_exp: should access local variables".fail) {
+  test("where_exp: should access local variables") {
     val data = TestHelper.mapOf(
       "var" -> TestHelper.listOf(
         TestHelper.mapOf("key" -> L(1), "marker" -> "wrong"),
@@ -192,7 +191,7 @@ final class WhereExpFilterSuite extends munit.FunSuite {
     assertEquals(res, "good")
   }
 
-  test("where_exp: should access complex variables".fail) {
+  test("where_exp: should access complex variables") {
     val data = TestHelper.mapOf(
       "var" -> TestHelper.listOf(
         TestHelper.mapOf("key" -> L(1), "marker" -> "wrong"),

@@ -98,9 +98,16 @@ final class Template(
     templateParser.renderTransformer.transformObject(templateContext, rendered)
   }
 
-  /** Renders with an existing parent context (used by include tags). */
-  def renderToObjectUnguarded(variables: JMap[String, DataView], parentContext: TemplateContext, isInclude: Boolean): DataView = {
-    val context = if (isInclude) {
+  /** Renders with an existing parent context (used by include tags and `where_exp`).
+    *
+    * Mirrors liqp `Template.renderToObjectUnguarded` (Template.java:347-380): scoping is decided solely by whether `parentContext` is non-null — a non-null parent ALWAYS yields
+    * `parent.newChildContext(variables)` (Template.java:358-362), so the child resolves variables local-first and falls through to the enclosing scope (TemplateContext.java:104-120).
+    * `doClearThreadLocal` is the thread-local cleanup flag (BasicTypesSupport.clearReferences, Template.java:350-352); in this DataView-mode port there is no thread-local reference table, so it is a
+    * no-op kept for signature parity with the upstream call sites.
+    */
+  def renderToObjectUnguarded(variables: JMap[String, DataView], parentContext: TemplateContext, doClearThreadLocal: Boolean): DataView = {
+    val _       = doClearThreadLocal
+    val context = if (parentContext != null) {
       parentContext.newChildContext(new LinkedHashMap[String, DataView](variables))
     } else {
       newRootContext(new LinkedHashMap[String, DataView](variables))
