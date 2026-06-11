@@ -36,6 +36,8 @@ package compress
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.util.boundary
+import scala.util.boundary.break
 
 import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
@@ -58,18 +60,58 @@ object ReduceVars {
   // Walker state
   // -----------------------------------------------------------------------
 
+  /** Prototype-chained safe-id map mirroring the original's plain-object `tw.safe_ids`.
+    *
+    * The original code relies on three distinct JavaScript-object semantics that a flat `Map` cannot reproduce (reduce-vars.js):
+    *   - `push(tw)` = `Object.create(tw.safe_ids)` — a fresh layer whose prototype is the current one (reduce-vars.js:156-158);
+    *   - `pop(tw)` = `Object.getPrototypeOf(tw.safe_ids)` (reduce-vars.js:160-162);
+    *   - reads (`tw.safe_ids[def.id]`, reduce-vars.js:170) walk the prototype chain, but `safe_to_assign`'s `HOP(tw.safe_ids, def.id)` (reduce-vars.js:191) is `hasOwnProperty` — true only when the
+    *     def was marked safe AT the current layer, not in an ancestor.
+    *
+    * This `HOP` distinction is exactly what guards assignments inside the conditional part of an optional chain: `AST_PropAccess`/`AST_Call` push a layer when optional and never pop it
+    * (reduce-vars.js:415-439), so an assignment there sees the def only via the prototype (not own) and `safe_to_assign` returns false — leaving `fixed`/`chained` untouched. A `Map.clone()` collapses
+    * own and inherited entries into one flat map, losing the distinction and letting the assignment update `fixed` (the ISS-1142 bug). Modeling the chain restores faithful semantics.
+    */
+  final class SafeIds(val parent: SafeIds | Null) {
+
+    /** Own properties at this layer (entries set via `mark` here). */
+    private val own: mutable.Map[Int, Boolean] = mutable.Map.empty
+
+    /** Set an own property (`tw.safe_ids[def.id] = safe`). */
+    def setOwn(defId: Int, safe: Boolean): Unit =
+      own(defId) = safe
+
+    /** Read through the prototype chain (`tw.safe_ids[def.id]`). */
+    def get(defId: Int): Boolean | Null =
+      boundary[Boolean | Null] {
+        var cur: SafeIds | Null = this
+        while (cur != null) {
+          val c = cur.nn
+          c.own.get(defId) match {
+            case Some(v) => break(v) // found own entry, stop the walk
+            case None    => cur = c.parent
+          }
+        }
+        null
+      }
+
+    /** Own-property check (`HOP(tw.safe_ids, def.id)`). */
+    def hasOwn(defId: Int): Boolean =
+      own.contains(defId)
+
+    /** Fork a child layer (`Object.create(tw.safe_ids)`). */
+    def create(): SafeIds =
+      new SafeIds(this)
+  }
+
   /** State maintained during the reduce_vars tree walk. */
   class ReduceVarsState {
 
-    /** Chain of safe-id maps (linked by prototype-like nesting). Each entry maps a definition ID to whether it is safe to read.
-      */
-    var safeIds: mutable.Map[Int, Boolean] = mutable.Map.empty
-
-    /** Stack of safe-id maps for push/pop. */
-    private var _safeIdsStack: List[mutable.Map[Int, Boolean]] = Nil
+    /** Current safe-id layer (the original's `tw.safe_ids`). */
+    var safeIds: SafeIds = new SafeIds(null)
 
     /** Map from definition ID to safe-ids at point of first encounter. */
-    val defsToSafeIds: mutable.Map[Int, mutable.Map[Int, Boolean]] = mutable.Map.empty
+    val defsToSafeIds: mutable.Map[Int, SafeIds] = mutable.Map.empty
 
     /** Map from definition ID to the loop node containing it. */
     val loopIds: mutable.Map[Int, AstNode | Null] = mutable.Map.empty
@@ -78,24 +120,29 @@ object ReduceVars {
     var inLoop: AstNode | Null = null
 
     /** Push a new scope for safe IDs (forking from parent). */
-    def push(): Unit = {
-      _safeIdsStack = safeIds :: _safeIdsStack
-      safeIds = safeIds.clone()
-    }
+    def push(): Unit =
+      safeIds = safeIds.create()
 
     /** Pop back to the parent safe-ID scope. */
-    def pop(): Unit = {
-      safeIds = _safeIdsStack.head
-      _safeIdsStack = _safeIdsStack.tail
-    }
+    def pop(): Unit =
+      // pop is only called balanced against push, so parent is never null
+      safeIds = safeIds.parent.nn
 
-    /** Mark a definition as safe or unsafe. */
+    /** Mark a definition as safe or unsafe (own property at current layer). */
     def mark(defId: Int, safe: Boolean): Unit =
-      safeIds(defId) = safe
+      safeIds.setOwn(defId, safe)
 
-    /** Check if a definition ID has an entry in the current safe_ids scope. */
+    /** Check if a definition ID is safe in the current scope, reading through the prototype chain (`tw.safe_ids[def.id]`, defaulting falsy entries to `false`).
+      */
+    def safeRead(defId: Int): Boolean =
+      safeIds.get(defId) match {
+        case b: Boolean => b
+        case null => false
+      }
+
+    /** `HOP(tw.safe_ids, def.id)` — own-property-only check. */
     def hasSafe(defId: Int): Boolean =
-      safeIds.contains(defId)
+      safeIds.hasOwn(defId)
   }
 
   // -----------------------------------------------------------------------
@@ -179,7 +226,7 @@ object ReduceVars {
   /** Check if it is safe to read a definition's fixed value. */
   private def safeToRead(state: ReduceVarsState, d: SymbolDef): Boolean = {
     if (d.singleUse == "m") return false // @nowarn — modified single-use
-    if (state.safeIds.getOrElse(d.id, false)) {
+    if (state.safeRead(d.id)) {
       if (d.fixed == null) {
         // Variable was declared but no initializer — treat as void 0
         val orig = d.orig(0)
@@ -206,7 +253,7 @@ object ReduceVars {
   private def safeToAssign(state: ReduceVarsState, d: SymbolDef, scope: AstScope | Null, value: Any): Boolean = {
     if (d.fixed == null && state.defsToSafeIds.contains(d.id)) {
       // First assignment to an uninitialized variable
-      state.defsToSafeIds.get(d.id).foreach(ids => ids(d.id) = false)
+      state.defsToSafeIds.get(d.id).foreach(ids => ids.setOwn(d.id, false))
       state.defsToSafeIds.remove(d.id)
       return true // @nowarn
     }
@@ -698,9 +745,6 @@ object ReduceVars {
     * children are skipped. Returns true if aborted, false otherwise.
     */
   private def walkParent(node: AstNode, cb: (AstNode, WalkParentInfo) => Any): Boolean = {
-    import scala.util.boundary
-    import scala.util.boundary.break
-
     val toVisit = ArrayBuffer[AstNode](node)
     val push: AstNode => Unit = n => toVisit.addOne(n)
     val stack            = ArrayBuffer.empty[AstNode]
@@ -942,10 +986,7 @@ object ReduceVars {
     *
     * Similar to Common.isRecursiveRef but uses WalkParentInfo instead of TreeWalker.
     */
-  private def isRecursiveRefByInfo(info: WalkParentInfo, defId: Int): Boolean = {
-    import scala.util.boundary
-    import scala.util.boundary.break
-
+  private def isRecursiveRefByInfo(info: WalkParentInfo, defId: Int): Boolean =
     boundary[Boolean] {
       var i    = 0
       var node = info.parent(i)
@@ -972,7 +1013,6 @@ object ReduceVars {
       }
       false
     }
-  }
 
   // -----------------------------------------------------------------------
   // Assignment handling

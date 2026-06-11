@@ -62,7 +62,7 @@ final class CompressIssue1105Suite extends munit.FunSuite {
   // =========================================================================
   // compress_with_with_in_other_scope
   // =========================================================================
-  test("compress_with_with_in_other_scope".fail) {
+  test("compress_with_with_in_other_scope") {
     assertCompresses(
       input = """function foo() {
             var o = 42;
@@ -125,7 +125,7 @@ final class CompressIssue1105Suite extends munit.FunSuite {
   // =========================================================================
   // check_drop_unused_in_peer_function
   // =========================================================================
-  test("check_drop_unused_in_peer_function".fail) {
+  test("check_drop_unused_in_peer_function") {
     assertCompresses(
       input = """function outer() {
             var o = {};

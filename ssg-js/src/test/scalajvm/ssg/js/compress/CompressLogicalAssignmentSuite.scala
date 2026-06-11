@@ -163,7 +163,7 @@ final class CompressLogicalAssignmentSuite extends munit.FunSuite {
   // =========================================================================
   // assignment_in_left_part_2
   // =========================================================================
-  test("assignment_in_left_part_2".fail) {
+  test("assignment_in_left_part_2") {
     assertCompresses(
       input = """var status = 'FAIL'
         var x = {'PASS': false}

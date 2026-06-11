@@ -277,7 +277,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_1
   // =========================================================================
-  test("set_immutable_1".fail) {
+  test("set_immutable_1") {
     assertCompresses(
       input = """var a = 1;
         a.foo += "";
@@ -325,7 +325,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_3
   // =========================================================================
-  test("set_immutable_3".fail) {
+  test("set_immutable_3") {
     assertCompresses(
       input = """"use strict";
         var a = 1;
@@ -377,7 +377,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_5
   // =========================================================================
-  test("set_immutable_5".fail) {
+  test("set_immutable_5") {
     assertCompresses(
       input = """"use strict";
         var a = 1;

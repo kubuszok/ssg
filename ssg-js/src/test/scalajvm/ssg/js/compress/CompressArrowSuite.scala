@@ -151,7 +151,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // arrow_unused
   // =========================================================================
-  test("arrow_unused".fail) {
+  test("arrow_unused") {
     assertCompresses(
       input = """top => dog;
         let fn = a => { console.log(a * a); };
@@ -184,7 +184,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // arrow_unused_toplevel
   // =========================================================================
-  test("arrow_unused_toplevel".fail) {
+  test("arrow_unused_toplevel") {
     assertCompresses(
       input = """top => dog;
         let fn = a => { console.log(a * a); };

@@ -270,7 +270,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_properties
   // =========================================================================
-  test("collapse_vars_properties".fail) {
+  test("collapse_vars_properties") {
     assertCompresses(
       input = """function f1(obj) {
             var prop = 'LiteralProperty';
@@ -1080,7 +1080,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_closures
   // =========================================================================
-  test("collapse_vars_closures".fail) {
+  test("collapse_vars_closures") {
     assertCompresses(
       input = """function constant_vars_can_be_replaced_in_any_scope() {
             var outer = 3;
@@ -1198,7 +1198,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_try
   // =========================================================================
-  test("collapse_vars_try".fail) {
+  test("collapse_vars_try") {
     assertCompresses(
       input = """function f1() {
             try {
@@ -1449,7 +1449,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_constants
   // =========================================================================
-  test("collapse_vars_constants".fail) {
+  test("collapse_vars_constants") {
     assertCompresses(
       input = """function f1(x) {
             var a = 4, b = x.prop, c = 5, d = sideeffect1(), e = sideeffect2();
@@ -1643,7 +1643,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_regexp
   // =========================================================================
-  test("collapse_vars_regexp".fail) {
+  test("collapse_vars_regexp") {
     assertCompresses(
       input = """function f1() {
             var k = 9;
@@ -1834,7 +1834,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1562
   // =========================================================================
-  test("issue_1562".fail) {
+  test("issue_1562") {
     assertCompresses(
       input = """var v = 1, B = 2;
         for (v in objs) f(B);
@@ -2694,7 +2694,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // unused_orig
   // =========================================================================
-  test("unused_orig".fail) {
+  test("unused_orig") {
     assertCompresses(
       input = """var a = 1;
         console.log(function(b) {
@@ -2766,7 +2766,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // lvalues_def
   // =========================================================================
-  test("lvalues_def".fail) {
+  test("lvalues_def") {
     assertCompresses(
       input = """var a = 0, b = 1;
         var a = b++, b = +function() {}();

@@ -19,7 +19,7 @@ final class CompressIssue2001Suite extends munit.FunSuite {
   // =========================================================================
   // export_toplevel_1
   // =========================================================================
-  test("export_toplevel_1".fail) {
+  test("export_toplevel_1") {
     assertCompresses(
       input = """function f(){}
         export function g(){}
@@ -36,7 +36,7 @@ final class CompressIssue2001Suite extends munit.FunSuite {
   // =========================================================================
   // export_toplevel_2
   // =========================================================================
-  test("export_toplevel_2".fail) {
+  test("export_toplevel_2") {
     assertCompresses(
       input = """class A {}
         export class B {}

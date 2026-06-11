@@ -501,7 +501,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // pow_sequence_with_parens_evaluated
   // =========================================================================
-  test("pow_sequence_with_parens_evaluated".fail) {
+  test("pow_sequence_with_parens_evaluated") {
     assertCompresses(
       input = """var one = 1;
         var two = 2;
@@ -558,7 +558,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_object
   // =========================================================================
-  test("unsafe_object".fail) {
+  test("unsafe_object") {
     assertCompresses(
       input = """var o = { a: 1 };
         console.log(
@@ -587,7 +587,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_object_nested
   // =========================================================================
-  test("unsafe_object_nested".fail) {
+  test("unsafe_object_nested") {
     assertCompresses(
       input = """var o = { a: { b: 1 } };
         console.log(
@@ -616,7 +616,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_object_complex
   // =========================================================================
-  test("unsafe_object_complex".fail) {
+  test("unsafe_object_complex") {
     assertCompresses(
       input = """var o = { a: { b: 1 }, b: 1 };
         console.log(
@@ -645,7 +645,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_object_repeated
   // =========================================================================
-  test("unsafe_object_repeated".fail) {
+  test("unsafe_object_repeated") {
     assertCompresses(
       input = """var o = { a: { b: 1 }, a: 1 };
         console.log(
@@ -1348,7 +1348,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1964_2
   // =========================================================================
-  test("issue_1964_2".fail) {
+  test("issue_1964_2") {
     assertCompresses(
       input = """function f() {
             var long_variable_name = /\s/;
@@ -1516,7 +1516,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // self_comparison_1
   // =========================================================================
-  test("self_comparison_1".fail) {
+  test("self_comparison_1") {
     assertCompresses(
       input = """var o = { n: NaN };
         console.log(typeof o.n, o.n == o.n, o.n === o.n, o.n != o.n, o.n !== o.n)""".stripMargin.trim,

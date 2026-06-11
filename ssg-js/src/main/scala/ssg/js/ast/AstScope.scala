@@ -45,9 +45,17 @@ trait AstScope extends AstBlock {
   /** Current index for mangling variables (used internally by the mangler). */
   var cname: Int = -1
 
+  /** Whether this scope object is a synthetic block scope.
+    *
+    * Models terser's `AST_Scope._block_scope` flag (scope.js:226): a block scope object created during `figure_out_scope` sets this to `true`, and `AST_Scope.is_block_scope` returns
+    * `this._block_scope || false` (scope.js:634-636). All other scope objects leave it `false`.
+    */
+  var blockScopeFlag: Boolean = false
+
   def pinned: Boolean = usesEval || usesWith
 
-  def isBlockScope: Boolean = false
+  // AST_Scope.is_block_scope: this._block_scope || false (scope.js:634-636)
+  def isBlockScope: Boolean = blockScopeFlag
 
   def getDefunScope: AstScope = {
     var self: AstScope = this
@@ -139,7 +147,8 @@ private trait AstLambdaWalk extends AstLambda {
 
   override protected def transformDescend(tw: TreeTransformer): Unit = {
     if (name != null) name = name.nn.transform(tw)
-    argnames = transformList(argnames, tw)
+    // do_list(self.argnames, tw, /* allow_splicing */ false) — terser lib/transform.js:207
+    argnames = transformList(argnames, tw, allowSplicing = false)
     body = transformList(body, tw)
   }
 }

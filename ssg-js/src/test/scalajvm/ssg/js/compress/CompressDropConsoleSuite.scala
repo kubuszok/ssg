@@ -48,7 +48,7 @@ final class CompressDropConsoleSuite extends munit.FunSuite {
   // =========================================================================
   // unexpected_side_effects_dropping_console
   // =========================================================================
-  test("unexpected_side_effects_dropping_console".fail) {
+  test("unexpected_side_effects_dropping_console") {
     assertCompresses(
       input = """function f() {
             var a = 33;

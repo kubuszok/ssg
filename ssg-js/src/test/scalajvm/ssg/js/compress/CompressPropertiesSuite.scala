@@ -913,7 +913,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // prop_side_effects_1
   // =========================================================================
-  test("prop_side_effects_1".fail) {
+  test("prop_side_effects_1") {
     assertCompresses(
       input = """var C = 1;
         console.log(C);

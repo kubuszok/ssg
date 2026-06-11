@@ -125,10 +125,12 @@ object DropUnused {
     // Pass 3: transform to drop unused declarations
     // -----------------------------------------------------------------------
 
-    val transformer = new Pass3Transformer(ctx)
-    // Use walk since transform is not yet implemented on AstScope
-    // The transformer modifies the tree in-place via its callbacks
-    self.walk(transformer)
+    val transformer = Pass3Transformer(ctx)
+    // self.transform(tt) — drop-unused.js:464. The transformer's `before`
+    // callback returns replacement nodes (or TransformSkip / TransformSplice
+    // markers consumed by transformList), which AstNode.transform applies in
+    // place of each visited node.
+    self.transform(transformer)
   }
 
   // -----------------------------------------------------------------------
@@ -473,23 +475,31 @@ object DropUnused {
   // Pass 3 Transformer
   // -----------------------------------------------------------------------
 
-  /** Pass 3: Transform to drop unused declarations. */
-  private class Pass3Transformer(ctx: DropUnusedContext) extends TreeTransformer() {
-
-    override def _visit(node: AstNode, descend: () => Unit): Unit = {
-      push(node)
-      val ret = beforeTransform(node, descend)
-      if (ret == null || ret == false || ret == (())) {
-        descend()
-      }
-      // Handle the after callback
-      afterTransform(node)
-      pop()
+  /** Pass 3: Transform to drop unused declarations.
+    *
+    * The `before`/`after` callbacks are wired into the TreeTransformer so that AstNode.transform applies their replacement nodes (drop-unused.js:419-461).
+    */
+  private object Pass3Transformer {
+    def apply(ctx: DropUnusedContext): TreeTransformer = {
+      val impl = new Pass3TransformerImpl(ctx)
+      val tt   = new TreeTransformer(
+        before = (node, descend, inList) => impl.beforeTransform(node, descend, inList),
+        after = (node, inList) => impl.afterTransform(node, inList)
+      )
+      impl.tt = tt
+      tt
     }
+  }
 
-    def beforeTransform(node: AstNode, descend: () => Unit): Any = {
-      val parentNode = this.parent()
-      val inList     = isInList(this)
+  /** Holds the Pass 3 before/after logic; bound to its owning TreeTransformer so the callbacks can read the ancestry stack and parent (drop-unused.js:419-461).
+    */
+  private class Pass3TransformerImpl(ctx: DropUnusedContext) {
+
+    /** The transformer these callbacks are attached to (set right after construction). */
+    var tt: TreeTransformer = null.asInstanceOf[TreeTransformer]
+
+    def beforeTransform(node: AstNode, descend: () => Unit, inList: Boolean): Any = {
+      val parentNode = tt.parent()
 
       // Handle unused assignments
       if (ctx.dropVars) {
@@ -502,15 +512,15 @@ object DropUnused {
               node match {
                 case assign: AstAssign =>
                   if (!inUse || (ctx.fixedIds.contains(d.nn.id) && ctx.fixedIds.get(d.nn.id) != Some(node))) {
-                    val assignee = transformNode(assign.right, this)
-                    if (!inUse && !hasSideEffects(assignee, ctx.compressor) && !isUsedInExpression(this)) {
-                      return if (inList) SkipMarker else makeNumber(node, 0)
+                    val assignee = assign.right.nn.transform(tt)
+                    if (!inUse && !hasSideEffects(assignee, ctx.compressor) && !isUsedInExpression(tt)) {
+                      return if (inList) TransformSkip else makeNumber(node, 0)
                     }
                     return maintainThisBinding(parentNode, node, assignee)
                   }
                 case _ =>
                   if (!inUse) {
-                    return if (inList) SkipMarker else makeNumber(node, 0)
+                    return if (inList) TransformSkip else makeNumber(node, 0)
                   }
               }
             }
@@ -611,9 +621,9 @@ object DropUnused {
                 val keepClass = (d.nn.global && !ctx.dropFuncs) || ctx.inUseIds.contains(d.nn.id)
                 if (!keepClass) {
                   val kept = dropSideEffectFree(node, ctx.compressor)
-                  d.nn.eliminated += 1
                   if (kept == null) {
-                    return if (inList) SkipMarker else makeEmpty(node)
+                    d.nn.eliminated += 1
+                    return if (inList) TransformSkip else makeEmpty(node)
                   }
                   return kept
                 }
@@ -634,7 +644,7 @@ object DropUnused {
                 val keep = (d.nn.global && !ctx.dropFuncs) || ctx.inUseIds.contains(d.nn.id)
                 if (!keep) {
                   d.nn.eliminated += 1
-                  return if (inList) SkipMarker else makeEmpty(node)
+                  return if (inList) TransformSkip else makeEmpty(node)
                 }
               }
             case _ =>
@@ -651,7 +661,7 @@ object DropUnused {
             case _ => false
           }
           if (!isForInInit) {
-            return processDefinitions(defs, parentNode, inList, ctx, this)
+            return processDefinitions(defs, parentNode, inList, ctx, tt)
           }
         case _ =>
       }
@@ -674,7 +684,7 @@ object DropUnused {
             case _                                     =>
           }
           if (block != null) {
-            return if (inList) SpliceMarker(block.nn.body) else block
+            return if (inList) TransformSplice(block.nn.body) else block
           }
           return node
 
@@ -691,7 +701,7 @@ object DropUnused {
                 case block: AstBlockStatement =>
                   ls.body = block.body.remove(block.body.size - 1)
                   block.body.addOne(ls)
-                  return if (inList) SpliceMarker(block.body) else block
+                  return if (inList) TransformSplice(block.body) else block
                 case _ =>
               }
               return node
@@ -705,7 +715,7 @@ object DropUnused {
         case block: AstBlockStatement =>
           descend()
           if (inList && block.body.forall(canBeEvictedFromBlock)) {
-            return SpliceMarker(block.body)
+            return TransformSplice(block.body)
           }
           return node
         case _ =>
@@ -725,11 +735,11 @@ object DropUnused {
       null
     }
 
-    def afterTransform(node: AstNode): Any =
+    def afterTransform(node: AstNode, inList: Boolean): Any =
       node match {
         case seq: AstSequence =>
           seq.expressions.size match {
-            case 0 => makeNumber(node, 0)
+            case 0 => if (inList) TransformSkip else makeNumber(node, 0)
             case 1 => seq.expressions(0)
             case _ => null
           }
@@ -740,16 +750,6 @@ object DropUnused {
   // -----------------------------------------------------------------------
   // Helpers
   // -----------------------------------------------------------------------
-
-  /** Marker object for nodes that should be skipped in a list. */
-  private object SkipMarker extends AstNode {
-    def nodeType: String = "_Skip"
-  }
-
-  /** Marker class for nodes that should be spliced into a list. */
-  final private case class SpliceMarker(nodes: ArrayBuffer[AstNode]) extends AstNode {
-    def nodeType: String = "_Splice"
-  }
 
   /** Create an AstNumber node with the given value. */
   private def makeNumber(orig: AstNode, value: Double): AstNumber = {
@@ -766,27 +766,6 @@ object DropUnused {
     empty.start = orig.start
     empty.end = orig.end
     empty
-  }
-
-  /** Check if the current node is in a list context. */
-  private def isInList(tt: TreeTransformer): Boolean = {
-    val parentNode = tt.parent()
-    parentNode match {
-      case _: AstBlock       => true
-      case _: AstDefinitions => true
-      case _ => false
-    }
-  }
-
-  /** Transform a node using the given transformer. */
-  private def transformNode(node: AstNode, tt: TreeTransformer): AstNode = {
-    // Walk through the transformer
-    val result = tt.before(node, () => {})
-    if (result != null && result != false && result != (())) {
-      result.asInstanceOf[AstNode]
-    } else {
-      node
-    }
   }
 
   /** Walk all symbol declarations in a pattern, calling fn for each. */
@@ -838,7 +817,7 @@ object DropUnused {
       case vdef: AstVarDef =>
         // Transform the value if present
         if (vdef.value != null) {
-          vdef.value = transformNode(vdef.value.nn, tt)
+          vdef.value = vdef.value.nn.transform(tt)
         }
 
         val isDestructure = vdef.name.isInstanceOf[AstDestructuring]
@@ -905,7 +884,7 @@ object DropUnused {
                       if (ctx.fixedIds.get(sym.nn.id).contains(vdef)) {
                         ctx.fixedIds(sym.nn.id) = assign
                       }
-                      sideEffects.addOne(transformNode(assign, tt))
+                      sideEffects.addOne(assign.transform(tt))
                     }
                     varDefs -= vdef
                     sym.nn.eliminated += 1
@@ -982,12 +961,12 @@ object DropUnused {
 
     body.size match {
       case 0 =>
-        if (inList) SkipMarker else makeEmpty(defs)
+        if (inList) TransformSkip else makeEmpty(defs)
       case 1 =>
         body(0)
       case _ =>
         if (inList) {
-          SpliceMarker(body)
+          TransformSplice(body)
         } else {
           val block = new AstBlockStatement
           block.start = defs.start

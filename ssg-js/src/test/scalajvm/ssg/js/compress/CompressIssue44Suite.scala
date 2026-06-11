@@ -18,7 +18,7 @@ final class CompressIssue44Suite extends munit.FunSuite {
   // =========================================================================
   // issue_44_valid_ast_1
   // =========================================================================
-  test("issue_44_valid_ast_1".fail) {
+  test("issue_44_valid_ast_1") {
     assertCompresses(
       input = """function a(b) {
             for (var i = 0, e = b.qoo(); ; i++) {}
@@ -36,7 +36,7 @@ final class CompressIssue44Suite extends munit.FunSuite {
   // =========================================================================
   // issue_44_valid_ast_2
   // =========================================================================
-  test("issue_44_valid_ast_2".fail) {
+  test("issue_44_valid_ast_2") {
     assertCompresses(
       input = """function a(b) {
             if (foo) for (var i = 0, e = b.qoo(); ; i++) {}

@@ -381,6 +381,9 @@ private[scope] class ScopeContext(
   private def handleBlockScope(node: AstNode, descend: () => Unit): Unit = {
     val saveScope  = scope
     val blockScope = new AstToplevel
+    // scope._block_scope = true (scope.js:226): flag the synthetic block scope
+    // so AST_Scope.is_block_scope() reports true for it.
+    blockScope.blockScopeFlag = true
     node match {
       case b:  AstBlock              => b.blockScope = blockScope
       case it: AstIterationStatement => it.blockScope = blockScope

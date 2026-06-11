@@ -99,7 +99,7 @@ final class CompressBlockScopeSuite extends munit.FunSuite {
   // =========================================================================
   // remove_unused_in_global_block
   // =========================================================================
-  test("remove_unused_in_global_block".fail) {
+  test("remove_unused_in_global_block") {
     assertCompresses(
       input = """{
             let x;

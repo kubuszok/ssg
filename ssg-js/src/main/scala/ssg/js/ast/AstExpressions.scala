@@ -57,7 +57,8 @@ class AstCall extends AstNode {
 
   override protected def transformDescend(tw: TreeTransformer): Unit = {
     if (expression != null) expression = expression.nn.transform(tw)
-    args = transformList(args, tw)
+    // do_list(self.args, tw, /* allow_splicing */ false) — terser lib/transform.js:217
+    args = transformList(args, tw, allowSplicing = false)
   }
 }
 
