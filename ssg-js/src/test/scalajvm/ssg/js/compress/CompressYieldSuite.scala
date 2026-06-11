@@ -114,7 +114,7 @@ final class CompressYieldSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t60
   // =========================================================================
-  test("issue_t60".fail) {
+  test("issue_t60") {
     assertCompresses(
       input = """function* t() {
             const v = yield 1;

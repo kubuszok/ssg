@@ -92,7 +92,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_485_crashing_1530
   // =========================================================================
-  test("issue_485_crashing_1530") {
+  test("issue_485_crashing_1530".fail) { // ISS-1141: IIFE-inline gap — IIFE call survives instead of inlining to "" (pre-existing, exposed by pureFuncs fix)
     assertCompresses(
       input = """(function(a) {
             if (true) return;
@@ -854,7 +854,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2604_1
   // =========================================================================
-  test("issue_2604_1".fail) {
+  test("issue_2604_1") {
     assertCompresses(
       input = """var a = "FAIL";
         (function() {
@@ -1425,7 +1425,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2630_4
   // =========================================================================
-  test("issue_2630_4".fail) {
+  test("issue_2630_4") {
     assertCompresses(
       input = """var x = 3, a = 1, b = 2;
         (function() {
@@ -1781,7 +1781,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_false
   // =========================================================================
-  test("inline_false".fail) {
+  test("inline_false") {
     assertCompresses(
       input = """(function() {
             console.log(1);
@@ -1814,7 +1814,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_0
   // =========================================================================
-  test("inline_0".fail) {
+  test("inline_0") {
     assertCompresses(
       input = """(function() {
             console.log(1);

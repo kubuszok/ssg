@@ -174,7 +174,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // dead_code_block_decls_die
   // Fails: class declaration in dead code not yet handled
   // =========================================================================
-  test("dead_code_block_decls_die".fail) {
+  test("dead_code_block_decls_die") {
     assertCompresses(
       input = """if (0) {
                 |    let foo = 6;
@@ -519,7 +519,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // global_fns
   // Fails: side_effects+unsafe pure global function call dropping incomplete
   // =========================================================================
-  test("global_fns".fail) {
+  test("global_fns") {
     assertCompresses(
       input = """Boolean(1, 2);
                 |decodeURI(1, 2);
@@ -626,7 +626,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // issue_2383_3
   // Fails: destructuring array in dead code var extraction
   // =========================================================================
-  test("issue_2383_3".fail) {
+  test("issue_2383_3") {
     assertCompresses(
       input = """var b = 7, y = 8;
                 |if (0) {
@@ -1131,7 +1131,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // unsafe_builtin
   // Fails: side_effects+unsafe builtin method call optimization incomplete
   // =========================================================================
-  test("unsafe_builtin".fail) {
+  test("unsafe_builtin") {
     assertCompresses(
       input = """(!w).constructor(x);
                 |Math.abs(y);

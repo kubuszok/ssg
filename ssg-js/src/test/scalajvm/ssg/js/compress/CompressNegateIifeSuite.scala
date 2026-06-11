@@ -277,7 +277,7 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_issue_1073
   // =========================================================================
-  test("negate_iife_issue_1073".fail) {
+  test("negate_iife_issue_1073") {
     assertCompresses(
       input = """new (function(a) {
             return function Foo() {

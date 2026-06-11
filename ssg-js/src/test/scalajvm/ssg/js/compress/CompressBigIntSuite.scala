@@ -90,7 +90,7 @@ final class CompressBigIntSuite extends munit.FunSuite {
   // =========================================================================
   // big_int_math — requires defaults:true compression
   // =========================================================================
-  test("big_int_math".fail) {
+  test("big_int_math") {
     // Requires compression with defaults:true to fold BigInt arithmetic
     val input  = "console.log({\n    sum: 10n + 15n,\n    exp: 2n ** 3n,\n    sub: 1n - 3n,\n    mul: 5n * 5n,\n    div: 15n / 5n,\n});"
     val result = Terser.minifyToString(input)
@@ -100,7 +100,7 @@ final class CompressBigIntSuite extends munit.FunSuite {
   // =========================================================================
   // big_int_math_counter_examples — requires defaults:true compression
   // =========================================================================
-  test("big_int_math_counter_examples".fail) {
+  test("big_int_math_counter_examples") {
     // Requires compression — these should NOT be folded (mixing types, bad operations)
     val input  = "console.log({\n    mixing_types: 1 * 10n,\n    bad_shift: 1n >>> 0n,\n    bad_div: 1n / 0n,\n});"
     val result = Terser.minifyToString(input)

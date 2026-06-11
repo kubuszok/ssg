@@ -646,7 +646,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // cond_9
   // =========================================================================
-  test("cond_9".fail) {
+  test("cond_9") {
     assertCompresses(
       input = """function f(x, y) {
             g() ? x(1) : x(2);
@@ -905,7 +905,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // equality_conditionals_false
   // =========================================================================
-  test("equality_conditionals_false".fail) {
+  test("equality_conditionals_false") {
     assertCompresses(
       input = """function f(a, b, c) {
             console.log(
@@ -953,7 +953,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // equality_conditionals_true
   // =========================================================================
-  test("equality_conditionals_true".fail) {
+  test("equality_conditionals_true") {
     assertCompresses(
       input = """function f(a, b, c) {
             console.log(
@@ -1018,7 +1018,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1645_2
   // =========================================================================
-  test("issue_1645_2".fail) {
+  test("issue_1645_2") {
     assertCompresses(
       input = """var a = 0;
         function f() {

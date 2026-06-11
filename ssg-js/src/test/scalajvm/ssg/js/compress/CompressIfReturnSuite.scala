@@ -70,7 +70,7 @@ final class CompressIfReturnSuite extends munit.FunSuite {
   // =========================================================================
   // if_return_3
   // =========================================================================
-  test("if_return_3".fail) {
+  test("if_return_3") {
     assertCompresses(
       input = """function f(x) {
             a();
@@ -175,7 +175,7 @@ final class CompressIfReturnSuite extends munit.FunSuite {
   // =========================================================================
   // if_return_7
   // =========================================================================
-  test("if_return_7".fail) {
+  test("if_return_7") {
     assertCompresses(
       input = """function f(x) {
             if (x) {
@@ -247,7 +247,7 @@ final class CompressIfReturnSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1089
   // =========================================================================
-  test("issue_1089".fail) {
+  test("issue_1089") {
     assertCompresses(
       input = """function x() {
             var f = document.getElementById("fname");

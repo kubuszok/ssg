@@ -90,7 +90,7 @@ final class CompressIssue640Suite extends munit.FunSuite {
   // =========================================================================
   // drop_value
   // =========================================================================
-  test("drop_value".fail) {
+  test("drop_value") {
     assertCompresses(
       input = "(1, [2, foo()], 3, {a:1, b:bar()})",
       expected = "foo(), {a:1, b:bar()}",
@@ -299,7 +299,7 @@ final class CompressIssue640Suite extends munit.FunSuite {
   // =========================================================================
   // iife
   // =========================================================================
-  test("iife".fail) {
+  test("iife") {
     assertCompresses(
       input = """x = 42;
         (function a() {})();

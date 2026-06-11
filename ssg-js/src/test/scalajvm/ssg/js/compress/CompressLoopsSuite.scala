@@ -244,7 +244,7 @@ final class CompressLoopsSuite extends munit.FunSuite {
   // =========================================================================
   // evaluate
   // =========================================================================
-  test("evaluate".fail) {
+  test("evaluate") {
     assertCompresses(
       input = """while (true) {
             a();
@@ -324,7 +324,7 @@ final class CompressLoopsSuite extends munit.FunSuite {
   // =========================================================================
   // init_side_effects
   // =========================================================================
-  test("init_side_effects".fail) {
+  test("init_side_effects") {
     assertCompresses(
       input = """for (function() {}(), i = 0; i < 5; i++) console.log(i);
         for (function() {}(); i < 10; i++) console.log(i)""".stripMargin.trim,

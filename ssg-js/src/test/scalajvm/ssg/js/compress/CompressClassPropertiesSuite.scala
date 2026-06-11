@@ -39,7 +39,7 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // class_expression_not_constant
   // =========================================================================
-  test("class_expression_not_constant".fail) {
+  test("class_expression_not_constant") {
     assertCompresses(
       input = """const obj = {};
         leak();
@@ -65,7 +65,7 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // class_expression_constant
   // =========================================================================
-  test("class_expression_constant".fail) {
+  test("class_expression_constant") {
     assertCompresses(
       input = """const obj = {};
         obj.Class1 = class { static foo = "constant" };
