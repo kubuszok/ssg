@@ -28,6 +28,20 @@ import scala.collection.mutable.ArrayBuffer
 /** Sentinel object to abort a tree walk. */
 object WalkAbort
 
+/** Marker returned from a `before` callback to drop a node from its list. Port of `MAP.skip` (a non-AST_Node sentinel) from terser lib/utils/index.js:119. Only meaningful when the node is being
+  * transformed as a list element via [[transformList]]; outside a list it must never be returned.
+  */
+object TransformSkip extends AstNode {
+  def nodeType: String = "_Skip"
+}
+
+/** Marker returned from a `before` callback to splice several nodes into the place of one list element. Port of `Splice` from terser lib/utils/index.js:120, consumed by `MAP`
+  * (lib/utils/index.js:111). Only meaningful within [[transformList]].
+  */
+final case class TransformSplice(nodes: ArrayBuffer[AstNode]) extends AstNode {
+  def nodeType: String = "_Splice"
+}
+
 /** Annotation bit flags for calls, dots, etc. */
 object Annotations {
   val Pure:       Int = 0x01
@@ -60,17 +74,21 @@ trait AstNode {
     *
     * The transformer's `before` callback is called first. If it returns an AstNode, that replaces this node (descend is skipped). Otherwise, children are descended into (calling `transformDescend`),
     * then the `after` callback is called — if it returns an AstNode, that replaces the result.
+    *
+    * `inList` is the upstream `in_list` flag threaded from the parent's `do_list`/`MAP` call (terser lib/utils/index.js:106 `item.transform(tw, allow_splicing)`); a scalar `.transform(tw)` call
+    * passes `false` (upstream `undefined`). It is forwarded verbatim to `before`/`after` (terser lib/transform.js:100,105) so a callback can decide between a splice/skip (list context) and a
+    * replacement node (scalar context).
     */
-  def transform(tw: TreeTransformer): AstNode = {
+  def transform(tw: TreeTransformer, inList: Boolean = false): AstNode = {
     var transformed: AstNode = null.asInstanceOf[AstNode]
     tw.push(this)
-    val ret = tw.before(this, () => transformDescend(tw))
+    val ret = tw.before(this, () => transformDescend(tw), inList)
     if (ret != null && ret.isInstanceOf[AstNode]) {
       transformed = ret.asInstanceOf[AstNode]
     } else {
       transformed = this
       transformDescend(tw)
-      val afterRet = tw.after(transformed)
+      val afterRet = tw.after(transformed, inList)
       if (afterRet != null && afterRet.isInstanceOf[AstNode]) {
         transformed = afterRet.asInstanceOf[AstNode]
       }
@@ -112,13 +130,22 @@ def walkBody(body: ArrayBuffer[AstNode], visitor: TreeWalker): Unit = {
   }
 }
 
-/** Transform each element of a list, returning a new list with the transformed nodes. */
-def transformList(list: ArrayBuffer[AstNode], tw: TreeTransformer): ArrayBuffer[AstNode] = {
+/** Transform each element of a list, returning a new list with the transformed nodes. Port of `MAP`/`do_list` (terser lib/utils/index.js:101) and the per-node `do_list` calls in lib/transform.js: an
+  * [[AstNode]] result replaces the element, a [[TransformSplice]] expands into several elements, and a [[TransformSkip]] (or `null`) drops the element.
+  *
+  * `allowSplicing` mirrors the upstream `MAP(a, tw, allow_splicing = true)` parameter (terser lib/utils/index.js:101); it is forwarded to each element's `transform` as `in_list`
+  * (lib/utils/index.js:106). Most `do_list` call sites take the default `true`, but call arguments (lib/transform.js:217) and lambda argnames (lib/transform.js:207) pass `false`.
+  */
+def transformList(list: ArrayBuffer[AstNode], tw: TreeTransformer, allowSplicing: Boolean = true): ArrayBuffer[AstNode] = {
   val result = ArrayBuffer.empty[AstNode]
   var i      = 0
   while (i < list.size) {
-    val ret = list(i).transform(tw)
-    if (ret != null) result.addOne(ret)
+    list(i).transform(tw, allowSplicing) match {
+      case splice: TransformSplice => result.addAll(splice.nodes)
+      case TransformSkip      => // dropped — list element removed
+      case ret if ret != null => result.addOne(ret)
+      case _                  => // null — dropped
+    }
     i += 1
   }
   result
@@ -243,8 +270,12 @@ class TreeWalker(val visit: (AstNode, () => Unit) => Any = (_, _) => {}) {
   }
 }
 
-/** Tree transformer that extends TreeWalker with before/after callbacks. */
+/** Tree transformer that extends TreeWalker with before/after callbacks.
+  *
+  * The `inList` parameter of each callback is the upstream `in_list` flag threaded by `transform`/`transformList` from the parent's `do_list` call (terser lib/transform.js:100,105). It is `true` when
+  * the node is being transformed as an element of a list whose `do_list` allowed splicing, and `false` for scalar `.transform(tw)` positions.
+  */
 class TreeTransformer(
-  val before: (AstNode, () => Unit) => Any = (_, _) => {},
-  val after:  (AstNode) => Any = _ => {}
-) extends TreeWalker(before)
+  val before: (AstNode, () => Unit, Boolean) => Any = (_, _, _) => {},
+  val after:  (AstNode, Boolean) => Any = (_, _) => {}
+) extends TreeWalker((node, descend) => before(node, descend, false))

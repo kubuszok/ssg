@@ -157,7 +157,7 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // computed_property_names_side_effects
   // =========================================================================
-  test("computed_property_names_side_effects".fail) {
+  test("computed_property_names_side_effects") {
     assertCompresses(
       input = """const foo = {
             [console.log("PASS")]: 42

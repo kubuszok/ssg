@@ -18,7 +18,7 @@ final class CompressConstSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1191
   // =========================================================================
-  test("issue_1191".fail) {
+  test("issue_1191") {
     assertCompresses(
       input = """function foo(rot) {
             const rotTol = 5;
@@ -52,7 +52,7 @@ final class CompressConstSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1194
   // =========================================================================
-  test("issue_1194".fail) {
+  test("issue_1194") {
     assertCompresses(
       input = """function f1() {const a = "X"; return a + a;}
         function f2() {const aa = "X"; return aa + aa;}
@@ -82,7 +82,7 @@ final class CompressConstSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1396
   // =========================================================================
-  test("issue_1396".fail) {
+  test("issue_1396") {
     assertCompresses(
       input = """function foo(a) {
             const VALUE = 1;
@@ -132,7 +132,7 @@ final class CompressConstSuite extends munit.FunSuite {
   // =========================================================================
   // unused_regexp_literal
   // =========================================================================
-  test("unused_regexp_literal".fail) {
+  test("unused_regexp_literal") {
     assertCompresses(
       input = "function f(){ var a = /b/; }",
       expected = "function f(){}",

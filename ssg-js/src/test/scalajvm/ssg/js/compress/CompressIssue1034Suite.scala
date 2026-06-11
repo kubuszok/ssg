@@ -18,7 +18,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return
   // =========================================================================
-  test("non_hoisted_function_after_return".fail) {
+  test("non_hoisted_function_after_return") {
     assertCompresses(
       input = """function foo(x) {
             if (x) {
@@ -58,7 +58,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return_2a
   // =========================================================================
-  test("non_hoisted_function_after_return_2a".fail) {
+  test("non_hoisted_function_after_return_2a") {
     assertCompresses(
       input = """function foo(x) {
             if (x) {
@@ -101,7 +101,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return_2b
   // =========================================================================
-  test("non_hoisted_function_after_return_2b".fail) {
+  test("non_hoisted_function_after_return_2b") {
     assertCompresses(
       input = """function foo(x) {
             if (x) {
@@ -141,7 +141,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return_strict
   // =========================================================================
-  test("non_hoisted_function_after_return_strict".fail) {
+  test("non_hoisted_function_after_return_strict") {
     assertCompresses(
       input = """"use strict";
         function foo(x) {
@@ -185,7 +185,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return_2a_strict
   // =========================================================================
-  test("non_hoisted_function_after_return_2a_strict".fail) {
+  test("non_hoisted_function_after_return_2a_strict") {
     assertCompresses(
       input = """"use strict";
         function foo(x) {
@@ -232,7 +232,7 @@ final class CompressIssue1034Suite extends munit.FunSuite {
   // =========================================================================
   // non_hoisted_function_after_return_2b_strict
   // =========================================================================
-  test("non_hoisted_function_after_return_2b_strict".fail) {
+  test("non_hoisted_function_after_return_2b_strict") {
     assertCompresses(
       input = """"use strict";
         function foo(x) {

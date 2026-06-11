@@ -1918,7 +1918,7 @@ object TightenBody {
       var found = false
 
       val remover = new TreeTransformer(
-        before = (node, _) =>
+        before = (node, _, _) =>
           if (found) node
           else if (
             (node.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]) ||
@@ -1951,7 +1951,7 @@ object TightenBody {
           } else {
             null // continue descent
           },
-        after = node =>
+        after = (node, _) =>
           node match {
             case seq: AstSequence =>
               seq.expressions.size match {
@@ -2064,7 +2064,7 @@ object TightenBody {
     // scanner: TreeTransformer that tracks state and replaces variables
     // -----------------------------------------------------------------------
     lazy val scanner: TreeTransformer = new TreeTransformer(
-      before = (node, descend) => {
+      before = (node, descend, _) => {
         if (abort) node
         else {
           // Skip nodes before `candidate` as quickly as possible
@@ -2250,7 +2250,7 @@ object TightenBody {
           }
         }
       },
-      after = node =>
+      after = (node, _) =>
         if (!abort) {
           if (stopAfter != null && (stopAfter.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef])) {
             abort = true
@@ -2265,7 +2265,7 @@ object TightenBody {
     // multi_replacer: TreeTransformer for multi-use variable replacement
     // -----------------------------------------------------------------------
     lazy val multiReplacer: TreeTransformer = new TreeTransformer(
-      before = (node, _) =>
+      before = (node, _, _) =>
         if (abort) node
         else {
           // Skip nodes before `candidate` as quickly as possible

@@ -59,7 +59,7 @@ object GlobalDefs {
     // a structural copy where container nodes may get new instances while
     // leaf values are shared.
     val cloner = new TreeTransformer(
-      before = (n, _) => null // continue to children
+      before = (n, _, _) => null // continue to children
     )
     node.transform(cloner)
   }
@@ -228,7 +228,7 @@ object GlobalDefs {
       // Walk and replace matching global references
       var transformer: TreeTransformer = null // @nowarn -- initialized before use
       transformer = new TreeTransformer(
-        before = (node, _) => {
+        before = (node, _, _) => {
           val replacement = findDefs(node, globalDefs)
           if (replacement == null) {
             null // continue walking

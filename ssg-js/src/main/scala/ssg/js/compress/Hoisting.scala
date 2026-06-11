@@ -227,7 +227,7 @@ object Hoisting {
     // Transform pass
     var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward reference
     tt = new TreeTransformer(
-      before = (node, _) => {
+      before = (node, _, _) => {
         if (node eq self) {
           null // Continue into self
         } else {
@@ -482,7 +482,7 @@ object Hoisting {
     // First pass: identify eligible VarDefs with object literals
     var hoister: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
     hoister = new TreeTransformer(
-      before = (node, descend) => {
+      before = (node, descend, _) => {
         node match {
           case varDef: AstVarDef if varDef.name != null =>
             val sym = varDef.name.nn

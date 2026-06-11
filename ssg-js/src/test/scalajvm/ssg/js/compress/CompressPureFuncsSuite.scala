@@ -77,7 +77,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // unused
   // =========================================================================
-  test("unused".fail) {
+  test("unused") {
     assertCompresses(
       input = """function foo() {
             var u = pure(1);
@@ -386,7 +386,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3065_1
   // =========================================================================
-  test("issue_3065_1".fail) {
+  test("issue_3065_1") {
     assertCompresses(
       input = """function modifyWrapper(a, f, wrapper) {
             wrapper.a = a;
@@ -416,7 +416,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3065_2
   // =========================================================================
-  test("issue_3065_2".fail) {
+  test("issue_3065_2") {
     assertCompresses(
       input = """function modifyWrapper(a, f, wrapper) {
             wrapper.a = a;

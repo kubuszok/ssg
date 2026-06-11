@@ -74,7 +74,7 @@ final class CompressExportSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2131
   // =========================================================================
-  test("issue_2131".fail) {
+  test("issue_2131") {
     assertCompresses(
       input = """function no() {
             console.log(42);

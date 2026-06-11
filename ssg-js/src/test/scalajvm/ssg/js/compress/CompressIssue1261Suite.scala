@@ -19,7 +19,7 @@ final class CompressIssue1261Suite extends munit.FunSuite {
   // =========================================================================
   // pure_function_calls
   // =========================================================================
-  test("pure_function_calls".fail) {
+  test("pure_function_calls") {
     assertCompresses(
       input = """// pure top-level IIFE will be dropped
         // @__PURE__ - comment

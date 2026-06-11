@@ -139,7 +139,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1841_2
   // =========================================================================
-  test("issue_1841_2".fail) {
+  test("issue_1841_2") {
     assertCompresses(
       input = """var b = 10;
         !function(arg) {
@@ -1538,7 +1538,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // recursive_inline_1
   // =========================================================================
-  test("recursive_inline_1".fail) {
+  test("recursive_inline_1") {
     assertCompresses(
       input = """function f() {
             h();

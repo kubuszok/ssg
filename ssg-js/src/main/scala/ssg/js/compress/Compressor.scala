@@ -188,7 +188,17 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   /** Bitwise binary operators. */
   private val bitwiseBinop: Set[String] = Set("&", "|", "^", "<<", ">>", ">>>")
 
-  // Initialize module mode — set "use strict" directive
+  // top_retain — wire the def filter (lib/compress/index.js:299-313). When a
+  // top_retain predicate is supplied it tests the def name; otherwise the
+  // default `_ => false` from CompressorLike is kept.
+  options.topRetain match {
+    case Some(pred) =>
+      topRetain = d => pred(d.asInstanceOf[ssg.js.scope.SymbolDef].name)
+    case None =>
+  }
+
+  // Initialize module mode — set "use strict" directive and force toplevel
+  // (lib/compress/index.js:314-317).
   if (options.module) {
     // TreeWalker.directives maps String -> AstNode, but we need a
     // sentinel node here. Use a synthetic directive.
@@ -196,6 +206,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     strictDirective.value = "use strict"
     directives("use strict") = strictDirective
   }
+
+  // toplevel — derive what to drop at the top level (lib/compress/index.js:318-325).
+  // `options.toplevel` already carries the resolved {funcs, vars}; in module mode
+  // both are forced on (options["toplevel"] = true above).
+  toplevel =
+    if (options.module) CompressorLike.ToplevelConfig(funcs = true, vars = true)
+    else CompressorLike.ToplevelConfig(funcs = options.toplevel.funcs, vars = options.toplevel.vars)
 
   // -----------------------------------------------------------------------
   // Public API
@@ -237,7 +254,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Create a TreeTransformer that delegates to the Compressor's before() callback
     val compressor  = this
     val transformer = new TreeTransformer(
-      before = (node, descend) => compressor.before(node, (n, _) => descend())
+      before = (node, descend, _) => compressor.before(node, (n, _) => descend())
     )
 
     var pass = 0
@@ -291,7 +308,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     val self = scope
     var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
     tt = new TreeTransformer(
-      before = (node, _) =>
+      before = (node, _, _) =>
         if (insert && node.isInstanceOf[AstSimpleStatement]) {
           val ss  = node.asInstanceOf[AstSimpleStatement]
           val ret = new AstReturn
@@ -4238,7 +4255,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     }
 
     val tt = new TreeTransformer(
-      before = (self, _) =>
+      before = (self, _, _) =>
         self match {
           case call: AstCall =>
             call.expression match {
