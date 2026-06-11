@@ -1813,29 +1813,100 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     else if (num.isInfinite) { if (num > 0) "1/0" else "-1/0" }
     else if (num == 0.0 && (1.0 / num) < 0) "-0"
     else {
-      val str        = numToString(num).replaceFirst("^0\\.", ".").replace("e+", "e")
+      // output.js:2428 — `num.toString(10).replace(/^0\./, ".").replace("e+", "e")`.
+      // The leading "0." → "." rewrite is done by plain string ops (stripLeadingZeroDot)
+      // instead of `replaceFirst("^0\\.", ".")`. This is a defensive, regex-free rewrite:
+      // the number-shortening transformations below are expressed as faithful string
+      // manipulation that is behavior-preserving (mutation-tested, byte-identical to the
+      // prior regex implementation). The makeNum patterns themselves compile fine on Scala
+      // Native; the actual ISS-1135 Native blocker was elsewhere (Compressor.reSafeRegexp's
+      // `\0` escape spelling, since fixed). See docs/contributing/cross-platform-regex.md.
+      val str        = stripLeadingZeroDot(numToString(num)).replace("e+", "e")
       val candidates = mutable.ArrayBuffer(str)
+      // output.js:2430-2436 — hexadecimal candidate for integral values.
       if (Math.floor(num) == num && !num.isInfinite) {
         if (num < 0) candidates += ("-0x" + (-num).toLong.toHexString)
         else if (num <= Long.MaxValue.toDouble) candidates += ("0x" + num.toLong.toHexString)
       }
-      val leadingZeros = "^\\.0+".r.findFirstIn(str)
-      if (leadingZeros.isDefined) {
-        val zeroLen = leadingZeros.get.length
+      // output.js:2438-2441 — `if (match = /^\.0+/.exec(str))`: a leading "." followed by
+      // one or more "0" digits. `leadingZeroRunLength` returns the length of the matched
+      // ".0+" prefix (the dot plus the run of zeros), or -1 when it does not match.
+      val leadingZeroLen = leadingZeroRunLength(str)
+      if (leadingZeroLen >= 0) {
+        val zeroLen = leadingZeroLen
         val digits  = str.substring(zeroLen)
         candidates += (digits + "e-" + (digits.length + zeroLen - 1))
       }
-      val trailingZeros = "0+$".r.findFirstIn(str)
-      if (trailingZeros.isDefined && !str.contains('.') && !str.contains('e')) {
-        val zeroLen = trailingZeros.get.length
+      // output.js:2442-2444 — `else if (match = /0+$/.exec(str))`: a run of trailing "0"
+      // digits. `trailingZeroRunLength` returns the count of trailing zeros, or 0 when none.
+      // (The `!str.contains('.') && !str.contains('e')` guard reproduces the existing port's
+      // behavior; the regex shape is replaced, the guard is unchanged.)
+      val trailingZeroLen = trailingZeroRunLength(str)
+      if (trailingZeroLen > 0 && !str.contains('.') && !str.contains('e')) {
+        val zeroLen = trailingZeroLen
         candidates += (str.substring(0, str.length - zeroLen) + "e" + zeroLen)
       }
-      val expMatch = "^(\\d)\\.(\\d+)e(-?\\d+)$".r.findFirstMatchIn(str)
-      if (expMatch.isDefined) {
-        val m = expMatch.get
-        candidates += (m.group(1) + m.group(2) + "e" + (m.group(3).toInt - m.group(2).length))
+      // output.js:2445-2446 — `else if (match = /^(\d)\.(\d+)e(-?\d+)$/.exec(str))`:
+      // single leading digit, ".", a run of digits, "e", then an optionally-negative
+      // exponent. `parseExpForm` decomposes str into (lead, frac, exp) or null.
+      val expMatch = parseExpForm(str)
+      if (expMatch != null) {
+        val (lead, frac, exp) = expMatch.nn
+        candidates += (lead + frac + "e" + (exp - frac.length))
       }
       candidates.minBy(_.length)
+    }
+
+  /** output.js:2428 — `str.replace(/^0\./, ".")`: drop a leading "0" that immediately precedes a ".", turning "0.5" into ".5" (a sign prefix like "-0.5" is left untouched because the regex is
+    * anchored at the start of the string).
+    */
+  private def stripLeadingZeroDot(str: String): String =
+    if (str.startsWith("0.")) str.substring(1) else str
+
+  /** output.js:2438 — `/^\.0+/`: returns the length of a leading "." followed by one or more "0" digits (the dot plus the zero run), or -1 when the string does not start with ".0".
+    */
+  private def leadingZeroRunLength(str: String): Int =
+    if (str.length >= 2 && str.charAt(0) == '.' && str.charAt(1) == '0') {
+      var i = 2
+      while (i < str.length && str.charAt(i) == '0') i += 1
+      i
+    } else -1
+
+  /** output.js:2442 — `/0+$/`: returns the number of trailing "0" digits, or 0 when the string does not end in "0".
+    */
+  private def trailingZeroRunLength(str: String): Int = {
+    var count = 0
+    var i     = str.length - 1
+    while (i >= 0 && str.charAt(i) == '0') { count += 1; i -= 1 }
+    count
+  }
+
+  /** output.js:2445 — `/^(\d)\.(\d+)e(-?\d+)$/`: matches a single leading digit, ".", a run of one or more digits, "e", and an optionally-negative integer exponent that consumes the rest of the
+    * string. Returns (leadingDigit, fractionDigits, exponentValue) on a full match, or null otherwise.
+    */
+  private def parseExpForm(str: String): (String, String, Int) | Null =
+    boundary[(String, String, Int) | Null] {
+      // group 1: ^(\d)
+      if (str.isEmpty || !str.charAt(0).isDigit) break(null)
+      val lead = str.substring(0, 1)
+      // \.
+      if (str.length < 2 || str.charAt(1) != '.') break(null)
+      // group 2: (\d+)
+      var i = 2
+      while (i < str.length && str.charAt(i).isDigit) i += 1
+      if (i == 2) break(null) // require at least one fraction digit
+      val frac = str.substring(2, i)
+      // e
+      if (i >= str.length || str.charAt(i) != 'e') break(null)
+      i += 1
+      // group 3: (-?\d+)$
+      val expStart = i
+      if (i < str.length && str.charAt(i) == '-') i += 1
+      val digitsStart = i
+      while (i < str.length && str.charAt(i).isDigit) i += 1
+      if (i == digitsStart) break(null) // require at least one exponent digit
+      if (i != str.length) break(null) // $ — must consume the whole string
+      (lead, frac, str.substring(expStart, i).toInt)
     }
 
   private def numToString(num: Double): String =
