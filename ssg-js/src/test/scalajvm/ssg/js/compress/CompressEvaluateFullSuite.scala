@@ -1873,7 +1873,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // null_conditional_chain_eval_2
   // =========================================================================
-  test("null_conditional_chain_eval_2".fail) {
+  test("null_conditional_chain_eval_2") {
     assertCompresses(
       input = """null.deep?.unused
         null.deep?.[side_effect()]

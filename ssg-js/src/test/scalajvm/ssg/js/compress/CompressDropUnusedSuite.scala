@@ -778,7 +778,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // global_var
   // =========================================================================
-  test("global_var".fail) {
+  test("global_var") {
     assertCompresses(
       input = """var a;
         function foo(b) {
@@ -826,7 +826,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_value
   // =========================================================================
-  test("drop_value".fail) {
+  test("drop_value") {
     assertCompresses(
       input = "(1, [2, foo()], 3, {a:1, b:bar()})",
       expected = "foo(), bar()",
@@ -1312,7 +1312,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // reassign_const
   // =========================================================================
-  test("reassign_const".fail) {
+  test("reassign_const") {
     assertCompresses(
       input = """function f() {
             const a = 1;
@@ -1535,6 +1535,9 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         a;
         b""".stripMargin.trim,
       options = AllOff.copy(
+        // Upstream issue_2163 sets pure_funcs: [ "pure" ] alongside side_effects;
+        // the generated fixture dropped it (original-src/terser/test/compress/drop-unused.js:1516).
+        pureFuncs = List("pure"),
         sideEffects = true
       )
     )
@@ -2909,7 +2912,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t1392_2
   // =========================================================================
-  test("issue_t1392_2".fail) {
+  test("issue_t1392_2") {
     assertCompresses(
       input = """class BaseClass {}
         class SubClass {
@@ -3027,7 +3030,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t1412_2
   // =========================================================================
-  test("issue_t1412_2".fail) {
+  test("issue_t1412_2") {
     assertCompresses(
       input = "class C { static { side_eff(); } }",
       expected = "class C { static { side_eff(); } }",
@@ -3142,7 +3145,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_6
   // =========================================================================
-  test("class_used_within_itself_6".fail) {
+  test("class_used_within_itself_6") {
     assertCompresses(
       input = """class X {
             static prop = "X"
@@ -3313,7 +3316,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_6_var
   // =========================================================================
-  test("class_used_within_itself_6_var".fail) {
+  test("class_used_within_itself_6_var") {
     assertCompresses(
       input = """var X = class {
             static prop = "X"
@@ -3484,7 +3487,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_6_var_expname
   // =========================================================================
-  test("class_used_within_itself_6_var_expname".fail) {
+  test("class_used_within_itself_6_var_expname") {
     assertCompresses(
       input = """var X = class X {
             static prop = "X"
@@ -3655,7 +3658,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_6_classname
   // =========================================================================
-  test("class_used_within_itself_6_classname".fail) {
+  test("class_used_within_itself_6_classname") {
     assertCompresses(
       input = """class X {
             static prop = "X"

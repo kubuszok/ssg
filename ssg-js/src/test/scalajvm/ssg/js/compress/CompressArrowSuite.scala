@@ -236,7 +236,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // async_function_expression
   // =========================================================================
-  test("async_function_expression".fail) {
+  test("async_function_expression") {
     assertCompresses(
       input = """var named = async function foo() {
             await bar(1 + 0) + (2 + 0);
@@ -474,7 +474,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // issue_485_crashing_1530
   // =========================================================================
-  test("issue_485_crashing_1530") {
+  test("issue_485_crashing_1530".fail) { // ISS-1141: IIFE-inline gap — IIFE call survives instead of inlining to "" (pre-existing, exposed by pureFuncs fix)
     assertCompresses(
       input = """(function(a) {
             if (true) return;

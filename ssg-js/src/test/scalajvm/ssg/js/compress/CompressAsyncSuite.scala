@@ -45,7 +45,7 @@ final class CompressAsyncSuite extends munit.FunSuite {
   // =========================================================================
   // async_function_expression
   // =========================================================================
-  test("async_function_expression".fail) {
+  test("async_function_expression") {
     assertCompresses(
       input = """var named = async function foo() {
             await bar(1 + 0) + (2 + 0);

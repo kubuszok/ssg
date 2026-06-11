@@ -156,7 +156,7 @@ final class CompressConstSuite extends munit.FunSuite {
   // =========================================================================
   // regexp_literal_not_const
   // =========================================================================
-  test("regexp_literal_not_const".fail) {
+  test("regexp_literal_not_const") {
     assertCompresses(
       input = """(function(){
             var result;

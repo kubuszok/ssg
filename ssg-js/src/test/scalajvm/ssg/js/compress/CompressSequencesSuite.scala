@@ -19,7 +19,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // make_sequences_1
   // =========================================================================
-  test("make_sequences_1".fail) {
+  test("make_sequences_1") {
     assertCompresses(
       input = """foo();
         bar();
@@ -34,7 +34,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // make_sequences_2
   // =========================================================================
-  test("make_sequences_2".fail) {
+  test("make_sequences_2") {
     assertCompresses(
       input = """if (boo) {
             foo();
@@ -56,7 +56,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // make_sequences_3
   // =========================================================================
-  test("make_sequences_3".fail) {
+  test("make_sequences_3") {
     assertCompresses(
       input = """function f() {
             foo();
@@ -196,7 +196,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // lift_sequences_6
   // =========================================================================
-  test("lift_sequences_6".fail) {
+  test("lift_sequences_6") {
     assertCompresses(
       input = """var a = 2;
         a &&= (leak(), a = 4, 3);
@@ -322,7 +322,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // iife
   // =========================================================================
-  test("iife".fail) {
+  test("iife") {
     assertCompresses(
       input = """x = 42;
         (function a() {})();
@@ -377,7 +377,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1685
   // =========================================================================
-  test("issue_1685".fail) {
+  test("issue_1685") {
     assertCompresses(
       input = """var a = 100, b = 10;
         function f() {
@@ -421,7 +421,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // func_def_2
   // =========================================================================
-  test("func_def_2".fail) {
+  test("func_def_2") {
     assertCompresses(
       input = """console.log(function f() {
             return f = 0, !!f;
@@ -487,7 +487,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // func_def_5
   // =========================================================================
-  test("func_def_5".fail) {
+  test("func_def_5") {
     assertCompresses(
       input = """function f() {
             return function g(){
@@ -681,7 +681,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // side_effects
   // =========================================================================
-  test("side_effects".fail) {
+  test("side_effects") {
     assertCompresses(
       input = "0, a(), 1, b(), 2, c(), 3",
       expected = "a(), b(), c()",
@@ -786,7 +786,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // reassign_const
   // =========================================================================
-  test("reassign_const".fail) {
+  test("reassign_const") {
     assertCompresses(
       input = """function f() {
             const a = 1;
@@ -889,7 +889,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // hoist_defun
   // =========================================================================
-  test("hoist_defun".fail) {
+  test("hoist_defun") {
     assertCompresses(
       input = """x();
         function f() {}

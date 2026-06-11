@@ -324,7 +324,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2629_4
   // =========================================================================
-  test("issue_2629_4".fail) {
+  test("issue_2629_4") {
     assertCompresses(
       input = """(/*@__PURE__*/ x(), y());
         (w(), /*@__PURE__*/ x(), y())""".stripMargin.trim,
@@ -339,7 +339,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2629_5
   // =========================================================================
-  test("issue_2629_5".fail) {
+  test("issue_2629_5") {
     assertCompresses(
       input = """[ /*@__PURE__*/ x() ];
         [ /*@__PURE__*/ x(), y() ];
@@ -355,7 +355,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2705_4
   // =========================================================================
-  test("issue_2705_4".fail) {
+  test("issue_2705_4") {
     assertCompresses(
       input = """(/*@__PURE__*/ new x(), y());
         (w(), /*@__PURE__*/ new x(), y())""".stripMargin.trim,
@@ -370,7 +370,7 @@ final class CompressPureFuncsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2705_5
   // =========================================================================
-  test("issue_2705_5".fail) {
+  test("issue_2705_5") {
     assertCompresses(
       input = """[ /*@__PURE__*/ new x() ];
         [ /*@__PURE__*/ new x(), y() ];
