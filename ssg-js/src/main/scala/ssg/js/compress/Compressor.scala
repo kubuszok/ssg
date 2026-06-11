@@ -2473,12 +2473,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     '\u2029' -> "u2029"
   )
 
-  /** Subset of regexps that is not going to cause regexp based DDOS. See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS The original JS regex:
-    * /^[\\/|\0\s\w\^$.\[\]()]*$/ Note: \0 is the NUL character (U+0000)
+  /** Subset of regexps that is not going to cause regexp based DDOS. See: https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS The original JS regex
+    * (utils/index.js:244): /^[\\/|\0\s\w^$.[\]()]*$/ — `\0` is the NUL character (U+0000), part of the safe set.
+    *
+    * The pattern is built with a LITERAL NUL character (0.toChar) because no escape spelling compiles on all three platforms: the `\uXXXX` escape inside a character class is rejected by Scala
+    * Native's re2 engine (yet accepted by JVM/JS), while the `\0` octal escape is rejected as an illegal octal escape by the JVM and Scala.js (yet accepted by Native). A literal NUL char is the only
+    * spelling that JVM, JS, AND Native all accept, and it compiles and matches identically on all three. So NUL stays in the safe set exactly as upstream — only its spelling differs.
     */
-  private val reSafeRegexp = """^[\\/|\u0000\s\w\^$.\[\]()]*$""".r
+  private val reSafeRegexp = ("^[\\\\/|" + 0.toChar + """\s\w\^$.\[\]()]*$""").r
 
-  /** Check if the regexp is safe for Terser to create without risking a RegExp DOS. */
+  /** Check if the regexp is safe for Terser to create without risking a RegExp DOS. Faithful to utils/index.js:247 (`re_safe_regexp.test(source)`); NUL is part of the safe set in `reSafeRegexp`
+    * above.
+    */
   private def regexpIsSafe(source: String): Boolean =
     reSafeRegexp.findFirstIn(source).isDefined
 
