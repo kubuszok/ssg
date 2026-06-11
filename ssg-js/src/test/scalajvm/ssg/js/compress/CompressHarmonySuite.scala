@@ -605,7 +605,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // array_literal_with_spread_1
   // =========================================================================
-  test("array_literal_with_spread_1".fail) {
+  test("array_literal_with_spread_1") {
     assertCompresses(
       input = """var f = (x) => [...x][0];
         console.log(f(["PASS"]))""".stripMargin.trim,
@@ -1217,7 +1217,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_3061
   // =========================================================================
-  test("issue_3061".fail) {
+  test("issue_3061") {
     assertCompresses(
       input = """console.log(new class extends(function(base) {
             return class extends base {};

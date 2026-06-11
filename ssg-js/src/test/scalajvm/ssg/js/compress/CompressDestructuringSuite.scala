@@ -563,7 +563,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3205_2
   // =========================================================================
-  test("issue_3205_2".fail) {
+  test("issue_3205_2") {
     assertCompresses(
       input = """(function() {
             function f() {
@@ -590,7 +590,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3205_3
   // =========================================================================
-  test("issue_3205_3".fail) {
+  test("issue_3205_3") {
     assertCompresses(
       input = """(function() {
             function f(o, {a: x} = o) {
@@ -615,7 +615,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3205_4
   // =========================================================================
-  test("issue_3205_4".fail) {
+  test("issue_3205_4") {
     assertCompresses(
       input = """(function() {
             function f(o) {

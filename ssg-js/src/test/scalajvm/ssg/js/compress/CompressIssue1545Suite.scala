@@ -19,7 +19,7 @@ final class CompressIssue1545Suite extends munit.FunSuite {
   // =========================================================================
   // issue_1545
   // =========================================================================
-  test("issue_1545".fail) {
+  test("issue_1545") {
     assertCompresses(
       input = """console.assert(true, "This should be removed");
         console.assert(1, "This should be removed too");

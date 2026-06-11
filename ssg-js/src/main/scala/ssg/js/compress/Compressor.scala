@@ -155,9 +155,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   override def pureFuncs(call: AstCall): Boolean =
-    // Returns true if the call is NOT pure (i.e., has side effects)
+    // Returns true if the call is NOT pure (i.e., has side effects).
+    // Mirrors terser's Compressor `pure_funcs`: when the `pure_funcs` option is
+    // null/empty the function is `return_true` (every call is treated as having
+    // side effects), so `is_callee_pure` -> `!pure_funcs(this)` is false and the
+    // call is preserved (lib/compress/index.js:295-297, return_true).
     options.pureFuncs match {
-      case Nil   => false // no pure_funcs specified — all calls may have side effects
+      case Nil   => true // no pure_funcs specified — all calls may have side effects (return_true)
       case funcs =>
         if (call.expression == null) true
         else {

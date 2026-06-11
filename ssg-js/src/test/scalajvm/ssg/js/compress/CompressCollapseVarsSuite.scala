@@ -1397,7 +1397,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_eval_and_with
   // =========================================================================
-  test("collapse_vars_eval_and_with".fail) {
+  test("collapse_vars_eval_and_with") {
     assertCompresses(
       input = """// Don't attempt to collapse vars in presence of eval() or with statement.
         (function f0() {
@@ -5139,7 +5139,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2878
   // =========================================================================
-  test("issue_2878".fail) {
+  test("issue_2878") {
     assertCompresses(
       input = """var c = 0;
         (function (a, b) {

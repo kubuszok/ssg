@@ -555,7 +555,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2208_2
   // =========================================================================
-  test("issue_2208_2".fail) {
+  test("issue_2208_2") {
     assertCompresses(
       input = """console.log({
             a: 42,
@@ -1023,7 +1023,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // array_hole
   // =========================================================================
-  test("array_hole".fail) {
+  test("array_hole") {
     assertCompresses(
       input = """console.log(
             [ 1, 2, , 3][1],

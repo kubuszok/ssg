@@ -49,7 +49,7 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch_ie8
   // =========================================================================
-  test("mangle_catch_ie8".fail) {
+  test("mangle_catch_ie8") {
     val result = minifyWithMangleAndCompress(catchInput, ie8 = true)
     assertEquals(result, "var a=\"FAIL\";try{throw 1}catch(args){a=\"PASS\"}console.log(a);")
   }
@@ -66,7 +66,7 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch_var_ie8
   // =========================================================================
-  test("mangle_catch_var_ie8".fail) {
+  test("mangle_catch_var_ie8") {
     val input  = "var a = \"FAIL\";\ntry {\n    throw 1;\n} catch (args) {\n    var a = \"PASS\";\n}\nconsole.log(a);"
     val result = minifyWithMangleAndCompress(input, ie8 = true)
     assertEquals(result, "var a=\"FAIL\";try{throw 1}catch(args){var a=\"PASS\"}console.log(a);")
