@@ -338,7 +338,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_1
   // =========================================================================
-  test("remove_switch_1".fail) {
+  test("remove_switch_1") {
     assertCompresses(
       input = """switch (foo) {
           case 1:

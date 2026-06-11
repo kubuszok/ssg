@@ -349,7 +349,7 @@ final class CompressInlineSuite extends munit.FunSuite {
   // =========================================================================
   // do_not_repeat_when_variable_larger_than_inlined_node_2
   // =========================================================================
-  test("do_not_repeat_when_variable_larger_than_inlined_node_2".fail) {
+  test("do_not_repeat_when_variable_larger_than_inlined_node_2") {
     assertCompresses(
       input = """const a=0.1, b=0.2, c=a+b;
         console.log(c)""".stripMargin.trim,
@@ -368,7 +368,7 @@ final class CompressInlineSuite extends munit.FunSuite {
   // =========================================================================
   // do_not_repeat_when_variable_larger_than_inlined_node_3
   // =========================================================================
-  test("do_not_repeat_when_variable_larger_than_inlined_node_3".fail) {
+  test("do_not_repeat_when_variable_larger_than_inlined_node_3") {
     assertCompresses(
       input = """const a = "string";
         const b = "string";

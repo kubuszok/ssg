@@ -332,7 +332,7 @@ object DropSideEffectFree {
   private def processExpression(scope: AstScope, insert: Boolean, compressor: CompressorLike): Unit = {
     var tt: TreeTransformer = null.asInstanceOf[TreeTransformer] // @nowarn — forward ref
     tt = new TreeTransformer(
-      before = (node, _) =>
+      before = (node, _, _) =>
         if (insert && node.isInstanceOf[AstSimpleStatement]) {
           val ss  = node.asInstanceOf[AstSimpleStatement]
           val ret = new AstReturn

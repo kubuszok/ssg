@@ -369,7 +369,7 @@ object PropMangler {
       )
 
     val tt = new TreeTransformer(
-      before = (node, _) => {
+      before = (node, _, _) => {
         node match {
           case cpp: AstClassPrivateProperty =>
             cpp.key match {
@@ -507,7 +507,7 @@ object PropMangler {
 
     def mangleStrings(node: AstNode): AstNode = {
       val tt = new TreeTransformer(
-        before = (n, _) => {
+        before = (n, _, _) => {
           n match {
             case seq: AstSequence =>
               val last = seq.expressions.size - 1
@@ -617,7 +617,7 @@ object PropMangler {
 
     // Step 2: transform the tree, renaming properties
     val tt = new TreeTransformer(
-      before = (node, _) => {
+      before = (node, _, _) => {
         node match {
           case _: AstClassPrivateProperty | _: AstPrivateMethod | _: AstPrivateGetter | _: AstPrivateSetter | _: AstDotHash =>
           // handled by manglePrivateProperties

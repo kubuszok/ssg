@@ -228,7 +228,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // dead_code_const_annotation
   // Fails: @const annotation + toplevel reduce_vars interaction
   // =========================================================================
-  test("dead_code_const_annotation".fail) {
+  test("dead_code_const_annotation") {
     assertCompresses(
       input = """var unused;
                 |/** @const */ var CONST_FOO_ANN = false;
@@ -283,7 +283,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // dead_code_const_annotation_complex_scope
   // Fails: complex reduce_vars + sequences + toplevel interaction
   // =========================================================================
-  test("dead_code_const_annotation_complex_scope".fail) {
+  test("dead_code_const_annotation_complex_scope") {
     assertCompresses(
       input = """var unused_var;
                 |/** @const */ var test = 'test';
@@ -823,7 +823,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // throw_assignment
   // Fails: dead_code+unused throw assignment optimization incomplete
   // =========================================================================
-  test("throw_assignment".fail) {
+  test("throw_assignment") {
     assertCompresses(
       input = """function f1() {
                 |    throw a = x();

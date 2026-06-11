@@ -64,7 +64,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // destructuring_remove_unused_1
   // =========================================================================
-  test("destructuring_remove_unused_1".fail) {
+  test("destructuring_remove_unused_1") {
     assertCompresses(
       input = """function a() {
             var unused = "foo";
@@ -138,7 +138,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // destructuring_remove_unused_2
   // =========================================================================
-  test("destructuring_remove_unused_2".fail) {
+  test("destructuring_remove_unused_2") {
     assertCompresses(
       input = """function a() {
             var unused = "foo";
@@ -1122,7 +1122,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_1
   // =========================================================================
-  test("issue_t111_1".fail) {
+  test("issue_t111_1") {
     assertCompresses(
       input = "var p = x => (console.log(x), x), unused = p(1), {} = p(2)",
       expected = "var p = x => (console.log(x), x), {} = (p(1), p(2))",
@@ -1136,7 +1136,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_2a
   // =========================================================================
-  test("issue_t111_2a".fail) {
+  test("issue_t111_2a") {
     assertCompresses(
       input = "var p = x => (console.log(x), x), a = p(1), {} = p(2), c = p(3), d = p(4)",
       expected = """var p = x => (console.log(x), x), {} = (p(1), p(2));
@@ -1151,7 +1151,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_2b
   // =========================================================================
-  test("issue_t111_2b".fail) {
+  test("issue_t111_2b") {
     assertCompresses(
       input = "let p = x => (console.log(x), x), a = p(1), {} = p(2), c = p(3), d = p(4)",
       expected = """let p = x => (console.log(x), x), {} = (p(1), p(2));
@@ -1166,7 +1166,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_2c
   // =========================================================================
-  test("issue_t111_2c".fail) {
+  test("issue_t111_2c") {
     assertCompresses(
       input = "const p = x => (console.log(x), x), a = p(1), {} = p(2), c = p(3), d = p(4)",
       expected = """const p = x => (console.log(x), x), {} = (p(1), p(2));
@@ -1181,7 +1181,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_3
   // =========================================================================
-  test("issue_t111_3".fail) {
+  test("issue_t111_3") {
     assertCompresses(
       input = "let p = x => (console.log(x), x), a = p(1), {} = p(2), c = p(3), {} = p(4)",
       expected = "let p = x => (console.log(x), x), {} = (p(1), p(2)), {} = (p(3), p(4))",
@@ -1195,7 +1195,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t111_4
   // =========================================================================
-  test("issue_t111_4".fail) {
+  test("issue_t111_4") {
     assertCompresses(
       input = """let p = x => (console.log(x), x), a = 1, {length} = [0], c = 3, {x} = {x: 2};
         p(`$${length} $${x}`)""".stripMargin.trim,
@@ -1310,7 +1310,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // destructure_empty_array_1
   // =========================================================================
-  test("destructure_empty_array_1".fail) {
+  test("destructure_empty_array_1") {
     assertCompresses(
       input = "let {} = Object, [] = {}, unused = console.log(\"not reached\")",
       expected = """let {} = Object, [] = {};
@@ -1326,7 +1326,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // destructure_empty_array_2
   // =========================================================================
-  test("destructure_empty_array_2".fail) {
+  test("destructure_empty_array_2") {
     assertCompresses(
       input = "let {} = Object, [] = {}, unused = console.log(\"not reached\")",
       expected = """let {} = Object, [] = {};

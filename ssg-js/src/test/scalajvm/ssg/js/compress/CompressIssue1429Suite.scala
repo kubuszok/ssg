@@ -19,7 +19,7 @@ final class CompressIssue1429Suite extends munit.FunSuite {
   // =========================================================================
   // variant_1
   // =========================================================================
-  test("variant_1".fail) {
+  test("variant_1") {
     assertCompresses(
       input = """const A = 1, B = 0, C = 2, D = 3;
 
@@ -41,7 +41,7 @@ final class CompressIssue1429Suite extends munit.FunSuite {
   // =========================================================================
   // variant_2
   // =========================================================================
-  test("variant_2".fail) {
+  test("variant_2") {
     assertCompresses(
       input = """const A = 1, B = 0, C = 2, D = 3;
 
@@ -67,7 +67,7 @@ final class CompressIssue1429Suite extends munit.FunSuite {
   // =========================================================================
   // variant_3
   // =========================================================================
-  test("variant_3".fail) {
+  test("variant_3") {
     assertCompresses(
       input = """const A = 1, B = 0, C = 2, D = 3;
 
@@ -93,7 +93,7 @@ final class CompressIssue1429Suite extends munit.FunSuite {
   // =========================================================================
   // variant_4
   // =========================================================================
-  test("variant_4".fail) {
+  test("variant_4") {
     assertCompresses(
       input = """const A = 1, B = 0, C = 2, D = 3;
 

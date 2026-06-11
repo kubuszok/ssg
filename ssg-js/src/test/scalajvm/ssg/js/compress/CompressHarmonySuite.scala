@@ -103,7 +103,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // classes_extending_classes_out_of_pure_iifes
   // =========================================================================
-  test("classes_extending_classes_out_of_pure_iifes".fail) {
+  test("classes_extending_classes_out_of_pure_iifes") {
     assertCompresses(
       input = """let Base = /*@__PURE__*/ (() => {
             class A {}
@@ -1311,7 +1311,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_t80
   // =========================================================================
-  test("issue_t80".fail) {
+  test("issue_t80") {
     assertCompresses(
       input = """function foo(data = []) {
             var u, v = "unused";
