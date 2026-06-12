@@ -165,7 +165,9 @@ final case class EvaluateResult(
 final class EvaluateVisitor(
   val importCache: Nullable[ImportCache] = Nullable.Null,
   val logger:      Nullable[Logger] = Nullable.Null,
-  val importer:    Nullable[Importer] = Nullable.Null
+  val importer:    Nullable[Importer] = Nullable.Null,
+  val functions:   Nullable[Iterable[Callable]] = Nullable.Null,
+  val quietDeps:   Boolean = false
 ) extends StatementVisitor[Value]
     with ExpressionVisitor[Value]
     with IfConditionExpressionVisitor[Any]
@@ -203,12 +205,19 @@ final class EvaluateVisitor(
         // Slash-separated number (e.g., font: 16px/1.4)
         result.asInstanceOf[SassNumber].withSlash(l, r)
       case (_: SassNumber, _: SassNumber) =>
-        // Both are numbers but slash-separated is not allowed — emit deprecation warning
-        warnForDeprecation(
-          Deprecation.SlashDiv,
+        // Both are numbers but slash-separated is not allowed — emit deprecation warning.
+        // dart-sass evaluate.dart:2838 routes this through `_warn(message,
+        // node.span, Deprecation.slashDiv)`, which honors `_quietDeps &&
+        // _inDependency` (evaluate.dart:4682); the port mirrors that by going
+        // through `_warnWithSpan` rather than the context-level
+        // `warnForDeprecation`, so dependency warnings are suppressed when
+        // `quietDeps` is set.
+        _warnWithSpan(
           "Using / for division outside of calc() is deprecated and will be removed in Dart Sass 2.0.0.\n\n" +
             s"Recommendation: math.div(${node.left}, ${node.right}) or calc(${node.left} / ${node.right})\n\n" +
-            "More info and automated migrator: https://sass-lang.com/d/slash-div"
+            "More info and automated migrator: https://sass-lang.com/d/slash-div",
+          node.span,
+          Nullable(Deprecation.SlashDiv)
         )
         result
       case _ =>
@@ -267,6 +276,29 @@ final class EvaluateVisitor(
     env
   }
 
+  /** A map from built-in function names to their associated functions.
+    *
+    * Port of dart-sass `_builtInFunctions` (evaluate.dart:189). Populated per evaluate.dart:699-709: the user's [functions] are merged with the global built-ins and the meta module's runtime
+    * functions, then each is keyed under its name with `_` normalized to `-` (`_builtInFunctions[function.name.replaceAll("_", "-")] = function;`, evaluate.dart:707-708). The list order is
+    * `[...?functions, ...globalFunctions, ...meta]` and map assignment is last-wins, so the built-ins and meta functions take precedence over a user function that shares a name.
+    *
+    * `_execute` evaluates each stylesheet in a bare [[Environment]] without built-ins (so a module's public surface contains only its own user-defined functions), and `visitFunctionExpression` falls
+    * back to this table when the environment's scope chain doesn't resolve a name. The static [[ssg.sass.functions.Functions.lookupGlobal]] previously served that fallback for the global built-ins
+    * alone; this per-evaluator table additionally carries the caller's `functions`.
+    */
+  private val _builtInFunctions: Map[String, Callable] = {
+    val merged =
+      functions.fold[Iterable[Callable]](Nil)(identity).toList :::
+        ssg.sass.functions.Functions.global :::
+        ssg.sass.functions.MetaFunctions.runtimeFunctions.map(_.withDeprecationWarning("meta"))
+    val builder = scala.collection.mutable.LinkedHashMap.empty[String, Callable]
+    for (fn <- merged) {
+      val key = fn.name.replace("_", "-")
+      builder(key) = AliasedCallable(key, fn)
+    }
+    builder.toMap
+  }
+
   /** Whether we're currently evaluating a `@supports` declaration. When true, calculations are not reduced to plain numbers.
     */
   private var _inSupportsDeclaration: Boolean = false
@@ -288,8 +320,11 @@ final class EvaluateVisitor(
     */
   private var _inDependency: Boolean = false
 
-  /** Whether to suppress deprecation warnings for dependencies. */
-  private val _quietDeps: Boolean = false
+  /** Whether to suppress deprecation warnings for dependencies.
+    *
+    * dart-sass evaluate.dart:381 `_quietDeps = quietDeps` — the constructor argument is stored verbatim and consumed at evaluate.dart:4682.
+    */
+  private val _quietDeps: Boolean = quietDeps
 
   /** Set of (message, span) pairs that have already been warned about, used to deduplicate warnings. Corresponds to Dart's `_warningsEmitted`.
     */
@@ -1326,12 +1361,16 @@ final class EvaluateVisitor(
                 _environment.getNamespacedFunction(ns, node.name)
               }
             } else {
-              // dart-sass: after checking the environment's scope chain and
-              // imported/global modules, fall back to the evaluator-level
-              // built-in function table (_builtInFunctions). This is necessary
-              // because _execute creates bare environments without built-ins.
+              // dart-sass evaluate.dart:3088: after checking the environment's
+              // scope chain and imported/global modules, fall back to the
+              // evaluator-level built-in function table (_builtInFunctions).
+              // This is necessary because _execute creates bare environments
+              // without built-ins. The table also carries the caller's
+              // `functions` (evaluate.dart:699-709), so a user-supplied
+              // function registered via `compileString(functions: ...)` is
+              // invocable here.
               _environment.getFunction(node.name).orElse {
-                ssg.sass.functions.Functions.lookupGlobal(node.name).fold(Nullable.empty[Callable])(b => Nullable(b: Callable))
+                _builtInFunctions.get(node.name).fold(Nullable.empty[Callable])(c => Nullable(c))
               }
             }
           )
