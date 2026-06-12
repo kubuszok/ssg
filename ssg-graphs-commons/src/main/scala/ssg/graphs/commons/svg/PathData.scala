@@ -197,21 +197,12 @@ final class PathData {
     if (v == v.toLong.toDouble) {
       v.toLong.toString
     } else {
-      // Round to 2 decimal places
-      val rounded = math.round(v * 100.0) / 100.0
-      if (rounded == rounded.toLong.toDouble) {
-        rounded.toLong.toString
-      } else {
-        // Format with up to 2 decimal places, strip trailing zeros
-        val s = f"$rounded%.2f"
-        // Remove trailing zeros after decimal point
-        if (s.contains('.')) {
-          val trimmed = s.replaceAll("0+$", "")
-          if (trimmed.endsWith(".")) trimmed.init else trimmed
-        } else {
-          s
-        }
-      }
+      // Round to 2 decimal places and strip trailing zeros via locale-independent
+      // integer math. The previous `f"$rounded%.2f"` followed Locale.getDefault on
+      // the JVM (emitting "1,50" on comma-locale hosts) and its trailing-zero trim
+      // was guarded by `s.contains('.')`, false for "1,50"; integer-math formatting
+      // repairs both by construction (ISS-1156).
+      ssg.graphs.commons.util.FormatUtil.toFixedTrimmed(v, 2)
     }
 }
 
