@@ -20,6 +20,9 @@ package ssg
 package katex
 package data
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 import lowlevel.Nullable
 import ssg.katex.{ MacroContextInterface, MacroDef, MacroDefinition, MacroExpansion, Mode, ParseError, Token }
 import ssg.katex.functions.FunctionDef
@@ -27,6 +30,8 @@ import ssg.katex.functions.FunctionDef
 /** Predefined macros for KaTeX. All macros are registered at class-loading time via the `registerAll()` call at the bottom of this object.
   */
 object Macros {
+
+  @volatile private var registered: Boolean = false
 
   // Helper: register a string macro
   private def defineMacro(name: String, body: String): Unit =
@@ -264,7 +269,10 @@ object Macros {
 
   /** Register all predefined macros. Called once at class-loading time.
     */
-  def registerAll(): Unit = {
+  def registerAll(): Unit = boundary {
+    if (registered) break(())
+    registered = true
+
     //////////////////////////////////////////////////////////////////////
     // macro tools
 
