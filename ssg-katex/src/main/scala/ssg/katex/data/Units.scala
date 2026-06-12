@@ -120,15 +120,39 @@ object Units {
   /** Round `n` to 4 decimal places, or to the nearest 1/10,000th em. See https://github.com/KaTeX/KaTeX/pull/2460.
     */
   def makeEm(n: Double): String = {
-    val rounded = Math.round(n * 10000.0).toDouble / 10000.0
-    // Remove trailing zeros for clean output matching +n.toFixed(4)
-    val str = if (rounded == rounded.toLong) {
-      rounded.toLong.toString
-    } else {
-      val s = f"$rounded%.4f"
-      // Strip trailing zeros after decimal point
-      s.replaceAll("0+$", "").replaceAll("\\.$", "")
+    // Upstream (units.ts:103): `+n.toFixed(4) + "em"`. toFixed(4) rounds to 4
+    // decimal places and the unary `+` round-trip strips trailing zeros, always
+    // emitting a "." decimal separator regardless of locale. We reproduce those
+    // semantics with pure integer math so the output is locale-independent on
+    // every platform (JVM/JS/Native) — never via String.format, which on the JVM
+    // follows Locale.getDefault and would emit comma decimals on comma-locale
+    // hosts (ISS-1153).
+    // Round half-up (matching the original port's Math.round behaviour) to the
+    // nearest 1/10,000th, then format the integral and fractional parts by hand
+    // with a hardcoded '.', stripping trailing zeros to mirror the `+` round-trip.
+    val scaled:    Long          = Math.round(n * 10000.0)
+    val negative:  Boolean       = scaled < 0L
+    val magnitude: Long          = Math.abs(scaled)
+    val integral:  Long          = magnitude / 10000L
+    val fraction:  Long          = magnitude % 10000L
+    val sb:        StringBuilder = new StringBuilder()
+    if (negative && (integral != 0L || fraction != 0L)) {
+      sb.append('-')
     }
-    str + "em"
+    sb.append(integral.toString)
+    if (fraction != 0L) {
+      sb.append('.')
+      // Zero-pad the fractional part to 4 digits, then strip trailing zeros so
+      // e.g. 0.0500 -> "0.05" and 0.8141 -> "0.8141".
+      var frac: String = fraction.toString
+      while (frac.length < 4)
+        frac = "0" + frac
+      var end: Int = frac.length
+      while (end > 0 && frac.charAt(end - 1) == '0')
+        end -= 1
+      sb.append(frac.substring(0, end))
+    }
+    sb.append("em")
+    sb.toString
   }
 }
