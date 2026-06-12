@@ -2,31 +2,23 @@
 package ssg
 package highlight
 
-/** Red tests for ISS-1091 (R0610-P1): `HtmlHighlightRenderer.render(source, spans)` drops
-  * nested captures and emits unbalanced HTML on overlapping spans.
+/** Red tests for ISS-1091 (R0610-P1): `HtmlHighlightRenderer.render(source, spans)` drops nested captures and emits unbalanced HTML on overlapping spans.
   *
-  * Expected-value provenance (C11): ssg-highlight is SSG-native — it wraps tree-sitter via
-  * FFI and has no original-src mapping (CLAUDE.md), so the canonical semantics come from the
-  * renderer's own documented contract and from tree-sitter's strict node-nesting property:
+  * Expected-value provenance (C11): ssg-highlight is SSG-native — it wraps tree-sitter via FFI and has no original-src mapping (CLAUDE.md), so the canonical semantics come from the renderer's own
+  * documented contract and from tree-sitter's strict node-nesting property:
   *   - every source byte is emitted exactly once, HTML-escaped (`& < > " '`);
   *   - every `<span>` opened is closed — the output is balanced HTML;
-  *   - capture ranges produced by a tree-sitter tree query are nested-or-disjoint (syntax
-  *     tree nodes nest strictly), so a capture contained in another must render as a nested
-  *     `<span>` — the same semantics as tree-sitter-highlight's `HtmlRenderer`, whose
-  *     HighlightStart/Source/HighlightEnd event model produces properly nested tags.
+  *   - capture ranges produced by a tree-sitter tree query are nested-or-disjoint (syntax tree nodes nest strictly), so a capture contained in another must render as a nested `<span>` — the same
+  *     semantics as tree-sitter-highlight's `HtmlRenderer`, whose HighlightStart/Source/HighlightEnd event model produces properly nested tags.
   *
-  * Bug being demonstrated (HtmlHighlightRenderer.scala lines 15-31): spans are sorted by
-  * `(startByte, -endByte)` (outer-first); the outer span is emitted whole including its
-  * closing `</span>`, after which every inner span satisfies `startByte < pos` and either
+  * Bug being demonstrated (HtmlHighlightRenderer.scala lines 15-31): spans are sorted by `(startByte, -endByte)` (outer-first); the outer span is emitted whole including its closing `</span>`, after
+  * which every inner span satisfies `startByte < pos` and either
   *   - `endByte <= pos`: it is SILENTLY SKIPPED (nested captures never rendered), or
-  *   - `endByte > pos` (partial overlap): a stray `</span>` is appended (the previous span
-  *     was already closed), the text `[pos, endByte)` is re-emitted (duplication), a `<span>`
-  *     is opened that is never closed, and `pos` does not advance, so the tail from `pos`
-  *     is emitted a second time.
+  *   - `endByte > pos` (partial overlap): a stray `</span>` is appended (the previous span was already closed), the text `[pos, endByte)` is re-emitted (duplication), a `<span>` is opened that is
+  *     never closed, and `pos` does not advance, so the tail from `pos` is emitted a second time.
   *
-  * The renderer is a pure function of `(String, Seq[HighlightSpan])` and needs no FFI or
-  * grammar loading, so this suite extends plain munit.FunSuite and runs on all platforms.
-  * All sources are ASCII, so byte offsets equal char offsets.
+  * The renderer is a pure function of `(String, Seq[HighlightSpan])` and needs no FFI or grammar loading, so this suite extends plain munit.FunSuite and runs on all platforms. All sources are ASCII,
+  * so byte offsets equal char offsets.
   */
 final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
 
@@ -40,21 +32,19 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     count
   }
 
-  /** Strips all tags; on a correct rendering this must yield the escaped source exactly
-    * once (catches both text loss and text duplication).
+  /** Strips all tags; on a correct rendering this must yield the escaped source exactly once (catches both text loss and text duplication).
     */
   private def stripTags(html: String): String =
     html.replaceAll("<[^>]*>", "")
 
-  /** Walks `<span`/`</span>` tags left to right tracking nesting depth; returns the minimum
-    * depth seen. A negative result means a `</span>` appeared with no matching open tag
-    * (stack underflow). Escaped text never contains a raw `<`, so the scan is unambiguous.
+  /** Walks `<span`/`</span>` tags left to right tracking nesting depth; returns the minimum depth seen. A negative result means a `</span>` appeared with no matching open tag (stack underflow).
+    * Escaped text never contains a raw `<`, so the scan is unambiguous.
     */
   private def minTagDepth(html: String): Int = {
     var depth = 0
     var min   = 0
     var i     = 0
-    while (i < html.length) {
+    while (i < html.length)
       if (html.startsWith("</span>", i)) {
         depth -= 1
         if (depth < min) {
@@ -67,7 +57,6 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
       } else {
         i += 1
       }
-    }
     min
   }
 
@@ -77,13 +66,13 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     val source = "def foo(x)" // 10 ASCII bytes
     val spans  = Seq(
       HighlightSpan(0, 10, "function"), // outer: whole source
-      HighlightSpan(4, 7, "name"),      // inner: "foo", fully inside the outer span
+      HighlightSpan(4, 7, "name") // inner: "foo", fully inside the outer span
     )
     // Today the inner span hits the silent-skip branch and the output is
     // <span class="hl-function">def foo(x)</span> — the "name" capture vanishes.
     assertEquals(
       HtmlHighlightRenderer.render(source, spans),
-      "<span class=\"hl-function\">def <span class=\"hl-name\">foo</span>(x)</span>",
+      "<span class=\"hl-function\">def <span class=\"hl-name\">foo</span>(x)</span>"
     )
   }
 
@@ -92,12 +81,12 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     val spans  = Seq(
       HighlightSpan(0, 10, "outer"),
       HighlightSpan(2, 8, "mid"),
-      HighlightSpan(4, 6, "inner"),
+      HighlightSpan(4, 6, "inner")
     )
     // [0,10) wraps "abcdefghij", [2,8) wraps "cdefgh" inside it, [4,6) wraps "ef" inside that.
     assertEquals(
       HtmlHighlightRenderer.render(source, spans),
-      "<span class=\"hl-outer\">ab<span class=\"hl-mid\">cd<span class=\"hl-inner\">ef</span>gh</span>ij</span>",
+      "<span class=\"hl-outer\">ab<span class=\"hl-mid\">cd<span class=\"hl-inner\">ef</span>gh</span>ij</span>"
     )
   }
 
@@ -109,8 +98,8 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
       source,
       Seq(
         HighlightSpan(0, 5, "a"),
-        HighlightSpan(3, 8, "b"), // overlaps [3,5) with the previous span
-      ),
+        HighlightSpan(3, 8, "b") // overlaps [3,5) with the previous span
+      )
     )
     // The exact rendering of partially-overlapping spans (split point, which span is
     // re-opened) is the implementer's choice within the balanced-nesting contract; the
@@ -119,16 +108,16 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     assertEquals(
       countOccurrences(html, "<span"),
       countOccurrences(html, "</span>"),
-      s"open/close span tag counts must match in: $html",
+      s"open/close span tag counts must match in: $html"
     )
     assertEquals(
       stripTags(html),
       source,
-      s"stripping tags must yield the escaped source exactly once (no loss, no duplication) in: $html",
+      s"stripping tags must yield the escaped source exactly once (no loss, no duplication) in: $html"
     )
     assert(
       minTagDepth(html) >= 0,
-      s"a </span> appeared with no matching <span (stack underflow) in: $html",
+      s"a </span> appeared with no matching <span (stack underflow) in: $html"
     )
   }
 
@@ -140,8 +129,8 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
       source,
       Seq(
         HighlightSpan(0, 3, "a"),
-        HighlightSpan(0, 3, "b"),
-      ),
+        HighlightSpan(0, 3, "b")
+      )
     )
     // Sorting by (startByte, -endByte) puts the identical ranges adjacent; today the first
     // is emitted whole and the second hits the silent-skip branch and is dropped. Both
@@ -151,7 +140,7 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     assertEquals(
       countOccurrences(html, "<span"),
       countOccurrences(html, "</span>"),
-      s"open/close span tag counts must match in: $html",
+      s"open/close span tag counts must match in: $html"
     )
     assertEquals(stripTags(html), "abc", s"text must appear exactly once in: $html")
     assert(minTagDepth(html) >= 0, s"stack underflow in: $html")
@@ -163,7 +152,7 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     val source = "val x = 1"
     assertEquals(
       HtmlHighlightRenderer.render(source, Seq(HighlightSpan(0, 3, "keyword"))),
-      "<span class=\"hl-keyword\">val</span> x = 1",
+      "<span class=\"hl-keyword\">val</span> x = 1"
     )
   }
 
@@ -172,7 +161,7 @@ final class HtmlHighlightRendererIss1091Suite extends munit.FunSuite {
     val source = "a&\"b <c> 'd'"
     assertEquals(
       HtmlHighlightRenderer.render(source, Seq(HighlightSpan(5, 8, "tag"))),
-      "a&amp;&quot;b <span class=\"hl-tag\">&lt;c&gt;</span> &#39;d&#39;",
+      "a&amp;&quot;b <span class=\"hl-tag\">&lt;c&gt;</span> &#39;d&#39;"
     )
   }
 
