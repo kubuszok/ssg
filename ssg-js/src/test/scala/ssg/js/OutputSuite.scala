@@ -104,7 +104,12 @@ final class OutputSuite extends munit.FunSuite {
   }
 
   test("object") {
-    assertEquals(minify("({a: 1, b: 2});"), "{a:1,b:2};")
+    // A statement that begins with an object literal must keep its parens, or
+    // `{...}` parses as a block — `{a:1,b:2};` is a SyntaxError ("Unexpected
+    // token ':'"). terser 5.46.1 (compress:false,mangle:false) emits
+    // `({a:1,b:2});`; the previous expectation baked the broken AST_Object
+    // first-in-statement parens gap fixed by ISS-1163 (output.js:1018).
+    assertEquals(minify("({a: 1, b: 2});"), "({a:1,b:2});")
   }
 
   // -- ES6+ --

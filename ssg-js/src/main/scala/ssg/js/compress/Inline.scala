@@ -1058,9 +1058,13 @@ object Inline {
       }
 
       // IIFE negation: !function(){}() is shorter than (function(){})()
+      // inline.js:462-464 — `compressor.parent() instanceof AST_SimpleStatement`.
+      // The Compressor's own walker stack is empty during a pass, so read the
+      // live transformer ancestry (see `liveParent` / Compressor.activeWalker),
+      // mirroring the identity-call this-guard at inline.js:378-383 above.
       if (
         compressor.optionBool("negate_iife") &&
-        compressor.parent().isInstanceOf[AstSimpleStatement] &&
+        liveParent(compressor, self).isInstanceOf[AstSimpleStatement] &&
         isIifeCall(self)
       ) {
         // Negate the call to avoid wrapping parens

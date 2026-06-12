@@ -302,9 +302,9 @@ final class CompressSequencesSuite extends munit.FunSuite {
   }
 
   // =========================================================================
-  // negate_iife_for
+  // negate_iife_for (un-pinned by ISS-1163: live-ancestry parent check)
   // =========================================================================
-  test("negate_iife_for".fail) {
+  test("negate_iife_for") {
     assertCompresses(
       input = """(function() {})();
         for (i = 0; i < 5; i++) console.log(i);
