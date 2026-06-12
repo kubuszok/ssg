@@ -1171,21 +1171,7 @@ object Inline {
     */
   private def liveParent(compressor: CompressorLike, self: AstNode): AstNode | Null =
     compressor match {
-      case c: Compressor =>
-        c.activeWalker match {
-          case w: TreeWalker if w.stack.nonEmpty =>
-            boundary[AstNode | Null] {
-              var i = w.stack.size - 1
-              while (i >= 0) {
-                if (w.stack(i).asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) {
-                  break(if (i - 1 >= 0) w.stack(i - 1) else null)
-                }
-                i -= 1
-              }
-              compressor.parent()
-            }
-          case _ => compressor.parent()
-        }
+      case c: Compressor => c.liveParent(self)
       case _ => compressor.parent()
     }
 

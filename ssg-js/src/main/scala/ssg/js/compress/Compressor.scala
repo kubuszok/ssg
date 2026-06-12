@@ -86,6 +86,29 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     */
   var activeWalker: TreeWalker | Null = null
 
+  /** The live parent of `self` during a compress pass — terser's `compressor.parent()`.
+    *
+    * Terser's Compressor *is* the TreeWalker driving the transform, so `compressor.parent()` reads the live ancestry. This port runs the transform on a separate `TreeTransformer`, leaving the
+    * Compressor's own stack empty during a pass; the live ancestry is exposed via `activeWalker` (set at the pass loop, Compressor.scala:298). We locate `self` (the node currently being optimized) in
+    * that live stack and return its immediate parent, exactly as `inComputedKey` walks the active stack (Compressor.scala:95-117). Falls back to the compressor's own `parent()` when no active walker
+    * is present (e.g. unit calls outside a pass), preserving the previous behavior. Shared by `Inline` (inline.js:381) and `optimizeTemplateString` (index.js:3910-3913).
+    */
+  def liveParent(self: AstNode): AstNode | Null =
+    activeWalker match {
+      case w: TreeWalker if w.stack.nonEmpty =>
+        boundary[AstNode | Null] {
+          var i = w.stack.size - 1
+          while (i >= 0) {
+            if (w.stack(i).asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) {
+              break(if (i - 1 >= 0) w.stack(i - 1) else null)
+            }
+            i -= 1
+          }
+          parent()
+        }
+      case _ => parent()
+    }
+
   /** Faithful port of terser `Compressor.in_computed_key()` (lib/compress/index.js:419).
     *
     * Returns false unless `evaluate` is on, then walks the *live* ancestry (the active transformer's stack — the compressor's own stack is empty during a pass, see `activeWalker`) for an
@@ -4860,9 +4883,13 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   private def optimizeTemplateString(self: AstTemplateString): AstNode = {
     // ISS-143: Skip if evaluate is off or parent is PrefixedTemplateString
     if (!optionBool("evaluate")) return self // @nowarn
-    val par =
-      try parent(0)
-      catch { case _: IndexOutOfBoundsException => null }
+    // index.js:3910-3913 `compressor.parent() instanceof AST_PrefixedTemplateString`.
+    // ISS-1171: read the LIVE ancestry — the compressor's own stack is empty during
+    // a pass (parent(0) there returns null, the guard never fires, and a
+    // substitution-free tagged template gets unwrapped to AstString → CCE in the
+    // parent's AstPrefixedTemplateString.transformDescend). liveParent walks the
+    // active transformer's stack, matching terser's `compressor.parent()`.
+    val par = liveParent(self)
     if (par != null && par.nn.isInstanceOf[AstPrefixedTemplateString]) return self // @nowarn
 
     if (self.segments.isEmpty) return self // @nowarn

@@ -1759,7 +1759,9 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
 
     val seg1 = new AstTemplateSegment
     seg1.start = token
-    seg1.raw = input.templateRaws.getOrElse(token, "")
+    // Upstream parse.js:2520 `raw: TEMPLATE_RAWS.get(S.token)`; identity-keyed
+    // get, defaulting to "" for the (unreachable) miss. @nowarn — Java interop.
+    seg1.raw = Option(input.templateRaws.get(token)).getOrElse("")
     seg1.value = token.value
     seg1.end = token
     segments.addOne(seg1)
@@ -1771,7 +1773,9 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
 
       val seg = new AstTemplateSegment
       seg.start = token
-      seg.raw = input.templateRaws.getOrElse(token, "")
+      // Upstream parse.js:2532 `raw: TEMPLATE_RAWS.get(S.token)`; identity-keyed
+      // get, defaulting to "" for the (unreachable) miss. @nowarn — Java interop.
+      seg.raw = Option(input.templateRaws.get(token)).getOrElse("")
       seg.value = token.value
       seg.end = token
       segments.addOne(seg)
