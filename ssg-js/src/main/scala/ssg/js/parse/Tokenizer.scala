@@ -79,9 +79,15 @@ class Tokenizer(
   /** Latest raw token text — used for numbers and template strings. */
   var latestRaw: String = ""
 
-  /** Raw template string data, keyed by token. */
-  val templateRaws: scala.collection.mutable.Map[AstToken, String] =
-    scala.collection.mutable.Map.empty
+  /** Raw template string data, keyed by token.
+    *
+    * Upstream parse.js:175 `var TEMPLATE_RAWS = new Map()` keys by object identity. We must do the same: AstToken is a `final case class` whose `var flags` participates in case-class equals/hashCode,
+    * and readTemplateCharacters inserts a token (Tokenizer.scala:607) then mutates `tok.templateEnd_=(true)` (:608), which would change the hashCode after insertion in any value-keyed Map and break
+    * the parser's lookups (Parser.scala:1762/1774). A java.util.IdentityHashMap is identity-keyed and mutation-immune, matching upstream — the same precedent already used for
+    * `outerCommentsBeforeCounts` at Parser.scala:68 for this exact reason.
+    */
+  val templateRaws: java.util.IdentityHashMap[AstToken, String] =
+    new java.util.IdentityHashMap()
 
   private var prevWasDot:    Boolean  = false
   private var previousToken: AstToken = null.asInstanceOf[AstToken] // @nowarn — interop sentinel
@@ -580,7 +586,7 @@ class Tokenizer(
             next(signalEof = true, inString = true)
             braceCounter += 1
             interpolationTok = token(if (begin) Token.TemplateHead else Token.TemplateCont, content.toString)
-            templateRaws(interpolationTok) = raw.toString
+            templateRaws.put(interpolationTok, raw.toString)
             interpolationTok.templateEnd_=(false)
           }
           if (interpolationTok == null) {
@@ -604,7 +610,7 @@ class Tokenizer(
       } else {
         templateBraces.remove(templateBraces.length - 1)
         val tok = token(if (begin) Token.TemplateHead else Token.TemplateCont, content.toString)
-        templateRaws(tok) = raw.toString
+        templateRaws.put(tok, raw.toString)
         tok.templateEnd_=(true)
         tok
       }
