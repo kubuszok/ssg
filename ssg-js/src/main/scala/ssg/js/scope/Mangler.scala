@@ -46,7 +46,10 @@ final case class ManglerOptions(
   reserved:       mutable.Set[String] = mutable.Set.empty,
   toplevel:       Boolean = false,
   cache:          ManglerCache | Null = null,
-  nthIdentifier:  NthIdentifier = Base54
+  nthIdentifier:  NthIdentifier = Base54,
+  // minify.js:170 defaults `properties` to false; compute_char_frequency
+  // (scope.js:989-996) only subtracts property names when this is truthy.
+  properties: Boolean = false
 )
 
 /** Cache for mangled names across multiple files. */
@@ -105,9 +108,42 @@ object Base54 extends NthIdentifier {
   }
 
   override def sort(): Unit = {
-    val sortedLeading = leading.sortWith((a, b) => compare(a, b) < 0)
-    val sortedDigits  = digits.sortWith((a, b) => compare(a, b) < 0)
+    // scope.js:1040 — chars = mergeSort(leading, compare).concat(mergeSort(digits, compare)).
+    // mergeSort (utils/index.js:159-181) is a STABLE merge sort (`cmp(a,b) <= 0` keeps the
+    // earlier element first on a tie), so characters of equal frequency retain their
+    // original order in `leading`/`digits`. Scala's Array.sortWith on a primitive Char
+    // array is not guaranteed stable, so use the stable mergeSort below.
+    val sortedLeading = mergeSort(leading, compare)
+    val sortedDigits  = mergeSort(digits, compare)
     chars = sortedLeading ++ sortedDigits
+  }
+
+  /** Stable merge sort — faithful port of utils/index.js:159-181 `mergeSort`. */
+  private def mergeSort(array: Array[Char], cmp: (Char, Char) => Int): Array[Char] = {
+    def merge(a: Array[Char], b: Array[Char]): Array[Char] = {
+      val r  = new Array[Char](a.length + b.length)
+      var ai = 0
+      var bi = 0
+      var i  = 0
+      while (ai < a.length && bi < b.length)
+        if (cmp(a(ai), b(bi)) <= 0) { r(i) = a(ai); i += 1; ai += 1 }
+        else { r(i) = b(bi); i += 1; bi += 1 }
+      while (ai < a.length) { r(i) = a(ai); i += 1; ai += 1 }
+      while (bi < b.length) { r(i) = b(bi); i += 1; bi += 1 }
+      r
+    }
+
+    def ms(a: Array[Char]): Array[Char] =
+      if (a.length <= 1) a
+      else {
+        val m     = a.length / 2
+        val left  = ms(a.slice(0, m))
+        val right = ms(a.slice(m, a.length))
+        merge(left, right)
+      }
+
+    // utils/index.js:160 — `if (array.length < 2) return array.slice();`
+    if (array.length < 2) array.clone() else ms(array)
   }
 
   override def get(num: Int): String = {
@@ -513,7 +549,14 @@ object Mangler {
     )
   }
 
-  /** Compute character frequency for optimal base54 ordering. */
+  /** Compute character frequency for optimal base54 ordering.
+    *
+    * Ports `AST_Toplevel.compute_char_frequency` (scope.js:975-1015). Upstream considers the FULL printed output once with delta +1 (`consider(this.print_to_string(), 1)`, scope.js:999) and, during
+    * that same print, subtracts (delta -1) each mangleable AST_Symbol's name (scope.js:987-988) and — only when `options.properties` is truthy (scope.js:989) — each AST_Dot/AST_DotHash property and
+    * the strings reachable from an AST_Sub subscript (scope.js:994-996, `skip_string`). The net frequency favors the characters that survive mangling, so the most frequent of those gets the shortest
+    * mangled name. Because `consider` performs commutative integer additions on the frequency map, applying the +1 whole-string pass and the per-node -1 subtractions in separate traversals yields the
+    * same map as upstream's single hooked print pass.
+    */
   def computeCharFrequency(ast: AstToplevel, options: ManglerOptions = ManglerOptions()): Unit = {
     val opts          = formatOptions(options)
     val nthIdentifier = opts.nthIdentifier
@@ -523,24 +566,57 @@ object Mangler {
       case b54: Base54.type =>
         b54.reset()
 
+        // scope.js:999 — consider every character of the printed program with delta +1.
+        b54.consider(ssg.js.output.OutputStream.printToString(ast), 1)
+
+        // scope.js:1005-1014 — skip_string subtracts strings reachable from an AST_Sub
+        // subscript (only invoked under `options.properties`).
+        def skipString(node: AstNode): Unit =
+          node match {
+            case str:  AstString      => b54.consider(str.value, -1)
+            case cond: AstConditional =>
+              if (cond.consequent != null) skipString(cond.consequent.nn)
+              if (cond.alternative != null) skipString(cond.alternative.nn)
+            case seq: AstSequence =>
+              if (seq.expressions.nonEmpty) skipString(seq.expressions.last)
+            case _ =>
+          }
+
         walk(
           ast,
           (node: AstNode, _: ArrayBuffer[AstNode]) => {
             node match {
+              // scope.js:987-988 — subtract each mangleable symbol's name. AST_Symbol
+              // .unmangleable (scope.js:762-764) is `!def || def.unmangleable(options)`,
+              // matched here by requiring a SymbolDef thedef that is not unmangleable.
+              // AST_Label.unmangleable is return_false (scope.js:768), and AST_LabelRef's
+              // thedef is its AstLabel (scope.js:366) whose unmangleable is likewise false
+              // — so labels and label-refs always participate. Each is printed once (the
+              // label decl, plus one per continue/break target), so the tree-walker's
+              // single visit per node matches the upstream print-override's one subtraction
+              // per printed occurrence.
               case sym: AstSymbol =>
                 sym.thedef match {
                   case d: SymbolDef if !d.unmangleable(opts) =>
                     b54.consider(sym.name, -1)
+                  case _: AstLabel =>
+                    b54.consider(sym.name, -1)
                   case _ =>
                 }
-              case dot: AstDot =>
+              // scope.js:989-996 — property handling, gated on options.properties.
+              case dot: AstDot if opts.properties =>
                 dot.property match {
                   case s: String => b54.consider(s, -1)
                   case _ =>
                 }
-              case dotHash: AstDotHash =>
+              case dotHash: AstDotHash if opts.properties =>
                 dotHash.property match {
                   case s: String => b54.consider("#" + s, -1)
+                  case _ =>
+                }
+              case sub: AstSub if opts.properties =>
+                sub.property match {
+                  case n: AstNode => skipString(n)
                   case _ =>
                 }
               case _ =>

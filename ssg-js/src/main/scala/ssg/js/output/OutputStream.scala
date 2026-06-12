@@ -1777,7 +1777,21 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   // ---- Symbols ----
 
-  private def printSymbol(node: AstSymbol): Unit = printName(node.name)
+  // output.js:2341-2343 — AST_Symbol._do_print: resolve the definition and prefer the
+  // mangled name. `var def = this.definition()` (scope.js:774-776 returns this.thedef);
+  // `output.print_name(def ? def.mangled_name || def.name : this.name)`.
+  // For AST_Label / AST_LabelRef the definition IS the AstLabel itself (ScopeAnalysis:
+  // AstLabel.thedef = self, AstLabelRef.thedef = its AstLabel; scope.js:366,376), and
+  // the AstLabel carries `mangledName` assigned by mangleNames (Mangler.scala:385-393,
+  // mirroring scope.js:868-874) — so it takes the same `mangled_name || name` path.
+  private def printSymbol(node: AstSymbol): Unit =
+    node.thedef match {
+      case sd: ssg.js.scope.SymbolDef =>
+        printName(if (sd.mangledName != null) sd.mangledName.nn else sd.name)
+      case lbl: ssg.js.ast.AstLabel =>
+        printName(if (lbl.mangledName != null) lbl.mangledName.nn else lbl.name)
+      case _ => printName(node.name)
+    }
 
   // ---- Numbers ----
 

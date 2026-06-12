@@ -30,7 +30,7 @@ package js
 import ssg.js.ast.*
 import ssg.js.parse.{ Parser, ParserOptions }
 import ssg.js.output.{ OutputOptions, OutputStream }
-import ssg.js.scope.{ Mangler, ManglerOptions, ScopeAnalysis }
+import ssg.js.scope.{ Mangler, ManglerOptions, ScopeAnalysis, ScopeOptions }
 import ssg.js.compress.{ Compressor, CompressorOptions }
 
 /** Options for the Terser minifier.
@@ -100,17 +100,30 @@ object Terser {
     }
 
     // 3. Mangle (if enabled)
-    // Upstream minify.js:270-274 runs figure_out_scope + mangle_names when
-    // `options.mangle` is truthy; utils/index.js:66-68 normalizes the Boolean `true`
-    // to the default mangler options (minify.js:161-174), so `mangle = true` means
-    // "default ManglerOptions"; only `false` disables the phase.
+    // Upstream minify.js:270-274 runs figure_out_scope, then compute_char_frequency,
+    // then mangle_names when `options.mangle` is truthy; utils/index.js:66-68 normalizes
+    // the Boolean `true` to the default mangler options (minify.js:161-174), so
+    // `mangle = true` means "default ManglerOptions"; only `false` disables the phase.
+    // compute_char_frequency (minify.js:273) orders base54 by source character frequency
+    // so the most frequent characters get the shortest mangled names.
+    // minify.js:270 — `if (options.mangle) toplevel.figure_out_scope(options.mangle)`:
+    // the mangle-phase scope analysis is run with the mangler options, so ie8/safari10/
+    // module/cache reach figure_out_scope (pass 3 catch-scope workarounds depend on ie8/
+    // safari10). figure_out_scope normalizes via `defaults(options, { cache, ie8, safari10,
+    // module })` (scope.js:205-209), which ScopeOptions mirrors.
+    def scopeOptionsFor(m: ManglerOptions): ScopeOptions =
+      ScopeOptions(cache = m.cache, ie8 = m.ie8, safari10 = m.safari10, module = m.module)
+
     options.mangle match {
       case mangleOpts: ManglerOptions =>
-        ScopeAnalysis.figureOutScope(ast)
+        ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(mangleOpts))
+        Mangler.computeCharFrequency(ast, mangleOpts)
         Mangler.mangleNames(ast, mangleOpts)
       case true =>
-        ScopeAnalysis.figureOutScope(ast)
-        Mangler.mangleNames(ast, ManglerOptions())
+        val defaultMangle = ManglerOptions()
+        ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(defaultMangle))
+        Mangler.computeCharFrequency(ast, defaultMangle)
+        Mangler.mangleNames(ast, defaultMangle)
       case false =>
       // mangling disabled
     }

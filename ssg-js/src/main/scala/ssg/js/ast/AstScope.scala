@@ -11,7 +11,7 @@
  * Migration notes:
  *   Renames: AST_* -> Ast*
  *   Convention: Mutable scope analysis fields (variables, enclosed, etc.)
- *   Idiom: mutable.Map for variables/globals, ArrayBuffer for enclosed
+ *   Idiom: mutable.LinkedHashMap for variables/globals (insertion-ordered, matching terser's JS Map), ArrayBuffer for enclosed
  *
  * Covenant: full-port
  * Covenant-js-reference: lib/ast.js
@@ -33,8 +33,12 @@ import scala.collection.mutable.ArrayBuffer
 /** Base class for all statements introducing a lexical scope. */
 trait AstScope extends AstBlock {
 
-  /** Map of name -> SymbolDef for all variables/functions defined in this scope. */
-  var variables:   mutable.Map[String, Any] = mutable.Map.empty
+  /** Map of name -> SymbolDef for all variables/functions defined in this scope.
+    *
+    * terser (scope.js:497) uses a JS `Map`, whose iteration order is insertion order; the mangler relies on that order (to_mangle is collected by `variables.forEach`, so source order — params before
+    * vars — determines which name gets the shortest mangled symbol). Use LinkedHashMap to preserve insertion order faithfully.
+    */
+  var variables:   mutable.Map[String, Any] = mutable.LinkedHashMap.empty
   var usesWith:    Boolean                  = false
   var usesEval:    Boolean                  = false
   var parentScope: AstScope | Null          = null
@@ -71,8 +75,11 @@ trait AstScope extends AstBlock {
 /** The toplevel scope. */
 class AstToplevel extends AstNode with AstScope {
 
-  /** Map of name -> SymbolDef for all undeclared names. */
-  var globals: mutable.Map[String, Any] = mutable.Map.empty
+  /** Map of name -> SymbolDef for all undeclared names.
+    *
+    * terser (scope.js:404) uses an insertion-ordered JS `Map`; preserve that with LinkedHashMap so global mangle order matches upstream.
+    */
+  var globals: mutable.Map[String, Any] = mutable.LinkedHashMap.empty
 
   /** Set of mangled names already assigned (used to avoid duplicates at top level). */
   var mangledNames: mutable.Set[String] = mutable.Set.empty
