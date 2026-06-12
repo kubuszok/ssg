@@ -19,7 +19,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity
   // =========================================================================
-  test("inline_identity".fail) {
+  test("inline_identity") {
     assertCompresses(
       input = """const id = x => x;
         console.log(id(1), id(2))""".stripMargin.trim,
@@ -36,7 +36,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_function
   // =========================================================================
-  test("inline_identity_function".fail) {
+  test("inline_identity_function") {
     assertCompresses(
       input = """function id(x) { return x };
         console.log(id(1), id(2))""".stripMargin.trim,
@@ -53,7 +53,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_undefined
   // =========================================================================
-  test("inline_identity_undefined".fail) {
+  test("inline_identity_undefined") {
     assertCompresses(
       input = """const id = x => x;
         console.log(id(), id(undefined))""".stripMargin.trim,
@@ -70,7 +70,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_extra_params
   // =========================================================================
-  test("inline_identity_extra_params".fail) {
+  test("inline_identity_extra_params") {
     assertCompresses(
       input = """const id = x => x;
         console.log(id(1, console.log(2)), id(3, 4))""".stripMargin.trim,
@@ -88,7 +88,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_higher_order
   // =========================================================================
-  test("inline_identity_higher_order".fail) {
+  test("inline_identity_higher_order") {
     assertCompresses(
       input = """const id = x => x;
         const inc = x => x + 1;
@@ -107,7 +107,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_inline_function
   // =========================================================================
-  test("inline_identity_inline_function".fail) {
+  test("inline_identity_inline_function") {
     assertCompresses(
       input = """const id = x => x;
         console.log(id(x => x + 1)(1), id((x => x + 1)(2)))""".stripMargin.trim,
@@ -127,7 +127,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_duplicate_arg_var
   // =========================================================================
-  test("inline_identity_duplicate_arg_var".fail) {
+  test("inline_identity_duplicate_arg_var") {
     assertCompresses(
       input = """const id = x => {
             return x;
@@ -165,7 +165,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_async
   // =========================================================================
-  test("inline_identity_async".fail) {
+  test("inline_identity_async") {
     assertCompresses(
       input = """const id = x => x;
         id(async () => await 1)();
@@ -184,7 +184,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_lose_this
   // =========================================================================
-  test("inline_identity_lose_this".fail) {
+  test("inline_identity_lose_this") {
     assertCompresses(
       input = """"use strict";
 
@@ -221,7 +221,7 @@ final class CompressIdentitySuite extends munit.FunSuite {
   // =========================================================================
   // inline_identity_dont_lose_this_when_arg
   // =========================================================================
-  test("inline_identity_dont_lose_this_when_arg".fail) {
+  test("inline_identity_dont_lose_this_when_arg") {
     assertCompresses(
       input = """"use strict";
 

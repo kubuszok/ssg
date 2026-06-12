@@ -18,7 +18,7 @@ final class CompressIssue1787Suite extends munit.FunSuite {
   // unary_prefix — inlining preserves unary prefix -(2/3)
   // =========================================================================
   // Known gap: compressor does not inline IIFE with reduce_vars+inline yet
-  test("unary_prefix".fail) {
+  test("unary_prefix") {
     assertCompresses(
       input = "console.log(function() {\n    var x = -(2 / 3);\n    return x;\n}());",
       expected = "console.log(-2/3);",
