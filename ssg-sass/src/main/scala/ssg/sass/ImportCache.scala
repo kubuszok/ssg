@@ -51,13 +51,21 @@ final class ImportCache(
 
   // -- Constructor variants --
 
-  /** Creates an import cache that resolves imports using [[importers]] and [[loadPaths]]. */
+  /** Creates an import cache that resolves imports using [[importers]] and [[loadPaths]].
+    *
+    * Mirrors dart-sass `ImportCache(importers:, loadPaths:)` (import_cache.dart:98-104): each load path becomes a filesystem importer through the platform seam
+    * ([[ssg.sass.importer.LoadPathImporterPlatform.loadPathImporter]], the port's `FilesystemImporter(path)`), and the SASS_PATH environment variable contributes additional importers on platforms
+    * that honor it.
+    */
   def this(
     importers: List[Importer],
     loadPaths: List[String],
     logger:    Nullable[Logger]
   ) =
-    this(ImportCache.toImporters(importers, loadPaths), logger)
+    this(
+      ImportCache.toImporters(importers, loadPaths, ssg.sass.importer.LoadPathImporterPlatform.loadPathImporter),
+      logger
+    )
 
   // ---- Caches ----
 
@@ -436,25 +444,37 @@ object ImportCache {
   def only(importers: List[Importer]): ImportCache =
     new ImportCache(importers)
 
+  /** Creates an [[ImportCache]] from the user's `importers` and `loadPaths` options, mirroring dart-sass `ImportCache(importers:, loadPaths:)` (import_cache.dart:100-103). Each load path becomes a
+    * filesystem importer via the platform load-path importer factory ([[ssg.sass.importer.LoadPathImporterPlatform.loadPathImporter]], the port's equivalent of `FilesystemImporter(path)` at
+    * import_cache.dart:128-129). Importers are consulted before load paths.
+    */
+  def fromOptions(
+    importers: List[Importer],
+    loadPaths: List[String],
+    logger:    Nullable[Logger] = Nullable.empty
+  ): ImportCache =
+    new ImportCache(
+      toImporters(importers, loadPaths, ssg.sass.importer.LoadPathImporterPlatform.loadPathImporter),
+      logger
+    )
+
   /** Converts the user's importers and loadPaths into a single list of importers.
     *
-    * Port of dart-sass `_toImporters` (import_cache.dart:119-135). Converts each loadPath to an importer via [loadPathImporter], and reads SASS_PATH environment variable for additional paths.
+    * Port of dart-sass `_toImporters` (import_cache.dart:119-135). Each explicit loadPath is converted to an importer via [loadPathImporter] (the port's `FilesystemImporter(path)`,
+    * import_cache.dart:128-129), and the implicit SASS_PATH environment variable contributes additional importers via the platform seam
+    * [[ssg.sass.importer.LoadPathImporterPlatform.sassPathImporters]] (import_cache.dart:124/130-132).
+    *
+    * dart-sass short-circuits both blocks in a browser (`if (isBrowser) return [...?importers];`, import_cache.dart:125). The port preserves a loud-vs-skip distinction at the seam: explicit loadPaths
+    * stay loud on JS/Native (`loadPathImporter` throws there), while implicit SASS_PATH is skipped on JS/Native (`sassPathImporters` returns empty there, mirroring dart's browser branch) and honored
+    * on the JVM.
     */
   private[sass] def toImporters(
     importers:        List[Importer],
     loadPaths:        List[String],
-    loadPathImporter: String => Importer = _ => Importer.noOp
+    loadPathImporter: String => Importer
   ): List[Importer] = {
     val fromLoadPaths = loadPaths.map(loadPathImporter)
-    val fromSassPath  =
-      try
-        sys.env.get("SASS_PATH").toList.flatMap { paths =>
-          val sep = if (sys.props.getOrElse("os.name", "").toLowerCase.contains("win")) ";" else ":"
-          paths.split(sep).toList.filter(_.nonEmpty).map(loadPathImporter)
-        }
-      catch {
-        case _: SecurityException => Nil
-      }
+    val fromSassPath  = ssg.sass.importer.LoadPathImporterPlatform.sassPathImporters()
     importers ::: fromLoadPaths ::: fromSassPath
   }
 }

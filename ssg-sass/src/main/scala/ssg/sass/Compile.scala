@@ -86,10 +86,49 @@ object Compile {
 
     val effectiveImporter = importer.getOrElse(new NoOpImporter())
 
+    // dart-sass sass.dart:236-239: both `importers` and `loadPaths` are folded
+    // into the ImportCache (`ImportCache(importers: importers, loadPaths:
+    // loadPaths)`), and dart ALWAYS constructs an ImportCache here -- there is
+    // no conditional. That matters because `ImportCache(...)` also folds in the
+    // SASS_PATH environment variable (import_cache.dart:124/130-132), so a plain
+    // `compileString` honors SASS_PATH on the VM even with no explicit
+    // `importers`/`loadPaths`.
+    //
+    // In dart the entrypoint `importer` (compile.dart:160) is SEPARATE from the
+    // ImportCache: the evaluator takes both, with the importer used as the base
+    // importer (async_evaluate.dart:369 `_importCache = importCache ??
+    // AsyncImportCache.none()`, importer tried via `baseImporter:`). The SSG
+    // port flattened that: EvaluateVisitor builds its cache from the singular
+    // `importer` when none is supplied (EvaluateVisitor.scala:427-432), so the
+    // importer must live in the cache's importer list for scheme-bearing URLs
+    // (e.g. `@import "pkg:foo"`, where the relative `baseImporter` path is
+    // skipped). To keep ALWAYS constructing the cache without regressing that
+    // singular-importer route, we fold `effectiveImporter` into the cache's
+    // importers (first, so it is consulted before loadPaths/SASS_PATH), mirroring
+    // what the evaluator's own fallback did.
+    //
+    // When the caller supplies an explicit `importCache`, that takes precedence
+    // (matching the port's pre-existing one-importCache contract). dart guards
+    // the SASS_PATH/loadPaths block behind `isBrowser` (import_cache.dart:125):
+    // the JVM honors SASS_PATH while JS and Native skip it (documented in
+    // LoadPathImporterPlatform), so on those platforms the construction folds in
+    // only the singular importer when nothing else is passed. import_cache.dart:
+    // 128-129 turns each load path into a filesystem importer.
+    val effectiveImportCache: Nullable[ImportCache] =
+      if (importCache.isDefined) importCache
+      else
+        Nullable(
+          ImportCache.fromOptions(
+            effectiveImporter :: importers.fold[List[Importer]](Nil)(_.toList),
+            loadPaths.fold[List[String]](Nil)(_.toList),
+            Nullable(deprecationLogger)
+          )
+        )
+
     val result = _compileStylesheet(
       stylesheet,
       Nullable(deprecationLogger),
-      importCache,
+      effectiveImportCache,
       effectiveImporter,
       functions,
       style,
@@ -141,16 +180,22 @@ object Compile {
     charset:     Boolean
   ): CompileResult = {
     // 1. Evaluate Sass AST to CSS AST
+    // dart-sass compile.dart:206 forwards `functions` and `quietDeps` into the
+    // _EvaluateVisitor constructor (evaluate.dart:375/381).
     val evaluator = new EvaluateVisitor(
       importCache = importCache.fold(Nullable.empty[ImportCache])(ic => Nullable(ic)),
       logger = logger,
-      importer = Nullable(importer)
+      importer = Nullable(importer),
+      functions = functions,
+      quietDeps = quietDeps
     )
     val evaluateResult = evaluator.run(stylesheet)
 
     // 2. Serialize CSS AST to text
+    // dart-sass compile.dart:220 forwards `charset` into serialize()
+    // (serialize.dart:55).
     val serializer      = new SerializeVisitor(style = style, sourceMap = sourceMap)
-    val serializeResult = serializer.serialize(evaluateResult.stylesheet)
+    val serializeResult = serializer.serialize(evaluateResult.stylesheet, charset = charset)
 
     CompileResult(
       css = serializeResult.css,
