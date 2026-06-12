@@ -99,9 +99,11 @@ final case class RgbaColor(r: Int, g: Int, b: Int, a: Double = 1.0) {
     if (alpha == 1.0) "1"
     else if (alpha == 0.0) "0"
     else {
-      // Format to at most 2 decimal places, trimming trailing zeros
-      val formatted = f"$alpha%.2f"
-      formatted.replaceAll("0+$", "").replaceAll("\\.$", "")
+      // Format to at most 2 decimal places, trimming trailing zeros. Uses the
+      // shared locale-independent integer-math formatter; the previous
+      // `f"$alpha%.2f"` emitted comma decimals on comma-locale JVMs, invalid in
+      // a CSS <number> (ISS-1156).
+      ssg.graphs.commons.util.FormatUtil.toFixedTrimmed(alpha, 2)
     }
 }
 
@@ -187,16 +189,18 @@ final case class HslaColor(h: Double, s: Double, l: Double, a: Double = 1.0) {
   private def formatNumber(v: Double): String =
     if (v == v.toLong.toDouble) v.toLong.toString
     else {
-      val formatted = f"$v%.2f"
-      formatted.replaceAll("0+$", "").replaceAll("\\.$", "")
+      // Locale-independent integer-math formatting; the previous `f"$v%.2f"`
+      // emitted comma decimals on comma-locale JVMs, invalid in a CSS <number>
+      // (ISS-1156).
+      ssg.graphs.commons.util.FormatUtil.toFixedTrimmed(v, 2)
     }
 
   private def formatAlpha(alpha: Double): String =
     if (alpha == 1.0) "1"
     else if (alpha == 0.0) "0"
     else {
-      val formatted = f"$alpha%.2f"
-      formatted.replaceAll("0+$", "").replaceAll("\\.$", "")
+      // Locale-independent integer-math formatting; see formatNumber (ISS-1156).
+      ssg.graphs.commons.util.FormatUtil.toFixedTrimmed(alpha, 2)
     }
 }
 

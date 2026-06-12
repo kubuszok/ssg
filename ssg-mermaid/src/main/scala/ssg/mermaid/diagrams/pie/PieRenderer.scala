@@ -138,10 +138,17 @@ object PieRenderer {
           label.attr("text-anchor", "middle")
           label.attr("dominant-baseline", "central")
           label.classed("slice", true)
-          val labelText = if (db.showData) {
-            f"${percentage}%.1f%% (${"%.0f".format(section.value)})"
+          // Locale-independent formatting (ISS-1156): the port renders one
+          // decimal place for the percentage (upstream pieRenderer.ts:119 uses
+          // toFixed(0)); toFixed keeps the single fraction digit (e.g. 50.0 ->
+          // "50.0", matching JS toFixed(1)), and the integer value count rounds
+          // half-up to Latin digits. The previous `f"...%.1f"`/`"%.0f".format`
+          // followed Locale.getDefault and emitted "33,3%" on comma-locale JVMs.
+          val percentStr = ssg.graphs.commons.util.FormatUtil.toFixed(percentage, 1)
+          val labelText  = if (db.showData) {
+            s"$percentStr% (${Math.round(section.value).toString})"
           } else {
-            f"${percentage}%.1f%%"
+            s"$percentStr%"
           }
           label.text(labelText)
         }
@@ -174,7 +181,9 @@ object PieRenderer {
         text.attr("y", LegendRectSize - LegendSpacing)
         text.classed("legend", true)
         val legendText = if (db.showData) {
-          s"${section.label} [${"%.0f".format(section.value)}]"
+          // Round half-up to Latin digits (ISS-1156): `"%.0f".format` followed
+          // Locale.getDefault, which under CLDR providers can vary the digit set.
+          s"${section.label} [${Math.round(section.value).toString}]"
         } else {
           section.label
         }
