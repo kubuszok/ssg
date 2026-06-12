@@ -18,7 +18,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // iifes_returning_constants_keep_fargs_true
   // =========================================================================
-  test("iifes_returning_constants_keep_fargs_true".fail) {
+  test("iifes_returning_constants_keep_fargs_true") {
     assertCompresses(
       input = """(function(){ return -1.23; }());
         console.log( function foo(){ return "okay"; }() );
@@ -55,7 +55,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // iifes_returning_constants_keep_fargs_false
   // =========================================================================
-  test("iifes_returning_constants_keep_fargs_false".fail) {
+  test("iifes_returning_constants_keep_fargs_false") {
     assertCompresses(
       input = """(function(){ return -1.23; }());
         console.log( function foo(){ return "okay"; }() );
@@ -92,7 +92,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_485_crashing_1530
   // =========================================================================
-  test("issue_485_crashing_1530".fail) { // ISS-1141: IIFE-inline gap — IIFE call survives instead of inlining to "" (pre-existing, exposed by pureFuncs fix)
+  test("issue_485_crashing_1530") { // ISS-1141: IIFE-inline gap fixed — the IIFE now inlines to "" (optionBool truthiness for numeric `inline` level + faithful .optimize re-runs)
     assertCompresses(
       input = """(function(a) {
             if (true) return;
@@ -2000,7 +2000,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // use_before_init_in_loop
   // =========================================================================
-  test("use_before_init_in_loop".fail) {
+  test("use_before_init_in_loop") {
     assertCompresses(
       input = """var a = "PASS";
         for (var b = 2; --b >= 0;) (function() {
@@ -2127,7 +2127,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_function_expressions
   // =========================================================================
-  test("inline_function_expressions".fail) {
+  test("inline_function_expressions") {
     assertCompresses(
       input = """(async()=>2)().catch(x=>null);
         (async function(){ return 3; })().catch(x => null);

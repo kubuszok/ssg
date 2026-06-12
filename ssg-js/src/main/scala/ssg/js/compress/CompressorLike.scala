@@ -40,11 +40,26 @@ trait CompressorLike {
   /** Get an option value by name (returns Any to match Terser's dynamic options). */
   def option(name: String): Any
 
+  /** Run the per-node optimizer once on `node`, equivalent to terser's `AST_Node.optimize(compressor)` (lib/compress/index.js `def_optimize`): honors the OPTIMIZED flag, dispatches the node's
+    * optimizer a single time, and stamps the flag. Does NOT descend into children. Inlining paths in `Inline.inlineIntoCall` rely on this to re-optimize the sequence/call they synthesize, matching
+    * the `.optimize(compressor)` calls in lib/compress/inline.js.
+    */
+  def optimizeNode(node: AstNode): AstNode
+
   /** Convenience: check if an option is truthy boolean. */
   def optionBool(name: String): Boolean =
+    // Model JS truthiness of `compressor.option(name)`: upstream terser uses
+    // option values directly in boolean position (e.g. `is_regular_func &&
+    // compressor.option("inline")` in lib/compress/inline.js:353, where
+    // `inline` is the numeric level 0..3). A non-zero number, a non-empty
+    // string and `true` are truthy; 0, "", false and null are falsy.
     option(name) match {
       case b: Boolean => b
-      case _ => false
+      case n: Int     => n != 0
+      case n: Double  => n != 0.0 && !n.isNaN
+      case s: String  => s.nonEmpty
+      case null => false
+      case _    => true
     }
 
   /** Access parent nodes in the current tree walk. */

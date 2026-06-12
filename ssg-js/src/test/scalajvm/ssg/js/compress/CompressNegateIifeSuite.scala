@@ -46,7 +46,7 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_3_evaluate
   // =========================================================================
-  test("negate_iife_3_evaluate".fail) {
+  test("negate_iife_3_evaluate") {
     assertCompresses(
       input = "(function(){ return true })() ? console.log(true) : console.log(false)",
       expected = "console.log(true)",
@@ -91,7 +91,7 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_3_off_evaluate
   // =========================================================================
-  test("negate_iife_3_off_evaluate".fail) {
+  test("negate_iife_3_off_evaluate") {
     assertCompresses(
       input = "(function(){ return true })() ? console.log(true) : console.log(false)",
       expected = "console.log(true)",
