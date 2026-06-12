@@ -177,3 +177,5 @@ ssg-katex/src/main/scala/ssg/katex/parse/Parser.scala	shortcuts	(no reason)	2026
 ssg-katex/src/main/scala/ssg/katex/tree/DomTree.scala	shortcuts	(no reason)	2026-05-09	dev
 ssg-katex/src/main/scala/ssg/katex/tree/VirtualNode.scala	shortcuts	(no reason)	2026-05-09	dev
 ssg-katex/src/test/scala/ssg/katex/KaTeXSpecSuite.scala	shortcuts	(no reason)	2026-05-09	dev
+ssg-sass/src/main/scalajs/ssg/sass/importer/LoadPathImporterPlatform.scala	shortcuts	(no reason)	2026-06-12	dev
+ssg-sass/src/main/scalanative/ssg/sass/importer/LoadPathImporterPlatform.scala	shortcuts	(no reason)	2026-06-12	dev
