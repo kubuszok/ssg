@@ -47,13 +47,22 @@ object FirstInStatement {
       while (p != null) {
         val parent = p.nn
         parent match {
+          // Upstream: `p instanceof AST_Statement && p.body === node`. In terser
+          // AST_SimpleStatement (`body`) and AST_StatementWithBody (`body`) both
+          // extend AST_Statement; the port splits the `body` field across
+          // AstSimpleStatement and the AstStatementWithBody trait, so match both.
+          case stmt: AstSimpleStatement if stmt.body != null && (stmt.body.nn eq node.nn) =>
+            break(true)
           case stmt: AstStatementWithBody if stmt.body != null && (stmt.body.nn eq node.nn) =>
             break(true)
           case _ =>
             val isLeftmost = parent match {
               case seq: AstSequence =>
                 seq.expressions.nonEmpty && (seq.expressions.head eq node.nn)
-              case call: AstCall =>
+              // Upstream guards this with `p.TYPE === "Call"` (first_in_statement.js:23),
+              // which EXCLUDES AST_New (TYPE "New"). Since `AstNew extends AstCall`
+              // here, exclude it explicitly (the OutputStream.scala:588 idiom).
+              case call: AstCall if !call.isInstanceOf[AstNew] =>
                 call.expression != null && (call.expression.nn eq node.nn)
               case pts: AstPrefixedTemplateString =>
                 pts.prefix != null && (pts.prefix.nn eq node.nn)
@@ -92,7 +101,10 @@ object FirstInStatement {
       case _:   AstObject   => true
       case seq: AstSequence =>
         seq.expressions.nonEmpty && leftIsObject(seq.expressions.head)
-      case call: AstCall if call.expression != null =>
+      // Upstream guards this with `node.TYPE === "Call"` (first_in_statement.js:43),
+      // which EXCLUDES AST_New (TYPE "New"). Since `AstNew extends AstCall` here,
+      // exclude it explicitly (the OutputStream.scala:588 idiom).
+      case call: AstCall if !call.isInstanceOf[AstNew] && call.expression != null =>
         leftIsObject(call.expression.nn)
       case pts: AstPrefixedTemplateString if pts.prefix != null =>
         leftIsObject(pts.prefix.nn)

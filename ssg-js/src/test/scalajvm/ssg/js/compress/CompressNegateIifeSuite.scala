@@ -17,9 +17,9 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   override val munitTimeout = scala.concurrent.duration.Duration(120, "s")
 
   // =========================================================================
-  // negate_iife_1
+  // negate_iife_1 (un-pinned by ISS-1163: live-ancestry parent check)
   // =========================================================================
-  test("negate_iife_1".fail) {
+  test("negate_iife_1") {
     assertCompresses(
       input = "(function(){ stuff() })()",
       expected = "!function(){ stuff() }()",
@@ -209,9 +209,9 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   }
 
   // =========================================================================
-  // negate_iife_nested
+  // negate_iife_nested (un-pinned by ISS-1163: live-ancestry parent check)
   // =========================================================================
-  test("negate_iife_nested".fail) {
+  test("negate_iife_nested") {
     assertCompresses(
       input = """function Foo(f) {
             this.f = f;
@@ -300,9 +300,9 @@ final class CompressNegateIifeSuite extends munit.FunSuite {
   }
 
   // =========================================================================
-  // issue_1288
+  // issue_1288 (un-pinned by ISS-1163: live-ancestry parent check)
   // =========================================================================
-  test("issue_1288".fail) {
+  test("issue_1288") {
     assertCompresses(
       input = """if (w) ;
         else {
