@@ -94,7 +94,7 @@ object Common {
     fn.body = ArrayBuffer.empty
     fn.isGenerator = false
     fn.isAsync = false
-    fn.variables = scala.collection.mutable.Map.empty
+    fn.variables = scala.collection.mutable.LinkedHashMap.empty // new Map() in common.js:118 — insertion-ordered
     fn.usesWith = false
     fn.usesEval = false
     fn.parentScope = null

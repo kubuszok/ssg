@@ -77,7 +77,7 @@ object ScopeAnalysis {
 
   /** Initialize scope variables on the given scope node. */
   def initScopeVars(scope: AstScope, parentScope: AstScope | Null): Unit = {
-    scope.variables = mutable.Map.empty
+    scope.variables = mutable.LinkedHashMap.empty // insertion-ordered, matching terser's JS Map (scope.js:497)
     scope.usesWith = false
     scope.usesEval = false
     scope.parentScope = parentScope
@@ -180,8 +180,12 @@ object ScopeAnalysis {
     }
   }
 
-  /** Record a reference to a symbol's definition and mark enclosed. */
-  def reference(symbol: AstSymbolRef): Unit = {
+  /** Record a reference to a symbol's definition and mark enclosed.
+    *
+    * terser's `AST_Symbol.reference` (scope.js:664-666) is defined on the symbol base, so it accepts any `AstSymbol` (e.g. an `AstSymbolCatch` in the ie8/safari10 pass-3 workaround), not only
+    * `AstSymbolRef`.
+    */
+  def reference(symbol: AstSymbol): Unit = {
     val d = symbol.thedef.asInstanceOf[SymbolDef]
     d.references.addOne(symbol)
     markEnclosed(symbol)
@@ -551,7 +555,7 @@ private[scope] class ScopeContext(
   def pass2(): Unit = {
     val isToplevel = ast.isInstanceOf[AstToplevel]
     if (isToplevel) {
-      toplevel.globals = mutable.Map.empty
+      toplevel.globals = mutable.LinkedHashMap.empty // insertion-ordered, matching terser's JS Map (scope.js:404)
     }
 
     val tw2: TreeWalker = new TreeWalker(pass2Visit)
@@ -661,14 +665,14 @@ private[scope] class ScopeContext(
                 }
               }
 
+              // scope.js:459-464 — refs.forEach(ref => { ref.thedef = def; ref.reference(); });
+              // node.thedef = def; node.reference();
               refs.foreach { ref =>
                 ref.thedef = d
-                d.references.addOne(ref)
-                markEnclosed(ref)
+                reference(ref)
               }
               sym.thedef = d
-              d.references.addOne(sym.asInstanceOf[AstSymbolRef])
-              markEnclosed(sym)
+              reference(sym)
               true // skip children
             case _ => () // continue
           }

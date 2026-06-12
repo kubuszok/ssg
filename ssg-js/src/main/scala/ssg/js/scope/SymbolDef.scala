@@ -51,8 +51,13 @@ class SymbolDef(
   /** The scope in which this symbol is defined. */
   var scope: AstScope = scopeArg
 
-  /** All references (AstSymbolRef) pointing to this definition. */
-  var references: ArrayBuffer[AstSymbolRef] = ArrayBuffer.empty
+  /** All references pointing to this definition.
+    *
+    * terser's `SymbolDef.references` (scope.js:145) is populated by `AST_Symbol.reference` (scope.js:664-666: `this.definition().references.push(this)`), which pushes the symbol NODE itself — usually
+    * an `AST_SymbolRef`, but also an `AST_SymbolCatch` from the ie8/ safari10 catch-scope workaround (figure_out_scope pass 3, scope.js:459-464). The element type is therefore `AstSymbol`, not the
+    * narrower `AstSymbolRef`.
+    */
+  var references: ArrayBuffer[AstSymbol] = ArrayBuffer.empty
 
   /** Whether this is a global (undeclared at top level). */
   var global: Boolean = false

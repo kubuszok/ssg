@@ -50,7 +50,7 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch
   // =========================================================================
-  test("mangle_catch".fail) {
+  test("mangle_catch") {
     val result = minifyWithMangleAndCompress(catchInput)
     assertEquals(result, "var a=\"FAIL\";try{throw 1}catch(o){a=\"PASS\"}console.log(a);")
   }
@@ -67,11 +67,11 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // mangle_catch_var
   // =========================================================================
   // Expectation is upstream terser/test/compress/issue-1704.js:63 expect_exact,
-  // verbatim. Pinned on ISS-1136 (mangled catch-arg name never reaches printed
-  // output; harness rebuilt per ISS-1144). NOT ISS-1035: with the false_by_default
-  // base, drop_unused is off and the `var` keyword is retained, so the only
-  // remaining blocker is the un-printed mangled name.
-  test("mangle_catch_var".fail) { // ISS-1136 (harness: ISS-1144)
+  // verbatim. Was pinned on ISS-1136 (mangled catch-arg name never reached printed
+  // output; harness rebuilt per ISS-1144); pin retired by the ISS-1136 fix. NOT
+  // ISS-1035: with the false_by_default base, drop_unused is off and the `var`
+  // keyword is retained, so the only blocker was the un-printed mangled name.
+  test("mangle_catch_var") {
     val input  = "var a = \"FAIL\";\ntry {\n    throw 1;\n} catch (args) {\n    var a = \"PASS\";\n}\nconsole.log(a);"
     val result = minifyWithMangleAndCompress(input)
     assertEquals(result, "var a=\"FAIL\";try{throw 1}catch(o){var a=\"PASS\"}console.log(a);")
@@ -111,7 +111,7 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch_var_toplevel
   // =========================================================================
-  test("mangle_catch_var_toplevel".fail) { // ISS-1136 (harness: ISS-1144)
+  test("mangle_catch_var_toplevel") {
     val input  = "var a = \"FAIL\";\ntry {\n    throw 1;\n} catch (args) {\n    var a = \"PASS\";\n}\nconsole.log(a);"
     val result = minifyWithMangleAndCompress(input, toplevel = true)
     // upstream terser/test/compress/issue-1704.js:151 expect_exact
@@ -121,7 +121,7 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch_var_ie8_toplevel
   // =========================================================================
-  test("mangle_catch_var_ie8_toplevel".fail) { // ISS-1136 (harness: ISS-1144)
+  test("mangle_catch_var_ie8_toplevel") {
     val input  = "var a = \"FAIL\";\ntry {\n    throw 1;\n} catch (args) {\n    var a = \"PASS\";\n}\nconsole.log(a);"
     val result = minifyWithMangleAndCompress(input, ie8 = true, toplevel = true)
     // upstream terser/test/compress/issue-1704.js:173 expect_exact — `catch(r)`,
