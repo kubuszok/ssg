@@ -424,7 +424,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // call_args
   // =========================================================================
-  test("call_args".fail) {
+  test("call_args") {
     assertCompresses(
       input = """const a = 1;
         console.log(a);
@@ -448,7 +448,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // call_args_drop_param
   // =========================================================================
-  test("call_args_drop_param".fail) {
+  test("call_args_drop_param") {
     assertCompresses(
       input = """const a = 1;
         console.log(a);
@@ -474,7 +474,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // issue_485_crashing_1530
   // =========================================================================
-  test("issue_485_crashing_1530".fail) { // ISS-1141: IIFE-inline gap — IIFE call survives instead of inlining to "" (pre-existing, exposed by pureFuncs fix)
+  test("issue_485_crashing_1530") { // ISS-1141: IIFE-inline gap fixed — the IIFE now inlines to "" (optionBool truthiness for numeric `inline` level + faithful .optimize re-runs)
     assertCompresses(
       input = """(function(a) {
             if (true) return;

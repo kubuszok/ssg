@@ -80,6 +80,43 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   // which provides compatible implementations.
   // -----------------------------------------------------------------------
 
+  /** The tree-walker driving the current transform pass. Unlike terser — where the Compressor itself is that walker (lib/compress/index.js:453) — this port runs the transform on a separate
+    * `TreeTransformer`, so the compressor's own ancestry stack stays empty during a pass. `in_computed_key` is the one optimization guard that genuinely needs the live ancestry, so we expose the
+    * active transformer's stack to it (see `inComputedKey`). Set for the duration of the compress pass loop; `null` otherwise.
+    */
+  var activeWalker: TreeWalker | Null = null
+
+  /** Faithful port of terser `Compressor.in_computed_key()` (lib/compress/index.js:419).
+    *
+    * Returns false unless `evaluate` is on, then walks the *live* ancestry (the active transformer's stack — the compressor's own stack is empty during a pass, see `activeWalker`) for an
+    * `AST_ObjectProperty` (`AST_ClassProperty` extends it) whose `key` is the node currently being optimized. Prevents inlining/evaluation whose order differs inside a `[...]` computed key (e.g.
+    * `class A { [(() => class{})()] = 1 }`).
+    */
+  override def inComputedKey(): Boolean =
+    if (!optionBool("evaluate")) false
+    else
+      activeWalker match {
+        case w: TreeWalker if w.stack.nonEmpty =>
+          val s = w.stack(w.stack.size - 1)
+          boundary[Boolean] {
+            var i = 0
+            var p: AstNode | Null = w.parent(i)
+            while (p != null) {
+              p.nn match {
+                case prop: AstObjectProperty
+                    if prop.key.isInstanceOf[AstNode]
+                      && (prop.key.asInstanceOf[AstNode].asInstanceOf[AnyRef] eq s.asInstanceOf[AnyRef]) =>
+                  break(true)
+                case _ =>
+              }
+              i += 1
+              p = w.parent(i)
+            }
+            false
+          }
+        case _ => false
+      }
+
   override def option(name: String): Any = options.get(name)
 
   override def inBooleanContext(): Boolean =
@@ -251,11 +288,14 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     var minCount = Int.MaxValue
     var stopping = false
 
-    // Create a TreeTransformer that delegates to the Compressor's before() callback
+    // Create a TreeTransformer that delegates to the Compressor's before() callback.
+    // Expose its ancestry stack to `inComputedKey` (the compressor's own stack
+    // is empty during the pass; see `activeWalker`).
     val compressor  = this
     val transformer = new TreeTransformer(
       before = (node, descend, _) => compressor.before(node, (n, _) => descend())
     )
+    compressor.activeWalker = transformer
 
     var pass = 0
     while (pass < passes) {
@@ -293,6 +333,9 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
 
       pass += 1
     }
+
+    // Pass loop done — stop exposing the transformer's ancestry stack.
+    compressor.activeWalker = null
 
     // Unwrap returns back to simple statements for bookmarklet mode
     if (optionBool("expression")) {
@@ -604,7 +647,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     * @return
     *   the optimized node (may be same instance, a replacement, or a simplified form)
     */
-  private def optimizeNode(node: AstNode): AstNode = {
+  override def optimizeNode(node: AstNode): AstNode = {
     if (hasFlag(node, OPTIMIZED)) {
       node
     } else if (hasDirective("use asm") != null) {
@@ -4489,7 +4532,11 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     */
   private def optimizeDestructuring(self: AstDestructuring): AstNode = {
     if (
-      optionBool("pure_getters")
+      // index.js:4077 — compressor.option("pure_getters") == true (the boolean
+      // literal `true`, not JS-truthiness: the default "strict" must NOT enable
+      // this prune). Was previously optionBool, which only matched upstream by
+      // accident before optionBool modelled JS truthiness (ISS-1141).
+      (option("pure_getters") == true)
       && optionBool("unused")
       && !self.isArray
       && self.names.nonEmpty

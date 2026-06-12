@@ -127,35 +127,6 @@ object Inline {
       false
     }
 
-  /** Check if the compressor is currently in a computed key position.
-    *
-    * We avoid inlining into computed keys because they're evaluated in a different order.
-    */
-  private def inComputedKey(compressor: CompressorLike): Boolean =
-    boundary[Boolean] {
-      var level = 0
-      var node: AstNode | Null = compressor.parent(level)
-      while (node != null) {
-        node.nn match {
-          case _:    AstScope                                => break(false)
-          case prop: AstObjectProperty if prop.computedKey() =>
-            // Check if we're in the key position
-            val keyNode = prop.key
-            if (keyNode != null) {
-              // Check if current node is the key (or under the key)
-              val prev = if (level > 0) compressor.parent(level - 1) else null
-              if (prev != null && (prev.nn.asInstanceOf[AnyRef] eq keyNode.nn.asInstanceOf[AnyRef])) {
-                break(true)
-              }
-            }
-          case _ =>
-        }
-        level += 1
-        node = compressor.parent(level)
-      }
-      false
-    }
-
   /** Check if a const identifier name is shorter than its init value.
     *
     * For top_retain option: only inline if init value is longer than identifier. Example:
@@ -192,7 +163,7 @@ object Inline {
   def inlineIntoSymbolRef(self: AstSymbolRef, compressor: CompressorLike): AstNode =
     boundary[AstNode] {
       // Don't inline in computed key positions
-      if (inComputedKey(compressor)) break(self)
+      if (compressor.inComputedKey()) break(self)
 
       val d = self.definition()
       if (d == null) break(self)
@@ -419,9 +390,8 @@ object Inline {
           }
         }
 
-        // Return the optimized result
-        // Note: in the original, this calls .optimize(compressor) but we just return the result
-        break(result)
+        // inline.js:277 — return fixed.optimize(compressor)
+        break(compressor.optimizeNode(result))
       }
 
       // Multi-use: attempt constant replacement
@@ -494,7 +464,7 @@ object Inline {
   def inlineIntoCall(self: AstCall, compressor: CompressorLike): AstNode =
     boundary[AstNode] {
       // Don't inline in computed key positions
-      if (inComputedKey(compressor)) break(self)
+      if (compressor.inComputedKey()) break(self)
 
       val exp = self.expression
       if (exp == null) break(self)
@@ -558,7 +528,8 @@ object Inline {
           }
           val args = ArrayBuffer.from(self.args)
           args.addOne(returned.nn)
-          break(makeSequence(self, args))
+          // inline.js:363 — make_sequence(self, args).optimize(compressor)
+          break(compressor.optimizeNode(makeSequence(self, args)))
         }
 
         // Identity function: (function(x){ return x; })(arg) -> arg
@@ -571,12 +542,17 @@ object Inline {
           returned.isInstanceOf[AstSymbolRef] &&
           returned.asInstanceOf[AstSymbolRef].name == lambda.argnames(0).asInstanceOf[AstSymbol].name
         ) {
-          val replacement: AstNode = self.args.headOption.getOrElse(makeVoid0(self))
+          // inline.js:376 — (self.args[0] || make_void_0()).optimize(compressor)
+          val replacement: AstNode =
+            compressor.optimizeNode(self.args.headOption.getOrElse(makeVoid0(self)))
 
           // Check if we need to wrap in (0, replacement) to maintain this binding
+          // inline.js:378-383 — `(parent = compressor.parent()) instanceof AST_Call`.
+          // The Compressor's own walker stack is empty during a pass, so read the
+          // live transformer ancestry (see `liveParent` / Compressor.activeWalker).
           replacement match {
             case _: AstPropAccess =>
-              val parentNode = compressor.parent()
+              val parentNode = liveParent(compressor, self)
               parentNode match {
                 case parentCall: AstCall if parentCall.expression != null && (parentCall.expression.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) =>
                   // Identity function was being used to remove `this`:
@@ -1013,7 +989,8 @@ object Inline {
         ) {
           setFlag(lambda, SQUEEZED)
           addChildScope(nearestScope.nn, lambda)
-          break(makeSequence(self, flattenFn(returnedValue.nn)))
+          // inline.js:437 — make_sequence(self, flatten_fn(returned_value)).optimize(compressor)
+          break(compressor.optimizeNode(makeSequence(self, flattenFn(returnedValue.nn))))
         }
       }
 
@@ -1066,7 +1043,8 @@ object Inline {
         newCall.end = self.end
         newCall.expression = fnCopy
         newCall.args = self.args
-        break(newCall)
+        // inline.js:450 — make_node(AST_Call, ...).optimize(compressor)
+        break(compressor.optimizeNode(newCall))
       }
 
       // Empty body optimization: (function(){})(...args) -> (...args, void 0)
@@ -1075,7 +1053,8 @@ object Inline {
       if (canDropThisCall) {
         val args = ArrayBuffer.from(self.args)
         args.addOne(makeVoid0(self))
-        break(makeSequence(self, args))
+        // inline.js:459 — make_sequence(self, args).optimize(compressor)
+        break(compressor.optimizeNode(makeSequence(self, args)))
       }
 
       // IIFE negation: !function(){}() is shorter than (function(){})()
@@ -1091,7 +1070,8 @@ object Inline {
       // Try to evaluate the entire call
       val ev = evaluate(self, compressor)
       if (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef]) {
-        val evNode = makeNodeFromConstant(ev, self)
+        // inline.js:470 — ev = make_node_from_constant(ev, self).optimize(compressor)
+        val evNode = compressor.optimizeNode(makeNodeFromConstant(ev, self))
         break(bestOfExpression(evNode, self))
       }
 
@@ -1177,6 +1157,33 @@ object Inline {
     }
     null
   }
+
+  /** The live parent of `self` during a compress pass — terser's `compressor.parent()` (inline.js:381).
+    *
+    * Terser's Compressor *is* the TreeWalker driving the transform, so `compressor.parent()` reads the live ancestry. This port runs the transform on a separate `TreeTransformer`, leaving the
+    * Compressor's own stack empty during a pass; the live ancestry is exposed via `Compressor.activeWalker` (Compressor.scala:87, set at the pass loop). We locate `self` (the node currently being
+    * optimized) in that live stack and return its immediate parent, exactly as `in_computed_key` walks the active stack (Compressor.scala:95-117). Falls back to the compressor's own `parent()` when
+    * no active walker is present (e.g. unit calls outside a pass), preserving the previous behavior.
+    */
+  private def liveParent(compressor: CompressorLike, self: AstNode): AstNode | Null =
+    compressor match {
+      case c: Compressor =>
+        c.activeWalker match {
+          case w: TreeWalker if w.stack.nonEmpty =>
+            boundary[AstNode | Null] {
+              var i = w.stack.size - 1
+              while (i >= 0) {
+                if (w.stack(i).asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) {
+                  break(if (i - 1 >= 0) w.stack(i - 1) else null)
+                }
+                i -= 1
+              }
+              compressor.parent()
+            }
+          case _ => compressor.parent()
+        }
+      case _ => compressor.parent()
+    }
 
   /** Add a child scope to a parent scope. */
   private def addChildScope(parent: AstScope, child: AstScope): Unit = {

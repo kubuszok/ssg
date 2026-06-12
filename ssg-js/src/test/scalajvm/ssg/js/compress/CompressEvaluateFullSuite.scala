@@ -997,7 +997,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // call_args
   // =========================================================================
-  test("call_args".fail) {
+  test("call_args") {
     assertCompresses(
       input = """const a = 1;
         console.log(a);
@@ -1019,7 +1019,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // call_args_drop_param
   // =========================================================================
-  test("call_args_drop_param".fail) {
+  test("call_args_drop_param") {
     assertCompresses(
       input = """const a = 1;
         console.log(a);
