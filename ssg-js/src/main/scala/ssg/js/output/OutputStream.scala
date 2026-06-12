@@ -573,24 +573,35 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   def needsParens(node: AstNode): Boolean =
     node match {
-      case _:     AstFunction                           => needsParensFunction(node)
-      case arrow: AstArrow                              => needsParensArrow(arrow)
-      case _:     AstObject                             => !hasParens && FirstInStatement.firstInStatement(this)
-      case _:     AstClassExpression                    => FirstInStatement.firstInStatement(this)
-      case u:     AstUnary                              => needsParensUnary(u)
-      case aw:    AstAwait                              => needsParensAwait(aw)
-      case seq:   AstSequence                           => needsParensSequence(seq)
-      case bin:   AstBinary                             => needsParensBinary(bin)
-      case pi:    AstPrivateIn                          => needsParensPrivateIn(pi)
-      case y:     AstYield                              => needsParensYield(y)
-      case ch:    AstChain                              => needsParensChain(ch)
-      case pa:    AstPropAccess                         => needsParensPropAccess(pa)
-      case call:  AstCall if !call.isInstanceOf[AstNew] => needsParensCall(call)
-      case nw:    AstNew                                => needsParensNew(nw)
-      case num:   AstNumber                             => needsParensNumber(num)
-      case bi:    AstBigInt                             => needsParensBigInt(bi)
-      case _: AstAssign | _: AstConditional => needsParensAssignConditional(node)
-      case _                                => false
+      case _:     AstFunction        => needsParensFunction(node)
+      case arrow: AstArrow           => needsParensArrow(arrow)
+      case _:     AstObject          => !hasParens && FirstInStatement.firstInStatement(this)
+      case _:     AstClassExpression => FirstInStatement.firstInStatement(this)
+      case u:     AstUnary           => needsParensUnary(u)
+      case aw:    AstAwait           => needsParensAwait(aw)
+      case seq:   AstSequence        => needsParensSequence(seq)
+      // PARENS([ AST_Assign, AST_Conditional ], ...) is registered via DEFMETHOD on
+      // AST_Assign's prototype (output.js:1229), which OVERRIDES the inherited
+      // AST_Binary needs_parens (output.js:1064) — AST_Assign extends AST_Binary
+      // (ast.js:1994) but the most-derived registration wins, so an assignment NEVER
+      // takes the AST_Binary parens path. This arm must therefore precede the AstBinary
+      // arm below to mirror that override. AST_DefaultAssign (ast.js:2008) has no own
+      // PARENS registration, so it keeps inheriting the AST_Binary handler and is left
+      // to fall through to the AstBinary arm.
+      case _:    AstAssign                             => needsParensAssignConditional(node)
+      case bin:  AstBinary                             => needsParensBinary(bin)
+      case pi:   AstPrivateIn                          => needsParensPrivateIn(pi)
+      case y:    AstYield                              => needsParensYield(y)
+      case ch:   AstChain                              => needsParensChain(ch)
+      case pa:   AstPropAccess                         => needsParensPropAccess(pa)
+      case call: AstCall if !call.isInstanceOf[AstNew] => needsParensCall(call)
+      case nw:   AstNew                                => needsParensNew(nw)
+      case num:  AstNumber                             => needsParensNumber(num)
+      case bi:   AstBigInt                             => needsParensBigInt(bi)
+      // AST_Conditional shares the PARENS([ AST_Assign, AST_Conditional ]) handler
+      // (output.js:1229); AST_Assign is routed above to mirror its prototype override.
+      case _: AstConditional => needsParensAssignConditional(node)
+      case _ => false
     }
 
   private def needsParensFunction(node: AstNode): Boolean =
