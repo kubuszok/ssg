@@ -137,13 +137,12 @@ object Utils {
     if (value == value.toLong.toDouble) {
       value.toLong.toString
     } else {
-      val rounded = roundNumber(value, 4)
-      val s       = rounded.toString
-      if (s.contains("E") || s.contains("e")) {
-        f"$rounded%.4f".replaceAll("0+$", "").replaceAll("\\.$", "")
-      } else {
-        s
-      }
+      // Round to 4 decimals, strip trailing zeros, '.' separator — delegated to
+      // the shared graphs-commons formatter so the comma-locale bug is fixed in
+      // one place. The previous E-notation branch routed |value| < 1e-3 or >= 1e7
+      // through a locale-sensitive `f"$rounded%.4f"`; toFixedTrimmed never emits
+      // E-notation and is locale-independent on all platforms (ISS-1156).
+      ssg.graphs.commons.util.FormatUtil.toFixedTrimmed(value, 4)
     }
 
   /** Checks if a substring is present in any element of an array.

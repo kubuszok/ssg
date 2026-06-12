@@ -167,7 +167,9 @@ object XyChartRenderer {
       label.attr("x", -10).attr("y", yPos + 4)
       label.attr("text-anchor", "end")
       label.classed("xychartTickLabel", true)
-      label.text(f"$value%.0f")
+      // Round half-up to Latin digits (ISS-1156): `f"$value%.0f"` followed
+      // Locale.getDefault, which under CLDR providers can vary the digit set.
+      label.text(Math.round(value).toString)
     }
 
     // X axis category labels
