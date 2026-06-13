@@ -5,7 +5,9 @@
  * Node.js fs (existsSync/statSync/readFileSync), mirroring the fs-based approach in
  * ssg.md.util.misc.PlatformResourcesImpl (scalajs). This supports FileUriContentResolver
  * (flexmark/src/main/java/com/vladsch/flexmark/html/renderer/FileUriContentResolver.java)
- * which on the JVM uses java.io.File.isFile()/exists() and FileUtil.getFileContentBytesWithExceptions. */
+ * which on the JVM uses java.io.File.isFile()/exists() and FileUtil.getFileContentBytesWithExceptions.
+ *
+ * Covenant: original */
 package ssg
 package md
 package util
