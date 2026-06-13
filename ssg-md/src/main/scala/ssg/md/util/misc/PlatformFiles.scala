@@ -11,6 +11,8 @@
  * java.io.File.isFile/exists. Those NIO APIs are unavailable / unreliable on Scala.js
  * (no synchronous filesystem on the JVM model) so the read is funneled through this
  * facade exactly like ssg.md.util.misc.PlatformResources funnels resource loading.
+ *
+ * Covenant: original
  */
 package ssg
 package md
@@ -24,8 +26,7 @@ object PlatformFiles {
   def isExistingFile(path: String): Boolean =
     PlatformFilesImpl.isExistingFile(path)
 
-  /** Read all bytes of the file at path. Throws java.io.IOException on failure, mirroring
-    * FileUtil.getFileContentBytesWithExceptions (Files.readAllBytes).
+  /** Read all bytes of the file at path. Throws java.io.IOException on failure, mirroring FileUtil.getFileContentBytesWithExceptions (Files.readAllBytes).
     */
   def readAllBytes(path: String): Array[Byte] =
     PlatformFilesImpl.readAllBytes(path)
