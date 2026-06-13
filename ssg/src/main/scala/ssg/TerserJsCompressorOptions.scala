@@ -18,6 +18,8 @@
  * This bridge carries the subset ssg-js Terser can honor — `with` is dropped
  * because ssg-js Terser exposes no `with`-statement toggle (Terser.scala:46-51,
  * compress/CompressorOptions.scala, scope/Mangler.scala:39-53, output/OutputOptions.scala:73).
+ *
+ * Covenant: original
  */
 package ssg
 
