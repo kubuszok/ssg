@@ -3,13 +3,14 @@
  * Ported from terser/test/mocha/minify.js
  * Original: 38 it() calls (1 disabled via `if(0)` in original — "rename").
  *
- * Tests that require compression use assume() to skip (ISS-031/032 — compressor multi-pass loop hangs).
+ * Compression tests run with default MinifyOptions (compress + mangle enabled).
  * Tests requiring unported features (nameCache, enclose, wrap, multi-file, mangle.properties,
  * source map file I/O) are marked .fail with explanatory comments.
  */
 package ssg
 package js
 
+import ssg.js.compress.CompressorOptions
 import ssg.js.parse.JsParseError
 import ssg.js.output.OutputOptions
 
@@ -19,10 +20,6 @@ final class MinifySuite extends munit.FunSuite {
 
   private val noOpt = MinifyOptions.NoOptimize
 
-  // Compressor multi-pass loop is broken (ISS-031/032), so compression tests may hang.
-  private def assumeCompressorWorks(): Unit =
-    assume(false, "Compression tests disabled — compressor multi-pass loop hangs (ISS-031/032)")
-
   // === Tests from mocha/minify.js ===
 
   // 1. "Should test basic sanity of minify with default options"
@@ -30,7 +27,6 @@ final class MinifySuite extends munit.FunSuite {
   // Expected: "function foo(n){return n?3:7}"
   // Requires compression + mangle
   test("basic sanity of minify with default options") {
-    assumeCompressorWorks()
     assertEquals(
       Terser.minifyToString("function foo(bar) { if (bar) return 3; else return 7; var u = not_called(); }"),
       "function foo(n){return n?3:7}"
@@ -41,7 +37,6 @@ final class MinifySuite extends munit.FunSuite {
   // Original: minify_sync("console.log(1 + 1);") → "console.log(2);"
   // Requires compression for constant folding
   test("sync version (parse+output only, compression needed for constant folding)") {
-    assumeCompressorWorks()
     assertEquals(Terser.minifyToString("console.log(1 + 1);"), "console.log(2);")
   }
 
@@ -168,17 +163,26 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   // 31. "should work with compress defaults disabled"
+  // Original: minify(code, { compress: { defaults: false } })
   test("should work with compress defaults disabled") {
-    assumeCompressorWorks()
     val code = "if (true) { console.log(1 + 2); }"
     // compress with defaults:false should not optimize the if(true)
-    assertEquals(Terser.minifyToString(code), "if(true)console.log(1+2);")
+    assertEquals(
+      Terser.minifyToString(code, MinifyOptions(compress = CompressorOptions.NoDefaults)),
+      "if(true)console.log(1+2);"
+    )
   }
 
   // 32. "should work with compress defaults disabled and evaluate enabled"
+  // Original: minify(code, { compress: { defaults: false, evaluate: true } })
   test("should work with compress defaults disabled and evaluate enabled") {
-    assumeCompressorWorks()
-    assertEquals(Terser.minifyToString("if (true) { console.log(1 + 2); }"), "if(true)console.log(3);")
+    assertEquals(
+      Terser.minifyToString(
+        "if (true) { console.log(1 + 2); }",
+        MinifyOptions(compress = CompressorOptions.NoDefaults.copy(evaluate = true))
+      ),
+      "if(true)console.log(3);"
+    )
   }
 
   // 33-36. enclose tests — enclose option not yet ported
@@ -323,14 +327,14 @@ final class MinifySuite extends munit.FunSuite {
 
   // 28. "Should throw for non-trivial expressions" (global_defs)
   test("global_defs: should throw for non-trivial expressions".fail) {
-    // global_defs requires compression
-    assumeCompressorWorks()
+    // global_defs not yet integrated into MinifyOptions/Terser.minify() — ISS-1179
+    fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
   }
 
   // 29. "Should skip inherited properties" (global_defs)
   test("global_defs: should skip inherited properties".fail) {
-    // global_defs requires compression
-    assumeCompressorWorks()
+    // global_defs not yet integrated into MinifyOptions/Terser.minify() — ISS-1179
+    fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
   }
 
   // 31. "rename: Should be repeatable" — disabled in original via `if (0)`

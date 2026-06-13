@@ -3,7 +3,7 @@
  * Ported from terser/test/mocha/yield.js
  * Original: 6 it() calls
  *
- * Tests that require compression use assume() to skip (ISS-031/032).
+ * Tests cover yield parsing and compression behavior.
  */
 package ssg
 package js
@@ -14,15 +14,11 @@ final class YieldSuite extends munit.FunSuite {
 
   override val munitTimeout = scala.concurrent.duration.Duration(10, "s")
 
-  private def assumeCompressorWorks(): Unit =
-    assume(false, "Compression tests disabled — compressor multi-pass loop hangs (ISS-031/032)")
-
   // 1. "Should not delete statements after yield"
   // Original: minify("function *foo(bar) { yield 1; yield 2; return 3; }")
   // Expected: "function*foo(e){return yield 1,yield 2,3}"
   // Requires compression (sequential statements → comma expression)
   test("should not delete statements after yield") {
-    assumeCompressorWorks()
     assertEquals(
       Terser.minifyToString("function *foo(bar) { yield 1; yield 2; return 3; }"),
       "function*foo(e){return yield 1,yield 2,3}"
@@ -48,7 +44,6 @@ final class YieldSuite extends munit.FunSuite {
   // 4. "Should be able to compress its expression"
   // Original: minify("function *f() { yield 3-4; }", {compress: true}) → "function*f(){yield-1}"
   test("should be able to compress yield expression") {
-    assumeCompressorWorks()
     assertEquals(
       Terser.minifyToString("function *f() { yield 3-4; }"),
       "function*f(){yield-1}"
@@ -68,7 +63,6 @@ final class YieldSuite extends munit.FunSuite {
 
   // 6. "Should be able to drop undefined after yield if necessary with compression"
   test("should drop undefined after yield with compression") {
-    assumeCompressorWorks()
     assertEquals(
       Terser.minifyToString("function *f() { yield undefined; yield; yield* undefined; yield void 0}"),
       "function*f(){yield,yield,yield*void 0,yield}"

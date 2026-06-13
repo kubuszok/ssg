@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Integration tests for the Terser public API.
- * Compression tests are marked with assume() until the Compressor's multi-pass loop is debugged (ISS-031/032). Parse+output works fine. */
+ * Covers parse+output (no compression) and basic compression tests. */
 package ssg
 package js
 
@@ -69,35 +69,30 @@ final class TerserSuite extends munit.FunSuite {
   }
 
   // -- With compression --
-  // Note: Compression tests use assume() to skip if compressor hangs (ISS-031/032)
+  // -- With compression (skip on Native due to regex limitations) --
 
   private def isNative: Boolean =
     System.getProperty("java.vm.name", "").toLowerCase.contains("native") ||
       System.getProperty("java.vendor", "").toLowerCase.contains("scala native") ||
       !System.getProperty("java.home", "").contains("java")
 
-  // Compressor multi-pass loop is broken (ISS-031/032), so compression tests may hang.
-  // Use assume() to skip these until the compressor is fixed.
-  private def assumeCompressorWorks(): Unit = {
+  private def assumeNotNative(): Unit =
     assume(!isNative, "Compression tests skip on Native due to regex limitations")
-    // ISS-031/032: compressor multi-pass loop can hang
-    assume(false, "Compression tests disabled — compressor multi-pass loop hangs (ISS-031/032)")
-  }
 
   test("compress drops debugger") {
-    assumeCompressorWorks()
+    assumeNotNative()
     val result = Terser.minifyToString("debugger; var x = 1;")
     assert(!result.contains("debugger"), s"Expected debugger dropped, got: $result")
   }
 
   test("compress constant folding") {
-    assumeCompressorWorks()
+    assumeNotNative()
     val result = Terser.minifyToString("var x = 1 + 2;")
     assert(result.contains("3"), s"Expected constant folding (1+2->3), got: $result")
   }
 
   test("compress with defaults does not crash") {
-    assumeCompressorWorks()
+    assumeNotNative()
     val code   = "function foo(a) { var b = a + 1; return b; }"
     val result = Terser.minifyToString(code)
     assert(result.nonEmpty, s"Expected non-empty output, got: $result")
