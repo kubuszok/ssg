@@ -390,7 +390,7 @@ final class LiquidLexer(
     tokens.add(Token(tokenType, id, startLine, startCol))
   }
 
-  /** Scans raw block body until {% endraw %} is found. */
+  /** Scans raw block body until {% endraw %} or {% endraw -%} is found. */
   private def scanRawBody(): Unit = boundary {
     val startLine = line
     val startCol  = col
@@ -414,10 +414,18 @@ final class LiquidLexer(
           if (savedPos > bodyStart) {
             tokens.add(Token(TokenType.TEXT, input.substring(bodyStart, savedPos), startLine, startCol))
           }
-          // Emit the endraw tag
+          // Emit the endraw tag — accept both -%} and %} as the tag close,
+          // matching liqp's grammar: RawEnd (LiquidLexer.g4:284) pops back
+          // to tag mode, then TagEnd (LiquidLexer.g4:129-133) closes with
+          // either '-%}' WhitespaceChar* or '%}'.
           skipWhitespace()
-          // Expect %}
-          if (pos + 1 < input.length() && input.charAt(pos) == '%' && input.charAt(pos + 1) == '}') {
+          // Check for -%} first (3 chars), then %} (2 chars) — mirrors scanTagEnd()
+          if (pos + 2 < input.length() && input.charAt(pos) == '-' && input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}') {
+            tokens.add(Token(TokenType.TAG_START, "{%", savedLine, savedCol))
+            tokens.add(Token(TokenType.RAW, "endraw", savedLine, savedCol))
+            emitToken(TokenType.TAG_END, "-%}", 3)
+            handlePostTagStripping()
+          } else if (pos + 1 < input.length() && input.charAt(pos) == '%' && input.charAt(pos + 1) == '}') {
             tokens.add(Token(TokenType.TAG_START, "{%", savedLine, savedCol))
             tokens.add(Token(TokenType.RAW, "endraw", savedLine, savedCol))
             emitToken(TokenType.TAG_END, "%}", 2)
