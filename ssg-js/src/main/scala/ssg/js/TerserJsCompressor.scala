@@ -26,19 +26,26 @@ object TerserJsCompressor {
 
   /** Compress JavaScript source code using the Terser engine.
     *
+    * On failure the original input is returned (graceful degradation). The diagnostic is surfaced via the injectable `logger` channel so callers can observe failures — mirrors the ISS-1028 pattern in
+    * ssg-minify's HtmlMinifier (jekyll-minifier.rb:1013-1015).
+    *
     * @param input
     *   JavaScript source code
+    * @param logger
+    *   diagnostics channel (defaults to quiet — no output)
     * @return
     *   minified JavaScript, or original on error (graceful degradation)
     */
-  def compress(input: String): String =
+  def compress(input: String, logger: ssg.commons.Logger = ssg.commons.Logger.quiet): String =
     if (input.trim.isEmpty) {
       input
     } else {
       try
         Terser.minifyToString(input)
       catch {
-        case _: Exception => input
+        case e: Exception =>
+          logger.warn(s"JS compression failed: ${e.getClass.getName}: ${e.getMessage}. Using original source.")
+          input
       }
     }
 }
