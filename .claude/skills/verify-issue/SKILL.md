@@ -72,10 +72,13 @@ $READ docs/plans/remediation-2026-06.md
 ## Output format (your final message)
 
 Model check (do this FIRST): your system prompt names the model you run on.
-Audits must run on **Fable 5** (anti-cheat C13 — never the implementer's
-model). If you are not running on Fable 5, perform NO audit steps and return
-only: `VERDICT: VOID — wrong auditor model: <model>`. The orchestrator must
-re-dispatch you with `model: "fable"`.
+Audits must run on **Opus 4.8** (anti-cheat C13 — never the implementer's
+model, which is Opus 4.6). Fable 5 was the auditor model until Anthropic
+blocked Fable worldwide (2026-06-13); the auditor moved to Opus 4.8 and the
+implementer to Opus 4.6 so the two stay distinct. If you are not running on
+Opus 4.8 (model id `claude-opus-4-8`), perform NO audit steps and return only:
+`VERDICT: VOID — wrong auditor model: <model>`. The orchestrator must
+re-dispatch you with `model: "opus"`.
 
 ```
 VERDICT: PASS | FAIL
