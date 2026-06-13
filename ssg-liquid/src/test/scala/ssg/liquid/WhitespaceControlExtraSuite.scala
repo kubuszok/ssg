@@ -30,8 +30,9 @@ final class WhitespaceControlExtraSuite extends munit.FunSuite {
     assertEquals(rendered, "a..\n..bc")
   }
 
-  // SSG: withStripSpaceAroundTags doesn't fully strip whitespace in same way
-  test("whitespace control: default strip via parser setting".fail) {
+  // LiquidLexer.g4:86-87,94-95 — full strip mode strips all whitespace both
+  // before and after tags.
+  test("whitespace control: default strip via parser setting") {
     val source   = "a  \n  {% assign letter = 'b' %}  \n{{ letter }}\n  c"
     val parser   = new TemplateParser.Builder().withStripSpaceAroundTags(true).build()
     val template = parser.parse(source)

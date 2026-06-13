@@ -185,23 +185,20 @@ final class ParseSuite extends munit.FunSuite {
     assertEquals(res, "a \n \n b \n \n c")
   }
 
-  // NOTE: The original liqp ANTLR grammar stripped whitespace BOTH before and
-  // after tags. The SSG hand-written lexer only strips AFTER tags, so the
-  // pre-tag whitespace is preserved. This is a known behavioral difference.
-  // Original expected: "abc" / "a \n \nb \n c"
-  test("stripSpaces: true strips whitespace after tags") {
+  // LiquidLexer.g4:86-87,122-123 — full strip mode strips all whitespace
+  // both before and after tags (WhitespaceChar* on both sides).
+  test("stripSpaces: true strips whitespace around tags") {
     val source = "a \n \n {{ a }} \n \n c"
     val res    = new TemplateParser.Builder().withStripSpaceAroundTags(true).build().parse(source).render(mapOf("a" -> "b"))
-    // SSG lexer strips after tags only: " \n \n " after }} is consumed,
-    // but " \n \n " before {{ is kept.
-    assertEquals(res, "a \n \n bc")
+    assertEquals(res, "abc")
   }
 
+  // LiquidLexer.g4:86,122 — single-line strip: leading side strips SpaceOrTab*
+  // only (no linebreaks), trailing side strips SpaceOrTab* LineBreak?.
   test("stripSpaces: strip with single line") {
     val source = "a \n \n {{ a }} \n \n c"
     val res    = new TemplateParser.Builder().withStripSpaceAroundTags(true, true).build().parse(source).render(mapOf("a" -> "b"))
-    // SSG lexer strips single-line after tags only
-    assertEquals(res, "a \n \n b \n c")
+    assertEquals(res, "a \n \nb \n c")
   }
 
   // ---------------------------------------------------------------------------
