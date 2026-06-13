@@ -275,7 +275,7 @@ final case class CompressorOptions(
       case "pure_new"         => pureNew
       case "reduce_funcs"     => reduceFuncs
       case "reduce_vars"      => reduceVars
-      case "sequences"        => sequencesLimit > 0
+      case "sequences"        => sequencesLimit
       case "side_effects"     => sideEffects
       case "switches"         => switches
       case "toplevel"         => toplevel

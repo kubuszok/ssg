@@ -258,7 +258,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // limit_1
   // =========================================================================
-  test("limit_1".fail) {
+  test("limit_1") {
     assertCompresses(
       input = """a;
         b;
@@ -284,7 +284,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // limit_2
   // =========================================================================
-  test("limit_2".fail) {
+  test("limit_2") {
     assertCompresses(
       input = """a, b;
         c, d;
