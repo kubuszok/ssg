@@ -92,6 +92,25 @@ Execute ONE iteration of the §7 protocol:
    metrics moved. Then end the iteration (under `/loop`, the next firing
    continues).
 
+9. RESOURCE CLEANUP (memory hygiene — sbt servers are long-lived multi-GB
+   JVMs; left running across a long campaign they accumulate and OOM the
+   machine). Once the iteration's subagents are ALL retired and the work is
+   committed:
+   - **Worktree-isolated agents**: if any subagent was dispatched with
+     `isolation: "worktree"`, kill the sbt server in that worktree
+     (`re-scale proc kill --kind sbt --dir <worktree>`) and remove the
+     worktree (`git worktree remove <path>`) as part of retiring it — do NOT
+     leave a per-worktree sbt server alive.
+   - **Shared main-dir agents** (current model — reproducer/implementer/
+     auditor run in the repo root and share one sbt server): recycle that
+     server at iteration end with `re-scale build kill-sbt` to release the
+     accumulated heap; the next iteration's first gate restarts it fresh.
+   - Then `git worktree prune` and delete any leftover `fix/ISS-*` branches
+     whose work has merged. Verify with `re-scale proc list --kind sbt`
+     (only the recycled-or-absent ssg server should remain; never touch sbt
+     servers for OTHER project dirs) and `git worktree list`.
+   This runs on EVERY iteration outcome (PASS, stale-adjudication, or held).
+
 Phase exhausted (no open issues at current phase) → say so explicitly and
 start the next phase. Scope question → stop and ask the user. The phrases
 "effectively complete", "good enough", "diminishing returns", "mostly done"
