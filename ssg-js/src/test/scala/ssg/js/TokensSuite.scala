@@ -41,9 +41,10 @@ final class TokensSuite extends munit.FunSuite {
   }
 
   // 2. "Should give correct positions for accessors"
-  // Note: ssg-js parser has issues parsing object literal getters — same class
-  // method parsing gap as in ClassSuite. Marked .fail until resolved.
-  test("should give correct positions for accessors".fail) {
+  // Note: the object-literal getter / class-method parse gap was fixed by ISS-1174
+  // (createAccessor now parses the parameter list); this test passes, so the expected-failure pin
+  // was retired.
+  test("should give correct positions for accessors") {
     // location             0         1         2         3         4
     //                      01234567890123456789012345678901234567890123456789
     val ast   = parse("var obj = { get latest() { return undefined; } }")

@@ -56,7 +56,8 @@ final class CompressClassesSuite extends munit.FunSuite {
   // =========================================================================
   // class_duplication
   // =========================================================================
-  test("class_duplication".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_duplication") {
     assertCompresses(
       input = """class Foo {
             foo() {
@@ -83,7 +84,8 @@ final class CompressClassesSuite extends munit.FunSuite {
   // =========================================================================
   // class_duplication_2
   // =========================================================================
-  test("class_duplication_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_duplication_2") {
     assertCompresses(
       input = """class Foo {
             foo() {
@@ -140,7 +142,8 @@ final class CompressClassesSuite extends munit.FunSuite {
   // =========================================================================
   // private_class_methods
   // =========================================================================
-  test("private_class_methods".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("private_class_methods") {
     assertCompresses(
       input = """class A {
             #method() {
@@ -179,7 +182,8 @@ final class CompressClassesSuite extends munit.FunSuite {
   // =========================================================================
   // private_class_accessors
   // =========================================================================
-  test("private_class_accessors".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("private_class_accessors") {
     assertCompresses(
       input = """class A {
             #accessorInternal = "FAIL"
@@ -228,7 +232,8 @@ final class CompressClassesSuite extends munit.FunSuite {
   // =========================================================================
   // class_static_blocks
   // =========================================================================
-  test("class_static_blocks".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_static_blocks") {
     assertCompresses(
       input = """class A {
             static {

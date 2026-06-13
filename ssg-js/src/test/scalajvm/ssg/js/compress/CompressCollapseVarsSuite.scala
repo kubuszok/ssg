@@ -3184,7 +3184,8 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2313_1
   // =========================================================================
-  test("issue_2313_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2313_1") {
     assertCompresses(
       input = """var a = 0, b = 0;
         var foo = {

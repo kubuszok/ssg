@@ -18,7 +18,8 @@ final class CompressManglepropsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_string_keep_quoted
   // =========================================================================
-  test("inline_string_keep_quoted".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("inline_string_keep_quoted") {
     assertCompresses(
       input = """let quoted_obj = {
             '_obj_prop': 'bar',

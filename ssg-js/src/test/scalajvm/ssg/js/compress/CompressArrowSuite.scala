@@ -595,7 +595,8 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // concise_method_with_super
   // =========================================================================
-  test("concise_method_with_super".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("concise_method_with_super") {
     assertCompresses(
       input = """var o = {
             f: "FAIL",

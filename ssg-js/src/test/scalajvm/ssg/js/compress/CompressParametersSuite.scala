@@ -94,7 +94,8 @@ final class CompressParametersSuite extends munit.FunSuite {
   // =========================================================================
   // destructuring_arguments_2
   // =========================================================================
-  test("destructuring_arguments_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("destructuring_arguments_2") {
     assertCompresses(
       input = """(function([]) {});
         (function({}) {});

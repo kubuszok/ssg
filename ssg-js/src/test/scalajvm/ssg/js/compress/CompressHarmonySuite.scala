@@ -56,7 +56,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // classes_can_have_generators
   // =========================================================================
-  test("classes_can_have_generators".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("classes_can_have_generators") {
     assertCompresses(
       input = """class Foo {
             *bar() {}
@@ -73,7 +74,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // classes_can_have_computed_generators
   // =========================================================================
-  test("classes_can_have_computed_generators".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("classes_can_have_computed_generators") {
     assertCompresses(
       input = """class C4 {
             *['constructor']() {}
@@ -88,7 +90,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // classes_can_have_computed_static
   // =========================================================================
-  test("classes_can_have_computed_static".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("classes_can_have_computed_static") {
     assertCompresses(
       input = """class C4 {
             static ['constructor']() {}
@@ -353,7 +356,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_2028
   // =========================================================================
-  test("issue_2028".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2028") {
     assertCompresses(
       input = """var a = {};
         (function(x) {
@@ -867,7 +871,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // object_literal_method_using_arguments
   // =========================================================================
-  test("object_literal_method_using_arguments".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("object_literal_method_using_arguments") {
     assertCompresses(
       input = """console.log(({
             m() {
@@ -888,7 +893,8 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // class_method_using_arguments
   // =========================================================================
-  test("class_method_using_arguments".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_method_using_arguments") {
     assertCompresses(
       input = """console.log(new class {
             m() {

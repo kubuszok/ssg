@@ -14,9 +14,9 @@ final class ObjectSuite extends munit.FunSuite {
   private val noOpt = MinifyOptions.NoOptimize
 
   // 1. "Should allow objects to have a methodDefinition as property"
-  // Requires compression (arrows: false, reduce boolean true→!0)
-  // Known parser gap: concise methods in objects fail to parse
-  test("should allow objects to have a methodDefinition as property".fail) {
+  // The concise-method parse gap was fixed by ISS-1174 (createAccessor now parses the
+  // parameter list); this test passes, so the expected-failure pin was retired.
+  test("should allow objects to have a methodDefinition as property") {
     val result = Terser.minifyToString("var a = {test() {return true;}}", noOpt)
     assert(result.contains("test"), s"got: $result")
   }

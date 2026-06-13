@@ -372,7 +372,9 @@ final class MinifySuite extends munit.FunSuite {
 
   // Note: Concise method syntax in objects/classes currently fails to parse (parser bug).
   // Using .fail to document the expected behavior.
-  test("minify object with methods".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap (createAccessor now parses the
+  // parameter list); this test passes, so the expected-failure pin was retired.
+  test("minify object with methods") {
     val result = Terser.minifyToString("var o = { foo() { return 1; }, bar() { return 2; } };", noOpt)
     assert(result.contains("foo"), s"got: $result")
     assert(result.contains("bar"), s"got: $result")
@@ -383,7 +385,9 @@ final class MinifySuite extends munit.FunSuite {
     assert(result.contains("{a,b}") || result.contains("{a, b}"), s"got: $result")
   }
 
-  test("minify class with non-keyword methods".fail) {
+  // ISS-1174 resolved the class concise-method parse gap (createAccessor now parses the
+  // parameter list); this test passes, so the expected-failure pin was retired.
+  test("minify class with non-keyword methods") {
     val result = Terser.minifyToString(
       "class Foo { constructor(x) { this.x = x; } getX() { return this.x; } }",
       noOpt

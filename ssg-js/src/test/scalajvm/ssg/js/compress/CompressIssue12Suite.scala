@@ -18,7 +18,8 @@ final class CompressIssue12Suite extends munit.FunSuite {
   // =========================================================================
   // keep_name_of_getter
   // =========================================================================
-  test("keep_name_of_getter".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("keep_name_of_getter") {
     assertCompresses(
       input = "a = { get foo () {} }",
       expected = "a = { get foo () {} }",
@@ -31,7 +32,8 @@ final class CompressIssue12Suite extends munit.FunSuite {
   // =========================================================================
   // keep_name_of_setter
   // =========================================================================
-  test("keep_name_of_setter".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("keep_name_of_setter") {
     assertCompresses(
       input = "a = { set foo () {} }",
       expected = "a = { set foo () {} }",
@@ -44,7 +46,8 @@ final class CompressIssue12Suite extends munit.FunSuite {
   // =========================================================================
   // setter_with_operator_keys
   // =========================================================================
-  test("setter_with_operator_keys".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("setter_with_operator_keys") {
     assertCompresses(
       input = """var tokenCodes  = {
             get instanceof(){

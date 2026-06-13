@@ -19,7 +19,8 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // class_expression_properties_side_effects
   // =========================================================================
-  test("class_expression_properties_side_effects".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_expression_properties_side_effects") {
     assertCompresses(
       input = """global.side = () => { console.log("PASS") };
         (class {
@@ -150,7 +151,8 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // mangle_class_properties_keep_quoted
   // =========================================================================
-  test("mangle_class_properties_keep_quoted".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("mangle_class_properties_keep_quoted") {
     assertCompresses(
       input = """class Foo {
             "bar" = "bar";
@@ -173,7 +175,8 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // private_class_properties
   // =========================================================================
-  test("private_class_properties".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("private_class_properties") {
     assertCompresses(
       input = """class Foo {
             #bar = "FooBar"
@@ -200,7 +203,8 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // optional_chaining_private_fields
   // =========================================================================
-  test("optional_chaining_private_fields".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("optional_chaining_private_fields") {
     assertCompresses(
       input = """class A {
             #opt = undefined;

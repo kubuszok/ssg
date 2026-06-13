@@ -1727,7 +1727,15 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
   private def printClassPrivateProperty(node: AstClassPrivateProperty): Unit = {
     if (node.isStatic) { print("static"); space() }
     print("#")
-    node.key match { case s: String => printPropertyName(s, null); case n: AstNode => printNode(n) }
+    // terser output.js:2241 prints `print_property_name(self.key.name, undefined, output)` — i.e.
+    // the key symbol's NAME string, not the symbol node itself. Dispatching the symbol through
+    // printNode would re-emit a leading "#" (AstSymbolPrivateProperty prints "#" + name), doubling
+    // the prefix into "##x". Mirror terser by printing the name string directly.
+    node.key match {
+      case s: String    => printPropertyName(s, null)
+      case n: AstSymbol => printPropertyName(n.name, null)
+      case n: AstNode   => printNode(n)
+    }
     if (node.value != null) { print("="); printNode(node.value.nn) }
     semicolon()
   }
