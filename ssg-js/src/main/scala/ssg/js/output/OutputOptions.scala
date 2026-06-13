@@ -60,7 +60,8 @@ package output
   * @param shebang
   *   Preserve `#!` shebang line
   * @param shorthand
-  *   Use ES6 shorthand for property/method definitions
+  *   Use ES6 shorthand for property/method definitions. `None` (the default) derives from `ecma > 5` per terser output.js:287,297-298: shorthand defaults to undefined and is resolved to `ecma > 5` in
+  *   the OutputStream constructor. `Some(true)` / `Some(false)` overrides explicitly.
   * @param webkit
   *   Work around WebKit bugs
   * @param width
@@ -88,7 +89,7 @@ final case class OutputOptions(
   quoteStyle:          Int = 0,
   semicolons:          Boolean = true,
   shebang:             Boolean = true,
-  shorthand:           Boolean = true,
+  shorthand:           Option[Boolean] = None,
   webkit:              Boolean = false,
   width:               Int = 80,
   wrapIife:            Boolean = false,

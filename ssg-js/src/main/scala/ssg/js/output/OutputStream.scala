@@ -1687,8 +1687,9 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     }
 
   private def printObjectKeyVal(node: AstObjectKeyVal): Unit = {
-    val keyStr       = node.key match { case s: String => s; case _ => "" }
-    val tryShorthand = options.shorthand && !node.key.isInstanceOf[AstNode]
+    val keyStr = node.key match { case s: String => s; case _ => "" }
+    // terser output.js:297-298: `if (options.shorthand === undefined) options.shorthand = options.ecma > 5;`
+    val tryShorthand = options.shorthand.getOrElse(options.ecma > 5) && !node.key.isInstanceOf[AstNode]
 
     if (
       tryShorthand && node.value != null && node.value.nn.isInstanceOf[AstSymbol] &&
