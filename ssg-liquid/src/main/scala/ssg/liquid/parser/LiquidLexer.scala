@@ -57,16 +57,18 @@ final class LiquidLexer(
         val c1 = input.charAt(pos + 1)
 
         if (c0 == '{' && c1 == '{') {
-          // Emit accumulated text before the tag
+          // Emit accumulated text before the tag, stripping leading whitespace
+          // per LiquidLexer.g4:86-87 (OutStart: SpaceOrTab*/WhitespaceChar* '{{')
           if (pos > start) {
-            emitText(start, pos, startLine, startCol)
+            emitTextBeforeTag(start, pos, startLine, startCol)
           }
           scanOutputTag()
           break(())
         } else if (c0 == '{' && c1 == '%') {
-          // Emit accumulated text before the tag
+          // Emit accumulated text before the tag, stripping leading whitespace
+          // per LiquidLexer.g4:94-95 (TagStart: SpaceOrTab*/WhitespaceChar* '{%')
           if (pos > start) {
-            emitText(start, pos, startLine, startCol)
+            emitTextBeforeTag(start, pos, startLine, startCol)
           }
           scanTagStart()
           break(())
@@ -88,6 +90,35 @@ final class LiquidLexer(
       tokens.add(Token(TokenType.TEXT, text, startLine, startCol))
     }
   }
+
+  /** Emits a TEXT token before a tag opener, trimming trailing whitespace when `stripSpacesAroundTags` is set. This mirrors the liqp LEADING strip: LiquidLexer.g4 lines 86-87 (OutStart) and 94-95
+    * (TagStart) consume whitespace before `{{`/`{%` as part of the tag token. In our hand-written lexer, we trim it from the preceding text instead.
+    *
+    * Asymmetry (g4 lines 86 vs 87, 94 vs 95):
+    *   - stripSingleLine: strip only spaces/tabs (`SpaceOrTab*`), NOT linebreaks
+    *   - !stripSingleLine: strip all whitespace (`WhitespaceChar*`)
+    */
+  private def emitTextBeforeTag(start: Int, end: Int, startLine: Int, startCol: Int): Unit =
+    if (stripSpacesAroundTags) {
+      var trimmedEnd = end
+      if (stripSingleLine) {
+        // LiquidLexer.g4:86,94 — SpaceOrTab* only (spaces and tabs, no linebreaks)
+        while (
+          trimmedEnd > start && {
+            val c = input.charAt(trimmedEnd - 1)
+            c == ' ' || c == '\t'
+          }
+        )
+          trimmedEnd -= 1
+      } else {
+        // LiquidLexer.g4:87,95 — WhitespaceChar* (all whitespace including linebreaks)
+        while (trimmedEnd > start && isWhitespace(input.charAt(trimmedEnd - 1)))
+          trimmedEnd -= 1
+      }
+      emitText(start, trimmedEnd, startLine, startCol)
+    } else {
+      emitText(start, end, startLine, startCol)
+    }
 
   /** Scans an output tag: {{ ... }} */
   private def scanOutputTag(): Unit = {

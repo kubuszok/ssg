@@ -100,10 +100,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
     assertEquals(parser.parse(" {{true}}").render(), " true")
   }
 
-  // NOTE: SSG hand-written lexer strips AFTER tags only, not before.
-  // The original ANTLR grammar strips both before and after.
-  // See ParseSuite.scala for documentation of this known behavioral difference.
-  test("OutStart: leading space with strip — SSG preserves pre-tag whitespace".fail) {
+  // LiquidLexer.g4:86-87 — OutStart consumes leading whitespace when
+  // stripSpacesAroundTags is set: WhitespaceChar* '{{' (full mode).
+  test("OutStart: leading space with strip — leading whitespace stripped") {
     val parser = parserWithStrip(true)
     assertEquals(parser.parse(" {{true}}").render(), "true")
   }
@@ -131,8 +130,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
     assertEquals(parser.parse(" {%if true%}ok{%endif%}").render(), " ok")
   }
 
-  // NOTE: SSG hand-written lexer strips AFTER tags only, not before.
-  test("TagStart: leading space with strip — SSG preserves pre-tag whitespace".fail) {
+  // LiquidLexer.g4:94-95 — TagStart consumes leading whitespace when
+  // stripSpacesAroundTags is set: WhitespaceChar* '{%' (full mode).
+  test("TagStart: leading space with strip — leading whitespace stripped") {
     val parser = parserWithStrip(true)
     assertEquals(parser.parse(" {%if true%}ok{%endif%}").render(), "ok")
   }

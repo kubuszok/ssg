@@ -54,8 +54,9 @@ final class WhitespaceWindowsControlSuite extends munit.FunSuite {
     assertEquals(rendered, "abc")
   }
 
-  // SSG: withStripSpaceAroundTags doesn't strip \r\n the same way as liqp
-  test("whitespace windows: default strip".fail) {
+  // LiquidLexer.g4:86-87,94-95 — full strip mode strips all whitespace
+  // (including \r\n) both before and after tags.
+  test("whitespace windows: default strip") {
     val source   = "a  \r\n  {% assign letter = 'b' %}  \r\n{{ letter }}\r\n  c"
     val parser   = new TemplateParser.Builder().withStripSpaceAroundTags(true).build()
     val template = parser.parse(source)
