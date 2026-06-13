@@ -228,7 +228,7 @@ final class DirectivesSuite extends munit.FunSuite {
   }
 
   // 8. "Should be able to compress without side effects" — requires compressor
-  // Requires compression — test body not yet implemented.
+  // Requires compression — empty until the compressor is ported.
   test("should be able to compress directives without side effects") {}
 
   // 9. "Should be detect implicit usages of strict mode from tree walker"
