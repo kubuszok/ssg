@@ -37,19 +37,25 @@ object HtmlMinifier {
 
   /** Minify HTML content.
     *
+    * On failure the original input is returned (graceful degradation), matching jekyll-minifier.rb:1013-1015 `rescue => e` which warns and falls back. The diagnostic is surfaced via the injectable
+    * `logger` channel so callers can observe failures (jekyll-minifier.rb:1014 `Jekyll.logger.warn`).
+    *
     * @param input
     *   HTML string to minify
     * @param options
     *   minification options
     * @param jsCompressor
     *   pluggable JS compressor (defaults to basic JsMinifier)
+    * @param logger
+    *   diagnostics channel (defaults to quiet — no output)
     * @return
     *   minified HTML, or original on failure
     */
   def minify(
     input:        String,
     options:      HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
-    jsCompressor: JsCompressor = BasicJsMinifier
+    jsCompressor: JsCompressor = BasicJsMinifier,
+    logger:       ssg.minify.Logger = ssg.minify.Logger.quiet
   ): String =
     if (input.isEmpty) {
       input
@@ -57,7 +63,11 @@ object HtmlMinifier {
       try
         doMinify(input, options, jsCompressor)
       catch {
-        case _: Exception => input // graceful degradation
+        // jekyll-minifier.rb:1013-1015: rescue => e; Jekyll.logger.warn("Jekyll Minifier:",
+        //   "HTML compression failed for #{path}: #{e.message}. Using original content.")
+        case e: Exception =>
+          logger.warn(s"HTML compression failed: ${e.getClass.getName}: ${e.getMessage}. Using original content.")
+          input // graceful degradation
       }
     }
 
