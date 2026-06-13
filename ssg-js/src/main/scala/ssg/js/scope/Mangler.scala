@@ -47,10 +47,34 @@ final case class ManglerOptions(
   toplevel:       Boolean = false,
   cache:          ManglerCache | Null = null,
   nthIdentifier:  NthIdentifier = Base54,
-  // minify.js:170 defaults `properties` to false; compute_char_frequency
-  // (scope.js:989-996) only subtracts property names when this is truthy.
-  properties: Boolean = false
+  // minify.js:170 defaults `properties` to false; minify.js:175-178 normalizes a
+  // truthy non-object value to `{}`. Mirrors terser's `false | true | {object}`:
+  // `false` disables property mangling (and the compute_char_frequency property
+  // subtraction, scope.js:989-996), `true` means the default PropManglerOptions(),
+  // and an explicit PropManglerOptions is used as-is.
+  properties: PropManglerOptions | Boolean = false
 )
+
+object ManglerOptions {
+
+  /** Resolve `mangle.properties` to its normalized PropManglerOptions, mirroring minify.js:175-178 (`if (truthy && typeof != "object") properties = {}`). Returns `null` when property mangling is
+    * disabled (`properties == false`).
+    */
+  def resolveProperties(properties: PropManglerOptions | Boolean): PropManglerOptions | Null =
+    properties match {
+      case p: PropManglerOptions => p
+      case true  => PropManglerOptions()
+      case false => null
+    }
+
+  /** Truthiness of `mangle.properties` per minify.js:175,243,278 — true when an explicit PropManglerOptions is given or the Boolean `true` is set.
+    */
+  def propertiesEnabled(properties: PropManglerOptions | Boolean): Boolean =
+    properties match {
+      case _: PropManglerOptions => true
+      case b: Boolean            => b
+    }
+}
 
 /** Cache for mangled names across multiple files. */
 class ManglerCache {
@@ -560,6 +584,9 @@ object Mangler {
   def computeCharFrequency(ast: AstToplevel, options: ManglerOptions = ManglerOptions()): Unit = {
     val opts          = formatOptions(options)
     val nthIdentifier = opts.nthIdentifier
+    // scope.js:989 gates the property subtraction on truthy `options.properties`
+    // (false | true | {object}); ManglerOptions.properties mirrors that union.
+    val propertiesOn = ManglerOptions.propertiesEnabled(opts.properties)
 
     // Only compute if the identifier mangler supports frequency-based sorting
     nthIdentifier match {
@@ -604,17 +631,17 @@ object Mangler {
                   case _ =>
                 }
               // scope.js:989-996 — property handling, gated on options.properties.
-              case dot: AstDot if opts.properties =>
+              case dot: AstDot if propertiesOn =>
                 dot.property match {
                   case s: String => b54.consider(s, -1)
                   case _ =>
                 }
-              case dotHash: AstDotHash if opts.properties =>
+              case dotHash: AstDotHash if propertiesOn =>
                 dotHash.property match {
                   case s: String => b54.consider("#" + s, -1)
                   case _ =>
                 }
-              case sub: AstSub if opts.properties =>
+              case sub: AstSub if propertiesOn =>
                 sub.property match {
                   case n: AstNode => skipString(n)
                   case _ =>
