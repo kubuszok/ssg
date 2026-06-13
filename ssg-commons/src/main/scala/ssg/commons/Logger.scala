@@ -17,6 +17,8 @@
  * dart-sass's `lib/src/logger.dart` with a richer API (warn with span,
  * trace, deprecation; debug).  That logger is intentionally NOT unified
  * with this one — unification would break port fidelity and its covenant.
+ *
+ * Covenant: original
  */
 package ssg
 package commons
