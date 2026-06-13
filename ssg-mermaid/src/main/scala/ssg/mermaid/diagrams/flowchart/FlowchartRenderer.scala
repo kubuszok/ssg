@@ -236,7 +236,26 @@ object FlowchartRenderer {
           padding = padding
         )
 
-        val nodeGroup = parent.append("g")
+        // Add link when appropriate (nodes.js:67-80). When a node has a link,
+        // the node group is rendered INTO an <a xlink:href=... target=...>
+        // element inserted into the parent, instead of directly into the parent.
+        val groupParent =
+          if (node.link.isDefined) {
+            val target =
+              if (config.securityLevel == "sandbox") {
+                "_top"
+              } else {
+                node.linkTarget.fold("_blank")(t => if (t.nonEmpty) t else "_blank")
+              }
+            val anchor = parent.append("a")
+            anchor.attr("xlink:href", node.link.get)
+            anchor.attr("target", target)
+            anchor
+          } else {
+            parent
+          }
+
+        val nodeGroup = groupParent.append("g")
         nodeGroup.classed("node", true)
         nodeGroup.classed("default", true)
         node.cssClasses.foreach(cls => nodeGroup.classed(cls, true))

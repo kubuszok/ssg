@@ -387,7 +387,16 @@ object FlowchartParser {
     true
   }
 
-  /** Tries to parse a click statement. */
+  /** Tries to parse a click statement.
+    *
+    * Ports the `clickStatement` grammar rule from `flow.jison:485-500`. After the `click` keyword the lexer (`flow.jison:80-82`) captures the node id as the `CLICK` token (everything up to the next
+    * whitespace/newline). The remaining tokens select between the link and callback forms:
+    *
+    *   - `CLICK HREF STR [SPACE STR] [SPACE LINK_TARGET]` (flow.jison:490-493) and the bare-string forms `CLICK STR [SPACE STR] [SPACE LINK_TARGET]` (flow.jison:496-499) → `setLink` (+ `setTooltip`
+    *     when a second STR is present). Both produce static `<a href>` anchors and are fully renderable server-side.
+    *   - `CLICK CALLBACKNAME [CALLBACKARGS] [SPACE STR]` (flow.jison:486-489) and `CLICK alphaNum [SPACE STR]` (flow.jison:494-495) → `setClickEvent` (+ `setTooltip`). Callbacks attach browser-side
+    *     behaviour only; the server-side `setClickEvent` faithfully just marks the node clickable and records the tooltip — there is no JS execution to perform here.
+    */
   private def tryParseClick(scanner: Scanner, db: FlowchartDb): Boolean = boundary {
     val saved = scanner.save()
     if (!scanner.matchStrIgnoreCase("click")) {
@@ -397,9 +406,168 @@ object FlowchartParser {
       scanner.restore(saved)
       break(false)
     }
-    // Skip the rest of the click line (browser interactivity not supported server-side)
-    skipToNewline(scanner)
+    scanner.skipWhitespace()
+
+    // flow.jison:82 — `<click>[^\s\n]*` captures the node id (CLICK token).
+    val id = readClickId(scanner)
+    if (id.isEmpty) {
+      // Malformed input — skip gracefully, matching the surrounding parser's tolerance.
+      skipToNewline(scanner)
+      break(true)
+    }
+    scanner.skipWhitespace()
+
+    // flow.jison:71 — HREF = the literal `href` followed by whitespace.
+    val sawHref =
+      if (scanner.matchStrIgnoreCase("href")) {
+        if (!scanner.isEof && (scanner.peek() == ' ' || scanner.peek() == '\t')) {
+          scanner.skipWhitespace()
+          true
+        } else {
+          // `href` not followed by whitespace is not the HREF token — treat the
+          // identifier as a callback name (alphaNum form).
+          db.setClickEvent(id, "href")
+          skipToNewline(scanner)
+          break(true)
+        }
+      } else {
+        false
+      }
+
+    if (sawHref) {
+      // flow.jison:490-493 — CLICK HREF STR [SPACE STR] [SPACE LINK_TARGET]
+      parseClickLink(scanner, db, id)
+      break(true)
+    }
+
+    if (!scanner.isEof && scanner.peek() == '"') {
+      // flow.jison:496-499 — bare-string forms CLICK STR [SPACE STR] [SPACE LINK_TARGET]
+      parseClickLink(scanner, db, id)
+      break(true)
+    }
+
+    // flow.jison:486-489 (callback forms) / :494-495 (alphaNum forms) → setClickEvent.
+    parseClickCallback(scanner, db, id)
     true
+  }
+
+  /** Reads the node id captured as the `CLICK` token (flow.jison:82).
+    *
+    * The id is everything up to the next whitespace or newline; quoted segments are read whole so an id is never split inside a string.
+    */
+  private def readClickId(scanner: Scanner): String = {
+    val sb = new StringBuilder()
+    while (!scanner.isEof && scanner.peek() != ' ' && scanner.peek() != '\t' && scanner.peek() != '\n' && scanner.peek() != '\r')
+      if (scanner.peek() == '"') {
+        sb.append(scanner.readQuotedString())
+      } else {
+        sb.append(scanner.advance())
+      }
+    sb.toString
+  }
+
+  /** Parses the shared link tail `STR [SPACE STR] [SPACE LINK_TARGET]`.
+    *
+    * Ports flow.jison:490-493 (after HREF) and :496-499 (bare-string). The first STR is the link, an optional second STR is the tooltip, and an optional LINK_TARGET sets the anchor target.
+    */
+  private def parseClickLink(scanner: Scanner, db: FlowchartDb, id: String): Unit =
+    if (scanner.isEof || scanner.peek() != '"') {
+      // No STR present — nothing renderable; skip gracefully.
+      skipToNewline(scanner)
+    } else {
+      val link = scanner.readQuotedString()
+      scanner.skipWhitespace()
+
+      // Optional second STR → tooltip (flow.jison:491,493,497,499).
+      val tooltip =
+        if (!scanner.isEof && scanner.peek() == '"') {
+          val t = scanner.readQuotedString()
+          scanner.skipWhitespace()
+          Nullable(t)
+        } else {
+          Nullable.empty[String]
+        }
+
+      // Optional LINK_TARGET (flow.jison:492,493,498,499).
+      val target = readLinkTarget(scanner)
+
+      target match {
+        case t if t.isDefined => db.setLink(id, link, t.get)
+        case _                => db.setLink(id, link)
+      }
+      tooltip.foreach(t => db.setTooltip(id, t))
+
+      skipToNewline(scanner)
+    }
+
+  /** Parses the callback forms (flow.jison:486-489, :494-495).
+    *
+    * `CALLBACKNAME [CALLBACKARGS] [SPACE STR]` and the `alphaNum [SPACE STR]` forms both resolve to `setClickEvent` plus an optional tooltip STR.
+    */
+  private def parseClickCallback(scanner: Scanner, db: FlowchartDb, id: String): Unit = {
+    // Read the callback name up to whitespace, newline, or the `(` that opens args.
+    val nameSb = new StringBuilder()
+    while (!scanner.isEof && scanner.peek() != ' ' && scanner.peek() != '\t' && scanner.peek() != '\n' && scanner.peek() != '\r' && scanner.peek() != '(' && scanner.peek() != '"')
+      nameSb.append(scanner.advance())
+    val name = nameSb.toString
+
+    // Optional CALLBACKARGS — `(...)` (flow.jison:48-50,488-489).
+    val args =
+      if (!scanner.isEof && scanner.peek() == '(') {
+        scanner.advance() // consume '('
+        val argsSb = new StringBuilder()
+        while (!scanner.isEof && scanner.peek() != ')' && scanner.peek() != '\n')
+          argsSb.append(scanner.advance())
+        if (!scanner.isEof && scanner.peek() == ')') {
+          scanner.advance() // consume ')'
+        }
+        argsSb.toString
+      } else {
+        ""
+      }
+
+    if (name.isEmpty) {
+      skipToNewline(scanner)
+    } else {
+      if (args.nonEmpty) {
+        db.setClickEvent(id, name, args)
+      } else {
+        db.setClickEvent(id, name)
+      }
+
+      // Optional tooltip STR (flow.jison:487,489,495).
+      scanner.skipWhitespace()
+      if (!scanner.isEof && scanner.peek() == '"') {
+        val tooltip = scanner.readQuotedString()
+        db.setTooltip(id, tooltip)
+      }
+
+      skipToNewline(scanner)
+    }
+  }
+
+  /** Reads an optional LINK_TARGET token (flow.jison:90-93).
+    *
+    * Recognizes exactly `_self`, `_blank`, `_parent`, `_top`. Returns the matched target, or empty when the next token is not a link target (the scanner is left unchanged in that case).
+    */
+  private def readLinkTarget(scanner: Scanner): Nullable[String] = {
+    val saved   = scanner.save()
+    val targets = Array("_self", "_blank", "_parent", "_top")
+    var result  = Nullable.empty[String]
+    var i       = 0
+    while (i < targets.length && result.isEmpty) {
+      val t = targets(i)
+      if (scanner.matchStr(t)) {
+        // Must be followed by a token boundary, not part of a longer word.
+        if (scanner.isEof || scanner.peek() == ' ' || scanner.peek() == '\t' || scanner.peek() == '\n' || scanner.peek() == '\r' || scanner.peek() == ';') {
+          result = Nullable(t)
+        } else {
+          scanner.restore(saved)
+        }
+      }
+      i += 1
+    }
+    result
   }
 
   /** Tries to parse accTitle. */

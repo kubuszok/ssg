@@ -576,8 +576,10 @@ final class FlowchartDb {
     for (id <- ids.split(",")) {
       val trimId = id.trim
       nodes.get(trimId).foreach { node =>
-        node.link = Nullable(linkStr)
-        node.linkTarget = Nullable(sanitizeText(target))
+        // flowDb.ts:349 — the URL is sanitized (utils.formatUrl → Utils.sanitizeUrl)
+        node.link = Nullable(ssg.mermaid.util.Utils.sanitizeUrl(linkStr))
+        // flowDb.ts:350 — the target is stored RAW
+        node.linkTarget = Nullable(target)
       }
     }
     setClass(ids, "clickable")
