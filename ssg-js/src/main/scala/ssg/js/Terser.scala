@@ -30,7 +30,7 @@ package js
 import ssg.js.ast.*
 import ssg.js.parse.{ Parser, ParserOptions }
 import ssg.js.output.{ OutputOptions, OutputStream }
-import ssg.js.scope.{ Mangler, ManglerOptions, ScopeAnalysis, ScopeOptions }
+import ssg.js.scope.{ Mangler, ManglerOptions, PropMangler, ScopeAnalysis, ScopeOptions }
 import ssg.js.compress.{ Compressor, CompressorOptions }
 
 /** Options for the Terser minifier.
@@ -114,18 +114,43 @@ object Terser {
     def scopeOptionsFor(m: ManglerOptions): ScopeOptions =
       ScopeOptions(cache = m.cache, ie8 = m.ie8, safari10 = m.safari10, module = m.module)
 
-    options.mangle match {
-      case mangleOpts: ManglerOptions =>
-        ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(mangleOpts))
-        Mangler.computeCharFrequency(ast, mangleOpts)
-        Mangler.mangleNames(ast, mangleOpts)
-      case true =>
-        val defaultMangle = ManglerOptions()
-        ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(defaultMangle))
-        Mangler.computeCharFrequency(ast, defaultMangle)
-        Mangler.mangleNames(ast, defaultMangle)
-      case false =>
-      // mangling disabled
+    // The resolved mangler options for the active mangle phase, or `null` when
+    // mangling is disabled. minify.js:161-174 normalizes Boolean `true` to the
+    // default mangler options; we keep the resolved options so the property-
+    // mangling phase below can read `options.mangle.properties` (minify.js:278).
+    val resolvedMangle: ManglerOptions | Null =
+      options.mangle match {
+        case mangleOpts: ManglerOptions =>
+          ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(mangleOpts))
+          Mangler.computeCharFrequency(ast, mangleOpts)
+          Mangler.mangleNames(ast, mangleOpts)
+          mangleOpts
+        case true =>
+          val defaultMangle = ManglerOptions()
+          ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(defaultMangle))
+          Mangler.computeCharFrequency(ast, defaultMangle)
+          Mangler.mangleNames(ast, defaultMangle)
+          defaultMangle
+        case false =>
+          // mangling disabled
+          null
+      }
+
+    // 3b. Property mangling (if enabled)
+    // Upstream minify.js:278-280 — `if (options.mangle && options.mangle.properties)
+    // toplevel = mangle_properties(toplevel, options.mangle.properties, annotated_props)`.
+    // Runs AFTER mangle_names (minify.js:274). minify.js:175-178 normalizes a truthy
+    // non-object `properties` to `{}` (here: the Boolean `true` resolves to a default
+    // PropManglerOptions via ManglerOptions.resolveProperties). PropMangler.mangleProperties
+    // computes its own annotated-props set (its `annotatedProps` default mirrors the
+    // `annotated_props = find_annotated_props(ast)` default argument, propmangle.js:216).
+    if (resolvedMangle != null) {
+      ManglerOptions.resolveProperties(resolvedMangle.nn.properties) match {
+        case propOpts: ssg.js.scope.PropManglerOptions =>
+          ast = PropMangler.mangleProperties(ast, propOpts)
+        case null =>
+        // property mangling disabled
+      }
     }
 
     // 4. Output
