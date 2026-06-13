@@ -143,7 +143,8 @@ object Compile {
 
   /** Compile a Sass/SCSS file at the given path.
     *
-    * This cross-platform default throws -- the JVM override in `CompileFile` provides the real implementation using FilesystemImporter.
+    * Cross-platform file-from-path compilation is not provided in shared code because it requires platform-specific filesystem access. This method throws `UnsupportedOperationException` by design
+    * (fail-fast) on all platforms. On the JVM, use `CompileFile.compile` instead -- it reads the file, infers the syntax, and delegates to `compileString`.
     */
   def compile(
     path:                String,
@@ -161,7 +162,7 @@ object Compile {
     futureDeprecations:  Nullable[Iterable[Deprecation]] = Nullable.empty
   ): CompileResult =
     throw new UnsupportedOperationException(
-      "Compile.compile(path) requires filesystem access -- use CompileFile on JVM."
+      "Compile.compile(path) requires filesystem access -- use CompileFile.compile on JVM."
     )
 
   /** Compiles [stylesheet] and returns its result.
