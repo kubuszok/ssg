@@ -3,7 +3,7 @@
  * Ported from terser/test/mocha/line-endings.js
  * Original: 4 it() calls
  *
- * Tests that require compression use assume() (ISS-031/032).
+ * Tests verify line ending handling across LF, CR/LF, and CR.
  */
 package ssg
 package js
@@ -15,9 +15,6 @@ final class LineEndingsSuite extends munit.FunSuite {
 
   override val munitTimeout = scala.concurrent.duration.Duration(10, "s")
 
-  private def assumeCompressorWorks(): Unit =
-    assume(false, "Compression tests disabled — compressor multi-pass loop hangs (ISS-031/032)")
-
   // The original tests use compress:false, mangle:false, comments:/^!/
   // But the expected output includes compression artifacts (removing if body braces).
   // With compress:false, the output preserves the if block structure.
@@ -27,7 +24,6 @@ final class LineEndingsSuite extends munit.FunSuite {
 
   // 1. "Should parse LF line endings"
   test("should parse LF line endings") {
-    assumeCompressorWorks()
     val js     = "/*!one\n2\n3*///comment\nfunction f(x) {\n if (x)\n//comment\n  return 3;\n}\n"
     val result = Terser.minifyToString(
       js,
@@ -38,7 +34,6 @@ final class LineEndingsSuite extends munit.FunSuite {
 
   // 2. "Should parse CR/LF line endings"
   test("should parse CR/LF line endings") {
-    assumeCompressorWorks()
     val js     = "/*!one\r\n2\r\n3*///comment\r\nfunction f(x) {\r\n if (x)\r\n//comment\r\n  return 3;\r\n}\r\n"
     val result = Terser.minifyToString(
       js,
@@ -49,7 +44,6 @@ final class LineEndingsSuite extends munit.FunSuite {
 
   // 3. "Should parse CR line endings"
   test("should parse CR line endings") {
-    assumeCompressorWorks()
     val js     = "/*!one\r2\r3*///comment\rfunction f(x) {\r if (x)\r//comment\r  return 3;\r}\r"
     val result = Terser.minifyToString(
       js,

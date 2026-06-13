@@ -3,8 +3,8 @@
  * Ported from terser/test/mocha/directives.js
  * Original: 9 it() calls
  *
- * Note: Tests 7 (compress side effects) and 9 (tree walker has_directive)
- * require the compressor. They are marked with assumeCompressorWorks().
+ * Note: Test 8 (compress side effects) requires the compressor (body not yet implemented).
+ * Test 9 (tree walker has_directive) is fully implemented.
  */
 package ssg
 package js
@@ -18,9 +18,6 @@ final class DirectivesSuite extends munit.FunSuite {
   override val munitTimeout = scala.concurrent.duration.Duration(30, "s")
 
   private def parse(code: String) = new Parser().parse(code)
-
-  private def assumeCompressorWorks(): Unit =
-    assume(false, "Compression tests disabled — compressor multi-pass loop hangs (ISS-031/032)")
 
   // 1. "Should allow tokenizer to store directives state"
   test("should allow tokenizer to store directives state") {
@@ -231,9 +228,8 @@ final class DirectivesSuite extends munit.FunSuite {
   }
 
   // 8. "Should be able to compress without side effects" — requires compressor
-  test("should be able to compress directives without side effects") {
-    assumeCompressorWorks()
-  }
+  // Requires compression — test body not yet implemented.
+  test("should be able to compress directives without side effects") {}
 
   // 9. "Should be detect implicit usages of strict mode from tree walker"
   // Note: The original tests use "class foo {bar(){_check_}}". The class-method parse gap
