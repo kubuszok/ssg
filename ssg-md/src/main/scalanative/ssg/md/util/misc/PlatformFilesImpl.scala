@@ -4,7 +4,9 @@
  * Mirrors java.io.File.isFile()/exists() and FileUtil.getFileContentBytesWithExceptions
  * (java.nio.file.Files.readAllBytes). java.io.File and java.nio.file.Files/Paths are
  * supported on Scala Native (javalib), as already relied upon by
- * ssg-commons/src/main/scalanative/ssg/commons/io/FileOpsPlatform.scala. */
+ * ssg-commons/src/main/scalanative/ssg/commons/io/FileOpsPlatform.scala.
+ *
+ * Covenant: original */
 package ssg
 package md
 package util

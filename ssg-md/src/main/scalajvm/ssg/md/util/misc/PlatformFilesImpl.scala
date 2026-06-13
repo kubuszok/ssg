@@ -2,7 +2,9 @@
  *
  * JVM implementation of platform-specific filesystem access.
  * Mirrors java.io.File.isFile()/exists() and FileUtil.getFileContentBytesWithExceptions
- * (java.nio.file.Files.readAllBytes), both fully supported on the JVM. */
+ * (java.nio.file.Files.readAllBytes), both fully supported on the JVM.
+ *
+ * Covenant: original */
 package ssg
 package md
 package util
