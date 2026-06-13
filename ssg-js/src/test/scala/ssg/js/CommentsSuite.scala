@@ -81,11 +81,11 @@ final class CommentsSuite extends munit.FunSuite {
   }
 
   // 3. "Should handle comment within return correctly"
-  // Requires compression to fold the return — test body not yet implemented.
+  // Requires compression to fold the return — empty until the compressor is ported.
   test("should handle comment within return correctly") {}
 
   // 4. "Should handle comment folded into return correctly"
-  // Requires compression to fold the return — test body not yet implemented.
+  // Requires compression to fold the return — empty until the compressor is ported.
   test("should handle comment folded into return correctly") {}
 
   // 5. "Should not drop comments after first OutputStream"
@@ -198,7 +198,7 @@ final class CommentsSuite extends munit.FunSuite {
 
   // 12-13. "comment before constant" tests — require compression
 
-  // Requires compression to fold constants — test bodies not yet implemented.
+  // Requires compression to fold constants — empty until the compressor is ported.
   test("comment before constant: retained with comments enabled") {}
 
   test("comment before constant: code works with comments disabled") {}

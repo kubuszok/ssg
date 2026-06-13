@@ -327,13 +327,13 @@ final class MinifySuite extends munit.FunSuite {
 
   // 28. "Should throw for non-trivial expressions" (global_defs)
   test("global_defs: should throw for non-trivial expressions".fail) {
-    // global_defs not yet integrated into MinifyOptions/Terser.minify() — ISS-1179
+    // global_defs is unsupported in MinifyOptions/Terser.minify() — see ISS-1179
     fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
   }
 
   // 29. "Should skip inherited properties" (global_defs)
   test("global_defs: should skip inherited properties".fail) {
-    // global_defs not yet integrated into MinifyOptions/Terser.minify() — ISS-1179
+    // global_defs is unsupported in MinifyOptions/Terser.minify() — see ISS-1179
     fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
   }
 
