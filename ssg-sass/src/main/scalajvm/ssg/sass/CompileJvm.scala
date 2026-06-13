@@ -20,6 +20,18 @@ object CompileFile {
     val source   = FileOps.readString(file)
     val loadPath = file.parent.map(_.pathString).getOrElse(".")
     val importer: Importer = new FilesystemImporter(loadPath)
-    Compile.compileString(source, style, Nullable(importer))
+    // dart-sass compile.dart:72/82: syntax ?? Syntax.forPath(path)
+    // dart-sass syntax.dart:21-24 / port Syntax.scala:40-43
+    val syntax = Syntax.forPath(path)
+    // dart-sass compile.dart:83: url: p.toUri(path) — thread the file URL so
+    // error spans and loadedUrls carry the entry-file path instead of <unknown>.
+    val fileUrl = java.nio.file.Paths.get(file.pathString).toUri.toString
+    Compile.compileString(
+      source,
+      style,
+      importer = Nullable(importer),
+      syntax = syntax,
+      url = Nullable(fileUrl)
+    )
   }
 }
