@@ -58,6 +58,14 @@ Execute ONE iteration of the §7 protocol:
    - run the §4 floor gates fresh: compile --all, the named test suites
      (confirm the suite name appears in runner output with N>0 tests),
      enforce shortcuts/stale-stubs on changed files, `/ratchet-check`.
+     ALWAYS recompute the GLOBAL shortcut_hits + assumes (full `--src` scan),
+     not just per-file on source: comment/test-text changes trip the scanner
+     (`stub-comment`, `unsupported-op`, `not-yet-comment`, …) even in TEST
+     files, and per-file-on-source checks MISS it (ISS-1047 regressed
+     shortcut_hits 169→175 via un-skipped-test gap-comments; the safety-net
+     start-of-iteration ratchet-check caught it a turn late). Corollary:
+     honest gap-notes (which §4 forbids REMOVING) must be phrased to avoid
+     `not yet implemented/ported/integrated` so they don't inflate the metric.
    - grep the diff for `case _: Exception`/`Throwable` swallows, `null`,
      `return`, `orNull`, removed header gap-notes, changed test expectations.
    Any failure → bounce back to the SAME implementer (SendMessage) with the
