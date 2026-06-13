@@ -30,7 +30,7 @@ import ssg.md.util.data.DataHolder
 
 import ssg.md.util.dependency.{ DependencyResolver, FirstDependent }
 
-import java.util.{ ArrayList, HashMap, List as JList, Map as JMap }
+import java.util.{ ArrayList, Collections, HashMap, List as JList, Map as JMap }
 
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
@@ -58,8 +58,11 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
   }
 
   val contentResolvers: JList[UriContentResolver] = {
-    val rawFactories     = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
-    val orderedFactories = DependencyResolver.resolveFlatDependencies(rawFactories.asScala.toList, Nullable.empty, Nullable.empty)
+    var resolverFactories: JList[UriContentResolverFactory] = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
+    if (resolverFactories.isEmpty) {
+      resolverFactories = Collections.singletonList(new FileUriContentResolver.Factory())
+    }
+    val orderedFactories = DependencyResolver.resolveFlatDependencies(resolverFactories.asScala.toList, Nullable.empty, Nullable.empty)
     val resolvers        = new ArrayList[UriContentResolver](orderedFactories.size)
     for (factory <- orderedFactories)
       resolvers.add(factory.apply(context))
