@@ -15,6 +15,8 @@
  * (trait Logger + object Logger with a quiet/default).
  * ssg-sass's logger is intentionally NOT unified — it is a faithful port of
  * dart-sass's lib/src/logger.dart with a richer API.
+ *
+ * Covenant: original
  */
 package ssg
 package minify
