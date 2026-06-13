@@ -296,3 +296,49 @@ final case class CompressorOptions(
       case _                  => false
     }
 }
+
+object CompressorOptions {
+
+  /** All-defaults-enabled configuration — `compress: {}` / `compress: true` in Terser. */
+  val Defaults: CompressorOptions = CompressorOptions()
+
+  /** All default-gated passes disabled — `compress: { defaults: false }` in Terser.
+    *
+    * Matches lib/compress/index.js:222-275: every option whose default is `!false_by_default` is set to `false` / disabled. Options that are already off by default (e.g. `arguments`, `hoist_funs`,
+    * `unsafe_*`) or non-boolean (e.g. `ecma`, `passes`) keep their normal defaults.
+    *
+    * To enable a specific pass on top of this, use `.copy(evaluate = true)` etc.
+    */
+  val NoDefaults: CompressorOptions = CompressorOptions(
+    arrows = false,
+    booleans = false,
+    collapseVars = false,
+    comparisons = false,
+    computedProps = false,
+    conditionals = false,
+    deadCode = false,
+    defaults = false,
+    directives = false,
+    dropDebugger = false,
+    evaluate = false,
+    hoistProps = false,
+    ifReturn = false,
+    inline = InlineLevel.InlineDisabled,
+    joinVars = false,
+    lhsConstants = false,
+    loops = false,
+    negateIife = false,
+    properties = false,
+    // terser defaults:false -> pure_getters = !true && "strict" = false (falsy boolean);
+    // optionBool (CompressorLike.scala:60) maps String via s.nonEmpty, so "" is the
+    // falsy String value matching terser's boolean false (index.js:258)
+    pureGetters = "",
+    reduceFuncs = false,
+    reduceVars = false,
+    sequencesLimit = 0,
+    sideEffects = false,
+    switches = false,
+    typeofs = false,
+    unused = false
+  )
+}
