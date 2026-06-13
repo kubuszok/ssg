@@ -384,9 +384,12 @@ final class MinifySuite extends munit.FunSuite {
     assert(result.contains("bar"), s"got: $result")
   }
 
+  // ISS-1039: ecma 5 must NOT emit shorthand — terser oracle confirms:
+  //   minify('var {a, b} = obj;', {compress:false,mangle:false,format:{ecma:5}}) → "var{a:a,b:b}=obj;"
+  // The previous assertion ({a,b}) encoded the pre-fix bug (output.js:297-298).
   test("minify destructuring assignment") {
     val result = Terser.minifyToString("var {a, b} = obj;", noOpt)
-    assert(result.contains("{a,b}") || result.contains("{a, b}"), s"got: $result")
+    assertEquals(result, "var{a:a,b:b}=obj;")
   }
 
   // ISS-1174 resolved the class concise-method parse gap (createAccessor now parses the
