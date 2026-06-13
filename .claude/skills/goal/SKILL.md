@@ -18,7 +18,7 @@ Execute ONE iteration of the §7 protocol:
    (design docs, vendoring, FileOps). Announce your pick and why.
 
 3. For `bug`/`critical` issues, FIRST dispatch a REPRODUCER subagent —
-   general-purpose, `model: "fable"` — on a worktree branch
+   general-purpose, `model: "opus"` (Opus 4.8) — on a worktree branch
    `fix/ISS-NNN-<slug>`: it writes the red test (name contains the ISS id,
    expected values cited from the original source), runs it, confirms it
    fails for the issue's stated reason, and commits it as the branch's FIRST
@@ -29,11 +29,17 @@ Execute ONE iteration of the §7 protocol:
    instead of fixing anyway. (Plan §6 red-commit protocol; low-risk
    categories may skip this and rely on stash-based proof-of-red.)
 
-   Then dispatch an IMPLEMENTER subagent — ALWAYS with `model: "opus"`
-   (Opus 4.8; the override takes precedence over agent-definition defaults):
+   Then dispatch an IMPLEMENTER subagent — pinned to **Opus 4.6** via the
+   agent definition's frontmatter (`model: claude-opus-4-6`). Pass **NO**
+   `model:` override: the Agent-tool enum cannot express 4.6 (only opus=4.8),
+   and an override would both un-pin 4.6 and collide with the Opus 4.8 auditor
+   → void C13. Anti-Fable note: Fable 5 is blocked worldwide; the implementer
+   moved Opus 4.8 → Opus 4.6 so it stays a different model from the auditor.
    - porting/`incomplete-port` issues → `re-scale:port-implementer`
-   - everything else → general-purpose agent told to follow
-     `.claude/skills/fix-issue/SKILL.md` for issue <ID>
+     (frontmatter pinned to claude-opus-4-6)
+   - everything else → `issue-implementer` agent (project agent at
+     `.claude/agents/issue-implementer.md`, frontmatter pinned to
+     claude-opus-4-6, follows `.claude/skills/fix-issue/SKILL.md`)
    Give it: the issue id + full description, the relevant review section,
    the DoD category checklist from the plan §4, the red-sha + red-test name
    when one exists, and the explicit prohibition list (must not modify the
@@ -53,9 +59,12 @@ Execute ONE iteration of the §7 protocol:
    Any failure → bounce back to the SAME implementer (SendMessage) with the
    specific gate output. Do not spawn a fresh agent to "try again clean".
 
-5. Dispatch an AUDITOR subagent — ALWAYS with `model: "fable"` (Fable 5),
+5. Dispatch an AUDITOR subagent — ALWAYS with `model: "opus"` (Opus 4.8),
    never the implementer's model (anti-cheat C13: the auditor must not share
-   the implementer's blind spots; a same-model audit verdict is void):
+   the implementer's blind spots; a same-model audit verdict is void). The
+   implementer runs Opus 4.6, so the Opus 4.8 auditor is a distinct model —
+   C13 holds. (Fable 5 was the auditor model until Anthropic blocked Fable
+   worldwide; do NOT route the auditor through the implementer's 4.6.):
    - porting issues → `re-scale:port-auditor`
    - everything else → general-purpose agent told to follow
      `.claude/skills/verify-issue/SKILL.md` for issue <ID>
