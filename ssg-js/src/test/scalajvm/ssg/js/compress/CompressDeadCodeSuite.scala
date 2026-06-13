@@ -375,7 +375,8 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // accessor
   // Fails: parser does not support getter/setter shorthand in object literals
   // =========================================================================
-  test("accessor".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("accessor") {
     assertCompresses(
       input = """({
                 |    get a() {},

@@ -18,7 +18,8 @@ final class CompressIssue1014Suite extends munit.FunSuite {
   // =========================================================================
   // ternary_and_private_fields
   // =========================================================================
-  test("ternary_and_private_fields".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("ternary_and_private_fields") {
     assertCompresses(
       input = """class A {
             #fail = false;
@@ -45,7 +46,8 @@ final class CompressIssue1014Suite extends munit.FunSuite {
   // =========================================================================
   // ternary_and_private_public_fields
   // =========================================================================
-  test("ternary_and_private_public_fields".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("ternary_and_private_public_fields") {
     assertCompresses(
       input = """class A {
             fail = false;
@@ -72,7 +74,8 @@ final class CompressIssue1014Suite extends munit.FunSuite {
   // =========================================================================
   // ternary_and_private_methods
   // =========================================================================
-  test("ternary_and_private_methods".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("ternary_and_private_methods") {
     assertCompresses(
       input = """class A {
             #fail() { return false; }
@@ -99,7 +102,8 @@ final class CompressIssue1014Suite extends munit.FunSuite {
   // =========================================================================
   // ternary_and_private_static_fields
   // =========================================================================
-  test("ternary_and_private_static_fields".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("ternary_and_private_static_fields") {
     assertCompresses(
       input = """class A {
             static #fail = false;

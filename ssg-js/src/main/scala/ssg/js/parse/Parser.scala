@@ -1844,10 +1844,18 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
   // =========================================================================
 
   private def createAccessor(isGenerator: Boolean = false, isAsync: Boolean = false): AstAccessor = {
+    // Mirrors terser create_accessor -> function_(AST_Accessor, …) (parse.js:2571-2573, 1651-1681).
+    // function_ allocates `var args = []` and calls _function_body(true, …, name, args), which
+    // parses the parameter list `(…)` (filling args) before the body (parse.js:1670-1671, 2012-2046).
+    // The accessor never parses a name (the next token is `(`), and the generator/async flags are
+    // already supplied by the caller; embed_tokens overwrites start/end with S.token/prev()
+    // (parse.js:1258-1266), matched here by `start = token` and `end = prevTok`.
     val start = token
-    val body  = functionBody(block = true, generator = isGenerator, isAsync = isAsync)
+    val args  = ArrayBuffer.empty[AstNode]
+    val body  = functionBody(block = true, generator = isGenerator, isAsync = isAsync, args = args)
     val acc   = new AstAccessor
     acc.start = start
+    acc.argnames = args
     acc.body = ArrayBuffer.from(body)
     acc.end = prevTok
     acc

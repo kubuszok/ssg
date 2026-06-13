@@ -878,7 +878,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_getter_side_effect_1
   // =========================================================================
-  test("unused_destructuring_getter_side_effect_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unused_destructuring_getter_side_effect_1") {
     assertCompresses(
       input = """function extract(obj) {
             const { a, b } = obj;
@@ -981,7 +982,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_assign_2
   // =========================================================================
-  test("unused_destructuring_assign_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unused_destructuring_assign_2") {
     assertCompresses(
       input = """function extract(obj) {
             var a;
