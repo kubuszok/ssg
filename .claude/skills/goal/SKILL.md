@@ -22,9 +22,13 @@ Execute ONE iteration of the §7 protocol:
    `fix/ISS-NNN-<slug>`: it writes the red test (name contains the ISS id,
    expected values cited from the original source), runs it, confirms it
    fails for the issue's stated reason, and commits it as the branch's FIRST
-   commit (red-sha). The red test MUST be committed as a scalafmt fixpoint
-   (run the fmt pipeline before committing; ISS-1130 — an auto-format hook
-   reflows non-fixpoint files and would violate C16 red-commit integrity).
+   commit (red-sha). The red test MUST be committed as an ON-COMPILE scalafmt
+   fixpoint: compile the test so the on-compile hook formats it, then commit
+   THAT form — NOT the standalone `scalafmtAll` form (the two disagree, ISS-1152,
+   and a standalone-fmt red commit gets reflowed by every later gate compile,
+   dirtying the red suite and breaking C16 — ISS-1130). If a later gate compile
+   still dirties the red suite (comment-only reflow), the orchestrator amends
+   the red commit to the on-compile-stable form before auditing.
    If it cannot make the test fail, the issue may be stale — adjudicate
    instead of fixing anyway. (Plan §6 red-commit protocol; low-risk
    categories may skip this and rely on stash-based proof-of-red.)
