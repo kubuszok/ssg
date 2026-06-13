@@ -236,10 +236,10 @@ final class DirectivesSuite extends munit.FunSuite {
   }
 
   // 9. "Should be detect implicit usages of strict mode from tree walker"
-  // Note: The original tests use "class foo {bar(){_check_}}" which the ssg-js
-  // parser can't handle (class method parsing gap). Marked .fail until parser
-  // supports class methods.
-  test("should detect implicit usages of strict mode from tree walker".fail) {
+  // Note: The original tests use "class foo {bar(){_check_}}". The class-method parse gap
+  // that previously blocked this was fixed by ISS-1174 (createAccessor now parses the
+  // parameter list); this test passes, so the expected-failure pin was retired.
+  test("should detect implicit usages of strict mode from tree walker") {
     val tests = List(
       ("class foo {bar(){_check_}}", List("use strict"), List("use bar")),
       ("class foo {bar(){}}_check_", List(), List("use strict", "use bar"))

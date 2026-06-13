@@ -19,7 +19,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // getter_setter
   // =========================================================================
-  test("getter_setter".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("getter_setter") {
     assertCompresses(
       input = """var get = "bar";
         var a = {
@@ -192,7 +193,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // concise_methods_with_computed_property
   // =========================================================================
-  test("concise_methods_with_computed_property".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("concise_methods_with_computed_property") {
     assertCompresses(
       input = """var foo = {
             [Symbol.iterator]() {
@@ -225,7 +227,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // concise_methods_with_various_property_names
   // =========================================================================
-  test("concise_methods_with_various_property_names".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("concise_methods_with_various_property_names") {
     assertCompresses(
       input = """var get = "bar";
         var a = {
@@ -300,7 +303,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // prop_func_to_concise_method
   // =========================================================================
-  test("prop_func_to_concise_method".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("prop_func_to_concise_method") {
     assertCompresses(
       input = """({
             emit: function NamedFunctionExpression() {
@@ -328,7 +332,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // prop_arrow_to_concise_method
   // =========================================================================
-  test("prop_arrow_to_concise_method".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("prop_arrow_to_concise_method") {
     assertCompresses(
       input = """({
             run: () => {
@@ -456,7 +461,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // prop_arrow_with_this
   // =========================================================================
-  test("prop_arrow_with_this".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("prop_arrow_with_this") {
     assertCompresses(
       input = """function run(arg) {
             console.log(arg === this ? "global" : arg === foo ? "foo" : arg);
@@ -488,7 +494,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // prop_arrow_with_nested_this
   // =========================================================================
-  test("prop_arrow_with_nested_this".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("prop_arrow_with_nested_this") {
     assertCompresses(
       input = """function run(arg) {
             console.log(arg === this ? "global" : arg === foo ? "foo" : arg);
@@ -520,7 +527,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2554_1
   // =========================================================================
-  test("issue_2554_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2554_1") {
     assertCompresses(
       input = """var obj = {
             ["x" + ""]: 1,
@@ -560,7 +568,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2554_2
   // =========================================================================
-  test("issue_2554_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2554_2") {
     assertCompresses(
       input = """var instance = new class {
             constructor() {

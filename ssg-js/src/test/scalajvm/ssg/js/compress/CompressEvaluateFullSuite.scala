@@ -674,7 +674,8 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_object_accessor
   // =========================================================================
-  test("unsafe_object_accessor".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unsafe_object_accessor") {
     assertCompresses(
       input = """function f() {
             var a = {

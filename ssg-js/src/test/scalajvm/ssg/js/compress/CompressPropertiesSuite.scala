@@ -761,7 +761,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2321
   // =========================================================================
-  test("issue_2321".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2321") {
     assertCompresses(
       input = """var f = {
             foo: function(){ console.log("foo") },
@@ -975,7 +976,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // accessor_1
   // =========================================================================
-  test("accessor_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("accessor_1") {
     assertCompresses(
       input = """console.log({
             a: "FAIL",
@@ -998,7 +1000,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // accessor_2
   // =========================================================================
-  test("accessor_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("accessor_2") {
     assertCompresses(
       input = """console.log({
             get a() {
@@ -1676,7 +1679,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_1
   // =========================================================================
-  test("issue_2893_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_1") {
     assertCompresses(
       input = """var o = {
             get a() {
@@ -1702,7 +1706,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_2
   // =========================================================================
-  test("issue_2893_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_2") {
     assertCompresses(
       input = """var o = {
             set a(v) {
@@ -1730,7 +1735,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_3
   // =========================================================================
-  test("issue_2893_3".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_3") {
     assertCompresses(
       input = """var o = {
             get a() {
@@ -1756,7 +1762,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_4
   // =========================================================================
-  test("issue_2893_4".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_4") {
     assertCompresses(
       input = """var o = {
             set a(v) {
@@ -1784,7 +1791,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_5
   // =========================================================================
-  test("issue_2893_5".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_5") {
     assertCompresses(
       input = """"use strict";
         var o = {
@@ -1812,7 +1820,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_6
   // =========================================================================
-  test("issue_2893_6".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_6") {
     assertCompresses(
       input = """"use strict";
         var o = {
@@ -1842,7 +1851,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_7
   // =========================================================================
-  test("issue_2893_7".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_7") {
     assertCompresses(
       input = """"use strict";
         var o = {
@@ -1870,7 +1880,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2893_8
   // =========================================================================
-  test("issue_2893_8".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2893_8") {
     assertCompresses(
       input = """"use strict";
         var o = {
@@ -2018,7 +2029,8 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t64
   // =========================================================================
-  test("issue_t64".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_t64") {
     assertCompresses(
       input = """var obj = {};
         obj.Base = class {

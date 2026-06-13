@@ -70,7 +70,8 @@ final class CompressAsyncSuite extends munit.FunSuite {
   // =========================================================================
   // async_class
   // =========================================================================
-  test("async_class".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("async_class") {
     assertCompresses(
       input = """class Foo {
             async m1() {
@@ -97,7 +98,8 @@ final class CompressAsyncSuite extends munit.FunSuite {
   // =========================================================================
   // async_object_literal
   // =========================================================================
-  test("async_object_literal".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("async_object_literal") {
     assertCompresses(
       input = """var obj = {
             async a() {

@@ -18,7 +18,8 @@ final class CompressIssue999Suite extends munit.FunSuite {
   // =========================================================================
   // switch_case_and_private_fields
   // =========================================================================
-  test("switch_case_and_private_fields".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("switch_case_and_private_fields") {
     assertCompresses(
       input = """class A {
             #a = "FAIL";

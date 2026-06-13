@@ -136,7 +136,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // unused_keep_setter_arg
   // =========================================================================
-  test("unused_keep_setter_arg".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unused_keep_setter_arg") {
     assertCompresses(
       input = """var x = {
             _foo: null,
@@ -2733,7 +2734,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // unused_class_with_static_props_this_2
   // =========================================================================
-  test("unused_class_with_static_props_this_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unused_class_with_static_props_this_2") {
     assertCompresses(
       input = """let Foo = (()=>{
             let _classThis;
@@ -2968,7 +2970,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t1392_4
   // =========================================================================
-  test("issue_t1392_4".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_t1392_4") {
     assertCompresses(
       input = """class BaseClass {}
         class SubClass {
@@ -2990,7 +2993,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t1392_5
   // =========================================================================
-  test("issue_t1392_5".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_t1392_5") {
     assertCompresses(
       input = """(function test() {
             class RelatedClass {}
@@ -3071,7 +3075,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_2
   // =========================================================================
-  test("class_used_within_itself_2".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_2") {
     assertCompresses(
       input = """globalThis.useThis = function(obj) {
             obj.prototype.method()
@@ -3106,7 +3111,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_3
   // =========================================================================
-  test("class_used_within_itself_3".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_3") {
     assertCompresses(
       input = """const importedfn = () => console.log("------------");
 
@@ -3242,7 +3248,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_2_var
   // =========================================================================
-  test("class_used_within_itself_2_var".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_2_var") {
     assertCompresses(
       input = """globalThis.useThis = function(obj) {
             obj.prototype.method()
@@ -3277,7 +3284,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_3_var
   // =========================================================================
-  test("class_used_within_itself_3_var".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_3_var") {
     assertCompresses(
       input = """const importedfn = () => console.log("------------");
 
@@ -3413,7 +3421,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_2_var_expname
   // =========================================================================
-  test("class_used_within_itself_2_var_expname".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_2_var_expname") {
     assertCompresses(
       input = """globalThis.useThis = function(obj) {
             obj.prototype.method()
@@ -3448,7 +3457,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_3_var_expname
   // =========================================================================
-  test("class_used_within_itself_3_var_expname".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_3_var_expname") {
     assertCompresses(
       input = """const importedfn = () => console.log("------------");
 
@@ -3584,7 +3594,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_2_classname
   // =========================================================================
-  test("class_used_within_itself_2_classname".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_2_classname") {
     assertCompresses(
       input = """globalThis.useThis = function(obj) {
             obj.prototype.method()
@@ -3619,7 +3630,8 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_3_classname
   // =========================================================================
-  test("class_used_within_itself_3_classname".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("class_used_within_itself_3_classname") {
     assertCompresses(
       input = """const importedfn = () => console.log("------------");
 

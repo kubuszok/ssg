@@ -420,7 +420,8 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_evaluate_object_3
   // =========================================================================
-  test("unsafe_evaluate_object_3".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("unsafe_evaluate_object_3") {
     assertCompresses(
       input = """var obj = {
             get foo() {
@@ -1476,7 +1477,8 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t1382
   // =========================================================================
-  test("issue_t1382".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_t1382") {
     assertCompresses(
       input = """const qDev = false;
 
@@ -3174,7 +3176,8 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // accessor_1
   // =========================================================================
-  test("accessor_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("accessor_1") {
     assertCompresses(
       input = """var a = 1;
         console.log({
@@ -3232,7 +3235,8 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // method_1
   // =========================================================================
-  test("method_1".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("method_1") {
     assertCompresses(
       input = """var a = 1;
         console.log(new class {
@@ -5858,7 +5862,8 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2774
   // =========================================================================
-  test("issue_2774".fail) {
+  // ISS-1174 resolved the class/object concise-method parse gap; the expected-failure pin was retired.
+  test("issue_2774") {
     assertCompresses(
       input = """console.log({
             get a() {
