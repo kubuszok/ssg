@@ -45,7 +45,7 @@ final class HtmlMinifierDiagnosticsIss1028Suite extends munit.FunSuite {
       htmlWithInlineScript,
       opts,
       FailingJsCompressor,
-      logger
+      logger = logger
     )
 
     // (a) The diagnostic must have been emitted exactly once.
@@ -106,7 +106,7 @@ final class HtmlMinifierDiagnosticsIss1028Suite extends munit.FunSuite {
       htmlWithInlineScript,
       opts,
       FailingJsCompressor,
-      ssg.minify.Logger.quiet
+      logger = ssg.minify.Logger.quiet
     )
     assertEquals(result, htmlWithInlineScript)
   }

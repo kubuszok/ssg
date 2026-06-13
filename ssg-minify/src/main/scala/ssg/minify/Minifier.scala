@@ -39,7 +39,7 @@ object Minifier {
 
   /** Minify HTML content with a custom JS compressor. */
   def minifyHtml(input: String, options: MinifyOptions, jsCompressor: JsCompressor): String =
-    HtmlMinifier.minify(input, options.html, jsCompressor)
+    HtmlMinifier.minify(input, options.html, jsCompressor, options.jsCompressorOpts)
 
   /** Minify CSS content. */
   def minifyCss(input: String, options: MinifyOptions = MinifyOptions.Defaults): String =
@@ -64,8 +64,8 @@ object Minifier {
     jsCompressor: JsCompressor = BasicJsMinifier
   ): String =
     fileType match {
-      case FileType.Html => HtmlMinifier.minify(input, options.html, jsCompressor)
-      case FileType.Xml  => HtmlMinifier.minify(input, options.html, jsCompressor)
+      case FileType.Html => HtmlMinifier.minify(input, options.html, jsCompressor, options.jsCompressorOpts)
+      case FileType.Xml  => HtmlMinifier.minify(input, options.html, jsCompressor, options.jsCompressorOpts)
       case FileType.Css  => if (options.compressCss) CssMinifier.minify(input, options.css) else input
       case FileType.Js   => if (options.compressJs) options.jsCompressorOpts.fold(jsCompressor.compress(input))(opts => jsCompressor.compress(input, opts)) else input
       case FileType.Json => if (options.compressJson) JsonMinifier.minify(input) else input

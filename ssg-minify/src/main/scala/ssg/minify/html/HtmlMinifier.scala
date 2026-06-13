@@ -46,22 +46,27 @@ object HtmlMinifier {
     *   minification options
     * @param jsCompressor
     *   pluggable JS compressor (defaults to basic JsMinifier)
+    * @param jsCompressorOpts
+    *   optional compressor-specific options for inline `<script>` blocks. When present they are threaded to the 2-arg `jsCompressor.compress(content, opts)` exactly as the file-level path does
+    *   (Minifier.scala:70). jekyll-minifier compresses inline scripts with the SAME `terser_args` as standalone JS (lib/jekyll-minifier.rb:433-439 create_js_compressor_uncached wired into the
+    *   HtmlCompressor at :409/:414), so the same options apply here.
     * @param logger
     *   diagnostics channel (defaults to quiet — no output)
     * @return
     *   minified HTML, or original on failure
     */
   def minify(
-    input:        String,
-    options:      HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
-    jsCompressor: JsCompressor = BasicJsMinifier,
-    logger:       ssg.minify.Logger = ssg.minify.Logger.quiet
+    input:            String,
+    options:          HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
+    jsCompressor:     JsCompressor = BasicJsMinifier,
+    jsCompressorOpts: Option[JsCompressorOptions] = None,
+    logger:           ssg.minify.Logger = ssg.minify.Logger.quiet
   ): String =
     if (input.isEmpty) {
       input
     } else {
       try
-        doMinify(input, options, jsCompressor)
+        doMinify(input, options, jsCompressor, jsCompressorOpts)
       catch {
         // jekyll-minifier.rb:1013-1015: rescue => e; Jekyll.logger.warn("Jekyll Minifier:",
         //   "HTML compression failed for #{path}: #{e.message}. Using original content.")
@@ -71,7 +76,12 @@ object HtmlMinifier {
       }
     }
 
-  private def doMinify(input: String, options: HtmlMinifyOptions, jsCompressor: JsCompressor): String = {
+  private def doMinify(
+    input:            String,
+    options:          HtmlMinifyOptions,
+    jsCompressor:     JsCompressor,
+    jsCompressorOpts: Option[JsCompressorOptions]
+  ): String = {
     // 1. Extract preserved blocks (pre, textarea, script, style, user patterns)
     val (html, preserved) = PreservedBlock.extract(input, options.effectivePreservePatterns, options.preservedTags)
 
@@ -100,7 +110,7 @@ object HtmlMinifier {
 
     // 5. Compress inline CSS and JS
     if (options.compressCssInHtml) result = compressInlineCss(result)
-    if (options.compressJsInHtml) result = compressInlineJs(result, jsCompressor)
+    if (options.compressJsInHtml) result = compressInlineJs(result, jsCompressor, jsCompressorOpts)
 
     result
   }
@@ -319,7 +329,11 @@ object HtmlMinifier {
   private def compressInlineCss(html: String): String =
     compressTagContent(html, "style", (content, _) => CssMinifier.minify(content))
 
-  private def compressInlineJs(html: String, jsCompressor: JsCompressor): String =
+  private def compressInlineJs(
+    html:             String,
+    jsCompressor:     JsCompressor,
+    jsCompressorOpts: Option[JsCompressorOptions]
+  ): String =
     compressTagContent(
       html,
       "script",
@@ -330,7 +344,10 @@ object HtmlMinifier {
         } else if (content.trim.isEmpty) {
           content
         } else {
-          jsCompressor.compress(content)
+          // jekyll-minifier compresses inline <script> with the SAME terser_args
+          // as standalone JS (lib/jekyll-minifier.rb:433-439). Thread the options to
+          // the 2-arg compress when present, mirroring Minifier.scala:70's fold.
+          jsCompressorOpts.fold(jsCompressor.compress(content))(opts => jsCompressor.compress(content, opts))
         }
     )
 
