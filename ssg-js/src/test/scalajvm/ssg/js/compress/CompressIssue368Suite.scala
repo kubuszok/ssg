@@ -18,7 +18,7 @@ final class CompressIssue368Suite extends munit.FunSuite {
   // =========================================================================
   // collapse
   // =========================================================================
-  test("collapse".fail) {
+  test("collapse") {
     assertCompresses(
       input = """function f1() {
             var a;

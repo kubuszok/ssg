@@ -125,37 +125,79 @@ object TightenBody {
     }
   }
 
-  /** Build a TreeWalker with the parent stack from the compressor. */
+  /** Build a TreeWalker with the parent stack from the compressor.
+    *
+    * Upstream terser's Compressor IS the TreeWalker driving the transform (lib/compress/index.js:453), so `compressor.parent()` reads the live ancestry. This port runs the transform on a separate
+    * TreeTransformer; the compressor's own stack is empty during a pass. We access the active walker directly so `findScope` / `findLoopScopeTry` see the correct ancestry (tighten-body.js:234 —
+    * `compressor.self()`, `compressor.parent()`).
+    */
   private def buildParentWalker(compressor: CompressorLike): TreeWalker = {
     val tw          = new TreeWalker()
-    var level       = 0
-    var p           = compressor.parent(level)
     val parentStack = ArrayBuffer.empty[AstNode]
-    while (p != null) {
-      parentStack.insert(0, p.nn)
-      level += 1
-      p = compressor.parent(level)
+
+    // Use the active walker's stack if the compressor's own stack is empty
+    // (normal case during a compress pass — ISS-1147).
+    compressor match {
+      case c: Compressor if c.activeWalker != null && c.activeWalker.nn.stack.nonEmpty =>
+        val liveStack = c.activeWalker.nn.stack
+        var i         = 0
+        while (i < liveStack.size) {
+          parentStack.addOne(liveStack(i))
+          i += 1
+        }
+      case _ =>
+        var level = 0
+        var p     = compressor.parent(level)
+        while (p != null) {
+          parentStack.insert(0, p.nn)
+          level += 1
+          p = compressor.parent(level)
+        }
     }
+
     parentStack.foreach(tw.push)
     tw
   }
 
-  /** Find whether we're currently in a loop or try block by walking up the parent chain. */
+  /** Find whether we're currently in a loop or try block by walking up the parent chain.
+    *
+    * tighten-body.js:255-267 — `find_loop_scope_try()`: starts from `compressor.self()` and walks `compressor.parent(level++)`. Uses the active walker's stack when the compressor's own stack is empty
+    * (same rationale as `buildParentWalker` — ISS-1147).
+    */
   private def findLoopScopeTry(compressor: CompressorLike): (Boolean, Boolean) = {
     var inLoop = false
     var inTry  = false
-    var level  = 0
-    var node   = compressor.parent(level)
-    while (node != null) {
-      node.nn match {
-        case _: AstIterationStatement => inLoop = true
-        case _: AstScope              => return (inLoop, inTry) // @nowarn
-        case _: AstTryBlock           => inTry = true
-        case _ =>
-      }
-      level += 1
-      node = compressor.parent(level)
+
+    // Walk the live ancestry, matching buildParentWalker's approach.
+    compressor match {
+      case c: Compressor if c.activeWalker != null && c.activeWalker.nn.stack.nonEmpty =>
+        val liveStack = c.activeWalker.nn.stack
+        // Walk from the top of the stack (current node) upward
+        var i = liveStack.size - 1
+        while (i >= 0) {
+          liveStack(i) match {
+            case _: AstIterationStatement => inLoop = true
+            case _: AstScope              => return (inLoop, inTry) // @nowarn
+            case _: AstTryBlock           => inTry = true
+            case _ =>
+          }
+          i -= 1
+        }
+      case _ =>
+        var level = 0
+        var node  = compressor.parent(level)
+        while (node != null) {
+          node.nn match {
+            case _: AstIterationStatement => inLoop = true
+            case _: AstScope              => return (inLoop, inTry) // @nowarn
+            case _: AstTryBlock           => inTry = true
+            case _ =>
+          }
+          level += 1
+          node = compressor.parent(level)
+        }
     }
+
     (inLoop, inTry)
   }
 
@@ -1437,7 +1479,27 @@ object TightenBody {
               }
             case _ => l
           }
-        case u: AstUnary => u.expression
+        case u: AstUnary =>
+          // tighten-body.js:815-821 — same const/let/using guard as AstAssign
+          val l = u.expression
+          l match {
+            case ref: AstSymbolRef =>
+              ref.definition() match {
+                case null => l
+                case d    =>
+                  if (
+                    d.nn.orig.nonEmpty &&
+                    (d.nn.orig(0).isInstanceOf[AstSymbolConst] ||
+                      d.nn.orig(0).isInstanceOf[AstSymbolLet] ||
+                      d.nn.orig(0).isInstanceOf[AstSymbolUsing])
+                  ) {
+                    null
+                  } else {
+                    l
+                  }
+              }
+            case _ => l
+          }
         case _ => null
       }
 
@@ -1616,7 +1678,10 @@ object TightenBody {
           return node // @nowarn
         case _ =>
       }
-      node
+      // Upstream returns undefined (= descend) for non-Switch/non-Scope nodes;
+      // tighten-body.js:540 implicit return.  Returning null lets the SSG
+      // transform descend so the scanner can walk the hitStack path.
+      null
     }
 
     // -----------------------------------------------------------------------
@@ -1915,10 +1980,11 @@ object TightenBody {
         case _ =>
       }
 
-      var found = false
+      var found             = false
+      var removedInternally = false
 
       val remover = new TreeTransformer(
-        before = (node, _, _) =>
+        before = (node, _, inList) =>
           if (found) node
           else if (
             (node.asInstanceOf[AnyRef] eq expr.asInstanceOf[AnyRef]) ||
@@ -1943,10 +2009,19 @@ object TightenBody {
                 } else {
                   vd.value = null
                 }
+                removedInternally = true
                 node
               case _ =>
-                // Return null to remove the node (in_list case handled below)
-                null
+                // tighten-body.js:882 — return in_list ? MAP.skip : null
+                // MAP.skip removes the element from transformList; null (not
+                // in_list) means transform returns the original node, so the
+                // caller must splice the statement out of the enclosing list.
+                if (inList) {
+                  removedInternally = true
+                  TransformSkip
+                } else {
+                  null
+                }
             }
           } else {
             null // continue descent
@@ -1964,7 +2039,14 @@ object TightenBody {
       )
 
       statements(statIndex) = statements(statIndex).transform(remover)
-      found
+      // Upstream returns the transform result (truthy node → handled internally,
+      // null → caller must splice). The SSG transform never returns null from a
+      // null `before` result, so we track the distinction explicitly:
+      // removedInternally is true for VarDef (modified in place) and inList
+      // (TransformSkip removed it). False for non-list top-level candidates,
+      // causing the caller to remove the statement via statements.remove.
+      // tighten-body.js:870-871, 882, 511-512
+      removedInternally
     }
 
     /** Extract candidates from a statement. */
