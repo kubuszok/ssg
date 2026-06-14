@@ -647,15 +647,27 @@ final class LiquidParser(
       }
     } else {
       // Jekyll style: {% include filename var=val var=val %}
-      val fileName = if (check(TokenType.STR)) {
-        val s = peek().value
-        advance()
-        s
+      // file_name_or_output (LiquidParser.g4:219-222) is EITHER an `output`
+      // (`{{ expr }}` — #jekyll_include_output) OR a literal `filename`
+      // (#jekyll_include_filename). When the include name is given as an output
+      // expression, NodeVisitor.visitJekyll_include_output (NodeVisitor.java:498-504)
+      // simply delegates to visitOutput, producing the same OutputNode an output
+      // tag would. getJekyllIncludeInsertionNode (NodeVisitor.java:478-485) then
+      // uses it as nodes[0], which Include (tags/Include.java:26) renders to the
+      // filename string — exactly as it renders a literal-name AtomNode.
+      if (check(TokenType.OUT_START)) {
+        nodes.add(parseOutput())
       } else {
-        // Read until whitespace/tag end
-        consumeId()
+        val fileName = if (check(TokenType.STR)) {
+          val s = peek().value
+          advance()
+          s
+        } else {
+          // Read until whitespace/tag end
+          consumeId()
+        }
+        nodes.add(new AtomNode(DataView.from(fileName)))
       }
-      nodes.add(new AtomNode(DataView.from(fileName)))
 
       // key=value params
       while (isIdLike(peek().tokenType) && !check(TokenType.TAG_END)) {

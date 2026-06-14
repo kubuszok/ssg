@@ -270,33 +270,51 @@ final class LiquidLexer(
 
       val c = input.charAt(pos)
 
-      // Check for tag end
-      if (isOutput) {
-        if (c == '-' && pos + 2 < input.length() && input.charAt(pos + 1) == '}' && input.charAt(pos + 2) == '}') {
-          emitToken(TokenType.OUT_END, "-}}", 3)
-          handlePostTagStripping()
-          break(())
-        }
-        if (c == '}' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') {
-          emitToken(TokenType.OUT_END, "}}", 2)
-          handlePostTagStripping()
-          break(())
-        }
+      // Nested output start: a `{{` appearing inside a tag (or inside another
+      // output) starts a sub-output. This mirrors liqp LiquidLexer.g4:117
+      // `OutStart2 : '{{' -> pushMode(IN_TAG)` — the IN_TAG mode (shared by
+      // both `{{ }}` and `{% %}` bodies) recognises a nested `{{` as the
+      // `OutStart2` token, which the parser unifies with `OutStart` via
+      // LiquidParser.g4:363-366 `outStart : OutStart | OutStart2`. Note liqp
+      // has no `{{-` strip variant for OutStart2 (only the top-level OutStart
+      // carries it), so we only match a bare `{{` here. We recurse to scan the
+      // sub-output up to its matching `}}` (OutEnd, LiquidParser.g4:121-127),
+      // then resume the surrounding tag. A literal single `{` that is not part
+      // of `{{` falls through to `scanInTagToken` exactly as before.
+      if (c == '{' && pos + 1 < input.length() && input.charAt(pos + 1) == '{') {
+        emitToken(TokenType.OUT_START, "{{", 2)
+        scanInsideTag(isOutput = true)
+        skipWhitespace()
       } else {
-        if (c == '-' && pos + 2 < input.length() && input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}') {
-          emitToken(TokenType.TAG_END, "-%}", 3)
-          handlePostTagStripping()
-          break(())
-        }
-        if (c == '%' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') {
-          emitToken(TokenType.TAG_END, "%}", 2)
-          handlePostTagStripping()
-          break(())
-        }
-      }
 
-      // Scan a token inside the tag
-      scanInTagToken()
+        // Check for tag end
+        if (isOutput) {
+          if (c == '-' && pos + 2 < input.length() && input.charAt(pos + 1) == '}' && input.charAt(pos + 2) == '}') {
+            emitToken(TokenType.OUT_END, "-}}", 3)
+            handlePostTagStripping()
+            break(())
+          }
+          if (c == '}' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') {
+            emitToken(TokenType.OUT_END, "}}", 2)
+            handlePostTagStripping()
+            break(())
+          }
+        } else {
+          if (c == '-' && pos + 2 < input.length() && input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}') {
+            emitToken(TokenType.TAG_END, "-%}", 3)
+            handlePostTagStripping()
+            break(())
+          }
+          if (c == '%' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') {
+            emitToken(TokenType.TAG_END, "%}", 2)
+            handlePostTagStripping()
+            break(())
+          }
+        }
+
+        // Scan a token inside the tag
+        scanInTagToken()
+      }
     }
   }
 
