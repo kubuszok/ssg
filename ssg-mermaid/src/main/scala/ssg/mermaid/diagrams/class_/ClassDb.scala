@@ -621,7 +621,8 @@ final class ClassDb {
         id = MERMAID_DOM_ID_PREFIX + id
       }
       classes.get(id).foreach { theClass =>
-        theClass.link = Nullable(linkStr)
+        // classDb.ts:275 — the URL is sanitized (utils.formatUrl → Utils.sanitizeUrl)
+        theClass.link = Nullable(ssg.mermaid.util.Utils.sanitizeUrl(linkStr))
         theClass.linkTarget = Nullable(sanitizeText(target))
       }
     }
