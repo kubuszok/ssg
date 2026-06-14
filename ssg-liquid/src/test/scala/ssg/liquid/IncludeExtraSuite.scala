@@ -27,8 +27,10 @@ final class IncludeExtraSuite extends munit.FunSuite {
   // Variable syntax includes (Jekyll)
   // ---------------------------------------------------------------------------
 
-  // SSG: {{ variable }} syntax in include tags not yet supported
-  test("include: variable syntax tag (Jekyll)".fail) {
+  // Jekyll variable-syntax include: the filename comes from an output
+  // expression `{{ tmpl }}` (LiquidParser.g4:219-222 file_name_or_output ->
+  // output #jekyll_include_output).
+  test("include: variable syntax tag (Jekyll)") {
     val parser = parserWith(
       Flavor.JEKYLL,
       true,
@@ -297,8 +299,10 @@ final class IncludeExtraSuite extends munit.FunSuite {
   // Expression in include tag
   // ---------------------------------------------------------------------------
 
-  // SSG: {{ variable }} syntax in include tags not yet supported
-  test("include: expression in include tag (Jekyll)".fail) {
+  // liqp IncludeTest.expressionInIncludeTagJekyll: Jekyll resolves the include
+  // filename from an output expression (LiquidParser.g4:219-222
+  // file_name_or_output -> output #jekyll_include_output).
+  test("include: expression in include tag (Jekyll)") {
     val parser = parserWith(
       Flavor.JEKYLL,
       true,
@@ -308,20 +312,24 @@ final class IncludeExtraSuite extends munit.FunSuite {
     assert(rendered.contains("HEADER"))
   }
 
-  // SSG: {{ variable }} parsing differs between flavors
-  test("include: expression in include tag throws in Liquid".fail) {
+  // liqp IncludeTest.expressionInIncludeTagLiquidThrowsException: in Liquid
+  // style the include rule is `expr (With expr)?` (LiquidParser.g4:207), which
+  // does not accept a nested `{{ … }}` output, so it fails.
+  test("include: expression in include tag throws in Liquid") {
     val parser = parserWith(Flavor.LIQUID, true, "header.html" -> "HEADER")
     intercept[RuntimeException] {
       parser.parse("{% assign variable = 'header.html' %}{% include {{variable}} %}").render()
     }
   }
 
+  // liqp IncludeTest.expressionInIncludeTagDefaultFlavorThrowsException:
+  // TemplateParser.DEFAULT is Flavor.LIQP (TemplateParser.java:33), which uses
+  // the Liquid-style include rule (LiquidParser.g4:207), so the nested output
+  // form fails exactly as in Liquid.
   test("include: expression in include tag throws in default flavor") {
-    // Default is JEKYLL in SSG, but this tests the original liqp behavior
-    // where DEFAULT was LIQP (which acts like LIQUID for include syntax)
     val parser = parserWith(Flavor.LIQP, true, "header.html" -> "HEADER")
-    // LIQP flavor supports jekyll-style includes, so this should work
-    val rendered = parser.parse("{% assign variable = 'header.html' %}{% include {{variable}} %}").render()
-    assert(rendered.contains("HEADER"))
+    intercept[RuntimeException] {
+      parser.parse("{% assign variable = 'header.html' %}{% include {{variable}} %}").render()
+    }
   }
 }
