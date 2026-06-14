@@ -18,7 +18,7 @@ final class CompressIssue1609Suite extends munit.FunSuite {
   // =========================================================================
   // chained_evaluation_1
   // =========================================================================
-  test("chained_evaluation_1".fail) {
+  test("chained_evaluation_1") {
     assertCompresses(
       input = """(function() {
             var a = 1;
@@ -46,7 +46,7 @@ final class CompressIssue1609Suite extends munit.FunSuite {
   // =========================================================================
   // chained_evaluation_2
   // =========================================================================
-  test("chained_evaluation_2".fail) {
+  test("chained_evaluation_2") {
     assertCompresses(
       input = """(function() {
             var a = "long piece of string";

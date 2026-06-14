@@ -873,7 +873,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1539
   // =========================================================================
-  test("issue_1539".fail) {
+  test("issue_1539") {
     assertCompresses(
       input = """function f() {
             var a, b;
@@ -922,7 +922,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // assign_binding
   // =========================================================================
-  test("assign_binding".fail) {
+  test("assign_binding") {
     assertCompresses(
       input = """function f() {
             var a;
