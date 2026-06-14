@@ -9,7 +9,7 @@
  * Grammar specification: original-src/liqp/src/main/antlr4/liquid/parser/v4/LiquidParser.g4
  *
  * Covenant: full-port
- * Covenant-verified: 2026-04-26
+ * Covenant-verified: 2026-06-14
  */
 package ssg
 package liquid

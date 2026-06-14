@@ -6,7 +6,7 @@
  * Replaces ANTLR-generated token vocabulary.
  *
  * Covenant: full-port
- * Covenant-verified: 2026-04-26
+ * Covenant-verified: 2026-06-14
  */
 package ssg
 package liquid
