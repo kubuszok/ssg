@@ -401,7 +401,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // func_def_1
   // =========================================================================
-  test("func_def_1".fail) {
+  test("func_def_1") {
     assertCompresses(
       input = """function f() {
             return f = 0, !!f;
@@ -439,7 +439,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // func_def_3
   // =========================================================================
-  test("func_def_3".fail) {
+  test("func_def_3") {
     assertCompresses(
       input = """function f() {
             function g() {}
@@ -461,7 +461,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // func_def_4
   // =========================================================================
-  test("func_def_4".fail) {
+  test("func_def_4") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -695,7 +695,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // side_effects_cascade_1
   // =========================================================================
-  test("side_effects_cascade_1".fail) {
+  test("side_effects_cascade_1") {
     assertCompresses(
       input = """function f(a, b) {
             a -= 42;
@@ -740,7 +740,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // side_effects_cascade_3
   // =========================================================================
-  test("side_effects_cascade_3".fail) {
+  test("side_effects_cascade_3") {
     assertCompresses(
       input = """function f(a, b) {
             "foo" ^ (b += a),
@@ -763,7 +763,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_27
   // =========================================================================
-  test("issue_27".fail) {
+  test("issue_27") {
     assertCompresses(
       input = """(function(jQuery) {
             var $$;
@@ -810,7 +810,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2062
   // =========================================================================
-  test("issue_2062".fail) {
+  test("issue_2062") {
     assertCompresses(
       input = """var a = 1;
         if ([ a || a++ + a--, a++ + a--, a && a.var ]);
@@ -872,7 +872,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // cascade_assignment_in_return
   // =========================================================================
-  test("cascade_assignment_in_return".fail) {
+  test("cascade_assignment_in_return") {
     assertCompresses(
       input = """function f(a, b) {
             return a = x(), b(a);

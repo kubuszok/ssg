@@ -650,7 +650,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // collapse_vars_assignment
   // Fails: collapse_vars pass not yet fully implemented
   // =========================================================================
-  test("collapse_vars_assignment".fail) {
+  test("collapse_vars_assignment") {
     assertCompresses(
       input = """function f0(c) {
                 |    var a = 3 / c;
