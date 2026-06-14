@@ -22,3 +22,6 @@
 [submodule "original-src/mermaid"]
 	path = original-src/mermaid
 	url = https://github.com/mermaid-js/mermaid.git
+[submodule "original-src/cssminify2"]
+	path = original-src/cssminify2
+	url = https://github.com/digitalsparky/cssminify.git
