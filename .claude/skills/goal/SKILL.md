@@ -60,12 +60,20 @@ Execute ONE iteration of the §7 protocol:
      enforce shortcuts/stale-stubs on changed files, `/ratchet-check`.
      ALWAYS recompute the GLOBAL shortcut_hits + assumes (full `--src` scan),
      not just per-file on source: comment/test-text changes trip the scanner
-     (`stub-comment`, `unsupported-op`, `not-yet-comment`, …) even in TEST
-     files, and per-file-on-source checks MISS it (ISS-1047 regressed
+     (`stub-comment` = the word "stub"; `unsupported-op` =
+     "UnsupportedOperationException"; `not-yet-comment` = "not yet
+     implemented/ported/integrated"; `minimal-comment` = the word "minimal"; …)
+     even in TEST files, and per-file-on-source checks MISS it (ISS-1047 regressed
      shortcut_hits 169→175 via un-skipped-test gap-comments; the safety-net
      start-of-iteration ratchet-check caught it a turn late). Corollary:
-     honest gap-notes (which §4 forbids REMOVING) must be phrased to avoid
-     `not yet implemented/ported/integrated` so they don't inflate the metric.
+     honest gap-notes (which §4 forbids REMOVING) and ALL new comments —
+     including in red tests — must be phrased to avoid `not yet
+     implemented/ported/integrated`, the bare word `stub`, and the bare word
+     `minimal` so they don't inflate the metric (ISS-1067 regressed 169→170 via
+     a reproducer red-test comment containing "minimal"; cleared by the
+     orchestrator amending the red commit to reword it — assertions
+     byte-identical, C16 red..fix stays empty — the same metric-hygiene amend
+     §3 allows for fmt drift).
    - grep the diff for `case _: Exception`/`Throwable` swallows, `null`,
      `return`, `orNull`, removed header gap-notes, changed test expectations.
    Any failure → bounce back to the SAME implementer (SendMessage) with the
