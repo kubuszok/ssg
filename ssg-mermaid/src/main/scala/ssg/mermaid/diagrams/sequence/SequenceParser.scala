@@ -21,7 +21,7 @@ package diagrams
 package sequence
 
 import lowlevel.Nullable
-import ssg.mermaid.parse.{ ParseException, Scanner }
+import ssg.mermaid.parse.{ DirectiveParser, ParseException, Scanner }
 
 import scala.collection.mutable
 import scala.util.boundary
@@ -190,13 +190,29 @@ object SequenceParser {
     if (tryParseAccDescr(scanner, db, actions)) break(actions)
     scanner.restore(saved)
 
+    // Actor-metadata statements (sequenceDiagram.jison:248-274). `links` must be tried before
+    // `link` because `link` is a prefix of `links`.
+    if (tryParseLinks(scanner, actions)) break(actions)
+    scanner.restore(saved)
+
+    if (tryParseLink(scanner, actions)) break(actions)
+    scanner.restore(saved)
+
+    if (tryParseProperties(scanner, actions)) break(actions)
+    scanner.restore(saved)
+
+    if (tryParseDetails(scanner, actions)) break(actions)
+    scanner.restore(saved)
+
     // Default: try to parse as a signal (actor -> actor : text)
     if (tryParseSignal(scanner, db, actions)) break(actions)
     scanner.restore(saved)
 
-    // If nothing matched, skip to next line
-    skipToNewline(scanner)
-    actions
+    // If nothing matched, the line matches no jison production. Upstream's generated parser raises a
+    // parse error on such input (ISS-1067); previously SSG silently dropped the line via
+    // skipToNewline. Raise a ParseException with the offending text instead.
+    val offending = scanner.readToEndOfLine().trim
+    throw new ParseException(s"Unrecognized sequence statement: '$offending'", scanner.line, scanner.col)
   }
 
   // --- Keyword parsers ---
@@ -406,6 +422,200 @@ object SequenceParser {
     actions += SeqAction.AddNote(actorIds.toArray, placement, text, wrap)
     skipToNewline(scanner)
     true
+  }
+
+  /** Reads the `actor text2` tail shared by the actor-metadata statements.
+    *
+    * Ports the `<keyword> actor text2` shape from sequenceDiagram.jison:248-274. The lexer's `text2` rule (jison:87,324-325) lexes `":"...` (the `TXT` token) then runs
+    * `parseMessage($1.trim().substring(1))`, i.e. strips the leading `:` and trims. Here we read the actor name, skip the `:`, and return the trimmed remainder of the line as the raw text payload.
+    *
+    * @return
+    *   `Some((actorId, text))` on success, or `None` if no actor/`:` is present
+    */
+  private def readActorAndText2(scanner: Scanner): Option[(String, String)] = boundary {
+    val actorId = readActorName(scanner)
+    if (actorId.isEmpty) break(None)
+    scanner.skipWhitespace()
+
+    // text2 begins with ":" (jison TXT rule, lexer line 87)
+    if (scanner.isEof || scanner.peek() != ':') break(None)
+    scanner.advance() // consume ":"
+    val text = readTextUntilNewline(scanner).trim
+    Some((actorId, text))
+  }
+
+  /** Tries to parse `links actor text2` (sequenceDiagram.jison:248-252).
+    *
+    * Emits `addLinks` (sequenceDb.ts:369-383): the text2 payload is JSON-parsed into a links map and merged into the actor's `links` field via `insertLinks` (sequenceDb.ts:409-417). JSON parsing
+    * reuses [[DirectiveParser.parseSimpleObject]] for the simple `{"k":"v"}` object subset; upstream catches `JSON.parse` failure and continues without throwing, which is mirrored here because
+    * `parseSimpleObject` returns an empty map (no links added) on malformed input.
+    */
+  private def tryParseLinks(
+    scanner: Scanner,
+    actions: mutable.ArrayBuffer[SeqAction]
+  ): Boolean = boundary {
+    if (!scanner.matchStrIgnoreCase("links")) break(false)
+    if (!isWordBoundary(scanner)) break(false)
+    scanner.skipWhitespace()
+
+    readActorAndText2(scanner) match {
+      case Some((actorId, text)) =>
+        // jison:249 — `actor` production registers the participant (addParticipant) before addLinks.
+        actions += SeqAction.AddParticipant(actorId, Nullable.empty, "participant")
+        actions += SeqAction.AddLinks(actorId, parseLinksMap(text))
+        skipToNewline(scanner)
+        true
+      case None => break(false)
+    }
+  }
+
+  /** Tries to parse `link actor text2` (sequenceDiagram.jison:255-259).
+    *
+    * Emits `addALink` (sequenceDb.ts:385-403): a single `label @ url` pair. Upstream finds the `@` separator (`indexOf('@')`), takes `slice(0, sep - 1).trim()` as the label and
+    * `slice(sep + 1).trim()` as the link, then merges via `insertLinks`. Ported faithfully below.
+    */
+  private def tryParseLink(
+    scanner: Scanner,
+    actions: mutable.ArrayBuffer[SeqAction]
+  ): Boolean = boundary {
+    if (!scanner.matchStrIgnoreCase("link")) break(false)
+    if (!isWordBoundary(scanner)) break(false)
+    scanner.skipWhitespace()
+
+    readActorAndText2(scanner) match {
+      case Some((actorId, text)) =>
+        // jison:256 — `actor` production registers the participant (addParticipant) before addALink.
+        actions += SeqAction.AddParticipant(actorId, Nullable.empty, "participant")
+        actions += SeqAction.AddLinks(actorId, parseALinkMap(text))
+        skipToNewline(scanner)
+        true
+      case None => break(false)
+    }
+  }
+
+  /** Tries to parse `properties actor text2` (sequenceDiagram.jison:262-266).
+    *
+    * Emits `addProperties` (sequenceDb.ts:419-431): the text2 payload is JSON-parsed into a properties map and merged into the actor's `properties` field via `insertProperties`
+    * (sequenceDb.ts:437-445). Same `parseSimpleObject` reuse and silent-on-failure behavior as [[tryParseLinks]].
+    */
+  private def tryParseProperties(
+    scanner: Scanner,
+    actions: mutable.ArrayBuffer[SeqAction]
+  ): Boolean = boundary {
+    if (!scanner.matchStrIgnoreCase("properties")) break(false)
+    if (!isWordBoundary(scanner)) break(false)
+    scanner.skipWhitespace()
+
+    readActorAndText2(scanner) match {
+      case Some((actorId, text)) =>
+        // jison:263 — `actor` production registers the participant (addParticipant) before addProperties.
+        actions += SeqAction.AddParticipant(actorId, Nullable.empty, "participant")
+        actions += SeqAction.AddProperties(actorId, parseLinksMap(text))
+        skipToNewline(scanner)
+        true
+      case None => break(false)
+    }
+  }
+
+  /** Tries to parse `details actor text2` (sequenceDiagram.jison:269-273).
+    *
+    * Emits `addDetails` (sequenceDb.ts:451-471). Upstream resolves `text2` as a DOM element id and JSON-parses that element's `innerHTML` into `{ properties, links }`, merging each sub-object into
+    * the actor via `insertProperties`/`insertLinks`. SSG is a headless port with no DOM, so the inline `text2` payload is treated as the details JSON directly (the SSG substitute for the DOM
+    * indirection); its `properties` and `links` sub-objects are parsed and merged, faithful to the merge semantics of sequenceDb.ts:461-467.
+    */
+  private def tryParseDetails(
+    scanner: Scanner,
+    actions: mutable.ArrayBuffer[SeqAction]
+  ): Boolean = boundary {
+    if (!scanner.matchStrIgnoreCase("details")) break(false)
+    if (!isWordBoundary(scanner)) break(false)
+    scanner.skipWhitespace()
+
+    readActorAndText2(scanner) match {
+      case Some((actorId, text)) =>
+        // jison:270 — `actor` production registers the participant (addParticipant) before addDetails.
+        actions += SeqAction.AddParticipant(actorId, Nullable.empty, "participant")
+        val (props, links) = parseDetailsMaps(text)
+        // sequenceDb.ts:461-467 — merge details.properties then details.links into the actor.
+        if (props.nonEmpty) actions += SeqAction.AddProperties(actorId, props)
+        if (links.nonEmpty) actions += SeqAction.AddLinks(actorId, links)
+        skipToNewline(scanner)
+        true
+      case None => break(false)
+    }
+  }
+
+  /** Parses a simple `{"k":"v"}` JSON object into a links/properties map.
+    *
+    * Reuses [[DirectiveParser.parseSimpleObject]] (the existing JSON-object parser used for `%%{init}%%` directives). Mirrors sequenceDb.ts JSON.parse + insertLinks/insertProperties: on malformed
+    * input `parseSimpleObject` yields an empty map, matching upstream's catch-and-continue (sequenceDb.ts:380-382, 428-430) which adds nothing.
+    */
+  private def parseLinksMap(text: String): mutable.LinkedHashMap[String, String] = {
+    val result = mutable.LinkedHashMap.empty[String, String]
+    for ((k, v) <- DirectiveParser.parseSimpleObject(text))
+      result(k) = v
+    result
+  }
+
+  /** Parses a single `label @ url` pair (sequenceDb.ts:388-399).
+    *
+    * Faithful port of `addALink`'s body: find `@` via `indexOf`, label = `slice(0, sep - 1).trim()`, link = `slice(sep + 1).trim()`. When no `@` is present (`indexOf` returns -1) upstream still
+    * builds `{ label: link }` from the slices; here a missing `@` yields an empty map (no link added), matching the catch-and-continue effect for input that is not a valid `label @ url` pair.
+    */
+  private def parseALinkMap(text: String): mutable.LinkedHashMap[String, String] = {
+    val result = mutable.LinkedHashMap.empty[String, String]
+    val sep    = text.indexOf('@')
+    if (sep >= 1) {
+      val label = text.substring(0, sep - 1).trim
+      val link  = text.substring(sep + 1).trim
+      result(label) = link
+    }
+    result
+  }
+
+  /** Parses a `details` payload `{"properties": {...}, "links": {...}}` into (properties, links).
+    *
+    * Faithful to sequenceDb.ts:457-467: JSON-parse the details object, then read its `properties` and `links` sub-objects (`details.properties`, `details.links`). Because the existing
+    * [[DirectiveParser.parseSimpleObject]] handles only a single level of `{"k":"v"}` and does not descend into nested objects, the `properties` and `links` sub-objects are first extracted as
+    * brace-balanced substrings, then each is parsed via `parseSimpleObject`.
+    */
+  private def parseDetailsMaps(
+    text: String
+  ): (mutable.LinkedHashMap[String, String], mutable.LinkedHashMap[String, String]) = {
+    val props = extractBraceObject(text, "properties").map(parseLinksMap).getOrElse(mutable.LinkedHashMap.empty)
+    val links = extractBraceObject(text, "links").map(parseLinksMap).getOrElse(mutable.LinkedHashMap.empty)
+    (props, links)
+  }
+
+  /** Extracts the brace-balanced `{...}` value of `"key": {...}` from a JSON-like object string.
+    *
+    * Supports the single level of nesting that the `details` payload uses (an outer object whose `properties`/`links` values are themselves objects). Returns the inner object substring including its
+    * braces, or `None` if the key or a balanced object is not present.
+    */
+  private def extractBraceObject(text: String, key: String): Option[String] = boundary {
+    // Locate the quoted key, then the ':' and the opening '{'.
+    val keyToken = "\"" + key + "\""
+    val keyIdx   = text.indexOf(keyToken)
+    if (keyIdx < 0) break(None)
+
+    var i = keyIdx + keyToken.length
+    while (i < text.length && text.charAt(i) != '{' && text.charAt(i) != ',' && text.charAt(i) != '}')
+      i += 1
+    if (i >= text.length || text.charAt(i) != '{') break(None)
+
+    // Scan forward tracking brace depth to find the matching close brace.
+    val start = i
+    var depth = 0
+    while (i < text.length) {
+      val c = text.charAt(i)
+      if (c == '{') depth += 1
+      else if (c == '}') {
+        depth -= 1
+        if (depth == 0) break(Some(text.substring(start, i + 1)))
+      }
+      i += 1
+    }
+    None
   }
 
   /** Tries to parse `loop TEXT` ... `end`. */
