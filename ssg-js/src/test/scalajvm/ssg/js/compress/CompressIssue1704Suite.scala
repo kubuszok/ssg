@@ -95,17 +95,21 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // =========================================================================
   // mangle_catch_toplevel
   // =========================================================================
-  test("mangle_catch_toplevel".fail) {
+  // upstream terser/test/compress/issue-1704.js:107 expect_exact — `catch(c)`,
+  // corrected from the previous `catch(t)` which contradicted that line.
+  test("mangle_catch_toplevel") {
     val result = minifyWithMangleAndCompress(catchInput, toplevel = true)
-    assertEquals(result, "var o=\"FAIL\";try{throw 1}catch(t){o=\"PASS\"}console.log(o);")
+    assertEquals(result, "var o=\"FAIL\";try{throw 1}catch(c){o=\"PASS\"}console.log(o);")
   }
 
   // =========================================================================
   // mangle_catch_ie8_toplevel
   // =========================================================================
-  test("mangle_catch_ie8_toplevel".fail) {
+  // upstream terser/test/compress/issue-1704.js:129 expect_exact — `catch(c)`,
+  // corrected from the previous `catch(args)` which contradicted that line.
+  test("mangle_catch_ie8_toplevel") {
     val result = minifyWithMangleAndCompress(catchInput, ie8 = true, toplevel = true)
-    assertEquals(result, "var o=\"FAIL\";try{throw 1}catch(args){o=\"PASS\"}console.log(o);")
+    assertEquals(result, "var o=\"FAIL\";try{throw 1}catch(c){o=\"PASS\"}console.log(o);")
   }
 
   // =========================================================================
