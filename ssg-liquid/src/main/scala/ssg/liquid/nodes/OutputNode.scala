@@ -12,7 +12,7 @@
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/nodes/OutputNode.java
- * Covenant-verified: 2026-04-26
+ * Covenant-verified: 2026-06-14
  *
  * upstream-commit: 1f0c47e87053f937fde5448cab0963f3379ce4a3
  */
@@ -46,13 +46,27 @@ class OutputNode(
       i += 1
     }
 
-    if (context != null && context.parser.errorMode == TemplateParser.ErrorMode.WARN) {
+    // LiquidParser.g4:229-233: the output rule has three alternatives gated by
+    // errorMode predicates. Under STRICT (g4:231 `{isStrict()}? outStart term filter* OutEnd`)
+    // there is NO `unparsed` alternative, so any trailing content fails the rule, the ANTLR
+    // listener fires and Template.java:91-98 throws unconditionally. Under WARN/LAX
+    // (g4:232 `{isWarn() || isLax()}? outStart term filter* unparsed=not_out_end? OutEnd`)
+    // the trailing content is captured as `unparsed`: WARN records an "unexpected output"
+    // error (GtNodeTest:113) and still renders; LAX renders silently.
+    if (context != null) {
       val localUnparsed = unparsed
       if (!LValue.isBlank(localUnparsed)) {
         val truncated = if (localUnparsed.length() > 30) localUnparsed.substring(0, 30) + "..." else localUnparsed
         if (unparsedLine < 0) unparsedLine = -1
         if (unparsedPosition < 0) unparsedPosition = -1
-        context.addError(new LiquidException("unexpected output: " + truncated, unparsedLine, unparsedPosition, null))
+        context.parser.errorMode match {
+          case TemplateParser.ErrorMode.STRICT =>
+            throw new LiquidException("unexpected output: " + truncated, unparsedLine, unparsedPosition, null)
+          case TemplateParser.ErrorMode.WARN =>
+            context.addError(new LiquidException("unexpected output: " + truncated, unparsedLine, unparsedPosition, null))
+          case TemplateParser.ErrorMode.LAX =>
+            ()
+        }
       }
     }
 
