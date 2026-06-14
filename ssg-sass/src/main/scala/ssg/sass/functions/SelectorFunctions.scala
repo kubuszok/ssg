@@ -16,13 +16,29 @@
  *               and `unify` under their `selector-*` prefixed legacy
  *               names via `withName`; `is-superselector` and
  *               `simple-selectors` stay unprefixed in both places.
+ *   Idiom: the former SSG-internal `runExtendPipeline` helper (a hand-rolled
+ *               `MutableExtensionStore` loop shared by `extendFn`/`replaceFn`)
+ *               was retired when its logic was relocated into
+ *               `ExtensionStore._extendOrReplace` — a faithful 1:1 port of
+ *               dart-sass `extension_store.dart` `_extendOrReplace`
+ *               (lines 100-126) which also corrected a divergence (the old
+ *               helper used `optional = false` + a `length != 1` guard; the
+ *               dart-faithful path uses `singleCompound` + `optional = true`).
+ *               `extendFn`/`replaceFn` now call `ExtensionStore.extend`/
+ *               `replace` directly, matching dart-sass `_extend`
+ *               (selector.dart:98-114) / `_replace` (selector.dart:116-128)
+ *               which invoke `ExtensionStore` directly with NO shared helper.
+ *               `runExtendPipeline` has no dart-sass equivalent; its removal
+ *               (relocation) preserves all extend/replace logic and improves
+ *               fidelity. Dropped from Covenant-baseline-methods below per
+ *               ISS-1008 (justified removal; relocation in commit 33170252).
  *
  * Covenant: full-port
  * Covenant-baseline-spec-pass: 415
  * Covenant-baseline-loc: 340
- * Covenant-baseline-methods: nestFn,appendFn,extendFn,replaceFn,unifyFn,isSuperselectorFn,simpleSelectorsFn,parseFn,asSelectorText,asSelectorList,assertCompoundSelectorArg,prependParent,runExtendPipeline,global,module,SelectorFunctions
+ * Covenant-baseline-methods: nestFn,appendFn,extendFn,replaceFn,unifyFn,isSuperselectorFn,simpleSelectorsFn,parseFn,asSelectorText,asSelectorList,assertCompoundSelectorArg,prependParent,global,module,SelectorFunctions
  * Covenant-dart-reference: lib/src/functions/selector.dart
- * Covenant-verified: 2026-04-08
+ * Covenant-verified: 2026-06-14
  *
  * T006 — Phase 4 task. Faithful port of selector.dart covering:
  *   - nest: descendant-combinator nesting via SelectorList.nestWithin
