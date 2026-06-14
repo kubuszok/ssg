@@ -192,9 +192,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 6. testInvalidCustomBlock — InvalidTagId
   // ---------------------------------------------------------------------------
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for unknown tags;
-  // it silently ignores them. The original ANTLR parser would mark them as InvalidTagId.
-  test("InvalidCustomBlock: unregistered tag in block context — SSG LAX mode ignores".fail) {
+  // An unregistered tag is classified InvalidTagId (LiquidLexer.g4:247-280) and reported as
+  // "Invalid Tag" (LiquidParser.g4:106-107). The default parser is not LAX, so it raises.
+  test("InvalidCustomBlock: unregistered tag in block context raises error") {
     val parser = parserWithCustomBlock("one")
     // {%other%} is not registered, and {%endother%} is also invalid
     intercept[LiquidException] {
@@ -206,8 +206,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 7. testInvalidCustomBlockEnd — invalid end tag when another block exists
   // ---------------------------------------------------------------------------
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for unknown tags.
-  test("InvalidCustomBlockEnd: wrong end tag for existing block — SSG LAX mode ignores".fail) {
+  // {%other%} is an unregistered tag (Invalid Tag, LiquidParser.g4:106-107); the default
+  // parser is not LAX, so it raises before reaching {%endone%}.
+  test("InvalidCustomBlockEnd: wrong end tag for existing block raises error") {
     val parser = parserWithCustomBlock("one")
     // {%other%} is not registered; {%endone%} is valid end for "one" but has no matching start
     intercept[LiquidException] {
@@ -219,8 +220,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 8. testMismatchedEndCustomTag — MisMatchedEndBlockId
   // ---------------------------------------------------------------------------
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for mismatched end tags.
-  test("MismatchedEndCustomTag: end tag doesn't match start tag — SSG LAX mode ignores".fail) {
+  // A mismatched end tag is classified MisMatchedEndBlockId (LiquidLexer.g4:265) and reported as
+  // "Mismatched End Tag" (LiquidParser.g4:99-100). The default parser is not LAX, so it raises.
+  test("MismatchedEndCustomTag: end tag doesn't match start tag raises error") {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("one") {
@@ -249,8 +251,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 9. testInvalidEndTag — empty tag {%%} or {%}}
   // ---------------------------------------------------------------------------
 
-  // NOTE: SSG parser in LAX mode (default) treats empty tags as no-ops.
-  test("InvalidEndTag: empty tag block raises error — SSG LAX mode is lenient".fail) {
+  // An empty tag is classified InvalidEndTag (LiquidLexer.g4:196-206) and reported as
+  // "Invalid Empty Tag" (LiquidParser.g4:109). The default parser is not LAX, so it raises.
+  test("InvalidEndTag: empty tag block raises error") {
     intercept[LiquidException] {
       Template.parse("{%%}").render()
     }
@@ -1054,9 +1057,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 66. testInvalidEndBlockId — unregistered end block
   // ---------------------------------------------------------------------------
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for unknown end tags;
-  // it silently ignores them.
-  test("InvalidEndBlockId: endfoo with no registered tags — SSG LAX mode ignores".fail) {
+  // {%endfoo%} with no open block is classified InvalidEndBlockId (LiquidLexer.g4:271-273) and
+  // reported as "Invalid End Tag" (LiquidParser.g4:102-103). The default parser is not LAX, so it raises.
+  test("InvalidEndBlockId: endfoo with no registered tags raises error") {
     // With no registered custom tags, {%endfoo%} should raise an error
     intercept[LiquidException] {
       Template.parse("{%endfoo%}").render()

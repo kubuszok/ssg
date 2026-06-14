@@ -44,9 +44,53 @@ final class LiquidParser(
 ) {
   private var pos: Int = 0
 
+  /** Custom block names that are currently "open" (a {% blockid %} whose end tag remains to be consumed). Mirrors liqp's lexer `customBlockState` stack (LiquidLexer.g4:258-259), used to classify end
+    * tags as a valid EndBlockId vs a MisMatchedEndBlockId vs an InvalidEndBlockId (LiquidLexer.g4:256-279). The SSG lexer is stateless w.r.t. block nesting, so the classification needed by
+    * `error_other_tag` (LiquidParser.g4:98-110) is reconstructed here in the parser, which has the structural context.
+    */
+  private val openBlocks: ArrayList[String] = new ArrayList[String]()
+
+  /** Parse-time errors recorded while parsing. Mirrors liqp's parser error listener (Template.java:91-98) which routes `reportTokenError` (LiquidParser.g4:43-49) notifications.
+    */
+  private val parseErrors: ArrayList[LiquidException] = new ArrayList[LiquidException]()
+
+  /** Reports a token error matching liqp's `reportTokenError(String, Token)` (LiquidParser.g4:43-45). In liqp this calls `notifyErrorListeners`, and the registered parser error listener
+    * (Template.java:91-98) is installed unconditionally and throws a LiquidException for every notification regardless of errorMode — so an invalid/unknown/mismatched/missing/empty tag always raises.
+    * The errorMode flags (`isStrict()`/`isWarn()`/`isLax()`, LiquidLexer.g4:25-33) gate ONLY the output-tag/expression rule (LiquidLexer.g4:231-232), never invalid-TAG structure. We therefore throw
+    * unconditionally here, faithful to liqp's always-throwing parser listener.
+    */
+  private def reportTokenError(message: String, token: Token): Nothing = {
+    val ex = new LiquidException(s"$message: '${token.value}'", token.line, token.col)
+    parseErrors.add(ex)
+    throw ex
+  }
+
+  /** Reports a token error without an offending token, matching liqp's `reportTokenError(String)` (LiquidParser.g4:47-49). Throws unconditionally in all error modes, matching liqp's always-throwing
+    * parser error listener (Template.java:91-98); errorMode never gates invalid-tag structure (LiquidParser.g4:98-110 `error_other_tag` has no errorMode predicate).
+    */
+  private def reportTokenError(message: String): Nothing = {
+    val t  = peek()
+    val ex = new LiquidException(message, t.line, t.col)
+    parseErrors.add(ex)
+    throw ex
+  }
+
   /** Parses the token stream and returns the root BlockNode. */
   def parse(): BlockNode = {
     val root = parseBlock()
+    // A trailing end-block tag at the top level has no matching start block:
+    // liqp's lexer classifies it InvalidEndBlockId with an empty customBlockState
+    // (LiquidLexer.g4:271-273), reported as "Invalid End Tag"
+    // (LiquidParser.g4:102-103).
+    if (!isAtEnd && check(TokenType.TAG_START) && peekAfterTagStart() == TokenType.END_BLOCK_ID && openBlocks.isEmpty) {
+      consume(TokenType.TAG_START)
+      val endToken = peek()
+      // A stray top-level end-block tag is InvalidEndBlockId with an empty
+      // customBlockState (LiquidLexer.g4:271-273); error_other_tag reports it as
+      // "Invalid End Tag" (LiquidParser.g4:102-103) and the parser listener throws
+      // unconditionally (Template.java:91-98).
+      reportTokenError("Invalid End Tag", endToken)
+    }
     expect(TokenType.EOF)
     root
   }
@@ -215,9 +259,17 @@ final class LiquidParser(
       case TokenType.BLOCK_ID         => parseCustomBlockTag()
       case TokenType.SIMPLE_TAG_ID    => parseSimpleTag()
       case TokenType.TAG_END          =>
-        // Empty tag: {% %}
+        // Valid empty tag: {% %} reached via an inline comment {% # ... %}, whose
+        // comment pops the lexer's IN_TAG_ID mode so the close is a real TagEnd.
+        // This is the valid empty_tag rule (LiquidParser.g4:117-119): a no-op.
         advance() // consume TAG_END
-        null
+        new AtomNode(DataView.from(""))
+      case TokenType.INVALID_END_TAG =>
+        // A tag with no id and no inline comment: {%%}, {% %}, {%}} . liqp's lexer
+        // emits InvalidEndTag (LiquidLexer.g4:196-206) and error_other_tag
+        // (LiquidParser.g4:109) reports it as "Invalid Empty Tag" — the parser
+        // listener throws unconditionally in all error modes (Template.java:91-98).
+        reportTokenError("Invalid Empty Tag")
       case _ =>
         // Check for increment/decrement (tag name is an ID)
         val tagName = tagToken.value
@@ -674,13 +726,48 @@ final class LiquidParser(
     }
     consume(TokenType.TAG_END)
 
+    // Track the open block so end-tag classification can mirror liqp's lexer
+    // customBlockState stack (LiquidLexer.g4:251, 258-262).
+    openBlocks.add(tagName)
     val block = parseBlock()
     params.add(block)
 
-    // Consume end tag
-    if (check(TokenType.TAG_START)) consume(TokenType.TAG_START)
-    if (check(TokenType.END_BLOCK_ID)) advance()
-    consume(TokenType.TAG_END)
+    // Consume end tag. parseBlock stops at the first end-like tag; here we
+    // classify it the way liqp's lexer would (LiquidLexer.g4:256-279) and apply
+    // the matching error_other_tag case (LiquidParser.g4:99-105).
+    if (check(TokenType.TAG_START)) {
+      consume(TokenType.TAG_START)
+      val endToken = peek()
+      val endName  = endToken.value
+      if (endToken.tokenType == TokenType.END_BLOCK_ID) {
+        val suffix = if (endName.length > 3 && endName.startsWith("end")) endName.substring(3) else endName
+        if (suffix == tagName) {
+          // EndBlockId matching the open block (LiquidLexer.g4:261-263).
+          removeLastOpenBlock()
+          advance() // consume END_BLOCK_ID
+          consume(TokenType.TAG_END)
+        } else {
+          // A registered end block that does not match the open block:
+          // MisMatchedEndBlockId → "Mismatched End Tag" (LiquidParser.g4:99-100).
+          // The parser listener throws unconditionally (Template.java:91-98).
+          reportTokenError("Mismatched End Tag", endToken)
+        }
+      } else if (endName.startsWith("end")) {
+        // An `end...` identifier that is not a registered end block:
+        // InvalidEndBlockId → "Invalid End Tag" (LiquidParser.g4:102-103).
+        // The parser listener throws unconditionally (Template.java:91-98).
+        reportTokenError("Invalid End Tag", endToken)
+      } else {
+        // No end tag at all for this block: the block body ran into some other
+        // construct. Missing End Tag (LiquidParser.g4:105). Throws unconditionally
+        // (Template.java:91-98).
+        reportTokenError("Missing End Tag")
+      }
+    } else {
+      // EOF reached without an end tag → Missing End Tag (LiquidParser.g4:105).
+      // Throws unconditionally (Template.java:91-98).
+      reportTokenError("Missing End Tag")
+    }
 
     if (insertion != null) {
       new InsertionNode(insertion, params)
@@ -688,6 +775,11 @@ final class LiquidParser(
       block // fallback: just render the block content
     }
   }
+
+  /** Removes the most recently opened block from the stack, if any. Mirrors liqp's `customBlockState.pop()` (LiquidLexer.g4:262).
+    */
+  private def removeLastOpenBlock(): Unit =
+    if (!openBlocks.isEmpty) openBlocks.remove(openBlocks.size() - 1)
 
   /** simple tag: {% simpletag params %} */
   private def parseSimpleTag(): LNode = {
@@ -723,23 +815,45 @@ final class LiquidParser(
     }
   }
 
-  /** Generic tag handler for unknown tags. */
+  /** Generic tag handler for unknown tags.
+    *
+    * The SSG lexer collapses liqp's InvalidTagId / InvalidEndBlockId classification (LiquidLexer.g4:247-280) into a plain `ID` token, so the distinction is reconstructed here using the same rules and
+    * reported via the matching error_other_tag case (LiquidParser.g4:102-107).
+    */
   private def parseGenericTag(): LNode = {
-    val tagName = peek().value
-    advance() // consume tag name ID
+    val tagToken  = peek()
+    val tagName   = tagToken.value
     val insertion = insertions.get(tagName)
 
-    val params = new ArrayList[LNode]()
-    while (!check(TokenType.TAG_END) && !isAtEnd) {
-      params.add(parseExpr())
-      if (check(TokenType.COMMA)) advance()
-    }
-    consume(TokenType.TAG_END)
-
-    if (insertion != null) {
-      new InsertionNode(insertion, params)
+    // An unregistered `end...` identifier is an end-tag error, not an invalid
+    // (start) tag. liqp's lexer would emit InvalidEndBlockId for it
+    // (LiquidLexer.g4:256-273), reported as "Invalid End Tag"
+    // (LiquidParser.g4:102-103). Whether or not a block is open, an `end...`
+    // that does not close the current block is invalid here: if it closed the
+    // open block it would have been an END_BLOCK_ID handled in the block parser.
+    if (insertion == null && tagName.length > 3 && tagName.startsWith("end")) {
+      // The parser listener throws unconditionally in all error modes
+      // (Template.java:91-98); error_other_tag has no errorMode predicate
+      // (LiquidParser.g4:98-110).
+      reportTokenError("Invalid End Tag", tagToken)
     } else {
-      new AtomNode(DataView.from("")) // unknown tag
+      advance() // consume tag name ID
+
+      val params = new ArrayList[LNode]()
+      while (!check(TokenType.TAG_END) && !isAtEnd) {
+        params.add(parseExpr())
+        if (check(TokenType.COMMA)) advance()
+      }
+      consume(TokenType.TAG_END)
+
+      if (insertion != null) {
+        new InsertionNode(insertion, params)
+      } else {
+        // Unregistered start tag → Invalid Tag (LiquidParser.g4:106-107). The
+        // parser listener throws unconditionally in all error modes
+        // (Template.java:91-98); error_other_tag has no errorMode predicate.
+        reportTokenError("Invalid Tag", tagToken)
+      }
     }
   }
 

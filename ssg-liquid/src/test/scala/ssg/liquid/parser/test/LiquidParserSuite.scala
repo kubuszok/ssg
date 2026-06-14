@@ -137,8 +137,9 @@ final class LiquidParserSuite extends munit.FunSuite {
     }
   }
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for mismatched end tags.
-  test("custom_tag: mismatched end tag — SSG LAX mode ignores".fail) {
+  // A mismatched end tag is reported per errorMode (LiquidParser.g4:99-100, "Mismatched End Tag").
+  // The default parser is not LAX, so it raises a LiquidException.
+  test("custom_tag: mismatched end tag raises error") {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("mu") {
@@ -163,8 +164,9 @@ final class LiquidParserSuite extends munit.FunSuite {
     }
   }
 
-  // NOTE: SSG parser in LAX mode (default) does not raise errors for unknown tags.
-  test("custom_tag: invalid/unknown tag — SSG LAX mode ignores".fail) {
+  // An unknown/invalid tag is reported per errorMode (LiquidParser.g4:106-107, "Invalid Tag").
+  // The default parser is not LAX, so it raises a LiquidException.
+  test("custom_tag: invalid/unknown tag raises error") {
     val parser = parserWithBlocks("mu")
     // {% bad %} . {% endbad %} — 'bad' is not registered
     intercept[LiquidException] {
@@ -172,8 +174,9 @@ final class LiquidParserSuite extends munit.FunSuite {
     }
   }
 
-  // NOTE: SSG parser in LAX mode (default) treats empty tags as no-ops.
-  test("custom_tag: empty tag block — SSG LAX mode ignores".fail) {
+  // An empty tag is reported per errorMode (LiquidParser.g4:109, "Invalid Empty Tag").
+  // The default parser is not LAX, so it raises a LiquidException.
+  test("custom_tag: empty tag block raises error") {
     // {% %} — empty tag is an error
     intercept[LiquidException] {
       Template.parse("{% %}").render()

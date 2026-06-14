@@ -165,7 +165,12 @@ final class LiquidLexer(
       // Read the tag identifier
       val tagId = scanTagIdentifier()
 
-      if (tagId == "raw") {
+      if (tagId == "") {
+        // No tag id and no inline comment after {% : the close delimiter is an
+        // InvalidEndTag in liqp (LiquidLexer.g4:196-206), e.g. {%%}, {% %}, {%}} .
+        // Distinct from a valid empty_tag {% # comment %} which pops IN_TAG_ID.
+        scanInvalidEndTag()
+      } else if (tagId == "raw") {
         // Consume the tag end for raw
         skipWhitespace()
         scanTagEnd()
@@ -175,6 +180,28 @@ final class LiquidLexer(
         // Continue scanning tag contents
         scanInsideTag(isOutput = false)
       }
+    }
+  }
+
+  /** Emits an INVALID_END_TAG token for the close delimiter of a tag that has no tag id (LiquidLexer.g4:196-206). Handles %}, -%}, }} and -}} forms.
+    */
+  private def scanInvalidEndTag(): Unit = {
+    skipWhitespace()
+    if (pos + 2 < input.length() && input.charAt(pos) == '-' && input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}') {
+      emitToken(TokenType.INVALID_END_TAG, "-%}", 3)
+      handlePostTagStripping()
+    } else if (pos + 1 < input.length() && input.charAt(pos) == '%' && input.charAt(pos + 1) == '}') {
+      emitToken(TokenType.INVALID_END_TAG, "%}", 2)
+      handlePostTagStripping()
+    } else if (pos + 2 < input.length() && input.charAt(pos) == '-' && input.charAt(pos + 1) == '}' && input.charAt(pos + 2) == '}') {
+      emitToken(TokenType.INVALID_END_TAG, "-}}", 3)
+      handlePostTagStripping()
+    } else if (pos + 1 < input.length() && input.charAt(pos) == '}' && input.charAt(pos + 1) == '}') {
+      emitToken(TokenType.INVALID_END_TAG, "}}", 2)
+      handlePostTagStripping()
+    } else {
+      // Fall back to normal in-tag scanning if no close delimiter is present.
+      scanInsideTag(isOutput = false)
     }
   }
 

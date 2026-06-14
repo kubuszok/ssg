@@ -9,8 +9,10 @@ import java.util.Locale
 /** Gap-fill tests ported from liqp's TemplateTest.java — 5 missing tests. */
 final class TemplateExtraSuite extends munit.FunSuite {
 
-  // SSG: parser handles unknown tags differently — may not throw at parse time
-  test("template: custom tag missing error reporting".fail) {
+  // An unregistered tag is reported as "Invalid Tag" per errorMode
+  // (LiquidParser.g4:106-107); the default parser is not LAX, so parsing throws
+  // a LiquidException naming the offending tag.
+  test("template: custom tag missing error reporting") {
     try {
       Template.parse("{% custom_tag %}")
       fail("Expected parsing error for unknown tag")

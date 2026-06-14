@@ -20,6 +20,12 @@ enum TokenType {
   case OUT_END // }} (output end)
   case TAG_START // {% (tag start)
   case TAG_END // %} (tag end)
+  // A tag that started ({%) but immediately closed with no tag id and no inline
+  // comment, e.g. {%%}, {% %}, or {%}} . Mirrors liqp's InvalidEndTag lexer token
+  // (LiquidLexer.g4:196-206), reported by the parser as "Invalid Empty Tag"
+  // (LiquidParser.g4:109). Distinct from TAG_END so the valid empty_tag form
+  // {% # comment %} (LiquidParser.g4:117-119) is not flagged.
+  case INVALID_END_TAG
   case EOF // End of input
 
   // Literals
