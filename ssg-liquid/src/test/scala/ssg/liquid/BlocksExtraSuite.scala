@@ -987,9 +987,14 @@ final class BlocksExtraSuite extends munit.FunSuite {
     }
   }
 
-  // NOTE: SSG parser does not raise on unknown tags inside case blocks —
-  // it treats them as custom tags. The original liqp ANTLR grammar rejected them.
-  test("case: detects bad syntax — unknown tag".fail) {
+  // liqp's case_tag (LiquidParser.g4:149-150) is
+  //   `TagStart CaseStart expr TagEnd other? when_tag+ else_tag? TagStart CaseEnd TagEnd`
+  // where `other : Other+` (g4:368-369) is plain text only. An unknown tag `{% huh %}`
+  // matches neither `other` nor `when_tag` (which requires `When`), so the required
+  // `TagStart CaseEnd TagEnd` cannot be reached: ANTLR errors and Template.java:91-98 throws
+  // in all error modes. With expect(ENDCASE) now throwing unconditionally (ISS-1018), SSG
+  // matches that, so this test now passes unpinned.
+  test("case: detects bad syntax — unknown tag") {
     intercept[LiquidException] {
       TemplateParser.DEFAULT.parse("{% case false %}{% huh %}true{% endcase %}")
     }

@@ -40,7 +40,12 @@ final class LiquidParser(
   private val filtersRegistry:     filters.Filters,
   private val liquidStyleInclude:  Boolean,
   private val evaluateInOutputTag: Boolean,
-  private val errorMode:           TemplateParser.ErrorMode
+  // liqp's LiquidParser holds errorMode for its grammar predicates (LiquidParser.g4:25-33).
+  // In this port the output-tag errorMode dispatch lives in OutputNode.render (which reads
+  // context.parser.errorMode) and the built-in block-ends throw unconditionally via expect,
+  // so the parser no longer consults this field directly; it is retained to mirror liqp's
+  // constructor surface.
+  errorMode: TemplateParser.ErrorMode
 ) {
   private var pos: Int = 0
 
@@ -1052,16 +1057,20 @@ final class LiquidParser(
     advance()
   }
 
+  // Built-in block-end tokens (IfEnd/UnlessEnd/CaseEnd/ForEnd/TablerowEnd/CaptureEnd,
+  // LiquidParser.g4:134 etc.) and top-level EOF appear in grammar rules that carry NO
+  // errorMode predicate, so the end token is REQUIRED in all modes. A missing/mismatched
+  // end produces an ANTLR error and the parser listener (Template.java:91-98) throws
+  // unconditionally — regardless of STRICT/WARN/LAX. Mirror that here by throwing in all
+  // modes (matching reportTokenError's unconditional throw).
   private def expect(expected: TokenType): Unit =
     if (peek().tokenType != expected) {
       val t = peek()
-      if (errorMode == TemplateParser.ErrorMode.STRICT) {
-        throw new LiquidException(
-          s"Expected $expected but got ${t.tokenType} ('${t.value}')",
-          t.line,
-          t.col
-        )
-      }
+      throw new LiquidException(
+        s"Expected $expected but got ${t.tokenType} ('${t.value}')",
+        t.line,
+        t.col
+      )
     }
 
   /** Consumes an identifier token (ID or keyword used as identifier). */
