@@ -33,6 +33,12 @@ import scala.util.boundary.break
 
 object CssMinifier {
 
+  /** Enhanced CSS compression entry — mirrors cssminify2 CSSminify2Enhanced::Compressor#compress (enhanced.rb:73). The base `minify` is run first (the gem's CssCompressor.compress equivalent), then
+    * the opt-in enhanced passes are layered on top. See CssEnhancedCompressor.
+    */
+  def compressEnhanced(input: String, config: CssEnhancedConfig): String =
+    new CssEnhancedCompressor(config).compress(input)
+
   /** Minify CSS content by removing comments, collapsing whitespace, and optimizing values. */
   def minify(input: String, options: CssMinifyOptions = CssMinifyOptions.Defaults): String =
     if (input.isEmpty) {
