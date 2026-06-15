@@ -1723,7 +1723,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2916_2
   // =========================================================================
-  test("issue_2916_2".fail) {
+  test("issue_2916_2") {
     assertCompresses(
       input = """var c = "FAIL";
         (function(b) {

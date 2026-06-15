@@ -367,7 +367,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2101
   // =========================================================================
-  test("issue_2101".fail) {
+  test("issue_2101") {
     assertCompresses(
       input = """a = {};
         console.log(function() {
@@ -416,7 +416,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2107
   // =========================================================================
-  test("issue_2107".fail) {
+  test("issue_2107") {
     assertCompresses(
       input = """var c = 0;
         !function() {
@@ -445,7 +445,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2114_1
   // =========================================================================
-  test("issue_2114_1".fail) {
+  test("issue_2114_1") {
     assertCompresses(
       input = """var c = 0;
         !function(a) {
@@ -1022,7 +1022,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_call_1
   // =========================================================================
-  test("unsafe_call_1".fail) {
+  test("unsafe_call_1") {
     assertCompresses(
       input = """(function(a, b) {
             console.log(a, b);
@@ -1319,7 +1319,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2630_1
   // =========================================================================
-  test("issue_2630_1".fail) {
+  test("issue_2630_1") {
     assertCompresses(
       input = """var c = 0;
         (function() {
@@ -1458,7 +1458,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2630_5
   // =========================================================================
-  test("issue_2630_5".fail) {
+  test("issue_2630_5") {
     assertCompresses(
       input = """var c = 1;
         !function() {
@@ -1494,7 +1494,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2647_2
   // =========================================================================
-  test("issue_2647_2".fail) {
+  test("issue_2647_2") {
     assertCompresses(
       input = """(function() {
             function foo(x) {
@@ -1515,7 +1515,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2647_3
   // =========================================================================
-  test("issue_2647_3".fail) {
+  test("issue_2647_3") {
     assertCompresses(
       input = """(function() {
             function foo(x) {
@@ -1653,7 +1653,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2663_2
   // =========================================================================
-  test("issue_2663_2".fail) {
+  test("issue_2663_2") {
     assertCompresses(
       input = """(function() {
             var i;
@@ -1847,7 +1847,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_1
   // =========================================================================
-  test("inline_1".fail) {
+  test("inline_1") {
     assertCompresses(
       input = """(function() {
             console.log(1);
@@ -1878,7 +1878,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_2
   // =========================================================================
-  test("inline_2".fail) {
+  test("inline_2") {
     assertCompresses(
       input = """(function() {
             console.log(1);
@@ -1908,7 +1908,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_3
   // =========================================================================
-  test("inline_3".fail) {
+  test("inline_3") {
     assertCompresses(
       input = """(function() {
             console.log(1);
@@ -1936,7 +1936,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // inline_true
   // =========================================================================
-  test("inline_true".fail) {
+  test("inline_true") {
     assertCompresses(
       input = """(function() {
             console.log(1);
@@ -2025,7 +2025,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // duplicate_arg_var
   // =========================================================================
-  test("duplicate_arg_var".fail) {
+  test("duplicate_arg_var") {
     assertCompresses(
       input = """console.log(function(b) {
             return b + "ING";
@@ -2265,7 +2265,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3018
   // =========================================================================
-  test("issue_3018".fail) {
+  test("issue_3018") {
     assertCompresses(
       input = """var b = 1, c = "PASS";
         do {

@@ -2103,7 +2103,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2768
   // =========================================================================
-  test("issue_2768".fail) {
+  test("issue_2768") {
     assertCompresses(
       input = """var a = "FAIL", c = 1;
         var c = function(b) {
