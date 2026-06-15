@@ -280,7 +280,7 @@ final class CompressInlineSuite extends munit.FunSuite {
   // =========================================================================
   // inline_annotation
   // =========================================================================
-  test("inline_annotation".fail) {
+  test("inline_annotation") {
     assertCompresses(
       input = """function inline() {
             return external();

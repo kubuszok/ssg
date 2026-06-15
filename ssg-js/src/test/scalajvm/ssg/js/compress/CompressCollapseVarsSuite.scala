@@ -4138,7 +4138,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_8
   // =========================================================================
-  test("issue_2436_8".fail) {
+  test("issue_2436_8") {
     assertCompresses(
       input = """console.log(function(c) {
             return {
@@ -4165,7 +4165,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_9
   // =========================================================================
-  test("issue_2436_9".fail) {
+  test("issue_2436_9") {
     assertCompresses(
       input = """var o = console;
         console.log(function(c) {
@@ -4194,7 +4194,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_10
   // =========================================================================
-  test("issue_2436_10".fail) {
+  test("issue_2436_10") {
     assertCompresses(
       input = """var o = {
             a: 1,

@@ -93,20 +93,31 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     * that live stack and return its immediate parent, exactly as `inComputedKey` walks the active stack (Compressor.scala:95-117). Falls back to the compressor's own `parent()` when no active walker
     * is present (e.g. unit calls outside a pass), preserving the previous behavior. Shared by `Inline` (inline.js:381) and `optimizeTemplateString` (index.js:3910-3913).
     */
-  def liveParent(self: AstNode): AstNode | Null =
+  def liveParent(self: AstNode): AstNode | Null = liveParent(self, 0)
+
+  /** The live ancestor of `self` `n` levels up — terser's `compressor.parent(n)`.
+    *
+    * Terser's Compressor *is* the TreeWalker driving the transform, so `compressor.parent(n)` reads the live ancestry with the node being optimized at the top of the stack. This port runs the
+    * transform on a separate `TreeTransformer`, leaving the Compressor's own stack empty during a pass; the live ancestry is exposed via `activeWalker` (set at the pass loop). We locate `self` (the
+    * node currently being optimized) in that live stack at index `i` and return the node `n` levels above it — `stack(i - 1 - n)` — exactly mirroring terser's `parent(n)` (= `stack[top-1-n]` when
+    * `self` is `stack[top]`). `n == 0` is the immediate parent. Falls back to the compressor's own `parent(n)` when no active walker is present (e.g. unit calls outside a pass), preserving the
+    * previous behavior. Shared by `Inline` (inline.js:381, 407-440, 427, is_within_loop) and `optimizeTemplateString` (index.js:3910-3913).
+    */
+  def liveParent(self: AstNode, n: Int): AstNode | Null =
     activeWalker match {
       case w: TreeWalker if w.stack.nonEmpty =>
         boundary[AstNode | Null] {
           var i = w.stack.size - 1
           while (i >= 0) {
             if (w.stack(i).asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) {
-              break(if (i - 1 >= 0) w.stack(i - 1) else null)
+              val idx = i - 1 - n
+              break(if (idx >= 0) w.stack(idx) else null)
             }
             i -= 1
           }
-          parent()
+          parent(n)
         }
-      case _ => parent()
+      case _ => parent(n)
     }
 
   /** Faithful port of terser `Compressor.in_computed_key()` (lib/compress/index.js:419).
