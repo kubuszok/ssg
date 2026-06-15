@@ -19,7 +19,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_constants
   // =========================================================================
-  test("collapse_vars_constants".fail) {
+  test("collapse_vars_constants") {
     assertCompresses(
       input = """function f1(x) {
             var a = 4, b = x.prop, c = 5, d = sideeffect1(), e = sideeffect2();
@@ -52,7 +52,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // modified
   // =========================================================================
-  test("modified".fail) {
+  test("modified") {
     assertCompresses(
       input = """function f5(b) {
             var a = function() {
@@ -128,7 +128,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_3
   // =========================================================================
-  test("negate_iife_3".fail) {
+  test("negate_iife_3") {
     assertCompresses(
       input = "(function(){ return t })() ? console.log(true) : console.log(false)",
       expected = "t ? console.log(true) : console.log(false)",
@@ -144,7 +144,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_3_off
   // =========================================================================
-  test("negate_iife_3_off".fail) {
+  test("negate_iife_3_off") {
     assertCompresses(
       input = "(function(){ return t })() ? console.log(true) : console.log(false)",
       expected = "t ? console.log(true) : console.log(false)",
@@ -160,7 +160,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_4
   // =========================================================================
-  test("negate_iife_4".fail) {
+  test("negate_iife_4") {
     assertCompresses(
       input = """(function(){ return t })() ? console.log(true) : console.log(false);
         (function(){
@@ -180,7 +180,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_5
   // =========================================================================
-  test("negate_iife_5".fail) {
+  test("negate_iife_5") {
     assertCompresses(
       input = """if ((function(){ return t })()) {
             foo(true);
@@ -204,7 +204,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // negate_iife_5_off
   // =========================================================================
-  test("negate_iife_5_off".fail) {
+  test("negate_iife_5_off") {
     assertCompresses(
       input = """if ((function(){ return t })()) {
             foo(true);
@@ -256,7 +256,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // issue_1288_side_effects
   // =========================================================================
-  test("issue_1288_side_effects".fail) {
+  test("issue_1288_side_effects") {
     assertCompresses(
       input = """if (w) ;
         else {
@@ -292,7 +292,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // inner_var_for_in_1
   // =========================================================================
-  test("inner_var_for_in_1".fail) {
+  test("inner_var_for_in_1") {
     assertCompresses(
       input = """function f() {
             var a = 1, b = 2;
@@ -344,7 +344,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // issue_1758
   // =========================================================================
-  test("issue_1758".fail) {
+  test("issue_1758") {
     assertCompresses(
       input = """console.log(function(c) {
             var undefined = 42;
@@ -369,7 +369,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // drop_fargs
   // =========================================================================
-  test("drop_fargs".fail) {
+  test("drop_fargs") {
     assertCompresses(
       input = """var a = 1;
         !function(a_1) {
@@ -392,7 +392,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // keep_fargs
   // =========================================================================
-  test("keep_fargs".fail) {
+  test("keep_fargs") {
     assertCompresses(
       input = """var a = 1;
         !function(a_1) {

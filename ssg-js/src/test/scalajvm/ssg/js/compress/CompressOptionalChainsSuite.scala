@@ -40,7 +40,7 @@ final class CompressOptionalChainsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1586_optional_chain_inlined_2
   // =========================================================================
-  test("issue_1586_optional_chain_inlined_2".fail) {
+  test("issue_1586_optional_chain_inlined_2") {
     assertCompresses(
       input = """obj = {
             prop: (() => (foo(), bar()))?.(),

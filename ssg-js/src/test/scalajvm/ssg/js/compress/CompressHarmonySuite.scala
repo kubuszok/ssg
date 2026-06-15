@@ -1082,7 +1082,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // inline_arrow_using_arguments
   // =========================================================================
-  test("inline_arrow_using_arguments".fail) {
+  test("inline_arrow_using_arguments") {
     assertCompresses(
       input = """(function(){
             ((x) => {

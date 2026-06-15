@@ -3424,7 +3424,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // obj_arg_1
   // =========================================================================
-  test("obj_arg_1".fail) {
+  test("obj_arg_1") {
     assertCompresses(
       input = """var C = 1;
         function f(obj) {
@@ -3486,7 +3486,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // func_arg_1
   // =========================================================================
-  test("func_arg_1".fail) {
+  test("func_arg_1") {
     assertCompresses(
       input = """var a = 42;
         !function(a) {
@@ -3511,7 +3511,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // func_arg_2
   // =========================================================================
-  test("func_arg_2".fail) {
+  test("func_arg_2") {
     assertCompresses(
       input = """var a = 42;
         !function(a) {
@@ -6224,7 +6224,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2916
   // =========================================================================
-  test("issue_2916".fail) {
+  test("issue_2916") {
     assertCompresses(
       input = """var c = "FAIL";
         (function(b) {

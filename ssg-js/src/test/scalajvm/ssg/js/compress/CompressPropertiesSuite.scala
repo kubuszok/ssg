@@ -1082,7 +1082,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // skip_computed_properties_2
   // =========================================================================
-  test("skip_computed_properties_2".fail) {
+  test("skip_computed_properties_2") {
     assertCompresses(
       input = """function f(o) {
             return {[o.key]: o};
@@ -1961,7 +1961,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3188_1
   // =========================================================================
-  test("issue_3188_1".fail) {
+  test("issue_3188_1") {
     assertCompresses(
       input = """(function() {
             function f() {
@@ -1998,7 +1998,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3188_3
   // =========================================================================
-  test("issue_3188_3".fail) {
+  test("issue_3188_3") {
     assertCompresses(
       input = """(function() {
             function f() {
