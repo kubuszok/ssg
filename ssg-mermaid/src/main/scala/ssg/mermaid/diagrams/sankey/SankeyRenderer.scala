@@ -20,6 +20,7 @@ package mermaid
 package diagrams
 package sankey
 
+import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
@@ -49,7 +50,7 @@ object SankeyRenderer {
   /** Renders a Sankey diagram to an SVG string. */
   def render(db: SankeyDb, config: MermaidConfig): String =
     if (db.nodes.isEmpty) {
-      emptySvg(config)
+      emptySvg(db, config)
     } else {
       renderNonEmpty(db, config)
     }
@@ -93,6 +94,9 @@ object SankeyRenderer {
     val svg       = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "sankey", db.accTitle, db.accDescription)
 
     val defs      = svg.append("defs")
     val themeVars = Theme.getThemeByName(config.theme, config.themeVariables)
@@ -198,10 +202,13 @@ object SankeyRenderer {
     layers
   }
 
-  private def emptySvg(config: MermaidConfig): String = {
+  private def emptySvg(db: SankeyDb, config: MermaidConfig): String = {
     val svg = SvgBuilder.createSvg("0 0 100 50")
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "sankey", db.accTitle, db.accDescription)
     svg.build().toMarkup()
   }
 }
