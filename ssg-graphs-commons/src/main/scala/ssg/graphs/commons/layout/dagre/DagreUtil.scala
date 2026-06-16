@@ -27,6 +27,17 @@ object DagreUtil {
 
   private var idCounter: Int = 0
 
+  /** "Does this node have a rank?" — the SSG equivalent of dagre's `_.has(node, "rank")` presence check used throughout `lib/util.js`.
+    *
+    * In dagre-js every node carries a `rank` property by the time the normalization helpers run; only compound *parent* nodes lack one because `simplify()` / `asNonCompoundGraph()` exclude nodes with
+    * children from the graph that `rank()` operates on (their layout position is derived from their descendants by `assignRankMinMax`). SSG's `NodeLabel.rank` defaults to `-1`, which collides with
+    * the legitimate NEGATIVE ranks that `Rank.longestPath` assigns (sinks at 0, sources negative), so a value-based `rank >= 0` test wrongly drops real nodes (e.g. a diamond's `b`/`c` at rank -1)
+    * from rank normalization and positioning (ISS-1198). The presence predicate must therefore be STRUCTURAL, not value-based: a node has a rank iff it is not an excluded compound parent — exactly
+    * the set `simplify()` keeps (`!g.isCompound || g.children(v).isEmpty`).
+    */
+  private def hasRank(g: Graph[NodeLabel, EdgeLabel], v: String): Boolean =
+    !g.isCompound || g.children(v).isEmpty
+
   def uniqueId(prefix: String): String = {
     idCounter += 1
     s"$prefix$idCounter"
@@ -143,6 +154,13 @@ object DagreUtil {
     Point(x + sx, y + sy)
   }
 
+  /** Buckets every ranked node into its layer.
+    *
+    * Ports dagre lib/util.js `buildLayerMatrix()`, which buckets each node with a defined rank into `layering[rank]` at index `node.order`. SSG guards with `hasRank` (dagre's
+    * `_.has`/`!_.isUndefined(rank)` presence check) so the -1 sentinel of unranked compound parents is excluded; by the time this runs (Position, after normalizeRanks) every real rank is already >=
+    * 0, so the bounds check `rank <= mr` keeps the index in range. Replacing the former `rank >= 0` positivity filter with `hasRank` keeps negative-rank handling consistent across the normalization
+    * path (ISS-1198).
+    */
   def buildLayerMatrix(g: Graph[NodeLabel, EdgeLabel]): Array[Array[String]] = {
     val mr = maxRank(g)
     if (mr < 0) { Array.empty[Array[String]] }
@@ -150,7 +168,7 @@ object DagreUtil {
       val layers = Array.fill(mr + 1)(mutable.ArrayBuffer.empty[String])
       for (v <- g.nodes()) {
         val node = g.node(v)
-        if (node.rank >= 0 && node.rank <= mr) {
+        if (hasRank(g, v) && node.rank >= 0 && node.rank <= mr) {
           layers(node.rank) += v
         }
       }
@@ -166,15 +184,19 @@ object DagreUtil {
     * `minlen * nodeSep` spacing that `Nesting.run` introduced, removing ranks that only existed to separate border nodes from real nodes.
     */
   def removeEmptyRanks(g: Graph[NodeLabel, EdgeLabel]): Unit = {
-    // Ranks may not start at 0, so we need to offset them.
+    // Ranks may not start at 0, so we need to offset them. dagre takes the min
+    // over every node's rank; SSG restricts to ranked nodes (`hasRank`) so the
+    // -1 sentinel that compound parents carry — they are excluded from ranking
+    // by `simplify` — is not mistaken for a real rank (ISS-1198). Ranked nodes
+    // may legitimately be negative (longestPath), so the offset can be < 0.
     val offset =
-      g.nodes().filter(v => g.node(v).rank >= 0).map(v => g.node(v).rank).minOption.getOrElse(0)
+      g.nodes().filter(v => hasRank(g, v)).map(v => g.node(v).rank).minOption.getOrElse(0)
 
     // Build layer arrays indexed by rank (offset-adjusted).
     val layers = mutable.Map.empty[Int, mutable.ArrayBuffer[String]]
     for (v <- g.nodes()) {
       val node = g.node(v)
-      if (node.rank >= 0) {
+      if (hasRank(g, v)) {
         val rank = node.rank - offset
         node.rank = rank
         layers.getOrElseUpdate(rank, mutable.ArrayBuffer.empty) += v
@@ -242,11 +264,24 @@ object DagreUtil {
   def range(limit: Int): Array[Int] =
     (0 until limit).toArray
 
+  /** Shifts ranks so the minimum is 0.
+    *
+    * Faithful port of dagre lib/util.js `normalizeRanks()`:
+    * {{{
+    *   var min = Math.min(...nodes.map(v => g.node(v).rank));
+    *   nodes.forEach(v => { var node = g.node(v);
+    *     if (_.has(node, "rank")) node.rank -= min; });
+    * }}}
+    * `min` is taken over EVERY ranked node (including negatives that `Rank.longestPath` assigns — sinks at 0, sources negative) and the shift is applied to EVERY ranked node. The earlier `rank >= 0`
+    * filter never normalized those negatives, so they (and the nodes Position then never laid out) overlapped at the default center coordinates (ISS-1198). The presence predicate is `hasRank`
+    * (dagre's `_.has(node, "rank")`), not a positivity test, so legitimately-negative ranks — including the value -1 — participate.
+    */
   def normalizeRanks(g: Graph[NodeLabel, EdgeLabel]): Unit = {
-    val minRank = g.nodes().filter(v => g.node(v).rank >= 0).map(v => g.node(v).rank).minOption.getOrElse(0)
+    val minRank =
+      g.nodes().filter(v => hasRank(g, v)).map(v => g.node(v).rank).minOption.getOrElse(0)
     for (v <- g.nodes()) {
       val node = g.node(v)
-      if (node.rank >= 0) {
+      if (hasRank(g, v)) {
         node.rank = node.rank - minRank
       }
     }
