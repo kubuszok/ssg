@@ -137,9 +137,15 @@ final class GanttDb {
     */
   private var weekendStartDay: Int = 6 // Saturday by default
 
-  var title:             String  = ""
-  var dateFormat:        String  = "YYYY-MM-DD"
-  var axisFormat:        String  = "%Y-%m-%d"
+  var title:      String = ""
+  var dateFormat: String = "YYYY-MM-DD"
+  var axisFormat: String = "%Y-%m-%d"
+
+  /** Tick interval for the axis (e.g. "1week", "2month"); empty when unset.
+    *
+    * Ports `tickInterval` from `ganttDb.js:27`. Upstream initializes it to `undefined`; an empty string represents "unset" here.
+    */
+  var tickInterval:      String  = ""
   var todayMarker:       String  = "today"
   var inclusiveEndDates: Boolean = false
   var topAxis:           Boolean = false
@@ -233,11 +239,18 @@ final class GanttDb {
     val end = endDateStr match {
       case s if s.isDefined =>
         val str = s.get.trim
-        if (str.endsWith("d") || str.endsWith("w") || str.endsWith("m") || str.endsWith("y")) {
-          // Duration format
-          parseDuration(str, start)
-        } else {
-          parseDateString(str).getOrElse(start.plusDays(1))
+        // test for until — ganttDb.js:348-371 getEndDate(). A task whose
+        // end-spec is `until <id1> <id2> …` ends at the EARLIEST startTime
+        // among the referenced task ids (ids split on space, looked up by id).
+        untilEndDate(str) match {
+          case Some(untilDate) => untilDate
+          case None            =>
+            if (str.endsWith("d") || str.endsWith("w") || str.endsWith("m") || str.endsWith("y")) {
+              // Duration format
+              parseDuration(str, start)
+            } else {
+              parseDateString(str).getOrElse(start.plusDays(1))
+            }
         }
       case _ => start.plusDays(1)
     }
@@ -372,6 +385,52 @@ final class GanttDb {
       checkTaskDates(task)
   }
 
+  /** Resolves the `until <ids>` end-spec to the earliest start of the referenced tasks.
+    *
+    * Ports the `until` branch of `getEndDate()` from `ganttDb.js:348-371`:
+    *   - regex `/^until\s+(?<ids>[\d\w- ]+)/` — only fires when `str` starts with `until` followed by whitespace
+    *   - the captured ids are split on a single space and each looked up via `findTaskById`; the earliest `startTime` among the found tasks wins
+    *   - if no referenced task is found, upstream returns today at midnight
+    *
+    * Returns `None` when the string is not an `until` statement so the caller falls through to normal date/duration parsing.
+    */
+  private def untilEndDate(str: String): Option[LocalDate] = {
+    val trimmed = str.trim
+    // /^until\s+(?<ids>[\d\w- ]+)/
+    val untilRePattern = "^until\\s+([\\d\\w\\- ]+)".r
+    untilRePattern.findFirstMatchIn(trimmed) match {
+      case None    => None
+      case Some(m) =>
+        val idsGroup = m.group(1)
+        // check all until ids and take the earliest — ganttDb.js:356-363
+        var earliestTask: Nullable[GanttTask] = Nullable.empty
+        for (id <- idsGroup.split(" "))
+          findTaskById(id) match {
+            case Some(task) =>
+              val earlier = earliestTask.fold(true)(e => task.startDate.isBefore(e.startDate))
+              if (earlier) earliestTask = Nullable(task)
+            case None => ()
+          }
+        earliestTask.fold {
+          // ganttDb.js:368-370 — no referenced task found: today at midnight
+          Some(LocalDate.now())
+        }(task => Some(task.startDate))
+    }
+  }
+
+  /** Finds a task by its ID.
+    *
+    * Ports `findTaskById()` from `ganttDb.js`.
+    */
+  private def findTaskById(taskId: String): Option[GanttTask] =
+    boundary[Option[GanttTask]] {
+      for (task <- tasks)
+        if (task.id == taskId) {
+          break(Some(task))
+        }
+      None
+    }
+
   /** Finds a task's end date by its ID. */
   private def findTaskEndDate(taskId: String): Option[LocalDate] =
     boundary[Option[LocalDate]] {
@@ -397,14 +456,18 @@ final class GanttDb {
       )
 
       boundary[Option[LocalDate]] {
-        for (fmt <- formats)
-          try {
-            val formatter = DateTimeFormatter.ofPattern(fmt)
-            val date      = LocalDate.parse(trimmed, formatter)
-            break(Some(date))
-          } catch {
-            case _: Exception => () // try next format
-          }
+        for (fmt <- formats) {
+          // Parse outside the boundary `break` so the break's control
+          // exception is never swallowed by the catch clause; only the
+          // date-parse failure is caught so the next format is tried.
+          val parsed =
+            try
+              Some(LocalDate.parse(trimmed, DateTimeFormatter.ofPattern(fmt)))
+            catch {
+              case _: java.time.format.DateTimeParseException => Option.empty[LocalDate]
+            }
+          parsed.foreach(date => break(Some(date)))
+        }
         None
       }
     }
@@ -471,6 +534,7 @@ final class GanttDb {
     title = ""
     dateFormat = "YYYY-MM-DD"
     axisFormat = "%Y-%m-%d"
+    tickInterval = "" // ganttDb.js:58 — clear() resets tickInterval to undefined
     todayMarker = "today"
     inclusiveEndDates = false
     topAxis = false

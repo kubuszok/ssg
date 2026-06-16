@@ -134,7 +134,7 @@ object GanttRenderer {
     // Time axis
     val axisGroup = mainGroup.append("g")
     axisGroup.classed("grid", true)
-    renderTimeAxis(axisGroup, minDate, maxDate, leftPadding, yOffset + topPadding - 20, chartWidth, dayWidth, totalDays)
+    renderTimeAxis(axisGroup, minDate, maxDate, leftPadding, yOffset + topPadding - 20, chartWidth, dayWidth, totalDays, db.tickInterval, db.weekday)
 
     // Section backgrounds and task bars
     var currentY   = yOffset + topPadding
@@ -230,23 +230,56 @@ object GanttRenderer {
     svg.build().toMarkup()
   }
 
-  /** Renders the time axis with date labels and grid lines. */
+  /** Renders the time axis with date labels and grid lines.
+    *
+    * @param tickIntervalSpec
+    *   the configured `tickInterval` value from [[GanttDb]] (e.g. `1week`, `2month`); empty when unset
+    * @param weekday
+    *   the configured `weekday` (used to align `week` ticks)
+    */
   private def renderTimeAxis(
-    parent:      SvgBuilder,
-    minDate:     LocalDate,
-    maxDate:     LocalDate,
-    leftPadding: Double,
-    y:           Double,
-    chartWidth:  Double,
-    dayWidth:    Double,
-    totalDays:   Double
+    parent:           SvgBuilder,
+    minDate:          LocalDate,
+    maxDate:          LocalDate,
+    leftPadding:      Double,
+    y:                Double,
+    chartWidth:       Double,
+    dayWidth:         Double,
+    totalDays:        Double,
+    tickIntervalSpec: String,
+    weekday:          String
   ): Unit = {
-    // Determine tick interval based on total days
-    val tickInterval =
-      if (totalDays <= 14) 1
-      else if (totalDays <= 60) 7
-      else if (totalDays <= 365) 30
-      else 90
+    // The configured tick interval overrides the day-based heuristic when it
+    // matches the upstream pattern. Ports the renderer's tick-interval handling
+    // (ganttRenderer.js:595-628): `/^([1-9]\d*)(millisecond|second|minute|hour|
+    // day|week|month)$/` parses the value into `every` + `interval`, and the
+    // d3 time axis ticks at `timeXxx.every(every)`. Here the axis is stepped
+    // directly, so the matched interval drives `nextTick`'s cadence.
+    val reTickInterval = "^([1-9][0-9]*)(millisecond|second|minute|hour|day|week|month)$".r
+    val nextTick: LocalDate => LocalDate =
+      reTickInterval.findFirstMatchIn(tickIntervalSpec) match {
+        case Some(m) =>
+          val every    = m.group(1).toLong
+          val interval = m.group(2)
+          interval match {
+            // sub-day intervals collapse to a single day step on a date axis
+            case "millisecond" | "second" | "minute" | "hour" =>
+              (d: LocalDate) => d.plusDays(1L)
+            case "day" => (d: LocalDate) => d.plusDays(every)
+            // week ticks align to the configured weekday — ganttRenderer.js:622
+            case "week"  => (d: LocalDate) => alignToWeekday(d, weekday).plusWeeks(every)
+            case "month" => (d: LocalDate) => d.plusMonths(every)
+            case _       => (d: LocalDate) => d.plusDays(1L)
+          }
+        case None =>
+          // Determine tick interval based on total days (default heuristic)
+          val tickInterval =
+            if (totalDays <= 14) 1L
+            else if (totalDays <= 60) 7L
+            else if (totalDays <= 365) 30L
+            else 90L
+          (d: LocalDate) => d.plusDays(tickInterval)
+      }
 
     var current = minDate
     while (!current.isAfter(maxDate)) {
@@ -272,7 +305,30 @@ object GanttRenderer {
       label.attr("font-size", "10")
       label.text(current.toString)
 
-      current = current.plusDays(tickInterval.toLong)
+      val advanced = nextTick(current)
+      // Guard against a non-advancing step (e.g. alignment landing on the same
+      // date) so the axis loop always terminates.
+      current = if (advanced.isAfter(current)) advanced else current.plusDays(1L)
     }
+  }
+
+  /** Aligns a date to the start of its week for the configured weekday.
+    *
+    * Mirrors `mapWeekdayToTimeFunction[weekday]` from `ganttRenderer.js:39-47`, where a `week` tick interval snaps to boundaries on the given weekday (e.g. `timeMonday`, `timeSunday`).
+    */
+  private def alignToWeekday(date: LocalDate, weekday: String): LocalDate = {
+    val target = weekday.toLowerCase match {
+      case "monday"    => java.time.DayOfWeek.MONDAY
+      case "tuesday"   => java.time.DayOfWeek.TUESDAY
+      case "wednesday" => java.time.DayOfWeek.WEDNESDAY
+      case "thursday"  => java.time.DayOfWeek.THURSDAY
+      case "friday"    => java.time.DayOfWeek.FRIDAY
+      case "saturday"  => java.time.DayOfWeek.SATURDAY
+      case _           => java.time.DayOfWeek.SUNDAY
+    }
+    var d = date
+    while (d.getDayOfWeek != target)
+      d = d.minusDays(1L)
+    d
   }
 }
