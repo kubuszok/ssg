@@ -157,12 +157,14 @@ final case class CompressorOptions(
   inline: InlineLevel = InlineLevel.InlineFull,
   /** Join consecutive `var` statements. */
   joinVars: Boolean = true,
-  /** Prevent class name mangling. `true` keeps all, regex/set filters. */
-  keepClassnames: Boolean = false,
+  /** Prevent class name mangling. `true` keeps all; can be `Boolean` or a `scala.util.matching.Regex` (terser keep_classnames: Boolean | RegExp — keep only names matching the regex).
+    */
+  keepClassnames: Any = false,
   /** Prevent unused function args from being dropped. */
   keepFargs: Boolean = true,
-  /** Prevent function name mangling. `true` keeps all. */
-  keepFnames: Boolean = false,
+  /** Prevent function name mangling. `true` keeps all; can be `Boolean` or a `scala.util.matching.Regex` (terser keep_fnames: Boolean | RegExp — keep only names matching the regex).
+    */
+  keepFnames: Any = false,
   /** Pass `Infinity` through as identifier (not `1/0`). */
   keepInfinity: Boolean = false,
   /** Swap constant to LHS of commutative operators. */
