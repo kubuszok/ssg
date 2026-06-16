@@ -77,7 +77,8 @@ object TimelineRenderer {
     val baseCss   = CssGenerator.generateBaseStyles(themeVars)
     val styleEl   = defs.append("style")
     styleEl.attr("type", "text/css")
-    styleEl.text(baseCss + "\n" + css)
+    // Append user themeCSS when configured (mermaidAPI.ts:119-121 applies themeCSS to all diagrams)
+    styleEl.text(baseCss + "\n" + css + (if (config.themeCSS.nonEmpty) "\n" + config.themeCSS else ""))
 
     // Main group
     val mainGroup = svg.append("g")
