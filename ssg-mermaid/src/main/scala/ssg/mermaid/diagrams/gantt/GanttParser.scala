@@ -110,6 +110,7 @@ object GanttParser {
     if (tryParseTitle(scanner, db)) break()
     if (tryParseDateFormat(scanner, db)) break()
     if (tryParseAxisFormat(scanner, db)) break()
+    if (tryParseTickInterval(scanner, db)) break()
     if (tryParseSection(scanner, db)) break()
     if (tryParseExcludes(scanner, db)) break()
     if (tryParseTodayMarker(scanner, db)) break()
@@ -160,6 +161,23 @@ object GanttParser {
     }
     scanner.skipWhitespace()
     db.axisFormat = readTextUntilNewline(scanner).trim
+    true
+  }
+
+  /** Tries to parse `tickInterval ...`.
+    *
+    * Ports the `tickInterval` token (`gantt.jison:76`, `"tickInterval"\s[^#\n;]+`) and its action (`gantt.jison:143`, `yy.setTickInterval($1.substr(13))`). `substr(13)` strips the `"tickInterval "`
+    * prefix, leaving the value (e.g. `1day`, `2week`). Here the whitespace after the keyword is consumed by `skipWhitespace()` and the remaining text becomes the value.
+    */
+  private def tryParseTickInterval(scanner: Scanner, db: GanttDb): Boolean = boundary {
+    val saved = scanner.save()
+    if (!scanner.matchStrIgnoreCase("tickInterval")) break(false)
+    if (!scanner.isEof && scanner.peek() != ' ' && scanner.peek() != '\t') {
+      scanner.restore(saved)
+      break(false)
+    }
+    scanner.skipWhitespace()
+    db.tickInterval = readTextUntilNewline(scanner).trim
     true
   }
 
