@@ -21,6 +21,7 @@ package diagrams
 package mindmap
 
 import ssg.mermaid.MermaidConfig
+import ssg.mermaid.Accessibility
 import ssg.mermaid.render.text.TextMetrics
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
@@ -62,6 +63,9 @@ object MindmapRenderer {
     if (db.root.isEmpty) {
       val svg = SvgBuilder.createSvg("0 0 400 100")
       svg.attr("role", "img")
+      // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+      // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+      Accessibility.applyTo(svg, "mindmap", db.accTitle, db.accDescription)
       val text = svg.append("text")
       text.attr("x", 200)
       text.attr("y", 50)
@@ -96,6 +100,10 @@ object MindmapRenderer {
     val svg     = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "mindmap", db.accTitle, db.accDescription)
 
     // Add defs with styles
     val defs      = svg.append("defs")

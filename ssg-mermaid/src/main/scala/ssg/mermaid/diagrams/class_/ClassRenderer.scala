@@ -22,6 +22,7 @@ package diagrams
 package class_
 
 import lowlevel.Nullable
+import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph
@@ -87,6 +88,10 @@ object ClassRenderer {
     val svg     = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "classDiagram", db.accTitle, db.accDescription)
 
     // 5. Add defs with markers and styles
     val defs = svg.append("defs")

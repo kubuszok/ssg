@@ -21,6 +21,7 @@ package diagrams
 package xychart
 
 import ssg.mermaid.MermaidConfig
+import ssg.mermaid.Accessibility
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
@@ -49,6 +50,10 @@ object XyChartRenderer {
     val svg       = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "xychart", db.accTitle, db.accDescription)
 
     // Styles
     val defs      = svg.append("defs")

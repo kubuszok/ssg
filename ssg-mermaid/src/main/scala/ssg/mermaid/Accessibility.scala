@@ -99,4 +99,42 @@ object Accessibility {
       if (a11yDesc.isEmpty) Nullable.empty else Nullable(a11yDesc),
       baseId
     )
+
+  /** Wires accessibility info into a diagram's root SVG, mirroring `addA11yInfo` in mermaidAPI.ts (mermaid/packages/mermaid/src/mermaidAPI.ts:521-529):
+    * {{{
+    * function addA11yInfo(diagramType, svgNode, a11yTitle, a11yDescr): void {
+    *   setA11yDiagramInfo(svgNode, diagramType);
+    *   addSVGa11yTitleDescription(svgNode, a11yTitle, a11yDescr, svgNode.attr('id'));
+    * }
+    * }}}
+    *
+    * `setA11yDiagramInfo` is ALWAYS called (role + aria-roledescription); the title/desc are presence-gated inside [[addSVGa11yTitleDescription]] (only emitted when non-empty).
+    *
+    * Upstream uses the svg element's `id` as the base id for the `chart-title-<id>` / `chart-desc-<id>` elements (mermaidAPI.ts:528 `svgNode.attr('id')`). Since SSG renderers build their own root svg
+    * without the central id assignment from mermaidAPI's render(), this helper ensures the svg carries a deterministic `id` (defaulting to `mermaid-<diagramType>`) before deriving the base id, so the
+    * a11y child ids are well-formed.
+    *
+    * @param svg
+    *   the root SVG builder
+    * @param diagramType
+    *   the diagram type id passed to aria-roledescription (e.g. "flowchart-v2", "sequence")
+    * @param accTitle
+    *   the accessible title (empty = skip)
+    * @param accDescr
+    *   the accessible description (empty = skip)
+    */
+  def applyTo(
+    svg:         SvgBuilder,
+    diagramType: String,
+    accTitle:    String,
+    accDescr:    String
+  ): Unit = {
+    setA11yDiagramInfo(svg, diagramType)
+    val baseId = svg.getAttr("id").getOrElse {
+      val generated = s"mermaid-$diagramType"
+      svg.attr("id", generated)
+      generated
+    }
+    addSVGa11yTitleDescription(svg, accTitle, accDescr, baseId)
+  }
 }

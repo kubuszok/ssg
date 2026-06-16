@@ -23,6 +23,7 @@ package diagrams
 package sequence
 
 import lowlevel.Nullable
+import ssg.mermaid.Accessibility
 import ssg.mermaid.{ MermaidConfig, SequenceConfig }
 import ssg.mermaid.render.text.TextMetrics
 import ssg.graphs.commons.svg.SvgBuilder
@@ -248,6 +249,10 @@ object SequenceRenderer {
     val svg     = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "sequence", db.accTitle, db.accDescription)
 
     // Defs + styles
     val defs = svg.append("defs")

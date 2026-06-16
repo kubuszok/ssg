@@ -20,6 +20,7 @@ package mermaid
 package diagrams
 package block
 
+import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
@@ -45,6 +46,12 @@ object BlockRenderer {
     val svg       = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: set role + aria-roledescription and (when present) the a11y title/desc,
+    // mirroring addA11yInfo in mermaidAPI.ts:521-529. The block detector id is "block" (see
+    // diagrams/block/blockDetector.ts) — mermaid passes the registered diagram type to
+    // setA11yDiagramInfo(svg, diagramType).
+    Accessibility.applyTo(svg, "block", db.accTitle, db.accDescription)
 
     val defs      = svg.append("defs")
     val themeVars = Theme.getThemeByName(config.theme, config.themeVariables)
