@@ -35,6 +35,10 @@ package output
   *   Comment filter: "all", "some" (preserve important), or "false" (strip all). Can also be a regex string like "/regex/flags".
   * @param ecma
   *   Target ECMAScript version (5, 2015, etc.)
+  * @param ie8
+  *   Emit code compatible with IE8 (e.g. `\x0B` instead of `\v`, quote reserved-word property names, braces around `do` bodies in `if` branches)
+  * @param safari10
+  *   Work around Safari 10/11 bugs (avoid ES2015 unicode code-point escapes and identifier-string property keys)
   * @param indentLevel
   *   Number of spaces per indentation level (beautify mode)
   * @param indentStart
@@ -77,6 +81,7 @@ final case class OutputOptions(
   braces:              Boolean = false,
   comments:            String = "some",
   ecma:                Int = 5,
+  ie8:                 Boolean = false,
   indentLevel:         Int = 4,
   indentStart:         Int = 0,
   inlineScript:        Boolean = true,
@@ -87,6 +92,7 @@ final case class OutputOptions(
   preserveAnnotations: Boolean = false,
   quoteKeys:           Boolean = false,
   quoteStyle:          Int = 0,
+  safari10:            Boolean = false,
   semicolons:          Boolean = true,
   shebang:             Boolean = true,
   shorthand:           Option[Boolean] = None,

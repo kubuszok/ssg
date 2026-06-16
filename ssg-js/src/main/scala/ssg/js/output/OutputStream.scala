@@ -119,7 +119,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
   // ========================================================================
 
   /** Encode a string for ASCII-only output or escape lone surrogates. */
-  private def toUtf8(str: String, identifier: Boolean = false): String =
+  private def toUtf8(str: String, identifier: Boolean = false, regexp: Boolean = false): String =
     if (!options.asciiOnly) {
       val sb = new StringBuilder(str.length)
       var i  = 0
@@ -145,7 +145,8 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       while (i < str.length) {
         val c = str.charAt(i)
         if (Character.isHighSurrogate(c) && i + 1 < str.length && Character.isLowSurrogate(str.charAt(i + 1))) {
-          if (options.ecma >= 2015) {
+          // terser output.js:341: `if (options.ecma >= 2015 && !options.safari10 && !regexp)`
+          if (options.ecma >= 2015 && !options.safari10 && !regexp) {
             val cp = Character.toCodePoint(c, str.charAt(i + 1))
             sb.append("\\u{")
             sb.append(Integer.toHexString(cp))
@@ -193,7 +194,9 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
         case '\t'     => sb.append("\\t")
         case '\b'     => sb.append("\\b")
         case '\f'     => sb.append("\\f")
-        case '\u000b' => sb.append("\\v")
+        case '\u000b' =>
+          // terser output.js:379: `case "\x0B": return options.ie8 ? "\\x0B" : "\\v";`
+          sb.append(if (options.ie8) "\\x0B" else "\\v")
         case '\u2028' => sb.append("\\u2028")
         case '\u2029' => sb.append("\\u2029")
         case '\ufeff' => sb.append("\\ufeff")
@@ -678,7 +681,9 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       (pp.isInstanceOf[AstCall] && pp.asInstanceOf[AstCall].expression != null &&
         (pp.asInstanceOf[AstCall].expression.nn eq node)) ||
       (pp.isInstanceOf[AstBinary] && pp.asInstanceOf[AstBinary].operator == "**" &&
-        pp.asInstanceOf[AstBinary].left != null && (pp.asInstanceOf[AstBinary].left.nn eq node))
+        pp.asInstanceOf[AstBinary].left != null && (pp.asInstanceOf[AstBinary].left.nn eq node)) ||
+      // terser output.js:1041: `output.option("safari10") && p instanceof AST_UnaryPrefix`
+      (options.safari10 && pp.isInstanceOf[AstUnaryPrefix])
     }
   }
 
@@ -1342,8 +1347,11 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
   }
 
   private def makeThen(node: AstIf): Unit = {
+    // terser output.js:1622-1624: `if (output.option("braces") || output.option("ie8") && b instanceof AST_Do) return make_block(b, output);`
+    if (node.body != null && (options.braces || (options.ie8 && node.body.nn.isInstanceOf[AstDo]))) {
+      makeBlock(node.body.nn); return // @nowarn — guarded early exit
+    }
     if (node.body == null) { forceSemicolon(); return } // @nowarn — guarded early exit
-    if (options.braces) { makeBlock(node.body.nn); return } // @nowarn — guarded early exit
     var cur: AstNode = node.body.nn
     var needBlock = false
     boundary {
@@ -1551,10 +1559,14 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   private def printDot(node: AstDot): Unit = {
     if (node.expression != null) printNode(node.expression.nn)
-    val prop          = node.property match { case s: String => s; case _ => "" }
+    val prop = node.property match { case s: String => s; case _ => "" }
+    // terser output.js:1994-1999:
+    //   var print_computed = ALL_RESERVED_WORDS.has(prop)
+    //       ? output.option("ie8")
+    //       : !is_identifier_string(prop, output.option("ecma") >= 2015 && !output.option("safari10"));
     val printComputed =
-      if (Token.ALL_RESERVED_WORDS.contains(prop)) false
-      else !isIdentifierString(prop)
+      if (Token.ALL_RESERVED_WORDS.contains(prop)) options.ie8
+      else !Token.isIdentifierString(prop, options.ecma >= 2015 && !options.safari10)
     if (node.optional) print("?.")
     if (printComputed) { print("["); printString(prop); print("]") }
     else {
@@ -1679,7 +1691,16 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
         if (options.keepNumbers) { print(key); false }
         else { print(makeNum(asNum)); false }
       } else {
-        val printStr = !isIdentifierString(key)
+        // terser output.js:2173-2179:
+        //   var print_string = ALL_RESERVED_WORDS.has(key)
+        //       ? output.option("ie8")
+        //       : ( output.option("ecma") < 2015 || output.option("safari10")
+        //             ? !is_basic_identifier_string(key)
+        //             : !is_identifier_string(key, true) );
+        val printStr =
+          if (Token.ALL_RESERVED_WORDS.contains(key)) options.ie8
+          else if (options.ecma < 2015 || options.safari10) !Token.isBasicIdentifierString(key)
+          else !Token.isIdentifierString(key, true)
         if (printStr || (quote != null && quote.nonEmpty && options.keepQuotedProps)) {
           printString(key, if (quote != null) quote else "\""); false
         } else { printName(key); true }
@@ -1830,7 +1851,8 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     val sortedFlags   = if (rv.flags.nonEmpty) rv.flags.toSeq.sorted.mkString else ""
     val escapedSource = rv.source.replaceAll("(?i)(<\\s*/\\s*script)", "$1".replace("/", "\\\\/"))
     if (rv.source.matches("(?i)^\\s*script.*") && last.endsWith("<")) print(" ")
-    print(toUtf8("/" + escapedSource + "/" + sortedFlags))
+    // terser output.js:2390: `output.to_utf8(..., false, true)` — regexp = true suppresses ES2015 code-point escapes
+    print(toUtf8("/" + escapedSource + "/" + sortedFlags, regexp = true))
     val par = parent(0)
     if (par != null && par.nn.isInstanceOf[AstBinary]) {
       val bin = par.nn.asInstanceOf[AstBinary]
@@ -1950,9 +1972,6 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
   // ========================================================================
   // Utility helpers
   // ========================================================================
-
-  private def isIdentifierString(str: String): Boolean =
-    str.nonEmpty && "^[a-zA-Z_$][a-zA-Z0-9_$]*$".r.findFirstIn(str).isDefined
 
   private def makeBlock(stmt: AstNode): Unit =
     if (stmt.isInstanceOf[AstEmptyStatement]) print("{}")
