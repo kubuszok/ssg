@@ -40,10 +40,16 @@ final class CompressPropertiesSuite extends munit.FunSuite {
         a["\u0EB3"] = "unicode";
         a[""] = "whitespace";
         a["1_1"] = "foo"""".stripMargin.trim,
+      // NOTE (ISS-1041): U+0EB3 (\u0EB3 LAO VOWEL SIGN AM) is treated as a bare dot
+      // identifier here. terser's vendored UNICODE.ID_Start table (an older Unicode
+      // snapshot) excludes U+0EB3, so upstream emits `a["\u0EB3"]`; but SSG's tokenizer
+      // (Token.isIdentifierStart, category-based) accepts it, and the printer is now
+      // consistent with the parser via Token.isIdentifierString. The Unicode-table
+      // divergence is tracked as a separate candidate issue.
       expected = """a.foo = "bar";
         a["if"] = "if";
         a["*"] = "asterisk";
-        a["\u0EB3"] = "unicode";
+        a.\u0EB3 = "unicode";
         a[""] = "whitespace";
         a["1_1"] = "foo"""".stripMargin.trim,
       options = AllOff.copy(
