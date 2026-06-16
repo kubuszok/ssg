@@ -171,6 +171,13 @@ final class StateDb {
   /** Stack for tracking nested composite states during parsing. */
   private val stateStack: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty
 
+  /** Whether parsing is currently inside a composite `{ ... }` body.
+    *
+    * Mirrors the JISON `struct` start condition (entered on `STRUCT_START`/`{`), which the parser uses to know that `--` is a CONCURRENT divider (jison:142, `<struct>"--"`) rather than a top-level
+    * token.
+    */
+  def insideComposite: Boolean = stateStack.nonEmpty
+
   var direction:      String = "TB"
   var title:          String = ""
   var accTitle:       String = ""
@@ -454,12 +461,33 @@ final class StateDb {
 
   /** Generates a unique divider ID.
     *
-    * Ports `getDividerId()` from `stateDb.js`.
+    * Ports `getDividerId()` from `stateDb.js` (`dividerCnt++; return 'divider-id-' + dividerCnt;`).
+    *
+    * Upstream uses ONE `dividerCnt` counter shared by the parser's CONCURRENT rule and `docTranslator`'s region splitting; this method and [[docTranslator]] both increment the same `dividerCnt`.
     */
   def getDividerId: String = {
     dividerCnt += 1
     s"divider-id-$dividerCnt"
   }
+
+  /** Adds a concurrency divider inside the current composite state.
+    *
+    * Ports the CONCURRENT rule from `stateDiagram.jison:237-239`, which emits `{ stmt: 'state', id: yy.getDividerId(), type: 'divider' }` into the enclosing composite's `doc` array. The
+    * `<struct>"--"` start condition (jison:142) means `--` is a divider ONLY inside a composite `{ ... }` body; this method therefore registers the divider node as a child of the composite currently
+    * on the nesting stack. A `--` outside any composite is a no-op (no divider).
+    */
+  def addDivider(): Unit =
+    if (stateStack.nonEmpty) {
+      val dividerId = getDividerId
+      val node      = StateNode(id = dividerId, stateType = StateType.Divider)
+      states(dividerId) = node
+      val parentId = stateStack.last
+      states.get(parentId).foreach { parent =>
+        if (!parent.children.contains(dividerId)) {
+          parent.children += dividerId
+        }
+      }
+    }
 
   // --- Description methods ---
 
