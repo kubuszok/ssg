@@ -51,8 +51,24 @@ object FlowchartParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): FlowchartDb = {
-    val db      = new FlowchartDb
+  def parse(input: String): FlowchartDb =
+    parse(input, new FlowchartDb)
+
+  /** Parses Mermaid flowchart source text into a pre-configured [[FlowchartDb]].
+    *
+    * This overload allows the caller to set configuration-driven fields (e.g. `maxEdges`) on the Db before parsing populates it with edges. Mirrors the upstream pattern where `flowDb.ts:20` reads
+    * `config = getConfig()` at module scope so that `addSingleLink` (line 148) sees the configured limit.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   a pre-configured FlowchartDb instance
+    * @return
+    *   the same FlowchartDb, now populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: FlowchartDb): FlowchartDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

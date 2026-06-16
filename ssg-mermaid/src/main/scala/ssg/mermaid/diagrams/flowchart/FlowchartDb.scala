@@ -176,7 +176,8 @@ final class FlowchartDb {
   var accTitle:         String = ""
   var accDescription:   String = ""
   private var subCount: Int    = 0
-  private val maxEdges: Int    = 500
+  // flowDb.ts:148 — limit read from config.maxEdges ?? 500; settable before parsing
+  var maxEdges: Int = 500
 
   /** Function to lookup domId from id in the graph definition. */
   def lookUpDomId(id: String): String =
@@ -257,9 +258,13 @@ final class FlowchartDb {
     labelType: String = "text",
     length:    Int = 1
   ): Unit = {
+    // flowDb.ts:148 — `if (edges.length < (config.maxEdges ?? 500))` ok, else throw
     if (edges.length >= maxEdges) {
       throw new IllegalStateException(
-        s"Edge limit exceeded. ${edges.length} edges found, but the limit is $maxEdges."
+        s"Edge limit exceeded. ${edges.length} edges found, but the limit is $maxEdges.\n\n" +
+          "Initialize mermaid with maxEdges set to a higher number to allow more edges.\n" +
+          "You cannot set this config via configuration inside the diagram as it is a secure config.\n" +
+          "You have to call mermaid.initialize."
       )
     }
 
