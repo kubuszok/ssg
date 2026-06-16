@@ -30,8 +30,15 @@ import scala.util.boundary.break
   */
 object ArchitectureParser {
 
-  def parse(input: String): ArchitectureDb = {
-    val db      = new ArchitectureDb
+  def parse(input: String): ArchitectureDb =
+    parse(input, new ArchitectureDb)
+
+  /** Parses Mermaid architecture diagram source text into the supplied [[ArchitectureDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: ArchitectureDb): ArchitectureDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

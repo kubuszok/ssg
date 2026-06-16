@@ -45,8 +45,15 @@ object RequirementParser {
   )
 
   /** Parses Mermaid requirement diagram source text into a [[RequirementDb]]. */
-  def parse(input: String): RequirementDb = {
-    val db      = new RequirementDb
+  def parse(input: String): RequirementDb =
+    parse(input, new RequirementDb)
+
+  /** Parses Mermaid requirement diagram source text into the supplied [[RequirementDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: RequirementDb): RequirementDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

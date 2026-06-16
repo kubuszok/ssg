@@ -38,8 +38,22 @@ import scala.util.boundary.break
 object BlockParser {
 
   /** Parses Mermaid block diagram source text into a [[BlockDb]]. */
-  def parse(input: String): BlockDb = {
-    val db      = new BlockDb
+  def parse(input: String): BlockDb =
+    parse(input, new BlockDb)
+
+  /** Parses Mermaid block diagram source text into the supplied [[BlockDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied BlockDb, populated
+    */
+  def parse(input: String, db: BlockDb): BlockDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

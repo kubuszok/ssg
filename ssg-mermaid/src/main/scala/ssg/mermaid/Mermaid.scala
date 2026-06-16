@@ -72,68 +72,83 @@ object Mermaid {
     *   SVG markup string, or an HTML comment indicating an unsupported diagram type
     */
   def render(input: String, config: MermaidConfig = MermaidConfig()): String = {
-    val diagramType = DetectType.detect(input)
+    // Mirrors upstream preprocess.ts: frontmatter is stripped and extracted
+    // ONCE, before detection and before any parser sees the text, so the
+    // parsers never receive the leading `---` delimiters (ISS-1056). The
+    // extracted `title` is applied to each diagram db, mirroring
+    // Diagram.ts:41-43 `if (metadata.title) { db.setDiagramTitle?.(metadata.title); }`.
+    // The extracted `config` is surfaced by Preprocess but its application is
+    // owned by ISS-1057 (init-directive/config-application).
+    val pre   = Preprocess.processFrontmatter(input)
+    val text  = pre.text
+    val title = pre.title
+
+    val diagramType = DetectType.detect(text)
     diagramType match {
       case DiagramType.Flowchart | DiagramType.FlowchartV2 | DiagramType.Graph =>
-        FlowchartDiagram.render(input, config)
+        FlowchartDiagram.render(text, config, title)
       case DiagramType.Sequence =>
-        SequenceDiagram.render(input, config)
+        SequenceDiagram.render(text, config, title)
       case DiagramType.ClassDiagram | DiagramType.ClassDiagramV2 =>
-        ClassDiagram.render(input, config)
+        ClassDiagram.render(text, config, title)
       case DiagramType.StateDiagram | DiagramType.StateDiagramV2 =>
-        StateDiagram.render(input, config)
+        StateDiagram.render(text, config, title)
       case DiagramType.ErDiagram =>
-        ErDiagram.render(input, config)
+        ErDiagram.render(text, config, title)
       case DiagramType.Pie =>
-        PieDiagram.render(input, config)
+        PieDiagram.render(text, config, title)
       case DiagramType.Gantt =>
-        GanttDiagram.render(input, config)
+        GanttDiagram.render(text, config, title)
       case DiagramType.Timeline =>
-        TimelineDiagram.render(input, config)
+        TimelineDiagram.render(text, config, title)
       case DiagramType.Journey =>
-        JourneyDiagram.render(input, config)
+        JourneyDiagram.render(text, config, title)
       case DiagramType.Mindmap =>
-        MindmapDiagram.render(input, config)
+        MindmapDiagram.render(text, config, title)
       case DiagramType.GitGraph =>
-        GitDiagram.render(input, config)
+        GitDiagram.render(text, config, title)
       case DiagramType.XyChart =>
-        XyChartDiagram.render(input, config)
+        XyChartDiagram.render(text, config, title)
       case DiagramType.QuadrantChart =>
-        QuadrantDiagram.render(input, config)
+        QuadrantDiagram.render(text, config, title)
       case DiagramType.Requirement =>
-        RequirementDiagram.render(input, config)
+        RequirementDiagram.render(text, config, title)
       case DiagramType.Sankey =>
-        SankeyDiagram.render(input, config)
+        SankeyDiagram.render(text, config, title)
       case DiagramType.Block =>
-        BlockDiagram.render(input, config)
+        BlockDiagram.render(text, config, title)
       case DiagramType.Architecture =>
-        ArchitectureDiagram.render(input, config)
+        ArchitectureDiagram.render(text, config, title)
       case DiagramType.Packet =>
-        PacketDiagram.render(input, config)
+        PacketDiagram.render(text, config, title)
       case DiagramType.Radar =>
-        RadarDiagram.render(input, config)
+        RadarDiagram.render(text, config, title)
       case DiagramType.Kanban =>
-        KanbanDiagram.render(input, config)
+        KanbanDiagram.render(text, config, title)
       case DiagramType.Venn =>
-        VennDiagram.render(input, config)
+        VennDiagram.render(text, config, title)
       case DiagramType.Ishikawa =>
-        IshikawaDiagram.render(input, config)
+        IshikawaDiagram.render(text, config, title)
       case DiagramType.C4Context | DiagramType.C4Container | DiagramType.C4Component | DiagramType.C4Deployment | DiagramType.C4Dynamic =>
-        C4Diagram.render(input, config)
+        C4Diagram.render(text, config, title)
       case DiagramType.Cynefin =>
-        CynefinDiagram.render(input, config)
+        CynefinDiagram.render(text, config, title)
       case DiagramType.EventModeling =>
-        EventModelingDiagram.render(input, config)
+        EventModelingDiagram.render(text, config, title)
       case DiagramType.TreeView =>
-        TreeViewDiagram.render(input, config)
+        TreeViewDiagram.render(text, config, title)
       case DiagramType.Treemap =>
-        TreemapDiagram.render(input, config)
+        TreemapDiagram.render(text, config, title)
       case DiagramType.Wardley =>
-        WardleyDiagram.render(input, config)
+        WardleyDiagram.render(text, config, title)
       case DiagramType.Info =>
-        InfoDiagram.render(input, config)
+        // InfoDb has no title field — mirrors Diagram.ts:42 optional-chaining
+        // `db.setDiagramTitle?.(...)` being a no-op when absent.
+        InfoDiagram.render(text, config)
       case DiagramType.Error =>
-        ErrorDiagram.render(input, config)
+        // ErrorDb has no title field — mirrors Diagram.ts:42 optional-chaining
+        // `db.setDiagramTitle?.(...)` being a no-op when absent.
+        ErrorDiagram.render(text, config)
       case other =>
         s"<!-- Unsupported diagram type: ${other.keyword} -->"
     }

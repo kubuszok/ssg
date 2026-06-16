@@ -13,6 +13,8 @@ package mermaid
 package diagrams
 package wardley
 
+import lowlevel.Nullable
+
 import ssg.mermaid.MermaidConfig
 
 object WardleyDiagram {
@@ -22,8 +24,12 @@ object WardleyDiagram {
 
   def parse(text: String): WardleyDb = WardleyParser.parse(text)
 
-  def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
-    val db = parse(text)
+  def render(text: String, config: MermaidConfig = MermaidConfig(), title: Nullable[String] = Nullable.empty): String = {
+    // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
+    // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
+    val db = new WardleyDb
+    title.foreach(t => db.title = t)
+    WardleyParser.parse(text, db)
     WardleyRenderer.render(db, config)
   }
 }

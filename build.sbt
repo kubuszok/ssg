@@ -15,6 +15,7 @@ val versions = new {
 
   // Dependencies
   val hearth              = "0.3.0-49-g68e1781-SNAPSHOT"
+  val kindlingsYaml       = "0.2.0"
   val lls                 = "0.1.0"
   val scalaJavaLocales    = "1.5.4"
   val scalaJavaTime       = "2.7.0"
@@ -300,12 +301,13 @@ lazy val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
   .settings(
     name := "ssg-mermaid",
     libraryDependencies ++= Seq(
-      "io.github.cquiroz" %%% "scala-java-time"  % versions.scalaJavaTime
+      "io.github.cquiroz" %%% "scala-java-time"          % versions.scalaJavaTime,
+      "com.kubuszok"      %%% "kindlings-yaml-derivation" % versions.kindlingsYaml
     )
   )
   .settings(publishSettings)
   .settings(mimaSettings)
-  .dependsOn(`ssg-commons`, `ssg-graphs-commons`)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`)
 
 // --- Web asset minification (jekyll-minifier port) ---
 

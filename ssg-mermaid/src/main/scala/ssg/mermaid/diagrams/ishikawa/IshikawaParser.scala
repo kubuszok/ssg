@@ -27,8 +27,15 @@ import ssg.mermaid.parse.ParseException
   */
 object IshikawaParser {
 
-  def parse(input: String): IshikawaDb = {
-    val db      = new IshikawaDb
+  def parse(input: String): IshikawaDb =
+    parse(input, new IshikawaDb)
+
+  /** Parses Mermaid Ishikawa (fishbone) source text into the supplied [[IshikawaDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: IshikawaDb): IshikawaDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n")
 

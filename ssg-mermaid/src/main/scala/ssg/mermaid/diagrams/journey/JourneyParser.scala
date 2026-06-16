@@ -44,8 +44,24 @@ object JourneyParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): JourneyDb = {
-    val db      = new JourneyDb
+  def parse(input: String): JourneyDb =
+    parse(input, new JourneyDb)
+
+  /** Parses Mermaid user journey source text into the supplied [[JourneyDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied JourneyDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: JourneyDb): JourneyDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

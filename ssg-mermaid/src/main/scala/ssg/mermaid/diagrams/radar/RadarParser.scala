@@ -29,8 +29,15 @@ import scala.util.boundary.break
   */
 object RadarParser {
 
-  def parse(input: String): RadarDb = {
-    val db      = new RadarDb
+  def parse(input: String): RadarDb =
+    parse(input, new RadarDb)
+
+  /** Parses Mermaid radar chart source text into the supplied [[RadarDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: RadarDb): RadarDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

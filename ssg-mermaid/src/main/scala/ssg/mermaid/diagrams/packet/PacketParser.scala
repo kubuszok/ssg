@@ -29,8 +29,22 @@ import scala.util.boundary.break
   */
 object PacketParser {
 
-  def parse(input: String): PacketDb = {
-    val db      = new PacketDb
+  def parse(input: String): PacketDb =
+    parse(input, new PacketDb)
+
+  /** Parses Mermaid packet diagram source text into the supplied [[PacketDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied PacketDb, populated
+    */
+  def parse(input: String, db: PacketDb): PacketDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

@@ -21,6 +21,8 @@ package mermaid
 package diagrams
 package flowchart
 
+import lowlevel.Nullable
+
 import ssg.mermaid.MermaidConfig
 
 /** Flowchart diagram type registration and rendering entry point.
@@ -63,14 +65,19 @@ object FlowchartDiagram {
     *   the raw Mermaid diagram text
     * @param config
     *   the Mermaid configuration
+    * @param title
+    *   the frontmatter title to apply to the db, if any (mirrors Diagram.ts:42 `db.setDiagramTitle?.(metadata.title)`)
     * @return
     *   SVG markup string
     */
-  def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
+  def render(text: String, config: MermaidConfig = MermaidConfig(), title: Nullable[String] = Nullable.empty): String = {
     // flowDb.ts:20 — `let config = getConfig()` makes config available before parsing;
     // set config-driven Db fields before the parser adds edges so the limit is live.
     val db = new FlowchartDb
     db.maxEdges = config.maxEdges
+    // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
+    // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
+    title.foreach(t => db.title = t)
     FlowchartParser.parse(text, db)
     FlowchartRenderer.render(db, config)
   }

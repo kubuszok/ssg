@@ -40,8 +40,15 @@ import scala.util.boundary.break
 object XyChartParser {
 
   /** Parses Mermaid XY chart source text into an [[XyChartDb]]. */
-  def parse(input: String): XyChartDb = {
-    val db      = new XyChartDb
+  def parse(input: String): XyChartDb =
+    parse(input, new XyChartDb)
+
+  /** Parses Mermaid XY chart source text into the supplied [[XyChartDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: XyChartDb): XyChartDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

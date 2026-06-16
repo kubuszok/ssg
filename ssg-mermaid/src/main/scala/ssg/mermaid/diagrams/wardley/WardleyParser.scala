@@ -25,8 +25,15 @@ import ssg.mermaid.parse.ParseException
   */
 object WardleyParser {
 
-  def parse(input: String): WardleyDb = {
-    val db      = new WardleyDb
+  def parse(input: String): WardleyDb =
+    parse(input, new WardleyDb)
+
+  /** Parses Mermaid Wardley map source text into the supplied [[WardleyDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: WardleyDb): WardleyDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n").map(_.trim).filter(_.nonEmpty)
 

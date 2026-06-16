@@ -52,8 +52,22 @@ object GanttParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): GanttDb = {
-    val db      = new GanttDb
+  def parse(input: String): GanttDb =
+    parse(input, new GanttDb)
+
+  /** Parses Mermaid gantt source text into the supplied [[GanttDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied GanttDb, populated
+    */
+  def parse(input: String, db: GanttDb): GanttDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

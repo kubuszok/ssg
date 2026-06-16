@@ -27,8 +27,15 @@ import scala.collection.mutable
   */
 object TreeViewParser {
 
-  def parse(input: String): TreeViewDb = {
-    val db      = new TreeViewDb
+  def parse(input: String): TreeViewDb =
+    parse(input, new TreeViewDb)
+
+  /** Parses Mermaid tree view source text into the supplied [[TreeViewDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: TreeViewDb): TreeViewDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n")
 

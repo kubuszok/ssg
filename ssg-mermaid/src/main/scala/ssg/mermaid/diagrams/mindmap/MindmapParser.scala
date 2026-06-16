@@ -44,8 +44,18 @@ object MindmapParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): MindmapDb = {
-    val db      = new MindmapDb
+  def parse(input: String): MindmapDb =
+    parse(input, new MindmapDb)
+
+  /** Parses Mermaid mindmap source text into the supplied [[MindmapDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: MindmapDb): MindmapDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n")
 

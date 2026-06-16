@@ -55,8 +55,24 @@ object ClassParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): ClassDb = {
-    val db      = new ClassDb
+  def parse(input: String): ClassDb =
+    parse(input, new ClassDb)
+
+  /** Parses Mermaid class diagram source text into the supplied [[ClassDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied ClassDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: ClassDb): ClassDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 
