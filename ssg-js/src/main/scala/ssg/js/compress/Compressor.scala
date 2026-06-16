@@ -5570,8 +5570,13 @@ object Compressor {
   /** Create a Compressor with default options. */
   def apply(): Compressor = new Compressor(CompressorOptions())
 
-  /** Create a Compressor with custom options. */
-  def apply(options: CompressorOptions): Compressor = new Compressor(options)
+  /** Create a Compressor with custom options.
+    *
+    * Resolves `defaults = false` semantics before construction, matching terser lib/compress/index.js:220-222: when `options.defaults == false`, each default-gated option that the caller did not
+    * explicitly change is turned off. This is a no-op when `defaults == true`.
+    */
+  def apply(options: CompressorOptions): Compressor =
+    new Compressor(CompressorOptions.resolveDefaults(options))
 }
 
 /** Operator precedence table from Terser (lib/parse.js).

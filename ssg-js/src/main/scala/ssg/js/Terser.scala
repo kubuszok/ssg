@@ -89,7 +89,9 @@ object Terser {
     options.compress match {
       case compressOpts: CompressorOptions =>
         ScopeAnalysis.figureOutScope(ast)
-        val compressor = new Compressor(compressOpts)
+        // Resolve `defaults = false` before construction (terser index.js:220-222);
+        // resolveDefaults is a no-op when `defaults == true`.
+        val compressor = new Compressor(CompressorOptions.resolveDefaults(compressOpts))
         ast = compressor.compress(ast)
       case true =>
         ScopeAnalysis.figureOutScope(ast)
