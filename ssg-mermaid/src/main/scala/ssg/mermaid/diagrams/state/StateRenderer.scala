@@ -39,6 +39,10 @@ object StateRenderer {
   private val StartEndRadius: Double = 7.0
   private val ForkWidth:      Double = 70.0
   private val ForkHeight:     Double = 7.0
+  // Concurrency divider dimensions (ports the `drawDivider` line geometry from shapes.js, where the
+  // line runs from `state.textHeight` to `state.textHeight * 2`; textHeight defaults to 10).
+  private val DividerWidth:  Double = 10.0
+  private val DividerHeight: Double = 1.0
 
   /** Renders a state diagram to an SVG string.
     *
@@ -137,6 +141,11 @@ object StateRenderer {
         case StateType.Choice =>
           label.width = 28
           label.height = 28
+        case StateType.Divider =>
+          // Concurrency divider: a thin dashed separator line between concurrent regions.
+          // Ports `drawDivider()` from shapes.js (a short grey dashed `line`).
+          label.width = DividerWidth
+          label.height = DividerHeight
         case _ =>
           val textBBox = TextMetrics.measureText(desc, 14, "sans-serif")
           label.width = math.max(textBBox.width + StatePadding * 2, 50)
@@ -194,6 +203,8 @@ object StateRenderer {
             renderForkJoin(stateGroup, nl)
           case StateType.Choice =>
             renderChoice(stateGroup, nl)
+          case StateType.Divider =>
+            renderDivider(stateGroup, nl)
           case _ =>
             renderDefaultState(stateGroup, state, nl)
         }
@@ -248,6 +259,47 @@ object StateRenderer {
     path.style("fill", "#f0f0f0")
     path.style("stroke", "black")
     path.style("stroke-width", "1")
+  }
+
+  /** Renders a standalone divider visual to an SVG string.
+    *
+    * Exposes the [[renderDivider]] drawing (the `drawDivider()` line from shapes.js) for differential testing of the divider visual in isolation from compound-cluster layout. Produces a `<g>` holding
+    * the grey dashed `line.divider` sized to a default divider node.
+    */
+  def renderDividerSvg: String = {
+    val svg = SvgBuilder.createSvg("0 0 20 4")
+    val nl  = new NodeLabel
+    nl.width = DividerWidth
+    nl.height = DividerHeight
+    val group = svg.append("g")
+    group.classed("stateGroup", true)
+    renderDivider(group, nl)
+    svg.build().toMarkup()
+  }
+
+  /** Renders a concurrency divider (the dashed line separating concurrent regions).
+    *
+    * Ports `drawDivider()` from `shapes.js`:
+    * {{{
+    *   g.append('line')
+    *     .style('stroke', 'grey')
+    *     .style('stroke-dasharray', '3')
+    *     .attr('x1', textHeight).attr('x2', textHeight * 2)
+    *     .attr('y1', 0).attr('y2', 0)
+    *     .attr('class', 'divider');
+    * }}}
+    * The node is centred at `(nl.x, nl.y)` by the enclosing `translate`, so the line is drawn symmetrically about the origin.
+    */
+  private def renderDivider(g: SvgBuilder, nl: NodeLabel): Unit = {
+    val half = nl.width / 2.0
+    val line = g.append("line")
+    line.attr("x1", -half)
+    line.attr("x2", half)
+    line.attr("y1", 0)
+    line.attr("y2", 0)
+    line.classed("divider", true)
+    line.style("stroke", "grey")
+    line.style("stroke-dasharray", "3")
   }
 
   /** Renders a default state box with description. */

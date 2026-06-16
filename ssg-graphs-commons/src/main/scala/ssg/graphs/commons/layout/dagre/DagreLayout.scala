@@ -25,86 +25,94 @@ object DagreLayout {
   def layout(g: Graph[NodeLabel, EdgeLabel]): Unit = {
     DagreUtil.resetIdCounter()
 
-    // Phase 1: Make space for edge labels
+    // The phase order below mirrors dagre's `runLayout()` in lib/layout.js
+    // exactly (steps 1..27). The ordering is load-bearing: `nestingGraph.run`
+    // MUST precede `rank`, because the nesting root it inserts connects all
+    // otherwise-disconnected components of a compound graph. Without it
+    // `Rank.feasibleTree` can never find a tight tree edge spanning a
+    // disconnected component and spins forever (ISS-1195).
+
+    // dagre 1: makeSpaceForEdgeLabels
     makeSpaceForEdgeLabels(g)
 
-    // Phase 2: Remove self-edges (stash them for later)
+    // dagre 2: removeSelfEdges (stash them for later)
     removeSelfEdges(g)
 
-    // Phase 3: Cycle removal
+    // dagre 3: acyclic.run — cycle removal
     Acyclic.run(g)
 
-    // Phase 4: Rank assignment
+    // dagre 4: nestingGraph.run — compound graph nesting (BEFORE rank, so the
+    // nesting root joins all components for feasibleTree)
+    Nesting.run(g)
+
+    // dagre 5: rank — rank assignment (runs on the now-connected graph)
     Rank.rank(g)
 
-    // Phase 5: Inject edge label proxies — create proxy nodes for edge labels
+    // dagre 6: injectEdgeLabelProxies — create proxy nodes for edge labels
     // so they participate in rank assignment and ordering
     injectEdgeLabelProxies(g)
 
-    // Phase 6: Remove empty ranks
+    // dagre 7: removeEmptyRanks
     DagreUtil.removeEmptyRanks(g)
 
-    // Phase 7: Normalize ranks — ensure ranks start at 0
-    DagreUtil.normalizeRanks(g)
-
-    // Phase 8: Assign minRank/maxRank on compound nodes
-    assignRankMinMax(g)
-
-    // Phase 9: Edge normalization (insert dummy nodes for long edges)
-    Normalize.run(g)
-
-    // Phase 10: Handle dummy chains crossing subgraph borders
-    ParentDummyChains.run(g)
-
-    // Phase 11: Nesting (compound graph support)
-    Nesting.run(g)
-
-    // Phase 12: Add border segments to compound graphs
-    AddBorderSegments.run(g)
-
-    // Phase 13: Crossing minimization
-    Order.order(g)
-
-    // Phase 14: Clean up nesting (after order, before position)
+    // dagre 8: nestingGraph.cleanup (after removeEmptyRanks, before normalizeRanks)
     Nesting.cleanup(g)
 
-    // Phase 15: Remove edge label proxies (after ordering is done)
+    // dagre 9: normalizeRanks — ensure ranks start at 0
+    DagreUtil.normalizeRanks(g)
+
+    // dagre 10: assignRankMinMax — assign minRank/maxRank on compound nodes
+    assignRankMinMax(g)
+
+    // dagre 11: removeEdgeLabelProxies
     removeEdgeLabelProxies(g)
 
-    // Phase 16: Remove border nodes from nesting
-    removeBorderNodes(g)
+    // dagre 12: normalize.run — edge normalization (insert dummy nodes for long edges)
+    Normalize.run(g)
 
-    // Phase 17: Insert self-edges back
+    // dagre 13: parentDummyChains — handle dummy chains crossing subgraph borders
+    ParentDummyChains.run(g)
+
+    // dagre 14: addBorderSegments — add border segments to compound graphs
+    AddBorderSegments.run(g)
+
+    // dagre 15: order — crossing minimization
+    Order.order(g)
+
+    // dagre 16: insertSelfEdges — insert self-edges back
     insertSelfEdges(g)
 
-    // Phase 18: Coordinate system adjustment for rankdir
+    // dagre 17: coordinateSystem.adjust — coordinate system adjustment for rankdir
     CoordinateSystem.adjust(g)
 
-    // Phase 19: Position assignment
+    // dagre 18: position — position assignment
     Position.position(g)
 
-    // Phase 20: Position self-edge labels
+    // dagre 19: positionSelfEdges — position self-edge labels
     positionSelfEdges(g)
 
-    // Phase 21: Undo coordinate system adjustment
-    CoordinateSystem.undo(g)
+    // dagre 20: removeBorderNodes — remove border nodes from nesting
+    removeBorderNodes(g)
 
-    // Phase 22: Undo normalization (remove dummy nodes, set edge points)
+    // dagre 21: normalize.undo — undo normalization (remove dummy nodes, set edge points)
     Normalize.undo(g)
 
-    // Phase 23: Fix up edge label coordinates
+    // dagre 22: fixupEdgeLabelCoords — fix up edge label coordinates
     fixupEdgeLabelCoords(g)
 
-    // Phase 24: Translate graph to positive coordinates
+    // dagre 23: undoCoordinateSystemAdjust — undo coordinate system adjustment
+    CoordinateSystem.undo(g)
+
+    // dagre 24: translateGraph — translate graph to positive coordinates
     translateGraph(g)
 
-    // Phase 25: Assign edge endpoints at node intersections
+    // dagre 25: assignNodeIntersects — assign edge endpoints at node intersections
     assignNodeIntersects(g)
 
-    // Phase 26: Reverse points for reversed edges
+    // dagre 26: reversePointsForReversedEdges
     reversePointsForReversedEdges(g)
 
-    // Phase 27: Undo cycle removal
+    // dagre 27: acyclic.undo — undo cycle removal
     Acyclic.undo(g)
   }
 
