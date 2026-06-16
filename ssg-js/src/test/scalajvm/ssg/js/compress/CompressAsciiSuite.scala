@@ -51,7 +51,7 @@ final class CompressAsciiSuite extends munit.FunSuite {
   // =========================================================================
   // ascii_only_true_identifier_es2015 — \u{...} form for identifiers
   // =========================================================================
-  test("ascii_only_true_identifier_es2015".fail) {
+  test("ascii_only_true_identifier_es2015") {
     val input  = "function f() {\n    var o = { \ud835\udc9c: true };\n    return o.\ud835\udc9c;\n}"
     val result = Terser.minifyToString(
       input,
@@ -89,7 +89,7 @@ final class CompressAsciiSuite extends munit.FunSuite {
   // =========================================================================
   // ascii_only_false_identifier_es2015 — literal identifier chars in ES2015
   // =========================================================================
-  test("ascii_only_false_identifier_es2015".fail) {
+  test("ascii_only_false_identifier_es2015") {
     val input  = "function f() {\n    var o = { \ud835\udc9c: true };\n    return o.\ud835\udc9c;\n}"
     val result = Terser.minifyToString(
       input,

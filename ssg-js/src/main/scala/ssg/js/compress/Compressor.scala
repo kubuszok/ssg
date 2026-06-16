@@ -2697,12 +2697,19 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         && (self.operator == "==" || self.operator == "===")
       ) {
         val expr = self.left.nn.asInstanceOf[AstUnaryPrefix].expression.nn
-        expr match {
-          case ref: AstSymbolRef if ref.definition() != null && !ref.definition().nn.undeclared =>
-            self.left = expr
-            self.right = makeVoid0(self.right.nn)
-            if (self.operator.length == 2) self.operator += "="
-          case _ =>
+        // terser compress/index.js:2323-2324:
+        //   expr instanceof AST_SymbolRef ? expr.is_declared(compressor)
+        //     : !(expr instanceof AST_PropAccess && compressor.option("ie8"))
+        // Under ie8 a property access can throw, so it is NOT safe to drop the typeof.
+        val canSubstitute = expr match {
+          case ref: AstSymbolRef  => ref.definition() != null && !ref.definition().nn.undeclared
+          case _:   AstPropAccess => !optionBool("ie8")
+          case _ => true
+        }
+        if (canSubstitute) {
+          self.left = expr
+          self.right = makeVoid0(self.right.nn)
+          if (self.operator.length == 2) self.operator += "="
         }
       }
       // "undefined" === typeof x → void 0 === x
@@ -2714,12 +2721,19 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
         && (self.operator == "==" || self.operator == "===")
       ) {
         val expr = self.right.nn.asInstanceOf[AstUnaryPrefix].expression.nn
-        expr match {
-          case ref: AstSymbolRef if ref.definition() != null && !ref.definition().nn.undeclared =>
-            self.right = expr
-            self.left = makeVoid0(self.left.nn)
-            if (self.operator.length == 2) self.operator += "="
-          case _ =>
+        // terser compress/index.js:2310-2311:
+        //   expr instanceof AST_SymbolRef ? expr.is_declared(compressor)
+        //     : !(expr instanceof AST_PropAccess && compressor.option("ie8"))
+        // Under ie8 a property access can throw, so it is NOT safe to drop the typeof.
+        val canSubstitute = expr match {
+          case ref: AstSymbolRef  => ref.definition() != null && !ref.definition().nn.undeclared
+          case _:   AstPropAccess => !optionBool("ie8")
+          case _ => true
+        }
+        if (canSubstitute) {
+          self.right = expr
+          self.left = makeVoid0(self.left.nn)
+          if (self.operator.length == 2) self.operator += "="
         }
       }
     }
@@ -3866,8 +3880,10 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     // Don't optimize inside `with` blocks (all bets are off)
     if (findParent[AstWith] != null) return self // @nowarn
 
-    // Replace undeclared references to well-known globals
-    if (isUndeclaredRef(self)) {
+    // Replace undeclared references to well-known globals.
+    // terser compress/index.js:2942: guarded by `!compressor.option("ie8")` — under ie8
+    // these globals may be reassigned, so they are not collapsed to AST_Undefined/NaN/Infinity.
+    if (!optionBool("ie8") && isUndeclaredRef(self)) {
       self.name match {
         case "undefined" =>
           val undef = new AstUndefined
