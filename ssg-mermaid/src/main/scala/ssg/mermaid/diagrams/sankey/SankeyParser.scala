@@ -33,8 +33,15 @@ import ssg.mermaid.parse.ParseException
 object SankeyParser {
 
   /** Parses Mermaid Sankey diagram source text into a [[SankeyDb]]. */
-  def parse(input: String): SankeyDb = {
-    val db      = new SankeyDb
+  def parse(input: String): SankeyDb =
+    parse(input, new SankeyDb)
+
+  /** Parses Mermaid Sankey diagram source text into the supplied [[SankeyDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: SankeyDb): SankeyDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n").map(_.trim)
 

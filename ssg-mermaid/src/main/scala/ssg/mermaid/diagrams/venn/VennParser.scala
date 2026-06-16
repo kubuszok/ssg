@@ -30,8 +30,15 @@ import scala.util.boundary.break
   */
 object VennParser {
 
-  def parse(input: String): VennDb = {
-    val db      = new VennDb
+  def parse(input: String): VennDb =
+    parse(input, new VennDb)
+
+  /** Parses Mermaid Venn diagram source text into the supplied [[VennDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: VennDb): VennDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

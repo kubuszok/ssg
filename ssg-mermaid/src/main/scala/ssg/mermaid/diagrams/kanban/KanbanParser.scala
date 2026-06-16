@@ -26,8 +26,15 @@ import ssg.mermaid.parse.ParseException
   */
 object KanbanParser {
 
-  def parse(input: String): KanbanDb = {
-    val db      = new KanbanDb
+  def parse(input: String): KanbanDb =
+    parse(input, new KanbanDb)
+
+  /** Parses Mermaid Kanban board source text into the supplied [[KanbanDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: KanbanDb): KanbanDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n")
 

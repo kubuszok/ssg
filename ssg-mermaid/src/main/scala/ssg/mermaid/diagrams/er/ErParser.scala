@@ -46,8 +46,24 @@ object ErParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): ErDb = {
-    val db      = new ErDb
+  def parse(input: String): ErDb =
+    parse(input, new ErDb)
+
+  /** Parses Mermaid ER diagram source text into the supplied [[ErDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied ErDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: ErDb): ErDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

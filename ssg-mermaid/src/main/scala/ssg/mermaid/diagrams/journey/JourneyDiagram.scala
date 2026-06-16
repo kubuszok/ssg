@@ -21,6 +21,8 @@ package mermaid
 package diagrams
 package journey
 
+import lowlevel.Nullable
+
 import ssg.mermaid.MermaidConfig
 
 /** User journey diagram type registration and rendering entry point. */
@@ -38,8 +40,12 @@ object JourneyDiagram {
     JourneyParser.parse(text)
 
   /** Renders a user journey diagram from source text to SVG. */
-  def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
-    val db = parse(text)
+  def render(text: String, config: MermaidConfig = MermaidConfig(), title: Nullable[String] = Nullable.empty): String = {
+    // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
+    // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
+    val db = new JourneyDb
+    title.foreach(t => db.title = t)
+    JourneyParser.parse(text, db)
     JourneyRenderer.render(db, config)
   }
 }

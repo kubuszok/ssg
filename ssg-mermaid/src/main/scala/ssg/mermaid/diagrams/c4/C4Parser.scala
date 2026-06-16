@@ -38,8 +38,15 @@ object C4Parser {
     "c4dynamic"
   )
 
-  def parse(input: String): C4Db = {
-    val db      = new C4Db
+  def parse(input: String): C4Db =
+    parse(input, new C4Db)
+
+  /** Parses Mermaid C4 diagram source text into the supplied [[C4Db]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: C4Db): C4Db = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n").map(_.trim).filter(_.nonEmpty)
 

@@ -60,8 +60,24 @@ object SequenceParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): SequenceDb = {
-    val db      = new SequenceDb
+  def parse(input: String): SequenceDb =
+    parse(input, new SequenceDb)
+
+  /** Parses Mermaid sequence diagram source text into the supplied [[SequenceDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied SequenceDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: SequenceDb): SequenceDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

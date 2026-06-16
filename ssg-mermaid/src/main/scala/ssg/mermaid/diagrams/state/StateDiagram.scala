@@ -21,6 +21,8 @@ package mermaid
 package diagrams
 package state
 
+import lowlevel.Nullable
+
 import ssg.mermaid.MermaidConfig
 
 /** State diagram type registration and rendering entry point.
@@ -60,11 +62,17 @@ object StateDiagram {
     *   the raw Mermaid diagram text
     * @param config
     *   the Mermaid configuration
+    * @param title
+    *   the frontmatter title to apply to the db, if any (mirrors Diagram.ts:42 `db.setDiagramTitle?.(metadata.title)`)
     * @return
     *   SVG markup string
     */
-  def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
-    val db = parse(text)
+  def render(text: String, config: MermaidConfig = MermaidConfig(), title: Nullable[String] = Nullable.empty): String = {
+    // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
+    // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
+    val db = new StateDb
+    title.foreach(t => db.title = t)
+    StateParser.parse(text, db)
     StateRenderer.render(db, config)
   }
 }

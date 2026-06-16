@@ -38,8 +38,15 @@ import scala.util.boundary.break
 object QuadrantParser {
 
   /** Parses Mermaid quadrant chart source text into a [[QuadrantDb]]. */
-  def parse(input: String): QuadrantDb = {
-    val db      = new QuadrantDb
+  def parse(input: String): QuadrantDb =
+    parse(input, new QuadrantDb)
+
+  /** Parses Mermaid quadrant chart source text into the supplied [[QuadrantDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: QuadrantDb): QuadrantDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

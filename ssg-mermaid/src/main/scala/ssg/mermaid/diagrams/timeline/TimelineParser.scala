@@ -44,8 +44,24 @@ object TimelineParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): TimelineDb = {
-    val db      = new TimelineDb
+  def parse(input: String): TimelineDb =
+    parse(input, new TimelineDb)
+
+  /** Parses Mermaid timeline source text into the supplied [[TimelineDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied TimelineDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: TimelineDb): TimelineDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

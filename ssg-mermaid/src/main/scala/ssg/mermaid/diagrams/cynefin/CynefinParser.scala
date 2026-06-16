@@ -29,8 +29,15 @@ import ssg.mermaid.parse.ParseException
   */
 object CynefinParser {
 
-  def parse(input: String): CynefinDb = {
-    val db      = new CynefinDb
+  def parse(input: String): CynefinDb =
+    parse(input, new CynefinDb)
+
+  /** Parses Mermaid Cynefin diagram source text into the supplied [[CynefinDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: CynefinDb): CynefinDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n").map(_.trim).filter(_.nonEmpty)
 

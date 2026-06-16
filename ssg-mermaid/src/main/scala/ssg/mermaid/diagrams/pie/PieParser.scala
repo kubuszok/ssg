@@ -49,8 +49,24 @@ object PieParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): PieDb = {
-    val db      = new PieDb
+  def parse(input: String): PieDb =
+    parse(input, new PieDb)
+
+  /** Parses Mermaid pie chart source text into the supplied [[PieDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied PieDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: PieDb): PieDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

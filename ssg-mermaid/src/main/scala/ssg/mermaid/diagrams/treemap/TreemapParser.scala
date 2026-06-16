@@ -26,8 +26,22 @@ import scala.collection.mutable
   */
 object TreemapParser {
 
-  def parse(input: String): TreemapDb = {
-    val db      = new TreemapDb
+  def parse(input: String): TreemapDb =
+    parse(input, new TreemapDb)
+
+  /** Parses Mermaid treemap source text into the supplied [[TreemapDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied TreemapDb, populated
+    */
+  def parse(input: String, db: TreemapDb): TreemapDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n")
 

@@ -20,6 +20,8 @@ package mermaid
 package diagrams
 package quadrant
 
+import lowlevel.Nullable
+
 import ssg.mermaid.MermaidConfig
 
 /** Quadrant chart diagram type registration and rendering entry point. */
@@ -37,8 +39,12 @@ object QuadrantDiagram {
     QuadrantParser.parse(text)
 
   /** Renders a quadrant chart diagram from source text to SVG. */
-  def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
-    val db = parse(text)
+  def render(text: String, config: MermaidConfig = MermaidConfig(), title: Nullable[String] = Nullable.empty): String = {
+    // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
+    // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
+    val db = new QuadrantDb
+    title.foreach(t => db.title = t)
+    QuadrantParser.parse(text, db)
     QuadrantRenderer.render(db, config)
   }
 }

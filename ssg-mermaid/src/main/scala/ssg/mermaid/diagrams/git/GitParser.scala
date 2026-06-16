@@ -53,8 +53,24 @@ object GitParser {
     * @throws ParseException
     *   if the input cannot be parsed
     */
-  def parse(input: String): GitDb = {
-    val db      = new GitDb
+  def parse(input: String): GitDb =
+    parse(input, new GitDb)
+
+  /** Parses Mermaid git graph source text into the supplied [[GitDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param db
+    *   the db to parse into
+    * @return
+    *   the supplied GitDb, populated
+    * @throws ParseException
+    *   if the input cannot be parsed
+    */
+  def parse(input: String, db: GitDb): GitDb = {
     val cleaned = cleanInput(input)
     val scanner = new Scanner(cleaned)
 

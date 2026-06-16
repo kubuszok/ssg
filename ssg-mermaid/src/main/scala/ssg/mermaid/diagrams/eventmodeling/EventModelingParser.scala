@@ -27,8 +27,15 @@ import ssg.mermaid.parse.ParseException
   */
 object EventModelingParser {
 
-  def parse(input: String): EventModelingDb = {
-    val db      = new EventModelingDb
+  def parse(input: String): EventModelingDb =
+    parse(input, new EventModelingDb)
+
+  /** Parses Mermaid event modeling source text into the supplied [[EventModelingDb]].
+    *
+    * Mirrors `Diagram.fromText` holding the db across `setDiagramTitle` + `parser.parse`: the caller may pre-set a frontmatter title on the db, and the parser only overwrites it when an inline
+    * `title` directive is present.
+    */
+  def parse(input: String, db: EventModelingDb): EventModelingDb = {
     val cleaned = cleanInput(input)
     val lines   = cleaned.split("\n").map(_.trim).filter(_.nonEmpty)
 
