@@ -67,7 +67,11 @@ object FlowchartDiagram {
     *   SVG markup string
     */
   def render(text: String, config: MermaidConfig = MermaidConfig()): String = {
-    val db = parse(text)
+    // flowDb.ts:20 — `let config = getConfig()` makes config available before parsing;
+    // set config-driven Db fields before the parser adds edges so the limit is live.
+    val db = new FlowchartDb
+    db.maxEdges = config.maxEdges
+    FlowchartParser.parse(text, db)
     FlowchartRenderer.render(db, config)
   }
 }
