@@ -181,8 +181,11 @@ final case class CompressorOptions(
   properties: Boolean = true,
   /** Names of functions known to have no side effects. */
   pureFuncs: List[String] = Nil,
-  /** Assume property access has no side effects. `"strict"` = only on known-safe objects. */
-  pureGetters: String = "strict",
+  /** Assume property access has no side effects. `"strict"` = only on known-safe objects; `true` assumes ALL property access is pure (terser pure_getters: Boolean | "strict" — index.js:258
+    * `!false_by_default && "strict"`). Widened to `Any` (mirroring [[keepFnames]]) so `option("pure_getters")` can return the boolean `true` and the boolean-gated paths
+    * (Compressor.optimizeDestructuring, DropUnused) become reachable (ISS-1177; cf. ISS-1040 keep_fnames widening).
+    */
+  pureGetters: Any = "strict",
   /** Assume `new X()` always returns a new object (enable for side-effect-free `new`). */
   pureNew: Boolean = false,
   /** Allow inlining of function bodies. */
