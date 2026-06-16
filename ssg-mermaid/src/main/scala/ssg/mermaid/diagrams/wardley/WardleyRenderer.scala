@@ -45,7 +45,11 @@ object WardleyRenderer {
     val defs      = svg.append("defs")
     val themeVars = Theme.getThemeByName(config.theme, config.themeVariables)
     val css       = WardleyStyles.generate(themeVars)
-    defs.append("style").attr("type", "text/css").text(CssGenerator.generateBaseStyles(themeVars) + "\n" + css)
+    val baseCss   = CssGenerator.generateBaseStyles(themeVars)
+    val styleEl   = defs.append("style")
+    styleEl.attr("type", "text/css")
+    // Append user themeCSS when configured (mermaidAPI.ts:119-121 applies themeCSS to all diagrams)
+    styleEl.text(baseCss + "\n" + css + (if (config.themeCSS.nonEmpty) "\n" + config.themeCSS else ""))
 
     val mainGroup = svg.append("g")
     var yOff      = Padding

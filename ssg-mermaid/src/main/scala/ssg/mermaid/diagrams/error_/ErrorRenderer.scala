@@ -28,7 +28,11 @@ object ErrorRenderer {
     val defs      = svg.append("defs")
     val themeVars = Theme.getThemeByName(config.theme, config.themeVariables)
     val css       = ErrorStyles.generate(themeVars)
-    defs.append("style").attr("type", "text/css").text(CssGenerator.generateBaseStyles(themeVars) + "\n" + css)
+    val baseCss   = CssGenerator.generateBaseStyles(themeVars)
+    val styleEl   = defs.append("style")
+    styleEl.attr("type", "text/css")
+    // Append user themeCSS when configured (mermaidAPI.ts:119-121 applies themeCSS to all diagrams)
+    styleEl.text(baseCss + "\n" + css + (if (config.themeCSS.nonEmpty) "\n" + config.themeCSS else ""))
 
     // Error icon (simple X in a circle)
     svg.append("circle").attr("cx", 40).attr("cy", 40).attr("r", 25).style("fill", "#ff6b6b").style("stroke", "#cc0000").style("stroke-width", "2")

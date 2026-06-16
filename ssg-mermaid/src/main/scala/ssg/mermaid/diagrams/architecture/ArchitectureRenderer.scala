@@ -48,7 +48,10 @@ object ArchitectureRenderer {
     val themeVars = Theme.getThemeByName(config.theme, config.themeVariables)
     val css       = ArchitectureStyles.generate(themeVars)
     val baseCss   = CssGenerator.generateBaseStyles(themeVars)
-    defs.append("style").attr("type", "text/css").text(baseCss + "\n" + css)
+    val styleEl   = defs.append("style")
+    styleEl.attr("type", "text/css")
+    // Append user themeCSS when configured (mermaidAPI.ts:119-121 applies themeCSS to all diagrams)
+    styleEl.text(baseCss + "\n" + css + (if (config.themeCSS.nonEmpty) "\n" + config.themeCSS else ""))
 
     val marker = defs.append("marker")
     marker.attr("id", "arch-arrowhead").attr("viewBox", "0 0 10 10")
