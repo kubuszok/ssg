@@ -21,6 +21,7 @@ package diagrams
 package flowchart
 
 import lowlevel.Nullable
+import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph
@@ -78,6 +79,10 @@ object FlowchartRenderer {
     val svg     = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "flowchart-v2", db.accTitle, db.accDescription)
 
     // Add unique marker ID
     val markerId = "flowchart-marker"

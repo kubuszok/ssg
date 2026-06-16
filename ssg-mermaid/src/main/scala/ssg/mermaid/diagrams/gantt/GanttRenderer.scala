@@ -20,6 +20,7 @@ package mermaid
 package diagrams
 package gantt
 
+import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
@@ -55,6 +56,9 @@ object GanttRenderer {
     if (db.tasks.isEmpty) {
       val svg = SvgBuilder.createSvg("0 0 400 100")
       svg.attr("role", "img")
+      // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+      // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+      Accessibility.applyTo(svg, "gantt", db.accTitle, db.accDescription)
       val text = svg.append("text")
       text.attr("x", 200)
       text.attr("y", 50)
@@ -97,6 +101,10 @@ object GanttRenderer {
     val svg     = SvgBuilder.createSvg(viewBox)
     svg.attr("role", "img")
     svg.classed("mermaid", true)
+
+    // Accessibility: role + aria-roledescription always; a11y title/desc when present.
+    // Mirrors addA11yInfo in mermaidAPI.ts:521-529 (accessibility.ts setA11yDiagramInfo + addSVGa11yTitleDescription).
+    Accessibility.applyTo(svg, "gantt", db.accTitle, db.accDescription)
 
     // Add defs with styles
     val defs      = svg.append("defs")

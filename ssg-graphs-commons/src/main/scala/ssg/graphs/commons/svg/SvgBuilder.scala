@@ -211,18 +211,26 @@ final class SvgBuilder private (
     *
     * Mirrors D3's `selection.insert(type, before)`. If no child matches `beforeSelector`, the new element is appended at the end.
     *
+    * The D3 pseudo-selector `:first-child` is recognized and inserts the new element at index 0 (i.e. as the new first child), matching D3's behavior used by e.g. `addSVGa11yTitleDescription`
+    * (accessibility.ts:58,63 `svg.insert('desc', ':first-child')` / `svg.insert('title', ':first-child')`).
+    *
     * @param tag
     *   the tag name of the new element
     * @param beforeSelector
-    *   simple CSS selector (.class, #id, or tag) to find the insertion point
+    *   simple CSS selector (.class, #id, or tag), or the D3 pseudo-selector `:first-child`, to find the insertion point
     */
   def insert(tag: String, beforeSelector: String): SvgBuilder = {
     val child = new SvgBuilder(tag, Nullable(this))
-    val idx   = findChildIndex(beforeSelector)
-    if (idx >= 0) {
-      _children.insert(idx, child)
+    if (beforeSelector == ":first-child") {
+      // D3 ":first-child" inserts the new node as the first child.
+      _children.insert(0, child)
     } else {
-      _children += child
+      val idx = findChildIndex(beforeSelector)
+      if (idx >= 0) {
+        _children.insert(idx, child)
+      } else {
+        _children += child
+      }
     }
     child
   }
