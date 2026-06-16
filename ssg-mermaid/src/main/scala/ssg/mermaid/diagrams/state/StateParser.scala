@@ -117,6 +117,7 @@ object StateParser {
     scanner.skipWhitespace()
     if (scanner.isEof || scanner.peek() == '\n') break()
 
+    if (tryParseConcurrent(scanner, db)) break()
     if (tryParseDirection(scanner, db)) break()
     if (tryParseStateDeclaration(scanner, db)) break()
     if (tryParseNote(scanner, db)) break()
@@ -128,6 +129,48 @@ object StateParser {
 
     // Default: try transition (stateId --> stateId) or bare state
     parseTransitionOrState(scanner, db)
+  }
+
+  /** Tries to parse a `--` concurrency divider inside a composite state.
+    *
+    * Ports the JISON CONCURRENT token: `<struct>"--" return 'CONCURRENT';` (stateDiagram.jison:142) and its grammar rule (jison:237-239), which emits
+    * `{ stmt: 'state', id: yy.getDividerId(), type: 'divider' }` into the enclosing composite's `doc`.
+    *
+    * The `<struct>` start condition means `--` is a divider ONLY inside a composite `{ ... }` body, NOT at top level — so this only fires when [[StateDb.insideComposite]] is true. A top-level `--` is
+    * left for the default statement handling (it is not a divider).
+    *
+    * `-->` is a different token (jison:141, `<INITIAL,struct>"-->"`) and must NOT be consumed here: the `--` is rejected if a `>` follows. The `--` must also stand alone as a line (the next non-`-`
+    * character must terminate the token: newline, whitespace, `}`, `;`, or EOF).
+    */
+  private def tryParseConcurrent(scanner: Scanner, db: StateDb): Boolean = boundary {
+    if (!db.insideComposite) {
+      break(false)
+    }
+    val saved = scanner.save()
+    // Must be exactly `--` followed by a token terminator, and not `-->`.
+    if (scanner.isEof || scanner.peek() != '-' || scanner.peekAt(1) != '-') {
+      break(false)
+    }
+    val third = scanner.peekAt(2)
+    // `-->` (transition) or `---`+ (not a bare divider) are not CONCURRENT.
+    if (third == '>' || third == '-') {
+      break(false)
+    }
+    scanner.advance() // -
+    scanner.advance() // -
+    scanner.skipWhitespace()
+    // After `--` and trailing spaces only a line/struct terminator may follow.
+    if (!scanner.isEof && scanner.peek() != '\n' && scanner.peek() != '}' && scanner.peek() != ';') {
+      scanner.restore(saved)
+      break(false)
+    }
+    db.addDivider()
+    // Consume the rest of the line (whitespace already skipped; stop before `}`/`;` so the body
+    // loop can handle composite-close / statement-separator tokens).
+    if (!scanner.isEof && scanner.peek() == '\n') {
+      scanner.advance()
+    }
+    true
   }
 
   /** Tries to parse `direction TB/LR/RL/BT`. */

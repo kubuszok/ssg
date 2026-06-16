@@ -47,28 +47,39 @@ object DagreUtil {
     v
   }
 
+  /** Creates a simplified (non-multigraph, non-compound) copy of `g` with parallel edges merged.
+    *
+    * Ports dagre lib/util.js `simplify()`. Compound parent nodes (those with children in the original compound graph) are excluded because they have no edges of their own — their layout position is
+    * derived from their children's positions after ranking completes. Including them would leave isolated nodes that violate the connectivity precondition of `feasibleTree`.
+    */
   def simplify(g: Graph[NodeLabel, EdgeLabel]): Graph[NodeLabel, EdgeLabel] = {
     val simplified = new Graph[NodeLabel, EdgeLabel](isDirected = true, isMultigraph = false)
     simplified.setGraph(g.graph[GraphLabel]())
     for (v <- g.nodes())
-      simplified.setNode(v, g.node(v))
-    for (e <- g.edges()) {
-      val simpleLabel = simplified.edgeOpt(e.v, e.w).getOrElse {
-        val el = new EdgeLabel
-        el.weight = 0
-        el.minlen = 1
-        el
+      // Skip compound parent nodes — they have no edges and would be isolated
+      // in the simplified graph, breaking the connectivity precondition of
+      // feasibleTree. Their position is derived from children after layout.
+      if (!g.isCompound || g.children(v).isEmpty) {
+        simplified.setNode(v, g.node(v))
       }
-      val label = g.edge(e)
-      simplified.setEdge(
-        e.v,
-        e.w, {
-          simpleLabel.weight = simpleLabel.weight + label.weight
-          simpleLabel.minlen = Math.max(simpleLabel.minlen, label.minlen)
-          simpleLabel
+    for (e <- g.edges())
+      if (simplified.hasNode(e.v) && simplified.hasNode(e.w)) {
+        val simpleLabel = simplified.edgeOpt(e.v, e.w).getOrElse {
+          val el = new EdgeLabel
+          el.weight = 0
+          el.minlen = 1
+          el
         }
-      )
-    }
+        val label = g.edge(e)
+        simplified.setEdge(
+          e.v,
+          e.w, {
+            simpleLabel.weight = simpleLabel.weight + label.weight
+            simpleLabel.minlen = Math.max(simpleLabel.minlen, label.minlen)
+            simpleLabel
+          }
+        )
+      }
     simplified
   }
 
@@ -149,15 +160,45 @@ object DagreUtil {
     }
   }
 
+  /** Removes empty ranks inserted by nesting-graph border-node spacing.
+    *
+    * Faithful port of dagre lib/util.js `removeEmptyRanks()`. Empty layers whose index is NOT a multiple of `nodeRankFactor` are collapsed by shifting later nodes up. This undoes the
+    * `minlen * nodeSep` spacing that `Nesting.run` introduced, removing ranks that only existed to separate border nodes from real nodes.
+    */
   def removeEmptyRanks(g: Graph[NodeLabel, EdgeLabel]): Unit = {
-    val offset = g.nodes().filter(v => g.node(v).rank >= 0).map(v => g.node(v).rank).minOption.getOrElse(0)
-    val layers = mutable.Map.empty[Int, Boolean]
+    // Ranks may not start at 0, so we need to offset them.
+    val offset =
+      g.nodes().filter(v => g.node(v).rank >= 0).map(v => g.node(v).rank).minOption.getOrElse(0)
+
+    // Build layer arrays indexed by rank (offset-adjusted).
+    val layers = mutable.Map.empty[Int, mutable.ArrayBuffer[String]]
     for (v <- g.nodes()) {
       val node = g.node(v)
       if (node.rank >= 0) {
-        node.rank = node.rank - offset
-        layers(node.rank) = true
+        val rank = node.rank - offset
+        node.rank = rank
+        layers.getOrElseUpdate(rank, mutable.ArrayBuffer.empty) += v
       }
+    }
+
+    val nodeRankFactor = g.graph[GraphLabel]().nodeRankFactor
+    if (nodeRankFactor > 0) {
+      val maxRank = if (layers.isEmpty) 0 else layers.keys.max
+      var delta   = 0
+      for (i <- 0 to maxRank)
+        layers.get(i) match {
+          case None =>
+            // Empty layer — remove it unless it aligns with the nodeRankFactor
+            // grid (those are "real" rank positions that must be preserved).
+            if (i % nodeRankFactor.toInt != 0) {
+              delta -= 1
+            }
+          case Some(vs) =>
+            if (delta != 0) {
+              for (v <- vs)
+                g.node(v).rank += delta
+            }
+        }
     }
   }
 
