@@ -1,8 +1,9 @@
 # SSG End-to-End Site Pipeline — Design (ISS-1054)
 
-**Status:** Refreshed 2026-06-17 — reconciled with resolved blockers
-(ISS-978/980/991/1010/1056/1057/1058/1092/1121); user decisions Q1/Q3/Q11
-ratified. Approval pending orchestrator audit.
+**Status:** Refreshed 2026-06-17 — Q1 RE-DECIDED (dedicated `ssg-site` module;
+fold-into-ssg reversed due to Native linker OOM ISS-1213); reconciled with
+resolved blockers (ISS-978/980/991/1010/1056/1057/1058/1092/1121); user
+decisions Q3/Q11 ratified. Approval pending orchestrator audit.
 **Issue:** ISS-1054 (critical, infra, `[R0610-P0]`). Implements the design that
 ISS-1055 (`Site.build()`) is BLOCKED-BY.
 **Date:** 2026-06-17.
@@ -155,7 +156,7 @@ Q9 puts this decision to the user.)
 ### Module composition (text diagram)
 
 ```
-                         ssg module (pipeline + integration test — Q1 DECIDED)
+                         ssg-site (NEW module — Q1 RE-DECIDED)
                          ┌───────────────────────────────────────────────────┐
   _config.yml ──────────►│ SiteConfig.load (kindlings-yaml)            §4     │
                          │        │                                           │
@@ -239,22 +240,28 @@ Engine entry points the pipeline calls (all verified present today):
   follow-up: *"Wire KaTeX/Mermaid/highlight into the page pipeline behind config
   flags"*.
 
-### 3.1 Where does it live? — DECIDED: fold into the existing `ssg` module (Q1)
+### 3.1 Where does it live? — RE-DECIDED 2026-06-17: dedicated `ssg-site` module (Q1)
 
-**Decision (Q1 DECIDED):** the pipeline and integration test live in the
-existing `ssg` module (`ssg/src/main/scala/ssg/`, `ssg/src/test/`). No new
-`ssg-site` module is created.
+**Decision (Q1 RE-DECIDED 2026-06-17):** the pipeline and integration test live
+in a **dedicated `ssg-site` module** (`ssg-site/src/main/scala/ssg/site/`,
+`ssg-site/src/test/`).
 
-**Prerequisite:** `ssg` is currently classified **`compileOnly`**
-(`build.sbt:53-55`), so tests placed in `ssg` never run in CI
-(`docs/reviews/codebase-review-2026-06-10.md:79`). ISS-1055 Phase 0 must
-**remove `ssg` from `compileOnly`** so the integration test suite (§9) actually
-executes. The `ssg` module already has `publishSettings` (`build.sbt:344`) and
-`dependsOn` all engine modules (`build.sbt:346`), so it is the natural home
-for the pipeline glue.
+**Reversal rationale:** folding the pipeline into the `ssg` aggregator (the
+original Q1 decision) required removing `ssg` from `compileOnly` so its tests
+would run. This made the `ssg` Scala Native TEST binary link **all 12 modules**
+(ssg-highlight's 73 tree-sitter grammars + katex/mermaid/graphviz + full Terser
+engine) and **OOM the native linker even at -Xmx8G** (ISS-1213,
+resolved/superseded). A dedicated light module with deps limited to
+commons/data-commons/md/liquid/sass/minify/js native-links fine (verified:
+2687 classes, 136 LLVM IR files, ~9s link time).
 
-`FrontMatterBridge` and the other pipeline types live in package `ssg` (not
-`ssg.site`), consistent with the module's existing namespace.
+`ssg-site` is added to the `published` list (`build.sbt`) so its tests run on
+all 3 platforms in CI. The `ssg` aggregator `dependsOn` `ssg-site` (re-export)
+while **staying `compileOnly`** — the heavy aggregator's test binary is never
+linked.
+
+`FrontMatterBridge` and the other pipeline types live in package `ssg.site`,
+consistent with the module's own namespace.
 
 ### 3.2 Source-file selection (what `SourceScan` includes vs skips)
 
@@ -305,9 +312,9 @@ is bucket (2) and therefore **must not** appear in `_expected/`, while
 hand-rolled parser — project ecosystem rule, MEMORY note "JSON/YAML libs in
 re-scale"). JSON config, if ever supported, uses **kindlings-jsoniter**. Neither
 dependency is in `build.sbt` today (verified: no `kindlings`/`yaml`/`jsoniter`
-entries in `build.sbt`); **adding `kindlings-yaml` as an `ssg` dependency is a
-prerequisite of ISS-1055 phase 1** (§10). It must resolve on all three platforms;
-if a platform is missing, that gates the platform per §8.
+entries in `build.sbt`); **adding `kindlings-yaml` as an `ssg-site` dependency is
+a prerequisite of ISS-1055 phase 1** (§10). It must resolve on all three
+platforms; if a platform is missing, that gates the platform per §8.
 
 ### Typed config
 
@@ -374,10 +381,11 @@ different `SiteFlavor`. This mirrors how ssg-liquid already flavors its dialects
 
 ### Where the bridge code lives
 
-A new object `ssg.FrontMatterBridge` in the `ssg` module (Q1 DECIDED, §3.1).
-**It does not belong in ssg-md** (ssg-md must not depend on ssg-data-commons or
-Liquid) **nor in ssg-liquid** (Liquid must not know about Markdown front matter).
-`ssg` is the module that depends on both, making it the correct seam.
+A new object `ssg.site.FrontMatterBridge` in the `ssg-site` module (Q1
+RE-DECIDED, §3.1). **It does not belong in ssg-md** (ssg-md must not depend on
+ssg-data-commons or Liquid) **nor in ssg-liquid** (Liquid must not know about
+Markdown front matter). `ssg-site` is the module that depends on both, making
+it the correct seam.
 
 ### How variables reach Liquid
 
@@ -418,7 +426,7 @@ Liquid) **nor in ssg-liquid** (Liquid must not know about Markdown front matter)
 - `{% include x.html %}` resolves under `<source>/_includes/`. ssg-liquid already
   has a `NameResolver` SPI and a filesystem resolver
   (`ssg-liquid/src/main/scala/ssg/liquid/antlr/LocalFSNameResolver.scala:36-52`);
-  the `ssg` pipeline configures the `TemplateParser` with a resolver rooted at
+  the `ssg-site` pipeline configures the `TemplateParser` with a resolver rooted at
   `_includes/`.
 - **Former blocker resolved:** unquoted dotted include names
   (`{% include footer.html %}`) previously failed to lex in the Jekyll flavor
@@ -492,7 +500,7 @@ under** (e.g. `/blog`). v1 adopts Jekyll's semantics precisely:
 (`ssg-liquid/src/main/scala/ssg/liquid/antlr/LocalFSNameResolver.scala:41-44`) and
 resolves relative names under `root` **without verifying the result stays under
 root** (`…antlr/LocalFSNameResolver.scala:49-51`) — a path-traversal surface
-(ISS-1020, `pit-of-success`, high). **Decision for v1:** the `ssg` pipeline MUST
+(ISS-1020, `pit-of-success`, high). **Decision for v1:** the `ssg-site` pipeline MUST
 jail all include/layout/output resolution to the configured `source`/`destination`
 roots: after `resolve(...).normalize.toAbsolute`, assert the path string starts
 with the jailed root's absolute path; reject otherwise via §7 diagnostics. This is
@@ -535,7 +543,7 @@ final case class BuildResult(
   diagnostics, treat Liquid `STRICT`-mode throws as `Error`.
 - **No silent swallow.** Minify currently swallows exceptions and returns input
   unchanged with no channel (`docs/reviews/codebase-review-2026-06-10.md:99`);
-  the `ssg` pipeline records a `Warning` diagnostic when a minify pass is skipped, so a
+  the `ssg-site` pipeline records a `Warning` diagnostic when a minify pass is skipped, so a
   build never silently ships unminified assets without a trace.
 - `Site.build` returns `BuildResult` (not throwing) so a caller (CLI, test) can
   decide policy; a `failOnError` config flag can promote any `Error` to a thrown
@@ -556,14 +564,14 @@ resolved. Per-platform status for the pipeline:
 | `FilePath.normalize` (root-jail soundness) | ✅ | ✅ (ISS-980 resolved; delegates to `java.nio.file.Paths`, `ssg-commons/src/main/scalanative/ssg/commons/io/FilePathPlatform.scala:64-67`) | ✅ | all platforms |
 | Sass `compileString` + importers/loadPaths | ✅ | ✅ | ✅ (no FS needed) | ISS-991 resolved; `loadPaths` honored (`ssg-sass/src/main/scala/ssg/sass/Compile.scala:58-59`) |
 | ssg-md JS resource loading (entities/emoji) | ✅ | ✅ | ✅ (ISS-979 resolved; embedded at build time) | all platforms |
-| kindlings-yaml availability | assumed ✅ | TBD | TBD | verify at ISS-1055 phase 1 |
+| kindlings-yaml availability | ✅ | ✅ | ✅ | **ISS-1206 verified** — `kindlings-yaml-derivation` resolves and compiles on all 3 platforms (`ssg-site` smoke test) |
 
 **v1 platform target (Q11 DECIDED):** ship and CI-run the integration test on
 **all three platforms (JVM + Native + JS)**, honoring CLAUDE.md's "all 3
 platforms are baseline" rule. The blockers that previously gated Native (ISS-980
 normalize bug + ISS-1121 directory APIs) and JS (ISS-978 FileOps I/O) are all
-resolved. The only remaining TBD is `kindlings-yaml` platform availability,
-verified at ISS-1055 phase 1; if a platform is missing kindlings-yaml, that
+resolved. `kindlings-yaml` platform availability has been verified (ISS-1206:
+`ssg-site` compiles and tests pass on all 3 platforms); if a platform were missing kindlings-yaml, that
 platform's integration suite is gated until it resolves (a named, tracked
 dependency, not a permanent scoping).
 
@@ -578,7 +586,7 @@ for the orchestrator to close as premise-obsolete.
 
 ### Fixture site (in-repo)
 
-A minimal site under `ssg/src/test/resources/fixture-site/`:
+A minimal site under `ssg-site/src/test/resources/fixture-site/`:
 
 ```
 fixture-site/
@@ -606,8 +614,8 @@ and reviewed.
 
 **All three platforms (JVM + Native + JS)** per Q11 DECIDED (§8). The former
 platform blockers (ISS-978/980/1121) are resolved; see §8 for the full
-capability matrix. The `ssg` module must be **removed from `compileOnly`**
-(`build.sbt:53-55`) so the suite actually executes in CI on all platforms.
+capability matrix. `ssg-site` is a normal published module; its tests run on
+all 3 platforms.
 
 ### Concrete test cases
 
@@ -656,14 +664,15 @@ capability matrix. The `ssg` module must be **removed from `compileOnly`**
 Each phase is independently reviewable with its own Definition of Done (DoD).
 ISS-1055 is BLOCKED-BY this doc; on approval it executes these phases.
 
-- **Phase 0 — scaffolding.** Remove `ssg` from `compileOnly` (`build.sbt:53-55`)
-  so tests run in CI (Q1 DECIDED); add `kindlings-yaml` dependency to `ssg`. The
-  directory APIs the pipeline needs (`FileOps.list`, `FileOps.walkTree`,
+- **Phase 0 — scaffolding.** Create the `ssg-site` module (light deps:
+  commons/data-commons/md/liquid/sass/minify/js) + `kindlings-yaml` dependency +
+  smoke test; `ssg` aggregator `dependsOn` ssg-site; `ssg` stays `compileOnly`.
+  The directory APIs the pipeline needs (`FileOps.list`, `FileOps.walkTree`,
   `FileOps.createDirectories`, `FileOps.copy`, `FileOps.deleteRecursively`) are
   already present on all three platforms (ISS-1121 resolved;
   `ssg-commons/src/main/scala/ssg/commons/io/FileOps.scala:74-127`). **DoD:**
-  `ssg` module compiles on all three platforms with the `kindlings-yaml`
-  dependency; `ssg` is no longer in `compileOnly`.
+  `ssg-site` module compiles on all three platforms with `kindlings-yaml` on the
+  classpath; smoke test runs on JVM/JS/Native.
 - **Phase 1 — config + front-matter bridge.** `SiteConfig.load` + `FrontMatterBridge`.
   **DoD:** unit tests: a `_config.yml` parses to typed `SiteConfig`; a front-matter
   block parses to the expected `DataView` (exact values, nested map).
@@ -689,10 +698,15 @@ ISS-1055 is BLOCKED-BY this doc; on approval it executes these phases.
 
 Each is a genuine scope decision with a recommendation and the alternatives.
 
-**Q1 — Module name / location. DECIDED: fold into `ssg`.**
-The pipeline and integration test live in the existing `ssg` module. `ssg` is
-removed from `compileOnly` (`build.sbt:53-55`) so tests run in CI. No new
-module is created. See §3.1.
+**Q1 — Module name / location. RE-DECIDED: dedicated `ssg-site` module.**
+The pipeline and integration test live in a dedicated `ssg-site` module.
+Folding into the `ssg` aggregator (the original Q1 decision) was reversed
+because removing `ssg` from `compileOnly` made its Native test binary link all
+12 modules (73 tree-sitter grammars + katex/mermaid/graphviz + full Terser) and
+OOM the native linker even at 8GB (ISS-1213, resolved/superseded). A dedicated
+light module (deps: commons/data-commons/md/liquid/sass/minify/js) native-links
+fine. `ssg-site` is in the `published` list; the `ssg` aggregator `dependsOn`
+ssg-site and stays `compileOnly`. See §3.1.
 
 **Q2 — Config format strictness.** Should an unknown `_config.yml` key be an error,
 a warning, or silently exposed under `site.*`?
