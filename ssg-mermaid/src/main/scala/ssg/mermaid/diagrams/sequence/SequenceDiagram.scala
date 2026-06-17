@@ -73,6 +73,12 @@ object SequenceDiagram {
     // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
     // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
     val db = new SequenceDb
+    // sequenceDiagram.ts:13-14 — the diagram's `init` hook runs BEFORE the parser
+    // populates messages: `init: ({ wrap }) => { db.setWrap(wrap); }`. The
+    // top-level `config.wrap` (also where the `%%{wrap}%%` directive folds, per
+    // preprocess.ts:35-39) becomes the global auto-wrap default that addMessage /
+    // addActor / addNote etc. consult via autoWrap() (sequenceDb.ts:245-248).
+    db.setWrap(Nullable(config.wrap))
     title.foreach(t => db.title = t)
     SequenceParser.parse(text, db)
     SequenceRenderer.render(db, config)

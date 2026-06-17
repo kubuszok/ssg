@@ -41,29 +41,47 @@ import ssg.data.FromDataView
   * @param fontSize
   *   base font size in pixels
   * @param securityLevel
-  *   trust level for parsed diagrams: "strict", "loose", "antiscript", "sandbox"
+  *   trust level for parsed diagrams: "strict", "loose", "antiscript", "sandbox". Consulted by [[ssg.mermaid.util.Utils.formatUrl]] when a clickable node link is added (flowDb.ts:349): under any
+  *   level other than "loose" the link URL is run through [[ssg.mermaid.util.Utils.sanitizeUrl]], while "loose" passes the author URL through verbatim. "sandbox" additionally forces the link target
+  *   to "_top" (FlowchartRenderer, nodes.js:68-76).
   * @param startOnLoad
-  *   whether to render diagrams on page load (relevant for browser usage)
+  *   whether to render diagrams on page load. Browser bootstrap flag (mermaid.ts:144-146 `mermaidAPI.updateSiteConfig({ startOnLoad })`): an environment/bootstrap flag with no effect in SSG's
+  *   pure-render model, which has no DOMContentLoaded event. Kept for full-fidelity schema parity.
   * @param logLevel
-  *   logging verbosity: 0=trace, 1=debug, 2=info, 3=warn, 4=error, 5=fatal
+  *   logging verbosity: 0=trace, 1=debug, 2=info, 3=warn, 4=error, 5=fatal. Upstream `setLogLevel` controls console verbosity of the `log.*` calls; SSG's pure render emits no log output, so this is
+  *   an environment/host-config flag consumed by the host's logger injection ([[ssg.commons.Logger]]) rather than by the renderer.
   * @param darkMode
-  *   whether dark mode is enabled
+  *   whether dark mode is enabled. Upstream `darkMode` is a theme-internal flag (a property of the Theme instance, theme-base.js:33-65); top-level `config.darkMode` is never copied onto the active
+  *   theme by `getThemeVariables` (mermaidAPI.ts:492-499), so it has no faithful effect distinct from selecting `theme="dark"` or passing `themeVariables.darkMode`. The theme's own darkMode (driven
+  *   by theme selection / [[ssg.mermaid.theme.ThemeVariables]] `darkMode` key) remains the single source of truth.
   * @param htmlLabels
   *   whether to use HTML labels (foreignObject) in diagrams
   * @param wrap
-  *   whether to wrap text in labels
+  *   whether to wrap text in labels. Fed as the global auto-wrap default into sequence diagrams (sequenceDiagram.ts:13-14 `init: ({ wrap }) => db.setWrap(wrap)`): every message/actor/note whose own
+  *   wrap is unset inherits this via [[ssg.mermaid.diagrams.sequence.SequenceDb.autoWrap]]. Also the fold target of the `%%{wrap}%%` directive (preprocess.ts:35-39).
   * @param maxTextSize
-  *   maximum allowed size of user text diagrams
+  *   maximum allowed size of user text diagrams. Guarded at the top of [[Mermaid.render]] (mermaidAPI.ts:319-322): input longer than this is replaced by [[Mermaid.MaxTextLengthExceededMsg]]. A secure
+  *   key (not overridable by author markup), so the caller/site value always wins.
   * @param maxEdges
-  *   maximum number of edges that can be drawn
+  *   maximum number of edges that can be drawn. Enforced by [[ssg.mermaid.diagrams.flowchart.FlowchartDb.addEdge]] (flowDb.ts:148-155): adding the (maxEdges+1)-th edge throws.
   * @param deterministicIds
-  *   whether generated SVG IDs should be deterministic
+  *   environment id-disambiguation flag. Upstream feeds this pair into `new utils.InitIDGenerator(conf.deterministicIds, conf.deterministicIDSeed)` (mermaid.ts:150), whose `next()` (utils.ts:752-761)
+  *   switches between a seeded incrementing counter (`() => count++`, deterministic) and a wall-clock timestamp (`() => Date.now()`, non-deterministic) to disambiguate the `mermaid-${next()}` root id
+  *   (mermaid.ts:165) when multiple diagrams share one browser page. SSG renders one diagram per call and its root/node ids are unconditionally deterministic (`mermaid-<diagramType>` /
+  *   `flowchart-<id>`, see [[ssg.mermaid.Accessibility.applyTo]] Accessibility.scala:126-139) — i.e. it already behaves as `deterministicIds=true`. The `Date.now()` timestamp branch is a browser
+  *   multi-element-on-page artifact with no SSG analogue, so this flag has no distinct effect in pure render. Kept for full-fidelity schema parity.
   * @param deterministicIDSeed
-  *   seed for deterministic ID generation
+  *   seed companion to [[deterministicIds]]. Upstream uses it only for its length (`count = seed ? seed.length : 0`, utils.ts:758) to offset the deterministic counter's start value. SSG ids are
+  *   unconditionally deterministic ([[ssg.mermaid.Accessibility.applyTo]]) and carry no counter to offset, so this has no distinct effect in pure render. Kept for full-fidelity schema parity.
   * @param arrowMarkerAbsolute
-  *   whether arrow markers use absolute paths
+  *   whether arrow markers use absolute paths. Upstream prefixes the marker `url(...)` reference with `window.location` when true (common.ts getUrl:153-167) and the post-render `cleanUpSvgCode`
+  *   (mermaidAPI.ts:183-204) strips that prefix back to a bare `url(#…)` fragment when false. In SSG's pure-render model there is no document location, so `getUrl` yields the empty prefix for both
+  *   values and the marker reference is the bare `url(#…)` fragment either way (see [[ssg.mermaid.render.edges.ArrowMarkers.markerUrl]]). The flag therefore has no faithful distinct render effect
+  *   here; kept for full-fidelity schema parity.
   * @param markdownAutoWrap
-  *   whether to auto-wrap markdown text
+  *   whether to auto-wrap markdown text. Upstream consumes this only in the markdown text processor (handle-markdown-text.ts:18-20,74-76): when false, soft-wrap spaces become `&nbsp;` and newlines
+  *   become explicit `<br/>`. SSG's label path strips markdown markers ([[ssg.mermaid.render.text.TextUtils.stripMarkdown]]) but has no `markdownToLines`/`preprocessMarkdown` port, so the field has
+  *   no consumer yet (awaits the markdown-string label render path). Kept for full-fidelity schema parity.
   * @param flowchart
   *   flowchart-specific configuration
   * @param sequence
