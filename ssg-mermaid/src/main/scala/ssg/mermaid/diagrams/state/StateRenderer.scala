@@ -24,7 +24,8 @@ import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph
-import ssg.mermaid.render.text.TextMetrics
+import ssg.mermaid.render.labels.HtmlLabelHelper
+import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
@@ -96,10 +97,10 @@ object StateRenderer {
     renderCompositeStates(mainGroup, db, g)
 
     // Render transitions (edges)
-    renderTransitions(mainGroup, db, g)
+    renderTransitions(mainGroup, db, g, config)
 
     // Render states (nodes)
-    renderStates(mainGroup, db, g)
+    renderStates(mainGroup, db, g, config)
 
     // Title
     if (db.title.nonEmpty) {
@@ -185,7 +186,7 @@ object StateRenderer {
   }
 
   /** Renders all state nodes. */
-  private def renderStates(parent: SvgBuilder, db: StateDb, g: Graph[NodeLabel, EdgeLabel]): Unit =
+  private def renderStates(parent: SvgBuilder, db: StateDb, g: Graph[NodeLabel, EdgeLabel], config: MermaidConfig): Unit =
     for ((id, state) <- db.states) {
       val nodeLabel = g.nodeOpt(id)
       if (nodeLabel.isDefined) {
@@ -206,7 +207,7 @@ object StateRenderer {
           case StateType.Divider =>
             renderDivider(stateGroup, nl)
           case _ =>
-            renderDefaultState(stateGroup, state, nl)
+            renderDefaultState(stateGroup, state, nl, config)
         }
       }
     }
@@ -303,7 +304,7 @@ object StateRenderer {
   }
 
   /** Renders a default state box with description. */
-  private def renderDefaultState(g: SvgBuilder, state: StateNode, nl: NodeLabel): Unit = {
+  private def renderDefaultState(g: SvgBuilder, state: StateNode, nl: NodeLabel, config: MermaidConfig): Unit = {
     val w = nl.width
     val h = nl.height
 
@@ -322,13 +323,34 @@ object StateRenderer {
     }
 
     // State label
-    val desc = if (state.description.nonEmpty) state.description else state.id
-    val text = g.append("text")
-    text.attr("x", 0)
-    text.attr("y", 4)
-    text.attr("text-anchor", "middle")
-    text.classed("stateLabel", true)
-    text.text(desc)
+    val desc       = if (state.description.nonEmpty) state.description else state.id
+    val htmlLabels = TextUtils.evaluate(config.htmlLabels)
+    if (htmlLabels) {
+      // HTML label (ISS-1205): foreignObject for the state node label.
+      val labelGroup = g.append("g")
+      labelGroup.classed("label", true)
+      labelGroup.classed("stateLabel", true)
+      labelGroup.attr("transform", "translate(0,4)")
+      val sanitized = TextUtils.sanitizeTextHtml(desc, config.securityLevel, htmlLabels)
+      HtmlLabelHelper.createText(
+        el = labelGroup,
+        text = sanitized,
+        useHtmlLabels = true,
+        isNode = true,
+        classes = "",
+        width = w,
+        style = "",
+        addBackground = false
+      )
+      ()
+    } else {
+      val text = g.append("text")
+      text.attr("x", 0)
+      text.attr("y", 4)
+      text.attr("text-anchor", "middle")
+      text.classed("stateLabel", true)
+      text.text(desc)
+    }
 
     // Render note if present
     state.note.foreach { noteText =>
@@ -383,7 +405,7 @@ object StateRenderer {
       }
 
   /** Renders all transitions. */
-  private def renderTransitions(parent: SvgBuilder, db: StateDb, g: Graph[NodeLabel, EdgeLabel]): Unit = {
+  private def renderTransitions(parent: SvgBuilder, db: StateDb, g: Graph[NodeLabel, EdgeLabel], config: MermaidConfig): Unit = {
     val graphEdges = g.edges()
 
     for ((transition, idx) <- db.transitions.zipWithIndex) {
@@ -424,22 +446,48 @@ object StateRenderer {
           val labelX = points(midIdx).x
           val labelY = points(midIdx).y - 5
 
-          val labelBg = edgeGroup.append("rect")
-          val bbox    = TextMetrics.measureText(transition.label, 12, "sans-serif")
-          labelBg.attr("x", labelX - bbox.width / 2.0 - 3)
-          labelBg.attr("y", labelY - bbox.height + 2)
-          labelBg.attr("width", bbox.width + 6)
-          labelBg.attr("height", bbox.height + 4)
-          labelBg.style("fill", "white")
-          labelBg.style("stroke", "none")
+          // htmlLabels resolution mirrors the state node path (config.htmlLabels). The unified
+          // v3 renderer routes edge labels through the dagre-wrapper `insertEdgeLabel`
+          // (edges.js:20-54) which emits a `<foreignObject>` with `<span class="edgeLabel">`
+          // (isNode=false) inside `<g class="edgeLabel"> > <g class="label">` when htmlLabels is on.
+          val htmlLabels = TextUtils.evaluate(config.htmlLabels)
+          if (htmlLabels) {
+            val edgeLabel = edgeGroup.append("g")
+            edgeLabel.classed("edgeLabel", true)
+            val labelGroup = edgeLabel.append("g")
+            labelGroup.classed("label", true)
+            labelGroup.attr("transform", s"translate(${fmtCoord(labelX)},${fmtCoord(labelY)})")
+            val sanitized = TextUtils.sanitizeTextHtml(transition.label, config.securityLevel, htmlLabels)
+            HtmlLabelHelper.createText(
+              el = labelGroup,
+              text = sanitized,
+              useHtmlLabels = true,
+              isNode = false,
+              classes = "",
+              width = 200.0,
+              style = "",
+              addBackground = true
+            )
+            ()
+          } else {
+            val labelBg = edgeGroup.append("rect")
+            val bbox    = TextMetrics.measureText(transition.label, 12, "sans-serif")
+            labelBg.attr("x", labelX - bbox.width / 2.0 - 3)
+            labelBg.attr("y", labelY - bbox.height + 2)
+            labelBg.attr("width", bbox.width + 6)
+            labelBg.attr("height", bbox.height + 4)
+            labelBg.style("fill", "white")
+            labelBg.style("stroke", "none")
 
-          val label = edgeGroup.append("text")
-          label.attr("x", labelX)
-          label.attr("y", labelY)
-          label.attr("text-anchor", "middle")
-          label.attr("font-size", "12")
-          label.classed("transitionLabel", true)
-          label.text(transition.label)
+            val label = edgeGroup.append("text")
+            label.attr("x", labelX)
+            label.attr("y", labelY)
+            label.attr("text-anchor", "middle")
+            label.attr("font-size", "12")
+            label.classed("transitionLabel", true)
+            label.text(transition.label)
+            ()
+          }
         }
       }
     }
@@ -459,4 +507,8 @@ object StateRenderer {
     path.attr("d", "M 0 0 L 10 5 L 0 10 z")
     path.style("fill", "#333")
   }
+
+  /** Formats a coordinate without a trailing `.0` for integral values. */
+  private def fmtCoord(v: Double): String =
+    if (v == v.toLong.toDouble) v.toLong.toString else v.toString
 }

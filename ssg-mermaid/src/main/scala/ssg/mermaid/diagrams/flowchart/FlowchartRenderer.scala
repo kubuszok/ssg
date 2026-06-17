@@ -28,7 +28,7 @@ import ssg.graphs.commons.layout.graph.Graph
 import ssg.mermaid.render.clusters.{ ClusterConfig, ClusterRenderer }
 import ssg.mermaid.render.edges.{ ArrowMarkers, EdgeRenderer, EdgeStyle, MarkerType }
 import ssg.mermaid.render.shapes.{ ShapeConfig, ShapeRegistry }
-import ssg.mermaid.render.text.TextMetrics
+import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
@@ -104,7 +104,7 @@ object FlowchartRenderer {
     mainGroup.attr("transform", s"translate($DiagramPadding, $DiagramPadding)")
 
     // 7. Render subgraphs (clusters) — render first so nodes overlay
-    renderSubgraphs(mainGroup, db, g, themeVars)
+    renderSubgraphs(mainGroup, db, g, themeVars, config)
 
     // 8. Render edges
     renderEdges(mainGroup, db, g, config, markerId)
@@ -238,7 +238,11 @@ object FlowchartRenderer {
           ry = if (shapeName == "roundedRect") 5 else 0,
           cssClass = buildNodeCssClass(node),
           style = node.styles.mkString("; "),
-          padding = padding
+          padding = padding,
+          // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
+          // SSG has no per-node useHtmlLabels, so resolve from flowchart.htmlLabels.
+          htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
+          securityLevel = config.securityLevel
         )
 
         // Add link when appropriate (nodes.js:67-80). When a node has a link,
@@ -310,7 +314,8 @@ object FlowchartRenderer {
     parent:    SvgBuilder,
     db:        FlowchartDb,
     g:         Graph[NodeLabel, EdgeLabel],
-    themeVars: ssg.mermaid.theme.ThemeVariables
+    themeVars: ssg.mermaid.theme.ThemeVariables,
+    config:    MermaidConfig
   ): Unit =
     // Render in reverse order so outer subgraphs are behind inner ones
     for (sg <- db.subgraphs.reverseIterator) {
@@ -327,7 +332,9 @@ object FlowchartRenderer {
           borderColor = themeVars.clusterBorder,
           rx = 5,
           ry = 5,
-          cssClass = sg.cssClasses.mkString(" ")
+          cssClass = sg.cssClasses.mkString(" "),
+          htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
+          securityLevel = config.securityLevel
         )
         ClusterRenderer.renderRoundedCluster(parent, clusterConfig)
       }
@@ -406,7 +413,10 @@ object FlowchartRenderer {
       labelText = edge.label,
       labelX = edgeLabel.x,
       labelY = edgeLabel.y,
-      thickness = edge.stroke
+      thickness = edge.stroke,
+      // edges.js:22 — useHtmlLabels = evaluate(config.flowchart.htmlLabels) (same as node labels).
+      htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
+      securityLevel = config.securityLevel
     )
   }
 

@@ -26,7 +26,8 @@ import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
 import ssg.graphs.commons.layout.dagre.{ DagreLayout, EdgeLabel, GraphLabel, NodeLabel, Point }
 import ssg.graphs.commons.layout.graph.Graph
-import ssg.mermaid.render.text.TextMetrics
+import ssg.mermaid.render.labels.HtmlLabelHelper
+import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme, ThemeVariables }
 
@@ -113,10 +114,10 @@ object ClassRenderer {
     renderNamespaces(mainGroup, db, g, themeVars)
 
     // 8. Render relations (edges)
-    renderRelations(mainGroup, db, g)
+    renderRelations(mainGroup, db, g, config)
 
     // 9. Render class nodes
-    renderClasses(mainGroup, db, g, padding)
+    renderClasses(mainGroup, db, g, padding, config)
 
     // 10. Render notes
     renderNotes(mainGroup, db, g, themeVars)
@@ -250,11 +251,12 @@ object ClassRenderer {
     parent:  SvgBuilder,
     db:      ClassDb,
     g:       Graph[NodeLabel, EdgeLabel],
-    padding: Double
+    padding: Double,
+    config:  MermaidConfig
   ): Unit =
     for ((id, classNode) <- db.classes)
       g.nodeOpt(id).foreach { nl =>
-        renderClassBox(parent, classNode, nl, padding)
+        renderClassBox(parent, classNode, nl, padding, config)
       }
 
   /** Renders a single class as a 3-compartment box. */
@@ -262,7 +264,8 @@ object ClassRenderer {
     parent:    SvgBuilder,
     classNode: ClassNode,
     nodeLabel: NodeLabel,
-    padding:   Double
+    padding:   Double,
+    config:    MermaidConfig
   ): Unit = {
     val group = parent.append("g")
     group.classed("classGroup", true)
@@ -301,15 +304,37 @@ object ClassRenderer {
       annText.text(s"<<$ann>>")
     }
 
-    // Title
+    // Title — htmlLabels resolution: classRenderer-v2.ts:263 `flowchart?.htmlLabels ?? htmlLabels`.
+    // SSG flowchart.htmlLabels is always present, so it takes precedence.
     yOffset += MemberLineHeight + 2
-    val title = group.append("text")
-    title.attr("x", w / 2)
-    title.attr("y", yOffset)
-    title.attr("text-anchor", "middle")
-    title.classed("classTitle", true)
-    title.attr("font-weight", "bolder")
-    title.text(classNode.label)
+    val htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels)
+    if (htmlLabels) {
+      // HTML label (ISS-1205): foreignObject for the class title (the node label).
+      val labelGroup = group.append("g")
+      labelGroup.classed("label", true)
+      labelGroup.classed("classTitle", true)
+      labelGroup.attr("transform", s"translate(${fmtCoord(w / 2)},${fmtCoord(yOffset)})")
+      val sanitized = TextUtils.sanitizeTextHtml(classNode.label, config.securityLevel, htmlLabels)
+      HtmlLabelHelper.createText(
+        el = labelGroup,
+        text = sanitized,
+        useHtmlLabels = true,
+        isNode = true,
+        classes = "",
+        width = w,
+        style = "font-weight:bolder",
+        addBackground = false
+      )
+      ()
+    } else {
+      val title = group.append("text")
+      title.attr("x", w / 2)
+      title.attr("y", yOffset)
+      title.attr("text-anchor", "middle")
+      title.classed("classTitle", true)
+      title.attr("font-weight", "bolder")
+      title.text(classNode.label)
+    }
 
     yOffset += CompartmentPadding
 
@@ -330,12 +355,7 @@ object ClassRenderer {
       for (member <- classNode.members) {
         yOffset += MemberLineHeight
         val (displayText, cssStyle) = member.displayDetails
-        val memberText              = group.append("text")
-        memberText.attr("x", CompartmentPadding)
-        memberText.attr("y", yOffset)
-        memberText.attr("font-size", "10")
-        if (cssStyle.nonEmpty) memberText.attr("style", cssStyle)
-        memberText.text(displayText)
+        renderMemberRow(group, displayText, cssStyle, yOffset, htmlLabels, w, config)
       }
     }
 
@@ -358,21 +378,77 @@ object ClassRenderer {
       for (method <- classNode.methods) {
         yOffset += MemberLineHeight
         val (displayText, cssStyle) = method.displayDetails
-        val methodText              = group.append("text")
-        methodText.attr("x", CompartmentPadding)
-        methodText.attr("y", yOffset)
-        methodText.attr("font-size", "10")
-        if (cssStyle.nonEmpty) methodText.attr("style", cssStyle)
-        methodText.text(displayText)
+        renderMemberRow(group, displayText, cssStyle, yOffset, htmlLabels, w, config)
       }
     }
   }
+
+  /** Renders one class-body row (a member attribute or a method).
+    *
+    * Faithful port of the per-row `createLabel(parsedText, …, isTitle=true, isNode=true)` calls in `class_box` (nodes.js:953-982 for members, :987-1015 for methods). Under `htmlLabels` each row
+    * becomes its own `<foreignObject>` carrying a `<span class="nodeLabel">` (isNode=true, createText.ts:28), with the displayed text's `<`/`>` pre-escaped to `&lt;`/`&gt;` (nodes.js:957/:991). When
+    * `htmlLabels` is off the row stays an SVG `<text>` (byte-identical to the legacy inline block — default path / non-regression).
+    *
+    * @param group
+    *   the class group `<g>`
+    * @param displayText
+    *   the member/method display text (`getDisplayDetails().displayText`)
+    * @param cssStyle
+    *   the per-member CSS style (`getDisplayDetails().cssStyle`), empty when absent
+    * @param yOffset
+    *   the row baseline y
+    * @param htmlLabels
+    *   resolved `evaluate(config.flowchart.htmlLabels)`
+    * @param w
+    *   the class box width (foreignObject wrap width)
+    * @param config
+    *   the Mermaid configuration (for the security gate)
+    */
+  private def renderMemberRow(
+    group:       SvgBuilder,
+    displayText: String,
+    cssStyle:    String,
+    yOffset:     Double,
+    htmlLabels:  Boolean,
+    w:           Double,
+    config:      MermaidConfig
+  ): Unit =
+    if (htmlLabels) {
+      // nodes.js:957/:991 — `parsedText.replace(/</g, '&lt;').replace(/>/g, '&gt;')` before
+      // createLabel; createLabel then decodeEntities()-es it back inside the HTML span.
+      val escaped    = displayText.replace("<", "&lt;").replace(">", "&gt;")
+      val sanitized  = TextUtils.sanitizeTextHtml(escaped, config.securityLevel, htmlLabels)
+      val labelGroup = group.append("g")
+      labelGroup.classed("label", true)
+      labelGroup.attr("transform", s"translate(${fmtCoord(CompartmentPadding)},${fmtCoord(yOffset)})")
+      HtmlLabelHelper.createText(
+        el = labelGroup,
+        text = sanitized,
+        useHtmlLabels = true,
+        isNode = true,
+        classes = "",
+        width = w,
+        // createLabel(parsedInfo.cssStyle ? parsedInfo.cssStyle : node.labelStyle) (nodes.js:964/:998).
+        style = cssStyle,
+        addBackground = false
+      )
+      ()
+    } else {
+      val memberText = group.append("text")
+      memberText.attr("x", CompartmentPadding)
+      memberText.attr("y", yOffset)
+      memberText.attr("font-size", "10")
+      if (cssStyle.nonEmpty) memberText.attr("style", cssStyle)
+      memberText.text(displayText)
+      ()
+    }
 
   /** Renders all relations (edges). */
   private def renderRelations(
     parent: SvgBuilder,
     db:     ClassDb,
-    g:      Graph[NodeLabel, EdgeLabel]
+    g:      Graph[NodeLabel, EdgeLabel],
+    config: MermaidConfig
   ): Unit = {
     val graphEdges = g.edges()
 
@@ -392,7 +468,7 @@ object ClassRenderer {
           Array(Point(srcNode.x, srcNode.y), Point(dstNode.x, dstNode.y))
         }
 
-        drawRelation(parent, points, relation, edgeLabel)
+        drawRelation(parent, points, relation, edgeLabel, config)
       }
     }
   }
@@ -402,7 +478,8 @@ object ClassRenderer {
     parent:    SvgBuilder,
     points:    Array[Point],
     relation:  ClassRelation,
-    edgeLabel: EdgeLabel
+    edgeLabel: EdgeLabel,
+    config:    MermaidConfig
   ): Unit = {
     val group = parent.append("g")
     group.classed("relation", true)
@@ -458,24 +535,52 @@ object ClassRenderer {
 
     // Edge label (title)
     if (relation.title.nonEmpty) {
-      val labelText = group.append("text")
-      labelText.attr("x", edgeLabel.x)
-      labelText.attr("y", edgeLabel.y)
-      labelText.attr("text-anchor", "middle")
-      labelText.attr("font-size", "10")
-      labelText.classed("edgeLabel", true)
+      // htmlLabels resolution: classRenderer-v2.ts:263 `flowchart?.htmlLabels ?? htmlLabels`.
+      // SSG flowchart.htmlLabels is always present, so it takes precedence (same as the title path).
+      val htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels)
+      if (htmlLabels) {
+        // HTML edge label (ISS-1205, classRenderer-v2.ts:263-266 `edgeData.label =
+        // '<span class="edgeLabel">' + edge.text + '</span>'`): emitted as a `<foreignObject>`
+        // with an inner `<span class="edgeLabel">` (isNode=false), inside the
+        // `<g class="edgeLabel"> > <g class="label">` wrapper (edges.js:39-43), centred at the
+        // dagre label point.
+        val edgeLabelGroup = group.append("g")
+        edgeLabelGroup.classed("edgeLabel", true)
+        val labelGroup = edgeLabelGroup.append("g")
+        labelGroup.classed("label", true)
+        labelGroup.attr("transform", s"translate(${fmtCoord(edgeLabel.x)},${fmtCoord(edgeLabel.y)})")
+        val sanitized = TextUtils.sanitizeTextHtml(relation.title, config.securityLevel, htmlLabels)
+        HtmlLabelHelper.createText(
+          el = labelGroup,
+          text = sanitized,
+          useHtmlLabels = true,
+          isNode = false,
+          classes = "",
+          width = 200.0,
+          style = "",
+          addBackground = false
+        )
+        ()
+      } else {
+        val labelText = group.append("text")
+        labelText.attr("x", edgeLabel.x)
+        labelText.attr("y", edgeLabel.y)
+        labelText.attr("text-anchor", "middle")
+        labelText.attr("font-size", "10")
+        labelText.classed("edgeLabel", true)
 
-      // Background rect for label
-      val labelBBox = TextMetrics.measureText(relation.title, 10, "sans-serif")
-      val labelRect = group.append("rect")
-      labelRect.attr("x", edgeLabel.x - labelBBox.width / 2 - 5)
-      labelRect.attr("y", edgeLabel.y - labelBBox.height / 2 - 5)
-      labelRect.attr("width", labelBBox.width + 10)
-      labelRect.attr("height", labelBBox.height + 10)
-      labelRect.classed("classLabel", true)
-      labelRect.classed("box", true)
+        // Background rect for label
+        val labelBBox = TextMetrics.measureText(relation.title, 10, "sans-serif")
+        val labelRect = group.append("rect")
+        labelRect.attr("x", edgeLabel.x - labelBBox.width / 2 - 5)
+        labelRect.attr("y", edgeLabel.y - labelBBox.height / 2 - 5)
+        labelRect.attr("width", labelBBox.width + 10)
+        labelRect.attr("height", labelBBox.height + 10)
+        labelRect.classed("classLabel", true)
+        labelRect.classed("box", true)
 
-      labelText.text(relation.title)
+        labelText.text(relation.title)
+      }
     }
   }
 
@@ -645,4 +750,8 @@ object ClassRenderer {
     circle.attr("r", "5")
     circle.classed("lollipop", true)
   }
+
+  /** Formats a coordinate without a trailing `.0` for integral values. */
+  private def fmtCoord(v: Double): String =
+    if (v == v.toLong.toDouble) v.toLong.toString else v.toString
 }

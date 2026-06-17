@@ -22,7 +22,8 @@ package er
 
 import ssg.mermaid.Accessibility
 import ssg.mermaid.MermaidConfig
-import ssg.mermaid.render.text.TextMetrics
+import ssg.mermaid.render.labels.HtmlLabelHelper
+import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
 import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
@@ -103,7 +104,7 @@ object ErRenderer {
     for ((name, entity) <- db.entities) {
       val pos = entityPositions(name)
       val dim = entityDims(name)
-      renderEntity(mainGroup, entity, pos._1, pos._2, dim._1, dim._2, erConfig)
+      renderEntity(mainGroup, entity, pos._1, pos._2, dim._1, dim._2, erConfig, TextUtils.evaluate(config.htmlLabels), config.securityLevel)
     }
 
     // Render relationships
@@ -199,13 +200,15 @@ object ErRenderer {
 
   /** Renders a single entity box. */
   private def renderEntity(
-    parent: SvgBuilder,
-    entity: ErEntity,
-    x:      Double,
-    y:      Double,
-    width:  Double,
-    height: Double,
-    config: ErConfig
+    parent:        SvgBuilder,
+    entity:        ErEntity,
+    x:             Double,
+    y:             Double,
+    width:         Double,
+    height:        Double,
+    config:        ErConfig,
+    htmlLabels:    Boolean,
+    securityLevel: String
   ): Unit = {
     val g = parent.append("g")
     g.classed("er", true)
@@ -225,14 +228,35 @@ object ErRenderer {
 
     // Entity name (header)
     val headerHeight = TextMetrics.measureText(entity.name, config.fontSize.toDouble, "sans-serif", "bold").height + EntityPadding
-    val nameText     = g.append("text")
-    nameText.attr("x", width / 2.0)
-    nameText.attr("y", headerHeight / 2.0 + config.fontSize / 3.0)
-    nameText.attr("text-anchor", "middle")
-    nameText.attr("font-weight", "bold")
-    nameText.classed("er", true)
-    nameText.classed("entityLabel", true)
-    nameText.text(entity.name)
+    if (htmlLabels) {
+      // HTML label (ISS-1205): foreignObject for the entity name (the node label).
+      val labelGroup = g.append("g")
+      labelGroup.classed("label", true)
+      labelGroup.classed("er", true)
+      labelGroup.classed("entityLabel", true)
+      labelGroup.attr("transform", s"translate(${fmtCoord(width / 2.0)},${fmtCoord(headerHeight / 2.0 + config.fontSize / 3.0)})")
+      val sanitized = TextUtils.sanitizeTextHtml(entity.name, securityLevel, htmlLabels)
+      HtmlLabelHelper.createText(
+        el = labelGroup,
+        text = sanitized,
+        useHtmlLabels = true,
+        isNode = true,
+        classes = "",
+        width = width,
+        style = "font-weight:bold",
+        addBackground = false
+      )
+      ()
+    } else {
+      val nameText = g.append("text")
+      nameText.attr("x", width / 2.0)
+      nameText.attr("y", headerHeight / 2.0 + config.fontSize / 3.0)
+      nameText.attr("text-anchor", "middle")
+      nameText.attr("font-weight", "bold")
+      nameText.classed("er", true)
+      nameText.classed("entityLabel", true)
+      nameText.text(entity.name)
+    }
 
     // Separator line
     val sep = g.append("line")
@@ -479,4 +503,8 @@ object ErRenderer {
     zeroCircle.style("stroke", "#333")
     zeroCircle.style("fill", "white")
   }
+
+  /** Formats a coordinate without a trailing `.0` for integral values. */
+  private def fmtCoord(v: Double): String =
+    if (v == v.toLong.toDouble) v.toLong.toString else v.toString
 }

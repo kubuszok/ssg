@@ -24,6 +24,8 @@ import lowlevel.Nullable
 import ssg.graphs.commons.layout.dagre.Point
 import ssg.graphs.commons.render.Curves
 import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
+import ssg.mermaid.render.labels.HtmlLabelHelper
+import ssg.mermaid.render.text.TextUtils
 
 /** Renders edge paths (connections between nodes) as SVG `<path>` elements.
   *
@@ -104,34 +106,67 @@ object EdgeRenderer {
     * @param style
     *   edge style containing label text and position
     */
-  private def renderEdgeLabel(group: SvgBuilder, style: EdgeStyle): Unit = {
-    val labelGroup = group.append("g")
-    labelGroup.classed("edge-label", true)
+  private def renderEdgeLabel(group: SvgBuilder, style: EdgeStyle): Unit =
+    if (style.htmlLabels) {
+      // HTML edge label (ISS-1205, edges.js:20-54): when `evaluate(config.flowchart.htmlLabels)`
+      // is true the label is emitted as a `<foreignObject>` with an inner `<span class="edgeLabel">`
+      // (isNode=false; createText.ts:28 / classRenderer-v2.ts:263-266), inside the upstream
+      // `<g class="edgeLabel"> > <g class="label">` wrapper (edges.js:39-43). The label group is
+      // centred at (labelX, labelY); the foreignObject geometry is sized from TextMetrics inside
+      // [[HtmlLabelHelper.createText]] so dagre layout inputs are unchanged.
+      val edgeLabel = group.append("g")
+      edgeLabel.classed("edgeLabel", true)
+      val label = edgeLabel.append("g")
+      label.classed("label", true)
+      label.attr("transform", s"translate(${fmtCoord(style.labelX)},${fmtCoord(style.labelY)})")
+      // Security gate identical to the node path (sanitizeMore via sanitizeTextHtml).
+      val sanitized = TextUtils.sanitizeTextHtml(style.labelText, style.securityLevel, style.htmlLabels)
+      HtmlLabelHelper.createText(
+        el = label,
+        text = sanitized,
+        useHtmlLabels = true,
+        isNode = false,
+        classes = "",
+        width = 200.0,
+        style = style.style,
+        // edges.js:32 — markdown edge labels pass `addSvgBackground: true`.
+        addBackground = true
+      )
+      ()
+    } else {
+      // SVG-text edge label — byte-identical to the legacy inline block (default path).
+      val labelGroup = group.append("g")
+      labelGroup.classed("edge-label", true)
 
-    // Background rect for readability
-    val bg = labelGroup.append("rect")
-    bg.classed("edge-label-bg", true)
+      // Background rect for readability
+      val bg = labelGroup.append("rect")
+      bg.classed("edge-label-bg", true)
 
-    val text = labelGroup.append("text")
-    text.attr("x", style.labelX)
-    text.attr("y", style.labelY)
-    text.attr("dominant-baseline", "central")
-    text.attr("text-anchor", "middle")
-    text.classed("edge-label-text", true)
-    text.text(style.labelText)
+      val text = labelGroup.append("text")
+      text.attr("x", style.labelX)
+      text.attr("y", style.labelY)
+      text.attr("dominant-baseline", "central")
+      text.attr("text-anchor", "middle")
+      text.classed("edge-label-text", true)
+      text.text(style.labelText)
 
-    // Estimate label dimensions for background rectangle
-    val fontSize        = 12.0
-    val padding         = 4.0
-    val estimatedWidth  = style.labelText.length * fontSize * 0.6
-    val estimatedHeight = fontSize * 1.4
-    bg.attr("x", style.labelX - estimatedWidth / 2.0 - padding)
-    bg.attr("y", style.labelY - estimatedHeight / 2.0 - padding)
-    bg.attr("width", estimatedWidth + padding * 2)
-    bg.attr("height", estimatedHeight + padding * 2)
-    bg.attr("rx", 3)
-    bg.attr("ry", 3)
-  }
+      // Estimate label dimensions for background rectangle
+      val fontSize        = 12.0
+      val padding         = 4.0
+      val estimatedWidth  = style.labelText.length * fontSize * 0.6
+      val estimatedHeight = fontSize * 1.4
+      bg.attr("x", style.labelX - estimatedWidth / 2.0 - padding)
+      bg.attr("y", style.labelY - estimatedHeight / 2.0 - padding)
+      bg.attr("width", estimatedWidth + padding * 2)
+      bg.attr("height", estimatedHeight + padding * 2)
+      bg.attr("rx", 3)
+      bg.attr("ry", 3)
+      ()
+    }
+
+  /** Formats a coordinate without a trailing `.0` for integral values. */
+  private def fmtCoord(v: Double): String =
+    if (v == v.toLong.toDouble) v.toLong.toString else v.toString
 
   /** Interpolates bend points using the specified curve type.
     *

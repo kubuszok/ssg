@@ -20,6 +20,7 @@ package mermaid
 package render
 package shapes
 
+import ssg.mermaid.render.labels.ShapeLabel
 import ssg.graphs.commons.layout.dagre.Point
 import ssg.graphs.commons.render.Intersect
 import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
@@ -101,19 +102,9 @@ object CylinderShape {
       cap.attr("style", config.style)
     }
 
-    // Add label (centered vertically, slightly below center to account for top cap)
-    if (config.label.nonEmpty) {
-      val text = group.append("text")
-      text.attr("x", cx)
-      text.attr("y", cy + capH / 2.0)
-      text.attr("dominant-baseline", "central")
-      text.attr("text-anchor", "middle")
-      text.classed("node-label", true)
-      if (config.labelStyle.nonEmpty) {
-        text.attr("style", config.labelStyle)
-      }
-      text.text(config.label)
-    }
+    // Add label (htmlLabels-aware shared chokepoint — ISS-1205).
+    // SVG text is nudged below centre (cy + capH / 2.0) to clear the top cap.
+    ShapeLabel.renderNodeLabel(group, config, cy + capH / 2.0)
 
     val w = config.width
     val h = config.height

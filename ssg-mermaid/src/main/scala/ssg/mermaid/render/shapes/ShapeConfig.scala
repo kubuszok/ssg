@@ -49,20 +49,27 @@ import ssg.graphs.commons.layout.dagre.Point
   *   internal padding between shape boundary and label
   * @param labelStyle
   *   inline CSS styles for the label text
+  * @param htmlLabels
+  *   when true, the node label is rendered as an HTML `<foreignObject>` (ISS-1205) instead of an SVG `<text>`. Resolved per `node.useHtmlLabels || evaluate(flowchart.htmlLabels)`
+  *   (dagre-wrapper/shapes/util.js:9). Defaults to false so the SVG-text geometry is unchanged.
+  * @param securityLevel
+  *   the resolved `MermaidConfig.securityLevel`; gates HTML-label sanitization (diagrams/common/common.ts:66-94). Only consulted on the HTML-label path.
   */
 final case class ShapeConfig(
-  id:         String = "",
-  x:          Double = 0,
-  y:          Double = 0,
-  width:      Double = 0,
-  height:     Double = 0,
-  label:      String = "",
-  rx:         Double = 0,
-  ry:         Double = 0,
-  cssClass:   String = "",
-  style:      String = "",
-  padding:    Double = 8,
-  labelStyle: String = ""
+  id:            String = "",
+  x:             Double = 0,
+  y:             Double = 0,
+  width:         Double = 0,
+  height:        Double = 0,
+  label:         String = "",
+  rx:            Double = 0,
+  ry:            Double = 0,
+  cssClass:      String = "",
+  style:         String = "",
+  padding:       Double = 8,
+  labelStyle:    String = "",
+  htmlLabels:    Boolean = false,
+  securityLevel: String = "strict"
 )
 
 /** Result of rendering a shape. Contains the SVG builder for the shape group and a function for computing edge intersections with the shape boundary.

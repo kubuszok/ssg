@@ -53,6 +53,10 @@ import lowlevel.Nullable
   *   label center y coordinate (from dagre layout)
   * @param thickness
   *   edge thickness category: "normal", "thick", or an explicit pixel value
+  * @param htmlLabels
+  *   whether the edge label is emitted as an HTML `<foreignObject>` (edges.js:22 `evaluate(config.flowchart.htmlLabels)`). When false the label stays an SVG `<text>` (default → non-regression).
+  * @param securityLevel
+  *   resolved `MermaidConfig.securityLevel`, used by the HTML-label security gate ([[ssg.mermaid.render.text.TextUtils.sanitizeTextHtml]]) when [[htmlLabels]] is on
   */
 final case class EdgeStyle(
   id:              String = "",
@@ -68,5 +72,7 @@ final case class EdgeStyle(
   labelText:       String = "",
   labelX:          Double = 0,
   labelY:          Double = 0,
-  thickness:       String = "normal"
+  thickness:       String = "normal",
+  htmlLabels:      Boolean = false,
+  securityLevel:   String = "strict"
 )
