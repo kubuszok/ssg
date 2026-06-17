@@ -37,6 +37,7 @@ enum TokenType {
   case ID // identifier
   case DOT // .
   case DOTDOT // ..
+  case PATH_SEP // / or \ (LiquidLexer.g4:157 `PathSep : [/\\];`) — path separator in unquoted Jekyll include file names
 
   // Operators
   case EQ // ==

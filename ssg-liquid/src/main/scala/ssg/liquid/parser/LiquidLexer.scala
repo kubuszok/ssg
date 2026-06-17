@@ -313,13 +313,18 @@ final class LiquidLexer(
         }
 
         // Scan a token inside the tag
-        scanInTagToken()
+        scanInTagToken(isOutput)
       }
     }
   }
 
-  /** Scans a single token inside a tag. */
-  private def scanInTagToken(): Unit = {
+  /** Scans a single token inside a tag.
+    *
+    * `isOutput` distinguishes output tags (`{{ }}`) from statement tags (`{% %}`). The path separator (`PathSep`, LiquidLexer.g4:157) is only recognised inside statement tags (liqp's `IN_TAG` lexer
+    * mode), where it tokenizes the `/` and `\` in unquoted Jekyll include file names such as `{% include wmt/footer.html %}`. Output tags keep their previous lexing so that ordinary dotted variable
+    * access (`{{ a.b }}`) is unaffected.
+    */
+  private def scanInTagToken(isOutput: Boolean): Unit = {
     val c = input.charAt(pos)
 
     c match {
@@ -372,6 +377,11 @@ final class LiquidLexer(
         } else {
           emitToken(TokenType.MINUS, "-", 1)
         }
+      case '/' | '\\' if !isOutput =>
+        // PathSep (LiquidLexer.g4:157 `PathSep : [/\\];`): the separator in an
+        // unquoted Jekyll include file name (`{% include dir/file.html %}`).
+        // Only emitted inside statement tags so that output tags are untouched.
+        emitToken(TokenType.PATH_SEP, c.toString, 1)
       case _ =>
         if (isDigit(c)) {
           scanNumber()
