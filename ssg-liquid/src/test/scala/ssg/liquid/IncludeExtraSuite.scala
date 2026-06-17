@@ -129,8 +129,10 @@ final class IncludeExtraSuite extends munit.FunSuite {
     assertEquals(template.render(), "incl_var")
   }
 
-  // SSG: dotted include names (include_read_var.liquid) parsed differently
-  test("include: must see variables from outer scope in Jekyll".fail) {
+  // ISS-1010: unquoted dotted include names (include_read_var.liquid) now lex+parse
+  // per the liqp grammar (filename : ( . )+?, LiquidParser.g4:359-361), so this
+  // renders correctly — the stale expected-failure mark is removed.
+  test("include: must see variables from outer scope in Jekyll") {
     val parser = parserWith(
       Flavor.JEKYLL,
       true,
@@ -278,8 +280,10 @@ final class IncludeExtraSuite extends munit.FunSuite {
   // Iterations variables
   // ---------------------------------------------------------------------------
 
-  // SSG: dotted include names parsed differently
-  test("include: iterations variables visible in include".fail) {
+  // ISS-1010: unquoted dotted include names now lex+parse per the liqp grammar
+  // (filename : ( . )+?, LiquidParser.g4:359-361), so this renders correctly —
+  // the stale expected-failure mark is removed.
+  test("include: iterations variables visible in include") {
     val parser = parserWith(
       Flavor.JEKYLL,
       true,
