@@ -68,20 +68,11 @@ object DetectType {
     matchKeyword(cleaned)
   }
 
-  /** Parses a `%%{init: ...}%%` directive from the given text, extracting the JSON body.
-    *
-    * @param text
-    *   Mermaid source text
-    * @return
-    *   the directive body content if found, or empty string if not
-    */
-  def extractDirectiveBody(text: String): String = {
-    val initPattern = """(?i)%%\{\s*(?:init|initialize)\s*:\s*([\s\S]*?)\s*\}%%""".r
-    initPattern.findFirstMatchIn(text) match {
-      case Some(m) => m.group(1).trim
-      case None    => ""
-    }
-  }
+  // The dead `extractDirectiveBody` helper was retired in favour of the real
+  // directive channel: [[Directives.detectInit]] / [[Directives.detectDirective]]
+  // port `detectInit`/`detectDirective` from `utils.ts` and actually apply the
+  // parsed init-directive body (ISS-1057), which `extractDirectiveBody` never
+  // did (it had zero callers).
 
   /** Removes all `%%{...}%%` directives from the text.
     *

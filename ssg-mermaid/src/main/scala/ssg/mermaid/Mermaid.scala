@@ -18,6 +18,10 @@
 package ssg
 package mermaid
 
+import lowlevel.Nullable
+
+import ssg.data.DataView
+
 import ssg.mermaid.diagrams.architecture.ArchitectureDiagram
 import ssg.mermaid.diagrams.block.BlockDiagram
 import ssg.mermaid.diagrams.c4.C4Diagram
@@ -77,78 +81,119 @@ object Mermaid {
     // parsers never receive the leading `---` delimiters (ISS-1056). The
     // extracted `title` is applied to each diagram db, mirroring
     // Diagram.ts:41-43 `if (metadata.title) { db.setDiagramTitle?.(metadata.title); }`.
-    // The extracted `config` is surfaced by Preprocess but its application is
-    // owned by ISS-1057 (init-directive/config-application).
     val pre   = Preprocess.processFrontmatter(input)
     val text  = pre.text
     val title = pre.title
 
     val diagramType = DetectType.detect(text)
+
+    // ISS-1057: apply the frontmatter `config` and the `%%{init: {...}}%%`
+    // directive. Mirrors preprocess.ts:processDirectives + cleanAndMerge:
+    //   const directiveResult = processDirectives(frontMatterResult.text);
+    //   const config = cleanAndMerge(frontMatterResult.config, directiveResult.directive);
+    //
+    // detectInit collects the init/initialize directives from the
+    // frontmatter-stripped text and applies the config-key remapping using the
+    // detected diagram type. The `wrap` directive
+    // (processDirectives, preprocess.ts:35-39) folds `wrap: true` into the init
+    // overlay. cleanAndMerge then merges the frontmatter config (lower
+    // precedence) with the init directive (higher precedence, directive wins).
+    val initDirective: Nullable[DataView] = Directives.detectInit(text, diagramType)
+    val wrapDirectives = Directives.detectDirective(text, Nullable("wrap"))
+    val wrapIsSet      = wrapDirectives.exists(_.`type`.contains("wrap"))
+    val initWithWrap: Nullable[DataView] =
+      if (wrapIsSet) {
+        val base = initDirective.getOrElse(DataView.from(scala.collection.immutable.VectorMap.empty[String, DataView]))
+        Nullable(
+          DataView.deepMerge(base, DataView.from(scala.collection.immutable.VectorMap[String, DataView]("wrap" -> DataView.from(true))))
+        )
+      } else {
+        initDirective
+      }
+
+    // cleanAndMerge(frontmatterConfig, directive) — directive wins.
+    val mergedOverlay: DataView = Directives.cleanAndMerge(pre.config, initWithWrap)
+
+    // Sanitize the MERGED overlay ONCE, mirroring mermaidAPI.ts:55-57:
+    //   configApi.reset(); configApi.addDirective(processed.config ?? {});
+    // addDirective -> sanitizeDirective + updateCurrentConfig -> config.ts
+    // sanitize() (config.ts:146-181) runs over the whole merged
+    // (frontmatter + directive) config `d` (config.ts:22-25). So the frontmatter
+    // `config:` block gets the same secure-key drop / proto-pollution / XSS
+    // string filtering as an init directive does.
+    val overlay: DataView = Directives.sanitizeConfig(mergedOverlay)
+
+    // Precedence (faithful to upstream): defaults < caller `config` param <
+    // frontmatter.config < init directive. The caller's `config` plays
+    // upstream's `siteConfig` role, so the author markup (frontmatter + init
+    // directive), assembled in `overlay`, OVERRIDES it.
+    val effectiveConfig: MermaidConfig = MermaidConfig.applyOverlay(config, overlay)
+
     diagramType match {
       case DiagramType.Flowchart | DiagramType.FlowchartV2 | DiagramType.Graph =>
-        FlowchartDiagram.render(text, config, title)
+        FlowchartDiagram.render(text, effectiveConfig, title)
       case DiagramType.Sequence =>
-        SequenceDiagram.render(text, config, title)
+        SequenceDiagram.render(text, effectiveConfig, title)
       case DiagramType.ClassDiagram | DiagramType.ClassDiagramV2 =>
-        ClassDiagram.render(text, config, title)
+        ClassDiagram.render(text, effectiveConfig, title)
       case DiagramType.StateDiagram | DiagramType.StateDiagramV2 =>
-        StateDiagram.render(text, config, title)
+        StateDiagram.render(text, effectiveConfig, title)
       case DiagramType.ErDiagram =>
-        ErDiagram.render(text, config, title)
+        ErDiagram.render(text, effectiveConfig, title)
       case DiagramType.Pie =>
-        PieDiagram.render(text, config, title)
+        PieDiagram.render(text, effectiveConfig, title)
       case DiagramType.Gantt =>
-        GanttDiagram.render(text, config, title)
+        GanttDiagram.render(text, effectiveConfig, title)
       case DiagramType.Timeline =>
-        TimelineDiagram.render(text, config, title)
+        TimelineDiagram.render(text, effectiveConfig, title)
       case DiagramType.Journey =>
-        JourneyDiagram.render(text, config, title)
+        JourneyDiagram.render(text, effectiveConfig, title)
       case DiagramType.Mindmap =>
-        MindmapDiagram.render(text, config, title)
+        MindmapDiagram.render(text, effectiveConfig, title)
       case DiagramType.GitGraph =>
-        GitDiagram.render(text, config, title)
+        GitDiagram.render(text, effectiveConfig, title)
       case DiagramType.XyChart =>
-        XyChartDiagram.render(text, config, title)
+        XyChartDiagram.render(text, effectiveConfig, title)
       case DiagramType.QuadrantChart =>
-        QuadrantDiagram.render(text, config, title)
+        QuadrantDiagram.render(text, effectiveConfig, title)
       case DiagramType.Requirement =>
-        RequirementDiagram.render(text, config, title)
+        RequirementDiagram.render(text, effectiveConfig, title)
       case DiagramType.Sankey =>
-        SankeyDiagram.render(text, config, title)
+        SankeyDiagram.render(text, effectiveConfig, title)
       case DiagramType.Block =>
-        BlockDiagram.render(text, config, title)
+        BlockDiagram.render(text, effectiveConfig, title)
       case DiagramType.Architecture =>
-        ArchitectureDiagram.render(text, config, title)
+        ArchitectureDiagram.render(text, effectiveConfig, title)
       case DiagramType.Packet =>
-        PacketDiagram.render(text, config, title)
+        PacketDiagram.render(text, effectiveConfig, title)
       case DiagramType.Radar =>
-        RadarDiagram.render(text, config, title)
+        RadarDiagram.render(text, effectiveConfig, title)
       case DiagramType.Kanban =>
-        KanbanDiagram.render(text, config, title)
+        KanbanDiagram.render(text, effectiveConfig, title)
       case DiagramType.Venn =>
-        VennDiagram.render(text, config, title)
+        VennDiagram.render(text, effectiveConfig, title)
       case DiagramType.Ishikawa =>
-        IshikawaDiagram.render(text, config, title)
+        IshikawaDiagram.render(text, effectiveConfig, title)
       case DiagramType.C4Context | DiagramType.C4Container | DiagramType.C4Component | DiagramType.C4Deployment | DiagramType.C4Dynamic =>
-        C4Diagram.render(text, config, title)
+        C4Diagram.render(text, effectiveConfig, title)
       case DiagramType.Cynefin =>
-        CynefinDiagram.render(text, config, title)
+        CynefinDiagram.render(text, effectiveConfig, title)
       case DiagramType.EventModeling =>
-        EventModelingDiagram.render(text, config, title)
+        EventModelingDiagram.render(text, effectiveConfig, title)
       case DiagramType.TreeView =>
-        TreeViewDiagram.render(text, config, title)
+        TreeViewDiagram.render(text, effectiveConfig, title)
       case DiagramType.Treemap =>
-        TreemapDiagram.render(text, config, title)
+        TreemapDiagram.render(text, effectiveConfig, title)
       case DiagramType.Wardley =>
-        WardleyDiagram.render(text, config, title)
+        WardleyDiagram.render(text, effectiveConfig, title)
       case DiagramType.Info =>
         // InfoDb has no title field — mirrors Diagram.ts:42 optional-chaining
         // `db.setDiagramTitle?.(...)` being a no-op when absent.
-        InfoDiagram.render(text, config)
+        InfoDiagram.render(text, effectiveConfig)
       case DiagramType.Error =>
         // ErrorDb has no title field — mirrors Diagram.ts:42 optional-chaining
         // `db.setDiagramTitle?.(...)` being a no-op when absent.
-        ErrorDiagram.render(text, config)
+        ErrorDiagram.render(text, effectiveConfig)
       case other =>
         s"<!-- Unsupported diagram type: ${other.keyword} -->"
     }

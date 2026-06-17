@@ -7,14 +7,46 @@ package data
 package internal.compiletime
 
 import hearth.MacroCommons
+import hearth.MacroCommonsScala3
 import hearth.fp.effect.*
 import hearth.std.*
 
+import lowlevel.Nullable
+
 import scala.collection.immutable.VectorMap
 
-private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
+// Self-type is refined to MacroCommonsScala3 so this rule can drop to raw
+// scala.quoted reflection for the one thing the cross-platform hearth API does
+// not expose: destructuring an opaque applied type (Nullable[A] aliases the
+// opaque Nullable.Impl[A], which Type.Ctor1's `unapply` — `case '[HKT[a]]` —
+// cannot match). SSG is a Scala-3-only project, so this is sound; the macro
+// itself runs on the JVM compiler regardless of the target platform.
+private[data] trait AsDataViewMacrosImpl { this: MacroCommonsScala3 & MacroCommons & StdExtensions =>
 
   private lazy val asDataViewCtor: Type.Ctor1[AsDataView] = Type.Ctor1.of[AsDataView]
+
+  /** If `A` is a [[lowlevel.Nullable]] (the opaque `Nullable.Impl[X]`), returns the existential inner type `X`; otherwise `None`.
+    *
+    * Uses raw reflection's `baseType` against the `Nullable.Impl` symbol, which (unlike the quoted `'[HKT[a]]` pattern that Type.Ctor1 uses) matches an opaque applied type.
+    */
+  protected def nullableInnerType[A: Type]: Option[??] = {
+    import quotes.reflect.*
+    val repr        = TypeRepr.of[A](using Type[A].asInstanceOf[scala.quoted.Type[A]])
+    val nullableSym = TypeRepr.of[Nullable.Impl[Any]].typeSymbol
+    repr.baseType(nullableSym) match {
+      case AppliedType(_, List(arg)) =>
+        Some(arg.asType.asInstanceOf[Type[Any]].as_??)
+      case _ =>
+        // `A` written directly as `Nullable.Impl[X]` (not via baseType) — handle
+        // the AppliedType form too.
+        repr match {
+          case AppliedType(ctor, List(arg)) if ctor.typeSymbol == nullableSym =>
+            Some(arg.asType.asInstanceOf[Type[Any]].as_??)
+          case _ =>
+            scala.None
+        }
+    }
+  }
 
   private lazy val ignoredImplicits: Seq[UntypedMethod] =
     Type.of[AsDataView.type].asUntyped.methods.collect { case method if method.name == "derived" => method }.toSeq
@@ -206,7 +238,28 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommons & StdExtensions =>
 
   private object HandleNullableRule extends AsDataViewRule("handle Nullable types") {
     def apply[A: Type](value: Expr[A]): MIO[Rule.Applicability[Expr[DataView]]] =
-      MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} — Nullable is an opaque type, use fold/map to convert manually"))
+      nullableInnerType[A] match {
+        case Some(item) =>
+          import item.Underlying as Item
+          // Nullable[A] mirrors HandleOptionRule: an empty Nullable becomes
+          // DataView.nil, a present value recurses via AsDataView[Item]. Nullable
+          // is an opaque type, so its present value is reached through its `fold`
+          // extension rather than the std IsOption provider.
+          MIO.scoped { runSafe =>
+            val itemConverter: Expr[Item => DataView] = Expr.quote { (item: Item) =>
+              val _ = item
+              Expr.splice {
+                runSafe(deriveConversion[Item](Expr.quote(item)))
+              }
+            }
+            val nullableValue: Expr[Nullable[Item]] = value.asInstanceOf[Expr[Nullable[Item]]]
+            Rule.matched(Expr.quote {
+              Expr.splice(nullableValue).fold[DataView](DataView.nil)(Expr.splice(itemConverter))
+            })
+          }
+        case scala.None =>
+          MIO.pure(Rule.yielded(s"${Type[A].prettyPrint} is not a Nullable"))
+      }
   }
 
   private object HandleCollectionRule extends AsDataViewRule("handle collection types") {

@@ -5,6 +5,8 @@
 package ssg
 package data
 
+import lowlevel.Nullable
+
 import scala.collection.immutable.VectorMap
 
 final case class Point(x: Int, y: Int) derives AsDataView
@@ -12,6 +14,8 @@ final case class Point(x: Int, y: Int) derives AsDataView
 final case class Person(name: String, age: Int) derives AsDataView
 
 final case class Nested(label: String, point: Point) derives AsDataView
+
+final case class WithNullable(name: String, nickname: Nullable[String]) derives AsDataView
 
 enum Color derives AsDataView {
   case Red, Green, Blue
@@ -102,6 +106,30 @@ class AsDataViewSuite extends munit.FunSuite {
     val m  = dv.asMap.get
     assertEquals(m("a").asString.get, "hello")
     assertEquals(m("b").asString.get, "world")
+  }
+
+  test("AsDataView derives for Nullable[String] (present)") {
+    val dv = AsDataView.derived[Nullable[String]].asDataView(Nullable("hi"))
+    assertEquals(dv.asString.get, "hi")
+  }
+
+  test("AsDataView derives for Nullable[String] (empty)") {
+    val dv = AsDataView.derived[Nullable[String]].asDataView(Nullable.empty[String])
+    assert(dv.isNull)
+  }
+
+  test("AsDataView derives for case class with Nullable field (present)") {
+    val dv = WithNullable("a", Nullable("nick")).asDataView
+    val m  = dv.asMap.get
+    assertEquals(m("name").asString.get, "a")
+    assertEquals(m("nickname").asString.get, "nick")
+  }
+
+  test("AsDataView derives for case class with Nullable field (empty)") {
+    val dv = WithNullable("a", Nullable.empty[String]).asDataView
+    val m  = dv.asMap.get
+    assertEquals(m("name").asString.get, "a")
+    assert(m("nickname").isNull)
   }
 
   test("AsDataView derives for Java Bean") {
