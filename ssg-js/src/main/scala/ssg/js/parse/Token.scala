@@ -360,10 +360,26 @@ object Token {
           false
         } else {
           val rest = str.substring(Character.charCount(firstCp))
-          rest.isEmpty || rest.codePoints().allMatch(cp => isIdentifierCharCodePoint(cp))
+          rest.isEmpty || allCodePointsAreIdentifierChars(rest)
         }
       }
     }
+
+  /** Cross-platform check that every code point in `s` satisfies `isIdentifierCharCodePoint`. Uses `codePointAt` + `Character.charCount` instead of `String.codePoints()` (which returns
+    * `java.util.stream.IntStream`, unavailable on Scala.js).
+    */
+  private def allCodePointsAreIdentifierChars(s: String): Boolean = {
+    var i        = 0
+    var allMatch = true
+    while (allMatch && i < s.length) {
+      val cp = s.codePointAt(i)
+      if (!isIdentifierCharCodePoint(cp)) {
+        allMatch = false
+      }
+      i += Character.charCount(cp)
+    }
+    allMatch
+  }
 
   // ---- Surrogate pair helpers ----
 
