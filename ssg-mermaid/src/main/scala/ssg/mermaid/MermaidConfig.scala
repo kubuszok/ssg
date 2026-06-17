@@ -20,6 +20,10 @@ package mermaid
 
 import lowlevel.Nullable
 
+import ssg.data.AsDataView
+import ssg.data.DataView
+import ssg.data.FromDataView
+
 /** Top-level Mermaid configuration.
   *
   * This is a subset of the full Mermaid config type. Fields are added here as diagram renderers need them. The original TypeScript config has ~200 fields across all diagram types.
@@ -104,7 +108,8 @@ final case class MermaidConfig(
   gitGraph:            GitGraphConfig = GitGraphConfig(),
   mindmap:             MindmapConfig = MindmapConfig(),
   timeline:            TimelineConfig = TimelineConfig()
-)
+) derives AsDataView,
+      FromDataView
 
 /** Flowchart-specific configuration.
   *
@@ -368,6 +373,27 @@ final case class TimelineConfig(
 )
 
 object MermaidConfig {
+
+  /** Applies a config `overlay` (frontmatter + init-directive, already merged via [[Directives.cleanAndMerge]]) onto a base [[MermaidConfig]], with the overlay's present keys winning.
+    *
+    * This is the round-trip the user approved for ISS-1057: the base config is projected to a [[ssg.data.DataView]] via `AsDataView`, the overlay is deep-merged on top via
+    * [[ssg.data.DataView.deepMerge]] (present-keys-win), and the merged view is reconstructed into a `MermaidConfig` via `FromDataView`. Keys absent from the overlay keep the base's value; keys not
+    * modelled by `MermaidConfig` are ignored by `FromDataView`.
+    *
+    * If reconstruction somehow fails (it should not for any overlay subset of the config shape), the base config is returned unchanged.
+    *
+    * @param base
+    *   the base config (defaults < caller config param)
+    * @param overlay
+    *   the author-supplied config overlay (frontmatter < init directive)
+    * @return
+    *   the effective config with the overlay applied
+    */
+  def applyOverlay(base: MermaidConfig, overlay: DataView): MermaidConfig = {
+    val baseView: DataView = summon[AsDataView[MermaidConfig]].asDataView(base)
+    val merged:   DataView = DataView.deepMerge(baseView, overlay)
+    summon[FromDataView[MermaidConfig]].fromDataView(merged).getOrElse(base)
+  }
 
   /** Default configuration with all default values. */
   val Default: MermaidConfig = MermaidConfig()

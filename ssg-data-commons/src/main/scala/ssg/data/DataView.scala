@@ -121,4 +121,41 @@ object DataView {
   def from(value: TemporalAccessor):            DataView = if (value == null) nil else new DataView(value)
   def from(value: Vector[DataView]):            DataView = new DataView(value)
   def from(value: VectorMap[String, DataView]): DataView = new DataView(value)
+
+  // --- Deep merge ---
+
+  /** Recursively merges an `overlay` DataView onto a `base` DataView, with the overlay's present keys winning.
+    *
+    * This is a faithful port of the "present-keys-win, recurse-when-both-maps" semantics of lodash `merge` (used by mermaid's `cleanAndMerge`, `utils.ts:858-860` — `merge({}, defaultData, data)`) and
+    * mermaid's `assignWithDepth` (`assignWithDepth.ts`). The rules are:
+    *
+    *   - When BOTH sides are maps, merge key-by-key: every key present in `overlay` is merged onto the corresponding `base` key (recursing when both values are maps); a key present only in `base` is
+    *     preserved unchanged (present-keys-win — an absent overlay key keeps base's value).
+    *   - When the sides are not both maps (scalar-over-map, map-over-scalar, scalar-over-scalar), the overlay value replaces the base value.
+    *
+    * Unlike lodash `merge` this does not special-case arrays element-wise; an overlay vector replaces the base vector wholesale (matching the non-map "overlay replaces" branch), which is sufficient
+    * for the config-overlay use site where arrays are leaf values.
+    *
+    * @param base
+    *   the lower-precedence DataView (e.g. the existing config)
+    * @param overlay
+    *   the higher-precedence DataView (e.g. author-supplied config); its present keys win
+    * @return
+    *   the merged DataView
+    */
+  def deepMerge(base: DataView, overlay: DataView): DataView =
+    (base.asMap.toOption, overlay.asMap.toOption) match {
+      case (Some(baseMap), Some(overlayMap)) =>
+        // Both maps: start from base, then fold every overlay key on top.
+        val merged = overlayMap.foldLeft(baseMap) { case (acc, (key, overlayValue)) =>
+          acc.get(key) match {
+            case Some(baseValue) => acc.updated(key, deepMerge(baseValue, overlayValue))
+            case scala.None      => acc.updated(key, overlayValue)
+          }
+        }
+        DataView.from(merged)
+      case _ =>
+        // Not both maps: overlay replaces base.
+        overlay
+    }
 }
