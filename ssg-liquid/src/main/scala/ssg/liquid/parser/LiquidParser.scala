@@ -663,18 +663,23 @@ final class LiquidParser(
       if (check(TokenType.OUT_START)) {
         nodes.add(parseOutput())
       } else {
+        // file_name_or_output (LiquidParser.g4:219-222): a quoted string, or an
+        // unquoted `filename : ( . )+?` (LiquidParser.g4:359-361) — a lazy run of
+        // any tokens reassembled into the raw file name (NodeVisitor.java:512-526
+        // reads the source-text interval spanning the run).
         val fileName = if (check(TokenType.STR)) {
           val s = peek().value
           advance()
           s
         } else {
-          // Read until whitespace/tag end
-          consumeId()
+          // Unquoted Jekyll file name: assemble the Id/Dot/PathSep/... token run
+          // (e.g. `dir/sub/file.html`) up to the params/TagEnd boundary.
+          parseJekyllIncludeFileName()
         }
         nodes.add(new AtomNode(DataView.from(fileName)))
       }
 
-      // key=value params
+      // jekyll_include_params (LiquidParser.g4:224-227): `id '=' expr`
       while (isIdLike(peek().tokenType) && !check(TokenType.TAG_END)) {
         val key = consumeId()
         consume(TokenType.EQ_SIGN)
@@ -687,16 +692,112 @@ final class LiquidParser(
     new InsertionNode(insertions.get("include"), nodes)
   }
 
+  /** Assembles an unquoted Jekyll include file name from the token run.
+    *
+    * Mirrors liqp's `filename : ( . )+?` (LiquidParser.g4:359-361): a non-greedy (lazy) match of any tokens. The match stops as soon as the following `jekyll_include_params` (`id '=' expr`,
+    * LiquidParser.g4:224-227) or the closing TagEnd can begin.
+    *
+    * liqp does NOT concatenate token text. It reassembles the *raw source interval* spanning the run — `Interval.of(filename().start.getStartIndex(), filename().stop.getStopIndex())` — and then
+    * rejects any name that contains whitespace (NodeVisitor.java:519-524):
+    * {{{
+    *   if (filename.matches(".*\\s.*"))
+    *     throw new LiquidException("in `{% include filename %}` the `filename` is {" + filename +
+    *       "}, but it cannot have spaces for Flavor.JEKYLL", ctx);
+    * }}}
+    * Whitespace lives in the lexer's hidden channel and so does not surface as a token, but it DOES surface as a positional gap: every token carries its source `line`/`col`, so two consecutive tokens
+    * that are *not* physically adjacent (a different line, or a `col` beyond where the prior token's source text ends) prove hidden whitespace between them. We reconstruct the raw interval the same
+    * way liqp's `getText(interval)` would: replay each token's source span — restoring the quote characters the lexer stripped from STR tokens (`value` holds the unquoted content, but the source
+    * occupied two extra columns) and re-emitting the hidden whitespace between non-adjacent tokens — then apply liqp's whitespace check to the *whole* assembled name. So the run is consumed in full
+    * first (matching `start`..`stop`), and only then, if the complete assembled name contains any whitespace — whether between tokens (a reconstructed gap) or inside a token (e.g. a space within a
+    * quoted STR run such as `a"b c".html`) — liqp's exact exception is thrown carrying the complete `{name}`, mirroring `filename.matches(".*\\s.*")` over the raw interval (NodeVisitor.java:522).
+    */
+  private def parseJekyllIncludeFileName(): String = {
+    val sb = new java.lang.StringBuilder()
+    // Source line/end-column of the previously consumed run token (the end column is exclusive).
+    // `prevLine` < 0 marks "no token consumed yet" so the first token never registers a gap.
+    var prevLine      = -1
+    var prevEndCol    = 0
+    var hasWhitespace = false
+    // Position of the first reconstructed whitespace (for the thrown exception's line/col).
+    var wsLine = 0
+    var wsCol  = 0
+    while (
+      !check(TokenType.TAG_END) && !isAtEnd &&
+      // Boundary: an `id '=' ...` run starts a jekyll_include_params, which
+      // ends the lazy filename match — but only after at least one token has
+      // been consumed so the name is non-empty.
+      !(prevLine >= 0 && isIdLike(peek().tokenType) && peekNext().tokenType == TokenType.EQ_SIGN)
+    ) {
+      val t = peek()
+      // Hidden whitespace between this token and the previous one in the run shows up as a line
+      // change or a start column past where the previous token's source text ended. We replay it
+      // into the assembled name (the interval `getText` would have included it) and remember it, so
+      // the whole name is built before liqp's whitespace check (NodeVisitor.java:522-524) runs.
+      if (prevLine >= 0 && t.line != prevLine) {
+        if (!hasWhitespace) { wsLine = prevLine; wsCol = prevEndCol }
+        hasWhitespace = true
+        sb.append('\n')
+      } else if (prevLine >= 0 && t.col > prevEndCol) {
+        if (!hasWhitespace) { wsLine = prevLine; wsCol = prevEndCol }
+        hasWhitespace = true
+        var gap = t.col - prevEndCol
+        while (gap > 0) { sb.append(' '); gap -= 1 }
+      }
+      sb.append(rawText(t))
+      // Advance the source cursor past this token's raw span (STR adds back the two quote columns).
+      prevLine = t.line
+      prevEndCol = t.col + (if (t.tokenType == TokenType.STR) t.value.length + 2 else t.value.length)
+      advance()
+    }
+    if (prevLine < 0) {
+      // No tokens consumed: not a valid file name (matches consumeId's error).
+      val t = peek()
+      throw new LiquidException(
+        s"Expected include file name but got ${t.tokenType} ('${t.value}')",
+        t.line,
+        t.col
+      )
+    }
+    val fileName = sb.toString
+    // valid filename in jekyll doesn't allow whitespaces (NodeVisitor.java:516, 522-524).
+    // liqp's check `filename.matches(".*\\s.*")` (NodeVisitor.java:522) runs over the WHOLE
+    // assembled raw interval, so it also catches whitespace that lives INSIDE a STR token in
+    // an unquoted name run (e.g. `{% include a"b c".html %}` assembles to `a"b c".html`, whose
+    // STR value `b c` carries a space with no positional gap between tokens). We scan the entire
+    // assembled name rather than only the reconstructed inter-token gaps. `wsLine`/`wsCol` still
+    // point at the first reconstructed gap when one exists; for whitespace embedded inside a token
+    // there is no gap, so the run's start position (0/0) is reported, mirroring liqp's `ctx`.
+    if (fileName.exists(_.isWhitespace)) {
+      throw new LiquidException(
+        s"in `{% include filename %}` the `filename` is {$fileName}, but it cannot have spaces for Flavor.JEKYLL",
+        wsLine,
+        wsCol
+      )
+    }
+    fileName
+  }
+
+  /** Source-text spelling of a single token within an unquoted Jekyll include file-name run.
+    *
+    * For most tokens this is the literal `value`. STR tokens are special: the lexer strips the surrounding quotes into `value` (LiquidLexer.scala:386-402), but liqp's raw-interval read keeps them
+    * (NodeVisitor.java:519-520), so `{% include a"b" %}` reassembles to `a"b"`. We restore a double quote; the lexer does not record which quote glyph was used, but an unquoted file name embedding a
+    * quote is degenerate either way and the only contract that matters is that the quote is not silently dropped.
+    */
+  private def rawText(t: Token): String =
+    if (t.tokenType == TokenType.STR) "\"" + t.value + "\"" else t.value
+
   /** include_relative_tag */
   private def parseIncludeRelativeTag(): LNode = {
     advance() // consume INCLUDE_RELATIVE
-    val nodes    = new ArrayList[LNode]()
+    val nodes = new ArrayList[LNode]()
+    // include_relative also uses file_name_or_output (LiquidParser.g4:215), so
+    // unquoted dotted/slashed names are assembled the same way as `include`.
     val fileName = if (check(TokenType.STR)) {
       val s = peek().value
       advance()
       s
     } else {
-      consumeId()
+      parseJekyllIncludeFileName()
     }
     nodes.add(new AtomNode(DataView.from(fileName)))
 
@@ -1028,6 +1129,11 @@ final class LiquidParser(
 
   private def peek(): Token =
     if (pos < tokens.size()) tokens.get(pos)
+    else Token(TokenType.EOF, "", 0, 0)
+
+  /** Peeks one token past the current position (single-token lookahead). */
+  private def peekNext(): Token =
+    if (pos + 1 < tokens.size()) tokens.get(pos + 1)
     else Token(TokenType.EOF, "", 0, 0)
 
   /** Peeks at the token after TAG_START (skipping whitespace). */
