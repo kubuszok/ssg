@@ -48,7 +48,8 @@ lazy val al = new Aliases(
     `ssg-md`,
     `ssg-mermaid`,
     `ssg-minify`,
-    `ssg-sass`
+    `ssg-sass`,
+    `ssg-site`
   ),
   compileOnly = Seq(
     ssg
@@ -333,6 +334,19 @@ lazy val `ssg-sass` = (projectMatrix in file("ssg-sass"))
   .settings(mimaSettings)
   .dependsOn(`ssg-commons`)
 
+// --- Site pipeline (SSG-native glue) ---
+
+lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
+  .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
+  .settings(
+    name := "ssg-site",
+    libraryDependencies += "com.kubuszok" %%% "kindlings-yaml-derivation" % versions.kindlingsYaml
+  )
+  .settings(publishSettings)
+  .settings(mimaSettings)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-js`, `ssg-liquid`, `ssg-md`, `ssg-minify`, `ssg-sass`)
+
 // --- Aggregator module ---
 
 lazy val ssg = (projectMatrix in file("ssg"))
@@ -343,7 +357,7 @@ lazy val ssg = (projectMatrix in file("ssg"))
   )
   .settings(publishSettings)
   .settings(mimaSettings)
-  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-graphviz`, `ssg-highlight`, `ssg-js`, `ssg-katex`, `ssg-liquid`, `ssg-md`, `ssg-mermaid`, `ssg-minify`, `ssg-sass`)
+  .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-graphviz`, `ssg-highlight`, `ssg-js`, `ssg-katex`, `ssg-liquid`, `ssg-md`, `ssg-mermaid`, `ssg-minify`, `ssg-sass`, `ssg-site`)
 
 // ── Root project (welcome + aggregation) ─────────────────────────────
 
@@ -382,6 +396,7 @@ lazy val root = (project in file("."))
   .aggregate(`ssg-mermaid`.projectRefs *)
   .aggregate(`ssg-minify`.projectRefs *)
   .aggregate(`ssg-sass`.projectRefs *)
+  .aggregate(`ssg-site`.projectRefs *)
   .aggregate(ssg.projectRefs *)
   .settings(noPublishSettings)
   .settings(mimaSettings)
