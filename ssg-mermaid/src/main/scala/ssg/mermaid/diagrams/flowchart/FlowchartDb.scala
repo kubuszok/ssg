@@ -179,6 +179,12 @@ final class FlowchartDb {
   // flowDb.ts:148 — limit read from config.maxEdges ?? 500; settable before parsing
   var maxEdges: Int = 500
 
+  // flowDb.ts:20,36 — `let config = getConfig()` is captured at module scope and
+  // read by `setLink` (utils.formatUrl) and `setClickFun` to honor the active
+  // security level. Mirrors that module-level config by exposing the single
+  // securityLevel value the db actually consults; set before parsing (flowDb.ts:84).
+  var securityLevel: String = "strict"
+
   /** Function to lookup domId from id in the graph definition. */
   def lookUpDomId(id: String): String =
     boundary[String] {
@@ -581,8 +587,10 @@ final class FlowchartDb {
     for (id <- ids.split(",")) {
       val trimId = id.trim
       nodes.get(trimId).foreach { node =>
-        // flowDb.ts:349 — the URL is sanitized (utils.formatUrl → Utils.sanitizeUrl)
-        node.link = Nullable(ssg.mermaid.util.Utils.sanitizeUrl(linkStr))
+        // flowDb.ts:349 — `vertex.link = utils.formatUrl(linkStr, config)`.
+        // formatUrl trims, sanitizes under any non-`loose` security level, and
+        // passes the URL through verbatim under `loose` (utils.ts:248-260).
+        node.link = ssg.mermaid.util.Utils.formatUrl(linkStr, securityLevel)
         // flowDb.ts:350 — the target is stored RAW
         node.linkTarget = Nullable(target)
       }

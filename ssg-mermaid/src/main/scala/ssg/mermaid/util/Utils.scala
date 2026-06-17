@@ -10,7 +10,7 @@
  *
  * Migration notes:
  *   Convention: Replaces @braintree/sanitize-url and browser-dependent utilities
- *   Idiom: Pure functions; deterministic ID generation via AtomicInteger or seed
+ *   Idiom: Pure functions; the InitIDGenerator (utils.ts:752-761) id-generation path is omitted — SSG ids are unconditionally deterministic (Accessibility), with no Date.now() timestamp branch
  *   Renames: utils.formatUrl → Utils.sanitizeUrl; N/A for dedent (from TextUtils)
  *
  * upstream-commit: 2cfdd1620
@@ -19,7 +19,7 @@ package ssg
 package mermaid
 package util
 
-import java.util.concurrent.atomic.AtomicLong
+import lowlevel.Nullable
 
 import scala.util.boundary
 import scala.util.boundary.break
@@ -29,9 +29,6 @@ import scala.util.boundary.break
   * Provides URL sanitization, text dedenting, and unique ID generation for SVG elements.
   */
 object Utils {
-
-  /** Counter for generating unique IDs. Thread-safe via AtomicLong. */
-  private val idCounter: AtomicLong = new AtomicLong(0L)
 
   /** Dangerous URL protocol patterns that should be blocked. */
   private val DangerousProtocols = Set(
@@ -74,6 +71,43 @@ object Utils {
     }
   }
 
+  /** Formats a link URL for use in a clickable diagram element, honoring the security level.
+    *
+    * Ports `formatUrl(linkStr, config)` from utils.ts:248-260:
+    * {{{
+    * export function formatUrl(linkStr: string, config: MermaidConfig): string | undefined {
+    *   const url = linkStr.trim();
+    *   if (!url) {
+    *     return undefined;
+    *   }
+    *   if (config.securityLevel !== 'loose') {
+    *     return sanitizeUrl(url);
+    *   }
+    *   return url;
+    * }
+    * }}}
+    *
+    * Under any security level other than `"loose"` the URL is passed through [[sanitizeUrl]] (dangerous protocols neutralised). Under `"loose"` the trimmed URL is returned verbatim — the author is
+    * trusted, so e.g. `javascript:` links survive.
+    *
+    * @param linkStr
+    *   the raw author-supplied link string
+    * @param securityLevel
+    *   the active `config.securityLevel`
+    * @return
+    *   the formatted URL, or [[lowlevel.Nullable.empty]] when the trimmed input is empty (mirrors upstream returning `undefined`)
+    */
+  def formatUrl(linkStr: String, securityLevel: String): Nullable[String] = {
+    val url = linkStr.trim
+    if (url.isEmpty) {
+      Nullable.empty
+    } else if (securityLevel != "loose") {
+      Nullable(sanitizeUrl(url))
+    } else {
+      Nullable(url)
+    }
+  }
+
   /** Removes common leading whitespace from all lines.
     *
     * Delegates to [[ssg.mermaid.render.text.TextUtils.dedent]].
@@ -85,34 +119,6 @@ object Utils {
     */
   def dedent(text: String): String =
     ssg.mermaid.render.text.TextUtils.dedent(text)
-
-  /** Generates a unique ID string for SVG elements.
-    *
-    * When `deterministicIds` is true in config, generates predictable IDs based on an incrementing counter with an optional seed prefix. Otherwise, generates IDs based on a timestamp and counter.
-    *
-    * @return
-    *   a unique ID string suitable for use as an SVG element id attribute
-    */
-  def generateId(): String = {
-    val counter = idCounter.getAndIncrement()
-    s"id-${counter.toHexString}-${System.nanoTime().toHexString.takeRight(8)}"
-  }
-
-  /** Generates a deterministic ID using a seed string and counter.
-    *
-    * @param seed
-    *   a prefix string for the ID
-    * @return
-    *   a deterministic ID string
-    */
-  def generateDeterministicId(seed: String): String = {
-    val counter = idCounter.getAndIncrement()
-    s"$seed-$counter"
-  }
-
-  /** Resets the ID counter (useful for deterministic testing). */
-  def resetIdCounter(): Unit =
-    idCounter.set(0L)
 
   /** Zero-width space character used by Mermaid for text processing. */
   val ZeroWidthSpace: String = "​"

@@ -64,6 +64,13 @@ import ssg.mermaid.diagrams.xychart.XyChartDiagram
   */
 object Mermaid {
 
+  /** Replacement diagram source emitted when the input exceeds `config.maxTextSize`.
+    *
+    * Mirrors `MAX_TEXTLENGTH_EXCEEDED_MSG` (mermaidAPI.ts:31-32): a self-contained flowchart whose single node carries the over-limit message.
+    */
+  val MaxTextLengthExceededMsg: String =
+    "graph TB;a[Maximum text size in diagram exceeded];style a fill:#faa"
+
   /** Renders a Mermaid diagram to SVG.
     *
     * Detects the diagram type from the input text and dispatches to the appropriate renderer.
@@ -82,8 +89,24 @@ object Mermaid {
     // extracted `title` is applied to each diagram db, mirroring
     // Diagram.ts:41-43 `if (metadata.title) { db.setDiagramTitle?.(metadata.title); }`.
     val pre   = Preprocess.processFrontmatter(input)
-    val text  = pre.text
     val title = pre.title
+
+    // ISS-1058: maximum allowed text size guard. Mirrors mermaidAPI.ts:319-322:
+    //   // Check the maximum allowed text size
+    //   if (text.length > (config?.maxTextSize ?? MAX_TEXTLENGTH)) {
+    //     text = MAX_TEXTLENGTH_EXCEEDED_MSG;
+    //   }
+    // where MAX_TEXTLENGTH = 50_000 (mermaidAPI.ts:30) and
+    // MAX_TEXTLENGTH_EXCEEDED_MSG =
+    //   'graph TB;a[Maximum text size in diagram exceeded];style a fill:#faa'
+    // (mermaidAPI.ts:31-32). The replacement text is itself a flowchart that
+    // renders the over-limit message, so detection runs over it normally.
+    val text =
+      if (pre.text.length > config.maxTextSize) {
+        Mermaid.MaxTextLengthExceededMsg
+      } else {
+        pre.text
+      }
 
     val diagramType = DetectType.detect(text)
 

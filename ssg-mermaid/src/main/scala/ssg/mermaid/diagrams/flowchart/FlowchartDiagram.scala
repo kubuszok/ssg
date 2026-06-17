@@ -75,6 +75,10 @@ object FlowchartDiagram {
     // set config-driven Db fields before the parser adds edges so the limit is live.
     val db = new FlowchartDb
     db.maxEdges = config.maxEdges
+    // flowDb.ts:20,36,294 — config is captured before parsing so setLink
+    // (utils.formatUrl) honors the active security level: a `javascript:` link
+    // is neutralised under `strict`/`antiscript`/`sandbox` but kept under `loose`.
+    db.securityLevel = config.securityLevel
     // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
     // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
     title.foreach(t => db.title = t)
