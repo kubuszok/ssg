@@ -98,6 +98,98 @@ object TextUtils {
       result
     }
 
+  /** Converts a string/boolean-like value into a boolean.
+    *
+    * Faithful port of `evaluate` from `common.ts` (:175-176): `false`, `"false"`, `"null"`, `"0"` (case-insensitive, trimmed) are falsey; everything else is truthy. Used to resolve
+    * `flowchart.htmlLabels` (shapes/util.js:9, :11).
+    *
+    * @param value
+    *   the value to coerce (a String form of the config flag)
+    * @return
+    *   the boolean result
+    */
+  def evaluate(value: String): Boolean = {
+    val v = value.trim.toLowerCase
+    !(v == "false" || v == "null" || v == "0")
+  }
+
+  /** Boolean overload of [[evaluate]] — `false` stays falsey, everything else truthy. */
+  def evaluate(value: Boolean): Boolean = value
+
+  /** Removes script-like content from text (DOMPurify stand-in).
+    *
+    * Mirrors `removeScript` from `common.ts` (:58-64), which delegates to `DOMPurify.sanitize`. Since there is no browser DOM server-side, this strips
+    * `<script>`/`<style>`/`<iframe>`/`<object>`/`<embed>` tags and `on*` event-handler attributes — the dangerous subset DOMPurify removes by default.
+    *
+    * @param txt
+    *   the text to sanitize
+    * @return
+    *   the safer text
+    */
+  def removeScript(txt: String): String = sanitizeText(txt)
+
+  /** Applies the security-level sanitization gate for HTML labels.
+    *
+    * Faithful port of `sanitizeMore` from `common.ts` (:66-79). This gate is DISTINCT from the URL gate (`Utils.formatUrl`): it only runs when `htmlLabels !== false`, and branches on `securityLevel`:
+    *   - `antiscript` / `strict` → strip script-like content (`removeScript`)
+    *   - any level other than `loose` → escape `<`→`&lt;`, `>`→`&gt;`, `=`→`&equals;` with the `<br>`→`#br#`→`<br/>` round-trip (so line breaks survive)
+    *   - `loose` → raw passthrough
+    *
+    * @param text
+    *   the raw label text
+    * @param securityLevel
+    *   the resolved `MermaidConfig.securityLevel`
+    * @param htmlLabels
+    *   the resolved `flowchart.htmlLabels` flag (gate is skipped when false)
+    * @return
+    *   the sanitized text
+    */
+  def sanitizeMore(text: String, securityLevel: String, htmlLabels: Boolean): String =
+    // common.ts:67 — `if (config.flowchart?.htmlLabels !== false)`
+    if (!htmlLabels) {
+      text
+    } else {
+      val level = securityLevel
+      if (level == "antiscript" || level == "strict") {
+        // common.ts:69-70
+        removeScript(text)
+      } else if (level != "loose") {
+        // common.ts:71-76 — `<br>`→`#br#`→`<br/>` round-trip then escape < > =
+        var t = breakToPlaceholder(text)
+        t = t.replace("<", "&lt;").replace(">", "&gt;")
+        t = t.replace("=", "&equals;")
+        placeholderToBreak(t)
+      } else {
+        text
+      }
+    }
+
+  /** Sanitizes label text for HTML rendering, applying the security gate.
+    *
+    * Faithful port of `sanitizeText` from `common.ts` (:81-94). Runs [[sanitizeMore]] then ALWAYS forbids `style` tags (the `FORBID_TAGS: ['style']` branch at common.ts:89-91). Empty text is returned
+    * unchanged (common.ts:82-84).
+    *
+    * @param text
+    *   the raw label text
+    * @param securityLevel
+    *   the resolved `MermaidConfig.securityLevel`
+    * @param htmlLabels
+    *   the resolved `flowchart.htmlLabels` flag
+    * @return
+    *   sanitized text safe for HTML-label rendering
+    */
+  def sanitizeTextHtml(text: String, securityLevel: String, htmlLabels: Boolean): String =
+    if (text.isEmpty) {
+      text
+    } else {
+      // common.ts:89-91 — DOMPurify.sanitize(..., { FORBID_TAGS: ['style'] })
+      forbidStyleTags(sanitizeMore(text, securityLevel, htmlLabels))
+    }
+
+  /** Strips `<style>...</style>` blocks (the always-on `FORBID_TAGS: ['style']`). */
+  private def forbidStyleTags(text: String): String =
+    text.replaceAll("(?i)<style[^>]*>[\\s\\S]*?</style>", "").replaceAll("(?i)<style[^>]*/?>", "")
+
   /** Gets the rows of lines in a string, converting `<br>` tags and `\n` to line breaks.
     *
     * Mirrors `getRows` from `common.ts`.

@@ -51,6 +51,10 @@ package clusters
   *   border stroke color (default from theme)
   * @param backgroundColor
   *   background fill color (default from theme)
+  * @param htmlLabels
+  *   when true, the cluster title is rendered as an HTML `<foreignObject>` (ISS-1205) instead of an SVG `<text>`. Defaults to false so existing SVG-text geometry is unchanged.
+  * @param securityLevel
+  *   the resolved `MermaidConfig.securityLevel`; gates HTML-label sanitization (diagrams/common/common.ts:66-94).
   */
 final case class ClusterConfig(
   id:              String = "",
@@ -66,5 +70,7 @@ final case class ClusterConfig(
   labelStyle:      String = "",
   padding:         Double = 8,
   borderColor:     String = "#bbb",
-  backgroundColor: String = "#ececff"
+  backgroundColor: String = "#ececff",
+  htmlLabels:      Boolean = false,
+  securityLevel:   String = "strict"
 )

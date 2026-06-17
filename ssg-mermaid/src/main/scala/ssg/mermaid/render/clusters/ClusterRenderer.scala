@@ -20,8 +20,8 @@ package mermaid
 package render
 package clusters
 
-import ssg.mermaid.render.labels.{ LabelRenderer, LabelStyle }
-import ssg.mermaid.render.text.TextMetrics
+import ssg.mermaid.render.labels.{ HtmlLabelHelper, LabelRenderer, LabelStyle }
+import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
 import ssg.graphs.commons.svg.SvgBuilder
 
 /** Renders cluster (subgraph) containers as SVG elements.
@@ -89,27 +89,47 @@ object ClusterRenderer {
 
     // Title label at the top center
     if (config.title.nonEmpty) {
-      val titleStyle = LabelStyle(
-        fontSize = TitleFontSize,
-        fontWeight = "bold",
-        cssClass = "cluster-label"
-      )
-
       // Position the title at the top center of the cluster
       val titleX = config.x
       val titleY = config.y - halfH + TitleOffsetY
 
-      val titleGroup = LabelRenderer.renderLabel(
-        group,
-        config.title,
-        titleX,
-        titleY,
-        titleStyle
-      )
+      if (config.htmlLabels) {
+        // HTML label (ISS-1205): foreignObject centred at the title position.
+        val labelGroup = group.append("g")
+        labelGroup.classed("label", true)
+        labelGroup.classed("cluster-label", true)
+        labelGroup.attr("transform", s"translate(${fmtCoord(titleX)},${fmtCoord(titleY)})")
+        val sanitized = TextUtils.sanitizeTextHtml(config.title, config.securityLevel, config.htmlLabels)
+        HtmlLabelHelper.createText(
+          el = labelGroup,
+          text = sanitized,
+          useHtmlLabels = true,
+          isNode = true,
+          classes = "",
+          width = config.width,
+          style = config.labelStyle,
+          addBackground = false
+        )
+        ()
+      } else {
+        val titleStyle = LabelStyle(
+          fontSize = TitleFontSize,
+          fontWeight = "bold",
+          cssClass = "cluster-label"
+        )
 
-      if (config.labelStyle.nonEmpty) {
-        // Apply additional label styling
-        titleGroup.attr("style", config.labelStyle)
+        val titleGroup = LabelRenderer.renderLabel(
+          group,
+          config.title,
+          titleX,
+          titleY,
+          titleStyle
+        )
+
+        if (config.labelStyle.nonEmpty) {
+          // Apply additional label styling
+          titleGroup.attr("style", config.labelStyle)
+        }
       }
     }
 
@@ -135,6 +155,10 @@ object ClusterRenderer {
     }
     renderCluster(parent, roundedConfig)
   }
+
+  /** Formats a coordinate without a trailing `.0` for integral values. */
+  private def fmtCoord(v: Double): String =
+    if (v == v.toLong.toDouble) v.toLong.toString else v.toString
 
   /** Estimates the height needed for the cluster title.
     *

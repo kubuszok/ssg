@@ -20,6 +20,7 @@ package mermaid
 package render
 package shapes
 
+import ssg.mermaid.render.labels.ShapeLabel
 import ssg.graphs.commons.layout.dagre.Point
 import ssg.graphs.commons.render.Intersect
 import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
@@ -76,19 +77,8 @@ object DiamondShape {
       pathEl.attr("style", config.style)
     }
 
-    // Add label
-    if (config.label.nonEmpty) {
-      val text = group.append("text")
-      text.attr("x", cx)
-      text.attr("y", cy)
-      text.attr("dominant-baseline", "central")
-      text.attr("text-anchor", "middle")
-      text.classed("node-label", true)
-      if (config.labelStyle.nonEmpty) {
-        text.attr("style", config.labelStyle)
-      }
-      text.text(config.label)
-    }
+    // Add label (htmlLabels-aware shared chokepoint — ISS-1205)
+    ShapeLabel.renderNodeLabel(group, config)
 
     val polyPoints = Array(top, right, bottom, left)
 
