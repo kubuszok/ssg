@@ -68,11 +68,17 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
         )
         .asInstanceOf[String]
       val arr = js.JSON.parse(output).asInstanceOf[js.Array[js.Dynamic]]
+      // web-tree-sitter reports Node.startIndex/endIndex as UTF-16 code-unit indices
+      // into the JS source string, but HighlightSpan must carry UTF-8 byte offsets
+      // (the JVM/Native FFI contract, consumed by HtmlHighlightRenderer's
+      // source.getBytes("UTF-8") slicing). Convert via the Utf8Offsets prefix table
+      // (ISS-1092).
+      val utf8Prefix = Utf8Offsets.prefix(source)
       arr
         .map(c =>
           HighlightSpan(
-            c.s.asInstanceOf[Int],
-            c.e.asInstanceOf[Int],
+            Utf8Offsets.at(utf8Prefix, c.s.asInstanceOf[Int]),
+            Utf8Offsets.at(utf8Prefix, c.e.asInstanceOf[Int]),
             c.n.asInstanceOf[String]
           )
         )
