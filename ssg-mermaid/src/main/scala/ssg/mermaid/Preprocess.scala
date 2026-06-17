@@ -28,6 +28,8 @@ import lowlevel.Nullable
 
 import ssg.data.DataView
 
+import scala.collection.immutable.VectorMap
+
 /** Result of the frontmatter preprocessing stage.
   *
   * Mirrors the object returned by `processFrontmatter` in `preprocess.ts`: `{ title, config, text }`.
@@ -37,8 +39,8 @@ import ssg.data.DataView
   * @param title
   *   the extracted frontmatter title, to be applied to the diagram db via its title mechanism (mirrors `Diagram.ts:42` `db.setDiagramTitle?.(metadata.title)`)
   * @param config
-  *   the raw frontmatter config object, if present. Application of this config is owned by ISS-1057 (init-directive/config-application); the value is surfaced here so ISS-1057 can consume it
-  *   without re-parsing.
+  *   the raw frontmatter config object, if present. Application of this config is owned by ISS-1057 (init-directive/config-application); the value is surfaced here so ISS-1057 can consume it without
+  *   re-parsing.
   */
 final case class PreprocessResult(
   text:   String,
@@ -66,8 +68,8 @@ object Preprocess {
     * return { title, config, text };
     * }}}
     *
-    * The `displayMode` -> `config.gantt.displayMode` legacy merge mutates the raw config object. Config application as a whole is owned by ISS-1057, so the `displayMode` value is carried unchanged
-    * through [[FrontMatterMetadata.displayMode]] and surfaced to ISS-1057 alongside the config; it is therefore not merged into [[PreprocessResult.config]] here.
+    * The `displayMode` -> `config.gantt.displayMode` legacy merge (preprocess.ts:22-27) is reproduced here by overlaying `{ gantt: { displayMode } }` onto the frontmatter config (via
+    * [[ssg.data.DataView.deepMerge]]), so the value is carried into [[PreprocessResult.config]] and flows through the config-application channel (ISS-1057).
     *
     * @param code
     *   the (already CRLF-normalised) diagram text
@@ -75,11 +77,34 @@ object Preprocess {
     *   the stripped text plus the extracted title and config
     */
   def processFrontmatter(code: String): PreprocessResult = {
-    val result = Frontmatter.extractFrontMatter(code)
+    val result   = Frontmatter.extractFrontMatter(code)
+    val metadata = result.metadata
+
+    // const { displayMode, title, config = {} } = metadata;
+    // if (displayMode) {
+    //   if (!config.gantt) { config.gantt = {}; }
+    //   config.gantt.displayMode = displayMode;
+    // }
+    //
+    // The displayMode -> config.gantt.displayMode legacy merge mutates the raw
+    // frontmatter config object before it is handed to cleanAndMerge. Reproduce
+    // it here by overlaying `{ gantt: { displayMode } }` onto the config so the
+    // value flows through the config-application channel (ISS-1057). A `config`
+    // default of `{}` is modelled by starting from an empty map when absent.
+    val config: Nullable[DataView] = metadata.displayMode.fold(metadata.config) { displayMode =>
+      val base         = metadata.config.getOrElse(DataView.from(VectorMap.empty[String, DataView]))
+      val ganttOverlay = DataView.from(
+        VectorMap[String, DataView](
+          "gantt" -> DataView.from(VectorMap[String, DataView]("displayMode" -> DataView.from(displayMode)))
+        )
+      )
+      Nullable(DataView.deepMerge(base, ganttOverlay))
+    }
+
     PreprocessResult(
       text = result.text,
-      title = result.metadata.title,
-      config = result.metadata.config
+      title = metadata.title,
+      config = config
     )
   }
 }

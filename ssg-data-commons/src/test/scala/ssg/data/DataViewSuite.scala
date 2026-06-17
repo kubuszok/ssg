@@ -111,4 +111,60 @@ class DataViewSuite extends munit.FunSuite {
     assertEquals(dv.asString.get, "hello")
     assertEquals(count, 1)
   }
+
+  test("deepMerge overlays a subset of keys (present-keys-win)") {
+    val base = DataView.from(
+      VectorMap[String, DataView]("a" -> DataView("base-a"), "b" -> DataView("base-b"))
+    )
+    val overlay = DataView.from(VectorMap[String, DataView]("a" -> DataView("over-a")))
+    val merged  = DataView.deepMerge(base, overlay).asMap.get
+    assertEquals(merged("a").asString.get, "over-a")
+    assertEquals(merged("b").asString.get, "base-b")
+  }
+
+  test("deepMerge preserves a key absent in overlay") {
+    val base    = DataView.from(VectorMap[String, DataView]("keep" -> DataView(1)))
+    val overlay = DataView.from(VectorMap[String, DataView]("other" -> DataView(2)))
+    val merged  = DataView.deepMerge(base, overlay).asMap.get
+    assertEquals(merged("keep").asInt.get, 1)
+    assertEquals(merged("other").asInt.get, 2)
+  }
+
+  test("deepMerge recurses into nested maps") {
+    val base = DataView.from(
+      VectorMap[String, DataView](
+        "nested" -> DataView.from(
+          VectorMap[String, DataView]("x" -> DataView(1), "y" -> DataView(2))
+        )
+      )
+    )
+    val overlay = DataView.from(
+      VectorMap[String, DataView](
+        "nested" -> DataView.from(VectorMap[String, DataView]("y" -> DataView(99)))
+      )
+    )
+    val nested = DataView.deepMerge(base, overlay).asMap.get("nested").asMap.get
+    assertEquals(nested("x").asInt.get, 1)
+    assertEquals(nested("y").asInt.get, 99)
+  }
+
+  test("deepMerge replaces a base map with an overlay scalar") {
+    val base    = DataView.from(VectorMap[String, DataView]("k" -> DataView.from(VectorMap.empty[String, DataView])))
+    val overlay = DataView.from(VectorMap[String, DataView]("k" -> DataView("scalar")))
+    val merged  = DataView.deepMerge(base, overlay).asMap.get
+    assertEquals(merged("k").asString.get, "scalar")
+  }
+
+  test("deepMerge replaces a base scalar with an overlay map") {
+    val base    = DataView.from(VectorMap[String, DataView]("k" -> DataView("scalar")))
+    val overlay = DataView.from(VectorMap[String, DataView]("k" -> DataView.from(VectorMap[String, DataView]("inner" -> DataView(1)))))
+    val merged  = DataView.deepMerge(base, overlay).asMap.get
+    assertEquals(merged("k").asMap.get("inner").asInt.get, 1)
+  }
+
+  test("deepMerge with non-map overlay replaces base wholesale") {
+    val base    = DataView.from(VectorMap[String, DataView]("a" -> DataView(1)))
+    val overlay = DataView("scalar")
+    assertEquals(DataView.deepMerge(base, overlay).asString.get, "scalar")
+  }
 }
