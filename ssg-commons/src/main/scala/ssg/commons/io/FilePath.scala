@@ -4,8 +4,11 @@
  *
  * Cross-platform file path abstraction.
  *
- * On JVM: wraps java.nio.file.Path with full file system access
- * On JS/Native: string-based paths with limited/no file system access
+ * On JVM: wraps java.nio.file.Path
+ * On Scala Native: wraps java.nio.file.Path (Scala Native java.nio support)
+ * On Scala.js: string-based paths delegating to Node path/fs modules
+ *
+ * File I/O is provided via FileOps on all three platforms.
  *
  * Covenant: full-port
  * Covenant-verified: 2026-04-26
