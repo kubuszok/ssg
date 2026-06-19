@@ -1,0 +1,2 @@
+This file has no front matter.
+It should be copied verbatim to _site/static.txt.
