@@ -32,9 +32,9 @@ work, releasing to Maven Central.
 | Role | Who | Model | May do | May NOT do |
 |------|-----|-------|--------|------------|
 | **Orchestrator** | main session, follows `/goal` | session model | pick issues, dispatch agents, run gates, commit after auditor PASS, resolve issues *after* auditor PASS | write product code |
-| **Reproducer** | general agent, one per critical/bug issue | **Fable 5** — dispatch with `model: "fable"` | write the red test from the issue text + original source; commit it as the branch's FIRST commit (red-sha) | touch main-source code; see the fix |
-| **Implementer** | `re-scale:port-implementer` (porting) or general agent following `/fix-issue` | **Opus 4.8** — dispatch with `model: "opus"` | edit code/tests, compile, run tests, report | modify the red test, resolve/close ANY issue, edit any TSV/DB, update ratchet baseline, stamp covenants, edit `docs/reviews/*`, make changes outside the issue's scope |
-| **Auditor** | `re-scale:port-auditor` (porting) or general agent following `/verify-issue` | **Fable 5** — dispatch with `model: "fable"` | adversarial verification, proof-of-red, verdict PASS/FAIL, file NEW issues for discovered problems | edit product code, lower a finding's severity to make it pass |
+| **Reproducer** | general agent, one per critical/bug issue | **Opus 4.8** — dispatch with `model: "opus"` | write the red test from the issue text + original source; commit it as the branch's FIRST commit (red-sha) | touch main-source code; see the fix |
+| **Implementer** | `re-scale:port-implementer` (porting) or `issue-implementer` following `/fix-issue` | **Opus 4.6** — pinned via the agent definition's frontmatter (`model: claude-opus-4-6`, the full model ID); dispatch with **NO** `model:` override (the Agent-tool `model` enum cannot express 4.6 — only `opus`=4.8 — so an override would un-pin 4.6 and collide with the Opus 4.8 auditor) | edit code/tests, compile, run tests, report | modify the red test, resolve/close ANY issue, edit any TSV/DB, update ratchet baseline, stamp covenants, edit `docs/reviews/*`, make changes outside the issue's scope |
+| **Auditor** | `re-scale:port-auditor` (porting) or general agent following `/verify-issue` | **Opus 4.8** — dispatch with `model: "opus"` | adversarial verification, proof-of-red, verdict PASS/FAIL, file NEW issues for discovered problems | edit product code, lower a finding's severity to make it pass |
 
 The **Reproducer split** (imported from the SGE campaign) exists because an
 implementer writing its own reproduction test can — consciously or not —
@@ -52,10 +52,15 @@ a failing test. Two issues touching the same file are strictly sequential.
 The model split is deliberate and part of the anti-cheat design (C13): the
 auditor must run on a **different** model than the implementer so they do not
 share blind spots — an implementer's plausible-but-wrong rationalization is
-less likely to survive a different model's review. The orchestrator passes
-the `model` override on every Agent dispatch (it takes precedence over any
-agent-definition default); an audit performed on the implementer's model
-does not count as an audit.
+less likely to survive a different model's review. **Fable 5 was the original
+reproducer/auditor model; Anthropic blocked Fable worldwide (2026-06-13), so
+the campaign moved the implementer to Opus 4.6 and the reproducer + auditor to
+Opus 4.8** — still two distinct models, so C13 holds. The implementer's 4.6 is
+pinned in its agent-definition frontmatter as the full model ID
+(`claude-opus-4-6`) and dispatched with NO `model:` override; the reproducer
+and auditor take the `model: "opus"` (4.8) override on every dispatch (it takes
+precedence over any agent-definition default). An audit performed on the
+implementer's model does not count as an audit.
 
 Hard rule: **an issue is resolved only by the orchestrator, only after an
 auditor PASS verdict, only with evidence the orchestrator re-ran itself.**
@@ -81,7 +86,7 @@ Each counter below maps to a cheat actually observed in this codebase
 | C10 | Test files in a never-compiled directory (`src/test/scala-jvm/`) | Gate requires the test runner to report the new suite by name with N>0 tests executed; "the file exists" is not evidence the tests ran |
 | C11 | Fixing the test instead of the code (changing expectations to match wrong behavior) | Expected values in tests may only change with a citation of the upstream source/fixture line that justifies the new value; auditor diffs test expectations against the original |
 | C12 | Burying failures: `catch { case _: Exception => input }` | No new blanket catches; gate greps the diff for `case _: Exception`/`case _: Throwable` without rethrow/log |
-| C13 | Implementer and auditor sharing one model's blind spots — the same reasoning that produced a shortcut also approves it | Model diversity is mandatory: implementer runs on Opus 4.8 (`model: "opus"`), auditor on Fable 5 (`model: "fable"`). The orchestrator sets these on every dispatch; a verdict from a same-model audit is void |
+| C13 | Implementer and auditor sharing one model's blind spots — the same reasoning that produced a shortcut also approves it | Model diversity is mandatory: implementer runs on **Opus 4.6** (pinned via agent-definition frontmatter `model: claude-opus-4-6`, dispatched with NO override), auditor on **Opus 4.8** (`model: "opus"`). (Fable 5 was the original auditor model; blocked worldwide 2026-06-13.) The orchestrator sets these on every dispatch; a verdict from a same-model audit is void |
 | C14 | *(observed in the sibling SGE campaign)* Issue marked resolved on the easy half (accessors added, behavior unwired; init implemented, never called) | **Structured resolve notes**: every resolution carries `red:<sha> fix:<sha> test:<name> audit:PASS`; resolve-note evidence must be re-executable. Plus the sentence check: every clause of the issue description must now be false |
 | C15 | *(observed in SGE)* Green CI that gates nothing — `continue-on-error` gates, assume-skipped IT jobs, validation env-skipped on release | **Canary DoD for infra issues**: a gate counts as fixed only when a deliberately-broken branch (stubbed covenant file, injected test regression) is shown to turn CI red; link the red run in the resolve notes, then revert the canary |
 | C16 | *(observed in SGE)* Implementer fix-commit quietly rewording the reproduction test | **Red-commit protocol** (§6): the red test is a separate commit BEFORE the fix; `git diff red..fix -- <red-test-file>` must be empty — durable, re-checkable evidence rather than a one-time stash demo |
