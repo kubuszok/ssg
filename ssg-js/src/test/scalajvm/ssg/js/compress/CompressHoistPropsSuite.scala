@@ -142,7 +142,7 @@ final class CompressHoistPropsSuite extends munit.FunSuite {
   // =========================================================================
   // direct_access_2
   // =========================================================================
-  test("direct_access_2".fail) {
+  test("direct_access_2") {
     assertCompresses(
       input = """var o = { a: 1 };
         var f = function(k) {

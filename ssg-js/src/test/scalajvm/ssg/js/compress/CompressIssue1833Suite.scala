@@ -19,7 +19,7 @@ final class CompressIssue1833Suite extends munit.FunSuite {
   // =========================================================================
   // iife_for
   // =========================================================================
-  test("iife_for".fail) {
+  test("iife_for") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -46,7 +46,7 @@ final class CompressIssue1833Suite extends munit.FunSuite {
   // =========================================================================
   // iife_for_in
   // =========================================================================
-  test("iife_for_in".fail) {
+  test("iife_for_in") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -73,7 +73,7 @@ final class CompressIssue1833Suite extends munit.FunSuite {
   // =========================================================================
   // iife_do
   // =========================================================================
-  test("iife_do".fail) {
+  test("iife_do") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -104,7 +104,7 @@ final class CompressIssue1833Suite extends munit.FunSuite {
   // =========================================================================
   // iife_while
   // =========================================================================
-  test("iife_while".fail) {
+  test("iife_while") {
     assertCompresses(
       input = """function f() {
             function g() {

@@ -534,7 +534,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3205_1
   // =========================================================================
-  test("issue_3205_1".fail) {
+  test("issue_3205_1") {
     assertCompresses(
       input = """function f(a) {
             function g() {

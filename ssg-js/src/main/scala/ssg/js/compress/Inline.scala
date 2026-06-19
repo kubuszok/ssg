@@ -61,11 +61,16 @@ object Inline {
   // Helper predicates
   // -----------------------------------------------------------------------
 
-  /** Check if current compressor position is within an array or object literal. */
-  private def withinArrayOrObjectLiteral(compressor: CompressorLike): Boolean =
+  /** Check if current compressor position is within an array or object literal — terser `within_array_or_object_literal` (inline.js:123), reading the LIVE ancestry.
+    *
+    * Terser's Compressor IS the walker, so `within_array_or_object_literal` walks `compressor.parent(level++)` from the node being optimized upward; this port drives the transform on a separate
+    * `TreeTransformer`, so the Compressor's own stack is empty mid-pass and the previous `compressor.parent(level)` walk always yielded `null` (the guard was dead). We walk the live stack via
+    * `liveParent(compressor, self, level)` from `self` upward instead: an enclosing `AST_Statement` ends the search (false); an `AST_Array`/`AST_ObjectKeyVal`/`AST_Object` returns true.
+    */
+  private def withinArrayOrObjectLiteral(compressor: CompressorLike, self: AstNode): Boolean =
     boundary[Boolean] {
       var level = 0
-      var node: AstNode | Null = compressor.parent(level)
+      var node: AstNode | Null = liveParent(compressor, self, level)
       while (node != null) {
         node.nn match {
           case _: AstStatement => break(false)
@@ -73,7 +78,7 @@ object Inline {
           case _                                               =>
         }
         level += 1
-        node = compressor.parent(level)
+        node = liveParent(compressor, self, level)
       }
       false
     }
@@ -183,8 +188,12 @@ object Inline {
       if (d == null) break(self)
       val dd = d.nn.asInstanceOf[SymbolDef]
 
-      val parent = compressor.parent()
-      val nearestScope: AstScope | Null = findScope(compressor)
+      // inline.js:171,173 — `const parent = compressor.parent()` and `compressor.find_scope()`; both read
+      // the LIVE ancestry of `self`. Terser's Compressor IS the walker; this port drives the transform on a
+      // separate TreeTransformer whose Compressor stack is empty mid-pass, so the previous `compressor.parent()`
+      // / `findScope(compressor)` calls always yielded `null` (dead). Walk the live stack from `self` instead.
+      val parent = liveParent(compressor, self)
+      val nearestScope: AstScope | Null = findScopeLive(compressor, self)
 
       // Get fixed value for this symbol
       val fixed: AstNode | Null = self.fixedValue() match {
@@ -249,11 +258,11 @@ object Inline {
           (dd.scope.asInstanceOf[AnyRef] ne self.scope.nn.asInstanceOf[AnyRef]) &&
           (dd.escaped == 1 ||
             hasFlag(fixed, INLINED) ||
-            withinArrayOrObjectLiteral(compressor) ||
+            withinArrayOrObjectLiteral(compressor, self) ||
             !compressor.optionBool("reduce_funcs"))
         ) {
           singleUse = false
-        } else if (isRecursiveRef(compressor, dd)) {
+        } else if (isRecursiveRef(compressor, self, dd)) {
           singleUse = false
         } else if (
           (dd.scope.asInstanceOf[AnyRef] ne self.scope.nn.asInstanceOf[AnyRef]) ||
@@ -291,11 +300,20 @@ object Inline {
 
         val isDirectCall = parent match {
           case call: AstCall if call.expression != null && (call.expression.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]) =>
+            // inline.js:240 — `!(fixed.name && fixed.name.definition().recursive_refs > 0)`.
+            // `fixed.name` is read on either an AST_Lambda or an AST_Class (this branch is guarded by
+            // `fixed instanceof AST_Lambda || fixed instanceof AST_Class` above), so read `.name` from
+            // whichever it is — not via an unconditional AstLambda cast (which CCEs on a class value).
+            val fixedName: AstNode | Null = fixed match {
+              case l: AstLambda => l.name
+              case c: AstClass  => c.name
+              case _ => null
+            }
             nearestScope != null && !scopeEnclosesVariablesInThisScope(nearestScope.nn, fixed.asInstanceOf[AstScope]) &&
-            !(fixed.asInstanceOf[AstLambda].name match {
+            !(fixedName != null && (fixedName.nn match {
               case sym: AstSymbol if sym.thedef != null => sym.thedef.asInstanceOf[SymbolDef].recursiveRefs > 0
               case _ => false
-            })
+            }))
           case _ => false
         }
 
@@ -1020,7 +1038,7 @@ object Inline {
               }
               defOpt != null && {
                 val dd = defOpt.nn.asInstanceOf[SymbolDef]
-                dd.references.size == 1 && !isRecursiveRef(compressor, dd) &&
+                dd.references.size == 1 && !isRecursiveRef(compressor, self, dd) &&
                 isConstantExpression(lambda, exp.nn.asInstanceOf[AstSymbolRef].scope) == true
               }
             })) &&
@@ -1163,11 +1181,17 @@ object Inline {
         case _ => false
       })
 
-  /** Check if a ref refers to the name of a function/class it's defined within. */
-  private def isRecursiveRef(compressor: CompressorLike, theDef: SymbolDef): Boolean =
+  /** Check if a ref refers to the name of a function/class it's defined within — terser `is_recursive_ref` (common.js:357), reading the LIVE ancestry.
+    *
+    * Terser walks the live TreeWalker ancestry via `tw.parent(i++)` from the node being optimized upward; this port drives the transform on a separate `TreeTransformer`, so the Compressor's own stack
+    * is empty mid-pass and the previous `compressor.parent(i)` walk always yielded `null` (the guard was dead — and because it is consumed as `!isRecursiveRef(...)` in the now-live inline-flatten
+    * boolean, the always-false result wrongly let recursive refs be flattened). We walk the live stack via `liveParent(compressor, self, i)` from `self` upward: an enclosing `AST_Lambda`/`AST_Class`
+    * whose name's definition is `theDef` returns true (a recursive reference).
+    */
+  private def isRecursiveRef(compressor: CompressorLike, self: AstNode, theDef: SymbolDef): Boolean =
     boundary[Boolean] {
       var i = 0
-      var node: AstNode | Null = compressor.parent(i)
+      var node: AstNode | Null = liveParent(compressor, self, i)
       while (node != null) {
         node.nn match {
           case lambda: AstLambda if lambda.name != null =>
@@ -1185,7 +1209,7 @@ object Inline {
           case _ =>
         }
         i += 1
-        node = compressor.parent(i)
+        node = liveParent(compressor, self, i)
       }
       false
     }
@@ -1212,23 +1236,6 @@ object Inline {
     null
   }
 
-  /** Find the nearest enclosing scope via the compressor's own ancestry stack (the pre-ISS-1166 behavior). */
-  private def findScope(compressor: CompressorLike): AstScope | Null = {
-    var i = 0
-    var node: AstNode | Null = compressor.parent(i)
-    while (node != null) {
-      node.nn match {
-        case t: AstToplevel                      => return t // @nowarn -- interop boundary
-        case l: AstLambda                        => return l // @nowarn -- interop boundary
-        case b: AstBlock if b.blockScope != null => return b.blockScope // @nowarn -- interop boundary
-        case _ =>
-      }
-      i += 1
-      node = compressor.parent(i)
-    }
-    null
-  }
-
   /** The live parent of `self` during a compress pass — terser's `compressor.parent()` (inline.js:381).
     *
     * Terser's Compressor *is* the TreeWalker driving the transform, so `compressor.parent()` reads the live ancestry. This port runs the transform on a separate `TreeTransformer`, leaving the
@@ -1246,8 +1253,8 @@ object Inline {
     *
     * Same rationale as `liveParent`: terser's Compressor is the walker, so `compressor.parent(n)` reads the live ancestry of the node being optimized. This port drives the transform on a separate
     * `TreeTransformer`, so we walk the live stack via `Compressor.liveParent(self, n)` (Compressor.scala). `n == 0` is the immediate parent. Falls back to the compressor's own `parent(n)` when no
-    * active walker is present, preserving the previous behavior. Used by the live-ancestry guards `isWithinLoop` (is_within_loop), `inDefaultAssign` (inline.js:421-432) and `findScope` (find_scope /
-    * inline.js:419).
+    * active walker is present, preserving the previous behavior. Used by the live-ancestry guards `isWithinLoop` (is_within_loop), `inDefaultAssign` (inline.js:421-432), `findScopeLive` (find_scope /
+    * inline.js:419), `withinArrayOrObjectLiteral` (within_array_or_object_literal) and `isRecursiveRef` (is_recursive_ref).
     */
   private def liveParent(compressor: CompressorLike, self: AstNode, n: Int): AstNode | Null =
     compressor match {

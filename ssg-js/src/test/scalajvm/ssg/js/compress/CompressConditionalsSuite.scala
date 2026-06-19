@@ -1207,7 +1207,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2560
   // =========================================================================
-  test("issue_2560".fail) {
+  test("issue_2560") {
     assertCompresses(
       input = """function log(x) {
             console.log(x);
