@@ -19,7 +19,7 @@ final class CompressInlineSuite extends munit.FunSuite {
   // =========================================================================
   // inline_within_extends_1
   // =========================================================================
-  test("inline_within_extends_1".fail) {
+  test("inline_within_extends_1") {
     assertCompresses(
       input = """(function() {
             function foo(foo_base) {
@@ -50,7 +50,7 @@ final class CompressInlineSuite extends munit.FunSuite {
   // =========================================================================
   // inline_within_extends_2
   // =========================================================================
-  test("inline_within_extends_2".fail) {
+  test("inline_within_extends_2") {
     assertCompresses(
       input = """class Baz extends(foo(bar(Array))) {
             constructor() {

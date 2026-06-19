@@ -89,7 +89,7 @@ final class CompressClassPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // static_means_execution
   // =========================================================================
-  test("static_means_execution".fail) {
+  test("static_means_execution") {
     assertCompresses(
       input = """let x = 0;
         class NoProps { }

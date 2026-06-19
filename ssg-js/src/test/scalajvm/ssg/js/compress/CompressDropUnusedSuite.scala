@@ -895,7 +895,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // vardef_value
   // =========================================================================
-  test("vardef_value".fail) {
+  test("vardef_value") {
     assertCompresses(
       input = """function f() {
             function g(){
@@ -1386,7 +1386,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2105_1
   // =========================================================================
-  test("issue_2105_1".fail) {
+  test("issue_2105_1") {
     assertCompresses(
       input = """!function(factory) {
             factory();
@@ -1662,7 +1662,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2516_1
   // =========================================================================
-  test("issue_2516_1".fail) {
+  test("issue_2516_1") {
     assertCompresses(
       input = """function foo() {
             function qux(x) {
@@ -1702,7 +1702,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2516_2
   // =========================================================================
-  test("issue_2516_2".fail) {
+  test("issue_2516_2") {
     assertCompresses(
       input = """function foo() {
             function qux(x) {
@@ -1893,7 +1893,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2660_2
   // =========================================================================
-  test("issue_2660_2".fail) {
+  test("issue_2660_2") {
     assertCompresses(
       input = """var a = 1;
         function f(b) {
@@ -1922,7 +1922,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2665
   // =========================================================================
-  test("issue_2665".fail) {
+  test("issue_2665") {
     assertCompresses(
       input = """var a = 1;
         function g() {
@@ -2129,7 +2129,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2846
   // =========================================================================
-  test("issue_2846".fail) {
+  test("issue_2846") {
     assertCompresses(
       input = """function f(a, b) {
             var a = 0;

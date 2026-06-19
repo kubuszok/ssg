@@ -19,7 +19,7 @@ final class CompressIssueT292Suite extends munit.FunSuite {
   // =========================================================================
   // no_flatten_with_arg_colliding_with_arg_value_inner_scope
   // =========================================================================
-  test("no_flatten_with_arg_colliding_with_arg_value_inner_scope".fail) {
+  test("no_flatten_with_arg_colliding_with_arg_value_inner_scope") {
     assertCompresses(
       input = """var g = ["a"];
         function problem(arg) {
@@ -64,7 +64,7 @@ final class CompressIssueT292Suite extends munit.FunSuite {
   // =========================================================================
   // no_flatten_with_var_colliding_with_arg_value_inner_scope
   // =========================================================================
-  test("no_flatten_with_var_colliding_with_arg_value_inner_scope".fail) {
+  test("no_flatten_with_var_colliding_with_arg_value_inner_scope") {
     assertCompresses(
       input = """var g = ["a"];
         function problem(arg) {

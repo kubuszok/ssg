@@ -213,7 +213,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2110_1
   // =========================================================================
-  test("issue_2110_1".fail) {
+  test("issue_2110_1") {
     assertCompresses(
       input = """function f() {
             function f() {}
@@ -246,7 +246,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2110_2
   // =========================================================================
-  test("issue_2110_2".fail) {
+  test("issue_2110_2") {
     assertCompresses(
       input = """function f() {
             function f() {}
