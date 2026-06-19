@@ -168,6 +168,16 @@ class TemplateContext(
     val reg: JMap[String, Any] = getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)
     reg.get(TemplateContext.REGISTRY_ROOT_FOLDER).asInstanceOf[ssg.commons.io.FilePath]
   }
+
+  /** Returns the optional jail root for include_relative path traversal checks.
+    *
+    * SSG addition (ISS-1214): not in original liqp. When set, `IncludeRelative.detectSource` verifies that the resolved include path stays under this root. When not set (`None`), behavior is
+    * unchanged (faithful to the liqp port for non-pipeline users).
+    */
+  def getJailRoot: Option[ssg.commons.io.FilePath] = {
+    val reg: JMap[String, Any] = getRegistry(TemplateContext.REGISTRY_JAIL_ROOT)
+    Option(reg.get(TemplateContext.REGISTRY_JAIL_ROOT).asInstanceOf[ssg.commons.io.FilePath])
+  }
 }
 
 object TemplateContext {
@@ -177,4 +187,7 @@ object TemplateContext {
   val REGISTRY_IFCHANGED:           String = "ifchanged"
   val REGISTRY_ITERATION_PROTECTOR: String = "iteration_protector"
   val REGISTRY_ROOT_FOLDER:         String = "registry_root_folder"
+
+  /** SSG addition (ISS-1214): optional jail root for include_relative path traversal checks. */
+  val REGISTRY_JAIL_ROOT: String = "registry_jail_root"
 }
