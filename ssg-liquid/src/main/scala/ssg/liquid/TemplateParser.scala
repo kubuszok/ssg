@@ -101,6 +101,17 @@ final class TemplateParser(
   def parse(input: String): Template =
     parseWithLocation(input, None)
 
+  /** Parses a Liquid template string with an explicit source location.
+    *
+    * The location is used to set the root folder for `include_relative` resolution: `location.parent` becomes `context.getRootFolder`. This overload exists so callers (e.g. the site pipeline) can
+    * pass a page's file path when they have already read and stripped the body string — without this, `parse(String)` would produce a Template with no `sourceLocation`, and `include_relative` would
+    * fall back to `FilePath.cwd`.
+    *
+    * SSG addition (ISS-1214): not in original liqp — added to support page-local base resolution for `include_relative` in the site pipeline.
+    */
+  def parse(input: String, location: FilePath): Template =
+    parseWithLocation(input, Some(location))
+
   private def parseWithLocation(input: String, location: Option[FilePath]): Template = {
     val lexer = new parser.LiquidLexer(
       input,
