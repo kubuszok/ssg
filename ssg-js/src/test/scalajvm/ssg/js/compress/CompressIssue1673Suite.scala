@@ -18,7 +18,7 @@ final class CompressIssue1673Suite extends munit.FunSuite {
   // =========================================================================
   // side_effects_catch
   // =========================================================================
-  test("side_effects_catch".fail) {
+  test("side_effects_catch") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -53,7 +53,7 @@ final class CompressIssue1673Suite extends munit.FunSuite {
   // =========================================================================
   // side_effects_else
   // =========================================================================
-  test("side_effects_else".fail) {
+  test("side_effects_else") {
     assertCompresses(
       input = """function f(x) {
             function g() {
@@ -82,7 +82,7 @@ final class CompressIssue1673Suite extends munit.FunSuite {
   // =========================================================================
   // side_effects_finally
   // =========================================================================
-  test("side_effects_finally".fail) {
+  test("side_effects_finally") {
     assertCompresses(
       input = """function f() {
             function g() {
@@ -119,7 +119,7 @@ final class CompressIssue1673Suite extends munit.FunSuite {
   // =========================================================================
   // side_effects_label
   // =========================================================================
-  test("side_effects_label".fail) {
+  test("side_effects_label") {
     assertCompresses(
       input = """function f(x) {
             function g() {
@@ -152,7 +152,7 @@ final class CompressIssue1673Suite extends munit.FunSuite {
   // =========================================================================
   // side_effects_switch
   // =========================================================================
-  test("side_effects_switch".fail) {
+  test("side_effects_switch") {
     assertCompresses(
       input = """function f() {
             function g() {
