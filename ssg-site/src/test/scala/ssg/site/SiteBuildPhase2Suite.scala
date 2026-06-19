@@ -73,7 +73,7 @@ class SiteBuildPhase2Suite extends munit.FunSuite {
         )
       )
 
-      val written = Site.build(config)
+      val written = Site.build(config).written
 
       // Verify the output file was written.
       val outputPath = config.destination.resolve("index.html")
