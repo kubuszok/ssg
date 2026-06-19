@@ -964,7 +964,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_2794_1
   // =========================================================================
-  test("issue_2794_1".fail) {
+  test("issue_2794_1") {
     assertCompresses(
       input = """function foo() {
             for (const a of func(value)) {
@@ -1109,7 +1109,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_2874_1
   // =========================================================================
-  test("issue_2874_1".fail) {
+  test("issue_2874_1") {
     assertCompresses(
       input = """(function() {
             function foo() {
@@ -1145,7 +1145,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // issue_2874_2
   // =========================================================================
-  test("issue_2874_2".fail) {
+  test("issue_2874_2") {
     assertCompresses(
       input = """(function() {
             let keys = [];

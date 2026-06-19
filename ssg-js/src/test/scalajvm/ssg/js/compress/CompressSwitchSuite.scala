@@ -545,7 +545,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_8
   // =========================================================================
-  test("remove_switch_8".fail) {
+  test("remove_switch_8") {
     assertCompresses(
       input = """function test(foo) {
             switch (foo) {

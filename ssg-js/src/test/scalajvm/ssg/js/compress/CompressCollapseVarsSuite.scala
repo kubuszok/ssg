@@ -3140,7 +3140,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2298
   // =========================================================================
-  test("issue_2298".fail) {
+  test("issue_2298") {
     assertCompresses(
       input = """!function() {
             function f() {

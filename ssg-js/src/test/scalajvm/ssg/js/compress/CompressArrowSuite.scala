@@ -284,7 +284,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2105_1
   // =========================================================================
-  test("issue_2105_1".fail) {
+  test("issue_2105_1") {
     assertCompresses(
       input = """!function(factory) {
             factory();
@@ -328,7 +328,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2105_2
   // =========================================================================
-  test("issue_2105_2".fail) {
+  test("issue_2105_2") {
     assertCompresses(
       input = """((factory) => {
             factory();

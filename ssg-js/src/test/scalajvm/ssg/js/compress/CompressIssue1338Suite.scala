@@ -19,7 +19,7 @@ final class CompressIssue1338Suite extends munit.FunSuite {
   // =========================================================================
   // comment_1562957781
   // =========================================================================
-  test("comment_1562957781".fail) {
+  test("comment_1562957781") {
     assertCompresses(
       input = """'use strict';
 
