@@ -2,19 +2,21 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Site pipeline orchestrator — layout chain, includes, permalinks (ISS-1209).
+ * Site pipeline orchestrator — layout chain, includes, permalinks (ISS-1209),
+ * sass conversion, minify integration, diagnostics channel (ISS-1210).
  *
  * This is an SSG-native module (not a port of an external library).
- * See docs/architecture/site-pipeline-design.md sections 3, 6, 9 for design.
+ * See docs/architecture/site-pipeline-design.md sections 2, 3, 6, 7, 9 for design.
  *
  * Scope: SourceScan -> FrontMatter -> Liquid -> Markdown -> LayoutChain
- *        -> OutputWriter, with includes resolved under _includes/ and
- *        permalink-driven output paths.
- * Sass conversion + minify + diagnostics: ISS-1210.
+ *        -> SassCompile -> Minify -> OutputWriter, with includes resolved
+ *        under _includes/ and permalink-driven output paths.
  * Root-jail + hardening: ISS-1211.
  */
 package ssg
 package site
+
+import lowlevel.Nullable
 
 import ssg.commons.io.FileOps
 import ssg.commons.io.FilePath
@@ -23,6 +25,11 @@ import ssg.liquid.TemplateParser
 import ssg.liquid.antlr.LocalFSNameResolver
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
+import ssg.minify.Minifier
+import ssg.sass.Compile
+import ssg.sass.CompileResult
+import ssg.sass.SassException
+import ssg.sass.Syntax
 
 import java.util.{ HashMap => JHashMap }
 
@@ -30,9 +37,13 @@ import scala.collection.immutable.VectorMap
 
 /** Orchestrates the site build pipeline.
   *
-  * Composes SourceScan, Liquid, and Markdown rendering into an end-to-end page pipeline. Renders pages through Liquid (with `site.*` + `page.*` variables), then Markdown (for `.md`/`.markdown`
-  * files), then wraps in the layout chain (Jekyll nested layouts). Includes are resolved under `_includes/` via `LocalFSNameResolver`. Output paths are derived from the permalink style or an explicit
-  * per-page `permalink:` front-matter override.
+  * Composes SourceScan, Liquid, Markdown rendering, sass compilation, and minification into an end-to-end page pipeline. Renders pages through Liquid (with `site.*` + `page.*` variables), then
+  * Markdown (for `.md`/`.markdown` files), then wraps in the layout chain (Jekyll nested layouts). `.scss`/`.sass` files with front matter route to the sass converter instead of the Markdown/Liquid
+  * path. When `config.minify` is true, produced HTML is run through `Minifier.minifyFile`. Includes are resolved under `_includes/` via `LocalFSNameResolver`. Output paths are derived from the
+  * permalink style or an explicit per-page `permalink:` front-matter override.
+  *
+  * Each stage adapts its engine's native error into a [[BuildDiagnostic]] (design section 7). The build does not crash on a single-page error — it records the diagnostic and continues with remaining
+  * pages.
   */
 object Site {
 
@@ -42,23 +53,41 @@ object Site {
     */
   private val markdownExtensions: Set[String] = Set(".md", ".markdown")
 
+  /** The set of file extensions that route through the sass converter.
+    *
+    * Per design section 2: `.scss` and `.sass` files with front matter (even the empty `---\n---` marker) route to `Compile.compileString`, and the output extension becomes `.css`.
+    */
+  private val sassExtensions: Set[String] = Set(".scss", ".sass")
+
   /** Thrown when a layout cycle is detected during layout chain resolution.
     *
-    * The full BuildDiagnostic channel lands in ISS-1210. The cycle-guard uses a thrown exception with a clear message, caught by the integration test.
+    * Propagates to the caller (cycle-detection contract from ISS-1209).
     */
   final class LayoutCycleException(val chain: Vector[String]) extends RuntimeException(s"Layout cycle detected: ${chain.mkString(" -> ")}")
 
+  /** Thrown when a layout file referenced by `layout:` in front matter cannot be found.
+    *
+    * Caught by the diagnostics channel and adapted into a `BuildDiagnostic(stage = Layout, severity = Error)`. Uses an existence check (`FileOps.exists`) instead of catching platform-specific
+    * file-not-found exceptions (JVM/Native throw `NoSuchFileException`; JS throws `JavaScriptException`).
+    */
+  final class MissingLayoutException(val layoutName: String, val layoutPath: FilePath) extends RuntimeException(s"Layout not found: '$layoutName' (looked for ${layoutPath.pathString})")
+
   /** Builds the site from the given configuration.
     *
-    * Scans the source directory, renders processed files through the Liquid + Markdown + layout-chain pipeline, and writes the result to the destination. Static files are copied verbatim. Includes
-    * are resolved under `<source>/<includesDir>/`. Output paths are derived from `page.url` (permalink style or explicit per-page `permalink:` override).
+    * Scans the source directory, renders processed files through the Liquid + Markdown + layout-chain + sass + minify pipeline, and writes the result to the destination. Static files are copied
+    * verbatim. Includes are resolved under `<source>/<includesDir>/`. Output paths are derived from `page.url` (permalink style or explicit per-page `permalink:` override).
+    *
+    * Returns a [[BuildResult]] with written file paths and any diagnostics (errors/warnings) collected during the build. Per design section 7 (Q8): the build does not throw on single-page errors — it
+    * records them as diagnostics. A `failOnError` param can promote any Error diagnostic to a thrown exception.
     *
     * @param config
     *   the site configuration (source, destination, raw config for site.* vars)
+    * @param failOnError
+    *   if true, throw a RuntimeException when any Error diagnostic is recorded (default false)
     * @return
-    *   the list of output file paths written
+    *   the build result with written files and diagnostics
     */
-  def build(config: SiteConfig): Vector[FilePath] = {
+  def build(config: SiteConfig, failOnError: Boolean = false): BuildResult = {
     val sourceAbs = config.source.toAbsolute.normalize
     val destAbs   = config.destination.toAbsolute.normalize
 
@@ -68,7 +97,8 @@ object Site {
     // Scan the source tree.
     val scanResult = SourceScan.scan(config)
 
-    val writtenBuilder = Vector.newBuilder[FilePath]
+    val writtenBuilder     = Vector.newBuilder[FilePath]
+    val diagnosticsBuilder = Vector.newBuilder[BuildDiagnostic]
 
     // Build the site-level DataView for Liquid `site.*` variables.
     val siteDataView = config.raw
@@ -92,10 +122,16 @@ object Site {
 
       // Determine the output extension based on the input extension.
       val ext        = extractExtension(relativePath)
-      val isMarkdown = markdownExtensions.contains(ext.toLowerCase)
+      val extLower   = ext.toLowerCase
+      val isMarkdown = markdownExtensions.contains(extLower)
+      val isSass     = sassExtensions.contains(extLower)
 
       // Compute the output extension for this file (used by permalink resolution).
-      val outputExt = if (isMarkdown) ".html" else ext
+      // Per design section 2: .md/.markdown -> .html; .scss/.sass -> .css; others keep extension.
+      val outputExt =
+        if (isMarkdown) ".html"
+        else if (isSass) ".css"
+        else ext
 
       // Compute page.url from the permalink style or explicit per-page override
       // (design section 6 Permalinks Q3 DECIDED).
@@ -108,39 +144,105 @@ object Site {
       // including computed page.url and page.path.
       val pageDataView = buildPageDataView(frontMatter, relativePath, pageUrl)
 
-      // Build the Liquid render variable map: site.* + page.*
-      val variables = new JHashMap[String, DataView]()
-      variables.put("site", siteDataView)
-      variables.put("page", pageDataView)
+      if (isSass) {
+        // Sass route: compile the body through ssg-sass Compile.compileString
+        // (design section 2 — .scss/.sass with front matter -> sass converter -> .css).
+        // The body (after front matter stripping) is the raw SCSS/Sass source.
+        // NO markdown step, NO liquid step for sass files.
+        val sassSyntax = if (extLower == ".sass") Syntax.Sass else Syntax.Scss
+        try {
+          val result: CompileResult = Compile.compileString(body, syntax = sassSyntax)
 
-      // Step 1: Render through Liquid.
-      val template    = liquidParser.parse(body)
-      val afterLiquid = template.render(variables)
+          // Record any sass compilation warnings as Warning diagnostics
+          // (design section 7: CompileResult.warnings -> Warning).
+          result.warnings.foreach { warning =>
+            diagnosticsBuilder += BuildDiagnostic(
+              file = filePath,
+              stage = BuildStage.Sass,
+              severity = Severity.Warning,
+              message = warning
+            )
+          }
 
-      // Step 2: If markdown file, render through Markdown.
-      val afterMarkdown = if (isMarkdown) {
-        val document = mdParser.parse(afterLiquid)
-        mdRenderer.render(document)
+          // Write the compiled CSS output.
+          OutputWriter.write(destAbs, outputRelativePath, result.css)
+          writtenBuilder += destAbs.resolve(outputRelativePath)
+        } catch {
+          // Catch the specific SassException type thrown by the sass engine
+          // (SassFormatException for parse errors, SassRuntimeException for
+          // evaluation errors — both extend SassException).
+          // Per design section 7: targeted engine-error catch, not blanket Exception.
+          case e: SassException =>
+            diagnosticsBuilder += BuildDiagnostic(
+              file = filePath,
+              stage = BuildStage.Sass,
+              severity = Severity.Error,
+              message = e.getMessage,
+              cause = Nullable(e)
+            )
+        }
       } else {
-        afterLiquid
+        // Page route: Liquid -> Markdown (if .md/.markdown) -> Layout chain.
+        try {
+          // Build the Liquid render variable map: site.* + page.*
+          val variables = new JHashMap[String, DataView]()
+          variables.put("site", siteDataView)
+          variables.put("page", pageDataView)
+
+          // Step 1: Render through Liquid.
+          val template    = liquidParser.parse(body)
+          val afterLiquid = template.render(variables)
+
+          // Step 2: If markdown file, render through Markdown.
+          val afterMarkdown = if (isMarkdown) {
+            val document = mdParser.parse(afterLiquid)
+            mdRenderer.render(document)
+          } else {
+            afterLiquid
+          }
+
+          // Step 3: Layout chain — wrap the rendered content in layouts
+          // (design section 6). Render order: page body first, then wrap
+          // upward through nested layouts until a layout has no `layout` key.
+          val afterLayout = applyLayoutChain(
+            afterMarkdown,
+            frontMatter,
+            pageDataView,
+            siteDataView,
+            sourceAbs,
+            config,
+            liquidParser
+          )
+
+          // Step 4: Minify — if config.minify is true, run produced HTML
+          // through Minifier.minifyFile (design sections 3, 7, 10).
+          // Minify is off by default (Q10 DECIDED).
+          val rendered = if (config.minify) {
+            minifyContent(afterLayout, outputRelativePath, filePath, diagnosticsBuilder)
+          } else {
+            afterLayout
+          }
+
+          // Write the rendered output.
+          OutputWriter.write(destAbs, outputRelativePath, rendered)
+          writtenBuilder += destAbs.resolve(outputRelativePath)
+        } catch {
+          // Missing layout file — caught via the cross-platform
+          // MissingLayoutException thrown by applyLayoutChain when
+          // FileOps.exists returns false.
+          // Per design section 7: Layout/Error diagnostic, build continues.
+          // LayoutCycleException is NOT caught here — it still propagates
+          // (the cycle-detection contract from ISS-1209 is preserved).
+          case e: MissingLayoutException =>
+            diagnosticsBuilder += BuildDiagnostic(
+              file = filePath,
+              stage = BuildStage.Layout,
+              severity = Severity.Error,
+              message = e.getMessage,
+              cause = Nullable(e)
+            )
+        }
       }
-
-      // Step 3: Layout chain — wrap the rendered content in layouts
-      // (design section 6). Render order: page body first, then wrap
-      // upward through nested layouts until a layout has no `layout` key.
-      val rendered = applyLayoutChain(
-        afterMarkdown,
-        frontMatter,
-        pageDataView,
-        siteDataView,
-        sourceAbs,
-        config,
-        liquidParser
-      )
-
-      // Write the rendered output.
-      OutputWriter.write(destAbs, outputRelativePath, rendered)
-      writtenBuilder += destAbs.resolve(outputRelativePath)
     }
 
     // Copy static files verbatim.
@@ -150,8 +252,67 @@ object Site {
       writtenBuilder += destAbs.resolve(relativePath)
     }
 
-    writtenBuilder.result()
+    val result = BuildResult(
+      written = writtenBuilder.result(),
+      diagnostics = diagnosticsBuilder.result()
+    )
+
+    // failOnError: promote any Error diagnostic to a thrown exception (Q8 default = return).
+    if (failOnError) {
+      result.diagnostics.find(_.severity == Severity.Error).foreach { diag =>
+        throw new RuntimeException(s"Build error in ${diag.file.pathString} at stage ${diag.stage}: ${diag.message}")
+      }
+    }
+
+    result
   }
+
+  /** Runs the minify step on rendered content, recording a Warning diagnostic if it fails.
+    *
+    * Per design section 7: no silent swallow — if minify fails or is skipped, a Warning diagnostic is recorded so a build never silently ships unminified assets without a trace.
+    */
+  private def minifyContent(
+    content:            String,
+    outputRelativePath: String,
+    sourceFile:         FilePath,
+    diagnosticsBuilder: scala.collection.mutable.Builder[BuildDiagnostic, Vector[BuildDiagnostic]]
+  ): String =
+    try
+      Minifier.minifyFile(content, outputRelativePath)
+    catch {
+      // Catch the specific exception types that the minify engines throw.
+      // HtmlMinifier, CssMinifier, JsMinifier, JsonMinifier can throw
+      // various parsing exceptions. Record a Warning diagnostic and
+      // yield the original content (no silent swallow — the warning
+      // is the trace).
+      case e: java.lang.IllegalArgumentException =>
+        diagnosticsBuilder += BuildDiagnostic(
+          file = sourceFile,
+          stage = BuildStage.Minify,
+          severity = Severity.Warning,
+          message = s"Minification failed for $outputRelativePath: ${e.getMessage}",
+          cause = Nullable(e)
+        )
+        content
+      case e: java.lang.IllegalStateException =>
+        diagnosticsBuilder += BuildDiagnostic(
+          file = sourceFile,
+          stage = BuildStage.Minify,
+          severity = Severity.Warning,
+          message = s"Minification failed for $outputRelativePath: ${e.getMessage}",
+          cause = Nullable(e)
+        )
+        content
+      case e: java.io.IOException =>
+        diagnosticsBuilder += BuildDiagnostic(
+          file = sourceFile,
+          stage = BuildStage.Minify,
+          severity = Severity.Warning,
+          message = s"Minification failed for $outputRelativePath: ${e.getMessage}",
+          cause = Nullable(e)
+        )
+        content
+    }
 
   /** Computes `page.url` for a page based on the permalink style and any explicit override.
     *
@@ -240,7 +401,13 @@ object Site {
       // Load the layout file from <source>/<layoutsDir>/<name>.html
       // (design section 6).
       val layoutPath = sourceAbs.resolve(config.layoutsDir).resolve(name + ".html")
-      val layoutRaw  = FileOps.readString(layoutPath)
+      // Check existence before reading — cross-platform safe (JVM/Native throw
+      // NoSuchFileException, JS throws JavaScriptException; FileOps.exists works
+      // uniformly on all three platforms).
+      if (!FileOps.exists(layoutPath)) {
+        throw new MissingLayoutException(name, layoutPath)
+      }
+      val layoutRaw = FileOps.readString(layoutPath)
 
       // Parse the layout's own front matter (layouts can have front matter,
       // including a `layout:` key for nested layouts).
