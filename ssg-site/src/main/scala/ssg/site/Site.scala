@@ -23,6 +23,7 @@ import ssg.commons.io.FilePath
 import ssg.data.DataView
 import ssg.liquid.TemplateParser
 import ssg.liquid.antlr.LocalFSNameResolver
+import ssg.liquid.tags.IncludeRelative
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.minify.Minifier
@@ -110,9 +111,10 @@ object Site {
     // The resolver is wrapped with a RootJail.JailedNameResolver (ISS-1211,
     // ISS-1020) that verifies every resolved include path stays under the
     // source root. The jail pre-checks the path BEFORE the delegate reads
-    // the file, preventing traversal reads. When include_relative lands
-    // (ISS-1214), it will use a different base dir but route through the
-    // same JailedNameResolver wrapper.
+    // the file, preventing traversal reads.
+    // include_relative (ISS-1214) uses a different base dir (the page's
+    // parent directory, set via sourceLocation on parse) and its own jail
+    // check inside IncludeRelative.detectSource (via Template.withJailRoot).
     val includesRootAbs = sourceAbs.resolve(config.includesDir).toAbsolute.normalize
     val includesRoot    = includesRootAbs.pathString
     val baseResolver    = new LocalFSNameResolver(includesRoot)
@@ -213,7 +215,12 @@ object Site {
             variables.put("page", pageDataView)
 
             // Step 1: Render through Liquid.
-            val template    = liquidParser.parse(body)
+            // Parse with the page's file path as sourceLocation so that
+            // include_relative resolves relative to the page's parent dir
+            // (page-local base, Jekyll semantics — ISS-1214). The jail root
+            // is set to sourceAbs (config.source) so that include_relative
+            // paths cannot escape the source root (design §6).
+            val template    = liquidParser.parse(body, filePath).withJailRoot(sourceAbs)
             val afterLiquid = template.render(variables)
 
             // Step 2: If markdown file, render through Markdown.
@@ -283,6 +290,20 @@ object Site {
             // default). Check the cause chain for the jail violation.
             case e: RuntimeException if findJailViolation(e).isDefined =>
               val jailEx = findJailViolation(e).get
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Liquid,
+                severity = Severity.Error,
+                message = jailEx.getMessage,
+                cause = Nullable(jailEx)
+              )
+            // Root-jail violation from include_relative resolution (ISS-1214).
+            // IncludeRelative.detectSource throws JailViolationException when an
+            // include_relative path escapes the source root. Like the include
+            // jail, the Include tag wraps exceptions in RuntimeException when
+            // showExceptionsFromInclude is true. Check the cause chain.
+            case e: RuntimeException if findIncludeRelativeJailViolation(e).isDefined =>
+              val jailEx = findIncludeRelativeJailViolation(e).get
               diagnosticsBuilder += BuildDiagnostic(
                 file = filePath,
                 stage = BuildStage.Liquid,
@@ -479,7 +500,10 @@ object Site {
       variables.put("layout", layoutFm)
 
       // Render the layout template through Liquid.
-      val template = liquidParser.parse(layoutBody)
+      // Parse with layoutPath as sourceLocation so that any
+      // include_relative in a layout resolves relative to the
+      // layout file's parent dir (ISS-1214). Jail root = sourceAbs.
+      val template = liquidParser.parse(layoutBody, layoutPath).withJailRoot(sourceAbs)
       content = template.render(variables)
 
       // Move up the chain: check if this layout declares its own layout.
@@ -537,6 +561,29 @@ object Site {
       while (current.isDefined && depth < 10)
         current.get match {
           case jv: RootJail.RootJailViolationException => break(Some(jv))
+          case other =>
+            current = Option(other.getCause)
+            depth += 1
+        }
+      scala.None
+    }
+
+  /** Walks the cause chain of a throwable to find an [[IncludeRelative.JailViolationException]].
+    *
+    * Same cause-chain unwrapping as [[findJailViolation]], but for the `include_relative` jail (ISS-1214). The Include tag wraps exceptions identically regardless of whether the underlying tag is
+    * `include` or `include_relative`.
+    *
+    * @return
+    *   `Some(jailException)` if found, `scala.None` otherwise
+    */
+  private def findIncludeRelativeJailViolation(e: Throwable): Option[IncludeRelative.JailViolationException] =
+    boundary {
+      var current: Option[Throwable] = Option(e)
+      // Walk at most 10 levels to avoid infinite loops in pathological cause chains.
+      var depth = 0
+      while (current.isDefined && depth < 10)
+        current.get match {
+          case jv: IncludeRelative.JailViolationException => break(Some(jv))
           case other =>
             current = Option(other.getCause)
             depth += 1

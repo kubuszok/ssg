@@ -40,6 +40,23 @@ final class Template(
   private var templateContext: TemplateContext        = scala.compiletime.uninitialized
   private var contextHolder:   Template.ContextHolder = scala.compiletime.uninitialized
 
+  /** Optional jail root for include_relative path traversal checks.
+    *
+    * SSG addition (ISS-1214): when set, the jail root is stored in the rendering context's registry so that `IncludeRelative.detectSource` can verify resolved include paths stay under this root. When
+    * not set, behavior is unchanged (faithful to the liqp port).
+    */
+  private var _jailRoot: Option[FilePath] = scala.None
+
+  /** Sets an optional jail root for include_relative path traversal checks.
+    *
+    * SSG addition (ISS-1214): not in original liqp. The jail root is propagated to the rendering context during `render`/`renderToObject`/`renderToObjectUnguarded` so that
+    * `IncludeRelative.detectSource` can enforce path jailing.
+    */
+  def withJailRoot(root: FilePath): Template = {
+    this._jailRoot = Some(root)
+    this
+  }
+
   /** Sets a ContextHolder for accessing the rendering context externally. */
   def withContextHolder(holder: Template.ContextHolder): Template = {
     this.contextHolder = holder
@@ -141,13 +158,20 @@ final class Template(
     context
   }
 
-  private def setRootFolderRegistry(context: TemplateContext, location: Option[FilePath]): Unit =
+  private def setRootFolderRegistry(context: TemplateContext, location: Option[FilePath]): Unit = {
     location.foreach { loc =>
       val registry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_ROOT_FOLDER)
       loc.parent.foreach { parent =>
         registry.putIfAbsent(TemplateContext.REGISTRY_ROOT_FOLDER, parent)
       }
     }
+    // SSG addition (ISS-1214): propagate the optional jail root to the context
+    // registry so that IncludeRelative.detectSource can enforce path jailing.
+    _jailRoot.foreach { root =>
+      val jailRegistry: JMap[String, Any] = context.getRegistry(TemplateContext.REGISTRY_JAIL_ROOT)
+      jailRegistry.putIfAbsent(TemplateContext.REGISTRY_JAIL_ROOT, root)
+    }
+  }
 }
 
 object Template {
