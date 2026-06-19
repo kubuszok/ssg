@@ -10,6 +10,8 @@
  *   Renames: liqp.antlr → ssg.liquid.antlr
  *   Convention: Java class → Scala class
  *   Idiom: Returns ResolvedSource(content, sourceName) instead of ANTLR CharStream
+ *   SSG addition — optional root-jail per ISS-1020/design §6; inert when no jail-root
+ *     is set, preserving liqp behavior
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/antlr/LocalFSNameResolver.java
@@ -22,6 +24,7 @@ package liquid
 package antlr
 
 import ssg.commons.io.{ FileOps, FilePath }
+import ssg.liquid.tags.IncludeRelative
 
 import scala.util.boundary
 import scala.util.boundary.break
@@ -32,22 +35,54 @@ import scala.util.boundary.break
   *
   * If the name is an absolute path, it is used directly. Otherwise, the name is resolved relative to the configured root directory. If the name does not contain a dot (no extension), the default
   * extension `.liquid` is appended.
+  *
+  * When a jail root is set, both the absolute and relative resolution branches verify that the resolved path stays under the jail root before reading the file. If the path escapes the jail, a
+  * [[IncludeRelative.JailViolationException]] is thrown. When no jail root is set, behavior is unchanged (faithful to the liqp port for non-pipeline users).
+  *
+  * @param root
+  *   the root directory for relative template name resolution
+  * @param jailRoot
+  *   optional jail root — when set, resolved paths must stay under this root (SSG addition, ISS-1020)
   */
-final class LocalFSNameResolver(private val root: String) extends NameResolver {
+final class LocalFSNameResolver(private val root: String, val jailRoot: Option[FilePath] = None) extends NameResolver {
 
   override def resolve(name: String): NameResolver.ResolvedSource =
     boundary {
       val directPath = FilePath.of(name)
       if (directPath.isAbsolute) {
-        val absPath = directPath.toAbsolute
+        val absPath = directPath.toAbsolute.normalize
+        // SSG addition (ISS-1020): jail check for absolute paths — when a jail root
+        // is set, verify the absolute path stays under it BEFORE reading the file.
+        jailRoot.foreach { jail =>
+          val jailAbs = jail.toAbsolute.normalize
+          if (!IncludeRelative.isUnderRoot(absPath, jailAbs)) {
+            throw new IncludeRelative.JailViolationException(
+              absPath,
+              jailAbs,
+              s"include path '${name}' resolves to '${absPath.pathString}' which is outside the jail root '${jailAbs.pathString}'"
+            )
+          }
+        }
         val content = FileOps.readString(absPath)
         break(NameResolver.ResolvedSource(content, absPath.pathString))
       }
 
       val extension    = if (name.indexOf('.') > 0) "" else LocalFSNameResolver.DEFAULT_EXTENSION
       val resolvedName = name + extension
-      val path         = FilePath.of(root).resolve(resolvedName).toAbsolute
-      val content      = FileOps.readString(path)
+      val path         = FilePath.of(root).resolve(resolvedName).toAbsolute.normalize
+      // SSG addition (ISS-1020): jail check for relative paths — when a jail root
+      // is set, verify the resolved path stays under it BEFORE reading the file.
+      jailRoot.foreach { jail =>
+        val jailAbs = jail.toAbsolute.normalize
+        if (!IncludeRelative.isUnderRoot(path, jailAbs)) {
+          throw new IncludeRelative.JailViolationException(
+            path,
+            jailAbs,
+            s"include path '${name}' resolves to '${path.pathString}' which is outside the jail root '${jailAbs.pathString}'"
+          )
+        }
+      }
+      val content = FileOps.readString(path)
       NameResolver.ResolvedSource(content, path.pathString)
     }
 }
