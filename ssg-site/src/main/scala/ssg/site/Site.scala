@@ -34,6 +34,8 @@ import ssg.sass.Syntax
 import java.util.{ HashMap => JHashMap }
 
 import scala.collection.immutable.VectorMap
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Orchestrates the site build pipeline.
   *
@@ -105,8 +107,17 @@ object Site {
 
     // Configure the Liquid template parser with Jekyll flavor and an includes
     // resolver rooted at <source>/<includesDir>/ (design section 6).
-    val includesRoot = sourceAbs.resolve(config.includesDir).pathString
-    val liquidParser = TemplateParser.Builder().withFlavor(config.flavor.liquidFlavor).withNameResolver(new LocalFSNameResolver(includesRoot)).build()
+    // The resolver is wrapped with a RootJail.JailedNameResolver (ISS-1211,
+    // ISS-1020) that verifies every resolved include path stays under the
+    // source root. The jail pre-checks the path BEFORE the delegate reads
+    // the file, preventing traversal reads. When include_relative lands
+    // (ISS-1214), it will use a different base dir but route through the
+    // same JailedNameResolver wrapper.
+    val includesRootAbs = sourceAbs.resolve(config.includesDir).toAbsolute.normalize
+    val includesRoot    = includesRootAbs.pathString
+    val baseResolver    = new LocalFSNameResolver(includesRoot)
+    val jailedResolver  = new RootJail.JailedNameResolver(baseResolver, includesRootAbs, sourceAbs)
+    val liquidParser    = TemplateParser.Builder().withFlavor(config.flavor.liquidFlavor).withNameResolver(jailedResolver).build()
 
     // Create the Markdown parser and renderer.
     val mdParser   = Parser.builder().build()
@@ -140,107 +151,146 @@ object Site {
       // Derive the output file path from page.url.
       val outputRelativePath = urlToOutputPath(pageUrl)
 
-      // Build the page-level DataView for Liquid `page.*` variables,
-      // including computed page.url and page.path.
-      val pageDataView = buildPageDataView(frontMatter, relativePath, pageUrl)
-
-      if (isSass) {
-        // Sass route: compile the body through ssg-sass Compile.compileString
-        // (design section 2 — .scss/.sass with front matter -> sass converter -> .css).
-        // The body (after front matter stripping) is the raw SCSS/Sass source.
-        // NO markdown step, NO liquid step for sass files.
-        val sassSyntax = if (extLower == ".sass") Syntax.Sass else Syntax.Scss
-        try {
-          val result: CompileResult = Compile.compileString(body, syntax = sassSyntax)
-
-          // Record any sass compilation warnings as Warning diagnostics
-          // (design section 7: CompileResult.warnings -> Warning).
-          result.warnings.foreach { warning =>
-            diagnosticsBuilder += BuildDiagnostic(
-              file = filePath,
-              stage = BuildStage.Sass,
-              severity = Severity.Warning,
-              message = warning
-            )
-          }
-
-          // Write the compiled CSS output.
-          OutputWriter.write(destAbs, outputRelativePath, result.css)
-          writtenBuilder += destAbs.resolve(outputRelativePath)
-        } catch {
-          // Catch the specific SassException type thrown by the sass engine
-          // (SassFormatException for parse errors, SassRuntimeException for
-          // evaluation errors — both extend SassException).
-          // Per design section 7: targeted engine-error catch, not blanket Exception.
-          case e: SassException =>
-            diagnosticsBuilder += BuildDiagnostic(
-              file = filePath,
-              stage = BuildStage.Sass,
-              severity = Severity.Error,
-              message = e.getMessage,
-              cause = Nullable(e)
-            )
-        }
+      // Root-jail check on the output path (ISS-1211, ISS-1020, design section 6).
+      // The output path must stay under the destination root. A traversal
+      // permalink like /../../escape.txt would escape; reject via §7 diagnostics.
+      val outputAbsPath = destAbs.resolve(outputRelativePath).toAbsolute.normalize
+      if (!RootJail.isUnderRoot(outputAbsPath, destAbs)) {
+        diagnosticsBuilder += BuildDiagnostic(
+          file = filePath,
+          stage = BuildStage.Write,
+          severity = Severity.Error,
+          message = s"Output path '${outputAbsPath.pathString}' is outside the destination root '${destAbs.pathString}' (from permalink '${pageUrl}')"
+        )
       } else {
-        // Page route: Liquid -> Markdown (if .md/.markdown) -> Layout chain.
-        try {
-          // Build the Liquid render variable map: site.* + page.*
-          val variables = new JHashMap[String, DataView]()
-          variables.put("site", siteDataView)
-          variables.put("page", pageDataView)
+        // Build the page-level DataView for Liquid `page.*` variables,
+        // including computed page.url and page.path.
+        val pageDataView = buildPageDataView(frontMatter, relativePath, pageUrl)
 
-          // Step 1: Render through Liquid.
-          val template    = liquidParser.parse(body)
-          val afterLiquid = template.render(variables)
+        if (isSass) {
+          // Sass route: compile the body through ssg-sass Compile.compileString
+          // (design section 2 — .scss/.sass with front matter -> sass converter -> .css).
+          // The body (after front matter stripping) is the raw SCSS/Sass source.
+          // NO markdown step, NO liquid step for sass files.
+          val sassSyntax = if (extLower == ".sass") Syntax.Sass else Syntax.Scss
+          try {
+            val result: CompileResult = Compile.compileString(body, syntax = sassSyntax)
 
-          // Step 2: If markdown file, render through Markdown.
-          val afterMarkdown = if (isMarkdown) {
-            val document = mdParser.parse(afterLiquid)
-            mdRenderer.render(document)
-          } else {
-            afterLiquid
+            // Record any sass compilation warnings as Warning diagnostics
+            // (design section 7: CompileResult.warnings -> Warning).
+            result.warnings.foreach { warning =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Sass,
+                severity = Severity.Warning,
+                message = warning
+              )
+            }
+
+            // Write the compiled CSS output.
+            OutputWriter.write(destAbs, outputRelativePath, result.css)
+            writtenBuilder += destAbs.resolve(outputRelativePath)
+          } catch {
+            // Catch the specific SassException type thrown by the sass engine
+            // (SassFormatException for parse errors, SassRuntimeException for
+            // evaluation errors — both extend SassException).
+            // Per design section 7: targeted engine-error catch, not blanket Exception.
+            case e: SassException =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Sass,
+                severity = Severity.Error,
+                message = e.getMessage,
+                cause = Nullable(e)
+              )
           }
+        } else {
+          // Page route: Liquid -> Markdown (if .md/.markdown) -> Layout chain.
+          try {
+            // Build the Liquid render variable map: site.* + page.*
+            val variables = new JHashMap[String, DataView]()
+            variables.put("site", siteDataView)
+            variables.put("page", pageDataView)
 
-          // Step 3: Layout chain — wrap the rendered content in layouts
-          // (design section 6). Render order: page body first, then wrap
-          // upward through nested layouts until a layout has no `layout` key.
-          val afterLayout = applyLayoutChain(
-            afterMarkdown,
-            frontMatter,
-            pageDataView,
-            siteDataView,
-            sourceAbs,
-            config,
-            liquidParser
-          )
+            // Step 1: Render through Liquid.
+            val template    = liquidParser.parse(body)
+            val afterLiquid = template.render(variables)
 
-          // Step 4: Minify — if config.minify is true, run produced HTML
-          // through Minifier.minifyFile (design sections 3, 7, 10).
-          // Minify is off by default (Q10 DECIDED).
-          val rendered = if (config.minify) {
-            minifyContent(afterLayout, outputRelativePath, filePath, diagnosticsBuilder)
-          } else {
-            afterLayout
-          }
+            // Step 2: If markdown file, render through Markdown.
+            val afterMarkdown = if (isMarkdown) {
+              val document = mdParser.parse(afterLiquid)
+              mdRenderer.render(document)
+            } else {
+              afterLiquid
+            }
 
-          // Write the rendered output.
-          OutputWriter.write(destAbs, outputRelativePath, rendered)
-          writtenBuilder += destAbs.resolve(outputRelativePath)
-        } catch {
-          // Missing layout file — caught via the cross-platform
-          // MissingLayoutException thrown by applyLayoutChain when
-          // FileOps.exists returns false.
-          // Per design section 7: Layout/Error diagnostic, build continues.
-          // LayoutCycleException is NOT caught here — it still propagates
-          // (the cycle-detection contract from ISS-1209 is preserved).
-          case e: MissingLayoutException =>
-            diagnosticsBuilder += BuildDiagnostic(
-              file = filePath,
-              stage = BuildStage.Layout,
-              severity = Severity.Error,
-              message = e.getMessage,
-              cause = Nullable(e)
+            // Step 3: Layout chain — wrap the rendered content in layouts
+            // (design section 6). Render order: page body first, then wrap
+            // upward through nested layouts until a layout has no `layout` key.
+            val afterLayout = applyLayoutChain(
+              afterMarkdown,
+              frontMatter,
+              pageDataView,
+              siteDataView,
+              sourceAbs,
+              config,
+              liquidParser
             )
+
+            // Step 4: Minify — if config.minify is true, run produced HTML
+            // through Minifier.minifyFile (design sections 3, 7, 10).
+            // Minify is off by default (Q10 DECIDED).
+            val rendered = if (config.minify) {
+              minifyContent(afterLayout, outputRelativePath, filePath, diagnosticsBuilder)
+            } else {
+              afterLayout
+            }
+
+            // Write the rendered output.
+            OutputWriter.write(destAbs, outputRelativePath, rendered)
+            writtenBuilder += destAbs.resolve(outputRelativePath)
+          } catch {
+            // Missing layout file — caught via the cross-platform
+            // MissingLayoutException thrown by applyLayoutChain when
+            // FileOps.exists returns false.
+            // Per design section 7: Layout/Error diagnostic, build continues.
+            // LayoutCycleException is NOT caught here — it still propagates
+            // (the cycle-detection contract from ISS-1209 is preserved).
+            case e: MissingLayoutException =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Layout,
+                severity = Severity.Error,
+                message = e.getMessage,
+                cause = Nullable(e)
+              )
+            // Root-jail violation from layout resolution (ISS-1211, ISS-1020).
+            // checkLayoutPath throws RootJailViolationException when a layout
+            // path escapes the source root.
+            case e: RootJail.RootJailViolationException =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Layout,
+                severity = Severity.Error,
+                message = e.getMessage,
+                cause = Nullable(e)
+              )
+            // Root-jail violation from include resolution (ISS-1211, ISS-1020).
+            // The JailedNameResolver throws RootJailViolationException when an
+            // include path escapes the source root. The Liquid Include tag wraps
+            // all exceptions in a RuntimeException("problem with evaluating
+            // include", cause) when showExceptionsFromInclude is true (the
+            // default). Check the cause chain for the jail violation.
+            case e: RuntimeException if findJailViolation(e).isDefined =>
+              val jailEx = findJailViolation(e).get
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Liquid,
+                severity = Severity.Error,
+                message = jailEx.getMessage,
+                cause = Nullable(jailEx)
+              )
+          }
         }
       }
     }
@@ -401,6 +451,10 @@ object Site {
       // Load the layout file from <source>/<layoutsDir>/<name>.html
       // (design section 6).
       val layoutPath = sourceAbs.resolve(config.layoutsDir).resolve(name + ".html")
+      // Root-jail check on the layout path (ISS-1211, ISS-1020, design section 6).
+      // The layout path must stay under the source root. A layout name like
+      // "../../../../etc/passwd" would escape; reject via RootJailViolationException.
+      RootJail.checkLayoutPath(layoutPath, sourceAbs)
       // Check existence before reading — cross-platform safe (JVM/Native throw
       // NoSuchFileException, JS throws JavaScriptException; FileOps.exists works
       // uniformly on all three platforms).
@@ -466,4 +520,27 @@ object Site {
     if (lastDot >= 0) path.substring(0, lastDot) + newExt
     else path + newExt
   }
+
+  /** Walks the cause chain of a throwable to find a [[RootJail.RootJailViolationException]].
+    *
+    * The Liquid Include tag wraps all exceptions in `RuntimeException("problem with evaluating include", cause)` when `showExceptionsFromInclude` is true. This helper unwraps that wrapping to extract
+    * the jail violation exception from the cause chain.
+    *
+    * @return
+    *   `Some(jailException)` if found, `scala.None` otherwise
+    */
+  private def findJailViolation(e: Throwable): Option[RootJail.RootJailViolationException] =
+    boundary {
+      var current: Option[Throwable] = Option(e)
+      // Walk at most 10 levels to avoid infinite loops in pathological cause chains.
+      var depth = 0
+      while (current.isDefined && depth < 10)
+        current.get match {
+          case jv: RootJail.RootJailViolationException => break(Some(jv))
+          case other =>
+            current = Option(other.getCause)
+            depth += 1
+        }
+      scala.None
+    }
 }
