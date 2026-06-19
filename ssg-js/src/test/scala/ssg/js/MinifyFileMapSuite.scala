@@ -3,31 +3,37 @@
  * Ported from terser/test/mocha/minify-file-map.js
  * Original: 3 it() calls
  *
- * Note: These tests exercise the multi-file input API (passing a map of
- * filename→code or an array of strings). ssg-js currently only accepts
- * a single string. These tests are marked .fail until multi-file input
- * is supported.
+ * Multi-file input was ported under ISS-1045 (Terser.minifyFiles /
+ * Terser.minifySeq). The first two tests now exercise the real API; the
+ * source-map assertions of the originals (result.map / map.sources /
+ * sourcesContent) are split out — source-map orchestration remains tracked
+ * under ISS-1219, so the includeSources test stays .fail.
  */
 package ssg
 package js
 
 final class MinifyFileMapSuite extends munit.FunSuite {
 
-  // 1. "Should accept object"
-  test("should accept object (multi-file input)".fail) {
-    // Requires multi-file input API: minify({ "/scripts/foo.js": "..." })
-    fail("Multi-file input API not yet supported")
+  // 1. "Should accept object" (code half — map.sources / map.file ⇒ ISS-1219)
+  test("should accept object (multi-file input)") {
+    val jsMap  = scala.collection.immutable.ListMap("/scripts/foo.js" -> "var foo = {\"x\": 1, y: 2, 'z': 3};")
+    val result = Terser.minifyFiles(jsMap, MinifyOptions.NoOptimize)
+    assertEquals(result.code, "var foo={x:1,y:2,z:3};")
   }
 
-  // 2. "Should accept array of strings"
-  test("should accept array of strings".fail) {
-    // Requires array input API: minify(["...", "..."])
-    fail("Array input API not yet supported")
+  // 2. "Should accept array of strings" (code half — map.sources ['0','1'] ⇒ ISS-1219)
+  // Upstream uses the default pipeline (compress on), which join_vars-merges the
+  // two files' `var` statements ⇒ "var foo={x:1,y:2,z:3},bar=15;".
+  test("should accept array of strings") {
+    val jsSeq  = Seq("var foo = {\"x\": 1, y: 2, 'z': 3};", "var bar = 15;")
+    val result = Terser.minifySeq(jsSeq, MinifyOptions.Defaults)
+    assertEquals(result.code, "var foo={x:1,y:2,z:3},bar=15;")
   }
 
-  // 3. "Should correctly include source"
+  // 3. "Should correctly include source" — needs sourceMap.includeSources
+  //    (sourcesContent). Source-map orchestration: ISS-1219.
   test("should correctly include source".fail) {
-    // Requires multi-file input + sourceMap.includeSources
-    fail("Multi-file input API not yet supported")
+    // Requires sourceMap.includeSources — source-map orchestration: ISS-1219
+    fail("sourceMap.includeSources — source-map orchestration: ISS-1219")
   }
 }
