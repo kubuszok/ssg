@@ -155,8 +155,8 @@ final class NodeExtraSuite extends munit.FunSuite {
     assertEquals(Template.parse("hash has {{ hash.size }} elements").render(vars), "hash has 4 elements")
   }
 
-  // SSG: numeric key in dotted path not yet supported
-  test("lookup: number as key".fail) {
+  // ISS-1016: numeric key in dotted path now supported (liqp LookupNodeTest.java:300-306)
+  test("lookup: number as key") {
     // https://github.com/bkiers/Liqp/issues/209
     val vars = TestHelper.mapOf(
       "Data" -> TestHelper.mapOf(
