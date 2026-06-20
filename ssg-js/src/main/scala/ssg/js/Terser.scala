@@ -34,13 +34,21 @@
  *     original body in via TreeTransformer + TransformSplice (the MAP.splice
  *     analog).
  *
- *   Gap: source-map orchestration: ISS-1219. lib/sourcemap.js is a separate
- *     unported module; options.sourceMap (minify.js:191-200, 313-352) — inline
- *     content decoding, includeSources, url=inline appending, asObject — is
- *     tracked there. The in-minify.js orchestration (ecma normalization,
- *     nameCache, format/output resolution + set_shorthand, wrap/enclose,
- *     multi-file input, structured error fields) is ported below.
- *   Audited: 2026-06-19
+ *   Idiom: source-map orchestration (minify.js:191-200, 313-352): the
+ *     options.sourceMap struct is modelled as MinifySourceMapOptions and wired
+ *     through the ported ssg.js.sourcemap.SourceMap wrapper (lib/sourcemap.js).
+ *     Inline content decoding (content == "inline", minify.js:226-230 +
+ *     read_source_map minify.js:33-40 → ssg.js.sourcemap.InlineSourceMap),
+ *     includeSources (minify.js:321), the multi-file + inline guard
+ *     (minify.js:227-228), url == "inline" data-URI appending (minify.js:346-348)
+ *     and the plain url append (minify.js:349-350), asObject (minify.js:336) and
+ *     getDecoded (minify.js:345) are all wired below. The includeSources guard
+ *     "original source content unavailable" (minify.js:314-316) is unreachable —
+ *     ssg-js's public API always takes source strings, never a pre-parsed AST.
+ *     The in-minify.js orchestration (ecma normalization, nameCache, format/output
+ *     resolution + set_shorthand, wrap/enclose, multi-file input, structured error
+ *     fields) is ported below.
+ *   Audited: 2026-06-20
  *
  * Covenant: full-port
  * Covenant-js-reference: lib/minify.js
@@ -74,6 +82,38 @@ final class NameCache {
   var props: ManglerCache = new ManglerCache()
 }
 
+/** Source-map orchestration options, mirroring terser's `options.sourceMap` object (minify.js:191-200 defaults; minify.js:313-352 usage).
+  *
+  * Upstream `options.sourceMap` is resolved by `defaults(options.sourceMap, { asObject: false, content: null, filename: null, includeSources: false, root: null, url: null })` (minify.js:192-199).
+  * Each field is faithfully reproduced:
+  *
+  * @param filename
+  *   the generated file name — becomes `file` of the [[SourceMap]] (minify.js:318 `file: options.sourceMap.filename`). Upstream calls the field `filename`; there is no separate `file` slot.
+  * @param root
+  *   the `sourceRoot` of the output map (minify.js:320 `root: options.sourceMap.root`).
+  * @param content
+  *   the input ("original") source map to chain through (minify.js:319 `orig: options.sourceMap.content`). May be a parsed [[ssg.js.sourcemap.SourceMapData]], a JSON source-map string
+  *   (test/mocha/minify.js:299 reads the `.map` file as a string), or the literal `"inline"` (minify.js:226-230) to read the inline `//# sourceMappingURL=data:...;base64,...` comment from the input
+  *   JS.
+  * @param includeSources
+  *   when true, pass the input source strings as the map's `sourcesContent` (minify.js:321 `files: options.sourceMap.includeSources ? files : null`). minify.js:314-316 throws "original source content
+  *   unavailable" if the input is a pre-parsed AST — N/A here since ssg-js's public API always takes source strings, never a pre-parsed toplevel.
+  * @param url
+  *   when `"inline"`, append the output map to the result code as a `//# sourceMappingURL=data:application/json;charset=utf-8;base64,<...>` comment (minify.js:346-348); when any other non-null
+  *   string, append it as a plain `//# sourceMappingURL=<url>` comment (minify.js:349-350).
+  * @param asObject
+  *   when true, [[MinifyResult.sourceMap]] is the structured map; when false (the upstream default), [[MinifyResult.sourceMapString]] additionally carries the `JSON.stringify(map)` form
+  *   (minify.js:336).
+  */
+final case class MinifySourceMapOptions(
+  filename:       String | Null = null,
+  root:           String | Null = null,
+  content:        ssg.js.sourcemap.SourceMapData | String | Null = null,
+  includeSources: Boolean = false,
+  url:            String | Null = null,
+  asObject:       Boolean = false
+)
+
 /** Options for the Terser minifier.
   *
   * The `compress` and `mangle` fields follow upstream Terser's Boolean semantics (utils/index.js:66-68 `defaults()` + minify.js:116-123,161-174,262-276): an explicit options object uses those
@@ -104,7 +144,8 @@ final case class MinifyOptions(
   toplevel:  Boolean = false,
   nameCache: NameCache | Null = null,
   wrap:      String | Null = null,
-  enclose:   Boolean | String = false
+  enclose:   Boolean | String = false,
+  sourceMap: MinifySourceMapOptions | Null = null
 )
 
 object MinifyOptions {
@@ -114,11 +155,26 @@ object MinifyOptions {
   val NoOptimize: MinifyOptions = MinifyOptions(compress = false, mangle = false)
 }
 
-/** Result of a Terser minification. */
+/** Result of a Terser minification.
+  *
+  * @param code
+  *   the minified output code (with any `//# sourceMappingURL=` comment appended when `sourceMap.url` is set — minify.js:346-350).
+  * @param ast
+  *   the (transformed) top-level AST.
+  * @param sourceMap
+  *   the structured output source map (`getEncoded()`), or `null` when no source map was requested.
+  * @param sourceMapString
+  *   the `JSON.stringify(map)` form of [[sourceMap]] (minify.js:336), populated when a source map was requested with `asObject == false` (the upstream default — `result.map` is the JSON string in
+  *   that case). `null` when `asObject == true` or no map was requested.
+  * @param decodedMap
+  *   the decoded source map (`getDecoded()`, minify.js:345), or `null`.
+  */
 final case class MinifyResult(
-  code:      String,
-  ast:       AstToplevel,
-  sourceMap: ssg.js.sourcemap.SourceMapData | Null = null
+  code:            String,
+  ast:             AstToplevel,
+  sourceMap:       ssg.js.sourcemap.SourceMapData | Null = null,
+  sourceMapString: String | Null = null,
+  decodedMap:      ssg.js.sourcemap.SourceMapData | Null = null
 )
 
 /** Terser JavaScript minifier — public API. */
@@ -133,8 +189,18 @@ object Terser {
     * @return
     *   MinifyResult with minified code and AST
     */
-  def minify(code: String, options: MinifyOptions = MinifyOptions.Defaults): MinifyResult =
-    minifyFiles(scala.collection.immutable.ListMap(options.parse.filename -> code), options)
+  def minify(code: String, options: MinifyOptions = MinifyOptions.Defaults): MinifyResult = {
+    // minify.js:208 — `if (typeof files == "string") files = [ files ]`: a single
+    // source string becomes a one-element array, so the `for (var name in files)`
+    // loop (minify.js:223-225) keys it by the array index "0" and sets
+    // `options.parse.filename = "0"`. The index always wins over any caller-set
+    // `options.parse.filename`, so the source-map source name is "0" — matching
+    // terser's `"sources":["0"]` (test/mocha/minify.js:358). An explicitly set
+    // `options.parse.filename` is honored only as a fallback for callers that rely
+    // on it (e.g. SourceMapSuite passes "0" explicitly).
+    val filename = if (options.parse.filename.isEmpty) "0" else options.parse.filename
+    minifyFiles(scala.collection.immutable.ListMap(filename -> code), options)
+  }
 
   /** Minify multiple named source files, concatenating their parsed bodies into a single top-level AST.
     *
@@ -176,6 +242,63 @@ object Terser {
     files.tail.foreach { case (name, src) =>
       ast.body.addAll(parseFile(name, src).body)
     }
+
+    // -- Source-map content resolution (minify.js:226-230) --
+    // minify.js:226-230 — inside the parse loop, when `options.sourceMap.content
+    // == "inline"`, terser reads the inline `//# sourceMappingURL=data:...;base64`
+    // comment from the (single) input file and replaces `content` with the decoded
+    // JSON. The multi-file guard (minify.js:227-228) rejects an inline map with more
+    // than one input.
+    val resolvedOrig: ssg.js.sourcemap.SourceMapData | Null =
+      options.sourceMap match {
+        case null => null
+        case sm: MinifySourceMapOptions =>
+          sm.content match {
+            case null => null
+            case data: ssg.js.sourcemap.SourceMapData => data
+            case "inline" =>
+              // minify.js:227-228 — `if (Object.keys(files).length > 1) throw …`.
+              if (files.size > 1)
+                throw new IllegalArgumentException("inline source map only works with singular input")
+              // minify.js:229 — `read_source_map(files[name])` returns the decoded
+              // JSON string (or null when no inline comment is present).
+              ssg.js.sourcemap.InlineSourceMap.readSourceMap(firstSrc) match {
+                case null => null
+                case json: String => ssg.js.sourcemap.SourceMapJson.parse(json)
+              }
+            case json: String =>
+              // test/mocha/minify.js:299 — `content` may be a raw JSON source-map
+              // string (the `.map` file read verbatim); @jridgewell's
+              // SourceMapConsumer JSON.parses it (sourcemap.js:73).
+              ssg.js.sourcemap.SourceMapJson.parse(json)
+          }
+      }
+
+    // minify.js:313-322 — build the SourceMap wrapper when `options.sourceMap` is
+    // set. includeSources (minify.js:321) passes the input source strings as the
+    // map's `sourcesContent`. The minify.js:314-316 "original source content
+    // unavailable" guard fires only when the input is a pre-parsed AST_Toplevel;
+    // ssg-js's public API always takes source strings, so it is unreachable here.
+    val minifySourceMap: ssg.js.sourcemap.SourceMap | Null =
+      options.sourceMap match {
+        case null => null
+        case sm: MinifySourceMapOptions =>
+          new ssg.js.sourcemap.SourceMap(
+            ssg.js.sourcemap.SourceMapOptions(
+              file = sm.filename,
+              root = sm.root,
+              orig = resolvedOrig,
+              files = if (sm.includeSources) files.toMap else Map.empty
+            )
+          )
+      }
+
+    // minify.js:317 — `format_options.source_map = SourceMap({...})`. When the
+    // high-level sourceMap option is set, it drives the OutputStream's source map
+    // (overriding any low-level OutputOptions.sourceMap escape hatch); otherwise
+    // the existing OutputOptions.sourceMap path is used unchanged.
+    val effectiveOutputSourceMap: ssg.js.sourcemap.SourceMap | Null =
+      if (minifySourceMap != null) minifySourceMap else outputOptions.sourceMap
 
     // -- Compress phase (minify.js:260-266) --
     // Upstream minify.js:262 runs the Compressor when `options.compress` is truthy.
@@ -278,8 +401,17 @@ object Terser {
     // control whether the AST and/or code string are returned. The typed
     // MinifyResult always carries both `code` and `ast`, so these JS-object
     // result-shaping flags are N/A.
-    val out = new OutputStream(applyOutputShorthand(outputOptions, topEcma))
+    // minify.js:317 — `format_options.source_map = SourceMap({...})`: the resolved
+    // source map drives the OutputStream. `effectiveOutputSourceMap` is the
+    // high-level minify-option map when present, else the low-level
+    // OutputOptions.sourceMap escape hatch.
+    val resolvedOutputOptions = applyOutputShorthand(outputOptions, topEcma)
+    val out                   = new OutputStream(
+      if (minifySourceMap != null) resolvedOutputOptions.copy(sourceMap = effectiveOutputSourceMap)
+      else resolvedOutputOptions
+    )
     out.printNode(ast)
+    var code = out.get()
 
     // -- nameCache write-back (minify.js:354-359) --
     // `if (options.nameCache && options.mangle) { nameCache.vars = cache_to_json(mangle.cache);
@@ -288,13 +420,51 @@ object Terser {
     // so they are already the "written back" caches; no JSON round-trip is needed
     // because the NameCache holds the live ManglerCache instances.
 
-    // 5. Retrieve source map if configured (ISS-1219 — source-map orchestration).
-    val mapData = outputOptions.sourceMap match {
+    // 5. Retrieve and finalize the source map (minify.js:330-352).
+    // `getEncoded()` is the `format_options.source_map.getEncoded()` of minify.js:335.
+    val mapData: ssg.js.sourcemap.SourceMapData | Null = effectiveOutputSourceMap match {
       case sm: ssg.js.sourcemap.SourceMap => sm.getEncoded()
       case null => null
     }
 
-    MinifyResult(out.get(), ast, mapData)
+    // Source-map result shaping (minify.js:330-351) only runs when the high-level
+    // sourceMap option is set (the low-level escape hatch keeps the historical
+    // shape: structured `sourceMap`, no url-append/asObject handling).
+    var mapString: String | Null                         = null
+    var decoded:   ssg.js.sourcemap.SourceMapData | Null = null
+    options.sourceMap match {
+      case sm: MinifySourceMapOptions if mapData != null =>
+        val map = mapData.nn
+        // minify.js:336 — `result.map = asObject ? map : JSON.stringify(map)`.
+        // ssg-js always keeps the structured map in `sourceMap`; `asObject == false`
+        // additionally surfaces the JSON string form in `sourceMapString`.
+        if (!sm.asObject) mapString = ssg.js.sourcemap.SourceMapJson.stringify(map)
+        // minify.js:345 — `result.decoded_map = format_options.source_map.getDecoded()`.
+        decoded = effectiveOutputSourceMap match {
+          case s: ssg.js.sourcemap.SourceMap => s.getDecoded()
+          case null => null
+        }
+        // minify.js:346-350 — append the sourceMappingURL comment.
+        sm.url match {
+          case "inline" =>
+            // minify.js:347-348 — `var sourceMap = typeof result.map === "object"
+            // ? JSON.stringify(result.map) : result.map;` then append the data-URI.
+            // The stringified map is the asObject==false form; recompute when asObject.
+            val sourceMapStr = if (sm.asObject) ssg.js.sourcemap.SourceMapJson.stringify(map) else mapString.nn
+            code = code + "\n//# sourceMappingURL=data:application/json;charset=utf-8;base64," +
+              ssg.js.sourcemap.Base64.encode(sourceMapStr)
+          case null => // no url
+          case url: String =>
+            // minify.js:349-350 — `result.code += "\n//# sourceMappingURL=" + url`.
+            code = code + "\n//# sourceMappingURL=" + url
+        }
+      case _ => // no high-level source-map option
+    }
+
+    // minify.js:360-362 — `if (format_options.source_map) format_options.source_map.destroy()`.
+    if (minifySourceMap != null) minifySourceMap.destroy()
+
+    MinifyResult(code, ast, mapData, mapString, decoded)
   }
 
   /** Minify an array of source strings, naming each by its index ("0", "1", …), mirroring minify.js:208 `if (typeof files == "string") files = [ files ]` and the file-map iteration

@@ -105,7 +105,12 @@ class SourceMapConsumer(val mapData: SourceMapData) {
       return OriginalPosition(null, 0, 0, null) // @nowarn
     }
 
-    // Binary search for the segment whose genCol is <= column
+    // Greatest-lower-bound search for the segment whose genCol is <= column.
+    // @jridgewell's GREATEST_LOWER_BOUND returns the FIRST segment of a run of
+    // equal generated columns (its binarySearch lower-bounds on ties), so when
+    // several segments share a genCol we must pick the lowest index — otherwise a
+    // generated column landing on a duplicate boundary resolves to the wrong
+    // original column (off by the duplicate's delta).
     var lo = 0
     var hi = segs.length - 1
     while (lo < hi) {
@@ -118,15 +123,18 @@ class SourceMapConsumer(val mapData: SourceMapData) {
     if (seg.genCol > column) {
       return OriginalPosition(null, 0, 0, null) // @nowarn
     }
+    // Walk back to the first segment sharing this generated column (lower bound).
+    while (lo > 0 && segs(lo - 1).genCol == seg.genCol) lo -= 1
+    val first = segs(lo)
 
-    val sourceName = if (seg.srcIdx >= 0 && seg.srcIdx < sources.length) sources(seg.srcIdx) else null
+    val sourceName = if (first.srcIdx >= 0 && first.srcIdx < sources.length) sources(first.srcIdx) else null
     val names      = mapData.names
-    val name       = if (seg.nameIdx >= 0 && seg.nameIdx < names.size) names(seg.nameIdx) else null
+    val name       = if (first.nameIdx >= 0 && first.nameIdx < names.size) names(first.nameIdx) else null
 
     OriginalPosition(
       source = sourceName,
-      line = seg.origLine + 1, // convert back to 1-based
-      column = seg.origCol,
+      line = first.origLine + 1, // convert back to 1-based
+      column = first.origCol,
       name = name
     )
   }

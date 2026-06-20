@@ -35,6 +35,15 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.parse.Token
 
+/** A flushed source-map mapping (output.js:553-558): the queued token/name plus the generated position (line/col) captured at flush time.
+  */
+final private case class PendingMapping(
+  token: AstToken,
+  name:  AstNode | String | Boolean | Null,
+  line:  Int,
+  col:   Int
+)
+
 /** Main JavaScript code generator.
   *
   * Converts an AST tree back into JavaScript source text. The output is controlled by [[OutputOptions]] — it can produce minified or beautified code, preserve or strip comments, and handle various
@@ -62,6 +71,20 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
   private val printedComments: mutable.Set[AnyRef]          = mutable.Set.empty
   private val stack:           mutable.ArrayBuffer[AstNode] = mutable.ArrayBuffer.empty
+
+  // ---- source-map state (output.js:441-465, 668-671) ----
+  // `mappings` is `options.source_map && []` (output.js:441): an accumulator that
+  // exists only when a source map is requested. A queued `add_mapping(token, name)`
+  // (output.js:668-671) records a single token/name pair that is flushed into
+  // `mappings` on the next real `print()` (output.js:552-561), then emitted via
+  // `do_add_mapping` (output.js:443-465).
+  private val mappings: mutable.ArrayBuffer[PendingMapping] | Null =
+    if (options.sourceMap != null) mutable.ArrayBuffer.empty else null
+  // `mapping_token` (output.js:668-669): the queued token, or null when none.
+  private var mappingToken: AstToken | Null = null
+  // `mapping_name` (output.js:670): the queued name argument — `null` (undefined),
+  // `false`, an AstNode (a property key), or a String (an explicit name).
+  private var mappingName: AstNode | String | Boolean | Null = null
 
   /** Track directive context for string escaping. */
   var inDirective: Boolean = false
@@ -304,6 +327,21 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       mightNeedSpace = false
     }
 
+    // output.js:552-561 — flush the queued mapping token at the current generated
+    // position, then (unless a newline is still being held) emit it immediately.
+    if (mappingToken != null) {
+      mappings.nn.addOne(
+        PendingMapping(
+          token = mappingToken.nn,
+          name = mappingName,
+          line = currentLine,
+          col = currentCol
+        )
+      )
+      mappingToken = null
+      if (mightAddNewline == 0) doAddMapping()
+    }
+
     output.append(str)
     _hasParens = str.nonEmpty && str.charAt(str.length - 1) == '('
     currentPos += str.length
@@ -328,11 +366,95 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       if (currentCol > options.maxLineLen && mightAddNewline > 0) {
         output.insert(mightAddNewline, '\n')
         val lenAfterNewline = output.length - mightAddNewline - 1
+        // output.js:472-478 — shift the queued mappings down by the inserted
+        // newline (line +1, col += delta to the new column origin).
+        if (mappings != null) {
+          val delta = lenAfterNewline - currentCol
+          var i     = 0
+          while (i < mappings.nn.length) {
+            val m = mappings.nn(i)
+            mappings.nn(i) = m.copy(line = m.line + 1, col = m.col + delta)
+            i += 1
+          }
+        }
         currentLine += 1
         currentPos += 1
         currentCol = lenAfterNewline
       }
-      if (mightAddNewline > 0) mightAddNewline = 0
+      // output.js:484-487 — clear the held newline and flush the mappings.
+      if (mightAddNewline > 0) {
+        mightAddNewline = 0
+        doAddMapping()
+      }
+    }
+
+  /** Port of `do_add_mapping` (output.js:443-465): drain the accumulated mappings into the source map, resolving each name and ignoring bad mappings.
+    */
+  private def doAddMapping(): Unit = {
+    val ms = mappings
+    // noop when no source map (output.js:465)
+    if (ms != null) {
+      val sm = options.sourceMap
+      if (sm != null) {
+        var i = 0
+        while (i < ms.nn.length) {
+          val mapping = ms.nn(i)
+          try {
+            val token = mapping.token
+            // output.js:447-453 — resolve the mapping name unless it was explicitly
+            // suppressed with `false`.
+            var resolved: String | Null = mapping.name match {
+              case s: String => s
+              case _ => null
+            }
+            mapping.name match {
+              case false => // name === false: leave unresolved (output.js:447)
+              case _     =>
+                if (token.tokenType == "name" || token.tokenType == "privatename") {
+                  resolved = token.value
+                } else
+                  mapping.name match {
+                    case sym: AstSymbol =>
+                      resolved = if (token.tokenType == "string") token.value else sym.name
+                    case _ =>
+                      mapping.name match {
+                        case s: String => resolved = s
+                        case _ => resolved = null
+                      }
+                  }
+            }
+            // output.js:454-459 — only pass the name when it is a basic identifier.
+            val name: String | Null =
+              resolved match {
+                case s: String if Token.isBasicIdentifierString(s) => s
+                case _ => null
+              }
+            sm.nn.add(
+              source = token.file,
+              genLine = mapping.line,
+              genCol = mapping.col,
+              origLine = token.line,
+              origCol = token.col,
+              name = name
+            )
+          } catch {
+            case _: IndexOutOfBoundsException | _: IllegalArgumentException =>
+            // output.js:460-462 — "Ignore bad mapping".
+          }
+          i += 1
+        }
+        ms.nn.clear()
+      }
+    }
+  }
+
+  /** Port of `add_mapping` (output.js:668-671): record a queued mapping token and name, flushed at the next real `print()`. `name` is `null` (undefined), an AstNode key, a String, or `false`
+    * (suppress the name).
+    */
+  def addMapping(token: AstToken, name: AstNode | String | Boolean | Null = null): Unit =
+    if (mappings != null) {
+      mappingToken = token
+      mappingName = name
     }
 
   def star(): Unit = print("*")
@@ -903,13 +1025,14 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       case _ =>
     }
 
-    // Record source map mapping for this node
-    addSourceMapping(node)
-
     pushNode(node)
 
+    // output.js:932-937 — prepend_comments → add_source_map → generator →
+    // append_comments. add_source_map records a QUEUED mapping (flushed on the
+    // next real print); it is NOT eagerly added.
     def doit(): Unit = {
       prependComments(node)
+      addSourceMap(node)
       codeGen(node)
       appendComments(node)
     }
@@ -921,26 +1044,47 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     if (useAsm != null && (node eq useAsm.nn)) useAsm = null
   }
 
-  /** Record a source map mapping for the given node at the current output position. */
-  private def addSourceMapping(node: AstNode): Unit = {
-    val sm = options.sourceMap
-    if (sm == null) return // @nowarn
-    val token = node.start
-    if (token == null) return // @nowarn
-    if (token.file == null || token.file.isEmpty) return // @nowarn
-    val name = node match {
-      case sym: AstSymbol => sym.name
-      case _ => null
+  /** Port of the DEFMAP `add_source_map` generators (output.js:2471-2532): record a queued source-map mapping for the given node, keyed by node type. Most nodes are a noop (output.js:2471-2478 — "we
+    * could add info for ALL nodes, but it seems wasteful"); only the selected node types contribute a mapping.
+    */
+  private def addSourceMap(node: AstNode): Unit =
+    // noop when no source map requested (output.js:465)
+    if (mappings != null) node match {
+      // output.js:2471-2478 — AST_Node / AST_LabeledStatement / AST_Toplevel: noop
+      // (the label symbol already marks the labeled statement).
+      case _: AstToplevel | _: AstLabeledStatement => ()
+
+      // output.js:2507-2516 — getters/setters/methods: map start, suppress the name
+      // (the method's symbol handles the name below).
+      case _: AstObjectGetter | _: AstObjectSetter | _: AstPrivateGetter | _: AstPrivateSetter | _: AstConciseMethod | _: AstPrivateMethod =>
+        addMapping(node.start, false)
+
+      // output.js:2518-2528 — SymbolMethod / SymbolPrivateProperty: map `end`,
+      // attaching the symbol name when the end token is an identifier.
+      case sym: AstSymbolMethod =>
+        if (sym.end != null && (sym.end.nn.tokenType == "name" || sym.end.nn.tokenType == "privatename"))
+          addMapping(sym.end.nn, sym.name)
+        else addMapping(sym.end.nn)
+      case sym: AstSymbolPrivateProperty =>
+        if (sym.end != null && (sym.end.nn.tokenType == "name" || sym.end.nn.tokenType == "privatename"))
+          addMapping(sym.end.nn, sym.name)
+        else addMapping(sym.end.nn)
+
+      // output.js:2530-2532 — ObjectProperty: map start, name = the property key.
+      case op: AstObjectProperty =>
+        op.key match {
+          case keyNode: AstNode => addMapping(node.start, keyNode)
+          case _ => addMapping(node.start)
+        }
+
+      // output.js:2482-2505 — the "map start" group. AstSymbol covers all symbol
+      // subtypes (the SymbolMethod/SymbolPrivateProperty cases above take priority).
+      case _: AstArray | _: AstBlockStatement | _: AstCatch | _: AstClass | _: AstConstant | _: AstDebugger | _: AstDefinitionsLike | _: AstDirective | _: AstFinally | _: AstJump | _: AstLambda |
+          _: AstNew | _: AstObject | _: AstStatementWithBody | _: AstSymbol | _: AstSwitch | _: AstSwitchBranch | _: AstTemplateString | _: AstTemplateSegment | _: AstTry =>
+        addMapping(node.start)
+
+      case _ => () // output.js:2471-2474 — base AST_Node: noop.
     }
-    sm.nn.add(
-      source = token.file,
-      genLine = currentLine,
-      genCol = currentCol,
-      origLine = token.line,
-      origCol = token.col,
-      name = name
-    )
-  }
 
   // ========================================================================
   // Code generators (ported from DEFPRINT registrations)
@@ -957,7 +1101,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       case n: AstToplevel         => displayBody(n.body, isToplevel = true, allowDirectives = true); print("")
       case n: AstLabeledStatement => printNode(n.label.nn); colon(); printNode(n.body.nn)
       case n: AstSimpleStatement  => printNode(n.body.nn); semicolon()
-      case n: AstBlockStatement   => printBraced(n.body)
+      case n: AstBlockStatement   => printBraced(n, n.body)
       case _: AstEmptyStatement   => semicolon()
       case n: AstDo               => printDo(n)
       case n: AstWhile            => printWhile(n)
@@ -996,9 +1140,9 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
 
       // Exceptions
       case n: AstTry      => printTry(n)
-      case n: AstTryBlock => printBraced(n.body)
+      case n: AstTryBlock => printBraced(n, n.body)
       case n: AstCatch    => printCatch(n)
-      case n: AstFinally  => print("finally"); space(); printBraced(n.body)
+      case n: AstFinally  => print("finally"); space(); printBraced(n, n.body)
 
       // Definitions
       case n: AstLet        => printDefinitions(n, "let")
@@ -1060,7 +1204,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       case n: AstSymbolPrivateProperty => print("#" + n.name)
 
       // Static block
-      case n: AstClassStaticBlock => print("static"); space(); printBraced(n.body)
+      case n: AstClassStaticBlock => print("static"); space(); printBraced(n, n.body)
 
       // Symbols (This/Super before Symbol since they extend it)
       case _: AstSuper  => print("super")
@@ -1144,11 +1288,21 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     inDirective = false
   }
 
-  private def printBraced(body: mutable.Seq[AstNode], allowDirectives: Boolean = false): Unit =
+  // Port of `print_braced` / `print_braced_empty` (output.js:1333-1348). The
+  // closing-brace mapping `output.add_mapping(self.end)` is emitted after the body
+  // (or after the empty-block comments), so it is flushed when the `}` is printed.
+  private def printBraced(node: AstNode, body: mutable.Seq[AstNode], allowDirectives: Boolean = false): Unit =
     if (body.nonEmpty) {
-      withBlock(() => displayBody(body, isToplevel = false, allowDirectives = allowDirectives))
+      withBlock { () =>
+        displayBody(body, isToplevel = false, allowDirectives = allowDirectives)
+        addMapping(node.end) // output.js:1345
+      }
     } else {
-      print("{}")
+      // output.js:1333-1339 — print_braced_empty: `print("{")`, map self.end, then
+      // `print("}")` so the closing-brace mapping lands at the `}` column.
+      print("{")
+      addMapping(node.end)
+      print("}")
     }
 
   private def printDo(node: AstDo): Unit = {
@@ -1230,7 +1384,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       }
     )
     space()
-    printBraced(node.body, allowDirectives = true)
+    printBraced(node, node.body, allowDirectives = true)
   }
 
   private def printArrow(node: AstArrow): Unit = {
@@ -1256,7 +1410,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       if (ret.value == null) print("{}")
       else if (FirstInStatement.leftIsObject(ret.value.nn)) { print("("); printNode(ret.value.nn); print(")") }
       else printNode(ret.value.nn)
-    } else printBraced(node.body)
+    } else printBraced(node, node.body)
 
     if (needsOuterParens) print(")")
   }
@@ -1414,7 +1568,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     print("catch")
     if (node.argname != null) { space(); withParens(() => printNode(node.argname.nn)) }
     space()
-    printBraced(node.body)
+    printBraced(node, node.body)
   }
 
   // ---- Definitions ----
@@ -1543,6 +1697,11 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
   private def printCall(node: AstCall): Unit = {
     if (node.expression != null) printNode(node.expression.nn)
     if (node.isInstanceOf[AstNew] && node.args.isEmpty) { return } // @nowarn — skip parens for `new Foo`
+    // output.js:1949-1952 — when the callee is itself a call or a lambda, map the
+    // call's start so the `(` of an IIFE / chained call is attributed correctly.
+    if (node.expression != null && (node.expression.nn.isInstanceOf[AstCall] || node.expression.nn.isInstanceOf[AstLambda])) {
+      addMapping(node.start)
+    }
     if (node.optional) print("?.")
     withParens(() => node.args.zipWithIndex.foreach { case (expr, i) => if (i > 0) comma(); printNode(expr) })
   }
@@ -1568,8 +1727,12 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       if (Token.ALL_RESERVED_WORDS.contains(prop)) options.ie8
       else !Token.isIdentifierString(prop, options.ecma >= 2015 && !options.safari10)
     if (node.optional) print("?.")
-    if (printComputed) { print("["); printString(prop); print("]") }
-    else {
+    if (printComputed) {
+      print("[")
+      addMapping(node.end) // output.js:2005
+      printString(prop)
+      print("]")
+    } else {
       if (
         node.expression != null && node.expression.nn.isInstanceOf[AstNumber] &&
         node.expression.nn.asInstanceOf[AstNumber].value >= 0
@@ -1577,6 +1740,8 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
         if (!last.exists(c => "xa-fA-F.)eE0123456789".indexOf(c) >= 0)) print(".")
       }
       if (!node.optional) print(".")
+      // output.js:2015-2016 — the name after the dot is mapped here.
+      addMapping(node.end)
       printName(prop)
     }
   }
@@ -1586,6 +1751,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     val prop = node.property match { case s: String => s; case _ => "" }
     if (node.optional) print("?")
     print(".#")
+    addMapping(node.end) // output.js:2027
     printName(prop)
   }
 

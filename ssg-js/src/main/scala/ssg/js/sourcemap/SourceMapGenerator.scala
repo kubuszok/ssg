@@ -142,9 +142,13 @@ class SourceMapGenerator(
         sb.append(VlqCodec.encode(srcIdx - prevSource))
         prevSource = srcIdx
 
-        // Original line delta (1-based in source map spec)
-        sb.append(VlqCodec.encode(m.originalLine - prevOrigLine))
-        prevOrigLine = m.originalLine
+        // Original line delta. The V3 `mappings` field encodes source lines
+        // 0-based, while the addMapping API (mirroring @jridgewell's, which
+        // SourceMapConsumer.originalPositionFor reverses with `+ 1`) receives them
+        // 1-based; convert here so the encoded map matches @jridgewell byte-for-byte.
+        val origLine0 = m.originalLine - 1
+        sb.append(VlqCodec.encode(origLine0 - prevOrigLine))
+        prevOrigLine = origLine0
 
         // Original column delta
         sb.append(VlqCodec.encode(m.originalColumn - prevOrigCol))
