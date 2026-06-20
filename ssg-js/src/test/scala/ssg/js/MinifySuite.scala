@@ -21,6 +21,16 @@ final class MinifySuite extends munit.FunSuite {
 
   private val noOpt = MinifyOptions.NoOptimize
 
+  // terser/test/input/issue-520/input.js — has a decoy `//# sourceMappingURL`
+  // comment before the real inline data-URI map (exercises read_source_map's
+  // end-anchored regex, minify.js:34).
+  private val Issue520Input: String =
+    "var Foo = function Foo(){console.log(1+2);}; new Foo();\n\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,I/am/not/a/sourceMappingURL/but/a/comment\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjpudWxsLCJzb3VyY2VzIjpbInN0ZGluIl0sInNvdXJjZXNDb250ZW50IjpbImNsYXNzIEZvbyB7IGNvbnN0cnVjdG9yKCl7Y29uc29sZS5sb2coMSsyKTt9IH0gbmV3IEZvbygpO1xuIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUFBLElBQU0sR0FBRyxHQUFDLEFBQUUsWUFBVyxFQUFFLENBQUMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFBLEFBQUUsQ0FBQyxJQUFJLEdBQUcsRUFBRSxDQUFDOyJ9\n"
+
+  // terser/test/input/issue-520/output.js — the expected (code + "\n").
+  private val Issue520Output: String =
+    "new function(){console.log(3)};\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJjb25zb2xlIiwibG9nIl0sInNvdXJjZXMiOlsic3RkaW4iXSwic291cmNlc0NvbnRlbnQiOlsiY2xhc3MgRm9vIHsgY29uc3RydWN0b3IoKXtjb25zb2xlLmxvZygxKzIpO30gfSBuZXcgRm9vKCk7XG4iXSwibWFwcGluZ3MiOiJBQUErQyxJQUFyQyxXQUFnQkEsUUFBUUMsSUFBSSxFQUFLIn0=\n"
+
   // === Tests from mocha/minify.js ===
 
   // 1. "Should test basic sanity of minify with default options"
@@ -346,31 +356,89 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   // 19. "Should read the given string filename correctly when sourceMapIncludeSources
-  //    is enabled (#1236)" — source-map orchestration: ISS-1219.
-  test("inSourceMap: read filename correctly with includeSources (#1236)".fail) {
-    fail("sourceMap content + includeSources — source-map orchestration: ISS-1219")
+  //    is enabled (#1236)" (test/mocha/minify.js:296-311). Wires sourceMap.content
+  //    (a JSON .map string) + filename + includeSources through Terser.minify
+  //    (ISS-1219). The input map is terser/test/input/issue-1236/simple.js.map.
+  test("inSourceMap: read filename correctly with includeSources (#1236)") {
+    // terser/test/input/issue-1236/simple.js
+    val simpleJs =
+      "\"use strict\";\n\nvar foo = function foo(x) {\n  return \"foo \" + x;\n};\nconsole.log(foo(\"bar\"));\n\n//# sourceMappingURL=simple.js.map\n"
+    // terser/test/input/issue-1236/simple.js.map (read as a JSON string upstream)
+    val simpleMap =
+      "{\n    \"version\": 3,\n    \"sources\": [\"index.js\"],\n    \"names\": [],\n    \"mappings\": \";;AAAA,IAAI,MAAM,SAAN,GAAM;AAAA,SAAK,SAAS,CAAd;AAAA,CAAV;AACA,QAAQ,GAAR,CAAY,IAAI,KAAJ,CAAZ\",\n    \"file\": \"simple.js\",\n    \"sourcesContent\": [\"let foo = x => \\\"foo \\\" + x;\\nconsole.log(foo(\\\"bar\\\"));\"]\n}\n"
+    val result = Terser.minify(
+      simpleJs,
+      MinifyOptions(
+        sourceMap = MinifySourceMapOptions(
+          content = simpleMap,
+          filename = "simple.min.js",
+          includeSources = true
+        )
+      )
+    )
+    val map = result.sourceMap
+    assert(map != null, "Expected source map output")
+    // test/mocha/minify.js:307-310 — map.file, sourcesContent.length, sourcesContent[0].
+    assertEquals(map.nn.file, "simple.min.js")
+    assertEquals(map.nn.sourcesContent.length, 1)
+    assertEquals(
+      map.nn.sourcesContent(0),
+      "let foo = x => \"foo \" + x;\nconsole.log(foo(\"bar\"));": String | Null
+    )
   }
 
-  // 20. "Should process inline source map" — source-map orchestration: ISS-1219.
-  test("inSourceMap: process inline source map".fail) {
-    fail("inline source map content decoding — source-map orchestration: ISS-1219")
+  // 20. "Should process inline source map" (test/mocha/minify.js:312-321). content:
+  //    "inline" reads the trailing data-URI map from issue-520/input.js; url: "inline"
+  //    appends the output map. The (code + "\n") must equal issue-520/output.js.
+  test("inSourceMap: process inline source map") {
+    val result = Terser.minify(
+      Issue520Input,
+      MinifyOptions(
+        compress = ssg.js.compress.CompressorOptions(toplevel = ssg.js.compress.ToplevelConfig(funcs = true, vars = true)),
+        sourceMap = MinifySourceMapOptions(content = "inline", url = "inline")
+      )
+    )
+    assertEquals(result.code + "\n", Issue520Output)
   }
 
-  // 21. "Should process inline source map (minify_sync)" — source-map: ISS-1219.
-  test("inSourceMap: process inline source map (sync)".fail) {
-    fail("inline source map content decoding — source-map orchestration: ISS-1219")
+  // 21. "Should process inline source map (minify_sync)" (test/mocha/minify.js:322-331).
+  //    ssg-js is always synchronous; same expectation as #20.
+  test("inSourceMap: process inline source map (sync)") {
+    val result = Terser.minify(
+      Issue520Input,
+      MinifyOptions(
+        compress = ssg.js.compress.CompressorOptions(toplevel = ssg.js.compress.ToplevelConfig(funcs = true, vars = true)),
+        sourceMap = MinifySourceMapOptions(content = "inline", url = "inline")
+      )
+    )
+    assertEquals(result.code + "\n", Issue520Output)
   }
 
-  // 22. "Should fail with multiple input and inline source map" — multi-file is
-  //    ported, but the inline source-map guard is source-map orchestration: ISS-1219.
-  test("inSourceMap: fail with multiple input and inline source map".fail) {
-    fail("inline source map guard — source-map orchestration: ISS-1219")
+  // 22. "Should fail with multiple input and inline source map" (test/mocha/minify.js:332-346).
+  //    minify.js:227-228 — an inline input map with >1 input file throws.
+  test("inSourceMap: fail with multiple input and inline source map") {
+    val ex = intercept[IllegalArgumentException] {
+      Terser.minifySeq(
+        List(Issue520Input, Issue520Output),
+        MinifyOptions(sourceMap = MinifySourceMapOptions(content = "inline", url = "inline"))
+      )
+    }
+    assertEquals(ex.getMessage, "inline source map only works with singular input")
   }
 
-  // 23. "should append source map to output js when sourceMapInline is enabled" —
-  //    source-map orchestration: ISS-1219.
-  test("sourceMapInline: should append source map to output".fail) {
-    fail("sourceMap url='inline' appending — source-map orchestration: ISS-1219")
+  // 23. "should append source map to output js when sourceMapInline is enabled"
+  //    (test/mocha/minify.js:350-359). url: "inline" appends the data-URI map; the
+  //    Base64 is byte-exact with terser's oracle.
+  test("sourceMapInline: should append source map to output") {
+    val result = Terser.minify(
+      "var a = function(foo) { return foo; };",
+      MinifyOptions(sourceMap = MinifySourceMapOptions(url = "inline"))
+    )
+    assertEquals(
+      result.code,
+      "var a=function(n){return n};\n" +
+        "//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJhIiwiZm9vIl0sInNvdXJjZXMiOlsiMCJdLCJtYXBwaW5ncyI6IkFBQUEsSUFBSUEsRUFBSSxTQUFTQyxHQUFPLE9BQU9BLENBQUsifQ=="
+    )
   }
 
   // 24. "should not append source map to output js when sourceMapInline is not enabled"
