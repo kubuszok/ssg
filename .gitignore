@@ -33,6 +33,7 @@ target/
 scripts/bin/
 scripts/.metals-pid
 scripts/.metals.log
+.rescale/.metals-pid
 scripts/data/*.lock
 .scala-build/
 
