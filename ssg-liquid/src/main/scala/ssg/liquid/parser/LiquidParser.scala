@@ -1106,8 +1106,25 @@ final class LiquidParser(
       while (check(TokenType.DOT) || check(TokenType.OBR))
         if (check(TokenType.DOT)) {
           advance() // consume .
-          val prop = consumeIdOrKeyword()
-          lookup.add(new LookupNode.Hash(prop))
+          // liqp's IdChain (LiquidLexer.g4:182-184) tokenizes dotted chains like
+          // `Data.1.Value` as Id("Data") Dot Id("1") Dot Id("Value"), because the
+          // Id rule matches a leading digit (LiquidLexer.g4:186). ssg's lexer lacks
+          // IdChain, so a digit after DOT becomes LONG_NUM, and `1.Value` greedily
+          // becomes DOUBLE_NUM("1.") + Id("Value") (scanNumber consumes the trailing
+          // dot as a decimal point). Handle both numeric tokens to match liqp's
+          // Hash-index semantics (NodeVisitor.java:812-813).
+          if (check(TokenType.LONG_NUM)) {
+            // Simple case: `a.0` → Hash("0"). The number has no embedded dot.
+            lookup.add(new LookupNode.Hash(peek().value))
+            advance()
+          } else if (check(TokenType.DOUBLE_NUM)) {
+            // The lexer greedily consumed a '.' as a decimal point (scanNumber). Split
+            // the value at '.' to emit separate Hash segments per liqp IdChain semantics.
+            addDoubleNumHashSegments(lookup)
+          } else {
+            val prop = consumeIdOrKeyword()
+            lookup.add(new LookupNode.Hash(prop))
+          }
         } else {
           advance() // consume [
           val indexExpr = parseExpr()
@@ -1199,6 +1216,54 @@ final class LiquidParser(
     val t = peek()
     advance()
     t.value
+  }
+
+  /** Handles a DOUBLE_NUM token inside a dotted property chain.
+    *
+    * ssg's lexer lacks liqp's IdChain rule (LiquidLexer.g4:182-184), so it may greedily scan a digit-dot sequence as a single DOUBLE_NUM. For example, in `Data.1.Value` the lexer emits
+    * DOUBLE_NUM("1.") + Id("Value") instead of liqp's Id("1") Dot Id("Value"). This method splits the DOUBLE_NUM value at '.' to produce the correct Hash segments:
+    *
+    *   - "1.5" -> Hash("1"), Hash("5") (liqp: Id("1") Dot Id("5"))
+    *   - "1." -> Hash("1"), then consume next token as another Hash segment (the trailing dot is a separator, not a decimal point)
+    */
+  private def addDoubleNumHashSegments(lookup: LookupNode): Unit = {
+    val raw = peek().value
+    advance()
+    val dotIdx = raw.indexOf('.')
+    if (dotIdx < 0) {
+      // No dot — unlikely for DOUBLE_NUM but handle defensively.
+      lookup.add(new LookupNode.Hash(raw))
+    } else {
+      val before = raw.substring(0, dotIdx)
+      val after  = raw.substring(dotIdx + 1)
+      if (before.nonEmpty) {
+        lookup.add(new LookupNode.Hash(before))
+      }
+      if (after.nonEmpty) {
+        // "1.5" → Hash("1"), Hash("5") — matches liqp IdChain splitting
+        lookup.add(new LookupNode.Hash(after))
+      } else {
+        // "1." → Hash("1"), consumed dot is a separator. The next token is
+        // the segment after the dot (e.g. Id("Value") in `Data.1.Value`).
+        if (check(TokenType.LONG_NUM)) {
+          lookup.add(new LookupNode.Hash(peek().value))
+          advance()
+        } else if (check(TokenType.DOUBLE_NUM)) {
+          addDoubleNumHashSegments(lookup)
+        } else if (
+          !check(TokenType.DOT) && !check(TokenType.OBR) &&
+          !check(TokenType.OUT_END) && !check(TokenType.TAG_END) &&
+          !check(TokenType.PIPE) && !check(TokenType.EOF)
+        ) {
+          val prop = consumeIdOrKeyword()
+          lookup.add(new LookupNode.Hash(prop))
+        }
+        // If next is DOT/OBR/OUT_END/TAG_END/PIPE/EOF, the while loop or
+        // caller will handle it (e.g. `{{ a.1. | filter }}` — trailing dot
+        // with no segment is silently ignored, matching liqp's behavior where
+        // `a.1.` would be an error anyway).
+      }
+    }
   }
 
   /** Checks if a token type can be used as an identifier. */
