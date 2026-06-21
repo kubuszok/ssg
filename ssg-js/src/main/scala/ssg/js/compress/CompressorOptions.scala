@@ -193,7 +193,7 @@ final case class CompressorOptions(
   /** Data-flow analysis: track variable assignments. */
   reduceVars: Boolean = true,
   /** Join consecutive simple statements into sequences. Max count or boolean. */
-  sequencesLimit: Int = 200,
+  sequencesLimit: Int = 800,
   /** Drop pure expressions (no side effects). */
   sideEffects: Boolean = true,
   /** Optimize switch statements. */

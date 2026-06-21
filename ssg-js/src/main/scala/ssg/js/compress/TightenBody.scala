@@ -103,7 +103,7 @@ object TightenBody {
 
       val seqLimit = compressor.option("sequences") match {
         case false => 0
-        case true  => 200
+        case true  => 800
         case n: Int if n == 1 => 800
         case n: Int           => n
         case _ => 0
