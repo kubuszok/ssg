@@ -532,23 +532,70 @@ final class LiquidLexer(
     }
   }
 
-  /** Scans a comment block body until {% endcomment %} */
+  /** Skips an inline comment: `#` rest-of-line whitespace*, repeated.
+    *
+    * Faithfully ports LiquidLexer.g4:119/194:
+    * {{{
+    *   CommentInTag : ( '#' ( {!linebreakOrTagEndAhead()}? . )* [ \t\r\n]* )+ -> channel(HIDDEN);
+    * }}}
+    * Each continuation line after inter-line whitespace must begin with `#`; a non-`#` character raises a syntax error (the outer `+` cannot match, producing leftover tokens that break the parser's
+    * `empty_tag` rule).
+    */
   private def skipInlineComment(): Unit = boundary {
-    // Skip everything after # until we hit %} or -%}
-    while (pos < input.length()) {
-      val c = input.charAt(pos)
-      if (c == '%' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') {
-        break(()) // Don't consume %} — let the caller handle it
-      }
-      if (
-        c == '-' && pos + 1 < input.length() && input.charAt(pos + 1) == '%' &&
-        pos + 2 < input.length() && input.charAt(pos + 2) == '}'
-      ) {
-        break(()) // Don't consume -%}
-      }
+    // Outer loop: ( '#' ... )+  — each iteration handles one #-prefixed line
+    while (pos < input.length() && input.charAt(pos) == '#') {
+      // Consume the '#'
       advanceChar()
+
+      // Inner loop: ( {!linebreakOrTagEndAhead()}? . )*
+      // Consume chars while NOT at a linebreak and NOT at %} / -%}
+      while (pos < input.length() && !linebreakOrTagEndAhead())
+        advanceChar()
+
+      // Consume trailing whitespace [ \t\r\n]* (swallows linebreak + next-line indentation)
+      while (pos < input.length() && isWhitespace(input.charAt(pos)))
+        advanceChar()
+
+      // After whitespace: if at tag end (%} or -%}) or EOF, the comment is complete
+      if (pos >= input.length() || isTagEndAhead()) {
+        break(()) // Don't consume %} / -%} — let the caller handle it
+      }
+      // If next char is '#', the outer while-loop continues for the next line.
+      // If next char is anything else, fall through — the while condition fails,
+      // and we raise a syntax error below.
+    }
+
+    // Reached here only if a continuation line does not start with '#'
+    // (the while-condition `input.charAt(pos) == '#'` was false on a non-initial
+    // iteration, or on the first iteration if the caller mis-invoked us — though
+    // the caller guarantees '#' on entry). This mirrors the upstream behavior
+    // where the comment token ends mid-tag and the leftover characters break
+    // the parser's empty_tag rule, surfacing a syntax error.
+    if (pos < input.length() && !isTagEndAhead()) {
+      throw new LiquidException(
+        "Each line of an inline comment must start with '#'",
+        line,
+        col
+      )
     }
   }
+
+  /** Returns true when the next characters form a linebreak or a tag-end delimiter (`%}` or `-%}`). Ports `linebreakOrTagEndAhead()` from LiquidLexer.g4:69-73.
+    */
+  private def linebreakOrTagEndAhead(): Boolean =
+    pos < input.length() && {
+      val c = input.charAt(pos)
+      c == '\r' || c == '\n' || isTagEndAhead()
+    }
+
+  /** Returns true when the next characters are `%}` or `-%}`. */
+  private def isTagEndAhead(): Boolean =
+    pos < input.length() && {
+      val c = input.charAt(pos)
+      (c == '%' && pos + 1 < input.length() && input.charAt(pos + 1) == '}') ||
+      (c == '-' && pos + 1 < input.length() && input.charAt(pos + 1) == '%' &&
+        pos + 2 < input.length() && input.charAt(pos + 2) == '}')
+    }
 
   /** After a closing tag with -, strip trailing whitespace from next text. */
   private def handlePostTagStripping(): Unit = {
