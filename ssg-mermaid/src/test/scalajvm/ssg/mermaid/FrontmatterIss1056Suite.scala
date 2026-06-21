@@ -48,18 +48,15 @@ import munit.FunSuite
 
 final class FrontmatterIss1056Suite extends FunSuite {
 
-  /** Wall-clock budget for a single render. A correct render of any of these
-    * tiny diagrams completes in well under a second; this only fires if a
-    * render hangs (e.g. an infinite-loop regression).
+  /** Wall-clock budget for a single render. A correct render of any of these tiny diagrams completes in well under a second; this only fires if a render hangs (e.g. an infinite-loop regression).
     */
   private val TimeoutMs = 15000L
 
-  /** Renders `input` on a daemon thread with a join timeout so an infinite
-    * loop surfaces as a test failure instead of hanging the JVM runner.
-    * Returns the produced SVG, or fails the test on timeout / thrown error.
+  /** Renders `input` on a daemon thread with a join timeout so an infinite loop surfaces as a test failure instead of hanging the JVM runner. Returns the produced SVG, or fails the test on timeout /
+    * thrown error.
     */
   private def renderGuarded(input: String): String = {
-    @volatile var result: Option[String]    = None
+    @volatile var result:  Option[String]    = None
     @volatile var failure: Option[Throwable] = None
 
     val worker = new Thread(() =>
@@ -82,9 +79,7 @@ final class FrontmatterIss1056Suite extends FunSuite {
     result.getOrElse(fail("ISS-1056: Mermaid.render produced no result"))
   }
 
-  /** Standard frontmatter block, exactly the shape matched by upstream
-    * frontMatterRegex (regexes.ts) and stripped by extractFrontMatter
-    * (frontmatter.ts:24-60).
+  /** Standard frontmatter block, exactly the shape matched by upstream frontMatterRegex (regexes.ts) and stripped by extractFrontMatter (frontmatter.ts:24-60).
     */
   private val frontmatter = "---\ntitle: Test Title\n---\n"
 

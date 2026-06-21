@@ -13,14 +13,9 @@ import munit.FunSuite
 
 /** Reproduces the THROW half of ISS-1067.
   *
-  * Upstream mermaid's `sequenceDiagram.jison` grammar rejects any line that
-  * matches no production: the generated jison parser raises a parse error on
-  * unrecognized input. The SSG port instead falls through `parseStatement` to
-  * `skipToNewline` (SequenceParser.scala:197-198), silently dropping the line
-  * with no diagnostic — so typos and unsupported statements vanish without any
-  * signal. This differential suite proves the gap: valid input still parses,
-  * but a genuinely-invalid line (one upstream jison would also reject) is
-  * silently accepted today instead of raising a ParseException.
+  * Upstream mermaid's `sequenceDiagram.jison` grammar rejects any line that matches no production: the generated jison parser raises a parse error on unrecognized input. The SSG port instead falls
+  * through `parseStatement` to `skipToNewline` (SequenceParser.scala:197-198), silently dropping the line with no diagnostic — so typos and unsupported statements vanish without any signal. This
+  * differential suite proves the gap: valid input still parses, but a genuinely-invalid line (one upstream jison would also reject) is silently accepted today instead of raising a ParseException.
   */
 final class SequenceUnknownStmtIss1067Suite extends FunSuite {
 

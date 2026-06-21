@@ -27,9 +27,9 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
   // destructuring (output.js:341); ecma 5 does not. So the SAME source minified
   // with ecma=Some(2015) differs from the default (ecma 5).
   test("ecma: top-level ecma=2015 threads into output (shorthand destructuring)") {
-    val src     = "var {a, b} = obj;"
-    val ecma5   = Terser.minifyToString(src, noOpt)
-    val ecma6   = Terser.minifyToString(src, noOpt.copy(ecma = Some(2015)))
+    val src   = "var {a, b} = obj;"
+    val ecma5 = Terser.minifyToString(src, noOpt)
+    val ecma6 = Terser.minifyToString(src, noOpt.copy(ecma = Some(2015)))
     assertEquals(ecma5, "var{a:a,b:b}=obj;")
     assertEquals(ecma6, "var{a,b}=obj;")
     assertNotEquals(ecma5, ecma6)
@@ -190,7 +190,7 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
     assert(mappedFirst.isDefined, s"longName should be in cache: ${cache.vars.props}")
 
     // Second call: the same global keeps the same mangled name.
-    val out2 = Terser.minifyToString("longName(7);", opts)
+    val out2    = Terser.minifyToString("longName(7);", opts)
     val mangled = mappedFirst.get
     assert(out2.contains(mangled), s"second output '$out2' should reuse mangled name '$mangled'")
     assert(out1.contains(mangled), s"first output '$out1' should contain mangled name '$mangled'")

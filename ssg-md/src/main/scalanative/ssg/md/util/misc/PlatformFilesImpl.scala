@@ -24,4 +24,6 @@ object PlatformFilesImpl {
 
   def readAllBytes(path: String): Array[Byte] =
     Files.readAllBytes(new File(path).toPath)
+
+  def separatorChar: Char = File.separatorChar
 }

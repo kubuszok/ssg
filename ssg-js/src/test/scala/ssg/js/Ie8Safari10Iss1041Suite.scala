@@ -54,8 +54,8 @@ final class Ie8Safari10Iss1041Suite extends munit.FunSuite {
   test("output ie8 (output.js:1623): do-while inside an if-then gets braces under ie8") {
     // Oracle format:{ie8:true}  => "if(x){do{y()}while(z)}else w();"
     // Oracle format:{ie8:false} => "if(x)do{y()}while(z);else w();"
-    val src   = "if (x) do { y() } while (z); else w();"
-    val ie8On = out(src, OutputOptions(ie8 = true))
+    val src    = "if (x) do { y() } while (z); else w();"
+    val ie8On  = out(src, OutputOptions(ie8 = true))
     val ie8Off = out(src, OutputOptions(ie8 = false))
     assertEquals(ie8On, "if(x){do{y()}while(z)}else w();", s"ie8=true must brace the do-while then-body, got: $ie8On")
     assertEquals(ie8Off, "if(x)do{y()}while(z);else w();", s"ie8=false must not add braces, got: $ie8Off")
@@ -80,8 +80,8 @@ final class Ie8Safari10Iss1041Suite extends munit.FunSuite {
   test("output safari10 (output.js:1041): await inside void gets parens under safari10") {
     // Oracle format:{safari10:true, ecma:2017}  => "async function f(){return void(await g())}"
     // Oracle format:{safari10:false, ecma:2017} => "async function f(){return void await g()}"
-    val src   = "async function f(){ return void await g(); }"
-    val s10On = out(src, OutputOptions(safari10 = true, ecma = 2017))
+    val src    = "async function f(){ return void await g(); }"
+    val s10On  = out(src, OutputOptions(safari10 = true, ecma = 2017))
     val s10Off = out(src, OutputOptions(safari10 = false, ecma = 2017))
     assertEquals(s10On, "async function f(){return void(await g())}", s"safari10=true must parenthesize await under unary, got: $s10On")
     assertEquals(s10Off, "async function f(){return void await g()}", s"safari10=false must not add parens, got: $s10Off")

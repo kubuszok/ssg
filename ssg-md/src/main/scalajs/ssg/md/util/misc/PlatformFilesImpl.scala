@@ -20,7 +20,8 @@ import scala.scalajs.js.typedarray.{ Int8Array, Uint8Array }
 
 object PlatformFilesImpl {
 
-  private lazy val fs: js.Dynamic = js.Dynamic.global.require("fs")
+  private lazy val fs:       js.Dynamic = js.Dynamic.global.require("fs")
+  private lazy val nodePath: js.Dynamic = js.Dynamic.global.require("path")
 
   def isExistingFile(path: String): Boolean =
     try
@@ -57,4 +58,11 @@ object PlatformFilesImpl {
       case e: IOException => throw e
       case t: Throwable   => throw new IOException(t.getMessage)
     }
+
+  // java.io.File does not link on Scala.js; mirror File.separatorChar via Node's path.sep, which
+  // reflects the host OS ("/" on POSIX, "\\" on Windows) exactly like the JVM's File.separatorChar.
+  def separatorChar: Char = {
+    val sep = nodePath.sep.asInstanceOf[String]
+    if (sep.nonEmpty) sep.charAt(0) else '/'
+  }
 }

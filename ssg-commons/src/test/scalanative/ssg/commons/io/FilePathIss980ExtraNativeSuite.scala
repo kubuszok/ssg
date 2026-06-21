@@ -7,16 +7,12 @@ import java.nio.file.Paths
 
 /** ISS-980 (extra): Native FilePathPlatform operations beyond the red suite's coverage.
   *
-  * While fixing ISS-980 the Native impl
-  * (ssg-commons/src/main/scalanative/ssg/commons/io/FilePathPlatform.scala) was changed to delegate ALL operations to
-  * java.nio.file.Paths/Path, mirroring the JVM reference
-  * (ssg-commons/src/main/scalajvm/ssg/commons/io/FilePathPlatform.scala) operation-for-operation. This pins the
-  * operations the red suite (FilePathIss980NativeSuite) does not cover — `fileName`, `resolve(FilePath)`, and `of`'s
-  * rendering — to JVM parity, so they do not silently drift back to the previous hand-rolled string logic.
+  * While fixing ISS-980 the Native impl (ssg-commons/src/main/scalanative/ssg/commons/io/FilePathPlatform.scala) was changed to delegate ALL operations to java.nio.file.Paths/Path, mirroring the JVM
+  * reference (ssg-commons/src/main/scalajvm/ssg/commons/io/FilePathPlatform.scala) operation-for-operation. This pins the operations the red suite (FilePathIss980NativeSuite) does not cover —
+  * `fileName`, `resolve(FilePath)`, and `of`'s rendering — to JVM parity, so they do not silently drift back to the previous hand-rolled string logic.
   *
-  * Every expected value is the JVM-evaluated result of the same java.nio.file.Path expression (anti-cheat C11),
-  * computed here independently of the API under test via java.nio.file.Paths (available on Scala Native, as proven by
-  * FileOpsIss977NativeSuite).
+  * Every expected value is the JVM-evaluated result of the same java.nio.file.Path expression (anti-cheat C11), computed here independently of the API under test via java.nio.file.Paths (available on
+  * Scala Native, as proven by FileOpsIss977NativeSuite).
   */
 final class FilePathIss980ExtraNativeSuite extends munit.FunSuite {
 

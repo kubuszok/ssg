@@ -11,27 +11,18 @@ import ssg.sass.Nullable
 
 import scala.language.implicitConversions
 
-/** Differential red test for the `loadPaths =` half of ISS-991
-  * ([R0610-P1] api-noop, Compile.compileString).
+/** Differential red test for the `loadPaths =` half of ISS-991 ([R0610-P1] api-noop, Compile.compileString).
   *
-  * Upstream consumption in dart-sass (vendored at original-src/dart-sass):
-  * lib/sass.dart:219 (compileStringToResult param) -> lib/sass.dart:236-239
-  * (`importCache: ImportCache(importers: importers, ..., loadPaths:
-  * loadPaths)`) -> lib/src/import_cache.dart:100-103
-  * (`_importers = _toImporters(importers, loadPaths, packageConfig)`) ->
-  * import_cache.dart:128-129: `for (var path in loadPaths)
-  * FilesystemImporter(path)` — each load path becomes a filesystem importer
-  * consulted for `@use`/`@import` resolution (sass.dart:163-164: "this is a
-  * shorthand for adding [FilesystemImporter]s to [importers]").
+  * Upstream consumption in dart-sass (vendored at original-src/dart-sass): lib/sass.dart:219 (compileStringToResult param) -> lib/sass.dart:236-239 (`importCache: ImportCache(importers: importers,
+  * ..., loadPaths: loadPaths)`) -> lib/src/import_cache.dart:100-103 (`_importers = _toImporters(importers, loadPaths, packageConfig)`) -> import_cache.dart:128-129: `for (var path in loadPaths)
+  * FilesystemImporter(path)` — each load path becomes a filesystem importer consulted for `@use`/`@import` resolution (sass.dart:163-164: "this is a shorthand for adding [FilesystemImporter]s to
+  * [importers]").
   *
-  * The port drops `loadPaths` in Compile.compileString, and even the
-  * ImportCache route is inert: ImportCache.toImporters defaults
-  * `loadPathImporter = _ => Importer.noOp` (ImportCache.scala:446), so load
-  * paths never resolve anything.
+  * The port drops `loadPaths` in Compile.compileString, and even the ImportCache route is inert: ImportCache.toImporters defaults `loadPathImporter = _ => Importer.noOp` (ImportCache.scala:446), so
+  * load paths never resolve anything.
   *
-  * This suite is JVM-scoped because load-path semantics ARE filesystem
-  * semantics: the dart-sass reference maps each path to a FilesystemImporter,
-  * and the port's FilesystemImporter lives in src/main/scalajvm.
+  * This suite is JVM-scoped because load-path semantics ARE filesystem semantics: the dart-sass reference maps each path to a FilesystemImporter, and the port's FilesystemImporter lives in
+  * src/main/scalajvm.
   */
 final class CompileLoadPathsIss991JvmSuite extends munit.FunSuite {
 

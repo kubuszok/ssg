@@ -35,7 +35,7 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
 
   // A link resolver that marks any file:/ url as VALID (mirrors the CustomLinkResolverSample
   // DocxLinkResolver branch `url.startsWith("file:/")` -> withStatus(VALID).withUrl(url)).
-  private final class FileLinkResolver extends LinkResolver {
+  final private class FileLinkResolver extends LinkResolver {
     override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink = {
       val url = link.url
       if (url.startsWith("file:/")) link.withStatus(LinkStatus.VALID).withUrl(url)
@@ -43,7 +43,7 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
     }
   }
 
-  private final class FileLinkResolverFactory extends LinkResolverFactory {
+  final private class FileLinkResolverFactory extends LinkResolverFactory {
     override def afterDependents:                          Nullable[Set[Class[?]]] = Nullable.empty
     override def beforeDependents:                         Nullable[Set[Class[?]]] = Nullable.empty
     override def affectsGlobalScope:                       Boolean                 = false

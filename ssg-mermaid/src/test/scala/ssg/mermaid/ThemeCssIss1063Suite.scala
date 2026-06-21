@@ -19,7 +19,7 @@ final class ThemeCssIss1063Suite extends FunSuite {
 
   private val customCss = ".iss1063-marker{fill:red}"
 
-  private val configWithThemeCss = MermaidConfig(themeCSS = customCss)
+  private val configWithThemeCss    = MermaidConfig(themeCSS = customCss)
   private val configWithoutThemeCss = MermaidConfig()
 
   // ── Pie ─────────────────────────────────────────────────────────────────────

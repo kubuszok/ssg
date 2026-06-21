@@ -15,23 +15,35 @@ final class CompressFixtureSuite extends munit.FunSuite {
 
   override val munitTimeout = scala.concurrent.duration.Duration(60, "s")
 
-  // Fixture files relative to the original-src location
-  private val fixtureDir = {
-    val candidates = Seq(
-      java.nio.file.Paths.get(System.getProperty("user.dir"), "original-src/terser/test/compress"),
-      java.nio.file.Paths.get(System.getProperty("user.dir"), "../original-src/terser/test/compress"),
-      java.nio.file.Paths.get("/Users/dev/Workspaces/GitHub/ssg/original-src/terser/test/compress")
-    )
-    candidates
-      .find(java.nio.file.Files.isDirectory(_))
-      .getOrElse(
-        throw new RuntimeException("Cannot find Terser test/compress directory")
-      )
+  // Fixture files live in the original-src/terser git submodule. sbt 2.0 forks tests with a per-project
+  // working directory (under <repo>/.sbt/matrix/...), so a user.dir-relative lookup no longer finds the
+  // repo-root submodule; search user.dir and its ancestors for original-src/terser/test/compress. When the
+  // submodule is not checked out (e.g. CI with submodules:false), fixtureDir is None and every test below
+  // assumes() it, cancelling rather than failing — these fixtures require the external submodule.
+  private val fixtureRel = java.nio.file.Paths.get("original-src", "terser", "test", "compress")
+
+  private val fixtureDir: Option[java.nio.file.Path] = {
+    @scala.annotation.tailrec
+    def search(dir: java.nio.file.Path): Option[java.nio.file.Path] =
+      if (dir == null) None
+      else {
+        val candidate = dir.resolve(fixtureRel)
+        if (java.nio.file.Files.isDirectory(candidate)) Some(candidate)
+        else search(dir.getParent)
+      }
+    val start = java.nio.file.Paths.get(System.getProperty("user.dir")).toAbsolutePath
+    search(start)
   }
+
+  private def requireFixtures(): java.nio.file.Path =
+    fixtureDir.getOrElse {
+      assume(false, "original-src/terser submodule not checked out — skipping Terser fixture tests")
+      throw new IllegalStateException("unreachable")
+    }
 
   /** Load and parse a fixture file. */
   private def loadFixtures(filename: String): Seq[CompressFixture] = {
-    val path = fixtureDir.resolve(filename)
+    val path = requireFixtures().resolve(filename)
     if (!java.nio.file.Files.exists(path)) return Seq.empty // @nowarn
     val content = new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
     FixtureParser.parse(content)

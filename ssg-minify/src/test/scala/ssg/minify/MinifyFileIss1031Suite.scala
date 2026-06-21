@@ -2,13 +2,10 @@
 package ssg
 package minify
 
-/** Unit tests for `Minifier.minifyFile` covering exclude globs, `.min` passthrough, and
-  * per-extension dispatch — ISS-1031.
+/** Unit tests for `Minifier.minifyFile` covering exclude globs, `.min` passthrough, and per-extension dispatch — ISS-1031.
   *
-  * Each test cites the original Ruby line numbers from `original-src/jekyll-minifier/lib/jekyll-minifier.rb`
-  * (upstream-commit 5422b3570321668b419ec8271391a029f385c390). Does NOT duplicate ISS-1026/ISS-1027
-  * tests in `MinifyFileIss1026Iss1027Suite`; this suite exercises the GENERAL exclude, passthrough, and
-  * dispatch behavior.
+  * Each test cites the original Ruby line numbers from `original-src/jekyll-minifier/lib/jekyll-minifier.rb` (upstream-commit 5422b3570321668b419ec8271391a029f385c390). Does NOT duplicate
+  * ISS-1026/ISS-1027 tests in `MinifyFileIss1026Iss1027Suite`; this suite exercises the GENERAL exclude, passthrough, and dispatch behavior.
   */
 final class MinifyFileIss1031Suite extends munit.FunSuite {
 
@@ -256,7 +253,7 @@ final class MinifyFileIss1031Suite extends munit.FunSuite {
 
   test("custom JsCompressor is used for .js dispatch via minifyFile") {
     var called = false
-    val spy = new JsCompressor {
+    val spy    = new JsCompressor {
       override def compress(input: String): String = {
         called = true
         "CUSTOM:" + input
@@ -269,15 +266,15 @@ final class MinifyFileIss1031Suite extends munit.FunSuite {
 
   test("custom JsCompressor is used for .html dispatch (inline JS) via minifyFile") {
     var called = false
-    val spy = new JsCompressor {
+    val spy    = new JsCompressor {
       override def compress(input: String): String = {
         called = true
         input // passthrough
       }
     }
     // HTML with a <script> tag — the HtmlMinifier will invoke the jsCompressor on inline JS.
-    val input  = "<script>var x = 1; // inline</script>"
-    val _      = Minifier.minifyFile(input, "page.html", jsCompressor = spy)
+    val input = "<script>var x = 1; // inline</script>"
+    val _     = Minifier.minifyFile(input, "page.html", jsCompressor = spy)
     assert(called, "custom JsCompressor must be invoked for inline JS in HTML files")
   }
 }

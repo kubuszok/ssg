@@ -21,7 +21,7 @@
  */
 package ssg
 
-import ssg.minify.{ FileType, MinifyOptions, Minifier }
+import ssg.minify.{ FileType, Minifier, MinifyOptions }
 import ssg.minify.html.{ HtmlMinifier, HtmlMinifyOptions }
 
 class JsCompressorOptionsIss1029Suite extends munit.FunSuite {
@@ -74,7 +74,7 @@ class JsCompressorOptionsIss1029Suite extends munit.FunSuite {
     s"<html><head><script>$js</script></head><body></body></html>"
 
   test("inline <script>: mangle option flows through HtmlMinifier.minify") {
-    val outOn = HtmlMinifier.minify(html, htmlOpts, TerserJsCompressorAdapter, Some(mangleOn))
+    val outOn  = HtmlMinifier.minify(html, htmlOpts, TerserJsCompressorAdapter, Some(mangleOn))
     val outOff = HtmlMinifier.minify(html, htmlOpts, TerserJsCompressorAdapter, Some(mangleOff))
 
     assert(outOff.contains("firstNumber"), s"expected unmangled inline JS, got: $outOff")
@@ -83,7 +83,7 @@ class JsCompressorOptionsIss1029Suite extends munit.FunSuite {
   }
 
   test("inline <script>: option flows through Minifier.minifyHtml") {
-    val optsOn = MinifyOptions(html = htmlOpts, jsCompressorOpts = Some(mangleOn))
+    val optsOn  = MinifyOptions(html = htmlOpts, jsCompressorOpts = Some(mangleOn))
     val optsOff = MinifyOptions(html = htmlOpts, jsCompressorOpts = Some(mangleOff))
 
     val outOn  = Minifier.minifyHtml(html, optsOn, TerserJsCompressorAdapter)

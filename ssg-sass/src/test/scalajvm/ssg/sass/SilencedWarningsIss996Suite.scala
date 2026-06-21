@@ -9,8 +9,8 @@ import scala.language.implicitConversions
 
 /** Differential RED test for ISS-996 ([R0610-P1] bug: silenced deprecations still leak into `CompileResult.warnings`).
   *
-  * `EvaluateVisitor.warn` (EvaluateVisitor.scala:189) and `_warnWithSpan` (EvaluateVisitor.scala:2401) append the deprecation message to the `_warnings` buffer UNCONDITIONALLY, then separately
-  * call `_logger.warnForDeprecation(...)`. The `DeprecationProcessingLogger` (Logger.scala:265) correctly returns early — suppressing logging — for deprecations in its `silenceDeprecations` set, but
+  * `EvaluateVisitor.warn` (EvaluateVisitor.scala:189) and `_warnWithSpan` (EvaluateVisitor.scala:2401) append the deprecation message to the `_warnings` buffer UNCONDITIONALLY, then separately call
+  * `_logger.warnForDeprecation(...)`. The `DeprecationProcessingLogger` (Logger.scala:265) correctly returns early — suppressing logging — for deprecations in its `silenceDeprecations` set, but
   * `_warnings` is appended regardless. So a silenced deprecation still surfaces on `EvaluateResult.warnings` and thence on `CompileResult.warnings` (Compile.scala:201-205).
   *
   * Oracle — dart-sass (vendored at original-src/dart-sass):

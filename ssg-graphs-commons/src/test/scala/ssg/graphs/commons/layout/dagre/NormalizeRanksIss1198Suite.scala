@@ -94,7 +94,10 @@ final class NormalizeRanksIss1198Suite extends FunSuite {
 
     // Symptom 2: no two distinct real nodes sharing a y band overlap horizontally.
     // rankdir TB => same rank ~ same y. Compare every pair sharing a y band.
-    for (i <- nodes.indices; j <- (i + 1) until nodes.length) {
+    for {
+      i <- nodes.indices
+      j <- (i + 1) until nodes.length
+    } {
       val a  = g.node(nodes(i))
       val b  = g.node(nodes(j))
       val dy = math.abs(a.y - b.y)

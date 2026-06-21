@@ -33,7 +33,7 @@ import ssg.md.util.ast.Node
 import ssg.md.util.dependency.LastDependent
 import ssg.md.util.misc.PlatformFiles
 
-import java.io.{ File, IOException }
+import java.io.IOException
 
 import scala.util.boundary
 import scala.util.boundary.break
@@ -51,7 +51,7 @@ class FileUriContentResolver(context: LinkResolverBasicContext) extends UriConte
           // handle Windows and OSX/Unix URI
           val substring =
             if (url.startsWith("file://")) url.substring("file://".length)
-            else if (File.separatorChar == '\\') url.substring("file:/".length)
+            else if (PlatformFiles.separatorChar == '\\') url.substring("file:/".length)
             else url.substring("file:".length)
           if (PlatformFiles.isExistingFile(substring)) {
             // need to read and parse the file

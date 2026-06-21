@@ -8,32 +8,28 @@ import java.nio.file.Files
 
 /** ISS-977: Native FileOps unimplemented.
   *
-  * Every operation in ssg-commons/src/main/scalanative/ssg/commons/io/FileOpsPlatform.scala throws unconditionally
-  * (lines 15-16), even though java.nio.file.Files works on Scala Native (this suite itself uses
-  * Files.createTempDirectory for setup, proving it).
+  * Every operation in ssg-commons/src/main/scalanative/ssg/commons/io/FileOpsPlatform.scala throws unconditionally (lines 15-16), even though java.nio.file.Files works on Scala Native (this suite
+  * itself uses Files.createTempDirectory for setup, proving it).
   *
-  * Expected semantics are defined by the JVM reference implementation
-  * ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala, which delegates to java.nio.file.Files. Each
-  * test below cites the JVM file:line that backs its expected behavior (anti-cheat C11).
+  * Expected semantics are defined by the JVM reference implementation ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala, which delegates to java.nio.file.Files. Each test below cites
+  * the JVM file:line that backs its expected behavior (anti-cheat C11).
   *
-  * Red until ISS-977 is fixed: each test currently fails with the exception thrown by the current Native
-  * FileOpsPlatform.
+  * Red until ISS-977 is fixed: each test currently fails with the exception thrown by the current Native FileOpsPlatform.
   */
 final class FileOpsIss977NativeSuite extends munit.FunSuite {
 
   /** Creates a fresh temp directory, runs the body, and attempts to clean up the listed files afterwards. */
   private def withTempDir[A](body: java.nio.file.Path => A): A = {
     val dir = Files.createTempDirectory("iss977")
-    try {
+    try
       body(dir)
-    } finally {
+    finally {
       // Attempted cleanup of anything the test created directly under the temp dir.
       val entries = Files.list(dir)
-      try {
+      try
         entries.forEach(p => Files.deleteIfExists(p): Unit)
-      } finally {
+      finally
         entries.close()
-      }
       Files.deleteIfExists(dir): Unit
     }
   }

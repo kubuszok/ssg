@@ -116,11 +116,14 @@ final class KeepFnamesRegexIss1040Suite extends munit.FunSuite {
 
   // Verify the Regex arm in DropUnused.keepName is actually reachable via compressor.option()
   test("ISS-1040: CompressorOptions.get returns Regex (not Boolean) when set") {
-    val opts = CompressorOptions(keepFnames = "^keep".r, keepClassnames = "^Keep".r)
-    val fnamesOpt = opts.get("keep_fnames")
+    val opts          = CompressorOptions(keepFnames = "^keep".r, keepClassnames = "^Keep".r)
+    val fnamesOpt     = opts.get("keep_fnames")
     val classnamesOpt = opts.get("keep_classnames")
 
     assert(fnamesOpt.isInstanceOf[scala.util.matching.Regex], s"get(keep_fnames) must return Regex, got: ${fnamesOpt.getClass}")
-    assert(classnamesOpt.isInstanceOf[scala.util.matching.Regex], s"get(keep_classnames) must return Regex, got: ${classnamesOpt.getClass}")
+    assert(
+      classnamesOpt.isInstanceOf[scala.util.matching.Regex],
+      s"get(keep_classnames) must return Regex, got: ${classnamesOpt.getClass}"
+    )
   }
 }

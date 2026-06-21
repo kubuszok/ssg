@@ -33,10 +33,9 @@ final class A11yIss1060Suite extends FunSuite {
   private val accTitleText = "My Accessible Title"
   private val accDescrText = "My accessible description text"
 
-  /** Each case: human name, the diagramType id mermaid emits as aria-roledescription,
-    * the diagram body WITHOUT a11y lines, and the same body WITH the two a11y lines spliced in.
+  /** Each case: human name, the diagramType id mermaid emits as aria-roledescription, the diagram body WITHOUT a11y lines, and the same body WITH the two a11y lines spliced in.
     */
-  private final case class Case(
+  final private case class Case(
     name:        String,
     diagramType: String,
     without:     String,

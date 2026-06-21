@@ -5,18 +5,15 @@ package io
 
 /** ISS-1127 [R0610-P1]: extra JS FilePath parity cases beyond the red suite (FilePathIss1127JsSuite).
   *
-  * The ISS-1127 fix delegates the JS FilePathPlatform to Node's `path.posix` + `process.cwd()`. Node's `path`
-  * differs from java.nio.file.Path in two ways the red suite does not pin, which the fix maps deliberately; this
-  * suite locks those mappings to JVM-evaluated values (anti-cheat C11) so a future revert of the mapping is caught:
+  * The ISS-1127 fix delegates the JS FilePathPlatform to Node's `path.posix` + `process.cwd()`. Node's `path` differs from java.nio.file.Path in two ways the red suite does not pin, which the fix
+  * maps deliberately; this suite locks those mappings to JVM-evaluated values (anti-cheat C11) so a future revert of the mapping is caught:
   *
-  *   1. `path.normalize` returns "." for a path that reduces to nothing (".", "a/..", "", "./.") whereas
-  *      java.nio.file.Path.normalize returns the empty string "". The fix maps "." -> "".
-  *   2. `of` (= java.nio.file.Paths.get(path).toString) collapses duplicate separators and strips a trailing
-  *      separator but does NOT resolve "." / ".." segments — Paths.get("a/../b").toString == "a/../b". The fix uses a
-  *      separator-collapse render, not path.normalize (which WOULD resolve them).
+  *   1. `path.normalize` returns "." for a path that reduces to nothing (".", "a/..", "", "./.") whereas java.nio.file.Path.normalize returns the empty string "". The fix maps "." -> "".
+  *   2. `of` (= java.nio.file.Paths.get(path).toString) collapses duplicate separators and strips a trailing separator but does NOT resolve "." / ".." segments — Paths.get("a/../b").toString ==
+  *      "a/../b". The fix uses a separator-collapse render, not path.normalize (which WOULD resolve them).
   *
-  * Every expected value below was produced by evaluating the same expression with java.nio.file.Paths on the JVM
-  * (Scala 3.8.3, JVM 25), matching the JVM reference impl scalajvm/ssg/commons/io/FilePathPlatform.scala.
+  * Every expected value below was produced by evaluating the same expression with java.nio.file.Paths on the JVM (Scala 3.8.3, JVM 25), matching the JVM reference impl
+  * scalajvm/ssg/commons/io/FilePathPlatform.scala.
   */
 final class FilePathIss1127ExtraJsSuite extends munit.FunSuite {
 

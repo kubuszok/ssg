@@ -49,8 +49,8 @@ import scala.util.matching.Regex
   * @param displayMode
   *   custom display mode (currently used for compact mode in gantt charts)
   * @param config
-  *   raw configuration object extracted from the frontmatter. Application of this config is owned by ISS-1057 (the init-directive/config-application issue); the value is captured faithfully here
-  *   as the parsed untyped [[ssg.data.DataView]] so that ISS-1057 can consume it without re-parsing.
+  *   raw configuration object extracted from the frontmatter. Application of this config is owned by ISS-1057 (the init-directive/config-application issue); the value is captured faithfully here as
+  *   the parsed untyped [[ssg.data.DataView]] so that ISS-1057 can consume it without re-parsing.
   */
 final case class FrontMatterMetadata(
   title:       Nullable[String] = Nullable.empty,
