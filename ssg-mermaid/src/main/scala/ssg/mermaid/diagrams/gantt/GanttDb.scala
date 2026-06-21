@@ -441,30 +441,80 @@ final class GanttDb {
       None
     }
 
+  /** Converts a dayjs date-format string (gantt `dateFormat`) to a java.time DateTimeFormatter pattern. dayjs `Y`(year)/`D`(day-of-month) map to java.time `y`/`d` (java.time `Y`/`D` mean week-year /
+    * day-of-year); `M`/`H`/`h`/`m`/`s` coincide; dayjs `[literal]` -> java.time `'literal'`.
+    */
+  private def dayjsToJavaTimePattern(dayjsFormat: String): String = {
+    val out       = new StringBuilder
+    var inLiteral = false // true while inside a dayjs `[...]` literal block
+    for (ch <- dayjsFormat)
+      if (inLiteral) {
+        if (ch == ']') {
+          // close the java.time literal block opened on `[`
+          out.append('\'')
+          inLiteral = false
+        } else {
+          out.append(ch)
+        }
+      } else {
+        ch match {
+          case '[' =>
+            // open a java.time literal block in place of the dayjs `[`
+            out.append('\'')
+            inLiteral = true
+          case 'Y' => out.append('y') // dayjs year -> java.time year (java.time `Y` is week-year)
+          case 'D' => out.append('d') // dayjs day-of-month -> java.time day-of-month (java.time `D` is day-of-year)
+          case _   => out.append(ch) // M/H/h/m/s and separators pass through unchanged
+        }
+      }
+    if (inLiteral) {
+      // tolerate an unterminated `[...]` block by closing the literal
+      out.append('\'')
+    }
+    out.toString
+  }
+
   /** Parses a date string using the configured date format. */
   private def parseDateString(str: String): Option[LocalDate] = {
     val trimmed = str.trim
     if (trimmed.isEmpty) {
       None
     } else {
+      // Primary: the configured `dateFormat` (dayjs-style), converted to a
+      // java.time pattern, matching upstream ganttDb.js:292
+      // `dayjs(str, dateFormat.trim(), true)`. Lenient fallbacks follow,
+      // mirroring upstream's `new Date(str)` fallback (ganttDb.js:298).
+      val primaryFormat =
+        try
+          Some(dayjsToJavaTimePattern(dateFormat.trim))
+        catch {
+          // a malformed/exotic dayjs format yields an invalid java.time
+          // pattern; skip it and fall through to the hardcoded fallbacks.
+          case _: IllegalArgumentException => Option.empty[String]
+        }
+
       // Try common formats
-      val formats = Array(
-        "yyyy-MM-dd",
-        "yyyy/MM/dd",
-        "MM-dd-yyyy",
-        "dd-MM-yyyy"
-      )
+      val formats =
+        primaryFormat.toArray ++ Array(
+          "yyyy-MM-dd",
+          "yyyy/MM/dd",
+          "MM-dd-yyyy",
+          "dd-MM-yyyy"
+        )
 
       boundary[Option[LocalDate]] {
         for (fmt <- formats) {
           // Parse outside the boundary `break` so the break's control
           // exception is never swallowed by the catch clause; only the
           // date-parse failure is caught so the next format is tried.
+          // A malformed pattern (`ofPattern`) is also tolerated so an
+          // exotic configured format never crashes parsing.
           val parsed =
             try
               Some(LocalDate.parse(trimmed, DateTimeFormatter.ofPattern(fmt)))
             catch {
               case _: java.time.format.DateTimeParseException => Option.empty[LocalDate]
+              case _: IllegalArgumentException                => Option.empty[LocalDate]
             }
           parsed.foreach(date => break(Some(date)))
         }
