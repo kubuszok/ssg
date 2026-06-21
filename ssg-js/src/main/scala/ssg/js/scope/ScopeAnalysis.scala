@@ -542,7 +542,7 @@ private[scope] class ScopeContext(
       val outerDef = findVariable(scope, sym.name)
       if (outerDef != null && (sym.thedef.asInstanceOf[AnyRef] ne outerDef.asInstanceOf[AnyRef])) {
         sym.thedef = outerDef
-        outerDef.references.addOne(sym.asInstanceOf[AstSymbolRef])
+        outerDef.references.addOne(sym)
         markEnclosed(sym)
       }
     }
