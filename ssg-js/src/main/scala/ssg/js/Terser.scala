@@ -300,6 +300,47 @@ object Terser {
     val effectiveOutputSourceMap: ssg.js.sourcemap.SourceMap | Null =
       if (minifySourceMap != null) minifySourceMap else outputOptions.sourceMap
 
+    // The resolved mangler options for the active mangle phase, or `null` when
+    // mangling is disabled. minify.js:161-174 normalizes Boolean `true` to the
+    // default mangler options. nameCache (minify.js:162-163,184-186) is woven in
+    // here: the cache fields are pointed at the NameCache's live ManglerCache
+    // objects BEFORE figure_out_scope/mangle_names so they accumulate. Resolved
+    // before the compress phase because the reserve_quoted_keys step
+    // (minify.js:239-241) runs ahead of compress.
+    val resolvedMangle: ManglerOptions | Null =
+      options.mangle match {
+        case mangleOpts: ManglerOptions => applyMangleShorthand(mangleOpts, topEcma, options.toplevel, options.nameCache)
+        case true  => applyMangleShorthand(ManglerOptions(), topEcma, options.toplevel, options.nameCache)
+        case false => null
+      }
+
+    // The resolved property-mangler options, woven with the nameCache property
+    // cache (minify.js:184-186) and normalized per minify.js:175-178. Resolved
+    // once here so the `reserved` set populated by reserve_quoted_keys
+    // (minify.js:239-241) is the same set later read by mangle_properties.
+    val resolvedPropOptions: PropManglerOptions | Null =
+      resolvedMangle match {
+        case m: ManglerOptions =>
+          ManglerOptions.resolveProperties(m.properties) match {
+            case po: PropManglerOptions => applyPropertyCache(po, options.nameCache)
+            case null => null
+          }
+        case null => null
+      }
+
+    // minify.js:175-183,239-241 — quoted-key reservation. When `keep_quoted` is
+    // set (and not "strict"), minify.js points `quoted_props` at
+    // `options.mangle.properties.reserved` (the same array later read by
+    // mangle_properties) and calls `reserve_quoted_keys(toplevel, quoted_props)`
+    // BEFORE the compress phase. Running ahead of compress is essential: quoted
+    // keys that appear only inside dead code (e.g. `({ "keep": 1 })`) must be
+    // reserved before dead-code elimination removes them, so an unquoted key is
+    // never mangled into the reserved name. `resolvedPropOptions.reserved` is the
+    // shared mutable set threaded into mangleProperties below.
+    if (resolvedPropOptions != null && resolvedPropOptions.nn.keepQuoted) {
+      PropMangler.reserveQuotedKeys(ast, resolvedPropOptions.nn.reserved)
+    }
+
     // -- Compress phase (minify.js:260-266) --
     // Upstream minify.js:262 runs the Compressor when `options.compress` is truthy.
     // utils/index.js:66-68 normalizes the Boolean `true` to the default options object
@@ -338,18 +379,6 @@ object Terser {
     def scopeOptionsFor(m: ManglerOptions): ScopeOptions =
       ScopeOptions(cache = m.cache, ie8 = m.ie8, safari10 = m.safari10, module = m.module)
 
-    // The resolved mangler options for the active mangle phase, or `null` when
-    // mangling is disabled. minify.js:161-174 normalizes Boolean `true` to the
-    // default mangler options. nameCache (minify.js:162-163,184-186) is woven in
-    // here: the cache fields are pointed at the NameCache's live ManglerCache
-    // objects BEFORE figure_out_scope/mangle_names so they accumulate.
-    val resolvedMangle: ManglerOptions | Null =
-      options.mangle match {
-        case mangleOpts: ManglerOptions => applyMangleShorthand(mangleOpts, topEcma, options.toplevel, options.nameCache)
-        case true  => applyMangleShorthand(ManglerOptions(), topEcma, options.toplevel, options.nameCache)
-        case false => null
-      }
-
     if (resolvedMangle != null) {
       val m = resolvedMangle.nn
       ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(m))
@@ -366,14 +395,11 @@ object Terser {
     // Runs AFTER mangle_names (minify.js:274). minify.js:175-178 normalizes a truthy
     // non-object `properties` to `{}` (ManglerOptions.resolveProperties). The property
     // cache (minify.js:184-186) is woven into the resolved PropManglerOptions.
-    if (resolvedMangle != null) {
-      ManglerOptions.resolveProperties(resolvedMangle.nn.properties) match {
-        case propOpts: PropManglerOptions =>
-          val po = applyPropertyCache(propOpts, options.nameCache)
-          ast = PropMangler.mangleProperties(ast, po)
-        case null =>
-        // property mangling disabled
-      }
+    if (resolvedPropOptions != null) {
+      // `resolvedPropOptions` already carries the nameCache property cache and the
+      // reserved set populated by reserveQuotedKeys above (minify.js:239-241), so
+      // quoted keys reserved ahead of compress remain reserved here.
+      ast = PropMangler.mangleProperties(ast, resolvedPropOptions.nn)
     }
 
     // -- wrap / enclose (minify.js:246-251; ast.js:648-675) --
