@@ -37,7 +37,11 @@ final case class ParserOptions(
   html5Comments: Boolean = true,
   module:        Boolean = false,
   shebang:       Boolean = true,
-  strict:        Boolean = false
+  strict:        Boolean = false,
+  // An existing toplevel to continue parsing into (terser parse.js:1151 `toplevel : null`);
+  // the basis of multi-file input. When non-null, parseToplevel appends statements to it
+  // instead of creating a fresh node. The `| Null` default matches the module's null convention.
+  toplevel: AstToplevel | Null = null
 )
 
 object ParserOptions {
@@ -3180,11 +3184,21 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
     while (!is(Token.Eof))
       body.addOne(statement())
     input.popDirectivesStack()
-    val endTok   = prevTok
-    val toplevel = new AstToplevel
-    toplevel.start = start
-    toplevel.body = body
-    toplevel.end = endTok
-    toplevel
+    val endTok = prevTok
+    // terser parse.js:3601-3611: if an existing toplevel was supplied, append the new
+    // statements to its body and advance its end (start stays the existing toplevel's
+    // original start), returning that same instance; otherwise build a fresh toplevel.
+    if (options.toplevel != null) {
+      val toplevel = options.toplevel.nn
+      toplevel.body = toplevel.body ++ body
+      toplevel.end = endTok
+      toplevel
+    } else {
+      val toplevel = new AstToplevel
+      toplevel.start = start
+      toplevel.body = body
+      toplevel.end = endTok
+      toplevel
+    }
   }
 }
