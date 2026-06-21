@@ -12,7 +12,7 @@
  * Migration notes:
  *   Renames: makePredicate → Set[String], characters() → string.toSet
  *   Convention: Scala 3 vals, Set/Map instead of JS predicate functions
- *   Idiom: Character.isLetter / Character.getType for Unicode categories
+ *   Idiom: UnicodeIdentifierTables (vendored terser ID_Start/ID_Continue, ISS-1194)
  *
  * Covenant: full-port
  * Covenant-js-reference: lib/parse.js
@@ -301,18 +301,9 @@ object Token {
       isIdentifierStartCodePoint(cp)
     }
 
+  // parse.js:327-329: is_identifier_start tests against UNICODE.ID_Start (parse.js:267)
   def isIdentifierStartCodePoint(cp: Int): Boolean =
-    if (cp == '$' || cp == '_' || cp == '\\') {
-      true
-    } else {
-      val ct = Character.getType(cp)
-      ct == Character.UPPERCASE_LETTER ||
-      ct == Character.LOWERCASE_LETTER ||
-      ct == Character.TITLECASE_LETTER ||
-      ct == Character.MODIFIER_LETTER ||
-      ct == Character.OTHER_LETTER ||
-      ct == Character.LETTER_NUMBER
-    }
+    UnicodeIdentifierTables.contains(UnicodeIdentifierTables.idStart, cp)
 
   /** Tests whether a code point can continue a JavaScript identifier (Unicode ID_Continue or $ or \u200c/\u200d). */
   def isIdentifierChar(ch: String): Boolean =
@@ -323,22 +314,9 @@ object Token {
       isIdentifierCharCodePoint(cp)
     }
 
+  // parse.js:331-333: is_identifier_char tests against UNICODE.ID_Continue (parse.js:268)
   def isIdentifierCharCodePoint(cp: Int): Boolean =
-    if (cp == '$' || cp == '_' || cp == '\\' || cp == 0x200c || cp == 0x200d) {
-      true
-    } else {
-      val ct = Character.getType(cp)
-      ct == Character.UPPERCASE_LETTER ||
-      ct == Character.LOWERCASE_LETTER ||
-      ct == Character.TITLECASE_LETTER ||
-      ct == Character.MODIFIER_LETTER ||
-      ct == Character.OTHER_LETTER ||
-      ct == Character.LETTER_NUMBER ||
-      ct == Character.NON_SPACING_MARK ||
-      ct == Character.COMBINING_SPACING_MARK ||
-      ct == Character.DECIMAL_DIGIT_NUMBER ||
-      ct == Character.CONNECTOR_PUNCTUATION
-    }
+    UnicodeIdentifierTables.contains(UnicodeIdentifierTables.idContinue, cp)
 
   /** Check if a string is a valid basic identifier (ASCII letters, digits, _, $). */
   private val basicIdentPattern = "^[a-zA-Z_$][a-zA-Z0-9_$]*$".r
