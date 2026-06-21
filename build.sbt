@@ -64,7 +64,18 @@ val commonSettings = Seq(
     // Enable native access for the Foreign Function & Memory API (JEP 454),
     // used by NativeMathPlatform to call the native C pow() for exact
     // floating-point parity with dart-sass / JavaScript Math.pow.
-    javaOptions += "--enable-native-access=ALL-UNNAMED"
+    javaOptions += "--enable-native-access=ALL-UNNAMED",
+    // scoverage's runtime Invoker (forked test JVM) appends measurement files to
+    // crossTarget/scoverage-data, but under sbt-2.0's target/out layout scoverage
+    // does not create that dir at instrumentation time, so the first write throws
+    // FileNotFoundException mid-test (only when `coverage` is on, i.e. ci-jvm-3).
+    // Pre-create it before the test tasks (a no-op empty dir when coverage is off).
+    // Handoff recipe: "scoverage Test/compile dir pre-create" → Def.uncached.
+    // Only testFull needs it: coverage runs via ci-jvm-3 → testFull (sbt-2.0's
+    // bare `test` is an InputTask and is not used by CI).
+    Test / testFull := (Test / testFull).dependsOn(Def.uncached(Def.task {
+      IO.createDirectory(crossTarget.value / "scoverage-data")
+    })).value
   )),
   MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
     scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
