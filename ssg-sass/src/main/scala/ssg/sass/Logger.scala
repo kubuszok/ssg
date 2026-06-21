@@ -277,6 +277,15 @@ final class DeprecationProcessingLogger(
     inner.warn(message, span, trace, deprecation = deprecation)
   }
 
+  /** Whether warnForDeprecation would actually emit this deprecation (vs drop it for future-not-opted-in / silenced / repetition-limit reasons). Side-effect-free -- does NOT increment warningCounts;
+    * mirrors handleDeprecation's drop conditions so a caller can gate a parallel warnings sink on the single emission decision.
+    */
+  def willEmit(deprecation: Deprecation): Boolean =
+    if (deprecation.isFuture && !futureDeprecations.contains(deprecation)) false
+    else if (silenceDeprecations.contains(deprecation)) false
+    else if (limitRepetition && warningCounts.getOrElse(deprecation, 0) + 1 > maxRepetitions) false
+    else true
+
   override def debug(message: String, span: FileSpan): Unit =
     inner.debug(message, span)
 
