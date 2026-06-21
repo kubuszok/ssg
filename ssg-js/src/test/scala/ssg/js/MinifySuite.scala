@@ -13,7 +13,7 @@ package js
 import ssg.js.compress.CompressorOptions
 import ssg.js.parse.JsParseError
 import ssg.js.output.OutputOptions
-import ssg.js.scope.{ ManglerCache, ManglerOptions }
+import ssg.js.scope.{ ManglerCache, ManglerOptions, PropManglerOptions }
 
 final class MinifySuite extends munit.FunSuite {
 
@@ -328,31 +328,63 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   // 12. "Should consistently rename properties colliding with a mangled name"
-  // (minify.js:189-220). The nameCache ORCHESTRATION is wired (ISS-1045: the
-  // property cache is threaded into mangle_properties and written back), but
-  // ssg-js PropMangler does not mangle `obj.prop = …` property accesses in this
-  // construct (the prop cache stays empty), so the cross-call rename cannot be
-  // asserted. This is a PropMangler (propmangle.js) coverage gap, not an
-  // orchestration gap — see the candidate issue in the ISS-1045 report.
-  test("nameCache: should consistently rename properties across calls".fail) {
-    fail("PropMangler does not mangle obj.prop accesses here — PropMangler coverage gap (ISS-1217)")
+  // (minify.js:189-220). The four snippets minify through one SHARED nameCache
+  // (reused across calls); `obj.i` must consistently rename to `n.o` because the
+  // mangled var `n` collides with property `i`. The PROPERTY half is now correct
+  // (ISS-1217 resolved: `obj.prop`/`obj.i` mangle to `i`/`o` via the AST_Dot
+  // declared-root fix + full domprops reservation). The REMAINING divergence is in
+  // the VARIABLE nameCache (Mangler/ManglerCache, not PropMangler): the second
+  // snippet's function `fn2` must mangle to `c` — the shared nameCache.vars
+  // advancing past the `n` used for `fn1` (terser cache.vars: {$fn1:n, $fn2:c}) —
+  // but ssg-js reuses `n` for both. That adjacent var-name-cache gap is tracked
+  // by ISS-1234, which this pin awaits.
+  test("nameCache: should consistently rename properties across calls".fail) { // ISS-1234 (var-name-cache)
+    val cache = new NameCache()
+    val opts  = MinifyOptions(
+      compress = false,
+      mangle = ManglerOptions(toplevel = true, properties = true),
+      toplevel = true,
+      nameCache = cache
+    )
+    val snippets = List(
+      "function fn1(obj) { obj.prop = 1; obj.i = 2; }",
+      "function fn2(obj) { obj.prop = 1; obj.i = 2; }",
+      "let o1 = {}, o2 = {}; fn1(o1); fn2(o2);",
+      "console.log(o1.prop === o2.prop, o2.prop === 1, o1.i === o2.i, o2.i === 2);"
+    )
+    val compressed = snippets.map(Terser.minifyToString(_, opts)).mkString
+    assertEquals(
+      compressed,
+      "function n(n){n.i=1;n.o=2}function c(n){n.i=1;n.o=2}let f={},e={};n(f);c(e);console.log(f.i===e.i,e.i===1,f.o===e.o,e.o===2);"
+    )
   }
 
-  // 17. "Shouldn't mangle quoted properties" (minify.js:261-280). Property
-  // mangling is now wired through Terser.minify (ISS-1045), but keep_quoted does
-  // not preserve the quoted `foo`/`bar` keys: ssg-js PropMangler mangles them
-  // anyway (got `{r:"bar",a:"red"}`). keep_quoted depends on reserve_quoted_keys
-  // + the parser tracking the `quoted` flag — a PropMangler coverage gap, not an
-  // orchestration gap — see the candidate issue in the ISS-1045 report.
-  test("mangleProperties: should not mangle quoted properties".fail) {
-    fail("PropMangler keep_quoted does not reserve quoted keys — PropMangler coverage gap (ISS-1217)")
+  // 17. "Shouldn't mangle quoted properties" (minify.js:261-280). With
+  // keep_quoted, the quoted keys `"foo"` and `"bar"` must be reserved and left
+  // unmangled, while the dotted `color` mangles to `r`.
+  test("mangleProperties: should not mangle quoted properties") {
+    val js     = "var a = {}; a[\"foo\"] = \"bar\"; a.color = \"red\"; x = {\"bar\": 10};"
+    val result = Terser.minifyToString(
+      js,
+      MinifyOptions(
+        compress = CompressorOptions(properties = false),
+        mangle = ManglerOptions(properties = PropManglerOptions(builtins = true, keepQuoted = true)),
+        output = OutputOptions(keepQuotedProps = true, quoteStyle = 3)
+      )
+    )
+    assertEquals(result, "var a={foo:\"bar\",r:\"red\"};x={\"bar\":10};")
   }
 
   // 18. "Should not mangle quoted property within dead code" (minify.js:282-292).
-  // Same keep_quoted/PropMangler coverage gap: ssg-js leaves `g.change` unmangled
-  // (got `g.keep=g.change`, expected `g.keep=g.v`). See the ISS-1045 report.
-  test("mangleProperties: should not mangle quoted property within dead code".fail) {
-    fail("PropMangler keep_quoted dead-code path diverges — PropMangler coverage gap (ISS-1217)")
+  // The quoted `"keep"` in dead code reserves the `keep` name (reserveQuotedKeys
+  // runs before compress, so the reservation survives dead-code elimination of
+  // `({ "keep": 1 })`), so `g.keep` stays and `g.change` mangles to `g.v`.
+  test("mangleProperties: should not mangle quoted property within dead code") {
+    val result = Terser.minifyToString(
+      "var g = {}; ({ \"keep\": 1 }); g.keep = g.change;",
+      MinifyOptions(mangle = ManglerOptions(properties = PropManglerOptions(keepQuoted = true)))
+    )
+    assertEquals(result, "var g={};g.keep=g.v;")
   }
 
   // 19. "Should read the given string filename correctly when sourceMapIncludeSources
