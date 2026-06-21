@@ -4,11 +4,9 @@ package liquid
 
 /** Numeric dotted path access (ISS-1016).
   *
-  * liqp's Id lexer rule (LiquidLexer.g4:186) matches a leading digit, so `a.0` is parsed
-  * as `lookup(id="a", index=Dot id2("0"))` — a Hash lookup with the number's text as the key
-  * (NodeVisitor.java:813). ssg's lexer tokenizes `0` as LONG_NUM and `1.` as DOUBLE_NUM,
-  * which must be accepted in the DOT-index branch of parseLookup and split into Hash segments
-  * matching liqp's IdChain behavior (LiquidLexer.g4:182-184).
+  * liqp's Id lexer rule (LiquidLexer.g4:186) matches a leading digit, so `a.0` is parsed as `lookup(id="a", index=Dot id2("0"))` — a Hash lookup with the number's text as the key
+  * (NodeVisitor.java:813). ssg's lexer tokenizes `0` as LONG_NUM and `1.` as DOUBLE_NUM, which must be accepted in the DOT-index branch of parseLookup and split into Hash segments matching liqp's
+  * IdChain behavior (LiquidLexer.g4:182-184).
   *
   * Reference: liqp LookupNodeTest.java:300-306 `numberAsKeyTest`.
   */
@@ -25,8 +23,8 @@ final class NumericDottedPathIss1016Suite extends munit.FunSuite {
     // Tokenization: ssg lexer produces DOUBLE_NUM("1.") for `1.Value` because
     // scanNumber greedily consumes the dot (there are no digits after it).
     // The parser must split this into Hash("1") + consume Id("Value") as Hash("Value").
-    val inner = TestHelper.mapOf("Value" -> "tobi")
-    val vars  = TestHelper.mapOf("Data" -> TestHelper.mapOf("1" -> inner))
+    val inner    = TestHelper.mapOf("Value" -> "tobi")
+    val vars     = TestHelper.mapOf("Data" -> TestHelper.mapOf("1" -> inner))
     val template = Template.parse("hi {{Data.1.Value}}")
     assertEquals(template.render(vars), "hi tobi")
   }
@@ -35,19 +33,19 @@ final class NumericDottedPathIss1016Suite extends munit.FunSuite {
 
   test("{{ h.0 }} looks up key '0' in a hash") {
     // LONG_NUM("0") after DOT → Hash("0"), map lookup
-    val vars = TestHelper.mapOf("h" -> TestHelper.mapOf("0" -> "zero", "1" -> "one"))
+    val vars     = TestHelper.mapOf("h" -> TestHelper.mapOf("0" -> "zero", "1" -> "one"))
     val template = Template.parse("{{ h.0 }}")
     assertEquals(template.render(vars), "zero")
   }
 
   test("{{ h.1 }} looks up key '1' in a hash") {
-    val vars = TestHelper.mapOf("h" -> TestHelper.mapOf("0" -> "zero", "1" -> "one"))
+    val vars     = TestHelper.mapOf("h" -> TestHelper.mapOf("0" -> "zero", "1" -> "one"))
     val template = Template.parse("{{ h.1 }}")
     assertEquals(template.render(vars), "one")
   }
 
   test("{{ h.42 }} looks up multi-digit numeric key") {
-    val vars = TestHelper.mapOf("h" -> TestHelper.mapOf("42" -> "answer"))
+    val vars     = TestHelper.mapOf("h" -> TestHelper.mapOf("42" -> "answer"))
     val template = Template.parse("{{ h.42 }}")
     assertEquals(template.render(vars), "answer")
   }
@@ -57,8 +55,8 @@ final class NumericDottedPathIss1016Suite extends munit.FunSuite {
   test("{{ m.1.2 }} splits DOUBLE_NUM into two Hash segments") {
     // ssg lexer: `1.2` after DOT → DOUBLE_NUM("1.2"). The parser splits at '.'
     // to produce Hash("1"), Hash("2"), matching liqp IdChain semantics.
-    val inner = TestHelper.mapOf("2" -> "nested")
-    val vars  = TestHelper.mapOf("m" -> TestHelper.mapOf("1" -> inner))
+    val inner    = TestHelper.mapOf("2" -> "nested")
+    val vars     = TestHelper.mapOf("m" -> TestHelper.mapOf("1" -> inner))
     val template = Template.parse("{{ m.1.2 }}")
     assertEquals(template.render(vars), "nested")
   }

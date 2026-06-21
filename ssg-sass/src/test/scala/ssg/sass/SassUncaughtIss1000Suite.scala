@@ -6,37 +6,21 @@ import ssg.sass.visitor.OutputStyle
 
 /** Regression guard for ISS-1000 — adjudicated STALE.
   *
-  * ISS-1000 described an *uncaught* crash on two deeply-nested-paren inputs
-  * from the sass-spec `libsass-todo-issues` set. As of this branch those two
-  * inputs no longer crash uncaught: each one now produces a proper
-  * `ssg.sass.SassFormatException` (a subtype of `ssg.sass.SassException`) with
-  * an "Expected ')'" parse error — i.e. a clean compile error, exactly what a
-  * malformed stylesheet should yield.
+  * ISS-1000 described an *uncaught* crash on two deeply-nested-paren inputs from the sass-spec `libsass-todo-issues` set. As of this branch those two inputs no longer crash uncaught: each one now
+  * produces a proper `ssg.sass.SassFormatException` (a subtype of `ssg.sass.SassException`) with an "Expected ')'" parse error — i.e. a clean compile error, exactly what a malformed stylesheet should
+  * yield.
   *
-  * This file pins that GREEN behavior so the crash cannot silently return.
-  * Both assertions pass TODAY. No source change accompanies this guard.
+  * This file pins that GREEN behavior so the crash cannot silently return. Both assertions pass TODAY. No source change accompanies this guard.
   *
   * Inputs (read verbatim from the vendored sass-spec .hrx fixtures):
   *
-  *   - issue_221262
-  *     (original-src/sass-spec/spec/libsass-todo-issues/issue_221262.hrx,
-  *     `<===> input.scss`): the 665-char line `0{g:00;m:` followed by 655
-  *     `(` characters followed by a final `0`. The first unbalanced `(`
-  *     leaves the value expression expecting a closing paren, so the parser
-  *     reports `Expected ')'.` at column 666 (the position just past the
-  *     last `(`).
+  *   - issue_221262 (original-src/sass-spec/spec/libsass-todo-issues/issue_221262.hrx, `<===> input.scss`): the 665-char line `0{g:00;m:` followed by 655 `(` characters followed by a final `0`. The
+  *     first unbalanced `(` leaves the value expression expecting a closing paren, so the parser reports `Expected ')'.` at column 666 (the position just past the last `(`).
+  *   - issue_221292 (original-src/sass-spec/spec/libsass-todo-issues/issue_221292.hrx, `<===> input.scss`): the 664-char line `/**/0{i:` followed by 656 `(` characters (no trailing token). Same
+  *     shape, reported at column 665.
   *
-  *   - issue_221292
-  *     (original-src/sass-spec/spec/libsass-todo-issues/issue_221292.hrx,
-  *     `<===> input.scss`): the 664-char line `/**/0{i:` followed by 656
-  *     `(` characters (no trailing token). Same shape, reported at
-  *     column 665.
-  *
-  * Both fixtures are tagged `:todo: - dart-sass` upstream. In the SSG
-  * sass-spec baseline they are recorded with an `Error` outcome
-  * (.rescale/data/sass-spec-baseline.tsv rows 11470 / 11474) — i.e. the
-  * expected result is a compile error, which is what the two assertions
-  * below verify the port now produces.
+  * Both fixtures are tagged `:todo: - dart-sass` upstream. In the SSG sass-spec baseline they are recorded with an `Error` outcome (.rescale/data/sass-spec-baseline.tsv rows 11470 / 11474) — i.e. the
+  * expected result is a compile error, which is what the two assertions below verify the port now produces.
   */
 final class SassUncaughtIss1000Suite extends munit.FunSuite {
 

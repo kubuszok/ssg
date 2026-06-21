@@ -10,14 +10,11 @@ package flowchart
 import munit.FunSuite
 import ssg.mermaid.MermaidConfig
 
-/** Differential test for ISS-1062: the edge-limit check in FlowchartDb.addEdge
-  * must consult MermaidConfig.maxEdges instead of the hardcoded 500.
+/** Differential test for ISS-1062: the edge-limit check in FlowchartDb.addEdge must consult MermaidConfig.maxEdges instead of the hardcoded 500.
   *
-  * Faithful to: flowDb.ts:148
-  *   `if (edges.length < (config.maxEdges ?? 500)) { ... } else { throw ... }`
+  * Faithful to: flowDb.ts:148 `if (edges.length < (config.maxEdges ?? 500)) { ... } else { throw ... }`
   *
-  * The test is differential: it proves the limit is LIVE by toggling the config
-  * value and observing different behavior.
+  * The test is differential: it proves the limit is LIVE by toggling the config value and observing different behavior.
   */
 final class FlowchartMaxEdgesIss1062Suite extends FunSuite {
 
@@ -32,7 +29,7 @@ final class FlowchartMaxEdgesIss1062Suite extends FunSuite {
 
   test("Iss1062: low maxEdges config causes edge-limit exception during render") {
     val lowConfig = MermaidConfig(maxEdges = 2)
-    val ex = intercept[IllegalStateException] {
+    val ex        = intercept[IllegalStateException] {
       FlowchartDiagram.render(threeEdgeChart, lowConfig)
     }
     // flowDb.ts:153 — the message includes "Edge limit exceeded"
@@ -84,7 +81,7 @@ final class FlowchartMaxEdgesIss1062Suite extends FunSuite {
         |    C-->D
         |    D-->E""".stripMargin
     val limitThreeConfig = MermaidConfig(maxEdges = 3)
-    val ex = intercept[IllegalStateException] {
+    val ex               = intercept[IllegalStateException] {
       FlowchartDiagram.render(fourEdgeChart, limitThreeConfig)
     }
     assert(

@@ -58,22 +58,19 @@ final class CharFrequencyIss1043Suite extends munit.FunSuite {
   private val expectedDefault =
     "function test(a,b,c){return a+b+c+\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"}"
 
-  /** Expected output when Base54 uses frequency-sorted ordering (z,t,n,...).
-    * This is also the terser 5.46.1 oracle output.
+  /** Expected output when Base54 uses frequency-sorted ordering (z,t,n,...). This is also the terser 5.46.1 oracle output.
     */
   private val expectedFreqSorted =
     "function test(z,t,n){return z+t+n+\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"}"
 
-  /** Reset Base54 to the default alphabet order (a,b,c,...). All frequencies
-    * are zeroed, so the stable sort preserves the original character ordering.
+  /** Reset Base54 to the default alphabet order (a,b,c,...). All frequencies are zeroed, so the stable sort preserves the original character ordering.
     */
   private def resetBase54ToDefault(): Unit = {
     Base54.reset()
     Base54.sort()
   }
 
-  /** Parse, scope-analyse, and mangle WITHOUT computeCharFrequency (default
-    * Base54 alphabet: a,b,c,...).
+  /** Parse, scope-analyse, and mangle WITHOUT computeCharFrequency (default Base54 alphabet: a,b,c,...).
     */
   private def mangleWithoutFrequency(src: String): String = {
     val ast  = new Parser().parse(src)
@@ -86,8 +83,7 @@ final class CharFrequencyIss1043Suite extends munit.FunSuite {
     OutputStream.printToString(ast)
   }
 
-  /** Parse, scope-analyse, compute char frequency, and mangle (frequency-
-    * sorted Base54 alphabet).
+  /** Parse, scope-analyse, compute char frequency, and mangle (frequency- sorted Base54 alphabet).
     */
   private def mangleWithFrequency(src: String): String = {
     val ast  = new Parser().parse(src)

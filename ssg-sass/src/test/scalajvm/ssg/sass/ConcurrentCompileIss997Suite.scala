@@ -17,35 +17,21 @@ import scala.concurrent.duration._
 
 /** Concurrency RED test for ISS-997 ([R0610-P1] bug, high).
   *
-  * `EvaluationContext` (object, `private var _stack: List[EvaluationContext]`,
-  * EvaluationContext.scala:59) and `CurrentEnvironment` (object,
-  * `private var _env`, EvaluationContext.scala:118) — together with the
-  * `_invoker` vars in `CurrentCallableInvoker`/`CurrentMixinInvoker` (:143/:165)
-  * — are SHARED MUTABLE module-level statics, deliberately "single-threaded"
-  * per the in-source NOTE comments (e.g. "this is a single shared `var` rather
-  * than a `ThreadLocal`/`DynamicVariable`").
+  * `EvaluationContext` (object, `private var _stack: List[EvaluationContext]`, EvaluationContext.scala:59) and `CurrentEnvironment` (object, `private var _env`, EvaluationContext.scala:118) —
+  * together with the `_invoker` vars in `CurrentCallableInvoker`/`CurrentMixinInvoker` (:143/:165) — are SHARED MUTABLE module-level statics, deliberately "single-threaded" per the in-source NOTE
+  * comments (e.g. "this is a single shared `var` rather than a `ThreadLocal`/`DynamicVariable`").
   *
-  * The obvious SSG build pattern is to compile many Sass files CONCURRENTLY
-  * (one `Compile.compileString` call per source file). Because the evaluation
-  * `_stack`/`_env` are process-global, two concurrent evaluations interleave
-  * their push/pop on the SAME shared mutable state. That corrupts each other's
-  * context: a task can observe another task's environment, pop the wrong frame
-  * off `_stack`, or hit a `NoSuchElementException` from `_stack.tail` on an
-  * already-emptied list.
+  * The obvious SSG build pattern is to compile many Sass files CONCURRENTLY (one `Compile.compileString` call per source file). Because the evaluation `_stack`/`_env` are process-global, two
+  * concurrent evaluations interleave their push/pop on the SAME shared mutable state. That corrupts each other's context: a task can observe another task's environment, pop the wrong frame off
+  * `_stack`, or hit a `NoSuchElementException` from `_stack.tail` on an already-emptied list.
   *
-  * Reproduction strategy: each task compiles a DISTINCT source whose correct
-  * output is known and depends on evaluating variables + an `@if` branch
-  * through the environment/context (so the shared state is actually exercised
-  * during evaluation, not just at parse time). If a task ever sees the wrong
-  * `$x` / branch — i.e. another task's context — its output is detectably
-  * wrong. We run K tasks across a real fixed thread pool, repeated for M
-  * iterations, to make the race fire reliably. A SINGLE wrong output, a SINGLE
-  * cross-contaminated result, or a SINGLE thrown exception across all
-  * iterations means RED.
+  * Reproduction strategy: each task compiles a DISTINCT source whose correct output is known and depends on evaluating variables + an `@if` branch through the environment/context (so the shared state
+  * is actually exercised during evaluation, not just at parse time). If a task ever sees the wrong `$x` / branch — i.e. another task's context — its output is detectably wrong. We run K tasks across
+  * a real fixed thread pool, repeated for M iterations, to make the race fire reliably. A SINGLE wrong output, a SINGLE cross-contaminated result, or a SINGLE thrown exception across all iterations
+  * means RED.
   *
-  * NOTE: this suite intentionally has NO `.fail`/`assume` — it must genuinely
-  * pass once each compilation owns its own evaluation context (the ISS-997
-  * fix), and genuinely fail (wrong output / exception) on the shared statics.
+  * NOTE: this suite intentionally has NO `.fail`/`assume` — it must genuinely pass once each compilation owns its own evaluation context (the ISS-997 fix), and genuinely fail (wrong output /
+  * exception) on the shared statics.
   */
 final class ConcurrentCompileIss997Suite extends munit.FunSuite {
 
@@ -58,11 +44,8 @@ final class ConcurrentCompileIss997Suite extends munit.FunSuite {
   private val K = 12
   private val M = 150
 
-  /** A source for task `i` that exercises the evaluation context: it binds a
-    * variable, then selects a branch via `@if` on that variable, and finally
-    * emits the variable's value. The "correct" output for task `i` is fully
-    * determined by `i` alone, so any contamination by another task's `$x` is
-    * detectable.
+  /** A source for task `i` that exercises the evaluation context: it binds a variable, then selects a branch via `@if` on that variable, and finally emits the variable's value. The "correct" output
+    * for task `i` is fully determined by `i` alone, so any contamination by another task's `$x` is detectable.
     */
   private def sourceFor(i: Int): String =
     s"""$$x: $i;
@@ -75,9 +58,7 @@ final class ConcurrentCompileIss997Suite extends munit.FunSuite {
        |}
        |""".stripMargin
 
-  /** The oracle output for task `i`, computed by compiling it ALONE (no
-    * concurrency), so the expectation is exactly what a correct, isolated
-    * evaluation produces.
+  /** The oracle output for task `i`, computed by compiling it ALONE (no concurrency), so the expectation is exactly what a correct, isolated evaluation produces.
     */
   private def expectedFor(i: Int): String =
     Compile.compileString(sourceFor(i)).css
@@ -90,8 +71,8 @@ final class ConcurrentCompileIss997Suite extends munit.FunSuite {
     // A place to record the first failure we observe, so the assertion message
     // can show the actual corrupted output.
     val firstFailure = new AtomicReference[String](null)
-    var wrongCount    = 0
-    var iterations    = 0
+    var wrongCount   = 0
+    var iterations   = 0
 
     val pool = Executors.newFixedThreadPool(K)
     try {
@@ -104,11 +85,13 @@ final class ConcurrentCompileIss997Suite extends munit.FunSuite {
         var i     = 0
         while (i < K) {
           val idx = i
-          tasks.add(new JCallable[(Int, Either[Throwable, String])] {
-            def call(): (Int, Either[Throwable, String]) =
-              try (idx, Right(Compile.compileString(inputs(idx)).css))
-              catch { case t: Throwable => (idx, Left(t)) }
-          })
+          tasks.add(
+            new JCallable[(Int, Either[Throwable, String])] {
+              def call(): (Int, Either[Throwable, String]) =
+                try (idx, Right(Compile.compileString(inputs(idx)).css))
+                catch { case t: Throwable => (idx, Left(t)) }
+            }
+          )
           i += 1
         }
 

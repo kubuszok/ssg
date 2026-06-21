@@ -8,27 +8,19 @@ import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
 
-/** Red tests for ISS-1010: unquoted dotted/slashed include names must parse in
-  * the default Jekyll flavor.
+/** Red tests for ISS-1010: unquoted dotted/slashed include names must parse in the default Jekyll flavor.
   *
   * Per the liqp grammar (original-src/liqp/src/main/antlr4/liquid/parser/v4/):
-  *   - LiquidLexer.g4:157  — `PathSep : [/\\];` tokenizes path separators.
-  *   - LiquidLexer.g4:182-184 — `IdChain : [a-zA-Z_] [a-zA-Z_0-9]* ( '.'
-  *     [a-zA-Z_0-9]+ )+ {handleIdChain(getText());} -> skip;` re-emits dotted
-  *     names as Id/Dot/Id token runs.
-  *   - LiquidLexer.g4:186 — `Id : ( Letter | '_' | Digit) (Letter | '_' | '-' |
-  *     Digit)*;` so hyphens are allowed mid-name.
-  *   - LiquidParser.g4:206-209 — Jekyll-style include:
-  *     `TagStart jekyll=Include file_name_or_output (jekyll_include_params)* TagEnd`.
-  *   - LiquidParser.g4:219-222 — `file_name_or_output : output | filename;`
-  *     with `filename : ( . )+?` (LiquidParser.g4:359-361), so any token run —
-  *     including Id Dot Id and Id PathSep Id — is a valid unquoted file name.
+  *   - LiquidLexer.g4:157 — `PathSep : [/\\];` tokenizes path separators.
+  *   - LiquidLexer.g4:182-184 — `IdChain : [a-zA-Z_] [a-zA-Z_0-9]* ( '.' [a-zA-Z_0-9]+ )+ {handleIdChain(getText());} -> skip;` re-emits dotted names as Id/Dot/Id token runs.
+  *   - LiquidLexer.g4:186 — `Id : ( Letter | '_' | Digit) (Letter | '_' | '-' | Digit)*;` so hyphens are allowed mid-name.
+  *   - LiquidParser.g4:206-209 — Jekyll-style include: `TagStart jekyll=Include file_name_or_output (jekyll_include_params)* TagEnd`.
+  *   - LiquidParser.g4:219-222 — `file_name_or_output : output | filename;` with `filename : ( . )+?` (LiquidParser.g4:359-361), so any token run — including Id Dot Id and Id PathSep Id — is a valid
+  *     unquoted file name.
   *   - LiquidParser.g4:225-227 — `jekyll_include_params : id '=' expr;`.
   *
-  * Whitespace handling (the bounce area). liqp lexes WS to a HIDDEN channel
-  * (LiquidLexer.g4:166) then reassembles the RAW source interval spanning the
-  * filename token run and REJECTS any whitespace it finds
-  * (original-src/liqp/src/main/java/liqp/parser/v4/NodeVisitor.java:511-526):
+  * Whitespace handling (the bounce area). liqp lexes WS to a HIDDEN channel (LiquidLexer.g4:166) then reassembles the RAW source interval spanning the filename token run and REJECTS any whitespace it
+  * finds (original-src/liqp/src/main/java/liqp/parser/v4/NodeVisitor.java:511-526):
   * {{{
   *   Interval interval = Interval.of(ctx.filename().start.getStartIndex(),
   *                                   ctx.filename().stop.getStopIndex());
@@ -37,20 +29,14 @@ import java.util.{ HashMap => JHashMap }
   *     throw new LiquidException("in `{% include filename %}` the `filename` is {"
   *       + filename + "}, but it cannot have spaces for Flavor.JEKYLL", ctx);
   * }}}
-  * So `{% include foo bar %}` is a parse-time error (NOT a `foo` name + `bar`
-  * param), with the rejected interval `{foo bar}` reported between braces.
+  * So `{% include foo bar %}` is a parse-time error (NOT a `foo` name + `bar` param), with the rejected interval `{foo bar}` reported between braces.
   *
   * Upstream test mirrors:
-  *   - liqp IncludeTest.java:159-165 renders
-  *     src/test/jekyll/index_without_quotes.html = `{% include header.html %}`.
-  *   - liqp IncludeTest.java:176-182 (github.com/bkiers/Liqp issue #95) renders
-  *     index_without_quotes_subdirectory.html = `{% include wmt/footer.html %}`.
+  *   - liqp IncludeTest.java:159-165 renders src/test/jekyll/index_without_quotes.html = `{% include header.html %}`.
+  *   - liqp IncludeTest.java:176-182 (github.com/bkiers/Liqp issue #95) renders index_without_quotes_subdirectory.html = `{% include wmt/footer.html %}`.
   *
-  * These tests assert the FIXED behavior (no `.fail` marks): the unquoted-name
-  * cases are expected to FAIL until ISS-1010 is fixed (the lexer/parser has no
-  * path-name handling, so `{% include footer.html %}` throws
-  * `Expected TAG_END but got DOT`). Uses the default (Jekyll) flavor and the
-  * in-memory NameResolver so all 3 platforms can run them.
+  * These tests assert the FIXED behavior (no `.fail` marks): the unquoted-name cases are expected to FAIL until ISS-1010 is fixed (the lexer/parser has no path-name handling, so
+  * `{% include footer.html %}` throws `Expected TAG_END but got DOT`). Uses the default (Jekyll) flavor and the in-memory NameResolver so all 3 platforms can run them.
   */
 final class IncludeNamesIss1010Suite extends munit.FunSuite {
 
@@ -122,7 +108,7 @@ final class IncludeNamesIss1010Suite extends munit.FunSuite {
 
   test("ISS-1010: whitespace-separated unquoted include name {% include foo bar %} throws at parse time") {
     val parser = parserWith("foo bar" -> "WRONG", "foobar" -> "WRONG", "foo" -> "WRONG")
-    val ex = intercept[LiquidException] {
+    val ex     = intercept[LiquidException] {
       parser.parse("before {% include foo bar %} after")
     }
     assert(

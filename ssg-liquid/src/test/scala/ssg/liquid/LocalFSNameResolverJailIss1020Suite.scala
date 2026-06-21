@@ -8,13 +8,11 @@ import ssg.liquid.tags.IncludeRelative
 
 /** ISS-1020: tests for the optional root-jail on `LocalFSNameResolver`.
   *
-  * Tests (a)/(b): absolute and relative traversal attempts with a jail-root set
-  * must throw `JailViolationException` BEFORE any filesystem I/O.
+  * Tests (a)/(b): absolute and relative traversal attempts with a jail-root set must throw `JailViolationException` BEFORE any filesystem I/O.
   *
   * Tests (c)/(e): legitimate include resolution using a real temp directory.
   *
-  * Test (d): the separator-boundary predicate rejects sibling-prefix paths — pure
-  * string comparison, no filesystem I/O.
+  * Test (d): the separator-boundary predicate rejects sibling-prefix paths — pure string comparison, no filesystem I/O.
   */
 final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
 
@@ -47,9 +45,7 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
   // ---------- (c) legitimate include accepted ----------
 
   test("Iss1020-c: legitimate include under jail root resolves normally") {
-    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp"))
-      .resolve("iss1020-test-c-" + System.currentTimeMillis())
-      .toAbsolute.normalize
+    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp")).resolve("iss1020-test-c-" + System.currentTimeMillis()).toAbsolute.normalize
     FileOps.createDirectories(tmpBase)
     try {
       val includeFile = tmpBase.resolve("header.liquid")
@@ -60,9 +56,8 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
 
       assertEquals(result.content, "Hello from header")
       assert(result.sourceName.contains("header.liquid"), "source name should contain header.liquid")
-    } finally {
+    } finally
       FileOps.deleteRecursively(tmpBase)
-    }
   }
 
   // ---------- (d) separator-boundary REJECTION (mandatory — recurring C8 gap) ----------
@@ -90,9 +85,7 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
   // ---------- (e) inert when no jail-root ----------
 
   test("Iss1020-e: resolver without jail-root resolves normally (faithful port)") {
-    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp"))
-      .resolve("iss1020-test-e-" + System.currentTimeMillis())
-      .toAbsolute.normalize
+    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp")).resolve("iss1020-test-e-" + System.currentTimeMillis()).toAbsolute.normalize
     FileOps.createDirectories(tmpBase)
     try {
       val includeFile = tmpBase.resolve("footer.liquid")
@@ -104,8 +97,7 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
 
       assertEquals(result.content, "Footer content")
       assert(result.sourceName.contains("footer.liquid"), "source name should contain footer.liquid")
-    } finally {
+    } finally
       FileOps.deleteRecursively(tmpBase)
-    }
   }
 }

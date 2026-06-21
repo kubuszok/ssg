@@ -14,20 +14,15 @@ package minify
   *   end
   * }}}
   * Semantics pinned by these tests:
-  *   - fnmatch target is `file_name` = the destination-RELATIVE path (dest_path with the
-  *     `dest` prefix and its trailing separator sliced off), NOT the basename and NOT an
-  *     absolute path. `Minifier.minifyFile(input, filePath, ...)` receives that relative path.
-  *   - `File.fnmatch` is called with NO flags, so File::FNM_PATHNAME is OFF and `*` also
-  *     matches `/` (Ruby stdlib doc example: `File.fnmatch('*', 'dave/.profile') #=> true`).
-  *     Hence pattern "*.css" matches "assets/style.css" across the directory separator.
-  *   - A pattern with no wildcards matches only via the `e == file_name` arm or an exact
-  *     fnmatch: `File.fnmatch('js', 'assets/main.js') #=> false`, so exclude "js" must NOT
-  *     exclude "assets/main.js".
+  *   - fnmatch target is `file_name` = the destination-RELATIVE path (dest_path with the `dest` prefix and its trailing separator sliced off), NOT the basename and NOT an absolute path.
+  *     `Minifier.minifyFile(input, filePath, ...)` receives that relative path.
+  *   - `File.fnmatch` is called with NO flags, so File::FNM_PATHNAME is OFF and `*` also matches `/` (Ruby stdlib doc example: `File.fnmatch('*', 'dave/.profile') #=> true`). Hence pattern "*.css"
+  *     matches "assets/style.css" across the directory separator.
+  *   - A pattern with no wildcards matches only via the `e == file_name` arm or an exact fnmatch: `File.fnmatch('js', 'assets/main.js') #=> false`, so exclude "js" must NOT exclude "assets/main.js".
   *
   * ISS-1027 — pre-minified `.min.js` / `.min.css` files must pass through untouched.
   *
-  * Original: original-src/jekyll-minifier/lib/jekyll-minifier.rb:976-990 (Document/Page via
-  * output_compressed) and :1174-1188 (StaticFile):
+  * Original: original-src/jekyll-minifier/lib/jekyll-minifier.rb:976-990 (Document/Page via output_compressed) and :1174-1188 (StaticFile):
   * {{{
   *   def output_js_or_file(path, context)
   *     if path.end_with?('.min.js')   # rb:977 (and rb:1175 in process_js_file)
@@ -41,8 +36,7 @@ package minify
   *       output_css(path, context)
   * }}}
   * Semantics pinned by these tests:
-  *   - the check is `end_with?` on the destination path — a suffix check, NOT `contains`:
-  *     "assets/minify.js" does not end with ".min.js" and must still be minified.
+  *   - the check is `end_with?` on the destination path — a suffix check, NOT `contains`: "assets/minify.js" does not end with ".min.js" and must still be minified.
   *   - passthrough means the content is written byte-identical (output_file/copy_file).
   */
 final class MinifyFileIss1026Iss1027Suite extends munit.FunSuite {

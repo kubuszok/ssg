@@ -8,58 +8,27 @@ import ssg.sass.importer.MapImporter
 import ssg.sass.value.SassNumber
 import ssg.sass.visitor.OutputStyle
 
-/** Differential red tests for ISS-990 / ISS-991 / ISS-992 / ISS-993 — the
-  * `Compile.compileString` parameters that are accepted but dropped before
-  * they reach the component that consumes them ([R0610-P1] api-noop family).
+/** Differential red tests for ISS-990 / ISS-991 / ISS-992 / ISS-993 — the `Compile.compileString` parameters that are accepted but dropped before they reach the component that consumes them
+  * ([R0610-P1] api-noop family).
   *
-  * Red-commit protocol (remediation-2026-06.md §6): every test tagged "RED"
-  * below FAILS at the red-sha and must pass after the fix, with this file
-  * unchanged. The "control" tests pin behavior that already works today so
-  * the fix cannot regress the adjacent working path.
+  * Red-commit protocol (remediation-2026-06.md §6): every test tagged "RED" below FAILS at the red-sha and must pass after the fix, with this file unchanged. The "control" tests pin behavior that
+  * already works today so the fix cannot regress the adjacent working path.
   *
-  * Upstream consumption of each parameter in dart-sass (the port's reference,
-  * vendored at original-src/dart-sass):
+  * Upstream consumption of each parameter in dart-sass (the port's reference, vendored at original-src/dart-sass):
   *
-  *   - `functions` (ISS-990): lib/sass.dart:220 (compileStringToResult param)
-  *     -> lib/sass.dart:241 (forwarded) -> lib/src/compile.dart:120/206
-  *     (compileString -> _compileStylesheet -> evaluate(functions:)) ->
-  *     lib/src/visitor/evaluate.dart:699-709 — every user callable is merged
-  *     with the global built-ins and registered:
-  *     `_builtInFunctions[function.name.replaceAll("_", "-")] = function;`
-  *     (evaluate.dart:707-708). The port's equivalents exist:
-  *     Callable.function (Callable.scala:41) and Environment.setFunction
-  *     (Environment.scala:709) — they are simply never invoked from
-  *     Compile.compileString.
-  *
-  *   - `importers` / `loadPaths` (ISS-991): lib/sass.dart:217/219 ->
-  *     lib/sass.dart:236-239 — both are folded into the ImportCache:
-  *     `importCache: ImportCache(importers: importers, ..., loadPaths:
-  *     loadPaths)`. lib/src/import_cache.dart:100-103 stores
-  *     `_importers = _toImporters(importers, loadPaths, packageConfig)` and
-  *     import_cache.dart:128-129 turns each load path into a filesystem
-  *     importer: `for (var path in loadPaths) FilesystemImporter(path)`.
-  *     (loadPaths is exercised in CompileLoadPathsIss991JvmSuite because
-  *     FilesystemImporter is JVM-only in the port.)
-  *
-  *   - `quietDeps` (ISS-992): lib/sass.dart:224 -> lib/sass.dart:245 ->
-  *     lib/src/compile.dart:126/166/208 -> lib/src/visitor/evaluate.dart:375
-  *     constructor param, stored at evaluate.dart:381 `_quietDeps =
-  *     quietDeps`, consumed at evaluate.dart:4682:
-  *     `if (_quietDeps && _inDependency) return;` — i.e. warnings from
-  *     stylesheets loaded through importers/loadPaths are silenced
-  *     (lib/sass.dart:185-186). The port has the identical check at
-  *     EvaluateVisitor.scala:2355 but hardcodes `_quietDeps = false`
-  *     (EvaluateVisitor.scala:292).
-  *
-  *   - `charset` (ISS-993): lib/sass.dart:227 -> lib/sass.dart:248 ->
-  *     lib/src/compile.dart:129/168/220 (serialize(charset: charset)) ->
-  *     lib/src/visitor/serialize.dart:55 param, consumed at
-  *     serialize.dart:70-71: when true and the output has any code unit
-  *     > 0x7F the prefix is the U+FEFF BOM (compressed) or `'@charset
-  *     "UTF-8";\n'` (other styles); when false there is never a prefix.
-  *     The port supports this in SerializeVisitor.serialize
-  *     (SerializeVisitor.scala:161-168) but the call site
-  *     (Compile.scala:153) omits the argument.
+  *   - `functions` (ISS-990): lib/sass.dart:220 (compileStringToResult param) -> lib/sass.dart:241 (forwarded) -> lib/src/compile.dart:120/206 (compileString -> _compileStylesheet ->
+  *     evaluate(functions:)) -> lib/src/visitor/evaluate.dart:699-709 — every user callable is merged with the global built-ins and registered:
+  *     `_builtInFunctions[function.name.replaceAll("_", "-")] = function;` (evaluate.dart:707-708). The port's equivalents exist: Callable.function (Callable.scala:41) and Environment.setFunction
+  *     (Environment.scala:709) — they are simply never invoked from Compile.compileString.
+  *   - `importers` / `loadPaths` (ISS-991): lib/sass.dart:217/219 -> lib/sass.dart:236-239 — both are folded into the ImportCache: `importCache: ImportCache(importers: importers, ..., loadPaths:
+  *     loadPaths)`. lib/src/import_cache.dart:100-103 stores `_importers = _toImporters(importers, loadPaths, packageConfig)` and import_cache.dart:128-129 turns each load path into a filesystem
+  *     importer: `for (var path in loadPaths) FilesystemImporter(path)`. (loadPaths is exercised in CompileLoadPathsIss991JvmSuite because FilesystemImporter is JVM-only in the port.)
+  *   - `quietDeps` (ISS-992): lib/sass.dart:224 -> lib/sass.dart:245 -> lib/src/compile.dart:126/166/208 -> lib/src/visitor/evaluate.dart:375 constructor param, stored at evaluate.dart:381
+  *     `_quietDeps = quietDeps`, consumed at evaluate.dart:4682: `if (_quietDeps && _inDependency) return;` — i.e. warnings from stylesheets loaded through importers/loadPaths are silenced
+  *     (lib/sass.dart:185-186). The port has the identical check at EvaluateVisitor.scala:2355 but hardcodes `_quietDeps = false` (EvaluateVisitor.scala:292).
+  *   - `charset` (ISS-993): lib/sass.dart:227 -> lib/sass.dart:248 -> lib/src/compile.dart:129/168/220 (serialize(charset: charset)) -> lib/src/visitor/serialize.dart:55 param, consumed at
+  *     serialize.dart:70-71: when true and the output has any code unit > 0x7F the prefix is the U+FEFF BOM (compressed) or `'@charset "UTF-8";\n'` (other styles); when false there is never a prefix.
+  *     The port supports this in SerializeVisitor.serialize (SerializeVisitor.scala:161-168) but the call site (Compile.scala:153) omits the argument.
   */
 final class CompileWiringIss990Suite extends munit.FunSuite {
 

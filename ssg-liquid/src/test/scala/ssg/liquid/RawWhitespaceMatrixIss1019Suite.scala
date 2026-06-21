@@ -4,8 +4,7 @@ package liquid
 
 /** Combination matrix test for raw-block + whitespace-control variants (ISS-1019).
   *
-  * Tests every combination of raw-open and endraw-close whitespace control markers
-  * against the expected output derived from liqp's LiquidLexer.g4 grammar rules.
+  * Tests every combination of raw-open and endraw-close whitespace control markers against the expected output derived from liqp's LiquidLexer.g4 grammar rules.
   *
   * liqp oracle (original-src/liqp/src/main/antlr4/liquid/parser/v4/LiquidLexer.g4):
   *
@@ -14,42 +13,28 @@ package liquid
   *   - TagEnd (g4:129-134): `'-%}' WhitespaceChar*` strips all whitespace AFTER the tag.
   *
   * Raw mode entry:
-  *   - RawStart (g4:212): `'raw' WhitespaceChar* '%}' -> popMode, pushMode(IN_RAW)`
-  *     This rule is in IN_TAG_ID mode and requires a literal `%}` after `raw`.
-  *     It does NOT match `-%}`. Therefore `{% raw -%}` and `{%- raw -%}` do NOT
-  *     open a raw block in liqp -- they are parsed as an unknown/invalid tag.
+  *   - RawStart (g4:212): `'raw' WhitespaceChar* '%}' -> popMode, pushMode(IN_RAW)` This rule is in IN_TAG_ID mode and requires a literal `%}` after `raw`. It does NOT match `-%}`. Therefore
+  *     `{% raw -%}` and `{%- raw -%}` do NOT open a raw block in liqp -- they are parsed as an unknown/invalid tag.
   *
   * Raw mode exit:
-  *   - RawEnd (g4:284): `'{%' WhitespaceChar* 'endraw' -> popMode`
-  *     This is in IN_RAW mode and requires literal `{%` (not `{%-`). Therefore
-  *     `{%- endraw %}` and `{%- endraw -%}` inside a raw block do NOT terminate
-  *     the raw block -- the `{%-` characters become part of the raw body verbatim.
+  *   - RawEnd (g4:284): `'{%' WhitespaceChar* 'endraw' -> popMode` This is in IN_RAW mode and requires literal `{%` (not `{%-`). Therefore `{%- endraw %}` and `{%- endraw -%}` inside a raw block do
+  *     NOT terminate the raw block -- the `{%-` characters become part of the raw body verbatim.
   *
-  * Consequence: of the 16 matrix cells (4 raw-open x 4 endraw-close), only 4 are
-  * valid raw blocks in liqp:
-  *   `{% raw %}` x `{% endraw %}`,  `{% raw %}` x `{% endraw -%}`,
-  *   `{%- raw %}` x `{% endraw %}`, `{%- raw %}` x `{% endraw -%}`.
+  * Consequence: of the 16 matrix cells (4 raw-open x 4 endraw-close), only 4 are valid raw blocks in liqp: `{% raw %}` x `{% endraw %}`, `{% raw %}` x `{% endraw -%}`, `{%- raw %}` x `{% endraw %}`,
+  * `{%- raw %}` x `{% endraw -%}`.
   *
   * 8 additional cells test liqp-faithful behavior for:
-  *   - Invalid endraw inside a valid raw block (`{%- endraw %}`, `{%- endraw -%}`):
-  *     the `{%-` is not recognized by RawEnd so the entire endraw text is literal
-  *     raw body and the block is unterminated (4 cells: B1-B4).
-  *   - Invalid raw-open (`{% raw -%}`, `{%- raw -%}`) paired with a plain `{% endraw %}`
-  *     or `{% endraw -%}`: no raw block opens, body is normal Liquid, endraw is an
-  *     unknown tag. For C1, C2, C5, C6 the SSG output coincidentally matches the liqp
-  *     output because the invalid-tag-with-strip behavior produces the same text as
-  *     the valid-raw-with-strip behavior for these template shapes.
+  *   - Invalid endraw inside a valid raw block (`{%- endraw %}`, `{%- endraw -%}`): the `{%-` is not recognized by RawEnd so the entire endraw text is literal raw body and the block is unterminated
+  *     (4 cells: B1-B4).
+  *   - Invalid raw-open (`{% raw -%}`, `{%- raw -%}`) paired with a plain `{% endraw %}` or `{% endraw -%}`: no raw block opens, body is normal Liquid, endraw is an unknown tag. For C1, C2, C5, C6
+  *     the SSG output coincidentally matches the liqp output because the invalid-tag-with-strip behavior produces the same text as the valid-raw-with-strip behavior for these template shapes.
   *
-  * 4 cells DIVERGE (C3, C4, C7, C8): SSG's scanTagStart accepts `-%}` as a valid
-  * tag-end for raw-open (opening a raw block with trailing strip), while liqp does
-  * not. When the endraw also uses `{%-`, the divergence manifests: SSG has an open
-  * raw block with an unrecognized endraw, while liqp never opened the raw block.
-  * These 4 cells are excluded from this suite and tracked as ISS-1189 (raw-open
+  * 4 cells DIVERGE (C3, C4, C7, C8): SSG's scanTagStart accepts `-%}` as a valid tag-end for raw-open (opening a raw block with trailing strip), while liqp does not. When the endraw also uses `{%-`,
+  * the divergence manifests: SSG has an open raw block with an unrecognized endraw, while liqp never opened the raw block. These 4 cells are excluded from this suite and tracked as ISS-1189 (raw-open
   * accepts `-%}` where liqp only accepts `%}`, LiquidLexer.g4:212).
   *
-  * The 2 cells already covered by EndrawWhitespaceIss1011Suite (plain endraw and
-  * endraw `-%}`) are included here with distinct template shapes (surrounding text
-  * "A"/"Z" with spaces) to avoid exact duplication.
+  * The 2 cells already covered by EndrawWhitespaceIss1011Suite (plain endraw and endraw `-%}`) are included here with distinct template shapes (surrounding text "A"/"Z" with spaces) to avoid exact
+  * duplication.
   */
 final class RawWhitespaceMatrixIss1019Suite extends munit.FunSuite {
 

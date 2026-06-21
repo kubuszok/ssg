@@ -7,15 +7,12 @@ import scala.scalajs.js
 
 /** ISS-1123 [R0610-P0]: Scala.js isDirectory/isRegularFile single-stat, JVM-parity false on unreadable attrs.
   *
-  * The JS implementation queries the type of an entry with a single statSync (no existsSync pre-check), so there is
-  * no window in which the entry can be removed between two calls. When the entry is absent or its attributes cannot
-  * be read, the answer is false — the JVM-parity semantic of java.nio.file.Files.isDirectory/isRegularFile, which
-  * "return false if the file does not exist or it cannot be determined whether the file is a directory [/regular
-  * file]" (ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala:24-28).
+  * The JS implementation queries the type of an entry with a single statSync (no existsSync pre-check), so there is no window in which the entry can be removed between two calls. When the entry is
+  * absent or its attributes cannot be read, the answer is false — the JVM-parity semantic of java.nio.file.Files.isDirectory/isRegularFile, which "return false if the file does not exist or it cannot
+  * be determined whether the file is a directory [/regular file]" (ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala:24-28).
   *
-  * The two missing-path tests exercise the catch path: the single statSync fails because the entry is absent and the
-  * result must be false. Mutating the catch to re-raise instead of returning false turns these two red (anti-cheat
-  * C8). The remaining two are wrong-type sanity checks matching the JVM reference.
+  * The two missing-path tests exercise the catch path: the single statSync fails because the entry is absent and the result must be false. Mutating the catch to re-raise instead of returning false
+  * turns these two red (anti-cheat C8). The remaining two are wrong-type sanity checks matching the JVM reference.
   */
 final class FileOpsStatIss1123JsSuite extends munit.FunSuite {
 
@@ -32,10 +29,9 @@ final class FileOpsStatIss1123JsSuite extends munit.FunSuite {
     tempDir = nodeFs.mkdtempSync(prefix).asInstanceOf[String]
   }
 
-  override def afterEach(context: AfterEach): Unit = {
+  override def afterEach(context: AfterEach): Unit =
     // Recursive cleanup with Node fs; force=true tolerates entries a test never managed to create.
     nodeFs.rmSync(tempDir, js.Dynamic.literal(recursive = true, force = true)): Unit
-  }
 
   /** Joins a child name onto the current temp directory using Node's path module. */
   private def child(name: String): String =

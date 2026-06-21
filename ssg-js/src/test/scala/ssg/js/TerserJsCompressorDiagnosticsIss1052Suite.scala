@@ -2,18 +2,13 @@
 package ssg
 package js
 
-/** ISS-1052: TerserJsCompressor.compress silently swallows all exceptions with
-  * no diagnostics channel — JS minification failures are invisible to the build.
+/** ISS-1052: TerserJsCompressor.compress silently swallows all exceptions with no diagnostics channel — JS minification failures are invisible to the build.
   *
-  * The fix adds an injectable `ssg.commons.Logger` parameter (defaulting to
-  * `Logger.quiet`) and surfaces the exception via `logger.warn(...)` before
-  * returning the original input (graceful degradation preserved).
+  * The fix adds an injectable `ssg.commons.Logger` parameter (defaulting to `Logger.quiet`) and surfaces the exception via `logger.warn(...)` before returning the original input (graceful degradation
+  * preserved).
   *
-  * Test approach: feed syntactically invalid JavaScript that makes
-  * `Terser.minifyToString` throw a `JsParseError`, inject a collecting
-  * `ssg.commons.Logger` test double, and verify that (a) the diagnostic IS
-  * emitted via the logger, (b) the original input is returned (graceful
-  * degradation), and (c) the warning message contains the exception details.
+  * Test approach: feed syntactically invalid JavaScript that makes `Terser.minifyToString` throw a `JsParseError`, inject a collecting `ssg.commons.Logger` test double, and verify that (a) the
+  * diagnostic IS emitted via the logger, (b) the original input is returned (graceful degradation), and (c) the warning message contains the exception details.
   */
 final class TerserJsCompressorDiagnosticsIss1052Suite extends munit.FunSuite {
 

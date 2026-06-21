@@ -20,8 +20,7 @@ import ssg.commons.io.FilePath
 
 /** The stage of the site build pipeline that produced a diagnostic.
   *
-  * Each stage wraps its engine call and adapts the engine's native error
-  * contract into a [[BuildDiagnostic]] (design section 7).
+  * Each stage wraps its engine call and adapts the engine's native error contract into a [[BuildDiagnostic]] (design section 7).
   */
 enum BuildStage extends java.lang.Enum[BuildStage] {
   case Config
@@ -43,10 +42,8 @@ enum Severity extends java.lang.Enum[Severity] {
 
 /** A structured diagnostic emitted during a site build.
   *
-  * Adapts each engine's native error contract into a uniform shape that
-  * callers (CLI, test) can inspect without knowing which engine failed.
-  * Per design section 7: no silent swallow — every skipped or failed
-  * step produces a diagnostic.
+  * Adapts each engine's native error contract into a uniform shape that callers (CLI, test) can inspect without knowing which engine failed. Per design section 7: no silent swallow — every skipped or
+  * failed step produces a diagnostic.
   *
   * @param file
   *   the source file that triggered the diagnostic
@@ -69,11 +66,8 @@ final case class BuildDiagnostic(
 
 /** The result of a site build.
   *
-  * Contains the list of files written to the destination directory and
-  * any diagnostics (errors/warnings) collected during the build. Per
-  * design section 7 (Q8): `Site.build` returns this instead of throwing,
-  * so the caller can decide policy. A `failOnError` flag can promote
-  * any Error diagnostic to a thrown exception.
+  * Contains the list of files written to the destination directory and any diagnostics (errors/warnings) collected during the build. Per design section 7 (Q8): `Site.build` returns this instead of
+  * throwing, so the caller can decide policy. A `failOnError` flag can promote any Error diagnostic to a thrown exception.
   *
   * @param written
   *   the output file paths written to the destination directory

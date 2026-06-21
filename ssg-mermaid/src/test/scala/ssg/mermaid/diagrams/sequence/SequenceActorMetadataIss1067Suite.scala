@@ -11,12 +11,9 @@ import munit.FunSuite
 
 /** Differential suite for the actor-metadata half of ISS-1067.
   *
-  * Upstream mermaid's `sequenceDiagram.jison` recognizes four actor-metadata statements
-  * (jison:248-274): `links`, `link`, `properties`, `details`. Each dispatches to the corresponding
-  * `sequenceDb.ts` action (`addLinks`/`addALink`/`addProperties`/`addDetails`, lines 369-471) which
-  * JSON-parses the `text2` payload and merges it into the actor's `links`/`properties` maps. SSG
-  * previously dropped these lines silently. This suite parses each statement and asserts the actor's
-  * maps are populated with the REAL parsed values.
+  * Upstream mermaid's `sequenceDiagram.jison` recognizes four actor-metadata statements (jison:248-274): `links`, `link`, `properties`, `details`. Each dispatches to the corresponding `sequenceDb.ts`
+  * action (`addLinks`/`addALink`/`addProperties`/`addDetails`, lines 369-471) which JSON-parses the `text2` payload and merges it into the actor's `links`/`properties` maps. SSG previously dropped
+  * these lines silently. This suite parses each statement and asserts the actor's maps are populated with the REAL parsed values.
   */
 final class SequenceActorMetadataIss1067Suite extends FunSuite {
 

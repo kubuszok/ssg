@@ -54,11 +54,11 @@ object SourceMapJson {
   // ==========================================================================
 
   /** Serialize a source map to its JSON string, matching `JSON.stringify(map)` over
-    * @jridgewell's `toEncodedMap()` object (minify.js:336,347-348).
+    * @jridgewell's
+    *   `toEncodedMap()` object (minify.js:336,347-348).
     *
-    * Field order and omission follow the cleaned encoded map (sourcemap.js `clean`,
-    * lib/sourcemap.js:115-121): `file`/`sourceRoot` are emitted only when non-null,
-    * and `sourcesContent` only when present (the `clean` step drops all-null content).
+    * Field order and omission follow the cleaned encoded map (sourcemap.js `clean`, lib/sourcemap.js:115-121): `file`/`sourceRoot` are emitted only when non-null, and `sourcesContent` only when
+    * present (the `clean` step drops all-null content).
     */
   def stringify(map: SourceMapData): String = {
     val sb = new StringBuilder
@@ -103,7 +103,7 @@ object SourceMapJson {
     while (i < arr.length) {
       if (i > 0) sb.append(',')
       arr(i) match {
-        case null      => sb.append("null")
+        case null => sb.append("null")
         case s: String => writeString(sb, s)
       }
       i += 1
@@ -125,7 +125,7 @@ object SourceMapJson {
         case '\n' => sb.append("\\n")
         case '\r' => sb.append("\\r")
         case '\t' => sb.append("\\t")
-        case _ =>
+        case _    =>
           if (c < 0x20) {
             sb.append("\\u")
             val hex = Integer.toHexString(c.toInt)
@@ -148,31 +148,30 @@ object SourceMapJson {
   /** Parse failure for an inline/input source-map JSON string. */
   final class SourceMapParseError(msg: String) extends RuntimeException(msg)
 
-  /** Parse a JSON V3 source-map string into a [[SourceMapData]] (the `JSON.parse`
-    * a `SourceMapConsumer` performs on `options.sourceMap.content`, sourcemap.js:73).
+  /** Parse a JSON V3 source-map string into a [[SourceMapData]] (the `JSON.parse` a `SourceMapConsumer` performs on `options.sourceMap.content`, sourcemap.js:73).
     */
   def parse(json: String): SourceMapData = {
-    val p   = new JsonReader(json)
+    val p = new JsonReader(json)
     p.skipWs()
     val obj = p.readObject()
     p.skipWs()
     if (!p.atEnd) throw new SourceMapParseError("trailing data after source map JSON")
 
-    var version: Int                              = 3
-    var file: String | Null                       = null
-    var sourceRoot: String | Null                 = null
-    val sources: ArrayBuffer[String]               = ArrayBuffer.empty
+    var version:        Int                        = 3
+    var file:           String | Null              = null
+    var sourceRoot:     String | Null              = null
+    val sources:        ArrayBuffer[String]        = ArrayBuffer.empty
     val sourcesContent: ArrayBuffer[String | Null] = ArrayBuffer.empty
-    val names: ArrayBuffer[String]                 = ArrayBuffer.empty
-    var mappings: String                           = ""
+    val names:          ArrayBuffer[String]        = ArrayBuffer.empty
+    var mappings:       String                     = ""
 
     obj.foreach { case (key, value) =>
       key match {
         case "version" =>
           value match {
-            case JsonNum(n)  => version = n.toInt
-            case JsonNull    => // leave default
-            case _           => // ignore unexpected type
+            case JsonNum(n) => version = n.toInt
+            case JsonNull   => // leave default
+            case _          => // ignore unexpected type
           }
         case "file" =>
           value match {
@@ -235,15 +234,15 @@ object SourceMapJson {
 
   // --- JSON value model + recursive-descent reader ---
 
-  private sealed trait JsonValue
-  private case object JsonNull                              extends JsonValue
-  private final case class JsonStr(value: String)          extends JsonValue
-  private final case class JsonNum(value: Double)          extends JsonValue
-  private final case class JsonBool(value: Boolean)        extends JsonValue
-  private final case class JsonArr(items: List[JsonValue]) extends JsonValue
-  private final case class JsonObj(fields: List[(String, JsonValue)]) extends JsonValue
+  sealed private trait JsonValue
+  private case object JsonNull extends JsonValue
+  final private case class JsonStr(value: String) extends JsonValue
+  final private case class JsonNum(value: Double) extends JsonValue
+  final private case class JsonBool(value: Boolean) extends JsonValue
+  final private case class JsonArr(items: List[JsonValue]) extends JsonValue
+  final private case class JsonObj(fields: List[(String, JsonValue)]) extends JsonValue
 
-  private final class JsonReader(s: String) {
+  final private class JsonReader(s: String) {
     private var i = 0
 
     def atEnd: Boolean = i >= s.length
@@ -317,14 +316,14 @@ object SourceMapJson {
     private def readValue(): JsonValue = {
       if (i >= s.length) fail("unexpected end of input")
       s.charAt(i) match {
-        case '"' => JsonStr(readString())
-        case '{' => JsonObj(readObject())
-        case '[' => JsonArr(readArray())
-        case 't' => readLiteral("true"); JsonBool(true)
-        case 'f' => readLiteral("false"); JsonBool(false)
-        case 'n' => readLiteral("null"); JsonNull
+        case '"'                                     => JsonStr(readString())
+        case '{'                                     => JsonObj(readObject())
+        case '['                                     => JsonArr(readArray())
+        case 't'                                     => readLiteral("true"); JsonBool(true)
+        case 'f'                                     => readLiteral("false"); JsonBool(false)
+        case 'n'                                     => readLiteral("null"); JsonNull
         case c if c == '-' || (c >= '0' && c <= '9') => JsonNum(readNumber())
-        case _ => fail("unexpected character")
+        case _                                       => fail("unexpected character")
       }
     }
 
@@ -336,10 +335,12 @@ object SourceMapJson {
     private def readNumber(): Double = {
       val start = i
       if (i < s.length && s.charAt(i) == '-') i += 1
-      while (i < s.length && {
+      while (
+        i < s.length && {
           val c = s.charAt(i)
           (c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-'
-        }) i += 1
+        }
+      ) i += 1
       java.lang.Double.parseDouble(s.substring(start, i))
     }
 

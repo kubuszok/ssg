@@ -5,15 +5,12 @@ package liquid
 import ssg.commons.io.FilePath
 import ssg.liquid.tags.IncludeRelative
 
-/** ISS-1214 / C8: mutation-killing test for the separator-boundary predicate
-  * in `IncludeRelative.isUnderRoot`.
+/** ISS-1214 / C8: mutation-killing test for the separator-boundary predicate in `IncludeRelative.isUnderRoot`.
   *
-  * Same predicate shape as `RootJail.isUnderRoot` in ssg-site.
-  * The predicate uses `startsWith(rootStr + Separator)` (not bare `startsWith(rootStr)`)
-  * to prevent sibling-prefix false positives (e.g. root="/tmp/src", resolved="/tmp/srcfoo/evil.txt").
+  * Same predicate shape as `RootJail.isUnderRoot` in ssg-site. The predicate uses `startsWith(rootStr + Separator)` (not bare `startsWith(rootStr)`) to prevent sibling-prefix false positives (e.g.
+  * root="/tmp/src", resolved="/tmp/srcfoo/evil.txt").
   *
-  * All three assertions use `FilePath.of(...)` with absolute synthetic paths. The predicate is
-  * pure string-prefix comparison on `pathString`, so no filesystem I/O is required.
+  * All three assertions use `FilePath.of(...)` with absolute synthetic paths. The predicate is pure string-prefix comparison on `pathString`, so no filesystem I/O is required.
   */
 final class IncludeRelativeJailIss1214Suite extends munit.FunSuite {
 

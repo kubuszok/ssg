@@ -20,13 +20,12 @@ package io
 
 import java.nio.file.Paths
 
-/** Native implementation. The path is held as a string, but all operations are
-  * delegated to java.nio.file.Paths/Path to match the JVM implementation.
+/** Native implementation. The path is held as a string, but all operations are delegated to java.nio.file.Paths/Path to match the JVM implementation.
   */
 final private[io] class NativeFilePath(val pathString: String) extends FilePath {
 
-  /** The string routed through java.nio.file.Paths, matching the JVM impl's underlying Path
-    * (scalajvm/ssg/commons/io/FilePathPlatform.scala:55, and the FilePathPlatform.toNioPath fallback `Paths.get(fp.pathString)`).
+  /** The string routed through java.nio.file.Paths, matching the JVM impl's underlying Path (scalajvm/ssg/commons/io/FilePathPlatform.scala:55, and the FilePathPlatform.toNioPath fallback
+    * `Paths.get(fp.pathString)`).
     */
   private def underlying: java.nio.file.Path = Paths.get(pathString)
 

@@ -391,6 +391,9 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommonsScala3 & MacroCommo
 
       getters
         .foldLeft(MIO.pure(List.empty[(String, Expr[DataView])])) { case (accMIO, getter) =>
+          // hearth: JavaBean.beanGetters is List[Existential[Method.OfInstance[A, *]]] — `.value`
+          // unwraps the existential to the underlying Method.OfInstance, which exposes the Returned type
+          // and `apply(instance, arguments)` to build the getter-call expression.
           val method = getter.value
           val name   = method.javaAccessorName.getOrElse(method.name)
           accMIO.flatMap { acc =>

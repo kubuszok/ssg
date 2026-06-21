@@ -24,11 +24,10 @@ class SiteBuildPhase3Suite extends munit.FunSuite {
     val tmpBase = FilePath.cwd.resolve("target").resolve("test-tmp")
     val testDir = tmpBase.resolve(s"ssg-phase3-test-$testName-${System.nanoTime()}")
     FileOps.createDirectories(testDir)
-    try {
+    try
       body(testDir)
-    } finally {
+    finally
       FileOps.deleteRecursively(testDir)
-    }
   }
 
   /** Sets up a site source directory with the given files and returns a SiteConfig. */
@@ -179,7 +178,7 @@ class SiteBuildPhase3Suite extends munit.FunSuite {
   test("case 7: static passthrough byte-identical (byte-exact)") {
     withTempDir("case7") { baseDir =>
       val staticContent = "This is static content.\nNo front matter here.\nExact bytes preserved.\n"
-      val config = setupSite(
+      val config        = setupSite(
         baseDir,
         configYaml = "title: Test Site\n",
         files = Map(
