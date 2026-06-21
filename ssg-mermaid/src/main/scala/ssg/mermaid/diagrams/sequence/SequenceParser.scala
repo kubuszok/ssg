@@ -573,19 +573,27 @@ object SequenceParser {
     result
   }
 
+  /** JS `String.prototype.slice`: negative indices count from the end, both bounds are clamped to `[0, length]`, and an empty string is returned when `start >= end`. */
+  private def jsSlice(s: String, start: Int, end: Int = Int.MaxValue): String = {
+    val len = s.length
+    val st  = if (start < 0) math.max(len + start, 0) else math.min(start, len)
+    val en  = if (end < 0) math.max(len + end, 0) else math.min(end, len)
+    if (st >= en) "" else s.substring(st, en)
+  }
+
   /** Parses a single `label @ url` pair (sequenceDb.ts:388-399).
     *
-    * Faithful port of `addALink`'s body: find `@` via `indexOf`, label = `slice(0, sep - 1).trim()`, link = `slice(sep + 1).trim()`. When no `@` is present (`indexOf` returns -1) upstream still
-    * builds `{ label: link }` from the slices; here a missing `@` yields an empty map (no link added), matching the catch-and-continue effect for input that is not a valid `label @ url` pair.
+    * Faithful port of `addALink`'s body: find `@` via `indexOf`, label = `slice(0, sep - 1).trim()`, link = `slice(sep + 1).trim()`. The pair is ALWAYS inserted — `addALink` has no guard
+    * (sequenceDb.ts:397-399). When no `@` is present (`indexOf` returns -1) upstream still builds `{ label: link }` from the slices: with `sep == -1`, `slice(0, sep - 1)` == `slice(0, -2)` keeps
+    * `text` minus its last two chars and `slice(sep + 1)` == `slice(0)` keeps the whole `text`. [[jsSlice]] replicates these negative-index slice semantics (Scala `substring` would throw on negative
+    * indices). For `sep >= 1` this is identical to `substring(0, sep - 1)` / `substring(sep + 1)`.
     */
   private def parseALinkMap(text: String): mutable.LinkedHashMap[String, String] = {
     val result = mutable.LinkedHashMap.empty[String, String]
     val sep    = text.indexOf('@')
-    if (sep >= 1) {
-      val label = text.substring(0, sep - 1).trim
-      val link  = text.substring(sep + 1).trim
-      result(label) = link
-    }
+    val label  = jsSlice(text, 0, sep - 1).trim
+    val link   = jsSlice(text, sep + 1).trim
+    result(label) = link
     result
   }
 
