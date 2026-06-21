@@ -2644,7 +2644,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // catch_var
   // =========================================================================
-  test("catch_var".fail) {
+  test("catch_var") {
     assertCompresses(
       input = """try {
             throw {};

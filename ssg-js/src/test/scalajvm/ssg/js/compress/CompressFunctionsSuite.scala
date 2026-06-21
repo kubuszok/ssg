@@ -2198,7 +2198,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3016_2
   // =========================================================================
-  test("issue_3016_2".fail) {
+  test("issue_3016_2") {
     assertCompresses(
       input = """var b = 1;
         do {
@@ -2231,7 +2231,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3016_2_ie8
   // =========================================================================
-  test("issue_3016_2_ie8".fail) {
+  test("issue_3016_2_ie8") {
     assertCompresses(
       input = """var b = 1;
         do {
