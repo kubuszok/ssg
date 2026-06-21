@@ -508,7 +508,9 @@ object FlowchartParser {
       val target = readLinkTarget(scanner)
 
       target match {
-        case t if t.isDefined => db.setLink(id, link, t.get)
+        // flowDb.ts:345-350 — when LINK_TARGET is present, the raw target is stored;
+        // when omitted, setLink leaves linkTarget undefined (Nullable.empty default).
+        case t if t.isDefined => db.setLink(id, link, Nullable(t.get))
         case _                => db.setLink(id, link)
       }
       tooltip.foreach(t => db.setTooltip(id, t))

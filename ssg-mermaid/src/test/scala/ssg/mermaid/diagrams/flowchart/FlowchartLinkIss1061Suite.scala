@@ -25,7 +25,7 @@ final class FlowchartLinkIss1061Suite extends FunSuite {
   private def renderWith(linkStr: String, target: String, securityLevel: String = "strict"): String = {
     val db = new FlowchartDb
     db.addNode("A", text = Nullable("Click me"), shape = Nullable("square"))
-    db.setLink("A", linkStr, target)
+    db.setLink("A", linkStr, Nullable(target))
     FlowchartRenderer.render(db, MermaidConfig(securityLevel = securityLevel))
   }
 

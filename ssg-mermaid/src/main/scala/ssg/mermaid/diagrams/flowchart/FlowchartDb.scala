@@ -583,7 +583,7 @@ final class FlowchartDb {
     *
     * Ports `setLink()` from `flowDb.ts`.
     */
-  def setLink(ids: String, linkStr: String, target: String = "_blank"): Unit = {
+  def setLink(ids: String, linkStr: String, target: Nullable[String] = Nullable.empty): Unit = {
     for (id <- ids.split(",")) {
       val trimId = id.trim
       nodes.get(trimId).foreach { node =>
@@ -591,8 +591,10 @@ final class FlowchartDb {
         // formatUrl trims, sanitizes under any non-`loose` security level, and
         // passes the URL through verbatim under `loose` (utils.ts:248-260).
         node.link = ssg.mermaid.util.Utils.formatUrl(linkStr, securityLevel)
-        // flowDb.ts:350 — the target is stored RAW
-        node.linkTarget = Nullable(target)
+        // flowDb.ts:350 — `vertex.linkTarget = target` stored RAW; `target` has
+        // NO default in setLink (flowDb.ts:345), so it stays undefined/empty when
+        // the caller omits it (no `_blank` default at the DB layer).
+        node.linkTarget = target
       }
     }
     setClass(ids, "clickable")
