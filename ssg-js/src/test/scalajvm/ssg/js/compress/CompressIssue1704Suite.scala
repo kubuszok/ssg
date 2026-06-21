@@ -1,11 +1,10 @@
 /* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
  * Mangle + compression tests for issue-1704 (catch variable mangling).
- * Ported from: terser/test/compress/issue-1704.js (20 test cases)
- *
- * All 20 tests involve mangling catch variables with various options
- * (ie8, toplevel, redefine). They use both compression and mangle options
- * with expect_exact + expect_stdout assertions.
+ * Ported from: terser/test/compress/issue-1704.js — 18 of 20 upstream tests
+ * ported (those with expect_exact); 2 stdout-only tests omitted
+ * (mangle_catch_redef_3_toplevel :372, mangle_catch_redef_3_ie8_toplevel :417).
+ * 8 of the 18 are pinned on ISS-1231 (catch-var redefinition crash).
  *
  * Auto-ported by hand since gen-compress-tests.js does not support mangle format. */
 package ssg
@@ -134,45 +133,82 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   }
 
   // =========================================================================
-  // Remaining 12 redefine tests — these test catch var redefinitions
-  // with various ie8/toplevel combinations. They follow the same pattern
-  // but with more complex inputs. Mark as .fail since the exact mangled
-  // output depends on precise scope analysis ordering.
+  // mangle_catch_redef — catch var redefinitions with ie8/toplevel combos.
+  // 18 of 20 upstream tests ported (those with expect_exact); 2 omitted
+  // (mangle_catch_redef_3_toplevel issue-1704.js:372 and
+  // mangle_catch_redef_3_ie8_toplevel issue-1704.js:417) because they have
+  // only expect_stdout — SSG has no JS runtime to verify stdout, and
+  // asserting SSG's own output would be a tautology (C11).
+  // 8 of the 18 are pinned on ISS-1231 (ClassCastException in
+  // ScopeAnalysis.handleVarLikeDecl with catch-var redefinitions).
   // =========================================================================
-  test("mangle_catch_redef_1".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+
+  private val redef1Input =
+    "var a = \"PASS\";\ntry {\n    throw \"FAIL1\";\n} catch (a) {\n    var a = \"FAIL2\";\n}\nconsole.log(a);"
+  private val redef2Input =
+    "try {\n    throw \"FAIL1\";\n} catch (a) {\n    var a = \"FAIL2\";\n}\nconsole.log(a);"
+  private val redef3Input =
+    "var o = \"PASS\";\ntry {\n    throw 0;\n} catch (o) {\n    (function() {\n        function f() {\n            o = \"FAIL\";\n        }\n        f(), f();\n    })();\n}\nconsole.log(o);"
+
+  test("mangle_catch_redef_1".fail) { // ISS-1231 blocked; issue-1704.js:195
+    assertEquals(
+      minifyWithMangleAndCompress(redef1Input),
+      "var a=\"PASS\";try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
+    )
   }
-  test("mangle_catch_redef_1_ie8".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_1_ie8".fail) { // ISS-1231 blocked; issue-1704.js:217
+    assertEquals(
+      minifyWithMangleAndCompress(redef1Input, ie8 = true),
+      "var a=\"PASS\";try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
+    )
   }
-  test("mangle_catch_redef_1_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_1_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:239
+    assertEquals(
+      minifyWithMangleAndCompress(redef1Input, toplevel = true),
+      "var o=\"PASS\";try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
+    )
   }
-  test("mangle_catch_redef_1_ie8_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_1_ie8_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:261
+    assertEquals(
+      minifyWithMangleAndCompress(redef1Input, ie8 = true, toplevel = true),
+      "var o=\"PASS\";try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
+    )
   }
-  test("mangle_catch_redef_2".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_2".fail) { // ISS-1231 blocked; issue-1704.js:282
+    assertEquals(
+      minifyWithMangleAndCompress(redef2Input),
+      "try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
+    )
   }
-  test("mangle_catch_redef_2_ie8".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_2_ie8".fail) { // ISS-1231 blocked; issue-1704.js:303
+    assertEquals(
+      minifyWithMangleAndCompress(redef2Input, ie8 = true),
+      "try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
+    )
   }
-  test("mangle_catch_redef_2_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_2_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:325
+    assertEquals(
+      minifyWithMangleAndCompress(redef2Input, toplevel = true),
+      "try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
+    )
   }
-  test("mangle_catch_redef_2_ie8_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_2_ie8_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:347
+    assertEquals(
+      minifyWithMangleAndCompress(redef2Input, ie8 = true, toplevel = true),
+      "try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
+    )
   }
-  test("mangle_catch_redef_3".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+
+  test("mangle_catch_redef_3") { // issue-1704.js:368
+    assertEquals(
+      minifyWithMangleAndCompress(redef3Input),
+      "var o=\"PASS\";try{throw 0}catch(o){(function(){function c(){o=\"FAIL\"}c(),c()})()}console.log(o);"
+    )
   }
-  test("mangle_catch_redef_3_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
-  }
-  test("mangle_catch_redef_ie8_3".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
-  }
-  test("mangle_catch_redef_3_ie8_toplevel".fail) {
-    fail("Complex catch redefinition mangle tests need precise scope analysis verification")
+  test("mangle_catch_redef_ie8_3") { // issue-1704.js:413
+    assertEquals(
+      minifyWithMangleAndCompress(redef3Input, ie8 = true),
+      "var o=\"PASS\";try{throw 0}catch(o){(function(){function c(){o=\"FAIL\"}c(),c()})()}console.log(o);"
+    )
   }
 }
