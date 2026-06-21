@@ -53,6 +53,10 @@ val commonSettings = Seq(
       "org.scalameta"     %% "munit-scalacheck"  % versions.munitScalacheck % Test
     ),
     resolvers += Resolver.mavenLocal,
+    // Sonatype Central Portal snapshots — hearth/kindlings sbt-2.0 dev snapshots
+    // (the incoming hearth 0.4.0 / kindlings 0.3.0 breaking-change line) live here,
+    // published by their CI; not yet released to Central.
+    resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/",
     testFrameworks += new TestFramework("munit.Framework")
   )),
   MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(

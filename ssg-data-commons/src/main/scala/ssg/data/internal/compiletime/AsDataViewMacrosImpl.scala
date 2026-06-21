@@ -391,20 +391,42 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommonsScala3 & MacroCommo
 
       getters
         .foldLeft(MIO.pure(List.empty[(String, Expr[DataView])])) { case (accMIO, getter) =>
-          // hearth: JavaBean.beanGetters is List[Existential[Method.OfInstance[A, *]]] — `.value`
-          // unwraps the existential to the underlying Method.OfInstance, which exposes the Returned type
-          // and `apply(instance, arguments)` to build the getter-call expression.
-          val method = getter.value
-          val name   = method.javaAccessorName.getOrElse(method.name)
+          // hearth: JavaBean.beanGetters is now List[Method] (each already a Method, no
+          // existential to unwrap). A bean getter is a nullary instance method, i.e. it
+          // arrives in the Method.OnInstance state. Invocation is a builder chain: call
+          // `apply(instance)` to bind the receiver, which — being nullary — advances straight
+          // to a Method.Result, whose `build()` yields Either[String, Expr[Returned]] and
+          // whose `Returned` type member recovers the getter's return type. This mirrors the
+          // canonical idiom in hearth-kindlings' WiringMacrosImpl.membersAsValues (calling a
+          // nullary instance member to obtain its value expression + Returned type).
+          val name = getter.javaAccessorName.getOrElse(getter.name)
           accMIO.flatMap { acc =>
-            method.apply(value, Map.empty) match {
-              case Right(getterResult) =>
-                import method.Returned as ReturnType
-                deriveConversion[ReturnType](getterResult).map { dvExpr =>
-                  acc :+ (name -> dvExpr)
+            getter match {
+              case onInstance: Method.OnInstance =>
+                onInstance.apply(value.asInstanceOf[Expr[onInstance.Instance]]) match {
+                  case r: Method.Result[?] =>
+                    import r.Returned as ReturnType
+                    r.build() match {
+                      case Right(getterResult) =>
+                        deriveConversion[ReturnType](getterResult).map { dvExpr =>
+                          acc :+ (name -> dvExpr)
+                        }
+                      case Left(error) =>
+                        MIO.fail(new RuntimeException(s"Failed to call getter $name: $error"))
+                    }
+                  case other =>
+                    MIO.fail(
+                      new RuntimeException(
+                        s"Getter $name did not resolve to a result after binding the instance: ${other.getClass.getSimpleName}"
+                      )
+                    )
                 }
-              case Left(error) =>
-                MIO.fail(new RuntimeException(s"Failed to call getter $name: $error"))
+              case other =>
+                MIO.fail(
+                  new RuntimeException(
+                    s"Getter $name is not an instance method: ${other.getClass.getSimpleName}"
+                  )
+                )
             }
           }
         }
