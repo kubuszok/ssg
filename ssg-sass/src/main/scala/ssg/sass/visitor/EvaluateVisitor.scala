@@ -187,11 +187,13 @@ final class EvaluateVisitor(
     deprecation match {
       case dep if dep.isDefined =>
         // dart-sass evaluate.dart:4681-4696: `_warn` routes exclusively through
-        // the logger — there is no parallel warnings list.  Only record the
-        // deprecation in `_warnings` when the logger would actually emit it
-        // (i.e. the deprecation is not silenced).  The authority on suppression
-        // is `DeprecationProcessingLogger.silenceDeprecations` (Logger.scala:265).
-        if (!_isDeprecationSilenced(dep.get)) {
+        // the logger -- there is no parallel warnings list.  Only record the
+        // deprecation in `_warnings` when the logger would actually emit it.
+        // The authority on suppression is DeprecationProcessingLogger.willEmit
+        // (Logger.scala) which covers silenced, future-not-opted-in, and
+        // repetition-limited drop reasons (ISS-1183).  Must gate BEFORE
+        // warnForDeprecation so the repetition count reads pre-increment.
+        if (_loggerWillEmit(dep.get)) {
           _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
         }
         _logger.warnForDeprecation(dep.get, message)
@@ -577,11 +579,12 @@ final class EvaluateVisitor(
       ssg.sass.EvaluationContext.withContext(this) {
         // Forward any warnings discovered during parsing into the evaluator's
         // warning buffer so they surface on CompileResult.warnings.
-        // Silenced deprecations are excluded, matching the dart-sass single-path
-        // emission (evaluate.dart:4681-4696).
+        // Dropped deprecations are excluded, matching the dart-sass single-path
+        // emission (evaluate.dart:4681-4696).  Uses _loggerWillEmit to cover
+        // silenced, future-not-opted-in, and repetition-limited (ISS-1183).
         for (ptw <- stylesheet.parseTimeWarnings)
           ptw.deprecation.fold(_warnings += s"WARNING: ${ptw.message}") { d =>
-            if (!_isDeprecationSilenced(d)) {
+            if (_loggerWillEmit(d)) {
               _warnings += s"DEPRECATION WARNING [${d.id}]: ${ptw.message}"
             }
           }
@@ -2324,15 +2327,16 @@ final class EvaluateVisitor(
     */
   private def _logger: Logger = logger.getOrElse(Logger.quiet)
 
-  /** Returns `true` when the active logger would suppress [deprecation].
+  /** Returns `true` when the active logger would actually emit this [deprecation] (vs drop it).
     *
-    * dart-sass has no parallel `_warnings` buffer — warnings flow exclusively through the logger (evaluate.dart:4681-4696), so a silenced deprecation is never recorded at all. This helper queries the
-    * authoritative [[DeprecationProcessingLogger.silenceDeprecations]] set (Logger.scala:155) to keep `_warnings` in sync with what the logger actually emits.
+    * dart-sass has no parallel `_warnings` buffer -- warnings flow exclusively through the logger (evaluate.dart:4681-4696), so a dropped deprecation is never recorded at all. This helper queries the
+    * authoritative [[DeprecationProcessingLogger.willEmit]] predicate (Logger.scala) to keep `_warnings` in sync with what the logger actually emits for ALL drop reasons: future-not-opted-in,
+    * silenced, and repetition-limited (ISS-1183). Must be called BEFORE the corresponding `warnForDeprecation` so the repetition count reads pre-increment.
     */
-  private def _isDeprecationSilenced(deprecation: Deprecation): Boolean =
+  private def _loggerWillEmit(deprecation: Deprecation): Boolean =
     _logger match {
-      case dpl: DeprecationProcessingLogger => dpl.silenceDeprecations.contains(deprecation)
-      case _ => false
+      case dpl: DeprecationProcessingLogger => dpl.willEmit(deprecation)
+      case _ => true
     }
 
   // ---------------------------------------------------------------------------
@@ -2419,10 +2423,13 @@ final class EvaluateVisitor(
     val trace = _stackTrace(Nullable(span))
     deprecation match {
       case dep if dep.isDefined =>
-        _logger.warnForDeprecation(dep.get, message, span = Nullable(span), trace = Nullable(trace))
         // dart-sass evaluate.dart:4689-4694: warnings only flow through the
-        // logger — silenced deprecations are never recorded.
-        if (!_isDeprecationSilenced(dep.get)) {
+        // logger -- dropped deprecations are never recorded.  Gate BEFORE
+        // warnForDeprecation so the repetition count reads pre-increment
+        // (ISS-1183).
+        val emit = _loggerWillEmit(dep.get)
+        _logger.warnForDeprecation(dep.get, message, span = Nullable(span), trace = Nullable(trace))
+        if (emit) {
           _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
         }
       case _ =>
