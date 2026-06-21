@@ -27,6 +27,8 @@ package js
 package ast
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** AST node size estimation.
   *
@@ -80,11 +82,74 @@ object AstSize {
       case _ => 0
     }
 
-  /** Check if a node is first in statement position (simplified version for size estimation). */
-  private def isFirstInStatement(tw: TreeWalker): Boolean = {
-    val p = tw.parent()
-    p != null && p.nn.isInstanceOf[AstSimpleStatement]
-  }
+  /** Check if a node is the lexically first token in a statement by walking the left spine of the parent chain.
+    *
+    * Faithfully ports terser first_in_statement (first_in_statement.js:17-37): starting from the current node, walk up the ancestors. At each level, if the parent is an AST_Statement whose body IS
+    * the node, return true. If the node is the leftmost child of its parent (first element of a Sequence, expression of a Call (not New), expression of a Dot/Sub/Chain, condition of a Conditional,
+    * left of a Binary, expression of a UnaryPostfix, prefix of a PrefixedTemplateString), advance node=parent and continue. Otherwise return false.
+    */
+  private def isFirstInStatement(node: AstNode, tw: TreeWalker): Boolean =
+    boundary[Boolean] {
+      // terser: let node = stack.parent(-1)  -- the node currently being sized.
+      // Here `node` is passed in from the call site (== tw.self()).
+      var current: AstNode = node
+      var i = 0
+      var p: AstNode | Null = tw.parent(i)
+      while (p != null) {
+        val parent = p.nn
+        // first_in_statement.js:20-21
+        parent match {
+          case stmt: AstSimpleStatement if stmt.body != null && (stmt.body.nn eq current) =>
+            break(true)
+          case stmt: AstStatementWithBody if stmt.body != null && (stmt.body.nn eq current) =>
+            break(true)
+          case _ =>
+        }
+        // first_in_statement.js:22-30  -- leftmost-child checks
+        val isLeftmost = parent match {
+          // first_in_statement.js:22 -- p instanceof AST_Sequence && p.expressions[0] === node
+          case seq: AstSequence =>
+            seq.expressions.nonEmpty && (seq.expressions.head eq current)
+          // first_in_statement.js:23 -- p.TYPE === "Call" && p.expression === node
+          // AST_New extends AST_Call but TYPE is "New", not "Call" -- exclude it.
+          case call: AstCall if !call.isInstanceOf[AstNew] =>
+            call.expression != null && (call.expression.nn eq current)
+          // first_in_statement.js:24 -- p instanceof AST_PrefixedTemplateString && p.prefix === node
+          case pts: AstPrefixedTemplateString =>
+            pts.prefix != null && (pts.prefix.nn eq current)
+          // first_in_statement.js:25 -- p instanceof AST_Dot && p.expression === node
+          case dot: AstDot =>
+            dot.expression != null && (dot.expression.nn eq current)
+          // first_in_statement.js:26 -- p instanceof AST_Sub && p.expression === node
+          case sub: AstSub =>
+            sub.expression != null && (sub.expression.nn eq current)
+          // first_in_statement.js:27 -- p instanceof AST_Chain && p.expression === node
+          case chain: AstChain =>
+            chain.expression != null && (chain.expression.nn eq current)
+          // first_in_statement.js:28 -- p instanceof AST_Conditional && p.condition === node
+          case cond: AstConditional =>
+            cond.condition != null && (cond.condition.nn eq current)
+          // first_in_statement.js:29 -- p instanceof AST_Binary && p.left === node
+          case bin: AstBinary =>
+            bin.left != null && (bin.left.nn eq current)
+          // first_in_statement.js:30 -- p instanceof AST_UnaryPostfix && p.expression === node
+          case post: AstUnaryPostfix =>
+            post.expression != null && (post.expression.nn eq current)
+          case _ => false
+        }
+        if (isLeftmost) {
+          // first_in_statement.js:32 -- node = p
+          current = parent
+        } else {
+          // first_in_statement.js:34 -- return false
+          break(false)
+        }
+        i += 1
+        p = tw.parent(i)
+      }
+      // first_in_statement.js:37 -- falls off loop (undefined, falsy in JS)
+      false
+    }
 
   /** Estimate the size of a single node (not including children).
     *
@@ -158,7 +223,7 @@ object AstSize {
         lambdaModifiers(acc.isGenerator, acc.isAsync) + 4 +
           listOverhead(acc.argnames) + listOverhead(acc.body)
       case fn: AstFunction =>
-        val first = if (isFirstInStatement(tw)) 2 else 0
+        val first = if (isFirstInStatement(fn, tw)) 2 else 0
         first + lambdaModifiers(fn.isGenerator, fn.isAsync) + 12 +
           listOverhead(fn.argnames) + listOverhead(fn.body)
       case d: AstDefun =>
@@ -231,7 +296,7 @@ object AstSize {
         2 + listOverhead(arr.elements)
       case obj: AstObject =>
         var base = 2
-        if (isFirstInStatement(tw)) base += 2
+        if (isFirstInStatement(obj, tw)) base += 2
         base + listOverhead(obj.properties)
 
       // --- Object properties ---
