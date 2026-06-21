@@ -162,7 +162,16 @@ class SymbolDef(
           val rd = redefinition.nn
           if (rd.mangledName != null) rd.mangledName else rd.name
         } else {
-          Mangler.nextMangled(s, options, this)
+          // scope.js:186 — `s.next_mangled(options, this)` is a polymorphic
+          // dispatch: AST_Toplevel overrides to skip mangled_names (scope.js:736-743),
+          // AST_Function overrides for the safari tricky-def (scope.js:745-759),
+          // and the base AST_Scope just calls next_mangled (scope.js:732-734).
+          s match {
+            case tl: AstToplevel =>
+              Mangler.nextMangledToplevel(tl, options, tl.mangledNames)
+            case _ =>
+              Mangler.nextMangled(s, options, this)
+          }
         }
       if (global && cache != null) {
         cache.nn.props(name) = mangledName.nn

@@ -317,7 +317,12 @@ object Mangler {
       ScopeAnalysis.functionDefs = mutable.Set.empty
     }
 
+    // scope.js:823 — `const mangled_names = this.mangled_names = new Set();`
+    // Store on the AST node so SymbolDef.mangle can read it via the toplevel
+    // scope's mangledNames field (used by nextMangledToplevel to skip names
+    // already consumed by previous minify() calls through the shared cache).
     val mangledNames: mutable.Set[String] = mutable.Set.empty
+    ast.mangledNames = mangledNames
     ScopeAnalysis.unmangledNames = mutable.Set.empty
 
     val cache = opts.cache

@@ -332,13 +332,12 @@ final class MinifySuite extends munit.FunSuite {
   // (reused across calls); `obj.i` must consistently rename to `n.o` because the
   // mangled var `n` collides with property `i`. The PROPERTY half is now correct
   // (ISS-1217 resolved: `obj.prop`/`obj.i` mangle to `i`/`o` via the AST_Dot
-  // declared-root fix + full domprops reservation). The REMAINING divergence is in
-  // the VARIABLE nameCache (Mangler/ManglerCache, not PropMangler): the second
-  // snippet's function `fn2` must mangle to `c` — the shared nameCache.vars
-  // advancing past the `n` used for `fn1` (terser cache.vars: {$fn1:n, $fn2:c}) —
-  // but ssg-js reuses `n` for both. That adjacent var-name-cache gap is tracked
-  // by ISS-1234, which this pin awaits.
-  test("nameCache: should consistently rename properties across calls".fail) { // ISS-1234 (var-name-cache)
+  // declared-root fix + full domprops reservation). The VARIABLE half is now
+  // correct too (ISS-1234 resolved: the second snippet's function `fn2` mangles
+  // to `c` — the shared nameCache.vars advances past the `n` used for `fn1`
+  // (terser cache.vars: {$fn1:n, $fn2:c}) — via the AST_Toplevel.next_mangled
+  // do/while-skip over the cache-seeded mangledNames set, scope.js:736-743/823).
+  test("nameCache: should consistently rename properties across calls") {
     val cache = new NameCache()
     val opts  = MinifyOptions(
       compress = false,
