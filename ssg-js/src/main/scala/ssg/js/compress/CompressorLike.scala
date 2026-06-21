@@ -94,13 +94,14 @@ trait CompressorLike {
 
   /** Maximum number of expressions to merge into a single sequence.
     *
-    * Computed from the `sequences` option: if false → 0, if true → 200, if 1 → 800 (special case for maximum merging), otherwise the numeric value.
+    * Computed from the `sequences` option: if false → 0, if true → 800, if 1 → 800 (terser index.js:327 `sequences == 1 ? 800` — JS `true == 1` is true, so both map to 800), otherwise the numeric
+    * value.
     */
   def sequencesLimit: Int = {
     val seq = option("sequences")
     seq match {
       case false => 0
-      case true  => 200
+      case true  => 800
       case n: Int if n == 1 => 800
       case n: Int           => n
       case _ => 0
