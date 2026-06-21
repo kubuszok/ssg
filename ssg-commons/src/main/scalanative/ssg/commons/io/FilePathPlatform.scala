@@ -62,8 +62,12 @@ final private[io] class NativeFilePath(val pathString: String) extends FilePath 
 
   // Mirrors JvmFilePath.normalize (scalajvm/ssg/commons/io/FilePathPlatform.scala:41-42):
   // Path.normalize preserves the root component, so absolute paths stay absolute.
-  override def normalize: FilePath =
-    new NativeFilePath(underlying.normalize().toString)
+  override def normalize: FilePath = {
+    val normalized = underlying.normalize().toString
+    // Scala Native's java.nio emulation renders the single-segment dot as "." where the JVM/JS
+    // contract is "" (Paths.get(".").normalize().toString == ""; scalajs FilePathPlatform.scala:108).
+    new NativeFilePath(if (normalized == ".") "" else normalized)
+  }
 
   override def hashCode(): Int = pathString.hashCode
 
