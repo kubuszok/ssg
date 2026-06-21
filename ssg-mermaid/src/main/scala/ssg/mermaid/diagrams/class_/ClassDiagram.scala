@@ -73,6 +73,9 @@ object ClassDiagram {
     // Diagram.ts:41-44 — pre-set the frontmatter title BEFORE parse, so an inline `title` directive
     // parsed from the body overrides it (the parser sets db.title only when an inline title is present).
     val db = new ClassDb
+    // classDb.ts:267 — setLink consults config.securityLevel; thread the active level into the db
+    // before parse so click-link parsing sees the right level (mirrors FlowchartDiagram.scala:81).
+    db.securityLevel = config.securityLevel
     title.foreach(t => db.title = t)
     ClassParser.parse(text, db)
     ClassRenderer.render(db, config)
