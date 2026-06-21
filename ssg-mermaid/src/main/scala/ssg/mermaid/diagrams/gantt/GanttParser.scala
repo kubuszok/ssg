@@ -79,6 +79,12 @@ object GanttParser {
     // Parse body
     parseBody(scanner, db)
 
+    // Resolve forward dependencies via the multi-pass compile. Mirrors
+    // ganttDb.js:156-161 (getTasks runs compileTasks in a loop before
+    // returning the tasks): a FORWARD `after`/`until` reference — whose
+    // dependency is declared later in the source — only resolves here.
+    db.compileTasks()
+
     db
   }
 

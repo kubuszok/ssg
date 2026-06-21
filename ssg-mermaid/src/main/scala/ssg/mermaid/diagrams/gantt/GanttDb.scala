@@ -54,6 +54,13 @@ enum TaskStatus(val label: String) extends java.lang.Enum[TaskStatus] {
   *   set of task status flags
   * @param order
   *   display order within the section
+  * @param rawStart
+  *   the raw (unresolved) start spec — a date string, an `after <ids>` reference, or empty when the start is the previous task's end. Re-resolved across `compileTasks()` passes (ports `raw.startTime`
+  *   from `ganttDb.js:533`).
+  * @param rawEnd
+  *   the raw (unresolved) end spec — a date string, a duration (`2d`), or an `until <ids>` reference. Re-resolved across `compileTasks()` passes (ports `raw.endTime` from `ganttDb.js:534`).
+  * @param processed
+  *   whether the task's start and end have been resolved against real referenced tasks (not the `lastEndDate` fallback). Ports `processed` from `ganttDb.js:525`.
   */
 final case class GanttTask(
   id:            String,
@@ -62,7 +69,10 @@ final case class GanttTask(
   var endDate:   LocalDate,
   var section:   String = "",
   status:        mutable.Set[TaskStatus] = mutable.Set.empty,
-  var order:     Int = 0
+  var order:     Int = 0,
+  var rawStart:  String = "",
+  var rawEnd:    String = "",
+  var processed: Boolean = false
 ) {
 
   /** Duration of the task in days. */
@@ -221,59 +231,149 @@ final class GanttDb {
         endDateStr = Nullable(nonStatusTokens(2))
     }
 
-    // Resolve start date
-    val start = startDateStr match {
-      case s if s.isDefined =>
-        val str = s.get.trim
-        if (str.startsWith("after")) {
-          // after taskId — look up that task's end date
-          val afterId = str.stripPrefix("after").trim
-          findTaskEndDate(afterId).getOrElse(lastEndDate)
-        } else {
-          parseDateString(str).getOrElse(lastEndDate)
-        }
-      case _ => lastEndDate
-    }
-
-    // Resolve end date
-    val end = endDateStr match {
-      case s if s.isDefined =>
-        val str = s.get.trim
-        // test for until — ganttDb.js:348-371 getEndDate(). A task whose
-        // end-spec is `until <id1> <id2> …` ends at the EARLIEST startTime
-        // among the referenced task ids (ids split on space, looked up by id).
-        untilEndDate(str) match {
-          case Some(untilDate) => untilDate
-          case None            =>
-            if (str.endsWith("d") || str.endsWith("w") || str.endsWith("m") || str.endsWith("y")) {
-              // Duration format
-              parseDuration(str, start)
-            } else {
-              parseDateString(str).getOrElse(start.plusDays(1))
-            }
-        }
-      case _ => start.plusDays(1)
-    }
-
     if (statusFlags.isEmpty) {
       statusFlags += TaskStatus.Normal
     }
 
+    // Store the raw start/end specs so compileTasks() can RE-resolve them on
+    // later passes once forward `after`/`until` dependencies exist. The empty
+    // string means "no spec" (start = lastEndDate / end = start + 1 day).
+    // Mirrors ganttDb.js:533-534 storing raw.startTime / raw.endTime.
+    val rawStart = startDateStr.fold("")(_.trim)
+    val rawEnd   = endDateStr.fold("")(_.trim)
+
     val task = GanttTask(
       id = taskId,
       name = taskName,
-      startDate = start,
-      endDate = end,
+      startDate = lastEndDate,
+      endDate = lastEndDate.plusDays(1),
       section = currentSection,
       status = statusFlags,
-      order = taskCount
+      order = taskCount,
+      rawStart = rawStart,
+      rawEnd = rawEnd
     )
 
     tasks += task
-    lastEndDate = end
+
+    // Add-time resolution so BACKWARD references (the referenced task already
+    // exists) resolve immediately. FORWARD references resolve later via
+    // compileTasks(). resolveTask returns whether the task fully resolved
+    // against real referenced tasks (not the lastEndDate fallback).
+    resolveTask(task)
+    lastEndDate = task.endDate
 
     // Add to current section
     sections.lastOption.foreach(_.tasks += task)
+  }
+
+  /** Resolves a task's start and end from its raw specs against the CURRENT state of the other tasks, mutating `task.startDate`/`task.endDate` and `task.processed`.
+    *
+    * Ports the `compileTask` closure body from `ganttDb.js:578-613`: resolve the start (literal date / `after <ids>` / previous-task end), then — when the start resolved — resolve the end (literal
+    * date / duration / `until <ids>`), then run `checkTaskDates`. A task is "processed" only when BOTH its start and end were computed from real referenced tasks (or literal values), NOT from the
+    * `lastEndDate` fallback — so a forward reference stays unprocessed until a later pass once its dependency is resolved.
+    *
+    * @return
+    *   true when the task fully resolved (start and end both real)
+    */
+  private def resolveTask(task: GanttTask): Boolean = {
+    val (start, startResolved) = resolveStart(task.rawStart)
+    task.startDate = start
+
+    val (end, endResolved) = resolveEnd(task.rawEnd, start)
+    task.endDate = end
+
+    checkTaskDates(task)
+
+    val resolved = startResolved && endResolved
+    task.processed = resolved
+    resolved
+  }
+
+  /** Resolves a raw start spec against the current state of the other tasks.
+    *
+    * Ports the start-resolution of `getStartDate()` (`ganttDb.js:266-314`) plus the `prevTaskEnd` case (`ganttDb.js:582-585`):
+    *   - empty spec -> previous task's end (`lastEndDate`); a deterministic, real value (resolved)
+    *   - `after <ids>` -> the LATEST endDate among the referenced, already-resolved tasks; unresolved (fallback to `lastEndDate`) while no referenced task is processed yet
+    *   - otherwise a literal date parsed via the configured `dateFormat`; resolved when it parses, otherwise falls back to `lastEndDate` (unresolved)
+    *
+    * @return
+    *   (startDate, resolved) where `resolved` is false when the fallback was used
+    */
+  private def resolveStart(rawStart: String): (LocalDate, Boolean) = {
+    val str = rawStart.trim
+    if (str.isEmpty) {
+      // No start spec — previous task's end (ganttDb.js:582-585 prevTaskEnd).
+      (lastEndDate, true)
+    } else if (str.startsWith("after")) {
+      // after <ids> — the LATEST endDate among the referenced, resolved tasks
+      // (ganttDb.js:270-289 getStartDate after-branch).
+      val ids = str.stripPrefix("after").trim
+      afterStartDate(ids) match {
+        case Some(date) => (date, true)
+        case None       => (lastEndDate, false)
+      }
+    } else {
+      parseDateString(str) match {
+        case Some(date) => (date, true)
+        case None       => (lastEndDate, false)
+      }
+    }
+  }
+
+  /** Resolves a raw end spec against a resolved start and the current state of the other tasks.
+    *
+    * Ports `getEndDate()` (`ganttDb.js:348-391`):
+    *   - empty spec -> start + 1 day (resolved)
+    *   - `until <ids>` -> the EARLIEST startDate among the referenced tasks (resolved when a referenced task exists, else unresolved with the today fallback)
+    *   - a duration (`2d`, `1w`, …) -> start advanced by the duration (resolved)
+    *   - otherwise a literal date parsed via the configured `dateFormat`; resolved when it parses, otherwise `start + 1 day` (unresolved)
+    *
+    * @return
+    *   (endDate, resolved) where `resolved` is false when no real value could be computed
+    */
+  private def resolveEnd(rawEnd: String, start: LocalDate): (LocalDate, Boolean) = {
+    val str = rawEnd.trim
+    if (str.isEmpty) {
+      (start.plusDays(1), true)
+    } else {
+      // test for until — ganttDb.js:348-371 getEndDate(). A task whose
+      // end-spec is `until <id1> <id2> …` ends at the EARLIEST startTime
+      // among the referenced task ids (ids split on space, looked up by id).
+      untilEndDate(str) match {
+        case Some((untilDate, untilResolved)) => (untilDate, untilResolved)
+        case None                             =>
+          if (str.endsWith("d") || str.endsWith("w") || str.endsWith("m") || str.endsWith("y")) {
+            // Duration format
+            (parseDuration(str, start), true)
+          } else {
+            parseDateString(str) match {
+              case Some(date) => (date, true)
+              case None       => (start.plusDays(1), false)
+            }
+          }
+      }
+    }
+  }
+
+  /** Resolves an `after <ids>` start spec to the LATEST endDate among the referenced, already-resolved tasks.
+    *
+    * Ports the `after` branch of `getStartDate()` (`ganttDb.js:270-289`): the ids are split on a single space and each looked up via `findTaskById`; the latest `endTime` among the found tasks wins.
+    * Only tasks that have been `processed` count, so a forward reference stays unresolved until its dependency is resolved on a later compile pass.
+    *
+    * @return
+    *   `Some(date)` when at least one referenced task is resolved, else `None`
+    */
+  private def afterStartDate(ids: String): Option[LocalDate] = {
+    var latestTask: Nullable[GanttTask] = Nullable.empty
+    for (id <- ids.split(" ") if id.nonEmpty)
+      findTaskById(id) match {
+        case Some(t) if t.processed =>
+          val later = latestTask.fold(true)(l => t.endDate.isAfter(l.endDate))
+          if (later) latestTask = Nullable(t)
+        case _ => ()
+      }
+    latestTask.fold(Option.empty[LocalDate])(t => Some(t.endDate))
   }
 
   /** Adds exclude days.
@@ -368,21 +468,54 @@ final class GanttDb {
     (adjustedEnd, renderEnd)
   }
 
-  /** Compiles all raw tasks, resolving dependencies.
+  /** Compiles all raw tasks across multiple passes, resolving dependencies.
     *
-    * After all tasks have been added via `addTask()`, this method resolves `after` references so that dependent tasks start after their prerequisites end. Ports `compileTasks()` from `ganttDb.js`.
+    * After all tasks have been added via `addTask()`, this re-resolves every unprocessed task's start/end from its raw spec against the CURRENT state of the other tasks. A FORWARD `after`/`until`
+    * reference (the dependency is declared later in the source) cannot resolve at add-time because its dependency is absent at that point; it resolves here on a later pass once that dependency itself
+    * is processed.
+    *
+    * Ports `compileTasks()` together with its caller loop (`ganttDb.js:156-161`):
+    * {{{
+    *   let allItemsProcessed = compileTasks();
+    *   const maxDepth = 10;
+    *   let iterationCount = 0;
+    *   while (!allItemsProcessed && iterationCount < maxDepth) {
+    *     allItemsProcessed = compileTasks();
+    *     iterationCount++;
+    *   }
+    * }}}
+    * Each pass calls [[resolveTask]] (the port of the `compileTask` closure, `ganttDb.js:578-613`) for each unprocessed task; the loop runs up to `maxDepth = 10` passes or until every task is
+    * processed, whichever comes first.
     */
   def compileTasks(): Unit = {
-    val taskMap = mutable.LinkedHashMap.empty[String, GanttTask]
-    for (task <- tasks)
-      taskMap(task.id) = task
-    // Resolve "after" dependencies
-    for (task <- tasks)
-      // Check if the task's start was set via "after taskId"
-      // The after reference is stored in the task name or start context during addTask
-      // Dependencies are already resolved in addTask via findTaskEndDate
-      // This method can be extended for multi-pass compilation if needed
-      checkTaskDates(task)
+    val maxDepth       = 10 // ganttDb.js:157
+    var allProcessed   = compilePass()
+    var iterationCount = 0
+    while (!allProcessed && iterationCount < maxDepth) {
+      allProcessed = compilePass()
+      iterationCount += 1
+    }
+  }
+
+  /** Runs a single compile pass over every task, re-resolving the not-yet-processed ones.
+    *
+    * Ports the body of `compileTasks` (`ganttDb.js:616-622`): iterate every task, resolve it, and AND together every task's `processed` flag to decide whether another pass is needed.
+    *
+    * @return
+    *   true when every task is processed (no further pass needed)
+    */
+  private def compilePass(): Boolean = {
+    var allProcessed = true
+    for (task <- tasks) {
+      // Already-processed tasks keep their resolved dates; re-resolving an
+      // unprocessed one may now succeed because a dependency resolved on an
+      // earlier task in this (or a previous) pass.
+      if (!task.processed) {
+        resolveTask(task)
+      }
+      allProcessed = allProcessed && task.processed
+    }
+    allProcessed
   }
 
   /** Resolves the `until <ids>` end-spec to the earliest start of the referenced tasks.
@@ -392,9 +525,10 @@ final class GanttDb {
     *   - the captured ids are split on a single space and each looked up via `findTaskById`; the earliest `startTime` among the found tasks wins
     *   - if no referenced task is found, upstream returns today at midnight
     *
-    * Returns `None` when the string is not an `until` statement so the caller falls through to normal date/duration parsing.
+    * Returns `None` when the string is not an `until` statement so the caller falls through to normal date/duration parsing. Otherwise returns `Some((date, resolved))` where `resolved` is false for
+    * the "no referenced task" today fallback so a forward `until` reference is retried on a later compile pass.
     */
-  private def untilEndDate(str: String): Option[LocalDate] = {
+  private def untilEndDate(str: String): Option[(LocalDate, Boolean)] = {
     val trimmed = str.trim
     // /^until\s+(?<ids>[\d\w- ]+)/
     val untilRePattern = "^until\\s+([\\d\\w\\- ]+)".r
@@ -402,19 +536,22 @@ final class GanttDb {
       case None    => None
       case Some(m) =>
         val idsGroup = m.group(1)
-        // check all until ids and take the earliest — ganttDb.js:356-363
+        // check all until ids and take the earliest — ganttDb.js:356-363.
+        // Only resolved tasks count, so a forward `until` reference stays
+        // unresolved until its dependency is resolved on a later pass.
         var earliestTask: Nullable[GanttTask] = Nullable.empty
-        for (id <- idsGroup.split(" "))
+        for (id <- idsGroup.split(" ") if id.nonEmpty)
           findTaskById(id) match {
-            case Some(task) =>
+            case Some(task) if task.processed =>
               val earlier = earliestTask.fold(true)(e => task.startDate.isBefore(e.startDate))
               if (earlier) earliestTask = Nullable(task)
-            case None => ()
+            case _ => ()
           }
         earliestTask.fold {
-          // ganttDb.js:368-370 — no referenced task found: today at midnight
-          Some(LocalDate.now())
-        }(task => Some(task.startDate))
+          // ganttDb.js:368-370 — no referenced task found: today at midnight.
+          // Unresolved so a forward reference is retried on a later pass.
+          Some((LocalDate.now(), false))
+        }(task => Some((task.startDate, true)))
     }
   }
 
@@ -427,16 +564,6 @@ final class GanttDb {
       for (task <- tasks)
         if (task.id == taskId) {
           break(Some(task))
-        }
-      None
-    }
-
-  /** Finds a task's end date by its ID. */
-  private def findTaskEndDate(taskId: String): Option[LocalDate] =
-    boundary[Option[LocalDate]] {
-      for (task <- tasks)
-        if (task.id == taskId) {
-          break(Some(task.endDate))
         }
       None
     }
