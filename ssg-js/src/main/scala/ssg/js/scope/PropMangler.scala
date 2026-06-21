@@ -57,197 +57,18 @@ final case class PropManglerOptions(
 /** Property name mangling engine. */
 object PropMangler {
 
-  /** Well-known DOM property names that should not be mangled. */
-  private val builtinNames: mutable.Set[String] = {
-    val reserved = mutable.Set[String]()
-    // Literal keywords
+  /** Seed the reserved set with the built-in / DOM property names.
+    *
+    * Faithful port of propmangle.js:79-120 `find_builtins`. Upstream walks the full `domprops` list (tools/domprops.js — ported verbatim as [[DomProps.domprops]]), the standard-environment globals,
+    * the literal keywords, and every own-property name of the core constructors (and their prototypes). The constructor/prototype own-property reflection (propmangle.js:100-116) is not portable
+    * across Scala platforms, but `domprops` is generated to already include those names, so seeding `domprops` + the literal keywords reproduces the reserved set. The `new_globals` constructor names
+    * (Symbol/Map/Promise/... propmangle.js:83-89) are likewise present in `domprops`.
+    */
+  def findBuiltins(reserved: mutable.Set[String]): Unit = {
+    // propmangle.js:80 — domprops.forEach(add).
+    reserved.addAll(DomProps.domprops)
+    // propmangle.js:91-99 — literal keyword names.
     reserved.addAll(Seq("null", "true", "false", "NaN", "Infinity", "-Infinity", "undefined"))
-    // Standard built-in object property names (subset of domprops)
-    val builtins = Seq(
-      "Object",
-      "Array",
-      "Function",
-      "Number",
-      "String",
-      "Boolean",
-      "Error",
-      "Math",
-      "Date",
-      "RegExp",
-      "Symbol",
-      "Map",
-      "Set",
-      "WeakMap",
-      "WeakSet",
-      "Promise",
-      "Proxy",
-      "Reflect",
-      "ArrayBuffer",
-      "DataView",
-      "Float32Array",
-      "Float64Array",
-      "Int8Array",
-      "Int16Array",
-      "Int32Array",
-      "Uint8Array",
-      "Uint8ClampedArray",
-      "Uint16Array",
-      "Uint32Array",
-      "JSON",
-      "EvalError",
-      "RangeError",
-      "ReferenceError",
-      "SyntaxError",
-      "TypeError",
-      "URIError"
-    )
-    reserved.addAll(builtins)
-    // Common method/property names from built-in prototypes
-    val commonProps = Seq(
-      "constructor",
-      "prototype",
-      "length",
-      "name",
-      "toString",
-      "valueOf",
-      "toLocaleString",
-      "hasOwnProperty",
-      "isPrototypeOf",
-      "propertyIsEnumerable",
-      "apply",
-      "call",
-      "bind",
-      "arguments",
-      "caller",
-      "concat",
-      "join",
-      "pop",
-      "push",
-      "reverse",
-      "shift",
-      "slice",
-      "sort",
-      "splice",
-      "unshift",
-      "indexOf",
-      "lastIndexOf",
-      "every",
-      "some",
-      "forEach",
-      "map",
-      "filter",
-      "reduce",
-      "reduceRight",
-      "find",
-      "findIndex",
-      "fill",
-      "copyWithin",
-      "entries",
-      "keys",
-      "values",
-      "includes",
-      "flat",
-      "flatMap",
-      "at",
-      "toFixed",
-      "toExponential",
-      "toPrecision",
-      "charAt",
-      "charCodeAt",
-      "codePointAt",
-      "trim",
-      "trimStart",
-      "trimEnd",
-      "padStart",
-      "padEnd",
-      "repeat",
-      "startsWith",
-      "endsWith",
-      "match",
-      "replace",
-      "replaceAll",
-      "search",
-      "split",
-      "substring",
-      "toLowerCase",
-      "toUpperCase",
-      "normalize",
-      "matchAll",
-      "getTime",
-      "setTime",
-      "getFullYear",
-      "getMonth",
-      "getDate",
-      "getHours",
-      "getMinutes",
-      "getSeconds",
-      "getMilliseconds",
-      "toISOString",
-      "toJSON",
-      "toDateString",
-      "toTimeString",
-      "source",
-      "flags",
-      "global",
-      "ignoreCase",
-      "multiline",
-      "sticky",
-      "unicode",
-      "test",
-      "exec",
-      "then",
-      "catch",
-      "finally",
-      "resolve",
-      "reject",
-      "all",
-      "race",
-      "any",
-      "allSettled",
-      "get",
-      "set",
-      "has",
-      "delete",
-      "clear",
-      "size",
-      "add",
-      "forEach",
-      "next",
-      "done",
-      "value",
-      "return",
-      "throw",
-      "getPrototypeOf",
-      "setPrototypeOf",
-      "isExtensible",
-      "preventExtensions",
-      "getOwnPropertyDescriptor",
-      "defineProperty",
-      "deleteProperty",
-      "ownKeys",
-      "apply",
-      "construct",
-      "assign",
-      "create",
-      "defineProperties",
-      "freeze",
-      "fromEntries",
-      "getOwnPropertyDescriptors",
-      "getOwnPropertyNames",
-      "getOwnPropertySymbols",
-      "is",
-      "isFrozen",
-      "isSealed",
-      "seal",
-      "message",
-      "stack",
-      "cause",
-      "byteLength",
-      "byteOffset",
-      "buffer"
-    )
-    reserved.addAll(commonProps)
-    reserved
   }
 
   /** Add strings extracted from subscript property accesses. */
@@ -429,7 +250,8 @@ object PropMangler {
   ): AstToplevel = {
     val nthIdentifier = options.nthIdentifier
     val reserved      = options.reserved.clone()
-    if (!options.builtins) reserved.addAll(builtinNames)
+    // propmangle.js:235 — `if (!options.builtins) find_builtins(reserved)`.
+    if (!options.builtins) findBuiltins(reserved)
 
     var cname = -1
 
@@ -563,12 +385,19 @@ object PropMangler {
             }
 
           case dot: AstDot =>
+            // propmangle.js:286-293 — `declared = !(root.thedef && root.thedef.undeclared)`.
+            // Walk to the root expression, then treat the property as declared
+            // unless the root resolves to an *undeclared* symbol. A parameter or
+            // local (root.thedef set, but undeclared == false) is still declared,
+            // so its dotted properties are mangle candidates.
             val declared = options.undeclared || {
               var root: AstNode = dot
               while (root.isInstanceOf[AstDot] && root.asInstanceOf[AstDot].expression != null)
                 root = root.asInstanceOf[AstDot].expression.nn
               root match {
-                case sr: AstSymbolRef => !(sr.thedef != null && sr.thedef.asInstanceOf[AnyRef] != null)
+                case sr: AstSymbolRef =>
+                  val td = sr.definition()
+                  !(td != null && td.nn.undeclared)
                 case _ => true
               }
             }
