@@ -341,6 +341,30 @@ object Terser {
       PropMangler.reserveQuotedKeys(ast, resolvedPropOptions.nn.reserved)
     }
 
+    // -- wrap / enclose (minify.js:246-251; ast.js:648-675) --
+    // minify.js:247 — `if (options.wrap) toplevel = toplevel.wrap_commonjs(options.wrap)`.
+    // minify.js:250 — `if (options.enclose) toplevel = toplevel.wrap_enclose(options.enclose)`.
+    // Upstream applies wrap/enclose at minify.js:246-251 — AFTER reserve_quoted_keys
+    // (minify.js:239-241) and find_annotated_props (minify.js:242-245) but BEFORE the
+    // compress phase (minify.js:260-266) and mangle phase (minify.js:268-280). The
+    // injected wrapper IIFE therefore PARTICIPATES in compress + mangle: the wrapped
+    // toplevel flows through figure_out_scope → compress (minify.js:263) →
+    // figure_out_scope → mangle_names (minify.js:270,274), exactly like
+    // minify.js:247→263→270. We reassign `ast` to the wrapped toplevel here so the
+    // wrapper body is reachable by the Compressor below (e.g. constant-fold inside the
+    // wrapped function body). Note: terser does NOT mangle the toplevel by default
+    // (mangle.toplevel defaults to false), so the wrapper-introduced names (`exports`,
+    // enclose args) stay un-mangled even though wrap now precedes mangle — this falls
+    // out of the default options and is not special-cased.
+    if (options.wrap != null) {
+      ast = wrapCommonjs(ast, options.wrap.nn)
+    }
+    options.enclose match {
+      case false => // no enclose
+      case true  => ast = wrapEnclose(ast, "")
+      case s: String => ast = wrapEnclose(ast, s)
+    }
+
     // -- Compress phase (minify.js:260-266) --
     // Upstream minify.js:262 runs the Compressor when `options.compress` is truthy.
     // utils/index.js:66-68 normalizes the Boolean `true` to the default options object
@@ -400,26 +424,6 @@ object Terser {
       // reserved set populated by reserveQuotedKeys above (minify.js:239-241), so
       // quoted keys reserved ahead of compress remain reserved here.
       ast = PropMangler.mangleProperties(ast, resolvedPropOptions.nn)
-    }
-
-    // -- wrap / enclose (minify.js:246-251; ast.js:648-675) --
-    // minify.js:246-248 — `if (options.wrap) toplevel = toplevel.wrap_commonjs(options.wrap)`.
-    // minify.js:249-251 — `if (options.enclose) toplevel = toplevel.wrap_enclose(options.enclose)`.
-    // NOTE: upstream applies wrap/enclose at minify.js:246-251 (between
-    // find_annotated_props and the rename/compress/mangle phases). The ssg-js
-    // mangle pipeline mutates `ast` in place, so wrap/enclose is applied here,
-    // after mangling, on the same toplevel — the wrapper template is parsed
-    // fresh and the (already-mangled) body is spliced into it. The wrapped
-    // names (`exports`, enclose args) are intentionally NOT mangled in upstream
-    // either, since wrap/enclose run before mangle but the wrapper identifiers
-    // are introduced by the template parse, not the user source.
-    if (options.wrap != null) {
-      ast = wrapCommonjs(ast, options.wrap.nn)
-    }
-    options.enclose match {
-      case false => // no enclose
-      case true  => ast = wrapEnclose(ast, "")
-      case s: String => ast = wrapEnclose(ast, s)
     }
 
     // -- Format phase (minify.js:282-353) --
