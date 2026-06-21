@@ -396,6 +396,11 @@ final class ClassDb {
   var accTitle:       String = ""
   var accDescription: String = ""
 
+  // classDb.ts:267 — `const config = getConfig()`; setLink consults config.securityLevel.
+  // Mirror that module-level config by exposing the single securityLevel value the db
+  // consults; set before parsing by ClassDiagram (classDb.ts captures config in setLink's closure).
+  var securityLevel: String = "strict"
+
   // --- Class methods ---
 
   /** Splits a class identifier into class name and generic type.
@@ -623,7 +628,14 @@ final class ClassDb {
       classes.get(id).foreach { theClass =>
         // classDb.ts:275 — the URL is sanitized (utils.formatUrl → Utils.sanitizeUrl)
         theClass.link = Nullable(ssg.mermaid.util.Utils.sanitizeUrl(linkStr))
-        theClass.linkTarget = Nullable(sanitizeText(target))
+        // classDb.ts:276-281 — under sandbox the link target is forced to '_top'; otherwise the
+        // (string) target is sanitized. The upstream `else '_blank'` (non-string target) is handled
+        // at the parser (ClassParser.scala passes "_blank" when LINK_TARGET is omitted).
+        if (securityLevel == "sandbox") {
+          theClass.linkTarget = Nullable("_top")
+        } else {
+          theClass.linkTarget = Nullable(sanitizeText(target))
+        }
       }
     }
     setCssClass(ids, "clickable")
