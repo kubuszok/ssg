@@ -38,14 +38,13 @@ object InlineSourceMap {
   private val InlineMapRegex: Regex =
     new Regex("(?:^|[^.])//# sourceMappingURL=data:application/json(;[\\w=-]*)?;base64,([+/0-9A-Za-z]*=*)\\s*$")
 
-  /** Port of `read_source_map(code)` (minify.js:33-40): return the decoded inline
-    * source-map JSON string, or `null` when no inline map is present (upstream
-    * logs `console.warn("inline source map not found")` and returns `null`).
+  /** Port of `read_source_map(code)` (minify.js:33-40): return the decoded inline source-map JSON string, or `null` when no inline map is present (upstream logs
+    * `console.warn("inline source map not found")` and returns `null`).
     */
   def readSourceMap(code: String): String | Null =
     InlineMapRegex.findFirstMatchIn(code) match {
       case Some(m) => Base64.decode(m.group(2))
-      case None =>
+      case None    =>
         // minify.js:36 — console.warn("inline source map not found")
         System.err.println("inline source map not found")
         null

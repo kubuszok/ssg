@@ -59,10 +59,9 @@ final class PlatformResourcesIss979JsSuite extends munit.FunSuite {
     process.chdir(os.tmpdir().asInstanceOf[String])
   }
 
-  override def afterEach(context: AfterEach): Unit = {
+  override def afterEach(context: AfterEach): Unit =
     // Restore the original cwd unconditionally so other suites in the same JS runtime are unaffected.
     process.chdir(savedCwd)
-  }
 
   test("ISS-979 (a): PlatformResources resolves entities.properties when cwd is outside the repo tree") {
     val lookup = PlatformResources.getResourceAsStream(classOf[PlatformResourcesIss979JsSuite], ENTITY_PATH)

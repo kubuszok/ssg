@@ -27,18 +27,17 @@ class SiteBuildPhase2Suite extends munit.FunSuite {
     val tmpBase = FilePath.cwd.resolve("target").resolve("test-tmp")
     val testDir = tmpBase.resolve(s"ssg-phase2-test-$testName-${System.nanoTime()}")
     FileOps.createDirectories(testDir)
-    try {
+    try
       body(testDir)
-    } finally {
+    finally
       FileOps.deleteRecursively(testDir)
-    }
   }
 
   /** Sets up a site source directory with the given files and returns a SiteConfig. */
   private def setupSite(
-    baseDir: FilePath,
+    baseDir:    FilePath,
     configYaml: String,
-    files: Map[String, String]
+    files:      Map[String, String]
   ): SiteConfig = {
     val sourceDir = baseDir.resolve("source")
     val destDir   = baseDir.resolve("_site")
@@ -149,7 +148,7 @@ class SiteBuildPhase2Suite extends munit.FunSuite {
   test("static file without front matter is copied verbatim (byte-exact)") {
     withTempDir("static") { baseDir =>
       val staticContent = "This is a plain text file.\nNo front matter.\n"
-      val config = setupSite(
+      val config        = setupSite(
         baseDir,
         configYaml = "title: Test Site\n",
         files = Map(
@@ -173,9 +172,9 @@ class SiteBuildPhase2Suite extends munit.FunSuite {
         baseDir,
         configYaml = "title: Test Site\n",
         files = Map(
-          "index.md"                  -> "---\ntitle: Home\n---\n# Home\n",
-          "_layouts/default.html"     -> "<html>{{ content }}</html>",
-          "_includes/header.html"     -> "<header>Header</header>"
+          "index.md" -> "---\ntitle: Home\n---\n# Home\n",
+          "_layouts/default.html" -> "<html>{{ content }}</html>",
+          "_includes/header.html" -> "<header>Header</header>"
         )
       )
 
@@ -202,7 +201,7 @@ class SiteBuildPhase2Suite extends munit.FunSuite {
         baseDir,
         configYaml = "title: Test Site\n",
         files = Map(
-          "index.md"   -> "---\ntitle: Home\n---\n# Home\n",
+          "index.md" -> "---\ntitle: Home\n---\n# Home\n",
           ".gitignore" -> "*.class\n"
         )
       )

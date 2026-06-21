@@ -4,9 +4,9 @@ package highlight
 
 /** Unit tests for [[Utf8Offsets]] (ISS-1092): UTF-16 code-unit index to UTF-8 byte offset conversion on the Scala.js platform.
   *
-  * Expected byte offsets are hand-computed per UTF-8 width class and cross-checked against `String.getBytes("UTF-8")` semantics (the JVM/Native FFI contract HighlightSpan must match). Cases cover each
-  * width: 1-byte ASCII, 2-byte (alpha = U+03B1), 3-byte (euro = U+20AC), 4-byte via a surrogate pair (grinning face = U+1F600, two UTF-16 code units), an index at string end, an unpaired surrogate,
-  * and the ISS-1092 fixture's two boundary indices.
+  * Expected byte offsets are hand-computed per UTF-8 width class and cross-checked against `String.getBytes("UTF-8")` semantics (the JVM/Native FFI contract HighlightSpan must match). Cases cover
+  * each width: 1-byte ASCII, 2-byte (alpha = U+03B1), 3-byte (euro = U+20AC), 4-byte via a surrogate pair (grinning face = U+1F600, two UTF-16 code units), an index at string end, an unpaired
+  * surrogate, and the ISS-1092 fixture's two boundary indices.
   */
 final class Utf8OffsetsSuite extends munit.FunSuite {
 

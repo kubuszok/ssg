@@ -5,17 +5,14 @@ package io
 
 /** ISS-982 [R0610-P1]: cross-platform FilePath invariant contract.
   *
-  * The existing FilePath test suites are platform-specific — JS only (ISS-1127/1127Extra) and Native only
-  * (ISS-980/980Extra) — so the JVM java.nio.file.Path-backed implementation has zero executing assertions. This suite
-  * lives in src/test/scala/ and runs on ALL THREE platforms (JVM, Scala.js, Scala Native), filling that gap.
+  * The existing FilePath test suites are platform-specific — JS only (ISS-1127/1127Extra) and Native only (ISS-980/980Extra) — so the JVM java.nio.file.Path-backed implementation has zero executing
+  * assertions. This suite lives in src/test/scala/ and runs on ALL THREE platforms (JVM, Scala.js, Scala Native), filling that gap.
   *
-  * Every expected value is lifted from the existing suites (which declare JVM parity as their oracle) and was originally
-  * produced by evaluating the same expression with java.nio.file.Paths on the JVM (anti-cheat C11). The assertions below
-  * are the cross-platform INVARIANT subset: they hold identically on JVM (java.nio.file.Path), JS (Node path.posix with
-  * JVM-parity mappings), and Native (java.nio.file.Paths delegation).
+  * Every expected value is lifted from the existing suites (which declare JVM parity as their oracle) and was originally produced by evaluating the same expression with java.nio.file.Paths on the JVM
+  * (anti-cheat C11). The assertions below are the cross-platform INVARIANT subset: they hold identically on JVM (java.nio.file.Path), JS (Node path.posix with JVM-parity mappings), and Native
+  * (java.nio.file.Paths delegation).
   *
-  * Covered API: FilePath.of, pathString, fileName, parent, resolve(String), resolve(FilePath), isAbsolute, toAbsolute,
-  * normalize, FilePath.cwd.
+  * Covered API: FilePath.of, pathString, fileName, parent, resolve(String), resolve(FilePath), isAbsolute, toAbsolute, normalize, FilePath.cwd.
   */
 final class FilePathIss982Suite extends munit.FunSuite {
 

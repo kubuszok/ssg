@@ -33,11 +33,10 @@ final class FrontmatterInlineTitleIss1056Suite extends FunSuite {
   /** Wall-clock budget for a single render (see FrontmatterIss1056Suite). */
   private val TimeoutMs = 15000L
 
-  /** Renders `input` on a daemon thread with a join timeout so an infinite
-    * loop surfaces as a test failure instead of hanging the JVM runner.
+  /** Renders `input` on a daemon thread with a join timeout so an infinite loop surfaces as a test failure instead of hanging the JVM runner.
     */
   private def renderGuarded(input: String): String = {
-    @volatile var result: Option[String]     = None
+    @volatile var result:  Option[String]    = None
     @volatile var failure: Option[Throwable] = None
 
     val worker = new Thread(() =>

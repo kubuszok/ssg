@@ -60,7 +60,7 @@ import java.util.Locale
 
 import munit.FunSuite
 
-import ssg.mermaid.color.{HslaColor, RgbaColor}
+import ssg.mermaid.color.{ HslaColor, RgbaColor }
 import ssg.mermaid.util.Utils
 
 class LocaleSvgIss1156JvmSuite extends FunSuite {
@@ -119,8 +119,8 @@ class LocaleSvgIss1156JvmSuite extends FunSuite {
     // theme-variable string literals, not f-interpolated numbers. Kept as a
     // guard so the ISS-1156 fix cannot regress style attributes the way the
     // labels and colors are broken (CSS <number> admits only '.').
-    val svg    = Mermaid.render(pieInput)
-    val styles = styleAttrRe.findAllMatchIn(svg).map(_.group(1)).toList
+    val svg       = Mermaid.render(pieInput)
+    val styles    = styleAttrRe.findAllMatchIn(svg).map(_.group(1)).toList
     val offenders = styles.filter(s => commaDecimalRe.findFirstIn(s).isDefined)
     assert(
       offenders.isEmpty,

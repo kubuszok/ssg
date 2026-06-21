@@ -25,9 +25,7 @@ package commons
 
 /** Injectable diagnostics channel for SSG-native warnings.
   *
-  * Implementations receive a plain message string; the caller prefixes with
-  * the subsystem name (e.g. "HTML compression failed", "JS compression
-  * failed").
+  * Implementations receive a plain message string; the caller prefixes with the subsystem name (e.g. "HTML compression failed", "JS compression failed").
   */
 trait Logger {
 

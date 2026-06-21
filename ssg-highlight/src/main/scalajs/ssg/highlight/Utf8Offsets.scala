@@ -15,13 +15,13 @@ package highlight
   * web-tree-sitter indexes nodes by UTF-16 code units into the JS source string. The renderer and the JVM/Native platforms index by UTF-8 bytes. This object bridges the two: [[prefix]] builds, in a
   * single pass, a prefix array mapping each UTF-16 index `i` (0..length) to the number of UTF-8 bytes occupied by the first `i` code units; [[at]] then reads any span index in O(1).
   *
-  * The oracle is exactly `substring(0, i).getBytes("UTF-8").length`: the renderer slices `source.getBytes("UTF-8")` (HtmlHighlightRenderer.scala line 31) and the JVM/Native FFI feeds the same bytes, so
-  * the JS span offsets must index that byte array identically. UTF-8 byte width per code unit, matching that JVM oracle:
+  * The oracle is exactly `substring(0, i).getBytes("UTF-8").length`: the renderer slices `source.getBytes("UTF-8")` (HtmlHighlightRenderer.scala line 31) and the JVM/Native FFI feeds the same bytes,
+  * so the JS span offsets must index that byte array identically. UTF-8 byte width per code unit, matching that JVM oracle:
   *   - U+0000..U+007F: 1 byte;
   *   - U+0080..U+07FF: 2 bytes;
   *   - a high surrogate (U+D800..U+DBFF) immediately followed by a low surrogate (U+DC00..U+DFFF) forms one supplementary code point: 4 bytes total, but an index landing *between* the two code units
-  *     ends a substring on a lone high surrogate, which `getBytes("UTF-8")` encodes as a single `?` byte; so the prefix value at the mid-pair index is `(bytes-so-far) + 1`, and the index after the pair
-  *     is `(bytes-so-far) + 4`. tree-sitter is not expected to split a code point, but the function stays total and consistent with the renderer's slicing regardless;
+  *     ends a substring on a lone high surrogate, which `getBytes("UTF-8")` encodes as a single `?` byte; so the prefix value at the mid-pair index is `(bytes-so-far) + 1`, and the index after the
+  *     pair is `(bytes-so-far) + 4`. tree-sitter is not expected to split a code point, but the function stays total and consistent with the renderer's slicing regardless;
   *   - an unpaired surrogate (lone high or lone low): 1 byte: `getBytes("UTF-8")` substitutes a single `?` for an isolated surrogate (it is *not* the 3-byte U+FFFD replacement -- that width only
   *     appears for a real U+FFFD code point in the source);
   *   - any other BMP code unit (U+0800..U+FFFF, non-surrogate): 3 bytes.

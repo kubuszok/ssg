@@ -30,4 +30,9 @@ object PlatformFiles {
     */
   def readAllBytes(path: String): Array[Byte] =
     PlatformFilesImpl.readAllBytes(path)
+
+  /** The platform's filesystem path separator (mirrors java.io.File.separatorChar). Funneled through this facade because java.io.File does not link on Scala.js.
+    */
+  def separatorChar: Char =
+    PlatformFilesImpl.separatorChar
 }

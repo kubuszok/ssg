@@ -25,13 +25,36 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
 
   /** Resolves a classpath resource directory to a FilePath.
     *
-    * On JVM, test resources are copied to target/jvm-3/test-classes/ by sbt,
-    * so getResource returns a file:// URL that can be converted to a Path.
+    * On sbt 1.x, test resources are copied to target/.../test-classes/ and getResource returns a file:// URL that converts directly to a Path. On sbt 2.0, test classes+resources are packaged into a
+    * `<name>-tests.jar` placed on the test classpath, so getResource returns a `jar:` URL whose `toURI`/`Paths.get` throws FileSystemNotFoundException. Since this suite walks the resource as a real
+    * directory tree, in the jar case we fall back to the on-disk source resources directory (`ssg-site/src/test/resources/<name>`), which holds the same committed fixtures; the forked test JVM runs
+    * with the repository root as its working directory.
     */
   private def resourceDir(name: String): FilePath = {
-    val url = Option(getClass.getClassLoader.getResource(name))
-      .getOrElse(fail(s"Resource '$name' not found on classpath"))
-    FilePath.of(java.nio.file.Paths.get(url.toURI).toString)
+    val url = Option(getClass.getClassLoader.getResource(name)).getOrElse(fail(s"Resource '$name' not found on classpath"))
+    if (url.getProtocol == "file") {
+      FilePath.of(java.nio.file.Paths.get(url.toURI).toString)
+    } else {
+      // jar: (or other non-filesystem) URL — sbt 2.0 packages test resources into a `<name>-tests.jar`.
+      // Since this suite needs to walk the resource as a real directory tree, fall back to the on-disk
+      // committed source fixtures at ssg-site/src/test/resources/<name>. The sbt-2.0 forked test JVM runs
+      // with a per-project working directory under <repo>/.sbt/matrix/..., so search the cwd and its
+      // ancestors for the first one that contains ssg-site/src/test/resources/<name>.
+      val rel = java.nio.file.Paths.get("ssg-site", "src", "test", "resources", name)
+
+      def search(dir: java.nio.file.Path): Option[FilePath] =
+        if (dir == null) None
+        else {
+          val candidate = dir.resolve(rel)
+          if (java.nio.file.Files.isDirectory(candidate)) Some(FilePath.of(candidate.toString))
+          else search(dir.getParent)
+        }
+
+      val start = java.nio.file.Paths.get(FilePath.cwd.pathString).toAbsolutePath
+      search(start).getOrElse(
+        fail(s"Resource '$name' is in a non-file URL ($url) and no ancestor of $start contains $rel")
+      )
+    }
   }
 
   /** Creates a temporary directory for test output, cleaned up after. */
@@ -39,16 +62,16 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
     val tmpBase = FilePath.cwd.resolve("target").resolve("test-tmp")
     val testDir = tmpBase.resolve(s"ssg-golden-$testName-${System.nanoTime()}")
     FileOps.createDirectories(testDir)
-    try {
+    try
       body(testDir)
-    } finally {
+    finally
       FileOps.deleteRecursively(testDir)
-    }
   }
 
   /** Walks a directory and returns a sorted set of relative paths (files only). */
   private def fileSet(root: FilePath): Vector[String] =
-    FileOps.walkTree(root)
+    FileOps
+      .walkTree(root)
       .filter(f => !FileOps.isDirectory(f))
       .map { f =>
         val rel = f.pathString.stripPrefix(root.pathString)
@@ -68,7 +91,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
     FileOps.createDirectories(destDir)
 
     val baseConfig = SiteConfig.load(configYaml)
-    val config = baseConfig.copy(
+    val config     = baseConfig.copy(
       source = fixtureDir,
       destination = destDir,
       minify = minify
@@ -86,7 +109,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
   test("golden comparison: minify=false produces byte-exact match to committed golden") {
     withTempDir("nomin") { tmpDir =>
       val (destDir, result) = buildFixture(tmpDir, minify = false)
-      val goldenDir = resourceDir("fixture-site-expected")
+      val goldenDir         = resourceDir("fixture-site-expected")
 
       // No diagnostics expected for a clean build.
       assertEquals(
@@ -125,7 +148,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
   test("golden comparison: minify=true produces byte-exact match to committed golden") {
     withTempDir("min") { tmpDir =>
       val (destDir, result) = buildFixture(tmpDir, minify = true)
-      val goldenDir = resourceDir("fixture-site-expected-min")
+      val goldenDir         = resourceDir("fixture-site-expected-min")
 
       // No diagnostics expected for a clean build.
       assertEquals(
@@ -198,7 +221,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
   test("structural: special directories and config excluded from output") {
     withTempDir("struct") { tmpDir =>
       val (destDir, _) = buildFixture(tmpDir, minify = false)
-      val produced = fileSet(destDir)
+      val produced     = fileSet(destDir)
 
       // _layouts/ must not appear in output.
       assert(
@@ -220,7 +243,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
 
   test("structural: static.txt copied verbatim (byte-exact)") {
     withTempDir("static") { tmpDir =>
-      val fixtureDir = resourceDir("fixture-site")
+      val fixtureDir   = resourceDir("fixture-site")
       val (destDir, _) = buildFixture(tmpDir, minify = false)
 
       val sourceContent   = FileOps.readString(fixtureDir.resolve("static.txt"))

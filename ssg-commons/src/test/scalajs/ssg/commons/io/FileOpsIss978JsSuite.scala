@@ -9,17 +9,14 @@ import scala.scalajs.js
 
 /** ISS-978 [R0610-P0]: Scala.js FileOps unimplemented.
   *
-  * Every operation in ssg-commons/src/main/scalajs/ssg/commons/io/FileOpsPlatform.scala throws unconditionally (line
-  * 15), even though the test suites run under Node (sbt `Test / jsEnv` is a NodeJSEnv), where the `fs` module provides
-  * full file system access — this suite itself uses Node's os/fs/path modules for setup and teardown, proving it.
+  * Every operation in ssg-commons/src/main/scalajs/ssg/commons/io/FileOpsPlatform.scala throws unconditionally (line 15), even though the test suites run under Node (sbt `Test / jsEnv` is a
+  * NodeJSEnv), where the `fs` module provides full file system access — this suite itself uses Node's os/fs/path modules for setup and teardown, proving it.
   *
-  * Expected semantics are defined by the JVM reference implementation
-  * ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala, which delegates to java.nio.file.Files. Each
-  * test below cites the JVM file:line that backs its expected behavior (anti-cheat C11).
+  * Expected semantics are defined by the JVM reference implementation ssg-commons/src/main/scalajvm/ssg/commons/io/FileOpsPlatform.scala, which delegates to java.nio.file.Files. Each test below cites
+  * the JVM file:line that backs its expected behavior (anti-cheat C11).
   *
-  * Red until ISS-978 is fixed: each test currently fails with the exception thrown by the current JS FileOpsPlatform,
-  * except the isSupported test, which fails by assertion because the current JS FileOpsPlatform hardcodes `false`
-  * (line 32).
+  * Red until ISS-978 is fixed: each test currently fails with the exception thrown by the current JS FileOpsPlatform, except the isSupported test, which fails by assertion because the current JS
+  * FileOpsPlatform hardcodes `false` (line 32).
   */
 final class FileOpsIss978JsSuite extends munit.FunSuite {
 
@@ -36,10 +33,9 @@ final class FileOpsIss978JsSuite extends munit.FunSuite {
     tempDir = nodeFs.mkdtempSync(prefix).asInstanceOf[String]
   }
 
-  override def afterEach(context: AfterEach): Unit = {
+  override def afterEach(context: AfterEach): Unit =
     // Recursive cleanup with Node fs; force=true tolerates files a red run never managed to create.
     nodeFs.rmSync(tempDir, js.Dynamic.literal(recursive = true, force = true)): Unit
-  }
 
   /** Joins a child name onto the current temp directory using Node's path module. */
   private def child(name: String): String =

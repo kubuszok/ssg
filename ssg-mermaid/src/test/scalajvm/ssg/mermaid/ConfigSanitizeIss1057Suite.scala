@@ -39,7 +39,7 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
   test("sanitizeConfig drops a secure key (securityLevel) from the overlay") {
     val overlay = map(
       "securityLevel" -> DataView.from("loose"),
-      "theme"         -> DataView.from("forest")
+      "theme" -> DataView.from("forest")
     )
     val sanitised = Directives.sanitizeConfig(overlay)
     val keys      = sanitised.asMap.fold[Set[String]](Set.empty)(_.keySet)
@@ -49,13 +49,13 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
 
   test("sanitizeConfig drops every default secure key") {
     val overlay = map(
-      "secure"                 -> DataView.from(Vector.empty[DataView]),
-      "securityLevel"          -> DataView.from("loose"),
-      "startOnLoad"            -> DataView.from(true),
-      "maxTextSize"            -> DataView.from(999999),
+      "secure" -> DataView.from(Vector.empty[DataView]),
+      "securityLevel" -> DataView.from("loose"),
+      "startOnLoad" -> DataView.from(true),
+      "maxTextSize" -> DataView.from(999999),
       "suppressErrorRendering" -> DataView.from(true),
-      "maxEdges"               -> DataView.from(99999),
-      "theme"                  -> DataView.from("forest")
+      "maxEdges" -> DataView.from(99999),
+      "theme" -> DataView.from("forest")
     )
     val sanitised = Directives.sanitizeConfig(overlay)
     val keys      = sanitised.asMap.fold[Set[String]](Set.empty)(_.keySet)
@@ -68,7 +68,7 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
   test("sanitizeConfig drops a top-level string value containing '<'") {
     val overlay = map(
       "fontFamily" -> DataView.from("trebuchet<script>"),
-      "theme"      -> DataView.from("forest")
+      "theme" -> DataView.from("forest")
     )
     val sanitised = Directives.sanitizeConfig(overlay)
     val keys      = sanitised.asMap.fold[Set[String]](Set.empty)(_.keySet)
@@ -77,7 +77,7 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
   }
 
   test("sanitizeConfig drops a string value containing 'url(data:'") {
-    val overlay = map("themeCSS" -> DataView.from("background: url(data:image/svg+xml;base64,xxx)"))
+    val overlay   = map("themeCSS" -> DataView.from("background: url(data:image/svg+xml;base64,xxx)"))
     val sanitised = Directives.sanitizeConfig(overlay)
     val keys      = sanitised.asMap.fold[Set[String]](Set.empty)(_.keySet)
     assert(!keys.contains("themeCSS"), s"themeCSS with url(data: must be dropped (XSS); got keys=$keys")
@@ -102,7 +102,7 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
   test("sanitizeConfig drops a __-prefixed key (proto-pollution)") {
     val overlay = map(
       "__proto__" -> DataView.from("x"),
-      "theme"     -> DataView.from("forest")
+      "theme" -> DataView.from("forest")
     )
     val sanitised = Directives.sanitizeConfig(overlay)
     val keys      = sanitised.asMap.fold[Set[String]](Set.empty)(_.keySet)
@@ -150,7 +150,7 @@ final class ConfigSanitizeIss1057Suite extends FunSuite {
     result.getOrElse(fail("Mermaid.render produced no result"))
   }
 
-  private val flowchartBody = "graph TD\n    A-->B"
+  private val flowchartBody   = "graph TD\n    A-->B"
   private lazy val defaultSvg = renderGuarded(flowchartBody)
 
   test("regression: theme:forest still flows through sanitize (directive)") {

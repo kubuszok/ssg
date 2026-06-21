@@ -1,33 +1,13 @@
-import sbtwelcome.UsefulTask
 import commandmatrix.extra.*
 import kubuszok.sbt._
 import kubuszok.sbt.KubuszokPlugin.autoImport._
 
 // Versions
-
-val versions = new {
-  // Versions we are publishing for.
-  val scala3 = "3.8.4"
-
-  // Which versions should be cross-compiled for publishing.
-  val scalas = List(scala3)
-  val platforms = List(VirtualAxis.jvm, VirtualAxis.js, VirtualAxis.native)
-
-  // Dependencies
-  val hearth              = "0.3.0-49-g68e1781-SNAPSHOT"
-  val kindlingsYaml       = "0.2.0"
-  val lls                 = "0.1.0"
-  val scalaJavaLocales    = "1.5.4"
-  val scalaJavaTime       = "2.6.0"
-
-  // Multiarch
-  val multiarch           = "0.2.0"
-  val treeSitterProviders = "0.1.0"
-
-  // Tests
-  val munit           = "1.3.2"
-  val munitScalacheck = "1.3.0"
-}
+//
+// Defined as a top-level object in project/Versions.scala (not an anonymous `new { ... }`
+// refinement here) because the sbt-2.0 Scala-3 build dialect drops the structural members of an
+// anonymous refinement, breaking `versions.X` field access.
+val versions = Versions
 
 val dev = new DevProperties(
   scala213 = None,
@@ -69,8 +49,8 @@ val commonSettings = Seq(
       "-Wunused:imports,privates,locals,patvars,nowarn"
     ),
     libraryDependencies ++= Seq(
-      "org.scalameta"     %%% "munit"             % versions.munit % Test,
-      "org.scalameta"     %%% "munit-scalacheck"  % versions.munitScalacheck % Test
+      "org.scalameta"     %% "munit"             % versions.munit % Test,
+      "org.scalameta"     %% "munit-scalacheck"  % versions.munitScalacheck % Test
     ),
     resolvers += Resolver.mavenLocal,
     testFrameworks += new TestFramework("munit.Framework")
@@ -85,7 +65,11 @@ val commonSettings = Seq(
   MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
     scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
       _.withEmbedResources(true).withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
-    }
+    },
+    // scalacheck 1.19 pulls test-interface 0.5.8 while scala-native 0.5.12 selects 0.5.8's successor
+    // 0.5.12 (strict): the two are compatible at the test-interface level, so downgrade the eviction
+    // conflict from an error to a warning on the native axis.
+    evictionErrorLevel := Level.Warn
   ))
 )
 
@@ -129,7 +113,7 @@ lazy val `ssg-commons` = (projectMatrix in file("ssg-commons"))
   .settings(
     name := "ssg-commons",
     libraryDependencies ++= Seq(
-      "com.kubuszok"  %%% "lls" % versions.lls,
+      "com.kubuszok"  %% "lls" % versions.lls,
     )
   )
   .settings(publishSettings)
@@ -143,8 +127,8 @@ lazy val `ssg-data-commons` = (projectMatrix in file("ssg-data-commons"))
   .settings(
     name := "ssg-data-commons",
     libraryDependencies ++= Seq(
-      "com.kubuszok"      %%% "hearth"            % versions.hearth,
-      "io.github.cquiroz" %%% "scala-java-time"   % versions.scalaJavaTime
+      "com.kubuszok"      %% "hearth"            % versions.hearth,
+      "io.github.cquiroz" %% "scala-java-time"   % versions.scalaJavaTime
     ),
     libraryDependencies += compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % versions.hearth)
   )
@@ -190,10 +174,11 @@ lazy val `ssg-highlight` = (projectMatrix in file("ssg-highlight"))
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
       libraryDependencies += "com.kubuszok" % "wasm-provider-tree-sitter" % versions.treeSitterProviders,
       scalaJSLinkerConfig ~= { _.withModuleKind(org.scalajs.linker.interface.ModuleKind.CommonJSModule) },
-      Test / jsEnv := new org.scalajs.jsenv.nodejs.NodeJSEnv(
+      // sbt 2.0 result caching has no sjsonnew.HashWriter for JSEnv → opt out with Def.uncached.
+      Test / jsEnv := Def.uncached(new org.scalajs.jsenv.nodejs.NodeJSEnv(
         org.scalajs.jsenv.nodejs.NodeJSEnv.Config()
           .withEnv(Map("TREE_SITTER_WASM_DIR" -> sys.env.getOrElse("TREE_SITTER_WASM_DIR", "/tmp/ts-wasm")))
-      )
+      ))
     )),
     // TODO: check if _root_.multiarch.sbt.NativeProviderPlugin.projectSettings is necessary for this to work
     MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
@@ -221,7 +206,13 @@ lazy val `ssg-js` = (projectMatrix in file("ssg-js"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-js"
+    name := "ssg-js",
+    // The Terser port's name mangler keeps process-global mutable state (object Base54's char/frequency
+    // table — terser's lib/scope.js Base54 is a single module-level singleton, reset per minify call).
+    // sbt 2.0 runs test suites in parallel within one forked JVM by default, so concurrent minify calls
+    // race on that shared state and produce nondeterministic mangled names. Run ssg-js tests serially to
+    // preserve the single-threaded contract (matches sbt 1.x behavior).
+    Test / parallelExecution := false
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -245,17 +236,17 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
-      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+      libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     )),
     MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
-      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+      libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     ))
   )) *)
   .settings(
     name := "ssg-liquid",
     libraryDependencies ++= Seq(
-      "io.github.cquiroz" %%% "scala-java-time"    % versions.scalaJavaTime,
-      "io.github.cquiroz" %%% "scala-java-locales" % versions.scalaJavaLocales
+      "io.github.cquiroz" %% "scala-java-time"    % versions.scalaJavaTime,
+      "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales
     )
   )
   .settings(publishSettings)
@@ -264,24 +255,24 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
 
 // --- Markdown engine (flexmark-java port) ---
 
-// Generates ssg.md.util.misc.EmbeddedResources for the Scala.js platform (see project/EmbeddedResourcesGen.scala).
-// Class.getResourceAsStream is not available on Scala.js, so PlatformResourcesImpl (scalajs) loads runtime
-// resources from this build-time-embedded map first, falling back to Node fs only for development/in-repo lookups.
+// Scala.js has no classpath, so Class.getResourceAsStream cannot resolve runtime resources. The shared
+// multiarch-resources mechanism embeds ssg-md's main resources at build time into a self-registering
+// generated object (ssg.md.util.misc.GeneratedEmbeddedResources) which the runtime
+// multiarch.resources.PlatformResourcesImpl (scalajs) consults first, falling back to a Node fs lookup
+// for in-repo development. ssg.md.util.misc.PlatformResources is a thin boundary shim that delegates to
+// the shared API and converts Option -> Nullable (ISS-979).
 lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
-      Compile / sourceGenerators += Def.task {
-        val resourceDir = (Compile / sourceDirectory).value / "resources"
-        val outFile     = (Compile / sourceManaged).value / "ssg" / "md" / "util" / "misc" / "EmbeddedResources.scala"
-        val log         = streams.value.log
-        EmbeddedResourcesGen.generate(resourceDir, outFile, log)
-        Seq(outFile)
-      }.taskValue
+      _root_.multiarch.sbt.MultiArchResourcesPlugin.embeddedResourcesSettings(
+        objectName = "ssg.md.util.misc.GeneratedEmbeddedResources"
+      )
     ))
   )) *)
   .settings(
-    name := "ssg-md"
+    name := "ssg-md",
+    libraryDependencies += "com.kubuszok" %% "multiarch-resources" % versions.multiarch
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -293,17 +284,17 @@ lazy val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
-      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+      libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     )),
     MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
-      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % versions.scalaJavaTime
+      libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     ))
   )) *)
   .settings(
     name := "ssg-mermaid",
     libraryDependencies ++= Seq(
-      "io.github.cquiroz" %%% "scala-java-time"          % versions.scalaJavaTime,
-      "com.kubuszok"      %%% "kindlings-yaml-derivation" % versions.kindlingsYaml
+      "io.github.cquiroz" %% "scala-java-time"          % versions.scalaJavaTime,
+      "com.kubuszok"      %% "kindlings-yaml-derivation" % versions.kindlingsYaml
     )
   )
   .settings(publishSettings)
@@ -341,7 +332,7 @@ lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-site",
-    libraryDependencies += "com.kubuszok" %%% "kindlings-yaml-derivation" % versions.kindlingsYaml
+    libraryDependencies += "com.kubuszok" %% "kindlings-yaml-derivation" % versions.kindlingsYaml
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -359,30 +350,25 @@ lazy val ssg = (projectMatrix in file("ssg"))
   .settings(mimaSettings)
   .dependsOn(`ssg-commons`, `ssg-data-commons`, `ssg-graphs-commons`, `ssg-graphviz`, `ssg-highlight`, `ssg-js`, `ssg-katex`, `ssg-liquid`, `ssg-md`, `ssg-mermaid`, `ssg-minify`, `ssg-sass`, `ssg-site`)
 
-// ── Root project (welcome + aggregation) ─────────────────────────────
+// ── Root project (aggregation + CI aliases) ──────────────────────────
+//
+// sbt-welcome has no sbt-2.0 build and is no longer bundled by sbt-kubuszok, so the `logo` /
+// `usefulTasks` wiring (which also registered the ci-*/test-* aliases on the sbt-1.x axis) is gone.
+// We register the CI aliases ourselves via addCommandAlias, reusing Aliases.ci(...) to assemble each
+// pipeline's task list. On sbt 2.0 the bare `test` task is incrementally cached and runs 0 suites on a
+// fresh checkout (silent false-green), so we rewrite every `<id>/test` task to `<id>/testFull`.
+def ciTestFull(platform: String, scalaBinary: String): String =
+  al.ci(platform, scalaBinary).replaceAll("""/test(?=( ; )|$)""", "/testFull")
 
 lazy val root = (project in file("."))
   .enablePlugins(KubuszokRootPlugin)
   .settings(
-    name := "ssg-root",
-    logo :=
-      s"""SSG ${version.value} for Scala ${versions.scala3} x (Scala JVM, Scala.js $scalaJSVersion, Scala Native $nativeVersion)
-         |
-         |This build uses sbt-projectmatrix:
-         | - Scala JVM adds no suffix to a project name seen in build.sbt
-         | - Scala.js adds the "JS" suffix to a project name seen in build.sbt
-         | - Scala Native adds the "Native" suffix to a project name seen in build.sbt
-         |
-         |When working with IntelliJ or Scala Metals, edit dev.properties to control which platform you're currently working with.
-         |
-         |Library depends on artifacts developed in:
-         | - https://github.com/kubuszok/lls
-         | - https://github.com/kubuszok/ssg-native-providers
-         |When working with them, it might be necessary to create PRs and test the SNAPSHOTs published before merging all changes.
-         |""".stripMargin,
-    usefulTasks := al.usefulTasks(extra = Seq(
-      UsefulTask("scalafmtAll", "Format all sources").noAlias
-    ))
+    name := "ssg-root"
+  )
+  .settings(
+    addCommandAlias("ci-jvm-3", ciTestFull("JVM", "3")),
+    addCommandAlias("ci-js-3", ciTestFull("JS", "3")),
+    addCommandAlias("ci-native-3", ciTestFull("Native", "3"))
   )
   .aggregate(`ssg-commons`.projectRefs *)
   .aggregate(`ssg-data-commons`.projectRefs *)

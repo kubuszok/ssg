@@ -24,11 +24,10 @@ class SiteBuildPhase4Suite extends munit.FunSuite {
     val tmpBase = FilePath.cwd.resolve("target").resolve("test-tmp")
     val testDir = tmpBase.resolve(s"ssg-phase4-test-$testName-${System.nanoTime()}")
     FileOps.createDirectories(testDir)
-    try {
+    try
       body(testDir)
-    } finally {
+    finally
       FileOps.deleteRecursively(testDir)
-    }
   }
 
   /** Sets up a site source directory with the given files and returns a SiteConfig. */
@@ -122,7 +121,7 @@ class SiteBuildPhase4Suite extends munit.FunSuite {
   test("case 8c: scss without front matter is static (copied verbatim)") {
     withTempDir("case8c") { baseDir =>
       val scssContent = "body { color: green; }\n"
-      val config = setupSite(
+      val config      = setupSite(
         baseDir,
         configYaml = "title: Test Site\n",
         files = Map(
@@ -182,9 +181,7 @@ class SiteBuildPhase4Suite extends munit.FunSuite {
       )
 
       // There must be at least one diagnostic with stage == Layout and severity == Error.
-      val layoutErrors = result.diagnostics.filter(d =>
-        d.stage == BuildStage.Layout && d.severity == Severity.Error
-      )
+      val layoutErrors = result.diagnostics.filter(d => d.stage == BuildStage.Layout && d.severity == Severity.Error)
       assert(
         layoutErrors.nonEmpty,
         s"Expected a Layout/Error diagnostic for missing layout, got diagnostics: ${result.diagnostics}"
@@ -218,9 +215,7 @@ class SiteBuildPhase4Suite extends munit.FunSuite {
       assert(FileOps.exists(goodOutputPath), s"Good page must still be built: ${goodOutputPath.pathString}")
 
       // There must be a Sass/Error diagnostic for the broken SCSS.
-      val sassErrors = result.diagnostics.filter(d =>
-        d.stage == BuildStage.Sass && d.severity == Severity.Error
-      )
+      val sassErrors = result.diagnostics.filter(d => d.stage == BuildStage.Sass && d.severity == Severity.Error)
       assert(
         sassErrors.nonEmpty,
         s"Expected a Sass/Error diagnostic for broken SCSS, got diagnostics: ${result.diagnostics}"
@@ -259,8 +254,8 @@ class SiteBuildPhase4Suite extends munit.FunSuite {
       val outputFalse = FileOps.readString(outputFalsePath)
 
       // Build 2: minify = true (separate dest to avoid collision)
-      val baseDirMin  = baseDir.resolve("min-build")
-      val configTrue  = setupSite(
+      val baseDirMin = baseDir.resolve("min-build")
+      val configTrue = setupSite(
         baseDirMin,
         configYaml = "title: Test Site\nminify: true\n",
         files = files

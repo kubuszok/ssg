@@ -130,8 +130,8 @@ final class RankIss1129GansnerPivotSuite extends FunSuite {
     // f to rank(a) + 1 and g to rank(a) + 2, reducing the total weighted edge
     // length from 12 to 10. Ranks are normalized relative to rank(a) so the
     // assertion is independent of the simplex's choice of root.
-    val base                                = g.node("a").rank
-    def relRank(v: String): Int             = g.node(v).rank - base
+    val base = g.node("a").rank
+    def relRank(v: String):            Int  = g.node(v).rank - base
     def assertRank(v: String, r: Int): Unit =
       assertEquals(
         relRank(v),

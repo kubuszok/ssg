@@ -11,8 +11,8 @@ package liquid
   *   - Asymmetry under `stripSingleLine`: LEADING removes only spaces/tabs (`SpaceOrTab*`, NO linebreak), while TRAILING removes spaces/tabs plus at most one linebreak.
   *
   * Bug in the SSG port (LiquidLexer.scala): `handlePostTagStripping` (lines 467-492) implements only the TRAILING half — it consumes whitespace AFTER `%}`/`}}` when `stripSpacesAroundTags` is set.
-  * The LEADING half is absent: `scanDefault` (lines 59-72) emits the accumulated text via `emitText` immediately before `scanOutputTag`/`scanTagStart` and never trims that text's trailing
-  * whitespace when `stripSpacesAroundTags` is set, so the whitespace BEFORE a tag survives, diverging from liqp's `stripSpacesAroundTags`.
+  * The LEADING half is absent: `scanDefault` (lines 59-72) emits the accumulated text via `emitText` immediately before `scanOutputTag`/`scanTagStart` and never trims that text's trailing whitespace
+  * when `stripSpacesAroundTags` is set, so the whitespace BEFORE a tag survives, diverging from liqp's `stripSpacesAroundTags`.
   *
   * Empirically observed CURRENT (buggy) outputs vs liqp-expected are recorded inline below.
   */
@@ -51,7 +51,7 @@ final class StripLeadingWhitespaceIss1013Suite extends munit.FunSuite {
    * leading spaces (keeping the `\n`) -> "a\nb". Today the leading spaces survive, so
    * the actual output is "a\n   b". */
   test("ISS-1013 red: single-line flag strips leading spaces but keeps the linebreak") {
-    val parser = new TemplateParser.Builder().withStripSpaceAroundTags(true, true).build()
+    val parser   = new TemplateParser.Builder().withStripSpaceAroundTags(true, true).build()
     val rendered =
       parser.parse("a\n   {% assign foo = 1 %}b").render().replace(' ', '.').replace("\n", "<NL>")
     // liqp-expected (leading spaces stripped, linebreak kept): "a<NL>b";

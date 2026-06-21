@@ -143,9 +143,7 @@ class SiteBuildIncludeRelativeSuite extends munit.FunSuite {
       val result = Site.build(config)
 
       // (a) A Liquid/Error diagnostic must be present for the jail violation.
-      val liquidErrors = result.diagnostics.filter(d =>
-        d.stage == BuildStage.Liquid && d.severity == Severity.Error
-      )
+      val liquidErrors = result.diagnostics.filter(d => d.stage == BuildStage.Liquid && d.severity == Severity.Error)
       assert(
         liquidErrors.nonEmpty,
         s"Expected a Liquid/Error diagnostic for include_relative traversal, got diagnostics: ${result.diagnostics}"
@@ -283,4 +281,3 @@ class SiteBuildIncludeRelativeSuite extends munit.FunSuite {
     }
   }
 }
-

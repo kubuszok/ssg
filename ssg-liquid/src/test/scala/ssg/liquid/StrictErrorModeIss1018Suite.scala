@@ -40,18 +40,13 @@ import ssg.liquid.parser.Flavor
 final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   private def parser(mode: TemplateParser.ErrorMode): TemplateParser =
-    new TemplateParser.Builder()
-      .withFlavor(Flavor.JEKYLL)
-      .withErrorMode(mode)
-      .build()
+    new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withErrorMode(mode).build()
 
   // --- (1) output-tag trailing junk: STRICT throws, WARN renders+records, LAX renders silent ---
 
   test("ISS-1018 output-tag STRICT: trailing junk throws 'unexpected output'") {
     val ex = intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.STRICT)
-        .parse("{{ 98 > 97 }}")
-        .render()
+      parser(TemplateParser.ErrorMode.STRICT).parse("{{ 98 > 97 }}").render()
     }
     assert(
       ex.getMessage.contains("unexpected output"),
@@ -61,10 +56,7 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   test("ISS-1018 output-tag WARN: trailing junk renders AND records an 'unexpected output' error") {
     val holder = new Template.ContextHolder()
-    val res = parser(TemplateParser.ErrorMode.WARN)
-      .parse("{{ 98 > 97 }}")
-      .withContextHolder(holder)
-      .render()
+    val res    = parser(TemplateParser.ErrorMode.WARN).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
     val errors = holder.getContext.errors()
     assertEquals(errors.size(), 1)
@@ -76,10 +68,7 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   test("ISS-1018 output-tag LAX: trailing junk renders silently with no recorded error") {
     val holder = new Template.ContextHolder()
-    val res = parser(TemplateParser.ErrorMode.LAX)
-      .parse("{{ 98 > 97 }}")
-      .withContextHolder(holder)
-      .render()
+    val res    = parser(TemplateParser.ErrorMode.LAX).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
     assertEquals(holder.getContext.errors().size(), 0)
   }
@@ -88,25 +77,19 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   test("ISS-1018 missing endif STRICT: throws") {
     intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.STRICT)
-        .parse("{% if true %}yes")
-        .render()
+      parser(TemplateParser.ErrorMode.STRICT).parse("{% if true %}yes").render()
     }
   }
 
   test("ISS-1018 missing endif WARN: throws (built-in end required in all modes)") {
     intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.WARN)
-        .parse("{% if true %}yes")
-        .render()
+      parser(TemplateParser.ErrorMode.WARN).parse("{% if true %}yes").render()
     }
   }
 
   test("ISS-1018 missing endif LAX: throws (built-in end required in all modes)") {
     intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.LAX)
-        .parse("{% if true %}yes")
-        .render()
+      parser(TemplateParser.ErrorMode.LAX).parse("{% if true %}yes").render()
     }
   }
 
@@ -114,17 +97,13 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
   // if_tag (g4:134) requires IfEnd, so an endfor fails the required-token rule.
   test("ISS-1018 mismatched end WARN: {% if %}...{% endfor %} throws") {
     intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.WARN)
-        .parse("{% if true %}yes{% endfor %}")
-        .render()
+      parser(TemplateParser.ErrorMode.WARN).parse("{% if true %}yes{% endfor %}").render()
     }
   }
 
   test("ISS-1018 mismatched end LAX: {% if %}...{% endfor %} throws") {
     intercept[LiquidException] {
-      parser(TemplateParser.ErrorMode.LAX)
-        .parse("{% if true %}yes{% endfor %}")
-        .render()
+      parser(TemplateParser.ErrorMode.LAX).parse("{% if true %}yes{% endfor %}").render()
     }
   }
 }

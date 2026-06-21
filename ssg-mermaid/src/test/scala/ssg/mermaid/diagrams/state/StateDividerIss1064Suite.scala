@@ -9,21 +9,14 @@ package state
 
 import munit.FunSuite
 
-/** Differential coverage for ISS-1064: the state-diagram `--` concurrency divider must be parsed and
-  * rendered, faithful to upstream Mermaid.
+/** Differential coverage for ISS-1064: the state-diagram `--` concurrency divider must be parsed and rendered, faithful to upstream Mermaid.
   *
   * Faithful to:
-  *   - diagrams/state/parser/stateDiagram.jison:142 — `<struct>"--" return 'CONCURRENT';`
-  *     (`--` is the CONCURRENT token ONLY inside a composite-state `struct` `{ ... }` body, never at
-  *     top level).
-  *   - stateDiagram.jison:237-239 — the CONCURRENT rule emits
-  *     `{ stmt: 'state', id: yy.getDividerId(), type: 'divider' }` into the composite's `doc` array.
-  *   - diagrams/state/stateDb.js getDividerId() — `dividerCnt++; return 'divider-id-' + dividerCnt;`
-  *     and docTranslator() — splits a composite's `doc` array into concurrent regions at divider nodes.
-  *   - diagrams/state/shapes.js drawDivider() — the dashed grey `line` (class `divider`) that
-  *     visually separates concurrent regions.
-  *   - stateDiagram.jison:141 — `<INITIAL,struct>"-->"` is a DIFFERENT token; a top-level transition
-  *     must be unaffected by divider recognition.
+  *   - diagrams/state/parser/stateDiagram.jison:142 — `<struct>"--" return 'CONCURRENT';` (`--` is the CONCURRENT token ONLY inside a composite-state `struct` `{ ... }` body, never at top level).
+  *   - stateDiagram.jison:237-239 — the CONCURRENT rule emits `{ stmt: 'state', id: yy.getDividerId(), type: 'divider' }` into the composite's `doc` array.
+  *   - diagrams/state/stateDb.js getDividerId() — `dividerCnt++; return 'divider-id-' + dividerCnt;` and docTranslator() — splits a composite's `doc` array into concurrent regions at divider nodes.
+  *   - diagrams/state/shapes.js drawDivider() — the dashed grey `line` (class `divider`) that visually separates concurrent regions.
+  *   - stateDiagram.jison:141 — `<INITIAL,struct>"-->"` is a DIFFERENT token; a top-level transition must be unaffected by divider recognition.
   */
 final class StateDividerIss1064Suite extends FunSuite {
 

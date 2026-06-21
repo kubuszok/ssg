@@ -82,7 +82,7 @@ jobs:
         if: always()
         uses: codecov/codecov-action@v5
         with:
-          files: target/scala-3.8.3/scoverage-report/scoverage.xml
+          files: target/scala-3.8.4/scoverage-report/scoverage.xml
           flags: ${{ matrix.label }}
           fail_ci_if_error: false
         env:

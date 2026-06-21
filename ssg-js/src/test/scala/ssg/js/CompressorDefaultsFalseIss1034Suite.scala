@@ -32,7 +32,7 @@ final class CompressorDefaultsFalseIss1034Suite extends munit.FunSuite {
   // (conditionals + dead_code both off under defaults:false).
   // Vs defaults=true: `a();` (dead branch eliminated).
   test("ISS-1034: defaults=false disables conditionals+dead_code (if-true branch preserved)") {
-    val src       = "if(true){a()}else{b()}"
+    val src             = "if(true){a()}else{b()}"
     val withDefaults    = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(), mangle = false))
     val withoutDefaults = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(defaults = false), mangle = false))
 
@@ -54,7 +54,7 @@ final class CompressorDefaultsFalseIss1034Suite extends munit.FunSuite {
   // `var x = 1 + 2;` => `var x=1+2;` (evaluate off).
   // Vs defaults=true: `var x=3;` (evaluate folds).
   test("ISS-1034: defaults=false disables evaluate (constant folding off)") {
-    val src       = "var x = 1 + 2;"
+    val src             = "var x = 1 + 2;"
     val withDefaults    = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(), mangle = false))
     val withoutDefaults = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(defaults = false), mangle = false))
 
@@ -74,7 +74,7 @@ final class CompressorDefaultsFalseIss1034Suite extends munit.FunSuite {
   // `a(); b(); c();` => `a();b();c();` (sequences off).
   // Vs defaults=true: `a(),b(),c();` (sequences on).
   test("ISS-1034: defaults=false disables sequences (no comma-joining)") {
-    val src       = "a(); b(); c();"
+    val src             = "a(); b(); c();"
     val withDefaults    = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(), mangle = false))
     val withoutDefaults = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(defaults = false), mangle = false))
 
@@ -157,8 +157,8 @@ final class CompressorDefaultsFalseIss1034Suite extends munit.FunSuite {
   // -- Baseline: defaults=true (or omitted) is unchanged --
   // Ensures the resolution is a no-op when defaults != false.
   test("ISS-1034: defaults=true (default) behavior is unchanged") {
-    val src = "if(true){a()}else{b()}"
-    val explicit   = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(), mangle = false))
+    val src         = "if(true){a()}else{b()}"
+    val explicit    = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(), mangle = false))
     val defaultTrue = Terser.minifyToString(src, MinifyOptions(compress = CompressorOptions(defaults = true), mangle = false))
 
     assertEquals(explicit, defaultTrue, "explicit defaults=true must match omitted defaults (both are Defaults)")
