@@ -510,7 +510,11 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2428
   // =========================================================================
-  test("issue_2428".fail) {
+  // Un-pinned by ISS-1236: this exercised the same reduce_funcs / drop_unused
+  // over-folding that was sensitive to absolute SymbolDef ids. Making the pass-2
+  // initialization walk (drop-unused.js:219) and reduce_funcs fixed-clearing
+  // (reduce-vars.js:621-640) id-invariant produces the correct terser output here.
+  test("issue_2428") {
     assertCompresses(
       input = """function bar(k) {
             console.log(k);

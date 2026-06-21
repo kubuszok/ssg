@@ -145,11 +145,22 @@ object DropUnused {
     val dropVars:   Boolean,
     val keepAssign: Boolean
   ) {
-    // Track which symbols are in use
-    val inUseIds:        mutable.Map[Int, SymbolDef]            = mutable.Map.empty
-    val fixedIds:        mutable.Map[Int, AstNode]              = mutable.Map.empty
-    val varDefsById:     mutable.Map[Int, ArrayBuffer[AstNode]] = mutable.Map.empty
-    val initializations: mutable.Map[Int, ArrayBuffer[AstNode]] = mutable.Map.empty
+    // Track which symbols are in use.
+    //
+    // terser declares these as JS `Map`s (drop-unused.js:132,133,141,142), which
+    // iterate in INSERTION order. `in_use_ids` is iterated at drop-unused.js:219
+    // (`in_use_ids.forEach`) to walk each used symbol's initializations into the
+    // pass-2 walker; the order of that walk feeds reduce_vars `fixed`/`single_use`
+    // tracking, so it is folding-relevant. A hash-keyed `mutable.Map` would iterate
+    // in SymbolDef-id-hash order, making the pass-2 result — and therefore whether
+    // a recursive call argument like `x - 1` is constant-folded — depend on the
+    // absolute id value (the process-wide `SymbolDef.nextId`). `LinkedHashMap`
+    // reproduces terser's insertion-ordered iteration so the result is id-invariant
+    // (ISS-1236).
+    val inUseIds:        mutable.LinkedHashMap[Int, SymbolDef]            = mutable.LinkedHashMap.empty
+    val fixedIds:        mutable.LinkedHashMap[Int, AstNode]              = mutable.LinkedHashMap.empty
+    val varDefsById:     mutable.LinkedHashMap[Int, ArrayBuffer[AstNode]] = mutable.LinkedHashMap.empty
+    val initializations: mutable.LinkedHashMap[Int, ArrayBuffer[AstNode]] = mutable.LinkedHashMap.empty
 
     // Current scope during walking
     var currentScope: AstScope = self
