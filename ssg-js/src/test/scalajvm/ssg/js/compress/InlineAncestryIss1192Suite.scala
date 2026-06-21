@@ -72,33 +72,46 @@ final class InlineAncestryIss1192Suite extends munit.FunSuite {
   }
 
   // =========================================================================
-  // withinArrayOrObjectLiteral.
+  // withinArrayOrObjectLiteral — guard-1 independently pinned (ISS-1221).
   //
-  // `f` is declared in the outer scope and has a single, cross-scope reference
-  // inside an ARRAY LITERAL in a nested function. inline.js:213-217 only inlines
-  // a cross-scope single-use function when it is NOT within an array/object
-  // literal; the live `within_array_or_object_literal` walk (inline.js:123) finds
-  // the enclosing `AST_Array` and sets single_use = false, so `f` is preserved.
-  // With the DEAD guard the walk was always false, wrongly allowing the inline.
+  // `f` is declared in the outer scope and CALLED cross-scope inside an ARRAY
+  // LITERAL in a nested function: `[f()]`. The SymbolRef `f` has parent
+  // AST_Call (direct call), and that call's parent is AST_Array. The live
+  // `within_array_or_object_literal` walk (inline.js:123) finds the enclosing
+  // AST_Array and sets single_use = false, so `f` is preserved as `var f`.
+  //
+  // Without this guard (withinArrayOrObjectLiteral always-false), the
+  // cross-scope check at inline.js:212-216 falls through: is_constant_expression
+  // returns true (the function is a constant expression), then the second
+  // single_use block at inline.js:233-241 allows inlining via the direct-call
+  // path (parent instanceof AST_Call && parent.expression === self), and `f` IS
+  // inlined — producing wrong output: `console.log([function(){return this.x}()][0])`.
+  //
+  // The function uses `this` so that `inline_into_call` cannot independently
+  // flatten the call body (contains_this blocks flattening at inline.js:417),
+  // ensuring that guard-1 is the SOLE decider of whether `f` stays as a variable.
   //
   // terser 5.46.1:
-  //   minify("(function(){var f=function(){return 42};function inner(){return [f];}console.log(inner()[0]());})();",
-  //          {compress:{defaults:false,inline:3,reduce_vars:true,reduce_funcs:true,
-  //                     unused:true,side_effects:true,toplevel:false,passes:1},mangle:false})
-  //   => "(function(){var f=function(){return 42};console.log([f][0]())})();"
+  //   node --input-type=module -e "import('./main.js').then(async t=>{const r=await t.minify(
+  //     '(function(){var f=function(){return this.x};function inner(){return [f()]}console.log(inner()[0])})();',
+  //     {compress:{defaults:false,inline:3,reduce_vars:true,reduce_funcs:true,
+  //                unused:true,side_effects:true,toplevel:false,passes:1},mangle:false});console.log(JSON.stringify(r.code))})"
+  //   => "(function(){var f=function(){return this.x};console.log([f()][0])})();"
   // =========================================================================
   test("iss1192_within_array_literal_blocks_cross_scope_inline") {
     assertCompresses(
       input = """(function(){
-        var f = function() { return 42; };
+        var f = function() { return this.x; };
         function inner() {
-          return [f];
+          return [f()];
         }
-        console.log(inner()[0]());
+        console.log(inner()[0]);
       })();""".stripMargin.trim,
       expected = """(function() {
-        var f = function() { return 42; };
-        console.log([ f ][0]());
+        var f = function() {
+            return this.x;
+        };
+        console.log([ f() ][0]);
       })();""".stripMargin.trim,
       options = baseOpts
     )
