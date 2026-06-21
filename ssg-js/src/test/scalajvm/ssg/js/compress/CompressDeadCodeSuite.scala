@@ -331,9 +331,10 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // try_catch_finally
-  // Fails: ClassCastException — AstSymbolVar cannot be cast to AstSymbolRef
+  // Previously failed with a ClassCastException (AstSymbolVar -> AstSymbolRef);
+  // fixed by ISS-1231 (catch-var scope handling), un-pinned in ISS-1235.
   // =========================================================================
-  test("try_catch_finally".fail) {
+  test("try_catch_finally") {
     assertCompresses(
       input = """var a = 1;
                 |!function() {
@@ -1098,9 +1099,10 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // issue_2749
-  // Fails: ClassCastException — AstSymbolVar cannot be cast to AstSymbolRef
+  // Previously failed with a ClassCastException (AstSymbolVar -> AstSymbolRef);
+  // fixed by ISS-1231 (catch-var scope handling), un-pinned in ISS-1235.
   // =========================================================================
-  test("issue_2749".fail) {
+  test("issue_2749") {
     assertCompresses(
       input = """var a = 2, c = "PASS";
                 |while (a--)

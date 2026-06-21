@@ -1031,7 +1031,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1715_1
   // =========================================================================
-  test("issue_1715_1".fail) {
+  test("issue_1715_1") {
     assertCompresses(
       input = """var a = 1;
         function f() {
@@ -1064,7 +1064,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1715_2
   // =========================================================================
-  test("issue_1715_2".fail) {
+  test("issue_1715_2") {
     assertCompresses(
       input = """var a = 1;
         function f() {
@@ -1097,7 +1097,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1715_3
   // =========================================================================
-  test("issue_1715_3".fail) {
+  test("issue_1715_3") {
     assertCompresses(
       input = """var a = 1;
         function f() {
@@ -1131,7 +1131,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1715_4
   // =========================================================================
-  test("issue_1715_4".fail) {
+  test("issue_1715_4") {
     assertCompresses(
       input = """var a = 1;
         !function a() {
@@ -1283,7 +1283,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // var_catch_toplevel
   // =========================================================================
-  test("var_catch_toplevel".fail) {
+  test("var_catch_toplevel") {
     assertCompresses(
       input = """function f() {
             a--;
