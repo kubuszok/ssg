@@ -837,9 +837,16 @@ object ReduceVars {
     )
 
     // `defun` id to array of `defun` ids it uses
-    val defunDependenciesMap = mutable.Map.empty[Int, ArrayBuffer[Int]]
+    // terser uses a JS `Map` (reduce-vars.js:533), which iterates in INSERTION
+    // order. `dependencies_map`/`defun_first_read_map` are later iterated to
+    // clear `fixed` (reduce-vars.js:621,640), and that result is order-sensitive
+    // for mutually-recursive defuns. A hash-keyed `mutable.Map` would iterate in
+    // SymbolDef-id-hash order, making the output depend on the absolute id value
+    // (the process-wide `SymbolDef.nextId`); `LinkedHashMap` reproduces terser's
+    // insertion-ordered iteration so the folding is id-invariant (ISS-1236).
+    val defunDependenciesMap = mutable.LinkedHashMap.empty[Int, ArrayBuffer[Int]]
     // `defun` id to array of enclosing `def` that are used by the function
-    val dependenciesMap = mutable.Map.empty[Int, ArrayBuffer[SymbolDef]]
+    val dependenciesMap = mutable.LinkedHashMap.empty[Int, ArrayBuffer[SymbolDef]]
     // all symbol ids that will be tracked for read/write
     val symbolsOfInterest = mutable.Set.empty[Int]
     val defunsOfInterest  = mutable.Set.empty[Int]
@@ -899,7 +906,10 @@ object ReduceVars {
     // These are tracked in AST order so we can check which is after which.
     var symbolIndex = 1
     // Map a defun ID to its first read (a `symbol_index`)
-    val defunFirstReadMap = mutable.Map.empty[Int, Int]
+    // terser `defun_first_read_map` is a JS `Map` (reduce-vars.js:594), iterated
+    // in insertion order at reduce-vars.js:621 — `LinkedHashMap` matches that so
+    // the fixed-clearing is independent of absolute SymbolDef ids (ISS-1236).
+    val defunFirstReadMap = mutable.LinkedHashMap.empty[Int, Int]
     // Map a symbol ID to its last write (a `symbol_index`)
     val symbolLastWriteMap = mutable.Map.empty[Int, Int]
 
@@ -934,30 +944,41 @@ object ReduceVars {
       }
     )
 
-    // Refine `defun_first_read_map` to be as high as possible
+    // Refine `defun_first_read_map` to be as high as possible (reduce-vars.js:620-636)
     for ((defun, defunFirstRead) <- defunFirstReadMap) {
-      // Update all dependencies of `defun`
-      val queue = mutable.Set.empty[Int]
-      defunDependenciesMap.get(defun).foreach(deps => queue.addAll(deps))
+      // Update all dependencies of `defun`.
+      //
+      // terser uses `const queue = new Set(defun_dependencies_map.get(defun))`
+      // then `for (const enclosed_defun of queue)` (reduce-vars.js:623-624) while
+      // calling `queue.add(...)` inside the loop (reduce-vars.js:633). A JS `Set`
+      // visited by `for...of` walks every element exactly once in INSERTION order,
+      // including elements added during the walk; re-adding an element already in
+      // the set is a no-op (so it is never revisited). We reproduce that with an
+      // insertion-ordered `LinkedHashSet` (membership = the "already present, won't
+      // re-add" guard) plus an index-driven walk over a parallel insertion-ordered
+      // buffer (the live `for...of` cursor). Using a hash `Set` + `.head` would
+      // visit in id-hash order, making the result depend on absolute SymbolDef ids
+      // (ISS-1236); the insertion-ordered walk is id-invariant.
+      val queueSet   = mutable.LinkedHashSet.empty[Int]
+      val queueOrder = ArrayBuffer.empty[Int]
+      defunDependenciesMap.get(defun).foreach { deps =>
+        for (dep <- deps)
+          if (queueSet.add(dep)) queueOrder.addOne(dep)
+      }
 
-      // Process queue (using iterator + add to simulate JS Set iteration with additions)
-      val processed = mutable.Set.empty[Int]
-      while (queue.nonEmpty) {
-        val enclosedDefun = queue.head
-        queue.remove(enclosedDefun)
-        if (!processed.contains(enclosedDefun)) {
-          processed.add(enclosedDefun)
+      var qi = 0
+      while (qi < queueOrder.size) {
+        val enclosedDefun = queueOrder(qi)
+        qi += 1
 
-          val enclosedDefunFirstRead = defunFirstReadMap.get(enclosedDefun)
-          if (enclosedDefunFirstRead.isEmpty || enclosedDefunFirstRead.get >= defunFirstRead) {
-            defunFirstReadMap(enclosedDefun) = defunFirstRead
+        val enclosedDefunFirstRead = defunFirstReadMap.get(enclosedDefun)
+        // reduce-vars.js:626 — skip if already read strictly earlier than this defun
+        if (!(enclosedDefunFirstRead.isDefined && enclosedDefunFirstRead.get < defunFirstRead)) {
+          defunFirstReadMap(enclosedDefun) = defunFirstRead
 
-            defunDependenciesMap.get(enclosedDefun).foreach { enclosedDeps =>
-              for (dep <- enclosedDeps)
-                if (!processed.contains(dep)) {
-                  queue.add(dep)
-                }
-            }
+          defunDependenciesMap.get(enclosedDefun).foreach { enclosedDeps =>
+            for (dep <- enclosedDeps)
+              if (queueSet.add(dep)) queueOrder.addOne(dep)
           }
         }
       }
