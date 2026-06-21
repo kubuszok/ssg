@@ -1106,6 +1106,16 @@ final class LiquidParser(
       while (check(TokenType.DOT) || check(TokenType.OBR))
         if (check(TokenType.DOT)) {
           advance() // consume .
+          // liqp IdChain after-dot segment is [a-zA-Z_0-9]+ (LiquidLexer.g4:182-184) and
+          // EXCLUDES '-', so a '-'-prefixed numeric key after '.' is a parse error in liqp.
+          if ((check(TokenType.LONG_NUM) || check(TokenType.DOUBLE_NUM)) && peek().value.startsWith("-")) {
+            val t = peek()
+            throw new LiquidException(
+              s"Invalid dotted key '${t.value}': numeric path segments after '.' may not begin with '-' (liqp IdChain [a-zA-Z_0-9]+, LiquidLexer.g4:182-184)",
+              t.line,
+              t.col
+            )
+          }
           // liqp's IdChain (LiquidLexer.g4:182-184) tokenizes dotted chains like
           // `Data.1.Value` as Id("Data") Dot Id("1") Dot Id("Value"), because the
           // Id rule matches a leading digit (LiquidLexer.g4:186). ssg's lexer lacks
