@@ -4,7 +4,7 @@
  * Ported from: terser/test/compress/issue-1704.js — 18 of 20 upstream tests
  * ported (those with expect_exact); 2 stdout-only tests omitted
  * (mangle_catch_redef_3_toplevel :372, mangle_catch_redef_3_ie8_toplevel :417).
- * 8 of the 18 are pinned on ISS-1231 (catch-var redefinition crash).
+ * All 18 ported tests are live (ISS-1231 catch-var redefinition crash is fixed).
  *
  * Auto-ported by hand since gen-compress-tests.js does not support mangle format. */
 package ssg
@@ -139,8 +139,8 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   // mangle_catch_redef_3_ie8_toplevel issue-1704.js:417) because they have
   // only expect_stdout — SSG has no JS runtime to verify stdout, and
   // asserting SSG's own output would be a tautology (C11).
-  // 8 of the 18 are pinned on ISS-1231 (ClassCastException in
-  // ScopeAnalysis.handleVarLikeDecl with catch-var redefinitions).
+  // All 8 redef_1/redef_2 tests are live (ISS-1231 ClassCastException in
+  // ScopeAnalysis.handleVarLikeDecl is fixed; output matches upstream expect_exact).
   // =========================================================================
 
   private val redef1Input =
@@ -150,49 +150,49 @@ final class CompressIssue1704Suite extends munit.FunSuite {
   private val redef3Input =
     "var o = \"PASS\";\ntry {\n    throw 0;\n} catch (o) {\n    (function() {\n        function f() {\n            o = \"FAIL\";\n        }\n        f(), f();\n    })();\n}\nconsole.log(o);"
 
-  test("mangle_catch_redef_1".fail) { // ISS-1231 blocked; issue-1704.js:195
+  test("mangle_catch_redef_1") { // issue-1704.js:195
     assertEquals(
       minifyWithMangleAndCompress(redef1Input),
       "var a=\"PASS\";try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
     )
   }
-  test("mangle_catch_redef_1_ie8".fail) { // ISS-1231 blocked; issue-1704.js:217
+  test("mangle_catch_redef_1_ie8") { // issue-1704.js:217
     assertEquals(
       minifyWithMangleAndCompress(redef1Input, ie8 = true),
       "var a=\"PASS\";try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
     )
   }
-  test("mangle_catch_redef_1_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:239
+  test("mangle_catch_redef_1_toplevel") { // issue-1704.js:239
     assertEquals(
       minifyWithMangleAndCompress(redef1Input, toplevel = true),
       "var o=\"PASS\";try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
     )
   }
-  test("mangle_catch_redef_1_ie8_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:261
+  test("mangle_catch_redef_1_ie8_toplevel") { // issue-1704.js:261
     assertEquals(
       minifyWithMangleAndCompress(redef1Input, ie8 = true, toplevel = true),
       "var o=\"PASS\";try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
     )
   }
-  test("mangle_catch_redef_2".fail) { // ISS-1231 blocked; issue-1704.js:282
+  test("mangle_catch_redef_2") { // issue-1704.js:282
     assertEquals(
       minifyWithMangleAndCompress(redef2Input),
       "try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
     )
   }
-  test("mangle_catch_redef_2_ie8".fail) { // ISS-1231 blocked; issue-1704.js:303
+  test("mangle_catch_redef_2_ie8") { // issue-1704.js:303
     assertEquals(
       minifyWithMangleAndCompress(redef2Input, ie8 = true),
       "try{throw\"FAIL1\"}catch(a){var a=\"FAIL2\"}console.log(a);"
     )
   }
-  test("mangle_catch_redef_2_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:325
+  test("mangle_catch_redef_2_toplevel") { // issue-1704.js:325
     assertEquals(
       minifyWithMangleAndCompress(redef2Input, toplevel = true),
       "try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
     )
   }
-  test("mangle_catch_redef_2_ie8_toplevel".fail) { // ISS-1231 blocked; issue-1704.js:347
+  test("mangle_catch_redef_2_ie8_toplevel") { // issue-1704.js:347
     assertEquals(
       minifyWithMangleAndCompress(redef2Input, ie8 = true, toplevel = true),
       "try{throw\"FAIL1\"}catch(o){var o=\"FAIL2\"}console.log(o);"
