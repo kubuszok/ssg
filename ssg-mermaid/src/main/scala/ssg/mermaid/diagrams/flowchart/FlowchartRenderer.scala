@@ -250,15 +250,17 @@ object FlowchartRenderer {
         // element inserted into the parent, instead of directly into the parent.
         val groupParent =
           if (node.link.isDefined) {
-            val target =
-              if (config.securityLevel == "sandbox") {
-                "_top"
-              } else {
-                node.linkTarget.fold("_blank")(t => if (t.nonEmpty) t else "_blank")
-              }
             val anchor = parent.append("a")
             anchor.attr("xlink:href", node.link.get)
-            anchor.attr("target", target)
+            // nodes.js:69-74 / flowRenderer-v3-unified.ts:75-79: the target attr is
+            // set ONLY under sandbox (→ "_top") or when linkTarget is present
+            // (→ linkTarget, or "_blank" if present-but-empty); otherwise NO target
+            // attribute is emitted (browser default _self).
+            if (config.securityLevel == "sandbox") {
+              anchor.attr("target", "_top")
+            } else {
+              node.linkTarget.foreach(t => anchor.attr("target", if (t.nonEmpty) t else "_blank"))
+            }
             anchor
           } else {
             parent
