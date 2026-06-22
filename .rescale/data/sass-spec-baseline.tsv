@@ -1,4 +1,5 @@
-# sass-spec baseline (relPath<TAB>outcome)
+# sass-spec baseline (key=test); schema in .rescale/databases.yaml
+# test	result	timestamp
 callable/arguments.hrx!function/arguments/sass	Pass
 callable/arguments.hrx!function/error/comma_only	ExpectedErrorOk
 callable/arguments.hrx!function/error/positional_after_named	ExpectedErrorOk
