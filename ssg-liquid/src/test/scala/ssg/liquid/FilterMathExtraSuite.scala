@@ -62,7 +62,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   }
 
   // SSG: LocalDateTime formatting with timezone offset differs
-  test("append: append to date type with default timezone set".fail) {
+  test("append: append to date type with default timezone set".fail) { // ISS-1266 (ISS-1024 umbrella)
     val time   = LocalDateTime.of(2020, 1, 1, 12, 59, 59, 999)
     val data   = Collections.singletonMap[String, DataView]("a", TestHelper.dv(time))
     val tz     = ZoneId.ofOffset("UTC", ZoneOffset.ofHours(-5))

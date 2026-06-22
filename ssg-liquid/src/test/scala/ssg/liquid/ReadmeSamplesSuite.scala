@@ -13,7 +13,7 @@ import java.util.{ HashMap => JHashMap }
 final class ReadmeSamplesSuite extends munit.FunSuite {
 
   // SSG: Unknown filters throw at parse time (price, prettyprint, paragraph)
-  test("readme: render tree (parse produces a template)".fail) {
+  test("readme: render tree (parse produces a template)".fail) { // ISS-1260 (ISS-1024 umbrella)
     val input =
       """<ul id="products">
         |  {% for product in products %}
@@ -62,7 +62,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
   }
 
   // SSG: EAGER mode object access differs
-  test("readme: eager mode".fail) {
+  test("readme: eager mode".fail) { // ISS-1267 (ISS-1024 umbrella)
     assume(PlatformCompat.isJVM, "EAGER mode requires reflection (JVM-only)")
     val data   = TestHelper.mapOf("a" -> new ReadmeSamplesSuite.ValHolder())
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
