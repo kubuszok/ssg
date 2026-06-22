@@ -1273,7 +1273,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // delete_binary_1
   // =========================================================================
-  test("delete_binary_1".fail) {
+  test("delete_binary_1") {
     assertCompresses(
       input = """console.log(delete (true && undefined));
         console.log(delete (true && void 0));
@@ -1298,7 +1298,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // delete_binary_2
   // =========================================================================
-  test("delete_binary_2".fail) {
+  test("delete_binary_2") {
     assertCompresses(
       input = """console.log(delete (false || undefined));
         console.log(delete (false || void 0));
