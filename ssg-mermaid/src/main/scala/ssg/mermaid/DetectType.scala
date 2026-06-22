@@ -106,8 +106,8 @@ object DetectType {
       if (firstLine.startsWith("flowchart")) break(DiagramType.FlowchartV2) // modern flowchart keyword implies v2
       if (firstLine.startsWith("graph")) break(DiagramType.Flowchart)
 
-      // Sequence
-      if (firstLine.startsWith("sequencediagram") || firstLine.startsWith("sequence-diagram")) {
+      // Sequence — sequenceDetector.ts:10: /^\s*sequenceDiagram/ (no hyphen form)
+      if (firstLine.startsWith("sequencediagram")) {
         break(DiagramType.Sequence)
       }
 

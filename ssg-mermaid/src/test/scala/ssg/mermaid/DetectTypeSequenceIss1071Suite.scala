@@ -5,13 +5,12 @@
  * ISS-1071: dead-code removal — the duplicate `if (firstLine.startsWith("sequencediagram"))`
  * check after the combined `sequencediagram || sequence-diagram` block was unreachable.
  *
- * This suite proves that both the canonical keyword (`sequenceDiagram`) and the
- * hyphen alias (`sequence-diagram`) resolve to DiagramType.Sequence after the
- * dead line is removed — i.e. the first if-block covers both aliases.
+ * ISS-1252: faithfulness correction — removed the `sequence-diagram` hyphen alias that was
+ * an SSG-only addition. Upstream sequenceDetector.ts:10 uses only `/^\s*sequenceDiagram/`
+ * (no hyphen form). The hyphen-alias assertion now expects Unknown (not Sequence).
  *
  * Upstream reference: mermaid/packages/mermaid/src/diagrams/sequence/sequenceDetector.ts:10
  *   detector regex: /^\s*sequenceDiagram/
- * The `sequence-diagram` alias is an SSG addition (not upstream).
  */
 package ssg
 package mermaid
@@ -25,9 +24,11 @@ final class DetectTypeSequenceIss1071Suite extends FunSuite {
     assertEquals(result, DiagramType.Sequence)
   }
 
-  test("sequence-diagram hyphen alias detects as Sequence") {
+  // ISS-1252: upstream sequenceDetector.ts:10 matches only /^\s*sequenceDiagram/ — no hyphen form.
+  // The `sequence-diagram` alias was an unfaithful SSG addition; it must NOT detect as Sequence.
+  test("sequence-diagram hyphen form does NOT detect as Sequence (ISS-1252)") {
     val result = DetectType.detect("sequence-diagram\n  Alice->>Bob: Hi")
-    assertEquals(result, DiagramType.Sequence)
+    assertEquals(result, DiagramType.Unknown)
   }
 
   test("sequenceDiagram with leading whitespace detects as Sequence") {
