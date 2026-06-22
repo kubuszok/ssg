@@ -24,10 +24,18 @@
  *   Convention: Class with CompressorLike trait, pattern matching dispatch
  *   Idiom: boundary/break instead of return, match/case instead of
  *     DEFMETHOD + instanceof chains
- *   Gap: Multi-pass convergence loop stubbed — TerserSuite compression tests
- *     are disabled because the loop hangs. Single-pass orchestration only.
- *     Pure-call elision and global hoisting gated on SymbolDef integration.
- *     See ISS-031, ISS-032. docs/architecture/terser-port.md.
+ *   Former gaps (all resolved):
+ *     - ISS-031 (multi-pass compression loop): resolved — compress() runs
+ *       a multi-pass loop driven by options.passes with node-count
+ *       convergence detection; each pass calls ScopeAnalysis.figureOutScope,
+ *       ReduceVars.reduceVars, and the full TreeTransformer optimization.
+ *     - ISS-032 (SymbolDef/scope integration): resolved — SymbolDef is
+ *       imported and used throughout (exposed, topRetain, findVariable);
+ *       ScopeAnalysis.figureOutScope runs per pass; pure-call elision is
+ *       active via isCalleePure in Inference and pureFuncs in Compressor;
+ *       global hoisting is active via Hoisting.hoistProperties and
+ *       Hoisting.hoistDeclarations wired into before().
+ *     See docs/architecture/terser-port.md.
  *   Hoisting: hoist_declarations (ISS-129) and hoist_properties (ISS-129)
  *     ported in Hoisting.scala, wired into before() method.
  *   ISS-142: optimizeUnaryPrefix unsafe_undefined_ref for void 0,
