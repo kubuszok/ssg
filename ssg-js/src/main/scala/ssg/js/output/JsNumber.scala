@@ -27,10 +27,8 @@ object JsNumber {
 
   /** Format a Double the way JavaScript's `Number.prototype.toString()` would.
     *
-    * Integer-valued Doubles (e.g. 1.0, -3.0) are formatted without the
-    * fractional part ("1", "-3"). Non-integer or infinite values use the
-    * platform `Double.toString` with uppercase "E" normalised to lowercase
-    * "e" (matching JS exponential notation).
+    * Integer-valued Doubles (e.g. 1.0, -3.0) are formatted without the fractional part ("1", "-3"). Non-integer or infinite values use the platform `Double.toString` with uppercase "E" normalised to
+    * lowercase "e" (matching JS exponential notation).
     */
   def toJsString(num: Double): String =
     if (num == Math.floor(num) && !num.isInfinite && Math.abs(num) < 1e15) num.toLong.toString
