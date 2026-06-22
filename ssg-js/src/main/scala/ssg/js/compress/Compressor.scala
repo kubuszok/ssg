@@ -4456,7 +4456,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
             }
         }
       case num: AstNumber =>
-        val key = num.value.toString
+        val key = ssg.js.output.JsNumber.toJsString(num.value) // ISS-1175/ISS-1245: JS number-to-string for lifted numeric keys (terser uses JS implicit coercion)
         if (key == "__proto__") return self // @nowarn
         self match {
           case kv: AstObjectKeyVal =>
