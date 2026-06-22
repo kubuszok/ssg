@@ -59,19 +59,20 @@ final private[io] class JsFilePath(val pathString: String) extends FilePath {
     // path.dirname("/") == "/" (== input) and path.dirname("a") == "." while "a" has no separator; both are null
     // (None) on java.nio. dirname equal to the input means there is no further parent (the root case).
     if (dir == pathString) None
-    else if (dir == "." && !pathString.contains('/') && !pathString.contains('\\')) None
+    else if (dir == "." && !pathString.contains('/')) None
     else Some(new JsFilePath(dir))
   }
 
   // Mirrors JvmFilePath.resolve(String) (scalajvm/ssg/commons/io/FilePathPlatform.scala:23-24):
   // Path.resolve appends a relative child and replaces with an absolute child.
+  // On posix, only a leading '/' makes a child absolute; ':' is a legal filename char (ISS-1128).
   override def resolve(other: String): FilePath =
     if (other.isEmpty) this
-    else if (other.startsWith("/") || (other.length > 1 && other.charAt(1) == ':')) {
+    else if (other.startsWith("/")) {
       // Absolute child: java.nio.file.Path.resolve returns the child unchanged.
       new JsFilePath(other)
     } else {
-      val sep = if (pathString.endsWith("/") || pathString.endsWith("\\")) "" else "/"
+      val sep = if (pathString.endsWith("/")) "" else "/"
       new JsFilePath(pathString + sep + other)
     }
 
@@ -84,9 +85,10 @@ final private[io] class JsFilePath(val pathString: String) extends FilePath {
   override def fileName: String =
     FilePathPlatform.path.basename(pathString).asInstanceOf[String]
 
-  // Mirrors JvmFilePath.isAbsolute (scalajvm/ssg/commons/io/FilePathPlatform.scala:36).
+  // Mirrors JvmFilePath.isAbsolute (scalajvm/ssg/commons/io/FilePathPlatform.scala:36):
+  // on posix, only a leading '/' makes a path absolute. ':' is a legal filename char (ISS-1128).
   override def isAbsolute: Boolean =
-    pathString.startsWith("/") || (pathString.length > 1 && pathString.charAt(1) == ':')
+    pathString.startsWith("/")
 
   // Mirrors JvmFilePath.toAbsolute (scalajvm/ssg/commons/io/FilePathPlatform.scala:38-39):
   // resolves a relative path against the process working directory. java.nio.toAbsolutePath does NOT normalize, so
@@ -127,13 +129,11 @@ object FilePathPlatform {
     js.Dynamic.global.require("process")
 
   /** Pure-string rendering matching java.nio.file.Paths.get(path).toString: collapse duplicate separators and drop a trailing separator (the root "/" keeps its single separator), preserving "." /
-    * ".." segments (java.nio does NOT resolve them here — Paths.get("a/../b").toString == "a/../b"). Backslashes are normalised to "/" as the rest of this impl treats either separator
-    * interchangeably.
+    * ".." segments (java.nio does NOT resolve them here — Paths.get("a/../b").toString == "a/../b"). On posix, backslash is a legal filename char (not a separator) and is preserved as-is (ISS-1128).
     */
   private def renderPath(p: String): String = {
-    val unified = p.replace('\\', '/')
-    val abs     = unified.startsWith("/")
-    val body    = unified.split("/").iterator.filter(_.nonEmpty).mkString("/")
+    val abs  = p.startsWith("/")
+    val body = p.split("/").iterator.filter(_.nonEmpty).mkString("/")
     if (abs) "/" + body else body
   }
 
