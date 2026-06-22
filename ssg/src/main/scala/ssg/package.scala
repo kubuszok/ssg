@@ -11,5 +11,7 @@
  * bridge ssg-js into ssg-minify.
  */
 package object ssg {
+
+  /** SSG project version (snapshot). */
   val Version = "0.1.0-SNAPSHOT"
 }

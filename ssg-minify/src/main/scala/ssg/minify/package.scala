@@ -17,5 +17,7 @@
 package ssg
 
 package object minify {
+
+  /** SSG project version (snapshot). */
   val Version = "0.1.0-SNAPSHOT"
 }

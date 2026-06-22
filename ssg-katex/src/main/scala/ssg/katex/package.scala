@@ -12,5 +12,6 @@ package ssg
 
 package object katex {
 
-  val Version: String = "0.16.45"
+  /** The upstream KaTeX library version this module ports (NOT the SSG project version). */
+  val UpstreamVersion: String = "0.16.45"
 }
