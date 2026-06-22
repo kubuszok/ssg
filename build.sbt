@@ -15,7 +15,7 @@ val versions = new {
 
   // Dependencies
   val hearth              = "0.3.0-49-g68e1781-SNAPSHOT"
-  val lls                 = "0.1.0"
+  val lls                 = "0.2.0"
   val scalaJavaLocales    = "1.5.4"
   val scalaJavaTime       = "2.7.0"
 
