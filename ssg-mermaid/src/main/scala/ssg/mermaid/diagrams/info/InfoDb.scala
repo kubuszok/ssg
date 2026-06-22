@@ -16,9 +16,9 @@ package info
 /** Minimal database for the info diagram (version display). */
 final class InfoDb {
 
-  var version:        String = ssg.mermaid.Version
+  var version:        String = ssg.mermaid.UpstreamVersion
   var accTitle:       String = ""
   var accDescription: String = ""
 
-  def clear(): Unit = { version = ssg.mermaid.Version; accTitle = ""; accDescription = "" }
+  def clear(): Unit = { version = ssg.mermaid.UpstreamVersion; accTitle = ""; accDescription = "" }
 }

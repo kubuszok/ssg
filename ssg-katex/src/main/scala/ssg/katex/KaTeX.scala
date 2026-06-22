@@ -17,7 +17,7 @@
  * Migration notes:
  *   Renames: katex default export -> KaTeX object
  *   Convention: DOM-dependent render() omitted (server-side only)
- *   Idiom: TypeScript __VERSION__ -> ssg.katex.Version
+ *   Idiom: TypeScript __VERSION__ -> ssg.katex.UpstreamVersion
  */
 package ssg
 package katex
@@ -51,7 +51,7 @@ object KaTeX {
   }
 
   /** Current KaTeX version. */
-  val version: String = Version
+  val version: String = UpstreamVersion
 
   /** Parse and build an expression, and return the markup for that.
     *
