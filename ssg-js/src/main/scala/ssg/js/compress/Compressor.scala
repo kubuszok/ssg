@@ -70,7 +70,7 @@ import ssg.js.compress.TightenBody.{ extractFromUnreachableCode, tightenBody }
 import ssg.js.compress.Inline.inlineIntoSymbolRef
 import ssg.js.ast.AstSize
 import ssg.js.parse.{ Parser, ParserOptions }
-import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
+import ssg.js.scope.{ Base54, Mangler, ManglerOptions, ScopeAnalysis, ScopeOptions, SymbolDef }
 
 /** The main JavaScript compressor.
   *
@@ -79,8 +79,43 @@ import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
   *
   * @param options
   *   the compressor configuration
+  * @param mangleOptionsParam
+  *   the resolved mangle options from the Terser.minify caller, threaded so the per-pass scope analysis and unsafe_Function sub-compressor honor the caller's mangle settings (ie8, nth_identifier,
+  *   module). Mirrors index.js:220 `constructor(options, { mangle_options = false })` and minify.js:263-266 `new Compressor(options.compress, { mangle_options: options.mangle })`. When `null`, the
+  *   compressor falls back to its own compress options for ie8/module (matching the `mangle_options = false` JS default).
   */
-class Compressor(val options: CompressorOptions) extends TreeWalker(null) with CompressorLike {
+class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOptions | Null = null) extends TreeWalker(null) with CompressorLike {
+
+  // index.js:330-332 — `this._mangle_options = mangle_options ? format_mangler_options(mangle_options) : mangle_options;`
+  // Format only when present (truthy); null stays null.
+  private val _mangleOptions: ManglerOptions | Null =
+    if (mangleOptionsParam != null) Mangler.formatOptions(mangleOptionsParam.nn)
+    else null
+
+  /** Mangle options accessor for scope analysis and unsafe_Function sub-compressor.
+    *
+    * Mirrors index.js:335-338:
+    * {{{
+    *   mangle_options() {
+    *     var nth_identifier = this._mangle_options && this._mangle_options.nth_identifier || base54;
+    *     var module = this._mangle_options && this._mangle_options.module || this.option("module");
+    *     return { ie8: this.option("ie8"), nth_identifier, module };
+    *   }
+    * }}}
+    */
+  override def mangleOptions(): Map[String, Any] = {
+    val nthId: Any =
+      if (_mangleOptions != null) _mangleOptions.nn.nthIdentifier
+      else Base54
+    val mod: Boolean =
+      if (_mangleOptions != null && _mangleOptions.nn.module) _mangleOptions.nn.module
+      else optionBool("module")
+    Map(
+      "ie8" -> optionBool("ie8"),
+      "nth_identifier" -> nthId,
+      "module" -> mod
+    )
+  }
 
   // -----------------------------------------------------------------------
   // CompressorLike implementation
@@ -372,10 +407,19 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     )
     compressor.activeWalker = transformer
 
+    // index.js:443 — `var mangle = this.mangle_options();` — computed once, used every pass.
+    val mangle = mangleOptions()
+    // Build a ScopeOptions from the mangle options (figure_out_scope reads
+    // module and ie8 from its options — scope.js:204-210).
+    val mangleScopeOptions = ScopeOptions(
+      ie8 = mangle("ie8").asInstanceOf[Boolean],
+      module = mangle("module").asInstanceOf[Boolean]
+    )
+
     var pass = 0
     while (pass < passes) {
-      // Run scope analysis before each pass
-      ssg.js.scope.ScopeAnalysis.figureOutScope(toplevel)
+      // Run scope analysis before each pass (index.js:445: `this._toplevel.figure_out_scope(mangle)`)
+      ssg.js.scope.ScopeAnalysis.figureOutScope(toplevel, mangleScopeOptions)
 
       if (pass == 0 && options.dropConsole != DropConsoleConfig.Disabled) {
         // must be run before reduce_vars and compress pass

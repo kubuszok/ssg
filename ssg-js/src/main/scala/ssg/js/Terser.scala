@@ -447,7 +447,12 @@ object Terser {
       // sub-option).
       val co = applyCompressShorthand(resolvedCompress.nn, topEcma, options.toplevel, options.ie8, resolvedKeepClassnames, options.keepFnames, options.module)
       ScopeAnalysis.figureOutScope(ast)
-      val compressor = new Compressor(co)
+      // minify.js:263-266 — `new Compressor(options.compress, { mangle_options: options.mangle })`.
+      // Thread the resolved mangle options into the Compressor so the per-pass
+      // figure_out_scope and mangleOptions() reflect the caller's mangle settings
+      // (ie8, nth_identifier, module). When mangle is disabled (false → null),
+      // pass null so _mangleOptions stays null (matching the JS `mangle_options = false` default).
+      val compressor = new Compressor(co, resolvedMangle)
       ast = compressor.compress(ast)
     }
 
