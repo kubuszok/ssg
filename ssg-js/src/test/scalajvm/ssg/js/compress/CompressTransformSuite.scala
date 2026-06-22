@@ -18,7 +18,7 @@ final class CompressTransformSuite extends munit.FunSuite {
   // =========================================================================
   // booleans_evaluate
   // =========================================================================
-  test("booleans_evaluate".fail) {
+  test("booleans_evaluate") {
     assertCompresses(
       input = """console.log(typeof void 0 != "undefined");
         console.log(1 == 1, 1 === 1)

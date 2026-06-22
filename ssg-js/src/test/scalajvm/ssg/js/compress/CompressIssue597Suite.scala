@@ -46,7 +46,7 @@ final class CompressIssue597Suite extends munit.FunSuite {
   // =========================================================================
   // NaN_and_Infinity_must_have_parens_evaluate
   // =========================================================================
-  test("NaN_and_Infinity_must_have_parens_evaluate".fail) {
+  test("NaN_and_Infinity_must_have_parens_evaluate") {
     assertCompresses(
       input = """(123456789 / 0).toString();
         (+"foo").toString()""".stripMargin.trim,

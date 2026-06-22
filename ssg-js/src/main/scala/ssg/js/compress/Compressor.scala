@@ -3429,7 +3429,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     if (optionBool("evaluate") && self.left != null && self.right != null) {
       val ev = Evaluate.evaluate(self, this)
       if (ev != null && (ev.asInstanceOf[AnyRef] ne self.asInstanceOf[AnyRef])) {
-        val folded = makeNodeFromConstant(ev, self)
+        val folded = optimizeNode(makeNodeFromConstant(ev, self))
         return bestOfExpression(folded, self) // @nowarn
       }
     }
@@ -5233,7 +5233,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
               u
           }
           exprs.addOne(cloned)
-          return makeSequence(self, exprs) // @nowarn
+          return optimizeNode(makeSequence(self, exprs)) // @nowarn
         case _ =>
       }
     }
