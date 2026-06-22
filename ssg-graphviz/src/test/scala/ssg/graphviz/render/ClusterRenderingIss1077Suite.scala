@@ -94,14 +94,14 @@ final class ClusterRenderingIss1077Suite extends FunSuite {
     // The cluster group must contain a rect with positive dimensions.
     // Use (?s) so dot matches newlines between <g> and <rect>.
     val clusterRectRe = """(?s)<g\s+class="cluster"[^>]*>\s*<rect\s+([^>]+)""".r
-    val attrRe = """(\w+)="([^"]+)"""".r
+    val attrRe        = """(\w+)="([^"]+)"""".r
 
     val clusterRectMatch = clusterRectRe.findFirstMatchIn(svg)
     assert(clusterRectMatch.isDefined, s"Should find a <g class='cluster'> with <rect>, but got:\n$svg")
 
     val rectAttrs = attrRe.findAllMatchIn(clusterRectMatch.get.group(1)).map(m => m.group(1) -> m.group(2)).toMap
-    val rw = rectAttrs("width").toDouble
-    val rh = rectAttrs("height").toDouble
+    val rw        = rectAttrs("width").toDouble
+    val rh        = rectAttrs("height").toDouble
 
     // The cluster rect must have positive dimensions
     assert(rw > 0 && rh > 0, s"Cluster rect should have positive dimensions, got width=$rw height=$rh")
@@ -222,7 +222,7 @@ final class ClusterRenderingIss1077Suite extends FunSuite {
         |  }
         |  c;
         |}""".stripMargin
-    val svg = renderDot(dotInput)
+    val svg    = renderDot(dotInput)
     val textRe = """>([^<]+)</text>""".r
     val labels = textRe.findAllMatchIn(svg).map(_.group(1).trim).filter(_.nonEmpty).toSet
     assert(
