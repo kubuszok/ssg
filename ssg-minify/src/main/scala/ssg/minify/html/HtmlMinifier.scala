@@ -12,9 +12,17 @@
  *   Renames: htmlcompressor gem → ssg.minify.html.HtmlMinifier
  *   Convention: Pure Scala 3, regex-pipeline based, cross-platform
  *   Idiom: Stateless pure functions, preserved-block extraction pattern
- *   Gap: preserveLineBreaks option declared but never read by doMinify
- *     (ISS-038). Quote-stripping over-conservative, only [A-Za-z0-9_-]+ values
- *     (ISS-039). No built-in SSI/JSP/PHP/CDATA preserve presets (ISS-040).
+ *   Former gaps (all resolved):
+ *     - ISS-038 (preserveLineBreaks): resolved — doMinify passes
+ *       options.preserveLineBreaks to collapseMultiSpaces and
+ *       removeIntertagSpaces, which branch on it.
+ *     - ISS-039 (quote-stripping charset): resolved — the QuotedSimpleAttr
+ *       regex value charset is [^\s=<>"']+, matching htmlcompressor behavior.
+ *     - ISS-040 (preserve presets for embedded markup): resolved —
+ *       HtmlMinifyOptions.preserveSsi/preservePhp booleans and
+ *       effectivePreservePatterns auto-inject SsiPattern/PhpPattern (dedicated
+ *       SSI/PHP presets); JSP and CDATA are preservable via the generic
+ *       preservePatterns/preservedTags rather than a dedicated preset.
  *     See docs/architecture/jekyll-minifier-port.md.
  *   Audited: 2026-04-07 (minor_issues)
  *
