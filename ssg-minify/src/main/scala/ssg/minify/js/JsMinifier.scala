@@ -16,12 +16,17 @@
  *   Renames: terser gem → ssg.minify.js.JsMinifier (basic stopgap)
  *   Convention: Pure Scala 3, state-machine based, cross-platform
  *   Idiom: Tracks string/template-literal/regex-literal context
- *   Gap: Intentional stopgap. No mangling, DCE, constant folding, inlining,
- *     scope analysis, or source maps. Real minification is delegated via the
- *     JsCompressor SPI to ssg.js.TerserJsCompressor (wired by
- *     TerserJsCompressorAdapter in the ssg aggregator module). Note that the
- *     Terser bridge itself is currently parse+re-emit until ISS-031/ISS-032
- *     are resolved. See docs/architecture/terser-port.md.
+ *   Scope: Intentional stopgap — no mangling, DCE, constant folding,
+ *     inlining, scope analysis, or source maps. Real minification is
+ *     delegated via the JsCompressor SPI to ssg.js.TerserJsCompressor
+ *     (wired by TerserJsCompressorAdapter in the ssg aggregator module).
+ *   Former gaps (all resolved):
+ *     - ISS-031 (multi-pass compression loop): resolved — Compressor.compress()
+ *       implements multi-pass with convergence detection (Compressor.scala:328-376).
+ *     - ISS-032 (SymbolDef/scope integration): resolved —
+ *       ScopeAnalysis.figureOutScope called per pass (Compressor.scala:344),
+ *       ReduceVars.reduceVars (line 354), SymbolDef used throughout compress passes.
+ *     See docs/architecture/terser-port.md.
  *   Audited: 2026-04-07 (minor_issues)
  *
  * Covenant: full-port
