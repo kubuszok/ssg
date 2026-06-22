@@ -63,8 +63,7 @@ final class NextMangledFunctionDispatchIss1242Suite extends munit.FunSuite {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  /** Parse, run scope analysis, mangle with ie8 and sequential identifiers,
-    * and return the printed output.
+  /** Parse, run scope analysis, mangle with ie8 and sequential identifiers, and return the printed output.
     */
   private def mangleIe8(input: String): String = {
     val ast = new Parser().parse(input)
@@ -74,8 +73,7 @@ final class NextMangledFunctionDispatchIss1242Suite extends munit.FunSuite {
     OutputStream.printToString(ast)
   }
 
-  /** Parse, run scope analysis, mangle WITHOUT ie8 and with sequential
-    * identifiers, and return the printed output.
+  /** Parse, run scope analysis, mangle WITHOUT ie8 and with sequential identifiers, and return the printed output.
     */
   private def mangleNormal(input: String): String = {
     val ast = new Parser().parse(input)
@@ -85,28 +83,26 @@ final class NextMangledFunctionDispatchIss1242Suite extends munit.FunSuite {
     OutputStream.printToString(ast)
   }
 
-  /** Regex matching `function <name>(<params>)` and capturing the function
-    * name and parameter list.
+  /** Regex matching `function <name>(<params>)` and capturing the function name and parameter list.
     */
   private val funcExprPattern =
     """function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(([^)]*)\)""".r
 
-  /** Assert that no function expression in the output has a parameter with the
-    * same name as the function expression itself.
+  /** Assert that no function expression in the output has a parameter with the same name as the function expression itself.
     */
-  private def assertNoFunctionNameParamCollision(output: String, clue: String): Unit = {
+  private def assertNoFunctionNameParamCollision(output: String, clue: String): Unit =
     funcExprPattern.findAllMatchIn(output).foreach { m =>
       val fname  = m.group(1)
       val params = m.group(2).split(",").map(_.trim).filter(_.nonEmpty)
       params.foreach { p =>
         assertNotEquals(
-          p, fname,
+          p,
+          fname,
           s"Safari tricky-def collision: function expression name '$fname' " +
             s"equals parameter '$p' in output: $output ($clue)"
         )
       }
     }
-  }
 
   // ---------------------------------------------------------------------------
   // Test 1: ie8 tricky-def — THE differential test
