@@ -142,7 +142,9 @@ class Lexer(val input: String, val settings: SettingsLike) extends LexerInterfac
         null // @nowarn
       } else {
         val delim = input.charAt(delimPos)
-        if (starred || (!Character.isLetter(delim) && delim != '*')) {
+        // Upstream Lexer.ts:60 uses [^*a-zA-Z] — ASCII letters only,
+        // NOT Character.isLetter which includes all Unicode letters.
+        if (starred || (!isAsciiLetter(delim) && delim != '*')) {
           val contentStart = delimPos + 1
           val endIdx       = input.indexOf(delim, contentStart)
           val nlIdx        = input.indexOf('\n', contentStart)
@@ -159,4 +161,8 @@ class Lexer(val input: String, val settings: SettingsLike) extends LexerInterfac
       }
     }
   }
+
+  /** ASCII-only letter test matching upstream Lexer.ts:60 [^*a-zA-Z]. */
+  private def isAsciiLetter(c: Char): Boolean =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
