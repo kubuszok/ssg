@@ -579,8 +579,6 @@ final class MinifySuite extends munit.FunSuite {
     )
   }
 
-  // Note: Concise method syntax in objects/classes currently fails to parse (parser bug).
-  // Using .fail to document the expected behavior.
   // ISS-1174 resolved the class/object concise-method parse gap (createAccessor now parses the
   // parameter list); this test passes, so the expected-failure pin was retired.
   test("minify object with methods") {
