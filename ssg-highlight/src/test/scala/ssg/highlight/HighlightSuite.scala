@@ -6,6 +6,17 @@ final class HighlightSuite extends munit.FunSuite {
 
   private def highlighter: SyntaxHighlighter = SyntaxHighlighter.default
 
+  // ISS-1161: tree-sitter grammar loading is unavailable on Scala.js (ISS-1118/ISS-1095/1098/1100);
+  // the grammar-dependent highlight tests are skipped there via conditional registration
+  // (NOT `assume`, to keep the assumes metric at baseline).
+  private val grammarsAvailable: Boolean = highlighter.highlight("class X {}", "scala").isDefined
+
+  // On JS (grammarsAvailable == false) the test is registered but `.ignore`d — the runner
+  // reports it as skipped with the ISS citation in the name.  On JVM/Native the test runs normally.
+  private def langTest(name: String)(body: => Any): Unit =
+    if (grammarsAvailable) test(name)(body)
+    else test((name + " [skipped on JS: tree-sitter grammars unavailable — ISS-1161/ISS-1118]").ignore) {}
+
   private def assertHighlights(language: String, snippet: String)(implicit loc: munit.Location): Unit = {
     val result = highlighter.highlight(snippet, language)
     assert(result.isDefined, s"highlight($language) returned None — language not supported or engine failed to load")
@@ -15,67 +26,67 @@ final class HighlightSuite extends munit.FunSuite {
 
   // ── Tier 1: Most popular languages ────────────────────────────────────
 
-  test("highlight: bash") {
+  langTest("highlight: bash") {
     assertHighlights("bash", HighlightFixtures.bash)
   }
 
-  test("highlight: c") {
+  langTest("highlight: c") {
     assertHighlights("c", HighlightFixtures.c)
   }
 
-  test("highlight: cpp") {
+  langTest("highlight: cpp") {
     assertHighlights("cpp", HighlightFixtures.cpp)
   }
 
-  test("highlight: c_sharp") {
+  langTest("highlight: c_sharp") {
     assertHighlights("c_sharp", HighlightFixtures.cSharp)
   }
 
-  test("highlight: css") {
+  langTest("highlight: css") {
     assertHighlights("css", HighlightFixtures.css)
   }
 
-  test("highlight: go") {
+  langTest("highlight: go") {
     assertHighlights("go", HighlightFixtures.go)
   }
 
-  test("highlight: html") {
+  langTest("highlight: html") {
     assertHighlights("html", HighlightFixtures.html)
   }
 
-  test("highlight: java") {
+  langTest("highlight: java") {
     assertHighlights("java", HighlightFixtures.java)
   }
 
-  test("highlight: javascript") {
+  langTest("highlight: javascript") {
     assertHighlights("javascript", HighlightFixtures.javascript)
   }
 
-  test("highlight: json") {
+  langTest("highlight: json") {
     assertHighlights("json", HighlightFixtures.json)
   }
 
-  test("highlight: markdown") {
+  langTest("highlight: markdown") {
     assertHighlights("markdown", HighlightFixtures.markdown)
   }
 
-  test("highlight: python") {
+  langTest("highlight: python") {
     assertHighlights("python", HighlightFixtures.python)
   }
 
-  test("highlight: regex") {
+  langTest("highlight: regex") {
     assertHighlights("regex", HighlightFixtures.regex)
   }
 
-  test("highlight: ruby") {
+  langTest("highlight: ruby") {
     assertHighlights("ruby", HighlightFixtures.ruby)
   }
 
-  test("highlight: rust") {
+  langTest("highlight: rust") {
     assertHighlights("rust", HighlightFixtures.rust)
   }
 
-  test("highlight: scala") {
+  langTest("highlight: scala") {
     assertHighlights("scala", HighlightFixtures.scala)
   }
 
@@ -83,144 +94,144 @@ final class HighlightSuite extends munit.FunSuite {
   // symbols (tree_sitter_sql_external_scanner_*) can't be linked into WASM. The native
   // library works because it statically links the scanner. Fix: either upstream adds
   // WASM support, or we switch to a different SQL grammar (e.g. DerekStride/tree-sitter-sql).
-  test("highlight: sql") {
+  langTest("highlight: sql") {
     assume(highlighter.highlight("SELECT 1;", "sql").isDefined, "SQL WASM unavailable (external scanner incompatible with WASM)")
     assertHighlights("sql", HighlightFixtures.sql)
   }
 
-  test("highlight: toml") {
+  langTest("highlight: toml") {
     assertHighlights("toml", HighlightFixtures.toml)
   }
 
-  test("highlight: typescript") {
+  langTest("highlight: typescript") {
     assertHighlights("typescript", HighlightFixtures.typescript)
   }
 
-  test("highlight: tsx") {
+  langTest("highlight: tsx") {
     assertHighlights("tsx", HighlightFixtures.tsx)
   }
 
-  test("highlight: yaml") {
+  langTest("highlight: yaml") {
     assertHighlights("yaml", HighlightFixtures.yaml)
   }
 
   // ── Tier 2: Broadly used languages ────────────────────────────────────
 
-  test("highlight: cmake") {
+  langTest("highlight: cmake") {
     assertHighlights("cmake", HighlightFixtures.cmake)
   }
 
-  test("highlight: dockerfile") {
+  langTest("highlight: dockerfile") {
     assertHighlights("dockerfile", HighlightFixtures.dockerfile)
   }
 
-  test("highlight: dtd") {
+  langTest("highlight: dtd") {
     assertHighlights("dtd", HighlightFixtures.dtd)
   }
 
-  test("highlight: elixir") {
+  langTest("highlight: elixir") {
     assertHighlights("elixir", HighlightFixtures.elixir)
   }
 
-  test("highlight: erlang") {
+  langTest("highlight: erlang") {
     assertHighlights("erlang", HighlightFixtures.erlang)
   }
 
-  test("highlight: haskell") {
+  langTest("highlight: haskell") {
     assertHighlights("haskell", HighlightFixtures.haskell)
   }
 
-  test("highlight: julia") {
+  langTest("highlight: julia") {
     assertHighlights("julia", HighlightFixtures.julia)
   }
 
-  test("highlight: kotlin") {
+  langTest("highlight: kotlin") {
     assertHighlights("kotlin", HighlightFixtures.kotlin)
   }
 
-  test("highlight: lua") {
+  langTest("highlight: lua") {
     assertHighlights("lua", HighlightFixtures.lua)
   }
 
-  test("highlight: make") {
+  langTest("highlight: make") {
     assertHighlights("make", HighlightFixtures.make)
   }
 
-  test("highlight: ocaml") {
+  langTest("highlight: ocaml") {
     assertHighlights("ocaml", HighlightFixtures.ocaml)
   }
 
-  test("highlight: ocaml_interface") {
+  langTest("highlight: ocaml_interface") {
     assertHighlights("ocaml_interface", HighlightFixtures.ocamlInterface)
   }
 
-  test("highlight: php") {
+  langTest("highlight: php") {
     assertHighlights("php", HighlightFixtures.php)
   }
 
-  test("highlight: php_only") {
+  langTest("highlight: php_only") {
     assertHighlights("php_only", HighlightFixtures.phpOnly)
   }
 
-  test("highlight: r") {
+  langTest("highlight: r") {
     assertHighlights("r", HighlightFixtures.r)
   }
 
-  test("highlight: swift") {
+  langTest("highlight: swift") {
     assertHighlights("swift", HighlightFixtures.swift)
   }
 
-  test("highlight: vim") {
+  langTest("highlight: vim") {
     assertHighlights("vim", HighlightFixtures.vim)
   }
 
-  test("highlight: xml") {
+  langTest("highlight: xml") {
     assertHighlights("xml", HighlightFixtures.xml)
   }
 
-  test("highlight: zig") {
+  langTest("highlight: zig") {
     assertHighlights("zig", HighlightFixtures.zig)
   }
 
   // ── Tier 3: Specialized languages ────────────────────────────────────
 
-  test("highlight: arduino") {
+  langTest("highlight: arduino") {
     assertHighlights("arduino", HighlightFixtures.arduino)
   }
 
-  test("highlight: bicep") {
+  langTest("highlight: bicep") {
     assertHighlights("bicep", HighlightFixtures.bicep)
   }
 
-  test("highlight: cairo") {
+  langTest("highlight: cairo") {
     assertHighlights("cairo", HighlightFixtures.cairo)
   }
 
-  test("highlight: cpon") {
+  langTest("highlight: cpon") {
     assertHighlights("cpon", HighlightFixtures.cpon)
   }
 
-  test("highlight: cuda") {
+  langTest("highlight: cuda") {
     assertHighlights("cuda", HighlightFixtures.cuda)
   }
 
-  test("highlight: embedded_template") {
+  langTest("highlight: embedded_template") {
     assertHighlights("embedded_template", HighlightFixtures.embeddedTemplate)
   }
 
-  test("highlight: func") {
+  langTest("highlight: func") {
     assertHighlights("func", HighlightFixtures.func)
   }
 
-  test("highlight: gitattributes") {
+  langTest("highlight: gitattributes") {
     assertHighlights("gitattributes", HighlightFixtures.gitattributes)
   }
 
-  test("highlight: glsl") {
+  langTest("highlight: glsl") {
     assertHighlights("glsl", HighlightFixtures.glsl)
   }
 
-  test("highlight: gosum") {
+  langTest("highlight: gosum") {
     assertHighlights("gosum", HighlightFixtures.gosum)
   }
 
@@ -228,7 +239,7 @@ final class HighlightSuite extends munit.FunSuite {
   // string_constant/rune_constant/integer_constant/floating_constant, but the latest
   // GitHub tree-sitter-hare (used for WASM) renamed them to string/rune/number/float.
   // Fix: pin WASM build to the same version as the Cargo crate, or update the crate.
-  test("highlight: hare") {
+  langTest("highlight: hare") {
     assume(
       highlighter.highlight("fn main() void = {};", "hare").isDefined,
       "hare WASM grammar version uses different node types than native"
@@ -236,91 +247,91 @@ final class HighlightSuite extends munit.FunSuite {
     assertHighlights("hare", HighlightFixtures.hare)
   }
 
-  test("highlight: jsdoc") {
+  langTest("highlight: jsdoc") {
     assertHighlights("jsdoc", HighlightFixtures.jsdoc)
   }
 
-  test("highlight: kconfig") {
+  langTest("highlight: kconfig") {
     assertHighlights("kconfig", HighlightFixtures.kconfig)
   }
 
-  test("highlight: kdl") {
+  langTest("highlight: kdl") {
     assertHighlights("kdl", HighlightFixtures.kdl)
   }
 
-  test("highlight: luadoc") {
+  langTest("highlight: luadoc") {
     assertHighlights("luadoc", HighlightFixtures.luadoc)
   }
 
-  test("highlight: luap") {
+  langTest("highlight: luap") {
     assertHighlights("luap", HighlightFixtures.luap)
   }
 
-  test("highlight: luau") {
+  langTest("highlight: luau") {
     assertHighlights("luau", HighlightFixtures.luau)
   }
 
-  test("highlight: objc") {
+  langTest("highlight: objc") {
     assertHighlights("objc", HighlightFixtures.objc)
   }
 
-  test("highlight: odin") {
+  langTest("highlight: odin") {
     assertHighlights("odin", HighlightFixtures.odin)
   }
 
-  test("highlight: po") {
+  langTest("highlight: po") {
     assertHighlights("po", HighlightFixtures.po)
   }
 
-  test("highlight: pony") {
+  langTest("highlight: pony") {
     assertHighlights("pony", HighlightFixtures.pony)
   }
 
-  test("highlight: printf") {
+  langTest("highlight: printf") {
     assertHighlights("printf", HighlightFixtures.printf)
   }
 
-  test("highlight: properties") {
+  langTest("highlight: properties") {
     assertHighlights("properties", HighlightFixtures.properties)
   }
 
-  test("highlight: puppet") {
+  langTest("highlight: puppet") {
     assertHighlights("puppet", HighlightFixtures.puppet)
   }
 
-  test("highlight: qmldir") {
+  langTest("highlight: qmldir") {
     assertHighlights("qmldir", HighlightFixtures.qmldir)
   }
 
-  test("highlight: requirements") {
+  langTest("highlight: requirements") {
     assertHighlights("requirements", HighlightFixtures.requirements)
   }
 
-  test("highlight: ron") {
+  langTest("highlight: ron") {
     assertHighlights("ron", HighlightFixtures.ron)
   }
 
-  test("highlight: scss") {
+  langTest("highlight: scss") {
     assertHighlights("scss", HighlightFixtures.scss)
   }
 
-  test("highlight: squirrel") {
+  langTest("highlight: squirrel") {
     assertHighlights("squirrel", HighlightFixtures.squirrel)
   }
 
-  test("highlight: starlark") {
+  langTest("highlight: starlark") {
     assertHighlights("starlark", HighlightFixtures.starlark)
   }
 
-  test("highlight: svelte") {
+  langTest("highlight: svelte") {
     assertHighlights("svelte", HighlightFixtures.svelte)
   }
 
-  test("highlight: ungrammar") {
+  langTest("highlight: ungrammar") {
     assertHighlights("ungrammar", HighlightFixtures.ungrammar)
   }
 
-  test("highlight: yuck") {
+  langTest("highlight: yuck") {
     assertHighlights("yuck", HighlightFixtures.yuck)
   }
 }
