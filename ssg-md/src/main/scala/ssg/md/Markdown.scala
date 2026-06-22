@@ -17,9 +17,7 @@ import ssg.md.util.data.DataHolder
 
 /** Recommended one-liner entry point for ssg-md.
   *
-  * Wraps the flexmark `Parser` + `HtmlRenderer` two-step into simple
-  * `parse` and `render` methods.  A single `DataHolder` (e.g. a
-  * `MutableDataSet`) configures both the parse and render phases when
+  * Wraps the flexmark `Parser` + `HtmlRenderer` two-step into simple `parse` and `render` methods. A single `DataHolder` (e.g. a `MutableDataSet`) configures both the parse and render phases when
   * using the options-accepting overloads.
   *
   * {{{
@@ -83,15 +81,13 @@ object Markdown {
 
   /** Parse and render a markdown string to HTML using the given options.
     *
-    * The same `options` are passed to both `Parser.builder(options)` and
-    * `HtmlRenderer.builder(Nullable(options))`, faithfully mirroring
-    * flexmark's model where one `DataHolder` configures both phases.
+    * The same `options` are passed to both `Parser.builder(options)` and `HtmlRenderer.builder(Nullable(options))`, faithfully mirroring flexmark's model where one `DataHolder` configures both
+    * phases.
     *
     * @param markdown
     *   the markdown source text
     * @param options
-    *   a `DataHolder` (e.g. `MutableDataSet`) configuring both parsing
-    *   and rendering
+    *   a `DataHolder` (e.g. `MutableDataSet`) configuring both parsing and rendering
     * @return
     *   the rendered HTML string
     */

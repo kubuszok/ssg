@@ -56,8 +56,8 @@ final class MarkdownFacadeIss1105Suite extends munit.FunSuite {
   }
 
   test("parse() returns a usable Document consistent with render()") {
-    val doc        = Markdown.parse(sampleMarkdown)
-    val renderedViaDoc = HtmlRenderer.builder().build().render(doc)
+    val doc               = Markdown.parse(sampleMarkdown)
+    val renderedViaDoc    = HtmlRenderer.builder().build().render(doc)
     val renderedViaFacade = Markdown.render(sampleMarkdown)
 
     assertEquals(renderedViaDoc, renderedViaFacade)
@@ -67,8 +67,8 @@ final class MarkdownFacadeIss1105Suite extends munit.FunSuite {
     val options = MutableDataSet()
     options.set(HtmlRenderer.SOFT_BREAK, "<br />\n")
 
-    val doc        = Markdown.parse(softBreakMarkdown, options)
-    val renderedViaDoc = HtmlRenderer.builder(Nullable(options)).build().render(doc)
+    val doc               = Markdown.parse(softBreakMarkdown, options)
+    val renderedViaDoc    = HtmlRenderer.builder(Nullable(options)).build().render(doc)
     val renderedViaFacade = Markdown.render(softBreakMarkdown, options)
 
     assertEquals(renderedViaDoc, renderedViaFacade)
