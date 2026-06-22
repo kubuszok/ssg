@@ -2565,7 +2565,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // side_effects_assign
   // =========================================================================
-  test("side_effects_assign".fail) {
+  test("side_effects_assign") {
     assertCompresses(
       input = """var a = typeof void (a && a.in == 1, 0);
         console.log(a)""".stripMargin.trim,
