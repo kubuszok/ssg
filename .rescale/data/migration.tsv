@@ -1647,11 +1647,11 @@ terser	lib/compress/inference.js		ported	ssg-js	2026-04-05	Ported as ssg.js.comp
 terser	lib/compress/reduce-vars.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.ReduceVars	6080510127d6c871ad58ce27c5c6b3045d948baa	2026-04-28
 terser	lib/compress/drop-side-effect-free.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropSideEffectFree	1d416afc7c3f4257ac44dacd3f5fa3a72a2be171	2026-04-28
 terser	lib/compress/drop-unused.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.DropUnused	b636c3da59f26429580719d4c8f162f4242f9749	2026-04-28
-terser	lib/compress/inline.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.Inline (stubs)	6080510127d6c871ad58ce27c5c6b3045d948baa	2026-04-28
+terser	lib/compress/inline.js	ssg-js/src/main/scala/ssg/js/compress/Inline.scala	ported	ssg-js	2026-06-22	Ported as ssg.js.compress.Inline (full-port covenant, verified 2026-04-26; 1347 lines, no stubs); dropped stale (stubs) note	6080510127d6c871ad58ce27c5c6b3045d948baa	2026-04-28
 terser	lib/compress/tighten-body.js		ported	ssg-js	2026-04-05	Ported as ssg.js.compress.TightenBody	6080510127d6c871ad58ce27c5c6b3045d948baa	2026-04-28
 terser	lib/cli.js		skipped	ssg-js	2026-04-05	CLI not applicable — SSG uses ssg-dev		
 terser	lib/mozilla-ast.js		skipped	ssg-js	2026-04-05	SpiderMonkey AST compat not needed		
-terser	lib/sourcemap.js		skipped	ssg-js	2026-04-05	Source maps deferred to future version	862226f234ed9c7180a8f8abe875b905ff4eacbb	2026-04-28
+terser	lib/sourcemap.js	ssg-js/src/main/scala/ssg/js/sourcemap/	ported	ssg-js	2026-06-22	Ported across 8 files in ssg.js.sourcemap (SourceMap, SourceMapGenerator, SourceMapConsumer, SourceMapJson, InlineSourceMap, VlqCodec, Base64, SourceMapTypes); was mis-marked skipped	862226f234ed9c7180a8f8abe875b905ff4eacbb	2026-04-28
 terser	lib/equivalent-to.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstEquivalent	88493d7ca0d708389f5f78f541c4fb48e71d9fe2	2026-04-28
 terser	lib/propmangle.js		ported	ssg-js	2026-04-05	Ported as ssg.js.scope.PropMangler	6e7323fd4b0e255a06f6d3a2dcd111b8640a9031	2026-04-28
 terser	lib/size.js		ported	ssg-js	2026-04-05	Ported as ssg.js.ast.AstSize	88493d7ca0d708389f5f78f541c4fb48e71d9fe2	2026-04-28
