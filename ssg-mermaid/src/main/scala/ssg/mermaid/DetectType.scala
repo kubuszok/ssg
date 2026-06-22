@@ -110,7 +110,6 @@ object DetectType {
       if (firstLine.startsWith("sequencediagram") || firstLine.startsWith("sequence-diagram")) {
         break(DiagramType.Sequence)
       }
-      if (firstLine.startsWith("sequencediagram")) break(DiagramType.Sequence)
 
       // Gantt
       if (firstLine.startsWith("gantt")) break(DiagramType.Gantt)
