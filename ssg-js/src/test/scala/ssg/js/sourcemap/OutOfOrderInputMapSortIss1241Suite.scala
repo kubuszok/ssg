@@ -50,7 +50,7 @@ final class OutOfOrderInputMapSortIss1241Suite extends munit.FunSuite {
     val mappings = VlqCodec.encodeMappings(
       Array(
         Array(
-          Array(5, 0, 0, 100),  // A
+          Array(5, 0, 0, 100), // A
           Array(15, 0, 0, 100), // B
           Array(-10, 0, 0, -50) // C
         )
@@ -100,8 +100,8 @@ final class OutOfOrderInputMapSortIss1241Suite extends munit.FunSuite {
       Array(
         Array(
           Array(5, 0, 0, 100), // A
-          Array(5, 0, 0, 50),  // C
-          Array(10, 0, 0, 50)  // B
+          Array(5, 0, 0, 50), // C
+          Array(10, 0, 0, 50) // B
         )
       )
     )
