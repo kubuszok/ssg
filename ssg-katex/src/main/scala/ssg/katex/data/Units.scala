@@ -127,10 +127,15 @@ object Units {
     // every platform (JVM/JS/Native) — never via String.format, which on the JVM
     // follows Locale.getDefault and would emit comma decimals on comma-locale
     // hosts (ISS-1153).
-    // Round half-up (matching the original port's Math.round behaviour) to the
-    // nearest 1/10,000th, then format the integral and fractional parts by hand
-    // with a hardcoded '.', stripping trailing zeros to mirror the `+` round-trip.
-    val scaled:    Long          = Math.round(n * 10000.0)
+    // Round the magnitude to the nearest 1/10,000th AWAY FROM ZERO, matching
+    // JS `Number.prototype.toFixed(4)` (units.ts:103). Sign-extracted
+    // `floor(|x| + 0.5)` reproduces toFixed's magnitude rounding for negative
+    // ties (e.g. -0.5 -> 1 -> -1, not Math.round's -0.5 -> -0). Binary64
+    // exact-tie edge cases (the 0.015-class) are tracked by ISS-1158.
+    // Format the integral and fractional parts by hand with a hardcoded '.',
+    // stripping trailing zeros to mirror the `+` round-trip.
+    val product:   Double        = n * 10000.0
+    val scaled:    Long          = (if (product < 0.0) -1L else 1L) * Math.floor(Math.abs(product) + 0.5).toLong
     val negative:  Boolean       = scaled < 0L
     val magnitude: Long          = Math.abs(scaled)
     val integral:  Long          = magnitude / 10000L
