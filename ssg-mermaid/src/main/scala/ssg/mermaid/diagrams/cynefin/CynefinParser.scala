@@ -2,13 +2,7 @@
  * Copyright (c) 2026 SSG contributors
  * SPDX-License-Identifier: Apache-2.0
  *
- * Mermaid diagramming engine — Scala 3 port of Mermaid (https://mermaid.js.org)
- *
- * Original source: mermaid cynefin framework diagram
- * Original author: Knut Sveidqvist and contributors
- * Original license: MIT
- *
- * upstream-commit: 2cfdd1620
+ * SSG-native Cynefin framework diagram (not an upstream Mermaid diagram type).
  */
 package ssg
 package mermaid
