@@ -31,8 +31,8 @@ final class MangleOptionsThreadingIss1240Suite extends munit.FunSuite {
   //   module comes from _mangle_options.module (when truthy, else option("module")),
   //   ie8 comes from option("ie8").
   test("ISS-1240: mangleOptions() reflects threaded ManglerOptions (module=true, ie8 from compressor)") {
-    val co = CompressorOptions(ie8 = true, module = false)
-    val mo = ManglerOptions(module = true, ie8 = false)
+    val co         = CompressorOptions(ie8 = true, module = false)
+    val mo         = ManglerOptions(module = true, ie8 = false)
     val compressor = new Compressor(co, mo)
 
     val result = compressor.mangleOptions()
@@ -48,7 +48,7 @@ final class MangleOptionsThreadingIss1240Suite extends munit.FunSuite {
   // Oracle: index.js:335-337 — when _mangle_options is absent (null/false),
   //   module falls back to `this.option("module")`.
   test("ISS-1240: mangleOptions() falls back to compressor options when no mangle_options") {
-    val co = CompressorOptions(module = true, ie8 = false)
+    val co         = CompressorOptions(module = true, ie8 = false)
     val compressor = new Compressor(co)
 
     val result = compressor.mangleOptions()
@@ -63,8 +63,8 @@ final class MangleOptionsThreadingIss1240Suite extends munit.FunSuite {
   //   `if (module) toplevel = true` and adds "arguments" to reserved.
   // Verify that the stored _mangle_options is formatted (module→toplevel rule).
   test("ISS-1240: Compressor formats mangle_options via Mangler.formatOptions (module→toplevel)") {
-    val co = CompressorOptions()
-    val mo = ManglerOptions(module = true, toplevel = false)
+    val co         = CompressorOptions()
+    val mo         = ManglerOptions(module = true, toplevel = false)
     val compressor = new Compressor(co, mo)
 
     // After formatting, module=true should force toplevel=true
@@ -80,7 +80,7 @@ final class MangleOptionsThreadingIss1240Suite extends munit.FunSuite {
 
   // Verify the existing single-arg ctor still works and produces defaults.
   test("ISS-1240: single-arg Compressor ctor is backward-compatible") {
-    val co = CompressorOptions()
+    val co         = CompressorOptions()
     val compressor = new Compressor(co)
 
     val result = compressor.mangleOptions()
@@ -151,8 +151,8 @@ final class MangleOptionsThreadingIss1240Suite extends munit.FunSuite {
     val custom = new NthIdentifier {
       def get(n: Int): String = s"custom_$n"
     }
-    val co = CompressorOptions()
-    val mo = ManglerOptions(nthIdentifier = custom)
+    val co         = CompressorOptions()
+    val mo         = ManglerOptions(nthIdentifier = custom)
     val compressor = new Compressor(co, mo)
 
     val result = compressor.mangleOptions()
