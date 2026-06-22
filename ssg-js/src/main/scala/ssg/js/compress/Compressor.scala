@@ -279,11 +279,18 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
   }
 
   // toplevel — derive what to drop at the top level (lib/compress/index.js:318-325).
-  // `options.toplevel` already carries the resolved {funcs, vars}; in module mode
-  // both are forced on (options["toplevel"] = true above).
+  // terser lib/compress/index.js:267 — toplevel defaults to !!(options["top_retain"]):
+  // when toplevel is at its unset default and top_retain is provided, toplevel
+  // is enabled (both funcs and vars). In module mode both are forced on
+  // (options["toplevel"] = true above).
+  private val effectiveToplevel: ToplevelConfig =
+    if (options.toplevel == ToplevelConfig() && options.topRetain.isDefined)
+      ToplevelConfig(funcs = true, vars = true)
+    else options.toplevel
+
   toplevel =
     if (options.module) CompressorLike.ToplevelConfig(funcs = true, vars = true)
-    else CompressorLike.ToplevelConfig(funcs = options.toplevel.funcs, vars = options.toplevel.vars)
+    else CompressorLike.ToplevelConfig(funcs = effectiveToplevel.funcs, vars = effectiveToplevel.vars)
 
   // -----------------------------------------------------------------------
   // Public API
