@@ -613,7 +613,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2554_3
   // =========================================================================
-  test("issue_2554_3".fail) {
+  // ISS-1245 resolved the liftKey numeric-key formatting bug; the expected-failure pin was retired.
+  test("issue_2554_3") {
     assertCompresses(
       input = """var foo = {
             [1 + 0]: 1,
@@ -653,7 +654,8 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2554_4
   // =========================================================================
-  test("issue_2554_4".fail) {
+  // ISS-1245 resolved the liftKey numeric-key formatting bug; the expected-failure pin was retired.
+  test("issue_2554_4") {
     assertCompresses(
       input = """var bar = new class {
             constructor() {
