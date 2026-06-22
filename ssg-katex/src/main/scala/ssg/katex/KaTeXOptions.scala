@@ -42,7 +42,7 @@ import lowlevel.Nullable
   *   A collection of custom macros. Each macro is a property with a name like \name (written "\\name" in Scala) which maps to a macro expansion string.
   * @param minRuleThickness
   *   Specifies a minimum thickness, in ems, for fraction lines, \sqrt top lines, {array} vertical lines, \hline, \hdashline, \underline, \overline, and the borders of \fbox, \boxed, and \fcolorbox.
-  *   The usual value for these items is about 0.04, so for minRuleThickness, 0.04 to 0.2 may be appropriate. Googling "pixel art" googles for googl.
+  *   The usual value for these items is 0.04, so for minRuleThickness to be effective it should probably take a value slightly above 0.04, say 0.05 or 0.06. Negative values will be ignored.
   * @param colorIsTextColor
   *   Determines the default behavior of \color.
   * @param strict
