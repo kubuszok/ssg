@@ -59,6 +59,10 @@ class SourceMapConsumer(val mapData: SourceMapData) {
     for (line <- decoded) {
       val segs       = ArrayBuffer.empty[ResolvedSegment]
       var prevGenCol = 0
+      // Track sortedness per line — mirrors @jridgewell/sourcemap-codec
+      // decode (sourcemap-codec.ts:49-59,79): `if (!sorted) sort(line)`
+      var sorted     = true
+      var lastGenCol = 0
       for (seg <- line)
         if (seg.length >= 4) {
           val genCol   = prevGenCol + seg(0)
@@ -73,12 +77,28 @@ class SourceMapConsumer(val mapData: SourceMapData) {
           prevOrigCol = origCol
           if (seg.length >= 5) prevNameIdx = nameIdx
 
+          if (genCol < lastGenCol) sorted = false
+          lastGenCol = genCol
+
           segs.addOne(ResolvedSegment(genCol, srcIdx, origLine, origCol, nameIdx))
         } else if (seg.length >= 1) {
           // Segment with only generated column (no original position)
-          prevGenCol += seg(0)
+          val genCol = prevGenCol + seg(0)
+          prevGenCol = genCol
+          // Update sortedness tracking even for genCol-only segments
+          // (they affect the column sequence but are dropped from segs)
+          if (genCol < lastGenCol) sorted = false
+          lastGenCol = genCol
         }
-      result.addOne(segs.toArray)
+      // Sort by generated column when out of order — stable sort preserves
+      // file order for equal genCol values, matching @jridgewell's
+      // sort(line) = line.sort(sortComparator); sortComparator(a,b) = a[0] - b[0]
+      if (!sorted) {
+        val arr = segs.sortBy(_.genCol).toArray
+        result.addOne(arr)
+      } else {
+        result.addOne(segs.toArray)
+      }
     }
     result.toArray
   }
