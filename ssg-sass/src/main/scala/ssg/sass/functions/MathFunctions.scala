@@ -33,16 +33,21 @@
  * through the EvaluateVisitor's use-rule handler so `@use "sass:math"`
  * exposes them under the math namespace.
  *
- * Spec progress — core_functions/math sass-spec subdir 248→397/486
- * (51.0%→81.7%, +149 cases). Global +167 cases (4345→4512).
- * Remaining 89 failures are dominated by:
- *   - B009 Infinity/NaN -> calc() wrapping (~60 cases): dart-sass
- *     serializes non-finite SassNumbers as `calc(infinity)`, `calc(NaN)`
- *     or `calc(NaN * 1deg)`; ssg-sass emits the raw Double name.
- *   - B004 argument-arity validation (~20 cases): error/too_many_args,
- *     error/wrong_name tests across every math built-in.
- *   - Precision edge cases on log/tan near asymptotes (~5 cases).
- *   - HRX multi-file resolution for random.hrx helpers (~4 cases).
+ * Spec progress — core_functions/math sass-spec subdir: 486/486
+ * (100%, up from 248 initially). All four previously-documented failure
+ * categories have been resolved:
+ *   - B009 Infinity/NaN calc() wrapping: resolved — SerializeVisitor
+ *     method formatNonFiniteNumber now emits calc(infinity), calc(NaN),
+ *     calc(NaN * 1deg) etc. matching dart-sass serialization.
+ *   - B004 argument-arity validation: resolved — EvaluateVisitor method
+ *     _checkBuiltInArity enforces too_many_args / wrong_name errors
+ *     generically for all BuiltInCallable functions.
+ *   - Precision edge cases on log/tan near asymptotes: resolved — all
+ *     asymptote cases (tan.hrx asymptote/radian, log.hrx edge cases)
+ *     pass via the NumberUtil fuzzy-equality precision system.
+ *   - HRX multi-file resolution for random.hrx: resolved — SassSpecRunner
+ *     MapImporter with siblingFiles handles multi-file HRX archives;
+ *     all 12 random.hrx test cases pass.
  *
  * upstream-commit: ec85871864ca16f8045e66ad329bd462e791bfa1
  */
