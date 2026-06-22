@@ -35,7 +35,7 @@ package js
 package compress
 
 import ssg.js.ast.*
-import ssg.js.compress.CompressorFlags.{ hasFlag, TOP }
+import ssg.js.compress.CompressorFlags.{ TOP, hasFlag }
 import ssg.js.parse.Parser
 
 final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
@@ -48,9 +48,8 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
       "function beta() { var y = 2; }" +
       "function outer() { function inner() { var z = 3; } }"
 
-  /** Parse, compress with the given options (1 pass, all optimizations off
-    * except the flags under test), and collect all AstDefun nodes from the
-    * resulting AST together with their name and TOP-flag state.
+  /** Parse, compress with the given options (1 pass, all optimizations off except the flags under test), and collect all AstDefun nodes from the resulting AST together with their name and TOP-flag
+    * state.
     */
   private def compressAndCollectFlags(
     opts: CompressorOptions
@@ -60,18 +59,21 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
     val result     = compressor.compress(ast)
 
     val flags = scala.collection.mutable.Map.empty[String, Boolean]
-    ssg.js.ast.walk(result, (node, _) => {
-      node match {
-        case defun: AstDefun =>
-          defun.name match {
-            case sym: AstSymbol =>
-              flags(sym.name) = hasFlag(defun, TOP)
-            case _ =>
-          }
-        case _ =>
+    ssg.js.ast.walk(
+      result,
+      (node, _) => {
+        node match {
+          case defun: AstDefun =>
+            defun.name match {
+              case sym: AstSymbol =>
+                flags(sym.name) = hasFlag(defun, TOP)
+              case _ =>
+            }
+          case _ =>
+        }
+        null // continue walking
       }
-      null // continue walking
-    })
+    )
     flags.toMap
   }
 
@@ -85,7 +87,7 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
   // invoked in reset_opt_flags -- it is invoked later in retain_top_func.
 
   test("ISS-1146 all top-level defuns get TOP when topRetain is present and reduce_vars is on") {
-    val opts  = baseOpts.copy(
+    val opts = baseOpts.copy(
       reduceVars = true,
       topRetain = Some((_: String) => true) // predicate matches everything -- irrelevant here
     )
@@ -109,7 +111,7 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
   // defun, it must STILL get TOP. The predicate is not called in
   // reset_opt_flags -- only in retain_top_func.
   test("ISS-1146 top-level defun gets TOP even when predicate does not match it") {
-    val opts  = baseOpts.copy(
+    val opts = baseOpts.copy(
       reduceVars = true,
       topRetain = Some((n: String) => n == "alpha") // matches only "alpha"
     )
@@ -136,7 +138,7 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
 
   // ---- PARENT GUARD: nested defun must NOT get TOP ----
   test("ISS-1146 nested defun does NOT get TOP (parent guard: preparation.parent() === self)") {
-    val opts  = baseOpts.copy(
+    val opts = baseOpts.copy(
       reduceVars = true,
       topRetain = Some((_: String) => true) // matches everything
     )
@@ -151,7 +153,7 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
 
   // ---- REDUCE_VARS GUARD: no TOP when reduce_vars is off ----
   test("ISS-1146 no TOP flags when reduce_vars is off") {
-    val opts  = baseOpts.copy(
+    val opts = baseOpts.copy(
       reduceVars = false,
       topRetain = Some((_: String) => true)
     )
@@ -178,7 +180,7 @@ final class TopRetainResetOptFlagsIss1146Suite extends munit.FunSuite {
 
   // ---- NO TOP_RETAIN: no TOP flags when topRetain is absent ----
   test("ISS-1146 no TOP flags when topRetain is absent") {
-    val opts  = baseOpts.copy(
+    val opts = baseOpts.copy(
       reduceVars = true,
       topRetain = None
     )
