@@ -3673,8 +3673,8 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     if (optionBool("properties") && prop != null) {
       val keyEv = Evaluate.evaluate(prop, this)
       val keyStr: String | Null = keyEv match {
-        case s: String                          => s
-        case d: Double if d == d.toInt.toDouble => d.toInt.toString
+        case s: String                                        => s
+        case d: Double if d == Math.floor(d) && !d.isInfinite => ssg.js.output.JsNumber.toJsString(d) // ISS-1175/ISS-1246: JS-faithful numeric key for full integer range (no .toInt truncation)
         case _ => null
       }
 
