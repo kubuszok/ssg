@@ -197,37 +197,44 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
 
   override def option(name: String): Any = options.get(name)
 
+  /** Faithful port of terser `Compressor.in_boolean_context()` (lib/compress/index.js:353-380).
+    *
+    * Walks the *live* ancestry (the active transformer's stack -- the compressor's own stack is empty during a pass, see `activeWalker`) to determine whether the current node sits in a boolean
+    * context (e.g. condition of if/while/for, `!` operand, or standalone simple-statement). Walk-through cases (&&/||/?? operand, ternary) allow the check to propagate through transparent ancestors.
+    * Mirrors the `in32BitContext` pattern (lines 238-273) and `inComputedKey` pattern (lines 173-196).
+    */
   override def inBooleanContext(): Boolean =
     if (!optionBool("booleans")) false
-    else {
-      boundary[Boolean] {
-        var current: AstNode =
-          try this.self()
-          catch { case _: IndexOutOfBoundsException => break(false) }
-        var i = 0
-        var p: AstNode | Null = parent(i)
-        while (p != null) {
-          val pn = p.nn
-          pn match {
-            case _:       AstSimpleStatement                                                                => break(true)
-            case cond:    AstConditional if cond.condition.nn eq current                                    => break(true)
-            case dw:      AstDWLoop if dw.condition.nn eq current                                           => break(true)
-            case forNode: AstFor if forNode.condition != null && (forNode.condition.nn eq current)          => break(true)
-            case ifNode:  AstIf if ifNode.condition.nn eq current                                           => break(true)
-            case up:      AstUnaryPrefix if up.operator == "!" && (up.expression.nn eq current)             => break(true)
-            case bin:     AstBinary if bin.operator == "&&" || bin.operator == "||" || bin.operator == "??" =>
-              current = pn
-            case _: AstConditional =>
-              current = pn
-            case _ =>
-              break(false)
+    else
+      activeWalker match {
+        case w: TreeWalker if w.stack.nonEmpty =>
+          boundary[Boolean] {
+            var current: AstNode = w.stack(w.stack.size - 1)
+            var i = 0
+            var p: AstNode | Null = w.parent(i)
+            while (p != null) {
+              val pn = p.nn
+              pn match {
+                case _:       AstSimpleStatement                                                                => break(true)
+                case cond:    AstConditional if cond.condition.nn eq current                                    => break(true)
+                case dw:      AstDWLoop if dw.condition.nn eq current                                           => break(true)
+                case forNode: AstFor if forNode.condition != null && (forNode.condition.nn eq current)          => break(true)
+                case ifNode:  AstIf if ifNode.condition.nn eq current                                           => break(true)
+                case up:      AstUnaryPrefix if up.operator == "!" && (up.expression.nn eq current)             => break(true)
+                case bin:     AstBinary if bin.operator == "&&" || bin.operator == "||" || bin.operator == "??" =>
+                  current = pn
+                case _: AstConditional =>
+                  current = pn
+                case _ =>
+                  break(false)
+              }
+              i += 1
+              p = w.parent(i)
+            }
+            false
           }
-          i += 1
-          p = parent(i)
-        }
-        false
+        case _ => false
       }
-    }
 
   /** Faithful port of terser `Compressor.in_32_bit_context()` (lib/compress/index.js:387-417).
     *

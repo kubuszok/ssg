@@ -18,7 +18,7 @@ final class CompressIssue979Suite extends munit.FunSuite {
   // =========================================================================
   // issue979_reported
   // =========================================================================
-  test("issue979_reported".fail) {
+  test("issue979_reported") {
     assertCompresses(
       input = """function f1() {
             if (a == 1 || b == 2) {
@@ -61,7 +61,7 @@ final class CompressIssue979Suite extends munit.FunSuite {
   // =========================================================================
   // issue979_test_negated_is_best
   // =========================================================================
-  test("issue979_test_negated_is_best".fail) {
+  test("issue979_test_negated_is_best") {
     assertCompresses(
       input = """function f3() {
             if (a == 1 | b == 2) {

@@ -18,7 +18,7 @@ final class CompressIssue1007Suite extends munit.FunSuite {
   // =========================================================================
   // optional_chaining_boolean_expr
   // =========================================================================
-  test("optional_chaining_boolean_expr".fail) {
+  test("optional_chaining_boolean_expr") {
     assertCompresses(
       input = """(function(option) {
             if (!(option.container?.tagName === "DIV"))
