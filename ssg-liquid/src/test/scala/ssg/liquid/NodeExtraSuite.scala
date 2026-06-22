@@ -369,7 +369,7 @@ final class NodeExtraSuite extends munit.FunSuite {
   }
 
   // SSG: expression in output parsing differs — may not throw LiquidException
-  test("gt node: bug 267 expression in output as Liquid".fail) {
+  test("gt node: bug 267 expression in output as Liquid".fail) { // ISS-1260 (ISS-1024 umbrella)
     try {
       new TemplateParser.Builder().withFlavor(Flavor.LIQUID).build().parse("{{ 98 > 97 }}").render()
       fail("Expected LiquidException")

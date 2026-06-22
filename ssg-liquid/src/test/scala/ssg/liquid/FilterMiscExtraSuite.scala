@@ -83,7 +83,7 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
   }
 
   // SSG: Unknown filter throws at parse time rather than render time
-  test("flavored filters: normalize_whitespace available in Jekyll but not Liquid".fail) {
+  test("flavored filters: normalize_whitespace available in Jekyll but not Liquid".fail) { // ISS-1260 (ISS-1024 umbrella)
     val templateText = "{{ ' a  b   c' | normalize_whitespace }}"
 
     val template1 = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).build().parse(templateText)

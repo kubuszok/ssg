@@ -281,7 +281,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   // NOTE: SSG lexer strips whitespace after -}}, so " after" becomes "after".
   // But the expression "true-" may parse differently than "true" + closing "-}}".
-  test("OutEnd: -}} strips trailing whitespace".fail) {
+  test("OutEnd: -}} strips trailing whitespace".fail) { // ISS-1263 (ISS-1024 umbrella)
     assertEquals(Template.parse("{{true-}} after").render(), "trueafter")
   }
 
@@ -310,7 +310,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
   }
 
   // NOTE: SSG lexer may parse "true-" differently. Test with space: "true -%}"
-  test("TagEnd: -%} strips trailing whitespace".fail) {
+  test("TagEnd: -%} strips trailing whitespace".fail) { // ISS-1263 (ISS-1024 umbrella)
     assertEquals(Template.parse("{%if true-%} ok{%endif%}").render(), "ok")
   }
 
@@ -1002,7 +1002,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // NOTE: In SSG (Jekyll default flavor), include_relative is a built-in tag,
   // so it takes precedence over custom tags. The original test used Liquid style
   // where include_relative is not defined and can be a custom tag.
-  test("IncludeRelativeCustomTag: SSG recognizes include_relative as built-in".fail) {
+  test("IncludeRelativeCustomTag: SSG recognizes include_relative as built-in".fail) { // ISS-1259 (ISS-1024 umbrella)
     val parser = parserWithCustomTag("include_relative")
     val result = parser.parse("{% include_relative %}").render()
     assertEquals(result, "<include_relative>")
@@ -1109,7 +1109,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // NOTE: SSG lexer does not support identifiers starting with digits.
   // In the original ANTLR grammar, ruby-style identifiers like "3ubar" are valid.
   // SSG lexes "3" as a number and "ubar" as a separate identifier.
-  test("Id: identifier starting with digit — SSG treats leading digit as number".fail) {
+  test("Id: identifier starting with digit — SSG treats leading digit as number".fail) { // ISS-1264 (ISS-1024 umbrella)
     // Ruby liquid identifiers can start with a number
     val vars = new JHashMap[String, DataView]()
     vars.put("3ubar", TestHelper.dv("ok"))
