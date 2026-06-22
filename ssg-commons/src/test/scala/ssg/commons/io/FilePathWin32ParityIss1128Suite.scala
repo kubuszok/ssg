@@ -6,13 +6,10 @@ package io
 /** ISS-1128 [R0610]: cross-platform FilePath parity for colon and backslash inputs.
   *
   * The JS FilePathPlatform had Win32-flavored heuristics that diverge from posix JVM and Native:
-  *   - isAbsolute and resolve treated a second-char ':' as a drive-letter (absolute), but on posix
-  *     JVM/Native, ':' is a legal filename char: `Paths.get("a:b").isAbsolute == false`.
-  *   - of/renderPath converted backslash to '/', but on posix JVM/Native, backslash is a legal
-  *     filename char: `Paths.get("a\\b").toString == "a\\b"` (preserved, not a separator).
+  *   - isAbsolute and resolve treated a second-char ':' as a drive-letter (absolute), but on posix JVM/Native, ':' is a legal filename char: `Paths.get("a:b").isAbsolute == false`.
+  *   - of/renderPath converted backslash to '/', but on posix JVM/Native, backslash is a legal filename char: `Paths.get("a\\b").toString == "a\\b"` (preserved, not a separator).
   *
-  * This suite runs on ALL THREE platforms (JVM, JS, Native) and asserts the SAME posix result
-  * everywhere. Every expected value is the java.nio.file.Paths result on posix JVM (anti-cheat C11).
+  * This suite runs on ALL THREE platforms (JVM, JS, Native) and asserts the SAME posix result everywhere. Every expected value is the java.nio.file.Paths result on posix JVM (anti-cheat C11).
   */
 final class FilePathWin32ParityIss1128Suite extends munit.FunSuite {
 
