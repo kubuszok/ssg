@@ -84,8 +84,8 @@ class DotParser(tokens: Array[Token]) {
     // assign_stmt: id = id
     if (next.tpe == TokenType.Equals) {
       advance() // =
-      val value = readId()
-      return DotAssignStmt(id, value)
+      val (value, valueIsHtml) = readIdWithHtmlFlag()
+      return DotAssignStmt(id, value, valueIsHtml)
     }
 
     // node_stmt: id optionally with port and attr_list
@@ -202,8 +202,8 @@ class DotParser(tokens: Array[Token]) {
               val key = readId()
               if (peek().tpe == TokenType.Equals) {
                 advance() // =
-                val value = readId()
-                attrs += DotAttr(key, value)
+                val (value, valueIsHtml) = readIdWithHtmlFlag()
+                attrs += DotAttr(key, value, valueIsHtml)
               } else {
                 // Bare key without value (treated as key=true in some DOT dialects)
                 attrs += DotAttr(key, "true")
@@ -319,6 +319,19 @@ class DotParser(tokens: Array[Token]) {
     if (isId(t)) {
       advance()
       t.value
+    } else {
+      throw new IllegalArgumentException(
+        s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}"
+      )
+    }
+  }
+
+  /** Reads an ID and also reports whether the token was an HTML-like string. */
+  private def readIdWithHtmlFlag(): (String, Boolean) = {
+    val t = peek()
+    if (isId(t)) {
+      advance()
+      (t.value, t.tpe == TokenType.HtmlString)
     } else {
       throw new IllegalArgumentException(
         s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}"
