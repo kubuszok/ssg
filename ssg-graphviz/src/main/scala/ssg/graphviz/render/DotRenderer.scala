@@ -52,26 +52,42 @@ object DotRenderer {
     val edgeDefaults  = mutable.LinkedHashMap.empty[String, String]
     val nodeOverrides = mutable.LinkedHashMap.empty[String, mutable.LinkedHashMap[String, String]]
     val edgeOverrides = mutable.LinkedHashMap.empty[String, mutable.LinkedHashMap[String, String]]
-    collectStmts(dot.stmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides)
-    DotAttrs(nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides)
+    // Track which (scope, key) pairs have HTML-like values
+    val htmlFlags = mutable.Set.empty[String]
+    collectStmts(dot.stmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides, htmlFlags)
+    DotAttrs(nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides, htmlFlags)
   }
+
+  /** Builds a composite key for tracking HTML-like attribute values. */
+  private def htmlFlagKey(scope: String, attrKey: String): String =
+    scope + "|" + attrKey
 
   private def collectStmts(
     stmts:         Seq[DotStmt],
     nodeDefaults:  mutable.LinkedHashMap[String, String],
     edgeDefaults:  mutable.LinkedHashMap[String, String],
     nodeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
-    edgeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]]
+    edgeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
+    htmlFlags:     mutable.Set[String]
   ): Unit =
     stmts.foreach {
       case DotAttrStmt(DotAttrTarget.Node, attrs) =>
-        attrs.foreach(a => nodeDefaults(a.key) = a.value)
+        attrs.foreach { a =>
+          nodeDefaults(a.key) = a.value
+          if (a.isHtml) { htmlFlags += htmlFlagKey("nodeDefault", a.key) }
+        }
       case DotAttrStmt(DotAttrTarget.Edge, attrs) =>
-        attrs.foreach(a => edgeDefaults(a.key) = a.value)
+        attrs.foreach { a =>
+          edgeDefaults(a.key) = a.value
+          if (a.isHtml) { htmlFlags += htmlFlagKey("edgeDefault", a.key) }
+        }
       case DotNodeStmt(id, attrs) =>
         if (attrs.nonEmpty) {
           val m = nodeOverrides.getOrElseUpdate(id.id, mutable.LinkedHashMap.empty)
-          attrs.foreach(a => m(a.key) = a.value)
+          attrs.foreach { a =>
+            m(a.key) = a.value
+            if (a.isHtml) { htmlFlags += htmlFlagKey("node:" + id.id, a.key) }
+          }
         }
       case DotEdgeStmt(nodes, attrs) =>
         if (attrs.nonEmpty) {
@@ -79,12 +95,15 @@ object DotRenderer {
             if (pair.size == 2) {
               val key = pair(0).id + "->" + pair(1).id
               val m   = edgeOverrides.getOrElseUpdate(key, mutable.LinkedHashMap.empty)
-              attrs.foreach(a => m(a.key) = a.value)
+              attrs.foreach { a =>
+                m(a.key) = a.value
+                if (a.isHtml) { htmlFlags += htmlFlagKey("edge:" + key, a.key) }
+              }
             }
           }
         }
       case DotSubgraphStmt(_, subStmts) =>
-        collectStmts(subStmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides)
+        collectStmts(subStmts, nodeDefaults, edgeDefaults, nodeOverrides, edgeOverrides, htmlFlags)
       case _ => ()
     }
 
@@ -92,8 +111,30 @@ object DotRenderer {
     nodeDefaults:  mutable.LinkedHashMap[String, String],
     edgeDefaults:  mutable.LinkedHashMap[String, String],
     nodeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
-    edgeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]]
+    edgeOverrides: mutable.LinkedHashMap[String, mutable.LinkedHashMap[String, String]],
+    htmlFlags:     mutable.Set[String]
   )
+
+  /** Checks whether a label value for a given node is from an HTML-like label. */
+  private def isHtmlLabel(dotAttrs: DotAttrs, nodeId: String): Boolean = {
+    // Check node-specific override first, then default
+    val nodeAttrs = dotAttrs.nodeOverrides.getOrElse(nodeId, mutable.LinkedHashMap.empty)
+    if (nodeAttrs.contains("label")) {
+      dotAttrs.htmlFlags.contains(htmlFlagKey("node:" + nodeId, "label"))
+    } else {
+      dotAttrs.htmlFlags.contains(htmlFlagKey("nodeDefault", "label"))
+    }
+  }
+
+  /** Checks whether an edge label value is from an HTML-like label. */
+  private def isHtmlEdgeLabel(dotAttrs: DotAttrs, edgeKey: String): Boolean = {
+    val edgeOverrides = dotAttrs.edgeOverrides.getOrElse(edgeKey, mutable.LinkedHashMap.empty)
+    if (edgeOverrides.contains("label")) {
+      dotAttrs.htmlFlags.contains(htmlFlagKey("edge:" + edgeKey, "label"))
+    } else {
+      dotAttrs.htmlFlags.contains(htmlFlagKey("edgeDefault", "label"))
+    }
+  }
 
   // -- SVG rendering ----------------------------------------------------------
 
@@ -208,9 +249,11 @@ object DotRenderer {
       title.text(name)
     }
 
-    // Collect the graph-level label from assign statements
-    val graphLabel = dot.stmts.collectFirst { case DotAssignStmt("label", v) =>
-      v
+    // Collect the graph-level label from assign statements;
+    // strip HTML tags for HTML-like labels (ISS-1078)
+    val graphLabel = dot.stmts.collectFirst { case DotAssignStmt("label", v, isHtml) =>
+      if (isHtml) { HtmlLabelUtil.stripHtmlTags(v) }
+      else { v }
     }
     graphLabel.foreach { labelText =>
       val text = content.append("text")
@@ -248,8 +291,10 @@ object DotRenderer {
     val fontName    = nodeAttrs.getOrElse("fontname", dotAttrs.nodeDefaults.getOrElse("fontname", config.fontName))
     val styleAttr   = nodeAttrs.getOrElse("style", dotAttrs.nodeDefaults.getOrElse("style", ""))
 
-    // Resolve label text
-    val labelText = nodeAttrs.getOrElse("label", nl.label)
+    // Resolve label text; strip HTML tags for HTML-like labels (ISS-1078)
+    val rawLabelText = nodeAttrs.getOrElse("label", nl.label)
+    val labelText    = if (isHtmlLabel(dotAttrs, id)) { HtmlLabelUtil.stripHtmlTags(rawLabelText) }
+    else { rawLabelText }
 
     val w = nl.width
     val h = nl.height
@@ -430,8 +475,10 @@ object DotRenderer {
       path.attr("marker-end", "url(#arrowhead)")
     }
 
-    // Edge label (if present)
-    val edgeLabelText = edgeOverrides.getOrElse("label", dotAttrs.edgeDefaults.getOrElse("label", ""))
+    // Edge label (if present); strip HTML tags for HTML-like labels (ISS-1078)
+    val rawEdgeLabelText = edgeOverrides.getOrElse("label", dotAttrs.edgeDefaults.getOrElse("label", ""))
+    val edgeLabelText    = if (isHtmlEdgeLabel(dotAttrs, edgeKey)) { HtmlLabelUtil.stripHtmlTags(rawEdgeLabelText) }
+    else { rawEdgeLabelText }
     if (edgeLabelText.nonEmpty && el.x != 0.0 && el.y != 0.0) {
       val text = edgeG.append("text")
       text.attr("x", el.x)
