@@ -3420,7 +3420,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         newLeft.right = rBin.left
         newLeft.start = self.left.nn.start
         newLeft.end = rBin.left.nn.end
-        self.left = newLeft
+        self.left = optimizeNode(newLeft)
         self.right = rBin.right
       }
     }
