@@ -121,22 +121,36 @@ final class Template(
     * `parent.newChildContext(variables)` (Template.java:358-362), so the child resolves variables local-first and falls through to the enclosing scope (TemplateContext.java:104-120).
     * `doClearThreadLocal` is the thread-local cleanup flag (BasicTypesSupport.clearReferences, Template.java:350-352); in this DataView-mode port there is no thread-local reference table, so it is a
     * no-op kept for signature parity with the upstream call sites.
+    *
+    * Tail behavior (Template.java:355-380): assigns `this.templateContext` so that `errors()` reflects this render, applies `renderTransformer.transformObject` to the rendered result, and wraps
+    * checked exceptions in `RuntimeException` (re-throwing `RuntimeException` as-is).
     */
   def renderToObjectUnguarded(variables: JMap[String, DataView], parentContext: TemplateContext, doClearThreadLocal: Boolean): DataView = {
-    val _       = doClearThreadLocal
-    val context = if (parentContext != null) {
-      parentContext.newChildContext(new LinkedHashMap[String, DataView](variables))
-    } else {
-      newRootContext(new LinkedHashMap[String, DataView](variables))
+    val _ = doClearThreadLocal
+    try {
+      // Template.java:358-362 — assign this.templateContext for the parent/root branch
+      val context = if (parentContext != null) {
+        parentContext.newChildContext(new LinkedHashMap[String, DataView](variables))
+      } else {
+        newRootContext(new LinkedHashMap[String, DataView](variables))
+      }
+      this.templateContext = context
+
+      setRootFolderRegistry(context, sourceLocation)
+
+      if (this.contextHolder != null) {
+        contextHolder.setContext(context)
+      }
+
+      // Template.java:369
+      val rendered = root.render(context)
+      // Template.java:371-372 — apply renderTransformer
+      templateParser.renderTransformer.transformObject(context, rendered)
+    } catch {
+      // Template.java:373-379 — rethrow RuntimeException as-is, wrap checked exceptions
+      case re: RuntimeException => throw re
+      case e:  Exception        => throw new RuntimeException(e)
     }
-
-    setRootFolderRegistry(context, sourceLocation)
-
-    if (this.contextHolder != null) {
-      contextHolder.setContext(context)
-    }
-
-    root.render(context)
   }
 
   /** Renders without guards — no size or time checks. */
