@@ -37,6 +37,9 @@ import ssg.katex.tree.{ DomSpan, SymbolNode }
   *   - `renderToString()` is the primary API for SSG usage.
   *   - `generateParseTree()` is available for inspection.
   *   - `renderToDomTree()` and `renderToHTMLTree()` produce in-memory trees that can be serialized to markup via `.toMarkup()`.
+  *
+  * For typical SSG usage, prefer the [[KaTeXOptions]]-based overload of `renderToString` — it provides a user-friendly, type-safe options API with named defaults (e.g. `displayMode`, `errorColor`,
+  * `throwOnError`).
   */
 object KaTeX {
 
@@ -51,6 +54,9 @@ object KaTeX {
   val version: String = Version
 
   /** Parse and build an expression, and return the markup for that.
+    *
+    * This overload accepts the internal [[Settings]] type used by the parser and builder. For typical SSG usage, prefer the [[KaTeXOptions]]-based overload which provides user-friendly, type-safe
+    * named defaults.
     */
   def renderToString(
     expression: String,
@@ -60,6 +66,25 @@ object KaTeX {
     val markup = renderToDomTree(expression, options).toMarkup()
     markup
   }
+
+  /** Parse and build an expression, and return the markup for that.
+    *
+    * This is the recommended entry point for typical SSG usage. [[KaTeXOptions]] provides a user-friendly, type-safe, discoverable options API with named defaults (e.g. `displayMode`, `errorColor`,
+    * `throwOnError`), and is the preferred way to configure rendering.
+    *
+    * {{{
+    * val html = KaTeX.renderToString("x^2", KaTeXOptions(displayMode = true))
+    * }}}
+    *
+    * @param expression
+    *   The LaTeX expression to render
+    * @param options
+    *   Rendering options — see [[KaTeXOptions]] for available fields
+    * @return
+    *   HTML markup string
+    */
+  def renderToString(expression: String, options: KaTeXOptions): String =
+    renderToString(expression, options.toSettings)
 
   /** Parse an expression and return the parse tree.
     */
