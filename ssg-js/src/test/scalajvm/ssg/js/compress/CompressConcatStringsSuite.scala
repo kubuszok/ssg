@@ -75,7 +75,7 @@ final class CompressConcatStringsSuite extends munit.FunSuite {
   // =========================================================================
   // concat_3
   // =========================================================================
-  test("concat_3".fail) {
+  test("concat_3") {
     assertCompresses(
       input = """console.log(
             1 + 2 + (3 + 4 + 5),
@@ -104,7 +104,7 @@ final class CompressConcatStringsSuite extends munit.FunSuite {
   // =========================================================================
   // concat_4
   // =========================================================================
-  test("concat_4".fail) {
+  test("concat_4") {
     assertCompresses(
       input = """console.log(
             1 + "2" + (3 + 4 + 5),
@@ -133,7 +133,7 @@ final class CompressConcatStringsSuite extends munit.FunSuite {
   // =========================================================================
   // concat_5
   // =========================================================================
-  test("concat_5".fail) {
+  test("concat_5") {
     assertCompresses(
       input = """console.log(
             "1" + 2 + (3 + 4 + 5),
@@ -162,7 +162,7 @@ final class CompressConcatStringsSuite extends munit.FunSuite {
   // =========================================================================
   // concat_6
   // =========================================================================
-  test("concat_6".fail) {
+  test("concat_6") {
     assertCompresses(
       input = """console.log(
             "1" + "2" + (3 + 4 + 5),
