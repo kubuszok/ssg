@@ -214,7 +214,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   // SSG: for loop variable scoping in includes differs
-  test("include: own scope in include".fail) {
+  test("include: own scope in include".fail) { // ISS-1265 (ISS-1024 umbrella)
     val parser = parserWith(
       Flavor.LIQP,
       true,

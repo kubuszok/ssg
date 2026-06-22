@@ -119,13 +119,13 @@ final class AbsoluteUrlFilterSuite extends munit.FunSuite {
   /*
    * should "normalize international URLs"
    */
-  test("absolute_url: normalize international URLs".fail) {
+  test("absolute_url: normalize international URLs".fail) { // ISS-1261 (ISS-1024 umbrella)
     val template = jekyllParser.parse("{{ '' | absolute_url }}")
     val data     = getData("http://\u00fcmlaut.example.org/", null)
     assertEquals(template.render(data), "http://xn--mlaut-jva.example.org/")
   }
 
-  test("absolute_url: normalize international URLs in path".fail) {
+  test("absolute_url: normalize international URLs in path".fail) { // ISS-1261 (ISS-1024 umbrella)
     val template = jekyllParser.parse("{{ '\u00fc' | absolute_url }}")
     val data     = getData("http://\u00fcmlaut.example.org/", null)
     assertEquals(template.render(data), "http://xn--mlaut-jva.example.org/%C3%BC")

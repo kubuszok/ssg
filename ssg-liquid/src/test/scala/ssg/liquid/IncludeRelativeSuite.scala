@@ -15,7 +15,7 @@ import java.util.{ HashMap => JHashMap }
 final class IncludeRelativeSuite extends munit.FunSuite {
 
   // SSG: include_relative may not throw in LIQUID flavor
-  test("include_relative: not supported in LIQUID flavor".fail) {
+  test("include_relative: not supported in LIQUID flavor".fail) { // ISS-1259 (ISS-1024 umbrella)
     val map = new JHashMap[String, String]()
     map.put("hello.liquid", "Hello {% include_relative 'world.liquid' %}!")
     map.put("world.liquid", "World")
@@ -43,7 +43,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
   }
 
   // SSG: block-as-include_relative parsing differs
-  test("include_relative: custom block stack with custom block include_relative".fail) {
+  test("include_relative: custom block stack with custom block include_relative".fail) { // ISS-1259 (ISS-1024 umbrella)
     val map    = new JHashMap[String, String]()
     val parser = new TemplateParser.Builder()
       .withFlavor(Flavor.LIQUID)
@@ -89,7 +89,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
   }
 
   // SSG: include_relative with in-memory resolver doesn't resolve relative paths
-  test("include_relative: nested relative include".fail) {
+  test("include_relative: nested relative include".fail) { // ISS-1259 (ISS-1024 umbrella)
     val map = new JHashMap[String, String]()
     map.put("nested_include.liquid", "Hello {% include_relative 'inner.liquid' %}!")
     map.put("inner.liquid", "Nested and {% include_relative 'deepest.liquid' %}")
