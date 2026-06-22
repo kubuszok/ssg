@@ -130,6 +130,17 @@ final class PackageImporter(
   *   3. `basename/_index.scss` / `basename/index.scss`
   *
   * Keys in [[sources]] should be the canonical form (what [[canonicalize]] returns) — typically the resolved file name including extension, e.g. `_colors.scss` or `vars.scss`.
+  *
+  * '''Deliberate public API (ISS-1005).''' This is the in-memory importer for SSG, kept in the cross-platform `src/main/scala` source set on purpose: [[FilesystemImporter]] and its
+  * `ImporterFileUtils` resolution helpers live in `src/main/scalajvm` (JVM-only, backed by real `FileOps` filesystem access), so they are unavailable on Scala.js and Scala Native. `MapImporter` is
+  * therefore the only importer usable in a filesystem-less environment, and on those platforms it is the primary way to compile SCSS from caller-supplied sources — not merely a test fixture.
+  *
+  * The private `normalizePath`/`exactlyOne`/`tryPath`/`tryPathWithExtensions` helpers below intentionally MIRROR (rather than share) `ssg.sass.importer.ImporterFileUtils`: the resolution RULES are
+  * identical, but the backing store differs (an in-memory `Map[String, String]` here vs. real file-existence checks there), and the JVM-only utility cannot be linked cross-platform. The duplication
+  * is the cross-platform cost, not an oversight.
+  *
+  * Unit tests for this class live in `ssg.sass.ImportMapSuite` (basename/partial/extension resolution, `.css` and `http(s)` pass-through, unresolved-import errors, and the full
+  * `@use`/`@forward`/config/private-member behaviour).
   */
 final class MapImporter(
   val sources: Map[String, String],
