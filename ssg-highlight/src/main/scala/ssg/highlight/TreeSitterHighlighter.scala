@@ -8,6 +8,10 @@ object TreeSitterHighlighter {
 
   val instance: SyntaxHighlighter = new SyntaxHighlighter {
 
+    /** Runtime grammars cached as a Set for O(1) membership checks. */
+    private lazy val availableRuntimeGrammars: Set[String] =
+      TreeSitterPlatform.availableGrammars.toSet
+
     override def highlight(source: String, language: String): Option[String] =
       for {
         grammarName <- LanguageRegistry.resolveGrammar(language)
@@ -18,9 +22,9 @@ object TreeSitterHighlighter {
       } yield HtmlHighlightRenderer.render(source, spans)
 
     override def supportsLanguage(language: String): Boolean =
-      LanguageRegistry.resolveGrammar(language).isDefined
+      LanguageRegistry.resolveGrammar(language).exists(g => availableRuntimeGrammars.contains(g))
 
     override def supportedLanguages: Seq[String] =
-      TreeSitterPlatform.availableGrammars
+      LanguageRegistry.registeredGrammars.intersect(availableRuntimeGrammars).toSeq.sorted
   }
 }

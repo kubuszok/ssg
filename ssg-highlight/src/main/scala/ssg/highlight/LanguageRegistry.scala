@@ -109,6 +109,9 @@ object LanguageRegistry {
     "requirements.txt" -> "requirements"
   )
 
+  /** The set of grammar names that have query directories registered. */
+  def registeredGrammars: Set[String] = grammarToQueryDir.keySet
+
   def resolveGrammar(language: String): Option[String] = {
     val grammar = aliases.getOrElse(language, language)
     if (grammarToQueryDir.contains(grammar)) Some(grammar)
