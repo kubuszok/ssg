@@ -172,8 +172,8 @@ final class BuiltInCallable(
     if (overloads.nonEmpty) {
       import scala.util.boundary, boundary.break
       boundary {
-        var fuzzyMatch:          (ParameterList, List[Value] => Value) = null
-        var minMismatchDistance: Int                                   = Int.MaxValue
+        var fuzzyMatch:          Nullable[(ParameterList, List[Value] => Value)] = Nullable.empty
+        var minMismatchDistance: Int                                             = Int.MaxValue
         for (overload <- overloads) {
           if (overload._1.matches(positional, names)) break(overload)
           val mismatchDistance = overload._1.parameters.length - positional
@@ -183,11 +183,10 @@ final class BuiltInCallable(
             (math.abs(mismatchDistance) == math.abs(minMismatchDistance) && mismatchDistance >= 0)
           ) {
             minMismatchDistance = mismatchDistance
-            fuzzyMatch = overload
+            fuzzyMatch = Nullable(overload)
           }
         }
-        if (fuzzyMatch != null) fuzzyMatch
-        else throw new IllegalStateException(s"BuiltInCallable $name may not have empty overloads.")
+        fuzzyMatch.fold(throw new IllegalStateException(s"BuiltInCallable $name may not have empty overloads."))(identity)
       }
     } else {
       (parameters.getOrElse(ParameterList.parse(s"@function $name($signature) {")), callback)
