@@ -169,6 +169,8 @@ class SymbolDef(
           s match {
             case tl: AstToplevel =>
               Mangler.nextMangledToplevel(tl, options, tl.mangledNames)
+            case fn: AstFunction =>
+              Mangler.nextMangledFunction(fn, options, this)
             case _ =>
               Mangler.nextMangled(s, options, this)
           }
