@@ -33,9 +33,11 @@ object Position {
 
     for (layer <- layering) {
       var maxHeight = 0.0
+      // First pass computes the layer's max height; the node.y assignment that
+      // used to live here was dead — every node's y is overwritten below with
+      // the final maxHeight before any read (ISS-1076).
       for (v <- layer) {
         val node = g.node(v)
-        node.y = prevY + maxHeight / 2.0
         if (node.height > maxHeight) {
           maxHeight = node.height
         }
