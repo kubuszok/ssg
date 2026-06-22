@@ -55,7 +55,9 @@ import ssg.mermaid.diagrams.xychart.XyChartDiagram
 
 /** Top-level entry point for Mermaid diagram rendering.
   *
-  * Detects the diagram type from the input text and dispatches to the appropriate diagram renderer. Supports all 31 diagram types.
+  * Detects the diagram type from the input text and dispatches to the appropriate diagram renderer. Supports 30 diagram types: 24 ported from upstream Mermaid (flowchart, sequence, class, state, er,
+  * pie, gantt, timeline, journey, mindmap, git, xychart, quadrant, requirement, sankey, block, architecture, packet, radar, kanban, c4, treemap, info, error) and 6 SSG-native types not present in
+  * upstream Mermaid (cynefin, eventmodeling, ishikawa, treeview, venn, wardley).
   *
   * Usage:
   * {{{
