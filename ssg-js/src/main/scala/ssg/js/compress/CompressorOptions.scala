@@ -66,10 +66,10 @@ final case class ToplevelConfig(
 
 object ToplevelConfig {
 
-  def fromAny(value: Any, hasTopRetain: Boolean): ToplevelConfig =
+  def fromAny(value: Any): ToplevelConfig =
     value match {
       case true  => ToplevelConfig(funcs = true, vars = true)
-      case false => ToplevelConfig(funcs = hasTopRetain, vars = hasTopRetain)
+      case false => ToplevelConfig()
       case s: String =>
         ToplevelConfig(
           funcs = s.contains("funcs"),
@@ -377,9 +377,18 @@ object CompressorOptions {
     * }}}
     */
   def resolveDefaults(o: CompressorOptions): CompressorOptions = {
-    if (o.defaults) {
-      // defaults == true (or omitted) — no resolution needed
-      o
+    // terser lib/compress/index.js:267 — toplevel defaults to !!(options["top_retain"]):
+    // when toplevel is at its unset default and top_retain is provided, toplevel
+    // is enabled (both funcs and vars). This cross-default applies regardless of
+    // the `defaults` flag.
+    val resolved =
+      if (o.toplevel == ToplevelConfig() && o.topRetain.isDefined)
+        o.copy(toplevel = ToplevelConfig(funcs = true, vars = true))
+      else o
+
+    if (resolved.defaults) {
+      // defaults == true (or omitted) — no further resolution needed
+      resolved
     } else {
       val d = Defaults
       val n = NoDefaults
@@ -391,64 +400,64 @@ object CompressorOptions {
       // = true)` would lose its `evaluate = true` because it matches Defaults).
       var matchesNoDefaults = 0
       var matchesDefaults   = 0
-      if (o.arrows == n.arrows) matchesNoDefaults += 1
-      if (o.arrows == d.arrows) matchesDefaults += 1
-      if (o.booleans == n.booleans) matchesNoDefaults += 1
-      if (o.booleans == d.booleans) matchesDefaults += 1
-      if (o.collapseVars == n.collapseVars) matchesNoDefaults += 1
-      if (o.collapseVars == d.collapseVars) matchesDefaults += 1
-      if (o.comparisons == n.comparisons) matchesNoDefaults += 1
-      if (o.comparisons == d.comparisons) matchesDefaults += 1
-      if (o.computedProps == n.computedProps) matchesNoDefaults += 1
-      if (o.computedProps == d.computedProps) matchesDefaults += 1
-      if (o.conditionals == n.conditionals) matchesNoDefaults += 1
-      if (o.conditionals == d.conditionals) matchesDefaults += 1
-      if (o.deadCode == n.deadCode) matchesNoDefaults += 1
-      if (o.deadCode == d.deadCode) matchesDefaults += 1
-      if (o.directives == n.directives) matchesNoDefaults += 1
-      if (o.directives == d.directives) matchesDefaults += 1
-      if (o.dropDebugger == n.dropDebugger) matchesNoDefaults += 1
-      if (o.dropDebugger == d.dropDebugger) matchesDefaults += 1
-      if (o.evaluate == n.evaluate) matchesNoDefaults += 1
-      if (o.evaluate == d.evaluate) matchesDefaults += 1
-      if (o.hoistProps == n.hoistProps) matchesNoDefaults += 1
-      if (o.hoistProps == d.hoistProps) matchesDefaults += 1
-      if (o.ifReturn == n.ifReturn) matchesNoDefaults += 1
-      if (o.ifReturn == d.ifReturn) matchesDefaults += 1
-      if (o.inline == n.inline) matchesNoDefaults += 1
-      if (o.inline == d.inline) matchesDefaults += 1
-      if (o.joinVars == n.joinVars) matchesNoDefaults += 1
-      if (o.joinVars == d.joinVars) matchesDefaults += 1
-      if (o.lhsConstants == n.lhsConstants) matchesNoDefaults += 1
-      if (o.lhsConstants == d.lhsConstants) matchesDefaults += 1
-      if (o.loops == n.loops) matchesNoDefaults += 1
-      if (o.loops == d.loops) matchesDefaults += 1
-      if (o.negateIife == n.negateIife) matchesNoDefaults += 1
-      if (o.negateIife == d.negateIife) matchesDefaults += 1
-      if (o.properties == n.properties) matchesNoDefaults += 1
-      if (o.properties == d.properties) matchesDefaults += 1
-      if (o.pureGetters == n.pureGetters) matchesNoDefaults += 1
-      if (o.pureGetters == d.pureGetters) matchesDefaults += 1
-      if (o.reduceFuncs == n.reduceFuncs) matchesNoDefaults += 1
-      if (o.reduceFuncs == d.reduceFuncs) matchesDefaults += 1
-      if (o.reduceVars == n.reduceVars) matchesNoDefaults += 1
-      if (o.reduceVars == d.reduceVars) matchesDefaults += 1
-      if (o.sequencesLimit == n.sequencesLimit) matchesNoDefaults += 1
-      if (o.sequencesLimit == d.sequencesLimit) matchesDefaults += 1
-      if (o.sideEffects == n.sideEffects) matchesNoDefaults += 1
-      if (o.sideEffects == d.sideEffects) matchesDefaults += 1
-      if (o.switches == n.switches) matchesNoDefaults += 1
-      if (o.switches == d.switches) matchesDefaults += 1
-      if (o.typeofs == n.typeofs) matchesNoDefaults += 1
-      if (o.typeofs == d.typeofs) matchesDefaults += 1
-      if (o.unused == n.unused) matchesNoDefaults += 1
-      if (o.unused == d.unused) matchesDefaults += 1
+      if (resolved.arrows == n.arrows) matchesNoDefaults += 1
+      if (resolved.arrows == d.arrows) matchesDefaults += 1
+      if (resolved.booleans == n.booleans) matchesNoDefaults += 1
+      if (resolved.booleans == d.booleans) matchesDefaults += 1
+      if (resolved.collapseVars == n.collapseVars) matchesNoDefaults += 1
+      if (resolved.collapseVars == d.collapseVars) matchesDefaults += 1
+      if (resolved.comparisons == n.comparisons) matchesNoDefaults += 1
+      if (resolved.comparisons == d.comparisons) matchesDefaults += 1
+      if (resolved.computedProps == n.computedProps) matchesNoDefaults += 1
+      if (resolved.computedProps == d.computedProps) matchesDefaults += 1
+      if (resolved.conditionals == n.conditionals) matchesNoDefaults += 1
+      if (resolved.conditionals == d.conditionals) matchesDefaults += 1
+      if (resolved.deadCode == n.deadCode) matchesNoDefaults += 1
+      if (resolved.deadCode == d.deadCode) matchesDefaults += 1
+      if (resolved.directives == n.directives) matchesNoDefaults += 1
+      if (resolved.directives == d.directives) matchesDefaults += 1
+      if (resolved.dropDebugger == n.dropDebugger) matchesNoDefaults += 1
+      if (resolved.dropDebugger == d.dropDebugger) matchesDefaults += 1
+      if (resolved.evaluate == n.evaluate) matchesNoDefaults += 1
+      if (resolved.evaluate == d.evaluate) matchesDefaults += 1
+      if (resolved.hoistProps == n.hoistProps) matchesNoDefaults += 1
+      if (resolved.hoistProps == d.hoistProps) matchesDefaults += 1
+      if (resolved.ifReturn == n.ifReturn) matchesNoDefaults += 1
+      if (resolved.ifReturn == d.ifReturn) matchesDefaults += 1
+      if (resolved.inline == n.inline) matchesNoDefaults += 1
+      if (resolved.inline == d.inline) matchesDefaults += 1
+      if (resolved.joinVars == n.joinVars) matchesNoDefaults += 1
+      if (resolved.joinVars == d.joinVars) matchesDefaults += 1
+      if (resolved.lhsConstants == n.lhsConstants) matchesNoDefaults += 1
+      if (resolved.lhsConstants == d.lhsConstants) matchesDefaults += 1
+      if (resolved.loops == n.loops) matchesNoDefaults += 1
+      if (resolved.loops == d.loops) matchesDefaults += 1
+      if (resolved.negateIife == n.negateIife) matchesNoDefaults += 1
+      if (resolved.negateIife == d.negateIife) matchesDefaults += 1
+      if (resolved.properties == n.properties) matchesNoDefaults += 1
+      if (resolved.properties == d.properties) matchesDefaults += 1
+      if (resolved.pureGetters == n.pureGetters) matchesNoDefaults += 1
+      if (resolved.pureGetters == d.pureGetters) matchesDefaults += 1
+      if (resolved.reduceFuncs == n.reduceFuncs) matchesNoDefaults += 1
+      if (resolved.reduceFuncs == d.reduceFuncs) matchesDefaults += 1
+      if (resolved.reduceVars == n.reduceVars) matchesNoDefaults += 1
+      if (resolved.reduceVars == d.reduceVars) matchesDefaults += 1
+      if (resolved.sequencesLimit == n.sequencesLimit) matchesNoDefaults += 1
+      if (resolved.sequencesLimit == d.sequencesLimit) matchesDefaults += 1
+      if (resolved.sideEffects == n.sideEffects) matchesNoDefaults += 1
+      if (resolved.sideEffects == d.sideEffects) matchesDefaults += 1
+      if (resolved.switches == n.switches) matchesNoDefaults += 1
+      if (resolved.switches == d.switches) matchesDefaults += 1
+      if (resolved.typeofs == n.typeofs) matchesNoDefaults += 1
+      if (resolved.typeofs == d.typeofs) matchesDefaults += 1
+      if (resolved.unused == n.unused) matchesNoDefaults += 1
+      if (resolved.unused == d.unused) matchesDefaults += 1
 
       if (matchesNoDefaults > matchesDefaults) {
         // The gated fields predominantly match NoDefaults — this was likely
         // built via `NoDefaults.copy(...)`. Leave as-is to preserve any
         // explicitly re-enabled passes.
-        o
+        resolved
       } else {
         // defaults == false and gated fields match Defaults: resolve each
         // gated field from its default-on value to its default-off value.
@@ -457,34 +466,44 @@ object CompressorOptions {
         // pattern (index.js:222-275): unset options resolve to their "off" value;
         // explicitly-set options are preserved by the `defaults()` helper because
         // the caller's value takes precedence over the default.
-        o.copy(
-          arrows = if (o.arrows == d.arrows) n.arrows else o.arrows,
-          booleans = if (o.booleans == d.booleans) n.booleans else o.booleans,
-          collapseVars = if (o.collapseVars == d.collapseVars) n.collapseVars else o.collapseVars,
-          comparisons = if (o.comparisons == d.comparisons) n.comparisons else o.comparisons,
-          computedProps = if (o.computedProps == d.computedProps) n.computedProps else o.computedProps,
-          conditionals = if (o.conditionals == d.conditionals) n.conditionals else o.conditionals,
-          deadCode = if (o.deadCode == d.deadCode) n.deadCode else o.deadCode,
-          directives = if (o.directives == d.directives) n.directives else o.directives,
-          dropDebugger = if (o.dropDebugger == d.dropDebugger) n.dropDebugger else o.dropDebugger,
-          evaluate = if (o.evaluate == d.evaluate) n.evaluate else o.evaluate,
-          hoistProps = if (o.hoistProps == d.hoistProps) n.hoistProps else o.hoistProps,
-          ifReturn = if (o.ifReturn == d.ifReturn) n.ifReturn else o.ifReturn,
-          inline = if (o.inline == d.inline) n.inline else o.inline,
-          joinVars = if (o.joinVars == d.joinVars) n.joinVars else o.joinVars,
-          lhsConstants = if (o.lhsConstants == d.lhsConstants) n.lhsConstants else o.lhsConstants,
-          loops = if (o.loops == d.loops) n.loops else o.loops,
-          negateIife = if (o.negateIife == d.negateIife) n.negateIife else o.negateIife,
-          properties = if (o.properties == d.properties) n.properties else o.properties,
-          pureGetters = if (o.pureGetters == d.pureGetters) n.pureGetters else o.pureGetters,
-          reduceFuncs = if (o.reduceFuncs == d.reduceFuncs) n.reduceFuncs else o.reduceFuncs,
-          reduceVars = if (o.reduceVars == d.reduceVars) n.reduceVars else o.reduceVars,
+        resolved.copy(
+          arrows = if (resolved.arrows == d.arrows) n.arrows else resolved.arrows,
+          booleans = if (resolved.booleans == d.booleans) n.booleans else resolved.booleans,
+          collapseVars =
+            if (resolved.collapseVars == d.collapseVars) n.collapseVars else resolved.collapseVars,
+          comparisons =
+            if (resolved.comparisons == d.comparisons) n.comparisons else resolved.comparisons,
+          computedProps =
+            if (resolved.computedProps == d.computedProps) n.computedProps else resolved.computedProps,
+          conditionals =
+            if (resolved.conditionals == d.conditionals) n.conditionals else resolved.conditionals,
+          deadCode = if (resolved.deadCode == d.deadCode) n.deadCode else resolved.deadCode,
+          directives = if (resolved.directives == d.directives) n.directives else resolved.directives,
+          dropDebugger =
+            if (resolved.dropDebugger == d.dropDebugger) n.dropDebugger else resolved.dropDebugger,
+          evaluate = if (resolved.evaluate == d.evaluate) n.evaluate else resolved.evaluate,
+          hoistProps = if (resolved.hoistProps == d.hoistProps) n.hoistProps else resolved.hoistProps,
+          ifReturn = if (resolved.ifReturn == d.ifReturn) n.ifReturn else resolved.ifReturn,
+          inline = if (resolved.inline == d.inline) n.inline else resolved.inline,
+          joinVars = if (resolved.joinVars == d.joinVars) n.joinVars else resolved.joinVars,
+          lhsConstants =
+            if (resolved.lhsConstants == d.lhsConstants) n.lhsConstants else resolved.lhsConstants,
+          loops = if (resolved.loops == d.loops) n.loops else resolved.loops,
+          negateIife = if (resolved.negateIife == d.negateIife) n.negateIife else resolved.negateIife,
+          properties = if (resolved.properties == d.properties) n.properties else resolved.properties,
+          pureGetters =
+            if (resolved.pureGetters == d.pureGetters) n.pureGetters else resolved.pureGetters,
+          reduceFuncs =
+            if (resolved.reduceFuncs == d.reduceFuncs) n.reduceFuncs else resolved.reduceFuncs,
+          reduceVars = if (resolved.reduceVars == d.reduceVars) n.reduceVars else resolved.reduceVars,
           sequencesLimit =
-            if (o.sequencesLimit == d.sequencesLimit) n.sequencesLimit else o.sequencesLimit,
-          sideEffects = if (o.sideEffects == d.sideEffects) n.sideEffects else o.sideEffects,
-          switches = if (o.switches == d.switches) n.switches else o.switches,
-          typeofs = if (o.typeofs == d.typeofs) n.typeofs else o.typeofs,
-          unused = if (o.unused == d.unused) n.unused else o.unused
+            if (resolved.sequencesLimit == d.sequencesLimit) n.sequencesLimit
+            else resolved.sequencesLimit,
+          sideEffects =
+            if (resolved.sideEffects == d.sideEffects) n.sideEffects else resolved.sideEffects,
+          switches = if (resolved.switches == d.switches) n.switches else resolved.switches,
+          typeofs = if (resolved.typeofs == d.typeofs) n.typeofs else resolved.typeofs,
+          unused = if (resolved.unused == d.unused) n.unused else resolved.unused
         )
       }
     }
