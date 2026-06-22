@@ -197,6 +197,14 @@ object Common {
         node.value = bi.toString
         node
 
+      // terser common.js:134 `case "number"` — all JS numbers are IEEE-754
+      // doubles; Scala's non-Double numeric types must coerce to Double.
+      case i:  Int   => makeNodeFromConstant(i.toDouble, orig)
+      case l:  Long  => makeNodeFromConstant(l.toDouble, orig)
+      case s:  Short => makeNodeFromConstant(s.toDouble, orig)
+      case bt: Byte  => makeNodeFromConstant(bt.toDouble, orig)
+      case f:  Float => makeNodeFromConstant(f.toDouble, orig)
+
       case _ =>
         throw new IllegalArgumentException(
           s"Can't handle constant of type: ${if (value == null) "null" else value.getClass.getName}"

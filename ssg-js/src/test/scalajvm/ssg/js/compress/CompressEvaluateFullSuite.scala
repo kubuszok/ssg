@@ -1131,8 +1131,10 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
 
   // =========================================================================
   // unsafe_charAt_noop
+  // (un-pinned: the `(typeof x).charAt()` -> `(typeof x)[0]` rewrite now works
+  //  via the makeNodeFromConstant Int fix — ISS-1255)
   // =========================================================================
-  test("unsafe_charAt_noop".fail) {
+  test("unsafe_charAt_noop") {
     assertCompresses(
       input = """console.log(
             s.charAt(0),
