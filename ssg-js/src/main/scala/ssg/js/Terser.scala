@@ -126,6 +126,18 @@ final case class MinifySourceMapOptions(
   * @param ecma
   *   top-level ECMAScript target (minify.js:118 defaults to `undefined` → `None`). When set, propagated into parse/compress/output via the set_shorthand rule (minify.js:152) — only filling a
   *   sub-option that is still at its own default.
+  * @param ie8
+  *   top-level IE8 compatibility flag (minify.js:120, default `false`). Propagated to compress.ie8, mangle.ie8, format.ie8 via set_shorthand (minify.js:153).
+  * @param keepClassnames
+  *   top-level keep-class-names flag (minify.js:121, default `undefined` → defaults to `keepFnames` per minify.js:142-144). Propagated to compress.keepClassnames, mangle.keepClassnames via
+  *   set_shorthand (minify.js:154). Type is `Any` to match the sub-option type (`Boolean` or `scala.util.matching.Regex`).
+  * @param keepFnames
+  *   top-level keep-function-names flag (minify.js:122, default `false`). Propagated to compress.keepFnames, mangle.keepFnames via set_shorthand (minify.js:155). Type is `Any` to match the sub-option
+  *   type (`Boolean` or `scala.util.matching.Regex`).
+  * @param module
+  *   top-level ES module flag (minify.js:124, default `false`). Propagated to parse.module, compress.module, mangle.module via set_shorthand (minify.js:156).
+  * @param safari10
+  *   top-level Safari 10/11 compatibility flag (minify.js:130, default `false`). Propagated to mangle.safari10, format.safari10 via set_shorthand (minify.js:157).
   * @param toplevel
   *   top-level mangling/compression flag (minify.js:134); propagated to compress.toplevel and mangle.toplevel via set_shorthand (minify.js:158).
   * @param nameCache
@@ -136,16 +148,21 @@ final case class MinifySourceMapOptions(
   *   when `true` or a (possibly empty) arg/arg:value string, wrap the output in an IIFE (minify.js:119,249-251; ast.js:659-675).
   */
 final case class MinifyOptions(
-  parse:     ParserOptions = ParserOptions(),
-  compress:  CompressorOptions | Boolean = CompressorOptions(),
-  mangle:    ManglerOptions | Boolean = ManglerOptions(),
-  output:    OutputOptions = OutputOptions(),
-  ecma:      Option[Int] = None,
-  toplevel:  Boolean = false,
-  nameCache: NameCache | Null = null,
-  wrap:      String | Null = null,
-  enclose:   Boolean | String = false,
-  sourceMap: MinifySourceMapOptions | Null = null
+  parse:          ParserOptions = ParserOptions(),
+  compress:       CompressorOptions | Boolean = CompressorOptions(),
+  mangle:         ManglerOptions | Boolean = ManglerOptions(),
+  output:         OutputOptions = OutputOptions(),
+  ecma:           Option[Int] = None,
+  ie8:            Boolean = false,
+  keepClassnames: Any = false,
+  keepFnames:     Any = false,
+  module:         Boolean = false,
+  safari10:       Boolean = false,
+  toplevel:       Boolean = false,
+  nameCache:      NameCache | Null = null,
+  wrap:           String | Null = null,
+  enclose:        Boolean | String = false,
+  sourceMap:      MinifySourceMapOptions | Null = null
 )
 
 object MinifyOptions {
@@ -214,6 +231,17 @@ object Terser {
 
     // -- Option resolution (minify.js:142-200) --
 
+    // minify.js:142-144 — `if (options.keep_classnames === undefined)
+    //   options.keep_classnames = options.keep_fnames;`
+    // In the typed API "undefined" (not explicitly set) is modelled as "equal to
+    // the MinifyOptions default" (false). When the caller did not set
+    // keepClassnames but DID set keepFnames, propagate keepFnames as the default.
+    val resolvedKeepClassnames: Any =
+      if (options.keepClassnames == MinifyOptions.Defaults.keepClassnames)
+        options.keepFnames
+      else
+        options.keepClassnames
+
     // minify.js:148-151 — `output`/`format` mutual exclusion + alias. ssg-js
     // exposes a single `output: OutputOptions` field, so there is no separate
     // `format` slot to conflict with; the resolved output options are just
@@ -228,6 +256,16 @@ object Terser {
     // options[key])` guard).
     val topEcma: Option[Int] = options.ecma
 
+    // minify.js:156 — set_shorthand("module", options, ["parse", "compress", "mangle"]).
+    // Thread top-level `module` into parse options (fill-if-absent: only when the
+    // parse option is still at its default). compress/mangle are handled in their
+    // respective applyXxxShorthand helpers below.
+    val resolvedParse: ParserOptions =
+      if (options.module && options.parse.module == ParserOptions.Defaults.module)
+        options.parse.copy(module = options.module)
+      else
+        options.parse
+
     // -- Parse phase (minify.js:202-238) --
     // minify.js:223-231 — iterate files, parsing each with its filename
     // (`options.parse.filename = name`) and concatenating bodies into a single
@@ -236,7 +274,7 @@ object Terser {
     // (guarded above), so the first file's parse seeds the toplevel and the
     // rest append their bodies.
     def parseFile(name: String, src: String): AstToplevel =
-      new Parser(options.parse.copy(filename = name)).parse(src)
+      new Parser(resolvedParse.copy(filename = name)).parse(src)
     val (firstName, firstSrc) = files.head
     var ast: AstToplevel = parseFile(firstName, firstSrc)
     files.tail.foreach { case (name, src) =>
@@ -309,8 +347,30 @@ object Terser {
     // (minify.js:239-241) runs ahead of compress.
     val resolvedMangle: ManglerOptions | Null =
       options.mangle match {
-        case mangleOpts: ManglerOptions => applyMangleShorthand(mangleOpts, topEcma, options.toplevel, options.nameCache)
-        case true  => applyMangleShorthand(ManglerOptions(), topEcma, options.toplevel, options.nameCache)
+        case mangleOpts: ManglerOptions =>
+          applyMangleShorthand(
+            mangleOpts,
+            topEcma,
+            options.toplevel,
+            options.ie8,
+            resolvedKeepClassnames,
+            options.keepFnames,
+            options.module,
+            options.safari10,
+            options.nameCache
+          )
+        case true =>
+          applyMangleShorthand(
+            ManglerOptions(),
+            topEcma,
+            options.toplevel,
+            options.ie8,
+            resolvedKeepClassnames,
+            options.keepFnames,
+            options.module,
+            options.safari10,
+            options.nameCache
+          )
         case false => null
       }
 
@@ -382,9 +442,10 @@ object Terser {
           null
       }
     if (resolvedCompress != null) {
-      // minify.js:152,158 — thread top-level ecma/toplevel into the compressor
-      // (set_shorthand only fills a still-default sub-option).
-      val co = applyCompressShorthand(resolvedCompress.nn, topEcma, options.toplevel)
+      // minify.js:152-158 — thread top-level ecma/ie8/keepClassnames/keepFnames/
+      // module/toplevel into the compressor (set_shorthand only fills a still-default
+      // sub-option).
+      val co = applyCompressShorthand(resolvedCompress.nn, topEcma, options.toplevel, options.ie8, resolvedKeepClassnames, options.keepFnames, options.module)
       ScopeAnalysis.figureOutScope(ast)
       val compressor = new Compressor(co)
       ast = compressor.compress(ast)
@@ -435,7 +496,7 @@ object Terser {
     // source map drives the OutputStream. `effectiveOutputSourceMap` is the
     // high-level minify-option map when present, else the low-level
     // OutputOptions.sourceMap escape hatch.
-    val resolvedOutputOptions = applyOutputShorthand(outputOptions, topEcma)
+    val resolvedOutputOptions = applyOutputShorthand(outputOptions, topEcma, options.ie8, options.safari10)
     val out                   = new OutputStream(
       if (minifySourceMap != null) resolvedOutputOptions.copy(sourceMap = effectiveOutputSourceMap)
       else resolvedOutputOptions
@@ -519,28 +580,79 @@ object Terser {
   // approximated as "is still at the field's own default value".
   // ==========================================================================
 
-  private def applyCompressShorthand(co: CompressorOptions, ecma: Option[Int], toplevel: Boolean): CompressorOptions = {
-    var result = co
+  private def applyCompressShorthand(
+    co:             CompressorOptions,
+    ecma:           Option[Int],
+    toplevel:       Boolean,
+    ie8:            Boolean,
+    keepClassnames: Any,
+    keepFnames:     Any,
+    module:         Boolean
+  ): CompressorOptions = {
+    val defaults = CompressorOptions()
+    var result   = co
     // set_shorthand("ecma", ...) — minify.js:152.
     ecma.foreach { e =>
-      if (result.ecma == CompressorOptions().ecma) result = result.copy(ecma = e)
+      if (result.ecma == defaults.ecma) result = result.copy(ecma = e)
+    }
+    // set_shorthand("ie8", options, ["compress", "mangle", "format"]) — minify.js:153.
+    if (ie8 && result.ie8 == defaults.ie8) {
+      result = result.copy(ie8 = ie8)
+    }
+    // set_shorthand("keep_classnames", options, ["compress", "mangle"]) — minify.js:154.
+    if (isTruthy(keepClassnames) && result.keepClassnames == defaults.keepClassnames) {
+      result = result.copy(keepClassnames = keepClassnames)
+    }
+    // set_shorthand("keep_fnames", options, ["compress", "mangle"]) — minify.js:155.
+    if (isTruthy(keepFnames) && result.keepFnames == defaults.keepFnames) {
+      result = result.copy(keepFnames = keepFnames)
+    }
+    // set_shorthand("module", options, ["parse", "compress", "mangle"]) — minify.js:156.
+    if (module && result.module == defaults.module) {
+      result = result.copy(module = module)
     }
     // set_shorthand("toplevel", options, ["compress", "mangle"]) — minify.js:158.
-    if (toplevel && result.toplevel == CompressorOptions().toplevel) {
+    if (toplevel && result.toplevel == defaults.toplevel) {
       result = result.copy(toplevel = ssg.js.compress.ToplevelConfig(funcs = true, vars = true))
     }
     result
   }
 
   private def applyMangleShorthand(
-    mo:        ManglerOptions,
-    ecma:      Option[Int],
-    toplevel:  Boolean,
-    nameCache: NameCache | Null
+    mo:             ManglerOptions,
+    ecma:           Option[Int],
+    toplevel:       Boolean,
+    ie8:            Boolean,
+    keepClassnames: Any,
+    keepFnames:     Any,
+    module:         Boolean,
+    safari10:       Boolean,
+    nameCache:      NameCache | Null
   ): ManglerOptions = {
-    var result = mo
+    val defaults = ManglerOptions()
+    var result   = mo
+    // set_shorthand("ie8", options, ["compress", "mangle", "format"]) — minify.js:153.
+    if (ie8 && result.ie8 == defaults.ie8) {
+      result = result.copy(ie8 = ie8)
+    }
+    // set_shorthand("keep_classnames", options, ["compress", "mangle"]) — minify.js:154.
+    if (isTruthy(keepClassnames) && result.keepClassnames == defaults.keepClassnames) {
+      result = result.copy(keepClassnames = keepClassnames)
+    }
+    // set_shorthand("keep_fnames", options, ["compress", "mangle"]) — minify.js:155.
+    if (isTruthy(keepFnames) && result.keepFnames == defaults.keepFnames) {
+      result = result.copy(keepFnames = keepFnames)
+    }
+    // set_shorthand("module", options, ["parse", "compress", "mangle"]) — minify.js:156.
+    if (module && result.module == defaults.module) {
+      result = result.copy(module = module)
+    }
+    // set_shorthand("safari10", options, ["mangle", "format"]) — minify.js:157.
+    if (safari10 && result.safari10 == defaults.safari10) {
+      result = result.copy(safari10 = safari10)
+    }
     // set_shorthand("toplevel", options, ["compress", "mangle"]) — minify.js:158.
-    if (toplevel && result.toplevel == ManglerOptions().toplevel) {
+    if (toplevel && result.toplevel == defaults.toplevel) {
       result = result.copy(toplevel = true)
     }
     // ecma is not a mangler sub-option (set_shorthand("ecma") targets parse/
@@ -560,11 +672,35 @@ object Terser {
     if (nameCache != null && po.cache == null) po.copy(cache = nameCache.nn.props)
     else po
 
-  private def applyOutputShorthand(oo: OutputOptions, ecma: Option[Int]): OutputOptions =
+  private def applyOutputShorthand(oo: OutputOptions, ecma: Option[Int], ie8: Boolean, safari10: Boolean): OutputOptions = {
+    val defaults = OutputOptions()
+    var result   = oo
     // set_shorthand("ecma", options, ["parse", "compress", "format"]) — minify.js:152.
     ecma match {
-      case Some(e) if oo.ecma == OutputOptions().ecma => oo.copy(ecma = e)
-      case _                                          => oo
+      case Some(e) if result.ecma == defaults.ecma => result = result.copy(ecma = e)
+      case _                                       => // no ecma shorthand
+    }
+    // set_shorthand("ie8", options, ["compress", "mangle", "format"]) — minify.js:153.
+    if (ie8 && result.ie8 == defaults.ie8) {
+      result = result.copy(ie8 = ie8)
+    }
+    // set_shorthand("safari10", options, ["mangle", "format"]) — minify.js:157.
+    if (safari10 && result.safari10 == defaults.safari10) {
+      result = result.copy(safari10 = safari10)
+    }
+    result
+  }
+
+  /** Truthiness check for `Any` values, mirroring JS truthiness in set_shorthand (minify.js:43 `if (options[name])`). `false`, `0`, `""`, and `null` are falsy; everything else (including `true`,
+    * non-zero numbers, non-empty strings, Regex objects) is truthy.
+    */
+  private def isTruthy(value: Any): Boolean =
+    value match {
+      case false => false
+      case 0     => false
+      case ""    => false
+      case null  => false // @nowarn — needed for JS interop truthiness check
+      case _     => true
     }
 
   // ==========================================================================
