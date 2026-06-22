@@ -137,7 +137,7 @@ flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/EmojiSh
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/EmojiVisitor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/EmojiVisitorExt.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiDelimiterProcessor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiJiraRenderer.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
+flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML EmojiNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiNodeFormatter.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiNodeRenderer.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-emoji/src/main/java/com/vladsch/flexmark/ext/emoji/internal/EmojiOptions.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
@@ -197,7 +197,7 @@ flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issu
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/GfmIssuesVisitor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/GfmIssuesVisitorExt.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/GfmIssuesInlineParserExtension.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/GfmIssuesJiraRenderer.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
+flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/GfmIssuesJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML GfmIssuesNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/GfmIssuesNodeRenderer.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/GfmIssuesOptions.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-issues/src/main/java/com/vladsch/flexmark/ext/gfm/issues/internal/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
@@ -212,10 +212,10 @@ flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/g
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/SubscriptVisitor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/SubscriptVisitorExt.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughDelimiterProcessor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughJiraRenderer.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
+flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML StrikethroughNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughNodeRenderer.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughSubscriptDelimiterProcessor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughYouTrackRenderer.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
+flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/StrikethroughYouTrackRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML StrikethroughNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/SubscriptDelimiterProcessor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/internal/package-info.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
 flexmark	flexmark-ext-gfm-strikethrough/src/main/java/com/vladsch/flexmark/ext/gfm/strikethrough/package-info.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
@@ -236,7 +236,7 @@ flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/GfmUsersVisitor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/GfmUsersVisitorExt.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/GfmUsersInlineParserExtension.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/GfmUsersJiraRenderer.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
+flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/GfmUsersJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML GfmUsersNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/GfmUsersNodeRenderer.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/GfmUsersOptions.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-gfm-users/src/main/java/com/vladsch/flexmark/ext/gfm/users/internal/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
@@ -262,7 +262,7 @@ flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/InsExtensio
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/InsVisitor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/InsVisitorExt.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/internal/InsDelimiterProcessor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/internal/InsJiraRenderer.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
+flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/internal/InsJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML InsNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/internal/InsNodeRenderer.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/internal/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
 flexmark	flexmark-ext-ins/src/main/java/com/vladsch/flexmark/ext/ins/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
@@ -349,7 +349,7 @@ flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/supersc
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/SuperscriptVisitor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/SuperscriptVisitorExt.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/internal/SuperscriptDelimiterProcessor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/internal/SuperscriptJiraRenderer.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
+flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/internal/SuperscriptJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML SuperscriptNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/internal/SuperscriptNodeRenderer.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/internal/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
 flexmark	flexmark-ext-superscript/src/main/java/com/vladsch/flexmark/ext/superscript/package-info.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
@@ -361,12 +361,12 @@ flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/Table
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableHead.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableRow.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableSeparator.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableTextCollectingVisitor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableTextCollectingVisitor.java		skipped	ssg-md	2026-06-22	@Deprecated extends TextCollectingVisitor; zero usages in flexmark or port	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableVisitor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TableVisitorExt.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/TablesExtension.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableColumnSeparator.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableJiraRenderer.java		ported	ssg-md	2026-03-30	Phase 6		2026-03-30
+flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML TableNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableNodeFormatter.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableNodeRenderer.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-tables/src/main/java/com/vladsch/flexmark/ext/tables/internal/TableParagraphPreProcessor.java		ported	ssg-md	2026-03-30	Phase 6	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
@@ -424,7 +424,7 @@ flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/W
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/WikiLinkVisitor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/WikiLinkVisitorExt.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/WikiNode.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/internal/WikiLinkJiraRenderer.java		ported	ssg-md	2026-03-31	Phase 7		2026-03-30
+flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/internal/WikiLinkJiraRenderer.java		skipped	ssg-md	2026-06-22	Jira/YouTrack wiki-markup output renderer; HTML WikiLinkNodeRenderer ported and used; SSG emits HTML only		2026-03-30
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/internal/WikiLinkLinkRefProcessor.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/internal/WikiLinkLinkResolver.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-ext-wikilink/src/main/java/com/vladsch/flexmark/ext/wikilink/internal/WikiLinkNodeFormatter.java		ported	ssg-md	2026-03-31	Phase 7	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
@@ -690,17 +690,17 @@ flexmark	flexmark-util-data/src/main/java/com/vladsch/flexmark/util/data/Nullabl
 flexmark	flexmark-util-data/src/main/java/com/vladsch/flexmark/util/data/ScopedDataSet.java		ported	ssg-md	2026-03-30	Phase 1	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-data/src/main/java/com/vladsch/flexmark/util/data/SharedDataKeys.java		ported	ssg-md	2026-03-30	Phase 1	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-data/src/main/java/com/vladsch/flexmark/util/data/package-info.java		ported	ssg-md	2026-03-30	Phase 1		2026-03-30
-flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/DependencyHandler.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/DependencyHandler.java		skipped	ssg-md	2026-06-22	@Deprecated upstream; superseded by ported DependencyResolver.resolveFlatDependencies; zero usages	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/DependencyResolver.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/Dependent.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/DependentItem.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/DependentItemMap.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FirstDependent.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencies.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencyHandler.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencyStage.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencies.java		skipped	ssg-md	2026-06-22	@Deprecated upstream; superseded by ported DependencyResolver.resolveFlatDependencies; zero usages	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencyHandler.java		skipped	ssg-md	2026-06-22	@Deprecated upstream; superseded by ported DependencyResolver.resolveFlatDependencies; zero usages	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/FlatDependencyStage.java		skipped	ssg-md	2026-06-22	@Deprecated upstream; superseded by ported DependencyResolver.resolveFlatDependencies; zero usages	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/LastDependent.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/ResolvedDependencies.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
+flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/ResolvedDependencies.java		skipped	ssg-md	2026-06-22	@Deprecated upstream; superseded by ported DependencyResolver.resolveFlatDependencies; zero usages	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-dependency/src/main/java/com/vladsch/flexmark/util/dependency/package-info.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
 flexmark	flexmark-util-experimental/src/main/java/com/vladsch/flexmark/experimental/util/collection/BitIntegerSet.java		skipped	ssg-md	2026-03-30	Unstable API, not used by core		2026-03-30
 flexmark	flexmark-util-experimental/src/main/java/com/vladsch/flexmark/experimental/util/collection/KeyedItemFactoryMap.java		skipped	ssg-md	2026-03-30	Unstable API, not used by core		2026-03-30
@@ -780,16 +780,16 @@ flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/Mutable
 flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/MutableAttributeImpl.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/MutableAttributes.java		ported	ssg-md	2026-03-30	Phase 3	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/package-info.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/BackgroundColor.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/Color.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/ColorStyler.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyle.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyleStyler.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyler.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlBuilder.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlHelpers.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlStyler.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
-flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlStylerBase.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/BackgroundColor.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/Color.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/ColorStyler.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyle.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyleStyler.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/FontStyler.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlBuilder.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlHelpers.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlStyler.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
+flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/HtmlStylerBase.java		skipped	ssg-md	2026-06-22	java.awt-based desktop UI styler (Color/Font); unused in port; SSG HTML output uses HtmlWriter, not ui/ stylers		2026-03-30
 flexmark	flexmark-util-html/src/main/java/com/vladsch/flexmark/util/html/ui/package-info.java		ported	ssg-md	2026-03-30	Phase 3		2026-03-30
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/ArrayUtils.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/BitField.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
@@ -797,8 +797,8 @@ flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/BitFiel
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/CharPredicate.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/DelimitedBuilder.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/Extension.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/FileUtil.java		ported	ssg-md	2026-03-30	Phase 0		2026-03-30
-flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/ImageUtils.java		ported	ssg-md	2026-03-30	Phase 0		2026-03-30
+flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/FileUtil.java	ssg-md/src/main/scala/ssg/md/util/misc/PlatformFiles.scala	ported	ssg-md	2026-06-22	File-IO methods (getFileContentBytesWithExceptions et al) ported as cross-platform PlatformFiles (subset rename); cited by FileUriContentResolver.scala		2026-03-30
+flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/ImageUtils.java		skipped	ssg-md	2026-06-22	java.awt/javax.imageio/clipboard desktop image util; unused in port; out of scope for SSG		2026-03-30
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/Immutable.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/MinMaxAvgDouble.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark-util-misc/src/main/java/com/vladsch/flexmark/util/misc/MinMaxAvgFloat.java		ported	ssg-md	2026-03-30	Phase 0	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
@@ -1011,7 +1011,7 @@ flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/package-info.java		por
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/AttributablePart.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/CoreNodeRenderer.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/DelegatingNodeRendererFactory.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
-flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/FileUriContentResolver.java		ported	ssg-md	2026-03-30	Phase 4		2026-03-30
+flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/FileUriContentResolver.java	ssg-md/src/main/scala/ssg/md/html/renderer/FileUriContentResolver.scala	ported	ssg-md	2026-06-22	Ported (ssg-path now recorded); was correctly 'ported' but lacked ssg-path		2026-03-30
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/HeaderIdGenerator.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/HeaderIdGeneratorFactory.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
 flexmark	flexmark/src/main/java/com/vladsch/flexmark/html/renderer/HtmlIdGenerator.java		ported	ssg-md	2026-03-30	Phase 4	bcfe84a3ab6d23d04adce3e5a0bae45c6b791d14	2026-04-28
