@@ -15,6 +15,24 @@ import ssg.graphs.commons.layout.graph.Graph
 
 import ssg.graphviz.parse._
 
+/** Information about a cluster subgraph for rendering. Only subgraphs whose id starts with "cluster" are registered here (per Graphviz semantics).
+  */
+final case class ClusterInfo(
+  id:      String,
+  attrs:   Map[String, String],
+  members: Seq[String]
+) {
+
+  def label: Option[String] = attrs.get("label")
+}
+
+/** Result of building a graph from a DOT AST, bundling the layout graph with cluster metadata needed by the renderer.
+  */
+final case class BuildResult(
+  graph:    Graph[NodeLabel, EdgeLabel],
+  clusters: Map[String, ClusterInfo]
+)
+
 object GraphBuilder {
 
   private val DefaultFontSize:   Double = 14.0
@@ -24,7 +42,21 @@ object GraphBuilder {
   private val LabelPaddingX:     Double = 20.0
   private val LabelPaddingY:     Double = 10.0
 
-  def build(dot: DotGraph): Graph[NodeLabel, EdgeLabel] = {
+  /** Cluster attribute keys that are captured per-cluster rather than being routed to the global graph attributes.
+    */
+  private val ClusterAttrKeys: Set[String] = Set(
+    "label",
+    "style",
+    "color",
+    "bgcolor",
+    "fillcolor",
+    "pencolor",
+    "fontcolor",
+    "fontsize",
+    "fontname"
+  )
+
+  def build(dot: DotGraph): BuildResult = {
     val g = new Graph[NodeLabel, EdgeLabel](
       isDirected = dot.isDirected,
       isMultigraph = false,
@@ -37,7 +69,14 @@ object GraphBuilder {
 
     applyGraphAttrs(ctx.graphAttrs, graphLabel)
     g.setGraph(graphLabel)
-    g
+
+    // Build immutable cluster registry from accumulated mutable state
+    val clusters = ctx.clusterAttrs.map { case (id, attrs) =>
+      val members = ctx.clusterMembers.getOrElse(id, mutable.ArrayBuffer.empty).toSeq
+      id -> ClusterInfo(id, attrs.toMap, members)
+    }.toMap
+
+    BuildResult(g, clusters)
   }
 
   final private class BuildContext(
@@ -45,8 +84,16 @@ object GraphBuilder {
     val graphLabel:       GraphLabel,
     val defaultNodeAttrs: mutable.Map[String, String] = mutable.LinkedHashMap.empty,
     val defaultEdgeAttrs: mutable.Map[String, String] = mutable.LinkedHashMap.empty,
-    val graphAttrs:       mutable.Map[String, String] = mutable.LinkedHashMap.empty
+    val graphAttrs:       mutable.Map[String, String] = mutable.LinkedHashMap.empty,
+    // Cluster-specific state: attributes and direct members per cluster id
+    val clusterAttrs:   mutable.Map[String, mutable.LinkedHashMap[String, String]] = mutable.LinkedHashMap.empty,
+    val clusterMembers: mutable.Map[String, mutable.ArrayBuffer[String]] = mutable.LinkedHashMap.empty
   )
+
+  /** Returns true if the given subgraph id represents a cluster (name starts with "cluster", per Graphviz semantics).
+    */
+  private def isClusterId(id: String): Boolean =
+    id.startsWith("cluster")
 
   private def processStmt(stmt: DotStmt, ctx: BuildContext, parentSubgraph: Option[String]): Unit =
     stmt match {
@@ -73,10 +120,23 @@ object GraphBuilder {
 
       case DotSubgraphStmt(id, stmts) =>
         val subId = id.getOrElse(s"cluster_${ctx.graph.nodeCount}")
+        // Register cluster subgraphs (id starts with "cluster")
+        if (isClusterId(subId)) {
+          ctx.clusterAttrs.getOrElseUpdate(subId, mutable.LinkedHashMap.empty)
+          ctx.clusterMembers.getOrElseUpdate(subId, mutable.ArrayBuffer.empty)
+        }
         stmts.foreach(s => processStmt(s, ctx, Some(subId)))
 
       case DotAssignStmt(key, value, _) =>
-        ctx.graphAttrs(key) = value
+        // Route cluster-specific attributes to the cluster registry rather
+        // than the global graph attrs (fixes Problem B: cluster attrs leaking
+        // to the graph level).
+        parentSubgraph match {
+          case Some(subId) if isClusterId(subId) && ClusterAttrKeys.contains(key) =>
+            ctx.clusterAttrs.getOrElseUpdate(subId, mutable.LinkedHashMap.empty)(key) = value
+          case _ =>
+            ctx.graphAttrs(key) = value
+        }
     }
 
   private def ensureNode(id: String, ctx: BuildContext, parentSubgraph: Option[String]): Unit = {
@@ -100,6 +160,10 @@ object GraphBuilder {
         ctx.graph.setNode(parent, parentLabel)
       }
       ctx.graph.setParent(id, parent)
+      // Track direct members for cluster subgraphs
+      if (isClusterId(parent)) {
+        ctx.clusterMembers.getOrElseUpdate(parent, mutable.ArrayBuffer.empty) += id
+      }
     }
   }
 

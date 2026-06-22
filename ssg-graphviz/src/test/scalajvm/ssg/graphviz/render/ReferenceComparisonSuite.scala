@@ -8,22 +8,12 @@
  *
  * Known renderer differences (documented, not bugs):
  *
- *   1. Cluster nodes: our GraphBuilder creates graph nodes for each
- *      subgraph parent ID (for compound layout), so graphs with
- *      clusters have extra class="node" groups.  Node count tests
- *      compensate by counting cluster nodes separately.
- *
- *   2. Cluster/subgraph labels: Graphviz renders the subgraph `label`
- *      attribute (e.g. "process #1") while our renderer emits the
- *      subgraph ID (e.g. "cluster_0").  Label comparisons exclude
- *      cluster-specific labels from both sides.
- *
- *   3. Edge labels with spring layout: the Neato layout engine does
+ *   1. Edge labels with spring layout: the Neato layout engine does
  *      not position edge labels, so they are suppressed (the
  *      renderer skips labels when coordinates are 0,0).  Label
  *      comparisons filter out edge-only labels.
  *
- *   4. Multi-line labels: Graphviz splits `label="First\nNode"` into
+ *   2. Multi-line labels: Graphviz splits `label="First\nNode"` into
  *      separate <text> elements; our renderer emits a single <text>
  *      with a literal newline.  Comparisons split multi-line text.
  */
@@ -203,239 +193,49 @@ final class ReferenceComparisonSuite extends FunSuite {
 
   // -- Gallery specification ----------------------------------------------------
 
-  /** Each gallery entry: DOT input, reference SVG resource name, directed flag, number of cluster subgraphs (used to adjust node counts), and known label differences between our renderer and
-    * Graphviz.
+  /** Each gallery entry: DOT input, reference SVG resource name, directed flag, and known label differences between our renderer and Graphviz.
     *
     * @param refOnlyLabels
     *   labels present in the reference SVG but absent from ours (e.g. edge labels suppressed by spring layout, or node labels for shape=none which Graphviz shows but our renderer suppresses)
     * @param ourOnlyLabels
-    *   labels present in our SVG but absent from the reference (e.g. cluster IDs that our GraphBuilder creates as nodes but Graphviz does not render)
-    * @param clusterLabelMap
-    *   maps cluster IDs in our output to the `label` attribute values that Graphviz renders instead
+    *   labels present in our SVG but absent from the reference
     */
   final private case class GalleryEntry(
-    name:            String,
-    dot:             String,
-    refFile:         String,
-    isDirected:      Boolean,
-    clusterCount:    Int,
-    refOnlyLabels:   Set[String],
-    ourOnlyLabels:   Set[String],
-    clusterLabelMap: Map[String, String]
+    name:          String,
+    dot:           String,
+    refFile:       String,
+    isDirected:    Boolean,
+    refOnlyLabels: Set[String],
+    ourOnlyLabels: Set[String]
   )
 
   // Edge labels suppressed by spring layout (Neato does not position them)
   private val selfLoopEdgeLabels = Set("0.1", "0.2", "0.4", "0.6", "0.7")
   private val fsmEdgeLabels      = Set("SS(B)", "SS(S)", "S($end)", "SS(b)", "SS(a)", "S(A)", "S(b)", "S(a)")
 
-  // Cluster IDs that our GraphBuilder creates as node labels but that
-  // Graphviz does not render (clusters without a `label` attribute)
-  private val crossEdgeClusterIds = Set("cluster_0", "cluster_1", "cluster_2")
-
   private val gallery: Seq[GalleryEntry] = Seq(
-    GalleryEntry(
-      "empty",
-      dot1,
-      "empty.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "single_node",
-      dot2,
-      "single_node.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "hello_world",
-      dot3,
-      "hello_world.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "undirected",
-      dot4,
-      "undirected.svg",
-      isDirected = false,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "cycle",
-      dot5,
-      "cycle.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "self_loop",
-      dot6,
-      "self_loop.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = selfLoopEdgeLabels,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "clusters",
-      dot7,
-      "clusters.svg",
-      isDirected = true,
-      clusterCount = 2,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map("cluster_0" -> "process #1", "cluster_1" -> "process #2")
-    ),
-    GalleryEntry(
-      "fsm",
-      dot8,
-      "fsm.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = fsmEdgeLabels,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
+    GalleryEntry("empty", dot1, "empty.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("single_node", dot2, "single_node.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("hello_world", dot3, "hello_world.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("undirected", dot4, "undirected.svg", isDirected = false, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("cycle", dot5, "cycle.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("self_loop", dot6, "self_loop.svg", isDirected = true, refOnlyLabels = selfLoopEdgeLabels, ourOnlyLabels = Set.empty),
+    GalleryEntry("clusters", dot7, "clusters.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("fsm", dot8, "fsm.svg", isDirected = true, refOnlyLabels = fsmEdgeLabels, ourOnlyLabels = Set.empty),
     // Node "l" has shape=none: Graphviz renders the label, our renderer suppresses text for none shapes
     // Node "f" has shape=point: Graphviz renders the label, our renderer suppresses text for point shapes
-    GalleryEntry(
-      "shapes",
-      dot9,
-      "shapes.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set("l", "f"),
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "edge_styles",
-      dot10,
-      "edge_styles.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "colors",
-      dot11,
-      "colors.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "strict",
-      dot12,
-      "strict.svg",
-      isDirected = false,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "named_graph",
-      dot13,
-      "named_graph.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "nested_subgraphs",
-      dot14,
-      "nested_subgraphs.svg",
-      isDirected = true,
-      clusterCount = 2,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map("cluster_outer" -> "Outer", "cluster_inner" -> "Inner")
-    ),
-    GalleryEntry(
-      "er_diagram",
-      dot15,
-      "er_diagram.svg",
-      isDirected = false,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "process_states",
-      dot16,
-      "process_states.svg",
-      isDirected = false,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    // cross_edges clusters have no `label` attribute; our renderer emits cluster IDs as text labels
-    GalleryEntry(
-      "cross_edges",
-      dot17,
-      "cross_edges.svg",
-      isDirected = true,
-      clusterCount = 3,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = crossEdgeClusterIds,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "multi_defaults",
-      dot18,
-      "multi_defaults.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "quoted_ids",
-      dot19,
-      "quoted_ids.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    ),
-    GalleryEntry(
-      "fan_out",
-      dot20,
-      "fan_out.svg",
-      isDirected = true,
-      clusterCount = 0,
-      refOnlyLabels = Set.empty,
-      ourOnlyLabels = Set.empty,
-      clusterLabelMap = Map.empty
-    )
+    GalleryEntry("shapes", dot9, "shapes.svg", isDirected = true, refOnlyLabels = Set("l", "f"), ourOnlyLabels = Set.empty),
+    GalleryEntry("edge_styles", dot10, "edge_styles.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("colors", dot11, "colors.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("strict", dot12, "strict.svg", isDirected = false, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("named_graph", dot13, "named_graph.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("nested_subgraphs", dot14, "nested_subgraphs.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("er_diagram", dot15, "er_diagram.svg", isDirected = false, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("process_states", dot16, "process_states.svg", isDirected = false, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("cross_edges", dot17, "cross_edges.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("multi_defaults", dot18, "multi_defaults.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("quoted_ids", dot19, "quoted_ids.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty),
+    GalleryEntry("fan_out", dot20, "fan_out.svg", isDirected = true, refOnlyLabels = Set.empty, ourOnlyLabels = Set.empty)
   )
 
   // -- SVG structure extraction -------------------------------------------------
@@ -516,19 +316,15 @@ final class ReferenceComparisonSuite extends FunSuite {
   for (entry <- gallery) {
 
     // --- Node count ---
-    // Our GraphBuilder creates an extra graph node per cluster subgraph
-    // (for compound layout parent tracking).  We account for this by
-    // subtracting the known cluster count from our total.
     test(s"ref-compare ${entry.name}: same node count") {
-      val refSvg           = readReference(entry.refFile)
-      val refStruct        = extractRefStructure(refSvg)
-      val ourSvg           = renderOurs(entry.dot)
-      val ourStruct        = extractOurStructure(ourSvg)
-      val adjustedOurNodes = ourStruct.nodeCount - entry.clusterCount
+      val refSvg    = readReference(entry.refFile)
+      val refStruct = extractRefStructure(refSvg)
+      val ourSvg    = renderOurs(entry.dot)
+      val ourStruct = extractOurStructure(ourSvg)
       assertEquals(
-        adjustedOurNodes,
+        ourStruct.nodeCount,
         refStruct.nodeCount,
-        s"[${entry.name}] node count mismatch (ours=${ourStruct.nodeCount} - ${entry.clusterCount} clusters = $adjustedOurNodes, ref=${refStruct.nodeCount})"
+        s"[${entry.name}] node count mismatch (ours=${ourStruct.nodeCount}, ref=${refStruct.nodeCount})"
       )
     }
 
@@ -549,9 +345,7 @@ final class ReferenceComparisonSuite extends FunSuite {
     // Known differences accounted for:
     //   - refOnlyLabels: labels in the reference but not ours (edge labels
     //     suppressed by spring layout, shape=none/point text suppression)
-    //   - ourOnlyLabels: labels in ours but not the reference (cluster ID
-    //     text labels for subgraphs without a `label` attribute)
-    //   - clusterLabelMap: cluster IDs remapped to their label values
+    //   - ourOnlyLabels: labels in ours but not the reference
     //   - multi-line labels split into lines (splitLabels)
     test(s"ref-compare ${entry.name}: same text labels") {
       val refSvg    = readReference(entry.refFile)
@@ -567,14 +361,9 @@ final class ReferenceComparisonSuite extends FunSuite {
       val filteredRef  = rawRef -- entry.refOnlyLabels
       val filteredOurs = rawOurs -- entry.ourOnlyLabels
 
-      // Replace cluster IDs with their label values to match Graphviz
-      val mappedOurs = filteredOurs.map { label =>
-        entry.clusterLabelMap.getOrElse(label, label)
-      }
-
       // Split multi-line labels for fair comparison
       val normalizedRef  = splitLabels(filteredRef)
-      val normalizedOurs = splitLabels(mappedOurs)
+      val normalizedOurs = splitLabels(filteredOurs)
 
       assertEquals(
         normalizedOurs,
