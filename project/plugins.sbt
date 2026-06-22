@@ -3,5 +3,5 @@ addSbtPlugin("com.kubuszok" % "sbt-kubuszok" % "0.2.1")
 // linters
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.7")
 // native library providers (auto-configures Scala Native linker from sn-provider.json)
-addSbtPlugin("com.kubuszok" % "sbt-multiarch-scala" % "0.2.0")
+addSbtPlugin("com.kubuszok" % "sbt-multiarch-scala" % "0.3.0")
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
