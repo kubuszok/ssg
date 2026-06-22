@@ -128,3 +128,25 @@ These rules apply when converting Java source files (from flexmark-java, liqp) t
 - Ensure no bare `null` usage
 - Ensure no `return` statements
 - Run `re-scale enforce shortcuts` to verify
+
+## Known Divergences
+
+### ssg-liquid: unknown-filter error timing (ISS-1023)
+
+liqp uses a two-phase architecture: `Template.parse()` produces an ANTLR
+parse tree (CST), and the AST is built lazily by `NodeVisitor.visit(root)`
+inside `Template.renderToObjectUnguarded()` (`Template.java:355-357`).
+`NodeVisitor.visitFilter()` (`NodeVisitor.java:571`) creates a `FilterNode`
+whose constructor throws `IllegalArgumentException` when the filter is null
+(`FilterNode.java:24-25`). Because the visitor runs at render time, unknown
+filters are a **render-time** error in liqp.
+
+ssg-liquid replaces the ANTLR grammar + NodeVisitor with a hand-written
+recursive descent parser (`LiquidParser.scala`) that builds the AST directly
+during parsing. `LiquidParser.parseFilter()` calls the `FilterNode.apply`
+factory (`FilterNode.scala:61-63`), which performs the
+same null-filter check. Because AST construction is eager, unknown filters
+are a **parse-time** error in ssg-liquid.
+
+This is a structural consequence of the single-phase parser design and is
+pinned in `.fail` tests (`FilterMiscExtraSuite`, `ReadmeSamplesSuite`).
