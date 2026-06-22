@@ -8,7 +8,7 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
 
   test("ISS-1093: every supportedLanguage is accepted by supportsLanguage") {
     val supported = highlighter.supportedLanguages
-    val failures = supported.filterNot(lang => highlighter.supportsLanguage(lang))
+    val failures  = supported.filterNot(lang => highlighter.supportsLanguage(lang))
     assert(
       failures.isEmpty,
       s"supportedLanguages contains ${failures.size} language(s) that supportsLanguage rejects: ${failures.mkString(", ")}"
@@ -28,9 +28,9 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
   }
 
   test("ISS-1093: supportedLanguages is a subset of registered grammars") {
-    val supported = highlighter.supportedLanguages.toSet
+    val supported  = highlighter.supportedLanguages.toSet
     val registered = LanguageRegistry.registeredGrammars
-    val extra = supported -- registered
+    val extra      = supported -- registered
     assert(
       extra.isEmpty,
       s"supportedLanguages contains ${extra.size} grammar(s) not in the registry: ${extra.mkString(", ")}"
@@ -39,8 +39,8 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
 
   test("ISS-1093: supportedLanguages is a subset of available runtime grammars") {
     val supported = highlighter.supportedLanguages.toSet
-    val runtime = TreeSitterPlatform.availableGrammars.toSet
-    val extra = supported -- runtime
+    val runtime   = TreeSitterPlatform.availableGrammars.toSet
+    val extra     = supported -- runtime
     assert(
       extra.isEmpty,
       s"supportedLanguages contains ${extra.size} grammar(s) not available at runtime: ${extra.mkString(", ")}"
@@ -48,9 +48,9 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
   }
 
   test("ISS-1093: registered grammars not available at runtime are rejected by supportsLanguage") {
-    val registered = LanguageRegistry.registeredGrammars
-    val runtime = TreeSitterPlatform.availableGrammars.toSet
-    val registryOnly = registered -- runtime
+    val registered     = LanguageRegistry.registeredGrammars
+    val runtime        = TreeSitterPlatform.availableGrammars.toSet
+    val registryOnly   = registered -- runtime
     val falsePositives = registryOnly.filter(g => highlighter.supportsLanguage(g))
     assert(
       falsePositives.isEmpty,
@@ -59,11 +59,11 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
   }
 
   test("ISS-1093: registered grammars not available at runtime are absent from supportedLanguages") {
-    val registered = LanguageRegistry.registeredGrammars
-    val runtime = TreeSitterPlatform.availableGrammars.toSet
-    val supported = highlighter.supportedLanguages.toSet
+    val registered   = LanguageRegistry.registeredGrammars
+    val runtime      = TreeSitterPlatform.availableGrammars.toSet
+    val supported    = highlighter.supportedLanguages.toSet
     val registryOnly = registered -- runtime
-    val leaking = registryOnly.intersect(supported)
+    val leaking      = registryOnly.intersect(supported)
     assert(
       leaking.isEmpty,
       s"supportedLanguages includes ${leaking.size} registry-only grammar(s) not available at runtime: ${leaking.mkString(", ")}"
@@ -71,11 +71,11 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
   }
 
   test("ISS-1093: runtime grammars not in registry are absent from supportedLanguages") {
-    val registered = LanguageRegistry.registeredGrammars
-    val runtime = TreeSitterPlatform.availableGrammars.toSet
-    val supported = highlighter.supportedLanguages.toSet
+    val registered  = LanguageRegistry.registeredGrammars
+    val runtime     = TreeSitterPlatform.availableGrammars.toSet
+    val supported   = highlighter.supportedLanguages.toSet
     val runtimeOnly = runtime -- registered
-    val leaking = runtimeOnly.intersect(supported)
+    val leaking     = runtimeOnly.intersect(supported)
     assert(
       leaking.isEmpty,
       s"supportedLanguages includes ${leaking.size} runtime-only grammar(s) not in registry: ${leaking.mkString(", ")}"
@@ -84,10 +84,10 @@ final class LanguageRegistryConsistencyIss1093Suite extends munit.FunSuite {
 
   test("ISS-1093: known alias resolves consistently with supportedLanguages") {
     // "js" is an alias for "javascript" in LanguageRegistry.aliases
-    val alias = "js"
-    val resolved = LanguageRegistry.resolveGrammar(alias)
+    val alias          = "js"
+    val resolved       = LanguageRegistry.resolveGrammar(alias)
     val aliasSupported = highlighter.supportsLanguage(alias)
-    val supported = highlighter.supportedLanguages.toSet
+    val supported      = highlighter.supportedLanguages.toSet
     resolved match {
       case Some(grammarName) =>
         assertEquals(
