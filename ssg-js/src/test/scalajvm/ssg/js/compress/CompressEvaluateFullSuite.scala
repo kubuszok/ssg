@@ -1588,7 +1588,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2535_2
   // =========================================================================
-  test("issue_2535_2".fail) {
+  test("issue_2535_2") {
     assertCompresses(
       input = """(x() || true) || y();
         (x() || true) && y();
