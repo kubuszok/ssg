@@ -13,7 +13,7 @@ enum DotGraphType {
   case Digraph
 }
 
-final case class DotAttr(key: String, value: String)
+final case class DotAttr(key: String, value: String, isHtml: Boolean = false)
 
 final case class DotNodeId(id: String, port: Option[String] = None, compass: Option[String] = None)
 
@@ -37,7 +37,7 @@ final case class DotSubgraphStmt(
   stmts: Seq[DotStmt]
 ) extends DotStmt
 
-final case class DotAssignStmt(key: String, value: String) extends DotStmt
+final case class DotAssignStmt(key: String, value: String, isHtml: Boolean = false) extends DotStmt
 
 final case class DotGraph(
   strict:    Boolean,

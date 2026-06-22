@@ -9,8 +9,6 @@ package graphviz
 package render
 
 import scala.collection.mutable
-import scala.util.boundary
-import scala.util.boundary.break
 
 import ssg.graphs.commons.layout.dagre.{ EdgeLabel, GraphLabel, NodeLabel }
 import ssg.graphs.commons.layout.graph.Graph
@@ -77,7 +75,7 @@ object GraphBuilder {
         val subId = id.getOrElse(s"cluster_${ctx.graph.nodeCount}")
         stmts.foreach(s => processStmt(s, ctx, Some(subId)))
 
-      case DotAssignStmt(key, value) =>
+      case DotAssignStmt(key, value, _) =>
         ctx.graphAttrs(key) = value
     }
 
@@ -165,18 +163,8 @@ object GraphBuilder {
   }
 
   private def estimateTextWidth(text: String): Double = {
-    // Strip HTML tags for width estimation
-    val stripped = boundary {
-      if (!text.contains('<')) { break(text) }
-      val sb    = new StringBuilder
-      var inTag = false
-      text.foreach { ch =>
-        if (ch == '<') { inTag = true }
-        else if (ch == '>') { inTag = false }
-        else if (!inTag) { sb.append(ch) }
-      }
-      sb.toString
-    }
+    // Strip HTML tags for width estimation (reuses shared utility)
+    val stripped = HtmlLabelUtil.stripHtmlTags(text)
     stripped.length * DefaultCharWidth
   }
 
