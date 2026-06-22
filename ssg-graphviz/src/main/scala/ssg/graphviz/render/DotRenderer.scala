@@ -31,7 +31,9 @@ object DotRenderer {
     *   3. Render positioned nodes and edges as SVG
     */
   def render(dot: DotGraph, config: GraphvizConfig): String = {
-    val g = GraphBuilder.build(dot)
+    val result   = GraphBuilder.build(dot)
+    val g        = result.graph
+    val clusters = result.clusters
     // Dispatch to layout engine
     config.engine match {
       case LayoutEngine.Dot   => DagreLayout.layout(g)
@@ -41,7 +43,7 @@ object DotRenderer {
     }
     // Collect DOT-level attributes for styling
     val dotAttrs = collectDotAttrs(dot)
-    renderSvg(g, dot, config, dotAttrs)
+    renderSvg(g, dot, config, dotAttrs, clusters)
   }
 
   // -- Attribute collection ---------------------------------------------------
@@ -144,39 +146,53 @@ object DotRenderer {
     g:        Graph[NodeLabel, EdgeLabel],
     dot:      DotGraph,
     config:   GraphvizConfig,
-    dotAttrs: DotAttrs
+    dotAttrs: DotAttrs,
+    clusters: Map[String, ClusterInfo]
   ): String = {
     val nodes = g.nodes()
     if (nodes.isEmpty) {
       EmptySvg
     } else {
-      renderNonEmpty(g, dot, config, dotAttrs, nodes)
+      renderNonEmpty(g, dot, config, dotAttrs, nodes, clusters)
     }
   }
+
+  /** Graphviz default cluster margin in points. */
+  private val ClusterMargin: Double = 8.0
+
+  /** Font size for cluster labels (in points). */
+  private val ClusterLabelFontSize: Double = 14.0
 
   private def renderNonEmpty(
     g:        Graph[NodeLabel, EdgeLabel],
     dot:      DotGraph,
     config:   GraphvizConfig,
     dotAttrs: DotAttrs,
-    nodes:    Array[String]
+    nodes:    Array[String],
+    clusters: Map[String, ClusterInfo]
   ): String = {
-    // Compute bounds
+    // Identify phantom cluster node IDs so they are excluded from bounds
+    // computation and node rendering (they are 0x0 layout placeholders,
+    // not real graph nodes).
+    val clusterIds = clusters.keySet
+
+    // Compute bounds from real nodes only (exclude phantom cluster nodes)
     var minX = Double.MaxValue
     var minY = Double.MaxValue
     var maxX = Double.MinValue
     var maxY = Double.MinValue
-    for (id <- nodes) {
-      val nl     = g.node(id)
-      val left   = nl.x - nl.width / 2.0
-      val top    = nl.y - nl.height / 2.0
-      val right  = nl.x + nl.width / 2.0
-      val bottom = nl.y + nl.height / 2.0
-      if (left < minX) { minX = left }
-      if (top < minY) { minY = top }
-      if (right > maxX) { maxX = right }
-      if (bottom > maxY) { maxY = bottom }
-    }
+    for (id <- nodes)
+      if (!clusterIds.contains(id)) {
+        val nl     = g.node(id)
+        val left   = nl.x - nl.width / 2.0
+        val top    = nl.y - nl.height / 2.0
+        val right  = nl.x + nl.width / 2.0
+        val bottom = nl.y + nl.height / 2.0
+        if (left < minX) { minX = left }
+        if (top < minY) { minY = top }
+        if (right > maxX) { maxX = right }
+        if (bottom > maxY) { maxY = bottom }
+      }
 
     val marginX   = config.marginX
     val marginY   = config.marginY
@@ -208,7 +224,13 @@ object DotRenderer {
     val content = svg.append("g")
     content.attr("transform", s"translate(${formatNumber(offsetX)}, ${formatNumber(offsetY)})")
 
-    // Render edges first (below nodes)
+    // Render cluster boxes FIRST (behind edges and nodes — correct z-order,
+    // matching Graphviz which draws clusters under their contents)
+    if (clusters.nonEmpty) {
+      renderClusters(content, g, clusters, config)
+    }
+
+    // Render edges (below nodes but above cluster boxes)
     val edgeGroup = content.append("g")
     edgeGroup.attr("class", "edges")
     for (edgeObj <- g.edges()) {
@@ -216,18 +238,134 @@ object DotRenderer {
       renderEdge(edgeGroup, g, edgeObj, el, dot.isDirected, dotAttrs)
     }
 
-    // Render nodes
+    // Render real nodes only (suppress phantom cluster nodes)
     val nodeGroup = content.append("g")
     nodeGroup.attr("class", "nodes")
-    for (id <- nodes) {
-      val nl = g.node(id)
-      renderNode(nodeGroup, id, nl, config, dotAttrs)
-    }
+    for (id <- nodes)
+      if (!clusterIds.contains(id)) {
+        val nl = g.node(id)
+        renderNode(nodeGroup, id, nl, config, dotAttrs)
+      }
 
     // Render graph-level title/label
     renderGraphLabel(content, dot, config, svgWidth, svgHeight, marginX, marginY)
 
     svg.build().toMarkup()
+  }
+
+  // -- Cluster rendering -------------------------------------------------------
+
+  /** Renders cluster subgraph boxes and labels. Each cluster is drawn as a rectangle enclosing its member nodes, with an optional label at the top.
+    *
+    * Per Graphviz semantics, only subgraphs whose name starts with "cluster" are drawn as boxed regions. The box bounds are computed from the laid-out positions of the cluster's member nodes,
+    * expanded by a margin.
+    */
+  private def renderClusters(
+    parent:   SvgBuilder,
+    g:        Graph[NodeLabel, EdgeLabel],
+    clusters: Map[String, ClusterInfo],
+    config:   GraphvizConfig
+  ): Unit =
+    for ((_, cluster) <- clusters) {
+      // Collect all member node positions (only real nodes, not nested
+      // cluster phantom nodes)
+      val memberNodes = cluster.members.filter { memberId =>
+        g.hasNode(memberId) && !clusters.contains(memberId)
+      }
+      // Skip clusters with no renderable member nodes
+      if (memberNodes.nonEmpty) {
+        renderSingleCluster(parent, g, cluster, memberNodes, config)
+      }
+    }
+
+  /** Renders a single cluster's box and label. */
+  private def renderSingleCluster(
+    parent:      SvgBuilder,
+    g:           Graph[NodeLabel, EdgeLabel],
+    cluster:     ClusterInfo,
+    memberNodes: Seq[String],
+    config:      GraphvizConfig
+  ): Unit = {
+    // Compute bounding box from member nodes' laid-out positions
+    var cMinX = Double.MaxValue
+    var cMinY = Double.MaxValue
+    var cMaxX = Double.MinValue
+    var cMaxY = Double.MinValue
+    for (memberId <- memberNodes) {
+      val nl     = g.node(memberId)
+      val left   = nl.x - nl.width / 2.0
+      val top    = nl.y - nl.height / 2.0
+      val right  = nl.x + nl.width / 2.0
+      val bottom = nl.y + nl.height / 2.0
+      if (left < cMinX) { cMinX = left }
+      if (top < cMinY) { cMinY = top }
+      if (right > cMaxX) { cMaxX = right }
+      if (bottom > cMaxY) { cMaxY = bottom }
+    }
+
+    // Expand by cluster margin
+    val margin = ClusterMargin
+    cMinX -= margin
+    cMinY -= margin
+    cMaxX += margin
+    cMaxY += margin
+
+    // Resolve cluster styling from its attributes
+    val attrs     = cluster.attrs
+    val styleAttr = attrs.getOrElse("style", "")
+    val isFilled  = styleAttr.contains("filled")
+
+    // Graphviz cluster fill semantics:
+    //   - fillcolor takes precedence if set
+    //   - bgcolor is used if fillcolor is not set
+    //   - color is used as fill if style=filled and neither fillcolor nor bgcolor is set
+    //   - If not filled, fill is "none"
+    val fillColor = if (isFilled) {
+      attrs.getOrElse("fillcolor", attrs.getOrElse("bgcolor", attrs.getOrElse("color", "lightgrey")))
+    } else {
+      attrs.getOrElse("bgcolor", "none")
+    }
+    // Border color: pencolor > color > default black
+    val strokeColor = attrs.getOrElse("pencolor", attrs.getOrElse("color", "black"))
+    val fontColor   = attrs.getOrElse("fontcolor", "#333")
+    val fontSizeStr = attrs.getOrElse("fontsize", ClusterLabelFontSize.toString)
+    val fontName    = attrs.getOrElse("fontname", config.fontName)
+
+    // Reserve space at the top for the label if present
+    val labelText = cluster.label.map { raw =>
+      HtmlLabelUtil.stripHtmlTags(raw)
+    }
+    val labelHeight = if (labelText.exists(_.nonEmpty)) { ClusterLabelFontSize + 4.0 }
+    else { 0.0 }
+    cMinY -= labelHeight
+
+    // Render the cluster group
+    val clusterG = parent.append("g")
+    clusterG.attr("class", "cluster")
+
+    // Cluster box (rect)
+    val rect = clusterG.append("rect")
+    rect.attr("x", cMinX)
+    rect.attr("y", cMinY)
+    rect.attr("width", cMaxX - cMinX)
+    rect.attr("height", cMaxY - cMinY)
+    rect.attr("fill", fillColor)
+    rect.attr("stroke", strokeColor)
+    applyStrokeDash(rect, styleAttr)
+
+    // Cluster label (top-center, just inside the top edge)
+    labelText.foreach { lt =>
+      if (lt.nonEmpty) {
+        val text = clusterG.append("text")
+        text.attr("x", (cMinX + cMaxX) / 2.0)
+        text.attr("y", cMinY + ClusterLabelFontSize + 2.0)
+        text.attr("text-anchor", "middle")
+        text.attr("font-size", fontSizeStr)
+        text.attr("font-family", fontName)
+        text.attr("fill", fontColor)
+        text.text(lt)
+      }
+    }
   }
 
   // -- Graph label rendering ---------------------------------------------------
