@@ -4977,7 +4977,7 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
           val ev    = Evaluate.evaluate(expr, this)
           val evStr = ev match {
             case s: String  => s
-            case d: Double  => d.toString
+            case d: Double  => ssg.js.output.JsNumber.toJsString(d) // ISS-1175: JS-faithful number formatting (shared with OutputStream)
             case b: Boolean => b.toString
             case null => "null"
             case _    => null

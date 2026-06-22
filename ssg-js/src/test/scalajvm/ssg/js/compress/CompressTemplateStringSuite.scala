@@ -18,7 +18,8 @@ final class CompressTemplateStringSuite extends munit.FunSuite {
   // =========================================================================
   // template_string_with_constant_expression
   // =========================================================================
-  test("template_string_with_constant_expression".fail) {
+  // Un-pinned by ISS-1175: the integer-valued Double now formats JS-faithfully (1, not 1.0).
+  test("template_string_with_constant_expression") {
     assertCompresses(
       input = "var foo = `${4 + 4} equals 4 + 4`",
       expected = "var foo = \"8 equals 4 + 4\"",
