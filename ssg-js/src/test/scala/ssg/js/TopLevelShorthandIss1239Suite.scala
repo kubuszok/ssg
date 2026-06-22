@@ -36,13 +36,18 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     // Via top-level shorthand:
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, keepFnames = true, toplevel = true))
     // Via direct sub-option on mangle:
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(
-      compress = false,
-      mangle = ManglerOptions(keepFnames = true, toplevel = true),
-      toplevel = true
-    ))
+    val viaDirect = Terser.minifyToString(src,
+                                          MinifyOptions(
+                                            compress = false,
+                                            mangle = ManglerOptions(keepFnames = true, toplevel = true),
+                                            toplevel = true
+                                          )
+    )
     // Both must preserve the function name.
-    assert(viaShorthand.contains("longFunctionName"), s"top-level keepFnames=true must preserve function name, got: $viaShorthand")
+    assert(
+      viaShorthand.contains("longFunctionName"),
+      s"top-level keepFnames=true must preserve function name, got: $viaShorthand"
+    )
     assertEquals(viaShorthand, viaDirect, "top-level shorthand must produce same result as direct sub-option")
     // Without keepFnames but with toplevel, the name should be mangled (shorter).
     val noKeep = Terser.minifyToString(src, MinifyOptions(compress = false, toplevel = true))
@@ -55,15 +60,21 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
 
   // Oracle: terser minify({keep_classnames:true, toplevel:true}) preserves class names.
   test("keepClassnames: top-level keepClassnames=true preserves class name in mangled output") {
-    val src = "class VeryLongClassName { constructor() { this.x = 1; } } new VeryLongClassName();"
+    val src          = "class VeryLongClassName { constructor() { this.x = 1; } } new VeryLongClassName();"
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, keepClassnames = true, toplevel = true, ecma = Some(2015)))
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(
-      compress = false,
-      mangle = ManglerOptions(keepClassnames = true, toplevel = true),
-      toplevel = true,
-      ecma = Some(2015)
-    ))
-    assert(viaShorthand.contains("VeryLongClassName"), s"top-level keepClassnames=true must preserve class name, got: $viaShorthand")
+    val viaDirect    = Terser.minifyToString(
+      src,
+      MinifyOptions(
+        compress = false,
+        mangle = ManglerOptions(keepClassnames = true, toplevel = true),
+        toplevel = true,
+        ecma = Some(2015)
+      )
+    )
+    assert(
+      viaShorthand.contains("VeryLongClassName"),
+      s"top-level keepClassnames=true must preserve class name, got: $viaShorthand"
+    )
     assertEquals(viaShorthand, viaDirect, "top-level shorthand must produce same result as direct sub-option")
     // Without keepClassnames but with toplevel, the name should be mangled.
     val noKeep = Terser.minifyToString(src, MinifyOptions(compress = false, toplevel = true, ecma = Some(2015)))
@@ -79,8 +90,10 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     val src = "class VeryLongClassName { constructor() { this.x = 1; } } new VeryLongClassName();"
     // Set keepFnames=true but NOT keepClassnames — keepClassnames should default to keepFnames.
     val withKeepFnames = Terser.minifyToString(src, MinifyOptions(compress = false, keepFnames = true, toplevel = true, ecma = Some(2015)))
-    assert(withKeepFnames.contains("VeryLongClassName"),
-      s"keepClassnames should default to keepFnames=true, preserving class name, got: $withKeepFnames")
+    assert(
+      withKeepFnames.contains("VeryLongClassName"),
+      s"keepClassnames should default to keepFnames=true, preserving class name, got: $withKeepFnames"
+    )
   }
 
   test("keepClassnames pre-rule: explicit keepClassnames=false overrides pre-rule even with keepFnames=true") {
@@ -101,16 +114,20 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     // at the MinifyOptions level is indeed treated as "not set".
     // To explicitly DISABLE keepClassnames while keepFnames is true, the
     // caller must set it on the sub-options directly.
-    val result = Terser.minifyToString(src, MinifyOptions(
-      compress = false,
-      keepFnames = true,
-      keepClassnames = false,
-      toplevel = true,
-      ecma = Some(2015)
-    ))
+    val result = Terser.minifyToString(src,
+                                       MinifyOptions(
+                                         compress = false,
+                                         keepFnames = true,
+                                         keepClassnames = false,
+                                         toplevel = true,
+                                         ecma = Some(2015)
+                                       )
+    )
     // Pre-rule fires: keepClassnames defaults to keepFnames=true.
-    assert(result.contains("VeryLongClassName"),
-      s"keepClassnames=false (default) should be treated as undefined by the pre-rule, got: $result")
+    assert(
+      result.contains("VeryLongClassName"),
+      s"keepClassnames=false (default) should be treated as undefined by the pre-rule, got: $result"
+    )
   }
 
   // ======================================================================
@@ -121,17 +138,17 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
   // under ie8 vs \v without ie8 (output.js:379).
   test("ie8: top-level ie8=true threads into format (vertical tab escape)") {
     // The source contains the actual U+000B (vertical tab) character between 'a' and 'b'.
-    val vtSource = "var s = \"ab\";"
+    val vtSource     = "var s = \"ab\";"
     val viaShorthand = Terser.minifyToString(vtSource, MinifyOptions(compress = false, mangle = false, ie8 = true))
-    val viaDirect = Terser.minifyToString(vtSource, MinifyOptions(compress = false, mangle = false, output = OutputOptions(ie8 = true)))
+    val viaDirect    = Terser.minifyToString(vtSource, MinifyOptions(compress = false, mangle = false, output = OutputOptions(ie8 = true)))
     assertEquals(viaShorthand, viaDirect, "top-level ie8 must produce same output as direct format.ie8")
     assert(viaShorthand.contains("\\x0B"), s"ie8=true must emit \\x0B for vertical tab, got: $viaShorthand")
   }
 
   test("ie8: top-level ie8=true threads into mangle") {
-    val src = "function f(x) { return x; } f(1);"
+    val src          = "function f(x) { return x; } f(1);"
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, ie8 = true))
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = ManglerOptions(ie8 = true)))
+    val viaDirect    = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = ManglerOptions(ie8 = true)))
     assertEquals(viaShorthand, viaDirect, "top-level ie8 must produce same result as direct mangle.ie8")
   }
 
@@ -140,13 +157,15 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
   // ======================================================================
 
   test("safari10: top-level safari10=true threads into mangle and format") {
-    val src = "function f(x) { return x; } f(1);"
+    val src          = "function f(x) { return x; } f(1);"
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, safari10 = true))
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(
-      compress = false,
-      mangle = ManglerOptions(safari10 = true),
-      output = OutputOptions(safari10 = true)
-    ))
+    val viaDirect    = Terser.minifyToString(src,
+                                          MinifyOptions(
+                                            compress = false,
+                                            mangle = ManglerOptions(safari10 = true),
+                                            output = OutputOptions(safari10 = true)
+                                          )
+    )
     assertEquals(viaShorthand, viaDirect, "top-level safari10 must produce same result as direct sub-options")
   }
 
@@ -160,16 +179,16 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     // module=true adds "use strict" directive (parser.js:76-79).
     // We can test that the top-level shorthand produces the same result as
     // setting parse.module directly.
-    val src = "var x = 1;"
+    val src          = "var x = 1;"
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = false, module = true))
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = false, parse = ParserOptions(module = true)))
+    val viaDirect    = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = false, parse = ParserOptions(module = true)))
     assertEquals(viaShorthand, viaDirect, "top-level module must produce same result as direct parse.module")
   }
 
   test("module: top-level module=true threads into mangle.module") {
-    val src = "function f(x) { return x; } f(1);"
+    val src          = "function f(x) { return x; } f(1);"
     val viaShorthand = Terser.minifyToString(src, MinifyOptions(compress = false, module = true))
-    val viaDirect = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = ManglerOptions(module = true)))
+    val viaDirect    = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = ManglerOptions(module = true)))
     assertEquals(viaShorthand, viaDirect, "top-level module must produce same result as direct mangle.module")
   }
 
@@ -184,16 +203,18 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
 
   test("fill-if-absent: explicit mangle.keepFnames=true is NOT overwritten by top-level keepFnames with regex") {
     val src = "function longFunctionName(x) { return x + 1; } longFunctionName(42);"
-    val re = "^long".r
+    val re  = "^long".r
     // Caller explicitly set mangle.keepFnames=true (non-default); top-level
     // keepFnames is a regex. Since the sub-option differs from its default
     // (false), the top-level shorthand must NOT overwrite it.
-    val result = Terser.minifyToString(src, MinifyOptions(
-      compress = false,
-      mangle = ManglerOptions(keepFnames = true, toplevel = true),
-      keepFnames = re,
-      toplevel = true
-    ))
+    val result = Terser.minifyToString(src,
+                                       MinifyOptions(
+                                         compress = false,
+                                         mangle = ManglerOptions(keepFnames = true, toplevel = true),
+                                         keepFnames = re,
+                                         toplevel = true
+                                       )
+    )
     assert(result.contains("longFunctionName"), s"explicit mangle.keepFnames=true must be preserved, got: $result")
   }
 
@@ -202,12 +223,14 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     // Caller explicitly sets output.ie8=true; top-level ie8 defaults to false
     // so no shorthand propagation occurs; the explicit output.ie8=true must
     // survive.
-    val result = Terser.minifyToString(vtSource, MinifyOptions(
-      compress = false,
-      mangle = false,
-      output = OutputOptions(ie8 = true),
-      ie8 = false
-    ))
+    val result = Terser.minifyToString(vtSource,
+                                       MinifyOptions(
+                                         compress = false,
+                                         mangle = false,
+                                         output = OutputOptions(ie8 = true),
+                                         ie8 = false
+                                       )
+    )
     assert(result.contains("\\x0B"), s"explicit output.ie8=true must be preserved, got: $result")
   }
 
@@ -215,15 +238,19 @@ final class TopLevelShorthandIss1239Suite extends munit.FunSuite {
     val src = "var x = 1;"
     // Caller explicitly sets compress.module=true; top-level module=false.
     // The explicit sub-option must survive.
-    val viaExplicit = Terser.minifyToString(src, MinifyOptions(
-      compress = CompressorOptions(module = true),
-      mangle = false
-    ))
-    val viaBoth = Terser.minifyToString(src, MinifyOptions(
-      compress = CompressorOptions(module = true),
-      mangle = false,
-      module = false
-    ))
+    val viaExplicit = Terser.minifyToString(src,
+                                            MinifyOptions(
+                                              compress = CompressorOptions(module = true),
+                                              mangle = false
+                                            )
+    )
+    val viaBoth = Terser.minifyToString(src,
+                                        MinifyOptions(
+                                          compress = CompressorOptions(module = true),
+                                          mangle = false,
+                                          module = false
+                                        )
+    )
     assertEquals(viaExplicit, viaBoth, "explicit compress.module=true must survive top-level module=false")
   }
 }
