@@ -491,8 +491,14 @@ final class LiquidLexer(
         skipWhitespace()
 
         val idStart = pos
-        while (pos < input.length() && isIdContinue(input.charAt(pos)))
-          advance(1)
+        while (
+          pos < input.length() && isIdContinue(input.charAt(pos)) &&
+          // Don't consume a '-' that begins the '-%}' whitespace-control close: per liqp
+          // (LiquidLexer.g4:284 RawEnd matches the literal `endraw`; :129-134 TagEnd `-%}`),
+          // the '-' belongs to the close, not the id — so `{% endraw-%}` closes the raw block.
+          !(input.charAt(pos) == '-' && pos + 2 < input.length() &&
+            input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}')
+        ) advance(1)
         val id = input.substring(idStart, pos)
 
         if (id == "endraw") {
