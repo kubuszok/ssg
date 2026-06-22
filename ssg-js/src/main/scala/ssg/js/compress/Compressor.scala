@@ -4794,7 +4794,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     if (optionBool("side_effects") && self.operator == "void") {
       val dropped = DropSideEffectFree.dropSideEffectFree(e, this)
       if (dropped == null) {
-        return makeVoid0(self) // @nowarn
+        // terser index.js:2127 re-optimizes the result: make_void_0(self).optimize(compressor).
+        return optimizeNode(makeVoid0(self)) // @nowarn
       } else if (!(dropped.nn eq e)) {
         self.expression = dropped.nn
         return self // @nowarn
