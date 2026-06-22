@@ -8,6 +8,18 @@
  * Builds LNode AST directly during parsing (no intermediate parse tree).
  * Grammar specification: original-src/liqp/src/main/antlr4/liquid/parser/v4/LiquidParser.g4
  *
+ * Migration notes:
+ *   Renames: liqp.parser.v4.NodeVisitor (AST-build) + liquid.parser.v4.LiquidParser (ANTLR grammar)
+ *            merged into ssg.liquid.parser.LiquidParser (recursive descent)
+ *   Divergence: unknown-filter error timing — liqp defers AST construction to render time
+ *     (NodeVisitor.visitFilter, NodeVisitor.java:571, runs inside Template.renderToObjectUnguarded,
+ *     Template.java:355-357), so FilterNode's null-filter check (FilterNode.java:24-25) throws
+ *     IllegalArgumentException at render. SSG's recursive descent parser builds the AST eagerly
+ *     during parse (LiquidParser.parseFilter calls FilterNode.apply which checks for null
+ *     at FilterNode.scala:61-63), so unknown filters error at parse time instead.
+ *     Pinned in .fail tests: FilterMiscExtraSuite "flavored filters: normalize_whitespace ...",
+ *     ReadmeSamplesSuite "readme: render tree ...".
+ *
  * Covenant: full-port
  * Covenant-verified: 2026-06-14
  */
