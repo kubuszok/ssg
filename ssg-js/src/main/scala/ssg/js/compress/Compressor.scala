@@ -229,32 +229,48 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       }
     }
 
+  /** Faithful port of terser `Compressor.in_32_bit_context()` (lib/compress/index.js:387-417).
+    *
+    * Walks the *live* ancestry (the active transformer's stack -- the compressor's own stack is empty during a pass, see `activeWalker`) to determine whether the current node's result will be turned
+    * into a 32-bit integer by a bitwise operator ancestor. Walk-through cases (&&/||/?? right operand, ternary non-condition, sequence tail) allow the check to propagate through transparent
+    * ancestors. Mirrors the `inComputedKey` pattern (lines 173-196).
+    */
   override def in32BitContext(): Boolean =
     if (!optionBool("evaluate")) false
-    else {
-      boundary[Boolean] {
-        var level = 0
-        var node: AstNode | Null = self()
-        var p:    AstNode | Null = parent(level)
-        while (p != null) {
-          p.nn match {
-            case bin: AstBinary if bitwiseBinop.contains(bin.operator) => break(true)
-            case up:  AstUnaryPrefix if up.operator == "~"             => break(true)
-            // Walk through && / || / ?? right side
-            case bin: AstBinary if (bin.operator == "&&" || bin.operator == "||" || bin.operator == "??") && bin.right != null && (node.nn.asInstanceOf[AnyRef] eq bin.right.nn.asInstanceOf[AnyRef]) =>
-            // Walk through ternary non-condition branches
-            case cond: AstConditional if cond.condition != null && !(node.nn.asInstanceOf[AnyRef] eq cond.condition.nn.asInstanceOf[AnyRef]) =>
-            // Walk through sequence tail
-            case seq: AstSequence if seq.expressions.nonEmpty && (node.nn.asInstanceOf[AnyRef] eq seq.expressions.last.asInstanceOf[AnyRef]) =>
-            case _ => break(false)
+    else
+      activeWalker match {
+        case w: TreeWalker if w.stack.nonEmpty =>
+          boundary[Boolean] {
+            var node: AstNode = w.stack(w.stack.size - 1)
+            var i = 0
+            var p: AstNode | Null = w.parent(i)
+            while (p != null) {
+              p.nn match {
+                case bin: AstBinary if bitwiseBinop.contains(bin.operator) => break(true)
+                case up:  AstUnaryPrefix if up.operator == "~"             => break(true)
+                // Walk through && / || / ?? right side (terser index.js:401-407)
+                case bin: AstBinary
+                    if (bin.operator == "&&" || bin.operator == "||" || bin.operator == "??")
+                      && bin.right != null
+                      && (node.asInstanceOf[AnyRef] eq bin.right.nn.asInstanceOf[AnyRef]) =>
+                // Walk through ternary non-condition branches (terser index.js:409)
+                case cond: AstConditional
+                    if cond.condition != null
+                      && !(node.asInstanceOf[AnyRef] eq cond.condition.nn.asInstanceOf[AnyRef]) =>
+                // Walk through sequence tail (terser index.js:410, p.tail_node() === self)
+                case seq: AstSequence
+                    if seq.expressions.nonEmpty
+                      && (node.asInstanceOf[AnyRef] eq seq.expressions.last.asInstanceOf[AnyRef]) =>
+                case _ => break(false)
+              }
+              node = p.nn
+              i += 1
+              p = w.parent(i)
+            }
+            false
           }
-          node = p
-          level += 1
-          p = parent(level)
-        }
-        false
+        case _ => false
       }
-    }
 
   override def exposed(theDef: Any): Boolean = {
     val d = theDef.asInstanceOf[ssg.js.scope.SymbolDef]
