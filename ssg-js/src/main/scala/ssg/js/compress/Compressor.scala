@@ -4397,27 +4397,46 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
 
   // findScope() is inherited from TreeWalker
 
-  /** Reset optimization flags before each pass. */
+  /** Reset optimization flags before each pass.
+    *
+    * terser lib/compress/index.js:618-642 — `AST_Toplevel.DEFMETHOD("reset_opt_flags", ...)`: clears per-pass flags on every node; when reduce_vars is enabled AND top_retain is present, sets the TOP
+    * flag on every AST_Defun whose parent is the toplevel (i.e. only top-level function declarations, NOT nested ones). The top_retain PREDICATE is NOT invoked here — it is invoked later in
+    * retain_top_func (common.js:369-375) during drop_unused / inline.
+    */
   private def resetOptFlags(toplevel: AstToplevel): Unit = {
-    val hasTopRetain = topRetain != null && (topRetain ne ((_: Any) => false))
-    val tw           = new TreeWalker((node, _) => {
+    // terser index.js:624: `if (reduce_vars) { ... }` — the TOP-flag block
+    // is gated on reduce_vars being enabled.
+    val reduceVarsEnabled = optionBool("reduce_vars")
+    // terser index.js:625: `if (compressor.top_retain && ...)` — top_retain
+    // is tested for PRESENCE (truthiness), not invoked as a predicate.
+    // options.topRetain is Option[String => Boolean]: None when absent,
+    // Some(...) when the user supplied a top_retain option.
+    val hasTopRetain = options.topRetain.isDefined
+    // Use a mutable holder so the callback can reference the walker after
+    // construction (Scala 3 forbids forward-referencing a val in its own
+    // initializer, even inside a closure).
+    var preparation: TreeWalker | Null = null
+    val tw:          TreeWalker        = new TreeWalker((node, _) => {
       clearFlag(node, CLEAR_BETWEEN_PASSES)
 
-      // Set TOP flag on retained top-level definitions
-      if (hasTopRetain) {
-        node match {
-          case defun: AstDefun if defun.name != null =>
-            defun.name.nn match {
-              case sym: AstSymbol if sym.thedef != null && topRetain(sym.thedef) =>
-                setFlag(defun, TOP)
-              case _ =>
-            }
-          case _ =>
+      // Set TOP flag on top-level function definitions (index.js:625-630).
+      // Conditions: reduce_vars on, top_retain present, node is AstDefun,
+      // and the walker's current parent is the toplevel node (not nested).
+      if (
+        reduceVarsEnabled
+        && hasTopRetain
+        && node.isInstanceOf[AstDefun]
+        && {
+          val p = preparation.nn.parent()
+          (p != null) && p.asInstanceOf[AnyRef].eq(toplevel.asInstanceOf[AnyRef])
         }
+      ) {
+        setFlag(node, TOP)
       }
 
       null // continue walking
     })
+    preparation = tw
     toplevel.walk(tw)
     // Note: reduceVars is called separately in the compress() loop
   }
