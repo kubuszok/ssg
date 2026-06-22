@@ -4776,7 +4776,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       val trueNode = new AstTrue
       trueNode.start = self.start
       trueNode.end = self.end
-      return makeSequence(self, ArrayBuffer(e, trueNode)) // @nowarn
+      return optimizeNode(makeSequence(self, ArrayBuffer(e, trueNode))) // @nowarn
     }
 
     // void 0 shortcut → unsafe_undefined_ref if enabled, otherwise return as-is
@@ -4827,7 +4827,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             val trueNode = new AstTrue
             trueNode.start = self.start
             trueNode.end = self.end
-            return makeSequence(self, ArrayBuffer(e, trueNode)) // @nowarn
+            return optimizeNode(makeSequence(self, ArrayBuffer(e, trueNode))) // @nowarn
           }
         case _ =>
       }
