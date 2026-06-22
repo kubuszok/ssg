@@ -58,8 +58,10 @@ trait CompressorLike {
       case n: Int     => n != 0
       case n: Double  => n != 0.0 && !n.isNaN
       case s: String  => s.nonEmpty
-      case null => false
-      case _    => true
+      case null       => false
+      case scala.None => false // upstream null/undefined is falsy in JS boolean position (e.g. unset top_retain)
+      case tc: CompressorLike.ToplevelConfig => tc.funcs || tc.vars // upstream `toplevel: false` is falsy; truthy only when toplevel optimization is enabled
+      case _ => true
     }
 
   /** Access parent nodes in the current tree walk. */
