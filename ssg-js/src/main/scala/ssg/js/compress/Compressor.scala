@@ -69,6 +69,7 @@ import ssg.js.compress.Inference.*
 import ssg.js.compress.TightenBody.{ extractFromUnreachableCode, tightenBody }
 import ssg.js.compress.Inline.inlineIntoSymbolRef
 import ssg.js.ast.AstSize
+import ssg.js.parse.{ Parser, ParserOptions }
 import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
 
 /** The main JavaScript compressor.
@@ -325,8 +326,33 @@ class Compressor(val options: CompressorOptions) extends TreeWalker(null) with C
     var toplevel = ast
     toplevelNode = Some(toplevel)
 
+    // Normalize @-prefixed global_defs keys: parse string values as expressions.
+    // terser lib/compress/index.js:282-290 — for each key starting with "@",
+    // the string value is parsed as a JS expression and re-stored under the
+    // de-@-ed key. Parse errors propagate (the minify call fails).
+    val normalizedGlobalDefs =
+      if (options.globalDefs.isEmpty) options.globalDefs
+      else {
+        options.globalDefs.foldLeft(Map.empty[String, Any]) { case (acc, (key, value)) =>
+          if (key.startsWith("@")) {
+            val strValue = value match {
+              case s: String => s
+              case other => other.toString
+            }
+            val parsed = new Parser(ParserOptions(expression = true)).parse(strValue)
+            // The parser wraps the expression in an AstToplevel; extract the expression node.
+            // terser lib/compress/index.js:285 — `parse(global_defs[key], { expression: true })`
+            // returns the AST_Toplevel whose single body element is the expression.
+            val exprNode = parsed.body.head
+            acc + (key.substring(1) -> exprNode)
+          } else {
+            acc + (key -> value)
+          }
+        }
+      }
+
     // Resolve global definitions (e.g., DEBUG: false → replace all DEBUG refs)
-    toplevel = GlobalDefs.resolveDefs(toplevel, options.globalDefs)
+    toplevel = GlobalDefs.resolveDefs(toplevel, normalizedGlobalDefs)
 
     // For bookmarklet mode: wrap simple statements in returns
     if (optionBool("expression")) {

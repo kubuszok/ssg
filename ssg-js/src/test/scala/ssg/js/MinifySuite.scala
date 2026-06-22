@@ -487,15 +487,47 @@ final class MinifySuite extends munit.FunSuite {
   }
 
   // 28. "Should throw for non-trivial expressions" (global_defs)
-  test("global_defs: should throw for non-trivial expressions".fail) {
-    // global_defs is unsupported in MinifyOptions/Terser.minify() — see ISS-1179
-    fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
+  // terser test/mocha/minify.js:397-408 — `@alert` key causes "debugger" to be
+  // parsed as an expression; since "debugger" is a statement keyword (not a valid
+  // expression), the parser rejects it. Terser expects "Unexpected token: keyword
+  // (debugger)"; SSG's parser may phrase the message differently, so we assert
+  // that a JsParseError is thrown (the error must propagate, not be swallowed).
+  test("global_defs: should throw for non-trivial expressions") {
+    // terser test/mocha/minify.js:399-408
+    val ex = intercept[JsParseError] {
+      Terser.minify(
+        "alert(42);",
+        MinifyOptions(
+          compress = CompressorOptions(
+            globalDefs = Map("@alert" -> "debugger")
+          )
+        )
+      )
+    }
+    // The parse error should mention "debugger" — the unexpected token.
+    // terser expects: "Unexpected token: keyword (debugger)"
+    assert(ex.message.contains("debugger"), s"Expected parse error about 'debugger', got: ${ex.message}")
   }
 
   // 29. "Should skip inherited properties" (global_defs)
-  test("global_defs: should skip inherited properties".fail) {
-    // global_defs is unsupported in MinifyOptions/Terser.minify() — see ISS-1179
-    fail("global_defs not yet integrated into MinifyOptions API — ISS-1179")
+  // terser test/mocha/minify.js:410-421 — in JS, `Object.create({ skip: this })`
+  // creates an object whose prototype has a "skip" property, but whose own
+  // properties are only `{ bar: 42 }`. terser's toNode converts only own
+  // properties, so the output is `alert({bar:42})`. Scala has no prototype chain,
+  // so the "skip inherited" aspect is vacuous; this test verifies that toNode
+  // converts a Map (own-property object) to an object literal correctly.
+  test("global_defs: should skip inherited properties") {
+    // terser test/mocha/minify.js:410-421
+    val result = Terser.minify(
+      "alert(FOO);",
+      MinifyOptions(
+        compress = CompressorOptions(
+          globalDefs = Map("FOO" -> Map("bar" -> 42.0))
+        )
+      )
+    )
+    // terser expects: "alert({bar:42});"
+    assertEquals(result.code, "alert({bar:42});")
   }
 
   // 31. "rename: Should be repeatable" — disabled in original via `if (0)`
