@@ -51,7 +51,7 @@ class KaTeXOptionsEntryPointIss1086Suite extends munit.FunSuite {
     val expr = "x^2"
 
     val displayOutput = KaTeX.renderToString(expr, KaTeXOptions(displayMode = true))
-    val inlineOutput = KaTeX.renderToString(expr, KaTeXOptions(displayMode = false))
+    val inlineOutput  = KaTeX.renderToString(expr, KaTeXOptions(displayMode = false))
 
     // Display mode wraps in katex-display, inline does not
     assert(
