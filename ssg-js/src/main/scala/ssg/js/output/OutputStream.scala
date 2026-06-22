@@ -2131,9 +2131,7 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
       (lead, frac, str.substring(expStart, i).toInt)
     }
 
-  private def numToString(num: Double): String =
-    if (num == Math.floor(num) && !num.isInfinite && Math.abs(num) < 1e15) num.toLong.toString
-    else num.toString.replace("E", "e")
+  private def numToString(num: Double): String = JsNumber.toJsString(num)
 
   // ========================================================================
   // Utility helpers
