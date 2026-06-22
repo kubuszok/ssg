@@ -35,8 +35,10 @@ final class In32BitContextCrashSuite extends munit.FunSuite {
     assert(out.nonEmpty, "output must be non-empty valid JS")
     // The output should contain bitwise operators (not all folded away since
     // b, d, f are free variables)
-    assert(out.contains("|") || out.contains("&") || out.contains("~") || out.contains(">>"),
-      s"output should retain bitwise ops for free variables: $out")
+    assert(
+      out.contains("|") || out.contains("&") || out.contains("~") || out.contains(">>"),
+      s"output should retain bitwise ops for free variables: $out"
+    )
   }
 
   // -----------------------------------------------------------------------
