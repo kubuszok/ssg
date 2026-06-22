@@ -12,5 +12,6 @@ package ssg
 
 package object mermaid {
 
-  val Version: String = "11.0.0"
+  /** The upstream Mermaid library version this module ports (NOT the SSG project version). */
+  val UpstreamVersion: String = "11.0.0"
 }

@@ -8,5 +8,6 @@ package ssg
 
 package object graphviz {
 
+  /** SSG-native ssg-graphviz module version (graphviz is an original SSG implementation, not a port). */
   val Version: String = "0.1.0"
 }

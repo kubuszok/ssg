@@ -15,5 +15,7 @@
 package ssg
 
 package object js {
+
+  /** SSG project version (snapshot). */
   val Version = "0.1.0-SNAPSHOT"
 }

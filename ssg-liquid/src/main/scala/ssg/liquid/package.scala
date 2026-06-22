@@ -10,5 +10,7 @@
 package ssg
 
 package object liquid {
+
+  /** SSG project version (snapshot). */
   val Version = "0.1.0-SNAPSHOT"
 }

@@ -21,13 +21,13 @@ final class InfoDiagramSuite extends FunSuite {
 
   test("parse: creates db with version") {
     val db = InfoParser.parse("info")
-    assertEquals(db.version, ssg.mermaid.Version)
+    assertEquals(db.version, ssg.mermaid.UpstreamVersion)
   }
 
   test("render: produces valid SVG with version") {
     val svg = InfoDiagram.render("info")
     assert(svg.contains("<svg"))
-    assert(svg.contains(ssg.mermaid.Version), s"Should contain version number")
+    assert(svg.contains(ssg.mermaid.UpstreamVersion), s"Should contain version number")
   }
 
   test("render: via Mermaid dispatch") {
