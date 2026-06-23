@@ -539,7 +539,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_retain
   // =========================================================================
-  test("drop_toplevel_retain".fail) {
+  test("drop_toplevel_retain") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -560,6 +560,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         a = 2;
         console.log(3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => Set("f", "a", "o").contains(n)),
         unused = true
       )
     )
@@ -568,7 +569,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_retain_array
   // =========================================================================
-  test("drop_toplevel_retain_array".fail) {
+  test("drop_toplevel_retain_array") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -589,6 +590,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         a = 2;
         console.log(3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => Set("f", "a", "o").contains(n)),
         unused = true
       )
     )
@@ -597,7 +599,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_retain_regex
   // =========================================================================
-  test("drop_toplevel_retain_regex".fail) {
+  test("drop_toplevel_retain_regex") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -618,6 +620,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         a = 2;
         console.log(3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => "^[fao]$".r.matches(n)),
         unused = true
       )
     )
@@ -626,7 +629,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_all_retain
   // =========================================================================
-  test("drop_toplevel_all_retain".fail) {
+  test("drop_toplevel_all_retain") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -647,6 +650,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         a = 2;
         console.log(3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => Set("f", "a", "o").contains(n)),
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -656,7 +660,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_funcs_retain
   // =========================================================================
-  test("drop_toplevel_funcs_retain".fail) {
+  test("drop_toplevel_funcs_retain") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -678,6 +682,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         function g() {}
         console.log(b = 3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => Set("f", "a", "o").contains(n)),
         toplevel = ToplevelConfig(funcs = true, vars = false),
         unused = true
       )
@@ -687,7 +692,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // drop_toplevel_vars_retain
   // =========================================================================
-  test("drop_toplevel_vars_retain".fail) {
+  test("drop_toplevel_vars_retain") {
     assertCompresses(
       input = """var a, b = 1, c = g;
         function f(d) {
@@ -710,6 +715,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         function h() {}
         console.log(3)""".stripMargin.trim,
       options = AllOff.copy(
+        topRetain = Some((n: String) => Set("f", "a", "o").contains(n)),
         toplevel = ToplevelConfig(funcs = false, vars = true),
         unused = true
       )
@@ -2322,7 +2328,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_1
   // =========================================================================
-  test("issue_t161_top_retain_1".fail) {
+  test("issue_t161_top_retain_1") {
     assertCompresses(
       input = """function f() { return 2; }
         function g() { return 3; }
@@ -2333,6 +2339,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         }())""".stripMargin.trim,
       options = AllOff.copy(
         reduceVars = true,
+        topRetain = Some((n: String) => Set("f").contains(n)),
         unused = true
       )
     )
@@ -2351,6 +2358,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         console.log(f(), f(), g(), g())""".stripMargin.trim,
       options = AllOff.copy(
         reduceVars = true,
+        topRetain = Some((n: String) => Set("f").contains(n)),
         unused = true
       )
     )
@@ -2359,16 +2367,17 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_3
   // =========================================================================
-  test("issue_t161_top_retain_3".fail) {
+  test("issue_t161_top_retain_3") {
     assertCompresses(
       input = """function f() { return 2; }
         function g() { return 3; }
         console.log(f(), g())""".stripMargin.trim,
       expected = """function f() { return 2; }
         console.log(f(), 3)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 3
+        passes = 3,
+        topRetain = Some((n: String) => Set("f").contains(n))
       )
     )
   }
@@ -2376,16 +2385,17 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_4
   // =========================================================================
-  test("issue_t161_top_retain_4".fail) {
+  test("issue_t161_top_retain_4") {
     assertCompresses(
       input = """function f() { return 2; }
         function g() { return 3; }
         console.log(f(), f(), g(), g())""".stripMargin.trim,
       expected = """function f() { return 2; }
         console.log(f(), f(), 3, 3)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 3
+        passes = 3,
+        topRetain = Some((n: String) => Set("f").contains(n))
       )
     )
   }
@@ -2393,7 +2403,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_5
   // =========================================================================
-  test("issue_t161_top_retain_5".fail) {
+  test("issue_t161_top_retain_5") {
     assertCompresses(
       input = """(function() {
             function f() { return 2; }
@@ -2401,9 +2411,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
             console.log(f(), g());
         })()""".stripMargin.trim,
       expected = "console.log(2, 3)",
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 3
+        passes = 3,
+        topRetain = Some((n: String) => Set("f").contains(n))
       )
     )
   }
@@ -2411,7 +2422,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_6
   // =========================================================================
-  test("issue_t161_top_retain_6".fail) {
+  test("issue_t161_top_retain_6") {
     assertCompresses(
       input = """(function() {
             function f() { return 2; }
@@ -2419,9 +2430,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
             console.log(f(), f(), g(), g());
         })()""".stripMargin.trim,
       expected = "console.log(2, 2, 3, 3)",
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 3
+        passes = 3,
+        topRetain = Some((n: String) => Set("f").contains(n))
       )
     )
   }
@@ -2429,7 +2441,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_7
   // =========================================================================
-  test("issue_t161_top_retain_7".fail) {
+  test("issue_t161_top_retain_7") {
     assertCompresses(
       input = """var x = 2, y = 3, z = 4;
         console.log(x, y, z, x * y, x * z, y * z)""".stripMargin.trim,
@@ -2439,6 +2451,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         evaluate = true,
         reduceVars = true,
         sideEffects = true,
+        topRetain = Some((n: String) => Set("y").contains(n)),
         unused = true
       )
     )
@@ -2447,7 +2460,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_8
   // =========================================================================
-  test("issue_t161_top_retain_8".fail) {
+  test("issue_t161_top_retain_8") {
     assertCompresses(
       input = """function f() { return x; }
         function g() { return y; }
@@ -2456,9 +2469,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         console.log(x, y, z, x * y, x * z, y * z, f(), g(), h())""".stripMargin.trim,
       expected = """var y = 3;
         console.log(2, 3, 4, 6, 8, 12, 2, 3, 4)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("y").contains(n))
       )
     )
   }
@@ -2466,7 +2480,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_9
   // =========================================================================
-  test("issue_t161_top_retain_9".fail) {
+  test("issue_t161_top_retain_9") {
     assertCompresses(
       input = """function f() { return x; }
         function g() { return y; }
@@ -2475,9 +2489,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         console.log(x, y, z, x * y, x * z, y * z, f(), g(), h())""".stripMargin.trim,
       expected = """var y = 3;
         console.log(2, 3, 4, 6, 8, 12, 2, 3, 4)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("y").contains(n))
       )
     )
   }
@@ -2485,7 +2500,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_10
   // =========================================================================
-  test("issue_t161_top_retain_10".fail) {
+  test("issue_t161_top_retain_10") {
     assertCompresses(
       input = """function f() { return x; }
         function g() { return y; }
@@ -2495,9 +2510,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
       expected = """function f() { return x; }
         var x = 2, y = 3;
         console.log(x, 3, 4, 3 * x, 4 * x, 12, f(), 3, 4)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("y", "f").contains(n))
       )
     )
   }
@@ -2505,7 +2521,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_11
   // =========================================================================
-  test("issue_t161_top_retain_11".fail) {
+  test("issue_t161_top_retain_11") {
     assertCompresses(
       input = """function f() { return x; }
         function g() { return y; }
@@ -2515,9 +2531,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
       expected = """function g() { return y; }
         var x = 2, y = 3;
         console.log(2, y, 4, 2 * y, 8, 4 * y, 2, g(), 4)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("g", "x", "y").contains(n))
       )
     )
   }
@@ -2525,7 +2542,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_12
   // =========================================================================
-  test("issue_t161_top_retain_12".fail) {
+  test("issue_t161_top_retain_12") {
     assertCompresses(
       input = """function f() { return x; }
         function g() { return y; }
@@ -2536,9 +2553,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         function h() { return z; }
         var y = 3, z = 4;
         console.log(2, y, z, 2 * y, 2 * z, y * z, 2, g(), h())""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("g", "h").contains(n))
       )
     )
   }
@@ -2546,7 +2564,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_13
   // =========================================================================
-  test("issue_t161_top_retain_13".fail) {
+  test("issue_t161_top_retain_13") {
     assertCompresses(
       input = """const f = () => x;
         const g = () => y;
@@ -2555,9 +2573,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
         console.log(x, y, z, x * y, x * z, y * z, f(), g(), h())""".stripMargin.trim,
       expected = """const g = () => y, y = 3;
         console.log(2, y, 4, 2 * y, 8, 4 * y, 2, g(), 4)""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("g").contains(n))
       )
     )
   }
@@ -2565,7 +2584,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t161_top_retain_14
   // =========================================================================
-  test("issue_t161_top_retain_14".fail) {
+  test("issue_t161_top_retain_14") {
     assertCompresses(
       input = """class Alpha {
             num() { return x; }
@@ -2597,9 +2616,10 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
                 return 4;
             }
         }().num())""".stripMargin.trim,
-      options = AllOff.copy(
+      options = CompressorOptions(
         inline = InlineLevel.InlineFull,
-        passes = 2
+        passes = 2,
+        topRetain = Some((n: String) => Set("Alpha", "z").contains(n))
       )
     )
   }
@@ -2649,7 +2669,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // issue_t183
   // =========================================================================
-  test("issue_t183".fail) {
+  test("issue_t183") {
     assertCompresses(
       input = """function foo(val) {
             function bar(x) {
@@ -2663,7 +2683,9 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
             if (x) return x;
             bar(x - 1);
         }("PASS"))""".stripMargin.trim,
-      options = AllOff
+      options = CompressorOptions(
+        topRetain = Some((_: String) => false)
+      )
     )
   }
 
