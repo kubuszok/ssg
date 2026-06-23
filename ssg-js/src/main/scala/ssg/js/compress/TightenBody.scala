@@ -2089,8 +2089,11 @@ object TightenBody {
     def extractCandidates(expr: AstNode): Unit = {
       hitStack.addOne(expr)
       expr match {
-        case a: AstAssign if !hasSideEffects(a.left.nn, compressor) && !a.right.nn.isInstanceOf[AstChain] =>
-          candidates.addOne(ArrayBuffer.from(hitStack))
+        // terser: candidate added conditionally, but right-side recursion is unconditional
+        case a: AstAssign =>
+          if (!hasSideEffects(a.left.nn, compressor) && !a.right.nn.isInstanceOf[AstChain]) {
+            candidates.addOne(ArrayBuffer.from(hitStack))
+          }
           extractCandidates(a.right.nn)
 
         case b: AstBinary =>

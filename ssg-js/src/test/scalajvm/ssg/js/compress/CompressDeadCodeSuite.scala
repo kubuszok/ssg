@@ -492,7 +492,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // issue_2233_3
   // Fails: side_effects+unsafe+unused+toplevel interaction
   // =========================================================================
-  test("issue_2233_3".fail) {
+  test("issue_2233_3") {
     assertCompresses(
       input = """var RegExp;
                 |Array.isArray;

@@ -2532,7 +2532,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
           // Method call optimizations
           case dot: AstDot if dot.expression != null =>
             dot.property match {
-              case "toString" if self.args.isEmpty && !Inference.mayThrowOnAccess(dot, this) =>
+              // terser: `!exp.expression.may_throw_on_access(compressor)` — wrapper on receiver
+              case "toString" if self.args.isEmpty && !Inference.dotThrow(dot.expression.nn, this) =>
                 val bin = new AstBinary
                 bin.operator = "+"
                 bin.left = { val s = new AstString; s.value = ""; s.start = self.start; s.end = self.end; s }
