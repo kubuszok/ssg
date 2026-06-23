@@ -6,8 +6,7 @@ import ssg.liquid.filters.Punycode
 
 /** Unit tests for the pure-Scala RFC 3492 Punycode encoder (ISS-1261).
   *
-  * Expected values are derived from RFC 3492 section 7 sample strings and
-  * verified against java.net.IDN.toASCII on the JVM.
+  * Expected values are derived from RFC 3492 section 7 sample strings and verified against java.net.IDN.toASCII on the JVM.
   */
 final class PunycodeIss1261Suite extends munit.FunSuite {
 
