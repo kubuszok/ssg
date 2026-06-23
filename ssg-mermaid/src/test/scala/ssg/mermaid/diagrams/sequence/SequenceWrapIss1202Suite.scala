@@ -12,9 +12,8 @@ import ssg.mermaid.render.text.TextMetrics
 
 /** Tests for ISS-1202: sequence message wrap (wrapLabel + breakString) rendering.
   *
-  * Verifies that when wrap is enabled (config.wrap=true), long message labels
-  * are line-broken in the SVG output using tspan elements, and that the
-  * wrap-off path remains unchanged (single text element).
+  * Verifies that when wrap is enabled (config.wrap=true), long message labels are line-broken in the SVG output using tspan elements, and that the wrap-off path remains unchanged (single text
+  * element).
   */
 final class SequenceWrapIss1202Suite extends FunSuite {
 
