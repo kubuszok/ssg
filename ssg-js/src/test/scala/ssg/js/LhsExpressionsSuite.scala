@@ -225,12 +225,12 @@ final class LhsExpressionsSuite extends munit.FunSuite {
   }
 
   // Known parser gap: multiple object rest elements not validated
-  test("should not allow spread on invalid locations — object multiple rest".fail) {
+  test("should not allow spread on invalid locations — object multiple rest") {
     intercept[JsParseError](parse("let { a, ...x, ...y } = o;"))
   }
 
   // Known parser gap: Object rest must be last is not validated
-  test("should not allow spread on invalid locations — object rest must be last".fail) {
+  test("should not allow spread on invalid locations — object rest must be last") {
     intercept[JsParseError](parse("let { ...x, a } = o;"))
   }
 }

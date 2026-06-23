@@ -604,7 +604,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // issue_2383_2
   // Fails: parser does not support destructuring default values in var declarations
   // =========================================================================
-  test("issue_2383_2".fail) {
+  test("issue_2383_2") {
     assertCompresses(
       input = """if (0) {
                 |    var {

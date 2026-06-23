@@ -1063,28 +1063,28 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
             kv.end = prevTok
             elements.addOne(kv)
           }
-          if (isExpand) {
-            if (!is(Token.Punc, "}")) {
-              croak("Rest element must be last element")
-            }
-          } else if (is(Token.Operator, "=")) {
-            up.markDefaultAssignment(token)
-            next()
-            val last      = elements(elements.size - 1)
-            val lastValue = last match {
-              case kv: AstObjectKeyVal => kv.value
-              case other => other
-            }
-            val da = new AstDefaultAssign
-            da.start = lastValue.nn.start
-            da.left = lastValue.nn
-            da.operator = "="
-            da.right = expression(commas = false)
-            da.end = token
-            last match {
-              case kv: AstObjectKeyVal => kv.value = da
-              case _ => elements(elements.size - 1) = da
-            }
+        }
+        if (isExpand) {
+          if (!is(Token.Punc, "}")) {
+            croak("Rest element must be last element")
+          }
+        } else if (is(Token.Operator, "=")) {
+          up.markDefaultAssignment(token)
+          next()
+          val last      = elements(elements.size - 1)
+          val lastValue = last match {
+            case kv: AstObjectKeyVal => kv.value
+            case other => other
+          }
+          val da = new AstDefaultAssign
+          da.start = lastValue.nn.start
+          da.left = lastValue.nn
+          da.operator = "="
+          da.right = expression(commas = false)
+          da.end = token
+          last match {
+            case kv: AstObjectKeyVal => kv.value = da
+            case _ => elements(elements.size - 1) = da
           }
         }
       }

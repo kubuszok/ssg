@@ -64,7 +64,7 @@ final class ArgumentsSuite extends munit.FunSuite {
 
   // 4. "Should parse a function containing default assignments in destructuring correctly"
   // Known parser gap: default assignments in destructuring function params fail to parse
-  test("should parse function with default assignments in destructuring".fail) {
+  test("should parse function with default assignments in destructuring") {
     // Array destructuring: function foo([a = 123]) {}
     val ast = parse("function foo([a = 123]) {}")
     val fn  = ast.body(0).asInstanceOf[AstDefun]
@@ -104,7 +104,7 @@ final class ArgumentsSuite extends munit.FunSuite {
 
   // 5. "Should parse a function containing default assignments in complex destructuring correctly"
   // Known parser gap: default assignments in complex destructuring function params fail to parse
-  test("should parse function with default assignments in complex destructuring".fail) {
+  test("should parse function with default assignments in complex destructuring") {
     // function foo([a, [b = 123]]){}
     val ast = parse("function foo([a, [b = 123]]){}")
     val fn  = ast.body(0).asInstanceOf[AstDefun]
