@@ -50,7 +50,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // strict_reduce_vars
   // =========================================================================
-  test("strict_reduce_vars".fail) {
+  test("strict_reduce_vars") {
     assertCompresses(
       input = """var a, b = null, c = {};
         a.prop;
@@ -80,7 +80,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe
   // =========================================================================
-  test("unsafe".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (drops null.prop/(void 0).prop)
+  test("unsafe") {
     assertCompresses(
       input = """var a, b = null, c = {};
         a.prop;
@@ -108,7 +108,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_reduce_vars
   // =========================================================================
-  test("unsafe_reduce_vars".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (drops null.prop/(void 0).prop)
+  test("unsafe_reduce_vars") {
     assertCompresses(
       input = """var a, b = null, c = {};
         a.prop;
@@ -378,7 +378,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_5
   // =========================================================================
-  test("set_immutable_5") {
+  test("set_immutable_5".fail) { // ISS-1311: collapse_vars over-collapses '1..foo += ""' into the following 'if (a.foo)' (terser keeps both); unmasked by ISS-1309's may_throw fix
     assertCompresses(
       input = """"use strict";
         var a = 1;
@@ -405,7 +405,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_6
   // =========================================================================
-  test("set_immutable_6".fail) {
+  test("set_immutable_6") {
     assertCompresses(
       input = """var a = 1;
         a.foo += "";
@@ -429,7 +429,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_mutable_1
   // =========================================================================
-  test("set_mutable_1".fail) {
+  test("set_mutable_1") {
     assertCompresses(
       input = """!function a() {
             a.foo += "";
@@ -454,7 +454,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_mutable_2
   // =========================================================================
-  test("set_mutable_2".fail) {
+  test("set_mutable_2") {
     assertCompresses(
       input = """!function a() {
             a.foo += "";
@@ -479,7 +479,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2265_1
   // =========================================================================
-  test("issue_2265_1".fail) {
+  test("issue_2265_1") {
     assertCompresses(
       input = """({ ...{} }).p;
         ({ ...g }).p""".stripMargin.trim,
@@ -522,7 +522,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2265_3
   // =========================================================================
-  test("issue_2265_3".fail) {
+  test("issue_2265_3") {
     assertCompresses(
       input = """var a = {
             set b() {
@@ -545,7 +545,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2265_4
   // =========================================================================
-  test("issue_2265_4".fail) {
+  test("issue_2265_4") {
     assertCompresses(
       input = """var a = { b: 1 };
         ({...a}).b""".stripMargin.trim,

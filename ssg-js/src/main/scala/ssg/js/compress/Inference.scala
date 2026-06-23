@@ -524,7 +524,8 @@ object Inference {
         if (isNullish(dot, compressor)) {
           dot.expression != null && hasSideEffects(dot.expression.nn, compressor)
         } else {
-          (!dot.optional && dot.expression != null && mayThrowOnAccess(dot, compressor)) ||
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+          (!dot.optional && dot.expression != null && dotThrow(dot.expression.nn, compressor)) ||
           (dot.expression != null && hasSideEffects(dot.expression.nn, compressor))
         }
 
@@ -532,7 +533,8 @@ object Inference {
         if (isNullish(sub, compressor)) {
           sub.expression != null && hasSideEffects(sub.expression.nn, compressor)
         } else {
-          (!sub.optional && sub.expression != null && mayThrowOnAccess(sub, compressor)) ||
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+          (!sub.optional && sub.expression != null && dotThrow(sub.expression.nn, compressor)) ||
           (sub.property match {
             case n: AstNode => hasSideEffects(n, compressor)
             case _ => false
@@ -691,14 +693,16 @@ object Inference {
       case dot: AstDot =>
         if (isNullish(dot, compressor)) false
         else {
-          (!dot.optional && dot.expression != null && mayThrowOnAccess(dot, compressor)) ||
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+          (!dot.optional && dot.expression != null && dotThrow(dot.expression.nn, compressor)) ||
           (dot.expression != null && mayThrow(dot.expression.nn, compressor))
         }
 
       case sub: AstSub =>
         if (isNullish(sub, compressor)) false
         else {
-          (!sub.optional && sub.expression != null && mayThrowOnAccess(sub, compressor)) ||
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+          (!sub.optional && sub.expression != null && dotThrow(sub.expression.nn, compressor)) ||
           (sub.expression != null && mayThrow(sub.expression.nn, compressor)) ||
           (sub.property match {
             case n: AstNode => mayThrow(n, compressor)
@@ -806,9 +810,9 @@ object Inference {
         else if (isUndeclaredRef(ref) && isRefDeclared(ref, compressor)) false
         else if (isRefImmutable(ref)) false
         else {
-          // Check if the fixed value may throw on access
+          // Check if the fixed value may throw on access (terser: `fixed._dot_throw(compressor)`)
           ref.fixedValue() match {
-            case n: AstNode => dotThrow(n, compressor)
+            case n: AstNode => mayThrowOnAccess(n, compressor)
             case _ => true // No fixed value in strict mode -> may throw
           }
         }
@@ -817,8 +821,11 @@ object Inference {
         isStrict(compressor)
     }
 
-  /** Internal helper for recursive _dot_throw checks. */
-  private def dotThrow(node: AstNode, compressor: CompressorLike): Boolean =
+  /** Wrapper equivalent to terser's `may_throw_on_access` (the DEFMETHOD wrapper): returns true when property access on `node` may throw at runtime.
+    *
+    * NB: naming is INVERTED vs terser — SSG `dotThrow` = terser `may_throw_on_access` (wrapper), SSG `mayThrowOnAccess` = terser `_dot_throw` (type-dispatch).
+    */
+  def dotThrow(node: AstNode, compressor: CompressorLike): Boolean =
     !compressor.optionBool("pure_getters") || mayThrowOnAccess(node, compressor)
 
   // -----------------------------------------------------------------------
