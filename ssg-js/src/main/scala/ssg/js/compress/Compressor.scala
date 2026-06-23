@@ -1798,6 +1798,14 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         !hasSideEffects(block, this)
       }
 
+    // Walker with `self` on the stack so loopcontrolTarget can resolve breaks
+    // targeting this switch — mirrors terser's is_break(node, compressor) where
+    // the compressor stack contains the switch during OPT(AST_Switch, ...).
+    // The compressor's own stack is empty here because optimizeTree recurses
+    // manually without push/pop, so we need a dedicated walker.
+    val switchWalker = new TreeWalker()
+    switchWalker.push(self)
+
     // - compress self.body into `body`
     // - find and deduplicate default branch
     // - find the exact match (`case 1234` inside `switch(1234)`)
@@ -1935,13 +1943,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         while (pi >= 0) {
           val bbody = body(pi).body
           // Pop trailing breaks targeting self
-          while (
-            bbody.nonEmpty && bbody.last.isInstanceOf[AstBreak] && {
-              val brk    = bbody.last.asInstanceOf[AstBreak]
-              val target = loopcontrolTarget(brk)
-              target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])
-            }
-          )
+          while (bbody.nonEmpty && isBreakTargetingSelf(bbody.last, switchWalker))
             bbody.remove(bbody.size - 1)
           if (!isInertBody(body(pi))) break(())
           pi -= 1
@@ -2106,12 +2108,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (aborts(body(0)) != null) {
         // Only the first branch body could have a break (at the last statement)
         val first = body(0)
-        if (first.body.nonEmpty && first.body.last.isInstanceOf[AstBreak]) {
-          val brk    = first.body.last.asInstanceOf[AstBreak]
-          val target = loopcontrolTarget(brk)
-          if (target != null && (target.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef])) {
-            first.body.remove(first.body.size - 1)
-          }
+        if (first.body.nonEmpty && isBreakTargetingSelf(first.body.last, switchWalker)) {
+          first.body.remove(first.body.size - 1)
         }
         branch match {
           case cas: AstCase if cas.expression != null =>
