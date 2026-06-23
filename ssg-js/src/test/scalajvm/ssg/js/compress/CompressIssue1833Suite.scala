@@ -131,7 +131,7 @@ final class CompressIssue1833Suite extends munit.FunSuite {
   // =========================================================================
   // label_do
   // =========================================================================
-  test("label_do".fail) {
+  test("label_do") {
     assertCompresses(
       input = """L: do {
             continue L;

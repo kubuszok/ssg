@@ -18,7 +18,7 @@ final class CompressIssueT1372Suite extends munit.FunSuite {
   // =========================================================================
   // issue_t1372_maintain_this_binding
   // =========================================================================
-  test("issue_t1372_maintain_this_binding".fail) {
+  test("issue_t1372_maintain_this_binding") {
     assertCompresses(
       input = """(function(o) {
             console.log((0, o.f)("PASS"), (0, o?.f)("PASS"));

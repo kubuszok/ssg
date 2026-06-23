@@ -1070,7 +1070,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // delete_conditional_1
   // =========================================================================
-  test("delete_conditional_1".fail) {
+  test("delete_conditional_1") {
     assertCompresses(
       input = """console.log(delete (1 ? undefined : x));
         console.log(delete (1 ? void 0 : x));
@@ -1096,7 +1096,7 @@ final class CompressConditionalsSuite extends munit.FunSuite {
   // =========================================================================
   // delete_conditional_2
   // =========================================================================
-  test("delete_conditional_2".fail) {
+  test("delete_conditional_2") {
     assertCompresses(
       input = """console.log(delete (0 ? x : undefined));
         console.log(delete (0 ? x : void 0));

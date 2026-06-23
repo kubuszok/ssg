@@ -18,7 +18,7 @@ final class CompressIssue782Suite extends munit.FunSuite {
   // =========================================================================
   // remove_redundant_sequence_items
   // =========================================================================
-  test("remove_redundant_sequence_items".fail) {
+  test("remove_redundant_sequence_items") {
     assertCompresses(
       input = """(0, 1, eval)();
         (0, 1, logThis)();
@@ -35,7 +35,7 @@ final class CompressIssue782Suite extends munit.FunSuite {
   // =========================================================================
   // dont_remove_this_binding_sequence
   // =========================================================================
-  test("dont_remove_this_binding_sequence".fail) {
+  test("dont_remove_this_binding_sequence") {
     assertCompresses(
       input = """(0, eval)();
         (0, logThis)();
