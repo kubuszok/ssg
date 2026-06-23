@@ -92,7 +92,6 @@ final class JsNumberEcmaIss1298Suite extends munit.FunSuite {
   }
 
   test("ISS-1298 Double.MaxValue -> 1.7976931348623157e+308") {
-    check(1.7976931348623157e308, "1.7976931348623157e+308",
-      "Double.MaxValue (ECMA step 11, large exponent)")
+    check(1.7976931348623157e308, "1.7976931348623157e+308", "Double.MaxValue (ECMA step 11, large exponent)")
   }
 }
