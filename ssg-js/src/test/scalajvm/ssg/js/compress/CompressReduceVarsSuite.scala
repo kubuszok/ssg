@@ -3456,7 +3456,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // obj_arg_2
   // =========================================================================
-  test("obj_arg_2".fail) {
+  test("obj_arg_2") {
     assertCompresses(
       input = """var C = 1;
         function f(obj) {

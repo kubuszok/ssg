@@ -3730,7 +3730,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
           }
           // Try flatten_object: {a:1}.a → [1][0]
           val flat = flattenObject(self, prop)
-          if (flat != null) return flat.nn // @nowarn
+          if (flat != null) return optimizeNode(flat.nn) // @nowarn  // terser index.js:3768 sub.optimize(compressor)
         case _ =>
       }
     }
@@ -3791,14 +3791,14 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         }
         // Try flatten_object with the evaluated key
         val flat = flattenObject(self, ks)
-        if (flat != null) return flat.nn // @nowarn
+        if (flat != null) return optimizeNode(flat.nn) // @nowarn  // terser index.js:3654-3658 sub falls through to re-optimize
       }
 
       // If key wasn't evaluated, try string key directly
       prop match {
         case str: AstString =>
           val flat = flattenObject(self, str.value)
-          if (flat != null) return flat.nn // @nowarn
+          if (flat != null) return optimizeNode(flat.nn) // @nowarn  // terser index.js:3654-3658 sub falls through to re-optimize
         case _ =>
       }
     }
@@ -3892,18 +3892,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
           val index = num.value.toInt
           if (num.value == index.toDouble && index >= 0 && index < arr.elements.size) {
             val retValue = arr.elements(index)
-            // Check safe_to_flatten
-            val safeToFlatten = retValue match {
-              case ref: AstSymbolRef =>
-                val fv = ref.fixedValue()
-                fv == null || !(fv.isInstanceOf[AstLambda] || fv.isInstanceOf[AstClass]) ||
-                (fv.isInstanceOf[AstLambda] && !containsThis(fv.asInstanceOf[AstLambda])) ||
-                (try parent(0)
-                catch { case _: IndexOutOfBoundsException => null }).isInstanceOf[AstNew]
-              case _: AstLambda | _: AstClass => false
-              case _                          => true
-            }
-            if (safeToFlatten && !retValue.isInstanceOf[AstExpansion]) {
+            // Check safe_to_flatten — delegate to shared safeToFlatten (index.js:3665 + 3516-3524)
+            if (safeToFlatten(retValue) && !retValue.isInstanceOf[AstExpansion]) {
               boundary {
                 var flatten = true
                 val values  = ArrayBuffer.empty[AstNode]
@@ -3935,7 +3925,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
                 }
                 if (flatten) {
                   values.addOne(rv)
-                  return makeSequence(self, values) // @nowarn
+                  return optimizeNode(makeSequence(self, values)) // @nowarn  // terser index.js:3687 make_sequence(..).optimize(compressor)
                 } else {
                   val newArr = new AstArray
                   newArr.elements = values
