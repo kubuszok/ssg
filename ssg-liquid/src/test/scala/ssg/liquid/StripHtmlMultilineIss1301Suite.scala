@@ -6,15 +6,11 @@ import java.util.{ HashMap => JHashMap }
 
 import ssg.data.DataView
 
-/** Pinning tests for ISS-1301: Strip_HTML must replicate liqp's MULTILINE
-  * semantics where `.*?` does NOT cross line terminators.
+/** Pinning tests for ISS-1301: Strip_HTML must replicate liqp's MULTILINE semantics where `.*?` does NOT cross line terminators.
   *
-  * Ground truth: liqp Strip_HTML.java:14 compiles STRIP_HTML_BLOCKS with
-  * Pattern.MULTILINE (not DOTALL), and line 17 compiles STRIP_HTML_TAGS the
-  * same way. Java MULTILINE only changes `^`/`$` anchors -- it does NOT make
-  * `.` match `\n`. Therefore `<script.*?</script>` only removes a script
-  * block when the entire construct is on ONE line. Multi-line blocks are left
-  * intact; only their individual single-line tags are stripped by STRIP_HTML_TAGS.
+  * Ground truth: liqp Strip_HTML.java:14 compiles STRIP_HTML_BLOCKS with Pattern.MULTILINE (not DOTALL), and line 17 compiles STRIP_HTML_TAGS the same way. Java MULTILINE only changes `^`/`$` anchors
+  * -- it does NOT make `.` match `\n`. Therefore `<script.*?</script>` only removes a script block when the entire construct is on ONE line. Multi-line blocks are left intact; only their individual
+  * single-line tags are stripped by STRIP_HTML_TAGS.
   *
   * Verified against liqp 0.9.0 Strip_HTML.java:14,17,28-29.
   */
