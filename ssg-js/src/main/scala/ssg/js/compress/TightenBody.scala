@@ -2341,7 +2341,20 @@ object TightenBody {
                 }
               } else {
                 // Check for stop conditions that don't abort immediately
-                val sym        = isLhs(node.asInstanceOf[AstNode], node)
+                // terser tighten-body.js:405 passes node.left (the LHS of an
+                // assignment) to is_lhs, NOT the node itself. Passing the
+                // parent node made the assign.left===node check in isLhs always
+                // false, so the prop-write may-alias stop (lines 2358-2360)
+                // was dead code. The else-node fallback preserves the unary
+                // side-effect branch in isLhs which only inspects the parent.
+                // Note: AST_ForIn has no .left property (ast.js:495 defines
+                // only "init object"), so node.left is undefined for for-in
+                // at this call site in terser — folds to null here.
+                val nodeLeft: AstNode | Null = node match {
+                  case a: AstAssign => a.left
+                  case _ => null
+                }
+                val sym        = isLhs(if (nodeLeft != null) nodeLeft.nn else node.asInstanceOf[AstNode], node)
                 val shouldStop =
                   (node.isInstanceOf[AstCall]) ||
                     (node.isInstanceOf[AstExit] &&
