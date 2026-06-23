@@ -111,7 +111,7 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // convert_computed_props_to_regular_ones
   // =========================================================================
-  test("convert_computed_props_to_regular_ones".fail) {
+  test("convert_computed_props_to_regular_ones") {
     assertCompresses(
       input = """var o = {
             ["hi"]: 0,
