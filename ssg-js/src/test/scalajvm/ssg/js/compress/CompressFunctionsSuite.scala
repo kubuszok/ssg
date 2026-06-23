@@ -2153,7 +2153,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_3166
   // =========================================================================
-  test("issue_3166".fail) {
+  test("issue_3166") {
     assertCompresses(
       input = """"foo";
         "use strict";
@@ -2316,7 +2316,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // drop_lone_use_strict
   // =========================================================================
-  test("drop_lone_use_strict".fail) {
+  test("drop_lone_use_strict") {
     assertCompresses(
       input = """function f1() {
             "use strict";

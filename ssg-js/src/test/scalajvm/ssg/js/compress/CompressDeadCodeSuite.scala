@@ -74,7 +74,7 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
   // dead_code_2_should_warn_strict
   // Fails: strict mode block-scoped function extraction not yet implemented
   // =========================================================================
-  test("dead_code_2_should_warn_strict".fail) {
+  test("dead_code_2_should_warn_strict") {
     assertCompresses(
       input = """"use strict";
                 |function f() {
