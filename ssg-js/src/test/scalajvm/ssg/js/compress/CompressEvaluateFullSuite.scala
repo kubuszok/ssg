@@ -728,7 +728,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_integer_key
   // =========================================================================
-  test("unsafe_integer_key".fail) {
+  test("unsafe_integer_key") {
     assertCompresses(
       input = """console.log(
             ({0:1}) + 1,
@@ -876,7 +876,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_string
   // =========================================================================
-  test("unsafe_string".fail) {
+  test("unsafe_string") {
     assertCompresses(
       input = """console.log(
             "1234" + 1,
@@ -1082,7 +1082,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_charAt
   // =========================================================================
-  test("unsafe_charAt".fail) {
+  test("unsafe_charAt") {
     assertCompresses(
       input = """console.log(
             "1234" + 1,
@@ -1110,7 +1110,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_charAt_bad_index
   // =========================================================================
-  test("unsafe_charAt_bad_index".fail) {
+  test("unsafe_charAt_bad_index") {
     assertCompresses(
       input = """console.log(
             "1234".charAt() + 1,
@@ -1642,7 +1642,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2822
   // =========================================================================
-  test("issue_2822".fail) {
+  test("issue_2822") {
     assertCompresses(
       input = "console.log([ function() {}, \"PASS\", \"FAIL\" ][1])",
       expected = "console.log(\"PASS\")",

@@ -298,7 +298,7 @@ final class CompressArraysSuite extends munit.FunSuite {
   // =========================================================================
   // index
   // =========================================================================
-  test("index".fail) {
+  test("index") {
     assertCompresses(
       input = """var a = [ 1, 2 ];
         console.log(a[0], a[1])""".stripMargin.trim,
