@@ -9,7 +9,7 @@
  * Migration notes:
  *   Renames: liqp.filters → ssg.liquid.filters
  *   Convention: Jekyll-specific URL filter, extends Relative_Url
- *   Idiom: URI normalization with punycode workaround, error handling
+ *   Idiom: URI normalization with pure-Scala Punycode (RFC 3492) for IDN hosts
  *   Audited: 2026-04-10 — ISS-099 fixed: full URI handling ported from Java
  *
  * Covenant: full-port
@@ -77,7 +77,7 @@ object Absolute_Url {
 
   /** Converts a Unicode URL to ASCII using URI normalization.
     *
-    * Note: `java.net.IDN.toASCII` is JVM-only, so we skip punycode conversion and rely on URI normalization which works cross-platform. On JVM, the authority will already be ASCII in most cases.
+    * Host IDN labels are Punycode-encoded via the pure-Scala [[Punycode]] object (RFC 3492), a cross-platform replacement for `java.net.IDN.toASCII`.
     */
   def convertUnicodeURLToAscii(url0: String): String =
     if (url0 != null) {
@@ -97,13 +97,37 @@ object Absolute_Url {
       val queryString = if (uri.getRawQuery != null) "?" + uri.getRawQuery else ""
       val fragment    = if (uri.getRawFragment != null) "#" + uri.getRawFragment else ""
 
-      // IDN.toASCII is JVM-only; skip punycode conversion for cross-platform compat.
-      // Most practical URLs already have ASCII authority.
-      val assembled = (if (includeScheme) scheme else "") + authority + path + queryString + fragment
+      // Must convert domain to punycode separately from the path
+      // see https://gist.github.com/msangel/f2224f72d386db3580ce18e5ef01bcc3
+      val asciiAuthority = punycodeAuthority(authority)
+      val assembled      = (if (includeScheme) scheme else "") + asciiAuthority + path + queryString + fragment
 
       // Convert path from unicode to ascii encoding
       new URI(assembled).normalize().toASCIIString
     } else {
       url0
+    }
+
+  /** Punycode-encode the host portion of a URI authority string.
+    *
+    * Handles `userinfo@host:port` by splitting off the optional userinfo prefix and port suffix, applying [[Punycode.toAscii]] only to the host, then reassembling. Mirrors `java.net.IDN.toASCII`
+    * applied to the full authority.
+    */
+  private def punycodeAuthority(authority: String): String =
+    if (authority.isEmpty) authority
+    else {
+      // Split off optional userinfo@ prefix
+      val atIdx    = authority.indexOf('@')
+      val userinfo = if (atIdx >= 0) authority.substring(0, atIdx + 1) else ""
+      val hostPort = if (atIdx >= 0) authority.substring(atIdx + 1) else authority
+
+      // Split off optional :port suffix (find last colon not inside IPv6 brackets)
+      val bracketEnd = hostPort.lastIndexOf(']')
+      val colonIdx   = hostPort.lastIndexOf(':')
+      val hasPort    = colonIdx > bracketEnd
+      val host       = if (hasPort) hostPort.substring(0, colonIdx) else hostPort
+      val port       = if (hasPort) hostPort.substring(colonIdx) else ""
+
+      userinfo + Punycode.toAscii(host) + port
     }
 }
