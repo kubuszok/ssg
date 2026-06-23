@@ -49,6 +49,7 @@ import ssg.js.compress.Common.*
 import ssg.js.compress.CompressorFlags.{ WRITE_ONLY, clearFlag }
 import ssg.js.compress.Inference.{ aborts, hasSideEffects, isLhs, isModified, isRefImmutable, lazyOp, mayThrow, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
+import ssg.js.output.JsNumber
 import ssg.js.scope.{ ScopeAnalysis, SymbolDef }
 
 /** Statement-level optimization engine.
@@ -1043,6 +1044,23 @@ object TightenBody {
   // Sub-pass: join consecutive var declarations
   // -----------------------------------------------------------------------
 
+  /** Coerce an evaluated constant to a JS string, mirroring `"" + prop`.
+    *
+    * terser tighten-body.js:1412 — `prop = "" + prop;`
+    *
+    * Returns null when the value cannot be coerced (caller should bail).
+    */
+  private def jsCoerceToString(value: Any): String | Null =
+    value match {
+      case s: String  => s
+      case d: Double  => JsNumber.toJsString(d)
+      case b: Boolean => b.toString
+      case null => "null"
+      case _:  Unit        => "undefined" // void 0 evaluates to () in SSG
+      case rv: RegExpValue => "/" + rv.source + "/" + rv.flags
+      case _ => null
+    }
+
   /** Try to merge `obj.a = 1; obj.b = 2;` into the object literal.
     *
     * @param defn
@@ -1092,17 +1110,35 @@ object TightenBody {
                   if (Inference.isConstantExpression(assign.right.nn, nearestScope) == false) return if (trimmed) exprs else null // @nowarn
 
                   // Evaluate the property key
-                  val propKey: Any = pa match {
-                    case dot: AstDot => dot.property
+                  // terser tighten-body.js:1406-1412 —
+                  //   var prop = node.left.property;
+                  //   if (prop instanceof AST_Node) prop = prop.evaluate(compressor);
+                  //   if (prop instanceof AST_Node) break;
+                  //   prop = "" + prop;
+                  val propStr: String = pa match {
+                    case dot: AstDot =>
+                      dot.property match {
+                        case s: String => s
+                        case _ => return if (trimmed) exprs else null // @nowarn
+                      }
                     case sub: AstSub =>
                       sub.property match {
-                        case str: AstString => str.value
-                        case num: AstNumber => num.value.toString
-                        case _ => return if (trimmed) exprs else null // @nowarn
+                        case str:  AstString => str.value
+                        case num:  AstNumber => JsNumber.toJsString(num.value)
+                        case s:    String    => s
+                        case prop: AstNode   =>
+                          // Evaluate (option-aware: returns the node when evaluate=false)
+                          val evaluated = Evaluate.evaluate(prop, compressor)
+                          evaluated match {
+                            case _: AstNode => return if (trimmed) exprs else null // @nowarn
+                            case _ =>
+                              val coerced = jsCoerceToString(evaluated)
+                              if (coerced == null) return if (trimmed) exprs else null // @nowarn
+                              coerced.nn
+                          }
                       }
                     case _ => return if (trimmed) exprs else null // @nowarn
                   }
-                  val propStr = propKey.toString
 
                   // Check if property already exists with different key
                   val ecmaVersion = compressor.option("ecma") match {
