@@ -73,7 +73,7 @@ final class OptimizeSubBigKeyIss1246Suite extends munit.FunSuite {
   // Terser full-default oracle: x=({4:7})[4.0]; -> x=7; (here it stops at the
   // first flatten step, [7][0], which is enough to prove the flatten fired).
   test("optimizeSub flattens an Int-range numeric key (control, ISS-1246)") {
-    assertEquals(minify("x=({4:7})[4.0];"), "x=[7][0];")
+    assertEquals(minify("x=({4:7})[4.0];"), "x=7;")
   }
 
   // RED on JVM/Native: 3e9 == 3000000000 > Int.MaxValue, so optimizeSub's
@@ -84,13 +84,13 @@ final class OptimizeSubBigKeyIss1246Suite extends munit.FunSuite {
   // Terser full-default oracle: x=({3000000000:7})[3e9]; -> x=7;
   // The fix routes the guard through JsNumber.toJsString(3e9) == "3000000000".
   test("optimizeSub flattens a numeric key > Int.MaxValue (3e9) (ISS-1246)") {
-    assertEquals(minify("x=({3000000000:7})[3e9];"), "x=[7][0];")
+    assertEquals(minify("x=({3000000000:7})[3e9];"), "x=7;")
   }
 
   // RED on JVM/Native, second big-key case: 5e9 == 5000000000 > Int.MaxValue --
   // same overflow, flatten skipped, SSG keeps `{5e9:9}[5e9]`.
   // Terser full-default oracle: x=({5000000000:9})[5e9]; -> x=9;
   test("optimizeSub flattens a numeric key > Int.MaxValue (5e9) (ISS-1246)") {
-    assertEquals(minify("x=({5000000000:9})[5e9];"), "x=[9][0];")
+    assertEquals(minify("x=({5000000000:9})[5e9];"), "x=9;")
   }
 }

@@ -703,7 +703,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // prop_function
   // =========================================================================
-  test("prop_function".fail) {
+  test("prop_function") {
     assertCompresses(
       input = """console.log(
             ({a:{b:1},b:function(){}}) + 1,
