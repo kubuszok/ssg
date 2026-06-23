@@ -18,7 +18,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_1
   // =========================================================================
-  test("constant_switch_1".fail) {
+  test("constant_switch_1") {
     assertCompresses(
       input = """switch (1+1) {
           case 1: foo(); break;
@@ -38,7 +38,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_2
   // =========================================================================
-  test("constant_switch_2".fail) {
+  test("constant_switch_2") {
     assertCompresses(
       input = """switch (1) {
           case 1: foo();
@@ -108,7 +108,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_5
   // =========================================================================
-  test("constant_switch_5".fail) {
+  test("constant_switch_5") {
     assertCompresses(
       input = """switch (1) {
           case 1:
@@ -143,7 +143,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_6
   // =========================================================================
-  test("constant_switch_6".fail) {
+  test("constant_switch_6") {
     assertCompresses(
       input = """OUT: {
             foo();
@@ -178,7 +178,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_7
   // =========================================================================
-  test("constant_switch_7".fail) {
+  test("constant_switch_7") {
     assertCompresses(
       input = """OUT: {
             foo();
@@ -222,7 +222,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // constant_switch_8
   // =========================================================================
-  test("constant_switch_8".fail) {
+  test("constant_switch_8") {
     assertCompresses(
       input = """OUT: switch (1) {
           case 1:
@@ -300,7 +300,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // drop_default_2
   // =========================================================================
-  test("drop_default_2".fail) {
+  test("drop_default_2") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar': baz(); break;
@@ -318,7 +318,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // keep_default
   // =========================================================================
-  test("keep_default".fail) {
+  test("keep_default") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar': baz();
@@ -369,7 +369,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_2
   // =========================================================================
-  test("remove_switch_2".fail) {
+  test("remove_switch_2") {
     assertCompresses(
       input = """switch (foo) {
           case 1:
@@ -396,7 +396,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_3
   // =========================================================================
-  test("remove_switch_3".fail) {
+  test("remove_switch_3") {
     assertCompresses(
       input = """switch (foo) {
           default:
@@ -423,7 +423,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_4
   // =========================================================================
-  test("remove_switch_4".fail) {
+  test("remove_switch_4") {
     assertCompresses(
       input = """switch (foo) {
           case 1:
@@ -453,7 +453,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_5
   // =========================================================================
-  test("remove_switch_5".fail) {
+  test("remove_switch_5") {
     assertCompresses(
       input = """switch (foo) {
           case "bar":
@@ -483,7 +483,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_6
   // =========================================================================
-  test("remove_switch_6".fail) {
+  test("remove_switch_6") {
     assertCompresses(
       input = """switch (foo) {
           case 1:
@@ -512,7 +512,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_7
   // =========================================================================
-  test("remove_switch_7".fail) {
+  test("remove_switch_7") {
     assertCompresses(
       input = """switch (foo) {
           case bar:
@@ -576,7 +576,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_9
   // =========================================================================
-  test("remove_switch_9".fail) {
+  test("remove_switch_9") {
     assertCompresses(
       input = """switch (foo) {
           case 1:
@@ -691,7 +691,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // remove_switch_13
   // =========================================================================
-  test("remove_switch_13".fail) {
+  test("remove_switch_13") {
     assertCompresses(
       input = """switch (1) {
           case 0:
@@ -1676,7 +1676,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // drop_case
   // =========================================================================
-  test("drop_case".fail) {
+  test("drop_case") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar': baz(); break;
@@ -1694,7 +1694,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // drop_case_2
   // =========================================================================
-  test("drop_case_2".fail) {
+  test("drop_case_2") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar': bar(); break;
@@ -1718,7 +1718,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // keep_case
   // =========================================================================
-  test("keep_case".fail) {
+  test("keep_case") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar': baz(); break;
@@ -1739,7 +1739,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // if_else
   // =========================================================================
-  test("if_else".fail) {
+  test("if_else") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar':
@@ -1780,7 +1780,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // if_else3
   // =========================================================================
-  test("if_else3".fail) {
+  test("if_else3") {
     assertCompresses(
       input = """switch (foo) {
           default:
@@ -1821,7 +1821,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // if_else5
   // =========================================================================
-  test("if_else5".fail) {
+  test("if_else5") {
     assertCompresses(
       input = """switch (1) {
           case bar:
@@ -1868,7 +1868,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // if_else7
   // =========================================================================
-  test("if_else7".fail) {
+  test("if_else7") {
     assertCompresses(
       input = """switch (foo) {
           case 'bar':
@@ -1912,7 +1912,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_376
   // =========================================================================
-  test("issue_376".fail) {
+  test("issue_376") {
     assertCompresses(
       input = """switch (true) {
           case boolCondition:
@@ -1934,7 +1934,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_441_1
   // =========================================================================
-  test("issue_441_1".fail) {
+  test("issue_441_1") {
     assertCompresses(
       input = """switch (foo) {
           case bar:
@@ -1962,7 +1962,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_441_2
   // =========================================================================
-  test("issue_441_2".fail) {
+  test("issue_441_2") {
     assertCompresses(
       input = """switch (foo) {
           case bar:
@@ -1992,7 +1992,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_441_3
   // =========================================================================
-  test("issue_441_3".fail) {
+  test("issue_441_3") {
     assertCompresses(
       input = """switch (foo) {
           case bar:
@@ -2019,7 +2019,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_441_4
   // =========================================================================
-  test("issue_441_4".fail) {
+  test("issue_441_4") {
     assertCompresses(
       input = """switch (foo) {
           case 1:
@@ -2064,7 +2064,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1674
   // =========================================================================
-  test("issue_1674".fail) {
+  test("issue_1674") {
     assertCompresses(
       input = """switch (0) {
           default:
@@ -2087,7 +2087,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1679
   // =========================================================================
-  test("issue_1679".fail) {
+  test("issue_1679") {
     assertCompresses(
       input = """var a = 100, b = 10;
         function f() {
@@ -2170,7 +2170,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1680_2
   // =========================================================================
-  test("issue_1680_2".fail) {
+  test("issue_1680_2") {
     assertCompresses(
       input = """var a = 100, b = 10;
         switch (b) {
@@ -2270,7 +2270,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1705_1
   // =========================================================================
-  test("issue_1705_1".fail) {
+  test("issue_1705_1") {
     assertCompresses(
       input = """var a = 0;
         switch (a) {
@@ -2291,7 +2291,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1705_2
   // =========================================================================
-  test("issue_1705_2".fail) {
+  test("issue_1705_2") {
     assertCompresses(
       input = """var a = 0;
         switch (a) {
@@ -2318,7 +2318,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1705_3
   // =========================================================================
-  test("issue_1705_3".fail) {
+  test("issue_1705_3") {
     assertCompresses(
       input = """switch (a) {
           case 0:
@@ -2407,7 +2407,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches
   // =========================================================================
-  test("collapse_same_branches".fail) {
+  test("collapse_same_branches") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2460,7 +2460,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row".fail) {
+  test("collapse_same_branches_not_in_a_row") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2491,7 +2491,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row2
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row2".fail) {
+  test("collapse_same_branches_not_in_a_row2") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2526,7 +2526,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row_including_fallthrough_with_same_body
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row_including_fallthrough_with_same_body".fail) {
+  test("collapse_same_branches_not_in_a_row_including_fallthrough_with_same_body") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2573,7 +2573,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row_ensure_no_side_effects
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row_ensure_no_side_effects".fail) {
+  test("collapse_same_branches_not_in_a_row_ensure_no_side_effects") {
     assertCompresses(
       input = """let i = 1;
         switch (id(2)) {
@@ -2608,7 +2608,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row_ensure_no_evaluate_elad
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row_ensure_no_evaluate_elad".fail) {
+  test("collapse_same_branches_not_in_a_row_ensure_no_evaluate_elad") {
     assertCompresses(
       input = """let i = 1;
         switch (true) {
@@ -2643,7 +2643,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_not_in_a_row_even_if_last_case_without_abort
   // =========================================================================
-  test("collapse_same_branches_not_in_a_row_even_if_last_case_without_abort".fail) {
+  test("collapse_same_branches_not_in_a_row_even_if_last_case_without_abort") {
     assertCompresses(
       input = """switch (id(3)) {
             case 1:
@@ -2673,7 +2673,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_as_default_not_in_a_row
   // =========================================================================
-  test("collapse_same_branches_as_default_not_in_a_row".fail) {
+  test("collapse_same_branches_as_default_not_in_a_row") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2714,7 +2714,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_same_branches_in_a_row2
   // =========================================================================
-  test("collapse_same_branches_in_a_row2".fail) {
+  test("collapse_same_branches_in_a_row2") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2785,7 +2785,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // trim_empty_last_branches
   // =========================================================================
-  test("trim_empty_last_branches".fail) {
+  test("trim_empty_last_branches") {
     assertCompresses(
       input = """switch (id(1)) {
             case 1:
@@ -2997,7 +2997,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1083_1
   // =========================================================================
-  test("issue_1083_1".fail) {
+  test("issue_1083_1") {
     assertCompresses(
       input = """function test(definitely_true, maybe_true) {
             switch (true) {
@@ -3034,7 +3034,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1083_2
   // =========================================================================
-  test("issue_1083_2".fail) {
+  test("issue_1083_2") {
     assertCompresses(
       input = """function test(definitely_true, maybe_true) {
             switch (true) {
@@ -3133,7 +3133,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1083_5
   // =========================================================================
-  test("issue_1083_5".fail) {
+  test("issue_1083_5") {
     assertCompresses(
       input = """function test(definitely_true, maybe_true) {
             switch (true) {
@@ -3174,7 +3174,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1083_6
   // =========================================================================
-  test("issue_1083_6".fail) {
+  test("issue_1083_6") {
     assertCompresses(
       input = """function test(definitely_true, maybe_true) {
             switch (true) {
