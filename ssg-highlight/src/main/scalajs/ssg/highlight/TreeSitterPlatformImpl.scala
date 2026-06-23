@@ -19,7 +19,12 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
   private val cp      = js.Dynamic.global.require("child_process")
 
   private lazy val wasmDir: String =
-    js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR.asInstanceOf[js.UndefOr[String]].getOrElse(throw new RuntimeException("TREE_SITTER_WASM_DIR not set"))
+    js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR.asInstanceOf[js.UndefOr[String]].getOrElse(
+      throw new IllegalStateException(
+        "TREE_SITTER_WASM_DIR is not set — point it at the directory containing " +
+          "web-tree-sitter.js/.wasm and a grammars/ subdirectory of tree-sitter-*.wasm files."
+      )
+    )
 
   override def availableGrammars: Seq[String] = {
     val grammarsDir = pathMod.join(wasmDir, "grammars").asInstanceOf[String]
@@ -30,69 +35,98 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     }
   }
 
-  override def highlight(source: String, grammarName: String, highlightQuery: String): Seq[HighlightSpan] = {
+  /** Resolves the grammar-specific wasm file path and checks whether the wasm
+    * file exists on disk. When `availableGrammars` reports a grammar but the
+    * corresponding wasm file has been removed, throws an actionable error
+    * (configuration inconsistency). For genuinely unknown grammars (not in
+    * `availableGrammars`), produces `None` so the caller can short-circuit to
+    * `Seq.empty` without a `return`.
+    */
+  private[highlight] def resolveWasmPath(grammarName: String): Option[String] =
+    resolveWasmPath(grammarName, availableGrammars)
+
+  /** Overload accepting a pre-computed grammar list, enabling deterministic
+    * testing of the throw path (the TOCTOU guard for configuration
+    * inconsistency) without filesystem races.
+    */
+  private[highlight] def resolveWasmPath(grammarName: String, knownGrammars: Seq[String]): Option[String] = {
     val wasmName = grammarName match {
       case "c_sharp" => "c_sharp"
       case "sql"     => "SQL"
       case other     => other
     }
     val wasmPath = pathMod.join(wasmDir, "grammars", s"tree-sitter-$wasmName.wasm").asInstanceOf[String]
-    if (!fs.existsSync(wasmPath).asInstanceOf[Boolean]) return Seq.empty
+    if (fs.existsSync(wasmPath).asInstanceOf[Boolean]) {
+      Some(wasmPath)
+    } else if (knownGrammars.contains(grammarName)) {
+      throw new IllegalStateException(
+        s"Grammar '$grammarName' is listed by availableGrammars but its wasm file is missing at '$wasmPath'. " +
+          "The grammars/ directory is inconsistent — reinstall the wasm provider or check TREE_SITTER_WASM_DIR."
+      )
+    } else {
+      None
+    }
+  }
 
-    val sourceJson = js.Dynamic.global.JSON.stringify(source).asInstanceOf[String]
-    val queryJson  = js.Dynamic.global.JSON.stringify(highlightQuery).asInstanceOf[String]
-    val tsJsPath   = pathMod.join(wasmDir, "web-tree-sitter.js").asInstanceOf[String]
-    val tsWasmPath = pathMod.join(wasmDir, "web-tree-sitter.wasm").asInstanceOf[String]
+  override def highlight(source: String, grammarName: String, highlightQuery: String): Seq[HighlightSpan] = {
+    resolveWasmPath(grammarName) match {
+      case None => Seq.empty
+      case Some(wasmPath) =>
+        val sourceJson = js.Dynamic.global.JSON.stringify(source).asInstanceOf[String]
+        val queryJson  = js.Dynamic.global.JSON.stringify(highlightQuery).asInstanceOf[String]
+        val tsJsPath   = pathMod.join(wasmDir, "web-tree-sitter.js").asInstanceOf[String]
+        val tsWasmPath = pathMod.join(wasmDir, "web-tree-sitter.wasm").asInstanceOf[String]
 
-    val script =
-      s"""import { readFileSync } from 'fs';
-         |import { Parser, Language, Query } from '${tsJsPath}';
-         |const wasmBuf = readFileSync('${tsWasmPath}');
-         |await Parser.init({ wasmBinary: wasmBuf.buffer });
-         |const lang = await Language.load('${wasmPath}');
-         |const parser = new Parser();
-         |parser.setLanguage(lang);
-         |const tree = parser.parse(${sourceJson});
-         |const query = new Query(lang, ${queryJson});
-         |const captures = query.captures(tree.rootNode);
-         |const result = captures.map(c => ({ s: c.node.startIndex, e: c.node.endIndex, n: c.name }));
-         |process.stdout.write(JSON.stringify(result));
-         |query.delete(); tree.delete(); parser.delete();""".stripMargin
+        val script =
+          s"""import { readFileSync } from 'fs';
+             |import { Parser, Language, Query } from '${tsJsPath}';
+             |const wasmBuf = readFileSync('${tsWasmPath}');
+             |await Parser.init({ wasmBinary: wasmBuf.buffer });
+             |const lang = await Language.load('${wasmPath}');
+             |const parser = new Parser();
+             |parser.setLanguage(lang);
+             |const tree = parser.parse(${sourceJson});
+             |const query = new Query(lang, ${queryJson});
+             |const captures = query.captures(tree.rootNode);
+             |const result = captures.map(c => ({ s: c.node.startIndex, e: c.node.endIndex, n: c.name }));
+             |process.stdout.write(JSON.stringify(result));
+             |query.delete(); tree.delete(); parser.delete();""".stripMargin
 
-    try {
-      val output = cp
-        .execFileSync(
-          "node",
-          js.Array("--input-type=module", "--max-old-space-size=1024", "--liftoff-only", "-e", script),
-          js.Dynamic.literal(encoding = "utf-8", maxBuffer = 10 * 1024 * 1024, timeout = 30000)
-        )
-        .asInstanceOf[String]
-      val arr = js.JSON.parse(output).asInstanceOf[js.Array[js.Dynamic]]
-      // web-tree-sitter reports Node.startIndex/endIndex as UTF-16 code-unit indices
-      // into the JS source string, but HighlightSpan must carry UTF-8 byte offsets
-      // (the JVM/Native FFI contract, consumed by HtmlHighlightRenderer's
-      // source.getBytes("UTF-8") slicing). Convert via the Utf8Offsets prefix table
-      // (ISS-1092).
-      val utf8Prefix = Utf8Offsets.prefix(source)
-      arr
-        .map(c =>
-          HighlightSpan(
-            Utf8Offsets.at(utf8Prefix, c.s.asInstanceOf[Int]),
-            Utf8Offsets.at(utf8Prefix, c.e.asInstanceOf[Int]),
-            c.n.asInstanceOf[String]
-          )
-        )
-        .toSeq
-    } catch {
-      case e: Exception =>
-        val stderr =
-          try
-            e.asInstanceOf[js.Dynamic].stderr.asInstanceOf[js.UndefOr[String]].toOption.getOrElse("")
-          catch { case _: Exception => "" }
-        js.Dynamic.global.process.stderr.write(
-          s"[tree-sitter] highlight($grammarName) subprocess failed: ${e.getMessage}\n${if (stderr.nonEmpty) s"  stderr: $stderr\n" else ""}"
-        )
-        Seq.empty
+        try {
+          val output = cp
+            .execFileSync(
+              "node",
+              js.Array("--input-type=module", "--max-old-space-size=1024", "--liftoff-only", "-e", script),
+              js.Dynamic.literal(encoding = "utf-8", maxBuffer = 10 * 1024 * 1024, timeout = 30000)
+            )
+            .asInstanceOf[String]
+          val arr = js.JSON.parse(output).asInstanceOf[js.Array[js.Dynamic]]
+          // web-tree-sitter reports Node.startIndex/endIndex as UTF-16 code-unit indices
+          // into the JS source string, but HighlightSpan must carry UTF-8 byte offsets
+          // (the JVM/Native FFI contract, consumed by HtmlHighlightRenderer's
+          // source.getBytes("UTF-8") slicing). Convert via the Utf8Offsets prefix table
+          // (ISS-1092).
+          val utf8Prefix = Utf8Offsets.prefix(source)
+          arr
+            .map(c =>
+              HighlightSpan(
+                Utf8Offsets.at(utf8Prefix, c.s.asInstanceOf[Int]),
+                Utf8Offsets.at(utf8Prefix, c.e.asInstanceOf[Int]),
+                c.n.asInstanceOf[String]
+              )
+            )
+            .toSeq
+        } catch {
+          case e: Exception =>
+            val stderr =
+              try
+                e.asInstanceOf[js.Dynamic].stderr.asInstanceOf[js.UndefOr[String]].toOption.getOrElse("")
+              catch { case _: Exception => "" }
+            js.Dynamic.global.process.stderr.write(
+              s"[tree-sitter] highlight($grammarName) subprocess failed: ${e.getMessage}\n${if (stderr.nonEmpty) s"  stderr: $stderr\n" else ""}"
+            )
+            Seq.empty
+        }
     }
   }
 }
