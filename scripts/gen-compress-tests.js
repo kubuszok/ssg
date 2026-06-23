@@ -276,6 +276,7 @@ function mapOption(name, value) {
     'lhs_constants': 'lhsConstants',
     'booleans_as_integers': 'booleansAsIntegers',
     'pure_new': 'pureNew',
+    'top_retain': 'topRetain',
   };
 
   const scalaName = mapping[name] || name;
@@ -293,6 +294,14 @@ function mapOption(name, value) {
     if (name === 'drop_console') {
       const items = value.value.map(s => `"${s}"`).join(', ');
       return { name: 'dropConsole', value: `DropConsoleConfig.Methods(Set(${items}))` };
+    }
+    if (name === 'top_retain') {
+      if (value.value.length === 0) {
+        // Empty array: no-op predicate
+        return { name: 'topRetain', value: 'Some((_: String) => false)' };
+      }
+      const items = value.value.map(s => `"${s}"`).join(', ');
+      return { name: 'topRetain', value: `Some((n: String) => Set(${items}).contains(n))` };
     }
     // Skip other array options we can't easily map
     return null;
@@ -367,9 +376,10 @@ function mapOption(name, value) {
     return { name: 'inline', value: `InlineLevel.${levels[Math.min(value, 3)]}` };
   }
 
-  // pure_getters
+  // pure_getters — boolean true maps to SSG's boolean `true` (enables pure-getters-dependent opts
+  // like destructuring/unused prune); string "strict" is handled above in the string-typed branch.
   if (name === 'pure_getters' && value === true) {
-    return { name: 'pureGetters', value: '"strict"' };
+    return { name: 'pureGetters', value: 'true' };
   }
   if (name === 'pure_getters' && value === false) {
     // Keep default "strict" value from AllOff
@@ -396,6 +406,16 @@ function mapOption(name, value) {
   // Skip unsupported options
   if (unsupported.includes(name)) {
     return null;
+  }
+
+  // top_retain with regex value (stored as plain string like "/^[fao]$/")
+  if (name === 'top_retain' && typeof value === 'string') {
+    const reMatch = value.match(/^\/(.+)\/([gimsuy]*)$/);
+    if (reMatch) {
+      const pattern = reMatch[1].replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return { name: 'topRetain', value: `Some((n: String) => "${pattern}".r.matches(n))` };
+    }
+    // Non-regex string top_retain is handled in the string-typed block above
   }
 
   // Boolean options that sometimes take string values in Terser

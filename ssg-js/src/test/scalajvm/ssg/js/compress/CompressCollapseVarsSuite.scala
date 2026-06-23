@@ -2067,7 +2067,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // var_side_effects_3
   // =========================================================================
-  test("var_side_effects_3".fail) {
+  test("var_side_effects_3") {
     assertCompresses(
       input = """var print = console.log.bind(console);
         function foo(x) {
@@ -2082,7 +2082,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         foo({ y: 10 })""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unsafe = true,
         unused = true
       )
@@ -2413,7 +2413,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1858
   // =========================================================================
-  test("issue_1858".fail) {
+  test("issue_1858".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (collapse_vars doesn't inline arg)
     assertCompresses(
       input = """console.log(function(x) {
             var a = {}, b = a.b = x;
@@ -2425,7 +2425,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }())""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -3362,7 +3362,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }.g())""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3400,7 +3400,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(foo.amount, answer)""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3422,7 +3422,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3458,7 +3458,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(foo.amount, answer)""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3494,7 +3494,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(foo.amount, answer)""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3502,7 +3502,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2364_5
   // =========================================================================
-  test("issue_2364_5".fail) {
+  test("issue_2364_5") {
     assertCompresses(
       input = """function f0(o, a, h) {
             var b = 3 - a;
@@ -3519,7 +3519,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         collapseVars = true,
         evaluate = true,
         properties = true,
-        pureGetters = "strict",
+        pureGetters = true,
         reduceFuncs = true,
         reduceVars = true,
         unused = true
@@ -3530,7 +3530,9 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2364_6
   // =========================================================================
-  test("issue_2364_6") {
+  // .fail: deeper source bug — SSG collapse_vars wrongly inlines a.p past the
+  // aliased mutation b.p="FAIL" when pureGetters=true. ISS-1307.
+  test("issue_2364_6".fail) {
     assertCompresses(
       input = """function f(a, b) {
             var c = a.p;
@@ -3552,7 +3554,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(f(o, o))""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3588,7 +3590,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(f(o, o))""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3624,7 +3626,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(f({}, o, o))""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3664,7 +3666,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }, o))""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -3672,7 +3674,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // pure_getters_chain
   // =========================================================================
-  test("pure_getters_chain".fail) {
+  test("pure_getters_chain") {
     assertCompresses(
       input = """function o(t, r) {
             var a = t[1], s = t[2], o = t[3], i = t[5];
@@ -3685,7 +3687,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         console.log(o([ , 23, 59, 59, , 42], 1))""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -4228,7 +4230,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
       options = AllOff.copy(
         collapseVars = true,
         inline = InlineLevel.InlineFull,
-        pureGetters = "strict",
+        pureGetters = true,
         reduceVars = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -5731,7 +5733,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }.f()[0])""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -5880,7 +5882,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -5915,7 +5917,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -5924,7 +5926,9 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // shadowed_variable_3
   // =========================================================================
-  test("shadowed_variable_3") {
+  // .fail: deeper source bug — SSG collapse_vars wrongly drops let-shadowed variable
+  // bindings when pureGetters=true + unused=true. ISS-1307.
+  test("shadowed_variable_3".fail) {
     assertCompresses(
       input = """if(1) {
             var object = 1
@@ -5948,7 +5952,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )

@@ -702,7 +702,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         var { w, x: y, z = new Object(3) } = { w: 4, x: 5, y: 6 };
         console.log(c, e, z + 0)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(),
         unused = true
       )
@@ -743,7 +743,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         var { w, x: y, z = new Object(3) } = { w: 4, x: 5, y: 6 };
         console.log(c, e, z + 0)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = false
       )
@@ -787,7 +787,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         var { w, x: y, ...z } = { w: 4, x: 5, y: 6 };
         console.log(c, e, z.y)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -923,7 +923,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_getter_side_effect_2
   // =========================================================================
-  test("unused_destructuring_getter_side_effect_2".fail) {
+  test("unused_destructuring_getter_side_effect_2") {
     assertCompresses(
       input = """function extract(obj) {
             const { a, b } = obj;
@@ -952,7 +952,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
             b: 4,
         })""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -980,7 +980,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         extract({a: 1, b: 2});
         extract({b: 4})""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -1031,6 +1031,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // export_unreferenced_declarations_2
   // =========================================================================
+  // .fail: deeper source bug — SSG over-prunes export bindings in array-nested
+  // destructuring (export const [{a,b=1}] = obj -> wrongly drops a). ISS-1307.
   test("export_unreferenced_declarations_2".fail) {
     assertCompresses(
       input = """var {unused} = obj;
@@ -1043,7 +1045,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         export var [, [{e, f = 3}]] = obj""".stripMargin.trim,
       options = AllOff.copy(
         module = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -1052,7 +1054,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // export_function_containing_destructuring_decl
   // =========================================================================
-  test("export_function_containing_destructuring_decl".fail) {
+  test("export_function_containing_destructuring_decl") {
     assertCompresses(
       input = """export function f() {
             let [{x, y, z}] = [{x: 1, y: 2}];
@@ -1064,7 +1066,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         module = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -1073,7 +1075,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_declaration_complex_1
   // =========================================================================
-  test("unused_destructuring_declaration_complex_1".fail) {
+  test("unused_destructuring_declaration_complex_1") {
     assertCompresses(
       input = """const [, w, , x, {y, z}] = [1, 2, 3, 4, {z: 5}];
         console.log(x, z)""".stripMargin.trim,
@@ -1081,7 +1083,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         const [, w, , x, {z}] = [1, 2, 3, 4, {z: 5}];
         console.log(x, z)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -1107,7 +1109,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_multipass
   // =========================================================================
-  test("unused_destructuring_multipass".fail) {
+  test("unused_destructuring_multipass") {
     assertCompresses(
       input = """let { w, x: y, z } = { x: 1, y: 2, z: 3 };
         console.log(y);
@@ -1120,7 +1122,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         conditionals = true,
         evaluate = true,
         passes = 2,
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -1275,14 +1277,14 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // empty_object_destructuring_4
   // =========================================================================
-  test("empty_object_destructuring_4".fail) {
+  test("empty_object_destructuring_4") {
     assertCompresses(
       input = """var {} = Object;
         let {L} = Object, L2 = "foo";
         const bar = "bar", {prop: C1, C2 = console.log("side effect"), C3} = Object""".stripMargin.trim,
       expected = "const {C2: C2 = console.log(\"side effect\")} = Object",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unsafe = true,
         unused = true
@@ -1293,7 +1295,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // empty_object_destructuring_misc
   // =========================================================================
-  test("empty_object_destructuring_misc".fail) {
+  test("empty_object_destructuring_misc") {
     assertCompresses(
       input = """let out = [],
             foo = (out.push(0), 1),
@@ -1309,7 +1311,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
             baz = (out.push(4), 5);
         console.log(`$${foo} $${prop} $${baz} $${JSON.stringify(out)}`)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unsafe = true,
         unused = true
@@ -1353,13 +1355,13 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // destructure_empty_array_3
   // =========================================================================
-  test("destructure_empty_array_3".fail) {
+  test("destructure_empty_array_3") {
     assertCompresses(
       input = "let {} = Object, [] = {}, unused = console.log(\"not reached\")",
       expected = """let [] = {};
         console.log("not reached")""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unsafe = true,
         unused = true

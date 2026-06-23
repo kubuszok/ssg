@@ -1177,7 +1177,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // const_prop_assign_pure
   // =========================================================================
-  test("const_prop_assign_pure".fail) {
+  test("const_prop_assign_pure".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (doesn't drop pure .prototype assignment)
     assertCompresses(
       input = """function Simulator() {
             /abc/.index = 1;
@@ -1191,7 +1191,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
         x();
         y()""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true
       )
     )
