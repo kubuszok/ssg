@@ -1973,23 +1973,29 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     }
 
     // Prune side-effect free branches that fall into default.
+    // terser index.js:1384-1428 — the DEFAULT: labeled block
     if (defaultOrExact != null) boundary {
       val defaultIndex     = body.indexOf(defaultOrExact)
       var defaultBodyIndex = defaultIndex
-      while (defaultBodyIndex < body.size - 1) {
-        if (!isInertBody(body(defaultBodyIndex))) {
-          defaultBodyIndex = body.size // will fail the check below
+      // terser: for (; dbi < body.length - 1; dbi++) { if (!is_inert_body(body[dbi])) break; }
+      // Leaves defaultBodyIndex AT the first non-inert index (or body.size - 1 if all inert).
+      boundary {
+        while (defaultBodyIndex < body.size - 1) {
+          if (!isInertBody(body(defaultBodyIndex))) break(())
+          defaultBodyIndex += 1
         }
-        defaultBodyIndex += 1
       }
-      // defaultBodyIndex must end at body.size - 1 or beyond
-      if (defaultBodyIndex < body.size - 1) break(()) // bail
+      // terser: if (default_body_index < body.length - 1) { break DEFAULT; }
+      if (defaultBodyIndex < body.size - 1) break(()) // bail the whole DEFAULT block
 
+      // terser: for (; sei >= 0; sei--) { if (branch === default_or_exact) continue;
+      //         if (branch.expression.has_side_effects(compressor)) break; }
       var sideEffectIndex = body.size - 1
       boundary {
         while (sideEffectIndex >= 0) {
           val branch = body(sideEffectIndex)
           if (branch.asInstanceOf[AnyRef] eq defaultOrExact.nn.asInstanceOf[AnyRef]) {
+            // continue — skip default, keep decrementing
             sideEffectIndex -= 1
           } else if (branch.isInstanceOf[AstCase] && hasSideEffects(branch.asInstanceOf[AstCase].expression.nn, this)) {
             break(()) // found last side-effect branch
@@ -1997,6 +2003,39 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             sideEffectIndex -= 1
           }
         }
+      }
+      // If the default behavior comes after any side-effect case expressions,
+      // then we can fold all side-effect free cases into the default branch.
+      // terser index.js:1405-1428
+      if (defaultBodyIndex > sideEffectIndex) {
+        var prevBodyIndex = defaultIndex - 1
+        boundary {
+          while (prevBodyIndex >= 0) {
+            if (!isInertBody(body(prevBodyIndex))) break(())
+            prevBodyIndex -= 1
+          }
+        }
+        val before = math.max(sideEffectIndex, prevBodyIndex) + 1
+        var after  = defaultIndex
+        if (sideEffectIndex > defaultIndex) {
+          // If the default falls into the same body as a side-effect
+          // case, then we need to preserve that case and only prune the
+          // cases after it.
+          after = sideEffectIndex
+          body(sideEffectIndex).body = body(defaultBodyIndex).body
+        } else {
+          // The default will be the last branch.
+          defaultOrExact.nn.body = body(defaultBodyIndex).body
+        }
+        // Prune everything after the default (or last side-effect case)
+        // until the next case with a body.
+        // terser: body.splice(after + 1, default_body_index - after)
+        val afterCount = defaultBodyIndex - after
+        if (afterCount > 0) body.remove(after + 1, afterCount)
+        // Prune everything before the default that falls into it.
+        // terser: body.splice(before, default_index - before)
+        val beforeCount = defaultIndex - before
+        if (beforeCount > 0) body.remove(before, beforeCount)
       }
     }
 
