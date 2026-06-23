@@ -537,7 +537,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // delete_seq_1
   // =========================================================================
-  test("delete_seq_1".fail) {
+  test("delete_seq_1") {
     assertCompresses(
       input = """console.log(delete (1, undefined));
         console.log(delete (1, void 0));
@@ -561,7 +561,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // delete_seq_2
   // =========================================================================
-  test("delete_seq_2".fail) {
+  test("delete_seq_2") {
     assertCompresses(
       input = """console.log(delete (1, 2, undefined));
         console.log(delete (1, 2, void 0));
@@ -585,7 +585,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // delete_seq_3
   // =========================================================================
-  test("delete_seq_3".fail) {
+  test("delete_seq_3") {
     assertCompresses(
       input = """console.log(delete (1, 2, undefined));
         console.log(delete (1, 2, void 0));
@@ -665,7 +665,7 @@ final class CompressSequencesSuite extends munit.FunSuite {
   // =========================================================================
   // delete_seq_6
   // =========================================================================
-  test("delete_seq_6".fail) {
+  test("delete_seq_6") {
     assertCompresses(
       input = """var a;
         console.log(delete (1, a))""".stripMargin.trim,

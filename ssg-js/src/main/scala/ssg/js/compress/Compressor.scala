@@ -1109,12 +1109,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             case false | 0 | 0.0 | "" | null =>
               // Condition is always false — body runs exactly once
               // But only if body has no break/continue targeting this loop
-              if (
-                !Common.hasBreakOrContinue(self.asInstanceOf[AstNode & AstIterationStatement],
-                                           try parent(0)
-                                           catch { case _: IndexOutOfBoundsException => null }
-                )
-              ) {
+              if (!Common.hasBreakOrContinue(self.asInstanceOf[AstNode & AstIterationStatement], liveParent(self, 0))) {
                 // Return block with body + condition for side effects
                 val condStmt = new AstSimpleStatement
                 condStmt.body = self.condition
@@ -1375,9 +1370,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       val cond   = self.condition.nn
       val condEv = Evaluate.evaluate(cond, this)
       if (condEv != null && (condEv.asInstanceOf[AnyRef] ne cond.asInstanceOf[AnyRef])) {
-        val p =
-          try parent(0)
-          catch { case _: IndexOutOfBoundsException => null }
+        val p = liveParent(self, 0)
         condEv match {
           case false | 0 | 0.0 | "" | null =>
             // Condition is falsy — return alternative with this-binding maintenance
@@ -4194,9 +4187,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (evaluateRight != null && isUndefined(self.right.nn, this)) {
         // Check keep_fargs context: if parent is a Lambda, only drop when
         // keep_fargs is false, or parent is an IIFE
-        val par =
-          try parent(0)
-          catch { case _: IndexOutOfBoundsException => null }
+        val par = liveParent(self, 0)
         par match {
           case lambda: AstLambda =>
             val keepFargs = optionBool("keep_fargs")
@@ -4204,9 +4195,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
               return self.left.nn // @nowarn
             }
             // Check if parent's parent is a Call with the lambda as expression (IIFE)
-            val gpar =
-              try parent(1)
-              catch { case _: IndexOutOfBoundsException => null }
+            val gpar = liveParent(self, 1)
             gpar match {
               case call: AstCall if call.expression != null && (call.expression.nn.asInstanceOf[AnyRef] eq lambda.asInstanceOf[AnyRef]) =>
                 return self.left.nn // @nowarn
@@ -4988,12 +4977,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
 
     // ISS-143: maintain_this_binding for single expression result
     if (end == 0 || expressions.size == 1) {
-      val p =
-        try parent(0)
-        catch { case _: IndexOutOfBoundsException => null }
-      val s =
-        try this.self()
-        catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
+      val p = liveParent(self, 0)
+      val s: AstNode = self
       val result = maintainThisBinding(if (p != null) p.nn else self, s, expressions(0))
       if (!result.isInstanceOf[AstSequence]) return optimizeNode(result) // @nowarn
       return result // @nowarn
