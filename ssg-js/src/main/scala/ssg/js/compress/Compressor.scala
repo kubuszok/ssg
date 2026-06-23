@@ -120,8 +120,10 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
   // -----------------------------------------------------------------------
   // CompressorLike implementation
   //
-  // parent(), findParent(), and hasDirective() are inherited from TreeWalker
-  // which provides compatible implementations.
+  // parent() and findParent() are inherited from TreeWalker which provides
+  // compatible implementations.  hasDirective() is overridden below to
+  // delegate to the active walker's directives map during a pass —
+  // mirroring how liveParent/inComputedKey delegate to activeWalker.
   // -----------------------------------------------------------------------
 
   /** The tree-walker driving the current transform pass. Unlike terser — where the Compressor itself is that walker (lib/compress/index.js:453) — this port runs the transform on a separate
@@ -129,6 +131,18 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     * active transformer's stack to it (see `inComputedKey`). Set for the duration of the compress pass loop; `null` otherwise.
     */
   var activeWalker: TreeWalker | Null = null
+
+  /** Read `has_directive` from the active descent walker during a compress pass (terser ast.js:3282).
+    *
+    * In terser the Compressor IS the TreeWalker driving the transform, so `compressor.has_directive(type)` reads the live `directives` map populated by `push()`/`pop()` during descent. This port runs
+    * the transform on a separate `TreeTransformer` (`activeWalker`), leaving the Compressor's own `directives` map empty during a pass. We delegate to the active walker's `directives` — exactly as
+    * `liveParent` and `inComputedKey` delegate to `activeWalker` for live ancestry — falling back to the inherited `TreeWalker.hasDirective` when no active walker is present.
+    */
+  override def hasDirective(dtype: String): AstNode | Null =
+    activeWalker match {
+      case w: TreeWalker => w.directives.getOrElse(dtype, super.hasDirective(dtype))
+      case null => super.hasDirective(dtype)
+    }
 
   /** The live parent of `self` during a compress pass — terser's `compressor.parent()`.
     *

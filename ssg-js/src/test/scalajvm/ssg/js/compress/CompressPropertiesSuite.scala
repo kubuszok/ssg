@@ -1631,7 +1631,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2816
   // =========================================================================
-  test("issue_2816".fail) {
+  test("issue_2816") {
     assertCompresses(
       input = """"use strict";
         var o = {

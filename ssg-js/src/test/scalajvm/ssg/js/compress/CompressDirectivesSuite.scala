@@ -30,7 +30,7 @@ final class CompressDirectivesSuite extends munit.FunSuite {
   // (known parser bug). Skip this test.
   // =======================================================================
 
-  test("class_directives_compression: remove use strict from class method".fail) {
+  test("class_directives_compression: remove use strict from class method") {
     assertCompresses(
       input = "class foo { foo() { 'use strict'; } }",
       expected = "class foo{foo(){}}",

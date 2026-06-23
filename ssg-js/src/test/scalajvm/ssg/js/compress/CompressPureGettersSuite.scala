@@ -378,7 +378,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // set_immutable_5
   // =========================================================================
-  test("set_immutable_5".fail) { // ISS-1311: collapse_vars over-collapses '1..foo += ""' into the following 'if (a.foo)' (terser keeps both); unmasked by ISS-1309's may_throw fix
+  test("set_immutable_5") {
     assertCompresses(
       input = """"use strict";
         var a = 1;
