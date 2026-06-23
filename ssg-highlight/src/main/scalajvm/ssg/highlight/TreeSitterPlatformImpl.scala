@@ -30,11 +30,23 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
 
   // ── Library loading via multiarch-core NativeLibLoader ───────────────
 
-  private val nativeLinker: Linker       = Linker.nativeLinker()
-  private val libLookup:    SymbolLookup = {
-    val libPath = multiarch.core.NativeLibLoader.load("tree_sitter_all")
-    SymbolLookup.libraryLookup(libPath, Arena.global())
-  }
+  private lazy val nativeLinker: Linker       = Linker.nativeLinker()
+  private lazy val libLookup:    SymbolLookup = loadLibrary("tree_sitter_all", multiarch.core.NativeLibLoader.load)
+
+  /** Loads a native library and returns its symbol lookup, wrapping any failure in an `IllegalStateException` that names the library and the host platform so load errors are immediately actionable
+    * instead of surfacing as a buried `ExceptionInInitializerError`.
+    */
+  private[highlight] def loadLibrary(libName: String, loader: String => java.nio.file.Path): SymbolLookup =
+    try
+      SymbolLookup.libraryLookup(loader(libName), Arena.global())
+    catch {
+      case cause: Throwable =>
+        throw new IllegalStateException(
+          s"Failed to load the '$libName' native library (host: ${System.getProperty("os.arch")}/${System.getProperty("os.name")}). " +
+            "Ensure the tree_sitter_all native library is on java.library.path or bundled as a classpath resource.",
+          cause
+        )
+    }
 
   private def sym(name: String): MemorySegment =
     libLookup.find(name).orElseThrow(() => new UnsupportedOperationException(s"Symbol not found: $name"))
