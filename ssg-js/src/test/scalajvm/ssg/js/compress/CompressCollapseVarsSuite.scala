@@ -3530,9 +3530,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2364_6
   // =========================================================================
-  // .fail: deeper source bug — SSG collapse_vars wrongly inlines a.p past the
-  // aliased mutation b.p="FAIL" when pureGetters=true. ISS-1307.
-  test("issue_2364_6".fail) {
+  test("issue_2364_6") {
     assertCompresses(
       input = """function f(a, b) {
             var c = a.p;

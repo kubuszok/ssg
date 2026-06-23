@@ -77,7 +77,7 @@ final class CompressIssue281Suite extends munit.FunSuite {
   // =========================================================================
   // ref_scope
   // =========================================================================
-  test("ref_scope".fail) {
+  test("ref_scope") {
     assertCompresses(
       input = """console.log(function() {
             var a = 1, b = 2, c = 3;
