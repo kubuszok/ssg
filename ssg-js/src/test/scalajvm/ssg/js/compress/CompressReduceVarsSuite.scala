@@ -2626,13 +2626,13 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // pure_getters_3
   // =========================================================================
-  test("pure_getters_3".fail) {
+  test("pure_getters_3") {
     assertCompresses(
       input = """var a;
         var a = a && a.b""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         reduceFuncs = true,
         reduceVars = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),

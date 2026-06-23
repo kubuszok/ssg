@@ -3079,14 +3079,14 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself
   // =========================================================================
-  test("class_used_within_itself".fail) {
+  test("class_used_within_itself") {
     assertCompresses(
       input = """class C {
             static [C.name] = 1;
         }""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -3252,14 +3252,14 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_var
   // =========================================================================
-  test("class_used_within_itself_var".fail) {
+  test("class_used_within_itself_var") {
     assertCompresses(
       input = """var C = class {
             static [C.name] = 1;
         }""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -3425,14 +3425,14 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_var_expname
   // =========================================================================
-  test("class_used_within_itself_var_expname".fail) {
+  test("class_used_within_itself_var_expname") {
     assertCompresses(
       input = """var C = class C {
             static [C.name] = 1;
         }""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -3598,14 +3598,14 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // class_used_within_itself_classname
   // =========================================================================
-  test("class_used_within_itself_classname".fail) {
+  test("class_used_within_itself_classname") {
     assertCompresses(
       input = """class C {
             static [C.name] = 1;
         }""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true

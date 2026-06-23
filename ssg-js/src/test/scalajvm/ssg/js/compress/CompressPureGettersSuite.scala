@@ -80,7 +80,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe
   // =========================================================================
-  test("unsafe".fail) {
+  test("unsafe".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (drops null.prop/(void 0).prop)
     assertCompresses(
       input = """var a, b = null, c = {};
         a.prop;
@@ -96,7 +96,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         (void 0).prop;
         (void 0).prop""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         reduceFuncs = false,
         reduceVars = false,
         sideEffects = true,
@@ -108,7 +108,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // unsafe_reduce_vars
   // =========================================================================
-  test("unsafe_reduce_vars".fail) {
+  test("unsafe_reduce_vars".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (drops null.prop/(void 0).prop)
     assertCompresses(
       input = """var a, b = null, c = {};
         a.prop;
@@ -124,7 +124,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         (void 0).prop;
         (void 0).prop""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         reduceFuncs = true,
         reduceVars = true,
         sideEffects = true,
@@ -187,7 +187,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // impure_getter_2
   // =========================================================================
-  test("impure_getter_2".fail) {
+  test("impure_getter_2") {
     assertCompresses(
       input = """// will produce incorrect output because getter is not pure
         ({
@@ -204,7 +204,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         }).b""".stripMargin.trim,
       expected = "",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true
       )
     )
@@ -636,7 +636,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
       options = AllOff.copy(
         collapseVars = true,
         conditionals = true,
-        pureGetters = "strict",
+        pureGetters = true,
         sequencesLimit = 200,
         sideEffects = true
       )
@@ -720,7 +720,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
       options = AllOff.copy(
         collapseVars = true,
         conditionals = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -744,14 +744,14 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2313_6
   // =========================================================================
-  test("issue_2313_6".fail) {
+  test("issue_2313_6") {
     assertCompresses(
       input = """x().y++;
         x().y""".stripMargin.trim,
       expected = """x().y++;
         x()""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true
       )
     )
@@ -800,7 +800,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
       options = AllOff.copy(
         collapseVars = true,
         conditionals = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
@@ -841,7 +841,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2838
   // =========================================================================
-  test("issue_2838".fail) {
+  test("issue_2838".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (doesn't drop pure .prototype assignment)
     assertCompresses(
       input = """function f(a, b) {
             (a || b).c = "PASS";
@@ -859,7 +859,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         f(null, o);
         console.log(o.c)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true
       )
     )
@@ -883,7 +883,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         f(o);
         console.log(o.b)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -909,7 +909,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         p.braceIsBlock = function() {};
         (new Parser).initialContext()""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -919,7 +919,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2938_3
   // =========================================================================
-  test("issue_2938_3".fail) {
+  test("issue_2938_3") {
     assertCompresses(
       input = """function f(a) {
             var unused = a.a;
@@ -937,7 +937,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         f(o);
         console.log(o.b)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         unused = true
       )
@@ -947,7 +947,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2938_4
   // =========================================================================
-  test("issue_2938_4".fail) {
+  test("issue_2938_4") {
     assertCompresses(
       input = """var Parser = function Parser() {};
         var p = Parser.prototype;
@@ -966,7 +966,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         p.braceIsBlock = function() {};
         (new Parser).initialContext()""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         sideEffects = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
@@ -977,7 +977,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_1_true
   // =========================================================================
-  test("collapse_vars_1_true".fail) {
+  test("collapse_vars_1_true") {
     assertCompresses(
       input = """function f(a, b) {
             for (;;) {
@@ -993,7 +993,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -1055,7 +1055,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_2_true
   // =========================================================================
-  test("collapse_vars_2_true".fail) {
+  test("collapse_vars_2_true") {
     assertCompresses(
       input = """function f() {
             function g() {}
@@ -1070,7 +1070,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         }""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict",
+        pureGetters = true,
         reduceVars = true
       )
     )
@@ -1142,7 +1142,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
         f({}, 1)""".stripMargin.trim,
       options = AllOff.copy(
         collapseVars = true,
-        pureGetters = "strict"
+        pureGetters = true
       )
     )
   }
