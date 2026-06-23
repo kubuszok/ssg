@@ -39,6 +39,7 @@ import scala.util.boundary.break
 import ssg.js.ast.*
 import ssg.js.ast.AstSize
 import ssg.js.compress.NativeObjects.*
+import ssg.js.output.JsNumber
 
 /** Sentinel value indicating a nullish short-circuit in optional chains. */
 object Nullish
@@ -561,10 +562,12 @@ object Evaluate {
           }
 
         // String + non-string (concatenation)
+        // Use jsStringOf so Doubles coerce via JS Number.prototype.toString()
+        // semantics (e.g. 1.0 -> "1") matching terser's runtime coercion.
         case (l: String, r) if binary.operator == "+" =>
-          l + String.valueOf(r)
+          l + jsStringOf(r)
         case (l, r: String) if binary.operator == "+" =>
-          String.valueOf(l) + r
+          jsStringOf(l) + r
 
         // Nullish coalescing
         case (l, r) if binary.operator == "??" =>
@@ -589,6 +592,16 @@ object Evaluate {
       case _: Seq[?] | _: mutable.Buffer[?]    => true
       case _: RegExpValue => true
       case _ => false
+    }
+
+  /** Convert a JS runtime value to its string representation using JS coercion semantics. Doubles are routed through [[JsNumber.toJsString]] so that integer-valued doubles stringify without the
+    * fractional part (e.g. `1.0` -> `"1"`), matching the JS `Number.prototype.toString()` behavior that the original terser gets for free from the JS runtime (evaluate.js string concat, array
+    * join/toString, object key coercion).
+    */
+  private def jsStringOf(v: Any): String =
+    v match {
+      case d: Double => JsNumber.toJsString(d)
+      case other => String.valueOf(other)
     }
 
   // -----------------------------------------------------------------------
@@ -683,7 +696,7 @@ object Evaluate {
           val evaluated = evalNode(n, compressor, depth)
           evaluated match {
             case s: String => s
-            case d: Double => d.toString
+            case d: Double => JsNumber.toJsString(d)
             case _ => break(pa)
           }
       }
@@ -783,7 +796,13 @@ object Evaluate {
           case s: String =>
             propName match {
               case "length" => break(s.length.toDouble)
-              case _        => break(pa)
+              case _        =>
+                // Indexed access: "abc"[0] -> "a" (terser evaluate.js:466 obj[key])
+                val idx =
+                  try propName.toInt
+                  catch { case _: NumberFormatException => -1 }
+                if (idx >= 0 && idx < s.length) break(s.charAt(idx).toString)
+                else break(pa)
             }
           case rv: RegExpValue =>
             // RegExp property access (ISS-169: use regexp_source_fix for source)
@@ -805,6 +824,14 @@ object Evaluate {
               case "length" => break(ef.length.toDouble)
               case _        => break(pa)
             }
+          case seq: Seq[?] =>
+            // Indexed access on evaluated arrays: [1,2,3][0] -> 1
+            // (terser evaluate.js:466 obj[key])
+            val idx =
+              try propName.toInt
+              catch { case _: NumberFormatException => -1 }
+            if (idx >= 0 && idx < seq.size) break(seq(idx))
+            else break(pa)
           case m: Map[?, ?] =>
             // ISS-168: HOP check - only access if obj has own property
             val mapObj = m.asInstanceOf[Map[String, Any]]
@@ -852,7 +879,7 @@ object Evaluate {
               val k = evalNode(n, compressor, depth)
               k match {
                 case s: String => s
-                case d: Double => d.toString
+                case d: Double => JsNumber.toJsString(d)
                 case _ => break(call)
               }
           }
@@ -1160,7 +1187,7 @@ object Evaluate {
                       }
                     case "join" =>
                       val sep = args.headOption.collect { case s: String => s }.getOrElse(",")
-                      break(arr.map(String.valueOf).mkString(sep))
+                      break(arr.map(jsStringOf).mkString(sep))
                     case "lastIndexOf" =>
                       args.headOption match {
                         case Some(searchElement) =>
@@ -1176,7 +1203,7 @@ object Evaluate {
                       val normalizedEnd   = if (end < 0) Math.max(arr.size + end, 0) else end
                       break(arr.slice(normalizedStart, normalizedEnd))
                     case "toString" | "valueOf" =>
-                      break(arr.map(String.valueOf).mkString(","))
+                      break(arr.map(jsStringOf).mkString(","))
                     case _ => break(call)
                   }
                 catch {
@@ -1279,7 +1306,7 @@ object Evaluate {
                 case n:   AstNode   =>
                   val k = evalNode(n, compressor, depth)
                   if (k.asInstanceOf[AnyRef] eq n.asInstanceOf[AnyRef]) break(obj)
-                  k.toString
+                  jsStringOf(k)
               }
               // ISS-170: Guard against Object.prototype functions (toString, valueOf, constructor)
               if (objectPrototypeFunctions.contains(key)) break(obj)

@@ -119,7 +119,7 @@ final class CompressEvaluateSuite extends munit.FunSuite {
 
   // String + number is NOT folded by the evaluate pass alone
   // (Terser folds it, ssg-js does not yet — this documents the gap)
-  test("string + number NOT folded".fail) {
+  test("string + number NOT folded") {
     assertCompresses("var x = 'value: ' + 42;", "var x=\"value: 42\";", evalOpts)
   }
 
