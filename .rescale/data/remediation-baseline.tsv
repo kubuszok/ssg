@@ -9,4 +9,4 @@ assumes_ssg-liquid	19	2026-06-10	grep -rE 'assume\(' ssg-liquid/src/test --inclu
 assumes_ssg-js	2	2026-06-13	grep -rE 'assume\(' ssg-js/src/test --include='*.scala' | wc -l
 assumes_ssg-katex	2	2026-06-10	grep -rE 'assume\(' ssg-katex/src/test --include='*.scala' | wc -l
 assumes_ssg-highlight	4	2026-06-17	grep -rE 'assume\(' ssg-highlight/src/test --include='*.scala' | wc -l
-exception_swallows	3	2026-06-23	grep -rE 'case _: (Exception|Throwable) =>' ssg-minify/src/main ssg-js/src/main --include='*.scala' | wc -l
+exception_swallows	9	2026-06-23	grep -raE 'case _: (Exception|Throwable) =>' ssg-minify/src/main ssg-js/src/main --include='*.scala' | wc -l
