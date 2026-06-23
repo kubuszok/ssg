@@ -69,22 +69,17 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     def tree_sitter_vim():               Ptr[Byte] = extern
     def tree_sitter_xml():               Ptr[Byte] = extern
     def tree_sitter_zig():               Ptr[Byte] = extern
-    def tree_sitter_agda():              Ptr[Byte] = extern
     def tree_sitter_arduino():           Ptr[Byte] = extern
     def tree_sitter_bicep():             Ptr[Byte] = extern
     def tree_sitter_cairo():             Ptr[Byte] = extern
-    def tree_sitter_commonlisp():        Ptr[Byte] = extern
     def tree_sitter_cpon():              Ptr[Byte] = extern
     def tree_sitter_cuda():              Ptr[Byte] = extern
-    def tree_sitter_diff():              Ptr[Byte] = extern
     def tree_sitter_embedded_template(): Ptr[Byte] = extern
     def tree_sitter_func():              Ptr[Byte] = extern
     def tree_sitter_gitattributes():     Ptr[Byte] = extern
     def tree_sitter_glsl():              Ptr[Byte] = extern
     def tree_sitter_gosum():             Ptr[Byte] = extern
     def tree_sitter_hare():              Ptr[Byte] = extern
-    def tree_sitter_hcl():               Ptr[Byte] = extern
-    def tree_sitter_hlsl():              Ptr[Byte] = extern
     def tree_sitter_jsdoc():             Ptr[Byte] = extern
     def tree_sitter_kconfig():           Ptr[Byte] = extern
     def tree_sitter_kdl():               Ptr[Byte] = extern
@@ -98,20 +93,14 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     def tree_sitter_printf():            Ptr[Byte] = extern
     def tree_sitter_properties():        Ptr[Byte] = extern
     def tree_sitter_puppet():            Ptr[Byte] = extern
-    def tree_sitter_ql():                Ptr[Byte] = extern
     def tree_sitter_qmldir():            Ptr[Byte] = extern
-    def tree_sitter_query():             Ptr[Byte] = extern
     def tree_sitter_requirements():      Ptr[Byte] = extern
     def tree_sitter_ron():               Ptr[Byte] = extern
     def tree_sitter_scss():              Ptr[Byte] = extern
     def tree_sitter_squirrel():          Ptr[Byte] = extern
     def tree_sitter_starlark():          Ptr[Byte] = extern
     def tree_sitter_svelte():            Ptr[Byte] = extern
-    def tree_sitter_test():              Ptr[Byte] = extern
     def tree_sitter_ungrammar():         Ptr[Byte] = extern
-    def tree_sitter_verilog():           Ptr[Byte] = extern
-    def tree_sitter_vue():               Ptr[Byte] = extern
-    def tree_sitter_wgsl_bevy():         Ptr[Byte] = extern
     def tree_sitter_yuck():              Ptr[Byte] = extern
   }
 
@@ -156,22 +145,17 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     "vim" -> (() => Extern.tree_sitter_vim()),
     "xml" -> (() => Extern.tree_sitter_xml()),
     "zig" -> (() => Extern.tree_sitter_zig()),
-    "agda" -> (() => Extern.tree_sitter_agda()),
     "arduino" -> (() => Extern.tree_sitter_arduino()),
     "bicep" -> (() => Extern.tree_sitter_bicep()),
     "cairo" -> (() => Extern.tree_sitter_cairo()),
-    "commonlisp" -> (() => Extern.tree_sitter_commonlisp()),
     "cpon" -> (() => Extern.tree_sitter_cpon()),
     "cuda" -> (() => Extern.tree_sitter_cuda()),
-    "diff" -> (() => Extern.tree_sitter_diff()),
     "embedded_template" -> (() => Extern.tree_sitter_embedded_template()),
     "func" -> (() => Extern.tree_sitter_func()),
     "gitattributes" -> (() => Extern.tree_sitter_gitattributes()),
     "glsl" -> (() => Extern.tree_sitter_glsl()),
     "gosum" -> (() => Extern.tree_sitter_gosum()),
     "hare" -> (() => Extern.tree_sitter_hare()),
-    "hcl" -> (() => Extern.tree_sitter_hcl()),
-    "hlsl" -> (() => Extern.tree_sitter_hlsl()),
     "jsdoc" -> (() => Extern.tree_sitter_jsdoc()),
     "kconfig" -> (() => Extern.tree_sitter_kconfig()),
     "kdl" -> (() => Extern.tree_sitter_kdl()),
@@ -185,20 +169,14 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     "printf" -> (() => Extern.tree_sitter_printf()),
     "properties" -> (() => Extern.tree_sitter_properties()),
     "puppet" -> (() => Extern.tree_sitter_puppet()),
-    "ql" -> (() => Extern.tree_sitter_ql()),
     "qmldir" -> (() => Extern.tree_sitter_qmldir()),
-    "query" -> (() => Extern.tree_sitter_query()),
     "requirements" -> (() => Extern.tree_sitter_requirements()),
     "ron" -> (() => Extern.tree_sitter_ron()),
     "scss" -> (() => Extern.tree_sitter_scss()),
     "squirrel" -> (() => Extern.tree_sitter_squirrel()),
     "starlark" -> (() => Extern.tree_sitter_starlark()),
     "svelte" -> (() => Extern.tree_sitter_svelte()),
-    "test" -> (() => Extern.tree_sitter_test()),
     "ungrammar" -> (() => Extern.tree_sitter_ungrammar()),
-    "verilog" -> (() => Extern.tree_sitter_verilog()),
-    "vue" -> (() => Extern.tree_sitter_vue()),
-    "wgsl_bevy" -> (() => Extern.tree_sitter_wgsl_bevy()),
     "yuck" -> (() => Extern.tree_sitter_yuck())
   )
 
