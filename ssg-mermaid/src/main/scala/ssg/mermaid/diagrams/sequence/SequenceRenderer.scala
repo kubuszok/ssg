@@ -30,6 +30,8 @@ import ssg.graphs.commons.svg.SvgBuilder
 import ssg.mermaid.theme.{ CssGenerator, Theme }
 
 import scala.collection.mutable
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Renders a sequence diagram to SVG.
   *
@@ -56,6 +58,137 @@ object SequenceRenderer {
 
   /** Default label box height for loop/alt titles. */
   private val LabelBoxHeight: Double = 20.0
+
+  /** Default wrap padding (upstream wrapPadding default = 10).
+    *
+    * sequenceRenderer.ts:383 — `textObj.textMargin = conf.wrapPadding`; config.schema.yaml default for sequence.wrapPadding is 10. SSG SequenceConfig lacks a wrapPadding field (candidate issue
+    * ISS-1203 family), so we hard-code the upstream default.
+    */
+  private val WrapPadding: Double = 10.0
+
+  /** Wraps a label string by breaking it into lines that fit within maxWidth.
+    *
+    * Faithful port of utils.ts:557-596 `wrapLabel`. Uses TextMetrics for width measurement instead of browser DOM. Joins lines with "\n" (SSG convention — upstream uses `<br/>` then re-splits; SSG
+    * uses \n throughout).
+    *
+    * Memoization is omitted: upstream memoizes for DOM perf; SSG server-side rendering does not benefit from per-render memoization.
+    *
+    * @param label
+    *   the text to wrap
+    * @param maxWidth
+    *   the maximum line width in pixels
+    * @param fontSize
+    *   font size for measurement
+    * @param fontFamily
+    *   font family for measurement
+    * @param fontWeight
+    *   font weight for measurement
+    * @return
+    *   the label with "\n" line breaks inserted
+    */
+  private[sequence] def wrapLabel(
+    label:      String,
+    maxWidth:   Double,
+    fontSize:   Double = 12,
+    fontFamily: String = "sans-serif",
+    fontWeight: String = "normal"
+  ): String =
+    boundary[String] {
+      // utils.ts:560-562 — empty guard
+      if (label.isEmpty) {
+        break(label) // preserved: upstream returns label as-is for falsy
+      }
+      // utils.ts:567-569 — if label already contains a line break, return as-is
+      if (label.contains("\n")) {
+        break(label)
+      }
+      // utils.ts:570 — split on spaces, filter empty
+      val words          = label.split(" ").filter(_.nonEmpty)
+      val completedLines = mutable.ArrayBuffer.empty[String]
+      var nextLine       = ""
+      var i              = 0
+      while (i < words.length) {
+        val word = words(i)
+        // utils.ts:574-575 — measure word (with trailing space) and current line
+        val wordLength     = TextMetrics.measureText(word + " ", fontSize, fontFamily, fontWeight).width
+        val nextLineLength = TextMetrics.measureText(nextLine, fontSize, fontFamily, fontWeight).width
+        if (wordLength > maxWidth) {
+          // utils.ts:577-579 — word itself exceeds maxWidth, hyphen-break it
+          val broken = breakString(word, maxWidth, "-", fontSize, fontFamily, fontWeight)
+          completedLines += nextLine
+          completedLines ++= broken.hyphenatedStrings
+          nextLine = broken.remainingWord
+        } else if (nextLineLength + wordLength >= maxWidth) {
+          // utils.ts:580-582 — adding this word would exceed maxWidth, start new line
+          completedLines += nextLine
+          nextLine = word
+        } else {
+          // utils.ts:584 — append word to current line
+          nextLine = Array(nextLine, word).filter(_.nonEmpty).mkString(" ")
+        }
+        // utils.ts:586-590 — if this is the last word, push the remaining line
+        val isLastWord = (i + 1) == words.length
+        if (isLastWord) {
+          completedLines += nextLine
+        }
+        i += 1
+      }
+      // utils.ts:592 — join non-empty completed lines
+      completedLines.filter(_.nonEmpty).mkString("\n")
+    }
+
+  /** Breaks a single word into hyphenated fragments that fit within maxWidth.
+    *
+    * Faithful port of utils.ts:603-639 `breakString`. Accumulates characters until the line width reaches maxWidth, then pushes a hyphenated line and resets.
+    *
+    * @param word
+    *   the word to break
+    * @param maxWidth
+    *   the maximum line width in pixels
+    * @param hyphenCharacter
+    *   the character to append when breaking (typically "-")
+    * @param fontSize
+    *   font size for measurement
+    * @param fontFamily
+    *   font family for measurement
+    * @param fontWeight
+    *   font weight for measurement
+    * @return
+    *   the hyphenated fragments and any remaining (non-hyphenated) tail
+    */
+  private[sequence] def breakString(
+    word:            String,
+    maxWidth:        Double,
+    hyphenCharacter: String = "-",
+    fontSize:        Double = 12,
+    fontFamily:      String = "sans-serif",
+    fontWeight:      String = "normal"
+  ): BreakStringOutput = {
+    // utils.ts:619 — spread word into characters
+    val characters  = word.toArray
+    val lines       = scala.collection.mutable.ArrayBuffer.empty[String]
+    var currentLine = ""
+    var idx         = 0
+    while (idx < characters.length) {
+      val character = characters(idx)
+      // utils.ts:623-624 — accumulate character, measure
+      val candidateLine = currentLine + character
+      val lineWidth     = TextMetrics.measureText(candidateLine, fontSize, fontFamily, fontWeight).width
+      if (lineWidth >= maxWidth) {
+        // utils.ts:626-629 — push line (with hyphen unless last char)
+        val isLastLine = (idx + 1) == characters.length
+        val fragment   = if (isLastLine) candidateLine else candidateLine + hyphenCharacter
+        lines += fragment
+        currentLine = ""
+      } else {
+        // utils.ts:632 — keep accumulating
+        currentLine = candidateLine
+      }
+      idx += 1
+    }
+    // utils.ts:635 — return hyphenated lines + remaining tail
+    BreakStringOutput(hyphenatedStrings = lines.toArray, remainingWord = currentLine)
+  }
 
   /** Renders a sequence diagram to an SVG string.
     *
@@ -406,7 +539,11 @@ object SequenceRenderer {
     )
   }
 
-  /** Builds a message rendering model. */
+  /** Builds a message rendering model.
+    *
+    * When msg.wrap is true, the message text is passed through [[wrapLabel]] before layout so that the SVG height accounts for the wrapped line count. This mirrors sequenceRenderer.ts:1507-1513 where
+    * `wrapLabel` is applied before `calculateTextDimensions`.
+    */
   private def buildMessageModel(
     msg:      SeqMessage,
     db:       SequenceDb,
@@ -422,7 +559,18 @@ object SequenceRenderer {
     val startx = fromActor.map(a => a.x + a.width / 2).getOrElse(0.0)
     val stopx  = toActor.map(a => a.x + a.width / 2).getOrElse(0.0)
 
-    val bbox       = TextMetrics.measureText(msg.message, 12, "sans-serif")
+    // sequenceRenderer.ts:1506-1513 — when wrap is enabled, run wrapLabel on the
+    // message before measuring. maxWidth = max(boundedWidth + 2*wrapPadding, conf.width).
+    val message =
+      if (msg.wrap && msg.message.nonEmpty) {
+        val boundedWidth = math.abs(startx - stopx)
+        val wrapMaxWidth = math.max(boundedWidth + 2 * WrapPadding, conf.width.toDouble)
+        wrapLabel(msg.message, wrapMaxWidth, 12, "sans-serif", "normal")
+      } else {
+        msg.message
+      }
+
+    val bbox       = TextMetrics.measureText(message, 12, "sans-serif")
     val textHeight = bbox.height + 10
 
     val isSelfRef = fromId == toId
@@ -433,7 +581,7 @@ object SequenceRenderer {
       stopx = stopx,
       starty = yPos,
       stopy = yPos + msgHeight,
-      message = msg.message,
+      message = message,
       msgType = msg.msgType,
       wrap = msg.wrap,
       sequenceIndex = seqIndex,
@@ -613,7 +761,11 @@ object SequenceRenderer {
   ): Unit = {
     val group = parent.append("g")
 
-    // Draw message text
+    // Draw message text — svgDraw.js:130-245 drawText.
+    // When the message contains line breaks (from wrapLabel), emit one <tspan> per line
+    // with dy offsets, mirroring svgDraw.js:197-246 and the drawActor tspan pattern
+    // (SequenceRenderer lines ~531-534). Single-line messages use the original code path
+    // (text.text) to keep wrap-off output byte-identical.
     val textX = (msgInfo.startx + msgInfo.stopx) / 2
     val textY = msgInfo.starty + 10
     val text  = group.append("text")
@@ -621,7 +773,22 @@ object SequenceRenderer {
     text.attr("y", textY)
     text.attr("text-anchor", "middle")
     text.classed("messageText", true)
-    text.text(msgInfo.message)
+    val lines = msgInfo.message.split("\n", -1)
+    if (lines.length <= 1) {
+      // Single line — keep existing output unchanged
+      text.text(msgInfo.message)
+    } else {
+      // Multi-line — emit one tspan per line with vertical offset (svgDraw.js:203 dy = i * fontSize)
+      var lineIdx = 0
+      while (lineIdx < lines.length) {
+        val tspan = text.append("tspan")
+        tspan.attr("x", textX)
+        // svgDraw.js:203 — dy = i * fontSize; first line at dy=0
+        tspan.attr("dy", if (lineIdx == 0) "0" else "12")
+        tspan.text(lines(lineIdx))
+        lineIdx += 1
+      }
+    }
 
     // Draw the line/arrow
     val lineY    = msgInfo.starty + 20
@@ -916,4 +1083,10 @@ final private[sequence] class LoopData(
 final private[sequence] case class SectionData(
   y:     Double,
   title: String
+)
+
+/** Output of [[SequenceRenderer.breakString]], mirroring utils.ts:598-601 `BreakStringOutput`. */
+final private[sequence] case class BreakStringOutput(
+  hyphenatedStrings: Array[String],
+  remainingWord:     String
 )
