@@ -31,7 +31,7 @@ final class CompressParametersSuite extends munit.FunSuite {
   // =========================================================================
   // destructuring_arguments_1
   // =========================================================================
-  test("destructuring_arguments_1".fail) {
+  test("destructuring_arguments_1") {
     assertCompresses(
       input = """(function ( a ) { });
         (function ( [ a ] ) { });

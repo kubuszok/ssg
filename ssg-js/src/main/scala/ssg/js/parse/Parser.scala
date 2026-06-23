@@ -694,7 +694,9 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
 
     val arrow = new AstArrow
     arrow.start = start
-    arrow.end = body.last.end
+    // Empty arrow bodies (() => {}) have no last element — fall back to prevTok
+    // (the closing }), mirroring functionDef below and terser parse.js:1640
+    arrow.end = body.lastOption.map(_.end).getOrElse(prevTok)
     arrow.isAsync = isAsync
     arrow.argnames = argnames
     arrow.body = ArrayBuffer.from(body)
