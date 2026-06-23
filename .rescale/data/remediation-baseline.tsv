@@ -3,7 +3,7 @@ covenant_fail_total	98	2026-06-14	re-scale enforce verify --all 2>&1 | tail -5
 shortcut_hits	131	2026-06-20	re-scale enforce shortcuts --src ssg-commons,ssg-graphs-commons,ssg-md,ssg-liquid,ssg-sass,ssg-minify,ssg-js,ssg-katex,ssg-mermaid,ssg-graphviz,ssg-highlight 2>&1 | tail -1
 fail_marks_ssg-md	2	2026-06-10	grep -rE '\.fail\b' ssg-md/src/test --include='*.scala' | wc -l
 fail_marks_ssg-liquid	23	2026-06-23	grep -rE '\.fail\b' ssg-liquid/src/test --include='*.scala' | wc -l
-fail_marks_ssg-js	696	2026-06-24	grep -rE '\.fail\b' ssg-js/src/test --include='*.scala' | wc -l
+fail_marks_ssg-js	687	2026-06-24	grep -rE '\.fail\b' ssg-js/src/test --include='*.scala' | wc -l
 assumes_ssg-md	2	2026-06-10	grep -rE 'assume\(' ssg-md/src/test --include='*.scala' | wc -l
 assumes_ssg-liquid	19	2026-06-10	grep -rE 'assume\(' ssg-liquid/src/test --include='*.scala' | wc -l
 assumes_ssg-js	2	2026-06-13	grep -rE 'assume\(' ssg-js/src/test --include='*.scala' | wc -l
