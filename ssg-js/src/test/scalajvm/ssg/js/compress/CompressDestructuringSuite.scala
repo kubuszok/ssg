@@ -670,7 +670,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_decl_1
   // =========================================================================
-  test("unused_destructuring_decl_1".fail) {
+  // terser destructuring.js:821-839 — pure_getters: true (line 823)
+  test("unused_destructuring_decl_1") {
     assertCompresses(
       input = """let { x: L, y } = { x: 2 };
         var { U: u, V } = { V: 3 };
@@ -680,7 +681,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         var { V } = { V: 3 };
         console.log(L, V)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -752,7 +753,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_decl_5
   // =========================================================================
-  test("unused_destructuring_decl_5".fail) {
+  // terser destructuring.js:904-924 — pure_getters: true (line 906), top_retain: ["a","e","w"] (line 908)
+  test("unused_destructuring_decl_5") {
     assertCompresses(
       input = """const { a, b: c, d = new Object(1) } = { b: 7 };
         let { e, f: g, h = new Object(2) } = { e: 8 };
@@ -763,7 +765,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         var { w, z = new Object(3) } = { w: 4, x: 5, y: 6 };
         console.log(c, e, z + 0)""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
+        topRetain = Some((n: String) => Set("a", "e", "w").contains(n)),
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
@@ -794,7 +797,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_function_param
   // =========================================================================
-  test("unused_destructuring_function_param".fail) {
+  // terser destructuring.js:947-968 — pure_getters: true (line 949)
+  test("unused_destructuring_function_param") {
     assertCompresses(
       input = """function foo({w = console.log("side effect"), x, y: z}) {
             console.log(x);
@@ -805,7 +809,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         }
         foo({x: 1, y: 2, z: 3})""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -814,7 +818,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_arrow_param
   // =========================================================================
-  test("unused_destructuring_arrow_param".fail) {
+  // terser destructuring.js:970-991 — pure_getters: true (line 972)
+  test("unused_destructuring_arrow_param") {
     assertCompresses(
       input = """let bar = ({w = console.log("side effect"), x, y: z}) => {
             console.log(x);
@@ -825,7 +830,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         };
         bar({x: 4, y: 5, z: 6})""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -834,7 +839,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_object_method_param
   // =========================================================================
-  test("unused_destructuring_object_method_param".fail) {
+  // terser destructuring.js:993-1016 — pure_getters: true (line 995)
+  test("unused_destructuring_object_method_param") {
     assertCompresses(
       input = """({
             baz({w = console.log("side effect"), x, y: z}) {
@@ -847,7 +853,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
             }
         }).baz({x: 7, y: 8, z: 9})""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -856,7 +862,8 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_class_method_param
   // =========================================================================
-  test("unused_destructuring_class_method_param".fail) {
+  // terser destructuring.js:1018-1041 — pure_getters: true (line 1020)
+  test("unused_destructuring_class_method_param") {
     assertCompresses(
       input = """(new class {
             baz({w = console.log("side effect"), x, y: z}) {
@@ -869,7 +876,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
             }
         }).baz({x: 7, y: 8, z: 9})""".stripMargin.trim,
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         unused = true
       )
     )
@@ -1250,14 +1257,15 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // empty_object_destructuring_3
   // =========================================================================
-  test("empty_object_destructuring_3".fail) {
+  // terser destructuring.js:1469-1484 — pure_getters: true (line 1471)
+  test("empty_object_destructuring_3") {
     assertCompresses(
       input = """var {} = Object;
         let {L} = Object, L2 = "foo";
         const bar = "bar", {prop: C1, C2 = console.log("side effect"), C3} = Object""".stripMargin.trim,
       expected = "const {C2: C2 = console.log(\"side effect\")} = Object",
       options = AllOff.copy(
-        pureGetters = "strict",
+        pureGetters = true,
         toplevel = ToplevelConfig(funcs = true, vars = true),
         unused = true
       )
