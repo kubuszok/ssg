@@ -89,7 +89,7 @@ final class CompressIssue973Suite extends munit.FunSuite {
   // =========================================================================
   // this_binding_side_effects
   // =========================================================================
-  test("this_binding_side_effects".fail) {
+  test("this_binding_side_effects") {
     assertCompresses(
       input = """(function (foo) {
             (0, foo)();

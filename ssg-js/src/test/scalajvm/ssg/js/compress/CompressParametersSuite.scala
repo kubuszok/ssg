@@ -120,7 +120,7 @@ final class CompressParametersSuite extends munit.FunSuite {
   // =========================================================================
   // keep_default_arg_when_undefined
   // =========================================================================
-  test("keep_default_arg_when_undefined".fail) {
+  test("keep_default_arg_when_undefined") {
     assertCompresses(
       input = """function x(a = void 0) { }
         console.log(x.length)""".stripMargin.trim,
