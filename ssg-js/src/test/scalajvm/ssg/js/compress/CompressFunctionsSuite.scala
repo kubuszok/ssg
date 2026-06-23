@@ -2347,7 +2347,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // drop_lone_use_strict_arrows_1
   // =========================================================================
-  test("drop_lone_use_strict_arrows_1".fail) {
+  test("drop_lone_use_strict_arrows_1") {
     assertCompresses(
       input = """var f0 = () => 0;
         var f1 = () => {
@@ -2378,7 +2378,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // drop_lone_use_strict_arrows_2
   // =========================================================================
-  test("drop_lone_use_strict_arrows_2".fail) {
+  test("drop_lone_use_strict_arrows_2") {
     assertCompresses(
       input = """let f0 = () => 0;
         let f1 = () => {

@@ -109,7 +109,7 @@ final class CompressArrowSuite extends munit.FunSuite {
   // =========================================================================
   // arrow_binding_pattern
   // =========================================================================
-  test("arrow_binding_pattern".fail) {
+  test("arrow_binding_pattern") {
     assertCompresses(
       input = """var foo = ([]) => "foo";
         var bar = ({}) => "bar";

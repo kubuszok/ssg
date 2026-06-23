@@ -216,7 +216,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // default_assign
   // =========================================================================
-  test("default_assign".fail) {
+  test("default_assign") {
     assertCompresses(
       input = """function f(a, b = 3) {
             console.log(a);

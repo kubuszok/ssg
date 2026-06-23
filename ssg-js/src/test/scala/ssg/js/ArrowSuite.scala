@@ -53,7 +53,7 @@ final class ArrowSuite extends munit.FunSuite {
 
   // 5. "Should parse a function containing default assignment correctly"
   // Known parser gap: default assignments in arrow function params
-  test("should parse arrow with default assignment".fail) {
+  test("should parse arrow with default assignment") {
     val ast   = parse("var a = (a = 123) => {}")
     val defn  = ast.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef]
     val arrow = defn.value.asInstanceOf[AstArrow]
@@ -74,7 +74,7 @@ final class ArrowSuite extends munit.FunSuite {
   }
 
   // 6. "Should parse a function containing default assignments in destructuring correctly"
-  test("should parse arrow with default assignments in destructuring".fail) {
+  test("should parse arrow with default assignments in destructuring") {
     // Array destructuring: ([a = 123]) => {}
     val ast1   = parse("var a = ([a = 123]) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
@@ -121,7 +121,7 @@ final class ArrowSuite extends munit.FunSuite {
   }
 
   // 7. "Should parse a function containing default assignments in complex destructuring correctly"
-  test("should parse arrow with default assignments in complex destructuring".fail) {
+  test("should parse arrow with default assignments in complex destructuring") {
     // ([a, [b = 123]]) => {}
     val ast1   = parse("var a = ([a, [b = 123]]) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
@@ -177,7 +177,7 @@ final class ArrowSuite extends munit.FunSuite {
   }
 
   // 8. "Should parse spread correctly"
-  test("should parse arrow with spread".fail) {
+  test("should parse arrow with spread") {
     // (a, b, ...c) => {}
     val ast1   = parse("var a = (a, b, ...c) => {}")
     val arrow1 = ast1.body(0).asInstanceOf[AstVar].definitions(0).asInstanceOf[AstVarDef].value.asInstanceOf[AstArrow]
