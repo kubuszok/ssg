@@ -319,7 +319,7 @@ final class CompressComparingSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2857_6
   // =========================================================================
-  test("issue_2857_6".fail) {
+  test("issue_2857_6") {
     assertCompresses(
       input = """function f(a) {
             if (({}).b === undefined || {}.b === null)

@@ -112,7 +112,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1841_1
   // =========================================================================
-  test("issue_1841_1".fail) {
+  test("issue_1841_1") {
     assertCompresses(
       input = """var b = 10;
         !function(arg) {
@@ -155,6 +155,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
         console.log(b)""".stripMargin.trim,
       options = AllOff.copy(
         keepFargs = false,
+        pureGetters = false, // terser: pure_getters: false (test/compress/functions.js:131)
         reduceFuncs = true,
         reduceVars = true,
         unused = true

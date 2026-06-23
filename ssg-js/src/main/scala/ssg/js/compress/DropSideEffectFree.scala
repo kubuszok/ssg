@@ -36,7 +36,7 @@ import ssg.js.ast.*
 import ssg.js.compress.CompressorFlags.*
 import ssg.js.compress.Common.makeSequence
 import ssg.js.compress.Common.{ isFuncExpr, isIifeCall }
-import ssg.js.compress.Inference.{ hasSideEffects, isCallPure, isCalleePure, isNullishShortcircuited, isSelfReferential, lazyOp, mayThrowOnAccess, negate, unarySideEffects }
+import ssg.js.compress.Inference.{ dotThrow, hasSideEffects, isCallPure, isCalleePure, isNullishShortcircuited, isSelfReferential, lazyOp, negate, unarySideEffects }
 import ssg.js.compress.NativeObjects.purePropAccessGlobals
 
 /** Side-effect-free expression removal.
@@ -193,7 +193,8 @@ object DropSideEffectFree {
         if (isNullishShortcircuited(dot, compressor)) {
           if (dot.expression != null) dropSideEffectFree(dot.expression.nn, compressor, firstInStatement)
           else null
-        } else if (!dot.optional && dot.expression != null && mayThrowOnAccess(dot, compressor)) {
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+        } else if (!dot.optional && dot.expression != null && dotThrow(dot.expression.nn, compressor)) {
           dot
         } else {
           if (dot.expression != null) dropSideEffectFree(dot.expression.nn, compressor, firstInStatement)
@@ -205,7 +206,8 @@ object DropSideEffectFree {
         if (isNullishShortcircuited(sub, compressor)) {
           if (sub.expression != null) dropSideEffectFree(sub.expression.nn, compressor, firstInStatement)
           else null
-        } else if (!sub.optional && sub.expression != null && mayThrowOnAccess(sub, compressor)) {
+          // terser: `this.expression.may_throw_on_access(compressor)` — wrapper on receiver
+        } else if (!sub.optional && sub.expression != null && dotThrow(sub.expression.nn, compressor)) {
           sub
         } else {
           val property = sub.property match {
