@@ -2155,7 +2155,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1670_5
   // =========================================================================
-  test("issue_1670_5".fail) {
+  test("issue_1670_5") {
     assertCompresses(
       input = """(function(a) {
             switch (1) {
@@ -2186,7 +2186,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1670_6
   // =========================================================================
-  test("issue_1670_6".fail) {
+  test("issue_1670_6") {
     assertCompresses(
       input = """(function(a) {
             switch (1) {
