@@ -9,9 +9,7 @@ import java.util.{ HashMap => JHashMap, Locale }
 
 /** Directive-battery test for strftime formatting faithfulness to Ruby/strftime4j.
   *
-  * Ground-truth values verified with:
-  *   ruby -e 'require "time"; t = Time.new(2026,1,5,13,7,9,"+00:00"); puts t.strftime("%C")'
-  *   (and similar for each directive)
+  * Ground-truth values verified with: ruby -e 'require "time"; t = Time.new(2026,1,5,13,7,9,"+00:00"); puts t.strftime("%C")' (and similar for each directive)
   *
   * Reference: liqp Date.java:63 delegates to StrftimeFormatter (strftime4j, Ruby/C semantics).
   *
@@ -29,10 +27,7 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   private def fmt(epochSeconds: Long, pattern: String): String = {
     val vars = new JHashMap[String, DataView]()
     vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(epochSeconds)))
-    val parser = new TemplateParser.Builder()
-      .withDefaultTimeZone(utcZone)
-      .withLocale(Locale.ENGLISH)
-      .build()
+    val parser = new TemplateParser.Builder().withDefaultTimeZone(utcZone).withLocale(Locale.ENGLISH).build()
     parser.parse(s"{{ ts | date: '$pattern' }}").render(vars)
   }
 
@@ -43,13 +38,13 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   //   2025-12-31 23:59:59 = Wednesday epoch = 1767225599
 
   // Ruby: Time.new(2026,1,5,13,7,9,"+00:00").to_i => 1767618429
-  private val mondayEpoch   = 1767618429L
+  private val mondayEpoch = 1767618429L
   // Ruby: Time.new(2026,1,4,9,3,5,"+00:00").to_i => 1767517385
-  private val sundayEpoch   = 1767517385L
+  private val sundayEpoch = 1767517385L
   // Ruby: Time.new(2026,1,1,3,5,0,"+00:00").to_i => 1767236700
   private val thursdayEpoch = 1767236700L
   // Ruby: Time.new(2025,12,31,23,59,59,"+00:00").to_i => 1767225599
-  private val wedEndOfYear  = 1767225599L
+  private val wedEndOfYear = 1767225599L
 
   // ---------------------------------------------------------------------------
   // (a) Monday 2026-01-05 13:07:09 UTC — divergent directives
