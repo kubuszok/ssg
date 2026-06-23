@@ -1200,7 +1200,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_1
   // =========================================================================
-  test("join_object_assignments_1".fail) {
+  test("join_object_assignments_1") {
     assertCompresses(
       input = """console.log(function() {
             var x = {
@@ -1431,7 +1431,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_negative
   // =========================================================================
-  test("join_object_assignments_negative".fail) {
+  test("join_object_assignments_negative") {
     assertCompresses(
       input = """var o = {};
         o[0] = 0;
@@ -1531,7 +1531,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_void_0
   // =========================================================================
-  test("join_object_assignments_void_0".fail) {
+  test("join_object_assignments_void_0") {
     assertCompresses(
       input = """var o = {};
         o[void 0] = 1;
@@ -1567,7 +1567,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_undefined_2
   // =========================================================================
-  test("join_object_assignments_undefined_2".fail) {
+  test("join_object_assignments_undefined_2") {
     assertCompresses(
       input = """var o = {};
         o[undefined] = 1;
@@ -1587,7 +1587,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_Infinity
   // =========================================================================
-  test("join_object_assignments_Infinity".fail) {
+  test("join_object_assignments_Infinity") {
     assertCompresses(
       input = """var o = {};
         o[Infinity] = 1;
@@ -1611,7 +1611,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // join_object_assignments_regex
   // =========================================================================
-  test("join_object_assignments_regex".fail) {
+  test("join_object_assignments_regex") {
     assertCompresses(
       input = """var o = {};
         o[/rx/] = 1;
