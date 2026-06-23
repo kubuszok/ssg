@@ -690,7 +690,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_decl_2
   // =========================================================================
-  test("unused_destructuring_decl_2".fail) {
+  test("unused_destructuring_decl_2") {
     assertCompresses(
       input = """const { a, b: c, d = new Object(1) } = { b: 7 };
         let { e, f: g, h = new Object(2) } = { e: 8 };
@@ -711,7 +711,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_decl_3
   // =========================================================================
-  test("unused_destructuring_decl_3".fail) {
+  test("unused_destructuring_decl_3") {
     assertCompresses(
       input = """const { a, b: c, d = new Object(1) } = { b: 7 };
         let { e, f: g, h = new Object(2) } = { e: 8 };
@@ -731,7 +731,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // unused_destructuring_decl_4
   // =========================================================================
-  test("unused_destructuring_decl_4".fail) {
+  test("unused_destructuring_decl_4") {
     assertCompresses(
       input = """const { a, b: c, d = new Object(1) } = { b: 7 };
         let { e, f: g, h = new Object(2) } = { e: 8 };
@@ -1213,7 +1213,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // empty_object_destructuring_1
   // =========================================================================
-  test("empty_object_destructuring_1".fail) {
+  test("empty_object_destructuring_1") {
     assertCompresses(
       input = """var {} = Object;
         let {L} = Object, L2 = "foo";
@@ -1231,7 +1231,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // empty_object_destructuring_2
   // =========================================================================
-  test("empty_object_destructuring_2".fail) {
+  test("empty_object_destructuring_2") {
     assertCompresses(
       input = """var {} = Object;
         let {L} = Object, L2 = "foo";
