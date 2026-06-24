@@ -2152,7 +2152,8 @@ abstract class StylesheetParser protected (
     stopAtComma:     Boolean = false,
     consumeNewlines: Boolean = false,
     singleEquals:    Boolean = false,
-    until:           () => Boolean = null
+    until:           () => Boolean = null,
+    firstSingle:     Option[Expression] = None
   ): Expression = {
     _rdExpressionDepth += 1
     if (_rdExpressionDepth == 1) _rdTotalIterations = 0
@@ -2189,7 +2190,7 @@ abstract class StylesheetParser protected (
       // legitimately rewinds.
       var reparsed = false
 
-      var singleExpression: Option[Expression] = Some(_rdSingleExpression())
+      var singleExpression: Option[Expression] = firstSingle.orElse(Some(_rdSingleExpression()))
 
       def resolveOneOperation(): Unit = {
         val opsBuf   = operators.get
@@ -2250,7 +2251,7 @@ abstract class StylesheetParser protected (
         operands = None
         scanner.state = start
         allowSlash = true
-        singleExpression = Some(_rdSingleExpression())
+        singleExpression = firstSingle.orElse(Some(_rdSingleExpression()))
         reparsed = true
       }
 
@@ -2758,48 +2759,115 @@ abstract class StylesheetParser protected (
     ListExpression(elts, sep, spanFrom(start), hasBrackets = true)
   }
 
-  /** dart-sass: `parentheses` (stylesheet.dart:2458-2506). */
-  protected def _rdParenthesizedExpression(): Expression = boundary {
+  /** dart-sass: `parentheses` (stylesheet.dart:2458-2506).
+    *
+    * Stack-safe: iteratively peels a run of directly-nested `(` onto a heap stack, runs the unchanged innermost body once, then unwinds — wrapping each level in `ParenthesizedExpression` and
+    * consuming `)` per level. Only pure `(((` prefixes are peeled; any intervening token breaks the loop so the innermost body's recursive path handles mixed nesting exactly as before (ISS-1334).
+    */
+  protected def _rdParenthesizedExpression(): Expression = {
     // dart-sass lines 2460-2461: save and set _inParentheses.
     val wasInParentheses = _inParentheses
     _inParentheses = true
     try {
-      val start = scanner.state
+      // Peel the leading run of directly-nested `(` onto an explicit stack
+      // instead of recursing once per nested paren (ISS-1334: stack-safe).
+      val nestedStarts = mutable.ListBuffer.empty[ssg.sass.util.LineScannerState]
+      var start        = scanner.state
       scanner.expectChar(CharCode.$lparen)
       whitespace(consumeNewlines = true)
-      // dart-sass line 2467: check if looking at expression
-      if (!_lookingAtExpression()) {
-        scanner.expectChar(CharCode.$rparen)
-        break(ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = false))
+      while (scanner.peekChar() == CharCode.$lparen) {
+        nestedStarts += start
+        start = scanner.state
+        scanner.expectChar(CharCode.$lparen)
+        whitespace(consumeNewlines = true)
       }
 
-      val first = expressionUntilComma()
-      if (scanner.scanChar(CharCode.$colon)) {
-        whitespace(consumeNewlines = true)
-        // dart-sass: `_map` (stylesheet.dart:2513-2529)
-        break(_rdMap(first, start))
-      }
-      if (!scanner.scanChar(CharCode.$comma)) {
-        scanner.expectChar(CharCode.$rparen)
-        break(ParenthesizedExpression(first, spanFrom(start)))
-      }
-      whitespace(consumeNewlines = true)
-      val inside = start // for span
-      val elts   = mutable.ListBuffer.empty[Expression]
-      elts += first
-      while (_lookingAtExpression()) {
-        elts += expressionUntilComma()
-        if (!scanner.scanChar(CharCode.$comma)) {
-          // no more commas
-          val list = ListExpression(elts.toList, ListSeparator.Comma, spanFrom(inside), hasBrackets = false)
+      // Innermost body — unchanged logic from dart-sass lines 2467-2502.
+      val result: Expression = boundary {
+        // dart-sass line 2467: check if looking at expression
+        if (!_lookingAtExpression()) {
           scanner.expectChar(CharCode.$rparen)
-          break(ParenthesizedExpression(list, spanFrom(start)))
+          break(ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = false))
+        }
+
+        val first = expressionUntilComma()
+        if (scanner.scanChar(CharCode.$colon)) {
+          whitespace(consumeNewlines = true)
+          // dart-sass: `_map` (stylesheet.dart:2513-2529)
+          break(_rdMap(first, start))
+        }
+        if (!scanner.scanChar(CharCode.$comma)) {
+          scanner.expectChar(CharCode.$rparen)
+          break(ParenthesizedExpression(first, spanFrom(start)))
         }
         whitespace(consumeNewlines = true)
+        val inside = start // for span
+        val elts   = mutable.ListBuffer.empty[Expression]
+        elts += first
+        while (_lookingAtExpression()) {
+          elts += expressionUntilComma()
+          if (!scanner.scanChar(CharCode.$comma)) {
+            // no more commas
+            val list = ListExpression(elts.toList, ListSeparator.Comma, spanFrom(inside), hasBrackets = false)
+            scanner.expectChar(CharCode.$rparen)
+            break(ParenthesizedExpression(list, spanFrom(start)))
+          }
+          whitespace(consumeNewlines = true)
+        }
+        val list = ListExpression(elts.toList, ListSeparator.Comma, spanFrom(inside), hasBrackets = false)
+        scanner.expectChar(CharCode.$rparen)
+        ParenthesizedExpression(list, spanFrom(start))
       }
-      val list = ListExpression(elts.toList, ListSeparator.Comma, spanFrom(inside), hasBrackets = false)
-      scanner.expectChar(CharCode.$rparen)
-      ParenthesizedExpression(list, spanFrom(start))
+
+      // Unwind the peeled prefix (deepest-first): at each level, RESUME the
+      // full expression with `acc` as the already-parsed first single, then
+      // handle `:` (map), `,` (comma-list), or `)` (plain paren) — exactly
+      // matching the innermost body's post-expression logic.
+      //
+      // For PURE nesting (ISS-1000 inputs) `_rdExpression(firstSingle=acc)`
+      // returns `acc` immediately (next char is `)`) → `expectChar($rparen)`
+      // succeeds. For MIXED nesting like `((1) 2)`, the resume parses the
+      // space-list/operator tail faithfully (shallow recursion via list
+      // elements, bounded by list length NOT nesting depth).
+      var acc = result
+      var i   = nestedStarts.length - 1
+      while (i >= 0) {
+        val levelStart = nestedStarts(i)
+        // Resume the expression at this paren level with acc as the
+        // already-parsed first single expression.
+        val exprL = expressionUntilComma(firstSingle = Some(acc))
+        if (scanner.scanChar(CharCode.$colon)) {
+          whitespace(consumeNewlines = true)
+          // dart-sass: map at this paren level
+          acc = _rdMap(exprL, levelStart)
+        } else if (scanner.scanChar(CharCode.$comma)) {
+          whitespace(consumeNewlines = true)
+          val insideL = levelStart // for span
+          val eltsL   = mutable.ListBuffer.empty[Expression]
+          eltsL += exprL
+          acc = boundary {
+            while (_lookingAtExpression()) {
+              eltsL += expressionUntilComma()
+              if (!scanner.scanChar(CharCode.$comma)) {
+                // no more commas
+                val listL = ListExpression(eltsL.toList, ListSeparator.Comma, spanFrom(insideL), hasBrackets = false)
+                scanner.expectChar(CharCode.$rparen)
+                break(ParenthesizedExpression(listL, spanFrom(levelStart)))
+              }
+              whitespace(consumeNewlines = true)
+            }
+            // Trailing comma or empty tail: wrap what we have.
+            val listL = ListExpression(eltsL.toList, ListSeparator.Comma, spanFrom(insideL), hasBrackets = false)
+            scanner.expectChar(CharCode.$rparen)
+            ParenthesizedExpression(listL, spanFrom(levelStart))
+          }
+        } else {
+          scanner.expectChar(CharCode.$rparen)
+          acc = ParenthesizedExpression(exprL, spanFrom(levelStart))
+        }
+        i -= 1
+      }
+      acc
     } finally
       // dart-sass line 2504: restore _inParentheses.
       _inParentheses = wasInParentheses
@@ -4931,8 +4999,8 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `expressionUntilComma` (lines 2409-2415).
     */
-  protected def expressionUntilComma(singleEquals: Boolean = false): Expression =
-    _rdExpression(stopAtComma = true, consumeNewlines = true, singleEquals = singleEquals)
+  protected def expressionUntilComma(singleEquals: Boolean = false, firstSingle: Option[Expression] = None): Expression =
+    _rdExpression(stopAtComma = true, consumeNewlines = true, singleEquals = singleEquals, firstSingle = firstSingle)
 
   /** dart-sass: `_argumentInvocation` (lines 1862-1953). Parses `(a, b, $c: d, rest..., kwRest...)`.
     */
