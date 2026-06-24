@@ -4658,9 +4658,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
   private def optimizeConciseMethod(self: AstConciseMethod): AstNode = {
     liftKey(self)
     // p(){return x;} → p:()=>x (when safe)
+    // terser index.js:4027 — compressor.parent() reads the live walker stack;
+    // SSG's Compressor stack is empty during a pass, so use liveParent (ISS-1319).
     if (
       optionBool("arrows")
-      && parent(0).isInstanceOf[AstObject]
+      && liveParent(self, 0).isInstanceOf[AstObject]
       && self.value != null
     ) {
       self.value.nn match {
@@ -4671,16 +4673,13 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
               && fn.body.size == 1
               && fn.body(0).isInstanceOf[AstReturn]
               && fn.body(0).asInstanceOf[AstReturn].value != null =>
-          // Check no `this` usage
-          var usesThis = false
-          val tw       = new TreeWalker((node, _) =>
-            node match {
-              case _: AstThis  => usesThis = true; true
-              case _: AstScope => true
-              case _ => null
-            }
-          )
-          fn.walk(tw)
+          // terser index.js:4034 — !self.value.contains_this()
+          // contains_this (inference.js:1045-1056) descends but stops at nested
+          // non-arrow scopes (n !== this && AST_Scope && !AST_Arrow), so `this`
+          // inside a nested function does NOT block the conversion. ISS-1319:
+          // the inline walker was buggy (AstLambda extends AstScope, so it
+          // matched the root fn itself and never descended into the body).
+          val usesThis = containsThis(fn)
           if (!usesThis) {
             val arrow = new AstArrow
             arrow.start = fn.start

@@ -355,7 +355,7 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // concise_method_to_prop_arrow
   // =========================================================================
-  test("concise_method_to_prop_arrow".fail) {
+  test("concise_method_to_prop_arrow") {
     assertCompresses(
       input = """console.log(({ a: () => 1 }).a());
         console.log(({ a: () => { return 2; } }).a());
