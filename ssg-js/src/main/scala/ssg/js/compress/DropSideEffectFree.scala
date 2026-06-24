@@ -509,9 +509,17 @@ object DropSideEffectFree {
               case null => current // break the loop
               case expr => expr.nn
             }
-          // If the target is a constant expression (pure access chain), we can drop the whole assign
-          // and just evaluate the right side for its effects
-          if (Evaluate.isConstantExpression(current))
+          // drop-side-effect-free.js:241 + inference.js:707/726 — if the base of
+          // the property chain is a constant expression (e.g. a function/class
+          // with no free refs), we can drop the assignment and keep only the
+          // right side's effects.  Terser calls `left.is_constant_expression(
+          // compressor.find_parent(AST_Scope))` — the scope must come from the
+          // live walker (activeWalker) because the Compressor's own stack is
+          // empty during a pass.  `Inference.isConstantExpression` returns a
+          // tri-value (true | "f" | false); both `true` and `"f"` mean safe to
+          // drop (inference.js:707 AST_Lambda = all_refs_local which returns
+          // true or "f"), so `!= false` is the correct faithful test.
+          if (Inference.isConstantExpression(current, compressor.liveFindScope()) != false)
             dropSideEffectFree(assign.right.nn, compressor)
           else assign
         }

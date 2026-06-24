@@ -1031,9 +1031,10 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // export_unreferenced_declarations_2
   // =========================================================================
-  // .fail: deeper source bug — SSG over-prunes export bindings in array-nested
-  // destructuring (export const [{a,b=1}] = obj -> wrongly drops a). ISS-1307.
-  test("export_unreferenced_declarations_2".fail) {
+  // ISS-1310 sub-bug (3) fixed: liveParent(self, p) reads the active walker's
+  // stack instead of the Compressor's empty stack, so isExportDecl is now true
+  // for export destructuring and the prune is correctly skipped.
+  test("export_unreferenced_declarations_2") {
     assertCompresses(
       input = """var {unused} = obj;
         export const [{a, b = 1}] = obj;
