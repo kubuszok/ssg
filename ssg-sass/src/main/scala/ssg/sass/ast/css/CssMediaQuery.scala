@@ -23,6 +23,9 @@ package sass
 package ast
 package css
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** A plain CSS media query, as used in `@media` and `@import`. */
 final class CssMediaQuery private (
   /** The modifier, probably either "not" or "only". May be absent. */
@@ -218,21 +221,21 @@ object CssMediaQuery {
 
   /** Normalize a feature condition string so `(orientation:landscape)` serializes as `(orientation: landscape)`, matching dart-sass output. Leaves unrecognized shapes (nested parens, no colon) alone.
     */
-  private[sass] def normalizeCondition(cond: String): String = {
-    if (!(cond.startsWith("(") && cond.endsWith(")"))) return cond
+  private[sass] def normalizeCondition(cond: String): String = boundary {
+    if (!(cond.startsWith("(") && cond.endsWith(")"))) break(cond)
     val inner = cond.substring(1, cond.length - 1)
-    if (inner.contains('(')) return cond
+    if (inner.contains('(')) break(cond)
     val colon = inner.indexOf(':')
-    if (colon < 0) return cond
+    if (colon < 0) break(cond)
     val name  = inner.substring(0, colon).trim
     val value = inner.substring(colon + 1).trim
-    if (name.isEmpty || value.isEmpty) return cond
+    if (name.isEmpty || value.isEmpty) break(cond)
     s"($name: $value)"
   }
 
   /** Normalize all parenthesized media features in a modifier string. */
-  private[sass] def normalizeMediaFeatures(text: String): String = {
-    if (!text.contains('(')) return text
+  private[sass] def normalizeMediaFeatures(text: String): String = boundary {
+    if (!text.contains('(')) break(text)
     val sb = new StringBuilder()
     var i  = 0
     while (i < text.length)

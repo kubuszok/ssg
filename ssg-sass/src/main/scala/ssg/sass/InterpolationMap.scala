@@ -50,20 +50,22 @@ final class InterpolationMap(
     *
     * Returns [error] if its span has already been mapped.
     */
-  def mapException(error: SassFormatException): SassFormatException = {
+  def mapException(error: SassFormatException): SassFormatException = boundary {
     val target = error.span
 
     if (interpolation.contents.isEmpty) {
-      if (_isMapped(target)) return error
-      return SassFormatException(
-        error.sassMessage,
-        interpolation.span,
-        error.loadedUrls
+      if (_isMapped(target)) break(error)
+      break(
+        SassFormatException(
+          error.sassMessage,
+          interpolation.span,
+          error.loadedUrls
+        )
       )
     }
 
     val source = mapSpan(target)
-    if (source eq target) return error
+    if (source eq target) break(error)
 
     val startIndex = _indexInContents(target.start)
     val endIndex   = _indexInContents(target.end)
@@ -87,8 +89,8 @@ final class InterpolationMap(
     *
     * Returns [target] as-is if it's already been mapped.
     */
-  def mapSpan(target: FileSpan): FileSpan = {
-    if (_isMapped(target)) return target
+  def mapSpan(target: FileSpan): FileSpan = boundary {
+    if (_isMapped(target)) break(target)
 
     val startMapped = _mapLocation(target.start)
     val endMapped   = _mapLocation(target.end)
@@ -124,13 +126,13 @@ final class InterpolationMap(
     * If [target] points to an un-interpolated portion of the original string, this will return the corresponding [FileLocation]. If it points to text generated from interpolation, this will return
     * the full [FileSpan] for that interpolated expression.
     */
-  private def _mapLocation(target: FileLocation): FileLocation | FileSpan = {
-    if (interpolation.contents.isEmpty) return interpolation.span
+  private def _mapLocation(target: FileLocation): FileLocation | FileSpan = boundary[FileLocation | FileSpan] {
+    if (interpolation.contents.isEmpty) break(interpolation.span)
 
     val index = _indexInContents(target)
     interpolation.contents(index) match {
       case chunk: Expression =>
-        return chunk.span
+        break(chunk.span)
       case _ => // fall through to string mapping
     }
 

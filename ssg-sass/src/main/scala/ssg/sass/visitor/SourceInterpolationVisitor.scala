@@ -62,12 +62,12 @@ final class SourceInterpolationVisitor extends ExpressionVisitor[Unit] with IfCo
 
   /** Visits the positional arguments in [arguments], if it's valid interpolated plain CSS.
     */
-  private def _visitArguments(arguments: ArgumentList): Unit = {
-    if (arguments.named.nonEmpty || arguments.rest.isDefined) return
+  private def _visitArguments(arguments: ArgumentList): Unit = boundary {
+    if (arguments.named.nonEmpty || arguments.rest.isDefined) break(())
 
     if (arguments.positional.isEmpty) {
       buffer.foreach(_.write(arguments.span.text))
-      return
+      break(())
     }
 
     buffer.foreach(_.write(arguments.span.before(arguments.positional.head.span).text))
@@ -124,15 +124,15 @@ final class SourceInterpolationVisitor extends ExpressionVisitor[Unit] with IfCo
   def visitLegacyIfExpression(node: LegacyIfExpression): Unit =
     buffer = Nullable.empty
 
-  def visitListExpression(node: ListExpression): Unit = {
+  def visitListExpression(node: ListExpression): Unit = boundary {
     if (node.contents.length <= 1 && !node.hasBrackets) {
       buffer = Nullable.empty
-      return
+      break(())
     }
 
     if (node.hasBrackets && node.contents.isEmpty) {
       buffer.foreach(_.write(node.span.text))
-      return
+      break(())
     }
 
     if (node.hasBrackets) {
@@ -160,10 +160,10 @@ final class SourceInterpolationVisitor extends ExpressionVisitor[Unit] with IfCo
   def visitSelectorExpression(node: SelectorExpression): Unit =
     buffer = Nullable.empty
 
-  def visitStringExpression(node: StringExpression): Unit = {
+  def visitStringExpression(node: StringExpression): Unit = boundary {
     if (node.text.isPlain) {
       buffer.foreach(_.write(node.span.text))
-      return
+      break(())
     }
 
     var i = 0
