@@ -10,7 +10,7 @@ import ssg.liquid.tags.IncludeRelative
   *
   * Tests (a)/(b): absolute and relative traversal attempts with a jail-root set must throw `JailViolationException` BEFORE any filesystem I/O.
   *
-  * Tests (c)/(e): legitimate include resolution using a real temp directory.
+  * Tests (c)/(e): legitimate include resolution using a target/-relative fixture directory (cwd-relative; all three test runners execute from the repo root, matching the ISS-1121 convention).
   *
   * Test (d): the separator-boundary predicate rejects sibling-prefix paths — pure string comparison, no filesystem I/O.
   */
@@ -45,7 +45,7 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
   // ---------- (c) legitimate include accepted ----------
 
   test("Iss1020-c: legitimate include under jail root resolves normally") {
-    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp")).resolve("iss1020-test-c-" + System.currentTimeMillis()).toAbsolute.normalize
+    val tmpBase = FilePath.of("target").resolve("iss1020-test-c-" + System.nanoTime().toString)
     FileOps.createDirectories(tmpBase)
     try {
       val includeFile = tmpBase.resolve("header.liquid")
@@ -85,7 +85,7 @@ final class LocalFSNameResolverJailIss1020Suite extends munit.FunSuite {
   // ---------- (e) inert when no jail-root ----------
 
   test("Iss1020-e: resolver without jail-root resolves normally (faithful port)") {
-    val tmpBase = FilePath.of(System.getProperty("java.io.tmpdir", "/tmp")).resolve("iss1020-test-e-" + System.currentTimeMillis()).toAbsolute.normalize
+    val tmpBase = FilePath.of("target").resolve("iss1020-test-e-" + System.nanoTime().toString)
     FileOps.createDirectories(tmpBase)
     try {
       val includeFile = tmpBase.resolve("footer.liquid")
