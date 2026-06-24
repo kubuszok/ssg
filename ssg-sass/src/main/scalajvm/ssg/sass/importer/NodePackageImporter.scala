@@ -21,6 +21,8 @@ import ssg.commons.io.{ FileOps, FilePath }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 private val ValidExtensions = Set(".scss", ".sass", ".css")
 
@@ -30,11 +32,11 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
 
   private val _entryPointDirectory: String = FilePath.of(entryPoint).toAbsolute.normalize.pathString
 
-  def canonicalize(url: String): Nullable[String] = {
+  def canonicalize(url: String): Nullable[String] = boundary {
     if (url.startsWith("file:")) {
-      return new FilesystemImporter(".").canonicalize(url)
+      break(new FilesystemImporter(".").canonicalize(url))
     }
-    if (!url.startsWith("pkg:")) return Nullable.empty
+    if (!url.startsWith("pkg:")) break(Nullable.empty)
 
     val path = url.substring(4)
     if (path.startsWith("//"))
@@ -66,24 +68,24 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       packageName.startsWith(".") || packageName.contains("\\") || packageName.contains("%") ||
       (packageName.startsWith("@") && !packageName.contains("/"))
     ) {
-      return Nullable.empty
+      break(Nullable.empty)
     }
 
     val packageRoot = _resolvePackageRoot(packageName, baseDirectory)
-    if (packageRoot == null) return Nullable.empty
+    if (packageRoot == null) break(Nullable.empty)
 
     val jsonPath = FilePath.of(packageRoot).resolve("package.json")
-    if (!FileOps.isRegularFile(jsonPath)) return Nullable.empty
+    if (!FileOps.isRegularFile(jsonPath)) break(Nullable.empty)
 
     val jsonString =
       try FileOps.readString(jsonPath)
-      catch { case _: Throwable => return Nullable.empty }
+      catch { case _: Throwable => break(Nullable.empty) }
     val manifest =
       try JsonValue.parse(jsonString)
       catch { case e: Exception => throw new IllegalArgumentException(s"Failed to parse $jsonPath for \"pkg:$packageName\": ${e.getMessage}") }
     val manifestMap = manifest match {
       case JsonValue.Obj(m) => m
-      case _                => return Nullable.empty
+      case _                => break(Nullable.empty)
     }
 
     _resolvePackageExports(packageRoot, subpath, manifestMap, packageName) match {
@@ -93,7 +95,7 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
           if (dot >= 0) resolved.substring(dot) else ""
         }
         if (ValidExtensions.contains(ext)) {
-          return Nullable(_toFileUri(resolved))
+          break(Nullable(_toFileUri(resolved)))
         } else {
           throw new IllegalArgumentException(
             s"The export for '${subpath.getOrElse("root")}' in '$packageName' resolved to '$resolved', " +
@@ -106,8 +108,8 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     val fs = new FilesystemImporter(packageRoot)
     if (subpath.isEmpty) {
       _resolvePackageRootValues(packageRoot, manifestMap) match {
-        case Some(p) => return fs.canonicalize(p)
-        case None    => return Nullable.empty
+        case Some(p) => break(fs.canonicalize(p))
+        case None    => break(Nullable.empty)
       }
     }
 
@@ -152,15 +154,15 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     (name, if (rest.isEmpty) None else Some(rest.mkString("/")))
   }
 
-  private def _resolvePackageRoot(packageName: String, baseDirectory: String): String | Null = {
+  private def _resolvePackageRoot(packageName: String, baseDirectory: String): String | Null = boundary[String | Null] {
     var dir = baseDirectory
     while (true) {
       val candidate = FilePath.of(dir).resolve("node_modules").resolve(packageName)
-      if (FileOps.isDirectory(candidate)) return candidate.pathString
+      if (FileOps.isDirectory(candidate)) break(candidate.pathString)
       val parent = FilePath.of(dir).parent
-      if (parent.isEmpty) return null
+      if (parent.isEmpty) break(null)
       val parentStr = parent.get.pathString
-      if (parentStr == dir) return null
+      if (parentStr == dir) break(null)
       dir = parentStr
     }
     null
@@ -186,19 +188,19 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     subpath:     Option[String],
     manifest:    Map[String, JsonValue],
     packageName: String
-  ): Option[String] = {
+  ): Option[String] = boundary {
     val exports = manifest.get("exports") match {
       case Some(v) if v != JsonValue.Null => v
-      case _                              => return None
+      case _                              => break(None)
     }
 
     val subpathVariants = _exportsToCheck(subpath, addIndex = false)
     _nodePackageExportsResolve(packageRoot, subpathVariants, exports, subpath, packageName) match {
-      case Some(p) => return Some(p)
+      case Some(p) => break(Some(p))
       case None    => ()
     }
 
-    if (subpath.isDefined && subpath.get.lastIndexOf('.') >= 0) return None
+    if (subpath.isDefined && subpath.get.lastIndexOf('.') >= 0) break(None)
 
     val indexVariants = _exportsToCheck(subpath, addIndex = true)
     _nodePackageExportsResolve(packageRoot, indexVariants, exports, subpath, packageName)
@@ -266,12 +268,12 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     }
   }
 
-  private def _compareExpansionKeys(keyA: String, keyB: String): Boolean = {
+  private def _compareExpansionKeys(keyA: String, keyB: String): Boolean = boundary {
     val baseLengthA = if (keyA.contains('*')) keyA.indexOf('*') + 1 else keyA.length
     val baseLengthB = if (keyB.contains('*')) keyB.indexOf('*') + 1 else keyB.length
-    if (baseLengthA != baseLengthB) return baseLengthA > baseLengthB
-    if (!keyA.contains("*")) return false
-    if (!keyB.contains("*")) return true
+    if (baseLengthA != baseLengthB) break(baseLengthA > baseLengthB)
+    if (!keyA.contains("*")) break(false)
+    if (!keyB.contains("*")) break(true)
     keyA.length > keyB.length
   }
 
@@ -317,12 +319,12 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
     case _                                                         => None
   }
 
-  private def _exportsToCheck(subpath: Option[String], addIndex: Boolean): List[Option[String]] = {
+  private def _exportsToCheck(subpath: Option[String], addIndex: Boolean): List[Option[String]] = boundary {
     val effective =
       if (subpath.isEmpty && addIndex) Some("index")
       else if (subpath.isDefined && addIndex) Some(subpath.get + "/index")
       else subpath
-    if (effective.isEmpty) return List(None)
+    if (effective.isEmpty) break(List(None))
 
     val sp    = effective.get
     val ext   = { val dot = sp.lastIndexOf('.'); if (dot >= 0) sp.substring(dot) else "" }
