@@ -876,7 +876,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // collapse_vars_lvalues_drop_assign
   // =========================================================================
-  test("collapse_vars_lvalues_drop_assign".fail) {
+  test("collapse_vars_lvalues_drop_assign") {
     assertCompresses(
       input = """function f0(x) { var i = ++x; return x += i; }
         function f1(x) { var a = (x -= 3); return x += a; }
@@ -4239,7 +4239,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_11
   // =========================================================================
-  test("issue_2436_11".fail) {
+  test("issue_2436_11") {
     assertCompresses(
       input = """function matrix() {}
         function isCollection() {}
@@ -4282,7 +4282,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_12
   // =========================================================================
-  test("issue_2436_12".fail) {
+  test("issue_2436_12") {
     assertCompresses(
       input = """function isUndefined() {}
         function f() {
@@ -5924,9 +5924,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // shadowed_variable_3
   // =========================================================================
-  // .fail: deeper source bug — SSG collapse_vars wrongly drops let-shadowed variable
-  // bindings when pureGetters=true + unused=true. ISS-1307.
-  test("shadowed_variable_3".fail) {
+  test("shadowed_variable_3") {
     assertCompresses(
       input = """if(1) {
             var object = 1

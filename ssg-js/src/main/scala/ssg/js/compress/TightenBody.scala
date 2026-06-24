@@ -2510,8 +2510,9 @@ object TightenBody {
           if (valueDef != null) {
             val d = candidate.asInstanceOf[AstVarDef].name.asInstanceOf[AstSymbol].definition()
             if (abort && d != null && d.nn.references.size - d.nn.replaced > replaced) {
-              // Too many references, can't replace
-              // replaced stays as-is (effectively false)
+              // Too many references, can't replace — reset replaced to 0
+              // (terser tighten-body.js:499-500: replaced = false)
+              replaced = 0
             } else {
               abort = false
               hitIndex = 0
