@@ -18,7 +18,7 @@ package ssg
 package js
 package compress
 
-import CompressTestHelper.{AllOff, assertCompresses}
+import CompressTestHelper.{ AllOff, assertCompresses }
 
 final class CompressIn32BitContextIss1286Suite extends munit.FunSuite {
 
