@@ -770,26 +770,30 @@ object Inference {
         if (!isStrict(compressor)) false
         else {
           // In strict mode, check if any property may throw (has getter)
+          // Internal recursion uses type-dispatch (terser: _dot_throw -> _dot_throw,
+          // inference.js:768/778/788/794/797-798/812/815).  Reachable only when
+          // pure_getters is truthy (dotThrow short-circuits otherwise), so the
+          // wrapper vs type-dispatch distinction is latent here.
           var i = obj.properties.size
           while ({ i -= 1; i >= 0 })
-            if (dotThrow(obj.properties(i), compressor)) {
+            if (mayThrowOnAccess(obj.properties(i), compressor)) {
               return true // @nowarn — performance hot path
             }
           false
         }
       case exp: AstExpansion =>
-        exp.expression != null && dotThrow(exp.expression.nn, compressor)
+        exp.expression != null && mayThrowOnAccess(exp.expression.nn, compressor)
       case prefix: AstUnaryPrefix => prefix.operator == "void"
       case assign: AstAssign      => // must come before AstBinary
         if (assign.logical) true
-        else assign.operator == "=" && assign.right != null && dotThrow(assign.right.nn, compressor)
+        else assign.operator == "=" && assign.right != null && mayThrowOnAccess(assign.right.nn, compressor)
       case binary: AstBinary =>
         (binary.operator == "&&" || binary.operator == "||" || binary.operator == "??") &&
-        ((binary.left != null && dotThrow(binary.left.nn, compressor)) ||
-          (binary.right != null && dotThrow(binary.right.nn, compressor)))
+        ((binary.left != null && mayThrowOnAccess(binary.left.nn, compressor)) ||
+          (binary.right != null && mayThrowOnAccess(binary.right.nn, compressor)))
       case cond: AstConditional =>
-        (cond.consequent != null && dotThrow(cond.consequent.nn, compressor)) ||
-        (cond.alternative != null && dotThrow(cond.alternative.nn, compressor))
+        (cond.consequent != null && mayThrowOnAccess(cond.consequent.nn, compressor)) ||
+        (cond.alternative != null && mayThrowOnAccess(cond.alternative.nn, compressor))
       case dot: AstDot =>
         if (!isStrict(compressor)) false
         else if (dot.property == "prototype") {
@@ -800,9 +804,9 @@ object Inference {
           }
         } else true
       case seq: AstSequence =>
-        seq.expressions.nonEmpty && dotThrow(seq.expressions.last, compressor)
+        seq.expressions.nonEmpty && mayThrowOnAccess(seq.expressions.last, compressor)
       case chain: AstChain =>
-        chain.expression != null && dotThrow(chain.expression.nn, compressor)
+        chain.expression != null && mayThrowOnAccess(chain.expression.nn, compressor)
       case ref: AstSymbolRef =>
         if (ref.name == "arguments" && ref.scope != null && ref.scope.nn.isInstanceOf[AstLambda]) false
         else if (hasFlag(ref, UNDEFINED)) true
@@ -1115,9 +1119,9 @@ object Inference {
         case _ if isBoolean(expr.nn)            => "Boolean"
         case _ if isNumber(expr.nn, compressor) => "Number"
         case _: AstRegExp => "RegExp"
-        case _ if isString(expr.nn, compressor)      => "String"
-        case _ if !mayThrowOnAccess(dot, compressor) => "Object"
-        case _                                       => null
+        case _ if isString(expr.nn, compressor) => "String"
+        case _ if !dotThrow(dot, compressor)    => "Object"
+        case _                                  => null
       }
 
       if (nativeObj == null) break(false)

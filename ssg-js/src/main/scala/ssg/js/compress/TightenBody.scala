@@ -2360,7 +2360,7 @@ object TightenBody {
                     (node.isInstanceOf[AstExit] &&
                       (sideEffects || (lhs != null && lhs.nn.isInstanceOf[AstPropAccess]) || mayModify(lhs.nn))) ||
                     (node.isInstanceOf[AstPropAccess] &&
-                      (sideEffects || Inference.mayThrowOnAccess(node.asInstanceOf[AstPropAccess].expression.nn, compressor))) ||
+                      (sideEffects || Inference.dotThrow(node.asInstanceOf[AstPropAccess].expression.nn, compressor))) ||
                     (node.isInstanceOf[AstSymbolRef] &&
                       (lvalues.get(node.asInstanceOf[AstSymbolRef].name).exists(_.modified) ||
                         (sideEffects && mayModify(node)))) ||
