@@ -11,8 +11,8 @@
 | sbt-scala-native | 0.5.10 | Scala Native compiler plugin |
 | sbt-scalafmt | 2.5.4 | Code formatting |
 | sbt-scalafix | 0.14.6 | Linting and refactoring |
-| MUnit | 1.2.3 | Test framework |
-| MUnit ScalaCheck | 1.0.0 | Property-based testing |
+| MUnit | 1.3.3 | Test framework |
+| MUnit ScalaCheck | 1.3.0 | Property-based testing |
 
 ## Compiler Flags
 
@@ -29,15 +29,14 @@ All platforms share the same flags:
 
 ### JVM
 - Fork enabled for test isolation
-- No special dependencies (all modules are pure Scala)
+- No special dependencies for most modules; ssg-highlight uses tree-sitter via platform-specific providers (pnm-provider-tree-sitter-desktop on JVM)
 
 ### Scala.js
 - No DOM dependencies (SSG is not a browser application)
 - May need `@JSExport` annotations if publishing as npm packages
 
 ### Scala Native
-- No C library dependencies (all modules are pure Scala)
-- Future: tree-sitter integration may require native libs
+- Most modules have no C library dependencies; ssg-highlight uses sn-provider-tree-sitter for tree-sitter integration via Scala Native FFI
 - No multithreading assumptions in core modules
 
 ## Platform-Specific Source Directories
@@ -64,5 +63,5 @@ sbt-projectmatrix automatically includes these based on the platform axis.
 
 4. **Threads**: Limited on Scala Native. Use single-threaded algorithms.
 
-5. **JavaScript interop**: Future `ssg-highlight` module may use tree-sitter-wasm on
-   Scala.js. Plan for platform-specific implementations behind a common trait.
+5. **JavaScript interop**: ssg-highlight uses wasm-provider-tree-sitter on Scala.js for
+   tree-sitter integration. Platform-specific implementations are behind common traits.
