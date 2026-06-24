@@ -3402,12 +3402,13 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (zeroSide != null) {
         val nonZeroSide = if (zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
-        // Terser index.js:2853: in_32_bit_context(true)
-        if ((self.operator == "|" || self.operator == "^") && in32BitContext(otherOperandMustBeNumber = true)) {
+        // Terser index.js:2853: non_zero_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if ((self.operator == "|" || self.operator == "^") && (Inference.is32BitInteger(nonZeroSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
           return nonZeroSide // @nowarn
         }
         // x & 0 → 0 (when x has no side effects and is 32-bit)
-        if (self.operator == "&" && !hasSideEffects(nonZeroSide, this)) {
+        // Terser index.js:2862-2863: !non_zero_side.has_side_effects(compressor) && non_zero_side.is_32_bit_integer(compressor)
+        if (self.operator == "&" && !hasSideEffects(nonZeroSide, this) && Inference.is32BitInteger(nonZeroSide, this)) {
           return zeroSide.nn // @nowarn
         }
       }
@@ -3427,13 +3428,13 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (fullMask != null) {
         val otherSide = if (fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x & -1 → x
-        // Terser index.js:2889: in_32_bit_context(true)
-        if (self.operator == "&" && in32BitContext(otherOperandMustBeNumber = true)) {
+        // Terser index.js:2888-2889: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if (self.operator == "&" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
           return otherSide // @nowarn
         }
         // x ^ -1 → ~x
-        // Terser index.js:2901: in_32_bit_context(true)
-        if (self.operator == "^" && in32BitContext(otherOperandMustBeNumber = true)) {
+        // Terser index.js:2900-2901: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if (self.operator == "^" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
           val neg = new AstUnaryPrefix
           neg.operator = "~"
           neg.expression = otherSide
