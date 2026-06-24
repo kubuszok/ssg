@@ -26,6 +26,7 @@
 | Original Package | SSG Package |
 |-----------------|-------------|
 | `liqp` | `ssg.liquid` |
+| `liqp.antlr` | `ssg.liquid.antlr` (resolver SPI: NameResolver, LocalFSNameResolver; name is liqp's own choice) |
 | `liqp.parser` | `ssg.liquid.parser` |
 | `liqp.nodes` | `ssg.liquid.nodes` |
 | `liqp.tags` | `ssg.liquid.tags` |

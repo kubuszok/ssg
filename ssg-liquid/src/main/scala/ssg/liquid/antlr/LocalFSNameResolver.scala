@@ -12,6 +12,8 @@
  *   Idiom: Returns ResolvedSource(content, sourceName) instead of ANTLR CharStream
  *   SSG addition — optional root-jail per ISS-1020/design §6; inert when no jail-root
  *     is set, preserving liqp behavior
+ *   Package: ssg.liquid.antlr faithfully mirrors liqp's liqp.antlr package —
+ *     see NameResolver.scala header for details.
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/antlr/LocalFSNameResolver.java
