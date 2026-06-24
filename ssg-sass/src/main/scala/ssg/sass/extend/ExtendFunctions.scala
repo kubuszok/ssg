@@ -625,17 +625,17 @@ object ExtendFunctions {
   private def isSupercombinator(
     combinator1: Nullable[CssValue[Combinator]],
     combinator2: Nullable[CssValue[Combinator]]
-  ): Boolean = {
+  ): Boolean = boundary {
     // combinator1 == combinator2 (both empty, or both same value)
-    if (combinator1.isEmpty && combinator2.isEmpty) return true
-    if (combinator1.isDefined && combinator2.isDefined && combinator1.get == combinator2.get) return true
+    if (combinator1.isEmpty && combinator2.isEmpty) break(true)
+    if (combinator1.isDefined && combinator2.isDefined && combinator1.get == combinator2.get) break(true)
     // null (descendant) is a supercombinator of child
-    if (combinator1.isEmpty && combinator2.isDefined && combinator2.get.value == Combinator.Child) return true
+    if (combinator1.isEmpty && combinator2.isDefined && combinator2.get.value == Combinator.Child) break(true)
     // followingSibling is a supercombinator of nextSibling
     if (
       combinator1.isDefined && combinator1.get.value == Combinator.FollowingSibling &&
       combinator2.isDefined && combinator2.get.value == Combinator.NextSibling
-    ) return true
+    ) break(true)
     false
   }
 
@@ -644,13 +644,13 @@ object ExtendFunctions {
   private def compatibleWithPreviousCombinator(
     previous: Nullable[CssValue[Combinator]],
     parents:  Iterable[ComplexSelectorComponent]
-  ): Boolean = {
-    if (parents.isEmpty) return true
-    if (previous.isEmpty) return true
+  ): Boolean = boundary {
+    if (parents.isEmpty) break(true)
+    if (previous.isEmpty) break(true)
 
     // The child and next sibling combinators require that the *immediate*
     // following component be a superselector.
-    if (previous.get.value != Combinator.FollowingSibling) return false
+    if (previous.get.value != Combinator.FollowingSibling) break(false)
 
     // The following sibling combinator does allow intermediate components, but
     // only if they're all siblings.

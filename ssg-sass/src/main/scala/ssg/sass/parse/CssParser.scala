@@ -35,6 +35,9 @@ package parse
 import ssg.sass.Nullable
 import ssg.sass.SassFormatException
 import ssg.sass.util.CharCode
+
+import scala.util.boundary
+import scala.util.boundary.break
 import ssg.sass.ast.sass.{
   ArgumentList,
   AtRootRule,
@@ -98,8 +101,8 @@ class CssParser(
   /** dart-sass css.dart: silentComment() — in plain CSS, `//` is never a comment. Inside expressions, return false so `//` is not consumed (allowing `1///bar` to parse as value text). Outside
     * expressions, consume the `//` via the super implementation and then throw, matching dart-sass's "Silent comments aren't allowed in plain CSS." error.
     */
-  override protected def silentComment(): Boolean = {
-    if (inExpression) return false
+  override protected def silentComment(): Boolean = boundary {
+    if (inExpression) break(false)
     val start = scanner.state
     super.silentComment()
     error(
@@ -215,7 +218,7 @@ class CssParser(
     *
     * Function calls use `expressionUntilComma(singleEquals = true)` for arguments (to allow `=` in IE filter syntax), and disallowed function names are rejected immediately.
     */
-  override protected def _rdIdentifierLike(): Expression = {
+  override protected def _rdIdentifierLike(): Expression = boundary {
     val start      = scanner.state
     val identifier = interpolatedIdentifier()
     // CSS doesn't allow non-plain identifiers
@@ -226,22 +229,22 @@ class CssParser(
     val lower = plain.toLowerCase
     // dart-sass css.dart:165-167: trySpecialFunction
     val specialFn = _rdTrySpecialFunction(lower, start)
-    if (specialFn.isDefined) return specialFn.get
+    if (specialFn.isDefined) break(specialFn.get)
 
     // dart-sass css.dart:170-177: dot / if / function call / string.
     // `namespacedExpression()` is just here to throw a clearer error.
     if (scanner.scanChar(CharCode.$dot)) {
-      return _rdNamespacedExpression(plain, start)
+      break(_rdNamespacedExpression(plain, start))
     } else if (lower == "if" && scanner.peekChar() == CharCode.$lparen) {
       // dart-sass css.dart:173-174: `if()` is handled via ifExpression().
       // Reset the scanner state and delegate to the base class which has
       // the full if() disambiguation logic (legacy vs CSS if() syntax).
       scanner.state = start
-      return super._rdIdentifierLike()
+      break(super._rdIdentifierLike())
     } else if (!scanner.scanChar(CharCode.$lparen)) {
       // In plain CSS, all non-function identifiers are just strings.
       // No conversion to NullExpression, BooleanExpression, or ColorExpression.
-      return StringExpression(identifier)
+      break(StringExpression(identifier))
     }
 
     // dart-sass css.dart:179-208: function call argument parsing.
@@ -251,7 +254,7 @@ class CssParser(
     val arguments           = scala.collection.mutable.ListBuffer.empty[Expression]
     if (!scanner.scanChar(CharCode.$rparen)) {
       import scala.util.boundary, boundary.break
-      boundary {
+      boundary[Unit] {
         while (true) {
           whitespace(consumeNewlines = true)
           if (
