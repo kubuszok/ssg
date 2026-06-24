@@ -47,6 +47,8 @@ package functions
 
 import scala.collection.immutable.ListMap
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 import ssg.sass.{ BuiltInCallable, Callable, SassScriptException }
 import ssg.sass.value.{ ListSeparator, SassArgumentList, SassBoolean, SassList, SassMap, SassNull, Value }
@@ -272,17 +274,17 @@ object MapFunctions {
     addNesting: Boolean = true
   ): Value = {
     val it = keys.iterator
-    def modifyNestedMap(current: SassMap): SassMap = {
+    def modifyNestedMap(current: SassMap): SassMap = boundary {
       var mutableMap = current.contents
       val key        = it.next()
       if (!it.hasNext) {
         val oldValue = mutableMap.getOrElse(key, SassNull)
         mutableMap = mutableMap.updated(key, modifyFn(oldValue))
-        return SassMap(mutableMap)
+        break(SassMap(mutableMap))
       }
       val nestedMap: Option[SassMap] =
         mutableMap.get(key).flatMap(_.tryMap())
-      if (nestedMap.isEmpty && !addNesting) return SassMap(mutableMap)
+      if (nestedMap.isEmpty && !addNesting) break(SassMap(mutableMap))
       val nextMap = nestedMap.getOrElse(SassMap.empty)
       mutableMap = mutableMap.updated(key, modifyNestedMap(nextMap))
       SassMap(mutableMap)
@@ -295,9 +297,9 @@ object MapFunctions {
     *
     * If both [map1] and [map2] have a map value associated with the same key, this recursively merges those maps as well.
     */
-  private def deepMergeImpl(map1: SassMap, map2: SassMap): SassMap = {
-    if (map1.contents.isEmpty) return map2
-    if (map2.contents.isEmpty) return map1
+  private def deepMergeImpl(map1: SassMap, map2: SassMap): SassMap = boundary {
+    if (map1.contents.isEmpty) break(map2)
+    if (map2.contents.isEmpty) break(map1)
     var result = map1.contents
     for ((key, value) <- map2.contents) {
       val leftMap  = result.get(key).flatMap(_.tryMap())

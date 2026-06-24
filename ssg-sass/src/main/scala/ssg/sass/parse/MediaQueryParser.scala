@@ -30,6 +30,8 @@ import ssg.sass.util.CharCode
 
 import scala.collection.mutable
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A parser for `@media` queries. */
 class MediaQueryParser(
@@ -53,7 +55,7 @@ class MediaQueryParser(
     }
 
   /** Consumes a single media query. */
-  private def _mediaQuery(): CssMediaQuery = {
+  private def _mediaQuery(): CssMediaQuery = boundary {
     // This is somewhat duplicated in StylesheetParser._mediaQuery.
     if (scanner.peekChar() == CharCode.$lparen) {
       val conditions = mutable.ListBuffer(_mediaInParens())
@@ -69,7 +71,7 @@ class MediaQueryParser(
         conditions ++= _mediaLogicSequence("or")
       }
 
-      return CssMediaQuery.condition(conditions.toList, conjunction = Some(conjunction))
+      break(CssMediaQuery.condition(conditions.toList, conjunction = Some(conjunction)))
     }
 
     var modifier: Option[String] = None
@@ -80,14 +82,14 @@ class MediaQueryParser(
       expectWhitespace()
       if (!lookingAtIdentifier()) {
         // For example, "@media not (...) {"
-        return CssMediaQuery.condition(List(s"(not ${_mediaInParens()})"))
+        break(CssMediaQuery.condition(List(s"(not ${_mediaInParens()})")))
       }
     }
 
     _whitespace()
     if (!lookingAtIdentifier()) {
       // For example, "@media screen {"
-      return CssMediaQuery.type_(type_ = Some(identifier1))
+      break(CssMediaQuery.type_(type_ = Some(identifier1)))
     }
 
     val identifier2 = identifier()
@@ -105,7 +107,7 @@ class MediaQueryParser(
         expectWhitespace()
       } else {
         // For example, "@media only screen {"
-        return CssMediaQuery.type_(type_ = type_, modifier = modifier)
+        break(CssMediaQuery.type_(type_ = type_, modifier = modifier))
       }
     }
 
@@ -115,10 +117,12 @@ class MediaQueryParser(
     if (scanIdentifier("not")) {
       // For example, "@media screen and not (...) {"
       expectWhitespace()
-      return CssMediaQuery.type_(
-        type_ = type_,
-        modifier = modifier,
-        conditions = List(s"(not ${_mediaInParens()})")
+      break(
+        CssMediaQuery.type_(
+          type_ = type_,
+          modifier = modifier,
+          conditions = List(s"(not ${_mediaInParens()})")
+        )
       )
     }
 
