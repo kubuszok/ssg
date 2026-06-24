@@ -127,7 +127,7 @@ final class CompressHarmonySuite extends munit.FunSuite {
   // =========================================================================
   // number_literals
   // =========================================================================
-  test("number_literals".fail) {
+  test("number_literals") {
     assertCompresses(
       input = """0b1001;
         0B1001;
