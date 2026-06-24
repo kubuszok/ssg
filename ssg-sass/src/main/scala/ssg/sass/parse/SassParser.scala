@@ -121,12 +121,12 @@ class SassParser(
   // expectStatementSeparator — dart-sass sass.dart lines 56-66
   // ---------------------------------------------------------------------------
 
-  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
+  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = boundary {
     val trailingSemicolon = _tryTrailingSemicolon()
     if (!atEndOfStatement()) {
       _expectNewline(trailingSemicolon = trailingSemicolon)
     }
-    if (_peekIndentation() <= currentIndentation) return
+    if (_peekIndentation() <= currentIndentation) break(())
     scanner.error(
       s"Nothing may be indented ${if (name.isEmpty) "here" else s"beneath a ${name.get}"}.",
       _nextIndentationEnd.get.position,
@@ -144,7 +144,7 @@ class SassParser(
     *
     * dart-sass sass.dart lines 73-116.
     */
-  override protected def importArgument(): Import = {
+  override protected def importArgument(): Import = boundary {
     val c = scanner.peekChar()
     // url(...) or URL(...)
     if (c == CharCode.$u || c == CharCode.$U) {
@@ -152,7 +152,7 @@ class SassParser(
       if (scanIdentifier("url")) {
         if (scanner.scanChar(CharCode.$lparen)) {
           scanner.state = start
-          return super.importArgument()
+          break(super.importArgument())
         } else {
           scanner.state = start
         }
@@ -160,7 +160,7 @@ class SassParser(
     }
     // Quoted string
     if (c == CharCode.$single_quote || c == CharCode.$double_quote) {
-      return super.importArgument()
+      break(super.importArgument())
     }
 
     // Bare URL — consume until comma, semicolon, or newline
@@ -199,15 +199,15 @@ class SassParser(
   // scanElse — dart-sass sass.dart lines 118-133
   // ---------------------------------------------------------------------------
 
-  override protected def scanElse(ifIndentation: Int): Boolean = {
-    if (_peekIndentation() != ifIndentation) return false
+  override protected def scanElse(ifIndentation: Int): Boolean = boundary {
+    if (_peekIndentation() != ifIndentation) break(false)
     val start                   = scanner.state
     val startIndentation        = currentIndentation
     val startNextIndentation    = _nextIndentation
     val startNextIndentationEnd = _nextIndentationEnd
 
     _readIndentation()
-    if (scanner.scanChar(CharCode.$at) && scanIdentifier("else")) return true
+    if (scanner.scanChar(CharCode.$at) && scanIdentifier("else")) break(true)
 
     scanner.state = start
     _currentIndentation = startIndentation
@@ -348,7 +348,7 @@ class SassParser(
   // ---------------------------------------------------------------------------
 
   /** Consumes an indented-style loud comment. */
-  private def _loudComment(): LoudComment = {
+  private def _loudComment(): LoudComment = boundary {
     val start = scanner.state
     scanner.expect("/*")
 
@@ -427,7 +427,7 @@ class SassParser(
                   Map(span -> "comment")
                 )
               } else {
-                return new LoudComment(buffer.interpolation(span))
+                break(new LoudComment(buffer.interpolation(span)))
               }
             } else {
               buffer.writeCharCode(scanner.readChar())
@@ -553,13 +553,13 @@ class SassParser(
     *
     * dart-sass sass.dart lines 399-449.
     */
-  private def _peekIndentation(): Int = {
-    if (_nextIndentation.isDefined) return _nextIndentation.get
+  private def _peekIndentation(): Int = boundary {
+    if (_nextIndentation.isDefined) break(_nextIndentation.get)
 
     if (scanner.isDone) {
       _nextIndentation = Nullable(0)
       _nextIndentationEnd = Nullable(scanner.state)
-      return 0
+      break(0)
     }
 
     val start = scanner.state
@@ -597,7 +597,7 @@ class SassParser(
         _nextIndentation = Nullable(0)
         _nextIndentationEnd = Nullable(scanner.state)
         scanner.state = start
-        return 0
+        break(0)
       }
 
       lineLoop = scanCharIf(c => c >= 0 && CharCode.isNewline(c))

@@ -32,6 +32,9 @@ import ssg.sass.value.color.{ ColorChannel, ColorSpace, GamutMapMethod, Interpol
 import ssg.sass.util.NumberUtil.{ fuzzyEquals, fuzzyRound }
 import ssg.sass.parse.ScssParser
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** Built-in color functions: rgb, rgba, hsl, hsla, and legacy accessors / manipulation functions (red, green, blue, hue, saturation, lightness, alpha, mix, lighten, darken, saturate, desaturate,
   * opacify, transparentize, adjust-hue, invert, grayscale, complement).
   */
@@ -497,8 +500,8 @@ object ColorFunctions {
 
   /** Prints a deprecation warning if [number] doesn't have unit `%`. Ported from dart-sass `_checkPercent`.
     */
-  private def checkPercent(number: SassNumber, name: String): Unit = {
-    if (number.hasUnit("%")) return
+  private def checkPercent(number: SassNumber, name: String): Unit = boundary {
+    if (number.hasUnit("%")) break(())
     EvaluationContext.warnForDeprecation(
       Deprecation.FunctionUnits,
       s"$$$name: Passing a number without unit % ($number) is deprecated.\n" +
@@ -545,10 +548,10 @@ object ColorFunctions {
 
   /** The implementation of the three- and four-argument `rgb()` and `rgba()` functions. Ported from dart-sass `_rgb`.
     */
-  private def rgbThreeOrFourArg(name: String, args: List[Value]): Value = {
+  private def rgbThreeOrFourArg(name: String, args: List[Value]): Value = boundary {
     val alpha: Option[Value] = if (args.length > 3) Some(args(3)) else None
     if (args(0).isSpecialNumber || args(1).isSpecialNumber || args(2).isSpecialNumber || alpha.exists(_.isSpecialNumber)) {
-      return functionString(name, args)
+      break(functionString(name, args))
     }
     colorFromChannelsModern(
       ColorSpace.rgb,
@@ -562,13 +565,13 @@ object ColorFunctions {
 
   /** The implementation of the two-argument `rgb()` and `rgba()` functions. Ported from dart-sass `_rgbTwoArg`.
     */
-  private def rgbTwoArg(name: String, args: List[Value]): Value = {
+  private def rgbTwoArg(name: String, args: List[Value]): Value = boundary {
     // rgba(var(--foo), 0.5) is valid CSS because --foo might be `123, 456, 789`
     // and functions are parsed after variable substitution.
     val first  = args(0)
     val second = args(1)
     if (first.isSpecialVariable || (!first.isInstanceOf[SassColor] && second.isSpecialVariable)) {
-      return functionString(name, args)
+      break(functionString(name, args))
     }
     val color = first.assertColor(Nullable("color"))
     if (!color.isLegacy) {
@@ -580,13 +583,15 @@ object ColorFunctions {
     color.assertLegacy(Nullable("color"))
     val rgbColor = color.toSpace(ColorSpace.rgb)
     if (second.isSpecialNumber) {
-      return functionString(
-        name,
-        List(
-          SassNumber(rgbColor.channel("red")),
-          SassNumber(rgbColor.channel("green")),
-          SassNumber(rgbColor.channel("blue")),
-          args(1)
+      break(
+        functionString(
+          name,
+          List(
+            SassNumber(rgbColor.channel("red")),
+            SassNumber(rgbColor.channel("green")),
+            SassNumber(rgbColor.channel("blue")),
+            args(1)
+          )
         )
       )
     }
@@ -614,10 +619,10 @@ object ColorFunctions {
 
   /** The implementation of the three- and four-argument `hsl()` and `hsla()` functions. Ported from dart-sass `_hsl`.
     */
-  private def hslThreeOrFourArg(name: String, args: List[Value]): Value = {
+  private def hslThreeOrFourArg(name: String, args: List[Value]): Value = boundary {
     val alpha: Option[Value] = if (args.length > 3) Some(args(3)) else None
     if (args(0).isSpecialNumber || args(1).isSpecialNumber || args(2).isSpecialNumber || alpha.exists(_.isSpecialNumber)) {
-      return functionString(name, args)
+      break(functionString(name, args))
     }
     colorFromChannelsModern(
       ColorSpace.hsl,
@@ -1094,14 +1099,14 @@ object ColorFunctions {
 
   /** The implementation of the `invert()` function. If [isGlobal] is true, indicates this is being called from the global `invert()` function. Ported from dart-sass `_invert`.
     */
-  private def invertImpl(args: List[Value], isGlobal: Boolean = false): Value = {
+  private def invertImpl(args: List[Value], isGlobal: Boolean = false): Value = boundary {
     val weightNumber = args(1).assertNumber(Nullable("weight"))
     if (args(0).isInstanceOf[SassNumber] || (isGlobal && args(0).isSpecialNumber)) {
       if (weightNumber.value != 100 || !weightNumber.hasUnit("%")) {
         throw SassScriptException("Only one argument may be passed to the plain-CSS invert() function.")
       }
       // Use the native CSS `invert` filter function.
-      return functionString("invert", args.take(1))
+      break(functionString("invert", args.take(1)))
     }
 
     val color    = args(0).assertColor(Nullable("color"))

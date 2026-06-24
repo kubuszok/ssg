@@ -49,6 +49,9 @@ import ssg.sass.ast.selector.{
 }
 import ssg.sass.util.FileSpan
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** A parser for CSS/Sass selectors. */
 class SelectorParser(
   contents:         String,
@@ -130,7 +133,7 @@ class SelectorParser(
   private def isName(c: Int): Boolean =
     isNameStart(c) || (c >= '0' && c <= '9')
 
-  private def readIdentifier(): String = {
+  private def readIdentifier(): String = boundary {
     val sb = new StringBuilder()
     // First character must be a name-start char (letter, _, -, non-ASCII) or
     // an escape sequence — digits are NOT valid identifier-start characters.
@@ -139,7 +142,7 @@ class SelectorParser(
     } else if (!isDone() && isNameStart(peek())) {
       sb.append(read())
     } else {
-      return "" // no valid identifier start found
+      break("") // no valid identifier start found
     }
     while (!isDone() && (isName(peek()) || peek() == '\\'))
       if (peek() == '\\') sb.append(readEscape(identifierStart = false))
@@ -149,9 +152,9 @@ class SelectorParser(
 
   /** Consumes a CSS escape sequence and returns the text to emit. Mirrors `Parser.escape()`: valid name chars are decoded; control chars and non-name codepoints are re-encoded as `\hex ` or `\char`.
     */
-  private def readEscape(identifierStart: Boolean = false): String = {
+  private def readEscape(identifierStart: Boolean = false): String = boundary {
     pos += 1 // consume backslash
-    if (isDone()) return "\ufffd"
+    if (isDone()) break("\ufffd")
     val c     = peek()
     var value = 0
     if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
@@ -642,20 +645,20 @@ class SelectorParser(
 
   /** Parses an An+B expression (e.g. "2n+1", "even", "odd", "-n+3"). Port of dart-sass `_aNPlusB` in lib/src/parse/selector.dart.
     */
-  private def parseAnPlusB(): String = {
+  private def parseAnPlusB(): String = boundary {
     val sb = new StringBuilder()
     if (!isDone()) {
       val ch = peek()
       if (ch == 'e' || ch == 'E') {
         // "even"
         val ident = readIdentifier()
-        if (ident.equalsIgnoreCase("even")) return "even"
-        else { sb.append(ident); return sb.toString() }
+        if (ident.equalsIgnoreCase("even")) break("even")
+        else { sb.append(ident); break(sb.toString()) }
       } else if (ch == 'o' || ch == 'O') {
         // "odd"
         val ident = readIdentifier()
-        if (ident.equalsIgnoreCase("odd")) return "odd"
-        else { sb.append(ident); return sb.toString() }
+        if (ident.equalsIgnoreCase("odd")) break("odd")
+        else { sb.append(ident); break(sb.toString()) }
       } else if (ch == '+' || ch == '-') {
         sb.append(read())
       }
@@ -667,7 +670,7 @@ class SelectorParser(
       if (!isDone() && (peek() == 'n' || peek() == 'N')) {
         sb.append(read())
       } else {
-        return sb.toString()
+        break(sb.toString())
       }
     } else {
       // Expect 'n' — dart-sass uses expectIdentChar($n) here which
@@ -689,7 +692,7 @@ class SelectorParser(
   }
 
   /** Reads balanced content until the matching `)`, not consuming the `)`. */
-  private def readBalancedUntilClose(): String = {
+  private def readBalancedUntilClose(): String = boundary {
     val sb    = new StringBuilder()
     var depth = 0
     while (!isDone()) {
@@ -698,7 +701,7 @@ class SelectorParser(
       else if (ch == ')') {
         if (depth == 0) {
           // Don't consume the closing paren
-          return sb.toString().trim
+          break(sb.toString().trim)
         }
         depth -= 1
         sb.append(read())
