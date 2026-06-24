@@ -2692,7 +2692,7 @@ final class CompressDropUnusedSuite extends munit.FunSuite {
   // =========================================================================
   // unused_assignments_caused_duplication
   // =========================================================================
-  test("unused_assignments_caused_duplication".fail) {
+  test("unused_assignments_caused_duplication") {
     assertCompresses(
       input = """var R, fn = (R = "do not duplicate me", function(){ return useVar(R) });
 

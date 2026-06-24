@@ -523,7 +523,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // native_prototype_lhs
   // =========================================================================
-  test("native_prototype_lhs".fail) {
+  test("native_prototype_lhs") {
     assertCompresses(
       input = """console.log(function() {
             Function.prototype.bar = "PASS";
@@ -839,7 +839,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // lhs_prop_1
   // =========================================================================
-  test("lhs_prop_1".fail) {
+  test("lhs_prop_1") {
     assertCompresses(
       input = """console.log(++{
             a: 1
@@ -888,7 +888,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // lhs_prop_3
   // =========================================================================
-  test("lhs_prop_3".fail) {
+  test("lhs_prop_3") {
     assertCompresses(
       input = "({ prop: 'do not put me in the LHS!' })[\"prop\"] = 1",
       expected = "({ prop: 'do not put me in the LHS!' }).prop = 1",
@@ -1112,7 +1112,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // new_this
   // =========================================================================
-  test("new_this".fail) {
+  test("new_this") {
     assertCompresses(
       input = """new {
             f: function(a) {

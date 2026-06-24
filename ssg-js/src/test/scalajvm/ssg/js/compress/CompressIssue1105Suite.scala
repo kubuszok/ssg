@@ -192,7 +192,7 @@ final class CompressIssue1105Suite extends munit.FunSuite {
   // =========================================================================
   // Infinity_in_with_scope
   // =========================================================================
-  test("Infinity_in_with_scope".fail) {
+  test("Infinity_in_with_scope") {
     assertCompresses(
       input = """var o = { Infinity: 'oInfinity' };
         var vInfinity = "Infinity";
