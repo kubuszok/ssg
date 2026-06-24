@@ -27,6 +27,8 @@ import ssg.sass.Nullable
 import ssg.sass.util.FileSpan
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A node in the abstract syntax tree for a selector.
   *
@@ -71,8 +73,8 @@ abstract class Selector(val span: FileSpan) extends AstNode {
     *
     * This may only be called from within a custom Sass function. This will throw a [[ssg.sass.SassException]] in Dart Sass 2.0.0.
     */
-  def assertNotBogus(name: Nullable[String] = Nullable.Null): Unit = {
-    if (!isBogus) return
+  def assertNotBogus(name: Nullable[String] = Nullable.Null): Unit = boundary {
+    if (!isBogus) break(())
     val prefix = if (name.isDefined) s"$$${name.get}: " else ""
     ssg.sass.EvaluationContext.warnForDeprecation(
       ssg.sass.Deprecation.BogusCombinators,

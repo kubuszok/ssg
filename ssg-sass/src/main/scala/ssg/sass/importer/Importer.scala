@@ -25,6 +25,9 @@ package ssg
 package sass
 package importer
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** An interface for importers that resolve URLs in `@import`/`@use`/`@forward` to stylesheet contents.
   */
 trait Importer {
@@ -196,7 +199,7 @@ final class MapImporter(
     result.toList
   }
 
-  def canonicalize(url: String): Nullable[String] = {
+  def canonicalize(url: String): Nullable[String] = boundary[Nullable[String]] {
     val stripped = if (url.startsWith("file:")) url.stripPrefix("file:") else url
     // Normalize `..` and `.` segments so `../foo/bar` resolves correctly
     // when the key in the map is a clean relative path.
@@ -246,7 +249,7 @@ final class MapImporter(
     // already has a known Sass extension. Files without extensions (e.g.
     // `other` with no `.scss`/`.sass`/`.css` suffix) are NOT valid import
     // targets.
-    if (hasKnownExtension && sources.contains(cleaned)) return Nullable(cleaned)
+    if (hasKnownExtension && sources.contains(cleaned)) break(Nullable(cleaned))
 
     if (hasKnownExtension) {
       // With explicit extension: in @import context, try .import variant first

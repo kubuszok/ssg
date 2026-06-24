@@ -10,4 +10,4 @@ assumes_ssg-js	2	2026-06-13	grep -rE 'assume\(' ssg-js/src/test --include='*.sca
 assumes_ssg-katex	2	2026-06-10	grep -rE 'assume\(' ssg-katex/src/test --include='*.scala' | wc -l
 assumes_ssg-highlight	4	2026-06-17	grep -rE 'assume\(' ssg-highlight/src/test --include='*.scala' | wc -l
 exception_swallows	9	2026-06-23	grep -raE 'case _: (Exception|Throwable) =>' ssg-minify/src/main ssg-js/src/main --include='*.scala' | wc -l
-returns_ssg-sass	83	2026-06-24	grep -rE '\breturn\b' ssg-sass/src/main --include='*.scala' | wc -l
+returns_ssg-sass	64	2026-06-24	grep -rE '\breturn\b' ssg-sass/src/main --include='*.scala' | wc -l

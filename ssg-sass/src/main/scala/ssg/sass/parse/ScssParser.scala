@@ -46,12 +46,12 @@ class ScssParser(
     */
   override protected def styleRuleSelector(): Interpolation = almostAnyValue()
 
-  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = {
+  override protected def expectStatementSeparator(name: Nullable[String] = Nullable.Null): Unit = boundary {
     _whitespaceWithoutComments()
-    if (scanner.isDone) return
+    if (scanner.isDone) break(())
     val c = scanner.peekChar()
-    if (c == CharCode.$semicolon) { scanner.readChar(); return }
-    if (c == CharCode.$rbrace) return
+    if (c == CharCode.$semicolon) { scanner.readChar(); break(()) }
+    if (c == CharCode.$rbrace) break(())
     scanner.expectChar(CharCode.$semicolon)
   }
 

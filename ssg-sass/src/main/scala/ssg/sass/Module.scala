@@ -21,6 +21,8 @@ package ssg
 package sass
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.css.{ CssComment, CssStylesheet }
 import ssg.sass.util.FileSpan
@@ -271,13 +273,13 @@ final class ForwardedView[T <: Callable](
   }
 
   /// Port of dart-sass `ForwardedModuleView.couldHaveBeenConfigured`.
-  override def couldHaveBeenConfigured(names: Set[String]): Boolean = {
+  override def couldHaveBeenConfigured(names: Set[String]): Boolean = boundary[Boolean] {
     assert(shownVariables.fold(true)(_ => true) || hiddenVariables.fold(true)(_ => true))
     if (
       prefix.isEmpty && shownVariables.isEmpty &&
       hiddenVariables.fold(true)(_.isEmpty)
     ) {
-      return inner.couldHaveBeenConfigured(names)
+      break(inner.couldHaveBeenConfigured(names))
     }
     var adjusted = names
     prefix.foreach { p =>

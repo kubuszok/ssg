@@ -14,6 +14,9 @@ package util
 
 import ssg.sass.Nullable.*
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** Represents a source file that can be referenced by spans.
   *
   * @param url
@@ -329,14 +332,14 @@ extension (span: FileSpan) {
     *
     * This span must start with `"` or `'`.
     */
-  def initialQuoted(): FileSpan = {
+  def initialQuoted(): FileSpan = boundary[FileSpan] {
     val t     = span.text
     val quote = t.charAt(0)
     var i     = 1
     while (true) {
       val next = t.charAt(i)
       i += 1
-      if (next == quote) return span.subspan(0, i)
+      if (next == quote) break(span.subspan(0, i))
       if (next == '\\') i += 1 // skip escaped character
     }
     span.subspan(0, i) // unreachable but needed for compiler
@@ -348,8 +351,6 @@ extension (span: FileSpan) {
   * Returns the position after the identifier.
   */
 private def _scanIdentifier(text: String, pos: Int): Int = {
-  import scala.util.boundary
-  import scala.util.boundary.break
   var i = pos
   boundary[Int] {
     while (i < text.length) {
