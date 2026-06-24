@@ -75,6 +75,8 @@ package sass
 
 import scala.collection.mutable
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.css.{ CssComment, CssStylesheet }
@@ -315,12 +317,12 @@ final class Environment private (
     * At root, existing imported and forwarded modules are shadowed so they no longer expose names that the newly-imported module forwards. Below root, the new modules go into
     * `_nestedForwardedModules` at the current scope level.
     */
-  def importForwards(module: Module[Callable]): Unit = {
+  def importForwards(module: Module[Callable]): Unit = boundary {
     val fwdOpt = module match {
       case impl: Environment.EnvironmentModule => impl.env._forwardedModules
       case _ => Nullable.empty[mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]]]
     }
-    if (fwdOpt.isEmpty) return
+    if (fwdOpt.isEmpty) break(())
     var forwarded: mutable.LinkedHashMap[Module[Callable], Nullable[AstNode]] = fwdOpt.get
 
     // Omit modules from [forwarded] that are already globally available
@@ -414,18 +416,20 @@ final class Environment private (
 
   /** Returns the variable named [name] from the namespace [namespace] if given, or walking the scope chain then namespaceless modules otherwise. Returns Nullable.empty when undefined.
     */
-  def getVariable(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Value] = {
+  def getVariable(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Value] = boundary {
     if (namespace.isDefined)
-      return _getModule(namespace.get).variables.get(name) match {
+      break((_getModule(namespace.get).variables.get(name) match {
         case Some(v) => v
         case None    => Nullable.empty
-      }
+      }): Nullable[Value])
 
     if (_lastVariableName.exists(_ == name))
-      return _variables(_lastVariableIndex).get(name) match {
-        case Some(v) => v
-        case None    => _getVariableFromGlobalModule(name)
-      }
+      break(
+        (_variables(_lastVariableIndex).get(name) match {
+          case Some(v) => v
+          case None    => _getVariableFromGlobalModule(name)
+        }): Nullable[Value]
+      )
 
     _variableIndices.get(name) match {
       case Some(idx) =>
@@ -511,11 +515,11 @@ final class Environment private (
     * env's `_variableNodes(0)` directly. For built-in and forwarded-view modules variable nodes are absent (those modules never produce runtime span warnings on their own variables), so this method
     * returns empty for them.
     */
-  private def _getVariableNodeFromGlobalModule(name: String): Nullable[AstNode] = scala.util.boundary {
+  private def _getVariableNodeFromGlobalModule(name: String): Nullable[AstNode] = boundary {
     for (m <- _importedModules.keysIterator) m match {
       case impl: Environment.EnvironmentModule =>
         impl.env._variableNodes(0).get(name) match {
-          case Some(n) => scala.util.boundary.break(Nullable(n))
+          case Some(n) => break(Nullable(n))
           case None    => ()
         }
       case _ => ()
@@ -523,7 +527,7 @@ final class Environment private (
     for (m <- _globalModules.keysIterator) m match {
       case impl: Environment.EnvironmentModule =>
         impl.env._variableNodes(0).get(name) match {
-          case Some(n) => scala.util.boundary.break(Nullable(n))
+          case Some(n) => break(Nullable(n))
           case None    => ()
         }
       case _ => ()
@@ -532,10 +536,10 @@ final class Environment private (
   }
 
   /** Returns the scope index (0..length-1) that contains [name], or -1. */
-  private def _variableIndex(name: String): Int = {
+  private def _variableIndex(name: String): Int = boundary {
     var i = _variables.length - 1
     while (i >= 0) {
-      if (_variables(i).contains(name)) return i
+      if (_variables(i).contains(name)) break(i)
       i -= 1
     }
     -1
@@ -558,10 +562,10 @@ final class Environment private (
     nodeWithSpan: Nullable[AstNode] = Nullable.empty,
     namespace:    Nullable[String] = Nullable.empty,
     global:       Boolean = false
-  ): Unit = {
+  ): Unit = boundary {
     if (namespace.isDefined) {
       _getModule(namespace.get).setVariable(name, value, nodeWithSpan.map(_.span))
-      return
+      break(())
     }
 
     if (global || atRoot) {
@@ -580,12 +584,12 @@ final class Environment private (
           )
         if (moduleWithName.isDefined) {
           moduleWithName.get.setVariable(name, value, nodeWithSpan.map(_.span))
-          return
+          break(())
         }
       }
       _variables(0)(name) = value
       nodeWithSpan.foreach(n => _variableNodes(0)(name) = n)
-      return
+      break(())
     }
 
     // Nested-forwarded-module write-through: if the variable isn't
@@ -602,7 +606,7 @@ final class Environment private (
           val m = bucket(j)
           if (m.variables.contains(name)) {
             m.setVariable(name, value, nodeWithSpan.map(_.span))
-            return
+            break(())
           }
           j -= 1
         }
@@ -659,12 +663,12 @@ final class Environment private (
   // Function lookup
   // ---------------------------------------------------------------------------
 
-  def getFunction(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Callable] = {
+  def getFunction(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Callable] = boundary {
     if (namespace.isDefined)
-      return _getModule(namespace.get).functions.get(name) match {
+      break(_getModule(namespace.get).functions.get(name) match {
         case Some(c) => Nullable(c)
         case None    => Nullable.empty
-      }
+      })
 
     _functionIndices.get(name) match {
       case Some(idx) =>
@@ -694,10 +698,10 @@ final class Environment private (
                                }
     )
 
-  private def _functionIndex(name: String): Int = {
+  private def _functionIndex(name: String): Int = boundary {
     var i = _functions.length - 1
     while (i >= 0) {
-      if (_functions(i).contains(name)) return i
+      if (_functions(i).contains(name)) break(i)
       i -= 1
     }
     -1
@@ -716,12 +720,12 @@ final class Environment private (
   // Mixin lookup
   // ---------------------------------------------------------------------------
 
-  def getMixin(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Callable] = {
+  def getMixin(name: String, namespace: Nullable[String] = Nullable.empty): Nullable[Callable] = boundary {
     if (namespace.isDefined)
-      return _getModule(namespace.get).mixins.get(name) match {
+      break(_getModule(namespace.get).mixins.get(name) match {
         case Some(c) => Nullable(c)
         case None    => Nullable.empty
-      }
+      })
 
     _mixinIndices.get(name) match {
       case Some(idx) =>
@@ -751,10 +755,10 @@ final class Environment private (
                                }
     )
 
-  private def _mixinIndex(name: String): Int = {
+  private def _mixinIndex(name: String): Int = boundary {
     var i = _mixins.length - 1
     while (i >= 0) {
-      if (_mixins(i).contains(name)) return i
+      if (_mixins(i).contains(name)) break(i)
       i -= 1
     }
     -1
@@ -954,7 +958,7 @@ final class Environment private (
     name:     String,
     typeName: String,
     callback: Module[Callable] => Nullable[T]
-  ): Nullable[T] = scala.util.boundary {
+  ): Nullable[T] = boundary {
     val nested = _nestedForwardedModules.toOption
     if (nested.isDefined) {
       val buckets = nested.get
@@ -964,7 +968,7 @@ final class Environment private (
         var j      = bucket.length - 1
         while (j >= 0) {
           val value = callback(bucket(j))
-          if (value.isDefined) scala.util.boundary.break(value)
+          if (value.isDefined) break(value)
           j -= 1
         }
         i -= 1
@@ -973,7 +977,7 @@ final class Environment private (
     val importedIt = _importedModules.keysIterator
     while (importedIt.hasNext) {
       val value = callback(importedIt.next())
-      if (value.isDefined) scala.util.boundary.break(value)
+      if (value.isDefined) break(value)
     }
 
     var resolved: Nullable[T] = Nullable.empty
@@ -1274,11 +1278,11 @@ object Environment {
         case None    => this
       }
 
-    override def couldHaveBeenConfigured(names: Set[String]): Boolean = {
+    override def couldHaveBeenConfigured(names: Set[String]): Boolean = boundary {
       val localHit =
         if (names.size < env._configurableVariables.size) names.exists(env._configurableVariables.contains)
         else env._configurableVariables.exists(names.contains)
-      if (localHit) return true
+      if (localHit) break(true)
       val relevantModules =
         if (names.size < _modulesByVariable.size)
           names.iterator.flatMap(n => _modulesByVariable.get(n)).toSet
@@ -1313,8 +1317,8 @@ object Environment {
 
   object EnvironmentModule {
 
-    private[sass] def makeModulesByVariable(forwarded: Set[Module[Callable]]): Map[String, Module[Callable]] = {
-      if (forwarded.isEmpty) return Map.empty
+    private[sass] def makeModulesByVariable(forwarded: Set[Module[Callable]]): Map[String, Module[Callable]] = boundary {
+      if (forwarded.isEmpty) break(Map.empty)
       val out = mutable.Map.empty[String, Module[Callable]]
       for (m <- forwarded)
         m match {
@@ -1334,10 +1338,10 @@ object Environment {
       *
       * When localMap is a live view and there are no otherMaps, it's returned directly so that mutations to the underlying mutable map are reflected.
       */
-    private[sass] def memberMap[V](localMap: Map[String, V], otherMaps: Iterable[Map[String, V]]): Map[String, V] = {
-      if (otherMaps.isEmpty) return localMap
+    private[sass] def memberMap[V](localMap: Map[String, V], otherMaps: Iterable[Map[String, V]]): Map[String, V] = boundary {
+      if (otherMaps.isEmpty) break(localMap)
       val nonEmpty = otherMaps.filter(_.nonEmpty)
-      if (nonEmpty.isEmpty) return localMap
+      if (nonEmpty.isEmpty) break(localMap)
       val out = mutable.LinkedHashMap.empty[String, V]
       for (m <- nonEmpty)
         for ((k, v) <- m) out(k) = v
