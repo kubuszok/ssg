@@ -239,7 +239,7 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `atRule` (stylesheet.dart:669-733).
     */
-  private def _atRule(root: Boolean = false): Nullable[Statement] = {
+  private def _atRule(root: Boolean = false): Nullable[Statement] = boundary {
     val start = scanner.state
     scanner.expectChar(CharCode.$at)
     // dart-sass uses interpolatedIdentifier() so `@#{$var}-rule` is valid.
@@ -248,7 +248,7 @@ abstract class StylesheetParser protected (
     if (namePlain.isEmpty) {
       // If the at-rule name contains interpolation, it's an unknown at-rule.
       whitespace(consumeNewlines = true)
-      return Nullable(_unknownAtRule(start, nameInterp))
+      break(Nullable(_unknownAtRule(start, nameInterp)): Nullable[Statement])
     }
     val name = namePlain.get
     // dart-sass: individual at-rule handlers consume their own whitespace.
@@ -955,18 +955,18 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_withChildren` → `children(child)`.
     */
-  private def _children(): List[Statement] = {
+  private def _children(): List[Statement] = boundary {
     if (indented) {
       // SassParser.children wraps child() inside _child(), which yields
       // Nullable and filters empties. When _childStatement() returns empty
       // the SassParser._child wrapper sees Nullable.Null and discards the
       // entry, so the sentinel SilentComment is never retained.
       val sentinel = new SilentComment("", scanner.emptySpan)
-      return children { () =>
+      break(children { () =>
         val stmt = _childStatement()
         if (stmt.isDefined) stmt.get
         else sentinel
-      }.filterNot(_ eq sentinel)
+      }.filterNot(_ eq sentinel))
     }
     _childrenScss()
   }
@@ -1060,11 +1060,11 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_declarationOrStyleRule` (stylesheet.dart:370-381).
     */
-  private def _declarationOrStyleRule(): Nullable[Statement] = {
+  private def _declarationOrStyleRule(): Nullable[Statement] = boundary {
     // The indented syntax allows a single backslash to distinguish a style rule
     // from old-style property syntax. We don't support old property syntax, but
     // we do support the backslash because it's easy to do.
-    if (indented && scanner.scanChar(CharCode.$backslash)) return Nullable(_styleRule())
+    if (indented && scanner.scanChar(CharCode.$backslash)) break(Nullable(_styleRule()): Nullable[Statement])
 
     val start            = scanner.state
     val declarationOrBuf = _declarationOrBuffer()
@@ -1083,7 +1083,7 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_declarationOrBuffer` (stylesheet.dart:390-494).
     */
-  private def _declarationOrBuffer(): Statement | InterpolationBuffer = {
+  private def _declarationOrBuffer(): Statement | InterpolationBuffer = boundary[Statement | InterpolationBuffer] {
     val start      = scanner.state
     val nameBuffer = new InterpolationBuffer()
 
@@ -1094,14 +1094,14 @@ abstract class StylesheetParser protected (
       nameBuffer.write(rawText(() => whitespace(consumeNewlines = false)))
     }
 
-    if (!_lookingAtInterpolatedIdentifier()) return nameBuffer
+    if (!_lookingAtInterpolatedIdentifier()) break(nameBuffer)
 
     val variableOrInterpolation: VariableDeclaration | Interpolation =
       if (startsWithPunctuation) interpolatedIdentifier()
       else _variableDeclarationOrInterpolation()
 
     variableOrInterpolation match {
-      case vd:     VariableDeclaration => return vd
+      case vd:     VariableDeclaration => break(vd)
       case interp: Interpolation       => nameBuffer.addInterpolation(interp)
     }
 
@@ -1113,7 +1113,7 @@ abstract class StylesheetParser protected (
     val beforeColon = scanner.state
     if (!scanner.scanChar(CharCode.$colon)) {
       if (midBuffer.nonEmpty) nameBuffer.writeCharCode(CharCode.$space)
-      return nameBuffer
+      break(nameBuffer)
     }
     midBuffer.append(':')
 
@@ -1132,23 +1132,23 @@ abstract class StylesheetParser protected (
       expectStatementSeparator(
         Nullable(if (isCustomProperty) "custom property" else "@function result")
       )
-      return Declaration.notSassScript(name, value, spanFrom(start))
+      break(Declaration.notSassScript(name, value, spanFrom(start)))
     }
 
     if (scanner.scanChar(CharCode.$colon)) {
       nameBuffer.write(midBuffer.toString)
       nameBuffer.writeCharCode(CharCode.$colon)
-      return nameBuffer
+      break(nameBuffer)
     } else if (indented && _lookingAtInterpolatedIdentifier()) {
       // In the indented syntax, `foo:bar` is always considered a selector
       // rather than a property.
       nameBuffer.write(midBuffer.toString)
-      return nameBuffer
+      break(nameBuffer)
     }
 
     val postColonWhitespace = rawText(() => whitespace(consumeNewlines = false))
     val tryNested           = _tryDeclarationChildren(name, start)
-    if (tryNested.isDefined) return tryNested.get
+    if (tryNested.isDefined) break(tryNested.get)
 
     midBuffer.append(postColonWhitespace)
     val couldBeSelector =
@@ -1183,11 +1183,11 @@ abstract class StylesheetParser protected (
 
         nameBuffer.write(midBuffer.toString)
         nameBuffer.addInterpolation(additional)
-        return nameBuffer
+        break(nameBuffer)
     }
 
     val tryNested2 = _tryDeclarationChildren(name, start, value = value)
-    if (tryNested2.isDefined) return tryNested2.get
+    if (tryNested2.isDefined) break(tryNested2.get)
 
     expectStatementSeparator()
     Declaration(name, value.get, spanFrom(start))
@@ -1197,14 +1197,14 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_variableDeclarationOrInterpolation` (stylesheet.dart:503-522).
     */
-  private def _variableDeclarationOrInterpolation(): VariableDeclaration | Interpolation = {
-    if (!lookingAtIdentifier()) return interpolatedIdentifier()
+  private def _variableDeclarationOrInterpolation(): VariableDeclaration | Interpolation = boundary[VariableDeclaration | Interpolation] {
+    if (!lookingAtIdentifier()) break(interpolatedIdentifier())
 
     val start = scanner.state
     val ident = identifier()
     if (scanner.matches(".$")) {
       scanner.readChar()
-      return variableDeclarationWithoutNamespace(Nullable(ident), Nullable(start))
+      break(variableDeclarationWithoutNamespace(Nullable(ident), Nullable(start)))
     } else {
       val buffer = new InterpolationBuffer()
       buffer.write(ident)
@@ -1227,8 +1227,8 @@ abstract class StylesheetParser protected (
     name:  Interpolation,
     start: ssg.sass.util.LineScannerState,
     value: Nullable[Expression] = Nullable.Null
-  ): Nullable[Declaration] = {
-    if (!lookingAtChildren()) return Nullable.empty
+  ): Nullable[Declaration] = boundary {
+    if (!lookingAtChildren()) break(Nullable.empty)
     if (plainCss) {
       scanner.error("Nested declarations aren't allowed in plain CSS.")
     }
@@ -1339,8 +1339,8 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_assertPublic` (stylesheet.dart:4806-4812).
     */
-  private def _assertPublic(ident: String, span: () => FileSpan): Unit = {
-    if (!CharCode.isPrivate(ident)) return
+  private def _assertPublic(ident: String, span: () => FileSpan): Unit = boundary {
+    if (!CharCode.isPrivate(ident)) break(())
     error(
       "Private members can't be accessed from outside their modules.",
       span()
@@ -1361,32 +1361,38 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_functionChild` (stylesheet.dart:755-795).
     */
-  private def _functionChild(): Statement = {
+  private def _functionChild(): Statement = boundary {
     if (scanner.peekChar() != CharCode.$at) {
       val saved = scanner.state
-      try
-        return _variableDeclarationWithNamespace()
-      catch {
-        case variableDeclarationError: Exception =>
-          scanner.state = saved
-          // If a variable declaration failed to parse, it's possible the user
-          // thought they could write a style rule or property declaration in a
-          // function. If so, throw a more helpful error message.
-          val statement: Statement =
-            try
-              _declarationOrStyleRule().getOrElse(throw variableDeclarationError)
-            catch {
-              case _: Exception => throw variableDeclarationError
+      // Restructured to avoid break-in-try: boundary.Break extends
+      // RuntimeException, so a break() inside the try body would be caught
+      // by the broad `case ... Exception` handler. Instead, capture the
+      // result and break after the try-catch completes.
+      val vdResult: Statement =
+        try
+          _variableDeclarationWithNamespace()
+        catch {
+          case variableDeclarationError: Exception =>
+            scanner.state = saved
+            // If a variable declaration failed to parse, it's possible the user
+            // thought they could write a style rule or property declaration in a
+            // function. If so, throw a more helpful error message.
+            val statement: Statement =
+              try
+                _declarationOrStyleRule().getOrElse(throw variableDeclarationError)
+              catch {
+                case _: Exception => throw variableDeclarationError
+              }
+            val what = statement match {
+              case _: StyleRule => "style rules"
+              case _ => "declarations"
             }
-          val what = statement match {
-            case _: StyleRule => "style rules"
-            case _ => "declarations"
-          }
-          error(
-            s"@function rules may not contain $what.",
-            statement.span
-          )
-      }
+            error(
+              s"@function rules may not contain $what.",
+              statement.span
+            )
+        }
+      break(vdResult)
     }
 
     val fnStart = scanner.state
@@ -1410,13 +1416,15 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_withChildren(_functionChild, ...)`.
     */
-  private def _functionChildren(): List[Statement] = {
+  private def _functionChildren(): List[Statement] = boundary {
     if (indented) {
       val sentinel = new SilentComment("", scanner.emptySpan)
-      return children(() =>
-        try _functionChild()
-        catch { case _: Exception => sentinel }
-      ).filterNot(_ eq sentinel)
+      break(
+        children(() =>
+          try _functionChild()
+          catch { case _: Exception => sentinel }
+        ).filterNot(_ eq sentinel)
+      )
     }
     scanner.expectChar(CharCode.$lbrace)
     whitespace(consumeNewlines = true)
@@ -1494,7 +1502,7 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_propertyOrVariableDeclaration` (stylesheet.dart:590-629).
     */
-  private def _propertyOrVariableDeclaration(): Statement = {
+  private def _propertyOrVariableDeclaration(): Statement = boundary {
     val start = scanner.state
 
     val name: Interpolation =
@@ -1507,7 +1515,7 @@ abstract class StylesheetParser protected (
       } else if (!plainCss) {
         val variableOrInterpolation = _variableDeclarationOrInterpolation()
         variableOrInterpolation match {
-          case vd:     VariableDeclaration => return vd
+          case vd:     VariableDeclaration => break(vd)
           case interp: Interpolation       => interp
         }
       } else {
@@ -1523,11 +1531,11 @@ abstract class StylesheetParser protected (
 
     whitespace(consumeNewlines = false)
     val tryNested = _tryDeclarationChildren(name, start)
-    if (tryNested.isDefined) return tryNested.get
+    if (tryNested.isDefined) break(tryNested.get)
 
     val value      = _rdExpression()
     val tryNested2 = _tryDeclarationChildren(name, start, value = Nullable(value))
-    if (tryNested2.isDefined) return tryNested2.get
+    if (tryNested2.isDefined) break(tryNested2.get)
 
     expectStatementSeparator()
     Declaration(name, value, spanFrom(start))
@@ -1548,15 +1556,15 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_variableDeclarationOrStyleRule` (stylesheet.dart:319-339).
     */
-  private def _variableDeclarationOrStyleRule(): Nullable[Statement] = {
-    if (plainCss) return Nullable(_styleRule())
+  private def _variableDeclarationOrStyleRule(): Nullable[Statement] = boundary {
+    if (plainCss) break(Nullable(_styleRule()): Nullable[Statement])
 
     // The indented syntax allows a single backslash to distinguish a style rule
     // from old-style property syntax. We don't support old property syntax, but
     // we do support the backslash because it's easy to do.
-    if (indented && scanner.scanChar(CharCode.$backslash)) return Nullable(_styleRule())
+    if (indented && scanner.scanChar(CharCode.$backslash)) break(Nullable(_styleRule()): Nullable[Statement])
 
-    if (!lookingAtIdentifier()) return Nullable(_styleRule())
+    if (!lookingAtIdentifier()) break(Nullable(_styleRule()): Nullable[Statement])
 
     val vdssStart               = scanner.state
     val variableOrInterpolation = _variableDeclarationOrInterpolation()
@@ -2610,16 +2618,16 @@ abstract class StylesheetParser protected (
     * When the character after `#` is a digit, parse directly as hex color. Otherwise, parse as an interpolated identifier, check whether it's a plain hex color (3/4/6/8 hex digits), and backtrack if
     * so.
     */
-  private def _rdHashExpression(): Expression = {
+  private def _rdHashExpression(): Expression = boundary {
     val start = scanner.state
     if (scanner.peekChar(1) == CharCode.$lbrace) {
       // #{...} interpolation — parse as interpolated identifier
       val ident = interpolatedIdentifier()
       if (scanner.peekChar() == CharCode.$lparen) {
         val args = _rdArgumentInvocation(start)
-        return InterpolatedFunctionExpression(ident, args, spanFrom(start))
+        break(InterpolatedFunctionExpression(ident, args, spanFrom(start)))
       }
-      return StringExpression(ident, hasQuotes = false)
+      break(StringExpression(ident, hasQuotes = false))
     }
     scanner.expectChar(CharCode.$hash)
 
@@ -2628,7 +2636,7 @@ abstract class StylesheetParser protected (
     val first = scanner.peekChar()
     if (first >= 0 && CharCode.isDigit(first)) {
       val color = _hexColorContents(start)
-      return ColorExpression(color, spanFrom(start))
+      break(ColorExpression(color, spanFrom(start)))
     }
 
     // Otherwise, parse the full identifier and check if it's a valid hex color.
@@ -2637,7 +2645,7 @@ abstract class StylesheetParser protected (
     if (_isHexColor(identifier)) {
       scanner.state = afterHash
       val color = _hexColorContents(start)
-      return ColorExpression(color, spanFrom(start))
+      break(ColorExpression(color, spanFrom(start)))
     }
 
     // Not a hex color — prepend `#` and return as unquoted string.
@@ -2708,15 +2716,15 @@ abstract class StylesheetParser protected (
 
   /** dart-sass: `_isHexColor` (stylesheet.dart:2603-2610). Returns whether [interpolation] is a plain string that can be parsed as a hex color.
     */
-  private def _isHexColor(interpolation: Interpolation): Boolean = {
+  private def _isHexColor(interpolation: Interpolation): Boolean = boundary {
     val plain = interpolation.asPlain
-    if (plain.isEmpty) return false
+    if (plain.isEmpty) break(false)
     val s   = plain.get
     val len = s.length
-    if (len != 3 && len != 4 && len != 6 && len != 8) return false
+    if (len != 3 && len != 4 && len != 6 && len != 8) break(false)
     var i = 0
     while (i < len) {
-      if (!CharCode.isHex(s.charAt(i).toInt)) return false
+      if (!CharCode.isHex(s.charAt(i).toInt)) break(false)
       i += 1
     }
     true
@@ -2732,12 +2740,12 @@ abstract class StylesheetParser protected (
   }
 
   /** dart-sass: `_expression(bracketList: true)`. Parses `[...]` bracket lists. */
-  private def _rdBracketList(): Expression = {
+  private def _rdBracketList(): Expression = boundary {
     val start = scanner.state
     scanner.expectChar(CharCode.$lbracket)
     whitespace(consumeNewlines = true)
     if (scanner.scanChar(CharCode.$rbracket)) {
-      return ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = true)
+      break(ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = true))
     }
     // Parse a full expression, then wrap in a bracketed list
     val inner = _rdExpression(consumeNewlines = true)
@@ -2751,7 +2759,7 @@ abstract class StylesheetParser protected (
   }
 
   /** dart-sass: `parentheses` (stylesheet.dart:2458-2506). */
-  protected def _rdParenthesizedExpression(): Expression = {
+  protected def _rdParenthesizedExpression(): Expression = boundary {
     // dart-sass lines 2460-2461: save and set _inParentheses.
     val wasInParentheses = _inParentheses
     _inParentheses = true
@@ -2762,18 +2770,18 @@ abstract class StylesheetParser protected (
       // dart-sass line 2467: check if looking at expression
       if (!_lookingAtExpression()) {
         scanner.expectChar(CharCode.$rparen)
-        return ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = false)
+        break(ListExpression(Nil, ListSeparator.Undecided, spanFrom(start), hasBrackets = false))
       }
 
       val first = expressionUntilComma()
       if (scanner.scanChar(CharCode.$colon)) {
         whitespace(consumeNewlines = true)
         // dart-sass: `_map` (stylesheet.dart:2513-2529)
-        return _rdMap(first, start)
+        break(_rdMap(first, start))
       }
       if (!scanner.scanChar(CharCode.$comma)) {
         scanner.expectChar(CharCode.$rparen)
-        return ParenthesizedExpression(first, spanFrom(start))
+        break(ParenthesizedExpression(first, spanFrom(start)))
       }
       whitespace(consumeNewlines = true)
       val inside = start // for span
@@ -2785,7 +2793,7 @@ abstract class StylesheetParser protected (
           // no more commas
           val list = ListExpression(elts.toList, ListSeparator.Comma, spanFrom(inside), hasBrackets = false)
           scanner.expectChar(CharCode.$rparen)
-          return ParenthesizedExpression(list, spanFrom(start))
+          break(ParenthesizedExpression(list, spanFrom(start)))
         }
         whitespace(consumeNewlines = true)
       }
@@ -2999,7 +3007,7 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `parseImportUrl` (stylesheet.dart:1253-1263).
     */
-  protected def parseImportUrl(url: String): String = {
+  protected def parseImportUrl(url: String): String = boundary {
     // Backwards-compatibility for implementations that allow absolute Windows
     // paths in imports.
     if (
@@ -3008,7 +3016,7 @@ abstract class StylesheetParser protected (
       !url.startsWith("/")
     ) {
       // Looks like an absolute Windows path (e.g. C:\foo\bar) — convert to URI.
-      return url.replace('\\', '/')
+      break(url.replace('\\', '/'))
     }
     // Throw if [url] is invalid.
     new java.net.URI(url)
@@ -3019,9 +3027,9 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `isPlainImportUrl` (stylesheet.dart:1267-1276).
     */
-  protected def isPlainImportUrl(url: String): Boolean = {
-    if (url.length < 5) return false
-    if (url.endsWith(".css")) return true
+  protected def isPlainImportUrl(url: String): Boolean = boundary {
+    if (url.length < 5) break(false)
+    if (url.endsWith(".css")) break(true)
     val c0 = url.charAt(0).toInt
     if (c0 == CharCode.$slash) url.charAt(1).toInt == CharCode.$slash
     else if (c0 == CharCode.$h) url.startsWith("http://") || url.startsWith("https://")
@@ -3032,12 +3040,12 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `dynamicUrl` (stylesheet.dart:3528-3540).
     */
-  protected def dynamicUrl(): Expression = {
+  protected def dynamicUrl(): Expression = boundary {
     val start = scanner.state
     expectIdentifier("url")
     val contents = _tryUrlContents(start)
     if (contents.isDefined) {
-      return StringExpression(contents.get)
+      break(StringExpression(contents.get))
     }
     InterpolatedFunctionExpression(
       Interpolation.plain("url", spanFrom(start)),
@@ -3052,11 +3060,11 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `tryImportModifiers` (stylesheet.dart:1282-1334).
     */
-  protected def tryImportModifiers(): Nullable[Interpolation] = {
+  protected def tryImportModifiers(): Nullable[Interpolation] = boundary {
     // Exit before allocating anything if we're not looking at any modifiers, as
     // is the most common case.
     if (!_lookingAtInterpolatedIdentifier() && scanner.peekChar() != CharCode.$lparen) {
-      return Nullable.empty
+      break(Nullable.empty)
     }
 
     val start  = scanner.state
@@ -3113,28 +3121,32 @@ abstract class StylesheetParser protected (
     *
     * dart-sass: `_importSupportsQuery` (stylesheet.dart:1338-1361).
     */
-  private def _importSupportsQuery(): SupportsCondition = {
+  private def _importSupportsQuery(): SupportsCondition = boundary {
     whitespace(consumeNewlines = true)
     if (scanIdentifier("not")) {
       whitespace(consumeNewlines = true)
       val start = scanner.state
-      return SupportsNegation(
-        _supportsConditionInParens(),
-        spanFrom(start)
+      break(
+        SupportsNegation(
+          _supportsConditionInParens(),
+          spanFrom(start)
+        )
       )
     } else if (scanner.peekChar() == CharCode.$lparen) {
-      return _supportsCondition(inParentheses = true)
+      break(_supportsCondition(inParentheses = true))
     } else {
       val fn = _tryImportSupportsFunction()
-      if (fn.isDefined) return fn.get
+      if (fn.isDefined) break(fn.get)
 
       val start = scanner.state
       val name  = _rdExpression(consumeNewlines = true)
       scanner.expectChar(CharCode.$colon)
-      return SupportsDeclaration(
-        name,
-        _supportsDeclarationValue(name),
-        spanFrom(start)
+      break(
+        SupportsDeclaration(
+          name,
+          _supportsDeclarationValue(name),
+          spanFrom(start)
+        )
       )
     }
   }
