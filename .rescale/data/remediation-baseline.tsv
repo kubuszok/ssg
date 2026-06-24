@@ -1,5 +1,5 @@
 metric	value	measured	command
-covenant_fail_total	97	2026-06-24	re-scale enforce verify --all 2>&1 | tail -5
+covenant_fail_total	96	2026-06-24	re-scale enforce verify --all 2>&1 | tail -5
 shortcut_hits	125	2026-06-24	re-scale enforce shortcuts --src ssg-commons,ssg-graphs-commons,ssg-md,ssg-liquid,ssg-sass,ssg-minify,ssg-js,ssg-katex,ssg-mermaid,ssg-graphviz,ssg-highlight 2>&1 | tail -1
 fail_marks_ssg-md	2	2026-06-10	grep -rE '\.fail\b' ssg-md/src/test --include='*.scala' | wc -l
 fail_marks_ssg-liquid	23	2026-06-23	grep -rE '\.fail\b' ssg-liquid/src/test --include='*.scala' | wc -l
