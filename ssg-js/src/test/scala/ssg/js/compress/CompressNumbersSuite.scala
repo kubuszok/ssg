@@ -211,7 +211,7 @@ final class CompressNumbersSuite extends munit.FunSuite {
   // =========================================================================
   // compress_numbers
   // =========================================================================
-  test("compress_numbers".fail) {
+  test("compress_numbers") {
     assertCompresses(
       input = """const exp = 1000;
         const Exp = 1000000000000;

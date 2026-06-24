@@ -1522,9 +1522,10 @@ class Parser(options: ParserOptions = ParserOptions.Defaults) {
           val n = new AstNumber
           n.start = tok
           n.end = tok
-          n.value =
-            try tok.value.toDouble
-            catch { case _: NumberFormatException => Double.NaN }
+          // terser parse.js:641-643 — the token carries the already-parsed number;
+          // hex/oct/bin literals must go through parseJsNumber (not .toDouble,
+          // which throws on 0x/0b/0o on JVM/JS).
+          n.value = Token.parseJsNumber(tok.value)
           n.raw = input.latestRaw
           n
         }
