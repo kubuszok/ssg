@@ -896,8 +896,8 @@ final class EvaluateVisitor(
       /// true, this contains the original modules, not the copies.
       val seen = scala.collection.mutable.LinkedHashSet.empty[Module[Callable]]
 
-      def visitModule(mod: Module[Callable]): Unit = {
-        if (!seen.add(mod)) return
+      def visitModule(mod: Module[Callable]): Unit = boundary {
+        if (!seen.add(mod)) break(())
         val effectiveMod = if (clone) mod.cloneCss() else mod
 
         for (upstream <- effectiveMod.upstream)
@@ -1783,167 +1783,170 @@ final class EvaluateVisitor(
     * Ported from: dart-sass `_visitCalculation` + `_checkCalculationArguments` + `_binaryOperatorToCalculationOperator` + value-type validation in `_visitCalculationExpression`.
     */
   private def _evaluateCalculation(node: FunctionExpression, inLegacySassFunction: Nullable[String] = Nullable.empty): Nullable[Value] = {
+    import scala.util.boundary, boundary.break
     import ssg.sass.value.{ CalculationOperation, CalculationOperator, ListSeparator, SassCalculation }
+    boundary[Nullable[Value]] {
 
-    // --- Reject named args and rest args (dart-sass _visitCalculation lines 3114-3123) ---
-    if (node.arguments.named.nonEmpty) {
-      throw SassException("Keyword arguments can't be used with calculations.", node.span)
-    }
-    if (node.arguments.rest.isDefined) {
-      throw SassException("Rest arguments can't be used with calculations.", node.span)
-    }
+      // --- Reject named args and rest args (dart-sass _visitCalculation lines 3114-3123) ---
+      if (node.arguments.named.nonEmpty) {
+        throw SassException("Keyword arguments can't be used with calculations.", node.span)
+      }
+      if (node.arguments.rest.isDefined) {
+        throw SassException("Rest arguments can't be used with calculations.", node.span)
+      }
 
-    // --- Argument count validation (dart-sass _checkCalculationArguments lines 3211-3252) ---
-    _checkCalculationArguments(node)
+      // --- Argument count validation (dart-sass _checkCalculationArguments lines 3211-3252) ---
+      _checkCalculationArguments(node)
 
-    val args = node.arguments.positional
-    var converted: List[Any] = Nil
-    try {
-      def toArg(expr: Expression): Any = expr match {
-        case ParenthesizedExpression(inner, _) =>
-          // Ported from dart-sass _visitCalculationExpression ParenthesizedExpression case.
-          val result = toArg(inner)
-          result match {
-            case s: SassString => SassString(s"(${s.text})", hasQuotes = false)
-            case _ => result
-          }
-        case binExpr @ BinaryOperationExpression(op, l, r, _) =>
-          // --- Check whitespace around + and - (dart-sass _checkWhitespaceAroundCalculationOperator) ---
-          _checkWhitespaceAroundCalculationOperator(binExpr)
-          // --- Reject non-calc operators (dart-sass _binaryOperatorToCalculationOperator lines 3434-3441) ---
-          val co: CalculationOperator = op match {
-            case BinaryOperator.Plus      => CalculationOperator.Plus
-            case BinaryOperator.Minus     => CalculationOperator.Minus
-            case BinaryOperator.Times     => CalculationOperator.Times
-            case BinaryOperator.DividedBy => CalculationOperator.DividedBy
-            case _                        =>
-              throw SassException("This operation can't be used in a calculation.", node.span)
-          }
-          SassCalculation.operateInternal(
-            co,
-            toArg(l),
-            toArg(r),
-            inLegacySassFunction = inLegacySassFunction,
-            simplify = !_inSupportsDeclaration,
-            warn = Nullable((msg: String, dep: Nullable[Deprecation]) => warn(msg, dep))
-          )
-        // --- StringExpression handling (dart-sass _visitCalculationExpression lines 3315-3327) ---
-        case se: StringExpression if !se.hasQuotes && se.isCalculationSafe =>
-          se.text.asPlain.fold(SassString(_performInterpolation(se.text), hasQuotes = false): Any) { plain =>
-            plain.toLowerCase match {
-              case "pi"        => SassNumber(math.Pi)
-              case "e"         => SassNumber(math.E)
-              case "infinity"  => SassNumber(Double.PositiveInfinity)
-              case "-infinity" => SassNumber(Double.NegativeInfinity)
-              case "nan"       => SassNumber(Double.NaN)
-              case _           => SassString(plain, hasQuotes = false)
+      val args = node.arguments.positional
+      var converted: List[Any] = Nil
+      try {
+        def toArg(expr: Expression): Any = expr match {
+          case ParenthesizedExpression(inner, _) =>
+            // Ported from dart-sass _visitCalculationExpression ParenthesizedExpression case.
+            val result = toArg(inner)
+            result match {
+              case s: SassString => SassString(s"(${s.text})", hasQuotes = false)
+              case _ => result
             }
-          }
-        // --- Space-separated list (dart-sass _visitCalculationExpression ListExpression case, lines 3364-3386) ---
-        case le: ListExpression if !le.hasBrackets && le.separator == ListSeparator.Space && le.contents.length >= 2 =>
-          val elements = le.contents.map(toArg)
-          _checkAdjacentCalculationValues(elements, le)
-          val rendered = elements.indices.map { i =>
-            val el = elements(i)
-            if (el.isInstanceOf[CalculationOperation] && le.contents(i).isInstanceOf[ParenthesizedExpression])
-              SassString(s"($el)", hasQuotes = false)
-            else el
-          }
-          SassString(rendered.mkString(" "), hasQuotes = false)
-        // dart-sass lines 3350-3353: only NumberExpression, VariableExpression,
-        // FunctionExpression, and LegacyIfExpression are allowed to be evaluated.
-        // Everything else (including UnaryOperationExpression) is rejected.
-        case _: NumberExpression | _: VariableExpression | _: FunctionExpression | _: InterpolatedFunctionExpression | _: LegacyIfExpression | _: IfExpression =>
-          val v = expr.accept(this)
-          // Special CSS calc keywords: pi, e, infinity, -infinity, NaN.
-          v match {
-            case s: SassString if !s.hasQuotes =>
-              s.text.toLowerCase match {
+          case binExpr @ BinaryOperationExpression(op, l, r, _) =>
+            // --- Check whitespace around + and - (dart-sass _checkWhitespaceAroundCalculationOperator) ---
+            _checkWhitespaceAroundCalculationOperator(binExpr)
+            // --- Reject non-calc operators (dart-sass _binaryOperatorToCalculationOperator lines 3434-3441) ---
+            val co: CalculationOperator = op match {
+              case BinaryOperator.Plus      => CalculationOperator.Plus
+              case BinaryOperator.Minus     => CalculationOperator.Minus
+              case BinaryOperator.Times     => CalculationOperator.Times
+              case BinaryOperator.DividedBy => CalculationOperator.DividedBy
+              case _                        =>
+                throw SassException("This operation can't be used in a calculation.", node.span)
+            }
+            SassCalculation.operateInternal(
+              co,
+              toArg(l),
+              toArg(r),
+              inLegacySassFunction = inLegacySassFunction,
+              simplify = !_inSupportsDeclaration,
+              warn = Nullable((msg: String, dep: Nullable[Deprecation]) => warn(msg, dep))
+            )
+          // --- StringExpression handling (dart-sass _visitCalculationExpression lines 3315-3327) ---
+          case se: StringExpression if !se.hasQuotes && se.isCalculationSafe =>
+            se.text.asPlain.fold(SassString(_performInterpolation(se.text), hasQuotes = false): Any) { plain =>
+              plain.toLowerCase match {
                 case "pi"        => SassNumber(math.Pi)
                 case "e"         => SassNumber(math.E)
                 case "infinity"  => SassNumber(Double.PositiveInfinity)
                 case "-infinity" => SassNumber(Double.NegativeInfinity)
                 case "nan"       => SassNumber(Double.NaN)
-                case _           => v
+                case _           => SassString(plain, hasQuotes = false)
               }
-            // --- Value type validation (dart-sass _visitCalculationExpression lines 3354-3361) ---
-            case _: SassNumber                 => v
-            case _: SassCalculation            => v
-            case s: SassString if !s.hasQuotes => v
-            case result =>
-              throw SassException(s"Value $result can't be used in a calculation.", node.span)
-          }
-        case _ =>
-          // dart-sass lines 3388-3393: reject any other expression type
-          throw SassException("This expression can't be used in a calculation.", node.span)
-      }
-      converted = args.map(toArg)
-      // dart-sass line 3133: in a @supports declaration, return the
-      // calculation unsimplified so calc(1 + 2) stays as-is.
-      if (_inSupportsDeclaration) {
-        return Nullable(SassCalculation.unsimplified(node.name, converted))
-      }
-      def nOpt(i: Int): Nullable[Any] =
-        if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
-      val result: Value = node.name.toLowerCase match {
-        case "calc" =>
-          SassCalculation.calc(converted.head)
-        case "calc-size" =>
-          SassCalculation.calcSize(converted(0), nOpt(1))
-        case "min"   => SassCalculation.min(converted)
-        case "max"   => SassCalculation.max(converted)
-        case "clamp" => SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
-        case "hypot" => SassCalculation.hypot(converted)
-        case "sqrt"  => SassCalculation.sqrt(converted.head)
-        case "sin"   => SassCalculation.sin(converted.head)
-        case "cos"   => SassCalculation.cos(converted.head)
-        case "tan"   => SassCalculation.tan(converted.head)
-        case "asin"  => SassCalculation.asin(converted.head)
-        case "acos"  => SassCalculation.acos(converted.head)
-        case "atan"  => SassCalculation.atan(converted.head)
-        case "abs"   =>
-          converted.head match {
-            case n: SassNumber if n.hasUnit("%") =>
-              warnForDeprecation(
-                Deprecation.AbsPercent,
-                "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module)."
-              )
-            case _ => ()
-          }
-          SassCalculation.abs(converted.head)
-        case "sign"                         => SassCalculation.sign(converted.head)
-        case "exp"                          => SassCalculation.exp(converted.head)
-        case "atan2"                        => SassCalculation.atan2(converted(0), Nullable(converted(1)))
-        case "pow"                          => SassCalculation.pow(converted(0), Nullable(converted(1)))
-        case "log" if converted.length == 1 => SassCalculation.log(converted.head, Nullable.empty[Any])
-        case "log"                          => SassCalculation.log(converted(0), Nullable(converted(1)))
-        case "mod"                          => SassCalculation.mod(converted(0), Nullable(converted(1)))
-        case "rem"                          => SassCalculation.rem(converted(0), Nullable(converted(1)))
-        case "round"                        =>
-          val warnFn: Nullable[(String, Nullable[Deprecation]) => Unit] =
-            Nullable((msg: String, dep: Nullable[Deprecation]) => warn(msg, dep))
-          SassCalculation.roundInternal(
-            converted(0),
-            nOpt(1),
-            nOpt(2),
-            inLegacySassFunction = inLegacySassFunction,
-            warn = warnFn
-          )
-        case _ => return Nullable.empty
-      }
-      Nullable(result)
-    } catch {
-      case e: SassException       => throw e
-      case e: SassScriptException =>
-        // dart-sass async_evaluate.dart:3197-3204: the simplification logic
-        // in SassCalculation static methods throws SassScriptException for
-        // incompatible arguments. Re-throw as SassException with span info.
-        if (e.getMessage != null && e.getMessage.contains("compatible")) {
-          _verifyCalcCompatibleNumbers(converted, args)
+            }
+          // --- Space-separated list (dart-sass _visitCalculationExpression ListExpression case, lines 3364-3386) ---
+          case le: ListExpression if !le.hasBrackets && le.separator == ListSeparator.Space && le.contents.length >= 2 =>
+            val elements = le.contents.map(toArg)
+            _checkAdjacentCalculationValues(elements, le)
+            val rendered = elements.indices.map { i =>
+              val el = elements(i)
+              if (el.isInstanceOf[CalculationOperation] && le.contents(i).isInstanceOf[ParenthesizedExpression])
+                SassString(s"($el)", hasQuotes = false)
+              else el
+            }
+            SassString(rendered.mkString(" "), hasQuotes = false)
+          // dart-sass lines 3350-3353: only NumberExpression, VariableExpression,
+          // FunctionExpression, and LegacyIfExpression are allowed to be evaluated.
+          // Everything else (including UnaryOperationExpression) is rejected.
+          case _: NumberExpression | _: VariableExpression | _: FunctionExpression | _: InterpolatedFunctionExpression | _: LegacyIfExpression | _: IfExpression =>
+            val v = expr.accept(this)
+            // Special CSS calc keywords: pi, e, infinity, -infinity, NaN.
+            v match {
+              case s: SassString if !s.hasQuotes =>
+                s.text.toLowerCase match {
+                  case "pi"        => SassNumber(math.Pi)
+                  case "e"         => SassNumber(math.E)
+                  case "infinity"  => SassNumber(Double.PositiveInfinity)
+                  case "-infinity" => SassNumber(Double.NegativeInfinity)
+                  case "nan"       => SassNumber(Double.NaN)
+                  case _           => v
+                }
+              // --- Value type validation (dart-sass _visitCalculationExpression lines 3354-3361) ---
+              case _: SassNumber                 => v
+              case _: SassCalculation            => v
+              case s: SassString if !s.hasQuotes => v
+              case result =>
+                throw SassException(s"Value $result can't be used in a calculation.", node.span)
+            }
+          case _ =>
+            // dart-sass lines 3388-3393: reject any other expression type
+            throw SassException("This expression can't be used in a calculation.", node.span)
         }
-        throw SassException(e.getMessage, node.span)
-      case _: IllegalArgumentException => Nullable.empty
-    }
+        converted = args.map(toArg)
+        // dart-sass line 3133: in a @supports declaration, return the
+        // calculation unsimplified so calc(1 + 2) stays as-is.
+        if (_inSupportsDeclaration) {
+          break(Nullable(SassCalculation.unsimplified(node.name, converted): Value))
+        }
+        def nOpt(i: Int): Nullable[Any] =
+          if (converted.length > i) Nullable(converted(i)) else Nullable.empty[Any]
+        val result: Value = node.name.toLowerCase match {
+          case "calc" =>
+            SassCalculation.calc(converted.head)
+          case "calc-size" =>
+            SassCalculation.calcSize(converted(0), nOpt(1))
+          case "min"   => SassCalculation.min(converted)
+          case "max"   => SassCalculation.max(converted)
+          case "clamp" => SassCalculation.clamp(converted(0), nOpt(1), nOpt(2))
+          case "hypot" => SassCalculation.hypot(converted)
+          case "sqrt"  => SassCalculation.sqrt(converted.head)
+          case "sin"   => SassCalculation.sin(converted.head)
+          case "cos"   => SassCalculation.cos(converted.head)
+          case "tan"   => SassCalculation.tan(converted.head)
+          case "asin"  => SassCalculation.asin(converted.head)
+          case "acos"  => SassCalculation.acos(converted.head)
+          case "atan"  => SassCalculation.atan(converted.head)
+          case "abs"   =>
+            converted.head match {
+              case n: SassNumber if n.hasUnit("%") =>
+                warnForDeprecation(
+                  Deprecation.AbsPercent,
+                  "Passing percentages to the global abs() function is deprecated. Recommendation: math.abs($number) (with the sass:math module)."
+                )
+              case _ => ()
+            }
+            SassCalculation.abs(converted.head)
+          case "sign"                         => SassCalculation.sign(converted.head)
+          case "exp"                          => SassCalculation.exp(converted.head)
+          case "atan2"                        => SassCalculation.atan2(converted(0), Nullable(converted(1)))
+          case "pow"                          => SassCalculation.pow(converted(0), Nullable(converted(1)))
+          case "log" if converted.length == 1 => SassCalculation.log(converted.head, Nullable.empty[Any])
+          case "log"                          => SassCalculation.log(converted(0), Nullable(converted(1)))
+          case "mod"                          => SassCalculation.mod(converted(0), Nullable(converted(1)))
+          case "rem"                          => SassCalculation.rem(converted(0), Nullable(converted(1)))
+          case "round"                        =>
+            val warnFn: Nullable[(String, Nullable[Deprecation]) => Unit] =
+              Nullable((msg: String, dep: Nullable[Deprecation]) => warn(msg, dep))
+            SassCalculation.roundInternal(
+              converted(0),
+              nOpt(1),
+              nOpt(2),
+              inLegacySassFunction = inLegacySassFunction,
+              warn = warnFn
+            )
+          case _ => break(Nullable.empty)
+        }
+        Nullable(result)
+      } catch {
+        case e: SassException       => throw e
+        case e: SassScriptException =>
+          // dart-sass async_evaluate.dart:3197-3204: the simplification logic
+          // in SassCalculation static methods throws SassScriptException for
+          // incompatible arguments. Re-throw as SassException with span info.
+          if (e.getMessage != null && e.getMessage.contains("compatible")) {
+            _verifyCalcCompatibleNumbers(converted, args)
+          }
+          throw SassException(e.getMessage, node.span)
+        case _: IllegalArgumentException => Nullable.empty
+      }
+    } // boundary
   }
 
   /** Verifies that calculation arguments aren't known to be incompatible, throwing a multi-span error with source positions when they are.
@@ -2014,28 +2017,31 @@ final class EvaluateVisitor(
     * Ported from: dart-sass `_checkWhitespaceAroundCalculationOperator` (evaluate.dart lines 3397-3426).
     */
   private def _checkWhitespaceAroundCalculationOperator(node: BinaryOperationExpression): Unit = {
-    if (node.operator != BinaryOperator.Plus && node.operator != BinaryOperator.Minus) {
-      return
-    }
+    import scala.util.boundary, boundary.break
+    boundary {
+      if (node.operator != BinaryOperator.Plus && node.operator != BinaryOperator.Minus) {
+        break(())
+      }
 
-    // We _should_ never be able to violate these conditions since we always
-    // parse binary operations from a single file, but it's better to be safe
-    // than have this crash bizarrely.
-    if (node.left.span.file != node.right.span.file) return
-    if (node.left.span.end.offset >= node.right.span.start.offset) return
+      // We _should_ never be able to violate these conditions since we always
+      // parse binary operations from a single file, but it's better to be safe
+      // than have this crash bizarrely.
+      if (node.left.span.file != node.right.span.file) break(())
+      if (node.left.span.end.offset >= node.right.span.start.offset) break(())
 
-    val textBetweenOperands = node.left.span.file.getText(
-      node.left.span.end.offset,
-      node.right.span.start.offset
-    )
-    val first = textBetweenOperands.charAt(0)
-    val last  = textBetweenOperands.charAt(textBetweenOperands.length - 1)
-    if (!(first.isWhitespace || first == '/') || !(last.isWhitespace || last == '/')) {
-      throw SassException(
-        """"+" and "-" must be surrounded by whitespace in calculations.""",
-        node.operatorSpan
+      val textBetweenOperands = node.left.span.file.getText(
+        node.left.span.end.offset,
+        node.right.span.start.offset
       )
-    }
+      val first = textBetweenOperands.charAt(0)
+      val last  = textBetweenOperands.charAt(textBetweenOperands.length - 1)
+      if (!(first.isWhitespace || first == '/') || !(last.isWhitespace || last == '/')) {
+        throw SassException(
+          """"+" and "-" must be surrounded by whitespace in calculations.""",
+          node.operatorSpan
+        )
+      }
+    } // boundary
   }
 
   /** Throws an error if [elements] contains two adjacent non-string values.
@@ -2417,25 +2423,28 @@ final class EvaluateVisitor(
     */
   @annotation.nowarn // scaffolding: called from _withoutSlash (itself awaiting full _runUserDefinedCallable wiring)
   private def _warnWithSpan(message: String, span: ssg.sass.util.FileSpan, deprecation: Nullable[Deprecation] = Nullable.empty): Unit = {
-    if (_quietDeps && _inDependency) return
+    import scala.util.boundary, boundary.break
+    boundary {
+      if (_quietDeps && _inDependency) break(())
 
-    if (!_warningsEmitted.add((message, span))) return
-    val trace = _stackTrace(Nullable(span))
-    deprecation match {
-      case dep if dep.isDefined =>
-        // dart-sass evaluate.dart:4689-4694: warnings only flow through the
-        // logger -- dropped deprecations are never recorded.  Gate BEFORE
-        // warnForDeprecation so the repetition count reads pre-increment
-        // (ISS-1183).
-        val emit = _loggerWillEmit(dep.get)
-        _logger.warnForDeprecation(dep.get, message, span = Nullable(span), trace = Nullable(trace))
-        if (emit) {
-          _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
-        }
-      case _ =>
-        _logger.warn(message, span = Nullable(span), trace = Nullable(trace))
-        _warnings += s"WARNING: $message"
-    }
+      if (!_warningsEmitted.add((message, span))) break(())
+      val trace = _stackTrace(Nullable(span))
+      deprecation match {
+        case dep if dep.isDefined =>
+          // dart-sass evaluate.dart:4689-4694: warnings only flow through the
+          // logger -- dropped deprecations are never recorded.  Gate BEFORE
+          // warnForDeprecation so the repetition count reads pre-increment
+          // (ISS-1183).
+          val emit = _loggerWillEmit(dep.get)
+          _logger.warnForDeprecation(dep.get, message, span = Nullable(span), trace = Nullable(trace))
+          if (emit) {
+            _warnings += s"DEPRECATION WARNING [${dep.get.id}]: $message"
+          }
+        case _ =>
+          _logger.warn(message, span = Nullable(span), trace = Nullable(trace))
+          _warnings += s"WARNING: $message"
+      }
+    } // boundary
   }
 
   /** Returns a [SassRuntimeException] with the given [message].
@@ -3199,126 +3208,132 @@ final class EvaluateVisitor(
   override def visitSilentComment(node: SilentComment): Value = SassNull
 
   override def visitLoudComment(node: LoudComment): Value = {
-    // NOTE: this logic is largely duplicated in [visitCssComment]. Most changes
-    // here should be mirrored there.
+    import scala.util.boundary, boundary.break
+    boundary[Value] {
+      // NOTE: this logic is largely duplicated in [visitCssComment]. Most changes
+      // here should be mirrored there.
 
-    // dart-sass: loud comments inside function bodies are silently ignored.
-    if (_inFunction) return SassNull
+      // dart-sass: loud comments inside function bodies are silently ignored.
+      if (_inFunction) break(SassNull)
 
-    // Comments are allowed to appear between CSS imports.
-    _root.foreach { root =>
-      if ((_parent.get eq root) && _endOfImports == root.children.length) {
-        _endOfImports += 1
+      // Comments are allowed to appear between CSS imports.
+      _root.foreach { root =>
+        if ((_parent.get eq root) && _endOfImports == root.children.length) {
+          _endOfImports += 1
+        }
       }
-    }
 
-    var text = _performInterpolation(node.text)
-    // Indented syntax doesn't require */
-    if (!text.endsWith("*/")) text += " */"
+      var text = _performInterpolation(node.text)
+      // Indented syntax doesn't require */
+      if (!text.endsWith("*/")) text += " */"
 
-    _copyParentAfterSibling()
-    _addChild(new ModifiableCssComment(text, node.text.span))
-    SassNull
+      _copyParentAfterSibling()
+      _addChild(new ModifiableCssComment(text, node.text.span))
+      SassNull
+    } // boundary
   }
 
   override def visitAtRule(node: AtRule): Value = {
-    // dart-sass (evaluate.dart:1555-1560): reject @rules nested inside declarations.
-    if (_declarationName.isDefined) {
-      throw _exception(
-        "At-rules may not be used within nested declarations.",
-        Nullable(node.span)
+    import scala.util.boundary, boundary.break
+    boundary[Value] {
+      // dart-sass (evaluate.dart:1555-1560): reject @rules nested inside declarations.
+      if (_declarationName.isDefined) {
+        throw _exception(
+          "At-rules may not be used within nested declarations.",
+          Nullable(node.span)
+        )
+      }
+
+      val nameText  = _performInterpolation(node.name)
+      val nameValue = new CssValue[String](nameText, node.name.span)
+      // dart-sass evaluate.dart:1564-1566: trim the value and warn for color.
+      val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
+        val raw = _performInterpolation(interp)
+        // dart-sass strips // comments at parse time; our raw-text parser
+        // preserves them, so strip them post-interpolation.
+        val stripped = _stripSilentComments(raw)
+        // dart-sass: `_interpolationToValue(value, trim: true, ...)` — trim ASCII
+        // whitespace from the interpolated value.
+        val trimmed = ssg.sass.Utils.trimAscii(stripped, excludeEscape = true)
+        new CssValue[String](trimmed, interp.span)
+      }
+
+      val childless = node.children.isEmpty
+      val rule      = new ModifiableCssAtRule(
+        nameValue,
+        node.span,
+        childless = childless,
+        value = valueWrapper
       )
-    }
 
-    val nameText  = _performInterpolation(node.name)
-    val nameValue = new CssValue[String](nameText, node.name.span)
-    // dart-sass evaluate.dart:1564-1566: trim the value and warn for color.
-    val valueWrapper: Nullable[CssValue[String]] = node.value.map { interp =>
-      val raw = _performInterpolation(interp)
-      // dart-sass strips // comments at parse time; our raw-text parser
-      // preserves them, so strip them post-interpolation.
-      val stripped = _stripSilentComments(raw)
-      // dart-sass: `_interpolationToValue(value, trim: true, ...)` — trim ASCII
-      // whitespace from the interpolated value.
-      val trimmed = ssg.sass.Utils.trimAscii(stripped, excludeEscape = true)
-      new CssValue[String](trimmed, interp.span)
-    }
-
-    val childless = node.children.isEmpty
-    val rule      = new ModifiableCssAtRule(
-      nameValue,
-      node.span,
-      childless = childless,
-      value = valueWrapper
-    )
-
-    if (childless) {
-      // dart-sass evaluate.dart:1569-1573: copy the parent after any siblings
-      // so that the childless at-rule appears after any bubbled-up rules.
-      _copyParentAfterSibling()
-      _parent.get.addChild(rule)
-    } else {
-      val wasInKeyframes     = _inKeyframes
-      val wasInUnknownAtRule = _inUnknownAtRule
-      val nameLower          = nameText.toLowerCase
-      if (ssg.sass.Utils.unvendor(nameLower) == "keyframes") {
-        _inKeyframes = true
+      if (childless) {
+        // dart-sass evaluate.dart:1569-1573: copy the parent after any siblings
+        // so that the childless at-rule appears after any bubbled-up rules.
+        _copyParentAfterSibling()
+        _parent.get.addChild(rule)
       } else {
-        _inUnknownAtRule = true
-      }
-
-      // dart-sass: if the user has already opted into plain CSS nesting, don't
-      // bother with any merging or bubbling.
-      if (_hasCssNesting) {
-        _withParent(rule) {
-          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
-            for (statement <- node.children.get) {
-              val _ = statement.accept(this)
-            }
-          }
-        }
-        _inUnknownAtRule = wasInUnknownAtRule
-        _inKeyframes = wasInKeyframes
-        return SassNull
-      }
-
-      // dart-sass: _withParent with through = CssStyleRule makes the
-      // at-rule bubble through enclosing style rules automatically.
-      // When inside a style rule, a copy of the style rule is created
-      // inside the at-rule to hold the nested children.
-      _addChild(rule, through = (n: CssNode) => n.isInstanceOf[CssStyleRule])
-      val savedParent = _parent
-      _parent = Nullable(rule: ModifiableCssParentNode)
-      try {
-        val enclosingStyleRule = _styleRule
-        if (enclosingStyleRule.isEmpty || _inKeyframes || nameLower == "font-face") {
-          // Special-cased at-rules within style blocks are pulled out to the
-          // root. Equivalent to prepending "@at-root" on them.
-          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
-            for (statement <- node.children.get) {
-              val _ = statement.accept(this)
-            }
-          }
+        val wasInKeyframes     = _inKeyframes
+        val wasInUnknownAtRule = _inUnknownAtRule
+        val nameLower          = nameText.toLowerCase
+        if (ssg.sass.Utils.unvendor(nameLower) == "keyframes") {
+          _inKeyframes = true
         } else {
-          // If we're in a style rule, copy it into the at-rule so that
-          // declarations immediately inside it have somewhere to go.
-          //
-          // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
-          val innerRule = enclosingStyleRule.get.copyWithoutChildren()
-          _withParent(innerRule, addChild = true) {
-            _withStyleRule(innerRule) {
+          _inUnknownAtRule = true
+        }
+
+        // dart-sass: if the user has already opted into plain CSS nesting, don't
+        // bother with any merging or bubbling.
+        if (_hasCssNesting) {
+          _withParent(rule) {
+            _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
               for (statement <- node.children.get) {
                 val _ = statement.accept(this)
               }
             }
           }
+          _inUnknownAtRule = wasInUnknownAtRule
+          _inKeyframes = wasInKeyframes
+          break(SassNull)
         }
-      } finally
-        _parent = savedParent
-      _inUnknownAtRule = wasInUnknownAtRule
-      _inKeyframes = wasInKeyframes
-    }
-    SassNull
+
+        // dart-sass: _withParent with through = CssStyleRule makes the
+        // at-rule bubble through enclosing style rules automatically.
+        // When inside a style rule, a copy of the style rule is created
+        // inside the at-rule to hold the nested children.
+        _addChild(rule, through = (n: CssNode) => n.isInstanceOf[CssStyleRule])
+        val savedParent = _parent
+        _parent = Nullable(rule: ModifiableCssParentNode)
+        try {
+          val enclosingStyleRule = _styleRule
+          if (enclosingStyleRule.isEmpty || _inKeyframes || nameLower == "font-face") {
+            // Special-cased at-rules within style blocks are pulled out to the
+            // root. Equivalent to prepending "@at-root" on them.
+            _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+              for (statement <- node.children.get) {
+                val _ = statement.accept(this)
+              }
+            }
+          } else {
+            // If we're in a style rule, copy it into the at-rule so that
+            // declarations immediately inside it have somewhere to go.
+            //
+            // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
+            val innerRule = enclosingStyleRule.get.copyWithoutChildren()
+            _withParent(innerRule, addChild = true) {
+              _withStyleRule(innerRule) {
+                for (statement <- node.children.get) {
+                  val _ = statement.accept(this)
+                }
+              }
+            }
+          }
+        } finally
+          _parent = savedParent
+        _inUnknownAtRule = wasInUnknownAtRule
+        _inKeyframes = wasInKeyframes
+      }
+      SassNull
+    } // boundary
   }
 
   // --- Module system and conditional at-rules --------------------------------
@@ -3336,106 +3351,109 @@ final class EvaluateVisitor(
   private var _mediaQuerySources: Set[CssMediaQuery] = Set.empty
 
   override def visitMediaRule(node: MediaRule): Value = {
-    // dart-sass (evaluate.dart:2261-2266): reject @media nested inside declarations.
-    if (_declarationName.isDefined) {
-      throw _exception(
-        "Media rules may not be used within nested declarations.",
-        Nullable(node.span)
-      )
-    }
+    import scala.util.boundary, boundary.break
+    boundary[Value] {
+      // dart-sass (evaluate.dart:2261-2266): reject @media nested inside declarations.
+      if (_declarationName.isDefined) {
+        throw _exception(
+          "Media rules may not be used within nested declarations.",
+          Nullable(node.span)
+        )
+      }
 
-    val queryText = _stripCssComments(_performInterpolation(node.query))
-    // Preflight: reject obviously invalid @media query shapes that dart-sass
-    // rejects at parse time but that our stage-1 StylesheetParser slurps as
-    // raw text. We do this to bring expected-error-not-raised cases in line
-    // with dart-sass for css/media/logic/error.hrx. This is intentionally
-    // conservative: we only reject patterns that are unambiguously invalid
-    // in Level 3/4 media query syntax.
-    _validateMediaQueryText(queryText, node.query.span)
-    // Try the structured parser first; fall back to wrapping the raw text
-    // as a condition-only query when the text doesn't conform to the
-    // Level-3 syntax our parser supports (e.g. interpolated fragments).
-    val parsed: List[CssMediaQuery] =
-      ssg.sass.parse.MediaQueryParser.tryParseList(queryText).getOrElse(List(CssMediaQuery.condition(List(queryText))))
+      val queryText = _stripCssComments(_performInterpolation(node.query))
+      // Preflight: reject obviously invalid @media query shapes that dart-sass
+      // rejects at parse time but that our stage-1 StylesheetParser slurps as
+      // raw text. We do this to bring expected-error-not-raised cases in line
+      // with dart-sass for css/media/logic/error.hrx. This is intentionally
+      // conservative: we only reject patterns that are unambiguously invalid
+      // in Level 3/4 media query syntax.
+      _validateMediaQueryText(queryText, node.query.span)
+      // Try the structured parser first; fall back to wrapping the raw text
+      // as a condition-only query when the text doesn't conform to the
+      // Level-3 syntax our parser supports (e.g. interpolated fragments).
+      val parsed: List[CssMediaQuery] =
+        ssg.sass.parse.MediaQueryParser.tryParseList(queryText).getOrElse(List(CssMediaQuery.condition(List(queryText))))
 
-    // dart-sass: If the user has already opted into plain CSS nesting, don't
-    // bother with any merging or bubbling; this rule is already only usable by
-    // browsers that support nesting natively anyway.
-    if (_hasCssNesting) {
-      _withParent(new ModifiableCssMediaRule(parsed, node.span)) {
-        for (child <- node.children.get) {
-          val _ = child.accept(this)
+      // dart-sass: If the user has already opted into plain CSS nesting, don't
+      // bother with any merging or bubbling; this rule is already only usable by
+      // browsers that support nesting natively anyway.
+      if (_hasCssNesting) {
+        _withParent(new ModifiableCssMediaRule(parsed, node.span)) {
+          for (child <- node.children.get) {
+            val _ = child.accept(this)
+          }
+        }
+        break(SassNull)
+      }
+
+      // dart-sass: merge with enclosing @media queries if any exist.
+      // If the merge produces an empty result, the nested @media is
+      // impossible (e.g. @media screen { @media print { ... } }) and
+      // should be skipped entirely. If there are no enclosing queries,
+      // use the parsed queries as-is.
+      val mergedQueries: Nullable[List[CssMediaQuery]] =
+        if (_mediaQueries.nonEmpty) _mergeMediaQueries(_mediaQueries, parsed)
+        else Nullable.empty
+      // If merge returned an empty list (no possible merge), skip this rule.
+      if (mergedQueries.isDefined && mergedQueries.get.isEmpty) break(SassNull)
+
+      val effectiveQueries = mergedQueries.getOrElse(parsed)
+      val mergedSources: Set[CssMediaQuery] =
+        if (mergedQueries.isEmpty) Set.empty
+        else _mediaQuerySources ++ _mediaQueries.toSet ++ parsed.toSet
+
+      val rule = new ModifiableCssMediaRule(effectiveQueries, node.span)
+
+      // dart-sass (async_evaluate.dart:2284-2316): use _withParent with a
+      // `through` function that bubbles the media rule past enclosing style
+      // rules and past enclosing media rules whose queries are all part of
+      // the merge sources. This is what causes nested @media to be promoted
+      // to siblings of the outer @media when the merge succeeds.
+      // dart-sass: bubble @media past CssStyleRule and past merge-source
+      // CssMediaRule. When _inKeyframes, our parser produces CssStyleRule
+      // nodes for keyframe selectors (to/from/0%/etc.) — dart-sass produces
+      // CssKeyframeBlock instead. Don't bubble through CssStyleRule when
+      // _inKeyframes to avoid moving @media out of keyframe blocks.
+      val throughFn: CssNode => Boolean = { (n: CssNode) =>
+        n match {
+          case _:  CssStyleRule                           => !_inKeyframes
+          case mr: CssMediaRule if mergedSources.nonEmpty =>
+            mr.queries.forall(mergedSources.contains)
+          case _ => false
         }
       }
-      return SassNull
-    }
 
-    // dart-sass: merge with enclosing @media queries if any exist.
-    // If the merge produces an empty result, the nested @media is
-    // impossible (e.g. @media screen { @media print { ... } }) and
-    // should be skipped entirely. If there are no enclosing queries,
-    // use the parsed queries as-is.
-    val mergedQueries: Nullable[List[CssMediaQuery]] =
-      if (_mediaQueries.nonEmpty) _mergeMediaQueries(_mediaQueries, parsed)
-      else Nullable.empty
-    // If merge returned an empty list (no possible merge), skip this rule.
-    if (mergedQueries.isDefined && mergedQueries.get.isEmpty) return SassNull
-
-    val effectiveQueries = mergedQueries.getOrElse(parsed)
-    val mergedSources: Set[CssMediaQuery] =
-      if (mergedQueries.isEmpty) Set.empty
-      else _mediaQuerySources ++ _mediaQueries.toSet ++ parsed.toSet
-
-    val rule = new ModifiableCssMediaRule(effectiveQueries, node.span)
-
-    // dart-sass (async_evaluate.dart:2284-2316): use _withParent with a
-    // `through` function that bubbles the media rule past enclosing style
-    // rules and past enclosing media rules whose queries are all part of
-    // the merge sources. This is what causes nested @media to be promoted
-    // to siblings of the outer @media when the merge succeeds.
-    // dart-sass: bubble @media past CssStyleRule and past merge-source
-    // CssMediaRule. When _inKeyframes, our parser produces CssStyleRule
-    // nodes for keyframe selectors (to/from/0%/etc.) — dart-sass produces
-    // CssKeyframeBlock instead. Don't bubble through CssStyleRule when
-    // _inKeyframes to avoid moving @media out of keyframe blocks.
-    val throughFn: CssNode => Boolean = { (n: CssNode) =>
-      n match {
-        case _:  CssStyleRule                           => !_inKeyframes
-        case mr: CssMediaRule if mergedSources.nonEmpty =>
-          mr.queries.forall(mergedSources.contains)
-        case _ => false
-      }
-    }
-
-    _withParent(rule, through = throughFn) {
-      _withMediaQueries(effectiveQueries, mergedSources) {
-        val enclosingStyleRule = _styleRule
-        // dart-sass: when inside keyframes, our parser uses CssStyleRule for
-        // keyframe selectors (to/from/0%) while dart-sass uses CssKeyframeBlock.
-        // Don't copy the keyframe selector into the media query — @media
-        // inside keyframes should contain its children directly.
-        if (enclosingStyleRule.isDefined && !_inKeyframes) {
-          // If we're in a style rule, copy it into the media query so that
-          // declarations immediately inside @media have somewhere to go.
-          //
-          // For example, "a {@media screen {b: c}}" should produce
-          // "@media screen {a {b: c}}".
-          val innerRule = enclosingStyleRule.get.copyWithoutChildren()
-          _withParent(innerRule) {
-            _withStyleRule(innerRule) {
-              for (statement <- node.children.get) {
-                val _ = statement.accept(this)
+      _withParent(rule, through = throughFn) {
+        _withMediaQueries(effectiveQueries, mergedSources) {
+          val enclosingStyleRule = _styleRule
+          // dart-sass: when inside keyframes, our parser uses CssStyleRule for
+          // keyframe selectors (to/from/0%) while dart-sass uses CssKeyframeBlock.
+          // Don't copy the keyframe selector into the media query — @media
+          // inside keyframes should contain its children directly.
+          if (enclosingStyleRule.isDefined && !_inKeyframes) {
+            // If we're in a style rule, copy it into the media query so that
+            // declarations immediately inside @media have somewhere to go.
+            //
+            // For example, "a {@media screen {b: c}}" should produce
+            // "@media screen {a {b: c}}".
+            val innerRule = enclosingStyleRule.get.copyWithoutChildren()
+            _withParent(innerRule) {
+              _withStyleRule(innerRule) {
+                for (statement <- node.children.get) {
+                  val _ = statement.accept(this)
+                }
               }
             }
-          }
-        } else {
-          for (statement <- node.children.get) {
-            val _ = statement.accept(this)
+          } else {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
           }
         }
       }
-    }
-    SassNull
+      SassNull
+    } // boundary
   }
 
   /** Strips `/* ... */` CSS comments from text, collapsing surrounding whitespace to a single space. Preserves quoted strings. Mirrors the comment-stripping that dart-sass's structured media-query
@@ -3445,45 +3463,48 @@ final class EvaluateVisitor(
     * strip them post-interpolation. Only strips `//` when it's outside strings and parentheses (to avoid stripping `//` in URLs like `url(//example.com)`).
     */
   private def _stripSilentComments(text: String): String = {
-    if (!text.contains("//")) return text
-    val sb         = new StringBuilder(text.length)
-    var i          = 0
-    val n          = text.length
-    var parenDepth = 0
-    while (i < n) {
-      val c = text.charAt(i)
-      if (c == '/' && i + 1 < n && text.charAt(i + 1) == '/' && parenDepth == 0) {
-        // Skip to end of line
-        while (i < n && text.charAt(i) != '\n') i += 1
-        // Trim trailing whitespace before the comment
-        while (sb.nonEmpty && sb.last == ' ') sb.deleteCharAt(sb.length - 1)
-      } else if (c == '(') {
-        parenDepth += 1
-        sb.append(c)
-        i += 1
-      } else if (c == ')') {
-        if (parenDepth > 0) parenDepth -= 1
-        sb.append(c)
-        i += 1
-      } else if (c == '"' || c == '\'') {
-        // Don't strip inside strings
-        sb.append(c)
-        i += 1
-        while (i < n && text.charAt(i) != c) {
-          if (text.charAt(i) == '\\' && i + 1 < n) {
+    import scala.util.boundary, boundary.break
+    boundary[String] {
+      if (!text.contains("//")) break(text)
+      val sb         = new StringBuilder(text.length)
+      var i          = 0
+      val n          = text.length
+      var parenDepth = 0
+      while (i < n) {
+        val c = text.charAt(i)
+        if (c == '/' && i + 1 < n && text.charAt(i + 1) == '/' && parenDepth == 0) {
+          // Skip to end of line
+          while (i < n && text.charAt(i) != '\n') i += 1
+          // Trim trailing whitespace before the comment
+          while (sb.nonEmpty && sb.last == ' ') sb.deleteCharAt(sb.length - 1)
+        } else if (c == '(') {
+          parenDepth += 1
+          sb.append(c)
+          i += 1
+        } else if (c == ')') {
+          if (parenDepth > 0) parenDepth -= 1
+          sb.append(c)
+          i += 1
+        } else if (c == '"' || c == '\'') {
+          // Don't strip inside strings
+          sb.append(c)
+          i += 1
+          while (i < n && text.charAt(i) != c) {
+            if (text.charAt(i) == '\\' && i + 1 < n) {
+              sb.append(text.charAt(i))
+              i += 1
+            }
             sb.append(text.charAt(i))
             i += 1
           }
-          sb.append(text.charAt(i))
+          if (i < n) { sb.append(text.charAt(i)); i += 1 }
+        } else {
+          sb.append(c)
           i += 1
         }
-        if (i < n) { sb.append(text.charAt(i)); i += 1 }
-      } else {
-        sb.append(c)
-        i += 1
       }
-    }
-    sb.toString().trim
+      sb.toString().trim
+    } // boundary
   }
 
   private def _stripCssComments(text: String): String =
@@ -3538,93 +3559,96 @@ final class EvaluateVisitor(
     * on interpolation-free text to avoid false positives from user-inserted fragments.
     */
   private def _validateMediaQueryText(text: String, span: ssg.sass.util.FileSpan): Unit = {
-    val trimmed = text.trim
-    if (trimmed.isEmpty) return
+    import scala.util.boundary, boundary.break
+    boundary {
+      val trimmed = text.trim
+      if (trimmed.isEmpty) break(())
 
-    // (0) Validate range syntax inside each top-level parenthesized expression.
-    // dart-sass parses media range syntax (`expr < name < expr`) structurally
-    // in _mediaInParens. Our parser collects raw text, so we validate here.
-    _validateMediaRangeExpressions(trimmed, span)
+      // (0) Validate range syntax inside each top-level parenthesized expression.
+      // dart-sass parses media range syntax (`expr < name < expr`) structurally
+      // in _mediaInParens. Our parser collects raw text, so we validate here.
+      _validateMediaRangeExpressions(trimmed, span)
 
-    // (1) Missing whitespace before an opening paren after a keyword:
-    //     `not(`, `and(`, `or(`. These are always errors in dart-sass.
-    //     Use \b-style lookbehind: the keyword must be preceded by start
-    //     or whitespace / `(`.
-    val missingWs = "(?:(?:^|[\\s()])(?:not|and|or))\\(".r
-    if (missingWs.findFirstIn(trimmed).isDefined) {
-      throw new SassException("Expected whitespace.", span)
-    }
-    // (2) Trailing keyword with no following condition: `a and`,
-    //     `(a) or`, `not`, `a and not`. These mean the query ends
-    //     immediately before the `{` with an unfinished operator.
-    val trailingKw = "(?:^|\\s)(?:not|and|or)\\s*$".r
-    if (trailingKw.findFirstIn(trimmed).isDefined) {
-      throw new SassException("expected media condition in parentheses.", span)
-    }
-    // (3) `not ` as a modifier must be followed by a type identifier
-    //     (e.g. `not screen`) or a parenthesised condition, not the end
-    //     of the query. Already covered by (2) when the query is just
-    //     `not`. Covered.
+      // (1) Missing whitespace before an opening paren after a keyword:
+      //     `not(`, `and(`, `or(`. These are always errors in dart-sass.
+      //     Use \b-style lookbehind: the keyword must be preceded by start
+      //     or whitespace / `(`.
+      val missingWs = "(?:(?:^|[\\s()])(?:not|and|or))\\(".r
+      if (missingWs.findFirstIn(trimmed).isDefined) {
+        throw new SassException("Expected whitespace.", span)
+      }
+      // (2) Trailing keyword with no following condition: `a and`,
+      //     `(a) or`, `not`, `a and not`. These mean the query ends
+      //     immediately before the `{` with an unfinished operator.
+      val trailingKw = "(?:^|\\s)(?:not|and|or)\\s*$".r
+      if (trailingKw.findFirstIn(trimmed).isDefined) {
+        throw new SassException("expected media condition in parentheses.", span)
+      }
+      // (3) `not ` as a modifier must be followed by a type identifier
+      //     (e.g. `not screen`) or a parenthesised condition, not the end
+      //     of the query. Already covered by (2) when the query is just
+      //     `not`. Covered.
 
-    // (4) Mixing `and` and `or` at the top level, or using `or` after a
-    //     type identifier. dart-sass requires either all `and`s or all
-    //     `or`s after the first operator, and does not allow `or` after
-    //     a bare media type. We approximate by scanning top-level tokens
-    //     outside parentheses and checking for illegal sequences.
-    val topLevel = _topLevelTokens(trimmed)
-    val hasAnd   = topLevel.exists(_.equalsIgnoreCase("and"))
-    val hasOr    = topLevel.exists(_.equalsIgnoreCase("or"))
-    val startsWithIdent: Boolean = topLevel.headOption.exists { t =>
-      val lc = t.toLowerCase
-      lc != "not" && lc != "only" && !t.startsWith("(") && !t.startsWith("#{")
-    }
-    if (hasAnd && hasOr) {
-      throw new SassException("""expected "{".""", span)
-    }
-    if (startsWithIdent && hasOr) {
-      // `a or ...` - type queries can only combine with `and`.
-      throw new SassException("""expected "{".""", span)
-    }
-
-    // (5) `IDENT and not (condition) and/or ...` — after consuming
-    //     `and not (condition)`, dart-sass returns immediately; any further
-    //     operator is invalid. Detect: [IDENT, "and", "not", PAREN, and/or, ...]
-    if (topLevel.length >= 5) {
-      val t0 = topLevel(0).toLowerCase
-      val t1 = topLevel(1).toLowerCase
-      val t2 = topLevel(2).toLowerCase
-      val t3 = topLevel(3)
-      val t4 = topLevel(4).toLowerCase
-      if (
-        t0 != "not" && t0 != "only" && !t0.startsWith("(") &&
-        t1 == "and" && t2 == "not" && t3.startsWith("(") &&
-        (t4 == "and" || t4 == "or")
-      ) {
+      // (4) Mixing `and` and `or` at the top level, or using `or` after a
+      //     type identifier. dart-sass requires either all `and`s or all
+      //     `or`s after the first operator, and does not allow `or` after
+      //     a bare media type. We approximate by scanning top-level tokens
+      //     outside parentheses and checking for illegal sequences.
+      val topLevel = _topLevelTokens(trimmed)
+      val hasAnd   = topLevel.exists(_.equalsIgnoreCase("and"))
+      val hasOr    = topLevel.exists(_.equalsIgnoreCase("or"))
+      val startsWithIdent: Boolean = topLevel.headOption.exists { t =>
+        val lc = t.toLowerCase
+        lc != "not" && lc != "only" && !t.startsWith("(") && !t.startsWith("#{")
+      }
+      if (hasAnd && hasOr) {
         throw new SassException("""expected "{".""", span)
       }
-    }
-    // Also check: [ONLY, IDENT, "and", "not", PAREN, and/or, ...]
-    if (topLevel.length >= 6) {
-      val t0 = topLevel(0).toLowerCase
-      val t1 = topLevel(1).toLowerCase
-      val t2 = topLevel(2).toLowerCase
-      val t3 = topLevel(3).toLowerCase
-      val t4 = topLevel(4)
-      val t5 = topLevel(5).toLowerCase
-      if (
-        (t0 == "only" || t0 == "not") &&
-        !t1.startsWith("(") && t2 == "and" && t3 == "not" && t4.startsWith("(") &&
-        (t5 == "and" || t5 == "or")
-      ) {
+      if (startsWithIdent && hasOr) {
+        // `a or ...` - type queries can only combine with `and`.
         throw new SassException("""expected "{".""", span)
       }
-    }
 
-    // (6) Interpolation followed by `or` is treated as a type query + or,
-    //     which is always invalid (or can only follow parenthesized conditions).
-    if (hasOr && topLevel.headOption.exists(_.startsWith("#{"))) {
-      throw new SassException("""expected "{".""", span)
-    }
+      // (5) `IDENT and not (condition) and/or ...` — after consuming
+      //     `and not (condition)`, dart-sass returns immediately; any further
+      //     operator is invalid. Detect: [IDENT, "and", "not", PAREN, and/or, ...]
+      if (topLevel.length >= 5) {
+        val t0 = topLevel(0).toLowerCase
+        val t1 = topLevel(1).toLowerCase
+        val t2 = topLevel(2).toLowerCase
+        val t3 = topLevel(3)
+        val t4 = topLevel(4).toLowerCase
+        if (
+          t0 != "not" && t0 != "only" && !t0.startsWith("(") &&
+          t1 == "and" && t2 == "not" && t3.startsWith("(") &&
+          (t4 == "and" || t4 == "or")
+        ) {
+          throw new SassException("""expected "{".""", span)
+        }
+      }
+      // Also check: [ONLY, IDENT, "and", "not", PAREN, and/or, ...]
+      if (topLevel.length >= 6) {
+        val t0 = topLevel(0).toLowerCase
+        val t1 = topLevel(1).toLowerCase
+        val t2 = topLevel(2).toLowerCase
+        val t3 = topLevel(3).toLowerCase
+        val t4 = topLevel(4)
+        val t5 = topLevel(5).toLowerCase
+        if (
+          (t0 == "only" || t0 == "not") &&
+          !t1.startsWith("(") && t2 == "and" && t3 == "not" && t4.startsWith("(") &&
+          (t5 == "and" || t5 == "or")
+        ) {
+          throw new SassException("""expected "{".""", span)
+        }
+      }
+
+      // (6) Interpolation followed by `or` is treated as a type query + or,
+      //     which is always invalid (or can only follow parenthesized conditions).
+      if (hasOr && topLevel.headOption.exists(_.startsWith("#{"))) {
+        throw new SassException("""expected "{".""", span)
+      }
+    } // boundary
   }
 
   /** Splits `text` into whitespace-separated tokens at the top level, treating anything inside balanced parentheses (and `#{...}`) as a single token.
@@ -3717,242 +3741,251 @@ final class EvaluateVisitor(
   /** Validates a single media feature expression (the content inside one pair of parentheses). Checks for invalid range syntax.
     */
   private def _validateSingleMediaFeature(content: String, span: ssg.sass.util.FileSpan): Unit = {
-    val s = content.trim
-    // Skip nested parenthesized conditions like `(not (...))` or `(a) and (b)`.
-    // These are logic expressions, not feature comparisons.
-    if (s.startsWith("(") || s.startsWith("not ") || s.startsWith("not\t")) return
-    // Skip if it contains `and` or `or` at the top level (logic expression).
-    val topTokens = _topLevelTokens(s)
-    if (topTokens.exists(t => t.equalsIgnoreCase("and") || t.equalsIgnoreCase("or"))) return
+    import scala.util.boundary, boundary.break
+    boundary {
+      val s = content.trim
+      // Skip nested parenthesized conditions like `(not (...))` or `(a) and (b)`.
+      // These are logic expressions, not feature comparisons.
+      if (s.startsWith("(") || s.startsWith("not ") || s.startsWith("not\t")) break(())
+      // Skip if it contains `and` or `or` at the top level (logic expression).
+      val topTokens = _topLevelTokens(s)
+      if (topTokens.exists(t => t.equalsIgnoreCase("and") || t.equalsIgnoreCase("or"))) break(())
 
-    // Find comparison operators in the token stream. We look for sequences of
-    // `<`, `<=`, `>`, `>=`, `=` that appear between non-operator tokens.
-    // Tokenize comparison operators: scan for <, >, = not inside parens, strings, or interpolations.
-    val ops   = scala.collection.mutable.ListBuffer.empty[(String, Int)]
-    var i     = 0
-    var depth = 0
-    while (i < s.length) {
-      val c = s.charAt(i)
-      if (c == '(') { depth += 1; i += 1 }
-      else if (c == ')') { depth -= 1; i += 1 }
-      else if (c == '\'' || c == '"') {
-        // Skip string
-        i += 1
-        while (i < s.length && s.charAt(i) != c) {
-          if (s.charAt(i) == '\\') i += 1
+      // Find comparison operators in the token stream. We look for sequences of
+      // `<`, `<=`, `>`, `>=`, `=` that appear between non-operator tokens.
+      // Tokenize comparison operators: scan for <, >, = not inside parens, strings, or interpolations.
+      val ops   = scala.collection.mutable.ListBuffer.empty[(String, Int)]
+      var i     = 0
+      var depth = 0
+      while (i < s.length) {
+        val c = s.charAt(i)
+        if (c == '(') { depth += 1; i += 1 }
+        else if (c == ')') { depth -= 1; i += 1 }
+        else if (c == '\'' || c == '"') {
+          // Skip string
           i += 1
-        }
-        if (i < s.length) i += 1
-      } else if (depth == 0 && (c == '<' || c == '>' || c == '=')) {
-        val pos = i
-        if ((c == '<' || c == '>') && i + 1 < s.length && s.charAt(i + 1) == '=') {
-          ops += ((s.substring(i, i + 2), pos))
-          i += 2
-        } else if (c == '=' && i + 1 < s.length && s.charAt(i + 1) == '=') {
-          // `==` is a Sass equality operator, not a media comparison.
-          i += 2
+          while (i < s.length && s.charAt(i) != c) {
+            if (s.charAt(i) == '\\') i += 1
+            i += 1
+          }
+          if (i < s.length) i += 1
+        } else if (depth == 0 && (c == '<' || c == '>' || c == '=')) {
+          val pos = i
+          if ((c == '<' || c == '>') && i + 1 < s.length && s.charAt(i + 1) == '=') {
+            ops += ((s.substring(i, i + 2), pos))
+            i += 2
+          } else if (c == '=' && i + 1 < s.length && s.charAt(i + 1) == '=') {
+            // `==` is a Sass equality operator, not a media comparison.
+            i += 2
+          } else {
+            ops += ((c.toString, pos))
+            i += 1
+          }
         } else {
-          ops += ((c.toString, pos))
           i += 1
         }
-      } else {
-        i += 1
       }
-    }
 
-    if (ops.isEmpty) return
+      if (ops.isEmpty) break(())
 
-    // Check for spaced comparison: `< =` or `> =`
-    // This manifests as `<` or `>` immediately followed (after whitespace) by `=`.
-    for (idx <- 0 until ops.length - 1) {
-      val (op1, _pos1) = ops(idx)
-      val (op2, pos2)  = ops(idx + 1)
-      if ((op1 == "<" || op1 == ">") && op2 == "=") {
-        // Check if there's only whitespace between them
-        val between = s.substring(_pos1 + op1.length, pos2).trim
-        if (between.isEmpty) {
-          throw new SassException("""Expected expression.""", span)
+      // Check for spaced comparison: `< =` or `> =`
+      // This manifests as `<` or `>` immediately followed (after whitespace) by `=`.
+      for (idx <- 0 until ops.length - 1) {
+        val (op1, _pos1) = ops(idx)
+        val (op2, pos2)  = ops(idx + 1)
+        if ((op1 == "<" || op1 == ">") && op2 == "=") {
+          // Check if there's only whitespace between them
+          val between = s.substring(_pos1 + op1.length, pos2).trim
+          if (between.isEmpty) {
+            throw new SassException("""Expected expression.""", span)
+          }
         }
       }
-    }
 
-    // A colon means this is a `feature: value` expression, not a range.
-    if (s.contains(':')) return
+      // A colon means this is a `feature: value` expression, not a range.
+      if (s.contains(':')) break(())
 
-    // Validate operator count and direction.
-    if (ops.length == 1) {
-      // Single comparison is always valid (e.g. `width < 500px`).
-      return
-    }
-
-    if (ops.length == 2) {
-      val (op1, _) = ops(0)
-      val (op2, _) = ops(1)
-      // Both must be range-capable (< or > family, not bare =).
-      if (op1 == "=" || op2 == "=") {
-        // `=` cannot form a range.
-        throw new SassException("""expected ")".""", span)
+      // Validate operator count and direction.
+      if (ops.length == 1) {
+        // Single comparison is always valid (e.g. `width < 500px`).
+        break(())
       }
-      // Both must point the same direction.
-      val dir1 = if (op1 == "<" || op1 == "<=") -1 else 1
-      val dir2 = if (op2 == "<" || op2 == "<=") -1 else 1
-      if (dir1 != dir2) {
-        // Mismatched range: e.g. `1px > width < 2px`
-        throw new SassException("""expected ")".""", span)
-      }
-      // Valid range.
-      return
-    }
 
-    // Three or more operators: always invalid (e.g. `1 < width < 2 < 3`).
-    throw new SassException("""expected ")".""", span)
+      if (ops.length == 2) {
+        val (op1, _) = ops(0)
+        val (op2, _) = ops(1)
+        // Both must be range-capable (< or > family, not bare =).
+        if (op1 == "=" || op2 == "=") {
+          // `=` cannot form a range.
+          throw new SassException("""expected ")".""", span)
+        }
+        // Both must point the same direction.
+        val dir1 = if (op1 == "<" || op1 == "<=") -1 else 1
+        val dir2 = if (op2 == "<" || op2 == "<=") -1 else 1
+        if (dir1 != dir2) {
+          // Mismatched range: e.g. `1px > width < 2px`
+          throw new SassException("""expected ")".""", span)
+        }
+        // Valid range.
+        break(())
+      }
+
+      // Three or more operators: always invalid (e.g. `1 < width < 2 < 3`).
+      throw new SassException("""expected ")".""", span)
+    } // boundary
   }
 
   override def visitSupportsRule(node: SupportsRule): Value = {
-    // dart-sass (evaluate.dart:2541-2546): reject @supports nested inside declarations.
-    if (_declarationName.isDefined) {
-      throw _exception(
-        "Supports rules may not be used within nested declarations.",
-        Nullable(node.span)
-      )
-    }
-
-    val conditionText = _visitSupportsCondition(node.condition)
-    val cssCondition  = new CssValue[String](conditionText, node.condition.span)
-    val rule          = new ModifiableCssSupportsRule(cssCondition, node.span)
-
-    // dart-sass: if the user has already opted into plain CSS nesting, don't
-    // bother with bubbling.
-    if (_hasCssNesting) {
-      _withParent(rule) {
-        for (statement <- node.children.get) {
-          val _ = statement.accept(this)
-        }
+    import scala.util.boundary, boundary.break
+    boundary[Value] {
+      // dart-sass (evaluate.dart:2541-2546): reject @supports nested inside declarations.
+      if (_declarationName.isDefined) {
+        throw _exception(
+          "Supports rules may not be used within nested declarations.",
+          Nullable(node.span)
+        )
       }
-      return SassNull
-    }
 
-    // Sass supports-bubbling (mirrors @media): when a `@supports` rule
-    // appears inside a style rule, the supports rule itself attaches to
-    // the nearest non-style parent and a clone of the enclosing style
-    // rule is placed inside the supports rule to hold the nested
-    // children. `.a { @supports (q) { color: red; } }` serializes as
-    // `@supports (q) { .a { color: red; } }`.
-    val enclosingStyleRule = _styleRule
-    if (enclosingStyleRule.isDefined) {
-      val savedParent = _parent
-      val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
-      _parent = Nullable(nearestNonStyle)
-      try
+      val conditionText = _visitSupportsCondition(node.condition)
+      val cssCondition  = new CssValue[String](conditionText, node.condition.span)
+      val rule          = new ModifiableCssSupportsRule(cssCondition, node.span)
+
+      // dart-sass: if the user has already opted into plain CSS nesting, don't
+      // bother with bubbling.
+      if (_hasCssNesting) {
         _withParent(rule) {
-          val outer     = enclosingStyleRule.get
-          val innerRule = outer.copyWithoutChildren()
-          _withParent(innerRule) {
-            _withStyleRule(innerRule) {
-              _withScope {
-                for (statement <- node.children.get) {
-                  val _ = statement.accept(this)
-                }
-              }
-            }
-          }
-        }
-      finally _parent = savedParent
-    } else {
-      _withParent(rule) {
-        _withScope {
           for (statement <- node.children.get) {
             val _ = statement.accept(this)
           }
         }
+        break(SassNull)
       }
-    }
-    SassNull
+
+      // Sass supports-bubbling (mirrors @media): when a `@supports` rule
+      // appears inside a style rule, the supports rule itself attaches to
+      // the nearest non-style parent and a clone of the enclosing style
+      // rule is placed inside the supports rule to hold the nested
+      // children. `.a { @supports (q) { color: red; } }` serializes as
+      // `@supports (q) { .a { color: red; } }`.
+      val enclosingStyleRule = _styleRule
+      if (enclosingStyleRule.isDefined) {
+        val savedParent = _parent
+        val nearestNonStyle: ModifiableCssParentNode = _nearestNonStyleRuleParent()
+        _parent = Nullable(nearestNonStyle)
+        try
+          _withParent(rule) {
+            val outer     = enclosingStyleRule.get
+            val innerRule = outer.copyWithoutChildren()
+            _withParent(innerRule) {
+              _withStyleRule(innerRule) {
+                _withScope {
+                  for (statement <- node.children.get) {
+                    val _ = statement.accept(this)
+                  }
+                }
+              }
+            }
+          }
+        finally _parent = savedParent
+      } else {
+        _withParent(rule) {
+          _withScope {
+            for (statement <- node.children.get) {
+              val _ = statement.accept(this)
+            }
+          }
+        }
+      }
+      SassNull
+    } // boundary
   }
 
   override def visitAtRootRule(node: AtRootRule): Value = {
-    val root = _root.getOrElse {
-      throw new IllegalStateException("@at-root used before a root stylesheet is set.")
-    }
-
-    // Resolve the query: parse the interpolated text if present, otherwise
-    // use the default query (which excludes only style rules).
-    val query: ssg.sass.ast.sass.AtRootQuery = node.query.fold(
-      ssg.sass.ast.sass.AtRootQuery.defaultQuery
-    ) { interp =>
-      val queryText = _performInterpolation(interp)
-      ssg.sass.parse.AtRootQueryParser.tryParseQuery(queryText).getOrElse(ssg.sass.ast.sass.AtRootQuery.defaultQuery)
-    }
-
-    // dart-sass evaluate.dart:1196-1208: walk up from _parent to the
-    // stylesheet root, collecting NON-excluded ancestors (innermost-first).
-    def excludes(n: ModifiableCssParentNode): Boolean = n match {
-      case _:  ModifiableCssStyleRule    => query.excludesStyleRules
-      case _:  ModifiableCssMediaRule    => query.excludesName("media")
-      case _:  ModifiableCssSupportsRule => query.excludesName("supports")
-      case ar: ModifiableCssAtRule       => query.excludesName(ar.name.value.toLowerCase)
-      case _ => false
-    }
-
-    var parent: ModifiableCssParentNode = _parent.getOrElse(root)
-    val included = scala.collection.mutable.ListBuffer.empty[ModifiableCssParentNode]
-    while (!parent.isInstanceOf[ModifiableCssStylesheet]) {
-      if (!excludes(parent)) included += parent
-      parent.modifiableParent match {
-        case gp if gp.isDefined => parent = gp.get
-        case _                  =>
-          throw new IllegalStateException(
-            "CssNodes must have a CssStylesheet transitive parent node."
-          )
+    import scala.util.boundary, boundary.break
+    boundary[Value] {
+      val root = _root.getOrElse {
+        throw new IllegalStateException("@at-root used before a root stylesheet is set.")
       }
-    }
 
-    // dart-sass evaluate.dart:1209: _trimIncluded
-    val trimmedRoot = _trimIncluded(included)
-
-    // dart-sass evaluate.dart:1213-1220: if nothing was excluded, just
-    // evaluate children in place. However, we still need to apply the
-    // _atRootExcludingStyleRule flag so that nested style rules don't
-    // get an implicit parent selector. This is needed when @at-root
-    // runs inside an @import context where _styleRuleIgnoringAtRoot
-    // is inherited from the outer scope.
-    if (trimmedRoot eq _parent.getOrElse(root)) {
-      val savedAtRootExcluding = _atRootExcludingStyleRule
-      if (query.excludesStyleRules) {
-        _atRootExcludingStyleRule = true
+      // Resolve the query: parse the interpolated text if present, otherwise
+      // use the default query (which excludes only style rules).
+      val query: ssg.sass.ast.sass.AtRootQuery = node.query.fold(
+        ssg.sass.ast.sass.AtRootQuery.defaultQuery
+      ) { interp =>
+        val queryText = _performInterpolation(interp)
+        ssg.sass.parse.AtRootQueryParser.tryParseQuery(queryText).getOrElse(ssg.sass.ast.sass.AtRootQuery.defaultQuery)
       }
-      try
-        _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
-          for (child <- node.children.get)
-            child.accept(this)
+
+      // dart-sass evaluate.dart:1196-1208: walk up from _parent to the
+      // stylesheet root, collecting NON-excluded ancestors (innermost-first).
+      def excludes(n: ModifiableCssParentNode): Boolean = n match {
+        case _:  ModifiableCssStyleRule    => query.excludesStyleRules
+        case _:  ModifiableCssMediaRule    => query.excludesName("media")
+        case _:  ModifiableCssSupportsRule => query.excludesName("supports")
+        case ar: ModifiableCssAtRule       => query.excludesName(ar.name.value.toLowerCase)
+        case _ => false
+      }
+
+      var parent: ModifiableCssParentNode = _parent.getOrElse(root)
+      val included = scala.collection.mutable.ListBuffer.empty[ModifiableCssParentNode]
+      while (!parent.isInstanceOf[ModifiableCssStylesheet]) {
+        if (!excludes(parent)) included += parent
+        parent.modifiableParent match {
+          case gp if gp.isDefined => parent = gp.get
+          case _                  =>
+            throw new IllegalStateException(
+              "CssNodes must have a CssStylesheet transitive parent node."
+            )
         }
-      finally
-        _atRootExcludingStyleRule = savedAtRootExcluding
-      return SassNull
-    }
-
-    // dart-sass evaluate.dart:1222-1233: create copies of included
-    // ancestors and nest them. `innerCopy` is where children will be
-    // evaluated; `outerCopy` is attached to `trimmedRoot`.
-    var innerCopy: ModifiableCssParentNode = trimmedRoot
-    if (included.nonEmpty) {
-      innerCopy = included.head.copyWithoutChildren()
-      var outerCopy = innerCopy
-      for (n <- included.tail) {
-        val copy = n.copyWithoutChildren()
-        copy.addChild(outerCopy)
-        outerCopy = copy
       }
-      trimmedRoot.addChild(outerCopy)
-    }
 
-    // dart-sass evaluate.dart:1235-1239: _scopeForAtRoot + evaluate children
-    _scopeForAtRoot(node, innerCopy, query, included.toList) {
-      for (child <- node.children.get)
-        child.accept(this)
-    }
+      // dart-sass evaluate.dart:1209: _trimIncluded
+      val trimmedRoot = _trimIncluded(included)
 
-    SassNull
+      // dart-sass evaluate.dart:1213-1220: if nothing was excluded, just
+      // evaluate children in place. However, we still need to apply the
+      // _atRootExcludingStyleRule flag so that nested style rules don't
+      // get an implicit parent selector. This is needed when @at-root
+      // runs inside an @import context where _styleRuleIgnoringAtRoot
+      // is inherited from the outer scope.
+      if (trimmedRoot eq _parent.getOrElse(root)) {
+        val savedAtRootExcluding = _atRootExcludingStyleRule
+        if (query.excludesStyleRules) {
+          _atRootExcludingStyleRule = true
+        }
+        try
+          _environment.scope(semiGlobal = false, when = node.hasDeclarations) {
+            for (child <- node.children.get)
+              child.accept(this)
+          }
+        finally
+          _atRootExcludingStyleRule = savedAtRootExcluding
+        break(SassNull)
+      }
+
+      // dart-sass evaluate.dart:1222-1233: create copies of included
+      // ancestors and nest them. `innerCopy` is where children will be
+      // evaluated; `outerCopy` is attached to `trimmedRoot`.
+      var innerCopy: ModifiableCssParentNode = trimmedRoot
+      if (included.nonEmpty) {
+        innerCopy = included.head.copyWithoutChildren()
+        var outerCopy = innerCopy
+        for (n <- included.tail) {
+          val copy = n.copyWithoutChildren()
+          copy.addChild(outerCopy)
+          outerCopy = copy
+        }
+        trimmedRoot.addChild(outerCopy)
+      }
+
+      // dart-sass evaluate.dart:1235-1239: _scopeForAtRoot + evaluate children
+      _scopeForAtRoot(node, innerCopy, query, included.toList) {
+        for (child <- node.children.get)
+          child.accept(this)
+      }
+
+      SassNull
+    } // boundary
   }
 
   /** dart-sass evaluate.dart:1254-1284: destructively trims a trailing sublist from [nodes] that matches the current list of parents.
@@ -3965,37 +3998,40 @@ final class EvaluateVisitor(
   private def _trimIncluded(
     nodes: scala.collection.mutable.ListBuffer[ModifiableCssParentNode]
   ): ModifiableCssParentNode = {
-    val root = _root.get
-    if (nodes.isEmpty) return root
+    import scala.util.boundary, boundary.break
+    boundary[ModifiableCssParentNode] {
+      val root = _root.get
+      if (nodes.isEmpty) break(root)
 
-    var parent:              ModifiableCssParentNode = _parent.getOrElse(root)
-    var innermostContiguous: Int                     = -1
-    var i = 0
-    while (i < nodes.length) {
-      while (!(parent eq nodes(i))) {
-        innermostContiguous = -1
+      var parent:              ModifiableCssParentNode = _parent.getOrElse(root)
+      var innermostContiguous: Int                     = -1
+      var i = 0
+      while (i < nodes.length) {
+        while (!(parent eq nodes(i))) {
+          innermostContiguous = -1
+          val gp = parent.modifiableParent
+          if (gp.isDefined) parent = gp.get
+          else
+            throw new IllegalArgumentException(
+              s"Expected ${nodes(i)} to be an ancestor of this."
+            )
+        }
+        if (innermostContiguous < 0) innermostContiguous = i
+
         val gp = parent.modifiableParent
         if (gp.isDefined) parent = gp.get
         else
           throw new IllegalArgumentException(
             s"Expected ${nodes(i)} to be an ancestor of this."
           )
+        i += 1
       }
-      if (innermostContiguous < 0) innermostContiguous = i
 
-      val gp = parent.modifiableParent
-      if (gp.isDefined) parent = gp.get
-      else
-        throw new IllegalArgumentException(
-          s"Expected ${nodes(i)} to be an ancestor of this."
-        )
-      i += 1
-    }
-
-    if (!(parent eq root)) return root
-    val result = nodes(innermostContiguous)
-    nodes.remove(innermostContiguous, nodes.length - innermostContiguous)
-    result
+      if (!(parent eq root)) break(root)
+      val result = nodes(innermostContiguous)
+      nodes.remove(innermostContiguous, nodes.length - innermostContiguous)
+      result
+    } // boundary
   }
 
   /** dart-sass evaluate.dart:1291-1343: returns a scope callback for the at-root query. Adjusts _parent, _atRootExcludingStyleRule, _mediaQueries, _inKeyframes, and _inUnknownAtRule for the duration.
@@ -4949,37 +4985,40 @@ final class EvaluateVisitor(
     positional:    List[Value],
     originalNamed: ListMap[String, Value]
   ): (List[Value], ListMap[String, Value]) = {
-    if (!bic.hasRestParameter) return (positional, originalNamed)
-    // If _mergeBuiltInNamedArgs already created a SassArgumentList for the
-    // rest parameter (which it does when named args are present), don't
-    // create a second wrapper. This only applies when named args were
-    // provided (_mergeBuiltInNamedArgs is only called with non-empty named);
-    // a user-supplied SassArgumentList among positional args must still be
-    // wrapped into its own rest SassArgumentList.
-    if (originalNamed.nonEmpty) {
-      positional.lastOption match {
-        case Some(_: ssg.sass.value.SassArgumentList) =>
-          return (positional, originalNamed)
-        case _ => ()
+    import scala.util.boundary, boundary.break
+    boundary[(List[Value], ListMap[String, Value])] {
+      if (!bic.hasRestParameter) break((positional, originalNamed))
+      // If _mergeBuiltInNamedArgs already created a SassArgumentList for the
+      // rest parameter (which it does when named args are present), don't
+      // create a second wrapper. This only applies when named args were
+      // provided (_mergeBuiltInNamedArgs is only called with non-empty named);
+      // a user-supplied SassArgumentList among positional args must still be
+      // wrapped into its own rest SassArgumentList.
+      if (originalNamed.nonEmpty) {
+        positional.lastOption match {
+          case Some(_: ssg.sass.value.SassArgumentList) =>
+            break((positional, originalNamed))
+          case _ => ()
+        }
       }
-    }
-    val paramCount = bic.parameterNames.length
-    val rest: List[Value] =
-      if (positional.length > paramCount) positional.drop(paramCount)
-      else Nil
-    val base =
-      if (positional.length > paramCount) positional.take(paramCount)
-      else positional
-    // Compute which named args remain after the declared parameters
-    // consumed their share during _mergeBuiltInNamedArgs.
-    val declaredSet    = bic.parameterNames.toSet
-    val remainingNamed = originalNamed.filterNot { case (k, _) => declaredSet.contains(k) }
-    val argumentList   = new ssg.sass.value.SassArgumentList(
-      rest,
-      remainingNamed,
-      ssg.sass.value.ListSeparator.Comma
-    )
-    (base :+ argumentList, remainingNamed)
+      val paramCount = bic.parameterNames.length
+      val rest: List[Value] =
+        if (positional.length > paramCount) positional.drop(paramCount)
+        else Nil
+      val base =
+        if (positional.length > paramCount) positional.take(paramCount)
+        else positional
+      // Compute which named args remain after the declared parameters
+      // consumed their share during _mergeBuiltInNamedArgs.
+      val declaredSet    = bic.parameterNames.toSet
+      val remainingNamed = originalNamed.filterNot { case (k, _) => declaredSet.contains(k) }
+      val argumentList   = new ssg.sass.value.SassArgumentList(
+        rest,
+        remainingNamed,
+        ssg.sass.value.ListSeparator.Comma
+      )
+      (base :+ argumentList, remainingNamed)
+    } // boundary
   }
 
   private def _checkBuiltInArity(
@@ -4987,43 +5026,46 @@ final class EvaluateVisitor(
     positional: List[Value],
     named:      ListMap[String, Value]
   ): Unit = {
-    // Skip overloaded callables entirely — the dispatcher picks the
-    // right overload at runtime and handles arity inside the callback.
-    if (bic.isOverloaded) return
-    val declared = bic.parameterNames
-    // Skip rest-only signatures (e.g. `$args...`) where parameterNames is
-    // empty BUT the raw signature is non-empty. For truly zero-parameter
-    // functions (empty signature, no rest), fall through to the arity
-    // checks below so that extra arguments are rejected.
-    if (declared.isEmpty && (bic.hasRestParameter || bic.signature.trim.nonEmpty)) return
-    val declaredSet = declared.toSet
-    // 1. Unknown named args (skip when rest parameter absorbs them).
-    if (!bic.hasRestParameter) {
-      for ((k, _) <- named)
-        if (!declaredSet.contains(k))
-          throw SassScriptException(s"No parameter named $$$k.")
-    }
-    // 2. Positional overflow (only when no rest parameter).
-    if (!bic.hasRestParameter && positional.length > declared.length) {
-      val nParams = declared.length
-      val nPass   = positional.length
-      val argWord = if (nParams == 1) "argument" else "arguments"
-      val posWord = if (named.isEmpty) "" else "positional "
-      val wasWord = if (nPass == 1) "was" else "were"
-      throw SassScriptException(
-        s"Only $nParams $posWord${argWord} allowed, but $nPass $wasWord passed."
-      )
-    }
-    // 3. Positional / named collision. A name supplied both by position
-    //    (at index `i`) and by name (with `declared(i)`) is rejected.
-    val limit = math.min(positional.length, declared.length)
-    var i     = 0
-    while (i < limit) {
-      val pname = declared(i)
-      if (named.contains(pname))
-        throw SassScriptException(s"Argument $$$pname was passed both by position and by name.")
-      i += 1
-    }
+    import scala.util.boundary, boundary.break
+    boundary {
+      // Skip overloaded callables entirely — the dispatcher picks the
+      // right overload at runtime and handles arity inside the callback.
+      if (bic.isOverloaded) break(())
+      val declared = bic.parameterNames
+      // Skip rest-only signatures (e.g. `$args...`) where parameterNames is
+      // empty BUT the raw signature is non-empty. For truly zero-parameter
+      // functions (empty signature, no rest), fall through to the arity
+      // checks below so that extra arguments are rejected.
+      if (declared.isEmpty && (bic.hasRestParameter || bic.signature.trim.nonEmpty)) break(())
+      val declaredSet = declared.toSet
+      // 1. Unknown named args (skip when rest parameter absorbs them).
+      if (!bic.hasRestParameter) {
+        for ((k, _) <- named)
+          if (!declaredSet.contains(k))
+            throw SassScriptException(s"No parameter named $$$k.")
+      }
+      // 2. Positional overflow (only when no rest parameter).
+      if (!bic.hasRestParameter && positional.length > declared.length) {
+        val nParams = declared.length
+        val nPass   = positional.length
+        val argWord = if (nParams == 1) "argument" else "arguments"
+        val posWord = if (named.isEmpty) "" else "positional "
+        val wasWord = if (nPass == 1) "was" else "were"
+        throw SassScriptException(
+          s"Only $nParams $posWord${argWord} allowed, but $nPass $wasWord passed."
+        )
+      }
+      // 3. Positional / named collision. A name supplied both by position
+      //    (at index `i`) and by name (with `declared(i)`) is rejected.
+      val limit = math.min(positional.length, declared.length)
+      var i     = 0
+      while (i < limit) {
+        val pname = declared(i)
+        if (named.contains(pname))
+          throw SassScriptException(s"Argument $$$pname was passed both by position and by name.")
+        i += 1
+      }
+    } // boundary
   }
 
   /** Merges named arguments into the positional list for a built-in function call. Resolves each name against the callable's declared parameter signature (see [[BuiltInCallable.parameterNames]]),
@@ -5035,148 +5077,154 @@ final class EvaluateVisitor(
     positional: List[Value],
     named:      ListMap[String, Value]
   ): List[Value] = {
-    val names = bic.parameterNames
-    // For overloaded callables, different overloads accept different parameter
-    // names. We cannot validate named args against the canonical signature.
-    // Instead, treat the named args like a rest-parameter call: partition into
-    // known (canonical-signature) and leftover, then merge what we can and
-    // pass the rest through as-is. The overload dispatcher will select the
-    // right callback and the callback itself will do per-overload validation.
-    if (bic.isOverloaded && names.nonEmpty) {
-      val namesSet                    = names.toSet
-      val namedKeys                   = named.keySet
-      val (knownNamed, leftoverNamed) = named.partition { case (k, _) => namesSet.contains(k) }
-      // For overloaded functions, always try to find the tightest-fitting
-      // overload whose parameter names are a superset of the named keys.
-      // The canonical signature may be wider (e.g. $red,$green,$blue,$alpha)
-      // when the caller meant ($color, $alpha) — both contain "alpha".
-      val betterSig = _findMatchingOverloadSig(bic, positional.length, namedKeys)
-      betterSig match {
-        case Some(altNames) =>
-          return _mergeWithParamNames(altNames, positional, named)
-        case None if leftoverNamed.nonEmpty =>
-          if (knownNamed.isEmpty) {
-            // None of the named args match any overload — package
-            // into a SassArgumentList for the single-arg overload.
+    import scala.util.boundary, boundary.break
+    boundary[List[Value]] {
+      val names = bic.parameterNames
+      // For overloaded callables, different overloads accept different parameter
+      // names. We cannot validate named args against the canonical signature.
+      // Instead, treat the named args like a rest-parameter call: partition into
+      // known (canonical-signature) and leftover, then merge what we can and
+      // pass the rest through as-is. The overload dispatcher will select the
+      // right callback and the callback itself will do per-overload validation.
+      if (bic.isOverloaded && names.nonEmpty) {
+        val namesSet                    = names.toSet
+        val namedKeys                   = named.keySet
+        val (knownNamed, leftoverNamed) = named.partition { case (k, _) => namesSet.contains(k) }
+        // For overloaded functions, always try to find the tightest-fitting
+        // overload whose parameter names are a superset of the named keys.
+        // The canonical signature may be wider (e.g. $red,$green,$blue,$alpha)
+        // when the caller meant ($color, $alpha) — both contain "alpha".
+        val betterSig = _findMatchingOverloadSig(bic, positional.length, namedKeys)
+        betterSig match {
+          case Some(altNames) =>
+            break(_mergeWithParamNames(altNames, positional, named))
+          case None if leftoverNamed.nonEmpty =>
+            if (knownNamed.isEmpty) {
+              // None of the named args match any overload — package
+              // into a SassArgumentList for the single-arg overload.
+              val al = new ssg.sass.value.SassArgumentList(
+                positional,
+                named,
+                ssg.sass.value.ListSeparator.Comma
+              )
+              break(List(al))
+            }
+            // Partial match to canonical — merge what we can and wrap the
+            // rest into an argument list.
+            val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
+            val maxIdx       =
+              (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+            val buf = scala.collection.mutable.ListBuffer.empty[Value]
+            var i   = 0
+            while (i <= maxIdx && i < names.length) {
+              val pname = names(i)
+              if (i < positional.length) buf += positional(i)
+              else
+                knownNamed.get(pname) match {
+                  case Some(v) => buf += v
+                  case _       => buf += _argGap
+                }
+              i += 1
+            }
             val al = new ssg.sass.value.SassArgumentList(
-              positional,
-              named,
+              Nil,
+              leftoverNamed,
               ssg.sass.value.ListSeparator.Comma
             )
-            return List(al)
+            buf += al
+            break(buf.toList)
+          case None =>
+          // All named match canonical — fall through to normal merge
+        }
+      }
+      if (names.isEmpty) {
+        // rest-only signature (`$args...`): wrap positional + all kwargs
+        // into a SassArgumentList if there are keyword args.
+        if (named.nonEmpty || bic.hasRestParameter) {
+          val extras = positional.drop(0) // all positional become rest
+          val al     = new ssg.sass.value.SassArgumentList(
+            extras,
+            named,
+            ssg.sass.value.ListSeparator.Comma
+          )
+          List(al)
+        } else positional
+      } else {
+        val namesSet = names.toSet
+        // Separate known named args (match declared params) from leftover kwargs.
+        val (knownNamed, leftoverNamed) =
+          if (bic.hasRestParameter) named.partition { case (k, _) => namesSet.contains(k) }
+          else {
+            // Validate: every named key must be a declared parameter.
+            for ((k, _) <- named)
+              if (!namesSet.contains(k))
+                throw SassScriptException(s"No parameter named $$$k in ${bic.name}().")
+            (named, ListMap.empty[String, Value])
           }
-          // Partial match to canonical — merge what we can and wrap the
-          // rest into an argument list.
-          val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
-          val maxIdx       =
-            (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
-          val buf = scala.collection.mutable.ListBuffer.empty[Value]
-          var i   = 0
-          while (i <= maxIdx && i < names.length) {
-            val pname = names(i)
-            if (i < positional.length) buf += positional(i)
-            else
-              knownNamed.get(pname) match {
-                case Some(v) => buf += v
-                case _       => buf += _argGap
-              }
-            i += 1
-          }
-          val al = new ssg.sass.value.SassArgumentList(
-            Nil,
+        // Determine the highest index that is explicitly supplied (positional
+        // or named) so we don't append trailing nulls for unsupplied tail
+        // parameters with defaults.
+        val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
+        val maxIdx       =
+          (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
+        val buf = scala.collection.mutable.ListBuffer.empty[Value]
+        var i   = 0
+        while (i <= maxIdx && i < names.length) {
+          val pname = names(i)
+          if (i < positional.length) buf += positional(i)
+          else
+            knownNamed.get(pname) match {
+              case Some(v) => buf += v
+              case _       => buf += _argGap
+            }
+          i += 1
+        }
+        // When rest parameter is declared, collect extra positional and
+        // leftover named args into a SassArgumentList.
+        if (bic.hasRestParameter) {
+          val extras = positional.drop(names.length)
+          val al     = new ssg.sass.value.SassArgumentList(
+            extras,
             leftoverNamed,
             ssg.sass.value.ListSeparator.Comma
           )
           buf += al
-          return buf.toList
-        case None =>
-        // All named match canonical — fall through to normal merge
-      }
-    }
-    if (names.isEmpty) {
-      // rest-only signature (`$args...`): wrap positional + all kwargs
-      // into a SassArgumentList if there are keyword args.
-      if (named.nonEmpty || bic.hasRestParameter) {
-        val extras = positional.drop(0) // all positional become rest
-        val al     = new ssg.sass.value.SassArgumentList(
-          extras,
-          named,
-          ssg.sass.value.ListSeparator.Comma
-        )
-        List(al)
-      } else positional
-    } else {
-      val namesSet = names.toSet
-      // Separate known named args (match declared params) from leftover kwargs.
-      val (knownNamed, leftoverNamed) =
-        if (bic.hasRestParameter) named.partition { case (k, _) => namesSet.contains(k) }
-        else {
-          // Validate: every named key must be a declared parameter.
-          for ((k, _) <- named)
-            if (!namesSet.contains(k))
-              throw SassScriptException(s"No parameter named $$$k in ${bic.name}().")
-          (named, ListMap.empty[String, Value])
         }
-      // Determine the highest index that is explicitly supplied (positional
-      // or named) so we don't append trailing nulls for unsupplied tail
-      // parameters with defaults.
-      val namedIndices = knownNamed.keys.map(names.indexOf).filter(_ >= 0)
-      val maxIdx       =
-        (if (namedIndices.isEmpty) -1 else namedIndices.max).max(positional.length - 1)
-      val buf = scala.collection.mutable.ListBuffer.empty[Value]
-      var i   = 0
-      while (i <= maxIdx && i < names.length) {
-        val pname = names(i)
-        if (i < positional.length) buf += positional(i)
-        else
-          knownNamed.get(pname) match {
-            case Some(v) => buf += v
-            case _       => buf += _argGap
-          }
-        i += 1
+        buf.toList
       }
-      // When rest parameter is declared, collect extra positional and
-      // leftover named args into a SassArgumentList.
-      if (bic.hasRestParameter) {
-        val extras = positional.drop(names.length)
-        val al     = new ssg.sass.value.SassArgumentList(
-          extras,
-          leftoverNamed,
-          ssg.sass.value.ListSeparator.Comma
-        )
-        buf += al
-      }
-      buf.toList
-    }
+    } // boundary
   }
 
   /** Extracts parameter names from a raw overload signature string. E.g. `"$color, $alpha"` -> `List("color", "alpha")`.
     */
   private def _sigParamNames(sig: String): List[String] = {
-    val trimmed = sig.trim
-    if (trimmed.isEmpty) return Nil
-    val parts = scala.collection.mutable.ListBuffer.empty[String]
-    val buf   = new StringBuilder()
-    var depth = 0
-    var i     = 0
-    while (i < trimmed.length) {
-      val c = trimmed.charAt(i)
-      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
-      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
-      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
-      else buf.append(c)
-      i += 1
-    }
-    if (buf.nonEmpty) parts += buf.toString().trim
-    parts.toList.flatMap { raw =>
-      val withoutDefault = raw.indexOf(':') match {
-        case -1  => raw
-        case idx => raw.substring(0, idx).trim
+    import scala.util.boundary, boundary.break
+    boundary[List[String]] {
+      val trimmed = sig.trim
+      if (trimmed.isEmpty) break(Nil)
+      val parts = scala.collection.mutable.ListBuffer.empty[String]
+      val buf   = new StringBuilder()
+      var depth = 0
+      var i     = 0
+      while (i < trimmed.length) {
+        val c = trimmed.charAt(i)
+        if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+        else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+        else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+        else buf.append(c)
+        i += 1
       }
-      if (withoutDefault.endsWith("...")) None
-      else if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
-      else None
-    }
+      if (buf.nonEmpty) parts += buf.toString().trim
+      parts.toList.flatMap { raw =>
+        val withoutDefault = raw.indexOf(':') match {
+          case -1  => raw
+          case idx => raw.substring(0, idx).trim
+        }
+        if (withoutDefault.endsWith("...")) None
+        else if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
+        else None
+      }
+    } // boundary
   }
 
   /** Searches all overload signatures of [[bic]] to find one whose parameter names are a superset of the caller's [[namedKeys]] and can accommodate [[positionalCount]] positional args. Returns the
