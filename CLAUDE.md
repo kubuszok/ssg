@@ -20,7 +20,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 
 ## Build Rules
 
-- Scala **3.8.3**, compiler flags: `-deprecation -feature -no-indent -Werror`
+- Scala **3.8.4**, compiler flags: `-deprecation -feature -no-indent -Werror`
 - **Linter flags**: `-Wimplausible-patterns -Wrecurse-with-default -Wenum-comment-discard -Wunused:imports,privates,locals,patvars,nowarn`
 - **Braces required** (`-no-indent`): `{}` for all `trait`, `class`, `enum`, method defs
 - **Split packages**: `package ssg` / `package md` / `package core` (never flat)
@@ -41,6 +41,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | Directory | Purpose |
 |-----------|---------|
 | `ssg-commons/` | Shared cross-platform utilities. Depends on [lls](https://github.com/kubuszok/lls) for `lowlevel.*` types (Nullable, MkArray, ArrayView, collections). |
+| `ssg-data-commons/` | Shared data view abstractions |
 | `ssg-graphs-commons/` | Shared graph layout + SVG infrastructure (dagre, spring, circular, radial) |
 | `ssg-md/` | Markdown engine (flexmark-java port) |
 | `ssg-liquid/` | Liquid template engine (liqp port) |
@@ -51,6 +52,7 @@ Scala.js, and Scala Native — without external binary dependencies.
 | `ssg-mermaid/` | Diagramming engine (Mermaid port) |
 | `ssg-graphviz/` | Graphviz DOT renderer (4 layout engines) |
 | `ssg-highlight/` | Syntax highlighting (tree-sitter, 73 grammars) |
+| `ssg-site/` | Site pipeline (SSG-native glue) |
 | `ssg/` | Aggregator module (depends on all above) |
 | `.rescale/` | Per-project re-scale config + data |
 | `.rescale/data/` | TSV databases (migration, issues, audit, skip-policy, sass-spec-baseline, port-tasks) |
