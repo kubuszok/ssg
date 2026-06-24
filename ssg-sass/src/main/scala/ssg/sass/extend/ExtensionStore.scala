@@ -40,6 +40,8 @@ import ssg.sass.util.{ Box, FileSpan, ModifiableBox }
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Tracks style rules and extensions, computing the final selectors after `@extend` rules are applied.
   *
@@ -302,7 +304,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     target:       SimpleSelector,
     extend:       ExtendRule,
     mediaContext: Nullable[List[CssMediaQuery]] = Nullable.empty
-  ): Unit = {
+  ): Unit = boundary {
     val existingSelectors  = _selectors.get(target)
     val existingExtensions = _extensionsByExtender.get(target)
 
@@ -335,7 +337,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
         }
       }
 
-    if (newExtensions == null) return
+    if (newExtensions == null) break(())
 
     val newExtByTarget: mutable.LinkedHashMap[SimpleSelector, mutable.LinkedHashMap[ComplexSelector, Extension]] =
       mutable.LinkedHashMap(target -> newExtensions)
@@ -594,8 +596,8 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     complex:           ComplexSelector,
     extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]]
-  ): List[ComplexSelector] = {
-    if (complex.leadingCombinators.length > 1) return null
+  ): List[ComplexSelector] = boundary {
+    if (complex.leadingCombinators.length > 1) break(null)
 
     var extendedNotExpanded: mutable.ListBuffer[List[ComplexSelector]] = null
     val isOriginal = _originals.contains(complex)
@@ -643,7 +645,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       i += 1
     }
 
-    if (extendedNotExpanded == null) return null
+    if (extendedNotExpanded == null) break(null)
 
     var first = true
     ExtendFunctions.paths(extendedNotExpanded.toList).flatMap { path =>
@@ -661,7 +663,7 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]],
     inOriginal:        Boolean
-  ): List[ComplexSelector] = {
+  ): List[ComplexSelector] = boundary {
     val targetsUsed: mutable.Set[SimpleSelector] =
       if (mode == ExtendMode.Normal || extensions.size < 2) null
       else mutable.Set.empty
@@ -686,8 +688,8 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       }
       i += 1
     }
-    if (options == null) return null
-    if (targetsUsed != null && targetsUsed.size != extensions.size) return null
+    if (options == null) break(null)
+    if (targetsUsed != null && targetsUsed.size != extensions.size) break(null)
 
     // Single-option fast path
     if (options.length == 1) {
@@ -700,8 +702,8 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
         val complex = extender.selector.withAdditionalCombinators(component.combinators)
         if (!complex.isUseless) results += complex
       }
-      if (results.isEmpty) return null
-      return results.toList
+      if (results.isEmpty) break(null)
+      break(results.toList)
     }
 
     // Multi-option: compute cartesian product, unify each path
@@ -753,10 +755,10 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]],
     targetsUsed:       mutable.Set[SimpleSelector]
-  ): List[List[Extender]] = {
-    def withoutPseudo(s: SimpleSelector): List[Extender] = {
+  ): List[List[Extender]] = boundary {
+    def withoutPseudo(s: SimpleSelector): List[Extender] = boundary {
       val extsForSimple = extensions.get(s)
-      if (extsForSimple.isEmpty) return null
+      if (extsForSimple.isEmpty) break(null)
       if (targetsUsed != null) targetsUsed += s
       val out = mutable.ListBuffer.empty[Extender]
       if (mode != ExtendMode.Replace) out += _extenderForSimple(s)
@@ -768,10 +770,10 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
       case p: PseudoSelector if p.selector.isDefined =>
         val extended = _extendPseudo(p, extensions, mediaQueryContext)
         if (extended != null) {
-          return extended.map { pseudo =>
+          break(extended.map { pseudo =>
             val wp = withoutPseudo(pseudo)
             if (wp != null) wp else List(_extenderForSimple(pseudo))
-          }
+          })
         }
       case _ => ()
     }
@@ -876,9 +878,9 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
   private def _trim(
     selectors:  List[ComplexSelector],
     isOriginal: ComplexSelector => Boolean
-  ): List[ComplexSelector] = {
+  ): List[ComplexSelector] = boundary {
     // Avoid quadratic blowup for very large selector lists
-    if (selectors.length > 100) return selectors
+    if (selectors.length > 100) break(selectors)
 
     val result       = mutable.ListBuffer.empty[ComplexSelector]
     var numOriginals = 0
@@ -936,11 +938,11 @@ final class MutableExtensionStore(val mode: ExtendMode) extends ExtensionStore {
     pseudo:            PseudoSelector,
     extensions:        collection.Map[SimpleSelector, collection.Map[ComplexSelector, Extension]],
     mediaQueryContext: Option[List[CssMediaQuery]]
-  ): List[PseudoSelector] = {
+  ): List[PseudoSelector] = boundary {
     val selector = pseudo.selector.get
 
     val extended = _extendList(selector, extensions, mediaQueryContext)
-    if (extended eq selector) return null
+    if (extended eq selector) break(null)
 
     var complexes: List[ComplexSelector] = extended.components
     if (
