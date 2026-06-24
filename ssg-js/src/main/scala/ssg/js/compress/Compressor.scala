@@ -178,6 +178,18 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       case _ => parent(n)
     }
 
+  /** Find the nearest enclosing scope from the *live* walker ancestry.
+    *
+    * Faithful port of terser `compressor.find_parent(AST_Scope)` used by drop-side-effect-free.js:241 and inference.js:707/726. In terser the Compressor IS the walker, so `find_parent` reads the live
+    * stack; this port's Compressor stack is empty during a pass (the live ancestry is on `activeWalker`). Mirrors `TreeWalker.findScope()` but reads the active walker's stack, falling back to the
+    * inherited `findScope()` when no active walker is present.
+    */
+  override def liveFindScope(): AstScope | Null =
+    activeWalker match {
+      case w: TreeWalker if w.stack.nonEmpty => w.findScope()
+      case _ => findScope()
+    }
+
   /** Faithful port of terser `Compressor.in_computed_key()` (lib/compress/index.js:419).
     *
     * Returns false unless `evaluate` is on, then walks the *live* ancestry (the active transformer's stack — the compressor's own stack is empty during a pass, see `activeWalker`) for an
@@ -4757,9 +4769,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         var p       = 0
         var matched = true
         while (a < 3 && matched) {
-          val par =
-            try parent(p)
-            catch { case _: IndexOutOfBoundsException => null }
+          // index.js:4102 — terser walks `compressor.parent(p)` which reads the
+          // live walker stack.  This port's Compressor stack is empty during a
+          // pass (the live ancestry lives on `activeWalker`), so we use
+          // `liveParent` — exactly the same vein as inline/template-string fixes.
+          val par = liveParent(self, p)
           if (par == null) { matched = false }
           else if (a == 0 && par.nn.nodeType == "Destructuring") { p += 1 }
           else {

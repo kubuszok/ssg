@@ -34,15 +34,16 @@ final class OptionBoolFalsyIss1167Suite extends munit.FunSuite {
   // option name so a single instance can probe optionBool across many cases.
   // Every other abstract member is a no-op that is never exercised here.
   final class OptionDouble(values: Map[String, Any]) extends CompressorLike {
-    def option(name:                       String):      Any            = values.getOrElse(name, null)
-    def optimizeNode(node:                 AstNode):     AstNode        = node
-    def parent(n:                          Int = 0):     AstNode | Null = null
-    def findParent[T <: AstNode](using ct: ClassTag[T]): T | Null       = null
-    def inBooleanContext():                              Boolean        = false
-    def in32BitContext():                                Boolean        = false
-    def hasDirective(directive:            String):      AstNode | Null = null
-    def exposed(theDef:                    Any):         Boolean        = false
-    def pureFuncs(call:                    AstCall):     Boolean        = false
+    def option(name:                       String):      Any             = values.getOrElse(name, null)
+    def optimizeNode(node:                 AstNode):     AstNode         = node
+    def parent(n:                          Int = 0):     AstNode | Null  = null
+    def findParent[T <: AstNode](using ct: ClassTag[T]): T | Null        = null
+    def liveFindScope():                                 AstScope | Null = null
+    def inBooleanContext():                              Boolean         = false
+    def in32BitContext():                                Boolean         = false
+    def hasDirective(directive:            String):      AstNode | Null  = null
+    def exposed(theDef:                    Any):         Boolean         = false
+    def pureFuncs(call:                    AstCall):     Boolean         = false
   }
 
   private val double = new OptionDouble(
