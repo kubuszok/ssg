@@ -190,6 +190,36 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       case _ => findScope()
     }
 
+  /** The current node from the *live* walker ancestry -- terser's `compressor.self()`.
+    *
+    * In terser the Compressor IS the walker, so `compressor.self()` reads the live stack (the node at the top). This port runs the transform on a separate `TreeTransformer` (`activeWalker`), leaving
+    * the Compressor's own stack empty during a pass. We read the top of the active walker's stack, falling back to the inherited `self()` when no active walker is present. Same vein as
+    * liveParent/liveFindScope.
+    *
+    * Used by `isLhs()` (index.js:504-509), `safeToFlatten` (index.js:3523), and the &&/|| short-circuit paths in `optimizeBinary` (index.js:2477/2492/2516/2520).
+    */
+  def liveSelf(): AstNode | Null =
+    activeWalker match {
+      case w: TreeWalker if w.stack.nonEmpty => w.stack(w.stack.size - 1)
+      case _ =>
+        try self()
+        catch { case _: IndexOutOfBoundsException => null }
+    }
+
+  /** Find the nearest ancestor of the given type from the *live* walker ancestry -- terser's `compressor.find_parent(T)`.
+    *
+    * In terser the Compressor IS the walker, so `compressor.find_parent(AST_With)` reads the live stack. This port runs the transform on a separate `TreeTransformer` (`activeWalker`), leaving the
+    * Compressor's own stack empty during a pass. We scan the active walker's stack, falling back to the inherited `findParent[T]` when no active walker is present. Same vein as
+    * liveParent/liveFindScope.
+    *
+    * Used by `optimizeSymbolRef` (index.js:2944 `compressor.find_parent(AST_With)`).
+    */
+  def liveFindParent[T <: AstNode](using ct: scala.reflect.ClassTag[T]): T | Null =
+    activeWalker match {
+      case w: TreeWalker if w.stack.nonEmpty => w.findParent[T]
+      case _ => findParent[T]
+    }
+
   /** Faithful port of terser `Compressor.in_computed_key()` (lib/compress/index.js:419).
     *
     * Returns false unless `evaluate` is on, then walks the *live* ancestry (the active transformer's stack — the compressor's own stack is empty during a pass, see `activeWalker`) for an
@@ -1014,9 +1044,12 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         // ISS-144: Add AstUsing check
         val canExtractFromIfBlock = !stmt.isInstanceOf[AstConst] && !stmt.isInstanceOf[AstLet] &&
           !stmt.isInstanceOf[AstUsing] && !stmt.isInstanceOf[AstClass]
-        val parentIsIf =
-          try parent(0).isInstanceOf[AstIf]
-          catch { case _: IndexOutOfBoundsException => false }
+        // terser index.js:717 — `compressor.parent() instanceof AST_If`: reads
+        // live walker ancestry, not the Compressor's own empty stack.
+        val parentIsIf = liveParent(self, 0) match {
+          case _: AstIf => true
+          case _ => false
+        }
         if ((hasDirective("use strict") == null && parentIsIf && canExtractFromIfBlock) || canBeEvictedFromBlock(stmt)) {
           stmt
         } else {
@@ -3117,14 +3150,10 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             ll match {
               case false | 0 | 0.0 | "" | null =>
                 // Left is falsy → result is left (short-circuit)
-                // Use maintainThisBinding to preserve this-context for method calls
-                val p =
-                  try parent(0)
-                  catch { case _: IndexOutOfBoundsException => null }
-                val s =
-                  try this.self()
-                  catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
-                if (p != null) return optimizeNode(maintainThisBinding(p.asInstanceOf[AstNode], s, self.left.nn)) // @nowarn
+                // terser index.js:2477 — maintain_this_binding(compressor.parent(), compressor.self(), self.left)
+                val p = liveParent(self, 0)
+                val s = liveSelf()
+                if (p != null && s != null) return optimizeNode(maintainThisBinding(p.nn, s.nn, self.left.nn)) // @nowarn
                 return self.left.nn // @nowarn
               case _ =>
                 // Left is truthy → result is right
@@ -3145,13 +3174,12 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
                 }
               case _ =>
                 // Right is truthy in && → result depends only on left
-                // But also check: parent.operator == "&&" && parent.left === compressor.self()
-                val par =
-                  try parent(0)
-                  catch { case _: IndexOutOfBoundsException => null }
+                // terser index.js:2492-2493 — parent = compressor.parent(); parent.left === compressor.self()
+                val par                 = liveParent(self, 0)
                 val inParentAndWithLeft = par match {
                   case pbin: AstBinary if pbin.operator == "&&" && pbin.left != null =>
-                    pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
+                    val ls = liveSelf()
+                    ls != null && (pbin.left.nn.asInstanceOf[AnyRef] eq ls.nn.asInstanceOf[AnyRef])
                   case _ => false
                 }
                 if (inParentAndWithLeft || inBooleanContext()) {
@@ -3190,14 +3218,10 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
                 return makeSequence(self, ArrayBuffer(self.left.nn, self.right.nn)) // @nowarn
               case _ =>
                 // Left is truthy → result is left (short-circuit)
-                // Use maintainThisBinding to preserve this-context for method calls
-                val p =
-                  try parent(0)
-                  catch { case _: IndexOutOfBoundsException => null }
-                val s =
-                  try this.self()
-                  catch { case _: IndexOutOfBoundsException => self.asInstanceOf[AstNode] }
-                if (p != null) return optimizeNode(maintainThisBinding(p.asInstanceOf[AstNode], s, self.left.nn)) // @nowarn
+                // terser index.js:2516 — maintain_this_binding(compressor.parent(), compressor.self(), self.left)
+                val p = liveParent(self, 0)
+                val s = liveSelf()
+                if (p != null && s != null) return optimizeNode(maintainThisBinding(p.nn, s.nn, self.left.nn)) // @nowarn
                 return self.left.nn // @nowarn
             }
           }
@@ -3206,13 +3230,12 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             rr match {
               case false | 0 | 0.0 | "" | null =>
                 // Right is falsy in || → result is left
-                // But also check: parent.operator == "||" && parent.left === compressor.self()
-                val par =
-                  try parent(0)
-                  catch { case _: IndexOutOfBoundsException => null }
+                // terser index.js:2520-2521 — parent = compressor.parent(); parent.left === compressor.self()
+                val par                = liveParent(self, 0)
                 val inParentOrWithLeft = par match {
                   case pbin: AstBinary if pbin.operator == "||" && pbin.left != null =>
-                    pbin.left.nn.asInstanceOf[AnyRef] eq self.asInstanceOf[AnyRef]
+                    val ls = liveSelf()
+                    ls != null && (pbin.left.nn.asInstanceOf[AnyRef] eq ls.nn.asInstanceOf[AnyRef])
                   case _ => false
                 }
                 if (inParentOrWithLeft || inBooleanContext()) {
@@ -3692,9 +3715,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     * ISS-110 fix: Add unsafe_proto optimization and PropAccess-within-PropAccess early return guard.
     */
   private def optimizeDot(self: AstDot): AstNode = {
-    val parentNode =
-      try parent(0)
-      catch { case _: IndexOutOfBoundsException => null }
+    // terser index.js:3729 — `const parent = compressor.parent()`: reads live walker ancestry.
+    val parentNode = liveParent(self, 0)
 
     // Don't optimize LHS
     if (isLhs() != null) return self // @nowarn
@@ -4005,9 +4027,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
 
     // If the entire chain expression is nullish, replace with void 0
     if (isNullish(self.expression.nn, this)) {
-      val p =
-        try parent(0)
-        catch { case _: IndexOutOfBoundsException => null }
+      // terser index.js:3708 — `let parent = compressor.parent()`: reads live walker ancestry.
+      val p = liveParent(self, 0)
       // `delete x?.y` → `delete 0` (not `delete undefined` which would be a syntax error)
       p match {
         case up: AstUnaryPrefix if up.operator == "delete" =>
@@ -4033,7 +4054,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     if (isLhs() != null) return self // @nowarn
 
     // Don't optimize inside `with` blocks (all bets are off)
-    if (findParent[AstWith] != null) return self // @nowarn
+    // terser index.js:2944 — `compressor.find_parent(AST_With)`: reads live walker ancestry.
+    if (liveFindParent[AstWith] != null) return self // @nowarn
 
     // Replace undeclared references to well-known globals.
     // terser compress/index.js:2942: guarded by `!compressor.option("ie8")` — under ie8
@@ -4072,8 +4094,13 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     * Port of `find_variable(compressor, name)` from index.js:655-665.
     */
   private def findVariable(name: String): SymbolDef | Null = {
+    // terser index.js:655-665 — `while (scope = compressor.parent(i++))`: reads live
+    // walker ancestry. Anchor on liveSelf() since liveParent(anchor, 0) is the immediate
+    // parent of the current node in the live stack.
+    val anchor = liveSelf()
+    if (anchor == null) return null // @nowarn — no live node (outside a pass)
     var i = 0
-    var scope: AstNode | Null = parent(i)
+    var scope: AstNode | Null = liveParent(anchor.nn, i)
     while (scope != null) {
       scope.nn match {
         case _: AstScope => // found a scope — break out of the loop
@@ -4092,7 +4119,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         case _ => // not a scope or catch — keep walking
       }
       i += 1
-      scope = parent(i)
+      scope = liveParent(anchor.nn, i)
     }
     null
   }
@@ -4199,9 +4226,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       val num = new AstNumber; num.start = self.start; num.end = self.end; num.value = selfValue
       return num // @nowarn
     }
-    val p =
-      try parent(0)
-      catch { case _: IndexOutOfBoundsException => null }
+    // terser index.js:3490 — `var p = compressor.parent()`: reads live walker ancestry.
+    val p = liveParent(self, 0)
     if (optionBool("booleans_as_integers")) {
       // Relax === to == in parent binary
       p match {
@@ -4570,7 +4596,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       case str: AstString =>
         val key = str.value
         if (key == "__proto__") return self // @nowarn
-        if (key == "constructor" && parent(0).isInstanceOf[AstClass]) return self // @nowarn
+        // terser index.js:4002 — `compressor.parent() instanceof AST_Class`: reads live walker ancestry.
+        if (key == "constructor" && liveParent(self, 0).isInstanceOf[AstClass]) return self // @nowarn
         self match {
           case kv: AstObjectKeyVal =>
             kv.quote = str.quote
@@ -5262,16 +5289,17 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
   // Infrastructure helpers (used by multiple optimization handlers)
   // -----------------------------------------------------------------------
 
-  /** Alternative is_lhs() that works within .optimize() by reading from the TreeWalker stack. */
-  def isLhs(): AstNode | Null =
-    try {
-      val selfNode   = self()
-      val parentNode = parent(0)
-      if (parentNode == null) null
-      else Inference.isLhs(selfNode, parentNode.nn)
-    } catch {
-      case _: IndexOutOfBoundsException => null // stack empty during initial transform
-    }
+  /** Alternative is_lhs() that works within .optimize() by reading from the live walker stack.
+    *
+    * terser index.js:504-509 — `const self = this.stack[this.stack.length - 1]; const parent = this.stack[this.stack.length - 2]`: reads live walker ancestry (Compressor IS the walker in terser).
+    */
+  def isLhs(): AstNode | Null = {
+    val selfNode = liveSelf()
+    if (selfNode == null) return null // @nowarn — no live node (outside a pass)
+    val parentNode = liveParent(selfNode.nn, 0)
+    if (parentNode == null) null
+    else Inference.isLhs(selfNode.nn, parentNode.nn)
+  }
 
   /** Lift sequences from a unary expression: !(a, b) → (a, !b) */
   private def liftSequencesUnary(self: AstUnary): AstNode = {
@@ -5370,18 +5398,18 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     v match {
       case lambda: AstLambda =>
         // Lambda is safe unless it contains `this` and parent is not `new`
+        // terser index.js:3523 — `compressor.parent() instanceof AST_New`: reads live walker ancestry.
         if (!containsThis(lambda)) true
         else {
-          val par =
-            try parent(0)
-            catch { case _: IndexOutOfBoundsException => null }
+          val anchor = liveSelf()
+          val par    = if (anchor != null) liveParent(anchor.nn, 0) else null
           par != null && par.nn.isInstanceOf[AstNew]
         }
       case _: AstClass =>
         // Class is always unsafe unless parent is `new`
-        val par =
-          try parent(0)
-          catch { case _: IndexOutOfBoundsException => null }
+        // terser index.js:3523 — `compressor.parent() instanceof AST_New`: reads live walker ancestry.
+        val anchor = liveSelf()
+        val par    = if (anchor != null) liveParent(anchor.nn, 0) else null
         par != null && par.nn.isInstanceOf[AstNew]
       case _ => true
     }
