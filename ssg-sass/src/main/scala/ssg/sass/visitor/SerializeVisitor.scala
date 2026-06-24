@@ -113,8 +113,8 @@ final class SerializeVisitor(
   // dart-sass `_isInvisible` (serialize.dart:1822-1825): in inspect mode,
   // nothing is invisible. Otherwise delegate to node.isInvisible with the
   // appropriate hiding type (comments hidden in compressed mode).
-  private def isNodeInvisible(node: CssNode): Boolean = {
-    if (inspect) return false
+  private def isNodeInvisible(node: CssNode): Boolean = boundary {
+    if (inspect) break(false)
     node match {
       case _:    CssDeclaration => false
       case _:    CssImport      => false
@@ -175,10 +175,10 @@ final class SerializeVisitor(
   }
 
   /** Returns true if any code point in `s` is outside the ASCII range. */
-  private def containsNonAscii(s: String): Boolean = {
+  private def containsNonAscii(s: String): Boolean = boundary {
     var i = 0
     while (i < s.length) {
-      if (s.charAt(i) > 0x7f) return true
+      if (s.charAt(i) > 0x7f) break(true)
       i += 1
     }
     false
@@ -238,15 +238,15 @@ final class SerializeVisitor(
     *
     * Port of dart-sass `_isTrailingComment` (serialize.dart:1733-1761).
     */
-  private def isTrailingComment(node: CssNode, previous: CssNode): Boolean = {
+  private def isTrailingComment(node: CssNode, previous: CssNode): Boolean = boundary {
     // Short-circuit in compressed mode to avoid expensive span shenanigans
     // (shespanigans?), since we're compressing all whitespace anyway.
-    if (isCompressed) return false
-    if (!node.isInstanceOf[CssComment]) return false
+    if (isCompressed) break(false)
+    if (!node.isInstanceOf[CssComment]) break(false)
     val nodeSpan = node.span
     val prevSpan = previous.span
-    if (nodeSpan == null || prevSpan == null) return false
-    if (nodeSpan.file.url != prevSpan.file.url) return false
+    if (nodeSpan == null || prevSpan == null) break(false)
+    if (nodeSpan.file.url != prevSpan.file.url) break(false)
 
     if (!prevSpan.contains(nodeSpan)) {
       nodeSpan.start.line == prevSpan.end.line
@@ -259,7 +259,7 @@ final class SerializeVisitor(
 
       // Imports can cause a node to be "contained" by another node when they are
       // actually the same node twice in a row.
-      if (searchFrom < 0) return false
+      if (searchFrom < 0) break(false)
 
       val endOffset = {
         val idx = prevSpan.text.lastIndexOf('{', searchFrom)
@@ -1048,13 +1048,13 @@ final class SerializeVisitor(
     codeUnit: Int,
     string:   String,
     i:        Int
-  ): Option[Int] = {
-    if (isCompressed) return scala.None
+  ): Option[Int] = boundary {
+    if (isCompressed) break(scala.None)
 
     // BMP Private Use Area: U+E000-U+F8FF
     if (codeUnit >= 0xe000 && codeUnit <= 0xf8ff) {
       writeEscape(sb, codeUnit, string, i)
-      return Some(i)
+      break(Some(i))
     }
 
     // High surrogate for Supplementary Private Use Areas:
@@ -1063,7 +1063,7 @@ final class SerializeVisitor(
       val low      = string.charAt(i + 1).toInt
       val combined = ((codeUnit - 0xd800) << 10) + (low - 0xdc00) + 0x10000
       writeEscape(sb, combined, string, i + 1)
-      return Some(i + 1)
+      break(Some(i + 1))
     }
 
     scala.None
@@ -1098,7 +1098,7 @@ final class SerializeVisitor(
   // A single-element comma list is rendered as `(x,)`. Bracketed lists wrap
   // in `[...]`. Maps render as `(k1: v1, k2: v2)`.
   // ---------------------------------------------------------------------------
-  private def formatList(l: SassList): String = {
+  private def formatList(l: SassList): String = boundary[String] {
     // Port of dart-sass `_writeList` in lib/src/visitor/serialize.dart.
     //
     // Handles:
@@ -1111,12 +1111,12 @@ final class SerializeVisitor(
     //   - parentheses around nested sub-lists whose separator would be
     //     ambiguous with the outer separator (see elementNeedsParens)
     if (l.hasBrackets) {
-      if (l.asList.isEmpty) return "[]"
+      if (l.asList.isEmpty) break("[]")
     } else if (l.asList.isEmpty) {
       if (!inspect) {
         throw new SassScriptException("() isn't a valid CSS value.")
       }
-      return "()"
+      break("()")
     }
 
     val singleton =
@@ -1220,15 +1220,15 @@ final class SerializeVisitor(
     * `visitCalculation` + `_writeCalculationValue` + `_writeCalculationUnits`. Complex units (multi-numerator or any denominator) use the same calc wrapping so the output is a valid first-class CSS
     * calc() expression.
     */
-  private def formatSassNumber(n: SassNumber): String = {
+  private def formatSassNumber(n: SassNumber): String = boundary[String] {
     // dart-sass serialize.dart:1108-1112 — slash-separated numbers emit
     // `before/after` recursively rather than the computed numeric value.
     if (n.asSlash.isDefined) {
       val (before, after) = n.asSlash.get
-      return s"${formatSassNumber(before)}/${formatSassNumber(after)}"
+      break(s"${formatSassNumber(before)}/${formatSassNumber(after)}")
     }
-    if (!n.value.isFinite) return formatNonFiniteNumber(n)
-    if (n.hasComplexUnits) return formatComplexUnitNumber(n)
+    if (!n.value.isFinite) break(formatNonFiniteNumber(n))
+    if (n.hasComplexUnits) break(formatComplexUnitNumber(n))
     val sb = new StringBuilder()
     writeNumberTo(sb, n.value)
     if (n.numeratorUnits.nonEmpty) sb.append(n.numeratorUnits.head)
@@ -1293,7 +1293,7 @@ final class SerializeVisitor(
     * Ported from dart-sass `_writeNumber` / `_removeExponent` / `_writeRounded` in lib/src/visitor/serialize.dart. In compressed mode, strips the leading `0` from values like `0.5` -> `.5` (and
     * `-0.5` -> `-.5`). Emits integers without a trailing `.0`. Suppresses the minus sign when a negative value rounds to exactly zero.
     */
-  private[visitor] def writeNumberTo(sb: StringBuilder, number: Double): Unit = {
+  private[visitor] def writeNumberTo(sb: StringBuilder, number: Double): Unit = boundary {
     // Clamp doubles that are fuzzy-equal to an integer to their integer value.
     // In inspect mode only clamp on exact equality so full precision is shown.
     //
@@ -1306,7 +1306,7 @@ final class SerializeVisitor(
       val rounded = math.round(number)
       if (NumberUtil.fuzzyEquals(number, rounded.toDouble) && (!inspect || number == rounded.toDouble)) {
         sb.append(SerializeVisitor.removeExponent(rounded.toString))
-        return
+        break(())
       }
     }
 
@@ -1314,7 +1314,7 @@ final class SerializeVisitor(
 
     if (inspect) {
       sb.append(text)
-      return
+      break(())
     }
 
     // Any double that's less than `SassNumber.precision + 2` characters long
@@ -1324,7 +1324,7 @@ final class SerializeVisitor(
     if (canWriteDirectly) {
       if (isCompressed && text.charAt(0) == '0') text = text.substring(1)
       sb.append(text)
-      return
+      break(())
     }
 
     writeRounded(sb, text)
@@ -1332,12 +1332,12 @@ final class SerializeVisitor(
 
   /** Rounds `text` (a number written without exponent notation) to [[SassNumber.precision]] digits after the decimal point and writes the result to `sb`. Direct port of dart-sass `_writeRounded`.
     */
-  private def writeRounded(sb: StringBuilder, text: String): Unit = {
+  private def writeRounded(sb: StringBuilder, text: String): Unit = boundary {
     // Dart serializes doubles with a trailing `.0` for integer values; since
     // our `doubleToString` strips that, guard here anyway.
     if (text.endsWith(".0")) {
       sb.append(text, 0, text.length - 2)
-      return
+      break(())
     }
 
     val digits      = new Array[Int](text.length + 1)
@@ -1361,14 +1361,14 @@ final class SerializeVisitor(
     }
     if (!sawDot) {
       sb.append(text)
-      return
+      break(())
     }
     val firstFractionalDigit = digitsIndex
 
     val indexAfterPrecision = textIndex + SassNumber.precision
     if (indexAfterPrecision >= text.length) {
       sb.append(text)
-      return
+      break(())
     }
 
     while (textIndex < indexAfterPrecision) {
@@ -1379,7 +1379,11 @@ final class SerializeVisitor(
 
     // Round up if needed.
     if (text.charAt(textIndex) - '0' >= 5) {
-      boundary {
+      // H2: explicitly type inner boundary as [Unit] to prevent routing
+      // ambiguity with the outer method boundary (both are Unit, but the
+      // explicit annotation makes the target unambiguous for readers and
+      // the compiler).
+      boundary[Unit] {
         while (true) {
           digits(digitsIndex - 1) += 1
           if (digits(digitsIndex - 1) != 10) break(())
@@ -1400,7 +1404,7 @@ final class SerializeVisitor(
     // If rounded to exactly zero, emit a single `0` (no minus sign).
     if (digitsIndex == 2 && digits(0) == 0 && digits(1) == 0) {
       sb.append('0')
-      return
+      break(())
     }
 
     if (negative) sb.append('-')
@@ -1475,13 +1479,13 @@ final class SerializeVisitor(
   // its single space; `>`, `+`, and `~` have no surrounding whitespace, and
   // complex selectors are joined with a bare `,`.
   // ---------------------------------------------------------------------------
-  private def formatSelectorList(list: SelectorList): String = {
+  private def formatSelectorList(list: SelectorList): String = boundary[String] {
     val sb = new StringBuilder()
     // dart-sass visitSelectorList (serialize.dart:1603-1606): in inspect mode,
     // all complex selectors are included (even invisible ones like placeholders).
     // In normal mode, invisible selectors are filtered out.
     val complexes = if (inspect) list.components else list.components.filterNot(_.isInvisible)
-    if (complexes.isEmpty) return ""
+    if (complexes.isEmpty) break("")
     writeSelectorListTo(sb, complexes)
     sb.toString()
   }
@@ -1687,10 +1691,10 @@ final class SerializeVisitor(
     buffer.append(placeholder.name)
   }
 
-  override def visitPseudoSelector(pseudo: PseudoSelector): Unit = {
+  override def visitPseudoSelector(pseudo: PseudoSelector): Unit = boundary {
     if (pseudo.selector.isDefined) {
       val sel = pseudo.selector.get
-      if (pseudo.name == "not" && sel.isInvisible) return
+      if (pseudo.name == "not" && sel.isInvisible) break(())
     }
     buffer.append(if (pseudo.isSyntacticClass) ":" else "::")
     buffer.append(pseudo.name)
@@ -1820,12 +1824,12 @@ final class SerializeVisitor(
     *   - Returns `-1` if [text] has newlines but no indented non-empty line.
     *   - Otherwise returns the smallest leading-whitespace count.
     */
-  private def minimumIndentation(text: String): Int = {
+  private def minimumIndentation(text: String): Int = boundary {
     var i   = 0
     val len = text.length
     // Skip first line.
     while (i < len && text.charAt(i) != '\n') i += 1
-    if (i >= len) return Int.MaxValue // No newlines.
+    if (i >= len) break(Int.MaxValue) // No newlines.
     var min   = Int.MaxValue
     var saw   = false
     var atEol = true
@@ -1835,8 +1839,8 @@ final class SerializeVisitor(
         i += 1 // skip the '\n'
         if (i >= len) {
           // Trailing newline.
-          if (!saw) return -1
-          return if (min == Int.MaxValue) -1 else min
+          if (!saw) break(-1)
+          break(if (min == Int.MaxValue) -1 else min)
         }
         var col = 0
         while (i < len && (text.charAt(i) == ' ' || text.charAt(i) == '\t')) {
@@ -1879,7 +1883,7 @@ final class SerializeVisitor(
   }
 
   /** Writes [text] to the buffer, replacing [minIndent] leading whitespace on each non-first line with the current indentation. Compresses trailing empty lines into a single trailing space. */
-  private def writeWithIndent(text: String, minIndent: Int): Unit = {
+  private def writeWithIndent(text: String, minIndent: Int): Unit = boundary {
     var i   = 0
     val len = text.length
     // Write the first line as-is.
@@ -1898,7 +1902,7 @@ final class SerializeVisitor(
             if (i >= len) {
               // Trailing whitespace: emit a single space and stop.
               buffer.append(' ')
-              return
+              break(())
             }
             val ch = text.charAt(i)
             if (ch == ' ' || ch == '\t') {
@@ -1926,7 +1930,7 @@ final class SerializeVisitor(
             buffer.append(text.charAt(j))
             j += 1
           }
-          if (j >= len) return
+          if (j >= len) break(())
           i = j + 1 // skip the '\n'
         }
       } else {
@@ -1935,13 +1939,13 @@ final class SerializeVisitor(
     }
   }
 
-  override def visitCssComment(node: CssComment): Unit = {
+  override def visitCssComment(node: CssComment): Unit = boundary {
     // Preserve comments that start with `/*!`.
     // In compressed mode, only preserve /*! comments
-    if (isCompressed && !node.isPreserved) return
+    if (isCompressed && !node.isPreserved) break(())
     // dart-sass serialize.dart:200-202: strip sourceMappingURL and sourceURL comments (case-sensitive)
     // Ignore sourceMappingURL and sourceURL comments.
-    if (node.text.startsWith("/*# sourceMappingURL=") || node.text.startsWith("/*# sourceURL=")) return
+    if (node.text.startsWith("/*# sourceMappingURL=") || node.text.startsWith("/*# sourceURL=")) break(())
 
     _for(node) {
       // dart-sass serialize.dart:204-217: multi-line comment reindentation.
@@ -2073,10 +2077,10 @@ final class SerializeVisitor(
   /// Port of dart-sass `_writeImportUrl` (serialize.dart:277-294).
   /// In compressed mode, strips the `url()` wrapper for terser output and
   /// wraps unquoted URLs in quotes.
-  private def writeImportUrl(url: String): Unit = {
+  private def writeImportUrl(url: String): Unit = boundary {
     if (!isCompressed || url.isEmpty || url.charAt(0) != 'u') {
       buffer.append(url)
-      return
+      break(())
     }
 
     // If this is url(...), remove the surrounding function. This is terser and
@@ -2165,14 +2169,14 @@ object SerializeVisitor {
     *
     * Port of dart-sass `_removeExponent` in serialize.dart.
     */
-  def removeExponent(text: String): String = {
+  def removeExponent(text: String): String = boundary[String] {
     var eIdx = -1
     var i    = 0
     while (eIdx < 0 && i < text.length) {
       if (text.charAt(i) == 'e') eIdx = i
       i += 1
     }
-    if (eIdx < 0) return text
+    if (eIdx < 0) break(text)
 
     val negative = text.charAt(0) == '-'
 
