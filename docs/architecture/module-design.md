@@ -130,12 +130,67 @@ via platform-specific FFI:
 | Scala.js | tree-sitter WASM bindings |
 | Scala Native | Direct C interop via `ts_wrappers.c` |
 
+## ssg-katex (Math Typesetting)
+
+**Source**: [KaTeX](https://github.com/KaTeX/KaTeX) 0.16.45
+**Language**: TypeScript
+**License**: MIT
+
+KaTeX is a fast math typesetting library. Components:
+
+| Component | SSG Package | Notes |
+|-----------|-------------|-------|
+| Parser | `ssg.katex` | LaTeX math parsing |
+| Renderer | `ssg.katex` | HTML/MathML output |
+
+## ssg-mermaid (Diagramming)
+
+**Source**: [Mermaid](https://github.com/mermaid-js/mermaid) 11.0.0
+**Language**: TypeScript
+**License**: MIT
+
+Mermaid is a diagramming engine supporting 31 diagram types. Components:
+
+| Component | SSG Package | Notes |
+|-----------|-------------|-------|
+| Parsers | `ssg.mermaid` | Per-diagram-type parsers |
+| Renderers | `ssg.mermaid` | SVG rendering for each diagram type |
+| Databases | `ssg.mermaid` | Per-diagram AST/data models |
+
+## ssg-graphviz (Graphviz DOT Renderer)
+
+Original SSG implementation (not a port of an external library). Implements DOT
+language parsing and rendering with 4 layout engines.
+
+| Component | SSG Package | Notes |
+|-----------|-------------|-------|
+| DOT parser | `ssg.graphviz` | DOT language parsing |
+| Layout engines | `ssg.graphviz` | 4 layout engines |
+| SVG output | `ssg.graphviz` | Graph rendering to SVG |
+
 ## ssg-commons (Shared Utilities)
 
 Cross-platform utilities shared across modules. Contains common abstractions
 that don't belong to any single port.
 
+## ssg-data-commons (Shared Data Abstractions)
+
+Cross-platform data view abstractions shared across modules. Depends on
+`ssg-commons` and the hearth/scala-java-time libraries.
+
+## ssg-graphs-commons (Shared Graph Infrastructure)
+
+Shared graph layout algorithms (dagre, spring, circular, radial) and SVG
+infrastructure extracted from ssg-mermaid. Used by both `ssg-mermaid` and
+`ssg-graphviz`.
+
+## ssg-site (Site Pipeline)
+
+SSG-native glue module that wires the individual library modules into a site
+generation pipeline. Depends on `ssg-commons`, `ssg-data-commons`, `ssg-js`,
+`ssg-liquid`, `ssg-md`, `ssg-minify`, and `ssg-sass`.
+
 ## ssg (Aggregator)
 
-Depends on all modules above. Provides the `TerserJsCompressorAdapter` that
-wires ssg-js into ssg-minify's `JsCompressor` SPI.
+Depends on all 13 library modules. Provides the `TerserJsCompressorAdapter`
+that wires ssg-js into ssg-minify's `JsCompressor` SPI.

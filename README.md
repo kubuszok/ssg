@@ -21,14 +21,16 @@ battle-tested libraries to idiomatic Scala 3.
 | `ssg-highlight` | [tree-sitter](https://github.com/tree-sitter/tree-sitter) | C/Rust | Syntax highlighting | 73 grammars |
 | `ssg-graphviz` | — | — | Graphviz DOT renderer (4 layout engines) | 99 tests |
 | `ssg-graphs-commons` | — | — | Shared graph layout + SVG infrastructure | — |
+| `ssg-data-commons` | — | — | Shared data view abstractions | — |
 | `ssg-commons` | — | — | Shared cross-platform utilities | — |
+| `ssg-site` | — | — | Site pipeline (SSG-native glue) | — |
 | `ssg` | — | — | Aggregator (depends on all above) | — |
 
 All completed modules pass tests on **JVM, Scala.js, and Scala Native**.
 
 ## Building
 
-Requires: JDK 21+, sbt 1.12+, Scala 3.8.3
+Requires: JDK 21+, sbt 1.12+, Scala 3.8.4
 
 ```bash
 # Compile all modules on default (JVM) platform

@@ -4,7 +4,7 @@
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Scala | 3.8.3 | Language version |
+| Scala | 3.8.4 | Language version |
 | sbt | 1.12.6 | Build tool |
 | sbt-projectmatrix | 0.11.0 | Cross-platform compilation |
 | sbt-scalajs | 1.20.2 | Scala.js compiler plugin |
