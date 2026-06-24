@@ -15,6 +15,12 @@
 | `com.vladsch.flexmark.util.collection` | `ssg.md.util.collection` |
 | `com.vladsch.flexmark.ext.*` | `ssg.md.ext.*` |
 
+### Class Renames
+
+| Original Class | SSG Class | Reason |
+|---------------|-----------|--------|
+| `c.v.f.ext.emoji.internal.EmojiReference.Emoji` (inner class) | `ssg.md.ext.emoji.internal.EmojiReference.EmojiData` | Avoids clash with the `ssg.md.ext.emoji.Emoji` AST node class |
+
 ## liqp → ssg.liquid
 
 | Original Package | SSG Package |

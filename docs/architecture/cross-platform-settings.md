@@ -5,12 +5,12 @@
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Scala | 3.8.4 | Language version |
-| sbt | 1.12.6 | Build tool |
-| sbt-projectmatrix | 0.11.0 | Cross-platform compilation |
-| sbt-scalajs | 1.20.2 | Scala.js compiler plugin |
-| sbt-scala-native | 0.5.10 | Scala Native compiler plugin |
-| sbt-scalafmt | 2.5.4 | Code formatting |
-| sbt-scalafix | 0.14.6 | Linting and refactoring |
+| sbt | 2.0.0 | Build tool |
+| sbt-kubuszok | 0.2.3 | Meta-plugin (bundles sbt-scalafmt, sbt-scoverage, sbt-scalajs, sbt-scala-native, sbt-commandmatrix, and more) |
+| sbt-projectmatrix | (merged into sbt 2.0) | Cross-platform compilation (no longer a separate plugin) |
+| sbt-scalajs | (bundled by sbt-kubuszok) | Scala.js compiler plugin |
+| sbt-scala-native | (bundled by sbt-kubuszok) | Scala Native compiler plugin |
+| sbt-scalafmt | (bundled by sbt-kubuszok) | Code formatting |
 | MUnit | 1.3.3 | Test framework |
 | MUnit ScalaCheck | 1.3.0 | Property-based testing |
 
