@@ -25,18 +25,16 @@ import ssg.js.output.OutputStream
 import ssg.js.scope.ScopeAnalysis
 
 /** Utility for building and running compression tests.
- *
- * Platform-specific timeout behavior is delegated to [[CompressRunner]]:
- * on JVM, compression runs inside a Future with a 5-second timeout guard
- * (ISS-031/032 hang protection); on JS and Native (single-threaded),
- * compression runs directly.
- */
+  *
+  * Platform-specific timeout behavior is delegated to [[CompressRunner]]: on JVM, compression runs inside a Future with a 5-second timeout guard (ISS-031/032 hang protection); on JS and Native
+  * (single-threaded), compression runs directly.
+  */
 object CompressTestHelper {
 
   /** CompressorOptions with ALL boolean flags set to false/off.
-   *
-   * This mirrors Terser's `false_by_default: true` mode used by the test runner. Each test then enables only the specific flags it needs.
-   */
+    *
+    * This mirrors Terser's `false_by_default: true` mode used by the test runner. Each test then enables only the specific flags it needs.
+    */
   val AllOff: CompressorOptions = CompressorOptions(
     arguments = false,
     arrows = false,
@@ -104,18 +102,18 @@ object CompressTestHelper {
   }
 
   /** Normalize a code string by parsing and re-printing.
-   *
-   * This matches Terser's test runner behavior of `make_code(as_toplevel(test.expect))` for `expect:` blocks -- the expected output is parsed and re-printed to get a canonical representation.
-   */
+    *
+    * This matches Terser's test runner behavior of `make_code(as_toplevel(test.expect))` for `expect:` blocks -- the expected output is parsed and re-printed to get a canonical representation.
+    */
   def normalize(code: String): String =
     OutputStream.printToString(parse(code))
 
   /** Compress the given code with the specified options (single-pass only).
-   *
-   * Steps: parse -> scope analysis -> compress -> scope analysis -> output. Returns the resulting code string.
-   *
-   * WARNING: May hang if input contains undeclared references (ISS-031/032). Use compressWithTimeout for safety.
-   */
+    *
+    * Steps: parse -> scope analysis -> compress -> scope analysis -> output. Returns the resulting code string.
+    *
+    * WARNING: May hang if input contains undeclared references (ISS-031/032). Use compressWithTimeout for safety.
+    */
   def compress(code: String, options: CompressorOptions): String = {
     val ast = parse(code)
     ScopeAnalysis.figureOutScope(ast)
@@ -126,11 +124,11 @@ object CompressTestHelper {
   }
 
   /** Compress with a timeout guard.
-   *
-   * Returns `Some(result)` if compression completes within the timeout, `None` if it times out (indicating ISS-031/032 hang).
-   *
-   * On JVM, uses Future/Await with a real timeout. On JS/Native (single-threaded), runs the compression directly (no timeout guard).
-   */
+    *
+    * Returns `Some(result)` if compression completes within the timeout, `None` if it times out (indicating ISS-031/032 hang).
+    *
+    * On JVM, uses Future/Await with a real timeout. On JS/Native (single-threaded), runs the compression directly (no timeout guard).
+    */
   def compressWithTimeout(
     code:    String,
     options: CompressorOptions
@@ -138,11 +136,11 @@ object CompressTestHelper {
     CompressRunner.run(() => compress(code, options))
 
   /** Compress and compare: parse input, compress with options, compare to expected.
-   *
-   * Also parses the expected string to normalize it (matching Terser's test runner which uses `make_code(as_toplevel(test.expect))` for `expect:` blocks).
-   *
-   * Returns `Some((actual, expectedNormalized))` if compression completes, `None` if it times out.
-   */
+    *
+    * Also parses the expected string to normalize it (matching Terser's test runner which uses `make_code(as_toplevel(test.expect))` for `expect:` blocks).
+    *
+    * Returns `Some((actual, expectedNormalized))` if compression completes, `None` if it times out.
+    */
   def compressAndNormalize(
     input:    String,
     expected: String,
@@ -154,14 +152,14 @@ object CompressTestHelper {
     }
 
   /** Assert compression result matches expected, with timeout protection.
-   *
-   * @param input
-   *   JavaScript source to compress
-   * @param expected
-   *   expected output after compression
-   * @param options
-   *   compressor options (use AllOff as base, then .copy() to enable specific flags)
-   */
+    *
+    * @param input
+    *   JavaScript source to compress
+    * @param expected
+    *   expected output after compression
+    * @param options
+    *   compressor options (use AllOff as base, then .copy() to enable specific flags)
+    */
   def assertCompresses(
     input:    String,
     expected: String,
