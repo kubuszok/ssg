@@ -4641,6 +4641,16 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             kv.quote = str.quote
             kv.key = key
           case _ =>
+            // terser index.js:4011-4012 — `self.quote = self.key.quote` in the
+            // else (method/getter/setter) branch. Without this, keepQuoted in
+            // PropMangler sees an empty quote and mangles the lifted key (ISS-1327).
+            self match {
+              case cm: AstConciseMethod => cm.quote = str.quote
+              case og: AstObjectGetter  => og.quote = str.quote
+              case os: AstObjectSetter  => os.quote = str.quote
+              case cp: AstClassProperty => cp.quote = str.quote
+              case _ =>
+            }
             self.key = {
               val sym = new AstSymbolMethod
               sym.name = key
