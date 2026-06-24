@@ -63,19 +63,20 @@ abstract class Parser protected (
       scanner.readChar()
 
   /** Consumes spaces and tabs (never newlines). */
-  protected def spaces(): Unit =
+  protected def spaces(): Unit = boundary {
     while (!scanner.isDone) {
       val c = scanner.peekChar()
-      if (c < 0 || !CharCode.isSpaceOrTab(c)) return
+      if (c < 0 || !CharCode.isSpaceOrTab(c)) break(())
       scanner.readChar()
     }
+  }
 
   /** Consumes and ignores a comment if possible.
     *
     * Returns whether the comment was consumed.
     */
-  protected def scanComment(): Boolean = {
-    if (scanner.peekChar() != CharCode.$slash) return false
+  protected def scanComment(): Boolean = boundary {
+    if (scanner.peekChar() != CharCode.$slash) break(false)
     scanner.peekChar(1) match {
       case CharCode.`$slash` =>
         silentComment()
@@ -101,7 +102,7 @@ abstract class Parser protected (
     *
     * In dart-sass, `scanner.readChar()` throws at EOF, so an unterminated comment naturally produces "expected more input." Our `readChar()` returns -1 instead, so we check explicitly.
     */
-  protected def loudComment(): Unit = {
+  protected def loudComment(): Unit = boundary {
     scanner.expect("/*")
     while (true) {
       if (scanner.isDone) scanner.error("expected more input.")
@@ -115,7 +116,7 @@ abstract class Parser protected (
           if (scanner.isDone) scanner.error("expected more input.")
           next = scanner.readChar()
         }
-        if (next == CharCode.$slash) return
+        if (next == CharCode.$slash) break(())
       }
     }
   }
@@ -135,7 +136,7 @@ abstract class Parser protected (
     *
     * If [normalize] is true, converts underscores into hyphens. If [unit] is true, doesn't parse a `-` followed by a digit.
     */
-  protected def identifier(normalize: Boolean = false, unit: Boolean = false): String = {
+  protected def identifier(normalize: Boolean = false, unit: Boolean = false): String = boundary {
     val buf = new StringBuilder()
 
     if (scanner.scanChar(CharCode.$minus)) {
@@ -143,7 +144,7 @@ abstract class Parser protected (
       if (scanner.scanChar(CharCode.$minus)) {
         buf.append('-')
         identifierBody(buf, normalize, unit)
-        return buf.toString()
+        break(buf.toString())
       }
     }
 
@@ -248,14 +249,14 @@ abstract class Parser protected (
   }
 
   /** Returns whether the scanner is looking at an identifier. */
-  protected def lookingAtIdentifier(forward: Int = 0): Boolean = {
+  protected def lookingAtIdentifier(forward: Int = 0): Boolean = boundary {
     val first = scanner.peekChar(forward)
-    if (first < 0) return false
-    if (CharCode.isNameStart(first) || first == CharCode.$backslash) return true
-    if (first != CharCode.$minus) return false
+    if (first < 0) break(false)
+    if (CharCode.isNameStart(first) || first == CharCode.$backslash) break(true)
+    if (first != CharCode.$minus) break(false)
 
     val second = scanner.peekChar(forward + 1)
-    if (second < 0) return false
+    if (second < 0) break(false)
     CharCode.isNameStart(second) || second == CharCode.$backslash || second == CharCode.$minus
   }
 
@@ -269,27 +270,27 @@ abstract class Parser protected (
     *
     * This follows [[https://drafts.csswg.org/css-syntax-3/#starts-with-a-number the CSS algorithm]].
     */
-  protected def lookingAtNumber(): Boolean = {
+  protected def lookingAtNumber(): Boolean = boundary {
     val first = scanner.peekChar()
-    if (first >= 0 && CharCode.isDigit(first)) return true
+    if (first >= 0 && CharCode.isDigit(first)) break(true)
     if (first == CharCode.$dot) {
       val second = scanner.peekChar(1)
-      return second >= 0 && CharCode.isDigit(second)
+      break(second >= 0 && CharCode.isDigit(second))
     }
     if (first == CharCode.$plus || first == CharCode.$minus) {
       val second = scanner.peekChar(1)
-      if (second >= 0 && CharCode.isDigit(second)) return true
+      if (second >= 0 && CharCode.isDigit(second)) break(true)
       if (second == CharCode.$dot) {
         val third = scanner.peekChar(2)
-        return third >= 0 && CharCode.isDigit(third)
+        break(third >= 0 && CharCode.isDigit(third))
       }
     }
     false
   }
 
   /** Consumes an identifier if its name exactly matches [text]. */
-  protected def scanIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
-    if (!lookingAtIdentifier()) return false
+  protected def scanIdentifier(text: String, caseSensitive: Boolean = false): Boolean = boundary {
+    if (!lookingAtIdentifier()) break(false)
     val start = scanner.state
     if (_consumeIdentifier(text, caseSensitive) && !lookingAtIdentifierBody()) {
       true
@@ -303,8 +304,8 @@ abstract class Parser protected (
     *
     * This doesn't move the scan pointer forward.
     */
-  protected def matchesIdentifier(text: String, caseSensitive: Boolean = false): Boolean = {
-    if (!lookingAtIdentifier()) return false
+  protected def matchesIdentifier(text: String, caseSensitive: Boolean = false): Boolean = boundary {
+    if (!lookingAtIdentifier()) break(false)
     val start  = scanner.state
     val result = _consumeIdentifier(text, caseSensitive) && !lookingAtIdentifierBody()
     scanner.state = start
@@ -315,10 +316,10 @@ abstract class Parser protected (
     *
     * Returns true if the full [text] is consumed and false otherwise, but doesn't reset the scan pointer.
     */
-  private def _consumeIdentifier(text: String, caseSensitive: Boolean): Boolean = {
+  private def _consumeIdentifier(text: String, caseSensitive: Boolean): Boolean = boundary {
     var i = 0
     while (i < text.length) {
-      if (!scanIdentChar(text.charAt(i).toInt, caseSensitive = caseSensitive)) return false
+      if (!scanIdentChar(text.charAt(i).toInt, caseSensitive = caseSensitive)) break(false)
       i += 1
     }
     true
@@ -400,9 +401,9 @@ abstract class Parser protected (
   // Consumes the next character if it matches [condition].
   //
   // Returns whether or not the character was consumed.
-  protected def scanCharIf(condition: Int => Boolean): Boolean = {
+  protected def scanCharIf(condition: Int => Boolean): Boolean = boundary {
     val next = scanner.peekChar()
-    if (!condition(next)) return false
+    if (!condition(next)) break(false)
     scanner.readChar()
     true
   }
@@ -436,8 +437,8 @@ abstract class Parser protected (
     *
     * Matching will be case-insensitive unless [caseSensitive] is true.
     */
-  protected def expectIdentChar(letter: Int, caseSensitive: Boolean = false): Unit = {
-    if (scanIdentChar(letter, caseSensitive = caseSensitive)) return
+  protected def expectIdentChar(letter: Int, caseSensitive: Boolean = false): Unit = boundary {
+    if (scanIdentChar(letter, caseSensitive = caseSensitive)) break(())
     scanner.error(s"""Expected "${letter.toChar}".""", scanner.position, 0)
   }
 
@@ -671,8 +672,8 @@ abstract class Parser protected (
     }
 
   /** Moves span to [[_firstNewlineBefore]] if necessary. */
-  private def _adjustExceptionSpan(span: FileSpan): FileSpan = {
-    if (span.length > 0) return span
+  private def _adjustExceptionSpan(span: FileSpan): FileSpan = boundary {
+    if (span.length > 0) break(span)
     val start = _firstNewlineBefore(span.start)
     if (start == span.start) span else start.pointSpan
   }
@@ -683,15 +684,17 @@ abstract class Parser protected (
     *
     * This helps avoid missing token errors pointing at the next closing bracket rather than the line where the problem actually occurred.
     */
-  private def _firstNewlineBefore(location: FileLocation): FileLocation = {
+  private def _firstNewlineBefore(location: FileLocation): FileLocation = boundary {
     val text  = location.file.getText(0, location.offset)
     var index = location.offset - 1
     var lastNewline: Int = -1
     while (index >= 0) {
       val codeUnit = text.charAt(index).toInt
       if (!CharCode.isWhitespace(codeUnit)) {
-        return if (lastNewline < 0) location
-        else location.file.location(lastNewline)
+        break(
+          if (lastNewline < 0) location
+          else location.file.location(lastNewline)
+        )
       }
       if (CharCode.isNewline(codeUnit)) lastNewline = index
       index -= 1
@@ -728,11 +731,11 @@ object Parser {
     }
 
   /** Returns whether [text] starts like a variable declaration. */
-  def isVariableDeclarationLike(text: String): Boolean = {
+  def isVariableDeclarationLike(text: String): Boolean = boundary {
     val p = new StaticParser(text)
     try {
-      if (!p.scanner.scanChar(CharCode.$dollar)) return false
-      if (!p.lookingAtIdentifier()) return false
+      if (!p.scanner.scanChar(CharCode.$dollar)) break(false)
+      if (!p.lookingAtIdentifier()) break(false)
       p.identifier()
       p.whitespace(consumeNewlines = true)
       p.scanner.scanChar(CharCode.$colon)
