@@ -314,44 +314,47 @@ object BuiltInCallable {
   }
 
   private def _fallbackParseSignature(name: String, signature: String): ParameterList = {
-    val trimmed = signature.trim
-    if (trimmed.isEmpty) return ParameterList.empty(util.FileSpan.synthetic("<built-in>"))
-    val parts = scala.collection.mutable.ListBuffer.empty[String]
-    val buf   = new StringBuilder()
-    var depth = 0
-    var i     = 0
-    while (i < trimmed.length) {
-      val c = trimmed.charAt(i)
-      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
-      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
-      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
-      else buf.append(c)
-      i += 1
-    }
-    if (buf.nonEmpty) parts += buf.toString().trim
-    val partList  = parts.toList
-    val hasRest   = partList.lastOption.exists(_.endsWith("..."))
-    val effective = if (hasRest) partList.init else partList
-    val params    = effective.flatMap { raw =>
-      val nameRaw = raw.indexOf(':') match {
-        case -1  => raw
-        case idx => raw.substring(0, idx).trim
+    import scala.util.boundary, boundary.break
+    boundary[ParameterList] {
+      val trimmed = signature.trim
+      if (trimmed.isEmpty) break(ParameterList.empty(util.FileSpan.synthetic("<built-in>")))
+      val parts = scala.collection.mutable.ListBuffer.empty[String]
+      val buf   = new StringBuilder()
+      var depth = 0
+      var i     = 0
+      while (i < trimmed.length) {
+        val c = trimmed.charAt(i)
+        if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+        else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+        else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+        else buf.append(c)
+        i += 1
       }
-      if (nameRaw.startsWith("$")) {
-        val pname = nameRaw.substring(1).replace('_', '-')
-        val defaultValue: Nullable[ast.sass.Expression] =
-          if (raw.indexOf(':') >= 0) Nullable(ast.sass.StringExpression.plain("0", util.FileSpan.synthetic("<default>")))
-          else Nullable.empty
-        Some(new ast.sass.Parameter(pname, util.FileSpan.synthetic("<built-in>"), defaultValue))
-      } else None
-    }
-    val restParam: Nullable[String] =
-      if (hasRest) partList.last.replace("...", "").trim match {
-        case s if s.startsWith("$") => Nullable(s.substring(1).replace('_', '-'))
-        case _                      => Nullable.empty
+      if (buf.nonEmpty) parts += buf.toString().trim
+      val partList  = parts.toList
+      val hasRest   = partList.lastOption.exists(_.endsWith("..."))
+      val effective = if (hasRest) partList.init else partList
+      val params    = effective.flatMap { raw =>
+        val nameRaw = raw.indexOf(':') match {
+          case -1  => raw
+          case idx => raw.substring(0, idx).trim
+        }
+        if (nameRaw.startsWith("$")) {
+          val pname = nameRaw.substring(1).replace('_', '-')
+          val defaultValue: Nullable[ast.sass.Expression] =
+            if (raw.indexOf(':') >= 0) Nullable(ast.sass.StringExpression.plain("0", util.FileSpan.synthetic("<default>")))
+            else Nullable.empty
+          Some(new ast.sass.Parameter(pname, util.FileSpan.synthetic("<built-in>"), defaultValue))
+        } else None
       }
-      else Nullable.empty
-    new ParameterList(params, util.FileSpan.synthetic("<built-in>"), restParam)
+      val restParam: Nullable[String] =
+        if (hasRest) partList.last.replace("...", "").trim match {
+          case s if s.startsWith("$") => Nullable(s.substring(1).replace('_', '-'))
+          case _                      => Nullable.empty
+        }
+        else Nullable.empty
+      new ParameterList(params, util.FileSpan.synthetic("<built-in>"), restParam)
+    }
   }
 }
 
@@ -370,33 +373,36 @@ object BuiltInOverloadDispatch {
   )
 
   private def parseSignature(signature: String): Overload = {
-    val trimmed = signature.trim
-    if (trimmed.isEmpty) return Overload(Nil, hasRest = false, (_, _) => throw new IllegalStateException("empty overload invoked"))
-    val parts = scala.collection.mutable.ListBuffer.empty[String]
-    val buf   = new StringBuilder()
-    var depth = 0
-    var i     = 0
-    while (i < trimmed.length) {
-      val c = trimmed.charAt(i)
-      if (c == '(' || c == '[') { depth += 1; buf.append(c) }
-      else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
-      else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
-      else buf.append(c)
-      i += 1
-    }
-    if (buf.nonEmpty) parts += buf.toString().trim
-    val partList  = parts.toList
-    val hasRest   = partList.lastOption.exists(_.endsWith("..."))
-    val effective =
-      (if (hasRest) partList.init else partList).flatMap { raw =>
-        val withoutDefault = raw.indexOf(':') match {
-          case -1  => raw
-          case idx => raw.substring(0, idx).trim
-        }
-        if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
-        else None
+    import scala.util.boundary, boundary.break
+    boundary[Overload] {
+      val trimmed = signature.trim
+      if (trimmed.isEmpty) break(Overload(Nil, hasRest = false, (_, _) => throw new IllegalStateException("empty overload invoked")))
+      val parts = scala.collection.mutable.ListBuffer.empty[String]
+      val buf   = new StringBuilder()
+      var depth = 0
+      var i     = 0
+      while (i < trimmed.length) {
+        val c = trimmed.charAt(i)
+        if (c == '(' || c == '[') { depth += 1; buf.append(c) }
+        else if (c == ')' || c == ']') { depth -= 1; buf.append(c) }
+        else if (c == ',' && depth == 0) { parts += buf.toString().trim; buf.setLength(0) }
+        else buf.append(c)
+        i += 1
       }
-    Overload(effective, hasRest, (_, _) => throw new IllegalStateException("overload has no callback attached"))
+      if (buf.nonEmpty) parts += buf.toString().trim
+      val partList  = parts.toList
+      val hasRest   = partList.lastOption.exists(_.endsWith("..."))
+      val effective =
+        (if (hasRest) partList.init else partList).flatMap { raw =>
+          val withoutDefault = raw.indexOf(':') match {
+            case -1  => raw
+            case idx => raw.substring(0, idx).trim
+          }
+          if (withoutDefault.startsWith("$")) Some(withoutDefault.substring(1).replace('_', '-'))
+          else None
+        }
+      Overload(effective, hasRest, (_, _) => throw new IllegalStateException("overload has no callback attached"))
+    }
   }
 
   /** Given [raw] overload signatures paired with callbacks, select the overload for a call site with [positional] positional arguments and [named] named keys. Matches dart-sass semantics: the chosen
