@@ -699,7 +699,7 @@ final class CompressObjectSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2554_5
   // =========================================================================
-  test("issue_2554_5".fail) {
+  test("issue_2554_5") {
     assertCompresses(
       input = """new class {
             ["constructor"]() {

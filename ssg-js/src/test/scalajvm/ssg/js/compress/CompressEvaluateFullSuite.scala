@@ -1196,7 +1196,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1760_2
   // =========================================================================
-  test("issue_1760_2".fail) {
+  test("issue_1760_2") {
     assertCompresses(
       input = """!function(a) {
             try {
@@ -1224,7 +1224,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // delete_expr_1
   // =========================================================================
-  test("delete_expr_1".fail) {
+  test("delete_expr_1") {
     assertCompresses(
       input = """console.log(delete undefined);
         console.log(delete void 0);
@@ -1248,7 +1248,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // delete_expr_2
   // =========================================================================
-  test("delete_expr_2".fail) {
+  test("delete_expr_2") {
     assertCompresses(
       input = """console.log(delete undefined);
         console.log(delete void 0);
