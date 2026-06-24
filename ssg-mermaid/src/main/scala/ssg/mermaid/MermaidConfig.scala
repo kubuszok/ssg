@@ -157,7 +157,8 @@ final case class FlowchartConfig(
   padding:         Int = 15,
   defaultRenderer: String = "dagre-wrapper",
   wrappingWidth:   Int = 200
-)
+) derives AsDataView,
+      FromDataView
 
 /** Sequence diagram-specific configuration.
   *
@@ -208,7 +209,8 @@ final case class SequenceConfig(
   useMaxWidth:         Boolean = true,
   rightAngles:         Boolean = false,
   wrap:                Boolean = false
-)
+) derives AsDataView,
+      FromDataView
 
 /** Gantt chart-specific configuration.
   *
@@ -256,7 +258,8 @@ final case class GanttConfig(
   topAxis:              Boolean = false,
   displayMode:          String = "",
   weekday:              String = "sunday"
-)
+) derives AsDataView,
+      FromDataView
 
 /** Pie chart-specific configuration.
   *
@@ -271,7 +274,8 @@ final case class PieConfig(
   textPosition: Double = 0.75,
   useMaxWidth:  Boolean = true,
   useWidth:     Int = 0
-)
+) derives AsDataView,
+      FromDataView
 
 /** ER diagram-specific configuration.
   *
@@ -304,7 +308,8 @@ final case class ErConfig(
   fill:            String = "honeydew",
   fontSize:        Int = 12,
   useMaxWidth:     Boolean = true
-)
+) derives AsDataView,
+      FromDataView
 
 /** Git graph-specific configuration.
   *
@@ -334,7 +339,8 @@ final case class GitGraphConfig(
   showCommitLabel:   Boolean = true,
   showBranches:      Boolean = true,
   rotateCommitLabel: Boolean = true
-)
+) derives AsDataView,
+      FromDataView
 
 /** Mindmap-specific configuration.
   *
@@ -349,7 +355,8 @@ final case class MindmapConfig(
   padding:      Int = 10,
   maxNodeWidth: Int = 200,
   useMaxWidth:  Boolean = true
-)
+) derives AsDataView,
+      FromDataView
 
 /** Timeline-specific configuration.
   *
@@ -388,7 +395,8 @@ final case class TimelineConfig(
   noteMargin:     Int = 10,
   messageMargin:  Int = 35,
   useMaxWidth:    Boolean = true
-)
+) derives AsDataView,
+      FromDataView
 
 object MermaidConfig {
 
