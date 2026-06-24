@@ -19,7 +19,7 @@
  *     and never mutates the caller's MinifyOptions.
  *   Idiom: Terser does NOT implement ssg.minify.JsCompressor. Integration
  *     with ssg-minify is via the separate ssg.TerserJsCompressorAdapter in
- *     the ssg/ aggregator module (which delegates to TerserJsCompressor /
+ *     the ssg-site module (which delegates to TerserJsCompressor /
  *     Terser.minifyToString). Terser itself is a standalone pure API.
  *   Idiom: structured error shape — minify.js itself throws (the `{ error }`
  *     envelope lives in lib/cli.js:227-249, which reads ex.filename/line/col).

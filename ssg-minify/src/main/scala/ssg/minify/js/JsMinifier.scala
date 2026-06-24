@@ -19,7 +19,7 @@
  *   Scope: Intentional stopgap — no mangling, DCE, constant folding,
  *     inlining, scope analysis, or source maps. Real minification is
  *     delegated via the JsCompressor SPI to ssg.js.TerserJsCompressor
- *     (wired by TerserJsCompressorAdapter in the ssg aggregator module).
+ *     (wired by TerserJsCompressorAdapter in the ssg-site module).
  *   Former gaps (all resolved):
  *     - ISS-031 (multi-pass compression loop): resolved — Compressor.compress()
  *       implements multi-pass with convergence detection (Compressor.scala:328-376).
