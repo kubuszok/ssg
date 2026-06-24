@@ -80,8 +80,12 @@ trait CompressorLike {
   /** Check if the current context expects a boolean result. */
   def inBooleanContext(): Boolean
 
-  /** Check if the current context is a 32-bit integer context. */
-  def in32BitContext(): Boolean
+  /** Check if the current context is a 32-bit integer context.
+    *
+    * When `otherOperandMustBeNumber` is true, the bitwise-binop branch narrows: it checks whether the OTHER operand (i.e. the sibling in the binary expression) `is_number`, so we only claim "32-bit
+    * context" when the companion operand is known to be numeric. Terser index.js:387-393.
+    */
+  def in32BitContext(otherOperandMustBeNumber: Boolean = false): Boolean
 
   /** Check if this scope has a given directive (e.g. "use strict"). */
   def hasDirective(directive: String): AstNode | Null
