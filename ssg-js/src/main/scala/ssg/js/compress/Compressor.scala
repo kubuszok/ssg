@@ -298,7 +298,7 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     * into a 32-bit integer by a bitwise operator ancestor. Walk-through cases (&&/||/?? right operand, ternary non-condition, sequence tail) allow the check to propagate through transparent
     * ancestors. Mirrors the `inComputedKey` pattern (lines 173-196).
     */
-  override def in32BitContext(): Boolean =
+  override def in32BitContext(otherOperandMustBeNumber: Boolean = false): Boolean =
     if (!optionBool("evaluate")) false
     else
       activeWalker match {
@@ -309,8 +309,14 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             var p: AstNode | Null = w.parent(i)
             while (p != null) {
               p.nn match {
-                case bin: AstBinary if bitwiseBinop.contains(bin.operator) => break(true)
-                case up:  AstUnaryPrefix if up.operator == "~"             => break(true)
+                // Terser index.js:391-396: when otherOperandMustBeNumber is true, narrow to
+                // (self===p.left ? p.right : p.left).is_number(this)
+                case bin: AstBinary if bitwiseBinop.contains(bin.operator) =>
+                  if (otherOperandMustBeNumber) {
+                    val other = if (node.asInstanceOf[AnyRef] eq bin.left.nn.asInstanceOf[AnyRef]) bin.right.nn else bin.left.nn
+                    break(Inference.isNumber(other, this))
+                  } else break(true)
+                case up: AstUnaryPrefix if up.operator == "~" => break(true)
                 // Walk through && / || / ?? right side (terser index.js:401-407)
                 case bin: AstBinary
                     if (bin.operator == "&&" || bin.operator == "||" || bin.operator == "??")
@@ -3396,7 +3402,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (zeroSide != null) {
         val nonZeroSide = if (zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
-        if ((self.operator == "|" || self.operator == "^") && in32BitContext()) {
+        // Terser index.js:2853: in_32_bit_context(true)
+        if ((self.operator == "|" || self.operator == "^") && in32BitContext(otherOperandMustBeNumber = true)) {
           return nonZeroSide // @nowarn
         }
         // x & 0 → 0 (when x has no side effects and is 32-bit)
@@ -3420,11 +3427,13 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       if (fullMask != null) {
         val otherSide = if (fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
         // x & -1 → x
-        if (self.operator == "&" && in32BitContext()) {
+        // Terser index.js:2889: in_32_bit_context(true)
+        if (self.operator == "&" && in32BitContext(otherOperandMustBeNumber = true)) {
           return otherSide // @nowarn
         }
         // x ^ -1 → ~x
-        if (self.operator == "^" && in32BitContext()) {
+        // Terser index.js:2901: in_32_bit_context(true)
+        if (self.operator == "^" && in32BitContext(otherOperandMustBeNumber = true)) {
           val neg = new AstUnaryPrefix
           neg.operator = "~"
           neg.expression = otherSide
@@ -3439,7 +3448,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         (self.operator == "|" || self.operator == "&")
         && AstEquivalent.equivalentTo(self.left.nn, self.right.nn)
         && !hasSideEffects(self.left.nn, this)
-        && in32BitContext()
+        // Terser index.js:2811: in_32_bit_context(true)
+        && in32BitContext(otherOperandMustBeNumber = true)
       ) {
         val zero = new AstNumber
         zero.value = 0.0
