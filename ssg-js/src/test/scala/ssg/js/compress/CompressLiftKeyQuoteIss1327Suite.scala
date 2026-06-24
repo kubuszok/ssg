@@ -52,7 +52,7 @@ final class CompressLiftKeyQuoteIss1327Suite extends munit.FunSuite {
   // Without the quote copy, SSG mangles _foo -> o, producing {o(){...}}.
   // terser oracle: let o={_foo(){return"bar"}};console.log(o[id("_foo")]());
   test("liftKey preserves quote on computed concise method key (ISS-1327)") {
-    val input = """let prop = "_foo"; let o = { [prop]() { return "bar" } }; console.log(o[id("_foo")]());"""
+    val input    = """let prop = "_foo"; let o = { [prop]() { return "bar" } }; console.log(o[id("_foo")]());"""
     val expected = """let o={_foo(){return"bar"}};console.log(o[id("_foo")]());"""
     assertEquals(minify(input), expected)
   }
@@ -61,7 +61,7 @@ final class CompressLiftKeyQuoteIss1327Suite extends munit.FunSuite {
   // Without the quote copy, SSG mangles _foo -> o, producing {get o(){...}}.
   // terser oracle: let o={get _foo(){return"bar"}};console.log(o[id("_foo")]);
   test("liftKey preserves quote on computed getter key (ISS-1327)") {
-    val input = """let prop = "_foo"; let o = { get [prop]() { return "bar" } }; console.log(o[id("_foo")]);"""
+    val input    = """let prop = "_foo"; let o = { get [prop]() { return "bar" } }; console.log(o[id("_foo")]);"""
     val expected = """let o={get _foo(){return"bar"}};console.log(o[id("_foo")]);"""
     assertEquals(minify(input), expected)
   }
@@ -69,7 +69,7 @@ final class CompressLiftKeyQuoteIss1327Suite extends munit.FunSuite {
   // Case C: keyval — the KeyVal branch already copies quote (regression guard).
   // terser oracle: let o={_foo:"bar"};console.log(o[id("_foo")]);
   test("liftKey preserves quote on computed keyval key — regression guard (ISS-1327)") {
-    val input = """let prop = "_foo"; let o = { [prop]: "bar" }; console.log(o[id("_foo")]);"""
+    val input    = """let prop = "_foo"; let o = { [prop]: "bar" }; console.log(o[id("_foo")]);"""
     val expected = """let o={_foo:"bar"};console.log(o[id("_foo")]);"""
     assertEquals(minify(input), expected)
   }
