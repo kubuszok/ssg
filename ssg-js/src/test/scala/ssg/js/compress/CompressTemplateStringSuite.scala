@@ -347,7 +347,7 @@ baz`;
   // =========================================================================
   // template_literal_plus
   // =========================================================================
-  test("template_literal_plus".fail) {
+  test("template_literal_plus") {
     assertCompresses(
       input = """console.log(`foo$${any}baz` + 1);
         console.log(1 + `foo$${any}baz`);
@@ -364,7 +364,7 @@ baz`;
   // =========================================================================
   // template_literal_plus_grouping
   // =========================================================================
-  test("template_literal_plus_grouping".fail) {
+  test("template_literal_plus_grouping") {
     assertCompresses(
       input = """console.log((`foo$${any}baz` + 'middle') + 'test');
         console.log('test' + ('middle' + `foo$${any}baz`));

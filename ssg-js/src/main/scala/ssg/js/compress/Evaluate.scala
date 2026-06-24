@@ -598,7 +598,7 @@ object Evaluate {
     * fractional part (e.g. `1.0` -> `"1"`), matching the JS `Number.prototype.toString()` behavior that the original terser gets for free from the JS runtime (evaluate.js string concat, array
     * join/toString, object key coercion).
     */
-  private def jsStringOf(v: Any): String =
+  private[compress] def jsStringOf(v: Any): String =
     v match {
       case d: Double => JsNumber.toJsString(d)
       case other => String.valueOf(other)
