@@ -25,6 +25,8 @@ import ssg.sass.Nullable.*
 import ssg.sass.util.{ FileSpan, Trace => SassTrace }
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** Interface for loggers that print messages produced by Sass stylesheets. */
 trait Logger {
@@ -243,10 +245,10 @@ final class DeprecationProcessingLogger(
     message:     String,
     span:        Nullable[FileSpan],
     trace:       Nullable[SassTrace]
-  ): Unit = {
+  ): Unit = boundary {
     // Drop future deprecations that haven't been opted into
     if (deprecation.isFuture && !futureDeprecations.contains(deprecation)) {
-      return
+      break(())
     }
 
     if (fatalDeprecations.contains(deprecation)) {
@@ -263,14 +265,14 @@ final class DeprecationProcessingLogger(
     }
 
     if (silenceDeprecations.contains(deprecation)) {
-      return
+      break(())
     }
 
     if (limitRepetition) {
       val count = warningCounts.getOrElse(deprecation, 0) + 1
       warningCounts(deprecation) = count
       if (count > maxRepetitions) {
-        return
+        break(())
       }
     }
 

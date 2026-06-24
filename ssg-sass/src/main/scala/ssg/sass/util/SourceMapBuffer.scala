@@ -20,6 +20,9 @@ package ssg
 package sass
 package util
 
+import scala.util.boundary
+import scala.util.boundary.break
+
 /** Trait for CSS output buffers, with optional source map tracking. */
 trait SassBuffer {
   def write(obj:          Any):                             Unit
@@ -114,14 +117,14 @@ final class SourceMapBuffer extends SassBuffer {
     finally _inSpan = wasInSpan
   }
 
-  private def _addEntry(span: FileSpan): Unit = {
+  private def _addEntry(span: FileSpan): Unit = boundary {
     val srcUrl  = span.sourceUrl
     val srcLine = span.start.line
     val srcCol  = span.start.column
     if (_entries.nonEmpty) {
       val last = _entries.last
-      if (last._2 == srcLine && last._4 == _line) return
-      if (last._4 == _line && last._5 == _column) return
+      if (last._2 == srcLine && last._4 == _line) break(())
+      if (last._4 == _line && last._5 == _column) break(())
     }
     _entries += ((srcUrl, srcLine, srcCol, _line, _column))
   }

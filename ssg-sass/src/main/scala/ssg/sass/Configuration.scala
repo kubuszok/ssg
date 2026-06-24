@@ -22,6 +22,8 @@ package sass
 
 import scala.collection.mutable
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 import ssg.sass.ast.AstNode
 import ssg.sass.ast.sass.ForwardRule
 import ssg.sass.util.{ LimitedMapView, UnprefixedMapView }
@@ -83,8 +85,8 @@ class Configuration private[sass] (
     }
 
   /// Creates a new configuration from this one based on a `@forward` rule.
-  def throughForward(forward: ForwardRule): Configuration = {
-    if (isEmpty) return this
+  def throughForward(forward: ForwardRule): Configuration = boundary[Configuration] {
+    if (isEmpty) break(this)
     var newValues: mutable.Map[String, ConfiguredValue] = _values
 
     // Only allow variables that are visible through the `@forward` to be
@@ -116,8 +118,8 @@ class Configuration private[sass] (
 
   /** Throws a [[SassException]] if any values remain — i.e. for values that weren't used by the module. Implicit configurations are ignored: an unused forwarded `with` clause is not an error.
     */
-  def throwErrorForUnknownVariables(nodeWithSpan: Nullable[ssg.sass.util.FileSpan] = Nullable.empty): Unit = {
-    if (isImplicit || _values.isEmpty) return
+  def throwErrorForUnknownVariables(nodeWithSpan: Nullable[ssg.sass.util.FileSpan] = Nullable.empty): Unit = boundary {
+    if (isImplicit || _values.isEmpty) break(())
     val names  = _values.keys.toList.sorted.map("$" + _).mkString(", ")
     val plural = if (_values.size == 1) "variable" else "variables"
     val span   = nodeWithSpan.getOrElse(ssg.sass.util.FileSpan.bogusSpan)

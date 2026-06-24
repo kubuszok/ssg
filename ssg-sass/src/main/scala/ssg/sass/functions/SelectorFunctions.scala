@@ -64,6 +64,8 @@ package sass
 package functions
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 import ssg.sass.{ BuiltInCallable, Callable, Nullable, SassScriptException }
 import ssg.sass.ast.selector.{ ComplexSelector, ComplexSelectorComponent, CompoundSelector, ParentSelector, SelectorList, SimpleSelector, TypeSelector, UniversalSelector }
@@ -94,31 +96,33 @@ object SelectorFunctions {
     *   - SassList with space/undecided separator: each element must be a SassString.
     *   - Anything else: invalid (None).
     */
-  private def asSelectorText(v: Value): Option[String] = v match {
-    case s: SassString => Some(s.text)
-    case l: SassList   =>
-      val items = l.asList
-      if (items.isEmpty) return None
-      l.separator match {
-        case ListSeparator.Slash => None
-        case ListSeparator.Comma =>
-          val parts = items.map {
-            case s:   SassString                                                                                   => Some(s.text)
-            case sub: SassList if sub.separator == ListSeparator.Space || sub.separator == ListSeparator.Undecided =>
-              asSelectorText(sub)
-            case _ => None
-          }
-          if (parts.exists(_.isEmpty)) None
-          else Some(parts.flatten.mkString(", "))
-        case _ => // Space or Undecided
-          val parts = items.map {
-            case s: SassString => Some(s.text)
-            case _ => None
-          }
-          if (parts.exists(_.isEmpty)) None
-          else Some(parts.flatten.mkString(" "))
-      }
-    case _ => None
+  private def asSelectorText(v: Value): Option[String] = boundary[Option[String]] {
+    v match {
+      case s: SassString => Some(s.text)
+      case l: SassList   =>
+        val items = l.asList
+        if (items.isEmpty) break(None)
+        l.separator match {
+          case ListSeparator.Slash => None
+          case ListSeparator.Comma =>
+            val parts = items.map {
+              case s:   SassString                                                                                   => Some(s.text)
+              case sub: SassList if sub.separator == ListSeparator.Space || sub.separator == ListSeparator.Undecided =>
+                asSelectorText(sub)
+              case _ => None
+            }
+            if (parts.exists(_.isEmpty)) None
+            else Some(parts.flatten.mkString(", "))
+          case _ => // Space or Undecided
+            val parts = items.map {
+              case s: SassString => Some(s.text)
+              case _ => None
+            }
+            if (parts.exists(_.isEmpty)) None
+            else Some(parts.flatten.mkString(" "))
+        }
+      case _ => None
+    }
   }
 
   /** Parse a [[Value]] as a [[SelectorList]]. Raises a SassScriptException with the caller-supplied argument name on failure, matching dart-sass's `assertSelector` error format.

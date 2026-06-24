@@ -30,6 +30,8 @@ import ssg.sass.MultiSpanSassException
 import ssg.sass.util.{ CharCode, FileSpan }
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** An abstract superclass for simple selectors. */
 abstract class SimpleSelector(span: FileSpan) extends Selector(span) {
@@ -135,7 +137,7 @@ object SimpleSelector {
   private[selector] def unifyUniversalAndElement(
     selector1: SimpleSelector,
     selector2: SimpleSelector
-  ): Option[SimpleSelector] = {
+  ): Option[SimpleSelector] = boundary[Option[SimpleSelector]] {
     val (namespace1, name1) = _namespaceAndName(selector1)
     val (namespace2, name2) = _namespaceAndName(selector2)
 
@@ -143,13 +145,13 @@ object SimpleSelector {
     val namespace: Nullable[String] =
       if (namespace1 == namespace2 || namespace2.exists(_ == "*")) namespace1
       else if (namespace1.exists(_ == "*")) namespace2
-      else return None // incompatible namespaces
+      else break(None) // incompatible namespaces
 
     // Unify names
     val name: Nullable[String] =
       if (name1 == name2 || name2.isEmpty) name1
       else if (name1.isEmpty || name1.exists(_ == "*")) name2
-      else return None // incompatible names
+      else break(None) // incompatible names
 
     val sp = selector1.span
     if (name.isDefined) Some(TypeSelector(QualifiedName(name.get, namespace), sp))

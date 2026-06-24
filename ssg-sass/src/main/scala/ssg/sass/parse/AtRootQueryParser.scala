@@ -82,11 +82,11 @@ class AtRootQueryParser(
     * Dart-sass parses the @at-root query values as full Sass expressions, so `(without: "media")` resolves to `media` (quotes stripped). Our parser captures raw text, so we need to handle quoted
     * values explicitly here.
     */
-  private def readNameOrString(): String = {
+  private def readNameOrString(): String = boundary[String] {
     if (pos < text.length) {
       val c = text.charAt(pos)
       if (c == '"' || c == '\'') {
-        return readQuotedString(c)
+        break(readQuotedString(c))
       }
     }
     readIdentifier()

@@ -27,6 +27,8 @@ import ssg.sass.Utils.startsWithIgnoreCase
 import ssg.sass.visitor.ValueVisitor
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A SassScript string value. */
 final class SassString(val text: String, val hasQuotes: Boolean = true) extends Value {
@@ -152,8 +154,8 @@ final class SassString(val text: String, val hasQuotes: Boolean = true) extends 
 
   /** Fold newlines to a single space and collapse post-newline whitespace, matching dart-sass `_visitUnquotedString` (serialize.dart:1452-1473). Returns [s] unchanged if it contains no newlines.
     */
-  private def foldNewlines(s: String): String = {
-    if (s.indexOf('\n') < 0) return s
+  private def foldNewlines(s: String): String = boundary[String] {
+    if (s.indexOf('\n') < 0) break(s)
     val sb           = new StringBuilder(s.length)
     var afterNewline = false
     var i            = 0
