@@ -1187,6 +1187,13 @@ object Inline {
     * is empty mid-pass and the previous `compressor.parent(i)` walk always yielded `null` (the guard was dead — and because it is consumed as `!isRecursiveRef(...)` in the now-live inline-flatten
     * boolean, the always-false result wrongly let recursive refs be flattened). We walk the live stack via `liveParent(compressor, self, i)` from `self` upward: an enclosing `AST_Lambda`/`AST_Class`
     * whose name's definition is `theDef` returns true (a recursive reference).
+    *
+    * ISS-1243: this live re-check is structurally subsumed in BOTH terser and SSG by the earlier recursive-ref accounting — `Common.isRecursiveRef` (Common.scala:653, consumed in ReduceVars)
+    * increments `recursiveRefs`, and `refOnce` (ReduceVars) classifies single-use via `references.size - recursiveRefs`, so by the time the two consumers run (line 265 single-use lambda; line 1041
+    * flatten, gated by `references.size == 1` + the named-function gate) every recursive shape is already excluded. Forcing this method to always-false leaves the whole ssg-js suite green and matches
+    * the terser oracle byte-for-byte on every recursive single-use/flatten/IIFE shape. It is RETAINED for terser-faithfulness — terser keeps the identical re-check at inline.js:218 and :414 as a
+    * redundant safety net; the guard order + aggressiveness is identical terser-vs-SSG at both sites, so neither reaches `is_recursive_ref` as a sole decider. Removing it would diverge from terser's
+    * source (a port regression).
     */
   private def isRecursiveRef(compressor: CompressorLike, self: AstNode, theDef: SymbolDef): Boolean =
     boundary[Boolean] {
