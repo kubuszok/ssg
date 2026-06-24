@@ -29,6 +29,8 @@ import ssg.sass.extend.ExtendFunctions
 import ssg.sass.util.FileSpan
 
 import scala.language.implicitConversions
+import scala.util.boundary
+import scala.util.boundary.break
 
 /** A compound selector.
   *
@@ -82,31 +84,33 @@ final class CompoundSelector(
   def isSuperselector(
     other:   CompoundSelector,
     parents: Nullable[List[ComplexSelectorComponent]] = Nullable.empty
-  ): Boolean = {
+  ): Boolean = boundary {
     if (!hasComplicatedSuperselectorSemantics && !other.hasComplicatedSuperselectorSemantics) {
-      if (components.length > other.components.length) return false
-      return components.forall { simple1 =>
+      if (components.length > other.components.length) break(false)
+      break(components.forall { simple1 =>
         other.components.exists(simple1.isSuperselector)
-      }
+      })
     }
     // Pseudo-element check. dart-sass `_findPseudoElementIndexed`.
     val pe1 = CompoundSelector.findPseudoElementIndexed(this)
     val pe2 = CompoundSelector.findPseudoElementIndexed(other)
     (pe1.toOption, pe2.toOption) match {
       case (Some((pseudo1, index1)), Some((pseudo2, index2))) =>
-        return pseudo1.isSuperselector(pseudo2) &&
-          CompoundSelector.compoundComponentsIsSuperselector(
-            components.take(index1),
-            other.components.take(index2),
-            parents = parents
-          ) &&
-          CompoundSelector.compoundComponentsIsSuperselector(
-            components.drop(index1 + 1),
-            other.components.drop(index2 + 1),
-            parents = parents
-          )
+        break(
+          pseudo1.isSuperselector(pseudo2) &&
+            CompoundSelector.compoundComponentsIsSuperselector(
+              components.take(index1),
+              other.components.take(index2),
+              parents = parents
+            ) &&
+            CompoundSelector.compoundComponentsIsSuperselector(
+              components.drop(index1 + 1),
+              other.components.drop(index2 + 1),
+              parents = parents
+            )
+        )
       case (Some(_), None) | (None, Some(_)) =>
-        return false
+        break(false)
       case (None, None) => ()
     }
     // Mixed path. Every simple in this must match.
@@ -134,12 +138,12 @@ object CompoundSelector {
     */
   private[selector] def findPseudoElementIndexed(
     compound: CompoundSelector
-  ): Nullable[(PseudoSelector, Int)] = {
+  ): Nullable[(PseudoSelector, Int)] = boundary {
     var i = 0
     while (i < compound.components.length) {
       compound.components(i) match {
         case p: PseudoSelector if p.isElement =>
-          return Nullable((p, i))
+          break(Nullable((p, i)))
         case _ => ()
       }
       i += 1
@@ -155,8 +159,8 @@ object CompoundSelector {
     compound1: List[SimpleSelector],
     compound2: List[SimpleSelector],
     parents:   Nullable[List[ComplexSelectorComponent]]
-  ): Boolean = {
-    if (compound1.isEmpty) return true
+  ): Boolean = boundary {
+    if (compound1.isEmpty) break(true)
     val rhs =
       if (compound2.nonEmpty) compound2
       else List(UniversalSelector(compound1.head.span, namespace = Nullable("*")))
