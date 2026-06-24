@@ -40,12 +40,32 @@ import scala.collection.mutable
 
 import ssg.js.ast.*
 
+/** Tri-state for `keep_quoted` option.
+  *
+  * terser's `keep_quoted` is `false | true | "strict"`:
+  *   - `false` — quoted keys are mangled normally.
+  *   - `true` — quoted keys are un-mangled in their own object AND reserved globally (propmangle.js:264 `!!options.keep_quoted`; minify.js:239 `keep_quoted !== "strict"` — the global reserve pass
+  *     runs).
+  *   - `"strict"` — quoted keys are un-mangled in their own object but NOT reserved globally (the global `reserve_quoted_keys` pass is skipped).
+  */
+enum KeepQuoted extends java.lang.Enum[KeepQuoted] {
+  case No, Yes, Strict
+
+  /** propmangle.js:264 `!!options.keep_quoted` — quoted keys un-mangled in their own object.
+    */
+  def isQuotedKept: Boolean = this != KeepQuoted.No
+
+  /** minify.js:239 `keep_quoted !== "strict"` — `true` reserves quoted keys GLOBALLY; `strict` does not.
+    */
+  def reservesQuotedGlobally: Boolean = this == KeepQuoted.Yes
+}
+
 /** Options for property mangling. */
 final case class PropManglerOptions(
   builtins:      Boolean = false,
   cache:         ManglerCache | Null = null,
   debug:         Any = false, // false or String
-  keepQuoted:    Boolean = false,
+  keepQuoted:    KeepQuoted = KeepQuoted.No,
   nthIdentifier: NthIdentifier = Base54,
   onlyCache:     Boolean = false,
   regex:         String | Null = null,
@@ -278,7 +298,10 @@ object PropMangler {
     // Track already-mangled names to prevent collisions
     cache.values.foreach(unmangleable.add)
 
-    val keepQuoted     = options.keepQuoted
+    // propmangle.js:264 — `var keep_quoted = !!options.keep_quoted;`
+    // Both `true` and `"strict"` produce `true` here; the per-key
+    // guards below use the Boolean to skip quoted keys in their own object.
+    val keepQuoted     = options.keepQuoted.isQuotedKept
     val annotatedProps = findAnnotatedProps(ast)
 
     def canMangle(name: String): Boolean = {
