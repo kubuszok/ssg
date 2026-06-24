@@ -25,7 +25,7 @@ package js
 package compress
 
 import ssg.js.{ MinifyOptions, Terser }
-import ssg.js.scope.{ ManglerOptions, PropManglerOptions }
+import ssg.js.scope.{ KeepQuoted, ManglerOptions, PropManglerOptions }
 
 final class CompressLiftKeyQuoteIss1327Suite extends munit.FunSuite {
 
@@ -40,7 +40,7 @@ final class CompressLiftKeyQuoteIss1327Suite extends munit.FunSuite {
       computedProps = true
     ),
     mangle = ManglerOptions(
-      properties = PropManglerOptions(keepQuoted = true)
+      properties = PropManglerOptions(keepQuoted = KeepQuoted.Yes)
     ),
     toplevel = true
   )

@@ -397,7 +397,9 @@ object Terser {
     // reserved before dead-code elimination removes them, so an unquoted key is
     // never mangled into the reserved name. `resolvedPropOptions.reserved` is the
     // shared mutable set threaded into mangleProperties below.
-    if (resolvedPropOptions != null && resolvedPropOptions.nn.keepQuoted) {
+    // minify.js:239 — `if (quoted_props && options.mangle.properties.keep_quoted !== "strict")`
+    // The global reserve pass runs only for `true`, NOT `"strict"`.
+    if (resolvedPropOptions != null && resolvedPropOptions.nn.keepQuoted.reservesQuotedGlobally) {
       PropMangler.reserveQuotedKeys(ast, resolvedPropOptions.nn.reserved)
     }
 

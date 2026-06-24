@@ -13,7 +13,7 @@ package js
 import ssg.js.compress.CompressorOptions
 import ssg.js.parse.JsParseError
 import ssg.js.output.OutputOptions
-import ssg.js.scope.{ ManglerCache, ManglerOptions, PropManglerOptions }
+import ssg.js.scope.{ KeepQuoted, ManglerCache, ManglerOptions, PropManglerOptions }
 
 final class MinifySuite extends munit.FunSuite {
 
@@ -367,7 +367,7 @@ final class MinifySuite extends munit.FunSuite {
       js,
       MinifyOptions(
         compress = CompressorOptions(properties = false),
-        mangle = ManglerOptions(properties = PropManglerOptions(builtins = true, keepQuoted = true)),
+        mangle = ManglerOptions(properties = PropManglerOptions(builtins = true, keepQuoted = KeepQuoted.Yes)),
         output = OutputOptions(keepQuotedProps = true, quoteStyle = 3)
       )
     )
@@ -381,7 +381,7 @@ final class MinifySuite extends munit.FunSuite {
   test("mangleProperties: should not mangle quoted property within dead code") {
     val result = Terser.minifyToString(
       "var g = {}; ({ \"keep\": 1 }); g.keep = g.change;",
-      MinifyOptions(mangle = ManglerOptions(properties = PropManglerOptions(keepQuoted = true)))
+      MinifyOptions(mangle = ManglerOptions(properties = PropManglerOptions(keepQuoted = KeepQuoted.Yes)))
     )
     assertEquals(result, "var g={};g.keep=g.v;")
   }
