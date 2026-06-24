@@ -168,20 +168,15 @@ final class CompressEvaluateSuite extends munit.FunSuite {
     assertCompresses("var a = 1; var b = a;", "var a=1;var b=a;", evalOpts)
   }
 
-  // =======================================================================
-  // Known broken: bitwise ops with hex literals
-  // These document bugs in the evaluate pass.
-  // =======================================================================
-
-  test("bitwise AND with hex".fail) {
+  test("bitwise AND with hex") {
     assertCompresses("var x = 0xff & 0x0f;", "var x=15;", evalOpts)
   }
 
-  test("bitwise OR with hex".fail) {
+  test("bitwise OR with hex") {
     assertCompresses("var x = 0xf0 | 0x0f;", "var x=255;", evalOpts)
   }
 
-  test("bitwise XOR with hex".fail) {
+  test("bitwise XOR with hex") {
     assertCompresses("var x = 0xff ^ 0x0f;", "var x=240;", evalOpts)
   }
 
