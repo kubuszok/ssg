@@ -10,6 +10,11 @@
  *   Renames: liqp.antlr → ssg.liquid.antlr
  *   Convention: Java interface → Scala trait
  *   Idiom: Returns String content instead of ANTLR CharStream
+ *   Package: ssg.liquid.antlr faithfully mirrors liqp's liqp.antlr package,
+ *     which contains the parser's name-resolver SPI (NameResolver,
+ *     LocalFSNameResolver, CharStreamWithLocation, FilterCharStream). The
+ *     name "antlr" is liqp's own choice — preserved for 1:1 package
+ *     correspondence with the source.
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/antlr/NameResolver.java
