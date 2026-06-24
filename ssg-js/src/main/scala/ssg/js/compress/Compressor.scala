@@ -3574,6 +3574,9 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     }
 
     // dead_code: eliminate assignment to unreachable var in exit context
+    // terser index.js:3049-3069 — ancestry must be live (activeWalker), not the
+    // compressor's own empty stack; in_try uses bfinally/bcatch+may_assignment_throw
+    // discrimination (index.js:3091-3109).
     if (
       optionBool("dead_code")
       && self.left != null && self.left.nn.isInstanceOf[AstSymbolRef]
@@ -3582,37 +3585,34 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       theDef = leftRef.definition()
       if (theDef != null) {
         val defScope    = theDef.nn.scope
-        val lambdaScope = findParent[AstLambda]
+        val lambdaScope = liveFindParent[AstLambda]
         if (defScope != null && lambdaScope != null && (defScope.asInstanceOf[AnyRef] eq lambdaScope.asInstanceOf[AnyRef])) {
-          // Walk up to find if we're in an exit context (return/throw)
-          var level = 0
+          // terser index.js:3052-3068 do-while: walk live ancestry up to find exit context
+          val selfNode = liveSelf().nn
+          var level    = 0
           var node: AstNode        = self
-          var par:  AstNode | Null =
-            try parent(level)
-            catch { case _: IndexOutOfBoundsException => null }
+          var par:  AstNode | Null = liveParent(selfNode, level)
           var foundExit = false
+          level += 1
           boundary {
             while (par != null) {
               par.nn match {
-                case _: AstExit =>
-                  // Check not in try block
-                  val inTry = findParentBetween[AstTry](level)
-                  if (inTry == null && !Common.isReachable(defScope.asInstanceOf[AstScope], ArrayBuffer(theDef))) {
-                    foundExit = true
-                    break(())
-                  }
+                case exitNode: AstExit =>
+                  // terser index.js:3056-3065 — in_try / is_reachable / simplify
+                  if (inTryDeadCode(level, exitNode, self, selfNode)) break(())
+                  if (Common.isReachable(defScope.asInstanceOf[AstScope], ArrayBuffer(theDef))) break(())
+                  foundExit = true
+                  break(())
                 case bin: AstBinary if bin.right != null && (bin.right.nn.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) =>
-                // Continue up
+                // Continue up — terser index.js:3067
                 case seq: AstSequence if seq.expressions.nonEmpty && (seq.expressions.last.asInstanceOf[AnyRef] eq node.asInstanceOf[AnyRef]) =>
-                // Continue up
+                // Continue up — terser index.js:3068
                 case _ =>
-                  break(()) // Stop searching
+                  break(()) // Stop searching — not a valid ancestor chain
               }
               node = par.nn
+              par = liveParent(selfNode, level)
               level += 1
-              par =
-                try parent(level)
-                catch { case _: IndexOutOfBoundsException => null }
             }
           }
           if (foundExit) {
@@ -3695,19 +3695,42 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       }
     } else self
 
-  /** Find a parent of type T between current position and level. */
-  private def findParentBetween[T <: AstNode](maxLevel: Int)(using ct: scala.reflect.ClassTag[T]): T | Null = {
-    var i = 0
-    while (i < maxLevel) {
-      try
-        parent(i) match {
-          case p if ct.runtimeClass.isInstance(p) => return p.asInstanceOf[T] // @nowarn
-          case _                                  =>
+  /** Faithful port of terser index.js:3091-3109 `in_try` nested function inside the `def_optimize(AST_Assign)` dead_code block. Walks live ancestry from `startLevel` (one past the AstExit) up to
+    * `stop_at = self.left.definition().scope.get_defun_scope()`. Returns true if the exit is guarded by a try with bfinally, or a try with bcatch where the assignment's RHS replacement with AstNull
+    * would still cause the exit node to may_throw (terser's `may_assignment_throw` at index.js:3092-3098).
+    */
+  private def inTryDeadCode(startLevel: Int, exitNode: AstExit, assignSelf: AstAssign, selfNode: AstNode): Boolean = {
+    val leftRef = assignSelf.left.nn.asInstanceOf[AstSymbolRef]
+    val stopAt  = leftRef.definition().nn.scope.nn.asInstanceOf[AstScope].getDefunScope
+    var lvl     = startLevel
+    boundary[Boolean] {
+      var anc: AstNode | Null = liveParent(selfNode, lvl)
+      lvl += 1
+      while (anc != null && !(anc.nn.asInstanceOf[AnyRef] eq stopAt.asInstanceOf[AnyRef])) {
+        anc.nn match {
+          case tryNode: AstTry =>
+            // terser index.js:3105 — bfinally always guards
+            if (tryNode.bfinally != null) break(true)
+            // terser index.js:3106 — bcatch guards only if the exit may throw
+            // when the assignment RHS is replaced with null (may_assignment_throw)
+            if (tryNode.bcatch != null) {
+              // terser index.js:3092-3098 may_assignment_throw
+              val savedRight = assignSelf.right
+              val nullNode   = new AstNull
+              nullNode.start = if (savedRight != null) savedRight.nn.start else null
+              nullNode.end = if (savedRight != null) savedRight.nn.end else null
+              assignSelf.right = nullNode
+              val throws = Inference.mayThrow(exitNode, this)
+              assignSelf.right = savedRight
+              if (throws) break(true)
+            }
+          case _ => // continue walking
         }
-      catch { case _: IndexOutOfBoundsException => return null }
-      i += 1
+        anc = liveParent(selfNode, lvl)
+        lvl += 1
+      }
+      false
     }
-    null
   }
 
   /** Optimize property dot access — evaluate property reads on literals.

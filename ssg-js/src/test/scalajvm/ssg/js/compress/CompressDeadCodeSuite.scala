@@ -691,9 +691,8 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // collapse_vars_misc1
-  // Fails: collapse_vars pass not yet fully implemented
   // =========================================================================
-  test("collapse_vars_misc1".fail) {
+  test("collapse_vars_misc1") {
     assertCompresses(
       input = """function f10(x) { var a = 5, b = 3; return a += b; }
                 |function f11(x) { var a = 5, b = 3; return a += --b; }""".stripMargin,
@@ -709,9 +708,8 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // return_assignment
-  // Fails: dead_code+unused return assignment optimization incomplete
   // =========================================================================
-  test("return_assignment".fail) {
+  test("return_assignment") {
     assertCompresses(
       input = """function f1(a, b, c) {
                 |    return a = x(), b = y(), b = a && (c >>= 5);
@@ -1151,9 +1149,8 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // issue_2860_1
-  // Fails: compound assignment to return value not simplified (a ^= 1 -> a ^ 1)
   // =========================================================================
-  test("issue_2860_1".fail) {
+  test("issue_2860_1") {
     assertCompresses(
       input = """console.log(function(a) {
                 |    return a ^= 1;
@@ -1302,9 +1299,8 @@ final class CompressDeadCodeSuite extends munit.FunSuite {
 
   // =========================================================================
   // issue_1029_4
-  // Fails: return assignment to let not dropped when val is synchronously used
   // =========================================================================
-  test("issue_1029_4".fail) {
+  test("issue_1029_4") {
     assertCompresses(
       input = """function fn() {
                 |    let val
