@@ -6043,7 +6043,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2860_1
   // =========================================================================
-  test("issue_2860_1".fail) { // ISS-1315: still fails — separate bug in optimizeAssign ^= simplification
+  test("issue_2860_1") {
     assertCompresses(
       input = """console.log(function(a) {
             return a ^= 1;
