@@ -73,7 +73,11 @@ final private[io] class JvmFilePath(val pathString: String) extends FilePath {
   // Uses nio's proven normalize then POSIX-renders the output (replace backslash on Windows, strip trailing sep,
   // map "." -> "").
   override def normalize: FilePath = {
-    val normalized = Paths.get(pathString).normalize().toString.replace('\\', '/')
+    val driveAbs = FilePathPlatform.isDriveAbsolute(pathString)
+    val nioInput = if (driveAbs) pathString.substring(1) else pathString
+    val n0       = Paths.get(nioInput).normalize().toString.replace('\\', '/')
+    // Restore the model's leading '/' for a drive-absolute path so it stays POSIX-absolute (isAbsolute).
+    val normalized = if (driveAbs) "/" + n0 else n0
     val stripped   =
       if (normalized.length > 1 && normalized.endsWith("/")) normalized.substring(0, normalized.length - 1)
       else normalized
@@ -117,6 +121,21 @@ object FilePathPlatform {
     else p.substring(idx + 1)
   }
 
+  /** True if `p` is the POSIX-rendered form of a Windows drive-absolute path: "/X:/..." (a single drive letter then ':' at index 2). The leading '/' makes it POSIX-absolute (isAbsolute) while X: is
+    * the drive; java.nio.Paths.get REJECTS this form on Windows (a leading slash before a drive is illegal), so the nio bridge strips it. Never matches a POSIX path (index-2 is ':' only for a drive
+    * form), so this is a no-op off Windows.
+    */
+  private[io] def isDriveAbsolute(p: String): Boolean =
+    p.length >= 3 && p.charAt(0) == '/' && p.charAt(2) == ':' && {
+      val c = p.charAt(1); (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+    }
+
+  /** Translate the FilePath model form to a string java.nio.Paths.get accepts: strip the leading '/' from a drive-absolute path ("/C:/x" -> "C:/x") so Windows nio parses the drive. Unchanged on
+    * POSIX.
+    */
+  private[io] def toNioString(p: String): String =
+    if (isDriveAbsolute(p)) p.substring(1) else p
+
   def of(path: String): FilePath =
     new JvmFilePath(renderPath(path))
 
@@ -127,13 +146,17 @@ object FilePathPlatform {
     new JvmFilePath(if (host.startsWith("/")) host else "/" + host)
   }
 
-  /** Unwraps to a java.nio.file.Path for FS I/O (JVM-only). */
+  /** Unwraps to a java.nio.file.Path for FS I/O (JVM-only). On Windows, strips the model's leading '/' from a drive-absolute path ("/C:/x" -> "C:/x") so nio parses the drive letter. */
   def toNioPath(fp: FilePath): Path =
-    Paths.get(fp.pathString)
+    Paths.get(toNioString(fp.pathString))
 
   /** Wraps a java.nio.file.Path as a FilePath, POSIX-rendering the string so children from Files.newDirectoryStream match dir.resolve(name). On linux/macOS path.toString is already '/'-separated so
     * the replace is a no-op and renderPath is idempotent; on Windows it converts backslash separators to forward slashes.
     */
-  def fromNioPath(path: Path): FilePath =
-    new JvmFilePath(renderPath(path.toString.replace('\\', '/')))
+  def fromNioPath(path: Path): FilePath = {
+    val rendered = renderPath(path.toString.replace('\\', '/'))
+    // A Windows-absolute nio path (C:/Users/foo) is not POSIX-absolute after rendering; prefix '/' so the model
+    // form is absolute and round-trips via toNioString. No-op on POSIX (rendered already starts with '/').
+    new JvmFilePath(if (path.isAbsolute && !rendered.startsWith("/")) "/" + rendered else rendered)
+  }
 }
