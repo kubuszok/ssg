@@ -183,16 +183,18 @@ jobs:
       - name: Run Scala Native tests
         run: sbt ci-native-3
 
-  # ─── re-scale enforce gate (covenant verify + shortcut budget) ──────
+  # ─── re-scale enforce gate (ratchet-blocking) ──────────────────────
   #
-  # Non-blocking initially: validates that every file with a `Covenant:`
-  # header still passes (no method dropped, no shortcut introduced) and
-  # that no new shortcut markers leaked into covenanted files.
+  # BLOCKING on metric regression: the ratchet step at the end fails CI
+  # if any lower-is-better metric exceeds its committed baseline.
+  #
+  # The covenant-verify and shortcut-budget steps remain staged (non-
+  # blocking) until their absolute counts reach zero, at which point
+  # they can be promoted to blocking.
 
   enforce:
     name: re-scale enforce
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -220,11 +222,18 @@ jobs:
         run: re-scale version
 
       - name: Verify covenants on covenanted files
+        # Staged non-blocking: 98 known failures; will become blocking
+        # once the absolute count reaches zero.
         continue-on-error: true
         run: |
           grep -rl 'Covenant:' --include='*.scala' . \
             | xargs -I{} re-scale enforce verify --file {}
 
       - name: Shortcut budget on covenanted files
+        # Staged non-blocking: 6 covenanted-shortcut hits remain; will
+        # become blocking once the absolute count reaches zero.
         continue-on-error: true
         run: re-scale enforce shortcuts --covenanted
+
+      - name: Ratchet gate (no regression vs baseline)
+        run: bash .rescale/ci-ratchet.sh
