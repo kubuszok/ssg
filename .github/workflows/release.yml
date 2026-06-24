@@ -4,8 +4,6 @@ on:
   push:
     branches: [master]
     tags: ["*"]
-  pull_request:
-    branches: [master]
 
 # Cancel in-progress runs for the same branch/PR
 concurrency:
@@ -18,9 +16,10 @@ env:
 jobs:
   build-and-publish:
     # Never publish from pull requests (no secrets, and would otherwise attempt a snapshot deploy).
-    # Snapshots publish on master pushes; full releases (sonaRelease) only on tag pushes — the
-    # tag/snapshot distinction is made inside the `ci-release` command (publishSigned vs
-    # +publishSigned + sonaRelease).
+    # The pull_request trigger was removed so this workflow no longer runs on PRs at all;
+    # this guard is retained as defense-in-depth.  Snapshots publish on master pushes; full
+    # releases (sonaRelease) only on tag pushes — the tag/snapshot distinction is made inside
+    # the `ci-release` command (publishSigned vs +publishSigned + sonaRelease).
     if: github.event_name != 'pull_request'
     runs-on: macos-latest
 
