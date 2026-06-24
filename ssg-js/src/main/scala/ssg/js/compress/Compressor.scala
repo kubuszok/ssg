@@ -3114,7 +3114,9 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         case (tmpl: AstTemplateString, _) =>
           val rr = Evaluate.evaluate(self.right.nn, this)
           if (rr != null && (rr.asInstanceOf[AnyRef] ne self.right.nn.asInstanceOf[AnyRef])) {
-            val rrStr = rr.toString
+            // terser index.js:2636 — String(r): use jsStringOf for JS coercion
+            // semantics (e.g. Double 1.0 -> "1", not JVM's "1.0")
+            val rrStr = Evaluate.jsStringOf(rr)
             if (tmpl.segments.nonEmpty) {
               tmpl.segments.last match {
                 case seg: AstTemplateSegment =>
@@ -3127,7 +3129,9 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
         case (_, tmpl: AstTemplateString) =>
           val ll = Evaluate.evaluate(self.left.nn, this)
           if (ll != null && (ll.asInstanceOf[AnyRef] ne self.left.nn.asInstanceOf[AnyRef])) {
-            val llStr = ll.toString
+            // terser index.js:2645 — String(l): use jsStringOf for JS coercion
+            // semantics (e.g. Double 1.0 -> "1", not JVM's "1.0")
+            val llStr = Evaluate.jsStringOf(ll)
             if (tmpl.segments.nonEmpty) {
               tmpl.segments(0) match {
                 case seg: AstTemplateSegment =>
