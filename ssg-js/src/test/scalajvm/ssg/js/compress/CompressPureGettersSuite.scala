@@ -841,7 +841,7 @@ final class CompressPureGettersSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2838
   // =========================================================================
-  test("issue_2838".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (doesn't drop pure .prototype assignment)
+  test("issue_2838") { // ISS-1310 sub-bug (1) fixed: Inference.isConstantExpression with liveFindScope scope
     assertCompresses(
       input = """function f(a, b) {
             (a || b).c = "PASS";

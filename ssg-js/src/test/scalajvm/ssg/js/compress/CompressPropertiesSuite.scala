@@ -1154,7 +1154,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // const_prop_assign_strict
   // =========================================================================
-  test("const_prop_assign_strict".fail) {
+  test("const_prop_assign_strict") { // ISS-1310 sub-bug (1) fixed: Inference.isConstantExpression with liveFindScope scope
     assertCompresses(
       input = """function Simulator() {
             /abc/.index = 1;
@@ -1177,7 +1177,7 @@ final class CompressPropertiesSuite extends munit.FunSuite {
   // =========================================================================
   // const_prop_assign_pure
   // =========================================================================
-  test("const_prop_assign_pure".fail) { // ISS-1307: option corrected to true; still fails — deeper source bug (doesn't drop pure .prototype assignment)
+  test("const_prop_assign_pure") { // ISS-1310 sub-bug (1) fixed: Inference.isConstantExpression with liveFindScope scope
     assertCompresses(
       input = """function Simulator() {
             /abc/.index = 1;

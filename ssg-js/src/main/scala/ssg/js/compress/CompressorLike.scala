@@ -70,6 +70,13 @@ trait CompressorLike {
   /** Find the nearest ancestor of a given type. */
   def findParent[T <: AstNode](using ct: scala.reflect.ClassTag[T]): T | Null
 
+  /** Find the nearest enclosing scope from the *live* walker ancestry.
+    *
+    * Faithful port of terser `compressor.find_parent(AST_Scope)` used by drop-side-effect-free.js:241. In terser the Compressor IS the walker, so `find_parent` reads the live stack; this port's
+    * Compressor stack is empty during a pass (the live ancestry is on `activeWalker`). Mirrors `TreeWalker.findScope()` but reads the active walker's stack.
+    */
+  def liveFindScope(): AstScope | Null
+
   /** Check if the current context expects a boolean result. */
   def inBooleanContext(): Boolean
 
