@@ -100,7 +100,7 @@ final class ImportCacheCtorSassPathIss991JvmSuite extends munit.FunSuite {
     // the JVM each entry must become a FilesystemImporter
     // (import_cache.dart:130-132).
     val sassPathImporters =
-      LoadPathImporterPlatform.sassPathImportersFrom(Some(dir.toString), ":")
+      LoadPathImporterPlatform.sassPathImportersFrom(Some(dir.toString), java.io.File.pathSeparator)
     assertEquals(sassPathImporters.length, 1, "one SASS_PATH entry -> one importer")
     val cache  = new ImportCache(importers = sassPathImporters)
     val result = Compile.compileString(
@@ -114,8 +114,8 @@ final class ImportCacheCtorSassPathIss991JvmSuite extends munit.FunSuite {
   }
 
   test("ISS-991 control: an empty/absent SASS_PATH contributes no importers (JVM seam)") {
-    assertEquals(LoadPathImporterPlatform.sassPathImportersFrom(scala.None, ":"), Nil)
-    assertEquals(LoadPathImporterPlatform.sassPathImportersFrom(Some(""), ":"), Nil)
+    assertEquals(LoadPathImporterPlatform.sassPathImportersFrom(scala.None, java.io.File.pathSeparator), Nil)
+    assertEquals(LoadPathImporterPlatform.sassPathImportersFrom(Some(""), java.io.File.pathSeparator), Nil)
   }
 
   tempDir.test("ISS-991 control: multiple SASS_PATH entries split on the separator (JVM seam)") { dir =>
@@ -123,8 +123,9 @@ final class ImportCacheCtorSassPathIss991JvmSuite extends munit.FunSuite {
     val b         = dir.resolve("b")
     val _         = Files.createDirectory(a)
     val _         = Files.createDirectory(b)
+    val sep       = java.io.File.pathSeparator
     val importers =
-      LoadPathImporterPlatform.sassPathImportersFrom(Some(s"${a.toString}:${b.toString}"), ":")
+      LoadPathImporterPlatform.sassPathImportersFrom(Some(s"${a.toString}${sep}${b.toString}"), sep)
     assertEquals(importers.length, 2, "two colon-separated SASS_PATH entries -> two importers")
     assert(importers.forall(_.isInstanceOf[FilesystemImporter]), "SASS_PATH entries become FilesystemImporters")
   }
