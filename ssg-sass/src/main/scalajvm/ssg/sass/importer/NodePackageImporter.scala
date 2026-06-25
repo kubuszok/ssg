@@ -105,7 +105,11 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
       case None => ()
     }
 
-    val fs = new FilesystemImporter(packageRoot)
+    // packageRoot is already a POSIX-model pathString (derived from
+    // _entryPointDirectory which was fromNioPath'd). Route it to the primary
+    // ctor directly — the String ctor would call Paths.get(packageRoot) which
+    // throws on Windows for a "/C:/..." model string (ISS-1339 sub-cause B).
+    val fs = new FilesystemImporter(Nullable(FilePath.of(packageRoot).toAbsolute.normalize.pathString), false)
     if (subpath.isEmpty) {
       _resolvePackageRootValues(packageRoot, manifestMap) match {
         case Some(p) => break(fs.canonicalize(p))

@@ -21,7 +21,7 @@ import scala.language.implicitConversions
   *
   * JVM-only.
   */
-final class FilesystemImporter private (
+final class FilesystemImporter private[importer] (
   private val _loadPath:           Nullable[String],
   private val _loadPathDeprecated: Boolean
 ) extends Importer {
