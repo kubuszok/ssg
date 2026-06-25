@@ -17,7 +17,7 @@ package ssg
 package sass
 package importer
 
-import ssg.commons.io.{ FileOps, FilePath }
+import ssg.commons.io.{ FileOps, FilePath, FilePathPlatform }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -30,7 +30,7 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
 
   override def isNonCanonicalScheme(scheme: String): Boolean = scheme == "pkg"
 
-  private val _entryPointDirectory: String = FilePath.of(entryPoint).toAbsolute.normalize.pathString
+  private val _entryPointDirectory: String = FilePathPlatform.fromNioPath(java.nio.file.Paths.get(entryPoint)).toAbsolute.normalize.pathString
 
   def canonicalize(url: String): Nullable[String] = boundary {
     if (url.startsWith("file:")) {
@@ -95,7 +95,7 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
           if (dot >= 0) resolved.substring(dot) else ""
         }
         if (ValidExtensions.contains(ext)) {
-          break(Nullable(_toFileUri(resolved)))
+          break(Nullable(ImporterFileUtils.toFileUri(resolved)))
         } else {
           throw new IllegalArgumentException(
             s"The export for '${subpath.getOrElse("root")}' in '$packageName' resolved to '$resolved', " +
@@ -138,11 +138,6 @@ final class NodePackageImporter(val entryPoint: String) extends Importer {
   // ---------------------------------------------------------------------------
   // Private: resolution algorithm
   // ---------------------------------------------------------------------------
-
-  private def _toFileUri(path: String): String = {
-    val normalized = FilePath.of(path).toAbsolute.normalize.pathString.replace('\\', '/')
-    "file://" + (if (normalized.startsWith("/")) normalized else "/" + normalized)
-  }
 
   private def _packageNameAndSubpath(specifier: String): (String, Option[String]) = {
     val parts        = specifier.split('/').toList

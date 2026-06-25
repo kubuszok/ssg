@@ -10,7 +10,7 @@ package ssg
 package sass
 package importer
 
-import ssg.commons.io.{ FileOps, FilePath }
+import ssg.commons.io.{ FileOps, FilePath, FilePathPlatform }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -28,7 +28,7 @@ final class FilesystemImporter private (
 
   /** Creates an importer that loads files relative to [[loadPath]]. */
   def this(loadPath: String) =
-    this(Nullable(FilePath.of(loadPath).toAbsolute.normalize.pathString), false)
+    this(Nullable(FilePathPlatform.fromNioPath(java.nio.file.Paths.get(loadPath)).toAbsolute.normalize.pathString), false)
 
   /** The load path as a string, for backward compatibility. */
   def loadPath: String = _loadPath.getOrElse("")
@@ -70,7 +70,7 @@ final class FilesystemImporter private (
     }
 
     resolved.map { r =>
-      java.nio.file.Paths.get(r).toAbsolutePath.normalize.toUri.toString
+      ImporterFileUtils.toFileUri(r)
     }
   }
 
