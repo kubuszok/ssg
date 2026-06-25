@@ -5,7 +5,7 @@ package ssg
 package sass
 
 import ssg.commons.io.{ FileOps, FilePath }
-import ssg.sass.importer.{ FilesystemImporter, Importer }
+import ssg.sass.importer.{ FilesystemImporter, Importer, ImporterFileUtils }
 import ssg.sass.visitor.OutputStyle
 
 import scala.language.implicitConversions
@@ -25,7 +25,7 @@ object CompileFile {
     val syntax = Syntax.forPath(path)
     // dart-sass compile.dart:83: url: p.toUri(path) — thread the file URL so
     // error spans and loadedUrls carry the entry-file path instead of <unknown>.
-    val fileUrl = java.nio.file.Paths.get(file.pathString).toUri.toString
+    val fileUrl = ImporterFileUtils.toFileUri(file.pathString)
     Compile.compileString(
       source,
       style,

@@ -20,6 +20,7 @@ package site
 
 import ssg.commons.io.FileOps
 import ssg.commons.io.FilePath
+import ssg.commons.io.FilePathPlatform
 
 class SitePipelineGoldenSuite extends munit.FunSuite {
 
@@ -33,7 +34,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
   private def resourceDir(name: String): FilePath = {
     val url = Option(getClass.getClassLoader.getResource(name)).getOrElse(fail(s"Resource '$name' not found on classpath"))
     if (url.getProtocol == "file") {
-      FilePath.of(java.nio.file.Paths.get(url.toURI).toString)
+      FilePathPlatform.fromNioPath(java.nio.file.Paths.get(url.toURI))
     } else {
       // jar: (or other non-filesystem) URL — sbt 2.0 packages test resources into a `<name>-tests.jar`.
       // Since this suite needs to walk the resource as a real directory tree, fall back to the on-disk
@@ -46,7 +47,7 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
         if (dir == null) None
         else {
           val candidate = dir.resolve(rel)
-          if (java.nio.file.Files.isDirectory(candidate)) Some(FilePath.of(candidate.toString))
+          if (java.nio.file.Files.isDirectory(candidate)) Some(FilePathPlatform.fromNioPath(candidate))
           else search(dir.getParent)
         }
 

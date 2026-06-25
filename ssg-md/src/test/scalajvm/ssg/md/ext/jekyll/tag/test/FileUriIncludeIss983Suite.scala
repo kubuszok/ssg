@@ -71,7 +71,7 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
     val parser   = Parser.builder(options).build()
     val renderer = HtmlRenderer.builder(Nullable(options)).build()
 
-    val source   = "before\n\n{% include file:" + included.toAbsolutePath.toString + " %}\n\nafter\n"
+    val source   = "before\n\n{% include " + included.toAbsolutePath.toUri.toString + " %}\n\nafter\n"
     val document = parser.parse(source)
     val html     = renderer.render(document)
 

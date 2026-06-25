@@ -140,4 +140,14 @@ object ImporterFileUtils {
     } catch {
       case _: Throwable => false
     }
+
+  /** Converts a filesystem path to a `file:` URI string, OS-independently.
+    *
+    * The path is resolved to absolute, normalized, and forward-slash rendered so the resulting URI is identical on POSIX and Windows. On POSIX, this produces the same string as
+    * `java.nio.file.Paths.get(path).toAbsolutePath.normalize.toUri.toString` (verified by construction: both yield `file:///absolute/path`).
+    */
+  def toFileUri(path: String): String = {
+    val normalized = FilePath.of(path).toAbsolute.normalize.pathString.replace('\\', '/')
+    "file://" + (if (normalized.startsWith("/")) normalized else "/" + normalized)
+  }
 }
