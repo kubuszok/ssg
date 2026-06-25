@@ -51,7 +51,9 @@ class SitePipelineGoldenSuite extends munit.FunSuite {
           else search(dir.getParent)
         }
 
-      val start = java.nio.file.Paths.get(FilePath.cwd.pathString).toAbsolutePath
+      // Route the model cwd through the nio bridge: FilePath.cwd.pathString is the POSIX model form
+      // (/X:/... on Windows), and java.nio.Paths.get rejects a leading slash before a drive — use toNioPath.
+      val start = FilePathPlatform.toNioPath(FilePath.cwd).toAbsolutePath
       search(start).getOrElse(
         fail(s"Resource '$name' is in a non-file URL ($url) and no ancestor of $start contains $rel")
       )
