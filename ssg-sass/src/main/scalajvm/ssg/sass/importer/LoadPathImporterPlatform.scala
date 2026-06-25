@@ -38,7 +38,7 @@ object LoadPathImporterPlatform {
     try
       sassPathImportersFrom(
         sys.env.get("SASS_PATH"),
-        if (sys.props.getOrElse("os.name", "").toLowerCase.contains("win")) ";" else ":"
+        java.io.File.pathSeparator
       )
     catch {
       case _: SecurityException => Nil
