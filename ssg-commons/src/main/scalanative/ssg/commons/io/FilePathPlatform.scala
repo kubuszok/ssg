@@ -6,11 +6,14 @@
  *
  * The path is held as a string (like the JS and JVM implementations)
  * with all path-string operations implemented as pure POSIX string
- * transforms. java.nio.file.Path is used ONLY for normalize (its proven
- * edge-case handling is reused then POSIX-rendered) and for the FS I/O
- * bridge (toNioPath/fromNioPath). This makes the path-string API
- * OS-independent: on Windows Native, FilePath.of("/x").isAbsolute is
- * true and pathString uses forward slashes, matching JVM and JS.
+ * transforms — including normalize, which uses a pure-Scala POSIX
+ * dot-segment resolver (ISS-1346: Scala Native's nio normalize on
+ * Windows does not collapse ".." above root, unlike JVM nio).
+ * java.nio.file.Path is used ONLY for the FS I/O bridge
+ * (toNioPath/fromNioPath) and for obtaining the host cwd. This makes
+ * the path-string API OS-independent: on Windows Native,
+ * FilePath.of("/x").isAbsolute is true and pathString uses forward
+ * slashes, matching JVM and JS.
  */
 package ssg
 package commons
@@ -70,21 +73,11 @@ final private[io] class NativeFilePath(val pathString: String) extends FilePath 
   // Mirrors JvmFilePath.normalize (scalajvm/ssg/commons/io/FilePathPlatform.scala:75-87):
   // Path.normalize preserves the root component (absolute paths stay absolute), strips a trailing separator, and
   // renders a path that reduces to nothing as the empty string.
-  // Uses nio's proven normalize then POSIX-renders the output (replace backslash on Windows, strip trailing sep,
-  // map "." -> "").
-  override def normalize: FilePath = {
-    val driveAbs = FilePathPlatform.isDriveAbsolute(pathString)
-    val nioInput = if (driveAbs) pathString.substring(1) else pathString
-    val n0       = Paths.get(nioInput).normalize().toString.replace('\\', '/')
-    // Restore the model's leading '/' for a drive-absolute path so it stays POSIX-absolute (isAbsolute).
-    val normalized = if (driveAbs) "/" + n0 else n0
-    val stripped   =
-      if (normalized.length > 1 && normalized.endsWith("/")) normalized.substring(0, normalized.length - 1)
-      else normalized
-    // Paths.get(...).normalize() returns "." where it should return "" on some edge cases;
-    // map "." -> "" to match the JVM and JS contract (Paths.get(".").normalize().toString == "").
-    new NativeFilePath(if (stripped == ".") "" else stripped)
-  }
+  // Pure-Scala POSIX dot-segment resolution (no nio dependency): resolves "." and ".." segments per POSIX rules,
+  // drops ".." above an absolute root, preserves leading ".." on relative paths.  This avoids Scala Native's nio
+  // normalize() which on Windows does NOT collapse ".." above the root (ISS-1346).
+  override def normalize: FilePath =
+    new NativeFilePath(FilePathPlatform.posixNormalize(pathString))
 
   override def hashCode(): Int = pathString.hashCode
 
@@ -120,6 +113,50 @@ object FilePathPlatform {
     else if (idx == p.length - 1) "" // root "/" (after renderPath, only "/" ends with '/')
     else p.substring(idx + 1)
   }
+
+  /** Pure-Scala POSIX dot-segment normalization matching java.nio.file.Path.normalize on the JVM:
+    *   - Split on '/' into segments; discard empty segments (duplicate separators) and "." segments.
+    *   - For each ".." segment: if the previous (non-"..") segment exists, cancel both; if the path is absolute, drop the ".." (cannot go above root); if relative, keep the ".." (it escapes upward).
+    *   - Reassemble: absolute paths get a leading "/"; a result that reduces to nothing becomes "" (not ".").
+    *   - Drive-absolute paths ("/C:/...") are handled: the drive prefix is preserved and ".." above the drive root is dropped.
+    *
+    * This replaces the previous Paths.get(...).normalize() delegation which broke on Native-Windows (Scala Native's nio normalize does not collapse ".." above the root on Windows — ISS-1346).
+    */
+  private[io] def posixNormalize(p: String): String =
+    if (p.isEmpty) ""
+    else {
+      val abs      = p.startsWith("/")
+      val segments = p.split("/").iterator.filter(_.nonEmpty).toArray
+      // Resolve dot-segments in a single forward pass.
+      val stack = new scala.collection.mutable.ArrayBuffer[String](segments.length)
+      var i     = 0
+      while (i < segments.length) {
+        val seg = segments(i)
+        if (seg == ".") {
+          // Skip: "." is a no-op in normalization.
+        } else if (seg == "..") {
+          if (stack.nonEmpty && stack.last != "..") {
+            // Cancel the previous real segment.
+            stack.remove(stack.length - 1): Unit
+          } else if (!abs) {
+            // Relative path: keep leading ".." (it escapes above the start).
+            stack += ".."
+          }
+          // else: absolute path, ".." above root is silently dropped (POSIX/JVM contract).
+        } else {
+          stack += seg
+        }
+        i += 1
+      }
+      val body = stack.mkString("/")
+      if (abs) {
+        if (body.isEmpty) "/" else "/" + body
+      } else {
+        // A path that reduces to nothing is the empty string, matching JVM Paths.get(".").normalize() == ""
+        // and Paths.get("a/..").normalize() == "".
+        body
+      }
+    }
 
   /** True if `p` is the POSIX-rendered form of a Windows drive-absolute path: "/X:/..." (a single drive letter then ':' at index 2). The leading '/' makes it POSIX-absolute (isAbsolute) while X: is
     * the drive; java.nio.Paths.get REJECTS this form on Windows (a leading slash before a drive is illegal), so the nio bridge strips it. Never matches a POSIX path (index-2 is ':' only for a drive
