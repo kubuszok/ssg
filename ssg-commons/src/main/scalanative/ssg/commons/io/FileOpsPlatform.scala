@@ -72,6 +72,9 @@ private[io] object FileOpsPlatform {
 
   /** Removes a file or an entire tree; a missing path is a no-op. Symlinks are deleted as links — a directory symlink is removed directly (its target is never descended into), giving the clean-build
     * safety property (design Q13).
+    *
+    * ISS-1347 robustness: if a path vanishes between the exists check and the delete (e.g. a concurrent deletion, or the Native-Windows javalib following a directory symlink into a target that is
+    * itself being cleaned up), NoSuchFileException is caught and treated as a no-op — consistent with the "a missing path is a no-op" contract.
     */
   def deleteRecursively(path: FilePath): Unit = {
     val nio = FilePathPlatform.toNioPath(path)
@@ -79,7 +82,8 @@ private[io] object FileOpsPlatform {
       if (Files.isDirectory(nio, LinkOption.NOFOLLOW_LINKS)) {
         list(path).foreach(deleteRecursively)
       }
-      Files.delete(nio)
+      try Files.delete(nio)
+      catch { case _: java.nio.file.NoSuchFileException => () }
     }
   }
 
