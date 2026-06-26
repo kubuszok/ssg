@@ -95,7 +95,8 @@ private[data] trait AsDataViewMacrosImpl { this: MacroCommonsScala3 & MacroCommo
       .runToExprOrFail(
         "AsDataView.derived",
         infoRendering = DontRender,
-        errorRendering = DontRender
+        errorRendering = DontRender,
+        timeout = scala.concurrent.duration.FiniteDuration(10, java.util.concurrent.TimeUnit.SECONDS)
       ) { (_, errors) =>
         val errorsRendered = errors.map(e => "  - " + e.getMessage).mkString("\n")
         s"AsDataView.derived[${Type[A].prettyPrint}] failed:\n$errorsRendered"
