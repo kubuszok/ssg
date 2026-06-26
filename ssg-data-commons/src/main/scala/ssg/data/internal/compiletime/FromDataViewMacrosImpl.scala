@@ -89,7 +89,8 @@ private[data] trait FromDataViewMacrosImpl { this: MacroCommonsScala3 & MacroCom
       .runToExprOrFail(
         "FromDataView.derived",
         infoRendering = DontRender,
-        errorRendering = DontRender
+        errorRendering = DontRender,
+        timeout = scala.concurrent.duration.FiniteDuration(10, java.util.concurrent.TimeUnit.SECONDS)
       ) { (_, errors) =>
         val errorsRendered = errors.map(e => "  - " + e.getMessage).mkString("\n")
         s"FromDataView.derived[${Type[A].prettyPrint}] failed:\n$errorsRendered"
