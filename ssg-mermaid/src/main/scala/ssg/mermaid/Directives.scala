@@ -63,18 +63,26 @@ object Directives {
     *
     * Ports `directiveRegex` (`regexes.ts:8-9`): {{{/%{2}{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)|((?:(?!}%{2}).|\r?\n)*))?\s*(?:}%{2})?/gi}}}
     *
-    * Capture groups: 1 = `name:` form, 2 = bare `name` form, 3 = simple word argument, 4 = complex body (everything up to the closing `}%%`).
+    * Capture groups: 1 = `name:` form, 2 = bare `name` form, 3 = simple word argument, 4 = complex body terminated by `}%%`, 5 = complex body without a closing `}%%` (to end of text).
+    *
+    * Cross-platform (re2): the original group-4 negative lookahead `(?:(?!\}%%)[\s\S])*` ("everything up to the first `}%%`") is not supported on Scala Native. It is replaced by two alternation
+    * branches — `([\s\S]*?)\}%%` (reluctant, terminates at the first `}%%`) and `([\s\S]*)` (greedy, to end-of-text when there is no `}%%`) — reproducing the same match semantics without a lookahead
+    * (cross-platform regex guide, pattern #1: programmatic post-match via alternation). The word-arg branch `(\w+)` retains its own `\s*(?:\}%%)?` tail to consume the optional close.
     */
   private val DirectiveRegex: Regex =
-    """(?i)%%\{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)|((?:(?!\}%%)[\s\S])*))?\s*(?:\}%%)?""".r
+    """(?i)%%\{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)\s*(?:\}%%)?|([\s\S]*?)\}%%|([\s\S]*))?""".r
 
   /** Matches `%%`-comments that are NOT directives, used to strip them before the directive scan.
     *
     * Ports the `commentWithoutDirectives` regex (`utils.ts:165-168`): {{{`[%]{2}(?![{]${directiveWithoutOpen.source})(?=[}][%]{2}).*\n`}}} where `directiveWithoutOpen` is the directive body without
     * the opening `%%{` (`regexes.ts` shares the source). The negative lookahead keeps real directives; the positive lookahead requires the `}%%` close.
+    *
+    * Cross-platform (re2): the original's negative lookahead `(?!\{...)` excludes directives and its positive lookahead `(?=\}%%)` requires `}%%`. These are mutually exclusive at the character level:
+    * the negative lookahead checks for `{` while the positive requires `}`, so the negative always passes when the positive does. The reduced `%%\}%%` form matches `%%` immediately followed by `}%%`
+    * — exactly the set of `%%`-comments that contain a closing `}%%` but are not real `%%{...}%%` directives. This avoids all lookaheads (cross-platform regex guide, pattern #1).
     */
   private val CommentWithoutDirectives: Regex =
-    """(?i)%%(?!\{\s*(?:(?:\w+\s*:|\w+)\s*(?:\w+|(?:(?!\}%%)[\s\S])*)?\s*)(?=\}%%))(?=\}%%).*\n""".r
+    """(?i)%%\}%%.*\n""".r
 
   /** Detects the directive(s) of a given `type` (or all directives if `type` is empty) from the text.
     *
@@ -102,7 +110,9 @@ object Directives {
       val g1 = Option(m.group(1))
       val g2 = Option(m.group(2))
       val g3 = Option(m.group(3))
-      val g4 = Option(m.group(4))
+      // Group 4 = body terminated by `}%%`; group 5 = body without closing `}%%`
+      // (to end of text). At most one is non-null; coalesce to a single option.
+      val g4 = Option(m.group(4)).orElse(Option(m.group(5)))
 
       // (match && !type) || (type && match[1]?.match(type)) || (type && match[2]?.match(type))
       val matches =
