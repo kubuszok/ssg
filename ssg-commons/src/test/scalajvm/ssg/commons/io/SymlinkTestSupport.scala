@@ -3,7 +3,7 @@ package ssg
 package commons
 package io
 
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{ Files, LinkOption, Paths }
 
 /** Platform capability probe for the shared FileOps suite: creates a symbolic link at `link` pointing at `target`, returning true if the platform allowed it. JVM uses
   * java.nio.file.Files.createSymbolicLink. The probe is detection-only — its boolean result lets the shared suite decide whether to run the does-not-follow-symlinks assertion; it never masks a
@@ -27,4 +27,11 @@ object SymlinkTestSupport {
       case _: java.io.IOException => false
       case _: RuntimeException    => false
     }
+
+  /** Probes whether the platform honors LinkOption.NOFOLLOW_LINKS for an existing directory symlink. `link` must already exist and point at a directory target. Returns true when
+    * Files.isDirectory(link, NOFOLLOW_LINKS) correctly reports false (i.e. the link itself is not a directory — NOFOLLOW is honored). Returns false when the platform's javalib follows the link
+    * despite NOFOLLOW_LINKS (ISS-1347: Scala Native Windows).
+    */
+  def nofollowLinksHonored(link: FilePath): Boolean =
+    !Files.isDirectory(Paths.get(link.pathString), LinkOption.NOFOLLOW_LINKS)
 }
