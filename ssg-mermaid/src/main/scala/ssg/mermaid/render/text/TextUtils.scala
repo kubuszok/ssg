@@ -385,11 +385,62 @@ object TextUtils {
       result = result.replaceAll("__(.+?)__", "$1")
       // Italic: *text* and _text_
       result = result.replaceAll("\\*(.+?)\\*", "$1")
-      result = result.replaceAll("(?<=\\s|^)_(.+?)_(?=\\s|$)", "$1")
+      result = stripItalicUnderscores(result)
       // Code: `text`
       result = result.replaceAll("`(.+?)`", "$1")
       // Strikethrough: ~~text~~
       result = result.replaceAll("~~(.+?)~~", "$1")
       result
     }
+
+  /** Strips italic underscore markers (`_text_` to `text`) where the opening `_` is preceded by whitespace or start-of-string, and the closing `_` is followed by whitespace or end-of-string.
+    *
+    * Mirrors the original regex `(?<=\s|^)_(.+?)_(?=\s|$)` without lookaround (unsupported on Scala Native re2, ISS-1344). Boundary characters are preserved (not consumed), so adjacent italics like
+    * `_a_ _b_` both match — the shared space remains as a boundary for both.
+    */
+  private def stripItalicUnderscores(s: String): String = {
+    val len = s.length
+    if (len < 3) {
+      // Need at least _X_ (3 chars) for any match
+      s
+    } else {
+      val sb = new java.lang.StringBuilder(len)
+      var i  = 0
+      while (i < len)
+        if (s.charAt(i) == '_') {
+          // Check start boundary: preceded by whitespace or at position 0
+          val startBoundary = i == 0 || Character.isWhitespace(s.charAt(i - 1))
+          if (startBoundary && i + 2 < len) {
+            // Search for the closest closing '_' (reluctant: shortest match) that
+            // is followed by whitespace or end-of-string
+            var j     = i + 2 // content must be at least 1 char (.+?)
+            var found = false
+            while (j < len && !found) {
+              if (s.charAt(j) == '_') {
+                val endBoundary = j + 1 >= len || Character.isWhitespace(s.charAt(j + 1))
+                if (endBoundary) {
+                  // Match: append the content between the underscores (without them)
+                  sb.append(s, i + 1, j)
+                  i = j + 1
+                  found = true
+                }
+              }
+              if (!found) j += 1
+            }
+            if (!found) {
+              // No closing underscore with end-boundary found — emit the opening '_' literally
+              sb.append('_')
+              i += 1
+            }
+          } else {
+            sb.append('_')
+            i += 1
+          }
+        } else {
+          sb.append(s.charAt(i))
+          i += 1
+        }
+      sb.toString
+    }
+  }
 }

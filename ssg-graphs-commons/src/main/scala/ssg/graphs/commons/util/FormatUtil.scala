@@ -18,8 +18,9 @@ object FormatUtil {
     * digits (zero-padded), no grouping, no E-notation.
     *
     * Uses `new java.math.BigDecimal(double)` (the exact binary64 constructor, NOT `BigDecimal.valueOf` which re-rounds through `Double.toString`) with `setScale(precision, HALF_UP)` — Java's HALF_UP
-    * is round-half-away-from-zero for both signs, matching ECMA-262. `.toPlainString` is locale-independent and never emits E-notation, so this is safe on every platform (JVM/JS/Native) — never via
-    * `String.format`/f-interpolator, which on the JVM follows `Locale.getDefault` and would emit comma decimals on comma-locale hosts (ISS-1156, same bug class as ISS-1153).
+    * is round-half-away-from-zero for both signs, matching ECMA-262. `.toString` (not `.toPlainString` — broken on Native, ISS-1343) is locale-independent; after `setScale(p)` with `p >= 0` the scale
+    * is non-negative so `toString` never emits E-notation — safe on every platform (JVM/JS/Native). Never via `String.format`/f-interpolator, which on the JVM follows `Locale.getDefault` and would
+    * emit comma decimals on comma-locale hosts (ISS-1156, same bug class as ISS-1153).
     */
   def toFixed(value: Double, precision: Int): String =
     // NaN/Infinity guard: BigDecimal(double) throws NumberFormatException for
@@ -28,7 +29,11 @@ object FormatUtil {
     else if (value.isPosInfinity) "Infinity"
     else if (value.isNegInfinity) "-Infinity"
     else {
-      new java.math.BigDecimal(value).setScale(precision, java.math.RoundingMode.HALF_UP).toPlainString
+      // .toString (not .toPlainString): Native's toPlainString zeroes the integer
+      // part (386.0 → "000.00"). After setScale(p) with p >= 0 the scale is
+      // non-negative, so toString never emits E-notation — identical to
+      // toPlainString on JVM/JS. Same pattern as ssg-liquid PlainBigDecimal.
+      new java.math.BigDecimal(value).setScale(precision, java.math.RoundingMode.HALF_UP).toString
     }
 
   /** Like [[toFixed]] but strips trailing zeros (and a bare trailing '.') so e.g. 0.0500 -> "0.05", 1.0 -> "1". Mirrors the unary-`+` round-trip applied to a JS `toFixed` result. Locale-independent
