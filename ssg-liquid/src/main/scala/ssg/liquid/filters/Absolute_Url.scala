@@ -100,7 +100,7 @@ object Absolute_Url {
       // Must convert domain to punycode separately from the path
       // see https://gist.github.com/msangel/f2224f72d386db3580ce18e5ef01bcc3
       val asciiAuthority = punycodeAuthority(authority)
-      val assembled      = (if (includeScheme) scheme else "") + asciiAuthority + path + queryString + fragment
+      val assembled      = (if (includeScheme) scheme else "") + asciiAuthority + collapseSlashes(path) + queryString + fragment
 
       // Convert path from unicode to ascii encoding
       new URI(assembled).normalize().toASCIIString
@@ -129,5 +129,25 @@ object Absolute_Url {
       val port       = if (hasPort) hostPort.substring(colonIdx) else ""
 
       userinfo + Punycode.toAscii(host) + port
+    }
+
+  /** Collapse runs of consecutive '/' in a URI path to a single '/', mirroring the empty-segment removal that java.net.URI.normalize() performs on the JVM but which Scala Native's normalize() omits.
+    * Idempotent: single-slash paths are fixed points, so this is a no-op on JVM/JS where normalize() already collapsed. Operates on raw (un-percent-decoded) path text; '%XX' sequences contain no '/'
+    * so they are never touched, and literal '/' separators stay literal.
+    */
+  def collapseSlashes(path: String): String =
+    if (path.indexOf("//") < 0) path
+    else {
+      val sb        = new StringBuilder(path.length)
+      var prevSlash = false
+      var i         = 0
+      while (i < path.length) {
+        val c       = path.charAt(i)
+        val isSlash = c == '/'
+        if (!(isSlash && prevSlash)) sb.append(c)
+        prevSlash = isSlash
+        i += 1
+      }
+      sb.toString
     }
 }
