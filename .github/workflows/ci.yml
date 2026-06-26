@@ -15,7 +15,6 @@ concurrency:
 env:
   # Zulu 25 — FFM API stable since JDK 22, all 6 desktop platforms
   # including Windows aarch64 (which Temurin 25 lacks).
-  JVM_VERSION: "zulu:25"
   JAVA_VERSION: "25"
   JAVA_DISTRIBUTION: "zulu"
   NODE_VERSION: "22"
@@ -31,10 +30,13 @@ jobs:
         with:
           submodules: false
 
-      - uses: coursier/setup-action@v3.0.0
+      - uses: actions/setup-java@v4
         with:
-          jvm: ${{ env.JVM_VERSION }}
-          apps: sbt
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
 
       - name: Check formatting
         run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
@@ -98,10 +100,13 @@ jobs:
         with:
           submodules: false
 
-      - uses: coursier/setup-action@v3.0.0
+      - uses: actions/setup-java@v4
         with:
-          jvm: ${{ env.JVM_VERSION }}
-          apps: sbt
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
 
       - uses: actions/setup-node@v6
         with:
@@ -200,10 +205,13 @@ jobs:
         with:
           submodules: false
 
-      - uses: coursier/setup-action@v3.0.0
+      - uses: actions/setup-java@v4
         with:
-          jvm: ${{ env.JVM_VERSION }}
-          apps: sbt
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
 
       - name: Install Scala Native deps
         run: |
