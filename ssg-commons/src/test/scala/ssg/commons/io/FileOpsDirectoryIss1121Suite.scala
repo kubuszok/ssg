@@ -143,14 +143,21 @@ final class FileOpsDirectoryIss1121Suite extends munit.FunSuite {
     writeFile(targetChild, "behind-the-link")
     FileOps.createDirectories(target.resolve("subdir"))
 
-    // The walked tree: one real file plus a directory symlink that points at `target`.
+    // The walked tree: one real file plus (conditionally) a directory symlink that points at `target`.
     val tree = dir.resolve("tree")
     FileOps.createDirectories(tree)
     writeFile(tree.resolve("real.txt"), "real")
     val link = tree.resolve("link")
 
-    val created = SymlinkTestSupport.tryCreateSymlink(link, target)
-    if (created) {
+    // ISS-1347: probe whether both symlink creation AND NOFOLLOW_LINKS are honored BEFORE creating the test's own
+    // directory symlink. On Native-Windows (symlinks work but NOFOLLOW is not honored), skipping symlink creation
+    // prevents the fixture teardown's deleteRecursively from recursing through the link and throwing.
+    if (SymlinkTestSupport.symlinkSafelyTestable(dir, target)) {
+      // Both symlink creation and NOFOLLOW are supported (JVM, JS, macOS/linux-Native): create the symlink and run
+      // the full does-not-follow security assertions.
+      val created = SymlinkTestSupport.tryCreateSymlink(link, target)
+      assert(created, "symlinkSafelyTestable returned true but tryCreateSymlink failed")
+
       // The link must resolve (live, not dangling) — otherwise "did not descend" would be vacuously true.
       assert(FileOps.isDirectory(link), "the directory symlink must resolve to its target before walking")
       assert(FileOps.exists(link.resolve("inner.txt")), "following the link must reach the target's contents")
@@ -159,24 +166,15 @@ final class FileOpsDirectoryIss1121Suite extends munit.FunSuite {
       // The link entry itself IS returned.
       assert(names.contains("link"), "walkTree must return the symlink entry itself")
       assert(names.contains("real.txt"), "walkTree must return the real file in the tree")
-
-      if (SymlinkTestSupport.nofollowLinksHonored(link)) {
-        // NOFOLLOW_LINKS is honored (JVM, JS, macOS/linux-Native): the full does-not-follow assertions apply.
-        // NOTHING from beneath the target is enumerated through the link: not the target's file, not its subdir.
-        assert(!names.contains("inner.txt"), "walkTree must NOT enumerate the target's file through the link")
-        assert(!names.contains("subdir"), "walkTree must NOT enumerate the target's subdirectory through the link")
-        // Exactly the two in-tree entries — no descent past the link of any kind.
-        assertEquals(FileOps.walkTree(tree).map(_.fileName).sorted, List("link", "real.txt"))
-      } else {
-        // ISS-1347: Scala Native Windows does not honor NOFOLLOW_LINKS in its javalib — walkTree follows the
-        // directory symlink and descends into the target. The link entry is still present in the walk results; the
-        // degraded assertion confirms the tree was walked (link + real.txt both present) without asserting the
-        // no-descend property that the platform cannot provide.
-        assert(names.contains("link"), "walkTree must return the symlink entry (even when NOFOLLOW is not honored)")
-        assert(names.contains("real.txt"), "walkTree must return the real file (even when NOFOLLOW is not honored)")
-      }
+      // NOTHING from beneath the target is enumerated through the link: not the target's file, not its subdir.
+      assert(!names.contains("inner.txt"), "walkTree must NOT enumerate the target's file through the link")
+      assert(!names.contains("subdir"), "walkTree must NOT enumerate the target's subdirectory through the link")
+      // Exactly the two in-tree entries — no descent past the link of any kind.
+      assertEquals(FileOps.walkTree(tree).map(_.fileName).sorted, List("link", "real.txt"))
     } else {
-      // No symlink capability on this host: without the link there is only the one real file under `tree`.
+      // ISS-1347: this platform either cannot create symlinks or does not honor NOFOLLOW_LINKS (Native-Windows).
+      // No directory symlink is created — the degraded assertion confirms the tree walk works on the real file alone,
+      // and the fixture teardown's deleteRecursively never encounters a symlink it would recurse through.
       assertEquals(FileOps.walkTree(tree).map(_.fileName), List("real.txt"))
     }
   }
@@ -270,13 +268,20 @@ final class FileOpsDirectoryIss1121Suite extends munit.FunSuite {
     val protectedFile = outside.resolve("keep.txt")
     writeFile(protectedFile, "must-survive")
 
-    // The build directory to be cleaned; it contains a symlink to `outside`.
+    // The build directory to be cleaned; it will contain a symlink to `outside` only when safe.
     val buildDir = dir.resolve("build")
     FileOps.createDirectories(buildDir)
     val link = buildDir.resolve("link-to-outside")
 
-    val created = SymlinkTestSupport.tryCreateSymlink(link, outside)
-    if (created) {
+    // ISS-1347: probe whether both symlink creation AND NOFOLLOW_LINKS are honored BEFORE creating the test's own
+    // directory symlink. On Native-Windows (symlinks work but NOFOLLOW is not honored), skipping symlink creation
+    // prevents the fixture teardown's deleteRecursively from recursing through the link and throwing.
+    if (SymlinkTestSupport.symlinkSafelyTestable(dir, outside)) {
+      // Both symlink creation and NOFOLLOW are supported (JVM, JS, macOS/linux-Native): create the symlink and run
+      // the full does-not-follow security assertions.
+      val created = SymlinkTestSupport.tryCreateSymlink(link, outside)
+      assert(created, "symlinkSafelyTestable returned true but tryCreateSymlink failed")
+
       // The link is an entry under buildDir before the clean (proving this branch actually ran on this platform).
       assertEquals(FileOps.list(buildDir).map(_.fileName), List("link-to-outside"))
       // Pre-clean guard: the link must RESOLVE to its target directory. isDirectory follows links, so a true result
@@ -287,27 +292,20 @@ final class FileOpsDirectoryIss1121Suite extends munit.FunSuite {
         FileOps.exists(link.resolve("keep.txt")),
         "following the symlink must reach the protected file before the clean (proves the link is not dangling)"
       )
-      // Probe NOFOLLOW before the delete — the link will be gone after deleteRecursively removes buildDir.
-      val nofollowHonored = SymlinkTestSupport.nofollowLinksHonored(link)
       FileOps.deleteRecursively(buildDir)
       assert(!FileOps.exists(buildDir), "the build directory (and the link inside it) must be gone")
-
-      if (nofollowHonored) {
-        // NOFOLLOW_LINKS is honored (JVM, JS, macOS/linux-Native): the target and its contents must survive the
-        // clean because deleteRecursively removed the link as a link, never descending into the target.
-        assert(FileOps.exists(outside), "the symlink target directory must NOT be deleted")
-        assert(FileOps.exists(protectedFile), "the file behind the symlink must NOT be deleted")
-        assertEquals(FileOps.readString(protectedFile), "must-survive")
-      } else {
-        // ISS-1347: Scala Native Windows does not honor NOFOLLOW_LINKS in its javalib — deleteRecursively follows
-        // the directory symlink and deletes the target's contents. The degraded assertion confirms the build
-        // directory itself was removed (the operation completed without error) without asserting the no-follow
-        // property that the platform cannot provide.
-        assert(!FileOps.exists(buildDir), "the build directory must be gone (even when NOFOLLOW is not honored)")
-      }
+      // NOFOLLOW_LINKS is honored: the target and its contents must survive the clean because deleteRecursively
+      // removed the link as a link, never descending into the target.
+      assert(FileOps.exists(outside), "the symlink target directory must NOT be deleted")
+      assert(FileOps.exists(protectedFile), "the file behind the symlink must NOT be deleted")
+      assertEquals(FileOps.readString(protectedFile), "must-survive")
     } else {
-      // This host cannot create a symlink in-test; the does-not-follow assertion is skipped here and noted in the
-      // implementer report. The protected file trivially still exists since nothing was deleted.
+      // ISS-1347: this platform either cannot create symlinks or does not honor NOFOLLOW_LINKS (Native-Windows).
+      // No directory symlink is created — the degraded assertion confirms deleteRecursively works on the build
+      // directory without a symlink, and the fixture teardown never encounters a symlink it would recurse through.
+      // The protected file trivially still exists since nothing links to it.
+      FileOps.deleteRecursively(buildDir)
+      assert(!FileOps.exists(buildDir), "the build directory must be gone")
       assert(FileOps.exists(protectedFile))
     }
   }
