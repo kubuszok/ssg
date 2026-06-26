@@ -93,7 +93,12 @@ object TextUtils {
       // Remove style tags
       result = result.replaceAll("(?i)<style[^>]*>[\\s\\S]*?</style>", "")
       // Remove iframe/object/embed tags
-      result = result.replaceAll("(?i)<(iframe|object|embed)[^>]*>[\\s\\S]*?</\\1>", "")
+      // Three per-tag regexes instead of one backreference regex — re2 (Scala Native)
+      // does not support \1 backreferences. Each regex matches its own open/close pair,
+      // which is semantically identical to the backreference form.
+      result = result.replaceAll("(?i)<iframe[^>]*>[\\s\\S]*?</iframe>", "")
+      result = result.replaceAll("(?i)<object[^>]*>[\\s\\S]*?</object>", "")
+      result = result.replaceAll("(?i)<embed[^>]*>[\\s\\S]*?</embed>", "")
       result = result.replaceAll("(?i)<(iframe|object|embed)[^>]*/>", "")
       result
     }
