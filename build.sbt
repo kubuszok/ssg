@@ -239,7 +239,11 @@ lazy val `ssg-katex` = (projectMatrix in file("ssg-katex"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-katex"
+    name := "ssg-katex",
+    // ISS-1348: The KaTeX port's macro registry (Macros.registerAll) populates a process-global
+    // mutable map. Parallel test suites race on that shared state. Run ssg-katex tests serially
+    // to preserve the single-threaded contract (same pattern as ssg-js / Base54).
+    Test / parallelExecution := false
   )
   .settings(publishSettings)
   .settings(mimaSettings)
