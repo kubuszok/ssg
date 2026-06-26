@@ -35,4 +35,31 @@ object SymlinkTestSupport {
     */
   def nofollowLinksHonored(link: FilePath): Boolean =
     !fs.lstatSync(link.pathString).isDirectory().asInstanceOf[Boolean]
+
+  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors
+    * no-follow-link semantics during walks/deletes. Uses an isolated probe symlink under `parentDir` pointing at
+    * `targetDir` that is created, tested, and removed entirely within this method — no lingering symlink is left
+    * behind regardless of the result. Call BEFORE creating the test's own symlink so the test can decide whether to
+    * create one at all.
+    *
+    * On Node all platforms honor lstat correctly, so this returns true whenever symlink creation succeeds. Exists for
+    * API parity with the JVM/Native SymlinkTestSupport (ISS-1347).
+    */
+  def symlinkSafelyTestable(parentDir: FilePath, targetDir: FilePath): Boolean = {
+    val probeDir  = parentDir.resolve("_symlink_probe_" + System.nanoTime().toString)
+    val probeLink = probeDir.resolve("probe-link")
+    try {
+      fs.mkdirSync(probeDir.pathString, js.Dynamic.literal(recursive = true))
+      val absoluteTarget = path.resolve(targetDir.pathString).asInstanceOf[String]
+      fs.symlinkSync(absoluteTarget, probeLink.pathString): Unit
+      val honored = !fs.lstatSync(probeLink.pathString).isDirectory().asInstanceOf[Boolean]
+      // Clean up the probe link directly (unlinkSync removes the symlink entry itself, not its target).
+      fs.unlinkSync(probeLink.pathString)
+      fs.rmdirSync(probeDir.pathString)
+      honored
+    } catch {
+      // Symlink creation failed — this Node host cannot create symlinks.
+      case _: js.JavaScriptException => false
+    }
+  }
 }

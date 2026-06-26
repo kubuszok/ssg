@@ -34,4 +34,31 @@ object SymlinkTestSupport {
     */
   def nofollowLinksHonored(link: FilePath): Boolean =
     !Files.isDirectory(Paths.get(link.pathString), LinkOption.NOFOLLOW_LINKS)
+
+  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors NOFOLLOW_LINKS during walks/deletes. Uses an isolated probe symlink under
+    * `parentDir` pointing at `targetDir` that is created, tested, and removed entirely within this method — no lingering symlink is left behind regardless of the result. Call BEFORE creating the
+    * test's own symlink so the test can decide whether to create one at all.
+    *
+    * On platforms where this returns false (Native-Windows: symlinks work but NOFOLLOW is not honored), the caller must NOT create a directory symlink — otherwise the fixture teardown's
+    * deleteRecursively would recurse through it and throw (ISS-1347).
+    */
+  def symlinkSafelyTestable(parentDir: FilePath, targetDir: FilePath): Boolean = {
+    val probeDir  = parentDir.resolve("_symlink_probe_" + System.nanoTime().toString)
+    val probeLink = probeDir.resolve("probe-link")
+    try {
+      Files.createDirectories(Paths.get(probeDir.pathString))
+      val absoluteTarget = Paths.get(targetDir.pathString).toAbsolutePath
+      Files.createSymbolicLink(Paths.get(probeLink.pathString), absoluteTarget)
+      val honored = !Files.isDirectory(Paths.get(probeLink.pathString), LinkOption.NOFOLLOW_LINKS)
+      // Clean up the probe link directly (Files.delete on the link entry removes the symlink itself, not its target —
+      // this works even when NOFOLLOW_LINKS is not honored during walks, because delete targets the path entry).
+      Files.delete(Paths.get(probeLink.pathString))
+      Files.delete(Paths.get(probeDir.pathString))
+      honored
+    } catch {
+      // Symlink creation failed — this platform cannot create symlinks at all.
+      case _: java.io.IOException => false
+      case _: RuntimeException    => false
+    }
+  }
 }
