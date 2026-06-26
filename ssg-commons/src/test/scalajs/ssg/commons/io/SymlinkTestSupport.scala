@@ -28,4 +28,11 @@ object SymlinkTestSupport {
       // FileOps behavior is broken.
       case _: js.JavaScriptException => false
     }
+
+  /** Probes whether the platform honors no-follow-link semantics for an existing directory symlink. `link` must already exist and point at a directory target. Returns true when lstatSync reports the
+    * entry is NOT a directory (i.e. it sees the symlink, not its target). On Node all platforms honor lstat correctly, so this always returns true. Exists for API parity with the JVM/Native
+    * SymlinkTestSupport (ISS-1347).
+    */
+  def nofollowLinksHonored(link: FilePath): Boolean =
+    !fs.lstatSync(link.pathString).isDirectory().asInstanceOf[Boolean]
 }
