@@ -46,7 +46,11 @@ val commonSettings = Seq(
       "-Wimplausible-patterns",
       "-Wrecurse-with-default",
       "-Wenum-comment-discard",
-      "-Wunused:imports,privates,locals,patvars,nowarn"
+      "-Wunused:imports,privates,locals,patvars,nowarn",
+      // ISS-1354: raise the kindlings-yaml derivation macro timeout (default 5s) so
+      // KindlingsYamlDecoder.fromYamlString[DataView] doesn't intermittently time out on
+      // slow CI runners (macos-x86_64). kindlings-yaml reads this from -Xmacro-settings.
+      "-Xmacro-settings:yamlDerivation.timeout=30s"
     ),
     libraryDependencies ++= Seq(
       "org.scalameta"     %% "munit"             % versions.munit % Test,
