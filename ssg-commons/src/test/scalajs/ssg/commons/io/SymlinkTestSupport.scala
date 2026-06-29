@@ -36,14 +36,11 @@ object SymlinkTestSupport {
   def nofollowLinksHonored(link: FilePath): Boolean =
     !fs.lstatSync(link.pathString).isDirectory().asInstanceOf[Boolean]
 
-  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors
-    * no-follow-link semantics during walks/deletes. Uses an isolated probe symlink under `parentDir` pointing at
-    * `targetDir` that is created, tested, and removed entirely within this method — no lingering symlink is left
-    * behind regardless of the result. Call BEFORE creating the test's own symlink so the test can decide whether to
-    * create one at all.
+  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors no-follow-link semantics during walks/deletes. Uses an isolated probe symlink under
+    * `parentDir` pointing at `targetDir` that is created, tested, and removed entirely within this method — no lingering symlink is left behind regardless of the result. Call BEFORE creating the
+    * test's own symlink so the test can decide whether to create one at all.
     *
-    * On Node all platforms honor lstat correctly, so this returns true whenever symlink creation succeeds. Exists for
-    * API parity with the JVM/Native SymlinkTestSupport (ISS-1347).
+    * On Node all platforms honor lstat correctly, so this returns true whenever symlink creation succeeds. Exists for API parity with the JVM/Native SymlinkTestSupport (ISS-1347).
     */
   def symlinkSafelyTestable(parentDir: FilePath, targetDir: FilePath): Boolean = {
     val probeDir  = parentDir.resolve("_symlink_probe_" + System.nanoTime().toString)

@@ -19,12 +19,14 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
   private val cp      = js.Dynamic.global.require("child_process")
 
   private lazy val wasmDir: String =
-    js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR.asInstanceOf[js.UndefOr[String]].getOrElse(
-      throw new IllegalStateException(
-        "TREE_SITTER_WASM_DIR is not set — point it at the directory containing " +
-          "web-tree-sitter.js/.wasm and a grammars/ subdirectory of tree-sitter-*.wasm files."
+    js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR
+      .asInstanceOf[js.UndefOr[String]]
+      .getOrElse(
+        throw new IllegalStateException(
+          "TREE_SITTER_WASM_DIR is not set — point it at the directory containing " +
+            "web-tree-sitter.js/.wasm and a grammars/ subdirectory of tree-sitter-*.wasm files."
+        )
       )
-    )
 
   override def availableGrammars: Seq[String] = {
     val grammarsDir = pathMod.join(wasmDir, "grammars").asInstanceOf[String]
@@ -35,19 +37,13 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     }
   }
 
-  /** Resolves the grammar-specific wasm file path and checks whether the wasm
-    * file exists on disk. When `availableGrammars` reports a grammar but the
-    * corresponding wasm file has been removed, throws an actionable error
-    * (configuration inconsistency). For genuinely unknown grammars (not in
-    * `availableGrammars`), produces `None` so the caller can short-circuit to
-    * `Seq.empty` without a `return`.
+  /** Resolves the grammar-specific wasm file path and checks whether the wasm file exists on disk. When `availableGrammars` reports a grammar but the corresponding wasm file has been removed, throws
+    * an actionable error (configuration inconsistency). For genuinely unknown grammars (not in `availableGrammars`), produces `None` so the caller can short-circuit to `Seq.empty` without a `return`.
     */
   private[highlight] def resolveWasmPath(grammarName: String): Option[String] =
     resolveWasmPath(grammarName, availableGrammars)
 
-  /** Overload accepting a pre-computed grammar list, enabling deterministic
-    * testing of the throw path (the TOCTOU guard for configuration
-    * inconsistency) without filesystem races.
+  /** Overload accepting a pre-computed grammar list, enabling deterministic testing of the throw path (the TOCTOU guard for configuration inconsistency) without filesystem races.
     */
   private[highlight] def resolveWasmPath(grammarName: String, knownGrammars: Seq[String]): Option[String] = {
     val wasmName = grammarName match {
@@ -68,9 +64,9 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
     }
   }
 
-  override def highlight(source: String, grammarName: String, highlightQuery: String): Seq[HighlightSpan] = {
+  override def highlight(source: String, grammarName: String, highlightQuery: String): Seq[HighlightSpan] =
     resolveWasmPath(grammarName) match {
-      case None => Seq.empty
+      case None           => Seq.empty
       case Some(wasmPath) =>
         val sourceJson = js.Dynamic.global.JSON.stringify(source).asInstanceOf[String]
         val queryJson  = js.Dynamic.global.JSON.stringify(highlightQuery).asInstanceOf[String]
@@ -128,5 +124,4 @@ object TreeSitterPlatformImpl extends TreeSitterPlatform {
             Seq.empty
         }
     }
-  }
 }

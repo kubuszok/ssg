@@ -20,14 +20,13 @@ import ssg.js.{ MinifyOptions, Terser }
 
 object StdoutAssert {
 
-  /** Execute `code` in a sandbox providing terser's id/leak helpers plus a
-   *  capturing console.log; return captured stdout lines joined by newline.
-   *
-   *  The sandbox mirrors terser/test/sandbox.js globals:
-   *    - id(x)  = identity (blocks constant folding)
-   *    - leak() = no-op   (prevents dead-code elimination)
-   *    - console.log(args) = captures toString of each arg
-   */
+  /** Execute `code` in a sandbox providing terser's id/leak helpers plus a capturing console.log; return captured stdout lines joined by newline.
+    *
+    * The sandbox mirrors terser/test/sandbox.js globals:
+    *   - id(x) = identity (blocks constant folding)
+    *   - leak() = no-op (prevents dead-code elimination)
+    *   - console.log(args) = captures toString of each arg
+    */
   def runStdout(code: String): String = {
     val sb = new StringBuilder
     val logFn: js.Function1[js.Any, Unit] = (arg: js.Any) => {
@@ -35,26 +34,28 @@ object StdoutAssert {
       ()
     }
     val consoleDyn = js.Dynamic.literal(log = logFn)
-    val idFn: js.Function1[js.Any, js.Any] = (x: js.Any) => x
-    val leakFn: js.Function0[Unit] = () => ()
+    val idFn:   js.Function1[js.Any, js.Any] = (x: js.Any) => x
+    val leakFn: js.Function0[Unit]           = () => ()
     // new Function("id", "leak", "console", code)(idFn, leakFn, consoleDyn)
     val fn = js.Dynamic.newInstance(js.Dynamic.global.Function)(
-      "id", "leak", "console", code
+      "id",
+      "leak",
+      "console",
+      code
     )
     fn(idFn.asInstanceOf[js.Any], leakFn.asInstanceOf[js.Any], consoleDyn)
     sb.toString.trim
   }
 
-  /** Minify `input` with `options`, execute the minified code in the sandbox,
-   *  and assert stdout equals `expected`.
-   */
+  /** Minify `input` with `options`, execute the minified code in the sandbox, and assert stdout equals `expected`.
+    */
   def assertStdout(
-      input: String,
-      options: MinifyOptions,
-      expected: String
+    input:    String,
+    options:  MinifyOptions,
+    expected: String
   )(using munit.Location): Unit = {
     val minified = Terser.minifyToString(input, options)
-    val out = runStdout(minified)
+    val out      = runStdout(minified)
     munit.Assertions.assertEquals(out, expected)
   }
 }

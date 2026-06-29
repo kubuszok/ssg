@@ -13,18 +13,16 @@ package compress
 object CompressRunner {
 
   /** Run the compression thunk directly.
-   *
-   * Always returns `Some(result)` since there is no timeout mechanism
-   * on the single-threaded JS runtime.
-   */
+    *
+    * Always returns `Some(result)` since there is no timeout mechanism on the single-threaded JS runtime.
+    */
   def run(thunk: () => String): Option[String] =
     Some(thunk())
 
   /** No-op on JS -- shared suites are vetted hang-free.
-   *
-   * This method exists for API compatibility with the JVM CompressRunner
-   * but should never be reached for properly vetted shared suites.
-   */
+    *
+    * This method exists for API compatibility with the JVM CompressRunner but should never be reached for properly vetted shared suites.
+    */
   def skipOnTimeout(): Unit =
     throw new AssertionError(
       "CompressRunner.skipOnTimeout called on JS -- this should not happen for vetted hang-free suites"

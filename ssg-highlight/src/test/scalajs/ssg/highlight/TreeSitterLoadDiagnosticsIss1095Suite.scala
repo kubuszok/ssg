@@ -4,28 +4,21 @@ package highlight
 
 import scala.scalajs.js
 
-/** ISS-1095: Verifies that the Scala.js platform produces clear, actionable
-  * errors when wasm artifacts are missing or inconsistent.
+/** ISS-1095: Verifies that the Scala.js platform produces clear, actionable errors when wasm artifacts are missing or inconsistent.
   *
-  * The `resolveWasmPath(grammarName, knownGrammars)` overload on
-  * `TreeSitterPlatformImpl` allows deterministic testing of the configuration-
-  * inconsistency throw path without filesystem races. In single-threaded JS,
-  * the `availableGrammars` re-scan and the `fs.existsSync` check always observe
-  * the same filesystem state, so the TOCTOU guard (grammar listed but wasm file
-  * missing) cannot be triggered by deleting a file between calls. The two-arg
-  * overload decouples the grammar list from the filesystem check.
+  * The `resolveWasmPath(grammarName, knownGrammars)` overload on `TreeSitterPlatformImpl` allows deterministic testing of the configuration- inconsistency throw path without filesystem races. In
+  * single-threaded JS, the `availableGrammars` re-scan and the `fs.existsSync` check always observe the same filesystem state, so the TOCTOU guard (grammar listed but wasm file missing) cannot be
+  * triggered by deleting a file between calls. The two-arg overload decouples the grammar list from the filesystem check.
   *
-  * Proof-of-red: without the `resolveWasmPath` split logic, the original code
-  * used a bare `return Seq.empty` for missing wasm files regardless of whether
-  * the grammar was known -- no exception was thrown, so `intercept` would fail.
+  * Proof-of-red: without the `resolveWasmPath` split logic, the original code used a bare `return Seq.empty` for missing wasm files regardless of whether the grammar was known -- no exception was
+  * thrown, so `intercept` would fail.
   */
 final class TreeSitterLoadDiagnosticsIss1095Suite extends munit.FunSuite {
 
   private val fs      = js.Dynamic.global.require("fs")
   private val pathMod = js.Dynamic.global.require("path")
 
-  /** Reads `TREE_SITTER_WASM_DIR` from the process environment (the same
-    * source the impl's `wasmDir` lazy val reads).
+  /** Reads `TREE_SITTER_WASM_DIR` from the process environment (the same source the impl's `wasmDir` lazy val reads).
     */
   private def envWasmDir: String =
     js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR.asInstanceOf[js.UndefOr[String]].getOrElse("/tmp/ts-wasm")
@@ -85,9 +78,7 @@ final class TreeSitterLoadDiagnosticsIss1095Suite extends munit.FunSuite {
     // If wasmDir IS cached, this test just confirms that the env var was set
     // (which is the happy path -- no error to intercept). We verify the error
     // path indirectly via the resolveWasmPath tests above.
-    val wasmDirSet = js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR
-      .asInstanceOf[js.UndefOr[String]]
-      .isDefined
+    val wasmDirSet = js.Dynamic.global.process.env.TREE_SITTER_WASM_DIR.asInstanceOf[js.UndefOr[String]].isDefined
     if (!wasmDirSet) {
       val caught = intercept[IllegalStateException] {
         TreeSitterPlatformImpl.availableGrammars

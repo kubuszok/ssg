@@ -6,14 +6,10 @@ import ssg.sass.visitor.OutputStyle
 
 /** Regression guard for ISS-1334 — mixed paren nesting.
   *
-  * The ISS-1334 peel optimisation (stack-safe deep-nested parens) must handle
-  * mixed nesting correctly: after a peeled level's inner content, the parser
-  * must RESUME expression parsing (space-list/operator/comma tail) before
-  * consuming the outer `)`. These inputs exercise the resume path — each one
-  * must produce the faithful CSS, not throw "Expected ')'".
+  * The ISS-1334 peel optimisation (stack-safe deep-nested parens) must handle mixed nesting correctly: after a peeled level's inner content, the parser must RESUME expression parsing
+  * (space-list/operator/comma tail) before consuming the outer `)`. These inputs exercise the resume path — each one must produce the faithful CSS, not throw "Expected ')'".
   *
-  * Additionally, a deep pure-nesting sanity test confirms the ISS-1000 fix
-  * remains stack-safe.
+  * Additionally, a deep pure-nesting sanity test confirms the ISS-1000 fix remains stack-safe.
   */
 final class ParenNestingIss1334Suite extends munit.FunSuite {
 

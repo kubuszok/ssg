@@ -25,8 +25,8 @@ object ResourceCompatPlatform {
 
   /** Base directories where test resources are found, in search order. */
   private val baseDirs: Array[String] = Array(
-    "ssg-md/src/test/resources",          // canonical source — layout-independent (sbt-1.x/2.0 agnostic)
-    "ssg-md/target/js-3/test-classes"     // legacy fallback
+    "ssg-md/src/test/resources", // canonical source — layout-independent (sbt-1.x/2.0 agnostic)
+    "ssg-md/target/js-3/test-classes" // legacy fallback
   )
 
   def getResourceAsStream(cls: Class[?], path: String): InputStream = {
