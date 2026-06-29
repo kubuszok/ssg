@@ -91,11 +91,46 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # ─── Scala.js tests (platform-independent, runs in Node.js) ────────
+  #
+  # Sharded into 4 parallel matrix jobs so each shard fits comfortably
+  # under the 30-minute timeout. Together the 4 shards cover all 13 JS
+  # modules (the same set as the old monolithic `sbt ci-js-3`):
+  #
+  #   md      — ssg-md (heaviest: ~5 600 tests) + ssgJS/compile (aggregator)
+  #   engines — ssg-katex, ssg-mermaid, ssg-graphviz, ssg-highlight
+  #   core    — ssg-commons, ssg-data-commons, ssg-graphs-commons, ssg-js, ssg-sass, ssg-minify
+  #   site    — ssg-liquid, ssg-site
 
   test-js:
-    name: Scala.js tests
+    name: Scala.js tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: md
+            sbt-tasks: >-
+              ssg-mdJS/testFull ;
+              ssgJS/compile
+          - shard: engines
+            sbt-tasks: >-
+              ssg-katexJS/testFull ;
+              ssg-mermaidJS/testFull ;
+              ssg-graphvizJS/testFull ;
+              ssg-highlightJS/testFull
+          - shard: core
+            sbt-tasks: >-
+              ssg-commonsJS/testFull ;
+              ssg-data-commonsJS/testFull ;
+              ssg-graphs-commonsJS/testFull ;
+              ssg-jsJS/testFull ;
+              ssg-sassJS/testFull ;
+              ssg-minifyJS/testFull
+          - shard: site
+            sbt-tasks: >-
+              ssg-liquidJS/testFull ;
+              ssg-siteJS/testFull
     steps:
       - uses: actions/checkout@v4
         with:
@@ -114,6 +149,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Extract WASM and query files for tree-sitter
+        if: matrix.shard == 'engines'
         run: |
           sbt 'ssg-highlightJS/update'
           WASM_JAR=$(find ~/Library/Caches/Coursier ~/.cache/coursier ~/.ivy2 \
@@ -137,10 +173,10 @@ jobs:
             echo "::warning::tree-sitter-queries JAR not found"
           fi
 
-      - name: Run Scala.js tests
-        run: sbt ci-js-3
+      - name: Run Scala.js tests (${{ matrix.shard }})
+        run: sbt '${{ matrix.sbt-tasks }}'
         env:
-          TREE_SITTER_WASM_DIR: /tmp/ts-wasm
+          TREE_SITTER_WASM_DIR: ${{ matrix.shard == 'engines' && '/tmp/ts-wasm' || '' }}
 
   # ─── Scala Native tests (5 desktop platforms) ─────────────────────
 

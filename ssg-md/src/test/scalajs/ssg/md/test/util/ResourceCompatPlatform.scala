@@ -3,7 +3,8 @@
  * Scala.js implementation of resource loading for tests.
  * Uses Node.js `fs` module to read resource files from the filesystem, since Class.getResourceAsStream is not available on Scala.js.
  *
- * sbt copies test resources to ssg-md/target/js-3/test-classes/.
+ * Resources are read from ssg-md/src/test/resources/ (the canonical source directory, layout-independent across sbt versions).
+ * A legacy fallback to ssg-md/target/js-3/test-classes/ is kept for compatibility with stale sbt-1.x builds.
  * When JS tests run via Node.js, the working directory is the project root, so we resolve resource paths relative to that directory. */
 package ssg
 package md
@@ -22,9 +23,10 @@ object ResourceCompatPlatform {
   private val fs       = js.Dynamic.global.require("fs")
   private val nodePath = js.Dynamic.global.require("path")
 
-  /** Base directories where sbt places test resources, in search order. */
+  /** Base directories where test resources are found, in search order. */
   private val baseDirs: Array[String] = Array(
-    "ssg-md/target/js-3/test-classes"
+    "ssg-md/src/test/resources",          // canonical source — layout-independent (sbt-1.x/2.0 agnostic)
+    "ssg-md/target/js-3/test-classes"     // legacy fallback
   )
 
   def getResourceAsStream(cls: Class[?], path: String): InputStream = {
