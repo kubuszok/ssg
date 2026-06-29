@@ -351,7 +351,11 @@ lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-site",
-    libraryDependencies += "com.kubuszok" %% "kindlings-yaml-derivation" % versions.kindlingsYaml
+    libraryDependencies += "com.kubuszok" %% "kindlings-yaml-derivation" % versions.kindlingsYaml,
+    // ISS-1353: the SiteBuildPhase suites each run a full site build (SASS compile + file writes);
+    // run them serially so concurrent filesystem access can't race — intermittent IOException on
+    // Native-Windows only, where file locking is strict (POSIX tolerates it). Mirrors ssg-js/ssg-katex.
+    Test / parallelExecution := false
   )
   .settings(publishSettings)
   .settings(mimaSettings)
