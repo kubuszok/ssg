@@ -15,17 +15,17 @@ object Versions {
   val scala3 = "3.8.4"
 
   // Which versions should be cross-compiled for publishing.
-  val scalas: List[String] = List(scala3)
+  val scalas:    List[String]                   = List(scala3)
   val platforms: List[VirtualAxis.PlatformAxis] = List(VirtualAxis.jvm, VirtualAxis.js, VirtualAxis.native)
 
   // Dependencies
   // hearth 0.4.0 / kindlings 0.3.0 — the released breaking-change line (migrated off the
   // sbt-2.0 dev snapshots we previously tracked). These carry API breaks vs the 0.3.1/0.2.0 snapshots.
-  val hearth              = "0.4.0"
-  val kindlingsYaml       = "0.3.0"
-  val lls                 = "0.2.0"
-  val scalaJavaLocales    = "1.5.4"
-  val scalaJavaTime       = "2.6.0"
+  val hearth           = "0.4.0"
+  val kindlingsYaml    = "0.3.0"
+  val lls              = "0.2.0"
+  val scalaJavaLocales = "1.5.4"
+  val scalaJavaTime    = "2.6.0"
 
   // Multiarch
   val multiarch           = "0.3.0"
