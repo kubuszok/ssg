@@ -22,7 +22,7 @@ import scala.language.implicitConversions
   */
 final class PathologicalSuite extends munit.FunSuite {
 
-  private val x = 100000
+  private val x = PathologicalSize.x
 
   private val options = new MutableDataSet().set(Parser.SPACE_IN_LINK_URLS, false).toImmutable
 
