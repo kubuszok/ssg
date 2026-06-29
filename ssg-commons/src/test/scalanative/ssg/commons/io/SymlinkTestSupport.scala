@@ -34,14 +34,12 @@ object SymlinkTestSupport {
   def nofollowLinksHonored(link: FilePath): Boolean =
     !Files.isDirectory(Paths.get(link.pathString), LinkOption.NOFOLLOW_LINKS)
 
-  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors
-    * NOFOLLOW_LINKS during walks/deletes. Uses an isolated probe symlink under `parentDir` pointing at `targetDir`
-    * that is created, tested, and removed entirely within this method — no lingering symlink is left behind regardless
-    * of the result. Call BEFORE creating the test's own symlink so the test can decide whether to create one at all.
+  /** Combined capability probe: returns true only when this platform can BOTH create directory symlinks AND honors NOFOLLOW_LINKS during walks/deletes. Uses an isolated probe symlink under
+    * `parentDir` pointing at `targetDir` that is created, tested, and removed entirely within this method — no lingering symlink is left behind regardless of the result. Call BEFORE creating the
+    * test's own symlink so the test can decide whether to create one at all.
     *
-    * On platforms where this returns false (Native-Windows: symlinks work but NOFOLLOW is not honored), the caller
-    * must NOT create a directory symlink — otherwise the fixture teardown's deleteRecursively would recurse through it
-    * and throw (ISS-1347).
+    * On platforms where this returns false (Native-Windows: symlinks work but NOFOLLOW is not honored), the caller must NOT create a directory symlink — otherwise the fixture teardown's
+    * deleteRecursively would recurse through it and throw (ISS-1347).
     */
   def symlinkSafelyTestable(parentDir: FilePath, targetDir: FilePath): Boolean = {
     val probeDir  = parentDir.resolve("_symlink_probe_" + System.nanoTime().toString)
