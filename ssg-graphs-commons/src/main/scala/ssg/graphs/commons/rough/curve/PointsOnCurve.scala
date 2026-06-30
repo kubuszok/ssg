@@ -51,8 +51,7 @@ package curve
 
 import scala.collection.mutable.ArrayBuffer
 
-/** A 2D point. Port of the points-on-curve `Point = [number, number]` tuple type;
-  * shared across the `rough/curve` package (points-on-path re-exports it).
+/** A 2D point. Port of the points-on-curve `Point = [number, number]` tuple type; shared across the `rough/curve` package (points-on-path re-exports it).
   */
 final case class Point(x: Double, y: Double)
 
@@ -109,10 +108,10 @@ object PointsOnCurve {
   }
 
   private def getPointsOnBezierCurveWithSplitting(
-      points: Vector[Point],
-      offset: Int,
-      tolerance: Double,
-      newPoints: Option[ArrayBuffer[Point]]
+    points:    Vector[Point],
+    offset:    Int,
+    tolerance: Double,
+    newPoints: Option[ArrayBuffer[Point]]
   ): ArrayBuffer[Point] = {
     val outPoints: ArrayBuffer[Point] = newPoints.getOrElse(ArrayBuffer.empty)
     if (flatness(points, offset) < tolerance) {
@@ -128,11 +127,11 @@ object PointsOnCurve {
       outPoints += points(offset + 3)
     } else {
       // subdivide
-      val t: Double = .5
-      val p1: Point = points(offset + 0)
-      val p2: Point = points(offset + 1)
-      val p3: Point = points(offset + 2)
-      val p4: Point = points(offset + 3)
+      val t:  Double = .5
+      val p1: Point  = points(offset + 0)
+      val p2: Point  = points(offset + 1)
+      val p3: Point  = points(offset + 2)
+      val p4: Point  = points(offset + 3)
 
       val q1: Point = lerp(p1, p2, t)
       val q2: Point = lerp(p2, p3, t)
@@ -155,20 +154,20 @@ object PointsOnCurve {
   // Ramer–Douglas–Peucker algorithm
   // https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
   private def simplifyPoints(
-      points: Vector[Point],
-      start: Int,
-      end: Int,
-      epsilon: Double,
-      newPoints: Option[ArrayBuffer[Point]] = None
+    points:    Vector[Point],
+    start:     Int,
+    end:       Int,
+    epsilon:   Double,
+    newPoints: Option[ArrayBuffer[Point]] = None
   ): ArrayBuffer[Point] = {
     val outPoints: ArrayBuffer[Point] = newPoints.getOrElse(ArrayBuffer.empty)
 
     // find the most distance point from the endpoints
-    val s: Point         = points(start)
-    val e: Point         = points(end - 1)
+    val s:         Point  = points(start)
+    val e:         Point  = points(end - 1)
     var maxDistSq: Double = 0
-    var maxNdx: Int      = 1
-    var i: Int           = start + 1
+    var maxNdx:    Int    = 1
+    var i:         Int    = start + 1
     while (i < end - 1) {
       val distSq: Double = distanceToSegmentSq(points(i), s, e)
       if (distSq > maxDistSq) {
@@ -193,13 +192,13 @@ object PointsOnCurve {
   }
 
   def pointsOnBezierCurves(
-      points: Vector[Point],
-      tolerance: Double = 0.15,
-      distanceTolerance: Option[Double] = None
+    points:            Vector[Point],
+    tolerance:         Double = 0.15,
+    distanceTolerance: Option[Double] = None
   ): Vector[Point] = {
-    val newPoints: ArrayBuffer[Point] = ArrayBuffer.empty
-    val numSegments: Double           = (points.length - 1).toDouble / 3
-    var i: Int                        = 0
+    val newPoints:   ArrayBuffer[Point] = ArrayBuffer.empty
+    val numSegments: Double             = (points.length - 1).toDouble / 3
+    var i:           Int                = 0
     while (i < numSegments) {
       val offset: Int = i * 3
       getPointsOnBezierCurveWithSplitting(points, offset, tolerance, Some(newPoints))

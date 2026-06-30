@@ -53,17 +53,17 @@ import ssg.graphs.commons.rough.pathdata.PathDataParser
 object PointsOnPath {
 
   def pointsOnPath(
-      path: String,
-      tolerance: Option[Double] = None,
-      distance: Option[Double] = None
+    path:      String,
+    tolerance: Option[Double] = None,
+    distance:  Option[Double] = None
   ): Vector[Vector[Point]] = {
     val segments   = PathDataParser.parsePath(path)
     val normalized = PathDataParser.normalize(PathDataParser.absolutize(segments))
 
-    val sets: ArrayBuffer[Vector[Point]] = ArrayBuffer.empty
-    var currentPoints: ArrayBuffer[Point] = ArrayBuffer.empty
-    var start: Point                      = Point(0, 0)
-    var pendingCurve: ArrayBuffer[Point]  = ArrayBuffer.empty
+    val sets:          ArrayBuffer[Vector[Point]] = ArrayBuffer.empty
+    var currentPoints: ArrayBuffer[Point]         = ArrayBuffer.empty
+    var start:         Point                      = Point(0, 0)
+    var pendingCurve:  ArrayBuffer[Point]         = ArrayBuffer.empty
 
     def appendPendingCurve(): Unit = {
       if (pendingCurve.length >= 4) {
@@ -81,7 +81,7 @@ object PointsOnPath {
     }
 
     for (segment <- normalized) {
-      val key: String          = segment.key
+      val key:  String         = segment.key
       val data: Vector[Double] = segment.data
       key match {
         case "M" =>

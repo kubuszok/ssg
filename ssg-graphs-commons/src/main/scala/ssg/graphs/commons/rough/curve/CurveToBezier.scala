@@ -36,8 +36,7 @@ package curve
 
 import scala.collection.mutable.ArrayBuffer
 
-/** Error raised by [[CurveToBezier.curveToBezier]] when given fewer than three
-  * points. Mirrors the `throw new Error(...)` in the original `curveToBezier`.
+/** Error raised by [[CurveToBezier.curveToBezier]] when given fewer than three points. Mirrors the `throw new Error(...)` in the original `curveToBezier`.
   */
 final class CurveError(message: String) extends RuntimeException(message)
 
@@ -75,7 +74,7 @@ object CurveToBezier {
       var j: Int = 1
       while ((j + 2) < points.length) {
         val cachedVertArray: Point = points(j)
-        val b1: Point = Point(
+        val b1:              Point = Point(
           cachedVertArray.x + (s * points(j + 1).x - s * points(j - 1).x) / 6,
           cachedVertArray.y + (s * points(j + 1).y - s * points(j - 1).y) / 6
         )
