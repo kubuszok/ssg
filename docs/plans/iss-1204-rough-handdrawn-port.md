@@ -79,11 +79,20 @@ checks it off here.
   added the Int.MinValue det-0 test + a randomSeed 2^31-scale test. Faithful form was
   always correct; only test coverage + a comment were off. canvas-only `SVGAnimatedLength`
   → Double; Math.random fallback (seed==0 path) non-deterministic, documented.
-- [ ] **Chip 5 — roughjs fillers** (`fillers/filler-interface.ts`,
+- [x] **Chip 5 — roughjs fillers** (`fillers/filler-interface.ts`,
   `scan-line-hachure.ts` (wraps Chip 3 `hachureLines`), `hachure-filler.ts`,
   `zigzag-filler.ts`, `zigzag-line-filler.ts`, `dot-filler.ts`, `dashed-filler.ts`,
   `hatch-filler.ts`, `filler.ts` factory `getFiller`). Deps: Chip 3 + Chip 4.
   → `rough/fillers/`.
+  **DONE 2026-06-30** (commit `3c36637b`): 9 filler files (PatternFiller/RenderHelper
+  traits, HachureFiller base + ZigZag/Hatch extends, getFiller stateful cache quirk) +
+  `FillersIss1204Suite` (14 tests, JVM+JS+Native; deterministic stub RenderHelper since
+  renderer=Chip 6). Audit PASS after 1 bounce (ISS-1358): the `roughness>=1` skipOffset
+  branch had zero coverage (all tests roughness=0) — added seeded tests (Random(82303)
+  next=0.85>0.7) pinning skipOffset=gap + the `skipOffset||1` guard (M10 = non-term at
+  gap→0). Math.random non-determinism (dot jitter, scan-line randomizer||rand falsy-0)
+  + getFiller first-helper-wins cache documented + pinned. RenderHelper trait defined
+  here; renderer impl is Chip 6.
 - [ ] **Chip 6 — roughjs renderer** (`renderer.ts` 533: `line`, `linearPath`,
   `polygon`, `rectangle`, `curve`, `ellipse`, `generateEllipseParams`,
   `ellipseWithParams`, `arc`, `svgPath`, `solidFillPolygon`, `patternFillPolygons`,
