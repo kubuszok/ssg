@@ -117,7 +117,7 @@ checks it off here.
   (ECMA-262, replicated locally) verified vs 250k random doubles (0 mismatch); the `path()`
   3rd-replace BUG (`'/(\s\s)/g'`→literal `"/(ss)/g"` no-op) replicated faithfully; hachure
   fill cases pinned cache-independently (161/161 full Iss1204 set); 13 mutations all caught.
-- [ ] **Chip 8 — roughjs SVG output + entry** (`svg.ts` `RoughSVG` (`draw`,
+- [x] **Chip 8 — roughjs SVG output + entry** (`svg.ts` `RoughSVG` (`draw`,
   `opsToPath`, `path`/`rectangle`/etc, `fillSketch`), `rough.ts` `rough.svg`/
   `generator`/`newSeed`). Emit SSG SVG markup (`commons/svg/SvgBuilder` etc.), NOT
   DOM `SVGElement`. Deps: Chip 7. → `rough/`.
@@ -125,6 +125,14 @@ checks it off here.
   `CanvasRenderingContext2D`; SSG has no DOM-canvas target and Mermaid `handDrawn`
   uses only `rough.svg()`. Propose a skip-policy entry (NOT a silent drop); the
   auditor/user confirm.
+  **DONE 2026-07-01** (commit `df5422af`+cold-norm): `RoughSVG.scala` (DOM→SSG
+  `SvgElement` adaptation: createElementNS→`SvgElement.g()`, setAttribute→`withAttr`,
+  appendChild→`withChild`; returns `SvgElement`) + `Rough.scala` (entry: svg/generator/
+  newSeed; `canvas` = loud `RoughCanvasUnsupported` throw) + `RoughSvgIss1204Suite`
+  (41 tests, JVM+JS+Native). Audit PASS after 1 bounce (ISS-1360: fixedDecimalPlaceDigits
+  precision threading untested). **canvas.ts skip ADJUDICATED + skip-policy filed**
+  (auditor grep-proved mermaid uses only `rough.svg(...)`, zero `rough.canvas`). Pre-audit
+  gate also caught+fixed a ratchet regression (UnsupportedOperationException→custom exc).
 - [ ] **Chip 9 — mermaid wiring + differential test (ISS-1204 acceptance).** Wire
   `look=handDrawn` through `FlowchartRenderer` so nodes/edges/clusters route to
   `rough.svg(...)` (upstream `clusters.js:66`, `edges.js:513`, `shapes/*.ts`,
