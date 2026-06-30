@@ -44,8 +44,8 @@ final class RoughCanvasUnsupported(message: String) extends RuntimeException(mes
 /** roughjs entry point — the default-export `rough` namespace (port of `rough.ts`). */
 object Rough {
 
-  /** Port of `canvas(canvas: HTMLCanvasElement, config?)`. `canvas.ts`'s `RoughCanvas` renders to a DOM `CanvasRenderingContext2D`, which has no SSG analog (see the migration notes);
-    * calling it is unsupported. Kept as an explicit platform-inapplicable signal (not a silent drop) so misuse fails loudly.
+  /** Port of `canvas(canvas: HTMLCanvasElement, config?)`. `canvas.ts`'s `RoughCanvas` renders to a DOM `CanvasRenderingContext2D`, which has no SSG analog (see the migration notes); calling it is
+    * unsupported. Kept as an explicit platform-inapplicable signal (not a silent drop) so misuse fails loudly.
     */
   def canvas(): Nothing =
     throw new RoughCanvasUnsupported("rough.canvas is not supported on SSG (no DOM canvas; use rough.svg)")

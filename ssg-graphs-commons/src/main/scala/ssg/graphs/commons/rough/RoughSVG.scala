@@ -84,19 +84,15 @@ final class RoughSVG(config: Config = Config()) {
 
   /** Port of `draw(drawable): SVGGElement` — build the `<g>` of `<path>` elements for the drawable's op-sets. Returns the `<g>` as an [[SvgElement]]. */
   def draw(drawable: Drawable): SvgElement = {
-    val sets:      Vector[OpSet]   = drawable.sets
-    val o:         ResolvedOptions = drawable.options
+    val sets: Vector[OpSet]   = drawable.sets
+    val o:    ResolvedOptions = drawable.options
     // const doc = this.svg.ownerDocument || window.document; -> dropped (no DOM document; see notes)
-    var g:         SvgElement      = SvgElement.g()
-    val precision: Option[Double]  = drawable.options.fixedDecimalPlaceDigits
+    var g:         SvgElement     = SvgElement.g()
+    val precision: Option[Double] = drawable.options.fixedDecimalPlaceDigits
     for (drawing <- sets) {
       val path: Option[SvgElement] = drawing.`type` match {
         case OpSetType.path =>
-          var p: SvgElement = SvgElement("path")
-            .withAttr("d", opsToPath(drawing, precision))
-            .withAttr("stroke", o.stroke)
-            .withAttr("stroke-width", numStr(o.strokeWidth))
-            .withAttr("fill", "none")
+          var p: SvgElement = SvgElement("path").withAttr("d", opsToPath(drawing, precision)).withAttr("stroke", o.stroke).withAttr("stroke-width", numStr(o.strokeWidth)).withAttr("fill", "none")
           o.strokeLineDash.foreach { dash =>
             p = p.withAttr("stroke-dasharray", dash.map(numStr).mkString(" ").trim)
           }
@@ -105,11 +101,8 @@ final class RoughSVG(config: Config = Config()) {
           }
           Some(p)
         case OpSetType.fillPath =>
-          var p: SvgElement = SvgElement("path")
-            .withAttr("d", opsToPath(drawing, precision))
-            .withAttr("stroke", "none")
-            .withAttr("stroke-width", "0")
-            .withAttr("fill", o.fill.filter(_.nonEmpty).getOrElse(""))
+          var p: SvgElement =
+            SvgElement("path").withAttr("d", opsToPath(drawing, precision)).withAttr("stroke", "none").withAttr("stroke-width", "0").withAttr("fill", o.fill.filter(_.nonEmpty).getOrElse(""))
           if (drawable.shape == "curve" || drawable.shape == "polygon") {
             p = p.withAttr("fill-rule", "evenodd")
           }

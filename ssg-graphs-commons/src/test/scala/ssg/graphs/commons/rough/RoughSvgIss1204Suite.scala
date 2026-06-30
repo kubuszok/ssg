@@ -87,7 +87,9 @@ final class RoughSvgIss1204Suite extends FunSuite {
     assertEquals(p.attr("stroke-width").toOption, Some("3"))
   }
 
-  test("draw 'path' with strokeLineDash + strokeLineDashOffset -> dasharray (space-joined) + dashoffset (mutation e: separator)") {
+  test(
+    "draw 'path' with strokeLineDash + strokeLineDashOffset -> dasharray (space-joined) + dashoffset (mutation e: separator)"
+  ) {
     val o: ResolvedOptions = ro.copy(stroke = "blue", strokeWidth = 3, strokeLineDash = Some(Vector(5, 3)), strokeLineDashOffset = Some(2))
     val p: SvgElement      = child(new RoughSVG().draw(Drawable("rectangle", o, Vector(opset(OpSetType.path)))), 0)
     assertEquals(
@@ -103,7 +105,9 @@ final class RoughSvgIss1204Suite extends FunSuite {
     )
   }
 
-  test("draw 'path' strokeLineDash present-but-EMPTY array is still truthy -> dasharray='' set; offset 0 is falsy -> no dashoffset") {
+  test(
+    "draw 'path' strokeLineDash present-but-EMPTY array is still truthy -> dasharray='' set; offset 0 is falsy -> no dashoffset"
+  ) {
     val o: ResolvedOptions = ro.copy(strokeLineDash = Some(Vector.empty), strokeLineDashOffset = Some(0))
     val p: SvgElement      = child(new RoughSVG().draw(Drawable("rectangle", o, Vector(opset(OpSetType.path)))), 0)
     assertEquals(p.attr("stroke-dasharray").toOption, Some(""))
