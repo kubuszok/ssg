@@ -63,7 +63,7 @@ checks it off here.
   mutants adjudicated (dropped JS falsy-x single-vs-list artifact; `edges.sort` x/ymax
   tiebreak unobservable — 20k-case refutation failed). Self-mutation-battery brief
   requirement is what avoided the bounce.
-- [ ] **Chip 4 — roughjs foundation** (`math.ts` Random PRNG + `randomSeed`,
+- [x] **Chip 4 — roughjs foundation** (`math.ts` Random PRNG + `randomSeed`,
   `geometry.ts` Point/Line/Rectangle/lineLength, `core.ts` Options/ResolvedOptions/
   Op/OpSet/Drawable/PathInfo/Config types + SVGNS). No deps. → `rough/`.
   **RNG faithfulness (critical):** `Random.next` is Lehmer/MINSTD —
@@ -71,6 +71,14 @@ checks it off here.
   32-bit on all 3 platforms, so `48271 * seed` as `Int` == `Math.imul`; mask with
   `0x7FFFFFFF`, divide by `2147483648.0`. This must reproduce byte-for-byte or the
   differential test (Chip 9) can't pin output.
+  **DONE 2026-06-30** (commit `f3a09843`): `RoughMath`/`Geometry`/`Core`.scala +
+  `RoughFoundationIss1204Suite` (24 tests, JVM+JS+Native; RNG sequences byte-exact).
+  Audit PASS after 1 bounce (ISS-1357): the "mask stored seed" optimization is NOT
+  equivalent — `seed=Int.MinValue` is a fixed point where the faithful mask-only-return
+  form gives deterministic 0 but the masked-stored mutant diverges to Math.random();
+  added the Int.MinValue det-0 test + a randomSeed 2^31-scale test. Faithful form was
+  always correct; only test coverage + a comment were off. canvas-only `SVGAnimatedLength`
+  → Double; Math.random fallback (seed==0 path) non-deterministic, documented.
 - [ ] **Chip 5 — roughjs fillers** (`fillers/filler-interface.ts`,
   `scan-line-hachure.ts` (wraps Chip 3 `hachureLines`), `hachure-filler.ts`,
   `zigzag-filler.ts`, `zigzag-line-filler.ts`, `dot-filler.ts`, `dashed-filler.ts`,
