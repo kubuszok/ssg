@@ -93,12 +93,20 @@ checks it off here.
   gap→0). Math.random non-determinism (dot jitter, scan-line randomizer||rand falsy-0)
   + getFiller first-helper-wins cache documented + pinned. RenderHelper trait defined
   here; renderer impl is Chip 6.
-- [ ] **Chip 6 — roughjs renderer** (`renderer.ts` 533: `line`, `linearPath`,
+- [x] **Chip 6 — roughjs renderer** (`renderer.ts` 533: `line`, `linearPath`,
   `polygon`, `rectangle`, `curve`, `ellipse`, `generateEllipseParams`,
   `ellipseWithParams`, `arc`, `svgPath`, `solidFillPolygon`, `patternFillPolygons`,
   `patternFillArc`, `randOffset`, `randOffsetWithRange`, `doubleLineFillOps`, and
   the private `_*` helpers). Deps: Chip 1 (`parsePath`/`normalize`/`absolutize`),
   Chip 4, Chip 5 (`getFiller`). The core sketch algorithm. → `rough/`.
+  **DONE 2026-06-30** (commit `62dbd710`): `RoughRenderer.scala` (object, all 27
+  fns + `helper` RenderHelper) + `RoughRendererIss1204Suite` (36 tests, JVM+JS+Native;
+  seeded jitter BYTE-IDENTICAL cross-platform — the RNG byte-exactness proof). Required
+  `Core.scala` `randomizer` val→var (RNG must persist+advance across a render). RNG draw
+  ORDER/COUNT preserved via left-to-right eval; 4 OpSets independently Node-re-derived by
+  auditor. Audit PASS after 1 bounce (ISS-1359: arc/patternFillArc `>2π` clamp untested —
+  added span>2π tests). Impl's own battery self-caught an equivalent-under-curveTightness=0
+  mutant. canvas.ts still pending (Chip 8 skip-policy).
 - [ ] **Chip 7 — roughjs generator** (`generator.ts` 311: `RoughGenerator` —
   `line`/`rectangle`/`ellipse`/`circle`/`linearPath`/`polygon`/`arc`/`curve`/`path`
   → `Drawable`; `opsToPath`, `toPaths`, `fillSketch`, `_d`). Deps: Chip 2
