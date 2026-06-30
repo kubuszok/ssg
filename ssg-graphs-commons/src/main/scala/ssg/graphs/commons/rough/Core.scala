@@ -32,6 +32,14 @@
  *     `Nullable[Random]` (per the project's no-`null` rule), defaulting to
  *     `Nullable.empty`. The other optional members use `Option[T]` to match upstream's
  *     plain optional-interface-member shape.
+ *   Convention (mutable randomizer, REQUIRED for RNG threading — Chip 6): `randomizer`
+ *     is a `var` (not a `val`). The renderer's `random(ops)` (renderer.ts:267) LAZILY
+ *     assigns `ops.randomizer = new Random(ops.seed)` on first use and then REUSES and
+ *     ADVANCES that same `Random` instance across every `_offset`/`random` call within a
+ *     render. JS mutates the field in place (`ops.randomizer = ...`); reproducing the
+ *     byte-exact RNG sequence (the differential-test contract) requires the same single
+ *     persisted-and-advancing instance, so the field must be mutable. This is the sole
+ *     deviation from upstream's interface shape needed by the renderer port.
  *   Renames (`OpType`/`OpSetType`): TS string-literal union types
  *     `'move' | 'bcurveTo' | 'lineTo'` and `'path' | 'fillPath' | 'fillSketch'` ->
  *     Scala 3 `enum`s carrying an explicit `value: String` that serializes faithfully to
@@ -134,7 +142,7 @@ final case class ResolvedOptions(
   disableMultiStrokeFill:  Boolean,
   preserveVertices:        Boolean,
   fillShapeRoughnessGain:  Double,
-  randomizer:              Nullable[Random] = Nullable.empty,
+  var randomizer:          Nullable[Random] = Nullable.empty,
   fill:                    Option[String] = None,
   simplification:          Option[Double] = None,
   strokeLineDash:          Option[Vector[Double]] = None,
