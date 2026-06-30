@@ -56,29 +56,26 @@ import lowlevel.Nullable
 /** The SVG XML namespace. Port of `const SVGNS`. */
 final val SVGNS: String = "http://www.w3.org/2000/svg"
 
-/** The op-kind discriminant of an `Op`. Port of `type OpType = 'move' | 'bcurveTo' |
-  * 'lineTo'`. `value` is the exact string literal upstream emits.
+/** The op-kind discriminant of an `Op`. Port of `type OpType = 'move' | 'bcurveTo' | 'lineTo'`. `value` is the exact string literal upstream emits.
   */
 enum OpType(val value: String) {
-  case move     extends OpType("move")
+  case move extends OpType("move")
   case bcurveTo extends OpType("bcurveTo")
-  case lineTo   extends OpType("lineTo")
+  case lineTo extends OpType("lineTo")
 }
 
-/** The kind discriminant of an `OpSet`. Port of `type OpSetType = 'path' | 'fillPath' |
-  * 'fillSketch'`. `value` is the exact string literal upstream emits.
+/** The kind discriminant of an `OpSet`. Port of `type OpSetType = 'path' | 'fillPath' | 'fillSketch'`. `value` is the exact string literal upstream emits.
   */
 enum OpSetType(val value: String) {
-  case path       extends OpSetType("path")
-  case fillPath   extends OpSetType("fillPath")
+  case path extends OpSetType("path")
+  case fillPath extends OpSetType("fillPath")
   case fillSketch extends OpSetType("fillSketch")
 }
 
 /** Top-level configuration. Port of `interface Config`. */
 final case class Config(options: Option[Options] = None)
 
-/** A drawing surface's dimensions. Port of `interface DrawingSurface` (the
-  * `number | SVGAnimatedLength` union collapsed to `Double`; see the migration notes).
+/** A drawing surface's dimensions. Port of `interface DrawingSurface` (the `number | SVGAnimatedLength` union collapsed to `Double`; see the migration notes).
   */
 final case class DrawingSurface(width: Double, height: Double)
 
@@ -113,10 +110,8 @@ final case class Options(
   fillShapeRoughnessGain:  Option[Double] = None
 )
 
-/** The fully-resolved drawing options. Port of `interface ResolvedOptions extends
-  * Options` — the members upstream promotes to required are non-`Option`; the seven that
-  * stay optional remain `Option[T]`; `randomizer` is added as `Nullable[Random]` (see
-  * the migration notes on the flattened interface inheritance).
+/** The fully-resolved drawing options. Port of `interface ResolvedOptions extends Options` — the members upstream promotes to required are non-`Option`; the seven that stay optional remain
+  * `Option[T]`; `randomizer` is added as `Nullable[Random]` (see the migration notes on the flattened interface inheritance).
   */
 final case class ResolvedOptions(
   maxRandomnessOffset:     Double,

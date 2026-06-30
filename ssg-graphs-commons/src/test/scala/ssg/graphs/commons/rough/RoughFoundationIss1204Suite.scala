@@ -41,14 +41,7 @@ final class RoughFoundationIss1204Suite extends FunSuite {
     assertSequence(
       1,
       Vector(
-        0.000022477935999631882,
-        0.08503244863823056,
-        0.6013282160274684,
-        0.714315861929208,
-        0.7409711848013103,
-        0.4200615440495312,
-        0.7907928149215877,
-        0.3599690799601376
+        0.000022477935999631882, 0.08503244863823056, 0.6013282160274684, 0.714315861929208, 0.7409711848013103, 0.4200615440495312, 0.7907928149215877, 0.3599690799601376
       )
     )
   }
@@ -57,14 +50,7 @@ final class RoughFoundationIss1204Suite extends FunSuite {
     assertSequence(
       42,
       Vector(
-        0.000944073311984539,
-        0.5713628428056836,
-        0.2557850731536746,
-        0.00126620102673769,
-        0.12078976165503263,
-        0.6425848500803113,
-        0.21329822670668364,
-        0.11870135832577944
+        0.000944073311984539, 0.5713628428056836, 0.2557850731536746, 0.00126620102673769, 0.12078976165503263, 0.6425848500803113, 0.21329822670668364, 0.11870135832577944
       )
     )
   }
@@ -154,7 +140,7 @@ final class RoughFoundationIss1204Suite extends FunSuite {
   test("randomSeed() pins the 2^31 scale (no mass clamp at Int.MaxValue)") {
     val samples: Int = 100000
     var clamped: Int = 0
-    var i: Int       = 0
+    var i:       Int = 0
     while (i < samples) {
       if (RoughMath.randomSeed() == Int.MaxValue) {
         clamped += 1
@@ -229,8 +215,8 @@ final class RoughFoundationIss1204Suite extends FunSuite {
   }
 
   test("OpSet round-trips its fields including the `type` keyword field") {
-    val ops: Vector[Op] = Vector(Op(OpType.move, Vector(0.0, 0.0)), Op(OpType.lineTo, Vector(10.0, 10.0)))
-    val opSet: OpSet    = OpSet(OpSetType.fillSketch, ops, Some(Point(100, 200)), Some("M0 0L10 10"))
+    val ops:   Vector[Op] = Vector(Op(OpType.move, Vector(0.0, 0.0)), Op(OpType.lineTo, Vector(10.0, 10.0)))
+    val opSet: OpSet      = OpSet(OpSetType.fillSketch, ops, Some(Point(100, 200)), Some("M0 0L10 10"))
     assertEquals(opSet.`type`, OpSetType.fillSketch)
     assertEquals(opSet.`type`.value, "fillSketch")
     assertEquals(opSet.ops, ops)
@@ -265,8 +251,8 @@ final class RoughFoundationIss1204Suite extends FunSuite {
   }
 
   test("ResolvedOptions round-trips required + optional + Nullable randomizer") {
-    val rng: Random = new Random(7)
-    val ro: ResolvedOptions = ResolvedOptions(
+    val rng: Random          = new Random(7)
+    val ro:  ResolvedOptions = ResolvedOptions(
       maxRandomnessOffset = 2.0,
       roughness = 1.0,
       bowing = 1.0,
@@ -328,7 +314,7 @@ final class RoughFoundationIss1204Suite extends FunSuite {
       fillShapeRoughnessGain = 0.8
     )
     val sets: Vector[OpSet] = Vector(OpSet(OpSetType.path, Vector(Op(OpType.move, Vector(0.0, 0.0)))))
-    val d: Drawable         = Drawable("line", ro, sets)
+    val d:    Drawable      = Drawable("line", ro, sets)
     assertEquals(d.shape, "line")
     assertEquals(d.options, ro)
     assertEquals(d.sets, sets)

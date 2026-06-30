@@ -59,26 +59,21 @@ package graphs
 package commons
 package rough
 
-/** roughjs RNG foundation: `randomSeed` plus the shared non-deterministic generator
-  * backing the `seed == 0` fallback path. Port of the module-level members of
-  * `math.ts`.
+/** roughjs RNG foundation: `randomSeed` plus the shared non-deterministic generator backing the `seed == 0` fallback path. Port of the module-level members of `math.ts`.
   */
 object RoughMath {
 
-  /** The process-global non-deterministic generator standing in for JS `Math.random()`.
-    * Used only by the unseeded fallback paths (`randomSeed` and `Random.next` when the
-    * seed is 0); never reached on the seeded, deterministic path.
+  /** The process-global non-deterministic generator standing in for JS `Math.random()`. Used only by the unseeded fallback paths (`randomSeed` and `Random.next` when the seed is 0); never reached on
+    * the seeded, deterministic path.
     */
   private val unseededGenerator: scala.util.Random = new scala.util.Random()
 
-  /** A cross-platform analog of JS `Math.random()`: a non-deterministic Double in
-    * [0.0, 1.0). Non-deterministic by design (see the migration notes).
+  /** A cross-platform analog of JS `Math.random()`: a non-deterministic Double in [0.0, 1.0). Non-deterministic by design (see the migration notes).
     */
   private[rough] def unseededRandom(): Double =
     unseededGenerator.nextDouble()
 
-  /** Port of `randomSeed()` = `Math.floor(Math.random() * 2 ** 31)`. Returns a
-    * non-deterministic integer seed in `[0, 2147483648)` (i.e. `[0, 2^31)`).
+  /** Port of `randomSeed()` = `Math.floor(Math.random() * 2 ** 31)`. Returns a non-deterministic integer seed in `[0, 2147483648)` (i.e. `[0, 2^31)`).
     */
   def randomSeed(): Int =
     Math.floor(unseededRandom() * 2147483648.0).toInt
@@ -86,19 +81,16 @@ object RoughMath {
 
 /** Lehmer/MINSTD pseudo-random generator. Port of `class Random` from `math.ts`.
   *
-  * For any non-zero seed the sequence is fully deterministic and byte-identical to
-  * upstream roughjs across all platforms (see the migration notes on the Int-wrap
-  * equivalence to `Math.imul`). A zero seed selects the non-deterministic
-  * `Math.random()` fallback.
+  * For any non-zero seed the sequence is fully deterministic and byte-identical to upstream roughjs across all platforms (see the migration notes on the Int-wrap equivalence to `Math.imul`). A zero
+  * seed selects the non-deterministic `Math.random()` fallback.
   *
   * @param seed
   *   the 32-bit integer seed (mutated in place by each `next()` call)
   */
 final class Random(private var seed: Int) {
 
-  /** Port of `next()`. When the seed is non-zero, advances the Lehmer state and returns
-    * the next pseudo-random Double in `[0.0, 1.0)`; when the seed is zero, returns a
-    * non-deterministic `Math.random()` value.
+  /** Port of `next()`. When the seed is non-zero, advances the Lehmer state and returns the next pseudo-random Double in `[0.0, 1.0)`; when the seed is zero, returns a non-deterministic
+    * `Math.random()` value.
     */
   def next(): Double =
     if (seed != 0) {

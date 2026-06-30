@@ -39,8 +39,7 @@ final case class Rectangle(x: Double, y: Double, width: Double, height: Double)
 /** roughjs geometry helpers (port of the module-level functions of `geometry.ts`). */
 object Geometry {
 
-  /** Port of `lineLength(line)`: the Euclidean distance between the line's endpoints,
-    * `Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))`.
+  /** Port of `lineLength(line)`: the Euclidean distance between the line's endpoints, `Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))`.
     */
   def lineLength(line: Line): Double = {
     val p1: Point = line.p1
