@@ -92,10 +92,10 @@ final case class EllipseResult(opset: OpSet, estimatedPoints: Vector[Point])
 object RoughRenderer {
 
   private val helper: RenderHelper = new RenderHelper {
-    def randOffset(x: Double, o: ResolvedOptions): Double = RoughRenderer.randOffset(x, o)
-    def randOffsetWithRange(min: Double, max: Double, o: ResolvedOptions): Double = RoughRenderer.randOffsetWithRange(min, max, o)
-    def ellipse(x: Double, y: Double, width: Double, height: Double, o: ResolvedOptions): OpSet = RoughRenderer.ellipse(x, y, width, height, o)
-    def doubleLineOps(x1: Double, y1: Double, x2: Double, y2: Double, o: ResolvedOptions): Vector[Op] = RoughRenderer.doubleLineFillOps(x1, y1, x2, y2, o)
+    def randOffset(x:            Double, o:   ResolvedOptions):                                           Double     = RoughRenderer.randOffset(x, o)
+    def randOffsetWithRange(min: Double, max: Double, o:     ResolvedOptions):                            Double     = RoughRenderer.randOffsetWithRange(min, max, o)
+    def ellipse(x:               Double, y:   Double, width: Double, height: Double, o: ResolvedOptions): OpSet      = RoughRenderer.ellipse(x, y, width, height, o)
+    def doubleLineOps(x1:        Double, y1:  Double, x2:    Double, y2:     Double, o: ResolvedOptions): Vector[Op] = RoughRenderer.doubleLineFillOps(x1, y1, x2, y2, o)
   }
 
   /** Port of `line(x1, y1, x2, y2, o)`. */
@@ -144,7 +144,7 @@ object RoughRenderer {
     if (ip.nonEmpty) {
       val pointsList: Vector[Vector[Point]] = ip.head match {
         case _: Point => Vector(inputPoints.asInstanceOf[Vector[Point]])
-        case _        => inputPoints.asInstanceOf[Vector[Vector[Point]]]
+        case _ => inputPoints.asInstanceOf[Vector[Vector[Point]]]
       }
 
       val o1: ArrayBuffer[Op] = ArrayBuffer.empty
@@ -162,16 +162,14 @@ object RoughRenderer {
           val overlay:  Vector[Op] =
             if (o.disableMultiStroke) Vector.empty
             else _curveWithOffset(points, 1.5 * (1 + o.roughness * 0.22), cloneOptionsAlterSeed(o))
-          for (item <- underlay) {
+          for (item <- underlay)
             if (item.op != OpType.move) {
               o1 += item
             }
-          }
-          for (item <- overlay) {
+          for (item <- overlay)
             if (item.op != OpType.move) {
               o2 += item
             }
-          }
         }
         i += 1
       }
@@ -190,11 +188,11 @@ object RoughRenderer {
 
   /** Port of `generateEllipseParams(width, height, o)`. */
   def generateEllipseParams(width: Double, height: Double, o: ResolvedOptions): EllipseParams = {
-    val psq: Double = Math.sqrt(Math.PI * 2 * Math.sqrt((Math.pow(width / 2, 2) + Math.pow(height / 2, 2)) / 2))
-    val stepCount: Double = Math.ceil(Math.max(o.curveStepCount, (o.curveStepCount / Math.sqrt(200)) * psq))
-    val increment: Double = (Math.PI * 2) / stepCount
-    var rx: Double = Math.abs(width / 2)
-    var ry: Double = Math.abs(height / 2)
+    val psq:                Double = Math.sqrt(Math.PI * 2 * Math.sqrt((Math.pow(width / 2, 2) + Math.pow(height / 2, 2)) / 2))
+    val stepCount:          Double = Math.ceil(Math.max(o.curveStepCount, (o.curveStepCount / Math.sqrt(200)) * psq))
+    val increment:          Double = (Math.PI * 2) / stepCount
+    var rx:                 Double = Math.abs(width / 2)
+    var ry:                 Double = Math.abs(height / 2)
     val curveFitRandomness: Double = 1 - o.curveFitting
     rx += _offsetOpt(rx * curveFitRandomness, o)
     ry += _offsetOpt(ry * curveFitRandomness, o)
@@ -203,7 +201,7 @@ object RoughRenderer {
 
   /** Port of `ellipseWithParams(x, y, o, ellipseParams)`. */
   def ellipseWithParams(x: Double, y: Double, o: ResolvedOptions, ellipseParams: EllipseParams): EllipseResult = {
-    val overlap: Double = ellipseParams.increment * _offset(0.1, _offset(0.4, 1, o), o)
+    val overlap:    Double                         = ellipseParams.increment * _offset(0.1, _offset(0.4, 1, o), o)
     val (ap1, cp1): (Vector[Point], Vector[Point]) =
       _computeEllipsePoints(ellipseParams.increment, x, y, ellipseParams.rx, ellipseParams.ry, 1, overlap, o)
     val o1: ArrayBuffer[Op] = ArrayBuffer.empty
@@ -238,8 +236,8 @@ object RoughRenderer {
       strt = 0
       stp = Math.PI * 2
     }
-    val ellipseInc: Double         = (Math.PI * 2) / o.curveStepCount
-    val arcInc:     Double         = Math.min(ellipseInc / 2, (stp - strt) / 2)
+    val ellipseInc: Double          = (Math.PI * 2) / o.curveStepCount
+    val arcInc:     Double          = Math.min(ellipseInc / 2, (stp - strt) / 2)
     val ops:        ArrayBuffer[Op] = ArrayBuffer.empty
     ops ++= _arc(arcInc, cx, cy, rx, ry, strt, stp, 1, o)
     if (!o.disableMultiStroke) {
@@ -265,7 +263,7 @@ object RoughRenderer {
     var first:    Point                    = Point(0, 0)
     var current:  Point                    = Point(0, 0)
     for (segment <- segments) {
-      val key:  String        = segment.key
+      val key:  String         = segment.key
       val data: Vector[Double] = segment.data
       key match {
         case "M" =>
@@ -297,7 +295,7 @@ object RoughRenderer {
   /** Port of `solidFillPolygon(polygonList, o)`. */
   def solidFillPolygon(polygonList: Vector[Vector[Point]], o: ResolvedOptions): OpSet = {
     val ops: ArrayBuffer[Op] = ArrayBuffer.empty
-    for (points <- polygonList) {
+    for (points <- polygonList)
       if (points.nonEmpty) {
         val offset: Double = if (numTruthy(o.maxRandomnessOffset)) o.maxRandomnessOffset else 0.0
         val len:    Int    = points.length
@@ -310,7 +308,6 @@ object RoughRenderer {
           }
         }
       }
-    }
     OpSet(`type` = OpSetType.fillPath, ops = ops.toVector)
   }
 
@@ -362,8 +359,7 @@ object RoughRenderer {
 
   // Private helpers
 
-  /** Port of `cloneOptionsAlterSeed(ops)`: a shallow copy with a cleared randomizer and a
-    * bumped seed (`ops.seed ? ops.seed + 1 : ops.seed`).
+  /** Port of `cloneOptionsAlterSeed(ops)`: a shallow copy with a cleared randomizer and a bumped seed (`ops.seed ? ops.seed + 1 : ops.seed`).
     */
   private def cloneOptionsAlterSeed(ops: ResolvedOptions): ResolvedOptions =
     ops.copy(
@@ -392,7 +388,7 @@ object RoughRenderer {
 
   /** Port of `_doubleLine(x1, y1, x2, y2, o, filling = false)`. */
   private def _doubleLine(x1: Double, y1: Double, x2: Double, y2: Double, o: ResolvedOptions, filling: Boolean = false): Vector[Op] = {
-    val singleStroke: Boolean   = if (filling) o.disableMultiStrokeFill else o.disableMultiStroke
+    val singleStroke: Boolean    = if (filling) o.disableMultiStrokeFill else o.disableMultiStroke
     val o1:           Vector[Op] = _line(x1, y1, x2, y2, o, true, false)
     if (singleStroke) {
       o1
@@ -404,15 +400,15 @@ object RoughRenderer {
 
   /** Port of `_line(x1, y1, x2, y2, o, move, overlay)`. */
   private def _line(x1: Double, y1: Double, x2: Double, y2: Double, o: ResolvedOptions, move: Boolean, overlay: Boolean): Vector[Op] = {
-    val lengthSq: Double = Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2)
-    val length:   Double = Math.sqrt(lengthSq)
+    val lengthSq:      Double = Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2)
+    val length:        Double = Math.sqrt(lengthSq)
     var roughnessGain: Double = 1
     if (length < 200) {
       roughnessGain = 1
     } else if (length > 500) {
       roughnessGain = 0.4
     } else {
-      roughnessGain = (-0.0016668) * length + 1.233334
+      roughnessGain = -0.0016668 * length + 1.233334
     }
 
     var offset: Double = if (numTruthy(o.maxRandomnessOffset)) o.maxRandomnessOffset else 0.0
@@ -477,7 +473,7 @@ object RoughRenderer {
   }
 
   /** Port of `_curveWithOffset(points, offset, o)`. */
-  private def _curveWithOffset(points: Vector[Point], offset: Double, o: ResolvedOptions): Vector[Op] = {
+  private def _curveWithOffset(points: Vector[Point], offset: Double, o: ResolvedOptions): Vector[Op] =
     if (points.isEmpty) {
       Vector.empty
     } else {
@@ -506,7 +502,6 @@ object RoughRenderer {
       }
       _curve(ps.toVector, Nullable.empty, o)
     }
-  }
 
   /** Port of `_curve(points, closePoint, o)`. */
   private def _curve(points: Vector[Point], closePoint: Nullable[Point], o: ResolvedOptions): Vector[Op] = {
@@ -648,14 +643,14 @@ object RoughRenderer {
   /** Port of `_bezierTo(x1, y1, x2, y2, x, y, current, o)`. */
   private def _bezierTo(x1: Double, y1: Double, x2: Double, y2: Double, x: Double, y: Double, current: Point, o: ResolvedOptions): Vector[Op] = {
     val ops: ArrayBuffer[Op] = ArrayBuffer.empty
-    val ros: Vector[Double] = Vector(
+    val ros: Vector[Double]  = Vector(
       if (numTruthy(o.maxRandomnessOffset)) o.maxRandomnessOffset else 1.0,
       (if (numTruthy(o.maxRandomnessOffset)) o.maxRandomnessOffset else 1.0) + 0.3
     )
     var f:                Point   = Point(0, 0)
     val iterations:       Int     = if (o.disableMultiStroke) 1 else 2
     val preserveVertices: Boolean = o.preserveVertices
-    var i: Int = 0
+    var i:                Int     = 0
     while (i < iterations) {
       if (i == 0) {
         ops += Op(OpType.move, Vector(current.x, current.y))
