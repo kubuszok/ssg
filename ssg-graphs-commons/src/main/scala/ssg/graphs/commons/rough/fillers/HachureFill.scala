@@ -89,22 +89,19 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** A 2D point. Port of the hachure-fill `Point = [number, number]` tuple type. Mutable
-  * (`var x`/`var y`) so the in-place `rotatePoints` and the shared-reference aliasing of
-  * the original are reproduced exactly. This `Point` is local to `rough/fillers`.
+/** A 2D point. Port of the hachure-fill `Point = [number, number]` tuple type. Mutable (`var x`/`var y`) so the in-place `rotatePoints` and the shared-reference aliasing of the original are
+  * reproduced exactly. This `Point` is local to `rough/fillers`.
   */
 final case class Point(var x: Double, var y: Double)
 
 /** A line segment. Port of the hachure-fill `Line = [Point, Point]` tuple type. */
 final case class Line(p1: Point, p2: Point)
 
-/** An edge of the active-edge table. Port of the `EdgeEntry` interface; `x` is mutated
-  * each scanline (`x += stepOffset * islope`), so it is a `var`.
+/** An edge of the active-edge table. Port of the `EdgeEntry` interface; `x` is mutated each scanline (`x += stepOffset * islope`), so it is a `var`.
   */
 final case class EdgeEntry(ymin: Double, ymax: Double, var x: Double, islope: Double)
 
-/** An entry of the active-edge list. Port of the `ActiveEdgeEntry` interface. `s` (the
-  * scanline `y` at insertion) is set-but-never-read in the original and is preserved.
+/** An entry of the active-edge list. Port of the `ActiveEdgeEntry` interface. `s` (the scanline `y` at insertion) is set-but-never-read in the original and is preserved.
   */
 final case class ActiveEdgeEntry(s: Double, edge: EdgeEntry)
 
@@ -118,13 +115,13 @@ object HachureFill {
   private def truthy(d: Double): Boolean =
     d != 0.0 && !d.isNaN
 
-  private def rotatePoints(points: Vector[Point], center: Point, degrees: Double): Unit = {
+  private def rotatePoints(points: Vector[Point], center: Point, degrees: Double): Unit =
     if (points.nonEmpty) {
-      val cx: Double    = center.x
-      val cy: Double    = center.y
+      val cx:    Double = center.x
+      val cy:    Double = center.y
       val angle: Double = (Math.PI / 180) * degrees
-      val cos: Double   = Math.cos(angle)
-      val sin: Double   = Math.sin(angle)
+      val cos:   Double = Math.cos(angle)
+      val sin:   Double = Math.sin(angle)
       for (p <- points) {
         val x: Double = p.x
         val y: Double = p.y
@@ -132,7 +129,6 @@ object HachureFill {
         p.y = ((x - cx) * sin) + ((y - cy) * cos) + cy
       }
     }
-  }
 
   private def rotateLines(lines: Vector[Line], center: Point, degrees: Double): Unit = {
     val points: ArrayBuffer[Point] = ArrayBuffer.empty
@@ -147,17 +143,17 @@ object HachureFill {
     p1.x == p2.x && p1.y == p2.y
 
   def hachureLines(
-      polygons: Polygon | Vector[Polygon],
-      hachureGap: Double,
-      hachureAngle: Double,
-      hachureStepOffset: Double = 1
+    polygons:          Polygon | Vector[Polygon],
+    hachureGap:        Double,
+    hachureAngle:      Double,
+    hachureStepOffset: Double = 1
   ): Vector[Line] = {
     val angle: Double = hachureAngle
-    val gap: Double   = Math.max(hachureGap, 0.1)
+    val gap:   Double = Math.max(hachureGap, 0.1)
     // Detect single Polygon vs Polygon list: single iff the first element is a Point
     // (the original's `typeof polygons[0][0] === 'number'`). See the header note on the
     // dropped falsy-x sub-condition.
-    val pv: Vector[Any] = polygons.asInstanceOf[Vector[Any]]
+    val pv:          Vector[Any]     = polygons.asInstanceOf[Vector[Any]]
     val polygonList: Vector[Polygon] =
       if (pv.nonEmpty && pv.head.isInstanceOf[Point]) {
         Vector(polygons.asInstanceOf[Polygon])
@@ -167,24 +163,22 @@ object HachureFill {
 
     val rotationCenter: Point = Point(0, 0)
     if (truthy(angle)) {
-      for (polygon <- polygonList) {
+      for (polygon <- polygonList)
         rotatePoints(polygon, rotationCenter, angle)
-      }
     }
     val lines: Vector[Line] = straightHachureLines(polygonList, gap, hachureStepOffset)
     if (truthy(angle)) {
-      for (polygon <- polygonList) {
+      for (polygon <- polygonList)
         rotatePoints(polygon, rotationCenter, -angle)
-      }
       rotateLines(lines, rotationCenter, -angle)
     }
     lines
   }
 
   private def straightHachureLines(
-      polygons: Vector[Polygon],
-      gapIn: Double,
-      hachureStepOffset: Double
+    polygons:          Vector[Polygon],
+    gapIn:             Double,
+    hachureStepOffset: Double
   ): Vector[Line] = {
     val vertexArray: ArrayBuffer[Vector[Point]] = ArrayBuffer.empty
     for (polygon <- polygons) {
@@ -198,7 +192,7 @@ object HachureFill {
     }
 
     val lines: ArrayBuffer[Line] = ArrayBuffer.empty
-    val gap: Double              = Math.max(gapIn, 0.1)
+    val gap:   Double            = Math.max(gapIn, 0.1)
 
     // Create sorted edges table
     val edges: ArrayBuffer[EdgeEntry] = ArrayBuffer.empty
@@ -227,8 +221,8 @@ object HachureFill {
     } else {
       // Start scanning
       var activeEdges: ArrayBuffer[ActiveEdgeEntry] = ArrayBuffer.empty
-      var y: Double                                 = edges(0).ymin
-      var iteration: Int                            = 0
+      var y:           Double                       = edges(0).ymin
+      var iteration:   Int                          = 0
       while (activeEdges.nonEmpty || edges.nonEmpty) {
         if (edges.nonEmpty) {
           var ix: Int = -1
@@ -290,7 +284,7 @@ object HachureFill {
 
   // edges.sort comparator: lexicographic (ymin, x, ymax) ascending; the final case
   // returns the (a-b)/abs(a-b) sign (+/-1) of the ymax difference.
-  private def edgeCompare(e1: EdgeEntry, e2: EdgeEntry): Int = {
+  private def edgeCompare(e1: EdgeEntry, e2: EdgeEntry): Int =
     if (e1.ymin < e2.ymin) {
       -1
     } else if (e1.ymin > e2.ymin) {
@@ -304,15 +298,13 @@ object HachureFill {
     } else {
       ((e1.ymax - e2.ymax) / Math.abs(e1.ymax - e2.ymax)).toInt
     }
-  }
 
   // activeEdges.sort comparator: the (a-b)/abs(a-b) sign (+/-1) of the x difference,
   // with a 0 tie when the x's are equal.
-  private def activeCompare(ae1: ActiveEdgeEntry, ae2: ActiveEdgeEntry): Int = {
+  private def activeCompare(ae1: ActiveEdgeEntry, ae2: ActiveEdgeEntry): Int =
     if (ae1.edge.x == ae2.edge.x) {
       0
     } else {
       ((ae1.edge.x - ae2.edge.x) / Math.abs(ae1.edge.x - ae2.edge.x)).toInt
     }
-  }
 }

@@ -33,14 +33,14 @@ import munit.FunSuite
 
 final class HachureFillIss1204Suite extends FunSuite {
 
-  private def p(x: Double, y: Double): Point = Point(x, y)
-  private def l(x1: Double, y1: Double, x2: Double, y2: Double): Line =
+  private def p(x: Double, y: Double):                           Point = Point(x, y)
+  private def l(x1: Double, y1: Double, x2: Double, y2: Double): Line  =
     Line(Point(x1, y1), Point(x2, y2))
 
   private def assertLinesApprox(
-      obtained: Vector[Line],
-      expected: Vector[(Double, Double, Double, Double)],
-      delta: Double
+    obtained: Vector[Line],
+    expected: Vector[(Double, Double, Double, Double)],
+    delta:    Double
   ): Unit = {
     assertEquals(obtained.length, expected.length, "line count")
     obtained.zip(expected).zipWithIndex.foreach { case ((line, (x1, y1, x2, y2)), i) =>
@@ -96,7 +96,7 @@ final class HachureFillIss1204Suite extends FunSuite {
   // ---- D: single polygon, angle 30 (rotate forward, scan, rotate back) ----
 
   test("rectangle angle 30 gap 5 -> rotated fill lines") {
-    val rect: Vector[Point] = Vector(p(1, 1), p(21, 1), p(21, 21), p(1, 21))
+    val rect:     Vector[Point]                            = Vector(p(1, 1), p(21, 1), p(21, 21), p(1, 21))
     val expected: Vector[(Double, Double, Double, Double)] = Vector(
       (0.6830127018922192, 1.1830127018922194, 0.6830127018922192, 1.1830127018922194),
       (0.5849364905389027, 7.013139720814412, 10.977241335952167, 1.0131397208144133),
@@ -111,8 +111,8 @@ final class HachureFillIss1204Suite extends FunSuite {
   // ---- E: stepOffset != 1 -> fills every iteration regardless of gap ----
 
   test("rectangle stepOffset 0.5 gap 3 -> fills every 0.5 step (stepOffset != 1 branch)") {
-    val rect: Vector[Point] = Vector(p(2, 0), p(12, 0), p(12, 10), p(2, 10))
-    val expected: Vector[Line] =
+    val rect:     Vector[Point] = Vector(p(2, 0), p(12, 0), p(12, 10), p(2, 10))
+    val expected: Vector[Line]  =
       (0 until 20).map(i => l(2, i * 0.5, 12, i * 0.5)).toVector
     assertEquals(HachureFill.hachureLines(rect, 3, 0, 0.5), expected)
   }
@@ -137,7 +137,7 @@ final class HachureFillIss1204Suite extends FunSuite {
   }
 
   test("closed triangle gap 1 == open triangle (auto-close is a no-op when already closed)") {
-    val open: Vector[Point]   = Vector(p(1, 1), p(9, 1), p(5, 9))
+    val open:   Vector[Point] = Vector(p(1, 1), p(9, 1), p(5, 9))
     val closed: Vector[Point] = Vector(p(1, 1), p(9, 1), p(5, 9), p(1, 1))
     assertEquals(
       HachureFill.hachureLines(closed, 1, 0, 1),
@@ -148,10 +148,10 @@ final class HachureFillIss1204Suite extends FunSuite {
   // ---- G: single Polygon vs one-element Polygon LIST -> same geometry, same output ----
 
   test("single Polygon and one-element Polygon list produce identical lines") {
-    val verts: Vector[Point]         = Vector(p(2, 2), p(12, 2), p(12, 12), p(2, 12))
-    val asSingle: Vector[Line]       = HachureFill.hachureLines(verts, 4, 0, 1)
-    val asList: Vector[Line]         = HachureFill.hachureLines(Vector(verts), 4, 0, 1)
-    val expected: Vector[Line] = Vector(
+    val verts:    Vector[Point] = Vector(p(2, 2), p(12, 2), p(12, 12), p(2, 12))
+    val asSingle: Vector[Line]  = HachureFill.hachureLines(verts, 4, 0, 1)
+    val asList:   Vector[Line]  = HachureFill.hachureLines(Vector(verts), 4, 0, 1)
+    val expected: Vector[Line]  = Vector(
       l(2, 2, 12, 2),
       l(2, 6, 12, 6),
       l(2, 10, 12, 10)
