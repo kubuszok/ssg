@@ -44,10 +44,16 @@ checks it off here.
   `PathDataParser`.scala + `PathDataParserIss1204Suite` (22 tests, JVM+JS+Native).
   Arc-to-bezier verified digit-exact vs Node oracle (1e-9 libm cushion). Audit PASS
   after 1 bounce (ISS-1355: added relative-c/q/s parity-distinguishing tests).
-- [ ] **Chip 2 — points-on-curve + points-on-path** (177 + 69 LOC:
+- [x] **Chip 2 — points-on-curve + points-on-path** (177 + 69 LOC:
   `curve-to-bezier.ts`, points-on-curve `index.ts` (`pointsOnBezierCurves`,
   `simplify`), points-on-path `index.ts` (`pointsOnPath`)). points-on-path depends
   on Chip 1 + points-on-curve. → `rough/curve/`. Test: bezier sampling tolerance.
+  **DONE 2026-06-30** (commit `f3042901`): `PointsOnCurve`/`CurveToBezier`/
+  `PointsOnPath`.scala + `PointsOnCurveIss1204Suite` (18 tests, JVM+JS+Native).
+  Audit PASS after 1 bounce (ISS-1356): added flatness-max + dedup-band tests; the
+  `d>1` dedup `>1→>0` flip adjudicated an **equivalent mutant** (de Casteljau `red`
+  threaded by-ref → boundary `d≡0`; ~100M checks confirm), dedup pinned via
+  guard-removal instead.
 - [ ] **Chip 3 — hachure-fill** (173 LOC: `hachure.ts` `hachureLines`). Polygon
   scan-line hachure. No deps. → `rough/fillers/`.
 - [ ] **Chip 4 — roughjs foundation** (`math.ts` Random PRNG + `randomSeed`,
