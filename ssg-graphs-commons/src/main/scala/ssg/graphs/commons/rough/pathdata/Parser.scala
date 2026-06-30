@@ -56,20 +56,19 @@ import scala.util.boundary.break
 /** A parsed SVG path segment: a command `key` and its numeric parameter `data`. */
 final case class Segment(key: String, data: Vector[Double])
 
-/** Error raised by [[Parser.parsePath]] for malformed path data. Mirrors the
-  * `throw new Error(...)` calls in the original `parsePath`.
+/** Error raised by [[Parser.parsePath]] for malformed path data. Mirrors the `throw new Error(...)` calls in the original `parsePath`.
   */
 final class PathDataParseError(message: String) extends RuntimeException(message)
 
 /** SVG path `d`-string tokenizer and parser (port of `parser.ts`). */
 object Parser {
 
-  private final val COMMAND = 0
-  private final val NUMBER  = 1
-  private final val EOD     = 2
+  final private val COMMAND = 0
+  final private val NUMBER  = 1
+  final private val EOD     = 2
 
   /** A lexical token: `tokenType` is one of [[COMMAND]] / [[NUMBER]] / [[EOD]]. */
-  private final case class PathToken(tokenType: Int, text: String)
+  final private case class PathToken(tokenType: Int, text: String)
 
   private val Params: Map[String, Int] =
     Map(
@@ -100,9 +99,9 @@ object Parser {
   private val NumberPattern     = "^(([-+]?[0-9]+(\\.[0-9]*)?|[-+]?\\.[0-9]+)([eE][-+]?[0-9]+)?)".r
 
   private def tokenize(d0: String): Vector[PathToken] = boundary[Vector[PathToken]] {
-    var d: String                  = d0
+    var d:      String                 = d0
     val tokens: ArrayBuffer[PathToken] = ArrayBuffer.empty
-    while (d != "") {
+    while (d != "")
       WhitespacePattern.findPrefixMatchOf(d) match {
         case Some(m) =>
           d = d.substring(m.group(1).length)
@@ -121,7 +120,6 @@ object Parser {
               }
           }
       }
-    }
     tokens += PathToken(EOD, "")
     tokens.toVector
   }
@@ -132,13 +130,13 @@ object Parser {
   /** Parse an SVG path `d` string into a list of [[Segment]]s. */
   def parsePath(d: String): Vector[Segment] = boundary[Vector[Segment]] {
     val segments: ArrayBuffer[Segment] = ArrayBuffer.empty
-    val tokens: Vector[PathToken]      = tokenize(d)
-    var mode: String                   = "BOD"
-    var index: Int                     = 0
-    var token: PathToken               = tokens(index)
+    val tokens:   Vector[PathToken]    = tokenize(d)
+    var mode:     String               = "BOD"
+    var index:    Int                  = 0
+    var token:    PathToken            = tokens(index)
     while (!isType(token, EOD)) {
-      var paramsCount: Int          = 0
-      val params: ArrayBuffer[Double] = ArrayBuffer.empty
+      var paramsCount: Int                 = 0
+      val params:      ArrayBuffer[Double] = ArrayBuffer.empty
       if (mode == "BOD") {
         if (token.text == "M" || token.text == "m") {
           index += 1
@@ -186,7 +184,7 @@ object Parser {
   def serialize(segments: Vector[Segment]): String = {
     val tokens: ArrayBuffer[String] = ArrayBuffer.empty
     for (segment <- segments) {
-      val key: String        = segment.key
+      val key:  String         = segment.key
       val data: Vector[Double] = segment.data
       tokens += key
       key match {
@@ -209,10 +207,8 @@ object Parser {
     tokens.mkString(" ")
   }
 
-  /** Render a finite `Double` the way ECMA-262 `Number.prototype.toString` would for
-    * the value range produced by SVG path serialization (integers without a trailing
-    * `.0`; finite fractions as their shortest round-trip decimal). See the file
-    * header Migration notes for the documented extreme-magnitude fallback.
+  /** Render a finite `Double` the way ECMA-262 `Number.prototype.toString` would for the value range produced by SVG path serialization (integers without a trailing `.0`; finite fractions as their
+    * shortest round-trip decimal). See the file header Migration notes for the documented extreme-magnitude fallback.
     */
   private def jsNum(v: Double): String =
     if (v.isNaN) {

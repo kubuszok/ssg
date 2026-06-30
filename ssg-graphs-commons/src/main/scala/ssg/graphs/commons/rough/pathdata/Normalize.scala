@@ -50,15 +50,15 @@ object Normalize {
     val out: ArrayBuffer[Segment] = ArrayBuffer.empty
 
     var lastType: String = ""
-    var cx: Double       = 0
-    var cy: Double       = 0
-    var subx: Double     = 0
-    var suby: Double     = 0
-    var lcx: Double      = 0
-    var lcy: Double      = 0
+    var cx:       Double = 0
+    var cy:       Double = 0
+    var subx:     Double = 0
+    var suby:     Double = 0
+    var lcx:      Double = 0
+    var lcy:      Double = 0
 
     for (segment <- segments) {
-      val key: String          = segment.key
+      val key:  String         = segment.key
       val data: Vector[Double] = segment.data
       key match {
         case "M" =>
@@ -99,10 +99,10 @@ object Normalize {
           cx = data(2)
           cy = data(3)
         case "T" =>
-          val x: Double   = data(0)
-          val y: Double   = data(1)
-          var x1: Double  = 0
-          var y1: Double  = 0
+          val x:  Double = data(0)
+          val y:  Double = data(1)
+          var x1: Double = 0
+          var y1: Double = 0
           if (lastType == "Q" || lastType == "T") {
             x1 = cx + (cx - lcx)
             y1 = cy + (cy - lcy)
@@ -120,10 +120,10 @@ object Normalize {
           cx = x
           cy = y
         case "Q" =>
-          val x1: Double  = data(0)
-          val y1: Double  = data(1)
-          val x: Double   = data(2)
-          val y: Double   = data(3)
+          val x1:  Double = data(0)
+          val y1:  Double = data(1)
+          val x:   Double = data(2)
+          val y:   Double = data(3)
           val cx1: Double = cx + 2 * (x1 - cx) / 3
           val cy1: Double = cy + 2 * (y1 - cy) / 3
           val cx2: Double = x + 2 * (x1 - x) / 3
@@ -134,13 +134,13 @@ object Normalize {
           cx = x
           cy = y
         case "A" =>
-          val r1: Double           = Math.abs(data(0))
-          val r2: Double           = Math.abs(data(1))
-          val angle: Double        = data(2)
+          val r1:           Double = Math.abs(data(0))
+          val r2:           Double = Math.abs(data(1))
+          val angle:        Double = data(2)
           val largeArcFlag: Double = data(3)
-          val sweepFlag: Double    = data(4)
-          val x: Double            = data(5)
-          val y: Double            = data(6)
+          val sweepFlag:    Double = data(4)
+          val x:            Double = data(5)
+          val y:            Double = data(6)
           if (r1 == 0 || r2 == 0) {
             out += Segment("C", Vector(cx, cy, x, y, x, y))
             cx = x
@@ -175,16 +175,16 @@ object Normalize {
   }
 
   private def arcToCubicCurves(
-      x1in: Double,
-      y1in: Double,
-      x2in: Double,
-      y2in: Double,
-      r1in: Double,
-      r2in: Double,
-      angle: Double,
-      largeArcFlag: Double,
-      sweepFlag: Double,
-      recursive: Option[Vector[Double]] = None
+    x1in:         Double,
+    y1in:         Double,
+    x2in:         Double,
+    y2in:         Double,
+    r1in:         Double,
+    r2in:         Double,
+    angle:        Double,
+    largeArcFlag: Double,
+    sweepFlag:    Double,
+    recursive:    Option[Vector[Double]] = None
   ): Vector[Vector[Double]] = {
     var x1: Double = x1in
     var y1: Double = y1in
@@ -193,8 +193,8 @@ object Normalize {
     var r1: Double = r1in
     var r2: Double = r2in
 
-    val angleRad: Double            = degToRad(angle)
-    var params: Vector[Vector[Double]] = Vector.empty
+    val angleRad: Double                 = degToRad(angle)
+    var params:   Vector[Vector[Double]] = Vector.empty
 
     var f1: Double = 0
     var f2: Double = 0
@@ -228,7 +228,7 @@ object Normalize {
         val r1Pow: Double = r1 * r1
         val r2Pow: Double = r2 * r2
 
-        val left: Double  = r1Pow * r2Pow - r1Pow * y * y - r2Pow * x * x
+        val left:  Double = r1Pow * r2Pow - r1Pow * y * y - r2Pow * x * x
         val right: Double = r1Pow * y * y + r2Pow * x * x
 
         val k: Double = sign * Math.sqrt(Math.abs(left / right))
@@ -269,9 +269,9 @@ object Normalize {
       val y2old: Double = y2
 
       if (sweepFlag != 0 && f2 > f1) {
-        f2 = f1 + (Math.PI * 120 / 180) * (1)
+        f2 = f1 + (Math.PI * 120 / 180) * 1
       } else {
-        f2 = f1 + (Math.PI * 120 / 180) * (-1)
+        f2 = f1 + (Math.PI * 120 / 180) * -1
       }
 
       x2 = cx + r1 * Math.cos(f2)
@@ -285,7 +285,7 @@ object Normalize {
     val s1: Double = Math.sin(f1)
     val c2: Double = Math.cos(f2)
     val s2: Double = Math.sin(f2)
-    val t: Double  = Math.tan(df / 4)
+    val t:  Double = Math.tan(df / 4)
     val hx: Double = 4.0 / 3 * r1 * t
     val hy: Double = 4.0 / 3 * r2 * t
 
@@ -302,7 +302,7 @@ object Normalize {
     } else {
       params = Vector(m2.toVector, m3, m4) ++ params
       val curves: ArrayBuffer[Vector[Double]] = ArrayBuffer.empty
-      var i: Int = 0
+      var i:      Int                         = 0
       while (i < params.length) {
         val ra: (Double, Double) = rotate(params(i)(0), params(i)(1), angleRad)
         val rb: (Double, Double) = rotate(params(i + 1)(0), params(i + 1)(1), angleRad)

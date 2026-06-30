@@ -28,7 +28,7 @@ package pathdata
 /** Public entry point for the path-data-parser port (port of `index.ts`). */
 object PathDataParser {
 
-  export Parser.{parsePath, serialize}
+  export Parser.{ parsePath, serialize }
   export Absolutize.absolutize
   export Normalize.normalize
 }

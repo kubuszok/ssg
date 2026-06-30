@@ -236,8 +236,8 @@ final class PathDataParserIss1204Suite extends FunSuite {
   // ---- facade (index.ts re-exports) ----
 
   test("PathDataParser facade re-exports parsePath/serialize/absolutize/normalize") {
-    val parsed: Vector[Segment]     = PathDataParser.parsePath("m10 10 l5 5")
-    val absolute: Vector[Segment]   = PathDataParser.absolutize(parsed)
+    val parsed:     Vector[Segment] = PathDataParser.parsePath("m10 10 l5 5")
+    val absolute:   Vector[Segment] = PathDataParser.absolutize(parsed)
     val normalized: Vector[Segment] = PathDataParser.normalize(absolute)
     assertEquals(absolute, Vector(seg("M", 10, 10), seg("L", 15, 15)))
     assertEquals(normalized, Vector(seg("M", 10, 10), seg("L", 15, 15)))

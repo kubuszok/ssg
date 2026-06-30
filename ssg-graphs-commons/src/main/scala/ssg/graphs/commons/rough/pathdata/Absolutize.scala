@@ -31,13 +31,13 @@ object Absolutize {
 
   // Translate relative commands to absolute commands
   def absolutize(segments: Vector[Segment]): Vector[Segment] = {
-    var cx: Double               = 0
-    var cy: Double               = 0
-    var subx: Double             = 0
-    var suby: Double             = 0
-    val out: ArrayBuffer[Segment] = ArrayBuffer.empty
+    var cx:   Double               = 0
+    var cy:   Double               = 0
+    var subx: Double               = 0
+    var suby: Double               = 0
+    val out:  ArrayBuffer[Segment] = ArrayBuffer.empty
     for (segment <- segments) {
-      val key: String          = segment.key
+      val key:  String         = segment.key
       val data: Vector[Double] = segment.data
       key match {
         case "M" =>
