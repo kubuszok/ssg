@@ -293,16 +293,16 @@ final class RoughGenerator(config: Config = Config()) {
         )
         paths += OpSet(`type` = OpSetType.fillPath, ops = _mergedShape(fillShape.ops))
       } else {
-        val polyPoints: ArrayBuffer[Point] = ArrayBuffer.empty
+        val polyPoints:  ArrayBuffer[Point]                    = ArrayBuffer.empty
         val inputPoints: Vector[Point] | Vector[Vector[Point]] = points
-        val ip: Vector[Any] = inputPoints
+        val ip:          Vector[Any]                           = inputPoints
         if (ip.nonEmpty) {
-          val p1: Any = ip.head
+          val p1:         Any                   = ip.head
           val pointsList: Vector[Vector[Point]] = p1 match {
             case _: Point => Vector(inputPoints.asInstanceOf[Vector[Point]])
-            case _        => inputPoints.asInstanceOf[Vector[Vector[Point]]]
+            case _ => inputPoints.asInstanceOf[Vector[Vector[Point]]]
           }
-          for (pts <- pointsList) {
+          for (pts <- pointsList)
             if (pts.length < 3) {
               polyPoints ++= pts
             } else if (pts.length == 3) {
@@ -310,7 +310,6 @@ final class RoughGenerator(config: Config = Config()) {
             } else {
               polyPoints ++= bezierPolyPoints(pts, o.roughness)
             }
-          }
         }
         if (polyPoints.nonEmpty) {
           paths += RoughRenderer.patternFillPolygons(Vector(polyPoints.toVector), o)
@@ -356,7 +355,7 @@ final class RoughGenerator(config: Config = Config()) {
       val hasFill:    Boolean = o.fill.exists(s => s.nonEmpty && s != "transparent" && s != NOS)
       val hasStroke:  Boolean = o.stroke != NOS
       val simplified: Boolean = o.simplification.exists(s => numTruthy(s) && (s < 1))
-      val distance: Double =
+      val distance:   Double  =
         if (simplified) 4 - 4 * o.simplification.filter(numTruthy).getOrElse(1.0)
         else (1 + o.roughness) / 2
       val sets:  Vector[Vector[Point]] = PointsOnPath.pointsOnPath(cleaned, Some(1.0), Some(distance)).map(_.map(toGeomPoint))
@@ -382,9 +381,8 @@ final class RoughGenerator(config: Config = Config()) {
       }
       if (hasStroke) {
         if (simplified) {
-          for (set <- sets) {
+          for (set <- sets)
             paths += RoughRenderer.linearPath(set, false, o)
-          }
         } else {
           paths += shape
         }
@@ -406,7 +404,7 @@ final class RoughGenerator(config: Config = Config()) {
         case OpType.move     => sb ++= s"M${RoughGenerator.numToString(data(0))} ${RoughGenerator.numToString(data(1))} "
         case OpType.bcurveTo =>
           sb ++= s"C${RoughGenerator.numToString(data(0))} ${RoughGenerator.numToString(data(1))}, ${RoughGenerator.numToString(data(2))} ${RoughGenerator.numToString(data(3))}, ${RoughGenerator.numToString(data(4))} ${RoughGenerator.numToString(data(5))} "
-        case OpType.lineTo   => sb ++= s"L${RoughGenerator.numToString(data(0))} ${RoughGenerator.numToString(data(1))} "
+        case OpType.lineTo => sb ++= s"L${RoughGenerator.numToString(data(0))} ${RoughGenerator.numToString(data(1))} "
       }
     }
     sb.toString.trim
@@ -474,9 +472,7 @@ final class RoughGenerator(config: Config = Config()) {
 
   /** Port of `pointsOnBezierCurves(curveToBezier(pts), 10, (1 + roughness) / 2)` with the `Point`-type bridging (geometry -> curve -> geometry). */
   private def bezierPolyPoints(pts: Vector[Point], roughness: Double): Vector[Point] =
-    PointsOnCurve
-      .pointsOnBezierCurves(CurveToBezier.curveToBezier(pts.map(toCurvePoint)), 10, Some((1 + roughness) / 2))
-      .map(toGeomPoint)
+    PointsOnCurve.pointsOnBezierCurves(CurveToBezier.curveToBezier(pts.map(toCurvePoint)), 10, Some((1 + roughness) / 2)).map(toGeomPoint)
 }
 
 /** Companion of [[RoughGenerator]]: the `static newSeed()` plus the ECMA-262 number serializer backing `opsToPath`. */
@@ -501,13 +497,13 @@ object RoughGenerator {
       "Infinity"
     } else {
       // Parse the platform's shortest decimal representation to extract (s, n).
-      val raw:   String = num.toString
-      val lower: String = raw.replace('E', 'e')
-      val eIdx:  Int    = lower.indexOf('e')
+      val raw:                 String           = num.toString
+      val lower:               String           = raw.replace('E', 'e')
+      val eIdx:                Int              = lower.indexOf('e')
       val (mantissa, expPart): (String, String) =
         if (eIdx >= 0) (lower.substring(0, eIdx), lower.substring(eIdx + 1))
         else (lower, "")
-      val dotIdx: Int = mantissa.indexOf('.')
+      val dotIdx:                Int           = mantissa.indexOf('.')
       val (rawDigits, pointPos): (String, Int) =
         if (dotIdx >= 0) (mantissa.substring(0, dotIdx) + mantissa.substring(dotIdx + 1), dotIdx)
         else (mantissa, mantissa.length)
