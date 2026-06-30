@@ -118,8 +118,8 @@ final class RoughGeneratorIss1204Suite extends FunSuite {
 
   // ---- curve <-> geometry Point bridging (for curve pattern-fill reconstruction) ----
 
-  private def toCurve(p: Point): CurvePoint = CurvePoint(p.x, p.y)
-  private def toGeom(p: CurvePoint): Point  = Point(p.x, p.y)
+  private def toCurve(p: Point):                                 CurvePoint    = CurvePoint(p.x, p.y)
+  private def toGeom(p:  CurvePoint):                            Point         = Point(p.x, p.y)
   private def bezierPoly(pts: Vector[Point], roughness: Double): Vector[Point] =
     PointsOnCurve.pointsOnBezierCurves(CurveToBezier.curveToBezier(pts.map(toCurve)), 10, Some((1 + roughness) / 2)).map(toGeom)
 
@@ -156,14 +156,18 @@ final class RoughGeneratorIss1204Suite extends FunSuite {
 
   test("_o merge: a partial Options overrides exactly those fields, keeps the rest as defaults") {
     val g: RoughGenerator = new RoughGenerator(
-      Config(Some(Options(
-        roughness = Some(3),
-        stroke = Some("red"),
-        fill = Some("blue"),
-        seed = Some(5),
-        fillStyle = Some("solid"),
-        hachureAngle = Some(17)
-      )))
+      Config(
+        Some(
+          Options(
+            roughness = Some(3),
+            stroke = Some("red"),
+            fill = Some("blue"),
+            seed = Some(5),
+            fillStyle = Some("solid"),
+            hachureAngle = Some(17)
+          )
+        )
+      )
     )
     val expected: ResolvedOptions =
       roDefaults.copy(roughness = 3, stroke = "red", fill = Some("blue"), seed = 5, fillStyle = "solid", hachureAngle = 17)
@@ -240,7 +244,10 @@ final class RoughGeneratorIss1204Suite extends FunSuite {
 
   test("curve solid fill -> _mergedShape fillPath + stroke (mutation (i): index-0 kept, no later moves here)") {
     val d: Drawable =
-      new RoughGenerator().curve(Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)), Some(Options(seed = Some(3), fill = Some("red"), fillStyle = Some("solid"))))
+      new RoughGenerator().curve(
+        Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)),
+        Some(Options(seed = Some(3), fill = Some("red"), fillStyle = Some("solid")))
+      )
     assertEquals(d.shape, "curve")
     assertEquals(d.sets.map(_.`type`), Vector(OpSetType.fillPath, OpSetType.path))
     assertSetsApprox(d.sets, expCurveSolid3, "curve solid")
@@ -248,7 +255,10 @@ final class RoughGeneratorIss1204Suite extends FunSuite {
 
   test("polygon solid fill -> exact [fillPath, path]") {
     val d: Drawable =
-      new RoughGenerator().polygon(Vector(Point(0, 0), Point(40, 0), Point(40, 30), Point(0, 30)), Some(Options(seed = Some(13), fill = Some("red"), fillStyle = Some("solid"))))
+      new RoughGenerator().polygon(
+        Vector(Point(0, 0), Point(40, 0), Point(40, 30), Point(0, 30)),
+        Some(Options(seed = Some(13), fill = Some("red"), fillStyle = Some("solid")))
+      )
     assertEquals(d.shape, "polygon")
     assertEquals(d.sets.map(_.`type`), Vector(OpSetType.fillPath, OpSetType.path))
     assertSetsApprox(d.sets, expPolygonSolid13, "polygon solid")
