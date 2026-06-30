@@ -36,10 +36,14 @@ PASSes only when it compiles on **all 3 platforms** (JVM/JS/Native) and its port
 unit tests pass. The orchestrator advances one chip per `/loop /goal` firing and
 checks it off here.
 
-- [ ] **Chip 1 — path-data-parser** (466 LOC: `parser.ts` 112, `absolutize.ts` 111,
+- [x] **Chip 1 — path-data-parser** (466 LOC: `parser.ts` 112, `absolutize.ts` 111,
   `normalize.ts` 241, `index.ts` 2). SVG path `d` tokenizer + `parsePath` /
   `absolutize` / `normalize`. No deps. → `rough/pathdata/`. Test: round-trip known
   path strings from the parser's own behavior.
+  **DONE 2026-06-30** (commit `9d3469f5`): `Parser`/`Absolutize`/`Normalize`/
+  `PathDataParser`.scala + `PathDataParserIss1204Suite` (22 tests, JVM+JS+Native).
+  Arc-to-bezier verified digit-exact vs Node oracle (1e-9 libm cushion). Audit PASS
+  after 1 bounce (ISS-1355: added relative-c/q/s parity-distinguishing tests).
 - [ ] **Chip 2 — points-on-curve + points-on-path** (177 + 69 LOC:
   `curve-to-bezier.ts`, points-on-curve `index.ts` (`pointsOnBezierCurves`,
   `simplify`), points-on-path `index.ts` (`pointsOnPath`)). points-on-path depends
