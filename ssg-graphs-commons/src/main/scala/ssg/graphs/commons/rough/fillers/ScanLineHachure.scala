@@ -52,8 +52,7 @@ object ScanLineHachure {
   private def truthy(d: Double): Boolean =
     d != 0.0 && !d.isNaN
 
-  /** Port of `polygonHachureLines(polygonList, o)`: compute the scan-line hachure fill
-    * lines for the polygon list, rotated by `o.hachureAngle + 90`.
+  /** Port of `polygonHachureLines(polygonList, o)`: compute the scan-line hachure fill lines for the polygon list, rotated by `o.hachureAngle + 90`.
     */
   def polygonHachureLines(polygonList: Vector[Vector[rough.Point]], o: ResolvedOptions): Vector[rough.Line] = {
     val angle: Double = o.hachureAngle + 90
@@ -76,8 +75,8 @@ object ScanLineHachure {
     // Bridge the roughjs immutable points to hachure-fill mutable polygons (Chip 3).
     val hachurePolygons: Vector[HachureFill.Polygon] =
       polygonList.map(polygon => polygon.map(point => Point(point.x, point.y)))
-    val hachureStepOffset: Double = if (truthy(skipOffset)) skipOffset else 1
-    val lines: Vector[Line] = HachureFill.hachureLines(hachurePolygons, gap, angle, hachureStepOffset)
+    val hachureStepOffset: Double       = if (truthy(skipOffset)) skipOffset else 1
+    val lines:             Vector[Line] = HachureFill.hachureLines(hachurePolygons, gap, angle, hachureStepOffset)
     lines.map(line => rough.Line(rough.Point(line.p1.x, line.p1.y), rough.Point(line.p2.x, line.p2.y)))
   }
 }

@@ -39,22 +39,22 @@ final class DashedFiller(helper: RenderHelper) extends PatternFiller {
 
   private def dashedLine(lines: Vector[rough.Line], o: ResolvedOptions): Vector[Op] = {
     val offset: Double =
-      if (o.dashOffset < 0) (if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap) else o.dashOffset
+      if (o.dashOffset < 0) if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap else o.dashOffset
     val gap: Double =
-      if (o.dashGap < 0) (if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap) else o.dashGap
+      if (o.dashGap < 0) if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap else o.dashGap
     val ops: ArrayBuffer[Op] = ArrayBuffer.empty
     lines.foreach { line =>
-      val length:      Double = Geometry.lineLength(line)
-      val count:       Double = Math.floor(length / (offset + gap))
-      val startOffset: Double = (length + gap - (count * (offset + gap))) / 2
-      var p1: rough.Point = line.p1
-      var p2: rough.Point = line.p2
+      val length:      Double      = Geometry.lineLength(line)
+      val count:       Double      = Math.floor(length / (offset + gap))
+      val startOffset: Double      = (length + gap - (count * (offset + gap))) / 2
+      var p1:          rough.Point = line.p1
+      var p2:          rough.Point = line.p2
       if (p1.x > p2.x) {
         p1 = line.p2
         p2 = line.p1
       }
       val alpha: Double = Math.atan((p2.y - p1.y) / (p2.x - p1.x))
-      var i: Int = 0
+      var i:     Int    = 0
       while (i < count) {
         val lstart: Double = i * (offset + gap)
         val lend:   Double = lstart + offset

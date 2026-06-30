@@ -32,14 +32,12 @@ package fillers
 /** A fill-pattern generator. Port of `interface PatternFiller`. */
 trait PatternFiller {
 
-  /** Port of `fillPolygons(polygonList, o)`: produce the fill `OpSet` for the given
-    * polygon list under the resolved options.
+  /** Port of `fillPolygons(polygonList, o)`: produce the fill `OpSet` for the given polygon list under the resolved options.
     */
   def fillPolygons(polygonList: Vector[Vector[rough.Point]], o: ResolvedOptions): OpSet
 }
 
-/** The rendering callbacks a filler needs from the renderer. Port of
-  * `interface RenderHelper`. Implemented by the renderer (Chip 6).
+/** The rendering callbacks a filler needs from the renderer. Port of `interface RenderHelper`. Implemented by the renderer (Chip 6).
   */
 trait RenderHelper {
 

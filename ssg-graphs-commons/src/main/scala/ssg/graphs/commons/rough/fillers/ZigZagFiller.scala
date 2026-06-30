@@ -40,12 +40,12 @@ final class ZigZagFiller(helper: RenderHelper) extends HachureFiller(helper) {
       gap = o.strokeWidth * 4
     }
     gap = Math.max(gap, 0.1)
-    val o2:          ResolvedOptions    = o.copy(hachureGap = gap)
-    val lines:       Vector[rough.Line] = ScanLineHachure.polygonHachureLines(polygonList, o2)
-    val zigZagAngle: Double             = (Math.PI / 180) * o.hachureAngle
+    val o2:          ResolvedOptions         = o.copy(hachureGap = gap)
+    val lines:       Vector[rough.Line]      = ScanLineHachure.polygonHachureLines(polygonList, o2)
+    val zigZagAngle: Double                  = (Math.PI / 180) * o.hachureAngle
     val zigzagLines: ArrayBuffer[rough.Line] = ArrayBuffer.empty
-    val dgx:         Double                   = gap * 0.5 * Math.cos(zigZagAngle)
-    val dgy:         Double                   = gap * 0.5 * Math.sin(zigZagAngle)
+    val dgx:         Double                  = gap * 0.5 * Math.cos(zigZagAngle)
+    val dgy:         Double                  = gap * 0.5 * Math.sin(zigZagAngle)
     for (line <- lines) {
       val p1: rough.Point = line.p1
       val p2: rough.Point = line.p2

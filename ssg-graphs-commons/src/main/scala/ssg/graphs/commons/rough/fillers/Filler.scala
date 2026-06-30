@@ -45,8 +45,7 @@ object Filler {
   // notes: the first helper for a given style is retained). Ported verbatim.
   private val fillers: mutable.Map[String, PatternFiller] = mutable.Map.empty
 
-  /** Port of `getFiller(o, helper)`: return the (cached) `PatternFiller` for the
-    * requested fill style.
+  /** Port of `getFiller(o, helper)`: return the (cached) `PatternFiller` for the requested fill style.
     */
   def getFiller(o: ResolvedOptions, helper: RenderHelper): PatternFiller = {
     var fillerName: String = if (o.fillStyle.nonEmpty) o.fillStyle else "hachure"

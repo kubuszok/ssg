@@ -38,9 +38,9 @@ import scala.collection.mutable.ArrayBuffer
 final class ZigZagLineFiller(helper: RenderHelper) extends PatternFiller {
 
   def fillPolygons(polygonList: Vector[Vector[rough.Point]], o: ResolvedOptions): OpSet = {
-    val gap: Double = if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap
-    val zo:  Double = if (o.zigzagOffset < 0) gap else o.zigzagOffset
-    val o2:  ResolvedOptions = o.copy(hachureGap = gap + zo)
+    val gap:   Double             = if (o.hachureGap < 0) o.strokeWidth * 4 else o.hachureGap
+    val zo:    Double             = if (o.zigzagOffset < 0) gap else o.zigzagOffset
+    val o2:    ResolvedOptions    = o.copy(hachureGap = gap + zo)
     val lines: Vector[rough.Line] = ScanLineHachure.polygonHachureLines(polygonList, o2)
     OpSet(`type` = OpSetType.fillSketch, ops = zigzagLines(lines, zo, o2))
   }
@@ -48,24 +48,24 @@ final class ZigZagLineFiller(helper: RenderHelper) extends PatternFiller {
   private def zigzagLines(lines: Vector[rough.Line], zo: Double, o: ResolvedOptions): Vector[Op] = {
     val ops: ArrayBuffer[Op] = ArrayBuffer.empty
     lines.foreach { line =>
-      val length: Double = Geometry.lineLength(line)
-      val count:  Long   = Math.round(length / (2 * zo))
-      var p1: rough.Point = line.p1
-      var p2: rough.Point = line.p2
+      val length: Double      = Geometry.lineLength(line)
+      val count:  Long        = Math.round(length / (2 * zo))
+      var p1:     rough.Point = line.p1
+      var p2:     rough.Point = line.p2
       if (p1.x > p2.x) {
         p1 = line.p2
         p2 = line.p1
       }
       val alpha: Double = Math.atan((p2.y - p1.y) / (p2.x - p1.x))
-      var i: Int = 0
+      var i:     Int    = 0
       while (i < count) {
-        val lstart: Double = i * 2 * zo
-        val lend:   Double = (i + 1) * 2 * zo
-        val dz:     Double = Math.sqrt(2 * Math.pow(zo, 2))
-        val startX: Double = p1.x + (lstart * Math.cos(alpha))
-        val startY: Double = p1.y + lstart * Math.sin(alpha)
-        val endX:   Double = p1.x + (lend * Math.cos(alpha))
-        val endY:   Double = p1.y + (lend * Math.sin(alpha))
+        val lstart:  Double = i * 2 * zo
+        val lend:    Double = (i + 1) * 2 * zo
+        val dz:      Double = Math.sqrt(2 * Math.pow(zo, 2))
+        val startX:  Double = p1.x + (lstart * Math.cos(alpha))
+        val startY:  Double = p1.y + lstart * Math.sin(alpha)
+        val endX:    Double = p1.x + (lend * Math.cos(alpha))
+        val endY:    Double = p1.y + (lend * Math.sin(alpha))
         val middleX: Double = startX + dz * Math.cos(alpha + Math.PI / 4)
         val middleY: Double = startY + dz * Math.sin(alpha + Math.PI / 4)
         ops ++= helper.doubleLineOps(startX, startY, middleX, middleY, o)

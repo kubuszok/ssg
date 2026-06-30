@@ -36,9 +36,9 @@ import munit.FunSuite
 final class FillersIss1204Suite extends FunSuite {
 
   // A deterministic test-double RenderHelper (the real one is the renderer, Chip 6).
-  private final class StubHelper extends RenderHelper {
-    def randOffset(x: Double, o: ResolvedOptions): Double                              = x
-    def randOffsetWithRange(min: Double, max: Double, o: ResolvedOptions): Double      = min
+  final private class StubHelper extends RenderHelper {
+    def randOffset(x:            Double, o:   ResolvedOptions):                            Double     = x
+    def randOffsetWithRange(min: Double, max: Double, o: ResolvedOptions):                 Double     = min
     def doubleLineOps(x1: Double, y1: Double, x2: Double, y2: Double, o: ResolvedOptions): Vector[Op] =
       Vector(Op(OpType.lineTo, Vector(x1, y1, x2, y2)))
     def ellipse(x: Double, y: Double, width: Double, height: Double, o: ResolvedOptions): OpSet =
@@ -239,10 +239,10 @@ final class FillersIss1204Suite extends FunSuite {
   // ---- HatchFiller: ops = hachure(angle) ++ hachure(angle+90), doubled structure ----
 
   test("HatchFiller rect hachureAngle -90 gap 4 -> hachure(angle) ++ hachure(angle+90)") {
-    val o:    ResolvedOptions = base.copy(hachureAngle = -90, hachureGap = 4)
-    val out:  OpSet           = HatchFiller(StubHelper()).fillPolygons(rect, o)
-    val first: OpSet          = HachureFiller(StubHelper()).fillPolygons(rect, o)
-    val second: OpSet         = HachureFiller(StubHelper()).fillPolygons(rect, o.copy(hachureAngle = o.hachureAngle + 90))
+    val o:      ResolvedOptions = base.copy(hachureAngle = -90, hachureGap = 4)
+    val out:    OpSet           = HatchFiller(StubHelper()).fillPolygons(rect, o)
+    val first:  OpSet           = HachureFiller(StubHelper()).fillPolygons(rect, o)
+    val second: OpSet           = HachureFiller(StubHelper()).fillPolygons(rect, o.copy(hachureAngle = o.hachureAngle + 90))
     // structural: out is exactly the concatenation of the two passes
     assertEquals(out.`type`, OpSetType.fillSketch)
     assertEquals(out.ops.length, first.ops.length + second.ops.length)
@@ -288,8 +288,8 @@ final class FillersIss1204Suite extends FunSuite {
       // width == height == fweight == 2
       assertEqualsDouble(line.data(0), 2.0, eps, "ellipse width")
       assertEqualsDouble(line.data(1), 2.0, eps, "ellipse height")
-      val cx: Double = move.data(0)
-      val cy: Double = move.data(1)
+      val cx:   Double  = move.data(0)
+      val cy:   Double  = move.data(1)
       val cxOk: Boolean = (cx >= 4 - eps && cx <= 6 + eps) || (cx >= 8 - eps && cx <= 10 + eps)
       val cyOk: Boolean = (cy >= 3 - eps && cy <= 5 + eps) || (cy >= 7 - eps && cy <= 9 + eps)
       assert(cxOk, s"cx $cx within [4,6] or [8,10]")

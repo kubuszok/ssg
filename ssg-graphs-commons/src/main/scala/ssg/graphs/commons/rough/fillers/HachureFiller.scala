@@ -48,9 +48,8 @@ class HachureFiller(helper: RenderHelper) extends PatternFiller {
   /** Port of the protected `renderLines(lines, o)`. */
   protected def renderLines(lines: Vector[rough.Line], o: ResolvedOptions): Vector[Op] = {
     val ops: ArrayBuffer[Op] = ArrayBuffer.empty
-    for (line <- lines) {
+    for (line <- lines)
       ops ++= helper.doubleLineOps(line.p1.x, line.p1.y, line.p2.x, line.p2.y, o)
-    }
     ops.toVector
   }
 }
