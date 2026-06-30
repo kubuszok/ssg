@@ -54,8 +54,15 @@ checks it off here.
   `d>1` dedup `>1→>0` flip adjudicated an **equivalent mutant** (de Casteljau `red`
   threaded by-ref → boundary `d≡0`; ~100M checks confirm), dedup pinned via
   guard-removal instead.
-- [ ] **Chip 3 — hachure-fill** (173 LOC: `hachure.ts` `hachureLines`). Polygon
+- [x] **Chip 3 — hachure-fill** (173 LOC: `hachure.ts` `hachureLines`). Polygon
   scan-line hachure. No deps. → `rough/fillers/`.
+  **DONE 2026-06-30** (commit `3a33f2ba`): `HachureFill.scala` (AET scan-line fill,
+  mutable `Point(var x,var y)` for in-place rotate) + `HachureFillIss1204Suite`
+  (12 tests, JVM+JS+Native). **Audit PASS, NO bounce** (first chip clean — implementer
+  ran its own 6-mutation battery; auditor added 2 more, all 8 caught). 2 equivalent
+  mutants adjudicated (dropped JS falsy-x single-vs-list artifact; `edges.sort` x/ymax
+  tiebreak unobservable — 20k-case refutation failed). Self-mutation-battery brief
+  requirement is what avoided the bounce.
 - [ ] **Chip 4 — roughjs foundation** (`math.ts` Random PRNG + `randomSeed`,
   `geometry.ts` Point/Line/Rectangle/lineLength, `core.ts` Options/ResolvedOptions/
   Op/OpSet/Drawable/PathInfo/Config types + SVGNS). No deps. → `rough/`.
