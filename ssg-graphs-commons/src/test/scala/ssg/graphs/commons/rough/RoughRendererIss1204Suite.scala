@@ -79,10 +79,10 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // the public RoughRenderer members. Used to drive a FRESH HachureFiller for exact fill
   // assertions, bypassing the global getFiller cache.
   private val rendererHelper: RenderHelper = new RenderHelper {
-    def randOffset(x: Double, o: ResolvedOptions): Double = RoughRenderer.randOffset(x, o)
-    def randOffsetWithRange(min: Double, max: Double, o: ResolvedOptions): Double = RoughRenderer.randOffsetWithRange(min, max, o)
-    def ellipse(x: Double, y: Double, width: Double, height: Double, o: ResolvedOptions): OpSet = RoughRenderer.ellipse(x, y, width, height, o)
-    def doubleLineOps(x1: Double, y1: Double, x2: Double, y2: Double, o: ResolvedOptions): Vector[Op] = RoughRenderer.doubleLineFillOps(x1, y1, x2, y2, o)
+    def randOffset(x:            Double, o:   ResolvedOptions):                                           Double     = RoughRenderer.randOffset(x, o)
+    def randOffsetWithRange(min: Double, max: Double, o:     ResolvedOptions):                            Double     = RoughRenderer.randOffsetWithRange(min, max, o)
+    def ellipse(x:               Double, y:   Double, width: Double, height: Double, o: ResolvedOptions): OpSet      = RoughRenderer.ellipse(x, y, width, height, o)
+    def doubleLineOps(x1:        Double, y1:  Double, x2:    Double, y2:     Double, o: ResolvedOptions): Vector[Op] = RoughRenderer.doubleLineFillOps(x1, y1, x2, y2, o)
   }
 
   private val Delta: Double = 1e-9
@@ -148,7 +148,11 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // ---- curve (single list + multi list) ----
 
   test("curve single point list seed3") {
-    assertOps(RoughRenderer.curve(Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)), ro(3)), OpSetType.path, expCurveSingle3)
+    assertOps(
+      RoughRenderer.curve(Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)), ro(3)),
+      OpSetType.path,
+      expCurveSingle3
+    )
   }
 
   test("curve multi list seed3 (concats underlay/overlay, move-skips later segments)") {
@@ -167,7 +171,11 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // the sign is a no-op). single-stroke to isolate the underlay curve.
   test("curve with curveTightness=0.5 pins s = 1 - curveTightness") {
     val o: ResolvedOptions = ro(3, disableMultiStroke = true).copy(curveTightness = 0.5)
-    assertOps(RoughRenderer.curve(Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)), o), OpSetType.path, expCurveTight3)
+    assertOps(
+      RoughRenderer.curve(Vector(Point(0, 0), Point(20, 30), Point(40, 10), Point(60, 50), Point(80, 0)), o),
+      OpSetType.path,
+      expCurveTight3
+    )
   }
 
   // ---- ellipse / generateEllipseParams / ellipseWithParams ----
@@ -234,7 +242,11 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // negative start that ALSO spans > 2π: while(strt<0) shifts (-1..7 -> 5.283..13.283), then
   // (stp-strt)=8 > 2π fires the clamp -> 0..2π. closed + roughClosure exercises the closure too.
   test("arc negative start spanning > 2π: normalize then clamp (closed, roughClosure)") {
-    assertOps(RoughRenderer.arc(50, 50, 80, 60, -1, 7, true, true, ro(5)), OpSetType.path, RoughRendererClampIss1204Data.expArcClampNegClosed5)
+    assertOps(
+      RoughRenderer.arc(50, 50, 80, 60, -1, 7, true, true, ro(5)),
+      OpSetType.path,
+      RoughRendererClampIss1204Data.expArcClampNegClosed5
+    )
   }
 
   // ---- svgPath ----
@@ -272,10 +284,10 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // while(strt<0) normalize, the (stp-strt)>2π clamp, then the angle sweep), advancing the
   // SAME options' RNG, so the hachure fill matches the oracle for any start/stop span.
   private def reconstructArcPolygon(start: Double, stop: Double, o: ResolvedOptions): Vector[Point] = {
-    val cx:  Double = 50
-    val cy:  Double = 50
-    var rx:  Double = Math.abs(80.0 / 2)
-    var ry:  Double = Math.abs(60.0 / 2)
+    val cx: Double = 50
+    val cy: Double = 50
+    var rx: Double = Math.abs(80.0 / 2)
+    var ry: Double = Math.abs(60.0 / 2)
     rx += RoughRenderer.randOffset(rx * 0.01, o)
     ry += RoughRenderer.randOffset(ry * 0.01, o)
     var strt: Double = start
@@ -301,9 +313,9 @@ final class RoughRendererIss1204Suite extends FunSuite {
   }
 
   test("patternFillArc via the renderer helper = exact hachure fillSketch") {
-    val o:   ResolvedOptions = ro(13, roughness = 0.5)
-    val pts: Vector[Point]   = reconstructArcPolygon(0, Math.PI, o) // advances o's RNG by the 2 rx/ry draws
-    val viaFiller: OpSet = HachureFiller(rendererHelper).fillPolygons(Vector(pts), o)
+    val o:         ResolvedOptions = ro(13, roughness = 0.5)
+    val pts:       Vector[Point]   = reconstructArcPolygon(0, Math.PI, o) // advances o's RNG by the 2 rx/ry draws
+    val viaFiller: OpSet           = HachureFiller(rendererHelper).fillPolygons(Vector(pts), o)
     assertOps(viaFiller, OpSetType.fillSketch, expPatFillArc13)
   }
 
@@ -321,9 +333,9 @@ final class RoughRendererIss1204Suite extends FunSuite {
   // patternFillArc with span > 2π exercises the identical (stp-strt) > 2π clamp (ISS-1359):
   // 7 > 2π, so strt/stp reset to 0..2π (a full sweep). Asserted cache-independently.
   test("patternFillArc span > 2π triggers the clamp to a full 0..2π sweep") {
-    val o:   ResolvedOptions = ro(13, roughness = 0.5)
-    val pts: Vector[Point]   = reconstructArcPolygon(0, 7, o) // clamp -> 0..2π
-    val viaFiller: OpSet = HachureFiller(rendererHelper).fillPolygons(Vector(pts), o)
+    val o:         ResolvedOptions = ro(13, roughness = 0.5)
+    val pts:       Vector[Point]   = reconstructArcPolygon(0, 7, o) // clamp -> 0..2π
+    val viaFiller: OpSet           = HachureFiller(rendererHelper).fillPolygons(Vector(pts), o)
     assertOps(viaFiller, OpSetType.fillSketch, RoughRendererClampIss1204Data.expPatFillArcClamp13)
     // Cache-independent pin that the PUBLIC arc actually applies the clamp: the >2π arc must
     // equal patternFillPolygons of the clamped (0..2π) reconstructed points.
