@@ -107,10 +107,16 @@ checks it off here.
   auditor. Audit PASS after 1 bounce (ISS-1359: arc/patternFillArc `>2π` clamp untested —
   added span>2π tests). Impl's own battery self-caught an equivalent-under-curveTightness=0
   mutant. canvas.ts still pending (Chip 8 skip-policy).
-- [ ] **Chip 7 — roughjs generator** (`generator.ts` 311: `RoughGenerator` —
+- [x] **Chip 7 — roughjs generator** (`generator.ts` 311: `RoughGenerator` —
   `line`/`rectangle`/`ellipse`/`circle`/`linearPath`/`polygon`/`arc`/`curve`/`path`
   → `Drawable`; `opsToPath`, `toPaths`, `fillSketch`, `_d`). Deps: Chip 2
   (`curveToBezier`/`pointsOnBezierCurves`/`pointsOnPath`), Chip 4, Chip 6. → `rough/`.
+  **DONE 2026-07-01** (commit `81a0c65d`+cold-norm `d7b9c43d`): `RoughGenerator.scala`
+  (18 members + `NOS`) + `RoughGeneratorIss1204Suite` (35 tests, JVM+JS+Native).
+  **Audit PASS, NO bounce** (2nd clean chip): all 20 defaultOptions byte-exact; `numToString`
+  (ECMA-262, replicated locally) verified vs 250k random doubles (0 mismatch); the `path()`
+  3rd-replace BUG (`'/(\s\s)/g'`→literal `"/(ss)/g"` no-op) replicated faithfully; hachure
+  fill cases pinned cache-independently (161/161 full Iss1204 set); 13 mutations all caught.
 - [ ] **Chip 8 — roughjs SVG output + entry** (`svg.ts` `RoughSVG` (`draw`,
   `opsToPath`, `path`/`rectangle`/etc, `fillSketch`), `rough.ts` `rough.svg`/
   `generator`/`newSeed`). Emit SSG SVG markup (`commons/svg/SvgBuilder` etc.), NOT
