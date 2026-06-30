@@ -168,12 +168,15 @@ Path mappings for each library:
 | terser | `original-src/terser/lib/` | `ssg-js/src/main/scala/ssg/js/` |
 | KaTeX | `original-src/katex/src/` | `ssg-katex/src/main/scala/ssg/katex/` |
 | Mermaid | `original-src/mermaid/packages/mermaid/src/` | `ssg-mermaid/src/main/scala/ssg/mermaid/` |
+| rough.js | `original-src/roughjs/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/` |
 
 `ssg-highlight` wraps tree-sitter via FFI (not a source-level port) and has
 no original-src mapping. `ssg-commons` contains SSG-native shared utilities.
 `ssg-graphs-commons` contains graph layout algorithms (dagre, spring, circular,
 radial) and SVG infrastructure extracted from ssg-mermaid, shared by ssg-mermaid
-and ssg-graphviz. `ssg-graphviz` implements DOT language parsing and rendering
+and ssg-graphviz; it also hosts the rough.js port (`commons/rough/`, vendored at
+`original-src/roughjs` v4.6.6) that powers Mermaid's `look=handDrawn` sketch
+rendering (ISS-1204). `ssg-graphviz` implements DOT language parsing and rendering
 (not a port of an external library — original SSG implementation).
 
 **Never fetch from GitHub** — always use the local submodule copies.

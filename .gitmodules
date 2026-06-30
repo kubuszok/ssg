@@ -25,3 +25,6 @@
 [submodule "original-src/cssminify2"]
 	path = original-src/cssminify2
 	url = https://github.com/digitalsparky/cssminify.git
+[submodule "original-src/roughjs"]
+	path = original-src/roughjs
+	url = https://github.com/rough-stuff/rough.git
