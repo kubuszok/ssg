@@ -169,6 +169,10 @@ Path mappings for each library:
 | KaTeX | `original-src/katex/src/` | `ssg-katex/src/main/scala/ssg/katex/` |
 | Mermaid | `original-src/mermaid/packages/mermaid/src/` | `ssg-mermaid/src/main/scala/ssg/mermaid/` |
 | rough.js | `original-src/roughjs/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/` |
+| path-data-parser | `original-src/path-data-parser/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/pathdata/` |
+| points-on-curve | `original-src/points-on-curve/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/curve/` |
+| points-on-path | `original-src/points-on-path/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/curve/` |
+| hachure-fill | `original-src/hachure-fill/src/` | `ssg-graphs-commons/src/main/scala/ssg/graphs/commons/rough/fillers/` |
 
 `ssg-highlight` wraps tree-sitter via FFI (not a source-level port) and has
 no original-src mapping. `ssg-commons` contains SSG-native shared utilities.
