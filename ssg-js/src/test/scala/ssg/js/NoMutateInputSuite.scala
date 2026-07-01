@@ -54,13 +54,13 @@ final class NoMutateInputSuite extends munit.FunSuite {
     val barMap = barResult.sourceMap
 
     // Both should have source maps
-    assert(fooMap != null, "Expected foo source map")
-    assert(barMap != null, "Expected bar source map")
+    assert(fooMap.isDefined, "Expected foo source map")
+    assert(barMap.isDefined, "Expected bar source map")
 
     // Source maps should have different mappings (different code produces different maps)
     assert(
-      fooMap.nn.mappings != barMap.nn.mappings,
-      s"Source maps should have different mappings: foo=${fooMap.nn.mappings}, bar=${barMap.nn.mappings}"
+      fooMap.get.mappings != barMap.get.mappings,
+      s"Source maps should have different mappings: foo=${fooMap.get.mappings}, bar=${barMap.get.mappings}"
     )
   }
 }

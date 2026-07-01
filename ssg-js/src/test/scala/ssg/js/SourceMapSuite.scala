@@ -11,6 +11,8 @@
 package ssg
 package js
 
+import lowlevel.Nullable
+
 import ssg.js.output.OutputOptions
 import ssg.js.sourcemap.*
 
@@ -22,7 +24,7 @@ final class SourceMapSuite extends munit.FunSuite {
 
   /** Helper: minify code and get the source map data. Uses filename "0" to match terser's default behavior for unnamed input.
     */
-  private def sourceMap(code: String): SourceMapData | Null = {
+  private def sourceMap(code: String): Nullable[SourceMapData] = {
     val sm   = new SourceMap(SourceMapOptions())
     val opts = MinifyOptions(
       parse = ssg.js.parse.ParserOptions(filename = "0"),
@@ -37,12 +39,12 @@ final class SourceMapSuite extends munit.FunSuite {
   // 1. "Should give correct version"
   test("should give correct source map version") {
     val map = sourceMap("var x = 1 + 1;")
-    assert(map != null, "Expected non-null source map")
-    assertEquals(map.nn.version, 3)
+    assert(map.isDefined, "Expected non-null source map")
+    assertEquals(map.get.version, 3)
     // Note: Without mangling, names may not be collected in the source map.
     // The original test uses default options (with mangling). Without mangling,
     // the source map may have empty names. Verify structure is correct.
-    assert(map.nn.mappings.nonEmpty, "Expected non-empty mappings")
+    assert(map.get.mappings.nonEmpty, "Expected non-empty mappings")
   }
 
   // 2. "Should give correct names"
@@ -60,8 +62,8 @@ final class SourceMapSuite extends munit.FunSuite {
       "});"
     ).mkString("\n")
     val map = sourceMap(code)
-    assert(map != null, "Expected non-null source map")
-    assertEquals(map.nn.names.toList, List("enabled", "x"))
+    assert(map.isDefined, "Expected non-null source map")
+    assertEquals(map.get.names.toList, List("enabled", "x"))
   }
 
   // 3. "Should mark array/object literals" — requires toplevel compress
@@ -87,8 +89,8 @@ final class SourceMapSuite extends munit.FunSuite {
       output = OutputOptions(sourceMap = sm)
     )
     val result = Terser.minify(code, opts)
-    assert(result.sourceMap != null)
-    val map = result.sourceMap.nn
+    assert(result.sourceMap.isDefined)
+    val map = result.sourceMap.get
     assertEquals(map.version, 3)
     assertEquals(map.sourceRoot, "//foo.bar/")
     assert(map.mappings.nonEmpty, "Expected non-empty mappings")
@@ -111,8 +113,8 @@ final class SourceMapSuite extends munit.FunSuite {
       output = OutputOptions(sourceMap = sm)
     )
     val result = Terser.minify(code, opts)
-    assert(result.sourceMap != null)
-    val map = result.sourceMap.nn
+    assert(result.sourceMap.isDefined)
+    val map = result.sourceMap.get
     assertEquals(map.version, 3)
     assert(map.mappings.nonEmpty, "Expected non-empty mappings")
   }
@@ -129,8 +131,8 @@ final class SourceMapSuite extends munit.FunSuite {
       output = OutputOptions(sourceMap = sm)
     )
     val result = Terser.minify(code, opts)
-    assert(result.sourceMap != null)
-    assertEquals(result.sourceMap.nn.version, 3)
+    assert(result.sourceMap.isDefined)
+    assertEquals(result.sourceMap.get.version, 3)
   }
 
   // 8. "Should grab names from methods and properties correctly"

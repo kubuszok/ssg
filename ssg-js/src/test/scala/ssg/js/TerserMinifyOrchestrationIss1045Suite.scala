@@ -12,6 +12,8 @@
 package ssg
 package js
 
+import lowlevel.Nullable
+
 import ssg.js.parse.{ JsParseError, ParserOptions }
 import ssg.js.output.OutputOptions
 import ssg.js.scope.ManglerOptions
@@ -80,7 +82,7 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
 
   test("wrap: wraps body in a CommonJS module exposing the export name") {
     val src = "function enclose() {\n    console.log(\"test enclose\");\n}\nenclose();\n"
-    val r   = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = false, wrap = "exports"))
+    val r   = Terser.minifyToString(src, MinifyOptions(compress = false, mangle = false, wrap = Nullable("exports")))
     assertEquals(
       r,
       "(function(exports){function enclose(){console.log(\"test enclose\")}enclose()})(typeof exports==\"undefined\"?exports={}:exports);"
@@ -110,7 +112,7 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
   test("enclose: works alongside wrap") {
     val r = Terser.minifyToString(
       encloseSrc,
-      MinifyOptions(compress = false, mangle = false, enclose = "window,undefined:window", wrap = "exports")
+      MinifyOptions(compress = false, mangle = false, enclose = "window,undefined:window", wrap = Nullable("exports"))
     )
     assertEquals(
       r,
@@ -181,7 +183,7 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
   test("nameCache: persists mangled var names across two minify calls") {
     val cache  = new NameCache()
     val mangle = ManglerOptions(toplevel = true)
-    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = cache)
+    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = Nullable(cache))
 
     val out1 = Terser.minifyToString("function longName(aaa){ return aaa + 1; } longName(2);", opts)
     // The cache now holds the global's original→mangled mapping.
@@ -201,7 +203,7 @@ final class TerserMinifyOrchestrationIss1045Suite extends munit.FunSuite {
   test("nameCache: persists mangled property names across calls") {
     val cache  = new NameCache()
     val mangle = ManglerOptions(toplevel = true, properties = true)
-    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = cache)
+    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = Nullable(cache))
 
     Terser.minifyToString("var a_var = { a_prop: 'long' };", opts)
     assert(cache.props.props.contains("a_prop"), s"a_prop should be in props cache: ${cache.props.props}")
