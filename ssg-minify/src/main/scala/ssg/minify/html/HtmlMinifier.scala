@@ -38,6 +38,7 @@ package html
 
 import scala.util.boundary
 import scala.util.boundary.break
+import ssg.commons.{ DiagResult, Diagnostic }
 import ssg.minify.css.CssMinifier
 import ssg.minify.js.JsMinifier as BasicJsMinifier
 
@@ -83,6 +84,41 @@ object HtmlMinifier {
           input // graceful degradation
       }
     }
+
+  /** Minify HTML content, returning a diagnostics envelope (ISS-1376).
+    *
+    * Additive facade over [[minify]] per docs/architecture/error-contracts.md section 2.4: the return-input-unchanged degradation (jekyll-minifier.rb:1013-1015) surfaces as a `Severity.Warning` +
+    * success, NOT a degraded result — per the section 1.1 severity policy the passthrough content is still correct, merely unoptimized. Implemented WITHOUT any new catch: it reuses [[minify]]'s
+    * existing `logger` channel (the ISS-1028 contract), collecting each warned message into a local buffer and mapping every message to a `Severity.Warning` [[Diagnostic]] with component
+    * `"ssg-minify"` and code `"html-compression-failed"`.
+    *
+    * @param input
+    *   HTML string to minify
+    * @param options
+    *   minification options
+    * @param jsCompressor
+    *   pluggable JS compressor (defaults to basic JsMinifier)
+    * @param jsCompressorOpts
+    *   optional compressor-specific options for inline `<script>` blocks
+    * @return
+    *   a success carrying the minified HTML (or the original on passthrough), plus one Warning diagnostic per compression failure
+    */
+  def minifyResult(
+    input:            String,
+    options:          HtmlMinifyOptions = HtmlMinifyOptions.Defaults,
+    jsCompressor:     JsCompressor = BasicJsMinifier,
+    jsCompressorOpts: Option[JsCompressorOptions] = None
+  ): DiagResult[String] = {
+    // A private collector Logger appends each warned message to a local buffer; the buffer is mapped to
+    // Warning diagnostics afterwards, so no new catch is introduced (docs/architecture/error-contracts.md 2.4).
+    val buffer = scala.collection.mutable.ListBuffer.empty[String]
+    val collector: ssg.commons.Logger = new ssg.commons.Logger {
+      override def warn(message: String): Unit =
+        buffer += message
+    }
+    val output = minify(input, options, jsCompressor, jsCompressorOpts, logger = collector)
+    DiagResult(Some(output), buffer.toVector.map(msg => Diagnostic.warning("ssg-minify", msg, code = Some("html-compression-failed"))))
+  }
 
   private def doMinify(
     input:            String,
