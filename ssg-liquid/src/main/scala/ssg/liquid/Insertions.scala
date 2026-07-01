@@ -19,6 +19,7 @@
 package ssg
 package liquid
 
+import lowlevel.Nullable
 import ssg.liquid.blocks._
 import ssg.liquid.tags._
 
@@ -68,8 +69,8 @@ final class Insertions private (private val map: JMap[String, Insertion]) {
       new Insertions(newMap)
     }
 
-  /** Returns the Insertion registered under the given name, or null. */
-  def get(name: String): Insertion = map.get(name)
+  /** Returns the Insertion registered under the given name, or Nullable.empty. */
+  def get(name: String): Nullable[Insertion] = Nullable(map.get(name))
 
   /** Returns an unmodifiable collection of the stored Insertions. */
   def values(): JCollection[Insertion] = Collections.unmodifiableCollection(map.values())
