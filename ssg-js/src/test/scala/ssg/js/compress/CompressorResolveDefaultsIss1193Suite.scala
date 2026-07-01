@@ -50,24 +50,24 @@ final class CompressorResolveDefaultsIss1193Suite extends munit.FunSuite {
   private def boolField(o: CompressorOptions, name: String): Boolean =
     o.get(camelToSnake(name)) match {
       case b: Boolean => b
-      case other      => fail(s"expected Boolean for $name, got $other")
+      case other => fail(s"expected Boolean for $name, got $other")
     }
 
   private def camelToSnake(name: String): String =
     name match {
-      case "collapseVars"   => "collapse_vars"
-      case "computedProps"  => "computed_props"
-      case "deadCode"       => "dead_code"
-      case "dropDebugger"   => "drop_debugger"
-      case "hoistProps"     => "hoist_props"
-      case "ifReturn"       => "if_return"
-      case "joinVars"       => "join_vars"
-      case "lhsConstants"   => "lhs_constants"
-      case "negateIife"     => "negate_iife"
-      case "reduceFuncs"    => "reduce_funcs"
-      case "reduceVars"     => "reduce_vars"
-      case "sideEffects"    => "side_effects"
-      case other            => other
+      case "collapseVars"  => "collapse_vars"
+      case "computedProps" => "computed_props"
+      case "deadCode"      => "dead_code"
+      case "dropDebugger"  => "drop_debugger"
+      case "hoistProps"    => "hoist_props"
+      case "ifReturn"      => "if_return"
+      case "joinVars"      => "join_vars"
+      case "lhsConstants"  => "lhs_constants"
+      case "negateIife"    => "negate_iife"
+      case "reduceFuncs"   => "reduce_funcs"
+      case "reduceVars"    => "reduce_vars"
+      case "sideEffects"   => "side_effects"
+      case other           => other
     }
 
   // -- CORE FIX: the 13/13 tie/flip scenario, resolved directly --
