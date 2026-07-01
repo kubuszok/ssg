@@ -100,9 +100,11 @@ final class LiquidParser(
           case _                => parseTag()
         }
       case _ =>
-        // Skip unexpected token
+        val unexpected = peek()
         advance()
-        new AtomNode("")
+        throw new ssg.liquid.exceptions.LiquidException(
+          s"Unexpected token: ${unexpected.tokenType} '${unexpected.value}' at line ${unexpected.line}"
+        )
     }
   }
 

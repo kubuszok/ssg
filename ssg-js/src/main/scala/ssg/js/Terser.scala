@@ -12,6 +12,11 @@
  *   Renames: minify() → Terser.minify()
  *   Convention: Immutable options, pure function API
  *   Idiom: Implements ssg.minify.JsCompressor for integration with ssg-minify
+ *   Gap: 93 LOC vs upstream 413 LOC (~23%). Happy-path orchestration only.
+ *     Missing: ecma version normalization, mangle cache, format/output option
+ *     resolution, structured error shape, source-map integration (sourcemap.js
+ *     not ported at all). See ISS-033, ISS-034. docs/architecture/terser-port.md.
+ *   Audited: 2026-04-07 (major_issues)
  */
 package ssg
 package js
@@ -39,8 +44,9 @@ object MinifyOptions {
 
 /** Result of a Terser minification. */
 final case class MinifyResult(
-  code: String,
-  ast:  AstToplevel
+  code:      String,
+  ast:       AstToplevel,
+  sourceMap: ssg.js.sourcemap.SourceMapData | Null = null
 )
 
 /** Terser JavaScript minifier — public API. */
@@ -83,7 +89,13 @@ object Terser {
     val out = new OutputStream(options.output)
     out.printNode(ast)
 
-    MinifyResult(out.get(), ast)
+    // 5. Retrieve source map if configured
+    val mapData = options.output.sourceMap match {
+      case sm: ssg.js.sourcemap.SourceMap => sm.getEncoded()
+      case null => null
+    }
+
+    MinifyResult(out.get(), ast, mapData)
   }
 
   /** Minify JavaScript source code, returning just the code string. */

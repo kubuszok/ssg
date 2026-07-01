@@ -16,6 +16,6 @@ import ssg.md.util.sequence.BasedSequence
 trait ReferencingNode[R <: NodeRepository[B], B <: ReferenceNode[?, ?, ?]] {
   def isDefined:                              Boolean
   def reference:                              BasedSequence
-  def getReferenceNode(document:   Document): B
-  def getReferenceNode(repository: R):        B
+  def getReferenceNode(document:   Document): B | Null
+  def getReferenceNode(repository: R):        B | Null
 }

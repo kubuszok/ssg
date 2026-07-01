@@ -16,7 +16,6 @@ object SsgSettings {
       "-deprecation",
       "-feature",
       "-no-indent",
-      "-rewrite",
       "-Werror",
       "-Wimplausible-patterns",
       "-Wrecurse-with-default",

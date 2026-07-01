@@ -64,7 +64,11 @@ class MacrosExtension private () extends Parser.ParserExtension, HtmlRenderer.Ht
 object MacrosExtension {
   val MACRO_DEFINITIONS_KEEP: DataKey[KeepType]                  = new DataKey[KeepType]("MACRO_DEFINITIONS_KEEP", KeepType.FIRST) // standard option to allow control over how to handle duplicates
   val MACRO_DEFINITIONS:      DataKey[MacroDefinitionRepository] =
-    new DataKey[MacroDefinitionRepository]("MACRO_DEFINITIONS", new MacroDefinitionRepository(null), (options: DataHolder) => new MacroDefinitionRepository(options))
+    new DataKey[MacroDefinitionRepository](
+      "MACRO_DEFINITIONS",
+      new MacroDefinitionRepository(new ssg.md.util.data.MutableDataSet()),
+      (options: DataHolder) => new MacroDefinitionRepository(options)
+    )
 
   // formatter options
   val MACRO_DEFINITIONS_PLACEMENT:  DataKey[ElementPlacement]     = new DataKey[ElementPlacement]("MACRO_DEFINITIONS_PLACEMENT", ElementPlacement.AS_IS)

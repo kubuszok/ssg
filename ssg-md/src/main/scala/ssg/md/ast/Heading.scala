@@ -51,10 +51,8 @@ class Heading extends Block, AnchorRefTarget {
     Array(openingMarker, text, closingMarker)
 
   override def anchorRefText: String = {
-    // NOTE: HtmlRenderer.HEADER_ID_REF_TEXT_TRIM_LEADING_SPACES / TRAILING_SPACES
-    // are not yet ported; using defaults (trim both) for now
-    val trimLeadingSpaces  = true
-    val trimTrailingSpaces = true
+    val trimLeadingSpaces  = ssg.md.html.HtmlRenderer.HEADER_ID_REF_TEXT_TRIM_LEADING_SPACES.get(Nullable(document: ssg.md.util.data.DataHolder))
+    val trimTrailingSpaces = ssg.md.html.HtmlRenderer.HEADER_ID_REF_TEXT_TRIM_TRAILING_SPACES.get(Nullable(document: ssg.md.util.data.DataHolder))
 
     new TextCollectingVisitor().collectAndGetText(
       this,

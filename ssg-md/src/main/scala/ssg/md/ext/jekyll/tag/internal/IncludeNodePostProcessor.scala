@@ -22,10 +22,14 @@ import ssg.md.parser.block.{ NodePostProcessor, NodePostProcessorFactory }
 import ssg.md.util.ast.{ Document, Node, NodeTracker }
 import ssg.md.util.data.DataHolder
 
+import ssg.md.util.dependency.{ DependencyResolver, FirstDependent }
+
 import java.util.{ ArrayList, HashMap, List as JList, Map as JMap }
 
+import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
-import ssg.md.util.dependency.FirstDependent
+import scala.util.boundary
+import scala.util.boundary.break
 
 class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor {
 
@@ -38,24 +42,21 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
     override def getDocument: Document   = IncludeNodePostProcessor.this.document
   }
 
-  // TODO: DependencyResolver.resolveFlatDependencies expects scala.List not java.util.List
-  // These need proper conversion when DependencyResolver is fully ported.
   val linkResolvers: JList[LinkResolver] = {
-    val factories = JekyllTagExtension.LINK_RESOLVER_FACTORIES.get(document)
-    val resolvers = new ArrayList[LinkResolver](factories.size())
-    factories.forEach { factory =>
+    val rawFactories     = JekyllTagExtension.LINK_RESOLVER_FACTORIES.get(document)
+    val orderedFactories = DependencyResolver.resolveFlatDependencies(rawFactories.asScala.toList, Nullable.empty, Nullable.empty)
+    val resolvers        = new ArrayList[LinkResolver](orderedFactories.size)
+    for (factory <- orderedFactories)
       resolvers.add(factory.apply(context))
-    }
     resolvers
   }
 
   val contentResolvers: JList[UriContentResolver] = {
-    val resolverFactories = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
-    // TODO: FileUriContentResolver not yet ported - using configured factories only
-    val resolvers = new ArrayList[UriContentResolver](resolverFactories.size())
-    resolverFactories.forEach { factory =>
+    val rawFactories     = JekyllTagExtension.CONTENT_RESOLVER_FACTORIES.get(document)
+    val orderedFactories = DependencyResolver.resolveFlatDependencies(rawFactories.asScala.toList, Nullable.empty, Nullable.empty)
+    val resolvers        = new ArrayList[UriContentResolver](orderedFactories.size)
+    for (factory <- orderedFactories)
       resolvers.add(factory.apply(context))
-    }
     resolvers
   }
 
@@ -79,12 +80,14 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
 
           if (resolvedLink == null) { // @nowarn - Java interop: HashMap.get returns null
             resolvedLink = new ResolvedLink(LinkType.LINK, rawUrl)
-            val iter = linkResolvers.iterator()
-            while (iter.hasNext) {
-              val linkResolver = iter.next()
-              resolvedLink = linkResolver.resolveLink(node, context, resolvedLink)
-              if (resolvedLink.status != LinkStatus.UNKNOWN) {
-                // break equivalent via while guard
+            boundary {
+              val iter = linkResolvers.iterator()
+              while (iter.hasNext) {
+                val linkResolver = iter.next()
+                resolvedLink = linkResolver.resolveLink(node, context, resolvedLink)
+                if (resolvedLink.status != LinkStatus.UNKNOWN) {
+                  break()
+                }
               }
             }
             resolvedLinks.put(rawUrl, resolvedLink)
@@ -92,12 +95,14 @@ class IncludeNodePostProcessor(val document: Document) extends NodePostProcessor
 
           if (resolvedLink.status == LinkStatus.VALID) {
             var resolvedContent = new ResolvedContent(resolvedLink, LinkStatus.UNKNOWN, Nullable.empty)
-            val iter            = contentResolvers.iterator()
-            while (iter.hasNext) {
-              val contentResolver = iter.next()
-              resolvedContent = contentResolver.resolveContent(node, context, resolvedContent)
-              if (resolvedContent.status != LinkStatus.UNKNOWN) {
-                // break equivalent
+            boundary {
+              val iter = contentResolvers.iterator()
+              while (iter.hasNext) {
+                val contentResolver = iter.next()
+                resolvedContent = contentResolver.resolveContent(node, context, resolvedContent)
+                if (resolvedContent.status != LinkStatus.UNKNOWN) {
+                  break()
+                }
               }
             }
 

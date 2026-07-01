@@ -221,4 +221,248 @@ files as string constants. This is a test-only issue — production code links o
 ## Migration & Audit Statistics
 
 **Migration DB**: 871 ported, 179 skipped, 581 remaining (other libraries)
-**Audit DB**: 298 files audited — 278 pass, 20 minor issues, 0 major issues
+**Audit DB** (latest): 419 files audited — 387 pass, 32 minor issues, 0 major issues. Test coverage: 298 yes / 121 no.
+
+---
+
+## Gap Analysis (2026-04-07)
+
+This section is the result of a measured (not estimated) audit of the ssg-md
+port against the original flexmark-java sources. The earlier "99%+ complete"
+framing in this document was based on test pass rate alone — passing tests only
+prove what was tested, not what was implemented. The findings below identify the
+gaps that block ssg-md from being a 1:1 functional replacement of flexmark-java.
+
+### Methodology
+
+- **LOC ratio**: per-module count of `*.java` (main only) under
+  `original-src/flexmark-java/<module>/src/main/java` vs the corresponding
+  `ssg-md/src/main/scala/ssg/md/<package>` LOC. Target ratio for an idiomatic
+  Scala 3 port is ~0.55–0.95. ssg-md preserves Java structure faithfully (braces
+  required, license headers, no aggressive collapsing) and clusters near 1.0 in
+  most packages — useful as a *floor*, not a maximum.
+- **Stub sweep**: targeted Grep over `ssg-md/src/main/scala` for `TODO`, `FIXME`,
+  `HACK`, `???`, `UnsupportedOperationException`, `NotImplementedError`, and
+  prose markers (`simplif`, `for now`, `placeholder`, `stub`, `not yet ported`).
+- **Spec coverage**: cross-reference of every `.txt`/`.md` spec resource shipped
+  in `ssg-md/src/test/resources` against actual loaders in
+  `ssg-md/src/test/scala`.
+- **Audit DB**: cross-check that files with confirmed gaps are reflected in
+  `ssg-dev db audit`.
+
+### LOC Ratio (measured)
+
+| flexmark module | java LOC (main) | ssg-md package | scala LOC | ratio |
+|---|---:|---|---:|---:|
+| flexmark (core) | 23 217 | `ast`+`parser`+`html`+`formatter` | 21 757 | 0.94 |
+| flexmark-util-sequence | 14 878 | `util/sequence` | (incl. in 30 506 util total) | ~1.0 |
+| flexmark-util-format | 5 216 | `util/format` | — | ~1.0 |
+| flexmark-util-misc | 3 802 | `util/misc` | — | ~1.0 |
+| flexmark-util-ast | 3 161 | `util/ast` | — | ~1.0 |
+| flexmark-util-collection | 2 920 | `util/collection` | — | ~1.0 |
+| flexmark-util-html | 2 166 | `util/html` | — | ~1.0 |
+| flexmark-util-data | 1 034 | `util/data` | — | ~1.0 |
+| flexmark-util-dependency | 564 | `util/dependency` | — | ~1.0 |
+| flexmark-util-options | 297 | `util/options` | — | ~1.0 |
+| flexmark-util-visitor | 183 | `util/visitor` | — | ~1.0 |
+| flexmark-util-builder | 177 | `util/builder` | — | ~1.0 |
+| **util total** | **34 398** | `util/*` | **30 506** | **0.89** |
+| flexmark-ext-toc | 2 508 | `ext/toc` | 1 968 | 0.78 |
+| flexmark-ext-attributes | 1 931 | `ext/attributes` | 1 191 | **0.62** ⚠ |
+| flexmark-ext-tables | 1 651 | `ext/tables` | 1 448 | 0.88 |
+| flexmark-ext-enumerated-reference | 1 501 | `ext/enumerated` | 1 418 | 0.94 |
+| flexmark-ext-gitlab | 1 135 | `ext/gitlab` | 970 | 0.85 |
+| flexmark-ext-wikilink | 1 079 | `ext/wikilink` | 913 | 0.85 |
+| flexmark-ext-definition | 980 | `ext/definition` | 925 | 0.94 |
+| flexmark-ext-footnotes | 967 | `ext/footnotes` | 854 | 0.88 |
+| flexmark-ext-macros | 919 | `ext/macros` | 772 | 0.84 |
+| flexmark-ext-admonition | 831 | `ext/admonition` | 680 | 0.82 |
+| flexmark-ext-jekyll-tag | 829 | `ext/jekyll/tag` | (incl. in 1 054) | 0.93* |
+| flexmark-ext-emoji | 794 | `ext/emoji` | 717 | 0.90 |
+| flexmark-ext-abbreviation | 764 | `ext/abbreviation` | 710 | 0.93 |
+| flexmark-ext-gfm-strikethrough | 710 | `ext/gfm/strikethrough` | (incl. in 1 819) | 0.89* |
+| flexmark-ext-typographic | 646 | `ext/typographic` | 640 | 0.99 |
+| flexmark-ext-gfm-tasklist | 626 | `ext/gfm/tasklist` | — | 0.89* |
+| flexmark-ext-media-tags | 494 | `ext/media` | 648 | 1.31 |
+| flexmark-ext-aside | 445 | `ext/aside` | 439 | 0.99 |
+| flexmark-ext-yaml-front-matter | 434 | `ext/yaml` | 440 | 1.01 |
+| flexmark-ext-gfm-users | 360 | `ext/gfm/users` | — | 0.89* |
+| flexmark-ext-jekyll-front-matter | 352 | `ext/jekyll/front` | — | 0.93* |
+| flexmark-ext-gfm-issues | 350 | `ext/gfm/issues` | — | 0.89* |
+| flexmark-ext-autolink | 314 | `ext/autolink` | 362 | 1.15 |
+| flexmark-ext-superscript | 300 | `ext/superscript` | 250 | 0.83 |
+| flexmark-ext-ins | 300 | `ext/ins` | 250 | 0.83 |
+| flexmark-ext-escaped-character | 265 | `ext/escaped` | 284 | 1.07 |
+| flexmark-ext-anchorlink | 256 | `ext/anchorlink` | 283 | 1.10 |
+| flexmark-ext-resizable-image | 242 | `ext/resizable` | 234 | 0.97 |
+| flexmark-ext-youtube-embedded | 227 | `ext/youtube` | 267 | 1.18 |
+
+`*` jekyll-* and gfm-* extensions are bundled into shared parent packages —
+ratios are aggregate across the cluster.
+
+**Findings**: only one extension is significantly under-ported by LOC:
+**flexmark-ext-attributes (0.62)**. All other ratios are within or above the
+expected band. Note: a healthy ratio is necessary but not sufficient — TODOs and
+stubs (below) are the more reliable signal.
+
+### Production stubs and shortcuts (must-fix for 1.0)
+
+These markers indicate code paths that are intentionally incomplete in
+production source (`ssg-md/src/main/scala`). They are not test-harness TODOs.
+
+**Major (functional gap)**:
+
+1. `ext/attributes/internal/AttributesNodeFormatter.scala:21,36` —
+   *"Full AttributesNodeFormatter port pending"* / *"implement full attribute
+   formatting"*. Markdown→markdown formatting of `{#id .class}` blocks is not
+   implemented. Aligns with the 0.62 LOC ratio for ext-attributes.
+2. `ext/toc/internal/SimTocNodeFormatter.scala:21,34` —
+   *"Full SimTocNodeFormatter port pending"* / *"implement SimToc formatting"*.
+   Simulated-TOC formatter is a stub.
+3. `ext/enumerated/reference/internal/EnumeratedReferenceNodeRenderer.scala:27`
+   and `EnumeratedReferenceParagraphPreProcessor.scala:31` — fields marked
+   `// stub: will be used when rendering is completed`. Enumerated references
+   may not render with correct ordinals.
+4. `formatter/MarkdownWriter.scala:79–84` — nested block-quote prefix handling
+   is **simplified**. Round-trip formatting of nested `>` quotes will lose
+   structure beyond one level.
+5. `util/sequence/Escaping.scala:79,102,137` — explicit comments
+   *"Simplified Replacer"*, *"stubs that will be filled in when Html5Entities is
+   available"*, *"simplified version that handles backslash escapes only"*.
+   Numeric/named HTML entity decoding in `Escaping` is degraded.
+6. `util/sequence/Escaping.scala:576,581` — `normalizeEOL(BasedSequence,
+   ReplacedTextMapper)` and `normalizeEndWithEOL(BasedSequence,
+   ReplacedTextMapper)` throw `UnsupportedOperationException("not yet ported")`.
+7. `ext/jekyll/tag/internal/IncludeNodePostProcessor.scala:54` —
+   `FileUriContentResolver not yet ported - using configured factories only`.
+   Jekyll `{% include %}` cannot resolve `file://` URIs.
+8. `ext/emoji/internal/EmojiNodeFormatter.scala:35` and
+   `ext/enumerated/reference/internal/EnumeratedReferenceNodeFormatter.scala:41`
+   — `appendNonTranslating not yet ported - using append for now`. Translation
+   round-trips will leak text instead of producing placeholders.
+
+**Minor (edge case / quality)**:
+
+9. `ast/Heading.scala:55` — *"are not yet ported; using defaults (trim both)
+   for now"* — heading trim options ignored.
+10. `ast/HtmlEntity.scala:37` — completion-marker hint missing.
+11. `ext/autolink/internal/AutolinkNodePostProcessor.scala:46,317` — autolink
+    optimization disabled with TODO.
+12. `util/misc/Utils.scala:69` — utility methods to be rewritten on
+    BasedSequence.
+13. `parser/internal/DocumentParser.scala:316`,
+    `util/sequence/SegmentedSequenceFull.scala:47`,
+    `util/sequence/LineAppendableImpl.scala:528`,
+    `html/HtmlRenderer.scala:64`,
+    `ext/tables/internal/TableNodeFormatter.scala:168` — `// HACK:` comments
+    inherited from upstream flexmark-java; verify each is a faithful port and
+    not an SSG simplification.
+
+**Not gaps** (intentional Java→Scala interop): the
+`UnsupportedOperationException` in `util/collection/{MapEntry,OrderedMap,
+OrderedMultiMap}.scala` and `util/ast/Document.scala` mirror Java's
+unmodifiable-iterator pattern in the originals.
+
+### Spec coverage (missing CommonMark conformance)
+
+ssg-md ships **7 CommonMark spec files** as test resources but **none of them
+are loaded by any test runner**:
+
+| Spec file (`ssg-md/src/test/resources/ssg/md/test/specs/`) | Loaded by | Examples |
+|---|---|---|
+| `spec.txt` (current) | **NOT RUN** | ~650 |
+| `spec.0.30.txt` | **NOT RUN** | ~649 |
+| `spec.0.29.txt` | **NOT RUN** | ~624 |
+| `spec.0.28.txt` | **NOT RUN** | ~624 |
+| `spec.0.27.txt` | **NOT RUN** | ~613 |
+| `spec.0.26.txt` | **NOT RUN** | ~613 |
+| `com.vladsch.flexmark.test.specs.txt` | **NOT RUN** | — |
+
+The only core runner — `ComboCoreSpecTest` — loads
+`/ssg/md/core/test/ast_spec.md`, which is **flexmark's internal AST-based test
+file**, not the normative CommonMark spec. ast_spec.md contains targeted
+regression cases but is not a substitute for normative conformance.
+
+**Implication**: the "1645/1645 tests passing" headline does **not** include
+CommonMark spec conformance. ssg-md is *not* certified against any CommonMark
+version. This is the single largest gap to close.
+
+**Extension spec runners** *are* present and execute their `*_ast_spec.md`
+files for: abbreviation, admonition, anchorlink, aside, attributes, autolink,
+core, definition, emoji, escaped, footnotes, gfm-issues, gfm-strikethrough,
+gfm-tasklist, gfm-users, gitlab, ins, jekyll-front-matter, jekyll-tag, macros,
+superscript, tables, toc, sim-toc, typographic, wikilink, yaml-front-matter
+(27 Combo*SpecTest classes). Missing Combo runner — only `*ExtensionSuite`
+placeholder TODOs:
+
+- `ext/enumerated/reference/EnumeratedReferenceExtensionSuite.scala`
+- `ext/media/tags/MediaTagsExtensionSuite.scala`
+- `ext/resizable/image/ResizableImageExtensionSuite.scala`
+- `ext/youtube/embedded/YouTubeLinkExtensionSuite.scala`
+
+These four extensions have spec `.md` files in `src/test/resources` but no
+runner that compares rendered output against expected sections.
+
+### Audit DB cross-check
+
+Current audit DB state (from `ssg-dev db audit stats`):
+
+- 419 of ~790 production files audited (53%)
+- 387 pass / 32 minor / 0 major
+- 121 audited files marked `tested: no`
+
+The 13 production stubs above are not all reflected as `minor_issues` /
+`major_issues` rows. Items #1, #2, #3 (AttributesNodeFormatter,
+SimTocNodeFormatter, EnumeratedReferenceNodeRenderer) should be **`major_issues`**
+because they leave whole formatter/renderer responsibilities unimplemented.
+
+### Skipped-on-purpose modules (justified)
+
+These flexmark-java modules are intentionally not ported. Listed for
+completeness so future audits don't re-flag them:
+
+| Module | Java LOC | Reason |
+|---|---:|---|
+| flexmark-pdf-converter | 153 (+ deps) | Output format; OpenHTMLToPDF JVM-only |
+| flexmark-docx-converter | 9 478 | Output format; docx4j JVM-only |
+| flexmark-html2md-converter | 4 144 | Reverse direction (HTML→MD), out of scope |
+| flexmark-jira-converter | 457 | Output format, out of scope |
+| flexmark-youtrack-converter | 500 | Output format, out of scope |
+| flexmark-profile-pegdown | 254 | Legacy compatibility shim |
+| flexmark-osgi | 0 (manifest) | OSGi bundling, no source |
+| flexmark-all | 0 | Aggregator pom only |
+| flexmark-util-experimental | 2 553 | Marked unstable upstream |
+| flexmark-ext-spec-example | 1 232 | Flexmark dev tooling for spec authoring |
+| flexmark-ext-zzzzzz | 1 266 | Extension template / dev tooling |
+| flexmark-ext-xwiki-macros | 952 | XWiki output, out of scope |
+| flexmark-tree-iteration | 1 501 | Generic tree utility, unused by core |
+| flexmark-integration-test | 0 | Replaced by ssg-md test suites |
+
+Total skipped: ~22 500 LOC.
+
+### Definition of done for ssg-md 1.0
+
+Ranked by impact:
+
+1. **Wire CommonMark spec runners** for `spec.txt` and `spec.0.26..0.30.txt`
+   in `ssg-md/src/test/scala/ssg/md/core/test/`. Goal: pass rate published per
+   spec version. This is the headline gap.
+2. **Finish AttributesNodeFormatter** (item #1 above) — round-trip markdown
+   formatting of attribute blocks.
+3. **Finish SimTocNodeFormatter** (item #2 above).
+4. **Finish EnumeratedReferenceNodeRenderer / PreProcessor** (item #3 above).
+5. **Implement nested block-quote prefix handling** in `MarkdownWriter`
+   (item #4).
+6. **Port `Html5Entities` and the `Escaping` ReplacedTextMapper variants**
+   (items #5–#6).
+7. **Implement `appendNonTranslating`** in MarkdownWriter; remove the two
+   `// using append for now` shims in emoji/enumerated formatters (item #8).
+8. **Port `FileUriContentResolver`** for Jekyll includes (item #7).
+9. **Add Combo*SpecTest runners** for enumerated-reference, media-tags,
+   resizable-image, youtube-embedded (the four placeholder ExtensionSuites).
+10. **Audit the remaining ~370 unaudited files** and bring `tested: yes`
+    coverage to 100%.
+11. **Scala.js test resource loader** (separate, known effort).
+
+After (1) is wired, the *real* ssg-md conformance number replaces the current
+test-pass headline.

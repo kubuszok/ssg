@@ -1,6 +1,22 @@
 ThisBuild / organization := "dev.ssg"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
+// --- Common utilities (cross-platform abstractions) ---
+
+val `ssg-commons` = (projectMatrix in file("ssg-commons"))
+  .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(SsgSettings.scalaVersion))
+  .settings(SsgSettings.commonSettings *)
+  .settings(
+    name := "ssg-commons",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit"            % "1.2.3" % Test,
+      "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+
 // --- Markdown engine (flexmark-java port) ---
 
 val `ssg-md` = (projectMatrix in file("ssg-md"))
@@ -13,6 +29,7 @@ val `ssg-md` = (projectMatrix in file("ssg-md"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -31,9 +48,14 @@ val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "org.scalameta"      %%% "munit-scalacheck"   % "1.0.0" % Test
     )
   )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
-  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
-  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
+  .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings ++ Seq(
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
+  ))
+  .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings ++ Seq(
+    libraryDependencies += "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0"
+  ))
 
 // --- SASS/SCSS compiler (dart-sass port) ---
 
@@ -54,6 +76,7 @@ val `ssg-sass` = (projectMatrix in file("ssg-sass"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = sassJvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -70,6 +93,7 @@ val `ssg-minify` = (projectMatrix in file("ssg-minify"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -86,6 +110,7 @@ val `ssg-js` = (projectMatrix in file("ssg-js"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
+  .dependsOn(`ssg-commons`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)
@@ -102,7 +127,7 @@ val ssg = (projectMatrix in file("ssg"))
       "org.scalameta" %%% "munit-scalacheck" % "1.0.0" % Test
     )
   )
-  .dependsOn(`ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`)
+  .dependsOn(`ssg-commons`, `ssg-md`, `ssg-liquid`, `ssg-sass`, `ssg-minify`, `ssg-js`)
   .jvmPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jvmSettings)
   .jsPlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.jsSettings)
   .nativePlatform(scalaVersions = Seq(SsgSettings.scalaVersion), settings = SsgSettings.nativeSettings)

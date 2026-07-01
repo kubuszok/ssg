@@ -72,6 +72,9 @@ class AstToplevel extends AstNode with AstScope {
     var i = body.size
     while ({ i -= 1; i >= 0 }) push(body(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    body = transformList(body, tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +130,12 @@ private trait AstLambdaWalk extends AstLambda {
     val n = name
     if (n != null) push(n.nn)
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit = {
+    if (name != null) name = name.nn.transform(tw)
+    argnames = transformList(argnames, tw)
+    body = transformList(body, tw)
+  }
 }
 
 /** A setter/getter function. The `name` property is always null. */
@@ -172,6 +181,9 @@ class AstDestructuring extends AstNode {
     var i = names.size
     while ({ i -= 1; i >= 0 }) push(names(i))
   }
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    names = transformList(names, tw)
 }
 
 // ---------------------------------------------------------------------------
@@ -189,4 +201,7 @@ class AstExpansion extends AstNode {
 
   override def childrenBackwards(push: AstNode => Unit): Unit =
     if (expression != null) push(expression.nn)
+
+  override protected def transformDescend(tw: TreeTransformer): Unit =
+    if (expression != null) expression = expression.nn.transform(tw)
 }
