@@ -13,6 +13,13 @@
  *   Audited: 2026-04-10 — ISS-102 fixed: uses getRootFolder() for path resolution
  *   SSG addition — optional root-jail for include_relative per ISS-1214/ISS-1020/design §6;
  *     inert when no jail-root is set, preserving liqp behavior
+ *   DELIBERATE SSG DIVERGENCE (ISS-1259) — NameResolver fallback: liqp resolves
+ *     include_relative from the filesystem ONLY (IncludeRelative.java:40-48). SSG
+ *     targets JVM/JS/Native, where JS and Native have no on-disk source tree and
+ *     includes are provided via the in-memory NameResolver. When the source-relative
+ *     path has no real file, detectSource falls back to context.parser.nameResolver
+ *     (as the base `include` tag does), so include_relative — including nested — works
+ *     cross-platform. The liqp-faithful filesystem path is unchanged when the file exists.
  *
  * Covenant: full-port
  * Covenant-java-reference: src/main/java/liqp/tags/IncludeRelative.java
@@ -40,7 +47,9 @@ class IncludeRelative extends Include("include_relative") {
     * When a jail root is set on the context (via `Template.withJailRoot`), verifies that the resolved include path stays under the jail root before reading the file. If the path escapes the jail, a
     * [[IncludeRelative.JailViolationException]] is thrown. When no jail root is set, behavior is unchanged (faithful to the liqp port for non-pipeline users).
     *
-    * Requires file system access via FileOps: supported on JVM, Scala Native, and Scala.js (under Node).
+    * DELIBERATE SSG DIVERGENCE from liqp (ISS-1259, user-approved): liqp resolves `include_relative` from the filesystem only (IncludeRelative.java:40-48). When the computed source-relative path has
+    * no real file (e.g. on Scala.js / Scala Native, or any host where the include is only available in-memory), this falls back to `context.parser.nameResolver` — resolving the include name exactly
+    * as the base `include` tag does — so `include_relative` (including nested) works cross-platform. The liqp-faithful filesystem path is unchanged whenever the file exists on disk.
     */
   override protected def detectSource(context: TemplateContext, includeResource: String): NameResolver.ResolvedSource = {
     var rootPath = context.getRootFolder
@@ -65,8 +74,27 @@ class IncludeRelative extends Include("include_relative") {
       }
     }
 
-    val content = FileOps.readString(includePathAbs)
-    NameResolver.ResolvedSource(content, includePathAbs.pathString)
+    // liqp resolves include_relative from the filesystem ONLY
+    // (IncludeRelative.java:40-48 → `new CharStreamWithLocation(includePath)`).
+    // SSG keeps that filesystem path faithful for existing users: when the
+    // source-relative file IS present on disk, we read it exactly as liqp does.
+    if (FileOps.exists(includePathAbs)) {
+      val content = FileOps.readString(includePathAbs)
+      NameResolver.ResolvedSource(content, includePathAbs.pathString)
+    } else {
+      // DELIBERATE SSG DIVERGENCE (ISS-1259 — user decision): liqp is
+      // filesystem-only, but SSG targets JVM, Scala.js and Scala Native, where
+      // the in-memory NameResolver — not a real filesystem — is how includes are
+      // provided (JS/Native have no on-disk source tree). When the computed
+      // source-relative path does not resolve to a real file, fall back to the
+      // context's NameResolver, resolving the include name the same way the base
+      // `include` tag does (Include.detectSource → nameResolver.resolve). The
+      // SAME context (and therefore the same resolver + root) propagates through
+      // nested include_relative calls (Include.render re-renders against `context`),
+      // so nested source-relative includes resolve in-memory too. This changes
+      // nothing for users whose include_relative files exist on disk.
+      context.parser.nameResolver.resolve(includeResource)
+    }
   }
 }
 

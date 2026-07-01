@@ -29,6 +29,7 @@ final class LiquidLexer(
   private val input:                 String,
   private val stripSpacesAroundTags: Boolean,
   private val stripSingleLine:       Boolean,
+  private val liquidStyleInclude:    Boolean,
   private val blockNames:            JSet[String],
   private val tagNames:              JSet[String]
 ) {
@@ -240,14 +241,38 @@ final class LiquidLexer(
         case "raw"              => TokenType.RAW
         case "assign"           => TokenType.ASSIGN
         case "include"          => TokenType.INCLUDE
-        case "include_relative" => TokenType.INCLUDE_RELATIVE
-        case "cycle"            => TokenType.CYCLE
-        case "else"             => TokenType.ELSE
-        case "break"            => TokenType.BREAK_TAG
-        case "continue"         => TokenType.CONTINUE_TAG
-        case "increment"        => TokenType.ID // treated as ID for increment/decrement tags
-        case "decrement"        => TokenType.ID
-        case other              =>
+        case "include_relative" =>
+          // LiquidLexer.g4:229-245 — `include_relative` is a flavour-specific tag.
+          // It is a built-in ONLY in Jekyll style (isJekyllStyleInclude, i.e.
+          // !liquidStyleInclude). In Liquid style (isLiquidStyleInclude(), true for
+          // LIQUID+LIQP) it is NOT a built-in: it must be a user-defined block or
+          // tag, otherwise it is an invalid tag. This mirrors liqp's conditional
+          // action which only rewrites the token type when isLiquidStyleInclude().
+          if (!liquidStyleInclude) {
+            // Jekyll style: the built-in include_relative tag (g4:229 default type).
+            TokenType.INCLUDE_RELATIVE
+          } else if (blockNames.contains("include_relative")) {
+            // g4:236-238 — user block override wins: setType(BlockId). The block
+            // state is pushed by the parser's parseCustomBlockTag (openBlocks.add),
+            // exactly as for the generic BLOCK_ID path below.
+            TokenType.BLOCK_ID
+          } else if (tagNames.contains("include_relative")) {
+            // g4:239-240 — user simple-tag override wins: setType(SimpleTagId).
+            TokenType.SIMPLE_TAG_ID
+          } else {
+            // g4:241-242 — setType(InvalidTagId). SSG collapses liqp's InvalidTagId
+            // into a plain ID token; the parser reconstructs the invalid-tag error
+            // in parseGenericTag (LiquidParser.scala:948-988), so parser.parse
+            // throws "Invalid Tag" for an undefined include_relative in Liquid style.
+            TokenType.ID
+          }
+        case "cycle"     => TokenType.CYCLE
+        case "else"      => TokenType.ELSE
+        case "break"     => TokenType.BREAK_TAG
+        case "continue"  => TokenType.CONTINUE_TAG
+        case "increment" => TokenType.ID // treated as ID for increment/decrement tags
+        case "decrement" => TokenType.ID
+        case other       =>
           if (blockNames.contains(other)) TokenType.BLOCK_ID
           else if (tagNames.contains(other)) TokenType.SIMPLE_TAG_ID
           else if (other.startsWith("end") && blockNames.contains(other.substring(3))) TokenType.END_BLOCK_ID

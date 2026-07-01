@@ -117,6 +117,10 @@ final class TemplateParser(
       input,
       stripSpacesAroundTags,
       stripSingleLine,
+      // LiquidLexer.g4:20-35/229-245 — the lexer needs liquidStyleInclude to
+      // classify `include_relative`: built-in only in Jekyll style, user-override
+      // or invalid in Liquid style. Threaded from the parser's flavour-derived flag.
+      liquidStyleInclude,
       insertions.blockNames,
       insertions.tagNames
     )
