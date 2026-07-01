@@ -214,10 +214,10 @@ final class RectShapeHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("seed threads to opts: distinct seeds produce distinct sketches") {
-    val tv     = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
-    val base   = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", themeVariables = tv)
-    val d1     = pathDescriptors(renderBuilt(base.copy(handDrawnSeed = 1)))
-    val d2     = pathDescriptors(renderBuilt(base.copy(handDrawnSeed = 2)))
+    val tv   = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
+    val base = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", themeVariables = tv)
+    val d1   = pathDescriptors(renderBuilt(base.copy(handDrawnSeed = 1)))
+    val d2   = pathDescriptors(renderBuilt(base.copy(handDrawnSeed = 2)))
     assertNotEquals(d1, d2, "different seeds must yield different rough sketches (seed must thread to opts)")
   }
 

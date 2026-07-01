@@ -36,8 +36,8 @@ import ssg.graphs.commons.util.FormatUtil.formatNumber
 
 /** SVG path builder for a rounded rectangle — port of `roundedRectPath.ts`.
   *
-  * Produces the `d` attribute string for a rounded rectangle outline, used on the hand-drawn (`look: "handDrawn"`) rendering path where the outline is fed to `rough.svg().path(...)` to be
-  * re-sketched (see [[RectShape]]).
+  * Produces the `d` attribute string for a rounded rectangle outline, used on the hand-drawn (`look: "handDrawn"`) rendering path where the outline is fed to `rough.svg().path(...)` to be re-sketched
+  * (see [[RectShape]]).
   */
 object RoundedRectPath {
 
