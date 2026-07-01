@@ -7,10 +7,9 @@ import ssg.minify.html.{ HtmlMinifier, HtmlMinifyOptions }
 
 /** ISS-1376: error-contract wiring for ssg-minify — the `minifyResult` DiagResult facade (docs/architecture/error-contracts.md 2.4).
   *
-  * The silent-passthrough degradation (HtmlMinifier returns the input unchanged when compression throws) must surface as a
-  * `Severity.Warning` + success — per the section 1.1 severity policy the unoptimized content is still correct output, so it is
-  * NOT a degraded/failure result. These differential tests prove a Warning diagnostic IS emitted on a passthrough case and is
-  * ABSENT on a clean minify, asserting structure/values (severity, component, code, message, value) rather than non-emptiness.
+  * The silent-passthrough degradation (HtmlMinifier returns the input unchanged when compression throws) must surface as a `Severity.Warning` + success — per the section 1.1 severity policy the
+  * unoptimized content is still correct output, so it is NOT a degraded/failure result. These differential tests prove a Warning diagnostic IS emitted on a passthrough case and is ABSENT on a clean
+  * minify, asserting structure/values (severity, component, code, message, value) rather than non-emptiness.
   */
 final class MinifyResultIss1376Suite extends munit.FunSuite {
 
