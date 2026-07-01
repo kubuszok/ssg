@@ -165,7 +165,7 @@ one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to up
   → every `ShapeConfig` (+ make available to edges/clusters). Port `handDrawnShapeStyles.ts`
   (`userNodeOverrides`/`solidStateFill` → the rough `Options` each shape passes). NO render
   change yet (shapes stay classic; look/seed just becomes available). Foundation for 9b+.
-- [ ] **9b — rect + roundedRect handDrawn** (`drawRect.ts`: `rc.path(createRoundedRectPathD)`
+- [x] **9b — rect + roundedRect handDrawn** (`drawRect.ts`: `rc.path(createRoundedRectPathD)`
   / `rc.rectangle`). The `createRoundedRectPathD` helper + the look-branch in RectShape/
   RoundedRectShape → `Rough.svg().path/.rectangle`.
 - [ ] **9c — circle + ellipse + doublecircle handDrawn** (`circle.ts`/`ellipse.ts`/
