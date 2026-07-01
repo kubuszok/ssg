@@ -24,6 +24,19 @@
  *     from upstream's raw `String(n)` only for coordinates carrying more than four decimal
  *     places (`formatNumber` rounds to four); for the integral radii/dimensions typical of
  *     laid-out flowchart nodes the two are byte-identical.
+ *   9b flag resolved (ISS-1204 9j, numToString visibility): the Chip-9b review flagged whether
+ *     `RoughGenerator.numToString` (ECMA-262 Number::toString, `private[rough]`) needed to be
+ *     widened so the path builders could format this `d` with ECMA rather than `formatNumber`.
+ *     Determination: NOT needed, and it must stay `formatNumber`. The `d` here is consumed ONLY as
+ *     input to `rough.svg().path(...)`, which tokenizes it back to floats and re-emits its OWN
+ *     sketch `d` (via numToString) — so this input formatting never reaches the output; the sketch
+ *     is byte-exact w.r.t. the parsed floats. Because the shapes sketch SSG's OWN geometry, the
+ *     reference for "correct" is SSG's own coordinate formatting (`formatNumber`), which also keeps
+ *     the hand-drawn input `d` identical to the classic `<rect>`/path `d`. Widening numToString and
+ *     switching this builder to it would (a) not change the sketch output meaningfully (sub-pixel
+ *     5th-decimal only), (b) ripple into the 9b/9f/9i test oracles, and (c) make hand-drawn input
+ *     `d` diverge from the classic path `d` — a new classic/hand-drawn inconsistency. So the
+ *     faithful choice is to KEEP `formatNumber` and leave numToString `private[rough]`.
  *
  * upstream-commit: 56a2762 (mermaid roundedRectPath.ts)
  */

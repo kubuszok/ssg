@@ -83,9 +83,13 @@ object FlowchartStyles {
          |""".stripMargin
     )
 
-    // Node label alignment
+    // Node label alignment. Upstream styles.ts:62 targets the label text of BOTH the
+    // hand-drawn node container (`.rough-node`, applied in place of `.node` by
+    // getNodeClasses — shapes/util.js:136) and the classic node container (`.node`) with a
+    // single combined selector, so hand-drawn nodes get the same centred label text.
     sb.append(
-      """.node .label text {
+      """.rough-node .label text,
+        |.node .label text {
         |  text-anchor: middle;
         |}
         |.node .label {
@@ -188,18 +192,11 @@ object FlowchartStyles {
          |""".stripMargin
     )
 
-    // Rough-node styles (for hand-drawn/sketch mode)
-    sb.append(
-      s""".node .rough-node {
-         |  fill: ${vars.mainBkg};
-         |  stroke: ${vars.nodeBorder};
-         |  stroke-width: 1px;
-         |}
-         |.node .rough-node .label {
-         |  text-anchor: middle;
-         |}
-         |""".stripMargin
-    )
+    // Hand-drawn (sketch) node styling. Upstream styles.ts has NO `.rough-node { fill; stroke }`
+    // rule: the hand-drawn node's rough <path> carries its fill/stroke as presentation attributes
+    // baked in from the rough options (HandDrawnShapeStyles.userNodeOverrides), so no CSS fill/stroke
+    // is needed. The only rough-node CSS upstream emits is the label-text anchoring, folded into the
+    // combined `.rough-node .label text, .node .label text` selector above (styles.ts:62).
 
     sb.toString
   }

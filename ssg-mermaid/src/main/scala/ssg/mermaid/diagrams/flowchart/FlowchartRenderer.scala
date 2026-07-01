@@ -285,7 +285,7 @@ object FlowchartRenderer {
       label = node.text,
       rx = if (shapeName == "roundedRect") 5 else 0,
       ry = if (shapeName == "roundedRect") 5 else 0,
-      cssClass = buildNodeCssClass(node),
+      cssClass = buildNodeCssClass(node, config.look),
       style = node.styles.mkString("; "),
       padding = padding,
       // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
@@ -408,9 +408,15 @@ object FlowchartRenderer {
       case _               => "rect" // default fallback
     }
 
-  /** Builds a CSS class string for a node. */
-  private def buildNodeCssClass(node: FlowNode): String = {
-    val sb = new StringBuilder("node default")
+  /** Builds a CSS class string for a node's shape group.
+    *
+    * Mirrors upstream `getNodeClasses` (rendering-util/rendering-elements/shapes/util.js:135-136): `(node.look === 'handDrawn' ? 'rough-node' : 'node') + ' ' + node.cssClasses + ...`. The leading
+    * container class is REPLACED (not augmented) with `rough-node` on the hand-drawn path so the group carrying the shape + `.label` matches the `.rough-node .label text` rule (styles.ts:62); classic
+    * nodes keep the byte-identical `node` container class.
+    */
+  private def buildNodeCssClass(node: FlowNode, look: String): String = {
+    val container = if (look == "handDrawn") "rough-node" else "node"
+    val sb        = new StringBuilder(s"$container default")
     for (cls <- node.cssClasses) {
       sb.append(" ")
       sb.append(cls)
