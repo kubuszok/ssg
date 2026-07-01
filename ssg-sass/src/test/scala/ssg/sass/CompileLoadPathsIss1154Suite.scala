@@ -25,8 +25,7 @@ final class CompileLoadPathsIss1154Suite extends munit.FunSuite {
       FileOps.createDirectories(dir)
       dir
     },
-    teardown = dir =>
-      if (FileOps.exists(dir)) FileOps.deleteRecursively(dir)
+    teardown = dir => if (FileOps.exists(dir)) FileOps.deleteRecursively(dir)
   )
 
   private def writeFile(dir: FilePath, name: String, contents: String): Unit =
