@@ -26,7 +26,7 @@ package shapes
 
 import munit.FunSuite
 
-import ssg.graphs.commons.rough.{ Options, Rough, Point as RoughPoint }
+import ssg.graphs.commons.rough.{ Options, Point as RoughPoint, Rough }
 import ssg.graphs.commons.svg.{ SvgBuilder, SvgElement }
 import ssg.mermaid.theme.ThemeVariables
 
@@ -64,10 +64,10 @@ final class DiamondShapeHandDrawnIss1204Suite extends FunSuite {
     val cx    = config.x
     val cy    = config.y
     Vector(
-      RoughPoint(cx, cy - halfH),           // top
-      RoughPoint(cx + halfW, cy),           // right
-      RoughPoint(cx, cy + halfH),           // bottom
-      RoughPoint(cx - halfW, cy)            // left
+      RoughPoint(cx, cy - halfH), // top
+      RoughPoint(cx + halfW, cy), // right
+      RoughPoint(cx, cy + halfH), // bottom
+      RoughPoint(cx - halfW, cy) // left
     )
   }
 
@@ -89,8 +89,8 @@ final class DiamondShapeHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("diamond handDrawn: emitted paths match rough.polygon(top, right, bottom, left, opts) oracle") {
-    val tv     = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
-    val seed   = 42
+    val tv   = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
+    val seed = 42
     // Non-square box so a halfW<->halfH confusion is observable.
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = seed, themeVariables = tv)
     val built  = renderDiamond(config)
