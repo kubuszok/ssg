@@ -108,7 +108,7 @@ object RectShape {
       // shape child, then apply the shape class + inline style to it (SSG keeps its own `node-shape`
       // class convention here, matching the classic <rect>, in place of upstream's
       // 'basic label-container').
-      val roughGroup = graftElement(group, roughNode)
+      val roughGroup = HandDrawnShapes.graftElement(group, roughNode)
       roughGroup.classed("node-shape", true)
       if (config.style.nonEmpty) {
         roughGroup.attr("style", config.style)
@@ -148,20 +148,5 @@ object RectShape {
       shapeGroup = group,
       intersectFn = (point: Point) => Intersect.rect(cx, cy, w, h, point)
     )
-  }
-
-  /** Grafts an immutable [[SvgElement]] subtree onto the mutable [[SvgBuilder]] tree as a new child of `parent`, returning the builder for the grafted root.
-    *
-    * `Rough.svg().rectangle/.path` build their output as an immutable `SvgElement` `<g>` (of `<path>` children), whereas the shape renderers assemble into an `SvgBuilder`. This bridges the two by
-    * re-creating the element (tag, attributes in insertion order, text/HTML content, then children recursively) inside the builder — the deterministic-output analogue of D3's `insert(() => roughNode,
-    * ...)`.
-    */
-  private def graftElement(parent: SvgBuilder, element: SvgElement): SvgBuilder = {
-    val child = parent.append(element.tagName)
-    element.attributes.foreach { case (name, value) => child.attr(name, value) }
-    element.textContent.foreach(t => child.text(t))
-    element.htmlContent.foreach(h => child.html(h))
-    element.children.foreach(grandchild => graftElement(child, grandchild))
-    child
   }
 }
