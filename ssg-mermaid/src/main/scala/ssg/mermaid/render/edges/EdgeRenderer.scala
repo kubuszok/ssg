@@ -23,8 +23,10 @@ package edges
 import lowlevel.Nullable
 import ssg.graphs.commons.layout.dagre.Point
 import ssg.graphs.commons.render.Curves
-import ssg.graphs.commons.svg.{ PathData, SvgBuilder }
+import ssg.graphs.commons.rough.{ Options, Rough }
+import ssg.graphs.commons.svg.{ PathData, SvgBuilder, SvgElement }
 import ssg.mermaid.render.labels.HtmlLabelHelper
+import ssg.mermaid.render.shapes.HandDrawnShapes
 import ssg.mermaid.render.text.TextUtils
 
 /** Renders edge paths (connections between nodes) as SVG `<path>` elements.
@@ -66,29 +68,83 @@ object EdgeRenderer {
     // Build the path using curve interpolation
     val pathData = interpolate(points, style.curve)
 
-    val pathEl = group.append("path")
-    pathEl.attr("d", pathData.toString)
-    pathEl.attr("fill", "none")
+    if (style.look == "handDrawn") {
+      // edges.js:513 — the `edge.look === 'handDrawn'` branch. Upstream builds
+      //   const rc = rough.svg(elem);
+      //   const svgPathNode = rc.path(linePath, { roughness: 0.3, seed: handDrawnSeed });
+      //   strokeClasses += ' transition';
+      //   svgPath = select(svgPathNode).select('path').attr('id', edge.id)
+      //     .attr('class', ' ' + strokeClasses + ...).attr('style', ...);
+      //   elem.node().appendChild(svgPath.node());
+      // i.e. it rough-sketches the edge's OWN line path (`linePath`) with the EDGE-SPECIFIC options
+      // (roughness 0.3, seed = handDrawnSeed — NOT `userNodeOverrides`), keeps the classic edge
+      // styling/markers, and adds the `transition` class. SSG reuses its OWN `pathData` (the exact
+      // `d` the classic edge would draw) as the rough `d` so hand-drawn and classic edges share the
+      // same geometry — markers/stroke land on the same endpoints (the ISS-1363 geometry-consistency
+      // rule from 9g).
+      val roughEl: SvgElement =
+        Rough.svg().path(pathData.toString, Some(Options(roughness = Some(0.3), seed = Some(style.handDrawnSeed))))
 
-    // Apply stroke styling
-    pathEl.attr("stroke", style.stroke)
-    pathEl.attr("stroke-width", resolveStrokeWidth(style))
+      // Graft the rough `<g>` (of `<path>` children) into the edge group, then style its inner
+      // `<path>` — the deterministic-output analogue of upstream's
+      // `select(svgPathNode).select('path').attr(...)`. The styling/markers go on the inner path
+      // (which carries the sketchy `d`) so CSS + markers work exactly as for the classic pathEl;
+      // rough already set `stroke`/`fill=none` on that path from its default options, so the edge
+      // stroke/width/markers OVERWRITE them here (only the LINE geometry becomes sketchy).
+      val roughGroup = HandDrawnShapes.graftElement(group, roughEl)
+      roughGroup.select("path").foreach { pathEl =>
+        pathEl.attr("fill", "none")
 
-    if (style.strokeDasharray.nonEmpty) {
-      pathEl.attr("stroke-dasharray", style.strokeDasharray)
-    }
+        // Apply stroke styling
+        pathEl.attr("stroke", style.stroke)
+        pathEl.attr("stroke-width", resolveStrokeWidth(style))
 
-    if (style.style.nonEmpty) {
-      pathEl.attr("style", style.style)
-    }
+        if (style.strokeDasharray.nonEmpty) {
+          pathEl.attr("stroke-dasharray", style.strokeDasharray)
+        }
 
-    // Apply marker references
-    style.markerStart.foreach { mt =>
-      pathEl.attr("marker-start", ArrowMarkers.markerUrl(mt, markerId))
-    }
+        if (style.style.nonEmpty) {
+          pathEl.attr("style", style.style)
+        }
 
-    style.markerEnd.foreach { mt =>
-      pathEl.attr("marker-end", ArrowMarkers.markerUrl(mt, markerId))
+        // Apply marker references
+        style.markerStart.foreach { mt =>
+          pathEl.attr("marker-start", ArrowMarkers.markerUrl(mt, markerId))
+        }
+
+        style.markerEnd.foreach { mt =>
+          pathEl.attr("marker-end", ArrowMarkers.markerUrl(mt, markerId))
+        }
+
+        // strokeClasses += ' transition' — the hand-drawn edge carries the `transition` class on the
+        // sketch path (upstream appends it to the path's class list).
+        pathEl.classed("transition", true)
+      }
+    } else {
+      val pathEl = group.append("path")
+      pathEl.attr("d", pathData.toString)
+      pathEl.attr("fill", "none")
+
+      // Apply stroke styling
+      pathEl.attr("stroke", style.stroke)
+      pathEl.attr("stroke-width", resolveStrokeWidth(style))
+
+      if (style.strokeDasharray.nonEmpty) {
+        pathEl.attr("stroke-dasharray", style.strokeDasharray)
+      }
+
+      if (style.style.nonEmpty) {
+        pathEl.attr("style", style.style)
+      }
+
+      // Apply marker references
+      style.markerStart.foreach { mt =>
+        pathEl.attr("marker-start", ArrowMarkers.markerUrl(mt, markerId))
+      }
+
+      style.markerEnd.foreach { mt =>
+        pathEl.attr("marker-end", ArrowMarkers.markerUrl(mt, markerId))
+      }
     }
 
     // Add edge label if present

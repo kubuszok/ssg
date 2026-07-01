@@ -415,7 +415,7 @@ object FlowchartRenderer {
   }
 
   /** Builds an [[EdgeStyle]] from a flow edge and dagre edge label. */
-  private def buildEdgeStyle(
+  private[flowchart] def buildEdgeStyle(
     edge:      FlowEdge,
     edgeLabel: EdgeLabel,
     config:    MermaidConfig,
@@ -445,7 +445,11 @@ object FlowchartRenderer {
       thickness = edge.stroke,
       // edges.js:22 — useHtmlLabels = evaluate(config.flowchart.htmlLabels) (same as node labels).
       htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-      securityLevel = config.securityLevel
+      securityLevel = config.securityLevel,
+      // edges.js:513/519 — edge.look === 'handDrawn' routes to the rough.js sketch path, seeded by
+      // config.handDrawnSeed (threaded from config exactly as ShapeConfig gets them — Chip 9a/9b).
+      look = config.look,
+      handDrawnSeed = config.handDrawnSeed
     )
   }
 
