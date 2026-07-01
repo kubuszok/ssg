@@ -5,7 +5,31 @@ file + `/goal` alone. Updated by the orchestrator at every iteration boundary.
 Constitution: `docs/plans/remediation-2026-06.md`. Ledger:
 `docs/plans/remediation-progress.md`.
 
-## Current state (2026-07-01, iteration 1 COMPLETE)
+## Iteration 3 result (2026-07-02): ISS-1381 + ISS-1376 RESOLVED; protocols updated
+
+- Both facades cherry-picked onto the LINEARIZED `more-improvements-2`
+  (dfda4e58, f0c62e33 + fmt-fixpoint c737a0d8), audited PASS on Fable 5,
+  resolved with full evidence chains. 8 wiring issues remain (1373/1374/1375/
+  1377/1378/1379/1380/1382) — the error-contracts.md §2.x doc-driven pattern is
+  proven executable.
+- **Audit model protocol restored** (user-approved 2026-07-02, commit 89d0e72a):
+  auditor = Fable 5 (`model: "fable"`) while available (~2026-07-06), Opus 4.8
+  fallback after, NEVER the implementer's model. The first Fable dispatch
+  VOIDed itself under the older clause — that was the anti-cheat working;
+  escalation to the user produced the restoration. verify-issue SKILL.md +
+  remediation-2026-06.md §2/C13 both updated.
+- **Branch history was linearized + pushed 2026-07-01/02** (repo rules forbid
+  merge commits): PR #45 to master is open and MERGEABLE/CLEAN; local master
+  force-pushed to its tree-identical twin (de0b5f56). Old shas resolve via
+  `archive/more-improvements-2-pre-linearize`. See
+  `../MERGE-COMMIT-AUDIT-2026-07-01.md`.
+- **Three worktree gotchas for every dispatcher**: (1) Agent worktree isolation
+  can spawn at MASTER — first action must be `git checkout --detach <pinned
+  sha>`; (2) sbt-git/JGit in agent worktrees can't resolve HEAD without an
+  objects alternates/symlink shim; (3) Edit/Write pin to the cwd repo's
+  worktree — only dispatch worktree-isolated agents for the repo matching cwd.
+
+## Earlier state (2026-07-01, iteration 1 COMPLETE)
 
 - Branch: `more-improvements-2` at d8617aa1. P0/P1 exhausted; queue = P2
   (33 open + 10 new wiring = 43) then P3 (58).
