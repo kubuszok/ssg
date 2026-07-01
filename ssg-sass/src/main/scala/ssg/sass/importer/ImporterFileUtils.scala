@@ -155,8 +155,8 @@ object ImporterFileUtils {
   /** Converts a `file:` URI string to a filesystem path string, OS-independently — the inverse of [[toFileUri]] and the cross-platform equivalent of dart-sass `p.fromUri` (filesystem.dart:71/93/101).
     *
     * Mirrors `java.net.URI(url).getPath` for `file:` URLs (which the JVM-only port previously used): strips the `file:` scheme and any `//authority`, drops a query or fragment component, and
-    * percent-decodes `%XX` octets as UTF-8. A `url` without the `file:` scheme is returned as-is (the pre-move fallback was `url.stripPrefix("file:")`; this pure helper never throws, so no fallback path
-    * is needed).
+    * percent-decodes `%XX` octets as UTF-8. A `url` without the `file:` scheme is returned as-is (the pre-move fallback was `url.stripPrefix("file:")`; this pure helper never throws, so no fallback
+    * path is needed).
     */
   def fileUriToPath(url: String): String = {
     val afterScheme =
