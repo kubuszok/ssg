@@ -275,21 +275,76 @@ final class HtmlHighlightRendererIss1097Suite extends munit.FunSuite {
 
   // ── 5. Engine error paths ───────────────────────────────────────────────
 
-  test("ISS-1097 error path: unknown language returns None, no exception") {
+  test("ISS-1097 error path: unknown language returns Left(UnknownLanguage), no exception") {
     val highlighter = SyntaxHighlighter.default
     val result      = highlighter.highlight("fn main() {}", "totally_nonexistent_lang_xyz_42")
-    assertEquals(result, None)
+    assertEquals(result, Left(HighlightError.UnknownLanguage))
   }
 
-  test("ISS-1097 error path: empty string language returns None, no exception") {
+  test("ISS-1097 error path: empty string language returns Left(UnknownLanguage), no exception") {
     val highlighter = SyntaxHighlighter.default
     val result      = highlighter.highlight("some code", "")
-    assertEquals(result, None)
+    assertEquals(result, Left(HighlightError.UnknownLanguage))
   }
 
   test("ISS-1097 error path: supportsLanguage returns false for unknown language") {
     val highlighter = SyntaxHighlighter.default
     assertEquals(highlighter.supportsLanguage("totally_nonexistent_lang_xyz_42"), false)
+  }
+
+  // ── 5b. ISS-1096 mode-distinguishability tests ──────────────────────────
+  //
+  // ISS-1096: the result type changed from Option[String] to Either[HighlightError, String]
+  // so callers can distinguish misconfiguration from valid-but-unhighlighted input.
+  //
+  // Left(MissingQuery) and Left(QueryLoadFailed) are NOT testable via the public API:
+  //   - MissingQuery is structurally unreachable because LanguageRegistry.resolveGrammar
+  //     returns Some(grammar) only for grammars present in grammarToQueryDir, so the
+  //     subsequent queryDir(grammarName) call is guaranteed to return Some for any grammar
+  //     that passed resolveGrammar. Both steps use the same private map.
+  //   - QueryLoadFailed requires QueryLoader.loadHighlightQuery to return None for a valid
+  //     query dir, which depends on filesystem/platform state not controllable via the
+  //     public API (no mock injection point). On JVM/Native the query files are embedded;
+  //     on JS they depend on env vars (ISS-1118).
+  // These two Left cases are covered by inspection of the enum and the .toRight mapping
+  // in TreeSitterHighlighter. Testing them would require either internal mocking or a
+  // test-only backdoor into LanguageRegistry/QueryLoader, which is not warranted for an
+  // SSG-native module with no original-source contract to satisfy.
+
+  test("ISS-1096 distinguishability: zero captures from a supported grammar yields Right, not Left") {
+    val highlighter = SyntaxHighlighter.default
+    // Gate: this test requires grammar loading to work (not available on JS).
+    assume(
+      highlighter.highlight("class X {}", "scala").isRight,
+      "Grammar loading unavailable on this platform — ISS-1161/ISS-1118"
+    )
+    // Feed a whitespace-only / token-less source to a supported grammar.
+    // A single space has no syntactic tokens for any grammar, so tree-sitter
+    // should produce zero captures. The key assertion: this must be Right (success)
+    // rather than Left (error). A regression that re-adds the `spans.nonEmpty` guard
+    // or maps zero-captures to a Left would fail this test.
+    val source = " "
+    val result = highlighter.highlight(source, "json")
+    assert(result.isRight, s"ISS-1096: zero-captures should yield Right, got $result")
+    // The Right value should be the rendered source with no highlight spans.
+    val html = result.toOption.get
+    assert(
+      !html.contains("<span class=\"hl-"),
+      s"ISS-1096: expected no highlight spans in zero-capture result, got: $html"
+    )
+    // It should equal what the renderer produces for zero spans — the escaped source.
+    assertEquals(html, HtmlHighlightRenderer.render(source, Seq.empty))
+  }
+
+  test("ISS-1096 distinguishability: unknown language yields Left(UnknownLanguage), not generic None") {
+    // This test duplicates the existing ISS-1097 error-path test but frames it as an
+    // ISS-1096 distinguishability assertion: the specific Left case must be UnknownLanguage.
+    val highlighter = SyntaxHighlighter.default
+    val result      = highlighter.highlight("x", "nonexistent_language_qwerty_99")
+    result match {
+      case Left(err) => assertEquals(err, HighlightError.UnknownLanguage)
+      case Right(_)  => fail("ISS-1096: unknown language should yield Left, got Right")
+    }
   }
 
   // ── 6. Renderer edge cases (structural) ─────────────────────────────────

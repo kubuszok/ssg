@@ -4,7 +4,7 @@ package highlight
 
 trait SyntaxHighlighter {
 
-  def highlight(source: String, language: String): Option[String]
+  def highlight(source: String, language: String): Either[HighlightError, String]
 
   def supportsLanguage(language: String): Boolean
 
