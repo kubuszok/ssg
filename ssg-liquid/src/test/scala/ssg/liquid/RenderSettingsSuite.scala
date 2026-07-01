@@ -25,7 +25,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
   }
 
   // SSG: strict variables with STRICT ErrorMode behaves differently
-  test("strict variables: undefined variable throws with name".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: undefined variable throws with name") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables().parse("{{mu}}").render()
       fail("Expected VariableNotExistException")
@@ -37,7 +37,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     }
   }
 
-  test("strict variables: second undefined variable throws".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: second undefined variable throws") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables()
         .parse("{{mu}} {{qwe.asd.zxc}}")
@@ -58,7 +58,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     parserWithStrictVariables().parse("{% if mu == \"somethingElse\" %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
   }
 
-  test("strict variables: condition true branch evaluates".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: condition true branch evaluates") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables().parse("{% if mu == \"muValue\" %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
@@ -70,7 +70,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     }
   }
 
-  test("strict variables: and operator checks second operand".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: and operator checks second operand") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables().parse("{% if mu == \"muValue\" and checkThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
@@ -86,7 +86,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     parserWithStrictVariables().parse("{% if mu == \"somethingElse\" and doNotCheckThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
   }
 
-  test("strict variables: or operator skips second when first true".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: or operator skips second when first true") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables().parse("{% if mu == \"muValue\" or doNotCheckThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
@@ -98,7 +98,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     }
   }
 
-  test("strict variables: or operator checks second when first false".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("strict variables: or operator checks second when first false") { // ISS-1258 (ISS-1024 umbrella)
     try {
       parserWithStrictVariables().parse("{% if mu == \"somethingElse\" or checkThis %}{{ badVariableName }}{% endif %}").render(TestHelper.mapOf("mu" -> "muValue"))
       fail("Expected VariableNotExistException")
@@ -122,7 +122,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     assertEquals(rendered, "FOO")
   }
 
-  test("lax mode: records errors for non-existing variables in loops".fail) { // ISS-1258 (ISS-1024 umbrella)
+  test("lax mode: records errors for non-existing variables in loops") { // ISS-1258 (ISS-1024 umbrella)
     val parser   = parserWithStrictVariablesAndLaxMode()
     val template = parser.parse(
       "{% for v in a %}{{v.b}}{% endfor %}" +
