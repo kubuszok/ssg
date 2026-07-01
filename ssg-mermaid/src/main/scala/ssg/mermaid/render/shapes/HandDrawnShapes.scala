@@ -33,9 +33,9 @@ object HandDrawnShapes {
 
   /** Grafts an immutable [[SvgElement]] subtree onto the mutable [[SvgBuilder]] tree as a new child of `parent`, returning the builder for the grafted root.
     *
-    * `Rough.svg().rectangle/.path/.circle/.ellipse` build their output as an immutable `SvgElement` `<g>` (of `<path>` children), whereas the shape renderers assemble into an `SvgBuilder`. This bridges
-    * the two by re-creating the element (tag, attributes in insertion order, text/HTML content, then children recursively) inside the builder — the deterministic-output analogue of D3's `insert(() =>
-    * roughNode, ...)`.
+    * `Rough.svg().rectangle/.path/.circle/.ellipse` build their output as an immutable `SvgElement` `<g>` (of `<path>` children), whereas the shape renderers assemble into an `SvgBuilder`. This
+    * bridges the two by re-creating the element (tag, attributes in insertion order, text/HTML content, then children recursively) inside the builder — the deterministic-output analogue of D3's
+    * `insert(() => roughNode, ...)`.
     */
   def graftElement(parent: SvgBuilder, element: SvgElement): SvgBuilder = {
     val child = parent.append(element.tagName)

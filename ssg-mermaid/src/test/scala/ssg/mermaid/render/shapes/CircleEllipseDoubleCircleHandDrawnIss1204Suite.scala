@@ -169,8 +169,8 @@ final class CircleEllipseDoubleCircleHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("ellipse handDrawn: emitted paths match rough.ellipse(cx, cy, width, height, opts) oracle") {
-    val tv     = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
-    val seed   = 13
+    val tv   = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
+    val seed = 13
     // Non-square box so a width<->height swap is observable.
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = seed, themeVariables = tv)
     val built  = renderEllipse(config)
