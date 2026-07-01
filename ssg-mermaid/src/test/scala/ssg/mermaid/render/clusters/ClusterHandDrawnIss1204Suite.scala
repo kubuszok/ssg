@@ -118,12 +118,10 @@ final class ClusterHandDrawnIss1204Suite extends FunSuite {
     val built = renderRoundedBuilt(baseConfig(seed, tv))
 
     // Oracle: same top-left coords (x - w/2, y - h/2), same cluster opts, RADIUS 0, same seed.
-    val x    = 100 - 200 / 2.0
-    val y    = 80 - 120 / 2.0
-    val opts = clusterOptions(ClusterBkg, ClusterBorder, seed, tv)
-    val oracle = Rough
-      .svg()
-      .path(RoundedRectPath.createRoundedRectPathD(x, y, 200, 120, 0), Some(opts))
+    val x      = 100 - 200 / 2.0
+    val y      = 80 - 120 / 2.0
+    val opts   = clusterOptions(ClusterBkg, ClusterBorder, seed, tv)
+    val oracle = Rough.svg().path(RoundedRectPath.createRoundedRectPathD(x, y, 200, 120, 0), Some(opts))
 
     val expected = pathDescriptors(oracle)
     val actual   = pathDescriptors(built.findAllByClass("cluster-bg").head)
@@ -150,7 +148,11 @@ final class ClusterHandDrawnIss1204Suite extends FunSuite {
     val actual = pathDescriptors(built.findAllByClass("cluster-bg").head)
     assertEquals(actual, pathDescriptors(oracleR0), "hand-drawn cluster must use radius 0 (upstream faithful)")
     assertNotEquals(pathDescriptors(oracleR0), pathDescriptors(oracleR5), "sanity: radius 0 and radius 5 sketches must differ")
-    assertNotEquals(actual, pathDescriptors(oracleR5), "hand-drawn cluster must NOT use radius 5 (rx=5 must not leak from renderRoundedCluster)")
+    assertNotEquals(
+      actual,
+      pathDescriptors(oracleR5),
+      "hand-drawn cluster must NOT use radius 5 (rx=5 must not leak from renderRoundedCluster)"
+    )
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -163,7 +165,10 @@ final class ClusterHandDrawnIss1204Suite extends FunSuite {
     val strokes = pathDescriptors(built).map(_._2).toSet
     // The outline stroke is clusterBorder; the fillWeight=3 hachure fill is stroked with clusterBkg.
     assert(strokes.contains(ClusterBorder), s"expected the cluster border colour $ClusterBorder as a path stroke, got $strokes")
-    assert(strokes.contains(ClusterBkg), s"expected the cluster background colour $ClusterBkg as the fill-sketch stroke, got $strokes")
+    assert(
+      strokes.contains(ClusterBkg),
+      s"expected the cluster background colour $ClusterBkg as the fill-sketch stroke, got $strokes"
+    )
   }
 
   test("handDrawn cluster: exact opts (roughness 0.7 / fillWeight 3 / fill / stroke) pinned via a full-opts oracle") {
@@ -171,11 +176,11 @@ final class ClusterHandDrawnIss1204Suite extends FunSuite {
     val seed  = 13
     val built = renderRoundedBuilt(baseConfig(seed, tv))
 
-    val x        = 100 - 200 / 2.0
-    val y        = 80 - 120 / 2.0
-    val opts     = clusterOptions(ClusterBkg, ClusterBorder, seed, tv)
-    val oracle   = Rough.svg().path(RoundedRectPath.createRoundedRectPathD(x, y, 200, 120, 0), Some(opts))
-    val actual   = pathDescriptors(built.findAllByClass("cluster-bg").head)
+    val x      = 100 - 200 / 2.0
+    val y      = 80 - 120 / 2.0
+    val opts   = clusterOptions(ClusterBkg, ClusterBorder, seed, tv)
+    val oracle = Rough.svg().path(RoundedRectPath.createRoundedRectPathD(x, y, 200, 120, 0), Some(opts))
+    val actual = pathDescriptors(built.findAllByClass("cluster-bg").head)
     assertEquals(actual, pathDescriptors(oracle))
 
     // Wrong-opts guards: changing roughness / fillWeight / fill / stroke must diverge.
