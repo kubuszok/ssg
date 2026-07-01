@@ -4,8 +4,9 @@
  * Original license: MIT
  *
  * Migration notes:
- * Renames: utils.dart -> ImporterFileUtils.scala (JVM-only portion) Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
- * Idiom: resolveImportPath, tryPath, tryPathWithExtensions, tryPathAsDirectory, exactlyOne — filesystem operations that require actual file existence checks. */
+ * Renames: utils.dart -> ImporterFileUtils.scala Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
+ * Idiom: resolveImportPath, tryPath, tryPathWithExtensions, tryPathAsDirectory, exactlyOne — filesystem operations that require actual file existence checks.
+ * Cross-platform: FileOps/FilePath are supported on JVM, Scala Native, and Scala.js (under Node), so this helper — and the FilesystemImporter that uses it — is now cross-platform (ISS-1154). */
 package ssg
 package sass
 package importer
@@ -16,7 +17,7 @@ import ssg.sass.Nullable.*
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
-/** JVM-only filesystem resolution helpers for the importer infrastructure.
+/** Filesystem resolution helpers for the importer infrastructure.
   *
   * These functions implement the same logic as `resolveImportPath` and its helpers in the original Dart `importer/utils.dart`, using `FileOps` for actual filesystem access.
   */
@@ -150,4 +151,60 @@ object ImporterFileUtils {
     val normalized = FilePath.of(path).toAbsolute.normalize.pathString.replace('\\', '/')
     "file://" + (if (normalized.startsWith("/")) normalized else "/" + normalized)
   }
+
+  /** Converts a `file:` URI string to a filesystem path string, OS-independently — the inverse of [[toFileUri]] and the cross-platform equivalent of dart-sass `p.fromUri` (filesystem.dart:71/93/101).
+    *
+    * Mirrors `java.net.URI(url).getPath` for `file:` URLs (which the JVM-only port previously used): strips the `file:` scheme and any `//authority`, drops a query or fragment component, and
+    * percent-decodes `%XX` octets as UTF-8. A `url` without the `file:` scheme is returned as-is (the pre-move fallback was `url.stripPrefix("file:")`; this pure helper never throws, so no fallback path
+    * is needed).
+    */
+  def fileUriToPath(url: String): String = {
+    val afterScheme =
+      if (url.startsWith("file:")) url.substring("file:".length)
+      else url
+    val rawPath =
+      if (afterScheme.startsWith("//")) {
+        // file://[authority][/path] — skip the authority component up to the next '/'.
+        val rest  = afterScheme.substring(2)
+        val slash = rest.indexOf('/')
+        if (slash < 0) "" else rest.substring(slash)
+      } else afterScheme // file:/path or file:path
+    // Drop a query (?) or fragment (#) component if present, mirroring URI.getPath.
+    val q   = rawPath.indexOf('?')
+    val h   = rawPath.indexOf('#')
+    val cut =
+      if (q < 0) h
+      else if (h < 0) q
+      else math.min(q, h)
+    val pathPart = if (cut < 0) rawPath else rawPath.substring(0, cut)
+    percentDecode(pathPart)
+  }
+
+  /** True if [[c]] is a hexadecimal digit (used by [[percentDecode]] to validate `%XX` escapes). */
+  private def isHex(c: Char): Boolean =
+    (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+
+  /** Percent-decodes `%XX` octets in [[s]] as UTF-8, matching `java.net.URI.getPath`. A `%` not followed by two hex digits is left literal, and non-escaped characters are re-encoded as UTF-8 so
+    * multi-byte characters round-trip. Returns [[s]] unchanged when it contains no `%`.
+    */
+  private def percentDecode(s: String): String =
+    if (s.indexOf('%') < 0) s
+    else {
+      val bytes = ArrayBuffer.empty[Byte]
+      var i     = 0
+      while (i < s.length) {
+        val c = s.charAt(i)
+        if (c == '%' && i + 2 < s.length && isHex(s.charAt(i + 1)) && isHex(s.charAt(i + 2))) {
+          val hi = Character.digit(s.charAt(i + 1), 16)
+          val lo = Character.digit(s.charAt(i + 2), 16)
+          bytes += (((hi << 4) | lo) & 0xff).toByte
+          i += 3
+        } else {
+          val encoded = c.toString.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+          bytes ++= encoded
+          i += 1
+        }
+      }
+      new String(bytes.toArray, java.nio.charset.StandardCharsets.UTF_8)
+    }
 }

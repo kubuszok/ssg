@@ -29,6 +29,10 @@ private[io] object FileOpsPlatform {
   def isRegularFile(path: FilePath): Boolean =
     Files.isRegularFile(FilePathPlatform.toNioPath(path))
 
+  /** Last-modified time in milliseconds since the epoch (Files.getLastModifiedTime throws for a missing path). */
+  def lastModifiedTime(path: FilePath): Long =
+    Files.getLastModifiedTime(FilePathPlatform.toNioPath(path)).toMillis
+
   /** Immediate children of a directory, sorted by path string for deterministic output across platforms. Files.newDirectoryStream throws NotDirectoryException / NoSuchFileException for the non-dir /
     * missing cases, which propagate per the documented contract.
     */

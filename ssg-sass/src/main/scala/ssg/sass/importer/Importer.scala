@@ -11,9 +11,10 @@
  * Migration notes:
  *   Renames: importer.dart -> Importer.scala (merged family)
  *   Convention: Uri modeled as String
- *   Idiom: FilesystemImporter is in src/main/scala-jvm (JVM only) since it
- *          requires java.nio.file. Cross-platform code should use NoOpImporter
- *          or construct their own implementation.
+ *   Idiom: Since ISS-1154, FilesystemImporter is cross-platform (src/main/scala,
+ *          backed by ssg-commons FileOps/FilePath), so it runs on JVM, Scala
+ *          Native, and Scala.js (under Node). MapImporter remains available for
+ *          filesystem-less environments (e.g. a browser).
  *
  * Covenant: full-port
  * Covenant-dart-reference: lib/src/importer.dart
@@ -83,7 +84,7 @@ final class NoOpImporter extends Importer {
   override def toString: String = "(unknown)"
 }
 
-// FilesystemImporter is JVM-only and lives in src/main/scala-jvm/
+// FilesystemImporter is cross-platform (src/main/scala) since ISS-1154.
 
 /** An importer resolving `pkg:` URLs via a map of package name -> root path.
   *
@@ -134,9 +135,10 @@ final class PackageImporter(
   *
   * Keys in [[sources]] should be the canonical form (what [[canonicalize]] returns) — typically the resolved file name including extension, e.g. `_colors.scss` or `vars.scss`.
   *
-  * '''Deliberate public API (ISS-1005).''' This is the in-memory importer for SSG, kept in the cross-platform `src/main/scala` source set on purpose: [[FilesystemImporter]] and its
-  * `ImporterFileUtils` resolution helpers live in `src/main/scalajvm` (JVM-only, backed by real `FileOps` filesystem access), so they are unavailable on Scala.js and Scala Native. `MapImporter` is
-  * therefore the only importer usable in a filesystem-less environment, and on those platforms it is the primary way to compile SCSS from caller-supplied sources — not merely a test fixture.
+  * '''Deliberate public API (ISS-1005).''' This is the in-memory importer for SSG, kept in the cross-platform `src/main/scala` source set on purpose. Since ISS-1154 [[FilesystemImporter]] and its
+  * `ImporterFileUtils` resolution helpers are also cross-platform (backed by `FileOps`/`FilePath`, which run under Node on Scala.js and on Scala Native), but they still require a real filesystem.
+  * `MapImporter` is therefore the importer usable in a filesystem-less environment (e.g. a browser, where `FileOps` is unsupported), and there it is the primary way to compile SCSS from
+  * caller-supplied sources — not merely a test fixture.
   *
   * The private `normalizePath`/`exactlyOne`/`tryPath`/`tryPathWithExtensions` helpers below intentionally MIRROR (rather than share) `ssg.sass.importer.ImporterFileUtils`: the resolution RULES are
   * identical, but the backing store differs (an in-memory `Map[String, String]` here vs. real file-existence checks there), and the JVM-only utility cannot be linked cross-platform. The duplication
