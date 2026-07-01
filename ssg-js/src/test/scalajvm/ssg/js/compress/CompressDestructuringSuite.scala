@@ -199,7 +199,13 @@ final class CompressDestructuringSuite extends munit.FunSuite {
   // =========================================================================
   // reduce_vars
   // =========================================================================
-  test("reduce_vars".fail) {
+  // Byte-matches terser test/compress/destructuring.js:284: the final statement is
+  // `for ([x,y] in pairs);` — a body-less for with an empty statement. The trailing `;`
+  // was previously dropped, leaving an invalid body-less for at EOF that the parser
+  // faithfully rejected (see ForInDestructuringIss1364Suite). Restored per ISS-1364:
+  // the parser is correct; the transcription was wrong. reduce_vars/reduce_funcs are
+  // no-ops on this snippet, so input == expected (it compresses to itself).
+  test("reduce_vars") {
     assertCompresses(
       input = """{const [aa, [bb, cc]] = dd;}
         {let [aa, [bb, cc]] = dd;}
@@ -216,7 +222,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         for (const [x,y] in pairs);
         for (let [x,y] in pairs);
         for (var [x,y] in pairs);
-        for ([x,y] in pairs)""".stripMargin.trim,
+        for ([x,y] in pairs);""".stripMargin.trim,
       expected = """{const [aa, [bb, cc]] = dd;}
         {let [aa, [bb, cc]] = dd;}
         var [aa, [bb, cc]] = dd;
@@ -232,7 +238,7 @@ final class CompressDestructuringSuite extends munit.FunSuite {
         for (const [x,y] in pairs);
         for (let [x,y] in pairs);
         for (var [x,y] in pairs);
-        for ([x,y] in pairs)""".stripMargin.trim,
+        for ([x,y] in pairs);""".stripMargin.trim,
       options = AllOff.copy(
         reduceFuncs = true,
         reduceVars = true
