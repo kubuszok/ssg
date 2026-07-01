@@ -110,7 +110,7 @@ object FlowchartRenderer {
     renderEdges(mainGroup, db, g, config, markerId)
 
     // 9. Render nodes
-    renderNodes(mainGroup, db, g, config, padding)
+    renderNodes(mainGroup, db, g, config, padding, themeVars)
 
     // 10. Render title if present
     if (db.title.nonEmpty) {
@@ -213,11 +213,12 @@ object FlowchartRenderer {
 
   /** Renders all nodes in the graph. */
   private def renderNodes(
-    parent:  SvgBuilder,
-    db:      FlowchartDb,
-    g:       Graph[NodeLabel, EdgeLabel],
-    config:  MermaidConfig,
-    padding: Double
+    parent:    SvgBuilder,
+    db:        FlowchartDb,
+    g:         Graph[NodeLabel, EdgeLabel],
+    config:    MermaidConfig,
+    padding:   Double,
+    themeVars: ssg.mermaid.theme.ThemeVariables
   ): Unit =
     for ((id, node) <- db.nodes) {
       val nodeLabel = g.nodeOpt(id)
@@ -227,7 +228,7 @@ object FlowchartRenderer {
         val nl        = nodeLabel.get
         val shapeName = mapShapeName(node.shape)
 
-        val shapeConfig = buildShapeConfig(id, node, nl, shapeName, config, padding)
+        val shapeConfig = buildShapeConfig(id, node, nl, shapeName, config, padding, themeVars)
 
         // Add link when appropriate (nodes.js:67-80). When a node has a link,
         // the node group is rendered INTO an <a xlink:href=... target=...>
@@ -272,7 +273,8 @@ object FlowchartRenderer {
     nl:        NodeLabel,
     shapeName: String,
     config:    MermaidConfig,
-    padding:   Double
+    padding:   Double,
+    themeVars: ssg.mermaid.theme.ThemeVariables = new ssg.mermaid.theme.ThemeVariables()
   ): ShapeConfig =
     ShapeConfig(
       id = id,
@@ -293,7 +295,13 @@ object FlowchartRenderer {
       // flowDb.ts:882/918 copy config.look onto every node; thread it (and the seed)
       // so each shape renderer can branch into the hand-drawn rough path (ISS-1204).
       look = config.look,
-      handDrawnSeed = config.handDrawnSeed
+      handDrawnSeed = config.handDrawnSeed,
+      // Hand-drawn threading (ISS-1204 Chip 9b): the theme (for the rough stroke/fill
+      // defaults) and the node's directly-set inline styles map to handDrawnShapeStyles.ts's
+      // `node.cssStyles`. SSG applies node CSS classes as class attributes rather than
+      // resolving them to key:value pairs, so `cssCompiledStyles` stays empty.
+      themeVariables = themeVars,
+      cssStyles = node.styles.toVector
     )
 
   /** Renders all edges in the graph. */
