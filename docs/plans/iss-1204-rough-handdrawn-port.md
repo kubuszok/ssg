@@ -159,7 +159,7 @@ one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to up
 `shapes/*.ts` / `edges.js` / `clusters.js`). ssg-mermaid depends on ssg-graphs-commons
 (Chip 8 `Rough`/`RoughSVG` usable). handDrawnSeed default 0 (=random; tests pin non-zero).
 
-- [ ] **9a — config + look/seed plumbing + handDrawnShapeStyles**: add
+- [x] **9a — config + look/seed plumbing + handDrawnShapeStyles**: add
   `MermaidConfig.handDrawnSeed: Int = 0`; add `look: String` + `handDrawnSeed: Int` to
   `ShapeConfig`; thread `config.look`/`config.handDrawnSeed` through `FlowchartRenderer`
   → every `ShapeConfig` (+ make available to edges/clusters). Port `handDrawnShapeStyles.ts`
