@@ -4,30 +4,24 @@ package highlight
 
 import ssg.commons.Severity
 
-/** Differential tests for the ISS-1381 error-contract facade `SyntaxHighlighter.highlightResult`
-  * (docs/architecture/error-contracts.md §2.9).
+/** Differential tests for the ISS-1381 error-contract facade `SyntaxHighlighter.highlightResult` (docs/architecture/error-contracts.md §2.9).
   *
-  * The facade is `DiagResult.fromEither` over the existing `Either[HighlightError, String]` contract,
-  * so its behavior is exercised directly against a hand-built `SyntaxHighlighter` returning a chosen
-  * `Either` (each of the three `HighlightError` cases + a `Right`), plus one end-to-end check through
-  * `SyntaxHighlighter.default` for the only failure mode reachable via the public API on every platform
-  * (an unregistered language -> `UnknownLanguage`, which never touches grammar loading).
+  * The facade is `DiagResult.fromEither` over the existing `Either[HighlightError, String]` contract, so its behavior is exercised directly against a hand-built `SyntaxHighlighter` returning a chosen
+  * `Either` (each of the three `HighlightError` cases + a `Right`), plus one end-to-end check through `SyntaxHighlighter.default` for the only failure mode reachable via the public API on every
+  * platform (an unregistered language -> `UnknownLanguage`, which never touches grammar loading).
   *
-  * Reaching `MissingQuery` / `QueryLoadFailed` through the real engine is deliberately NOT attempted
-  * here -- that requires a grammar-registration seam and is ISS-1372's territory. These tests pin the
-  * facade's mapping (severity, component, code, message, `position = None`) rather than the engine's
-  * Left-case reachability.
+  * Reaching `MissingQuery` / `QueryLoadFailed` through the real engine is deliberately NOT attempted here -- that requires a grammar-registration seam and is ISS-1372's territory. These tests pin the
+  * facade's mapping (severity, component, code, message, `position = None`) rather than the engine's Left-case reachability.
   */
 final class HighlightResultFacadeIss1381Suite extends munit.FunSuite {
 
-  /** A `SyntaxHighlighter` whose `highlight` always returns `fixed`, so the facade's transformation can
-    * be tested independently of tree-sitter grammar availability (which differs per platform).
+  /** A `SyntaxHighlighter` whose `highlight` always returns `fixed`, so the facade's transformation can be tested independently of tree-sitter grammar availability (which differs per platform).
     */
   private def fixedHighlighter(fixed: Either[HighlightError, String]): SyntaxHighlighter =
     new SyntaxHighlighter {
-      override def highlight(source: String, language: String): Either[HighlightError, String] = fixed
-      override def supportsLanguage(language: String): Boolean                                 = fixed.isRight
-      override def supportedLanguages: Seq[String]                                             = Seq.empty
+      override def highlight(source:          String, language: String): Either[HighlightError, String] = fixed
+      override def supportsLanguage(language: String):                   Boolean                        = fixed.isRight
+      override def supportedLanguages:                                   Seq[String]                    = Seq.empty
     }
 
   test("ISS-1381: highlightResult maps Left(UnknownLanguage) to an Error failure diagnostic") {
