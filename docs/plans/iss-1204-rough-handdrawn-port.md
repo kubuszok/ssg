@@ -168,7 +168,7 @@ one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to up
 - [x] **9b — rect + roundedRect handDrawn** (`drawRect.ts`: `rc.path(createRoundedRectPathD)`
   / `rc.rectangle`). The `createRoundedRectPathD` helper + the look-branch in RectShape/
   RoundedRectShape → `Rough.svg().path/.rectangle`.
-- [ ] **9c — circle + ellipse + doublecircle handDrawn** (`circle.ts`/`ellipse.ts`/
+- [x] **9c — circle + ellipse + doublecircle handDrawn** (`circle.ts`/`ellipse.ts`/
   `doublecircle.ts`: `rc.circle`/`rc.ellipse`).
 - [ ] **9d — diamond/rhombus/question handDrawn** (`question.ts`/`diamond`: `rc.polygon`).
 - [ ] **9e — hexagon + trapezoid handDrawn** (`hexagon.ts`/`trapezoid.ts`: `rc.polygon`).
