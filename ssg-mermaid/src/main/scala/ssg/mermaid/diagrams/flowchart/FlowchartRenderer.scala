@@ -227,23 +227,7 @@ object FlowchartRenderer {
         val nl        = nodeLabel.get
         val shapeName = mapShapeName(node.shape)
 
-        val shapeConfig = ShapeConfig(
-          id = id,
-          x = nl.x,
-          y = nl.y,
-          width = nl.width,
-          height = nl.height,
-          label = node.text,
-          rx = if (shapeName == "roundedRect") 5 else 0,
-          ry = if (shapeName == "roundedRect") 5 else 0,
-          cssClass = buildNodeCssClass(node),
-          style = node.styles.mkString("; "),
-          padding = padding,
-          // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
-          // SSG has no per-node useHtmlLabels, so resolve from flowchart.htmlLabels.
-          htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-          securityLevel = config.securityLevel
-        )
+        val shapeConfig = buildShapeConfig(id, node, nl, shapeName, config, padding)
 
         // Add link when appropriate (nodes.js:67-80). When a node has a link,
         // the node group is rendered INTO an <a xlink:href=... target=...>
@@ -276,6 +260,41 @@ object FlowchartRenderer {
         ShapeRegistry.render(nodeGroup, shapeName, shapeConfig)
       }
     }
+
+  /** Builds the [[ShapeConfig]] for one laid-out node.
+    *
+    * Extracted from [[renderNodes]] as a pure, test-visible seam: it maps the dagre node label geometry plus the flowchart config onto a [[ShapeConfig]]. In particular it threads
+    * `config.look`/`config.handDrawnSeed` (flowDb.ts:882/918 copy `config.look` onto every node) so shape renderers can later branch into the hand-drawn rough path (ISS-1204).
+    */
+  private[flowchart] def buildShapeConfig(
+    id:        String,
+    node:      FlowNode,
+    nl:        NodeLabel,
+    shapeName: String,
+    config:    MermaidConfig,
+    padding:   Double
+  ): ShapeConfig =
+    ShapeConfig(
+      id = id,
+      x = nl.x,
+      y = nl.y,
+      width = nl.width,
+      height = nl.height,
+      label = node.text,
+      rx = if (shapeName == "roundedRect") 5 else 0,
+      ry = if (shapeName == "roundedRect") 5 else 0,
+      cssClass = buildNodeCssClass(node),
+      style = node.styles.mkString("; "),
+      padding = padding,
+      // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
+      // SSG has no per-node useHtmlLabels, so resolve from flowchart.htmlLabels.
+      htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
+      securityLevel = config.securityLevel,
+      // flowDb.ts:882/918 copy config.look onto every node; thread it (and the seed)
+      // so each shape renderer can branch into the hand-drawn rough path (ISS-1204).
+      look = config.look,
+      handDrawnSeed = config.handDrawnSeed
+    )
 
   /** Renders all edges in the graph. */
   private def renderEdges(

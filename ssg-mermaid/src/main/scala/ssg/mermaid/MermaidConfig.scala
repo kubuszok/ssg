@@ -36,6 +36,9 @@ import ssg.data.FromDataView
   *   additional CSS to inject into the SVG
   * @param look
   *   diagram look: "classic" or "handDrawn"
+  * @param handDrawnSeed
+  *   seed used for the hand-drawn look (config.schema.yaml:84). Feeds the rough.js PRNG so `look="handDrawn"` output is reproducible; the default 0 upstream means "give a random seed" (the
+  *   [[ssg.graphs.commons.rough.Random]] `seed==0` Math.random fallback path), so tests pin a non-zero seed for deterministic output.
   * @param fontFamily
   *   CSS font-family for rendered text
   * @param fontSize
@@ -104,6 +107,7 @@ final case class MermaidConfig(
   themeVariables:      Map[String, String] = Map.empty,
   themeCSS:            String = "",
   look:                String = "classic",
+  handDrawnSeed:       Int = 0,
   fontFamily:          String = "\"trebuchet ms\", verdana, arial, sans-serif",
   fontSize:            Int = 16,
   securityLevel:       String = "strict",

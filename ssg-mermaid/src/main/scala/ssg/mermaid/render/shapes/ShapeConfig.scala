@@ -54,6 +54,11 @@ import ssg.graphs.commons.layout.dagre.Point
   *   (dagre-wrapper/shapes/util.js:9). Defaults to false so the SVG-text geometry is unchanged.
   * @param securityLevel
   *   the resolved `MermaidConfig.securityLevel`; gates HTML-label sanitization (diagrams/common/common.ts:66-94). Only consulted on the HTML-label path.
+  * @param look
+  *   the resolved `MermaidConfig.look` ("classic" or "handDrawn"); upstream `flowDb.ts:882/918` copies `config.look` onto every node so each shape renderer can branch `node.look === "handDrawn"` into
+  *   `rough.svg(...)`. Threaded here so shape renderers can select the hand-drawn path (ISS-1204). Defaults to "classic" so classic geometry is unchanged.
+  * @param handDrawnSeed
+  *   the resolved `MermaidConfig.handDrawnSeed`; seeds the rough.js PRNG on the hand-drawn path so sketch output is reproducible. Defaults to 0 (the "random seed" sentinel).
   */
 final case class ShapeConfig(
   id:            String = "",
@@ -69,7 +74,9 @@ final case class ShapeConfig(
   padding:       Double = 8,
   labelStyle:    String = "",
   htmlLabels:    Boolean = false,
-  securityLevel: String = "strict"
+  securityLevel: String = "strict",
+  look:          String = "classic",
+  handDrawnSeed: Int = 0
 )
 
 /** Result of rendering a shape. Contains the SVG builder for the shape group and a function for computing edge intersections with the shape boundary.
