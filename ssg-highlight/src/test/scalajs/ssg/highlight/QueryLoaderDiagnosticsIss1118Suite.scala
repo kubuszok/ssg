@@ -4,10 +4,8 @@ package highlight
 
 import scala.scalajs.js
 
-/** ISS-1118: Verifies that the JS QueryLoaderPlatform emits a clear diagnostic to console.error
-  * when neither TREE_SITTER_QUERIES_DIR nor TREE_SITTER_WASM_DIR is set and a query file is not
-  * found -- instead of silently degrading to no-highlighting. Also verifies the at-most-once guard
-  * (no per-grammar spam) and that configured environments stay silent on missing grammars.
+/** ISS-1118: Verifies that the JS QueryLoaderPlatform emits a clear diagnostic to console.error when neither TREE_SITTER_QUERIES_DIR nor TREE_SITTER_WASM_DIR is set and a query file is not found --
+  * instead of silently degrading to no-highlighting. Also verifies the at-most-once guard (no per-grammar spam) and that configured environments stay silent on missing grammars.
   */
 final class QueryLoaderDiagnosticsIss1118Suite extends munit.FunSuite {
 
@@ -22,9 +20,7 @@ final class QueryLoaderDiagnosticsIss1118Suite extends munit.FunSuite {
     QueryLoaderPlatform.warnedMissingEnv = false
 
     val captured = scala.collection.mutable.ArrayBuffer.empty[String]
-    val stub: js.Function1[js.Any, Unit] = (msg: js.Any) => {
-      captured += msg.toString
-    }
+    val stub: js.Function1[js.Any, Unit] = (msg: js.Any) => captured += msg.toString
 
     try {
       // Unset both env vars (js.special.delete removes from process.env)
@@ -87,9 +83,7 @@ final class QueryLoaderDiagnosticsIss1118Suite extends munit.FunSuite {
     QueryLoaderPlatform.warnedMissingEnv = false
 
     val captured = scala.collection.mutable.ArrayBuffer.empty[String]
-    val stub: js.Function1[js.Any, Unit] = (msg: js.Any) => {
-      captured += msg.toString
-    }
+    val stub: js.Function1[js.Any, Unit] = (msg: js.Any) => captured += msg.toString
 
     try {
       console.error = stub.asInstanceOf[js.Any]
