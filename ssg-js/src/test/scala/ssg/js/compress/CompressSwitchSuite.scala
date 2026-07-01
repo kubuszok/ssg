@@ -1889,7 +1889,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // if_else8
   // =========================================================================
-  test("if_else8".fail) {
+  test("if_else8") {
     assertCompresses(
       input = """function test(foo) {
             switch (foo) {
@@ -1905,7 +1905,16 @@ final class CompressSwitchSuite extends munit.FunSuite {
 
         }
         console.log(test('bar'))""".stripMargin.trim,
-      options = AllOff
+      // terser switch.js:1820 uses `defaults: true`; the switch→if reduction needs
+      // switches+dead_code, the if/else-return→ternary needs conditionals+if_return,
+      // and the constant-operand swap (`'bar' === foo`) needs lhs_constants.
+      options = AllOff.copy(
+        switches = true,
+        conditionals = true,
+        deadCode = true,
+        ifReturn = true,
+        lhsConstants = true
+      )
     )
   }
 
@@ -2359,7 +2368,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2535
   // =========================================================================
-  test("issue_2535".fail) {
+  test("issue_2535") {
     assertCompresses(
       input = """switch(w(), 42) {
             case 13: x();
@@ -2381,7 +2390,7 @@ final class CompressSwitchSuite extends munit.FunSuite {
   // =========================================================================
   // issue_1750
   // =========================================================================
-  test("issue_1750".fail) {
+  test("issue_1750") {
     assertCompresses(
       input = """var a = 0, b = 1;
         switch (true) {

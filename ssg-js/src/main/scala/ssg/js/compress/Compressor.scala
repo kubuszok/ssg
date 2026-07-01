@@ -1783,8 +1783,14 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     if (!optionBool("dead_code")) return self // @nowarn
 
     if (value.isInstanceOf[AstNode]) {
-      value = Evaluate.evaluate(self.expression.nn, this)
-      if (value != null && value.isInstanceOf[AstNode]) value = self.expression.nn // keep as-is
+      // terser index.js:1247 — value = self.expression.tail_node().evaluate(compressor)
+      // For a comma-expression discriminant (e.g. `switch(w(), 42)`) the tail node
+      // may fold to a constant even when the whole expression cannot.
+      val tail = self.expression.nn match {
+        case seq: AstSequence if seq.expressions.nonEmpty => seq.expressions.last
+        case other => other
+      }
+      value = Evaluate.evaluate(tail, this)
     }
 
     val decl = ArrayBuffer.empty[AstNode]
@@ -1895,7 +1901,14 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
             // Check if expression with no side effects evaluates to match
             var expDeep = exp
             if (exp != null && exp.isInstanceOf[AstNode] && cas.expression != null && !hasSideEffects(cas.expression.nn, this)) {
-              expDeep = Evaluate.evaluate(cas.expression.nn, this)
+              // terser index.js:1271 — exp = branch.expression.tail_node().evaluate(compressor)
+              // A comma-expression case label (e.g. `case a, true:`) can match when
+              // its tail node folds to the discriminant value.
+              val tail = cas.expression.nn match {
+                case seq: AstSequence if seq.expressions.nonEmpty => seq.expressions.last
+                case other => other
+              }
+              expDeep = Evaluate.evaluate(tail, this)
             }
             if (expDeep != null && !expDeep.isInstanceOf[AstNode] && expDeep == value) {
               exactMatch = cas
