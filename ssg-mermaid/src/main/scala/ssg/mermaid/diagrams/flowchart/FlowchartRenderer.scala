@@ -363,7 +363,11 @@ object FlowchartRenderer {
           ry = 5,
           cssClass = sg.cssClasses.mkString(" "),
           htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-          securityLevel = config.securityLevel
+          securityLevel = config.securityLevel,
+          // clusters.js:66 branches node.look === "handDrawn"; thread look/seed/theme (ISS-1204 Chip 9i).
+          look = config.look,
+          handDrawnSeed = config.handDrawnSeed,
+          themeVariables = themeVars
         )
         ClusterRenderer.renderRoundedCluster(parent, clusterConfig)
       }
