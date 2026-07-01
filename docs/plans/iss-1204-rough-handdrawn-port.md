@@ -176,7 +176,7 @@ one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to up
 - [x] **9g — note + subroutine handDrawn** (`note.ts`/`subroutine.ts`: `rc.rectangle`+lines).
 - [x] **9h — edges handDrawn** (`edges.js` ~513: `rc.path(lineFunction(points))` sketchy edge).
 - [x] **9i — clusters/subgraphs handDrawn** (`clusters.js:66/224`: `rc.path(createRoundedRectPathD)`).
-- [ ] **9j — differential test + activate `.rough-node` CSS (ISS-1204 ACCEPTANCE)**: seeded
+- [x] **9j — differential test + activate `.rough-node` CSS (ISS-1204 ACCEPTANCE)**: seeded
   end-to-end flowchart with `look: handDrawn` → assert the emitted sketch SVG matches the
   upstream (mermaid) render for the same seed; wire the (currently dead) `.rough-node` CSS.
   **RESOLVES ISS-1204 on this sub-chip's PASS.**
