@@ -43,7 +43,7 @@ ssg-js/src/main/scala/ssg/js/scope/SymbolDef.scala	scope	pass	partial	2026-04-07
 ssg-liquid/src/main/scala/ssg/liquid/Insertion.scala	liquid	pass	no	2026-04-07	Matches Java; constructor logic preserved	
 ssg-liquid/src/main/scala/ssg/liquid/Insertions.scala	liquid	minor_issues	no	2026-04-07	blockNames/tagNames exposed as public def (Java package-private). All else matches.	
 ssg-liquid/src/main/scala/ssg/liquid/LValue.scala	liquid	minor_issues	no	2026-04-07	Date/temporal coercion fragile; asFormattedNumber trailing-zero divergence. ISS-020, ISS-021, gap-analysis §4.2.	
-ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	liquid	pass	no	2026-04-07	Borrowed from SGE; no liqp counterpart. Utility infrastructure.	
+ssg-liquid/src/main/scala/ssg/liquid/Nullable.scala	liquid	pass	no	2026-07-01	deleted ISS-1021: replaced by lowlevel.Nullable from lls	
 ssg-liquid/src/main/scala/ssg/liquid/PlainBigDecimal.scala	liquid	minor_issues	no	2026-04-07	toPlainString workaround for Native; manual sci-notation removal could diverge from Java BigDecimal in edge cases (negative scale, very large/small).	
 ssg-liquid/src/main/scala/ssg/liquid/RenderTransformer.scala	liquid	pass	no	2026-04-07	Matches Java interface structure	
 ssg-liquid/src/main/scala/ssg/liquid/RenderTransformerDefaultImpl.scala	liquid	pass	no	2026-04-07	State-machine variant of Java's lambda chain — equivalent behavior	
