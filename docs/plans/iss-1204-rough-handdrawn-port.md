@@ -170,7 +170,7 @@ one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to up
   RoundedRectShape → `Rough.svg().path/.rectangle`.
 - [x] **9c — circle + ellipse + doublecircle handDrawn** (`circle.ts`/`ellipse.ts`/
   `doublecircle.ts`: `rc.circle`/`rc.ellipse`).
-- [ ] **9d — diamond/rhombus/question handDrawn** (`question.ts`/`diamond`: `rc.polygon`).
+- [x] **9d — diamond/rhombus/question handDrawn** (`question.ts`/`diamond`: `rc.polygon`).
 - [ ] **9e — hexagon + trapezoid handDrawn** (`hexagon.ts`/`trapezoid.ts`: `rc.polygon`).
 - [ ] **9f — stadium + cylinder handDrawn** (`stadium.ts`/`cylinder.ts`: `rc.path`).
 - [ ] **9g — note + subroutine handDrawn** (`note.ts`/`subroutine.ts`: `rc.rectangle`+lines).
