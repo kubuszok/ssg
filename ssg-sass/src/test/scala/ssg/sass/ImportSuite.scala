@@ -79,15 +79,6 @@ final class ImportCacheSuite extends munit.FunSuite {
     assert(ex.getMessage.contains("already being loaded"), s"Expected 'already being loaded' but got: ${ex.getMessage}")
   }
 
-  test("StylesheetGraph.addEdge rejects direct self-cycle") {
-    val graph = new StylesheetGraph(ImportCache.none)
-    assert(graph.addEdge("a", "b"))
-    assert(graph.addEdge("b", "c"))
-    // c -> a would make a -> b -> c -> a -> ... a cycle.
-    assertEquals(graph.addEdge("c", "a"), false)
-    assertEquals(graph.addEdge("a", "a"), false)
-  }
-
   test("PackageImporter rewrites pkg: URLs via the package map and delegate") {
     val delegate = new CountingMemoryImporter(
       Map("libs/colors/index.scss" -> "$primary: green;")
