@@ -101,7 +101,7 @@ final class InputSourceMapSuite extends munit.FunSuite {
       output = ssg.js.output.OutputOptions(sourceMap = sm)
     )
     val result = Terser.minify(inputFile, opts)
-    assert(result.sourceMap != null, "Expected source map output")
+    assert(result.sourceMap.isDefined, "Expected source map output")
   }
 
   // 5. Additional test: SourceMapConsumer basic functionality

@@ -59,7 +59,10 @@
 package ssg
 package js
 
+import scala.annotation.nowarn
 import scala.collection.mutable
+
+import lowlevel.Nullable
 
 import ssg.js.ast.*
 import ssg.js.parse.{ Parser, ParserOptions }
@@ -106,11 +109,11 @@ final class NameCache {
   *   (minify.js:336).
   */
 final case class MinifySourceMapOptions(
-  filename:       String | Null = null,
-  root:           String | Null = null,
-  content:        ssg.js.sourcemap.SourceMapData | String | Null = null,
+  filename:       Nullable[String] = Nullable.empty,
+  root:           Nullable[String] = Nullable.empty,
+  content:        Nullable[ssg.js.sourcemap.SourceMapData | String] = Nullable.empty,
   includeSources: Boolean = false,
-  url:            String | Null = null,
+  url:            Nullable[String] = Nullable.empty,
   asObject:       Boolean = false
 )
 
@@ -159,10 +162,10 @@ final case class MinifyOptions(
   module:         Boolean = false,
   safari10:       Boolean = false,
   toplevel:       Boolean = false,
-  nameCache:      NameCache | Null = null,
-  wrap:           String | Null = null,
+  nameCache:      Nullable[NameCache] = Nullable.empty,
+  wrap:           Nullable[String] = Nullable.empty,
   enclose:        Boolean | String = false,
-  sourceMap:      MinifySourceMapOptions | Null = null
+  sourceMap:      Nullable[MinifySourceMapOptions] = Nullable.empty
 )
 
 object MinifyOptions {
@@ -189,9 +192,9 @@ object MinifyOptions {
 final case class MinifyResult(
   code:            String,
   ast:             AstToplevel,
-  sourceMap:       ssg.js.sourcemap.SourceMapData | Null = null,
-  sourceMapString: String | Null = null,
-  decodedMap:      ssg.js.sourcemap.SourceMapData | Null = null
+  sourceMap:       Nullable[ssg.js.sourcemap.SourceMapData] = Nullable.empty,
+  sourceMapString: Nullable[String] = Nullable.empty,
+  decodedMap:      Nullable[ssg.js.sourcemap.SourceMapData] = Nullable.empty
 )
 
 /** Terser JavaScript minifier — public API. */
@@ -287,29 +290,23 @@ object Terser {
     // comment from the (single) input file and replaces `content` with the decoded
     // JSON. The multi-file guard (minify.js:227-228) rejects an inline map with more
     // than one input.
-    val resolvedOrig: ssg.js.sourcemap.SourceMapData | Null =
-      options.sourceMap match {
-        case null => null
-        case sm: MinifySourceMapOptions =>
-          sm.content match {
-            case null => null
-            case data: ssg.js.sourcemap.SourceMapData => data
-            case "inline" =>
-              // minify.js:227-228 — `if (Object.keys(files).length > 1) throw …`.
-              if (files.size > 1)
-                throw new IllegalArgumentException("inline source map only works with singular input")
-              // minify.js:229 — `read_source_map(files[name])` returns the decoded
-              // JSON string (or null when no inline comment is present).
-              ssg.js.sourcemap.InlineSourceMap.readSourceMap(firstSrc) match {
-                case null => null
-                case json: String => ssg.js.sourcemap.SourceMapJson.parse(json)
-              }
-            case json: String =>
-              // test/mocha/minify.js:299 — `content` may be a raw JSON source-map
-              // string (the `.map` file read verbatim); @jridgewell's
-              // SourceMapConsumer JSON.parses it (sourcemap.js:73).
-              ssg.js.sourcemap.SourceMapJson.parse(json)
-          }
+    val resolvedOrig: Nullable[ssg.js.sourcemap.SourceMapData] =
+      options.sourceMap.flatMap { sm =>
+        sm.content.flatMap {
+          case data: ssg.js.sourcemap.SourceMapData => Nullable(data)
+          case "inline" =>
+            // minify.js:227-228 — `if (Object.keys(files).length > 1) throw …`.
+            if (files.size > 1)
+              throw new IllegalArgumentException("inline source map only works with singular input")
+            // minify.js:229 — `read_source_map(files[name])` returns the decoded
+            // JSON string (or null when no inline comment is present).
+            fromRawNull(ssg.js.sourcemap.InlineSourceMap.readSourceMap(firstSrc)).map(json => ssg.js.sourcemap.SourceMapJson.parse(json))
+          case json: String =>
+            // test/mocha/minify.js:299 — `content` may be a raw JSON source-map
+            // string (the `.map` file read verbatim); @jridgewell's
+            // SourceMapConsumer JSON.parses it (sourcemap.js:73).
+            Nullable(ssg.js.sourcemap.SourceMapJson.parse(json))
+        }
       }
 
     // minify.js:313-322 — build the SourceMap wrapper when `options.sourceMap` is
@@ -317,26 +314,24 @@ object Terser {
     // map's `sourcesContent`. The minify.js:314-316 "original source content
     // unavailable" guard fires only when the input is a pre-parsed AST_Toplevel;
     // ssg-js's public API always takes source strings, so it is unreachable here.
-    val minifySourceMap: ssg.js.sourcemap.SourceMap | Null =
-      options.sourceMap match {
-        case null => null
-        case sm: MinifySourceMapOptions =>
-          new ssg.js.sourcemap.SourceMap(
-            ssg.js.sourcemap.SourceMapOptions(
-              file = sm.filename,
-              root = sm.root,
-              orig = resolvedOrig,
-              files = if (sm.includeSources) files.toMap else Map.empty
-            )
+    val minifySourceMap: Nullable[ssg.js.sourcemap.SourceMap] =
+      options.sourceMap.map { sm =>
+        new ssg.js.sourcemap.SourceMap(
+          ssg.js.sourcemap.SourceMapOptions(
+            file = toRawNull(sm.filename),
+            root = toRawNull(sm.root),
+            orig = toRawNull(resolvedOrig),
+            files = if (sm.includeSources) files.toMap else Map.empty
           )
+        )
       }
 
     // minify.js:317 — `format_options.source_map = SourceMap({...})`. When the
     // high-level sourceMap option is set, it drives the OutputStream's source map
     // (overriding any low-level OutputOptions.sourceMap escape hatch); otherwise
     // the existing OutputOptions.sourceMap path is used unchanged.
-    val effectiveOutputSourceMap: ssg.js.sourcemap.SourceMap | Null =
-      if (minifySourceMap != null) minifySourceMap else outputOptions.sourceMap
+    val effectiveOutputSourceMap: Nullable[ssg.js.sourcemap.SourceMap] =
+      minifySourceMap.orElse(fromRawNull(outputOptions.sourceMap))
 
     // The resolved mangler options for the active mangle phase, or `null` when
     // mangling is disabled. minify.js:161-174 normalizes Boolean `true` to the
@@ -345,47 +340,46 @@ object Terser {
     // objects BEFORE figure_out_scope/mangle_names so they accumulate. Resolved
     // before the compress phase because the reserve_quoted_keys step
     // (minify.js:239-241) runs ahead of compress.
-    val resolvedMangle: ManglerOptions | Null =
+    val resolvedMangle: Nullable[ManglerOptions] =
       options.mangle match {
         case mangleOpts: ManglerOptions =>
-          applyMangleShorthand(
-            mangleOpts,
-            topEcma,
-            options.toplevel,
-            options.ie8,
-            resolvedKeepClassnames,
-            options.keepFnames,
-            options.module,
-            options.safari10,
-            options.nameCache
+          Nullable(
+            applyMangleShorthand(
+              mangleOpts,
+              topEcma,
+              options.toplevel,
+              options.ie8,
+              resolvedKeepClassnames,
+              options.keepFnames,
+              options.module,
+              options.safari10,
+              options.nameCache
+            )
           )
         case true =>
-          applyMangleShorthand(
-            ManglerOptions(),
-            topEcma,
-            options.toplevel,
-            options.ie8,
-            resolvedKeepClassnames,
-            options.keepFnames,
-            options.module,
-            options.safari10,
-            options.nameCache
+          Nullable(
+            applyMangleShorthand(
+              ManglerOptions(),
+              topEcma,
+              options.toplevel,
+              options.ie8,
+              resolvedKeepClassnames,
+              options.keepFnames,
+              options.module,
+              options.safari10,
+              options.nameCache
+            )
           )
-        case false => null
+        case false => Nullable.empty[ManglerOptions]
       }
 
     // The resolved property-mangler options, woven with the nameCache property
     // cache (minify.js:184-186) and normalized per minify.js:175-178. Resolved
     // once here so the `reserved` set populated by reserve_quoted_keys
     // (minify.js:239-241) is the same set later read by mangle_properties.
-    val resolvedPropOptions: PropManglerOptions | Null =
-      resolvedMangle match {
-        case m: ManglerOptions =>
-          ManglerOptions.resolveProperties(m.properties) match {
-            case po: PropManglerOptions => applyPropertyCache(po, options.nameCache)
-            case null => null
-          }
-        case null => null
+    val resolvedPropOptions: Nullable[PropManglerOptions] =
+      resolvedMangle.flatMap { m =>
+        fromRawNull(ManglerOptions.resolveProperties(m.properties)).map(po => applyPropertyCache(po, options.nameCache))
       }
 
     // minify.js:175-183,239-241 — quoted-key reservation. When `keep_quoted` is
@@ -399,8 +393,10 @@ object Terser {
     // shared mutable set threaded into mangleProperties below.
     // minify.js:239 — `if (quoted_props && options.mangle.properties.keep_quoted !== "strict")`
     // The global reserve pass runs only for `true`, NOT `"strict"`.
-    if (resolvedPropOptions != null && resolvedPropOptions.nn.keepQuoted.reservesQuotedGlobally) {
-      PropMangler.reserveQuotedKeys(ast, resolvedPropOptions.nn.reserved)
+    resolvedPropOptions.foreach { po =>
+      if (po.keepQuoted.reservesQuotedGlobally) {
+        PropMangler.reserveQuotedKeys(ast, po.reserved)
+      }
     }
 
     // -- wrap / enclose (minify.js:246-251; ast.js:648-675) --
@@ -418,8 +414,8 @@ object Terser {
     // (mangle.toplevel defaults to false), so the wrapper-introduced names (`exports`,
     // enclose args) stay un-mangled even though wrap now precedes mangle — this falls
     // out of the default options and is not special-cased.
-    if (options.wrap != null) {
-      ast = wrapCommonjs(ast, options.wrap.nn)
+    options.wrap.foreach { w =>
+      ast = wrapCommonjs(ast, w)
     }
     options.enclose match {
       case false => // no enclose
@@ -432,29 +428,29 @@ object Terser {
     // utils/index.js:66-68 normalizes the Boolean `true` to the default options object
     // (`if (args === true) { args = {}; }`), so `compress = true` means "default
     // CompressorOptions"; only `false` disables the phase.
-    val resolvedCompress: CompressorOptions | Null =
+    val resolvedCompress: Nullable[CompressorOptions] =
       options.compress match {
         case compressOpts: CompressorOptions =>
           // Resolve `defaults = false` before construction (terser index.js:220-222);
           // resolveDefaults is a no-op when `defaults == true`.
-          CompressorOptions.resolveDefaults(compressOpts)
+          Nullable(CompressorOptions.resolveDefaults(compressOpts))
         case true =>
-          CompressorOptions()
+          Nullable(CompressorOptions())
         case false =>
-          null
+          Nullable.empty[CompressorOptions]
       }
-    if (resolvedCompress != null) {
+    resolvedCompress.foreach { rc =>
       // minify.js:152-158 — thread top-level ecma/ie8/keepClassnames/keepFnames/
       // module/toplevel into the compressor (set_shorthand only fills a still-default
       // sub-option).
-      val co = applyCompressShorthand(resolvedCompress.nn, topEcma, options.toplevel, options.ie8, resolvedKeepClassnames, options.keepFnames, options.module)
+      val co = applyCompressShorthand(rc, topEcma, options.toplevel, options.ie8, resolvedKeepClassnames, options.keepFnames, options.module)
       ScopeAnalysis.figureOutScope(ast)
       // minify.js:263-266 — `new Compressor(options.compress, { mangle_options: options.mangle })`.
       // Thread the resolved mangle options into the Compressor so the per-pass
       // figure_out_scope and mangleOptions() reflect the caller's mangle settings
       // (ie8, nth_identifier, module). When mangle is disabled (false → null),
       // pass null so _mangleOptions stays null (matching the JS `mangle_options = false` default).
-      val compressor = new Compressor(co, resolvedMangle)
+      val compressor = new Compressor(co, toRawNull(resolvedMangle))
       ast = compressor.compress(ast)
     }
 
@@ -471,8 +467,7 @@ object Terser {
     def scopeOptionsFor(m: ManglerOptions): ScopeOptions =
       ScopeOptions(cache = m.cache, ie8 = m.ie8, safari10 = m.safari10, module = m.module)
 
-    if (resolvedMangle != null) {
-      val m = resolvedMangle.nn
+    resolvedMangle.foreach { m =>
       ScopeAnalysis.figureOutScope(ast, scopeOptionsFor(m))
       Mangler.computeCharFrequency(ast, m)
       Mangler.mangleNames(ast, m)
@@ -487,11 +482,11 @@ object Terser {
     // Runs AFTER mangle_names (minify.js:274). minify.js:175-178 normalizes a truthy
     // non-object `properties` to `{}` (ManglerOptions.resolveProperties). The property
     // cache (minify.js:184-186) is woven into the resolved PropManglerOptions.
-    if (resolvedPropOptions != null) {
+    resolvedPropOptions.foreach { po =>
       // `resolvedPropOptions` already carries the nameCache property cache and the
       // reserved set populated by reserveQuotedKeys above (minify.js:239-241), so
       // quoted keys reserved ahead of compress remain reserved here.
-      ast = PropMangler.mangleProperties(ast, resolvedPropOptions.nn)
+      ast = PropMangler.mangleProperties(ast, po)
     }
 
     // -- Format phase (minify.js:282-353) --
@@ -505,7 +500,7 @@ object Terser {
     // OutputOptions.sourceMap escape hatch.
     val resolvedOutputOptions = applyOutputShorthand(outputOptions, topEcma, options.ie8, options.safari10)
     val out                   = new OutputStream(
-      if (minifySourceMap != null) resolvedOutputOptions.copy(sourceMap = effectiveOutputSourceMap)
+      if (minifySourceMap.isDefined) resolvedOutputOptions.copy(sourceMap = toRawNull(effectiveOutputSourceMap))
       else resolvedOutputOptions
     )
     out.printNode(ast)
@@ -520,47 +515,46 @@ object Terser {
 
     // 5. Retrieve and finalize the source map (minify.js:330-352).
     // `getEncoded()` is the `format_options.source_map.getEncoded()` of minify.js:335.
-    val mapData: ssg.js.sourcemap.SourceMapData | Null = effectiveOutputSourceMap match {
-      case sm: ssg.js.sourcemap.SourceMap => sm.getEncoded()
-      case null => null
-    }
+    val mapData: Nullable[ssg.js.sourcemap.SourceMapData] =
+      effectiveOutputSourceMap.map(_.getEncoded())
 
     // Source-map result shaping (minify.js:330-351) only runs when the high-level
     // sourceMap option is set (the low-level escape hatch keeps the historical
     // shape: structured `sourceMap`, no url-append/asObject handling).
-    var mapString: String | Null                         = null
-    var decoded:   ssg.js.sourcemap.SourceMapData | Null = null
-    options.sourceMap match {
-      case sm: MinifySourceMapOptions if mapData != null =>
-        val map = mapData.nn
+    var mapString: Nullable[String]                         = Nullable.empty
+    var decoded:   Nullable[ssg.js.sourcemap.SourceMapData] = Nullable.empty
+    // The `foreach`/`foreach` nesting reproduces the upstream guard
+    // `case sm: MinifySourceMapOptions if mapData != null`: the body runs only when
+    // the high-level sourceMap option is set AND a map was produced; the empty
+    // (`case _ =>`) branch is the implicit no-op when either is absent.
+    options.sourceMap.foreach { sm =>
+      mapData.foreach { map =>
         // minify.js:336 — `result.map = asObject ? map : JSON.stringify(map)`.
         // ssg-js always keeps the structured map in `sourceMap`; `asObject == false`
         // additionally surfaces the JSON string form in `sourceMapString`.
-        if (!sm.asObject) mapString = ssg.js.sourcemap.SourceMapJson.stringify(map)
+        if (!sm.asObject) mapString = Nullable(ssg.js.sourcemap.SourceMapJson.stringify(map))
         // minify.js:345 — `result.decoded_map = format_options.source_map.getDecoded()`.
-        decoded = effectiveOutputSourceMap match {
-          case s: ssg.js.sourcemap.SourceMap => s.getDecoded()
-          case null => null
+        decoded = effectiveOutputSourceMap.fold(Nullable.empty[ssg.js.sourcemap.SourceMapData]) { s =>
+          fromRawNull(s.getDecoded())
         }
         // minify.js:346-350 — append the sourceMappingURL comment.
-        sm.url match {
+        sm.url.foreach {
           case "inline" =>
             // minify.js:347-348 — `var sourceMap = typeof result.map === "object"
             // ? JSON.stringify(result.map) : result.map;` then append the data-URI.
             // The stringified map is the asObject==false form; recompute when asObject.
-            val sourceMapStr = if (sm.asObject) ssg.js.sourcemap.SourceMapJson.stringify(map) else mapString.nn
+            val sourceMapStr = if (sm.asObject) ssg.js.sourcemap.SourceMapJson.stringify(map) else mapString.get
             code = code + "\n//# sourceMappingURL=data:application/json;charset=utf-8;base64," +
               ssg.js.sourcemap.Base64.encode(sourceMapStr)
-          case null => // no url
           case url: String =>
             // minify.js:349-350 — `result.code += "\n//# sourceMappingURL=" + url`.
             code = code + "\n//# sourceMappingURL=" + url
         }
-      case _ => // no high-level source-map option
+      }
     }
 
     // minify.js:360-362 — `if (format_options.source_map) format_options.source_map.destroy()`.
-    if (minifySourceMap != null) minifySourceMap.destroy()
+    minifySourceMap.foreach(_.destroy())
 
     MinifyResult(code, ast, mapData, mapString, decoded)
   }
@@ -576,6 +570,27 @@ object Terser {
   /** Minify JavaScript source code, returning just the code string. */
   def minifyToString(code: String, options: MinifyOptions = MinifyOptions.Defaults): String =
     minify(code, options).code
+
+  // ==========================================================================
+  // Interop bridge (representation only, no minify.js logic).
+  //
+  // The sourcemap/output/compress sibling packages still model optionality as
+  // the raw union `X | Null` (SourceMapOptions, OutputOptions.sourceMap,
+  // Compressor's mangle_options param). This helper is the single boundary that
+  // lowers a `Nullable[A]` back into `A | Null` for those un-migrated APIs; it is
+  // a genuine null-representation boundary (candidate issue: migrate those
+  // packages to Nullable and delete this bridge). `orNull` is the sanctioned
+  // interop escape hatch (lowlevel.Nullable), hence the @nowarn.
+  // ==========================================================================
+
+  @nowarn("msg=deprecated")
+  private def toRawNull[A](n: Nullable[A]): A | Null = n.orNull
+
+  // Lift a sibling-package `A | Null` back into `Nullable[A]`. `Nullable.apply`
+  // already maps `null → empty` at runtime; the cast only strips the `| Null`
+  // from the static type (the opaque type erases, so it is zero-cost). Same
+  // candidate-issue boundary as `toRawNull`.
+  private def fromRawNull[A](raw: A | Null): Nullable[A] = Nullable(raw).asInstanceOf[Nullable[A]]
 
   // ==========================================================================
   // set_shorthand helpers (minify.js:42-51, 152-159)
@@ -634,7 +649,7 @@ object Terser {
     keepFnames:     Any,
     module:         Boolean,
     safari10:       Boolean,
-    nameCache:      NameCache | Null
+    nameCache:      Nullable[NameCache]
   ): ManglerOptions = {
     val defaults = ManglerOptions()
     var result   = mo
@@ -667,17 +682,21 @@ object Terser {
     val _ = ecma
     // nameCache.vars → options.mangle.cache (minify.js:162-163). Only fill when
     // the caller did not provide an explicit cache.
-    if (nameCache != null && result.cache == null) {
-      result = result.copy(cache = nameCache.nn.vars)
+    nameCache.foreach { nc =>
+      if (Nullable(result.cache).isEmpty) {
+        result = result.copy(cache = nc.vars)
+      }
     }
     result
   }
 
-  private def applyPropertyCache(po: PropManglerOptions, nameCache: NameCache | Null): PropManglerOptions =
+  private def applyPropertyCache(po: PropManglerOptions, nameCache: Nullable[NameCache]): PropManglerOptions =
     // minify.js:184-186 — `if (options.nameCache && !("cache" in mangle.properties))
     //   mangle.properties.cache = options.nameCache.props || {}`.
-    if (nameCache != null && po.cache == null) po.copy(cache = nameCache.nn.props)
-    else po
+    nameCache.fold(po) { nc =>
+      if (Nullable(po.cache).isEmpty) po.copy(cache = nc.props)
+      else po
+    }
 
   private def applyOutputShorthand(oo: OutputOptions, ecma: Option[Int], ie8: Boolean, safari10: Boolean): OutputOptions = {
     val defaults = OutputOptions()

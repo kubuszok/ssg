@@ -25,6 +25,8 @@
 package ssg
 package js
 
+import lowlevel.Nullable
+
 final class WrapEncloseCompressOrderIss1238Suite extends munit.FunSuite {
 
   override val munitTimeout = scala.concurrent.duration.Duration(10, "s")
@@ -41,7 +43,7 @@ final class WrapEncloseCompressOrderIss1238Suite extends munit.FunSuite {
   test("ISS-1238: compress+wrap optimizes the whole wrapped program") {
     val result = Terser.minifyToString(
       "!function(){var x=1+2;console.log(x)}()",
-      compressOnly.copy(wrap = "exports")
+      compressOnly.copy(wrap = Nullable("exports"))
     )
     assertEquals(
       result,
