@@ -151,3 +151,32 @@ checks it off here.
 - Cross-platform: no DOM, no `Math.random` in the hot path (seed-pinned), watch
   32-bit Int semantics in the PRNG, and re2/JS regex limits in the path tokenizer
   (`parser.ts`) — see `docs/contributing/cross-platform-regex.md`.
+
+## Chip 9 decomposition (user: "full decomp, grind all" — 2026-07-01)
+
+Chip 9 (the ISS-1204 acceptance) is a sub-campaign in ssg-mermaid. Ordered sub-chips,
+one per /loop iteration (impl Opus 4.6 → auditor Opus 4.8; each faithful to upstream
+`shapes/*.ts` / `edges.js` / `clusters.js`). ssg-mermaid depends on ssg-graphs-commons
+(Chip 8 `Rough`/`RoughSVG` usable). handDrawnSeed default 0 (=random; tests pin non-zero).
+
+- [ ] **9a — config + look/seed plumbing + handDrawnShapeStyles**: add
+  `MermaidConfig.handDrawnSeed: Int = 0`; add `look: String` + `handDrawnSeed: Int` to
+  `ShapeConfig`; thread `config.look`/`config.handDrawnSeed` through `FlowchartRenderer`
+  → every `ShapeConfig` (+ make available to edges/clusters). Port `handDrawnShapeStyles.ts`
+  (`userNodeOverrides`/`solidStateFill` → the rough `Options` each shape passes). NO render
+  change yet (shapes stay classic; look/seed just becomes available). Foundation for 9b+.
+- [ ] **9b — rect + roundedRect handDrawn** (`drawRect.ts`: `rc.path(createRoundedRectPathD)`
+  / `rc.rectangle`). The `createRoundedRectPathD` helper + the look-branch in RectShape/
+  RoundedRectShape → `Rough.svg().path/.rectangle`.
+- [ ] **9c — circle + ellipse + doublecircle handDrawn** (`circle.ts`/`ellipse.ts`/
+  `doublecircle.ts`: `rc.circle`/`rc.ellipse`).
+- [ ] **9d — diamond/rhombus/question handDrawn** (`question.ts`/`diamond`: `rc.polygon`).
+- [ ] **9e — hexagon + trapezoid handDrawn** (`hexagon.ts`/`trapezoid.ts`: `rc.polygon`).
+- [ ] **9f — stadium + cylinder handDrawn** (`stadium.ts`/`cylinder.ts`: `rc.path`).
+- [ ] **9g — note + subroutine handDrawn** (`note.ts`/`subroutine.ts`: `rc.rectangle`+lines).
+- [ ] **9h — edges handDrawn** (`edges.js` ~513: `rc.path(lineFunction(points))` sketchy edge).
+- [ ] **9i — clusters/subgraphs handDrawn** (`clusters.js:66/224`: `rc.path(createRoundedRectPathD)`).
+- [ ] **9j — differential test + activate `.rough-node` CSS (ISS-1204 ACCEPTANCE)**: seeded
+  end-to-end flowchart with `look: handDrawn` → assert the emitted sketch SVG matches the
+  upstream (mermaid) render for the same seed; wire the (currently dead) `.rough-node` CSS.
+  **RESOLVES ISS-1204 on this sub-chip's PASS.**
