@@ -95,7 +95,7 @@ final class StadiumCylinderHandDrawnIss1204Suite extends FunSuite {
     val halfH = height / 2.0
     val capH  = height * CapFraction
     val left  = x - halfW
-    val right  = x + halfW
+    val right = x + halfW
     val top   = y - halfH
     val p     = PathData()
     p.moveTo(left, top + capH)
@@ -175,9 +175,9 @@ final class StadiumCylinderHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("stadium handDrawn: node style + theme thread into the rough stroke/fill; seed threads") {
-    val tv     = theme(nodeBorder = "#abcdef", mainBkg = "#123456")
-    val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = 42, themeVariables = tv)
-    val built  = renderStadium(config)
+    val tv      = theme(nodeBorder = "#abcdef", mainBkg = "#123456")
+    val config  = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = 42, themeVariables = tv)
+    val built   = renderStadium(config)
     val strokes = pathDescriptors(built).map(_._2).toSet
     assert(strokes.contains("#abcdef"), s"expected theme nodeBorder #abcdef as a stroke, got $strokes")
     assert(strokes.contains("#123456"), s"expected theme mainBkg #123456 as the fill-sketch stroke, got $strokes")
@@ -234,10 +234,10 @@ final class StadiumCylinderHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("cylinder handDrawn: body matches the filled Rough oracle; cap matches the fill:none oracle") {
-    val tv    = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
-    val seed  = 42
+    val tv     = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
+    val seed   = 42
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = seed, themeVariables = tv)
-    val built = renderCylinder(config)
+    val built  = renderCylinder(config)
 
     val bodyD = cylinderBodyPath(50, 40, 100, 60).toString
     val capD  = cylinderCapPath(50, 40, 100, 60).toString
@@ -255,10 +255,10 @@ final class StadiumCylinderHandDrawnIss1204Suite extends FunSuite {
   }
 
   test("cylinder handDrawn: cap is fill:none, distinct from a filled cap (fill mutation guard)") {
-    val tv    = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
-    val seed  = 42
+    val tv     = theme(nodeBorder = "#333333", mainBkg = "#ECECFF")
+    val seed   = 42
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = seed, themeVariables = tv)
-    val built = renderCylinder(config)
+    val built  = renderCylinder(config)
 
     val capD          = cylinderCapPath(50, 40, 100, 60).toString
     val capNoneOpts   = HandDrawnShapeStyles.userNodeOverrides(HandDrawnNode(), Options(fill = Some("none")), tv, seed)
