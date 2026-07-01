@@ -51,9 +51,8 @@ final class FlowchartHandDrawnAcceptanceIss1204Suite extends FunSuite {
     FlowchartRenderer.render(db, MermaidConfig(look = look, handDrawnSeed = seed))
   }
 
-  /** Value of the first `d="..."` path attribute strictly after `marker` (the marker
-    * itself is skipped so a marker such as `id="L-A-B-0"`, which contains the substring
-    * `d="`, does not shadow the real path attribute).
+  /** Value of the first `d="..."` path attribute strictly after `marker` (the marker itself is skipped so a marker such as `id="L-A-B-0"`, which contains the substring `d="`, does not shadow the real
+    * path attribute).
     */
   private def firstPathD(s: String, marker: String): String = {
     val i = s.indexOf(marker)
