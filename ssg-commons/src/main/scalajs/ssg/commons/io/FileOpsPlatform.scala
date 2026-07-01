@@ -96,6 +96,12 @@ private[io] object FileOpsPlatform {
       case _: js.JavaScriptException => false
     }
 
+  /** Last-modified time in milliseconds since the epoch, read from Node's `statSync(...).mtimeMs` (a Double, floored to a Long). The Node analogue of Files.getLastModifiedTime: statSync throws ENOENT
+    * (surfaced as js.JavaScriptException) for a missing path, matching the JVM contract that reading the mtime of an absent file fails.
+    */
+  def lastModifiedTime(path: FilePath): Long =
+    fs.statSync(path.pathString).mtimeMs.asInstanceOf[Double].toLong
+
   /** True when the entry at `p`, examined without dereferencing, is a directory (a directory symlink reports false, matching the JVM `Files.isDirectory(_, NOFOLLOW_LINKS)` used by the reference
     * impl).
     */

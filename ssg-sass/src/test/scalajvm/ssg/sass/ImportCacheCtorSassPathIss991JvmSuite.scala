@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * JVM-only — uses java.nio.file and FilesystemImporter (scalajvm-only). */
+ * JVM-only — the fixtures use java.nio.file directly. Since ISS-1154 FilesystemImporter itself is cross-platform; this suite is retained for its java.nio-based fixtures and JVM env assertions. */
 package ssg
 package sass
 

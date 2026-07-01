@@ -5,21 +5,19 @@
  * Original license: MIT
  *
  * Migration notes:
- *   Convention: dart-sass maps each load path to `FilesystemImporter(path)`
- *     (import_cache.dart:128-129) and each SASS_PATH entry to a
- *     `FilesystemImporter` (import_cache.dart:130-132). The port's
- *     FilesystemImporter is JVM-only (src/main/scalajvm), so Scala Native has
- *     no load-path importer.
+ *   Convention: dart-sass turns each load path into `FilesystemImporter(path)`
+ *     (import_cache.dart:128-129) and likewise turns every SASS_PATH entry into
+ *     a `FilesystemImporter` (import_cache.dart:130-132). Since ISS-1154 made
+ *     FilesystemImporter cross-platform (it is backed by ssg-commons FileOps /
+ *     FilePath, supported on Scala Native), both factories are real here — a
+ *     Scala Native binary has a filesystem, so an explicit load path resolves a
+ *     real FilesystemImporter and SASS_PATH is honored entry-for-entry, exactly
+ *     as on the JVM.
  *
- *     dart-sass short-circuits the whole block in a browser:
- *     `if (isBrowser) return [...?importers];` (import_cache.dart:125) — both
- *     loadPaths and SASS_PATH are ignored there. Scala Native is not a browser,
- *     but it has no FilesystemImporter yet, so it follows the same shape as the
- *     browser branch for the IMPLICIT SASS_PATH path: `sassPathImporters` is
- *     empty (skipped). This is a deliberate deviation from dart's non-browser
- *     behavior, taken until FilesystemImporter is cross-platform; an EXPLICIT
- *     load path is still a caller request, so `loadPathImporter` fails loudly
- *     rather than dropping it silently. */
+ *     dart-sass guards the whole load-path/SASS_PATH block behind
+ *     `if (isBrowser) return [...?importers];` (import_cache.dart:125): Scala
+ *     Native is not a browser, so SASS_PATH is honored (matching dart's
+ *     non-browser behavior). */
 package ssg
 package sass
 package importer
@@ -28,17 +26,28 @@ package importer
   */
 object LoadPathImporterPlatform {
 
-  /** On Scala Native the filesystem-backed [[FilesystemImporter]] is unavailable, so an explicit `loadPaths` entry cannot be resolved. Fail loudly rather than dropping the load path silently.
+  /** dart-sass import_cache.dart:128-129: `for (var path in loadPaths) FilesystemImporter(path)`.
     */
-  def loadPathImporter(path: String): Importer =
-    throw new UnsupportedOperationException(
-      s"loadPaths are not supported on Scala Native (no FilesystemImporter): $path. " +
-        "Pass an in-memory importer via `importers` instead."
-    )
+  def loadPathImporter(path: String): Importer = new FilesystemImporter(path)
 
-  /** dart-sass import_cache.dart:125 `if (isBrowser) return [...?importers];` skips the SASS_PATH block in a browser. Scala Native has no FilesystemImporter yet, so implicit SASS_PATH resolution
-    * follows the same shape and is skipped (empty) rather than failing — a deliberate deviation from dart's non-browser behavior, until FilesystemImporter is cross-platform. Differs from an explicit
-    * `loadPathImporter`, which is loud.
+  /** dart-sass import_cache.dart:124/130-132: reads the SASS_PATH environment variable and turns each entry into a `FilesystemImporter`. Scala Native is not a browser (import_cache.dart:125
+    * `isBrowser` guard does not apply), so SASS_PATH is honored here.
     */
-  def sassPathImporters(): List[Importer] = Nil
+  def sassPathImporters(): List[Importer] =
+    try
+      sassPathImportersFrom(
+        sys.env.get("SASS_PATH"),
+        java.io.File.pathSeparator
+      )
+    catch {
+      case _: SecurityException => Nil
+    }
+
+  /** The pure core of [[sassPathImporters]], parameterized over the raw SASS_PATH value and the path separator so it can be exercised without mutating the environment. dart-sass splits the variable
+    * on `;` (Windows) or `:` and builds a `FilesystemImporter` per non-empty entry (import_cache.dart:130-132).
+    */
+  private[sass] def sassPathImportersFrom(sassPath: Option[String], separator: String): List[Importer] =
+    sassPath.toList.flatMap { paths =>
+      paths.split(separator).toList.filter(_.nonEmpty).map(loadPathImporter)
+    }
 }

@@ -61,6 +61,14 @@ object FileOps {
   def isRegularFile(path: FilePath): Boolean =
     FileOpsPlatform.isRegularFile(path)
 
+  /** Returns the last-modified time of the file at `path`, in milliseconds since the epoch.
+    *
+    * Supported on JVM, Scala Native, and Scala.js (under Node). On JVM and Native this delegates to `java.nio.file.Files.getLastModifiedTime`; on Scala.js it reads Node's `statSync(...).mtimeMs`. If
+    * `path` does not exist (or its attributes cannot be read) the underlying call throws — callers that want to tolerate a missing file must guard with [[exists]] first.
+    */
+  def lastModifiedTime(path: FilePath): Long =
+    FileOpsPlatform.lastModifiedTime(path)
+
   /** Lists the immediate children of a directory (one level deep, non-recursive).
     *
     * Supported on JVM, Scala Native, and Scala.js (under Node).

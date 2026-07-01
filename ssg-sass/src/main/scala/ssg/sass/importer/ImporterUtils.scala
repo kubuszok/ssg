@@ -30,7 +30,8 @@ import scala.util.matching.Regex
   * The Dart original uses `Zone.current[#_canonicalizeContext]` to store the current canonicalization context. Since Sass evaluation is single-threaded, we use a simple shared `var` (consistent with
   * [[ssg.sass.EvaluationContext]]).
   *
-  * Filesystem-dependent resolution helpers (`resolveImportPath`, `_tryPath`, etc.) are in the JVM-only `ImporterFileUtils` since they require real filesystem access.
+  * Filesystem-dependent resolution helpers (`resolveImportPath`, `_tryPath`, etc.) are in `ImporterFileUtils` since they require real filesystem access; since ISS-1154 that helper is backed by
+  * cross-platform `FileOps`/`FilePath`, so it — like this object — runs on JVM, Scala Native, and Scala.js (under Node).
   */
 object ImporterUtils {
 

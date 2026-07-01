@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0
  *
- * JVM-only — uses java.nio.file (FilesystemImporter is scalajvm-only). */
+ * JVM-only — the fixtures use java.nio.file directly (Files.createTempDirectory). Since ISS-1154 FilesystemImporter itself is cross-platform; the cross-platform load-path coverage lives in
+ * CompileLoadPathsIss1154Suite. This JVM suite is retained for its java.nio-based fixtures. */
 package ssg
 package sass
 
@@ -21,8 +22,8 @@ import scala.language.implicitConversions
   * The port drops `loadPaths` in Compile.compileString, and even the ImportCache route is inert: ImportCache.toImporters defaults `loadPathImporter = _ => Importer.noOp` (ImportCache.scala:446), so
   * load paths never resolve anything.
   *
-  * This suite is JVM-scoped because load-path semantics ARE filesystem semantics: the dart-sass reference maps each path to a FilesystemImporter, and the port's FilesystemImporter lives in
-  * src/main/scalajvm.
+  * This suite is JVM-scoped because its fixtures use java.nio.file directly (Files.createTempDirectory). The dart-sass reference maps each path to a FilesystemImporter; since ISS-1154 that importer
+  * is cross-platform, and the cross-platform load-path coverage lives in CompileLoadPathsIss1154Suite.
   */
 final class CompileLoadPathsIss991JvmSuite extends munit.FunSuite {
 
