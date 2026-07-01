@@ -153,8 +153,8 @@ object HandDrawnShapeStyles {
   def styles2Map(styles: Vector[String]): SeqMap[String, Nullable[String]] = {
     val styleMap = mutable.LinkedHashMap.empty[String, Nullable[String]]
     styles.foreach { style =>
-      val parts               = style.split(":", -1)
-      val key                 = parts(0)
+      val parts = style.split(":", -1)
+      val key   = parts(0)
       val value: Nullable[String] = if (parts.length > 1) Nullable(parts(1).trim) else Nullable.empty
       styleMap.update(key.trim, value)
     }
@@ -162,7 +162,7 @@ object HandDrawnShapeStyles {
   }
 
   def styles2String(node: HandDrawnNode): NodeStyleStrings = {
-    val stylesArray                      = compileStyles(node).stylesArray
+    val stylesArray      = compileStyles(node).stylesArray
     val labelStyles      = mutable.ArrayBuffer.empty[String]
     val nodeStyles       = mutable.ArrayBuffer.empty[String]
     val borderStyles     = mutable.ArrayBuffer.empty[String]

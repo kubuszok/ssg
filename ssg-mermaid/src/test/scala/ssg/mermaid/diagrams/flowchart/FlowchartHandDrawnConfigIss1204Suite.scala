@@ -30,13 +30,7 @@ import munit.FunSuite
 import ssg.data.DataView
 import ssg.graphs.commons.layout.dagre.NodeLabel
 import ssg.graphs.commons.rough.Options
-import ssg.mermaid.render.shapes.{
-  CompiledStyles,
-  HandDrawnNode,
-  HandDrawnShapeStyles,
-  NodeStyleStrings,
-  ShapeConfig
-}
+import ssg.mermaid.render.shapes.{ CompiledStyles, HandDrawnNode, HandDrawnShapeStyles, NodeStyleStrings, ShapeConfig }
 import ssg.mermaid.theme.ThemeVariables
 
 final class FlowchartHandDrawnConfigIss1204Suite extends FunSuite {
@@ -107,9 +101,9 @@ final class FlowchartHandDrawnConfigIss1204Suite extends FunSuite {
   }
 
   test("FlowchartRenderer.buildShapeConfig defaults look=classic/seed=0 for a default config") {
-    val node   = FlowNode(id = "A", text = "A")
-    val nl     = nodeLabel(40, 30, 10, 20)
-    val sc     = FlowchartRenderer.buildShapeConfig("A", node, nl, "rect", MermaidConfig(), 8.0)
+    val node = FlowNode(id = "A", text = "A")
+    val nl   = nodeLabel(40, 30, 10, 20)
+    val sc   = FlowchartRenderer.buildShapeConfig("A", node, nl, "rect", MermaidConfig(), 8.0)
     assertEquals(sc.look, "classic")
     assertEquals(sc.handDrawnSeed, 0)
   }
@@ -242,7 +236,7 @@ final class FlowchartHandDrawnConfigIss1204Suite extends FunSuite {
   }
 
   test("styles2String: partitions into label/node/border/background (oracle case S)") {
-    val node = HandDrawnNode(cssCompiledStyles = Vector("color: red", "fill: blue", "stroke-width: 2", "stroke: green"))
+    val node                                                                         = HandDrawnNode(cssCompiledStyles = Vector("color: red", "fill: blue", "stroke-width: 2", "stroke: green"))
     val NodeStyleStrings(labelStyles, nodeStyles, _, borderStyles, backgroundStyles) =
       HandDrawnShapeStyles.styles2String(node)
     assertEquals(labelStyles, "color:red !important")
