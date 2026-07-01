@@ -33,7 +33,7 @@ package ssg
 package js
 package parse
 
-import ssg.js.ast.{AstForIn, AstForOf, AstDestructuring, AstNode}
+import ssg.js.ast.{ AstDestructuring, AstForIn, AstForOf, AstNode }
 
 final class ForInDestructuringIss1364Suite extends munit.FunSuite {
 
