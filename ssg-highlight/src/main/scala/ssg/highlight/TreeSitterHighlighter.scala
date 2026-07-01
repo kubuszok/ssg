@@ -12,14 +12,15 @@ object TreeSitterHighlighter {
     private lazy val availableRuntimeGrammars: Set[String] =
       TreeSitterPlatform.availableGrammars.toSet
 
-    override def highlight(source: String, language: String): Option[String] =
+    override def highlight(source: String, language: String): Either[HighlightError, String] =
       for {
-        grammarName <- LanguageRegistry.resolveGrammar(language)
-        queryDir <- LanguageRegistry.queryDir(grammarName)
-        querySource <- queryCache.getOrElseUpdate(queryDir, QueryLoader.loadHighlightQuery(queryDir))
-        spans = TreeSitterPlatform.highlight(source, grammarName, querySource)
-        if spans.nonEmpty
-      } yield HtmlHighlightRenderer.render(source, spans)
+        grammarName <- LanguageRegistry.resolveGrammar(language).toRight(HighlightError.UnknownLanguage)
+        queryDir <- LanguageRegistry.queryDir(grammarName).toRight(HighlightError.MissingQuery)
+        querySource <- queryCache.getOrElseUpdate(queryDir, QueryLoader.loadHighlightQuery(queryDir)).toRight(HighlightError.QueryLoadFailed)
+      } yield {
+        val spans = TreeSitterPlatform.highlight(source, grammarName, querySource)
+        HtmlHighlightRenderer.render(source, spans)
+      }
 
     override def supportsLanguage(language: String): Boolean =
       LanguageRegistry.resolveGrammar(language).exists(g => availableRuntimeGrammars.contains(g))

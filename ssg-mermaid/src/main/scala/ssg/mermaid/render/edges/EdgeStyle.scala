@@ -57,6 +57,10 @@ import lowlevel.Nullable
   *   whether the edge label is emitted as an HTML `<foreignObject>` (edges.js:22 `evaluate(config.flowchart.htmlLabels)`). When false the label stays an SVG `<text>` (default → non-regression).
   * @param securityLevel
   *   resolved `MermaidConfig.securityLevel`, used by the HTML-label security gate ([[ssg.mermaid.render.text.TextUtils.sanitizeTextHtml]]) when [[htmlLabels]] is on
+  * @param look
+  *   diagram look: "classic" (default → byte-identical classic edge) or "handDrawn" (edges.js:513 `edge.look === 'handDrawn'` → the rough.js sketch path).
+  * @param handDrawnSeed
+  *   seed fed to the rough.js PRNG for the hand-drawn look (edges.js:519 `seed: handDrawnSeed`), so `look="handDrawn"` edge output is reproducible.
   */
 final case class EdgeStyle(
   id:              String = "",
@@ -74,5 +78,7 @@ final case class EdgeStyle(
   labelY:          Double = 0,
   thickness:       String = "normal",
   htmlLabels:      Boolean = false,
-  securityLevel:   String = "strict"
+  securityLevel:   String = "strict",
+  look:            String = "classic",
+  handDrawnSeed:   Int = 0
 )

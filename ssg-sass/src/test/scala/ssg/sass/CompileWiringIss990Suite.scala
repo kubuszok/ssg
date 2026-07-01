@@ -22,7 +22,8 @@ import ssg.sass.visitor.OutputStyle
   *     (Environment.scala:709) — they are simply never invoked from Compile.compileString.
   *   - `importers` / `loadPaths` (ISS-991): lib/sass.dart:217/219 -> lib/sass.dart:236-239 — both are folded into the ImportCache: `importCache: ImportCache(importers: importers, ..., loadPaths:
   *     loadPaths)`. lib/src/import_cache.dart:100-103 stores `_importers = _toImporters(importers, loadPaths, packageConfig)` and import_cache.dart:128-129 turns each load path into a filesystem
-  *     importer: `for (var path in loadPaths) FilesystemImporter(path)`. (loadPaths is exercised in CompileLoadPathsIss991JvmSuite because FilesystemImporter is JVM-only in the port.)
+  *     importer: `for (var path in loadPaths) FilesystemImporter(path)`. (loadPaths is exercised cross-platform in CompileLoadPathsIss1154Suite since ISS-1154 made FilesystemImporter cross-platform,
+  *     and on the JVM additionally in CompileLoadPathsIss991JvmSuite.)
   *   - `quietDeps` (ISS-992): lib/sass.dart:224 -> lib/sass.dart:245 -> lib/src/compile.dart:126/166/208 -> lib/src/visitor/evaluate.dart:375 constructor param, stored at evaluate.dart:381
   *     `_quietDeps = quietDeps`, consumed at evaluate.dart:4682: `if (_quietDeps && _inDependency) return;` — i.e. warnings from stylesheets loaded through importers/loadPaths are silenced
   *     (lib/sass.dart:185-186). The port has the identical check at EvaluateVisitor.scala:2355 but hardcodes `_quietDeps = false` (EvaluateVisitor.scala:292).

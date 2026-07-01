@@ -20,6 +20,7 @@ package render
 package shapes
 
 import ssg.graphs.commons.layout.dagre.Point
+import ssg.mermaid.theme.ThemeVariables
 
 /** Configuration for rendering a single shape node.
   *
@@ -54,22 +55,42 @@ import ssg.graphs.commons.layout.dagre.Point
   *   (dagre-wrapper/shapes/util.js:9). Defaults to false so the SVG-text geometry is unchanged.
   * @param securityLevel
   *   the resolved `MermaidConfig.securityLevel`; gates HTML-label sanitization (diagrams/common/common.ts:66-94). Only consulted on the HTML-label path.
+  * @param look
+  *   the resolved `MermaidConfig.look` ("classic" or "handDrawn"); upstream `flowDb.ts:882/918` copies `config.look` onto every node so each shape renderer can branch `node.look === "handDrawn"` into
+  *   `rough.svg(...)`. Threaded here so shape renderers can select the hand-drawn path (ISS-1204). Defaults to "classic" so classic geometry is unchanged.
+  * @param handDrawnSeed
+  *   the resolved `MermaidConfig.handDrawnSeed`; seeds the rough.js PRNG on the hand-drawn path so sketch output is reproducible. Defaults to 0 (the "random seed" sentinel).
+  * @param themeVariables
+  *   the resolved theme variables (colors etc.). Upstream `handDrawnShapeStyles.ts` reads `nodeBorder`/`mainBkg` from the ambient `getConfig().themeVariables` to default the rough stroke/fill; SSG
+  *   has no ambient config, so the theme is threaded here and passed to `HandDrawnShapeStyles.userNodeOverrides`. Only consulted on the hand-drawn path; defaults to a fresh [[ThemeVariables]] (the
+  *   classic path never reads it).
+  * @param cssStyles
+  *   the node's directly-set inline styles, each `"key: value"` (upstream `node.cssStyles`). On the hand-drawn path these feed `HandDrawnShapeStyles.userNodeOverrides` to derive the rough stroke/fill
+  *   overrides. Mapped from `FlowNode.styles`. Defaults to empty (the classic path never reads it).
+  * @param cssCompiledStyles
+  *   the styles inherited from the node's CSS classes, each `"key: value"` (upstream `node.cssCompiledStyles`). SSG applies node classes as CSS class attributes rather than resolving them to
+  *   `key: value` pairs at render time, so this is empty for flowchart nodes; kept for faithfulness to the upstream `HandDrawnNode` shape. Defaults to empty (the classic path never reads it).
   */
 final case class ShapeConfig(
-  id:            String = "",
-  x:             Double = 0,
-  y:             Double = 0,
-  width:         Double = 0,
-  height:        Double = 0,
-  label:         String = "",
-  rx:            Double = 0,
-  ry:            Double = 0,
-  cssClass:      String = "",
-  style:         String = "",
-  padding:       Double = 8,
-  labelStyle:    String = "",
-  htmlLabels:    Boolean = false,
-  securityLevel: String = "strict"
+  id:                String = "",
+  x:                 Double = 0,
+  y:                 Double = 0,
+  width:             Double = 0,
+  height:            Double = 0,
+  label:             String = "",
+  rx:                Double = 0,
+  ry:                Double = 0,
+  cssClass:          String = "",
+  style:             String = "",
+  padding:           Double = 8,
+  labelStyle:        String = "",
+  htmlLabels:        Boolean = false,
+  securityLevel:     String = "strict",
+  look:              String = "classic",
+  handDrawnSeed:     Int = 0,
+  themeVariables:    ThemeVariables = new ThemeVariables(),
+  cssStyles:         Vector[String] = Vector.empty,
+  cssCompiledStyles: Vector[String] = Vector.empty
 )
 
 /** Result of rendering a shape. Contains the SVG builder for the shape group and a function for computing edge intersections with the shape boundary.

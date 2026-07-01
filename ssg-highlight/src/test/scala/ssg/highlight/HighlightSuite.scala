@@ -9,7 +9,7 @@ final class HighlightSuite extends munit.FunSuite {
   // ISS-1161: tree-sitter grammar loading is unavailable on Scala.js (ISS-1118/ISS-1095/1098/1100);
   // the grammar-dependent highlight tests are skipped there via conditional registration
   // (NOT `assume`, to keep the assumes metric at baseline).
-  private val grammarsAvailable: Boolean = highlighter.highlight("class X {}", "scala").isDefined
+  private val grammarsAvailable: Boolean = highlighter.highlight("class X {}", "scala").isRight
 
   // On JS (grammarsAvailable == false) the test is registered but `.ignore`d — the runner
   // reports it as skipped with the ISS citation in the name.  On JVM/Native the test runs normally.
@@ -19,8 +19,11 @@ final class HighlightSuite extends munit.FunSuite {
 
   private def assertHighlights(language: String, snippet: String)(implicit loc: munit.Location): Unit = {
     val result = highlighter.highlight(snippet, language)
-    assert(result.isDefined, s"highlight($language) returned None — language not supported or engine failed to load")
-    val html = result.get
+    assert(
+      result.isRight,
+      s"highlight($language) returned Left(${result.swap.toOption.get}) — language not supported or engine failed to load"
+    )
+    val html = result.toOption.get
     assert(html.contains("<span class=\"hl-"), s"highlight($language) produced no token spans:\n$html")
   }
 
@@ -95,7 +98,10 @@ final class HighlightSuite extends munit.FunSuite {
   // library works because it statically links the scanner. Fix: either upstream adds
   // WASM support, or we switch to a different SQL grammar (e.g. DerekStride/tree-sitter-sql).
   langTest("highlight: sql") {
-    assume(highlighter.highlight("SELECT 1;", "sql").isDefined, "SQL WASM unavailable (external scanner incompatible with WASM)")
+    assume(
+      highlighter.highlight("SELECT 1;", "sql").toOption.exists(_.contains("<span class=\"hl-")),
+      "SQL WASM unavailable (external scanner incompatible with WASM)"
+    )
     assertHighlights("sql", HighlightFixtures.sql)
   }
 
@@ -241,7 +247,7 @@ final class HighlightSuite extends munit.FunSuite {
   // Fix: pin WASM build to the same version as the Cargo crate, or update the crate.
   langTest("highlight: hare") {
     assume(
-      highlighter.highlight("fn main() void = {};", "hare").isDefined,
+      highlighter.highlight("fn main() void = {};", "hare").toOption.exists(_.contains("<span class=\"hl-")),
       "hare WASM grammar version uses different node types than native"
     )
     assertHighlights("hare", HighlightFixtures.hare)

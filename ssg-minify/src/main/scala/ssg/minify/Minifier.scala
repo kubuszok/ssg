@@ -26,6 +26,7 @@ import ssg.minify.css.CssMinifier
 import ssg.minify.js.JsMinifier as BasicJsMinifier
 import ssg.minify.json.JsonMinifier
 import ssg.minify.html.HtmlMinifier
+import ssg.commons.DiagResult
 
 /** Top-level minification facade.
   *
@@ -92,6 +93,33 @@ object Minifier {
         fileTypeFromPath(filePath) match {
           case Some(ft) => minify(input, ft, options, jsCompressor)
           case None     => input
+        }
+      }
+    }
+
+  /** Minify content based on file path, returning a diagnostics envelope (ISS-1376).
+    *
+    * Additive facade over [[minifyFile]] per docs/architecture/error-contracts.md section 2.4, letting ssg-site consume one envelope for all file types. The produced value matches [[minifyFile]]
+    * exactly; HTML/XML routes through [[ssg.minify.html.HtmlMinifier.minifyResult]] so the passthrough-on-failure degradation surfaces as a `Severity.Warning` + success (section 1.1). CSS/JS/JSON
+    * carry no passthrough contract, so their native exceptions keep propagating (the specific-catches-only rule — this facade adds no catch).
+    */
+  def minifyFileResult(
+    input:        String,
+    filePath:     String,
+    options:      MinifyOptions = MinifyOptions.Defaults,
+    jsCompressor: JsCompressor = BasicJsMinifier
+  ): DiagResult[String] =
+    // jekyll-minifier.rb:1091-1093 exclude?: excluded destinations are copied through untouched.
+    if (options.exclude.exists(pattern => pattern == filePath || fnmatch(pattern, filePath))) DiagResult.success(input)
+    else {
+      // jekyll-minifier.rb:976-990 / rb:1174-1188: a `.min.js` / `.min.css` destination is copied through untouched.
+      if (filePath.endsWith(".min.js") || filePath.endsWith(".min.css")) DiagResult.success(input)
+      else {
+        fileTypeFromPath(filePath) match {
+          case Some(FileType.Html) | Some(FileType.Xml) =>
+            HtmlMinifier.minifyResult(input, options.html, jsCompressor, options.jsCompressorOpts)
+          case Some(other) => DiagResult.success(minify(input, other, options, jsCompressor))
+          case None        => DiagResult.success(input)
         }
       }
     }

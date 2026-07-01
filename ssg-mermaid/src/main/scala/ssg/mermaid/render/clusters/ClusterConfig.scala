@@ -19,6 +19,8 @@ package mermaid
 package render
 package clusters
 
+import ssg.mermaid.theme.ThemeVariables
+
 /** Configuration for rendering a cluster (subgraph container).
   *
   * Clusters are visual groupings of nodes in flowcharts and other diagrams. They render as a bordered rectangle with a title, containing child nodes.
@@ -55,6 +57,15 @@ package clusters
   *   when true, the cluster title is rendered as an HTML `<foreignObject>` (ISS-1205) instead of an SVG `<text>`. Defaults to false so existing SVG-text geometry is unchanged.
   * @param securityLevel
   *   the resolved `MermaidConfig.securityLevel`; gates HTML-label sanitization (diagrams/common/common.ts:66-94).
+  * @param look
+  *   the resolved `MermaidConfig.look` ("classic" or "handDrawn"); upstream `clusters.js:66` branches `node.look === "handDrawn"` into `rough.svg(...)` for the subgraph rect. Threaded here so
+  *   [[ClusterRenderer]] can select the hand-drawn path (ISS-1204 Chip 9i). Defaults to "classic" so classic geometry is unchanged.
+  * @param handDrawnSeed
+  *   the resolved `MermaidConfig.handDrawnSeed`; seeds the rough.js PRNG on the hand-drawn path so sketch output is reproducible. Defaults to 0 (the "random seed" sentinel).
+  * @param themeVariables
+  *   the resolved theme variables (colors etc.). Upstream `clusters.js:19-21` reads `clusterBkg`/`clusterBorder` from the ambient `getConfig().themeVariables` and passes them as the base rough
+  *   options merged by `userNodeOverrides`. `borderColor`/`backgroundColor` already carry `clusterBorder`/`clusterBkg`; the full theme is threaded here so `HandDrawnShapeStyles.userNodeOverrides` can
+  *   default any absent stroke/fill from `nodeBorder`/`mainBkg`. Only consulted on the hand-drawn path; defaults to a fresh [[ThemeVariables]] (the classic path never reads it).
   */
 final case class ClusterConfig(
   id:              String = "",
@@ -72,5 +83,8 @@ final case class ClusterConfig(
   borderColor:     String = "#bbb",
   backgroundColor: String = "#ececff",
   htmlLabels:      Boolean = false,
-  securityLevel:   String = "strict"
+  securityLevel:   String = "strict",
+  look:            String = "classic",
+  handDrawnSeed:   Int = 0,
+  themeVariables:  ThemeVariables = new ThemeVariables()
 )

@@ -25,3 +25,18 @@
 [submodule "original-src/cssminify2"]
 	path = original-src/cssminify2
 	url = https://github.com/digitalsparky/cssminify.git
+[submodule "original-src/roughjs"]
+	path = original-src/roughjs
+	url = https://github.com/rough-stuff/rough.git
+[submodule "original-src/path-data-parser"]
+	path = original-src/path-data-parser
+	url = https://github.com/pshihn/path-data-parser.git
+[submodule "original-src/points-on-path"]
+	path = original-src/points-on-path
+	url = https://github.com/pshihn/points-on-path.git
+[submodule "original-src/hachure-fill"]
+	path = original-src/hachure-fill
+	url = https://github.com/pshihn/hachure-fill.git
+[submodule "original-src/points-on-curve"]
+	path = original-src/points-on-curve
+	url = https://github.com/pshihn/bezier-points.git

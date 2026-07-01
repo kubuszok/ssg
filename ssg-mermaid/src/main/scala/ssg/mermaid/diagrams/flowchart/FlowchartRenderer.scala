@@ -110,7 +110,7 @@ object FlowchartRenderer {
     renderEdges(mainGroup, db, g, config, markerId)
 
     // 9. Render nodes
-    renderNodes(mainGroup, db, g, config, padding)
+    renderNodes(mainGroup, db, g, config, padding, themeVars)
 
     // 10. Render title if present
     if (db.title.nonEmpty) {
@@ -213,11 +213,12 @@ object FlowchartRenderer {
 
   /** Renders all nodes in the graph. */
   private def renderNodes(
-    parent:  SvgBuilder,
-    db:      FlowchartDb,
-    g:       Graph[NodeLabel, EdgeLabel],
-    config:  MermaidConfig,
-    padding: Double
+    parent:    SvgBuilder,
+    db:        FlowchartDb,
+    g:         Graph[NodeLabel, EdgeLabel],
+    config:    MermaidConfig,
+    padding:   Double,
+    themeVars: ssg.mermaid.theme.ThemeVariables
   ): Unit =
     for ((id, node) <- db.nodes) {
       val nodeLabel = g.nodeOpt(id)
@@ -227,23 +228,7 @@ object FlowchartRenderer {
         val nl        = nodeLabel.get
         val shapeName = mapShapeName(node.shape)
 
-        val shapeConfig = ShapeConfig(
-          id = id,
-          x = nl.x,
-          y = nl.y,
-          width = nl.width,
-          height = nl.height,
-          label = node.text,
-          rx = if (shapeName == "roundedRect") 5 else 0,
-          ry = if (shapeName == "roundedRect") 5 else 0,
-          cssClass = buildNodeCssClass(node),
-          style = node.styles.mkString("; "),
-          padding = padding,
-          // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
-          // SSG has no per-node useHtmlLabels, so resolve from flowchart.htmlLabels.
-          htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-          securityLevel = config.securityLevel
-        )
+        val shapeConfig = buildShapeConfig(id, node, nl, shapeName, config, padding, themeVars)
 
         // Add link when appropriate (nodes.js:67-80). When a node has a link,
         // the node group is rendered INTO an <a xlink:href=... target=...>
@@ -276,6 +261,48 @@ object FlowchartRenderer {
         ShapeRegistry.render(nodeGroup, shapeName, shapeConfig)
       }
     }
+
+  /** Builds the [[ShapeConfig]] for one laid-out node.
+    *
+    * Extracted from [[renderNodes]] as a pure, test-visible seam: it maps the dagre node label geometry plus the flowchart config onto a [[ShapeConfig]]. In particular it threads
+    * `config.look`/`config.handDrawnSeed` (flowDb.ts:882/918 copy `config.look` onto every node) so shape renderers can later branch into the hand-drawn rough path (ISS-1204).
+    */
+  private[flowchart] def buildShapeConfig(
+    id:        String,
+    node:      FlowNode,
+    nl:        NodeLabel,
+    shapeName: String,
+    config:    MermaidConfig,
+    padding:   Double,
+    themeVars: ssg.mermaid.theme.ThemeVariables = new ssg.mermaid.theme.ThemeVariables()
+  ): ShapeConfig =
+    ShapeConfig(
+      id = id,
+      x = nl.x,
+      y = nl.y,
+      width = nl.width,
+      height = nl.height,
+      label = node.text,
+      rx = if (shapeName == "roundedRect") 5 else 0,
+      ry = if (shapeName == "roundedRect") 5 else 0,
+      cssClass = buildNodeCssClass(node, config.look),
+      style = node.styles.mkString("; "),
+      padding = padding,
+      // shapes/util.js:9 — node.useHtmlLabels || evaluate(flowchart.htmlLabels).
+      // SSG has no per-node useHtmlLabels, so resolve from flowchart.htmlLabels.
+      htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
+      securityLevel = config.securityLevel,
+      // flowDb.ts:882/918 copy config.look onto every node; thread it (and the seed)
+      // so each shape renderer can branch into the hand-drawn rough path (ISS-1204).
+      look = config.look,
+      handDrawnSeed = config.handDrawnSeed,
+      // Hand-drawn threading (ISS-1204 Chip 9b): the theme (for the rough stroke/fill
+      // defaults) and the node's directly-set inline styles map to handDrawnShapeStyles.ts's
+      // `node.cssStyles`. SSG applies node CSS classes as class attributes rather than
+      // resolving them to key:value pairs, so `cssCompiledStyles` stays empty.
+      themeVariables = themeVars,
+      cssStyles = node.styles.toVector
+    )
 
   /** Renders all edges in the graph. */
   private def renderEdges(
@@ -336,7 +363,11 @@ object FlowchartRenderer {
           ry = 5,
           cssClass = sg.cssClasses.mkString(" "),
           htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-          securityLevel = config.securityLevel
+          securityLevel = config.securityLevel,
+          // clusters.js:66 branches node.look === "handDrawn"; thread look/seed/theme (ISS-1204 Chip 9i).
+          look = config.look,
+          handDrawnSeed = config.handDrawnSeed,
+          themeVariables = themeVars
         )
         ClusterRenderer.renderRoundedCluster(parent, clusterConfig)
       }
@@ -377,9 +408,15 @@ object FlowchartRenderer {
       case _               => "rect" // default fallback
     }
 
-  /** Builds a CSS class string for a node. */
-  private def buildNodeCssClass(node: FlowNode): String = {
-    val sb = new StringBuilder("node default")
+  /** Builds a CSS class string for a node's shape group.
+    *
+    * Mirrors upstream `getNodeClasses` (rendering-util/rendering-elements/shapes/util.js:135-136): `(node.look === 'handDrawn' ? 'rough-node' : 'node') + ' ' + node.cssClasses + ...`. The leading
+    * container class is REPLACED (not augmented) with `rough-node` on the hand-drawn path so the group carrying the shape + `.label` matches the `.rough-node .label text` rule (styles.ts:62); classic
+    * nodes keep the byte-identical `node` container class.
+    */
+  private def buildNodeCssClass(node: FlowNode, look: String): String = {
+    val container = if (look == "handDrawn") "rough-node" else "node"
+    val sb        = new StringBuilder(s"$container default")
     for (cls <- node.cssClasses) {
       sb.append(" ")
       sb.append(cls)
@@ -388,7 +425,7 @@ object FlowchartRenderer {
   }
 
   /** Builds an [[EdgeStyle]] from a flow edge and dagre edge label. */
-  private def buildEdgeStyle(
+  private[flowchart] def buildEdgeStyle(
     edge:      FlowEdge,
     edgeLabel: EdgeLabel,
     config:    MermaidConfig,
@@ -418,7 +455,11 @@ object FlowchartRenderer {
       thickness = edge.stroke,
       // edges.js:22 — useHtmlLabels = evaluate(config.flowchart.htmlLabels) (same as node labels).
       htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels),
-      securityLevel = config.securityLevel
+      securityLevel = config.securityLevel,
+      // edges.js:513/519 — edge.look === 'handDrawn' routes to the rough.js sketch path, seeded by
+      // config.handDrawnSeed (threaded from config exactly as ShapeConfig gets them — Chip 9a/9b).
+      look = config.look,
+      handDrawnSeed = config.handDrawnSeed
     )
   }
 

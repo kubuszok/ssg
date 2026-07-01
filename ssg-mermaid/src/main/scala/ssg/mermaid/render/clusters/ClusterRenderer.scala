@@ -12,8 +12,31 @@
  *   Convention: Replaces D3 selection chaining with SvgBuilder API
  *   Idiom: Pure function for cluster rendering; label positioned at top center
  *   Renames: insertCluster() → ClusterRenderer.renderCluster()
+ *   Hand-drawn (clusters.js:66-84 `rect`, ISS-1204 Chip 9i): when `config.look == "handDrawn"`
+ *     the classic background <rect> is replaced by a rough.js sketch node
+ *     (`rough.svg().path(createRoundedRectPathD(x, y, width, height, 0), options)`). Unlike the
+ *     shape/edge/note branches, the cluster passes a BASE options object (roughness 0.7, fill =
+ *     clusterBkg, stroke = clusterBorder, fillWeight 3, seed = handDrawnSeed) THROUGH
+ *     `HandDrawnShapeStyles.userNodeOverrides` (upstream `userNodeOverrides(node, { ... })`), which
+ *     keeps every supplied key and fills defaults for the rest. clusterBkg/clusterBorder arrive as
+ *     `config.backgroundColor`/`config.borderColor` (set by `FlowchartRenderer.renderSubgraphs` from
+ *     `themeVars.clusterBkg`/`clusterBorder`).
+ *   Geometry (radius 0 — DELIBERATE, adjudicated Chip 9i): upstream's OWN hand-drawn cluster uses
+ *     `createRoundedRectPathD(x, y, width, height, 0)` — a SHARP-cornered rect — even though its
+ *     classic cluster (and SSG's, via `renderRoundedCluster` rx=ry=5) is ROUNDED. Because upstream's
+ *     classic cluster == SSG's classic cluster (both rounded), this is NOT the 9g situation where SSG
+ *     had simplified its own geometry; here the port faithfully reproduces upstream's intentional
+ *     radius-0 hand-drawn cluster. So hand-drawn clusters are sharp-cornered per upstream while the
+ *     classic cluster stays rounded (rx/ry preserved on the classic path).
+ *   Styling (clusters.js:83-84): upstream styles the inner rough paths from the node's OWN cssStyles
+ *     (`path:nth-child(2)` ← borderStyles, `path` ← backgroundStyles with fill→stroke). SSG clusters
+ *     carry no per-node cssStyles, so those style strings are empty; the cluster border/background
+ *     COLOURS are instead baked into the rough element by the `fill`/`stroke` options (clusterBkg /
+ *     clusterBorder). The grafted rough <g> keeps SSG's classic `cluster-bg` class + `config.style`
+ *     (matching the classic <rect>), so the cluster renders with its border + background. Title/label
+ *     + structure are unchanged. Classic rendering is byte-identical.
  *
- * upstream-commit: 2cfdd1620
+ * upstream-commit: 2cfdd1620 (classic) / 56a2762 (clusters.js hand-drawn, ISS-1204)
  */
 package ssg
 package mermaid
@@ -21,8 +44,10 @@ package render
 package clusters
 
 import ssg.mermaid.render.labels.{ HtmlLabelHelper, LabelRenderer, LabelStyle }
+import ssg.mermaid.render.shapes.{ HandDrawnNode, HandDrawnShapeStyles, HandDrawnShapes, RoundedRectPath }
 import ssg.mermaid.render.text.{ TextMetrics, TextUtils }
-import ssg.graphs.commons.svg.SvgBuilder
+import ssg.graphs.commons.rough.{ Options, Rough }
+import ssg.graphs.commons.svg.{ SvgBuilder, SvgElement }
 
 /** Renders cluster (subgraph) containers as SVG elements.
   *
@@ -66,25 +91,59 @@ object ClusterRenderer {
     val halfH = config.height / 2.0
 
     // Background rectangle
-    val rect = group.append("rect")
-    rect.attr("x", config.x - halfW)
-    rect.attr("y", config.y - halfH)
-    rect.attr("width", config.width)
-    rect.attr("height", config.height)
-    rect.attr("fill", config.backgroundColor)
-    rect.attr("stroke", config.borderColor)
-    rect.attr("stroke-width", "1")
-    rect.classed("cluster-bg", true)
+    if (config.look == "handDrawn") {
+      // clusters.js:66-84 — the `node.look === 'handDrawn'` branch. Build a rough sketch node via
+      // `rough.svg(...)` instead of the classic background <rect>, and insert it as the first child.
+      // const { clusterBkg, clusterBorder } = themeVariables;  → config.backgroundColor / borderColor
+      // const options = userNodeOverrides(node, {
+      //   roughness: 0.7, fill: clusterBkg, stroke: clusterBorder, fillWeight: 3, seed: handDrawnSeed });
+      // Cluster passes a BASE options object THROUGH userNodeOverrides (unlike edges/notes which pass
+      // raw opts). SSG clusters carry no cssStyles, so HandDrawnNode() is empty.
+      val clusterNode = HandDrawnNode()
+      val baseOptions = Options(
+        roughness = Some(0.7),
+        fill = Some(config.backgroundColor),
+        stroke = Some(config.borderColor),
+        fillWeight = Some(3),
+        seed = Some(config.handDrawnSeed)
+      )
+      val options = HandDrawnShapeStyles.userNodeOverrides(clusterNode, baseOptions, config.themeVariables, config.handDrawnSeed)
 
-    if (config.rx > 0) {
-      rect.attr("rx", config.rx)
-    }
-    if (config.ry > 0) {
-      rect.attr("ry", config.ry)
-    }
+      // const roughNode = rc.path(createRoundedRectPathD(x, y, width, height, 0), options);
+      // radius 0 — upstream's hand-drawn cluster is DELIBERATELY sharp-cornered (classic stays rounded).
+      val roughNode: SvgElement =
+        Rough.svg().path(RoundedRectPath.createRoundedRectPathD(config.x - halfW, config.y - halfH, config.width, config.height, 0), Some(options))
 
-    if (config.style.nonEmpty) {
-      rect.attr("style", config.style)
+      // rect = shapeSvg.insert(() => roughNode, ':first-child');
+      // Graft the rough <g> into the builder tree as the first (background) child. The cluster
+      // border/background colours are baked into the rough element via the fill/stroke options; keep
+      // SSG's classic cluster-bg class + inline style (matching the classic <rect>).
+      val roughGroup = HandDrawnShapes.graftElement(group, roughNode)
+      roughGroup.classed("cluster-bg", true)
+      if (config.style.nonEmpty) {
+        roughGroup.attr("style", config.style)
+      }
+    } else {
+      val rect = group.append("rect")
+      rect.attr("x", config.x - halfW)
+      rect.attr("y", config.y - halfH)
+      rect.attr("width", config.width)
+      rect.attr("height", config.height)
+      rect.attr("fill", config.backgroundColor)
+      rect.attr("stroke", config.borderColor)
+      rect.attr("stroke-width", "1")
+      rect.classed("cluster-bg", true)
+
+      if (config.rx > 0) {
+        rect.attr("rx", config.rx)
+      }
+      if (config.ry > 0) {
+        rect.attr("ry", config.ry)
+      }
+
+      if (config.style.nonEmpty) {
+        rect.attr("style", config.style)
+      }
     }
 
     // Title label at the top center

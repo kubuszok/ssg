@@ -49,16 +49,6 @@ final class LiquidLexerSuite extends munit.FunSuite {
       )
       .build()
 
-  private def parserWithCustomTag(tagName: String): TemplateParser =
-    new TemplateParser.Builder()
-      .withTag(
-        new tags.Tag(tagName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
-            DataView.from(s"<$tagName>")
-        }
-      )
-      .build()
-
   private def parserWithCustomBlockAndTag(blockName: String, tagName: String): TemplateParser =
     new TemplateParser.Builder()
       .withBlock(
@@ -999,11 +989,21 @@ final class LiquidLexerSuite extends munit.FunSuite {
   // 62. testIncludeRelativeCustomTag — custom tag named 'include_relative'
   // ---------------------------------------------------------------------------
 
-  // NOTE: In SSG (Jekyll default flavor), include_relative is a built-in tag,
-  // so it takes precedence over custom tags. The original test used Liquid style
-  // where include_relative is not defined and can be a custom tag.
-  test("IncludeRelativeCustomTag: SSG recognizes include_relative as built-in".fail) { // ISS-1259 (ISS-1024 umbrella)
-    val parser = parserWithCustomTag("include_relative")
+  // liqp LiquidLexerTest.testIncludeRelativeCustomTag (LiquidLexerTest.java:503-511):
+  // in Liquid style, `include_relative` is NOT a built-in (built-in is Jekyll-only),
+  // so a custom tag named `include_relative` is classified as a SimpleTagId and its
+  // custom rendering applies. LiquidLexer.g4:239-240 routes include_relative to the
+  // user tag when isLiquidStyleInclude() && tags.contains("include_relative").
+  test("IncludeRelativeCustomTag: custom include_relative tag renders in Liquid style") {
+    val parser = new TemplateParser.Builder()
+      .withFlavor(Flavor.LIQUID)
+      .withTag(
+        new tags.Tag("include_relative") {
+          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+            DataView.from("<include_relative>")
+        }
+      )
+      .build()
     val result = parser.parse("{% include_relative %}").render()
     assertEquals(result, "<include_relative>")
   }

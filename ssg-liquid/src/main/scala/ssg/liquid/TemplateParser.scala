@@ -117,6 +117,10 @@ final class TemplateParser(
       input,
       stripSpacesAroundTags,
       stripSingleLine,
+      // LiquidLexer.g4:20-35/229-245 — the lexer needs liquidStyleInclude to
+      // classify `include_relative`: built-in only in Jekyll style, user-override
+      // or invalid in Liquid style. Threaded from the parser's flavour-derived flag.
+      liquidStyleInclude,
       insertions.blockNames,
       insertions.tagNames
     )
@@ -264,6 +268,15 @@ object TemplateParser {
 
       val errorMode =
         if (_errorMode != null) _errorMode
+        // SSG divergence bridge (ISS-1258): liqp's DEFAULT_FLAVOR is LIQP (ErrorMode.STRICT), so
+        // `new Builder().withStrictVariables(true).build()` throws VariableNotExistException on
+        // undefined variables (liqp RenderSettingsTest#renderWithStrictVariables1). SSG deliberately
+        // defaults to JEKYLL (ErrorMode.WARN, see DEFAULT_FLAVOR above), under which strict variables
+        // would merely be recorded (LookupNode gates the throw on ErrorMode.STRICT, mirroring
+        // liqp LookupNode.java:55-60). To preserve liqp's observable strict-variables contract when a
+        // caller opts into strict variables without an explicit error mode, resolve to STRICT here.
+        // An explicit withErrorMode(...) always wins, so strict+WARN / strict+LAX stay as requested.
+        else if (_strictVariables && fl.errorMode != ErrorMode.STRICT) ErrorMode.STRICT
         else fl.errorMode
 
       val allInsertions = fl.getInsertions.mergeWith(Insertions.of(_insertions))

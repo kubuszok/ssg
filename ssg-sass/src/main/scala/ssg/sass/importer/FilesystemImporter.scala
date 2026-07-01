@@ -4,13 +4,16 @@
  * Original license: MIT
  *
  * Migration notes:
- * Renames: filesystem.dart -> FilesystemImporter.scala (JVM-only) Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
- * Idiom: Resolves imports via ImporterFileUtils.resolveImportPath, which tries exact, partial, extended, and index variants. */
+ * Renames: filesystem.dart -> FilesystemImporter.scala Convention: Uses ssg-commons FileOps/FilePath for cross-platform I/O.
+ * Idiom: Resolves imports via ImporterFileUtils.resolveImportPath, which tries exact, partial, extended, and index variants.
+ * Cross-platform (ISS-1154): every java.nio.file / java.net.URI site was replaced with FileOps/FilePath equivalents (path construction via FilePath.of, `file:` URL parsing via
+ * ImporterFileUtils.fileUriToPath — the cross-platform analogue of dart's p.fromUri — and modification time via FileOps.lastModifiedTime), so this importer now compiles and runs on JVM, Scala Native,
+ * and Scala.js (under Node). */
 package ssg
 package sass
 package importer
 
-import ssg.commons.io.{ FileOps, FilePath, FilePathPlatform }
+import ssg.commons.io.{ FileOps, FilePath }
 import ssg.sass.Nullable.*
 
 import scala.language.implicitConversions
@@ -18,17 +21,18 @@ import scala.language.implicitConversions
 /** An importer that loads files from a load path on the filesystem, either relative to the path passed to [[FilesystemImporter]] or absolute `file:` URLs.
   *
   * Use [[FilesystemImporter.noLoadPath]] to _only_ load absolute `file:` URLs and URLs relative to the current file.
-  *
-  * JVM-only.
   */
 final class FilesystemImporter private[importer] (
   private val _loadPath:           Nullable[String],
   private val _loadPathDeprecated: Boolean
 ) extends Importer {
 
-  /** Creates an importer that loads files relative to [[loadPath]]. */
+  /** Creates an importer that loads files relative to [[loadPath]].
+    *
+    * dart-sass filesystem.dart:36-38 stores `p.absolute(loadPath)`; here the path string is resolved to absolute and normalized cross-platform via `FilePath.of(loadPath).toAbsolute.normalize`.
+    */
   def this(loadPath: String) =
-    this(Nullable(FilePathPlatform.fromNioPath(java.nio.file.Paths.get(loadPath)).toAbsolute.normalize.pathString), false)
+    this(Nullable(FilePath.of(loadPath).toAbsolute.normalize.pathString), false)
 
   /** The load path as a string, for backward compatibility. */
   def loadPath: String = _loadPath.getOrElse("")
@@ -36,13 +40,8 @@ final class FilesystemImporter private[importer] (
   def canonicalize(url: String): Nullable[String] = {
     var resolved: Nullable[String] = Nullable.empty
     if (url.startsWith("file:")) {
-      // file: URL — resolve from the filesystem path
-      val path = try {
-        val uri = new java.net.URI(url)
-        uri.getPath
-      } catch {
-        case _: Throwable => url.stripPrefix("file:")
-      }
+      // file: URL — resolve from the filesystem path (dart-sass filesystem.dart:71 `p.fromUri(url)`).
+      val path = ImporterFileUtils.fileUriToPath(url)
       resolved = ImporterFileUtils.resolveImportPath(path)
     } else if (url.contains(":")) {
       // Non-file scheme — not our business
@@ -76,7 +75,8 @@ final class FilesystemImporter private[importer] (
 
   private def urlToPath(url: String): FilePath =
     if (url.startsWith("file:")) {
-      ssg.commons.io.FilePathPlatform.fromNioPath(java.nio.file.Paths.get(new java.net.URI(url)))
+      // dart-sass filesystem.dart:93 `p.fromUri(url)`.
+      FilePath.of(ImporterFileUtils.fileUriToPath(url))
     } else {
       FilePath.of(url)
     }
@@ -96,15 +96,11 @@ final class FilesystemImporter private[importer] (
       case _: Throwable => Nullable.empty
     }
 
-  /** Returns the modification time of the file at [[url]]. */
+  /** Returns the modification time of the file at [[url]] (dart-sass filesystem.dart:101 `io.modificationTime(p.fromUri(url))`). */
   override def modificationTime(url: String): Long =
     try {
       val path = urlToPath(url)
-      java.nio.file.Files
-        .getLastModifiedTime(
-          java.nio.file.Paths.get(path.pathString)
-        )
-        .toMillis
+      FileOps.lastModifiedTime(path)
     } catch {
       case _: Throwable => System.currentTimeMillis()
     }
@@ -134,11 +130,8 @@ final class FilesystemImporter private[importer] (
 
   /** Extracts the basename (last path component) from a URL/path string. */
   private def urlBasenameOf(url: String): String = {
-    val cleaned = if (url.startsWith("file:")) {
-      try new java.net.URI(url).getPath
-      catch { case _: Throwable => url.stripPrefix("file:") }
-    } else url
-    val sep = math.max(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'))
+    val cleaned = if (url.startsWith("file:")) ImporterFileUtils.fileUriToPath(url) else url
+    val sep     = math.max(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'))
     if (sep < 0) cleaned else cleaned.substring(sep + 1)
   }
 

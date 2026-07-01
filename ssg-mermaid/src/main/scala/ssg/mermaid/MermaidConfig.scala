@@ -36,6 +36,9 @@ import ssg.data.FromDataView
   *   additional CSS to inject into the SVG
   * @param look
   *   diagram look: "classic" or "handDrawn"
+  * @param handDrawnSeed
+  *   seed used for the hand-drawn look (config.schema.yaml:84). Feeds the rough.js PRNG so `look="handDrawn"` output is reproducible; the default 0 upstream means "give a random seed" (the
+  *   [[ssg.graphs.commons.rough.Random]] `seed==0` Math.random fallback path), so tests pin a non-zero seed for deterministic output.
   * @param fontFamily
   *   CSS font-family for rendered text
   * @param fontSize
@@ -82,6 +85,9 @@ import ssg.data.FromDataView
   *   whether to auto-wrap markdown text. Upstream consumes this only in the markdown text processor (handle-markdown-text.ts:18-20,74-76): when false, soft-wrap spaces become `&nbsp;` and newlines
   *   become explicit `<br/>`. SSG's label path strips markdown markers ([[ssg.mermaid.render.text.TextUtils.stripMarkdown]]) but has no `markdownToLines`/`preprocessMarkdown` port, so the field has
   *   no consumer yet (awaits the markdown-string label render path). Kept for full-fidelity schema parity.
+  * @param suppressErrorRendering
+  *   suppresses inserting the 'Syntax error' diagram in the output (config.type.ts:194-199). Consulted by [[Mermaid.render]] (mermaidAPI.ts:393-401,427): when a parse failure (or an undetected
+  *   diagram type) is encountered, the error diagram is rendered UNLESS this flag is set, in which case the [[ssg.mermaid.parse.ParseException]] is rethrown so the caller can control error handling.
   * @param flowchart
   *   flowchart-specific configuration
   * @param sequence
@@ -100,32 +106,34 @@ import ssg.data.FromDataView
   *   timeline-specific configuration
   */
 final case class MermaidConfig(
-  theme:               String = "default",
-  themeVariables:      Map[String, String] = Map.empty,
-  themeCSS:            String = "",
-  look:                String = "classic",
-  fontFamily:          String = "\"trebuchet ms\", verdana, arial, sans-serif",
-  fontSize:            Int = 16,
-  securityLevel:       String = "strict",
-  startOnLoad:         Boolean = true,
-  logLevel:            Int = 2,
-  darkMode:            Boolean = false,
-  htmlLabels:          Boolean = true,
-  wrap:                Boolean = false,
-  maxTextSize:         Int = 50000,
-  maxEdges:            Int = 500,
-  deterministicIds:    Boolean = false,
-  deterministicIDSeed: Nullable[String] = Nullable.empty,
-  arrowMarkerAbsolute: Boolean = false,
-  markdownAutoWrap:    Boolean = true,
-  flowchart:           FlowchartConfig = FlowchartConfig(),
-  sequence:            SequenceConfig = SequenceConfig(),
-  gantt:               GanttConfig = GanttConfig(),
-  pie:                 PieConfig = PieConfig(),
-  er:                  ErConfig = ErConfig(),
-  gitGraph:            GitGraphConfig = GitGraphConfig(),
-  mindmap:             MindmapConfig = MindmapConfig(),
-  timeline:            TimelineConfig = TimelineConfig()
+  theme:                  String = "default",
+  themeVariables:         Map[String, String] = Map.empty,
+  themeCSS:               String = "",
+  look:                   String = "classic",
+  handDrawnSeed:          Int = 0,
+  fontFamily:             String = "\"trebuchet ms\", verdana, arial, sans-serif",
+  fontSize:               Int = 16,
+  securityLevel:          String = "strict",
+  startOnLoad:            Boolean = true,
+  logLevel:               Int = 2,
+  darkMode:               Boolean = false,
+  htmlLabels:             Boolean = true,
+  wrap:                   Boolean = false,
+  maxTextSize:            Int = 50000,
+  maxEdges:               Int = 500,
+  deterministicIds:       Boolean = false,
+  deterministicIDSeed:    Nullable[String] = Nullable.empty,
+  arrowMarkerAbsolute:    Boolean = false,
+  markdownAutoWrap:       Boolean = true,
+  suppressErrorRendering: Boolean = false,
+  flowchart:              FlowchartConfig = FlowchartConfig(),
+  sequence:               SequenceConfig = SequenceConfig(),
+  gantt:                  GanttConfig = GanttConfig(),
+  pie:                    PieConfig = PieConfig(),
+  er:                     ErConfig = ErConfig(),
+  gitGraph:               GitGraphConfig = GitGraphConfig(),
+  mindmap:                MindmapConfig = MindmapConfig(),
+  timeline:               TimelineConfig = TimelineConfig()
 ) derives AsDataView,
       FromDataView
 

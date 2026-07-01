@@ -228,6 +228,28 @@ final class FileOpsDirectoryIss1121Suite extends munit.FunSuite {
     intercept[Throwable](FileOps.copy(dir.resolve("absent.txt"), dir.resolve("out.txt")))
   }
 
+  // ----- lastModifiedTime -----------------------------------------------------------------------------------------
+
+  test("lastModifiedTime: returns a plausible epoch-millis value for an existing file") {
+    // Contract: FileOps.scala lastModifiedTime scaladoc — milliseconds since the epoch for the file at `path`
+    // (ISS-1154: added so the cross-platform FilesystemImporter can report modification times on JVM/Native/JS).
+    val dir    = root()
+    val file   = dir.resolve("stamp.txt")
+    val before = System.currentTimeMillis()
+    FileOps.writeString(file, "x")
+    val mtime = FileOps.lastModifiedTime(file)
+    // A freshly-written file must have a positive mtime that is not implausibly far in the future. Filesystems may
+    // truncate to second precision, so allow a generous downward slack rather than asserting mtime >= before exactly.
+    assert(mtime > 0L, s"mtime must be positive, was $mtime")
+    assert(mtime <= System.currentTimeMillis() + 2000L, s"mtime must not be in the future: $mtime")
+    assert(mtime >= before - 5000L, s"mtime must be near write time: $mtime vs before=$before")
+  }
+
+  test("lastModifiedTime: a missing path throws") {
+    // Contract: reading the mtime of an absent file fails (Files.getLastModifiedTime / Node statSync both throw).
+    intercept[Throwable](FileOps.lastModifiedTime(root().resolve("no-such-file.txt")))
+  }
+
   // ----- deleteRecursively ----------------------------------------------------------------------------------------
 
   test("deleteRecursively: removes an entire tree of files and subdirectories") {

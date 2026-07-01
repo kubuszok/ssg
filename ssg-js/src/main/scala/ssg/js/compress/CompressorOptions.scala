@@ -16,6 +16,18 @@
  *     accessors for compatibility
  *   Convention: case class with default values instead of JS defaults() helper
  *   Idiom: sealed trait InlineLevel instead of boolean|int union
+ *   Idiom (ISS-1193): terser's HOP-based defaults() (lib/utils/index.js:66-92)
+ *     distinguishes a caller-set key from an unset one; a Scala case class with
+ *     plain Boolean fields cannot. We add a presence record `gatedPresence`
+ *     (GatedPresence: Unspecified | Provided(names)) on CompressorOptions so
+ *     resolveDefaults can replicate HOP exactly (present -> keep, absent ->
+ *     !false_by_default). This design (Option A: presence on the input, resolved
+ *     to a fully-concrete CompressorOptions) localizes the change to
+ *     resolveDefaults + NoDefaults and leaves every downstream read (get(),
+ *     options.<field>) untouched. It replaces the earlier fragile majority-match
+ *     vote (matchesDefaults vs matchesNoDefaults counting) that CLOBBERED
+ *     explicitly-enabled passes once >=13 gated passes were enabled via
+ *     NoDefaults.copy(...) through a public entry (the count tied/flipped).
  *
  * Covenant: full-port
  * Covenant-js-reference: lib/compress/index.js
@@ -101,6 +113,27 @@ object DropConsoleConfig {
       case list: List[?] => Methods(list.map(_.toString).toSet)
       case _ => Disabled
     }
+}
+
+/** Presence tracking for the DEFAULT-GATED options, mirroring terser's HOP (`Object.prototype.hasOwnProperty`) semantics in `defaults()` (lib/utils/index.js:66-92).
+  *
+  * A Scala `case class` with plain `Boolean` fields cannot distinguish "the caller wrote `evaluate = false`" from "the field defaulted to its value", so we carry an explicit record of which gated
+  * options the caller specified.
+  *
+  *   - [[GatedPresence.Unspecified]]: no presence information (a plain `CompressorOptions(...)` construction). Under `defaults = false` this falls back to a per-field value comparison against
+  *     [[CompressorOptions.Defaults]] (a gated field still equal to its on-default is treated as unset and turned off; a differing value is treated as caller-set and kept). This is deterministic and
+  *     per-field — it is NOT the deleted majority-match vote.
+  *   - [[GatedPresence.Provided]]: the exact set of gated field names the caller specified. This is the faithful terser HOP path: a present name keeps its value, an absent name resolves to terser's
+  *     `!false_by_default` default. [[CompressorOptions.NoDefaults]] uses `Provided(gatedFieldNames)` so that every `NoDefaults.copy(pass = true)` override survives resolution intact, regardless of
+  *     how many passes are enabled (ISS-1193).
+  */
+enum GatedPresence {
+
+  /** No presence info — plain construction; resolved via value comparison under `defaults = false`. */
+  case Unspecified
+
+  /** Explicit set of caller-specified gated field names (Scala field names). */
+  case Provided(names: Set[String])
 }
 
 /** Full compressor options.
@@ -227,7 +260,11 @@ final case class CompressorOptions(
   /** Drop unreferenced variables and functions. */
   unused: Boolean = true,
   /** Legacy option: emit warnings (no-op in Terser 5+). */
-  warnings: Boolean = false
+  warnings: Boolean = false,
+  /** Presence record for the default-gated fields, used by [[CompressorOptions.resolveDefaults]] to replicate terser's HOP-based `defaults()` semantics (lib/utils/index.js:66-92). Not a compressor
+    * pass; defaults to [[GatedPresence.Unspecified]] for plain constructions and is never surfaced via [[get]]. See [[GatedPresence]] and [[CompressorOptions.resolveDefaults]] (ISS-1193).
+    */
+  gatedPresence: GatedPresence = GatedPresence.Unspecified
 ) {
 
   /** Look up an option by its Terser-compatible snake_case name.
@@ -307,12 +344,45 @@ object CompressorOptions {
   /** All-defaults-enabled configuration — `compress: {}` / `compress: true` in Terser. */
   val Defaults: CompressorOptions = CompressorOptions()
 
+  /** The Scala field names of the DEFAULT-GATED options — the options terser defaults to `!false_by_default` (lib/compress/index.js:223-278). These are exactly the fields [[NoDefaults]] overrides,
+    * excluding the `defaults` control flag itself. Used by [[resolveDefaults]] for the terser HOP analog and by [[NoDefaults]]'s presence record.
+    */
+  val gatedFieldNames: Set[String] = Set(
+    "arrows",
+    "booleans",
+    "collapseVars",
+    "comparisons",
+    "computedProps",
+    "conditionals",
+    "deadCode",
+    "directives",
+    "dropDebugger",
+    "evaluate",
+    "hoistProps",
+    "ifReturn",
+    "inline",
+    "joinVars",
+    "lhsConstants",
+    "loops",
+    "negateIife",
+    "properties",
+    "pureGetters",
+    "reduceFuncs",
+    "reduceVars",
+    "sequencesLimit",
+    "sideEffects",
+    "switches",
+    "typeofs",
+    "unused"
+  )
+
   /** All default-gated passes disabled — `compress: { defaults: false }` in Terser.
     *
     * Matches lib/compress/index.js:222-275: every option whose default is `!false_by_default` is set to `false` / disabled. Options that are already off by default (e.g. `arguments`, `hoist_funs`,
     * `unsafe_*`) or non-boolean (e.g. `ecma`, `passes`) keep their normal defaults.
     *
-    * To enable a specific pass on top of this, use `.copy(evaluate = true)` etc.
+    * To enable a specific pass on top of this, use `.copy(evaluate = true)` etc. — the [[gatedPresence]] marker below records every gated field as `Provided`, so [[resolveDefaults]] preserves any
+    * such `.copy` override verbatim (this is the terser HOP analog: the resolved options equal what terser produces for `{ defaults: false, evaluate: true, ... }`). See ISS-1193.
     */
   val NoDefaults: CompressorOptions = CompressorOptions(
     arrows = false,
@@ -344,36 +414,42 @@ object CompressorOptions {
     sideEffects = false,
     switches = false,
     typeofs = false,
-    unused = false
+    unused = false,
+    // Every gated field is recorded as Provided so resolveDefaults treats this as a
+    // fully-specified off-state: NoDefaults resolves to all-off, and any
+    // NoDefaults.copy(pass = true) override is kept (present -> keep value), no matter
+    // how many passes are enabled (ISS-1193 — the old majority-match vote clobbered
+    // >=13 enabled passes).
+    gatedPresence = GatedPresence.Provided(gatedFieldNames)
   )
 
-  /** Resolve `defaults = false` semantics, matching terser lib/compress/index.js:222.
+  /** Resolve terser's `defaults()` semantics, matching lib/compress/index.js:220-278 and the HOP-based `defaults()` helper (lib/utils/index.js:66-92).
     *
-    * When `o.defaults == false`, each DEFAULT-GATED field (the fields overridden by
-    * [[NoDefaults]]) that still equals its [[Defaults]] value is replaced with the
-    * [[NoDefaults]] value (i.e. turned off). Fields the caller explicitly changed
-    * (value differs from [[Defaults]]) are preserved.
+    * terser computes `false_by_default = (options.defaults === false)` and then, for every DEFAULT-GATED option, applies `defaults(options, { arrows: !false_by_default, ... })` where `defaults()`
+    * keeps a key the caller EXPLICITLY set (HOP true) and fills an UNSET key with `!false_by_default` (its default). This method is a faithful analog:
     *
-    * When `o.defaults != false`, returns `o` unchanged — this is a strict no-op.
+    *   - `false_by_default = !o.defaults` (i.e. `o.defaults == false`).
+    *   - For each gated field: PRESENT (caller-specified) -> keep the caller's value; ABSENT -> terser's default (`!false_by_default` for the boolean passes; the analogous per-field default for the
+    *     non-boolean gated fields: `inline` -> `InlineFull`/`InlineDisabled`, `sequencesLimit` -> `800`/`0`, `pureGetters` -> `"strict"`/`""`).
     *
-    * When the gated fields already predominantly match [[NoDefaults]] (i.e. the
-    * options were likely built via `NoDefaults.copy(...)` rather than
-    * `CompressorOptions(defaults = false, ...)`), the method returns `o` unchanged
-    * to avoid clobbering explicitly re-enabled passes.
+    * Presence is carried by [[gatedPresence]] (see [[GatedPresence]]):
     *
-    * Limitation: because a Scala case class cannot distinguish "the caller wrote
-    * `evaluate = true`" from "the default was `true`", the value-comparison
-    * heuristic for `CompressorOptions(defaults = false, evaluate = true)` treats
-    * both as "unchanged" and turns evaluate off. To explicitly KEEP a normally-ON
-    * pass under `defaults = false`, use `CompressorOptions.NoDefaults.copy(evaluate
-    * = true)` instead — that is the documented API for this edge case (the
-    * case-class-vs-presence tradeoff).
+    *   - [[GatedPresence.Provided]] gives the exact caller-specified set — the true HOP path. [[NoDefaults]] uses `Provided(gatedFieldNames)`, so `NoDefaults.copy(pass = true)` keeps every override
+    *     regardless of how many passes are enabled (ISS-1193; the old majority-match vote flipped and clobbered >=13 enabled passes).
+    *   - [[GatedPresence.Unspecified]] (a plain `CompressorOptions(...)`) has no presence record. When `defaults == true` it is a no-op (the case-class defaults ARE terser's `!false_by_default`
+    *     on-defaults). When `defaults == false` presence is approximated per-field by value comparison against [[Defaults]]: a gated field still at its on-default is treated as unset and turned off;
+    *     a differing value is treated as caller-set and kept. This is deterministic and per-field — NOT the deleted majority-match counting vote. To express an explicitly-ENABLED normally-on pass
+    *     under `defaults = false` (which value comparison cannot detect, e.g. `CompressorOptions(defaults = false, evaluate = true)`), pass a presence record —
+    *     `CompressorOptions.NoDefaults.copy(evaluate = true)` or `.copy(evaluate = true, gatedPresence = GatedPresence.Provided(Set("evaluate")))`.
     *
-    * terser lib/compress/index.js:220-275:
+    * The `toplevel <- !!(top_retain)` cross-default (index.js:267) is applied first, regardless of the `defaults` flag.
+    *
+    * terser lib/compress/index.js:220-278:
     * {{{
     *   if (options.defaults !== undefined && !options.defaults)
     *       false_by_default = true;
-    *   // ... each gated option defaults to `!false_by_default`
+    *   this.options = defaults(options, { arrows: !false_by_default, ... }, true);
+    *   // defaults() (utils/index.js): HOP(args, key) ? args[key] : defs[key]
     * }}}
     */
   def resolveDefaults(o: CompressorOptions): CompressorOptions = {
@@ -386,126 +462,110 @@ object CompressorOptions {
         o.copy(toplevel = ToplevelConfig(funcs = true, vars = true))
       else o
 
-    if (resolved.defaults) {
-      // defaults == true (or omitted) — no further resolution needed
-      resolved
-    } else {
-      val d = Defaults
-      val n = NoDefaults
+    // terser: false_by_default = (options.defaults === false).
+    val falseByDefault = !resolved.defaults
 
-      // Count how many gated fields already match NoDefaults vs Defaults.
-      // If the majority already match NoDefaults, the options were likely built
-      // via `NoDefaults.copy(...)` and should be left as-is; resolving would
-      // clobber any explicitly re-enabled passes (e.g. `NoDefaults.copy(evaluate
-      // = true)` would lose its `evaluate = true` because it matches Defaults).
-      var matchesNoDefaults = 0
-      var matchesDefaults   = 0
-      if (resolved.arrows == n.arrows) matchesNoDefaults += 1
-      if (resolved.arrows == d.arrows) matchesDefaults += 1
-      if (resolved.booleans == n.booleans) matchesNoDefaults += 1
-      if (resolved.booleans == d.booleans) matchesDefaults += 1
-      if (resolved.collapseVars == n.collapseVars) matchesNoDefaults += 1
-      if (resolved.collapseVars == d.collapseVars) matchesDefaults += 1
-      if (resolved.comparisons == n.comparisons) matchesNoDefaults += 1
-      if (resolved.comparisons == d.comparisons) matchesDefaults += 1
-      if (resolved.computedProps == n.computedProps) matchesNoDefaults += 1
-      if (resolved.computedProps == d.computedProps) matchesDefaults += 1
-      if (resolved.conditionals == n.conditionals) matchesNoDefaults += 1
-      if (resolved.conditionals == d.conditionals) matchesDefaults += 1
-      if (resolved.deadCode == n.deadCode) matchesNoDefaults += 1
-      if (resolved.deadCode == d.deadCode) matchesDefaults += 1
-      if (resolved.directives == n.directives) matchesNoDefaults += 1
-      if (resolved.directives == d.directives) matchesDefaults += 1
-      if (resolved.dropDebugger == n.dropDebugger) matchesNoDefaults += 1
-      if (resolved.dropDebugger == d.dropDebugger) matchesDefaults += 1
-      if (resolved.evaluate == n.evaluate) matchesNoDefaults += 1
-      if (resolved.evaluate == d.evaluate) matchesDefaults += 1
-      if (resolved.hoistProps == n.hoistProps) matchesNoDefaults += 1
-      if (resolved.hoistProps == d.hoistProps) matchesDefaults += 1
-      if (resolved.ifReturn == n.ifReturn) matchesNoDefaults += 1
-      if (resolved.ifReturn == d.ifReturn) matchesDefaults += 1
-      if (resolved.inline == n.inline) matchesNoDefaults += 1
-      if (resolved.inline == d.inline) matchesDefaults += 1
-      if (resolved.joinVars == n.joinVars) matchesNoDefaults += 1
-      if (resolved.joinVars == d.joinVars) matchesDefaults += 1
-      if (resolved.lhsConstants == n.lhsConstants) matchesNoDefaults += 1
-      if (resolved.lhsConstants == d.lhsConstants) matchesDefaults += 1
-      if (resolved.loops == n.loops) matchesNoDefaults += 1
-      if (resolved.loops == d.loops) matchesDefaults += 1
-      if (resolved.negateIife == n.negateIife) matchesNoDefaults += 1
-      if (resolved.negateIife == d.negateIife) matchesDefaults += 1
-      if (resolved.properties == n.properties) matchesNoDefaults += 1
-      if (resolved.properties == d.properties) matchesDefaults += 1
-      if (resolved.pureGetters == n.pureGetters) matchesNoDefaults += 1
-      if (resolved.pureGetters == d.pureGetters) matchesDefaults += 1
-      if (resolved.reduceFuncs == n.reduceFuncs) matchesNoDefaults += 1
-      if (resolved.reduceFuncs == d.reduceFuncs) matchesDefaults += 1
-      if (resolved.reduceVars == n.reduceVars) matchesNoDefaults += 1
-      if (resolved.reduceVars == d.reduceVars) matchesDefaults += 1
-      if (resolved.sequencesLimit == n.sequencesLimit) matchesNoDefaults += 1
-      if (resolved.sequencesLimit == d.sequencesLimit) matchesDefaults += 1
-      if (resolved.sideEffects == n.sideEffects) matchesNoDefaults += 1
-      if (resolved.sideEffects == d.sideEffects) matchesDefaults += 1
-      if (resolved.switches == n.switches) matchesNoDefaults += 1
-      if (resolved.switches == d.switches) matchesDefaults += 1
-      if (resolved.typeofs == n.typeofs) matchesNoDefaults += 1
-      if (resolved.typeofs == d.typeofs) matchesDefaults += 1
-      if (resolved.unused == n.unused) matchesNoDefaults += 1
-      if (resolved.unused == d.unused) matchesDefaults += 1
-
-      if (matchesNoDefaults > matchesDefaults) {
-        // The gated fields predominantly match NoDefaults — this was likely
-        // built via `NoDefaults.copy(...)`. Leave as-is to preserve any
-        // explicitly re-enabled passes.
-        resolved
-      } else {
-        // defaults == false and gated fields match Defaults: resolve each
-        // gated field from its default-on value to its default-off value.
-        //
-        // This mirrors terser's `false_by_default = true` + `!false_by_default`
-        // pattern (index.js:222-275): unset options resolve to their "off" value;
-        // explicitly-set options are preserved by the `defaults()` helper because
-        // the caller's value takes precedence over the default.
+    resolved.gatedPresence match {
+      case GatedPresence.Provided(names) =>
+        // Faithful terser HOP: present name -> keep caller value; absent name ->
+        // terser default (`!false_by_default`, or the per-field analog).
+        def boolDefault: Boolean = !falseByDefault
         resolved.copy(
-          arrows = if (resolved.arrows == d.arrows) n.arrows else resolved.arrows,
-          booleans = if (resolved.booleans == d.booleans) n.booleans else resolved.booleans,
-          collapseVars =
-            if (resolved.collapseVars == d.collapseVars) n.collapseVars else resolved.collapseVars,
-          comparisons =
-            if (resolved.comparisons == d.comparisons) n.comparisons else resolved.comparisons,
-          computedProps =
-            if (resolved.computedProps == d.computedProps) n.computedProps else resolved.computedProps,
-          conditionals =
-            if (resolved.conditionals == d.conditionals) n.conditionals else resolved.conditionals,
-          deadCode = if (resolved.deadCode == d.deadCode) n.deadCode else resolved.deadCode,
-          directives = if (resolved.directives == d.directives) n.directives else resolved.directives,
-          dropDebugger =
-            if (resolved.dropDebugger == d.dropDebugger) n.dropDebugger else resolved.dropDebugger,
-          evaluate = if (resolved.evaluate == d.evaluate) n.evaluate else resolved.evaluate,
-          hoistProps = if (resolved.hoistProps == d.hoistProps) n.hoistProps else resolved.hoistProps,
-          ifReturn = if (resolved.ifReturn == d.ifReturn) n.ifReturn else resolved.ifReturn,
-          inline = if (resolved.inline == d.inline) n.inline else resolved.inline,
-          joinVars = if (resolved.joinVars == d.joinVars) n.joinVars else resolved.joinVars,
-          lhsConstants =
-            if (resolved.lhsConstants == d.lhsConstants) n.lhsConstants else resolved.lhsConstants,
-          loops = if (resolved.loops == d.loops) n.loops else resolved.loops,
-          negateIife = if (resolved.negateIife == d.negateIife) n.negateIife else resolved.negateIife,
-          properties = if (resolved.properties == d.properties) n.properties else resolved.properties,
+          arrows = if (names("arrows")) resolved.arrows else boolDefault,
+          booleans = if (names("booleans")) resolved.booleans else boolDefault,
+          collapseVars = if (names("collapseVars")) resolved.collapseVars else boolDefault,
+          comparisons = if (names("comparisons")) resolved.comparisons else boolDefault,
+          computedProps = if (names("computedProps")) resolved.computedProps else boolDefault,
+          conditionals = if (names("conditionals")) resolved.conditionals else boolDefault,
+          deadCode = if (names("deadCode")) resolved.deadCode else boolDefault,
+          directives = if (names("directives")) resolved.directives else boolDefault,
+          dropDebugger = if (names("dropDebugger")) resolved.dropDebugger else boolDefault,
+          evaluate = if (names("evaluate")) resolved.evaluate else boolDefault,
+          hoistProps = if (names("hoistProps")) resolved.hoistProps else boolDefault,
+          ifReturn = if (names("ifReturn")) resolved.ifReturn else boolDefault,
+          // terser `inline: !false_by_default` (index.js:246) — later `true` -> level 3.
+          inline =
+            if (names("inline")) resolved.inline
+            else if (falseByDefault) InlineLevel.InlineDisabled
+            else InlineLevel.InlineFull,
+          joinVars = if (names("joinVars")) resolved.joinVars else boolDefault,
+          lhsConstants = if (names("lhsConstants")) resolved.lhsConstants else boolDefault,
+          loops = if (names("loops")) resolved.loops else boolDefault,
+          negateIife = if (names("negateIife")) resolved.negateIife else boolDefault,
+          properties = if (names("properties")) resolved.properties else boolDefault,
+          // terser `pure_getters: !false_by_default && "strict"` (index.js:258) — "strict"
+          // under defaults, falsy "" under defaults:false (optionBool maps "" -> false).
           pureGetters =
-            if (resolved.pureGetters == d.pureGetters) n.pureGetters else resolved.pureGetters,
-          reduceFuncs =
-            if (resolved.reduceFuncs == d.reduceFuncs) n.reduceFuncs else resolved.reduceFuncs,
-          reduceVars = if (resolved.reduceVars == d.reduceVars) n.reduceVars else resolved.reduceVars,
+            if (names("pureGetters")) resolved.pureGetters
+            else if (falseByDefault) ""
+            else "strict",
+          reduceFuncs = if (names("reduceFuncs")) resolved.reduceFuncs else boolDefault,
+          reduceVars = if (names("reduceVars")) resolved.reduceVars else boolDefault,
+          // terser `sequences: !false_by_default` (index.js:261) — SSG models the limit as
+          // Int: 800 (on-default) / 0 (off).
           sequencesLimit =
-            if (resolved.sequencesLimit == d.sequencesLimit) n.sequencesLimit
-            else resolved.sequencesLimit,
-          sideEffects =
-            if (resolved.sideEffects == d.sideEffects) n.sideEffects else resolved.sideEffects,
-          switches = if (resolved.switches == d.switches) n.switches else resolved.switches,
-          typeofs = if (resolved.typeofs == d.typeofs) n.typeofs else resolved.typeofs,
-          unused = if (resolved.unused == d.unused) n.unused else resolved.unused
+            if (names("sequencesLimit")) resolved.sequencesLimit
+            else if (falseByDefault) 0
+            else 800,
+          sideEffects = if (names("sideEffects")) resolved.sideEffects else boolDefault,
+          switches = if (names("switches")) resolved.switches else boolDefault,
+          typeofs = if (names("typeofs")) resolved.typeofs else boolDefault,
+          unused = if (names("unused")) resolved.unused else boolDefault
         )
-      }
+
+      case GatedPresence.Unspecified =>
+        if (resolved.defaults) {
+          // defaults == true (or omitted): the case-class defaults ARE terser's
+          // `!false_by_default` on-defaults, and any explicit override is already the
+          // field value — no resolution needed.
+          resolved
+        } else {
+          // defaults == false with no presence record: approximate presence per-field by
+          // value comparison against Defaults (a gated field still at its on-default is
+          // treated as unset -> off; a differing value is caller-set -> kept). This is a
+          // deterministic per-field resolution, not the deleted majority-match vote.
+          val d = Defaults
+          val n = NoDefaults
+          resolved.copy(
+            arrows = if (resolved.arrows == d.arrows) n.arrows else resolved.arrows,
+            booleans = if (resolved.booleans == d.booleans) n.booleans else resolved.booleans,
+            collapseVars =
+              if (resolved.collapseVars == d.collapseVars) n.collapseVars else resolved.collapseVars,
+            comparisons =
+              if (resolved.comparisons == d.comparisons) n.comparisons else resolved.comparisons,
+            computedProps =
+              if (resolved.computedProps == d.computedProps) n.computedProps else resolved.computedProps,
+            conditionals =
+              if (resolved.conditionals == d.conditionals) n.conditionals else resolved.conditionals,
+            deadCode = if (resolved.deadCode == d.deadCode) n.deadCode else resolved.deadCode,
+            directives = if (resolved.directives == d.directives) n.directives else resolved.directives,
+            dropDebugger =
+              if (resolved.dropDebugger == d.dropDebugger) n.dropDebugger else resolved.dropDebugger,
+            evaluate = if (resolved.evaluate == d.evaluate) n.evaluate else resolved.evaluate,
+            hoistProps = if (resolved.hoistProps == d.hoistProps) n.hoistProps else resolved.hoistProps,
+            ifReturn = if (resolved.ifReturn == d.ifReturn) n.ifReturn else resolved.ifReturn,
+            inline = if (resolved.inline == d.inline) n.inline else resolved.inline,
+            joinVars = if (resolved.joinVars == d.joinVars) n.joinVars else resolved.joinVars,
+            lhsConstants =
+              if (resolved.lhsConstants == d.lhsConstants) n.lhsConstants else resolved.lhsConstants,
+            loops = if (resolved.loops == d.loops) n.loops else resolved.loops,
+            negateIife = if (resolved.negateIife == d.negateIife) n.negateIife else resolved.negateIife,
+            properties = if (resolved.properties == d.properties) n.properties else resolved.properties,
+            pureGetters =
+              if (resolved.pureGetters == d.pureGetters) n.pureGetters else resolved.pureGetters,
+            reduceFuncs =
+              if (resolved.reduceFuncs == d.reduceFuncs) n.reduceFuncs else resolved.reduceFuncs,
+            reduceVars = if (resolved.reduceVars == d.reduceVars) n.reduceVars else resolved.reduceVars,
+            sequencesLimit =
+              if (resolved.sequencesLimit == d.sequencesLimit) n.sequencesLimit
+              else resolved.sequencesLimit,
+            sideEffects =
+              if (resolved.sideEffects == d.sideEffects) n.sideEffects else resolved.sideEffects,
+            switches = if (resolved.switches == d.switches) n.switches else resolved.switches,
+            typeofs = if (resolved.typeofs == d.typeofs) n.typeofs else resolved.typeofs,
+            unused = if (resolved.unused == d.unused) n.unused else resolved.unused
+          )
+        }
     }
   }
 }

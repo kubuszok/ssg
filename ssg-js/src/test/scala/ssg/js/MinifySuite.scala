@@ -10,6 +10,8 @@
 package ssg
 package js
 
+import lowlevel.Nullable
+
 import ssg.js.compress.CompressorOptions
 import ssg.js.parse.JsParseError
 import ssg.js.output.OutputOptions
@@ -260,7 +262,7 @@ final class MinifySuite extends munit.FunSuite {
       compress = false,
       mangle = ManglerOptions(toplevel = true, properties = true),
       toplevel = true,
-      nameCache = cache
+      nameCache = Nullable(cache)
     )
     Terser.minifyToString("const a_var = { a_prop: 'long' }", opts)
     assert(cache.vars.props.nonEmpty, s"vars cache should be populated: ${cache.vars.props}")
@@ -275,10 +277,10 @@ final class MinifySuite extends munit.FunSuite {
       compress = false,
       mangle = ManglerOptions(toplevel = true, properties = true),
       toplevel = true,
-      nameCache = cache
+      nameCache = Nullable(cache)
     )
     Terser.minifyToString("const a_var = { a_prop: 'long' }", opts)
-    assert(opts.nameCache != null)
+    assert(opts.nameCache.isDefined)
     assert(cache.props.props.contains("a_prop"), s"props cache should contain a_prop: ${cache.props.props}")
   }
 
@@ -302,7 +304,7 @@ final class MinifySuite extends munit.FunSuite {
   test("nameCache: should work with nameCache (vars persist)") {
     val cache  = new NameCache()
     val mangle = ManglerOptions(toplevel = true)
-    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = cache)
+    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = Nullable(cache))
     Terser.minifyToString("function helper(x){ return 3*x; }", opts)
     assert(cache.vars.props.contains("helper"), s"nameCache.vars should record helper: ${cache.vars.props}")
     val mapped = cache.vars.props("helper")
@@ -315,7 +317,7 @@ final class MinifySuite extends munit.FunSuite {
   test("nameCache: should avoid mangled names in cache (no collision across calls)") {
     val cache  = new NameCache()
     val mangle = ManglerOptions(toplevel = true, properties = true)
-    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = cache)
+    val opts   = MinifyOptions(compress = false, mangle = mangle, toplevel = true, nameCache = Nullable(cache))
     Terser.minifyToString("var i = { prop1: 1 };", opts)
     val firstMappings = cache.props.props.values.toSet
     Terser.minifyToString("var j = { prop2: 2, prop3: 3 };", opts)
@@ -343,7 +345,7 @@ final class MinifySuite extends munit.FunSuite {
       compress = false,
       mangle = ManglerOptions(toplevel = true, properties = true),
       toplevel = true,
-      nameCache = cache
+      nameCache = Nullable(cache)
     )
     val snippets = List(
       "function fn1(obj) { obj.prop = 1; obj.i = 2; }",
@@ -400,20 +402,22 @@ final class MinifySuite extends munit.FunSuite {
     val result = Terser.minify(
       simpleJs,
       MinifyOptions(
-        sourceMap = MinifySourceMapOptions(
-          content = simpleMap,
-          filename = "simple.min.js",
-          includeSources = true
+        sourceMap = Nullable(
+          MinifySourceMapOptions(
+            content = Nullable(simpleMap: ssg.js.sourcemap.SourceMapData | String),
+            filename = Nullable("simple.min.js"),
+            includeSources = true
+          )
         )
       )
     )
     val map = result.sourceMap
-    assert(map != null, "Expected source map output")
+    assert(map.isDefined, "Expected source map output")
     // test/mocha/minify.js:307-310 — map.file, sourcesContent.length, sourcesContent[0].
-    assertEquals(map.nn.file, "simple.min.js")
-    assertEquals(map.nn.sourcesContent.length, 1)
+    assertEquals(map.get.file, "simple.min.js")
+    assertEquals(map.get.sourcesContent.length, 1)
     assertEquals(
-      map.nn.sourcesContent(0),
+      map.get.sourcesContent(0),
       "let foo = x => \"foo \" + x;\nconsole.log(foo(\"bar\"));": String | Null
     )
   }
@@ -426,7 +430,7 @@ final class MinifySuite extends munit.FunSuite {
       Issue520Input,
       MinifyOptions(
         compress = ssg.js.compress.CompressorOptions(toplevel = ssg.js.compress.ToplevelConfig(funcs = true, vars = true)),
-        sourceMap = MinifySourceMapOptions(content = "inline", url = "inline")
+        sourceMap = Nullable(MinifySourceMapOptions(content = Nullable("inline": ssg.js.sourcemap.SourceMapData | String), url = Nullable("inline")))
       )
     )
     assertEquals(result.code + "\n", Issue520Output)
@@ -439,7 +443,7 @@ final class MinifySuite extends munit.FunSuite {
       Issue520Input,
       MinifyOptions(
         compress = ssg.js.compress.CompressorOptions(toplevel = ssg.js.compress.ToplevelConfig(funcs = true, vars = true)),
-        sourceMap = MinifySourceMapOptions(content = "inline", url = "inline")
+        sourceMap = Nullable(MinifySourceMapOptions(content = Nullable("inline": ssg.js.sourcemap.SourceMapData | String), url = Nullable("inline")))
       )
     )
     assertEquals(result.code + "\n", Issue520Output)
@@ -451,7 +455,9 @@ final class MinifySuite extends munit.FunSuite {
     val ex = intercept[IllegalArgumentException] {
       Terser.minifySeq(
         List(Issue520Input, Issue520Output),
-        MinifyOptions(sourceMap = MinifySourceMapOptions(content = "inline", url = "inline"))
+        MinifyOptions(
+          sourceMap = Nullable(MinifySourceMapOptions(content = Nullable("inline": ssg.js.sourcemap.SourceMapData | String), url = Nullable("inline")))
+        )
       )
     }
     assertEquals(ex.getMessage, "inline source map only works with singular input")
@@ -463,7 +469,7 @@ final class MinifySuite extends munit.FunSuite {
   test("sourceMapInline: should append source map to output") {
     val result = Terser.minify(
       "var a = function(foo) { return foo; };",
-      MinifyOptions(sourceMap = MinifySourceMapOptions(url = "inline"))
+      MinifyOptions(sourceMap = Nullable(MinifySourceMapOptions(url = Nullable("inline"))))
     )
     assertEquals(
       result.code,
@@ -554,7 +560,7 @@ final class MinifySuite extends munit.FunSuite {
   test("enclose: should work alongside wrap") {
     val result = Terser.minifyToString(
       encloseSrc,
-      MinifyOptions(compress = false, mangle = false, enclose = "window,undefined:window", wrap = "exports")
+      MinifyOptions(compress = false, mangle = false, enclose = "window,undefined:window", wrap = Nullable("exports"))
     )
     assertEquals(
       result,

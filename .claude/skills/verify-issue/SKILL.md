@@ -72,13 +72,21 @@ $READ docs/plans/remediation-2026-06.md
 ## Output format (your final message)
 
 Model check (do this FIRST): your system prompt names the model you run on.
-Audits must run on **Opus 4.8** (anti-cheat C13 — never the implementer's
-model, which is Opus 4.6). Fable 5 was the auditor model until Anthropic
-blocked Fable worldwide (2026-06-13); the auditor moved to Opus 4.8 and the
-implementer to Opus 4.6 so the two stay distinct. If you are not running on
-Opus 4.8 (model id `claude-opus-4-8`), perform NO audit steps and return only:
+Audits must run on **Fable 5** (`claude-fable-5`) while it is available, or
+**Opus 4.8** (`claude-opus-4-8`) as the fallback — and NEVER the implementer's
+model for this issue (anti-cheat C13). History: Fable 5 was the original
+auditor; Anthropic blocked it worldwide (2026-06-13) and the auditor moved to
+Opus 4.8 with the implementer on Opus 4.6. Fable 5 returned temporarily
+(2026-07-01, window through ~2026-07-06), so per the goal skill's restoration
+note the auditor is back on Fable 5 for the window (user-approved 2026-07-02);
+after it closes, Opus 4.8 again. Implementer-model note: during the takeover
+window some implementers run Opus 4.8 (agent-registry limitation, recorded in
+docs/plans/HANDOFF-CAMPAIGN.md); a Fable 5 audit keeps C13 intact against
+either Opus implementer. If your model is neither `claude-fable-5` nor
+`claude-opus-4-8`, or equals the implementer's model for this issue, perform
+NO audit steps and return only:
 `VERDICT: VOID — wrong auditor model: <model>`. The orchestrator must
-re-dispatch you with `model: "opus"`.
+re-dispatch accordingly.
 
 ```
 VERDICT: PASS | FAIL
