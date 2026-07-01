@@ -170,7 +170,9 @@ final class NoteSubroutineHandDrawnIss1204Suite extends FunSuite {
     assert(pathDescriptors(foldOracle).nonEmpty, "sanity: fold oracle must produce paths")
   }
 
-  test("note handDrawn: opts are the note-specific ones (roughness 0.7, fillWeight 3, fill=noteBkg, stroke=noteBorder), NOT userNodeOverrides") {
+  test(
+    "note handDrawn: opts are the note-specific ones (roughness 0.7, fillWeight 3, fill=noteBkg, stroke=noteBorder), NOT userNodeOverrides"
+  ) {
     val tv     = theme(noteBkg = "#fff5ad", noteBorder = "#aaaa33")
     val seed   = 42
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = seed, themeVariables = tv)
@@ -261,7 +263,11 @@ final class NoteSubroutineHandDrawnIss1204Suite extends FunSuite {
 
     // Exactly one node-shape (rect) group + two subroutine-border (line) groups grafted.
     assertEquals(built.findAllByClass("node-shape").size, 1, "hand-drawn subroutine grafts exactly one rect (node-shape) group")
-    assertEquals(built.findAllByClass("subroutine-border").size, 2, "hand-drawn subroutine grafts exactly two line (subroutine-border) groups")
+    assertEquals(
+      built.findAllByClass("subroutine-border").size,
+      2,
+      "hand-drawn subroutine grafts exactly two line (subroutine-border) groups"
+    )
     assertEquals(subRectGroup(built).tagName, "g")
     assert(subLineGroups(built).forall(_.tagName == "g"))
 
@@ -275,8 +281,8 @@ final class NoteSubroutineHandDrawnIss1204Suite extends FunSuite {
     val config = ShapeConfig(x = 50, y = 40, width = 100, height = 60, look = "handDrawn", handDrawnSeed = 42, themeVariables = tv)
     val built  = renderSubroutine(config)
 
-    val kids    = built.children.toVector
-    val rectIdx = kids.indexWhere(_.hasClass("node-shape"))
+    val kids       = built.children.toVector
+    val rectIdx    = kids.indexWhere(_.hasClass("node-shape"))
     val borderIdxs = kids.zipWithIndex.collect { case (c, i) if c.hasClass("subroutine-border") => i }
     assert(rectIdx >= 0, s"rect group must be a direct child (rectIdx=$rectIdx)")
     assertEquals(borderIdxs.size, 2, s"two line groups must be direct children, got $borderIdxs")
