@@ -80,15 +80,24 @@ final class EdgeHandDrawnIss1204Suite extends FunSuite {
     // Exactly one sketch <path>, and it is nested inside the rough <g> (not a direct child).
     val paths = built.findAllByTag("path").toVector
     assertEquals(paths.size, 1, "hand-drawn edge must emit exactly one rough sketch <path>")
-    assert(!built.children.toVector.exists(_.tagName == "path"), "the sketch <path> must be nested in the rough <g>, not a direct child")
+    assert(
+      !built.children.toVector.exists(_.tagName == "path"),
+      "the sketch <path> must be nested in the rough <g>, not a direct child"
+    )
 
     // Its `d` is the rough sketch of the edge's OWN pathData, NOT the plain interpolated `d`.
     val d = edgePath(built).attr("d").getOrElse("")
-    assertEquals(d, roughEdgeD(plainD("basis"), seed = 7), "the sketch `d` must be Rough.svg().path(<edge pathData>, roughness 0.3, seed) — the geometry-consistency reuse")
+    assertEquals(
+      d,
+      roughEdgeD(plainD("basis"), seed = 7),
+      "the sketch `d` must be Rough.svg().path(<edge pathData>, roughness 0.3, seed) — the geometry-consistency reuse"
+    )
     assertNotEquals(d, plainD("basis"), "hand-drawn edge must NOT be the plain interpolated `d`")
   }
 
-  test("edge handDrawn: sketch path keeps stroke, stroke-width, marker-start/end, transition class; group keeps id + classes") {
+  test(
+    "edge handDrawn: sketch path keeps stroke, stroke-width, marker-start/end, transition class; group keeps id + classes"
+  ) {
     val style = EdgeStyle(
       id = "L-A-B-0",
       stroke = "#333",
@@ -109,8 +118,16 @@ final class EdgeHandDrawnIss1204Suite extends FunSuite {
     assertEquals(path.attr("fill").getOrElse(""), "none", "hand-drawn edge fill must be none")
 
     // Markers preserved (arrowheads must still attach to the sketch path endpoints).
-    assertEquals(path.attr("marker-start").getOrElse(""), ArrowMarkers.markerUrl(MarkerType.Circle, markerId), "marker-start must be preserved on the sketch path")
-    assertEquals(path.attr("marker-end").getOrElse(""), ArrowMarkers.markerUrl(MarkerType.Normal, markerId), "marker-end must be preserved on the sketch path")
+    assertEquals(
+      path.attr("marker-start").getOrElse(""),
+      ArrowMarkers.markerUrl(MarkerType.Circle, markerId),
+      "marker-start must be preserved on the sketch path"
+    )
+    assertEquals(
+      path.attr("marker-end").getOrElse(""),
+      ArrowMarkers.markerUrl(MarkerType.Normal, markerId),
+      "marker-end must be preserved on the sketch path"
+    )
 
     // strokeClasses += ' transition'
     assert(path.hasClass("transition"), "hand-drawn edge sketch path must carry the `transition` class")
@@ -172,7 +189,15 @@ final class EdgeHandDrawnIss1204Suite extends FunSuite {
   // ──────────────────────────────────────────────────────────────────────────
 
   test("edge classic look: emits the plain interpolated <path> as a direct child, no rough graft") {
-    val style = EdgeStyle(id = "L-A-B-0", stroke = "#333", strokeWidth = 1.5, cssClass = "edge-thickness-normal edge-pattern-solid", curve = "basis", look = "classic", markerEnd = Nullable(MarkerType.Normal))
+    val style = EdgeStyle(
+      id = "L-A-B-0",
+      stroke = "#333",
+      strokeWidth = 1.5,
+      cssClass = "edge-thickness-normal edge-pattern-solid",
+      curve = "basis",
+      look = "classic",
+      markerEnd = Nullable(MarkerType.Normal)
+    )
     val built = render(style)
 
     // The classic path is a DIRECT child <path> of the edge group (no intermediate rough <g>).
