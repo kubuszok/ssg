@@ -48,7 +48,11 @@ class TemplateContext(
 
   /** Creates a child context for nested scopes. */
   private def this(parentCtx: TemplateContext) =
-    this(parentCtx.parser, parentCtx, new LinkedHashMap[String, DataView](), parentCtx.errorsList)
+    // liqp TemplateContext.java:52 — each context (including nested child scopes created via
+    // newChildContext) owns a fresh error list; nested errors are propagated back to the parent
+    // explicitly by the enclosing block (e.g. For.java:73-75). Sharing the parent's list here would
+    // double-count every nested error once the block copies it up (ISS-1258).
+    this(parentCtx.parser, parentCtx, new LinkedHashMap[String, DataView](), new ArrayList[Exception]())
 
   /** Creates a new child context for nested scopes (blocks, loops). */
   def newChildContext(): TemplateContext =
