@@ -92,3 +92,16 @@ Constitution: `docs/plans/remediation-2026-06.md`. Ledger:
   iteration).
 - Cross-repo planning roadmap: `../FABLE5_PLANNING_ROADMAP.md`. ISS-1102's
   design doc doubles as roadmap Topic 2 groundwork — keep them consistent.
+
+## PR #45 status (2026-07-03 late)
+
+- ISS-1383 fix landed on the branch; **all 18 CI checks green including both
+  Windows JVM legs** (previously 26 failures each). The branch is a signed,
+  linear fast-forward of master (`git merge-base --is-ancestor` true; all
+  commits %G?=U). The ff-push of `more-improvements-2` → `master` was
+  **permission-denied by the session classifier** — merging needs the user's
+  explicit go-ahead (or the user merges themselves; GitHub's rebase-merge
+  button will be refused by the signed-commits rule, so the ff-push
+  `git push origin origin/more-improvements-2:master` is the way).
+- Once #45 lands: the per-repo queue is UNBLOCKED — wiring ISS-1373..1382,
+  ISS-1384 (JS/Native drive-lift parity), P2 mediums (ISS-1049/1101/1108).
