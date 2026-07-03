@@ -72,19 +72,21 @@ $READ docs/plans/remediation-2026-06.md
 ## Output format (your final message)
 
 Model check (do this FIRST): your system prompt names the model you run on.
-Audits must run on **Fable 5** (`claude-fable-5`) while it is available, or
-**Opus 4.8** (`claude-opus-4-8`) as the fallback — and NEVER the implementer's
-model for this issue (anti-cheat C13). History: Fable 5 was the original
-auditor; Anthropic blocked it worldwide (2026-06-13) and the auditor moved to
-Opus 4.8 with the implementer on Opus 4.6. Fable 5 returned temporarily
-(2026-07-01, window through ~2026-07-06), so per the goal skill's restoration
-note the auditor is back on Fable 5 for the window (user-approved 2026-07-02);
-after it closes, Opus 4.8 again. Implementer-model note: during the takeover
-window some implementers run Opus 4.8 (agent-registry limitation, recorded in
-docs/plans/HANDOFF-CAMPAIGN.md); a Fable 5 audit keeps C13 intact against
-either Opus implementer. If your model is neither `claude-fable-5` nor
-`claude-opus-4-8`, or equals the implementer's model for this issue, perform
-NO audit steps and return only:
+Two-tier routing (user decision 2026-07-03 — Fable-per-review exhausts session
+limits): PER-ISSUE audits like this one run **Opus 4.8** (`claude-opus-4-8`);
+**Fable 5** (`claude-fable-5`) is reserved for MILESTONE reviews — a whole
+milestone already landed and Opus-approved (those are dispatched by the
+orchestrator with an explicit milestone-review prompt, not this skill). Either
+model is a valid auditor for this skill; anything else is not. C13 note: when
+the implementer for this issue also ran Opus 4.8, the same-model-void rule is
+SUSPENDED for per-issue audits (user decision; compensations: fresh context,
+full adversarial checklist, orchestrator re-runs every gate, Fable milestone
+review as the backstop) — prefer the Opus 4.6 implementer pin when the project
+agent registry allows it, restoring genuine diversity. History: Fable was the
+original auditor (blocked worldwide 2026-06-13; restored 2026-07-02 for the
+window through ~2026-07-06; demoted to milestone-only 2026-07-03 for token
+economy). If your model is neither `claude-opus-4-8` nor `claude-fable-5`,
+perform NO audit steps and return only:
 `VERDICT: VOID — wrong auditor model: <model>`. The orchestrator must
 re-dispatch accordingly.
 

@@ -48,7 +48,17 @@ Constitution: `docs/plans/remediation-2026-06.md`. Ledger:
   ISS-1049 (.fail citation umbrella — biggest ratchet target), ISS-1101
   (Nullable sweep), ISS-1108 (codecov path — needs CI-verified canary DoD).
 
-## Model routing — DEVIATION IN EFFECT (record in resolve notes)
+## Model routing — TWO-TIER POLICY (user decision 2026-07-03)
+
+- Fable-per-review exhausts session limits. Per-issue audits + reproducers +
+  gates run **Opus 4.8** (`model: "opus"`); **Fable 5** is reserved for
+  MILESTONE reviews — a whole milestone landed and already Opus-approved.
+  Same-model-void (C13) is SUSPENDED for per-issue audits when the
+  implementer is also Opus 4.8; the Fable milestone review is the diversity
+  backstop. verify-issue SKILL.md + remediation-2026-06.md §2/C13 updated
+  2026-07-03. The 2026-07-02 Fable-auditor restoration below is superseded.
+
+## Model routing — earlier deviation record (historical)
 
 - The plan pins implementer = Opus 4.6 via the project agent
   `.claude/agents/issue-implementer.md` frontmatter. This session's Agent
