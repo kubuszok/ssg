@@ -98,12 +98,27 @@ object FilePathPlatform {
 
   /** Pure-string rendering matching java.nio.file.Paths.get(path).toString: collapse duplicate separators and drop a trailing separator (the root "/" keeps its single separator), preserving "." /
     * ".." segments (java.nio does NOT resolve them here -- Paths.get("a/../b").toString == "a/../b"). On posix, backslash is a legal filename char (not a separator) and is preserved as-is (ISS-1128).
+    *
+    * A native Windows drive-absolute input ("C:\\a" or "C:/a", no leading slash) is first lifted into the model form "/C:/a" (ISS-1383): its backslash separators become forward slashes and a leading
+    * '/' is prefixed so the path is POSIX-absolute, matching the "/C:/x" form that cwd and fromNioPath already produce. A bare colon or bare backslash (ISS-1128: "a:b", "a\\b") is NOT a
+    * drive-absolute form and is preserved unchanged.
     */
   private def renderPath(p: String): String = {
-    val abs  = p.startsWith("/")
-    val body = p.split("/").iterator.filter(_.nonEmpty).mkString("/")
+    val lifted = if (isNativeDriveAbsolute(p)) "/" + p.replace('\\', '/') else p
+    val abs    = lifted.startsWith("/")
+    val body   = lifted.split("/").iterator.filter(_.nonEmpty).mkString("/")
     if (abs) "/" + body else body
   }
+
+  /** True if `p` is a native Windows drive-absolute input ("C:\\..." or "C:/...", with NO leading slash): a single drive letter, then ':' at index 1, then a '/' or '\\' separator at index 2. This is
+    * the raw form java.nio.Paths.get parses as absolute on Windows (Paths.get("C:\\a").isAbsolute == true); FilePath.of must lift it into the model's "/C:/..." form (ISS-1383). Requiring the
+    * separator at index 2 keeps a bare-colon filename ("a:b") and a drive-relative input ("C:a") out (ISS-1128 parity), and the leading letter+':' never matches a POSIX path nor the already-lifted
+    * "/C:/x" model form.
+    */
+  private[io] def isNativeDriveAbsolute(p: String): Boolean =
+    p.length >= 3 && p.charAt(1) == ':' && (p.charAt(2) == '/' || p.charAt(2) == '\\') && {
+      val c = p.charAt(0); (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+    }
 
   /** POSIX dirname: everything before the last '/'; root stays '/'; no-slash returns ".". */
   private[io] def posixDirname(p: String): String = {
