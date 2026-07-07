@@ -28,8 +28,6 @@ import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.minify.Minifier
 import ssg.sass.Compile
-import ssg.sass.CompileResult
-import ssg.sass.SassException
 import ssg.sass.Syntax
 
 import java.util.{ HashMap => JHashMap }
@@ -170,42 +168,42 @@ object Site {
         val pageDataView = buildPageDataView(frontMatter, relativePath, pageUrl)
 
         if (isSass) {
-          // Sass route: compile the body through ssg-sass Compile.compileString
-          // (design section 2 — .scss/.sass with front matter -> sass converter -> .css).
-          // The body (after front matter stripping) is the raw SCSS/Sass source.
-          // NO markdown step, NO liquid step for sass files.
+          // Sass route: compile the body through the ssg-sass DiagResult facade
+          // Compile.compileStringResult (design section 2 — .scss/.sass with front
+          // matter -> sass converter -> .css). The body (after front matter
+          // stripping) is the raw SCSS/Sass source. NO markdown step, NO liquid
+          // step for sass files.
+          //
+          // ISS-1382 (error-contracts.md section 2.10 step 3): consume the shared
+          // envelope instead of catching SassException here. The facade catches the
+          // specific SassException hierarchy (SassFormatException for parse errors,
+          // SassRuntimeException for evaluation errors) and turns it into one
+          // Severity.Error diagnostic carrying the mapped FileSpan source position
+          // and the machine-readable code; success carries CompileResult.warnings as
+          // Severity.Warning diagnostics. Each diagnostic is embedded verbatim into a
+          // BuildDiagnostic, so positions and codes flow through for free. Failure
+          // and success both keep the "record diagnostic, continue" contract; a
+          // non-SassException (genuine bug) still propagates from the facade.
           val sassSyntax = if (extLower == ".sass") Syntax.Sass else Syntax.Scss
-          try {
-            val result: CompileResult = Compile.compileString(body, syntax = sassSyntax)
+          Compile
+            .compileStringResult(body, syntax = sassSyntax)
+            .fold(
+              diags =>
+                diags.foreach { diag =>
+                  diagnosticsBuilder += BuildDiagnostic(file = filePath, stage = BuildStage.Sass, diagnostic = diag)
+                },
+              (result, diags) => {
+                // Record any sass compilation warnings (design section 7:
+                // CompileResult.warnings -> Warning) — surfaced by the facade.
+                diags.foreach { diag =>
+                  diagnosticsBuilder += BuildDiagnostic(file = filePath, stage = BuildStage.Sass, diagnostic = diag)
+                }
 
-            // Record any sass compilation warnings as Warning diagnostics
-            // (design section 7: CompileResult.warnings -> Warning).
-            result.warnings.foreach { warning =>
-              diagnosticsBuilder += BuildDiagnostic(
-                file = filePath,
-                stage = BuildStage.Sass,
-                severity = Severity.Warning,
-                message = warning
-              )
-            }
-
-            // Write the compiled CSS output.
-            OutputWriter.write(destAbs, outputRelativePath, result.css)
-            writtenBuilder += destAbs.resolve(outputRelativePath)
-          } catch {
-            // Catch the specific SassException type thrown by the sass engine
-            // (SassFormatException for parse errors, SassRuntimeException for
-            // evaluation errors — both extend SassException).
-            // Per design section 7: targeted engine-error catch, not blanket Exception.
-            case e: SassException =>
-              diagnosticsBuilder += BuildDiagnostic(
-                file = filePath,
-                stage = BuildStage.Sass,
-                severity = Severity.Error,
-                message = e.getMessage,
-                cause = Nullable(e)
-              )
-          }
+                // Write the compiled CSS output.
+                OutputWriter.write(destAbs, outputRelativePath, result.css)
+                writtenBuilder += destAbs.resolve(outputRelativePath)
+              }
+            )
         } else {
           // Page route: Liquid -> Markdown (if .md/.markdown) -> Layout chain.
           try {
