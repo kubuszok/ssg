@@ -4,6 +4,7 @@
 package ssg
 package sass
 
+import ssg.commons.{ DiagResult, Diagnostic, Severity }
 import ssg.commons.io.{ FileOps, FilePathPlatform }
 import ssg.sass.importer.{ FilesystemImporter, Importer, ImporterFileUtils }
 import ssg.sass.visitor.OutputStyle
@@ -38,4 +39,20 @@ object CompileFile {
       url = Nullable(fileUrl)
     )
   }
+
+  /** Compile a Sass/SCSS file at the given path, returning a diagnostics envelope (ISS-1375).
+    *
+    * The JVM mirror of [[Compile.compileStringResult]] (docs/architecture/error-contracts.md section 2.3): it delegates to [[compile]] and wraps it the same way — a caught `SassException` becomes an
+    * `Severity.Error` failure with the span-mapped position and subclass code, a successful compile becomes a success carrying its warnings as `Severity.Warning` diagnostics. The catch is SPECIFIC to
+    * the module-native `SassException` (section 1.2 rule 3); the file-reading `compile` above stays unchanged.
+    */
+  def compileResult(path: String, style: OutputStyle = OutputStyle.Expanded): DiagResult[CompileResult] =
+    try
+      Compile.resultWithWarnings(compile(path, style))
+    catch {
+      case e: SassException =>
+        DiagResult.failure(
+          Diagnostic.fromThrowable(Severity.Error, "ssg-sass", e, position = Some(Compile.spanPosition(e.span)), code = Some(Compile.codeFor(e)))
+        )
+    }
 }
