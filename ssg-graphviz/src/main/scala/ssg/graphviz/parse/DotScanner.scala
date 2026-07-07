@@ -99,8 +99,10 @@ class DotScanner(input: String) {
         }
     }
     if (pos >= input.length) {
-      throw new IllegalArgumentException(
-        s"Unterminated block comment starting at line $startLine, col $startCol"
+      throw new DotParseException(
+        s"Unterminated block comment starting at line $startLine, col $startCol",
+        startLine,
+        startCol
       )
     }
   }
@@ -157,8 +159,10 @@ class DotScanner(input: String) {
         } else if (isIdStart(ch)) {
           readIdentifier(startLine, startCol)
         } else {
-          throw new IllegalArgumentException(
-            s"Unexpected character '${ch}' at line $startLine, col $startCol"
+          throw new DotParseException(
+            s"Unexpected character '${ch}' at line $startLine, col $startCol",
+            startLine,
+            startCol
           )
         }
     }
@@ -206,8 +210,10 @@ class DotScanner(input: String) {
     }
     val value = sb.toString
     if (value == "-" || value == ".") {
-      throw new IllegalArgumentException(
-        s"Invalid number '$value' at line $startLine, col $startCol"
+      throw new DotParseException(
+        s"Invalid number '$value' at line $startLine, col $startCol",
+        startLine,
+        startCol
       )
     }
     Token(TokenType.Number, value, startLine, startCol)
@@ -239,8 +245,10 @@ class DotScanner(input: String) {
               val continuation = readQuotedString(line, col)
               sb.append(continuation.value)
             } else {
-              throw new IllegalArgumentException(
-                s"Expected quoted string after '+' at line $line, col $col"
+              throw new DotParseException(
+                s"Expected quoted string after '+' at line $line, col $col",
+                line,
+                col
               )
             }
           }
@@ -277,8 +285,10 @@ class DotScanner(input: String) {
       }
     }
     if (depth != 0) {
-      throw new IllegalArgumentException(
-        s"Unterminated HTML string starting at line $startLine, col $startCol"
+      throw new DotParseException(
+        s"Unterminated HTML string starting at line $startLine, col $startCol",
+        startLine,
+        startCol
       )
     }
     Token(TokenType.HtmlString, sb.toString, startLine, startCol)

@@ -30,8 +30,10 @@ class DotParser(tokens: Array[Token]) {
     expectValue("}")
     if (peek().tpe != TokenType.Eof) {
       val t = peek()
-      throw new IllegalArgumentException(
-        s"Unexpected token '${t.value}' after graph at line ${t.line}, col ${t.col}"
+      throw new DotParseException(
+        s"Unexpected token '${t.value}' after graph at line ${t.line}, col ${t.col}",
+        t.line,
+        t.col
       )
     }
     DotGraph(strict, graphType, id, stmts)
@@ -107,7 +109,7 @@ class DotParser(tokens: Array[Token]) {
       case "graph" => DotAttrTarget.Graph
       case "node"  => DotAttrTarget.Node
       case "edge"  => DotAttrTarget.Edge
-      case _       => throw new IllegalArgumentException(s"Unexpected attr target '${t.value}' at line ${t.line}, col ${t.col}")
+      case _       => throw new DotParseException(s"Unexpected attr target '${t.value}' at line ${t.line}, col ${t.col}", t.line, t.col)
     }
     val attrs = parseAttrList()
     DotAttrStmt(target, attrs)
@@ -278,8 +280,10 @@ class DotParser(tokens: Array[Token]) {
     if (t.tpe == TokenType.Identifier && t.value.equalsIgnoreCase(kw)) {
       advance()
     } else {
-      throw new IllegalArgumentException(
-        s"Expected '$kw' but found '${t.value}' at line ${t.line}, col ${t.col}"
+      throw new DotParseException(
+        s"Expected '$kw' but found '${t.value}' at line ${t.line}, col ${t.col}",
+        t.line,
+        t.col
       )
     }
   }
@@ -289,8 +293,10 @@ class DotParser(tokens: Array[Token]) {
     if (t.value == value) {
       advance()
     } else {
-      throw new IllegalArgumentException(
-        s"Expected '$value' but found '${t.value}' at line ${t.line}, col ${t.col}"
+      throw new DotParseException(
+        s"Expected '$value' but found '${t.value}' at line ${t.line}, col ${t.col}",
+        t.line,
+        t.col
       )
     }
   }
@@ -320,8 +326,10 @@ class DotParser(tokens: Array[Token]) {
       advance()
       t.value
     } else {
-      throw new IllegalArgumentException(
-        s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}"
+      throw new DotParseException(
+        s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}",
+        t.line,
+        t.col
       )
     }
   }
@@ -333,8 +341,10 @@ class DotParser(tokens: Array[Token]) {
       advance()
       (t.value, t.tpe == TokenType.HtmlString)
     } else {
-      throw new IllegalArgumentException(
-        s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}"
+      throw new DotParseException(
+        s"Expected identifier but found '${t.value}' (${t.tpe}) at line ${t.line}, col ${t.col}",
+        t.line,
+        t.col
       )
     }
   }
