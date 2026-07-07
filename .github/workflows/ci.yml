@@ -84,9 +84,17 @@ jobs:
         if: always()
         uses: codecov/codecov-action@v7
         with:
-          files: target/scala-3.8.4/scoverage-report/scoverage.xml
+          # sbt 2.0's target/out layout: `sbt ci-jvm-3` runs `coverageAggregate`,
+          # which writes the merged report to the ROOT project's crossTarget at
+          # target/out/jvm/scala-<ver>/ssg-root/scoverage-report/scoverage.xml —
+          # NOT the classic target/scala-<ver>/... path (which never existed here,
+          # so coverage silently never uploaded). The scala-* glob keeps this
+          # correct across Scala-version bumps; disable_search + fail_ci_if_error
+          # make a MISSING report hard-fail CI instead of silently passing.
+          files: target/out/jvm/scala-*/ssg-root/scoverage-report/scoverage.xml
+          disable_search: true
           flags: ${{ matrix.label }}
-          fail_ci_if_error: false
+          fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
