@@ -20,6 +20,7 @@ package mermaid
 
 import lowlevel.Nullable
 
+import ssg.commons.{ DiagResult, Diagnostic, Severity, SourcePosition }
 import ssg.data.DataView
 
 import ssg.mermaid.diagrams.architecture.ArchitectureDiagram
@@ -98,6 +99,108 @@ object Mermaid {
     *   SVG markup string; on a parse failure (or an undetected diagram type) the error-diagram SVG, unless `suppressErrorRendering` is set (then the [[ssg.mermaid.parse.ParseException]] propagates)
     */
   def render(input: String, config: MermaidConfig = MermaidConfig()): String = {
+    // The frontmatter extraction, text-size guard, type detection, and
+    // effective-config assembly are shared verbatim with `renderResult` via
+    // `prepare`, so both entry points see byte-identical inputs before dispatch.
+    val Prepared(text, effectiveConfig, diagramType, title) = prepare(input, config)
+
+    // ISS-1068: unified failure contract, faithful to mermaidAPI.ts:393-401.
+    // A parse failure in any per-type renderer surfaces as a `ParseException`;
+    // upstream catches it and renders the ERROR diagram
+    // (`diag = Diagram.fromText('error')`) instead of propagating, recording the
+    // exception — UNLESS `config.suppressErrorRendering` is set, in which case
+    // the exception is rethrown (mermaidAPI.ts:395-397). SSG catches the
+    // SPECIFIC `ParseException` (not a blanket `Exception`/`Throwable`) so any
+    // OTHER exception type — a genuine renderer bug — still propagates rather
+    // than being masked as a syntax error (faithful deviation from upstream's
+    // broad catch; see the render scaladoc).
+    try
+      dispatchKnown(text, effectiveConfig, diagramType, title).toOption match {
+        case Some(svg) => svg
+        case None      =>
+          // Unknown/undetected diagram type. In upstream `detectType` throws
+          // `UnknownDiagramError` inside `Diagram.fromText` (detectType.ts:48),
+          // which is caught at mermaidAPI.ts:393-401 and routed to the error
+          // diagram (or rethrown under `suppressErrorRendering`). We unify the
+          // contract by treating it as a parse failure with the same message,
+          // rather than emitting an in-band HTML comment.
+          val message = s"No diagram type detected matching given configuration for text: $text"
+          if (effectiveConfig.suppressErrorRendering) {
+            throw new ParseException(message, 0, 0)
+          } else {
+            ErrorDiagram.renderError(message, effectiveConfig)
+          }
+      }
+    catch {
+      // mermaidAPI.ts:395-401 — a parse failure records the exception and
+      // renders the error diagram; `suppressErrorRendering` rethrows instead.
+      case e: ParseException =>
+        if (effectiveConfig.suppressErrorRendering) {
+          throw e
+        } else {
+          ErrorDiagram.renderError(e.getMessage, effectiveConfig)
+        }
+    }
+  }
+
+  /** Renders a Mermaid diagram to SVG, returning a diagnostics envelope (ISS-1379).
+    *
+    * Additive facade over [[render]] per docs/architecture/error-contracts.md section 2.7: it shares [[render]]'s exact effective-config computation (via [[prepare]]) and replicates the dispatch
+    * `try` (via [[dispatchKnown]]), wrapping the outcome in the shared [[ssg.commons.DiagResult]] envelope instead of the legacy throw-or-error-diagram contract. [[render]]'s ISS-1068 contract
+    * (test-locked by `MermaidIss1068Suite`), the `ParseException` fields, the `ErrorDiagram` markup, and `suppressErrorRendering` semantics are all unchanged.
+    *
+    *   - A caught `ParseException` becomes a `Severity.Error` [[ssg.commons.Diagnostic]] (component `"ssg-mermaid"`, `code = "parse-error"`, the native exception preserved as `cause`, position mapped
+    *     from the exception's 1-based `line`/`col` verbatim per the section 1.3 mermaid row — NO `+1`). Under `suppressErrorRendering` (consulted on the EFFECTIVE config, after frontmatter/init
+    *     merging) no substitute output is requested, so the result is [[ssg.commons.DiagResult.failure]]; otherwise it is [[ssg.commons.DiagResult.degraded]] carrying
+    *     `ErrorDiagram.renderError(e.getMessage, effectiveConfig)` — byte-equal to [[render]]'s error SVG (the adapter invariant). The catch is SPECIFIC to the module-native `ParseException` (section
+    *     1.2 rule 3): draw-phase exceptions (`IllegalStateException`, `IndexOutOfBoundsException`, …) stay uncaught, exactly as in [[render]].
+    *   - An undetected [[DiagramType.Unknown]] becomes [[ssg.commons.DiagResult.degraded]] carrying the unknown-type error SVG plus a direct `Diagnostic.error` coded `"unknown-diagram-type"` (no
+    *     native exception behind it, so no `cause` and no `position`). This mirrors the ISS-1068 unknown-type path routing to the error diagram.
+    *
+    * @param input
+    *   the raw Mermaid diagram text
+    * @param config
+    *   optional configuration overrides
+    * @return
+    *   a clean success carrying the SVG, a degraded result carrying the error-diagram SVG plus its diagnostic, or (only under `suppressErrorRendering` on a parse failure) a failure carrying the
+    *   `"parse-error"` diagnostic
+    */
+  def renderResult(input: String, config: MermaidConfig = MermaidConfig()): DiagResult[String] = {
+    val Prepared(text, effectiveConfig, diagramType, title) = prepare(input, config)
+
+    try
+      dispatchKnown(text, effectiveConfig, diagramType, title).toOption match {
+        case Some(svg) => DiagResult.success(svg)
+        case None      =>
+          // Unknown/undetected diagram type — the section 2.7 unknown-type path:
+          // a degraded result carrying the error-diagram SVG plus a direct
+          // `"unknown-diagram-type"` diagnostic (no ParseException behind it, so
+          // no cause and no position).
+          val message = s"No diagram type detected matching given configuration for text: $text"
+          DiagResult.degraded(
+            ErrorDiagram.renderError(message, effectiveConfig),
+            Diagnostic.error("ssg-mermaid", message, code = Some("unknown-diagram-type"))
+          )
+      }
+    catch {
+      // section 2.7 — the caught ParseException becomes one Severity.Error
+      // diagnostic; `suppressErrorRendering` means no substitute output was
+      // requested (failure), otherwise the error diagram rides along (degraded).
+      case e: ParseException =>
+        val diag =
+          Diagnostic.fromThrowable(Severity.Error, "ssg-mermaid", e, position = Some(SourcePosition.lineColumn(e.line, e.col)), code = Some("parse-error"))
+        if (effectiveConfig.suppressErrorRendering) {
+          DiagResult.failure(diag)
+        } else {
+          DiagResult.degraded(ErrorDiagram.renderError(e.getMessage, effectiveConfig), diag)
+        }
+    }
+  }
+
+  /** The shared pre-dispatch computation of [[render]] and [[renderResult]]: strips and extracts frontmatter, applies the max-text-size guard, detects the diagram type, and assembles the effective
+    * config from the frontmatter/init overlay. Extracted so both entry points see byte-identical inputs before dispatch (the byte-parity the ISS-1379 facade asserts).
+    */
+  private def prepare(input: String, config: MermaidConfig): Prepared = {
     // Mirrors upstream preprocess.ts: frontmatter is stripped and extracted
     // ONCE, before detection and before any parser sees the text, so the
     // parsers never receive the leading `---` delimiters (ISS-1056). The
@@ -167,105 +270,88 @@ object Mermaid {
     // directive), assembled in `overlay`, OVERRIDES it.
     val effectiveConfig: MermaidConfig = MermaidConfig.applyOverlay(config, overlay)
 
-    // ISS-1068: unified failure contract, faithful to mermaidAPI.ts:393-401.
-    // A parse failure in any per-type renderer surfaces as a `ParseException`;
-    // upstream catches it and renders the ERROR diagram
-    // (`diag = Diagram.fromText('error')`) instead of propagating, recording the
-    // exception — UNLESS `config.suppressErrorRendering` is set, in which case
-    // the exception is rethrown (mermaidAPI.ts:395-397). SSG catches the
-    // SPECIFIC `ParseException` (not a blanket `Exception`/`Throwable`) so any
-    // OTHER exception type — a genuine renderer bug — still propagates rather
-    // than being masked as a syntax error (faithful deviation from upstream's
-    // broad catch; see the render scaladoc).
-    try
-      diagramType match {
-        case DiagramType.Flowchart | DiagramType.FlowchartV2 | DiagramType.Graph =>
-          FlowchartDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Sequence =>
-          SequenceDiagram.render(text, effectiveConfig, title)
-        case DiagramType.ClassDiagram | DiagramType.ClassDiagramV2 =>
-          ClassDiagram.render(text, effectiveConfig, title)
-        case DiagramType.StateDiagram | DiagramType.StateDiagramV2 =>
-          StateDiagram.render(text, effectiveConfig, title)
-        case DiagramType.ErDiagram =>
-          ErDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Pie =>
-          PieDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Gantt =>
-          GanttDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Timeline =>
-          TimelineDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Journey =>
-          JourneyDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Mindmap =>
-          MindmapDiagram.render(text, effectiveConfig, title)
-        case DiagramType.GitGraph =>
-          GitDiagram.render(text, effectiveConfig, title)
-        case DiagramType.XyChart =>
-          XyChartDiagram.render(text, effectiveConfig, title)
-        case DiagramType.QuadrantChart =>
-          QuadrantDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Requirement =>
-          RequirementDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Sankey =>
-          SankeyDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Block =>
-          BlockDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Architecture =>
-          ArchitectureDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Packet =>
-          PacketDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Radar =>
-          RadarDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Kanban =>
-          KanbanDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Venn =>
-          VennDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Ishikawa =>
-          IshikawaDiagram.render(text, effectiveConfig, title)
-        case DiagramType.C4Context | DiagramType.C4Container | DiagramType.C4Component | DiagramType.C4Deployment | DiagramType.C4Dynamic =>
-          C4Diagram.render(text, effectiveConfig, title)
-        case DiagramType.Cynefin =>
-          CynefinDiagram.render(text, effectiveConfig, title)
-        case DiagramType.EventModeling =>
-          EventModelingDiagram.render(text, effectiveConfig, title)
-        case DiagramType.TreeView =>
-          TreeViewDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Treemap =>
-          TreemapDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Wardley =>
-          WardleyDiagram.render(text, effectiveConfig, title)
-        case DiagramType.Info =>
-          // InfoDb has no title field — mirrors Diagram.ts:42 optional-chaining
-          // `db.setDiagramTitle?.(...)` being a no-op when absent.
-          InfoDiagram.render(text, effectiveConfig)
-        case DiagramType.Error =>
-          // ErrorDb has no title field — mirrors Diagram.ts:42 optional-chaining
-          // `db.setDiagramTitle?.(...)` being a no-op when absent.
-          ErrorDiagram.render(text, effectiveConfig)
-        case _ =>
-          // Unknown/undetected diagram type. In upstream `detectType` throws
-          // `UnknownDiagramError` inside `Diagram.fromText` (detectType.ts:48),
-          // which is caught at mermaidAPI.ts:393-401 and routed to the error
-          // diagram (or rethrown under `suppressErrorRendering`). We unify the
-          // contract by treating it as a parse failure with the same message,
-          // rather than emitting an in-band HTML comment.
-          val message = s"No diagram type detected matching given configuration for text: $text"
-          if (effectiveConfig.suppressErrorRendering) {
-            throw new ParseException(message, 0, 0)
-          } else {
-            ErrorDiagram.renderError(message, effectiveConfig)
-          }
-      }
-    catch {
-      // mermaidAPI.ts:395-401 — a parse failure records the exception and
-      // renders the error diagram; `suppressErrorRendering` rethrows instead.
-      case e: ParseException =>
-        if (effectiveConfig.suppressErrorRendering) {
-          throw e
-        } else {
-          ErrorDiagram.renderError(e.getMessage, effectiveConfig)
-        }
-    }
+    Prepared(text, effectiveConfig, diagramType, title)
   }
+
+  /** Dispatches to the per-type renderer for a KNOWN diagram type, or [[lowlevel.Nullable.empty]] for an undetected type ([[DiagramType.Unknown]]). Shared by [[render]] and [[renderResult]] so the
+    * two entry points cannot diverge on which SVG a given diagram type produces (the byte-parity the ISS-1379 facade asserts). Any [[ssg.mermaid.parse.ParseException]] a per-type renderer throws
+    * propagates to the caller's dispatch `try`, unchanged.
+    */
+  private def dispatchKnown(text: String, effectiveConfig: MermaidConfig, diagramType: DiagramType, title: Nullable[String]): Nullable[String] =
+    diagramType match {
+      case DiagramType.Flowchart | DiagramType.FlowchartV2 | DiagramType.Graph =>
+        Nullable(FlowchartDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Sequence =>
+        Nullable(SequenceDiagram.render(text, effectiveConfig, title))
+      case DiagramType.ClassDiagram | DiagramType.ClassDiagramV2 =>
+        Nullable(ClassDiagram.render(text, effectiveConfig, title))
+      case DiagramType.StateDiagram | DiagramType.StateDiagramV2 =>
+        Nullable(StateDiagram.render(text, effectiveConfig, title))
+      case DiagramType.ErDiagram =>
+        Nullable(ErDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Pie =>
+        Nullable(PieDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Gantt =>
+        Nullable(GanttDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Timeline =>
+        Nullable(TimelineDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Journey =>
+        Nullable(JourneyDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Mindmap =>
+        Nullable(MindmapDiagram.render(text, effectiveConfig, title))
+      case DiagramType.GitGraph =>
+        Nullable(GitDiagram.render(text, effectiveConfig, title))
+      case DiagramType.XyChart =>
+        Nullable(XyChartDiagram.render(text, effectiveConfig, title))
+      case DiagramType.QuadrantChart =>
+        Nullable(QuadrantDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Requirement =>
+        Nullable(RequirementDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Sankey =>
+        Nullable(SankeyDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Block =>
+        Nullable(BlockDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Architecture =>
+        Nullable(ArchitectureDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Packet =>
+        Nullable(PacketDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Radar =>
+        Nullable(RadarDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Kanban =>
+        Nullable(KanbanDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Venn =>
+        Nullable(VennDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Ishikawa =>
+        Nullable(IshikawaDiagram.render(text, effectiveConfig, title))
+      case DiagramType.C4Context | DiagramType.C4Container | DiagramType.C4Component | DiagramType.C4Deployment | DiagramType.C4Dynamic =>
+        Nullable(C4Diagram.render(text, effectiveConfig, title))
+      case DiagramType.Cynefin =>
+        Nullable(CynefinDiagram.render(text, effectiveConfig, title))
+      case DiagramType.EventModeling =>
+        Nullable(EventModelingDiagram.render(text, effectiveConfig, title))
+      case DiagramType.TreeView =>
+        Nullable(TreeViewDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Treemap =>
+        Nullable(TreemapDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Wardley =>
+        Nullable(WardleyDiagram.render(text, effectiveConfig, title))
+      case DiagramType.Info =>
+        // InfoDb has no title field — mirrors Diagram.ts:42 optional-chaining
+        // `db.setDiagramTitle?.(...)` being a no-op when absent.
+        Nullable(InfoDiagram.render(text, effectiveConfig))
+      case DiagramType.Error =>
+        // ErrorDb has no title field — mirrors Diagram.ts:42 optional-chaining
+        // `db.setDiagramTitle?.(...)` being a no-op when absent.
+        Nullable(ErrorDiagram.render(text, effectiveConfig))
+      case _ =>
+        // Undetected diagram type — the unknown-type path is handled by the
+        // caller (an error diagram in `render`, a degraded result in
+        // `renderResult`), so no per-type renderer applies here.
+        Nullable.empty
+    }
+
+  /** The shared pre-dispatch outcome of [[prepare]]: the frontmatter-stripped (and possibly size-capped) `text`, the assembled `effectiveConfig`, the detected `diagramType`, and the extracted
+    * `title`.
+    */
+  final private case class Prepared(text: String, effectiveConfig: MermaidConfig, diagramType: DiagramType, title: Nullable[String])
 }
