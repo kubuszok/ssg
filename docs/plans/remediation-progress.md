@@ -339,3 +339,4 @@ One line per `/goal` iteration: `date | phase | attempted | resolved | bounced |
 2026-07-07 | P2-wiring | ISS-1377 | resolved | 1 bounce | ssg-js Terser.minifyResult + TerserJsCompressor.compressResult DiagResult facades; red 1b52d6cd/76e002a9 fix 78a65618/afbb222d audit PASS; bounce = missing compressResult adapter caught by orchestrator gate
 2026-07-07 | P2-wiring | ISS-1378 | resolved | 0 bounces | ssg-katex renderToStringResult DiagResult facades (4 §2.6 adapters); red 6da93f35 fix 1bb90747 audit PASS
 2026-07-07 | P2-wiring | ISS-1379 | resolved | 0 bounces | ssg-mermaid renderResult DiagResult facade (§2.7, render refactored into prepare+dispatchKnown, behavior-preserving); red 1cbf818d fix f22121a4 audit PASS
+2026-07-07 | P2-wiring | ISS-1374 | resolved | 0 bounces | ssg-liquid parseResult(x2)+renderResult DiagResult facades (typed LiquidException+ExceededMaxIterationsException, errors()-drain degraded); red 7c80931f fix 291d1348 audit PASS

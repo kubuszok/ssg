@@ -20,8 +20,10 @@
 package ssg
 package liquid
 
+import ssg.commons.{ DiagResult, Diagnostic, Severity, SourcePosition }
 import ssg.commons.io.FilePath
 import ssg.data.DataView
+import ssg.liquid.exceptions.{ ExceededMaxIterationsException, LiquidException }
 import ssg.liquid.nodes.BlockNode
 
 import java.util.{ ArrayList, HashMap, LinkedHashMap, List => JList, Map => JMap }
@@ -75,6 +77,53 @@ final class Template(
   /** Renders this template with no variables. */
   def render(): String =
     render(new HashMap[String, DataView]())
+
+  /** Renders this template with the given variables, returning a diagnostics envelope (ISS-1374).
+    *
+    * Additive facade over [[render]] per docs/architecture/error-contracts.md §2.2, wrapping the throwing entry point in the shared [[ssg.commons.DiagResult]] envelope. `render`'s signature and its
+    * throwing/collecting contract are unchanged — this method forwards `variables` verbatim and reads back the collected [[errors]].
+    *
+    *   - A caught `LiquidException` (STRICT mode raises it at render, e.g. OutputNode) becomes a failure carrying one `Severity.Error` [[ssg.commons.Diagnostic]] — `component = "ssg-liquid"`, `code =
+    *     "render-error"`, position mapped per the §1.3 ssg-liquid row (`line = e.line`, `column = e.charPositionInLine + 1`).
+    *   - A caught `ExceededMaxIterationsException` becomes a failure with `code = "iteration-limit"` and no position (the exception carries none).
+    *   - On a successful render the WARN/LAX-mode collected exceptions ([[errors]], TemplateContext.errorsList) are drained: a non-empty list yields a DEGRADED result — the SAME output bytes `render`
+    *     produced, plus one `Diagnostic.fromThrowable(Severity.Error, "ssg-liquid", e, code = "render-error")` per collected exception — while an empty list is a clean success.
+    *
+    * The catches are SPECIFIC to the module-native exception types (§1.2 rule 3): the bare `RuntimeException` size/time-limit guards ([[renderToObject]], Template.scala size/time checks) are NOT
+    * caught — catching that untyped type would be a blanket catch (C12) — and keep propagating faithful to liqp. Each native exception rides along as `Diagnostic.cause` (rule 5).
+    */
+  def renderResult(variables: JMap[String, DataView]): DiagResult[String] =
+    try {
+      val output    = render(variables)
+      val collected = errors()
+      if (collected.isEmpty) {
+        DiagResult.success(output)
+      } else {
+        val diagnostics = Vector.newBuilder[Diagnostic]
+        var i           = 0
+        while (i < collected.size()) {
+          diagnostics += Diagnostic.fromThrowable(Severity.Error, "ssg-liquid", collected.get(i), code = Some("render-error"))
+          i += 1
+        }
+        val diags = diagnostics.result()
+        DiagResult.degraded(output, diags.head, diags.tail*)
+      }
+    } catch {
+      case e: LiquidException =>
+        DiagResult.failure(
+          Diagnostic.fromThrowable(
+            Severity.Error,
+            "ssg-liquid",
+            e,
+            position = Some(SourcePosition(line = Some(e.line), column = Some(e.charPositionInLine + 1))),
+            code = Some("render-error")
+          )
+        )
+      case e: ExceededMaxIterationsException =>
+        DiagResult.failure(
+          Diagnostic.fromThrowable(Severity.Error, "ssg-liquid", e, code = Some("iteration-limit"))
+        )
+    }
 
   /** Renders this template with no variables, returning the raw result. */
   def renderToObject(): DataView =

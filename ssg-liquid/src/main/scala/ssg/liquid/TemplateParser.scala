@@ -23,8 +23,10 @@
 package ssg
 package liquid
 
+import ssg.commons.{ DiagResult, Diagnostic, Severity, SourcePosition }
 import ssg.commons.io.{ FileOps, FilePath }
 import ssg.liquid.antlr.NameResolver
+import ssg.liquid.exceptions.LiquidException
 import ssg.liquid.filters.{ Filter, Filters }
 import ssg.liquid.filters.date.{ BasicDateParser, DateParser }
 import ssg.liquid.parser.Flavor
@@ -111,6 +113,43 @@ final class TemplateParser(
     */
   def parse(input: String, location: FilePath): Template =
     parseWithLocation(input, Some(location))
+
+  /** Parses a Liquid template string with an explicit source location, returning a diagnostics envelope (ISS-1374).
+    *
+    * Additive facade over [[parse]] per docs/architecture/error-contracts.md §2.2, wrapping the throwing entry point in the shared [[ssg.commons.DiagResult]] envelope. `parse`'s signature and its
+    * `LiquidException`-throwing contract are unchanged — this method forwards both arguments verbatim.
+    *
+    * A caught `LiquidException` becomes a failure carrying one `Severity.Error` [[ssg.commons.Diagnostic]] with `component = "ssg-liquid"`, `code = "parse-error"`, and the position mapped per the
+    * §1.3 ssg-liquid row (`line = e.line`, 1-based passthrough; `column = e.charPositionInLine + 1`, native `charPositionInLine` is 0-based). The catch is SPECIFIC to the module-native
+    * `LiquidException` (§1.2 rule 3) — the parser error listener (LiquidParser.scala:80-94) throws it unconditionally in every error mode — and the exception rides along as `Diagnostic.cause` (rule
+    * 5). A clean parse becomes a `DiagResult.success` carrying the same [[Template]] `parse` returns.
+    */
+  def parseResult(input: String, location: FilePath): DiagResult[Template] =
+    try
+      DiagResult.success(parse(input, location))
+    catch {
+      case e: LiquidException => parseErrorResult(e)
+    }
+
+  /** Parses a Liquid template string, returning a diagnostics envelope (ISS-1374). String-only overload of [[parseResult]] with the same `LiquidException` → `"parse-error"` mapping. */
+  def parseResult(input: String): DiagResult[Template] =
+    try
+      DiagResult.success(parse(input))
+    catch {
+      case e: LiquidException => parseErrorResult(e)
+    }
+
+  /** Maps a caught parse-time `LiquidException` to a `"parse-error"` failure, sharing the §1.3 position mapping across both [[parseResult]] overloads. */
+  private def parseErrorResult(e: LiquidException): DiagResult[Template] =
+    DiagResult.failure(
+      Diagnostic.fromThrowable(
+        Severity.Error,
+        "ssg-liquid",
+        e,
+        position = Some(SourcePosition(line = Some(e.line), column = Some(e.charPositionInLine + 1))),
+        code = Some("parse-error")
+      )
+    )
 
   private def parseWithLocation(input: String, location: Option[FilePath]): Template = {
     val lexer = new parser.LiquidLexer(
