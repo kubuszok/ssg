@@ -21,6 +21,8 @@
 package ssg
 package js
 
+import ssg.commons.{ DiagResult, Diagnostic }
+
 /** Standalone JavaScript compressor using the full Terser engine. */
 object TerserJsCompressor {
 
@@ -48,4 +50,30 @@ object TerserJsCompressor {
           input
       }
     }
+
+  /** Compress JavaScript source code, returning a diagnostics envelope (ISS-1377).
+    *
+    * Additive facade over [[compress]] per docs/architecture/error-contracts.md section 2.5, built with the SAME collecting-logger technique as ssg-minify's `HtmlMinifier.minifyResult`: a private
+    * buffering `ssg.commons.Logger` is passed into the existing `compress`, and each warned message is mapped afterwards into a `Severity.Warning` [[ssg.commons.Diagnostic]] with component `"ssg-js"`
+    * and code `"js-compression-failed"`. No new catch is introduced — the ISS-1052 compress + catch + Logger channel stays intact.
+    *
+    * The return-input-unchanged degradation (graceful passthrough on a compression failure) is a Warning + success per the section 1.1 severity policy: the passthrough content is still correct JS,
+    * merely uncompressed, so `isSuccess` stays true. A clean compress carries no diagnostics and the compressed string; the value is byte-identical to what [[compress]] returns for the same input.
+    *
+    * @param input
+    *   JavaScript source code
+    * @return
+    *   a success carrying the compressed JS (or the original on passthrough), plus one Warning diagnostic per compression failure
+    */
+  def compressResult(input: String): DiagResult[String] = {
+    // A private collector Logger appends each warned message to a local buffer; the buffer is mapped to
+    // Warning diagnostics afterwards, so no new catch is introduced (docs/architecture/error-contracts.md 2.5).
+    val buffer = scala.collection.mutable.ListBuffer.empty[String]
+    val collector: ssg.commons.Logger = new ssg.commons.Logger {
+      override def warn(message: String): Unit =
+        buffer += message
+    }
+    val output = compress(input, collector)
+    DiagResult(Some(output), buffer.toVector.map(msg => Diagnostic.warning("ssg-js", msg, code = Some("js-compression-failed"))))
+  }
 }

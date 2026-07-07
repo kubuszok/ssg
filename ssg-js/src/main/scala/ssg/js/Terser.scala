@@ -64,8 +64,9 @@ import scala.collection.mutable
 
 import lowlevel.Nullable
 
+import ssg.commons.{ DiagResult, Diagnostic, Severity, SourcePosition }
 import ssg.js.ast.*
-import ssg.js.parse.{ Parser, ParserOptions }
+import ssg.js.parse.{ JsParseError, Parser, ParserOptions }
 import ssg.js.output.{ OutputOptions, OutputStream }
 import ssg.js.scope.{ Mangler, ManglerCache, ManglerOptions, PropMangler, PropManglerOptions, ScopeAnalysis, ScopeOptions }
 import ssg.js.compress.{ Compressor, CompressorOptions }
@@ -221,6 +222,40 @@ object Terser {
     val filename = if (options.parse.filename.isEmpty) "0" else options.parse.filename
     minifyFiles(scala.collection.immutable.ListMap(filename -> code), options)
   }
+
+  /** Minify JavaScript source code, returning a diagnostics envelope (ISS-1377).
+    *
+    * Additive facade over [[minify]] per docs/architecture/error-contracts.md section 2.5, wrapping the throwing entry point in the shared [[ssg.commons.DiagResult]] envelope. `minify`'s signature
+    * and its `JsParseError`-throwing contract are unchanged — this method forwards both parameters verbatim.
+    *
+    *   - A caught `JsParseError` becomes a failure carrying one `Severity.Error` [[ssg.commons.Diagnostic]] with `component = "ssg-js"`, `code = "parse-error"`, and the position mapped from the
+    *     exception per the section 1.3 ssg-js row: `source = e.filename`, `line = e.line` (1-based, passed through), `column = e.col + 1` (native `col` is 0-based — Tokenizer.scala:69),
+    *     `offset = e.pos` (0-based char offset). The catch is SPECIFIC to the module-native `JsParseError` (section 1.2 rule 3) — a non-`JsParseError` throw is a compressor bug outside the
+    *     parse-failure contract and keeps propagating — and the exception itself rides along as `Diagnostic.cause` (rule 5).
+    *   - A successful minify becomes a clean `DiagResult.success` carrying the same [[MinifyResult]] `minify` returns for the same input.
+    *
+    * @param code
+    *   JavaScript source code
+    * @param options
+    *   minification options
+    * @return
+    *   a success carrying the [[MinifyResult]], or a failure carrying one `"parse-error"` diagnostic
+    */
+  def minifyResult(code: String, options: MinifyOptions = MinifyOptions.Defaults): DiagResult[MinifyResult] =
+    try
+      DiagResult.success(minify(code, options))
+    catch {
+      case e: JsParseError =>
+        DiagResult.failure(
+          Diagnostic.fromThrowable(
+            Severity.Error,
+            "ssg-js",
+            e,
+            position = Some(SourcePosition(source = Some(e.filename), line = Some(e.line), column = Some(e.col + 1), offset = Some(e.pos))),
+            code = Some("parse-error")
+          )
+        )
+    }
 
   /** Minify multiple named source files, concatenating their parsed bodies into a single top-level AST.
     *
