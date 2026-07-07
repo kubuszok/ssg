@@ -23,6 +23,7 @@ package ssg
 package katex
 
 import lowlevel.Nullable
+import ssg.commons.{ DiagResult, Diagnostic, Severity, SourcePosition }
 import ssg.katex.build.{ BuildCommon, BuildTree }
 import ssg.katex.data.Macros
 import ssg.katex.environments.Environments
@@ -85,6 +86,76 @@ object KaTeX {
     */
   def renderToString(expression: String, options: KaTeXOptions): String =
     renderToString(expression, options.toSettings)
+
+  /** Parse and build an expression, returning a diagnostics envelope (ISS-1378).
+    *
+    * Additive facade over [[renderToString(expression:String,options:ssg\.katex\.Settings)*]] per docs/architecture/error-contracts.md section 2.6, wiring the throwing entry point into the shared
+    * [[ssg.commons.DiagResult]] envelope. It lives in-module so it can reach the private [[renderError]] path directly and reproduce the SAME in-band `katex-error` span the legacy path emits, without
+    * re-rendering by re-throwing.
+    *
+    * The render pipeline (`ParseTree.parseTree` then `BuildTree.buildTree`, exactly as [[renderToDomTree]]'s `try` body) runs inside a `try` that catches ONLY the module-native [[ParseError]]
+    * (section 1.2 rule 3 — genuine bugs outside the KaTeX parse contract keep propagating):
+    *
+    *   - a clean render is a `DiagResult.success` carrying byte-for-byte the same markup [[renderToString(expression:String,options:ssg\.katex\.Settings)*]] produces;
+    *   - a caught `ParseError` with `options.throwOnError == true` becomes a failure carrying one `Severity.Error` [[ssg.commons.Diagnostic]] (component `"ssg-katex"`, code `"parse-error"`, position
+    *     from [[positionOf]], the native `ParseError` preserved as `cause`);
+    *   - a caught `ParseError` with `options.throwOnError == false` becomes a DEGRADED result: the value is the [[renderError]] `katex-error` span markup (byte-identical to what the legacy entry
+    *     point renders in-band), carried alongside the same diagnostic (section 1.1 — substitute output WITH an Error diagnostic).
+    *
+    * `Settings.throwOnError` semantics and the error-HTML markup are untouched — callers get the same bytes the legacy entry point produces AND a machine-readable diagnostic.
+    *
+    * @param expression
+    *   The LaTeX expression to render
+    * @param options
+    *   Rendering options — the internal [[Settings]] type
+    * @return
+    *   a success carrying the HTML markup, a degraded result carrying the in-band error span, or a failure carrying one `"parse-error"` diagnostic
+    */
+  def renderToStringResult(
+    expression: String,
+    options:    Settings = new Settings()
+  ): DiagResult[String] = {
+    ensureRegistered()
+    try {
+      val tree   = ParseTree.parseTree(expression, options)
+      val markup = BuildTree.buildTree(tree, expression, options).toMarkup()
+      DiagResult.success(markup)
+    } catch {
+      case error: ParseError =>
+        val diagnostic = Diagnostic.fromThrowable(Severity.Error, "ssg-katex", error, position = positionOf(error), code = Some("parse-error"))
+        if (options.throwOnError) {
+          DiagResult.failure(diagnostic)
+        } else {
+          // Same in-band katex-error span the legacy renderToDomTree path emits;
+          // renderError access is in-module, so we do not re-render by re-throwing.
+          DiagResult.degraded(renderError(error, expression, options).toMarkup(), diagnostic)
+        }
+    }
+  }
+
+  /** Parse and build an expression, returning a diagnostics envelope (ISS-1378).
+    *
+    * The [[KaTeXOptions]] overload of [[renderToStringResult(expression:String,options:ssg\.katex\.Settings)*]]: bridges through [[KaTeXOptions.toSettings]] exactly as the throwing
+    * [[renderToString(expression:String,options:ssg\.katex\.KaTeXOptions)*]] overload does, so a clean render is byte-identical.
+    *
+    * @param expression
+    *   The LaTeX expression to render
+    * @param options
+    *   Rendering options — see [[KaTeXOptions]] for available fields
+    * @return
+    *   a success carrying the HTML markup, a degraded result carrying the in-band error span, or a failure carrying one `"parse-error"` diagnostic
+    */
+  def renderToStringResult(expression: String, options: KaTeXOptions): DiagResult[String] =
+    renderToStringResult(expression, options.toSettings)
+
+  /** Maps a [[ParseError]]'s native 0-based char offset into a [[ssg.commons.SourcePosition]] per the section 1.3 katex row: `offset = e.position`, `endOffset = e.position + e.length` when BOTH the
+    * `position` and `length` `Nullable`s are present; line/column never exist for KaTeX, so they stay `None`, and an absent position (e.g. a `ParseError` thrown with no token) maps to `None`.
+    */
+  private def positionOf(error: ParseError): Option[SourcePosition] =
+    (error.position.toOption, error.length.toOption) match {
+      case (Some(position), Some(length)) => Some(SourcePosition.offsetRange(position, position + length))
+      case _                              => None
+    }
 
   /** Parse an expression and return the parse tree.
     */

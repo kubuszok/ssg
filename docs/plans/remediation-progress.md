@@ -337,3 +337,4 @@ One line per `/goal` iteration: `date | phase | attempted | resolved | bounced |
 2026-07-07 | P2-wiring | ISS-1375 | resolved | 0 bounces | ssg-sass Compile DiagResult facade; red 4bcaac5f fix 6fcab22e audit PASS; merged 802042fe
 2026-07-07 | P2-wiring | ISS-1373 | resolved | 0 bounces | ssg-md Markdown DiagResult facade; red a252363f fix e22e6376 audit PASS
 2026-07-07 | P2-wiring | ISS-1377 | resolved | 1 bounce | ssg-js Terser.minifyResult + TerserJsCompressor.compressResult DiagResult facades; red 1b52d6cd/76e002a9 fix 78a65618/afbb222d audit PASS; bounce = missing compressResult adapter caught by orchestrator gate
+2026-07-07 | P2-wiring | ISS-1378 | resolved | 0 bounces | ssg-katex renderToStringResult DiagResult facades (4 §2.6 adapters); red 6da93f35 fix 1bb90747 audit PASS
