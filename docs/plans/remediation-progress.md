@@ -340,3 +340,4 @@ One line per `/goal` iteration: `date | phase | attempted | resolved | bounced |
 2026-07-07 | P2-wiring | ISS-1378 | resolved | 0 bounces | ssg-katex renderToStringResult DiagResult facades (4 §2.6 adapters); red 6da93f35 fix 1bb90747 audit PASS
 2026-07-07 | P2-wiring | ISS-1379 | resolved | 0 bounces | ssg-mermaid renderResult DiagResult facade (§2.7, render refactored into prepare+dispatchKnown, behavior-preserving); red 1cbf818d fix f22121a4 audit PASS
 2026-07-07 | P2-wiring | ISS-1374 | resolved | 0 bounces | ssg-liquid parseResult(x2)+renderResult DiagResult facades (typed LiquidException+ExceededMaxIterationsException, errors()-drain degraded); red 7c80931f fix 291d1348 audit PASS
+2026-07-07 | P2-wiring | ISS-1382 | resolved | 0 bounces | ssg-site §2.10 (BuildDiagnostic embeds commons Diagnostic + Severity alias + sass stage consumes compileStringResult + failOnError); reshape audited behavior-preserving; red 0f54033c fix 70153d9c audit PASS
