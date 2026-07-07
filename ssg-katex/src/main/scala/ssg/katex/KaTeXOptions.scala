@@ -24,6 +24,7 @@ package katex
 import scala.collection.mutable
 
 import lowlevel.Nullable
+import ssg.commons.DiagResult
 
 /** Public-facing options for the KaTeX rendering API.
   *
@@ -114,4 +115,20 @@ object KaTeXOptions {
     */
   def renderToString(expression: String, options: KaTeXOptions): String =
     KaTeX.renderToString(expression, options.toSettings)
+
+  /** Convenience: render LaTeX to a diagnostics envelope with default options (ISS-1378).
+    *
+    * The static companion of [[KaTeX.renderToStringResult(expression:String,options:ssg\.katex\.Settings)*]] mirroring [[renderToString(expression:String)*]] per docs/architecture/error-contracts.md
+    * section 2.6 — same default [[Settings]], so a clean render is byte-identical.
+    */
+  def renderToStringResult(expression: String): DiagResult[String] =
+    KaTeX.renderToStringResult(expression)
+
+  /** Convenience: render LaTeX to a diagnostics envelope with custom options (ISS-1378).
+    *
+    * The static companion of [[KaTeX.renderToStringResult(expression:String,options:ssg\.katex\.KaTeXOptions)*]] mirroring [[renderToString(expression:String,options:ssg\.katex\.KaTeXOptions)*]] per
+    * docs/architecture/error-contracts.md section 2.6 — bridges through [[toSettings]], so a clean render is byte-identical.
+    */
+  def renderToStringResult(expression: String, options: KaTeXOptions): DiagResult[String] =
+    KaTeX.renderToStringResult(expression, options.toSettings)
 }
