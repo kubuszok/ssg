@@ -23,7 +23,7 @@ object Versions {
   // sbt-2.0 dev snapshots we previously tracked). These carry API breaks vs the 0.3.1/0.2.0 snapshots.
   val hearth           = "0.4.0"
   val kindlingsYaml    = "0.3.0"
-  val lls              = "0.2.0"
+  val lls              = "0.3.0"
   val scalaJavaLocales = "1.5.4"
   val scalaJavaTime    = "2.6.0"
 
