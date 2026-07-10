@@ -413,17 +413,18 @@ object PropMangler {
             // unless the root resolves to an *undeclared* symbol. A parameter or
             // local (root.thedef set, but undeclared == false) is still declared,
             // so its dotted properties are mangle candidates.
-            val declared = options.undeclared || {
-              var root: AstNode = dot
-              while (root.isInstanceOf[AstDot] && root.asInstanceOf[AstDot].expression != null)
-                root = root.asInstanceOf[AstDot].expression.nn
-              root match {
-                case sr: AstSymbolRef =>
-                  val td = sr.definition()
-                  !(td != null && td.nn.undeclared)
-                case _ => true
+            val declared =
+              options.undeclared || {
+                var root: AstNode = dot
+                while (root.isInstanceOf[AstDot] && root.asInstanceOf[AstDot].expression != null)
+                  root = root.asInstanceOf[AstDot].expression.nn
+                root match {
+                  case sr: AstSymbolRef =>
+                    val td = sr.definition()
+                    !(td != null && td.nn.undeclared)
+                  case _ => true
+                }
               }
-            }
             if (declared && (!keepQuoted || dot.quote.isEmpty)) {
               dot.property match {
                 case s: String => add(s)
