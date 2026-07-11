@@ -32,13 +32,16 @@ class Round extends Filter {
       DataView.from(0)
     } else {
       val number = asNumber(value).doubleValue()
-      var scale  = 0
+      var round  = 0L
 
       if (params.length > 0 && canBeDouble(params(0))) {
-        scale = asNumber(params(0)).intValue()
+        round = asNumber(params(0)).longValue()
       }
 
-      val bd = new BigDecimal(number.toString).setScale(scale, RoundingMode.HALF_UP)
+      // liqp Round.java:26-32: decimal places appended only when round > 0;
+      // round <= 0 uses scale 0 (nearest integer, HALF_UP).
+      val scale = if (round > 0) round.toInt else 0
+      val bd    = new BigDecimal(number.toString).setScale(scale, RoundingMode.HALF_UP)
       DataView.from(PlainBigDecimal(bd))
     }
 }
