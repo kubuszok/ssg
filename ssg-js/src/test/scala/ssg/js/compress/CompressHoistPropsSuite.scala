@@ -187,7 +187,7 @@ final class CompressHoistPropsSuite extends munit.FunSuite {
   // =========================================================================
   // single_use
   // =========================================================================
-  test("single_use".fail) {
+  test("single_use") {
     assertCompresses(
       input = """var obj = {
             bar: function() {

@@ -4003,7 +4003,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_4
   // =========================================================================
-  test("issue_2436_4".fail) {
+  test("issue_2436_4") {
     assertCompresses(
       input = """var o = {
             a: 1,
@@ -4038,7 +4038,7 @@ final class CompressCollapseVarsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2436_5
   // =========================================================================
-  test("issue_2436_5".fail) {
+  test("issue_2436_5") {
     assertCompresses(
       input = """var o = {
             a: 1,

@@ -1173,9 +1173,21 @@ object ReduceVars {
         && !compressor.exposed(dd)
         && refOnce(state, compressor, dd)
       ) {
-        dd.singleUse = (fixedValue.isInstanceOf[AstLambda] && !fixedValue.asInstanceOf[AstLambda].pinned) ||
-          fixedValue.isInstanceOf[AstClass] ||
-          ((dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef]) && Evaluate.isConstantExpression(fixedValue.nn))
+        // reduce-vars.js:757-760 — d.single_use =
+        //   fixed_value instanceof AST_Lambda && !fixed_value.pinned()
+        //   || fixed_value instanceof AST_Class
+        //   || d.scope === this.scope && fixed_value.is_constant_expression();
+        // Use the faithful `is_constant_expression` (Inference, imported unqualified),
+        // which recognises constant object/array/unary/property literals. The
+        // Evaluate.isConstantExpression variant used previously here returned false for
+        // object and array literals, so a single-use funarg/var bound to `{a:1}` was never
+        // inlined. is_constant_expression() is called with no scope arg, so it yields
+        // true/false; the raw result is preserved (JS `||`/`&&` semantics) if an "f" propagates.
+        dd.singleUse =
+          if (fixedValue.isInstanceOf[AstLambda] && !fixedValue.asInstanceOf[AstLambda].pinned) true
+          else if (fixedValue.isInstanceOf[AstClass]) true
+          else if (dd.scope.asInstanceOf[AnyRef] eq ref.scope.nn.asInstanceOf[AnyRef]) isConstantExpression(fixedValue.nn)
+          else false
       } else {
         dd.singleUse = false
       }
