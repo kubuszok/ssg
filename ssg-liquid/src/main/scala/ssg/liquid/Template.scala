@@ -210,6 +210,14 @@ final class Template(
   def renderToObjectUnguarded(variables: JMap[String, DataView]): DataView =
     renderToObjectUnguarded(variables, null, true)
 
+  /** Renders the template using a parent context. Mirrors liqp `Template.renderUnguarded(TemplateContext)` (Template.java:396-398). */
+  def renderUnguarded(parent: TemplateContext): String =
+    renderToObjectUnguarded(parent).toString
+
+  /** Prerenders the template using a parent context. Mirrors liqp `Template.renderToObjectUnguarded(TemplateContext)` (Template.java:407-409). */
+  private def renderToObjectUnguarded(parent: TemplateContext): DataView =
+    renderToObjectUnguarded(new HashMap[String, DataView](), parent, true)
+
   private def newRootContext(variables: JMap[String, DataView]): TemplateContext = {
     val context      = new TemplateContext(templateParser, variables)
     val configurator = templateParser.environmentMapConfigurator
