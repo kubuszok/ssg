@@ -173,9 +173,13 @@ object XyChartRenderer {
       label.attr("x", -10).attr("y", yPos + 4)
       label.attr("text-anchor", "end")
       label.classed("xychartTickLabel", true)
-      // Round half-up to Latin digits (ISS-1156): `f"$value%.0f"` followed
-      // Locale.getDefault, which under CLDR providers can vary the digit set.
-      label.text(Math.round(value).toString)
+      // Emit the tick value via the locale-independent FormatUtil.formatNumber,
+      // matching upstream baseAxis.ts:201 `tick.toString()` (ISS-1160): fractional
+      // ticks like 2.5/7.5 render exactly, not rounded to 3/8. Preserves the
+      // ISS-1156 locale-independence guarantee (dot decimal, Latin digits, never a
+      // comma) since formatNumber is BigDecimal-based and never routes through
+      // Locale.getDefault.
+      label.text(ssg.graphs.commons.util.FormatUtil.formatNumber(value))
     }
 
     // X axis category labels
