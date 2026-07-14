@@ -21,7 +21,7 @@ object Versions {
   // Dependencies
   // hearth 0.4.0 / kindlings 0.3.0 — the released breaking-change line (migrated off the
   // sbt-2.0 dev snapshots we previously tracked). These carry API breaks vs the 0.3.1/0.2.0 snapshots.
-  val hearth           = "0.4.0"
+  val hearth           = "0.4.1"
   val kindlingsYaml    = "0.3.0"
   val lls              = "0.3.0"
   val scalaJavaLocales = "1.5.4"
