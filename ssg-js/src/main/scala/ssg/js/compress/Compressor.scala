@@ -281,6 +281,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
                   current = pn
                 case _: AstConditional =>
                   current = pn
+                // Walk through sequence tail (terser index.js:373, p.tail_node() === self)
+                case seq: AstSequence
+                    if seq.expressions.nonEmpty
+                      && (current.asInstanceOf[AnyRef] eq seq.expressions.last.asInstanceOf[AnyRef]) =>
+                  current = pn
                 case _ =>
                   break(false)
               }
