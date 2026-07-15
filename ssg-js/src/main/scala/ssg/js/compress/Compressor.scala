@@ -3039,7 +3039,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     }
 
     // == / != : void 0 == x → null == x (undefined equals null in loose comparison)
-    if (self.left != null && self.right != null && (self.operator == "==" || self.operator == "!=")) {
+    // Gated on comparisons per terser index.js:2280 (the fold is at 2298-2302 inside the comparisons switch)
+    if (optionBool("comparisons") && self.left != null && self.right != null && (self.operator == "==" || self.operator == "!=")) {
       if (isUndefined(self.left.nn, this)) {
         val nullNode = new AstNull
         nullNode.start = self.left.nn.start
