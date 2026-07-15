@@ -5471,11 +5471,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
           par != null && par.nn.isInstanceOf[AstNew]
         }
       case _: AstClass =>
-        // Class is always unsafe unless parent is `new`
-        // terser index.js:3523 — `compressor.parent() instanceof AST_New`: reads live walker ancestry.
-        val anchor = liveSelf()
-        val par    = if (anchor != null) liveParent(anchor.nn, 0) else null
-        par != null && par.nn.isInstanceOf[AstNew]
+        // terser index.js:3521-3522: a Class is not an AST_Lambda, so
+        // `value instanceof AST_Lambda && value.contains_this()` is false and
+        // safe_to_flatten returns true unconditionally (never reaches the
+        // parent-new check at 3523).
+        true
       case _ => true
     }
   }
