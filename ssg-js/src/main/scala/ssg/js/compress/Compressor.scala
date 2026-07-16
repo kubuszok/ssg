@@ -281,6 +281,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
                   current = pn
                 case _: AstConditional =>
                   current = pn
+                // Walk through sequence tail (terser index.js:373, p.tail_node() === self)
+                case seq: AstSequence
+                    if seq.expressions.nonEmpty
+                      && (current.asInstanceOf[AnyRef] eq seq.expressions.last.asInstanceOf[AnyRef]) =>
+                  current = pn
                 case _ =>
                   break(false)
               }
@@ -3034,7 +3039,8 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
     }
 
     // == / != : void 0 == x → null == x (undefined equals null in loose comparison)
-    if (self.left != null && self.right != null && (self.operator == "==" || self.operator == "!=")) {
+    // Gated on comparisons per terser index.js:2280 (the fold is at 2298-2302 inside the comparisons switch)
+    if (optionBool("comparisons") && self.left != null && self.right != null && (self.operator == "==" || self.operator == "!=")) {
       if (isUndefined(self.left.nn, this)) {
         val nullNode = new AstNull
         nullNode.start = self.left.nn.start
@@ -3382,98 +3388,10 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       }
     }
 
-    // Bitwise optimizations
+    // Bitwise optimizations — ordered to match terser index.js:2760-2911
     if (self.left != null && self.right != null && bitwiseBinop.contains(self.operator)) {
-      // ~x ^ ~y → x ^ y
-      if (
-        self.operator == "^"
-        && self.left.nn.isInstanceOf[AstUnaryPrefix] && self.left.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
-        && self.right.nn.isInstanceOf[AstUnaryPrefix] && self.right.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
-      ) {
-        val newBin = new AstBinary
-        newBin.operator = "^"
-        newBin.left = self.left.nn.asInstanceOf[AstUnaryPrefix].expression
-        newBin.right = self.right.nn.asInstanceOf[AstUnaryPrefix].expression
-        newBin.start = self.start
-        newBin.end = self.end
-        return newBin // @nowarn
-      }
-
-      // Shifts by 0: x >> 0 → x | 0,  x << 0 → x | 0
-      if (
-        (self.operator == "<<" || self.operator == ">>")
-        && self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0
-      ) {
-        self.operator = "|"
-      }
-
-      // Identity with 0: x | 0 → x (when x is 32-bit), x ^ 0 → x (when x is 32-bit)
-      val zeroSide: AstNode | Null =
-        if (self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0) self.right.nn
-        else if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0.0) self.left.nn
-        else null
-      if (zeroSide != null) {
-        val nonZeroSide = if (zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
-        // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
-        // Terser index.js:2853: non_zero_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
-        if ((self.operator == "|" || self.operator == "^") && (Inference.is32BitInteger(nonZeroSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
-          return nonZeroSide // @nowarn
-        }
-        // x & 0 → 0 (when x has no side effects and is 32-bit)
-        // Terser index.js:2862-2863: !non_zero_side.has_side_effects(compressor) && non_zero_side.is_32_bit_integer(compressor)
-        if (self.operator == "&" && !hasSideEffects(nonZeroSide, this) && Inference.is32BitInteger(nonZeroSide, this)) {
-          return zeroSide.nn // @nowarn
-        }
-      }
-
-      // Full mask: x & -1 → x (when x is 32-bit or in 32-bit context)
-      def isFullMask(node: AstNode): Boolean =
-        (node.isInstanceOf[AstNumber] && node.asInstanceOf[AstNumber].value == -1.0) ||
-          (node.isInstanceOf[AstUnaryPrefix] && node.asInstanceOf[AstUnaryPrefix].operator == "-" &&
-            node.asInstanceOf[AstUnaryPrefix].expression != null &&
-            node.asInstanceOf[AstUnaryPrefix].expression.nn.isInstanceOf[AstNumber] &&
-            node.asInstanceOf[AstUnaryPrefix].expression.nn.asInstanceOf[AstNumber].value == 1.0)
-
-      val fullMask: AstNode | Null =
-        if (isFullMask(self.right.nn)) self.right.nn
-        else if (isFullMask(self.left.nn)) self.left.nn
-        else null
-      if (fullMask != null) {
-        val otherSide = if (fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
-        // x & -1 → x
-        // Terser index.js:2888-2889: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
-        if (self.operator == "&" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
-          return otherSide // @nowarn
-        }
-        // x ^ -1 → ~x
-        // Terser index.js:2900-2901: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
-        if (self.operator == "^" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
-          val neg = new AstUnaryPrefix
-          neg.operator = "~"
-          neg.expression = otherSide
-          neg.start = self.start
-          neg.end = self.end
-          return neg // @nowarn
-        }
-      }
-
-      // x | x �� 0 | x, x & x → 0 | x (when equivalent and no side effects, in 32-bit context)
-      if (
-        (self.operator == "|" || self.operator == "&")
-        && AstEquivalent.equivalentTo(self.left.nn, self.right.nn)
-        && !hasSideEffects(self.left.nn, this)
-        // Terser index.js:2811: in_32_bit_context(true)
-        && in32BitContext(otherOperandMustBeNumber = true)
-      ) {
-        val zero = new AstNumber
-        zero.value = 0.0
-        zero.start = self.start
-        zero.end = self.end
-        self.left = zero
-        self.operator = "|"
-      }
-
       // De Morgan's laws: z & (X | y) => z & X (given y & z === 0), or z & X | {y & z} (given y & z !== 0)
+      // Terser index.js:2760-2803
       if (self.operator == "&") {
         val zEval = Evaluate.evaluate(self.left.nn, this)
         if (zEval.isInstanceOf[Double]) {
@@ -3528,6 +3446,101 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
               }
             case _ =>
           }
+        }
+      }
+
+      // x | x → 0 | x, x & x → 0 | x (when equivalent and no side effects, in 32-bit context)
+      // Terser index.js:2805-2815 — must precede the identity-with-0 check so the
+      // freshly-mutated 0|x falls through to the zero-elimination below.
+      if (
+        (self.operator == "|" || self.operator == "&")
+        && AstEquivalent.equivalentTo(self.left.nn, self.right.nn)
+        && !hasSideEffects(self.left.nn, this)
+        // Terser index.js:2811: in_32_bit_context(true)
+        && in32BitContext(otherOperandMustBeNumber = true)
+      ) {
+        val zero = new AstNumber
+        zero.value = 0.0
+        zero.start = self.start
+        zero.end = self.end
+        self.left = zero
+        self.operator = "|"
+      }
+
+      // ~x ^ ~y → x ^ y
+      // Terser index.js:2817-2830
+      if (
+        self.operator == "^"
+        && self.left.nn.isInstanceOf[AstUnaryPrefix] && self.left.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
+        && self.right.nn.isInstanceOf[AstUnaryPrefix] && self.right.nn.asInstanceOf[AstUnaryPrefix].operator == "~"
+      ) {
+        val newBin = new AstBinary
+        newBin.operator = "^"
+        newBin.left = self.left.nn.asInstanceOf[AstUnaryPrefix].expression
+        newBin.right = self.right.nn.asInstanceOf[AstUnaryPrefix].expression
+        newBin.start = self.start
+        newBin.end = self.end
+        return newBin // @nowarn
+      }
+
+      // Shifts by 0: x >> 0 → x | 0,  x << 0 → x | 0
+      // Terser index.js:2832-2841
+      if (
+        (self.operator == "<<" || self.operator == ">>")
+        && self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0
+      ) {
+        self.operator = "|"
+      }
+
+      // Identity with 0: x | 0 → x (when x is 32-bit), x ^ 0 → x (when x is 32-bit)
+      // Terser index.js:2843-2856
+      val zeroSide: AstNode | Null =
+        if (self.right.nn.isInstanceOf[AstNumber] && self.right.nn.asInstanceOf[AstNumber].value == 0.0) self.right.nn
+        else if (self.left.nn.isInstanceOf[AstNumber] && self.left.nn.asInstanceOf[AstNumber].value == 0.0) self.left.nn
+        else null
+      if (zeroSide != null) {
+        val nonZeroSide = if (zeroSide.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
+        // x | 0 → x or x ^ 0 → x (when x is 32-bit or in 32-bit context)
+        // Terser index.js:2853: non_zero_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if ((self.operator == "|" || self.operator == "^") && (Inference.is32BitInteger(nonZeroSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
+          return nonZeroSide // @nowarn
+        }
+        // x & 0 → 0 (when x has no side effects and is 32-bit)
+        // Terser index.js:2862-2863: !non_zero_side.has_side_effects(compressor) && non_zero_side.is_32_bit_integer(compressor)
+        if (self.operator == "&" && !hasSideEffects(nonZeroSide, this) && Inference.is32BitInteger(nonZeroSide, this)) {
+          return zeroSide.nn // @nowarn
+        }
+      }
+
+      // Full mask: x & -1 → x (when x is 32-bit or in 32-bit context)
+      // Terser index.js:2868-2911
+      def isFullMask(node: AstNode): Boolean =
+        (node.isInstanceOf[AstNumber] && node.asInstanceOf[AstNumber].value == -1.0) ||
+          (node.isInstanceOf[AstUnaryPrefix] && node.asInstanceOf[AstUnaryPrefix].operator == "-" &&
+            node.asInstanceOf[AstUnaryPrefix].expression != null &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.isInstanceOf[AstNumber] &&
+            node.asInstanceOf[AstUnaryPrefix].expression.nn.asInstanceOf[AstNumber].value == 1.0)
+
+      val fullMask: AstNode | Null =
+        if (isFullMask(self.right.nn)) self.right.nn
+        else if (isFullMask(self.left.nn)) self.left.nn
+        else null
+      if (fullMask != null) {
+        val otherSide = if (fullMask.nn.asInstanceOf[AnyRef] eq self.right.nn.asInstanceOf[AnyRef]) self.left.nn else self.right.nn
+        // x & -1 → x
+        // Terser index.js:2888-2889: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if (self.operator == "&" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
+          return otherSide // @nowarn
+        }
+        // x ^ -1 → ~x
+        // Terser index.js:2900-2901: other_side.is_32_bit_integer(compressor) || compressor.in_32_bit_context(true)
+        if (self.operator == "^" && (Inference.is32BitInteger(otherSide, this) || in32BitContext(otherOperandMustBeNumber = true))) {
+          val neg = new AstUnaryPrefix
+          neg.operator = "~"
+          neg.expression = otherSide
+          neg.start = self.start
+          neg.end = self.end
+          return neg // @nowarn
         }
       }
     }
@@ -4994,22 +5007,20 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
       // let it be handled by evaluate below
     }
 
-    // ISS-107: ~(x^y) => x^~y (tilde-xor distributivity)
+    // ~(x ^ y) => x ^ ~y  (terser index.js:2179-2191)
+    // When the left operand is already ~, cancel via bitwiseNegate: ~(~a ^ b) => a ^ b
+    // Otherwise negate the right: ~(a ^ b) => a ^ ~b
     if (self.operator == "~" && e.isInstanceOf[AstBinary]) {
       val bin = e.asInstanceOf[AstBinary]
       if (bin.operator == "^" && bin.left != null && bin.right != null) {
-        val newTilde = new AstUnaryPrefix
-        newTilde.operator = "~"
-        newTilde.expression = bin.right
-        newTilde.start = bin.right.nn.start
-        newTilde.end = bin.right.nn.end
-        val newBin = new AstBinary
-        newBin.operator = "^"
-        newBin.left = bin.left
-        newBin.right = newTilde
-        newBin.start = self.start
-        newBin.end = self.end
-        return newBin // @nowarn
+        if (bin.left.nn.isInstanceOf[AstUnaryPrefix] && bin.left.nn.asInstanceOf[AstUnaryPrefix].operator == "~") {
+          // ~(~x ^ y) => x ^ y  (terser index.js:2185-2187)
+          bin.left = Inference.bitwiseNegate(bin.left.nn, this, in32BitContext = true)
+        } else {
+          // ~(x ^ y) => x ^ ~y  (terser index.js:2189)
+          bin.right = Inference.bitwiseNegate(bin.right.nn, this, in32BitContext = true)
+        }
+        return bin // @nowarn
       }
     }
 
@@ -5466,11 +5477,11 @@ class Compressor(val options: CompressorOptions, mangleOptionsParam: ManglerOpti
           par != null && par.nn.isInstanceOf[AstNew]
         }
       case _: AstClass =>
-        // Class is always unsafe unless parent is `new`
-        // terser index.js:3523 — `compressor.parent() instanceof AST_New`: reads live walker ancestry.
-        val anchor = liveSelf()
-        val par    = if (anchor != null) liveParent(anchor.nn, 0) else null
-        par != null && par.nn.isInstanceOf[AstNew]
+        // terser index.js:3521-3522: a Class is not an AST_Lambda, so
+        // `value instanceof AST_Lambda && value.contains_this()` is false and
+        // safe_to_flatten returns true unconditionally (never reaches the
+        // parent-new check at 3523).
+        true
       case _ => true
     }
   }

@@ -57,16 +57,16 @@ final class MakeNumIss1135Suite extends munit.FunSuite {
     check(100000.0, "1e5", "100000 -> 1e5")
   }
 
-  // output.js:2445-2446 — `/^(\d)\.(\d+)e(-?\d+)$/`: d.dddde±dd → digits then adjusted exp.
-  // The cases below use exponent strings that are identical across the platforms' float
-  // formatters (Double.toString differs between JVM/Native and JS, so values like 1.0e-4 /
-  // 5e-7 print differently per platform — those are excluded here; they are exercised
-  // indirectly by the 400k differential check that pins JVM == prior regex behavior).
-  // 1.23e-10: lead=1, frac=23, exp=-10 -> "1"+"23"+"e"+(-10-2) = "123e-12".
-  // 4.5e30 (after "e+"->"e"): lead=4, frac=5, exp=30 -> "4"+"5"+"e"+(30-1) = "45e29".
-  test("d.dddde+-dd exponent form is recombined (output.js:2445-2446)") {
-    check(1.23e-10, "123e-12", "1.23e-10 -> 123e-12 (frac=23, exp=-10 -> e-(10+2))")
-    check(4.5e30, "45e29", "4.5e30 -> 45e29 (frac=5, exp=30 -> e(30-1))")
+  // output.js:2442-2447 — the shortening branches form an `if / else if / else if` chain, so the
+  // trailing-zero `/0+$/` else-if (:2442) short-circuits the exponent-recombine
+  // `/^(\d)\.(\d+)e(-?\d+)$/` else-if (:2445): at most one fires (ISS-1139). Both decimal strings
+  // below end in "0" (their exponent digits), so upstream fires ONLY the trailing-zero branch —
+  // whose candidate ("1.23e-1e1" / "4.5e3e1") is longer than the original and is discarded by
+  // best_of (:2449) — leaving the number's own form. Verified against real terser
+  // (minify("x=<n>;",{compress:false,mangle:false})):  1.23e-10 => x=1.23e-10;  4.5e30 => x=4.5e30;
+  test("trailing-zero else-if short-circuits recombine; form is kept (output.js:2442-2449)") {
+    check(1.23e-10, "1.23e-10", "1.23e-10 -> 1.23e-10 (terser real minify: x=1.23e-10;)")
+    check(4.5e30, "4.5e30", "4.5e30 -> 4.5e30 (terser real minify: x=4.5e30;)")
   }
 
   // output.js:2430-2435 — integral values also get a hex candidate; best_of (:2448) picks it

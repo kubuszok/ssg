@@ -485,6 +485,11 @@ object SequenceRenderer {
   /** Builds a note rendering model.
     *
     * When the placement is `Over` and the message references two actors, the note spans from the first actor to the second actor, covering the space between them.
+    *
+    * When `msg.wrap` is true the note message is passed through [[wrapLabel]] before layout so the box height accounts for the wrapped line count. This mirrors `buildNoteModel` in
+    * sequenceRenderer.ts:1361-1431: a first pass measures the message wrapped to `conf.width` (line 1371), the placement determines the note width, then the message is re-wrapped to
+    * `noteWidth - 2*wrapPadding` (lines 1420-1426) so `drawNote` renders the correct multi-line text. Upstream uses `noteFont(conf)` (noteFontFamily/Size/Weight, sequenceRenderer.ts:290-296); SSG
+    * SequenceConfig lacks note-font fields, so we reuse the message path's hard-coded 12/"sans-serif"/"normal" (ISS-1203 tracks making note fonts configurable).
     */
   private def buildNoteModel(
     msg:  SeqMessage,
@@ -497,9 +502,16 @@ object SequenceRenderer {
     val fromActor = db.actors.get(fromId)
     val toActor   = db.actors.get(toId)
 
-    val bbox         = TextMetrics.measureText(msg.message, 12, "sans-serif")
+    // sequenceRenderer.ts:1366 — shouldWrap = msg.wrap && msg.message.
+    val shouldWrap = msg.wrap && msg.message.nonEmpty
+
+    // sequenceRenderer.ts:1368-1373 — first pass measures the message wrapped to conf.width with
+    // the note font so the placement branches size the box off the wrapped extent.
+    val measuredMessage =
+      if (shouldWrap) wrapLabel(msg.message, conf.width.toDouble, 12, "sans-serif", "normal")
+      else msg.message
+    val bbox         = TextMetrics.measureText(measuredMessage, 12, "sans-serif")
     val minNoteWidth = math.max(conf.width.toDouble, bbox.width + conf.noteMargin * 2)
-    val noteHeight   = bbox.height + conf.noteMargin * 2
 
     val (startx, noteWidth) = msg.placement match {
       case Placement.RightOf =>
@@ -528,12 +540,24 @@ object SequenceRenderer {
         (sx, minNoteWidth)
     }
 
+    // sequenceRenderer.ts:1420-1426 — re-wrap the message to the final note width so drawNote
+    // emits the correct multi-line text; wrap width = noteWidth - 2*wrapPadding.
+    val message =
+      if (shouldWrap) wrapLabel(msg.message, noteWidth - 2 * WrapPadding, 12, "sans-serif", "normal")
+      else msg.message
+
+    // Recompute height from the final (possibly multi-line) message so the box grows with the
+    // wrapped line count — mirrors drawNote sizing the rect from the rendered text height
+    // (sequenceRenderer.ts:274-277) and the analogous adjustment in buildMessageModel.
+    val finalBbox  = TextMetrics.measureText(message, 12, "sans-serif")
+    val noteHeight = finalBbox.height + conf.noteMargin * 2
+
     NoteRenderInfo(
       startx = startx,
       starty = yPos,
       stopx = startx + noteWidth,
       stopy = yPos + noteHeight,
-      message = msg.message,
+      message = message,
       width = noteWidth,
       height = noteHeight
     )
@@ -864,13 +888,38 @@ object SequenceRenderer {
     rect.attr("height", note.height)
     rect.classed("note", true)
 
-    val text = group.append("text")
-    text.attr("x", note.startx + note.width / 2)
-    text.attr("y", note.starty + note.height / 2)
+    // sequenceRenderer.ts:252-266 drawNote → svgDraw.js drawText: the note text is rendered with
+    // valign 'center' and the note anchor (default 'center'). When wrapLabel has inserted line
+    // breaks, emit one <tspan> per line (svgDraw.js:197-246), vertically centred in the note box —
+    // mirroring the multi-line message draw path above. Single-line notes keep the original
+    // text.text path so wrap-off output is unchanged.
+    val textX = note.startx + note.width / 2
+    val textY = note.starty + note.height / 2
+    val text  = group.append("text")
+    text.attr("x", textX)
+    text.attr("y", textY)
     text.attr("text-anchor", "middle")
     text.attr("dominant-baseline", "central")
     text.classed("noteText", true)
-    text.text(note.message)
+    val lines = note.message.split("\n", -1)
+    if (lines.length <= 1) {
+      // Single line — keep existing output unchanged
+      text.text(note.message)
+    } else {
+      // Multi-line — centre the block vertically: the first line is offset up by (n-1)/2 line
+      // heights and each subsequent line advances by one line height (12 = fontSize, matching
+      // the message draw path).
+      val lineHeight = 12.0
+      val firstDy    = -((lines.length - 1) * lineHeight) / 2.0
+      var lineIdx    = 0
+      while (lineIdx < lines.length) {
+        val tspan = text.append("tspan")
+        tspan.attr("x", textX)
+        tspan.attr("dy", if (lineIdx == 0) firstDy else lineHeight)
+        tspan.text(lines(lineIdx))
+        lineIdx += 1
+      }
+    }
   }
 
   /** Draws a loop/alt/opt/par/critical/break frame. */

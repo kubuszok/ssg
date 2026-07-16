@@ -2037,45 +2037,56 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     else {
       // output.js:2428 — `num.toString(10).replace(/^0\./, ".").replace("e+", "e")`.
       // The leading "0." → "." rewrite is done by plain string ops (stripLeadingZeroDot)
-      // instead of `replaceFirst("^0\\.", ".")`. This is a defensive, regex-free rewrite:
-      // the number-shortening transformations below are expressed as faithful string
-      // manipulation that is behavior-preserving (mutation-tested, byte-identical to the
-      // prior regex implementation). The makeNum patterns themselves compile fine on Scala
-      // Native; the actual ISS-1135 Native blocker was elsewhere (Compressor.reSafeRegexp's
-      // `\0` escape spelling, since fixed). See docs/contributing/cross-platform-regex.md.
-      val str        = stripLeadingZeroDot(numToString(num)).replace("e+", "e")
+      // instead of `replaceFirst("^0\\.", ".")`. The `.replace("e+", "e")` mirrors JS
+      // `String.prototype.replace(searchString, replaceString)`, which rewrites only the FIRST
+      // "e+" occurrence (replaceFirstLiteral) — NOT Scala's `String.replace`, which is
+      // replace-all. This is a defensive, regex-free rewrite: the number-shortening
+      // transformations below are expressed as faithful string manipulation. The makeNum
+      // patterns themselves compile fine on Scala Native; the actual ISS-1135 Native blocker was
+      // elsewhere (Compressor.reSafeRegexp's `\0` escape spelling, since fixed). See
+      // docs/contributing/cross-platform-regex.md.
+      val str        = replaceFirstLiteral(stripLeadingZeroDot(numToString(num)), "e+", "e")
       val candidates = mutable.ArrayBuffer(str)
-      // output.js:2430-2436 — hexadecimal candidate for integral values.
-      if (Math.floor(num) == num && !num.isInfinite) {
-        if (num < 0) candidates += ("-0x" + (-num).toLong.toHexString)
-        else if (num <= Long.MaxValue.toDouble) candidates += ("0x" + num.toLong.toHexString)
+      // output.js:2430-2435 — hexadecimal candidate for integral values. Upstream pushes it
+      // unconditionally for `Math.floor(num) === num` (no Long-range guard): JS `num.toString(16)`
+      // renders the exact hexadecimal of the integral Double at any magnitude, mirrored by
+      // doubleToHexNonNeg. (+/-Infinity are already returned earlier, so the integral test is safe.)
+      if (Math.floor(num) == num) {
+        if (num < 0) candidates += ("-0x" + doubleToHexNonNeg(-num))
+        else candidates += ("0x" + doubleToHexNonNeg(num))
       }
-      // output.js:2438-2441 — `if (match = /^\.0+/.exec(str))`: a leading "." followed by
-      // one or more "0" digits. `leadingZeroRunLength` returns the length of the matched
-      // ".0+" prefix (the dot plus the run of zeros), or -1 when it does not match.
+      // output.js:2438-2447 — the three shortening branches form an `if / else if / else if`
+      // chain, so at most ONE fires: the FIRST that matches, mutually exclusive.
       val leadingZeroLen = leadingZeroRunLength(str)
       if (leadingZeroLen >= 0) {
-        val zeroLen = leadingZeroLen
-        val digits  = str.substring(zeroLen)
-        candidates += (digits + "e-" + (digits.length + zeroLen - 1))
+        // output.js:2438-2441 — `if (match = /^\.0+/.exec(str))`: a leading "." followed by one
+        // or more "0" digits. `leadingZeroRunLength` returns the length of the matched ".0+"
+        // prefix (the dot plus the run of zeros).
+        val digits = str.substring(leadingZeroLen)
+        candidates += (digits + "e-" + (digits.length + leadingZeroLen - 1))
+      } else {
+        val trailingZeroLen = trailingZeroRunLength(str)
+        if (trailingZeroLen > 0) {
+          // output.js:2442-2444 — `else if (match = /0+$/.exec(str))`: a run of trailing "0"
+          // digits. `trailingZeroRunLength` returns the count of trailing zeros. Upstream's
+          // `/0+$/` has NO `.`/`e` guard — it matches on trailing zeros alone, which is why
+          // e.g. "1.5e300" is caught here (candidate "1.5e3e2", longer, discarded) and never
+          // reaches the exponent-recombine branch below.
+          candidates += (str.substring(0, str.length - trailingZeroLen) + "e" + trailingZeroLen)
+        } else {
+          // output.js:2445-2446 — `else if (match = /^(\d)\.(\d+)e(-?\d+)$/.exec(str))`: single
+          // leading digit, ".", a run of digits, "e", then an optionally-negative exponent.
+          // `parseExpForm` decomposes str into (lead, frac, exp) or null.
+          val expMatch = parseExpForm(str)
+          if (expMatch != null) {
+            val (lead, frac, exp) = expMatch.nn
+            candidates += (lead + frac + "e" + (exp - frac.length))
+          }
+        }
       }
-      // output.js:2442-2444 — `else if (match = /0+$/.exec(str))`: a run of trailing "0"
-      // digits. `trailingZeroRunLength` returns the count of trailing zeros, or 0 when none.
-      // (The `!str.contains('.') && !str.contains('e')` guard reproduces the existing port's
-      // behavior; the regex shape is replaced, the guard is unchanged.)
-      val trailingZeroLen = trailingZeroRunLength(str)
-      if (trailingZeroLen > 0 && !str.contains('.') && !str.contains('e')) {
-        val zeroLen = trailingZeroLen
-        candidates += (str.substring(0, str.length - zeroLen) + "e" + zeroLen)
-      }
-      // output.js:2445-2446 — `else if (match = /^(\d)\.(\d+)e(-?\d+)$/.exec(str))`:
-      // single leading digit, ".", a run of digits, "e", then an optionally-negative
-      // exponent. `parseExpForm` decomposes str into (lead, frac, exp) or null.
-      val expMatch = parseExpForm(str)
-      if (expMatch != null) {
-        val (lead, frac, exp) = expMatch.nn
-        candidates += (lead + frac + "e" + (exp - frac.length))
-      }
+      // output.js:2449 → best_of (:2416-2425): the shortest string; on a length tie the FIRST
+      // candidate wins (best_of replaces `best` only on a strict `<`). ArrayBuffer.minBy keeps
+      // the first element achieving the minimum, matching best_of's tie-break exactly.
       candidates.minBy(_.length)
     }
 
@@ -2084,6 +2095,31 @@ class OutputStream(val options: OutputOptions = OutputOptions()) {
     */
   private def stripLeadingZeroDot(str: String): String =
     if (str.startsWith("0.")) str.substring(1) else str
+
+  /** output.js:2428 — `str.replace("e+", "e")` with STRING arguments: JS `String.prototype.replace(searchString, replaceString)` replaces only the FIRST occurrence of the literal `search`, unlike
+    * Scala's `String.replace(CharSequence, CharSequence)` (replace-all). Regex-free (see docs/contributing/cross-platform-regex.md).
+    */
+  private def replaceFirstLiteral(str: String, search: String, replacement: String): String = {
+    val idx = str.indexOf(search)
+    if (idx < 0) str
+    else str.substring(0, idx) + replacement + str.substring(idx + search.length)
+  }
+
+  /** output.js:2432/2434 — `num.toString(16)`: render a non-negative integral Double as its exact lowercase hexadecimal at any magnitude (JS renders the exact integer value even beyond the 64-bit
+    * signed range). For values below 2^63 the Long conversion is exact; at or above 2^63 the value is reconstructed from the IEEE-754 significand and binary exponent so the hex is exact rather than
+    * saturating at Long.MaxValue.
+    */
+  private def doubleToHexNonNeg(num: Double): String =
+    if (num < 9223372036854775808.0) num.toLong.toHexString
+    else {
+      val bits  = java.lang.Double.doubleToLongBits(num)
+      val exp   = ((bits >> 52) & 0x7ffL).toInt
+      val mant  = (bits & 0xfffffffffffffL) | 0x10000000000000L // 53-bit significand (implicit leading 1)
+      val shift = exp - 1075 // 1023 bias + 52 mantissa bits; >= 0 for integral >= 2^52
+      val q     = shift / 4
+      val r     = shift % 4
+      (mant << r).toHexString + ("0" * q)
+    }
 
   /** output.js:2438 — `/^\.0+/`: returns the length of a leading "." followed by one or more "0" digits (the dot plus the zero run), or -1 when the string does not start with ".0".
     */
