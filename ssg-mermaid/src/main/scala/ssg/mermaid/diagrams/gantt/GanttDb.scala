@@ -568,38 +568,90 @@ final class GanttDb {
       None
     }
 
-  /** Converts a dayjs date-format string (gantt `dateFormat`) to a java.time DateTimeFormatter pattern. dayjs `Y`(year)/`D`(day-of-month) map to java.time `y`/`d` (java.time `Y`/`D` mean week-year /
-    * day-of-year); `M`/`H`/`h`/`m`/`s` coincide; dayjs `[literal]` -> java.time `'literal'`.
+  /** Converts a dayjs date-format string (gantt `dateFormat`) to a java.time DateTimeFormatter pattern.
+    *
+    * dayjs tokens are lexed as runs of the same letter (plus the 2-char `Xo` ordinal forms and `[literal]` blocks) rather than char-by-char, so a multi-letter token like `dddd` maps as a single unit
+    * instead of four separate `d`s. Token meanings follow dayjs core plus the advancedFormat / customParseFormat plugins.
+    *
+    * Ported mappings (clean java.time `ofPattern` parse equivalents):
+    *   - `Y`/`YY`/`YYYY` -> `y`… (dayjs year; java.time `Y` is week-year)
+    *   - `D`/`DD` -> `d`… (dayjs day-of-month; java.time `D` is day-of-year)
+    *   - `A` / `a` (AM/PM) -> `a` (java.time am-pm-of-day)
+    *   - `dd`/`ddd`/`dddd` (day-of-week name) -> `EE`/`EEE`/`EEEE`
+    *   - `Z` -> three `X`s, `ZZ` -> `XX` (UTC offset, `+HH:MM` / `+HHMM`)
+    *   - `Q` -> `Q` (quarter-of-year number)
+    *   - `M`/`MM`/`MMM`/`MMMM`, `H`/`HH`, `h`/`hh`, `m`/`mm`, `s`/`ss`, `S`… and separators pass through unchanged (dayjs and java.time coincide)
+    *   - `[literal]` -> `'literal'`
+    *
+    * Migration note — deliberately CARVED OUT (appended UNCHANGED; they make the resulting pattern fail `ofPattern`/parse so date parsing falls back to the lenient hardcoded patterns exactly as
+    * before, per the ISS-1196 date-only scope): dayjs has no clean java.time `ofPattern` *parse* mapping for
+    *   - ordinal `Xo` forms (`Do`, `Mo`, `Qo`, `Wo`, `wo`, `do`, …): java.time has no ordinal-parse token
+    *   - `X` (unix seconds), `x` (unix millis): not expressible in `ofPattern`
+    *   - `W`/`w` (ISO / locale week-of-year): java.time week fields are locale-fragile and impractical for gantt date parsing
+    *   - bare `d` (dayjs day-of-week NUMBER 0-6): java.time has no numeric 0-6 day-of-week parse token (only the `dd`/`ddd`/`dddd` NAME forms above are portable)
+    * A gantt `dateFormat` using any carved-out token therefore falls back to the lenient patterns rather than crashing (ISS-1232).
     */
   private def dayjsToJavaTimePattern(dayjsFormat: String): String = {
-    val out       = new StringBuilder
-    var inLiteral = false // true while inside a dayjs `[...]` literal block
-    for (ch <- dayjsFormat)
-      if (inLiteral) {
-        if (ch == ']') {
-          // close the java.time literal block opened on `[`
-          out.append('\'')
-          inLiteral = false
-        } else {
-          out.append(ch)
+    val out = new StringBuilder
+    val n   = dayjsFormat.length
+    var i   = 0
+    while (i < n) {
+      val ch = dayjsFormat.charAt(i)
+      if (ch == '[') {
+        // dayjs literal block `[...]` -> java.time `'...'`
+        out.append('\'')
+        i += 1
+        while (i < n && dayjsFormat.charAt(i) != ']') {
+          out.append(dayjsFormat.charAt(i))
+          i += 1
         }
+        out.append('\'')
+        // skip the closing `]` when present; tolerate an unterminated block
+        if (i < n) { i += 1 }
+      } else if (ch.isLetter) {
+        // consume the run of this same letter as one token
+        var j = i + 1
+        while (j < n && dayjsFormat.charAt(j) == ch) j += 1
+        val count = j - i
+        // a single-letter run immediately followed by `o` is a dayjs ordinal
+        // token (`Do`, `Mo`, `Qo`, `Wo`, `wo`, `do`, …)
+        val ordinal = count == 1 && j < n && dayjsFormat.charAt(j) == 'o'
+        out.append(mapDayjsToken(ch, count, ordinal))
+        i = if (ordinal) { j + 1 }
+        else { j }
       } else {
-        ch match {
-          case '[' =>
-            // open a java.time literal block in place of the dayjs `[`
-            out.append('\'')
-            inLiteral = true
-          case 'Y' => out.append('y') // dayjs year -> java.time year (java.time `Y` is week-year)
-          case 'D' => out.append('d') // dayjs day-of-month -> java.time day-of-month (java.time `D` is day-of-year)
-          case _   => out.append(ch) // M/H/h/m/s and separators pass through unchanged
-        }
+        // separators / punctuation pass through unchanged
+        out.append(ch)
+        i += 1
       }
-    if (inLiteral) {
-      // tolerate an unterminated `[...]` block by closing the literal
-      out.append('\'')
     }
     out.toString
   }
+
+  /** Maps a single lexed dayjs token to its java.time pattern equivalent, or returns it unchanged when it is a deliberately carved-out token (see [[dayjsToJavaTimePattern]] for the full carve-out
+    * list and rationale). `count` is the run length and `ordinal` is true for the `Xo` ordinal forms.
+    */
+  private def mapDayjsToken(letter: Char, count: Int, ordinal: Boolean): String =
+    if (ordinal) {
+      // carve-out: java.time has no ordinal-parse token — append unchanged
+      (letter.toString * count) + "o"
+    } else {
+      letter match {
+        case 'Y'               => "y" * count // dayjs year -> java.time year (java.time `Y` is week-year)
+        case 'D'               => "d" * count // dayjs day-of-month -> java.time day-of-month (java.time `D` is day-of-year)
+        case 'A' | 'a'         => "a" * count // dayjs AM/PM -> java.time am-pm-of-day
+        case 'Z' if count == 1 => "X" * 3 // dayjs `+HH:MM` offset -> java.time offset (three `X`s)
+        case 'Z' if count == 2 => "XX" // dayjs `+HHMM` offset -> java.time `XX`
+        case 'Q'               => "Q" * count // dayjs quarter -> java.time quarter-of-year
+        case 'd' if count == 1 => "d" // carve-out: dayjs day-of-week NUMBER (0-6) has no java.time parse token
+        case 'd' if count == 2 => "EE" // dayjs `dd` short day-name -> java.time `EE`
+        case 'd' if count == 3 => "EEE" // dayjs `ddd` short day-name -> java.time `EEE`
+        case 'd'               => "EEEE" // dayjs `dddd`(+) full day-name -> java.time `EEEE`
+        case 'W' | 'w'         => letter.toString * count // carve-out: locale-fragile week-of-year fields
+        case 'X' | 'x'         => letter.toString * count // carve-out: unix seconds/millis not expressible in `ofPattern`
+        case _                 => letter.toString * count // M/H/h/m/s/S and unknown letters pass through unchanged
+      }
+    }
 
   /** Parses a date string using the configured date format. */
   private def parseDateString(str: String): Option[LocalDate] = {

@@ -51,7 +51,7 @@ final class CompressIssue1639Suite extends munit.FunSuite {
   // =========================================================================
   // issue_1639_2
   // =========================================================================
-  test("issue_1639_2".fail) {
+  test("issue_1639_2") {
     assertCompresses(
       input = """var a = 100, b = 10;
 

@@ -308,9 +308,30 @@ object ClassRenderer {
     // SSG flowchart.htmlLabels is always present, so it takes precedence.
     yOffset += MemberLineHeight + 2
     val htmlLabels = TextUtils.evaluate(config.flowchart.htmlLabels)
+
+    // svgDraw.js:176-183 — when the class has a link, the TITLE element is wrapped in an
+    // `<svg:a xlink:href=... target=...>` anchor (only the title, NOT the whole node;
+    // v3-unified's whole-node wrap is a different renderer SSG does not use here). The
+    // title (`<text>`/label group) is appended into the `<a>` instead of directly into
+    // `group`. `<a>`-append mechanics mirror the flowchart (ISS-1061,
+    // FlowchartRenderer.scala:234-250). The non-link path leaves `titleParent == group`
+    // so it stays byte-identical.
+    val titleParent =
+      if (classNode.link.isDefined) {
+        val anchor = group.append("a")
+        // classNode.link is already sanitized by ClassDb.setLink (ISS-1059) — use as-is.
+        anchor.attr("xlink:href", classNode.link.get)
+        // svgDraw.js:180 sets target = classDef.linkTarget directly; ClassDb.setLink
+        // (ISS-1185) already resolved linkTarget (incl. sandbox→_top), so emit it as-is.
+        classNode.linkTarget.foreach(t => anchor.attr("target", t))
+        anchor
+      } else {
+        group
+      }
+
     if (htmlLabels) {
       // HTML label (ISS-1205): foreignObject for the class title (the node label).
-      val labelGroup = group.append("g")
+      val labelGroup = titleParent.append("g")
       labelGroup.classed("label", true)
       labelGroup.classed("classTitle", true)
       labelGroup.attr("transform", s"translate(${fmtCoord(w / 2)},${fmtCoord(yOffset)})")
@@ -327,7 +348,7 @@ object ClassRenderer {
       )
       ()
     } else {
-      val title = group.append("text")
+      val title = titleParent.append("text")
       title.attr("x", w / 2)
       title.attr("y", yOffset)
       title.attr("text-anchor", "middle")
