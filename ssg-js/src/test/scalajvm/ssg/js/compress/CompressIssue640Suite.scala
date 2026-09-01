@@ -104,7 +104,7 @@ final class CompressIssue640Suite extends munit.FunSuite {
   // =========================================================================
   // wrongly_optimized
   // =========================================================================
-  test("wrongly_optimized".fail) {
+  test("wrongly_optimized") {
     assertCompresses(
       input = """function func() {
             foo();

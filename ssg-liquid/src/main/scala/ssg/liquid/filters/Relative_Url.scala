@@ -71,7 +71,8 @@ class Relative_Url extends Filter() {
           } else {
             res
           }
-        val uri           = new URI(null, null, null, -1, path, query, anchor) // scalastyle:ignore null
+        val cleanPath     = UrlUtil.collapseSlashes(path)
+        val uri           = new URI(null, null, null, -1, cleanPath, query, anchor) // scalastyle:ignore null
         var afterDecoding = uri.normalize().toASCIIString
         if (afterDecoding.isEmpty) {
           afterDecoding = "/"

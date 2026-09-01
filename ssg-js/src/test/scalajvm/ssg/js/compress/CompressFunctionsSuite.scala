@@ -166,7 +166,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // function_returning_constant_literal
   // =========================================================================
-  test("function_returning_constant_literal".fail) {
+  test("function_returning_constant_literal") {
     assertCompresses(
       input = """function greeter() {
             return { message: 'Hello there' };
@@ -1690,7 +1690,7 @@ final class CompressFunctionsSuite extends munit.FunSuite {
   // =========================================================================
   // issue_2663_3
   // =========================================================================
-  test("issue_2663_3".fail) {
+  test("issue_2663_3") {
     assertCompresses(
       input = """(function () {
             var outputs = [

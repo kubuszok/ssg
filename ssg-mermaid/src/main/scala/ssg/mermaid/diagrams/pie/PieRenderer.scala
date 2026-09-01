@@ -144,13 +144,14 @@ object PieRenderer {
           label.attr("text-anchor", "middle")
           label.attr("dominant-baseline", "central")
           label.classed("slice", true)
-          // Locale-independent formatting (ISS-1156): the port renders one
-          // decimal place for the percentage (upstream pieRenderer.ts:119 uses
-          // toFixed(0)); toFixed keeps the single fraction digit (e.g. 50.0 ->
-          // "50.0", matching JS toFixed(1)), and the integer value count rounds
-          // half-up to Latin digits. The previous `f"...%.1f"`/`"%.0f".format`
-          // followed Locale.getDefault and emitted "33,3%" on comma-locale JVMs.
-          val percentStr = ssg.graphs.commons.util.FormatUtil.toFixed(percentage, 1)
+          // Locale-independent formatting (ISS-1156): the port renders integer
+          // percentages, matching upstream pieRenderer.ts:119
+          // `((datum.data.value / sum) * 100).toFixed(0) + '%'` (zero fraction
+          // digits, e.g. 33.333 -> "33"). Formatting still goes through the
+          // locale-independent FormatUtil.toFixed (ECMA-262 dot-decimal / Latin
+          // digits) rather than `f"...%.Nf"`/`"%.0f".format`, which follow
+          // Locale.getDefault and emit grouping/comma output on some JVMs.
+          val percentStr = ssg.graphs.commons.util.FormatUtil.toFixed(percentage, 0)
           val labelText  = if (db.showData) {
             s"$percentStr% (${Math.round(section.value).toString})"
           } else {

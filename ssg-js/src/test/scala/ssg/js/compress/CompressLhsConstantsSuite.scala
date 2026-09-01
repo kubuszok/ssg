@@ -18,7 +18,7 @@ final class CompressLhsConstantsSuite extends munit.FunSuite {
   // =========================================================================
   // lhs_constants
   // =========================================================================
-  test("lhs_constants".fail) {
+  test("lhs_constants") {
     assertCompresses(
       input = """function test(a, b, c, d) {
             var x;
