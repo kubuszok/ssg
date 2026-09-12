@@ -13,7 +13,7 @@ import java.util.{ HashMap => JHashMap }
 final class ReadmeSamplesSuite extends munit.FunSuite {
 
   // SSG: Unknown filters throw at parse time (price, prettyprint, paragraph)
-  test("readme: render tree (parse produces a template)".fail) { // ISS-1260 (ISS-1024 umbrella)
+  test("readme: render tree (parse produces a template)") { // ISS-1260 — generated code handles unknown filters at render time
     val input =
       """<ul id="products">
         |  {% for product in products %}
