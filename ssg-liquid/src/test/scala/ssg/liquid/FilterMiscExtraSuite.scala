@@ -69,7 +69,7 @@ final class FilterMiscExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("textilize") {
-          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
             val s = super.asString(value, context).trim
             DataView.from("<b>" + s.substring(1, s.length - 1) + "</b>")
           }

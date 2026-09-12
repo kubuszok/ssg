@@ -274,7 +274,7 @@ final class BlocksExtraSuite extends munit.FunSuite {
     } catch {
       case _: Exception => // expected
     }
-    assert(holder.getContext.getRegistry(TemplateContext.REGISTRY_FOR).isEmpty)
+    assert(holder.getContext().getRegistry[scala.collection.mutable.Map[String, ?]](TemplateContext.REGISTRY_FOR).isEmpty)
   }
 
   // --- testVariableNamedOffset ---

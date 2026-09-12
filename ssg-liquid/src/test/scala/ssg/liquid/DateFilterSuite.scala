@@ -246,7 +246,7 @@ final class DateFilterSuite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   test("date filter: custom DateParser via Builder") {
-    val customParser = new filters.date.DateParser()
+    val customParser = new filters.date.Parser()
     val parser       = new TemplateParser.Builder().withDateParser(customParser).build()
     val vars         = new JHashMap[String, DataView]()
     vars.put("ts", TestHelper.dv(java.lang.Long.valueOf(1710505200L)))
@@ -295,11 +295,11 @@ final class DateFilterSuite extends munit.FunSuite {
 
   test("date filter: addDatePattern adds a new pattern") {
     // Verify the static method exists and doesn't throw
-    val before = filters.date.DateParser.datePatterns.size()
+    val before = filters.date.Parser.datePatterns.size
     filters.Date.addDatePattern("dd.MM.yyyy")
-    assertEquals(filters.date.DateParser.datePatterns.size(), before + 1)
+    assertEquals(filters.date.Parser.datePatterns.size, before + 1)
     // Clean up
     filters.Date.removeDatePattern("dd.MM.yyyy")
-    assertEquals(filters.date.DateParser.datePatterns.size(), before)
+    assertEquals(filters.date.Parser.datePatterns.size, before)
   }
 }

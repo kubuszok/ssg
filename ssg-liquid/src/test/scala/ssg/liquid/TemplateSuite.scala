@@ -146,7 +146,7 @@ final class TemplateSuite extends munit.FunSuite {
     val parser   = new TemplateParser.Builder().withStrictVariables(true).withErrorMode(TemplateParser.ErrorMode.WARN).build()
     val template = parser.parse("{{ undefined_var }}")
     template.render()
-    assert(template.errors().size() > 0, "Expected at least one error")
+    assert(template.errors().size > 0, "Expected at least one error")
   }
 
   // ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ final class TemplateSuite extends munit.FunSuite {
     val vars = new JHashMap[String, DataView]()
     vars.put("name", TestHelper.dv("World"))
     template.render(vars)
-    val ctx = holder.getContext
+    val ctx = holder.getContext()
     assert(ctx != null, "ContextHolder should have a non-null context after render")
   }
 
@@ -171,13 +171,13 @@ final class TemplateSuite extends munit.FunSuite {
     val vars = new JHashMap[String, DataView]()
     vars.put("greeting", TestHelper.dv("hi"))
     template.render(vars)
-    val ctx = holder.getContext
+    val ctx = holder.getContext()
     assertEquals(ctx.get("greeting").toString, "hi")
   }
 
   test("ContextHolder: null before render") {
     val holder = new Template.ContextHolder()
-    assert(holder.getContext == null, "Context should be null before render")
+    assert(holder.getContext() == null, "Context should be null before render")
   }
 
   // ---------------------------------------------------------------------------
@@ -294,12 +294,12 @@ final class TemplateSuite extends munit.FunSuite {
 
   test("render time limit: not limited by default") {
     val parser = new TemplateParser.Builder().build()
-    assert(!parser.isRenderTimeLimited)
+    assert(!parser.isRenderTimeLimited())
   }
 
   test("render time limit: enabled when set") {
     val parser = new TemplateParser.Builder().withMaxRenderTimeMillis(5000).build()
-    assert(parser.isRenderTimeLimited)
+    assert(parser.isRenderTimeLimited())
   }
 
   // ---------------------------------------------------------------------------

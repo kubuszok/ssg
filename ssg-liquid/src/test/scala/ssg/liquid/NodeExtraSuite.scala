@@ -383,9 +383,9 @@ final class NodeExtraSuite extends munit.FunSuite {
     val contextHolder = new Template.ContextHolder()
     val res           = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).build().parse("{{ 98 > 97 }}").withContextHolder(contextHolder).render()
     assertEquals(res, "98")
-    val errors = contextHolder.getContext.errors()
-    assertEquals(errors.size(), 1)
-    assert(errors.get(0).getMessage.contains("unexpected output"))
+    val errors = contextHolder.getContext().errors()
+    assertEquals(errors.size, 1)
+    assert(errors(0).getMessage.contains("unexpected output"))
   }
 
   test("gt node: bug 267 string vs number strict") {
