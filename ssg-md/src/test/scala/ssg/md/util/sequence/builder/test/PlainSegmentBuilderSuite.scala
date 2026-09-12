@@ -10,7 +10,6 @@ import ssg.md.util.misc.Utils.escapeJavaString
 import ssg.md.util.sequence.{ BasedSequence, PositionAnchor }
 import ssg.md.util.sequence.builder.ISegmentBuilder.{ F_INCLUDE_ANCHORS, F_TRACK_FIRST256 }
 
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 final class PlainSegmentBuilderSuite extends munit.FunSuite {
@@ -21,7 +20,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     def this(base: CharSequence, optimizer: CharRecoveryOptimizer) =
       this(base, optimizer, F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
 
-    override protected def optimizeText(parts: Array[Object]): Array[Object] =
+    override protected[builder] def optimizeText(parts: Array[Object]): Array[Object] =
       optimizer.apply(base, parts)
   }
 

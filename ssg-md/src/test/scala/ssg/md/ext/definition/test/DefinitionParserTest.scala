@@ -7,7 +7,6 @@ package ext
 package definition
 package test
 
-import ssg.md.Nullable
 import ssg.md.ext.definition.DefinitionExtension
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataSet

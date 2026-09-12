@@ -10,7 +10,6 @@ import ssg.md.util.misc.Utils.escapeJavaString
 import ssg.md.util.sequence.{ BasedSequence, PositionAnchor, Range }
 import ssg.md.util.sequence.builder.ISegmentBuilder.{ F_INCLUDE_ANCHORS, F_TRACK_FIRST256 }
 
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 final class BasedSegmentBuilderSuite extends munit.FunSuite {
@@ -312,15 +311,15 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
     val input    = "0123456789"
     val sequence = BasedSequence.of(input)
     var s        = 0
-    while (s < input.length) {
+    while (s < input.length()) {
       var e = s
-      while (e < input.length) {
+      while (e < input.length()) {
         val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
         segments.append(2, 6)
         segments.append(s, e)
         val expected = input.substring(2, 6) + input.substring(s, e)
         assertEquals(segments.toStringChars(), expected, s"$s,$e")
-        assertEquals(segments.length(), expected.length)
+        assertEquals(segments.length(), expected.length())
         e += 1
       }
       s += 1
@@ -574,15 +573,15 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
     val input    = "0123456789"
     val sequence = BasedSequence.of(input)
     var s        = 0
-    while (s < input.length) {
+    while (s < input.length()) {
       var e = s
-      while (e < input.length) {
+      while (e < input.length()) {
         val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256)
         segments.append(2, 6)
         segments.append(s, e)
         val expected = input.substring(2, 6) + input.substring(s, e)
         assertEquals(segments.toStringChars(), expected, s"$s,$e")
-        assertEquals(segments.length(), expected.length)
+        assertEquals(segments.length(), expected.length())
         e += 1
       }
       s += 1
