@@ -102,7 +102,7 @@ object CommonMarkSpecConformanceTest {
   private def loadExamples(resource: String): List[SpecExample] = {
     val location = ResourceLocation.of(classOf[CommonMarkSpecConformanceTest], resource)
     val reader   = SpecReader.createAndReadExamples(location, false)
-    reader.getExamples.iterator().toList.filter(_.isSpecExample)
+    reader.getExamples.iterator().asScala.toList.filter(_.isSpecExample)
   }
 
   /** Run a single example: parse source, render HTML, compare to expected. */

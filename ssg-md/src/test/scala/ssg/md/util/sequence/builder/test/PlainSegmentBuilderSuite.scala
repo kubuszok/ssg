@@ -235,7 +235,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("abc")
     segments.append(3, 7)
 
-    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 7), s=0:0, u=1:3, t=1:3, l=10, sz=3, na=3: [0, 5), a:'abc', [5, 7) }")
+    assertEquals(
+      segments.toStringPrep(),
+      "PlainSegmentBuilder{[0, 7), s=0:0, u=1:3, t=1:3, l=10, sz=3, na=3: [0, 5), a:'abc', [5, 7) }"
+    )
     assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e601234\u27e7abc\u27e656\u27e7")
@@ -252,7 +255,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("abc")
     segments.append("def")
 
-    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 5), s=0:0, u=1:6, t=1:6, l=11, sz=3, na=2: [0, 5), a:'abcdef', [5) }")
+    assertEquals(
+      segments.toStringPrep(),
+      "PlainSegmentBuilder{[0, 5), s=0:0, u=1:6, t=1:6, l=11, sz=3, na=2: [0, 5), a:'abcdef', [5) }"
+    )
     assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e601234\u27e7abcdef\u27e6\u27e7")
