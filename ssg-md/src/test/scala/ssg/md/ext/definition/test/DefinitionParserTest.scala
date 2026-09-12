@@ -22,7 +22,7 @@ final class DefinitionParserTest extends munit.FunSuite {
 
   private def escape(input: String, parser: Parser): String = {
     val baseSeq  = BasedSequence.of(input)
-    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options.get)
+    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options)
     val sb       = new StringBuilder()
 
     boundary {
@@ -34,7 +34,7 @@ final class DefinitionParserTest extends munit.FunSuite {
 
   private def unEscape(input: String, parser: Parser): String = {
     val baseSeq  = BasedSequence.of(input)
-    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options.get)
+    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options)
     val sb       = new StringBuilder()
 
     boundary {

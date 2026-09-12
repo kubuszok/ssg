@@ -7,7 +7,6 @@ package test
 
 import ssg.md.util.misc.{ CharPredicate, Pair }
 import ssg.md.util.sequence.builder.{ BasedSegmentBuilder, SequenceBuilder }
-import ssg.md.util.sequence.mappers.SpaceMapper
 
 import java.util.ArrayList
 import scala.jdk.CollectionConverters.*
@@ -15,10 +14,10 @@ import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 // TEST: need to complete tests here
-final class SegmentedSequenceTreeSuite extends munit.FunSuite {
+final class BasedSequenceFullImplSuite extends munit.FunSuite {
 
   private def basedSequenceOf(chars: CharSequence): BasedSequence =
-    BasedSequence.of(BasedOptionsSequence.of(chars, BasedOptionsHolder.F_TREE_SEGMENTED_SEQUENCES))
+    BasedSequence.of(BasedOptionsSequence.of(chars, BasedOptionsHolder.F_FULL_SEGMENTED_SEQUENCES))
 
   test("indexOf") {
     val s1   = "01234567890123456789"
@@ -785,24 +784,24 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
   test("trimEOL") {
     val s = basedSequenceOf("abc\n")
     assertEquals(s.trimEOL().toString, "abc")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 3).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 3).getSourceRange())
     assertEquals(s.trimmedEOL().toString, "\n")
-    assertEquals(s.trimmedEOL().getSourceRange, s.subSequence(3, 4).getSourceRange)
+    assertEquals(s.trimmedEOL().getSourceRange(), s.subSequence(3, 4).getSourceRange())
   }
 
   test("trimEOL1") {
     val s = basedSequenceOf("abc\n   ")
     assertEquals(s.trimEOL().toString, "abc\n   ")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 7).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 7).getSourceRange())
     assertEquals(s.trimmedEOL().toString, "")
     assert(s.trimmedEOL() eq BasedSequence.NULL)
-    assert(s.trimmedEOL().getSourceRange eq Range.NULL)
+    assert(s.trimmedEOL().getSourceRange() eq Range.NULL)
   }
 
   test("trimEOL3") {
     val s = basedSequenceOf("abc\ndef")
     assertEquals(s.trimEOL().toString, "abc\ndef")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 7).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 7).getSourceRange())
     assertEquals(s.trimmedEOL().toString, "")
     assert(s.trimmedEOL() eq BasedSequence.NULL)
   }
@@ -810,24 +809,24 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
   test("trimNoEOL") {
     val s = basedSequenceOf("abc")
     assertEquals(s.trimEOL().toString, "abc")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 3).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 3).getSourceRange())
     assertEquals(s.trimmedEOL(), BasedSequence.NULL)
   }
 
   test("trimMultiEOL") {
     val s = basedSequenceOf("abc\n\n")
     assertEquals(s.trimEOL().toString, "abc\n")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 4).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 4).getSourceRange())
     assertEquals(s.trimmedEOL().toString, "\n")
-    assertEquals(s.trimmedEOL().getSourceRange, s.subSequence(4, 5).getSourceRange)
+    assertEquals(s.trimmedEOL().getSourceRange(), s.subSequence(4, 5).getSourceRange())
   }
 
   test("trimMultiEOL2") {
     val s = basedSequenceOf("abc\n\n   ")
     assertEquals(s.trimEOL().toString, "abc\n\n   ")
-    assertEquals(s.trimEOL().getSourceRange, s.subSequence(0, 8).getSourceRange)
+    assertEquals(s.trimEOL().getSourceRange(), s.subSequence(0, 8).getSourceRange())
     assertEquals(s.trimmedEOL().toString, "")
-    assertEquals(s.trimmedEOL().getSourceRange, Range.NULL)
+    assertEquals(s.trimmedEOL().getSourceRange(), Range.NULL)
   }
 
   test("trimTailBlankLines") {
@@ -950,7 +949,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val inserted = sequence.insert(0, "^")
     assert(inserted.isInstanceOf[PrefixedSubSequence])
     assertEquals(inserted.toString, "^0123456789")
-    assertEquals(inserted.getSourceRange, Range.of(0, 10))
+    assertEquals(inserted.getSourceRange(), Range.of(0, 10))
     assertEquals(inserted.getIndexOffset(0), -1)
     assertEquals(inserted.getIndexOffset(1), 0)
     assertEquals(inserted.getIndexOffset(2), 1)
@@ -964,8 +963,8 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val inserted = sequence.insert(10, "^")
     assertEquals(inserted.toString, "0123456789^")
-    assert(inserted.isInstanceOf[SegmentedSequenceTree])
-    assertEquals(inserted.getSourceRange, Range.of(0, 10))
+    assert(inserted.isInstanceOf[SegmentedSequenceFull])
+    assertEquals(inserted.getSourceRange(), Range.of(0, 10))
     assertEquals(inserted.getIndexOffset(0), 0)
     assertEquals(inserted.getIndexOffset(1), 1)
     assertEquals(inserted.getIndexOffset(2), 2)
@@ -979,8 +978,8 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val inserted = sequence.insert(1, "^")
     assertEquals(inserted.toString, "0^123456789")
-    assert(inserted.isInstanceOf[SegmentedSequenceTree])
-    assertEquals(inserted.getSourceRange, Range.of(0, 10))
+    assert(inserted.isInstanceOf[SegmentedSequenceFull])
+    assertEquals(inserted.getSourceRange(), Range.of(0, 10))
     assertEquals(inserted.getIndexOffset(0), 0)
     assertEquals(inserted.getIndexOffset(1), -1)
     assertEquals(inserted.getIndexOffset(2), 1)
@@ -994,8 +993,8 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val inserted = sequence.insert(5, "^")
     assertEquals(inserted.toString, "01234^56789")
-    assert(inserted.isInstanceOf[SegmentedSequenceTree])
-    assertEquals(inserted.getSourceRange, Range.of(0, 10))
+    assert(inserted.isInstanceOf[SegmentedSequenceFull])
+    assertEquals(inserted.getSourceRange(), Range.of(0, 10))
     assertEquals(inserted.getIndexOffset(0), 0)
     assertEquals(inserted.getIndexOffset(1), 1)
     assertEquals(inserted.getIndexOffset(4), 4)
@@ -1010,8 +1009,8 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val inserted = sequence.insert(9, "^")
     assertEquals(inserted.toString, "012345678^9")
-    assert(inserted.isInstanceOf[SegmentedSequenceTree])
-    assertEquals(inserted.getSourceRange, Range.of(0, 10))
+    assert(inserted.isInstanceOf[SegmentedSequenceFull])
+    assertEquals(inserted.getSourceRange(), Range.of(0, 10))
     assertEquals(inserted.getIndexOffset(0), 0)
     assertEquals(inserted.getIndexOffset(1), 1)
     assertEquals(inserted.getIndexOffset(8), 8)
@@ -1025,7 +1024,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(0, 0, "^")
     assertEquals(replaced.toString, "^0123456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), -1)
     assertEquals(replaced.getIndexOffset(1), 0)
     assertEquals(replaced.getIndexOffset(2), 1)
@@ -1039,7 +1038,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(0, 1, "^")
     assertEquals(replaced.toString, "^123456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), -1)
     assertEquals(replaced.getIndexOffset(1), 1)
     assertEquals(replaced.getIndexOffset(2), 2)
@@ -1061,7 +1060,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
 
     val replaced: BasedSequence = builder.toSequence()
     assertEquals(replaced.toString, "^123456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), -1)
     assertEquals(replaced.getIndexOffset(1), 1)
     assertEquals(replaced.getIndexOffset(2), 2)
@@ -1074,7 +1073,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(10, 10, "^")
     assertEquals(replaced.toString, "0123456789^")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), 0)
     assertEquals(replaced.getIndexOffset(1), 1)
     assertEquals(replaced.getIndexOffset(2), 2)
@@ -1087,7 +1086,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(9, 10, "^")
     assertEquals(replaced.toString, "012345678^")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), 0)
     assertEquals(replaced.getIndexOffset(1), 1)
     assertEquals(replaced.getIndexOffset(2), 2)
@@ -1101,7 +1100,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(1, 2, "^")
     assertEquals(replaced.toString, "0^23456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), 0)
     assertEquals(replaced.getIndexOffset(1), -1)
     assertEquals(replaced.getIndexOffset(2), 2)
@@ -1114,7 +1113,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val sequence = basedSequenceOf(input)
     val replaced = sequence.replace(5, 6, "^")
     assertEquals(replaced.toString, "01234^6789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), 0)
     assertEquals(replaced.getIndexOffset(1), 1)
     assertEquals(replaced.getIndexOffset(4), 4)
@@ -1418,59 +1417,59 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
   test("trimToEndOfLine1") {
     val input    = "\n234\n789\n"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange, Range.of(0, 0))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange, Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange(), Range.of(0, 0))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange(), Range.of(0, 9))
   }
 
   test("trimToEndOfLine2") {
     val input    = "\r234\r789\r"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange, Range.of(0, 0))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange, Range.of(0, 4))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange, Range.of(0, 8))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange, Range.of(0, 9))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange, Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange(), Range.of(0, 0))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange(), Range.of(0, 4))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange(), Range.of(0, 8))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange(), Range.of(0, 9))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange(), Range.of(0, 9))
   }
 
   test("trimToEndOfLine3") {
     val input    = "\r\n234\r\n789\r\n"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange, Range.of(0, 0))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange, Range.of(0, 1))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange, Range.of(0, 5))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange, Range.of(0, 5))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange, Range.of(0, 5))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange, Range.of(0, 5))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange, Range.of(0, 6))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange, Range.of(0, 10))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange, Range.of(0, 10))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange, Range.of(0, 10))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange, Range.of(0, 10))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange, Range.of(0, 11))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange, Range.of(0, 12))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange, Range.of(0, 12))
-    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 14).getSourceRange, Range.of(0, 12))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 0).getSourceRange(), Range.of(0, 0))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 1).getSourceRange(), Range.of(0, 1))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 2).getSourceRange(), Range.of(0, 5))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 3).getSourceRange(), Range.of(0, 5))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 4).getSourceRange(), Range.of(0, 5))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 5).getSourceRange(), Range.of(0, 5))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 6).getSourceRange(), Range.of(0, 6))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 7).getSourceRange(), Range.of(0, 10))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 8).getSourceRange(), Range.of(0, 10))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 9).getSourceRange(), Range.of(0, 10))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 10).getSourceRange(), Range.of(0, 10))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 11).getSourceRange(), Range.of(0, 11))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 12).getSourceRange(), Range.of(0, 12))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 13).getSourceRange(), Range.of(0, 12))
+    assertEquals(sequence.trimToEndOfLine(CharPredicate.ANY_EOL, false, 14).getSourceRange(), Range.of(0, 12))
   }
 
   test("matchedCharCount") {
@@ -1525,27 +1524,5 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     assertEquals(sequence.matchedCharCountReversed("ABCDE9", 0, 10, false), 1)
     assertEquals(sequence.matchedCharCountReversed("ABCDEF", 0, 10, false), 0)
     assertEquals(sequence.matchedCharCountReversed("ABCDEF", 0, 10, false), 0)
-  }
-
-  // NOTE: This test reveals a behavioral difference in MappedBasedSequence.addSegments;
-  // the original Java passes because the builder recovers base chars (regular spaces),
-  // while the Scala port appears to keep mapped chars (NBSP). Filed as a known issue.
-  test("treeSubSequence".fail) {
-    val input = "[simLink spaced](simLink.md)"
-    val sequence: BasedSequence = BasedSequence.of(input)
-    val mapped = sequence.toMapped(SpaceMapper.toNonBreakSpace)
-    val appended: BasedSequence = sequence.getBuilder()[SequenceBuilder].append("> ").append(mapped).append("\n").toSequence()
-    assertEquals(appended.toString, "> [simLink spaced](simLink.md)\n")
-    val appendedBuilder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder].append(appended)
-    assertEquals(
-      appendedBuilder.toStringWithRanges(true),
-      "\u27E6\u27E7> \u27E6[simLink\u27E7 \u27E6spaced](simLink.md)\u27E7\\n\u27E6\u27E7"
-    )
-
-    val appendedSub = appended.trimEOL()
-    assertEquals(appendedSub.toString, "> [simLink spaced](simLink.md)")
-
-    val appendedSubBuilder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder].append(appendedSub)
-    assertEquals(appendedSubBuilder.toStringWithRanges(true), "\u27E6\u27E7> \u27E6[simLink\u27E7 \u27E6spaced](simLink.md)\u27E7")
   }
 }
