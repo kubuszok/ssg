@@ -13,4 +13,9 @@ package object md {
 
   /** SSG project version (snapshot). */
   val Version = "0.1.0-SNAPSHOT"
+
+  extension (ds: ssg.md.util.data.MutableDataSet) {
+    def set[T <: Object](key: ssg.md.util.data.DataKey[balticporter.runtime.JavaCollection[T]], value: java.util.Collection[T]): ssg.md.util.data.MutableDataSet =
+      ds.set(key, balticporter.runtime.JavaCollection.fromJava(value))
+  }
 }

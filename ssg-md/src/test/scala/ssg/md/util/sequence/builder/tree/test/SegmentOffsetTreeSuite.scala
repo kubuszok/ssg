@@ -26,7 +26,7 @@ final class SegmentOffsetTreeSuite extends munit.FunSuite {
     // System.out.println(segOffsetTree.toString(sequence))
 
     val iMax = sequenceFull.length()
-    var seg: Nullable[Segment] = Nullable.empty[Segment]
+    var seg: Nullable[Segment] = null
     var i = 0
     while (i < iMax) {
       val offset = sequenceFull.getIndexOffset(i)
@@ -41,13 +41,13 @@ final class SegmentOffsetTreeSuite extends munit.FunSuite {
 //                    System.out.println("i=" + i + " pos=" + seg.get.pos + ", segOff=" + seg.get)
         }
 
-        val actual = offset - seg.get.getStartOffset + seg.get.startIndex
+        val actual = offset - seg.get.getStartOffset() + seg.get.startIndex
         assertEquals(actual, i, s"i=$i offset=$offset seg=${seg.get} segStartIndex=${seg.get.startIndex}")
       }
       i += 1
     }
 
-    seg = Nullable.empty[Segment]
+    seg = null
     i = iMax - 1
     while (i >= 0) {
       val offset = sequenceFull.getIndexOffset(i)
@@ -62,7 +62,7 @@ final class SegmentOffsetTreeSuite extends munit.FunSuite {
 //                    System.out.println("i=" + i + " pos=" + seg.get.pos + ", segOff=" + seg.get)
         }
 
-        val actual = offset - seg.get.getStartOffset + seg.get.startIndex
+        val actual = offset - seg.get.getStartOffset() + seg.get.startIndex
         assertEquals(actual, i, s"i=$i offset=$offset seg=${seg.get} segStartIndex=${seg.get.startIndex}")
       }
       i -= 1
@@ -257,7 +257,7 @@ final class SegmentOffsetTreeSuite extends munit.FunSuite {
     )
 
     val segments2 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
-    val treeRange = segTree.getSegmentRange(10, segments.length - 10, 0, segTree.size, sequence, Nullable.empty[Segment])
+    val treeRange = segTree.getSegmentRange(10, segments.length - 10, 0, segTree.size, sequence, null)
     segTree.addSegments(segments2, treeRange)
 
     assertEquals(
@@ -312,7 +312,7 @@ final class SegmentOffsetTreeSuite extends munit.FunSuite {
     assertEquals(segments3.toStringWithRangesVisibleWhitespace(input), "\u27e61\\nline 2\u27e7\u27e6\\n\\nli\u27e7")
 
     val segments2 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
-    val treeRange = segTree.getSegmentRange(5, segments.length - 5, 0, segTree.size, sequence, Nullable.empty[Segment])
+    val treeRange = segTree.getSegmentRange(5, segments.length - 5, 0, segTree.size, sequence, null)
     segTree.addSegments(segments2, treeRange)
 
     assertEquals(

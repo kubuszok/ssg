@@ -30,16 +30,25 @@ object ComboAnchorLinkSpecTest {
   val OPTIONS:           DataHolder       = new MutableDataSet()
     .set(Parser.EXTENSIONS, Collections.singleton(AnchorLinkExtension.create()))
     .set(AnchorLinkExtension.ANCHORLINKS_ANCHOR_CLASS, "anchor")
-    .set(AnchorLinkExtension.ANCHORLINKS_NO_BLOCK_QUOTE, true)
-    .set(HtmlRenderer.RENDER_HEADER_ID, false)
-    .set(HtmlRenderer.GENERATE_HEADER_ID, true)
+    .set(AnchorLinkExtension.ANCHORLINKS_NO_BLOCK_QUOTE, java.lang.Boolean.valueOf(true))
+    .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(false))
+    .set(HtmlRenderer.GENERATE_HEADER_ID, java.lang.Boolean.valueOf(true))
     .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-wrap", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false).toImmutable())
-    map.put("set-name", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_NAME, true).toImmutable())
-    map.put("no-id", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_ID, false).toImmutable())
+    map.put(
+      "no-wrap",
+      new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "set-name",
+      new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_NAME, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-id",
+      new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_ID, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put("no-class", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_ANCHOR_CLASS, "").toImmutable())
     map.put(
       "prefix-suffix",

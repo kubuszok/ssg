@@ -27,7 +27,7 @@ final class DefinitionParserTest extends munit.FunSuite {
 
     boundary {
       for (handler <- handlers)
-        if (handler.escape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.escape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }
@@ -39,7 +39,7 @@ final class DefinitionParserTest extends munit.FunSuite {
 
     boundary {
       for (handler <- handlers)
-        if (handler.unEscape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.unEscape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }
@@ -63,7 +63,7 @@ final class DefinitionParserTest extends munit.FunSuite {
   }
 
   test("test_escapeNoColon") {
-    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.COLON_MARKER, false)).extensions(Collections.singleton(DefinitionExtension.create())).build()
+    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.COLON_MARKER, java.lang.Boolean.valueOf(false))).extensions(Collections.singleton(DefinitionExtension.create())).build()
 
     assertEquals(escape("abc", parser), "abc")
 
@@ -81,7 +81,7 @@ final class DefinitionParserTest extends munit.FunSuite {
   }
 
   test("test_escapeNoTilde") {
-    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.TILDE_MARKER, false)).extensions(Collections.singleton(DefinitionExtension.create())).build()
+    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.TILDE_MARKER, java.lang.Boolean.valueOf(false))).extensions(Collections.singleton(DefinitionExtension.create())).build()
 
     assertEquals(escape("abc", parser), "abc")
 

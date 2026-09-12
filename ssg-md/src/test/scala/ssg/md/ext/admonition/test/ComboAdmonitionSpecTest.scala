@@ -31,9 +31,15 @@ object ComboAdmonitionSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-lazy-continuation", new MutableDataSet().set(AdmonitionExtension.ALLOW_LAZY_CONTINUATION, false).toImmutable())
-    map.put("no-lead-space", new MutableDataSet().set(AdmonitionExtension.ALLOW_LEADING_SPACE, false).toImmutable())
-    map.put("intellij", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, true).toImmutable())
+    map.put(
+      "no-lazy-continuation",
+      new MutableDataSet().set(AdmonitionExtension.ALLOW_LAZY_CONTINUATION, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-lead-space",
+      new MutableDataSet().set(AdmonitionExtension.ALLOW_LEADING_SPACE, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put("intellij", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, java.lang.Boolean.valueOf(true)).toImmutable())
     map
   }
 }

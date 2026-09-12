@@ -41,7 +41,7 @@ object ComboKramdownCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_kramdown_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboKramdownCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.KRAMDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.KRAMDOWN).set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(4)).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =

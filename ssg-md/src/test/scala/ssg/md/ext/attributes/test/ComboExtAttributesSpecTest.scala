@@ -35,8 +35,8 @@ object ComboExtAttributesSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/attributes/test/ext_attributes_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboExtAttributesSpecTest], SPEC_RESOURCE)
   val OPTIONS:           DataHolder       = new MutableDataSet()
-    .set(HtmlRenderer.RENDER_HEADER_ID, true)
-    .set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true)
+    .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(true))
+    .set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(true))
     .set(
       Parser.EXTENSIONS,
       Arrays.asList(
@@ -60,19 +60,34 @@ object ComboExtAttributesSpecTest {
           Parser.EXTENSIONS,
           Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create())
         )
-        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
-        .set(HtmlRenderer.RENDER_HEADER_ID, false)
+        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(false))
         .toImmutable()
     )
-    map.put("text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true).toImmutable())
-    map.put("no-text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, false).toImmutable())
-    map.put("dont-wrap-non-attributes", new MutableDataSet().set(AttributesExtension.WRAP_NON_ATTRIBUTE_TEXT, false).toImmutable())
+    map.put(
+      "text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "dont-wrap-non-attributes",
+      new MutableDataSet().set(AttributesExtension.WRAP_NON_ATTRIBUTE_TEXT, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put(
       "empty-implicit-delimiters",
-      new MutableDataSet().set(AttributesExtension.USE_EMPTY_IMPLICIT_AS_SPAN_DELIMITER, true).toImmutable()
+      new MutableDataSet().set(AttributesExtension.USE_EMPTY_IMPLICIT_AS_SPAN_DELIMITER, java.lang.Boolean.valueOf(true)).toImmutable()
     )
-    map.put("no-info-attributes", new MutableDataSet().set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, false).toImmutable())
-    map.put("info-attributes", new MutableDataSet().set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, true).toImmutable())
+    map.put(
+      "no-info-attributes",
+      new MutableDataSet().set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "info-attributes",
+      new MutableDataSet().set(AttributesExtension.FENCED_CODE_INFO_ATTRIBUTES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "fenced-code-to-both",
       new MutableDataSet().set(AttributesExtension.FENCED_CODE_ADD_ATTRIBUTES, FencedCodeAddType.ADD_TO_PRE_CODE).toImmutable()

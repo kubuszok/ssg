@@ -26,6 +26,6 @@ object ComboCoreWrappingSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/test/util/formatter/core_wrapping_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCoreWrappingSpecTest], SPEC_RESOURCE)
   val OPTIONS:           DataHolder       = new MutableDataSet()
-    .set(SharedDataKeys.RUNNING_TESTS, false) // Set to true to get stdout printout of intermediate wrapping information
+    .set(SharedDataKeys.RUNNING_TESTS, java.lang.Boolean.valueOf(false)) // Set to true to get stdout printout of intermediate wrapping information
     .toImmutable()
 }

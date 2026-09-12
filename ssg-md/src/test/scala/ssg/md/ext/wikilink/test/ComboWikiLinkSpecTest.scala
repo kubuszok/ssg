@@ -31,7 +31,10 @@ object ComboWikiLinkSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("links-first", new MutableDataSet().set(WikiLinkExtension.LINK_FIRST_SYNTAX, true).toImmutable())
+    map.put(
+      "links-first",
+      new MutableDataSet().set(WikiLinkExtension.LINK_FIRST_SYNTAX, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put("link-ext", new MutableDataSet().set(WikiLinkExtension.LINK_FILE_EXTENSION, ".html").toImmutable())
     map.put("link-prefix", new MutableDataSet().set(WikiLinkExtension.LINK_PREFIX, "/prefix/").toImmutable())
     map.put(
@@ -44,16 +47,31 @@ object ComboWikiLinkSpecTest {
       "image-prefix-absolute",
       new MutableDataSet().set(WikiLinkExtension.IMAGE_PREFIX, "/relative/images/").set(WikiLinkExtension.IMAGE_PREFIX_ABSOLUTE, "/absolute/images/").toImmutable()
     )
-    map.put("wiki-images", new MutableDataSet().set(WikiLinkExtension.IMAGE_LINKS, true).toImmutable())
-    map.put("allow-inlines", new MutableDataSet().set(WikiLinkExtension.ALLOW_INLINES, true).toImmutable())
-    map.put("allow-anchors", new MutableDataSet().set(WikiLinkExtension.ALLOW_ANCHORS, true).toImmutable())
-    map.put("allow-pipe-escape", new MutableDataSet().set(WikiLinkExtension.ALLOW_PIPE_ESCAPE, true).toImmutable())
-    map.put("allow-anchor-escape", new MutableDataSet().set(WikiLinkExtension.ALLOW_ANCHOR_ESCAPE, true).toImmutable())
+    map.put("wiki-images", new MutableDataSet().set(WikiLinkExtension.IMAGE_LINKS, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put(
+      "allow-inlines",
+      new MutableDataSet().set(WikiLinkExtension.ALLOW_INLINES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "allow-anchors",
+      new MutableDataSet().set(WikiLinkExtension.ALLOW_ANCHORS, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "allow-pipe-escape",
+      new MutableDataSet().set(WikiLinkExtension.ALLOW_PIPE_ESCAPE, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "allow-anchor-escape",
+      new MutableDataSet().set(WikiLinkExtension.ALLOW_ANCHOR_ESCAPE, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "custom-link-escape",
       new MutableDataSet().set(WikiLinkExtension.LINK_ESCAPE_CHARS, " +<>").set(WikiLinkExtension.LINK_REPLACE_CHARS, "____").toImmutable()
     )
-    map.put("link-text-priority", new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, true).toImmutable())
+    map.put(
+      "link-text-priority",
+      new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map
   }
 }

@@ -34,10 +34,10 @@ object ComboCoreDirectionalSpecTest {
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCoreDirectionalSpecTest], SPEC_RESOURCE)
 
   val OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.INDENT_SIZE, 0)
-    .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, true)
-    .set(HtmlRenderer.PERCENT_ENCODE_URLS, true)
-    .set(TestUtils.NO_FILE_EOL, false)
+    .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(0))
+    .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, java.lang.Boolean.valueOf(true))
+    .set(HtmlRenderer.PERCENT_ENCODE_URLS, java.lang.Boolean.valueOf(true))
+    .set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false))
     .toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */

@@ -201,7 +201,7 @@ class CollectionHostValidator[T] {
   }
 
   private def isNullableEmpty(param: Object): Boolean =
-    // Nullable.empty is represented as NestedNone at runtime
+    // null is represented as NestedNone at runtime
     param != null && param.getClass.getName.contains("NestedNone")
 
   private def prepareMessage(callBack: String, params: Object*): String = {
@@ -211,7 +211,7 @@ class CollectionHostValidator[T] {
     for (param <- params) {
       if (first) first = false
       else out.append(", ")
-      if (param == null || isNullableEmpty(param)) out.append("null") // @nowarn — mirrors Java original null handling and Nullable.empty
+      if (param == null || isNullableEmpty(param)) out.append("null") // @nowarn — mirrors Java original null handling and null
       else {
         val className = param.getClass.getName
         val pkgName   = param.getClass.getPackage.getName

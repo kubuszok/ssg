@@ -40,7 +40,7 @@ object ComboExtraSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_extra_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboExtraSpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.PERCENT_ENCODE_URLS, java.lang.Boolean.valueOf(true)).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =

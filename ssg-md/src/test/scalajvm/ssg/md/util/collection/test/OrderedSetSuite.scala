@@ -23,7 +23,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedSet.iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it, String.valueOf(i))
       i += 1
@@ -36,7 +36,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedSet.iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it, String.valueOf(lastJ))
         lastJ += 1
@@ -56,7 +56,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedSet.iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it, String.valueOf(i))
       i += 1
@@ -70,7 +70,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter2 = orderedSet.iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it, String.valueOf(lastJ))
         lastJ += 1
@@ -105,7 +105,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedSet.iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it, String.valueOf(i))
       i += 2
@@ -128,7 +128,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     var i        = 0
     var iterator = orderedSet.iterator()
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it, String.valueOf(i))
       i += 1
@@ -136,7 +136,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     iterator = orderedSet.iterator()
     var j = 0
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -144,7 +144,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedSet.iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it, String.valueOf(lastJ))
         lastJ += 1
@@ -166,7 +166,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     var i        = 9
     var iterator = orderedSet.reversedIterator()
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it, String.valueOf(i))
       i -= 1
@@ -174,7 +174,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
     iterator = orderedSet.reversedIterator()
     var j = 9
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -182,7 +182,7 @@ final class OrderedSetSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter2 = orderedSet.iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it, String.valueOf(lastJ))
         lastJ += 1
@@ -204,7 +204,7 @@ final class OrderedSetSuite extends munit.FunSuite {
     assertEquals(orderedSet.addAll(orderedSet), false)
 
     val iterator = orderedSet.iterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedSet.removeIndex(0)
     intercept[ConcurrentModificationException] {
       iterator.next()

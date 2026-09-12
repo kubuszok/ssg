@@ -29,7 +29,8 @@ final class ComboAbbreviationFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboAbbreviationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/abbreviation/test/ext_abbreviation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAbbreviationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     AbbreviationExtension.ABBREVIATIONS_KEEP,

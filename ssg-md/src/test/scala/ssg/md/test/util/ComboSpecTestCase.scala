@@ -25,7 +25,7 @@ abstract class ComboSpecTestCase(
 
   protected val optionsMap:       ju.Map[String, DataHolder] = new ju.HashMap[String, DataHolder]()
   protected val myDefaultOptions: Nullable[DataHolder]       = TestUtils.combineDefaultOptions(
-    if (defaultOptions.isEmpty) Nullable.empty else defaultOptions.toArray
+    if (defaultOptions.isEmpty) null else defaultOptions.toArray
   )
 
   optionMap.foreach(m => optionsMap.putAll(m))

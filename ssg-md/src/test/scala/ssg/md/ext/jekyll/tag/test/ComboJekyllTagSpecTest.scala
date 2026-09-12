@@ -31,15 +31,27 @@ object ComboJekyllTagSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("dummy-identifier", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, true).toImmutable())
-    map.put("no-inlines", new MutableDataSet().set(JekyllTagExtension.ENABLE_INLINE_TAGS, false).toImmutable())
-    map.put("no-blocks", new MutableDataSet().set(JekyllTagExtension.ENABLE_BLOCK_TAGS, false).toImmutable())
+    map.put(
+      "dummy-identifier",
+      new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-inlines",
+      new MutableDataSet().set(JekyllTagExtension.ENABLE_INLINE_TAGS, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-blocks",
+      new MutableDataSet().set(JekyllTagExtension.ENABLE_BLOCK_TAGS, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     val content = new HashMap[String, String]()
     content.put("test.html", "<h1>Heading 1</h1>\n<p>test text</p>\n")
     content.put("test2.md", "Included Text\n")
     content.put("links.html", "")
     map.put("includes", new MutableDataSet().set(JekyllTagExtension.INCLUDED_HTML, content).toImmutable())
-    map.put("embed-includes", new MutableDataSet().set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true).toImmutable())
+    map.put(
+      "embed-includes",
+      new MutableDataSet().set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map
   }
 }

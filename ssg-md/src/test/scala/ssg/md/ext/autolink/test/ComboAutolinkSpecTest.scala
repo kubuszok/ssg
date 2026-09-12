@@ -36,7 +36,10 @@ object ComboAutolinkSpecTest {
       new MutableDataSet().set(TestUtils.UNLOAD_EXTENSIONS, Collections.singletonList(classOf[AutolinkExtension])).toImmutable()
     )
     map.put("ignore-google", new MutableDataSet().set(AutolinkExtension.IGNORE_LINKS, "www.google.com").toImmutable())
-    map.put("intellij-dummy", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, true).toImmutable())
+    map.put(
+      "intellij-dummy",
+      new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "typographic-ext",
       new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(AutolinkExtension.create(), TypographicExtension.create())).toImmutable()

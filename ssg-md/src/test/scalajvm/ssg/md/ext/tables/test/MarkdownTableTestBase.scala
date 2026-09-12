@@ -65,7 +65,7 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
 
   @SuppressWarnings(Array("unused"))
   protected def getSortedTable(table: MarkdownTable, columnSorts: Array[ColumnSort]): MarkdownTable =
-    table.sorted(columnSorts, 0, Nullable.empty)
+    table.sorted(columnSorts, 0, null)
 
   protected def getTable(markdown: CharSequence, options: DataHolder): MarkdownTable = {
     val table = getTables(markdown, options)(0)
@@ -77,16 +77,16 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
     val useOptions = (if (options == null) new MutableDataSet() else new MutableDataSet(options))
       .set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, "")
       .set(TablesExtension.FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH, Integer.valueOf(3))
-      .set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, true)
-      .set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, true)
-      .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, true)
+      .set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(true))
       .set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.ADD)
       .set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.ADD)
-      .set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, true)
-      .set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, true)
+      .set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, java.lang.Boolean.valueOf(true))
       .set(TablesExtension.FORMAT_TABLE_MIN_SEPARATOR_DASHES, Integer.valueOf(3))
       .set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.AS_IS)
-      .set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, true)
+      .set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, java.lang.Boolean.valueOf(true))
       .set(
         TablesExtension.FORMAT_CHAR_WIDTH_PROVIDER,
         new CharWidthProvider {
@@ -101,16 +101,16 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
     val useOptions = (if (options == null) new MutableDataSet() else new MutableDataSet(options))
       .set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, "")
       .set(TablesExtension.FORMAT_TABLE_MIN_SEPARATOR_COLUMN_WIDTH, Integer.valueOf(3))
-      .set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, true)
-      .set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, true)
-      .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, true)
+      .set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(true))
       .set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
       .set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.AS_IS)
-      .set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, true)
-      .set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, true)
+      .set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, java.lang.Boolean.valueOf(true))
+      .set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, java.lang.Boolean.valueOf(true))
       .set(TablesExtension.FORMAT_TABLE_MIN_SEPARATOR_DASHES, Integer.valueOf(3))
       .set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.AS_IS)
-      .set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, true)
+      .set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, java.lang.Boolean.valueOf(true))
       .set(
         TablesExtension.FORMAT_CHAR_WIDTH_PROVIDER,
         new CharWidthProvider {
@@ -128,11 +128,11 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
     assertEquals(index.toString, new MarkdownTable.IndexSpanOffset(expIndex, expSpanOffset).toString, message)
 
   protected def assertCellInfo(message: String, row: Int, column: Int, insideCol: Integer, insideOffset: Integer, info: TableCellOffsetInfo): Unit = {
-    val insideColN:    Nullable[Integer] = if (insideCol == null) Nullable.empty else insideCol
-    val insideOffsetN: Nullable[Integer] = if (insideOffset == null) Nullable.empty else insideOffset
+    val insideColN:    Nullable[Integer] = if (insideCol == null) null else insideCol
+    val insideOffsetN: Nullable[Integer] = if (insideOffset == null) null else insideOffset
     assertEquals(
       info.toString,
-      new TableCellOffsetInfo(info.offset, info.table, info.section, Nullable.empty, Nullable.empty, row, column, insideColN, insideOffsetN).toString,
+      new TableCellOffsetInfo(info.offset, info.table, info.section, null, null, row, column, insideColN, insideOffsetN).toString,
       message
     )
   }

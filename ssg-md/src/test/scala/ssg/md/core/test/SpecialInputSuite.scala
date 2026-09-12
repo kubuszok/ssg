@@ -17,7 +17,7 @@ import scala.language.implicitConversions
 
 final class SpecialInputSuite extends munit.FunSuite {
 
-  private val options = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).toImmutable()
+  private val options = new MutableDataSet().set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false)).toImmutable()
 
   private def assertRendering(source: String, expectedHtml: String): Unit = {
     val parser   = Parser.builder(options).build()

@@ -79,14 +79,14 @@ final class BasicParseTest extends munit.FunSuite {
 
     // Debug: check LineAppendableImpl internals
     val htmlWriter = new ssg.md.html.HtmlWriter(
-      new java.lang.StringBuilder(: Appendable),
+      new java.lang.StringBuilder(): Appendable,
       0,
       0,
       false,
       false
     )
     val lineAppendable = htmlWriter.asInstanceOf[ssg.md.util.sequence.LineAppendable]
-    println(s"LineAppendable builder class: ${lineAppendable.getBuilder.getClass.getSimpleName}")
+    println(s"LineAppendable builder class: ${lineAppendable.getBuilder().getClass.getSimpleName}")
 
     // Also try render(node) which returns String
     val html = renderer.render(doc)
@@ -121,10 +121,12 @@ final class BasicParseTest extends munit.FunSuite {
     val doc    = parser.parse("[link]()")
     val link   = doc.getFirstChild().getFirstChild().asInstanceOf[ssg.md.ast.Link]
     println(
-      s"link.url = '${link.url}', isNull=${link.url.isNull}, isNotNull=${link.url.isNotNull}, length=${link.url.length()}, startOffset=${link.url.getStartOffset()}, endOffset=${link.url.getEndOffset()}"
+      s"link.getUrl() = '${link.getUrl()}', isNull=${link.getUrl().isNull()}, isNotNull=${link.getUrl().isNotNull()}, length=${link.getUrl().length()}, startOffset=${link.getUrl().getStartOffset()}, endOffset=${link.getUrl().getEndOffset()}"
     )
-    println(s"link.pageRef = '${link.pageRef}', isNull=${link.pageRef.isNull}, isNotNull=${link.pageRef.isNotNull}")
-    println(s"link.url eq BasedSequence.NULL: ${link.url eq ssg.md.util.sequence.BasedSequence.NULL}")
+    println(
+      s"link.getPageRef() = '${link.getPageRef()}', isNull=${link.getPageRef().isNull()}, isNotNull=${link.getPageRef().isNotNull()}"
+    )
+    println(s"link.getUrl() eq BasedSequence.NULL: ${link.getUrl() eq ssg.md.util.sequence.BasedSequence.NULL}")
     val ast = new ssg.md.test.util.AstCollectingVisitor().collectAndGetAstText(doc)
     println(s"Empty URL link AST:\n$ast")
     assert(ast.contains("url:"), s"AST should contain url field:\n$ast")
@@ -135,8 +137,6 @@ final class BasicParseTest extends munit.FunSuite {
     val options = new ssg.md.util.data.MutableDataSet().toImmutable()
     val rawValue: String = key.get(options)
     println(s"rawValue: '$rawValue', isNull: ${rawValue == null}")
-    val wrapped = rawValue
-    println(s"wrapped.isEmpty: ${wrapped.isEmpty}, wrapped.isDefined: ${wrapped.isDefined}")
-    assert(wrapped.isEmpty, s"Expected empty but got: $wrapped (class: ${wrapped.getClass})")
+    assert(rawValue == null, s"Expected null but got: $rawValue")
   }
 }

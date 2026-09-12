@@ -16,7 +16,7 @@ import scala.language.implicitConversions
 
 abstract class IRenderBase(val options: Nullable[DataHolder]) extends IRender {
 
-  def this() = this(Nullable.empty)
+  def this() = this(null)
 
   override def render(document: Node): String = {
     val out = new StringBuilder()

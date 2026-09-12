@@ -459,7 +459,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
 
   test("splitBasic") {
     val sequence = basedSequenceOf(" 1,2 , 3 ,4,5,   ").subSequence(0, " 1,2 , 3 ,4,5,   ".length)
-    val list     = sequence.split(",", 0, SequenceUtils.SPLIT_TRIM_PARTS | SequenceUtils.SPLIT_SKIP_EMPTY, ssg.md.Nullable.empty[CharPredicate])
+    val list     = sequence.split(",", 0, SequenceUtils.SPLIT_TRIM_PARTS | SequenceUtils.SPLIT_SKIP_EMPTY, ssg.md.null)
     val sl       = new ArrayList[String](list.length)
     for (bs <- list) sl.add(bs.toString)
     assertEquals(sl.toArray(new Array[String](0)).toSeq, Seq("1", "2", "3", "4", "5"))
@@ -467,7 +467,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
 
   test("splitEol") {
     val sequence = basedSequenceOf("   line1 \nline2 \n line3 \n").subSequence(0, "   line1 \nline2 \n line3 \n".length)
-    val list     = sequence.split("\n", 0, SequenceUtils.SPLIT_INCLUDE_DELIMS, ssg.md.Nullable.empty[CharPredicate])
+    val list     = sequence.split("\n", 0, SequenceUtils.SPLIT_INCLUDE_DELIMS, ssg.md.null)
     val sl       = new ArrayList[String](list.length)
     for (bs <- list) sl.add(bs.toString)
     assertEquals(sl.toArray(new Array[String](0)).toSeq, Seq("   line1 \n", "line2 \n", " line3 \n"))
@@ -1049,7 +1049,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
   test("replacePrefix11") {
     val input    = "0123456789"
     val sequence = basedSequenceOf(input)
-    val builder:  SequenceBuilder     = sequence.getBuilder[SequenceBuilder]
+    val builder:  SequenceBuilder     = sequence.getBuilder()[SequenceBuilder]
     val segments: BasedSegmentBuilder = builder.segmentBuilder
 
     segments.append(Range.of(0, 0))

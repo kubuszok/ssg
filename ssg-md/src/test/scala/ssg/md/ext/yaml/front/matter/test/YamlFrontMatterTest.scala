@@ -20,7 +20,8 @@ import scala.language.implicitConversions
 
 final class YamlFrontMatterTest extends munit.FunSuite {
 
-  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).toImmutable()
+  private val OPTIONS: DataHolder =
+    new MutableDataSet().set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false)).set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).toImmutable()
 
   private val PARSER:   Parser       = Parser.builder(OPTIONS).build()
   private val RENDERER: HtmlRenderer = HtmlRenderer.builder(OPTIONS).build()

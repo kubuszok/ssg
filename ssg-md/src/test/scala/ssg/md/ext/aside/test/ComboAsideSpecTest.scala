@@ -32,13 +32,16 @@ object ComboAsideSpecTest {
     val map = new HashMap[String, DataHolder]()
     map.put(
       "extend-to-blank-line",
-      new MutableDataSet().set(AsideExtension.EXTEND_TO_BLANK_LINE, true).set(Parser.BLOCK_QUOTE_EXTEND_TO_BLANK_LINE, true).toImmutable()
+      new MutableDataSet().set(AsideExtension.EXTEND_TO_BLANK_LINE, java.lang.Boolean.valueOf(true)).set(Parser.BLOCK_QUOTE_EXTEND_TO_BLANK_LINE, java.lang.Boolean.valueOf(true)).toImmutable()
     )
     map.put(
       "ignore-blank-line",
-      new MutableDataSet().set(AsideExtension.IGNORE_BLANK_LINE, true).set(Parser.BLOCK_QUOTE_IGNORE_BLANK_LINE, true).toImmutable()
+      new MutableDataSet().set(AsideExtension.IGNORE_BLANK_LINE, java.lang.Boolean.valueOf(true)).set(Parser.BLOCK_QUOTE_IGNORE_BLANK_LINE, java.lang.Boolean.valueOf(true)).toImmutable()
     )
-    map.put("blank-lines", new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, true).set(TestUtils.NO_FILE_EOL, false).toImmutable())
+    map.put(
+      "blank-lines",
+      new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true)).set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map
   }
 }

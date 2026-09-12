@@ -70,7 +70,7 @@ final class ArrayUtilsSuite extends munit.FunSuite {
     assertEquals(ArrayUtils.firstOf(ints, 1, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
     assertEquals(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
     assertEquals(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    // Objects.isNull returns the null element itself, which is null
+    // Objects.isNull() returns the null element itself, which is null
     assert(
       ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i)).get == null
     )

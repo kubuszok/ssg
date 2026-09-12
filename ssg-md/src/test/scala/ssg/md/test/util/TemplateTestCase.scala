@@ -15,7 +15,7 @@ import scala.language.implicitConversions
 // JUnit 4: @Test annotation — will need adaptation to munit later
 abstract class TemplateTestCase extends TemplateReaderFactory {
 
-  private var dumpTemplateReader: Nullable[DumpTemplateReader] = Nullable.empty
+  private var dumpTemplateReader: Nullable[DumpTemplateReader] = null
 
   override def create(inputStream: InputStream): TemplateReader = {
     val reader = new DumpTemplateReader(inputStream, this)

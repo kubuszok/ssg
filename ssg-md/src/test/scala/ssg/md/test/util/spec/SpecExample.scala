@@ -89,13 +89,13 @@ object SpecExample {
   val NULL: SpecExample = new SpecExample(
     ResourceLocation.NULL,
     0,
-    Nullable.empty,
+    null,
     "",
     0,
     "",
     "",
-    Nullable.empty,
-    Nullable.empty,
+    null,
+    null,
     true
   )
 
@@ -150,7 +150,7 @@ object SpecExample {
     new SpecExample(
       location,
       traceElement.getLineNumber - 1,
-      Nullable.empty,
+      null,
       traceElement.getMethodName,
       0,
       source,

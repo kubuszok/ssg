@@ -27,24 +27,43 @@ final class ComboGitLabSpecTest extends RendererSpecTestSuite {
 object ComboGitLabSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gitlab/test/ext_gitlab_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboGitLabSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(HtmlRenderer.RENDER_HEADER_ID, true).set(Parser.EXTENSIONS, Collections.singletonList(GitLabExtension.create())).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(true)).set(Parser.EXTENSIONS, Collections.singletonList(GitLabExtension.create())).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-del", new MutableDataSet().set(GitLabExtension.DEL_PARSER, false).toImmutable())
-    map.put("no-ins", new MutableDataSet().set(GitLabExtension.INS_PARSER, false).toImmutable())
-    map.put("no-quotes", new MutableDataSet().set(GitLabExtension.BLOCK_QUOTE_PARSER, false).toImmutable())
-    map.put("no-math", new MutableDataSet().set(GitLabExtension.RENDER_BLOCK_MATH, false).toImmutable())
-    map.put("no-mermaid", new MutableDataSet().set(GitLabExtension.RENDER_BLOCK_MERMAID, false).toImmutable())
-    map.put("no-video", new MutableDataSet().set(GitLabExtension.RENDER_VIDEO_IMAGES, false).toImmutable())
-    map.put("no-video-link", new MutableDataSet().set(GitLabExtension.RENDER_VIDEO_LINK, false).toImmutable())
-    map.put("no-nested-quotes", new MutableDataSet().set(GitLabExtension.NESTED_BLOCK_QUOTES, false).toImmutable())
+    map.put("no-del", new MutableDataSet().set(GitLabExtension.DEL_PARSER, java.lang.Boolean.valueOf(false)).toImmutable())
+    map.put("no-ins", new MutableDataSet().set(GitLabExtension.INS_PARSER, java.lang.Boolean.valueOf(false)).toImmutable())
+    map.put(
+      "no-quotes",
+      new MutableDataSet().set(GitLabExtension.BLOCK_QUOTE_PARSER, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put("no-math", new MutableDataSet().set(GitLabExtension.RENDER_BLOCK_MATH, java.lang.Boolean.valueOf(false)).toImmutable())
+    map.put(
+      "no-mermaid",
+      new MutableDataSet().set(GitLabExtension.RENDER_BLOCK_MERMAID, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-video",
+      new MutableDataSet().set(GitLabExtension.RENDER_VIDEO_IMAGES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-video-link",
+      new MutableDataSet().set(GitLabExtension.RENDER_VIDEO_LINK, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-nested-quotes",
+      new MutableDataSet().set(GitLabExtension.NESTED_BLOCK_QUOTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put("block-delimiters", new MutableDataSet().set(HtmlRenderer.FENCED_CODE_LANGUAGE_DELIMITERS, "-").toImmutable())
     map.put("math-class", new MutableDataSet().set(GitLabExtension.BLOCK_MATH_CLASS, "math-class").toImmutable())
     map.put("math-latex", new MutableDataSet().set(GitLabExtension.MATH_LANGUAGES, Array("math", "latex")).toImmutable())
     map.put("mermaid-class", new MutableDataSet().set(GitLabExtension.BLOCK_MERMAID_CLASS, "mermaid-class").toImmutable())
     map.put("mermaid-alias", new MutableDataSet().set(GitLabExtension.MERMAID_LANGUAGES, Array("mermaid", "alias")).toImmutable())
-    map.put("code-content-block", new MutableDataSet().set(Parser.FENCED_CODE_CONTENT_BLOCK, true).toImmutable())
+    map.put(
+      "code-content-block",
+      new MutableDataSet().set(Parser.FENCED_CODE_CONTENT_BLOCK, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put("video-extensions", new MutableDataSet().set(GitLabExtension.VIDEO_IMAGE_EXTENSIONS, "tst").toImmutable())
     map.put(
       "video-link-format",

@@ -32,21 +32,24 @@ object ComboTableSpecTest {
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
     map.put("class-name", new MutableDataSet().set(TablesExtension.CLASS_NAME, "table-class").toImmutable())
-    map.put("no-caption", new MutableDataSet().set(TablesExtension.WITH_CAPTION, false).toImmutable())
+    map.put("no-caption", new MutableDataSet().set(TablesExtension.WITH_CAPTION, java.lang.Boolean.valueOf(false)).toImmutable())
     map.put(
       "gfm",
       new MutableDataSet()
-        .set(TablesExtension.COLUMN_SPANS, false)
-        .set(TablesExtension.APPEND_MISSING_COLUMNS, true)
-        .set(TablesExtension.DISCARD_EXTRA_COLUMNS, true)
-        .set(TablesExtension.HEADER_SEPARATOR_COLUMN_MATCH, true)
+        .set(TablesExtension.COLUMN_SPANS, java.lang.Boolean.valueOf(false))
+        .set(TablesExtension.APPEND_MISSING_COLUMNS, java.lang.Boolean.valueOf(true))
+        .set(TablesExtension.DISCARD_EXTRA_COLUMNS, java.lang.Boolean.valueOf(true))
+        .set(TablesExtension.HEADER_SEPARATOR_COLUMN_MATCH, java.lang.Boolean.valueOf(true))
         .toImmutable()
     )
     map.put(
       "typographic",
       new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create(), TypographicExtension.create())).toImmutable()
     )
-    map.put("keep-whitespace", new MutableDataSet().set(TablesExtension.TRIM_CELL_WHITESPACE, false).toImmutable())
+    map.put(
+      "keep-whitespace",
+      new MutableDataSet().set(TablesExtension.TRIM_CELL_WHITESPACE, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put("min-dashes-2", new MutableDataSet().set(TablesExtension.MIN_SEPARATOR_DASHES, Integer.valueOf(2)).toImmutable())
     map.put("min-dashes-1", new MutableDataSet().set(TablesExtension.MIN_SEPARATOR_DASHES, Integer.valueOf(1)).toImmutable())
     map.put("strip-indent", new MutableDataSet().set(TestUtils.SOURCE_INDENT, "> > ").toImmutable())

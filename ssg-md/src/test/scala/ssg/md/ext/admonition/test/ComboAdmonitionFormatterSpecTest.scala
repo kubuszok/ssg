@@ -28,5 +28,6 @@ final class ComboAdmonitionFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboAdmonitionFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/admonition/test/ext_admonition_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAdmonitionFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 }

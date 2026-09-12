@@ -80,7 +80,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     val sequenceFull = SegmentedSequenceFull.create(sequence, segments)
     val iMax         = sequenceFull.length()
     // System.out.println(segTree.toString(sequence))
-    var seg: Nullable[Segment] = Nullable.empty[Segment]
+    var seg: Nullable[Segment] = null
 
     var i = 0
     while (i < iMax) {
@@ -96,7 +96,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
       i += 1
     }
 
-    seg = Nullable.empty[Segment]
+    seg = null
     i = iMax - 1
     while (i >= 0) {
       if (seg.isEmpty || seg.get.notInSegment(i)) {
@@ -186,12 +186,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
           { (bj, j) =>
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData1, 0, 1),
-              if (j >= i) Nullable.empty[SegmentTreePos] else SegmentTreePos(0, 0, 0),
+              if (j >= i) null else SegmentTreePos(0, 0, 0),
               s"i: $i j: $j"
             )
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData2, 1, 1),
-              if (j >= i) Nullable.empty[SegmentTreePos] else SegmentTreePos(1, 0, 0),
+              if (j >= i) null else SegmentTreePos(1, 0, 0),
               s"i: $i j: $j"
             )
           }
@@ -211,12 +211,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
           { (bj, j) =>
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData1, 0, 2),
-              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else SegmentTreePos(if (j >= i 1 else 0, if (j >= i) i else 0, 0)),
+              if (j >= i + 1000) null else SegmentTreePos(if (j >= i) 1 else 0, if (j >= i) i else 0, 0),
               s"i: $i j: $j"
             )
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData2, 1, 3),
-              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else SegmentTreePos(if (j >= i 2 else 1, if (j >= i) i else 0, 0)),
+              if (j >= i + 1000) null else SegmentTreePos(if (j >= i) 2 else 1, if (j >= i) i else 0, 0),
               s"i: $i j: $j"
             )
           }
@@ -264,12 +264,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
 
               assertEquals(
                 SegmentTree.findSegmentPos(j, aggrSegData1, 0, finalK),
-                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else SegmentTreePos(segment(0, startIndex(0), 0)),
+                if (segment(0) >= finalK) null else SegmentTreePos(segment(0, startIndex(0), 0)),
                 s"k: $finalK i: $i j: $j s:${segment(0)}"
               )
               assertEquals(
                 SegmentTree.findSegmentPos(j, aggrSegData2, 1, finalK + 1),
-                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else SegmentTreePos(segment(0 + 1, startIndex(0), 0)),
+                if (segment(0) >= finalK) null else SegmentTreePos(segment(0 + 1, startIndex(0), 0)),
                 s"k: $finalK i: $i j: $j s:${segment(0)}"
               )
             }
@@ -347,13 +347,13 @@ final class SegmentTreeSuite extends munit.FunSuite {
     )
     assertCharAt(sequence, segments, segTree)
 
-    val segRange = segTree.getSegmentRange(0, 12, 0, segTree.size, sequence, Nullable.empty[Segment])
+    val segRange = segTree.getSegmentRange(0, 12, 0, segTree.size, sequence, null)
     assertEquals(
       segRange.toString,
       "SegmentTreeRange{startIndex=0, endIndex=12, startOffset=0, endOffset=10, startPos=0, endPos=2, length=12}"
     )
 
-    val builder = sequence.getBuilder[SequenceBuilder]
+    val builder = sequence.getBuilder()[SequenceBuilder]
     segTree.addSegments(
       builder.segmentBuilder,
       segRange.startIndex,
@@ -387,13 +387,13 @@ final class SegmentTreeSuite extends munit.FunSuite {
     )
     assertCharAt(sequence, segments, segTree)
 
-    val segRange = segTree.getSegmentRange(0, 13, 0, segTree.size, sequence, Nullable.empty[Segment])
+    val segRange = segTree.getSegmentRange(0, 13, 0, segTree.size, sequence, null)
     assertEquals(
       segRange.toString,
       "SegmentTreeRange{startIndex=0, endIndex=13, startOffset=0, endOffset=0, startPos=0, endPos=3, length=13}"
     )
 
-    val builder = sequence.getBuilder[SequenceBuilder]
+    val builder = sequence.getBuilder()[SequenceBuilder]
     segTree.addSegments(
       builder.segmentBuilder,
       segRange.startIndex,
@@ -509,7 +509,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     )
 
     val segments2 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
-    val treeRange = segTree.getSegmentRange(10, segments.length - 10, 0, segTree.size, sequence, Nullable.empty[Segment])
+    val treeRange = segTree.getSegmentRange(10, segments.length - 10, 0, segTree.size, sequence, null)
     segTree.addSegments(segments2, treeRange)
 
     assertEquals(

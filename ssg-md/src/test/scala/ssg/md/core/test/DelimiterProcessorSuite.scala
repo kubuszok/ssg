@@ -25,7 +25,7 @@ import scala.language.implicitConversions
 
 final class DelimiterProcessorSuite extends munit.FunSuite {
 
-  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).toImmutable()
+  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false)).toImmutable()
 
   private val PARSER:   Parser       = Parser.builder(OPTIONS).customDelimiterProcessor(new AsymmetricDelimiterProcessor()).build()
   private val RENDERER: HtmlRenderer = HtmlRenderer.builder(OPTIONS).nodeRendererFactory(new UpperCaseNodeRendererFactory()).build()
@@ -89,7 +89,7 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
     override def skipNonOpenerCloser: Boolean = false
 
     override def unmatchedDelimiterNode(inlineParser: InlineParser, delimiter: DelimiterRun): Nullable[Node] =
-      Nullable.empty
+      null
 
     override def process(opener: Delimiter, closer: Delimiter, delimitersUsed: Int): Unit = {}
   }
@@ -102,7 +102,7 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
     override def getDelimiterUse(opener: DelimiterRun, closer: DelimiterRun): Int = 1
 
     override def unmatchedDelimiterNode(inlineParser: InlineParser, delimiter: DelimiterRun): Nullable[Node] =
-      Nullable.empty
+      null
 
     override def canBeOpener(
       before:              String,
@@ -169,15 +169,14 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
           new NodeRenderingHandler.CustomNodeRenderer[UpperCaseNode] {
             override def render(node: UpperCaseNode, context: NodeRendererContext, html: ssg.md.html.HtmlWriter): Unit = {
               var child = node.getFirstChild()
-              while (child.isDefined) {
-                val c = child.get
-                c match {
+              while (child != null) {
+                child match {
                   case textNode: Text =>
                     textNode.chars = textNode.chars.toUpperCase()
                   case _ =>
                 }
-                context.render(c)
-                child = c.next
+                context.render(child)
+                child = child.getNext()
               }
             }
           }

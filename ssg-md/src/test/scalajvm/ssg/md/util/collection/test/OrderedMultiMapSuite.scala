@@ -26,7 +26,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedMap.entrySet().iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -40,7 +40,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -59,7 +59,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var i         = 0
     val iterFirst = orderedMap.iterator()
-    while (iterFirst.hasNext) {
+    while (iterFirst.hasNext()) {
       val it = iterFirst.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -71,7 +71,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.putAll(orderedMap)
     i = 0
     val iter1 = entries.iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -82,7 +82,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     i = 0
     val iter2 = orderedMap.entrySet().iterator()
-    while (iter2.hasNext) {
+    while (iter2.hasNext()) {
       val it = iter2.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -98,7 +98,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter3 = orderedMap.entrySet().iterator()
-      while (iter3.hasNext) {
+      while (iter3.hasNext()) {
         val it = iter3.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -123,7 +123,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedMap.entrySet().iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -143,7 +143,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     i = 0
     val iter2 = orderedMap.entrySet().iterator()
-    while (iter2.hasNext) {
+    while (iter2.hasNext()) {
       val it = iter2.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue, Integer.valueOf(i))
@@ -170,7 +170,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var iterator = orderedMap.entrySet().iterator()
     var i        = 0
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -179,7 +179,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     iterator = orderedMap.entrySet().iterator()
     var j = 0
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -187,7 +187,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -211,7 +211,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var iterator = orderedMap.entrySet().reversedIterable().reversedIterator()
     var i        = 0
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -220,7 +220,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     iterator = orderedMap.entrySet().reversedIterable().reversedIterator()
     var j = 0
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -228,7 +228,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -252,7 +252,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var iterator = orderedMap.entrySet().reversedIterator()
     var i        = 9
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -263,7 +263,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     iterator = orderedMap.entrySet().reversedIterator()
     var j = 9
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -272,7 +272,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -297,7 +297,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var iterator = orderedMap.entrySetIterable().reversed().iterator()
     var i        = 9
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       val it = iterator.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -308,7 +308,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     iterator = orderedMap.entrySetIterable().reversedIterator()
     var j = 9
-    while (iterator.hasNext) {
+    while (iterator.hasNext()) {
       iterator.next()
       iterator.remove()
 
@@ -317,7 +317,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -343,7 +343,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedMap.entrySet().iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -357,7 +357,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = j + 1
       val iter2 = orderedMap.entrySet().iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -379,7 +379,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     var i     = 0
     val iter1 = orderedMap.entrySet().iterator()
-    while (iter1.hasNext) {
+    while (iter1.hasNext()) {
       val it = iter1.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -388,7 +388,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
     i = 0
     val iter1b = orderedMap.iterator()
-    while (iter1b.hasNext) {
+    while (iter1b.hasNext()) {
       val it = iter1b.next()
       assertEquals(it.getKey, String.valueOf(i))
       assertEquals(it.getValue.intValue(), i)
@@ -404,7 +404,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
 
       var lastJ = 0
       val iter2 = orderedMap.iterator()
-      while (iter2.hasNext) {
+      while (iter2.hasNext()) {
         val it = iter2.next()
         assertEquals(it.getKey, String.valueOf(lastJ))
         assertEquals(it.getValue.intValue(), lastJ)
@@ -421,7 +421,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.iterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.remove("0")
     intercept[ConcurrentModificationException] {
       iterator.next()
@@ -434,7 +434,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator1 = orderedMap.keyIterator()
-    assert(iterator1.hasNext)
+    assert(iterator1.hasNext())
     orderedMap.remove("0")
     intercept[ConcurrentModificationException] {
       iterator1.next()
@@ -447,7 +447,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.valueIterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.remove("0")
     intercept[ConcurrentModificationException] {
       iterator.next()
@@ -460,7 +460,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.iterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.keySet().remove("0")
     intercept[ConcurrentModificationException] {
       iterator.next()
@@ -473,7 +473,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator1 = orderedMap.keyIterator()
-    assert(iterator1.hasNext)
+    assert(iterator1.hasNext())
     orderedMap.keySet().remove("0")
     intercept[ConcurrentModificationException] {
       iterator1.next()
@@ -486,7 +486,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.valueIterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.keySet().remove("0")
     intercept[ConcurrentModificationException] {
       iterator.next()
@@ -499,7 +499,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.iterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.valueSet().removeIndex(0)
     intercept[ConcurrentModificationException] {
       iterator.next()
@@ -512,7 +512,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator1 = orderedMap.keyIterator()
-    assert(iterator1.hasNext)
+    assert(iterator1.hasNext())
     orderedMap.valueSet().removeIndex(0)
     intercept[ConcurrentModificationException] {
       iterator1.next()
@@ -525,7 +525,7 @@ final class OrderedMultiMapSuite extends munit.FunSuite {
     orderedMap.put("1", 1)
 
     val iterator = orderedMap.valueIterator()
-    assert(iterator.hasNext)
+    assert(iterator.hasNext())
     orderedMap.valueSet().removeIndex(0)
     intercept[ConcurrentModificationException] {
       iterator.next()

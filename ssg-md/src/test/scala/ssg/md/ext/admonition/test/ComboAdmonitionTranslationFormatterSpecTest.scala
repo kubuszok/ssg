@@ -28,5 +28,6 @@ final class ComboAdmonitionTranslationFormatterSpecTest extends TranslationForma
 object ComboAdmonitionTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/admonition/test/ext_admonition_translation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAdmonitionTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 }

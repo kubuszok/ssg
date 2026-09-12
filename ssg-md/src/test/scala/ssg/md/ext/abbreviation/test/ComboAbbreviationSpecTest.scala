@@ -47,7 +47,7 @@ object ComboAbbreviationSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("links", new MutableDataSet().set(AbbreviationExtension.USE_LINKS, true).toImmutable())
+    map.put("links", new MutableDataSet().set(AbbreviationExtension.USE_LINKS, java.lang.Boolean.valueOf(true)).toImmutable())
     map.put(
       "no-abbr",
       new MutableDataSet().set(TestUtils.UNLOAD_EXTENSIONS, Collections.singletonList(classOf[AbbreviationExtension])).toImmutable()

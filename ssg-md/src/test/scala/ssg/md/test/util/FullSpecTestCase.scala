@@ -25,7 +25,7 @@ abstract class FullSpecTestCase extends RenderingTestCase with SpecExampleProces
   // JUnit 4: @Test — will need adaptation to munit later
   def testSpecExample(): Unit = {
     val location = specResourceLocation
-    if (location.isNull) {
+    if (location.isNull()) {
       // skip
     } else {
       fullTestSpecStarting()

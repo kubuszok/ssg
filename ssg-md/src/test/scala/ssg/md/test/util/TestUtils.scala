@@ -55,7 +55,7 @@ object TestUtils {
   val SOURCE_SUFFIX:     DataKey[String] = new DataKey[String]("SOURCE_SUFFIX", "")
   val SOURCE_INDENT:     DataKey[String] = new DataKey[String]("SOURCE_INDENT", "")
 
-  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, false).toImmutable()
+  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, java.lang.Boolean.valueOf(false)).toImmutable()
   val UNLOAD_EXTENSIONS:     DataKey[ju.Collection[Class[? <: Extension]]]   = LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS
   val LOAD_EXTENSIONS:       DataKey[ju.Collection[Extension]]               = LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS
   private val EMPTY_OPTIONS: DataHolder                                      = new DataSet()
@@ -64,11 +64,11 @@ object TestUtils {
   val FILE_PROTOCOL: String = ResourceUrlResolver.FILE_PROTOCOL
 
   def processOption(optionsMap: ju.Map[String, ? <: DataHolder], option: String): Nullable[DataHolder] = {
-    var dataHolder: Nullable[DataHolder] = Nullable.empty
+    var dataHolder: Nullable[DataHolder] = null
     if (!option.startsWith(DISABLED_OPTION_PREFIX)) {
       dataHolder = optionsMap.get(option)
       var customOption = option
-      var params: Nullable[String] = Nullable.empty
+      var params: Nullable[String] = null
 
       if (dataHolder.isEmpty) {
         // see if parameterized option
@@ -134,7 +134,7 @@ object TestUtils {
       val sb = new DelimitedBuilder(",\n    ")
       sb.append("    ")
       val iter = builtInSet.iterator()
-      while (iter.hasNext)
+      while (iter.hasNext())
         sb.append(iter.next()).mark()
 
       throw new IllegalStateException("Not all built-in options present. Missing:\n" + sb.toString())
@@ -149,7 +149,7 @@ object TestUtils {
     val iMax = 7
     var i    = lastSectionLevel + 1
     while (i < iMax) {
-      sectionHeadings(i) = Nullable.empty
+      sectionHeadings(i) = null
       i += 1
     }
 
@@ -186,10 +186,10 @@ object TestUtils {
     */
   def getOptions(example: SpecExample, optionSets: Nullable[String], optionsProvider: String => Nullable[DataHolder]): Nullable[DataHolder] =
     if (optionSets.isEmpty) {
-      Nullable.empty
+      null
     } else {
       val optionNames = optionSets.get.replace('\u00A0', ' ').split(",")
-      var options: Nullable[DataHolder] = Nullable.empty
+      var options: Nullable[DataHolder] = null
       for (optionName <- optionNames) {
         val option = optionName.trim
         if (option.nonEmpty && !option.startsWith("-")) {
@@ -220,7 +220,7 @@ object TestUtils {
 
                 if (dataSet.isDefined) {
                   // CAUTION: have to only aggregate actions here
-                  options = DataSet.aggregateActions(options.get.toImmutable(, dataSet.get))
+                  options = DataSet.aggregateActions(options.get.toImmutable(), dataSet.get)
                 } else {
                   throwIllegalStateException(example, option)
                 }
@@ -275,7 +275,7 @@ object TestUtils {
 
   def addSpecExample(includeExampleStart: Boolean, source: String, html: String, ast: Nullable[String], optionsSet: Nullable[String]): String = {
     val sb = new StringBuilder()
-    addSpecExample(includeExampleStart, sb, source, html, ast, optionsSet, false, Nullable.empty[String], 0)
+    addSpecExample(includeExampleStart, sb, source, html, ast, optionsSet, false, null, 0)
     sb.toString()
   }
 
@@ -590,7 +590,7 @@ object TestUtils {
     data.add(Array[AnyRef](SpecExample.NULL.withResourceLocation(location)))
 
     val iter = examples.iterator()
-    while (iter.hasNext)
+    while (iter.hasNext())
       data.add(Array[AnyRef](iter.next()))
     data
   }
@@ -600,7 +600,7 @@ object TestUtils {
 
   def combineDefaultOptions(defaultOptions: Nullable[Array[DataHolder]]): Nullable[DataHolder] =
     defaultOptions.flatMap { opts =>
-      var combinedOptions: Nullable[DataHolder] = Nullable.empty
+      var combinedOptions: Nullable[DataHolder] = null
       for (options <- opts)
         combinedOptions = DataSet.aggregate(combinedOptions, Nullable(options))
       combinedOptions.map(_.toImmutable())
@@ -668,7 +668,7 @@ object TestUtils {
   }
 
   def insertCaretMarkup(sequence: BasedSequence, offsets: Array[Int]): SequenceBuilder = {
-    val builder: SequenceBuilder = sequence.getBuilder[SequenceBuilder]
+    val builder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder]
     java.util.Arrays.sort(offsets)
 
     val length     = sequence.length
@@ -753,7 +753,7 @@ object TestUtils {
       val sequence = BasedSequence.of(toWrap)
 
       // now we delete the indents to simulate prefix removal
-      val builder: SequenceBuilder = sequence.getBuilder[SequenceBuilder]
+      val builder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder]
       val jMax       = starts.length
       var lastOffset = 0
       var j          = 0

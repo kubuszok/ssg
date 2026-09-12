@@ -17,7 +17,7 @@ import scala.language.implicitConversions
 
 abstract class IParseBase(val options: Nullable[DataHolder]) extends IParse {
 
-  def this() = this(Nullable.empty)
+  def this() = this(null)
 
   override def parse(input: String): Node =
     parse(BasedSequence.of(input))

@@ -33,7 +33,11 @@ object ComboSimTocMdFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/toc/test/ext_simtoc_formatter_markdown_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboSimTocMdFormatterSpecTest], SPEC_RESOURCE)
   val OPTIONS:           DataHolder       =
-    new MutableDataSet().set(HtmlRenderer.RENDER_HEADER_ID, true).set(Parser.EXTENSIONS, Collections.singletonList(SimTocExtension.create())).set(TocExtension.IS_HTML, false).toImmutable()
+    new MutableDataSet()
+      .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(true))
+      .set(Parser.EXTENSIONS, Collections.singletonList(SimTocExtension.create()))
+      .set(TocExtension.IS_HTML, java.lang.Boolean.valueOf(false))
+      .toImmutable()
 
   // Build TOC_OPTIONS equivalent: levels=2,3,4, title="Table of Contents", isTextOnly=false, isHtml=false
   private val TOC_OPTIONS: DataHolder = {
@@ -55,20 +59,23 @@ object ComboSimTocMdFormatterSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("text-only", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, true).toImmutable())
-    map.put("formatted", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, false).toImmutable())
+    map.put("text-only", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put("formatted", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, java.lang.Boolean.valueOf(false)).toImmutable())
     map.put("hierarchy", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.HIERARCHY).toImmutable())
     map.put("flat", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.FLAT).toImmutable())
     map.put("flat-reversed", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.FLAT_REVERSED).toImmutable())
     map.put("sorted", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED).toImmutable())
     map.put("sorted-reversed", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED_REVERSED).toImmutable())
-    map.put("with-option-list", new MutableDataSet().set(TocExtension.AST_INCLUDE_OPTIONS, true).toImmutable())
+    map.put(
+      "with-option-list",
+      new MutableDataSet().set(TocExtension.AST_INCLUDE_OPTIONS, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "typographic",
       new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(SimTocExtension.create(), TypographicExtension.create())).toImmutable()
     )
-    map.put("numbered", new MutableDataSet().set(TocExtension.IS_NUMBERED, true).toImmutable())
-    map.put("spacer", new MutableDataSet().set(TocExtension.BLANK_LINE_SPACER, true).toImmutable())
+    map.put("numbered", new MutableDataSet().set(TocExtension.IS_NUMBERED, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put("spacer", new MutableDataSet().set(TocExtension.BLANK_LINE_SPACER, java.lang.Boolean.valueOf(true)).toImmutable())
     map.put("github", new MutableDataSet().setFrom(ParserEmulationProfile.GITHUB_DOC).toImmutable())
     map.put("div-class", new MutableDataSet().set(TocExtension.DIV_CLASS, "content-class").toImmutable())
     map.put("list-class", new MutableDataSet().set(TocExtension.LIST_CLASS, "list-class").toImmutable())

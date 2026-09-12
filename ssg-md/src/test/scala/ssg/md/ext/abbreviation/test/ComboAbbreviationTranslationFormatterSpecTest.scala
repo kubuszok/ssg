@@ -29,7 +29,8 @@ final class ComboAbbreviationTranslationFormatterSpecTest extends TranslationFor
 object ComboAbbreviationTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/abbreviation/test/ext_abbreviation_translation_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAbbreviationTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.UNDERSCORE_DELIMITER_PROCESSOR, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AbbreviationExtension.create())).set(Parser.UNDERSCORE_DELIMITER_PROCESSOR, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     AbbreviationExtension.ABBREVIATIONS_KEEP,

@@ -39,8 +39,11 @@ object ComboFootnotesSpecTest {
     map.put("link-class-text", new MutableDataSet().set(FootnoteExtension.FOOTNOTE_LINK_REF_CLASS, "text").toImmutable())
     map.put("back-link-class-none", new MutableDataSet().set(FootnoteExtension.FOOTNOTE_BACK_LINK_REF_CLASS, "").toImmutable())
     map.put("back-link-class-text", new MutableDataSet().set(FootnoteExtension.FOOTNOTE_BACK_LINK_REF_CLASS, "text").toImmutable())
-    map.put("item-indent-8", new MutableDataSet().set(Parser.LISTS_ITEM_INDENT, 8).toImmutable())
-    map.put("link-text-priority", new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, true).toImmutable())
+    map.put("item-indent-8", new MutableDataSet().set(Parser.LISTS_ITEM_INDENT, java.lang.Integer.valueOf(8)).toImmutable())
+    map.put(
+      "link-text-priority",
+      new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map
   }
 }

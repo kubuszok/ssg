@@ -48,7 +48,10 @@ object ComboEmojiSpecTest {
       new MutableDataSet().set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_FALLBACK_TO_IMAGE).toImmutable()
     )
     map.put("unicode-only", new MutableDataSet().set(EmojiExtension.USE_IMAGE_TYPE, EmojiImageType.UNICODE_ONLY).toImmutable())
-    map.put("unicode-file", new MutableDataSet().set(EmojiExtension.USE_UNICODE_FILE_NAMES, true).toImmutable())
+    map.put(
+      "unicode-file",
+      new MutableDataSet().set(EmojiExtension.USE_UNICODE_FILE_NAMES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put("size", new MutableDataSet().set(EmojiExtension.ATTR_IMAGE_SIZE, "40").toImmutable())
     map.put("no-size", new MutableDataSet().set(EmojiExtension.ATTR_IMAGE_SIZE, "").toImmutable())
     map.put("no-align", new MutableDataSet().set(EmojiExtension.ATTR_ALIGN, "").toImmutable())

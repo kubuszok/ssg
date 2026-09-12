@@ -25,11 +25,11 @@ object ResourceResolverManager {
   /** Resolves a file URL string through registered resolvers. Cross-platform: uses only string operations, no java.io.File or java.net.URL.
     */
   def adjustedFileUrl(externalForm: String): String = {
-    var bestProtocolMatch: Nullable[String] = Nullable.empty
+    var bestProtocolMatch: Nullable[String] = null
 
     val iter = urlResolvers.iterator()
     boundary {
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val resolver = iter.next()
         val filePath = resolver.apply(externalForm)
         if (filePath != null) { // Java interop: resolver returns null to indicate no match

@@ -33,12 +33,16 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
   val AST_DETAILS: DataKey[Boolean] = new DataKey[Boolean]("AST_DETAILS", SHOW_INTERMEDIATE_AST)
 
   private val TRANSLATION_BASE_OPTIONS: DataHolder =
-    new MutableDataSet().set(Parser.HTML_FOR_TRANSLATOR, true).set(Parser.PARSE_INNER_HTML_COMMENTS, true).set(Formatter.MAX_TRAILING_BLANK_LINES, 0).toImmutable()
+    new MutableDataSet()
+      .set(Parser.HTML_FOR_TRANSLATOR, java.lang.Boolean.valueOf(true))
+      .set(Parser.PARSE_INNER_HTML_COMMENTS, java.lang.Boolean.valueOf(true))
+      .set(Formatter.MAX_TRAILING_BLANK_LINES, java.lang.Integer.valueOf(0))
+      .toImmutable()
 
   private val translationOptionsMap: ju.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
-    map.put("details", new MutableDataSet().set(DETAILS, true).toImmutable())
-    map.put("ast-details", new MutableDataSet().set(AST_DETAILS, true).toImmutable())
+    map.put("details", new MutableDataSet().set(DETAILS, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put("ast-details", new MutableDataSet().set(AST_DETAILS, java.lang.Boolean.valueOf(true)).toImmutable())
     map
   }
 
@@ -116,7 +120,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
     // now need to output translation strings, delimited
     val translatingTexts = handler.getTranslatingTexts
 
-    val outputAst: Nullable[StringBuilder] = if (showIntermediateAst) new StringBuilder() else Nullable.empty
+    val outputAst: Nullable[StringBuilder] = if (showIntermediateAst) new StringBuilder() else null
 
     val out = new StringBuilder()
 
@@ -168,5 +172,5 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
 
   override protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] =
     // Translation tests override AST only when showIntermediateAst is set; for now, no AST
-    Nullable.empty
+    null
 }

@@ -25,12 +25,12 @@ class FlexmarkSpecExampleRenderer(
   def this(example: SpecExample, options: Nullable[DataHolder], parser: IParse, render: IRender) =
     this(example, options, parser, render, true)
 
-  private var myIncludedDocument: Nullable[Node] = Nullable.empty
-  private var myDocument:         Nullable[Node] = Nullable.empty
+  private var myIncludedDocument: Nullable[Node] = null
+  private var myDocument:         Nullable[Node] = null
 
   override def includeDocument(includedText: String): Unit = {
     // flexmark parser specific
-    myIncludedDocument = Nullable.empty
+    myIncludedDocument = null
 
     if (includedText.nonEmpty) {
       // need to parse and transfer references
@@ -58,7 +58,7 @@ class FlexmarkSpecExampleRenderer(
   protected def adjustParserForInclusion(): Unit =
     (myDocument.get, myIncludedDocument.get) match {
       case (doc: Document, inc: Document) =>
-        parser.transferReferences(doc, inc, Nullable.empty)
+        parser.transferReferences(doc, inc, null)
       case _ => // not both Documents, skip
     }
 

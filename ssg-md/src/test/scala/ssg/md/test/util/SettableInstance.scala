@@ -30,12 +30,12 @@ final class SettableInstance[T](
   def this(consumerKey: DataKey[Consumer[T]], extractedInstanceSetters: ju.Collection[SettableExtractedInstance[T, ?]]) =
     this(
       consumerKey,
-      if (extractedInstanceSetters.size() == 0) Nullable.empty[ju.Collection[SettableExtractedInstance[T, ?]]]
+      if (extractedInstanceSetters.size() == 0) null[ju.Collection[SettableExtractedInstance[T, ?]]]
       else extractedInstanceSetters
     )
 
   def this(consumerKey: DataKey[Consumer[T]]) =
-    this(consumerKey, Nullable.empty[ju.Collection[SettableExtractedInstance[T, ?]]])
+    this(consumerKey, null[ju.Collection[SettableExtractedInstance[T, ?]]])
 
   def setInstanceData(instance: T, dataHolder: Nullable[DataHolder]): T = {
     dataHolder.foreach { dh =>
@@ -45,7 +45,7 @@ final class SettableInstance[T](
 
       myExtractedInstanceSetters.foreach { setters =>
         val iter = setters.iterator()
-        while (iter.hasNext)
+        while (iter.hasNext())
           iter.next().aggregate(instance, dh)
       }
     }
@@ -67,7 +67,7 @@ final class SettableInstance[T](
 
     myExtractedInstanceSetters.foreach { setters =>
       val iter = setters.iterator()
-      while (iter.hasNext)
+      while (iter.hasNext())
         results = iter.next().aggregateActions(results, other, overrides)
     }
 

@@ -32,7 +32,8 @@ final class ComboJekyllFrontMatterFormatterSpecTest extends FormatterSpecTestSui
 object ComboJekyllFrontMatterFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/jekyll/front/matter/test/ext_jekyll_front_matter_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboJekyllFrontMatterFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllFrontMatterExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllFrontMatterExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Parser.REFERENCES_KEEP,

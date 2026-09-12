@@ -32,7 +32,8 @@ final class ComboYamlFrontMatterFormatterSpecTest extends FormatterSpecTestSuite
 object ComboYamlFrontMatterFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/yaml/front/matter/test/ext_yaml_front_matter_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboYamlFrontMatterFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(YamlFrontMatterExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
     Parser.REFERENCES_KEEP,
