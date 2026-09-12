@@ -220,6 +220,12 @@ object BalticPorterGen {
       // on Range, Attributes, etc.). Fix only the known JavaCollection call sites.
       "BitFieldSet.scala" -> List(("c\\.isEmpty\\(\\)", "c.isEmpty")),
       "PlaceholderReplacer.scala" -> List(("spanList\\.isEmpty\\(\\)", "spanList.isEmpty")),
+      // ISS-100: lookbehind (?<!^) is re2-incompatible (JS/Native). Replace with
+      // manual leading-empty-strip after a normal split.
+      "Split.scala" -> List(
+        (java.util.regex.Pattern.quote("""original.split("(?<!^)" + java.util.regex.Pattern.quote(delimiter))"""),
+         """{ val _p = original.split(java.util.regex.Pattern.quote(delimiter), -1); if (_p.length > 0 && _p(0).isEmpty()) _p.drop(1) else _p }""")
+      ),
     )
     var count = 0
     val stream = Files.walk(outDir)
