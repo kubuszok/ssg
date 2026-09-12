@@ -16,8 +16,16 @@ package object liquid {
 
   extension (t: Template.type) def parse(input: String): Template = TemplateParser.DEFAULT.parse(input)
 
+  extension (tp: TemplateParser) {
+    def parse(input: String, sourcePath: java.nio.file.Path): Template =
+      tp.parse(org.antlr.v4.runtime.CharStreams.fromString(input, sourcePath.toString))
+    def parse(input: String, sourcePath: ssg.commons.io.FilePath): Template =
+      tp.parse(org.antlr.v4.runtime.CharStreams.fromString(input, sourcePath.pathString))
+  }
+
   extension (t: Template) {
-    def render(vars: java.util.Map[String, ?]): String =
+    def withJailRoot(root: ssg.commons.io.FilePath): Template = t
+    def render(vars: java.util.Map[String, ?]):      String   =
       t.render(unwrapDataViewMap(vars))
     def renderToObject(vars: java.util.Map[String, ?]): Object =
       t.renderToObject(unwrapDataViewMap(vars))
