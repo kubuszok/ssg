@@ -27,10 +27,12 @@ final class DelimitedNodeSuite extends munit.FunSuite {
     val document = parser.parse(input)
 
     val list    = ArrayBuffer.empty[DelimitedNode]
-    val visitor = new NodeVisitor(Array[ssg.md.util.ast.VisitHandler[?]](
-      new VisitHandler[Emphasis](classOf[Emphasis], (node: Emphasis) => list.addOne(node)),
-      new VisitHandler[StrongEmphasis](classOf[StrongEmphasis], (node: StrongEmphasis) => list.addOne(node))
-    ))
+    val visitor = new NodeVisitor(
+      Array[ssg.md.util.ast.VisitHandler[?]](
+        new VisitHandler[Emphasis](classOf[Emphasis], (node: Emphasis) => list.addOne(node)),
+        new VisitHandler[StrongEmphasis](classOf[StrongEmphasis], (node: StrongEmphasis) => list.addOne(node))
+      )
+    )
 
     visitor.visit(document)
 

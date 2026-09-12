@@ -38,7 +38,7 @@ final class TemplateEntry(val entryNumber: Int, val source: String) {
       }
 
       // append parameter if exists
-      if (paramsMap.containsKey(param)) {
+      if (paramsMap.contains(param)) {
         sb.append(paramsMap.get(param))
       }
     }

@@ -861,7 +861,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
@@ -898,7 +898,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
@@ -937,7 +937,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
@@ -973,7 +973,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
@@ -1010,7 +1010,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
@@ -1049,7 +1049,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(

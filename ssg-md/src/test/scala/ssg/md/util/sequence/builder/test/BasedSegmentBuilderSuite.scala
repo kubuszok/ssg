@@ -886,7 +886,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   test("test_optimizersCompoundNoAnchors1") {
     val input = "  line 1 \n  line 2 \n\n  line 3\n"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); if (!trim.isEmpty) segments.append("    "); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); if (!trim.isEmpty) segments.append("    "); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
@@ -902,7 +902,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   test("test_optimizersCompoundNoAnchors2") {
     val input = "  line 1 \n  line 2 \n\n  line 3\n"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); if (!trim.isEmpty) segments.append("  "); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); if (!trim.isEmpty) segments.append("  "); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
@@ -918,7 +918,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   test("test_optimizersCompoundNoAnchors3") {
     val input = "line 1\nline 2 \n\nline 3\n"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
@@ -932,7 +932,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   test("test_optimizersCompoundAnchors1") {
     val input = "  line 1 \n  line 2 \n\n  line 3\n"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); if (!trim.isEmpty) segments.append("    "); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); if (!trim.isEmpty) segments.append("    "); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
@@ -948,7 +948,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   test("test_optimizersCompoundAnchors2") {
     val input = "  line 1 \n  line 2 \n\n  line 3\n"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); if (!trim.isEmpty) segments.append("  "); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); if (!trim.isEmpty) segments.append("  "); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
@@ -965,7 +965,7 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
     val input    = "line 1\nline 2 \n\nline 3\n"; val sequence = BasedSequence.of(input); val optimizer = new CharRecoveryOptimizer(PositionAnchor.CURRENT);
     val segments = BasedSegmentBuilder.emptyBuilder(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS);
     sequence.splitListEOL(false).foreach { line =>
-      val trim = line.trim(); segments.append(trim.getSourceRange); segments.append("\n")
+      val trim = line.trim(); segments.append(trim.getSourceRange()); segments.append("\n")
     };
     assertEquals(
       escapeJavaString(segments.toStringPrep()),
