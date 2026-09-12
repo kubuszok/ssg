@@ -269,8 +269,35 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     name := "ssg-liquid",
     libraryDependencies ++= Seq(
       "io.github.cquiroz" %% "scala-java-time"    % versions.scalaJavaTime,
-      "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales
-    )
+      "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
+      // Baltic Porter generated code dependencies: the mechanically ported liqp code
+      // uses these libraries directly (the hand-port had rewrote them away).
+      "com.kubuszok"                    %% "balticporter-runtime"      % "0.1.0-SNAPSHOT",
+      "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
+      "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
+      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
+      "com.fasterxml.jackson.core"       % "jackson-annotations"       % "2.15.0",
+      "com.fasterxml.jackson.datatype"   % "jackson-datatype-jsr310"   % "2.15.0",
+      "ua.co.k"                          % "strftime4j"                % "1.0.6",
+      "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-12-gc168b2f-SNAPSHOT",
+    ),
+    resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
+    // ANTLR-generated parser class directory: the generated liqp code imports liquid.parser.v4.*
+    // which is compiled from the grammar by LiqpClasspath in balticporter.
+    Compile / unmanagedClasspath ++= {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      val parserDir = bpRoot / "out" / "liqp-parser-classes"
+      if (parserDir.exists()) {
+        val fc = fileConverter.value
+        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
+      } else Nil
+    },
+    // Baltic Porter: generate ssg-liquid Scala sources from liqp Java originals.
+    Compile / sourceGenerators += Def.task {
+      BalticPorterGen.generateLiquid((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
+    // Suppress warnings from generated code (porter notes, unused imports, etc.)
+    scalacOptions += "-Wconf:src=target/balticporter-ssg-liquid/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)

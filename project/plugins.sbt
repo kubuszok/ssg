@@ -3,3 +3,8 @@ addSbtPlugin("com.kubuszok" % "sbt-kubuszok" % "0.2.3")
 // native library providers (auto-configures Scala Native linker from sn-provider.json) + shared multiarch resources
 addSbtPlugin("com.kubuszok" % "sbt-multiarch-scala" % "0.4.0")
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
+
+// Baltic Porter: the corpus module provides the migrators (LiqpMigrate, FlexmarkMigrate)
+// that the sourceGenerator calls to produce ssg-liquid and ssg-md Scala sources from the
+// upstream Java originals.
+libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "0.1.0-SNAPSHOT"
