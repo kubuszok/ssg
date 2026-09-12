@@ -34,7 +34,7 @@ object ComboTableFormatterSpecTest {
   val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TablesExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   private val WIDTH_PROVIDER: CharWidthProvider = new CharWidthProvider {
-    override def getSpaceWidth():            Int = 8
+    override def getSpaceWidth():       Int = 8
     override def getCharWidth(c: Char): Int = if (c <= 255) 8 else 13
   }
 
@@ -130,7 +130,7 @@ object ComboTableFormatterSpecTest {
         .set(
           TablesExtension.FORMAT_CHAR_WIDTH_PROVIDER,
           new CharWidthProvider {
-            override def getSpaceWidth():            Int = 1
+            override def getSpaceWidth():       Int = 1
             override def getCharWidth(c: Char): Int = if (c == TableFormatOptions.INTELLIJ_DUMMY_IDENTIFIER_CHAR) 0 else 1
           }
         )

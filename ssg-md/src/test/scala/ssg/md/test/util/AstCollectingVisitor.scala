@@ -10,10 +10,10 @@ import ssg.md.util.ast.{ Node, NodeVisitorBase }
 
 class AstCollectingVisitor extends NodeVisitorBase {
 
-  val EOL:                  String        = "\n"
+  val EOL:                  String                  = "\n"
   protected var output:     java.lang.StringBuilder = new java.lang.StringBuilder()
-  protected var indent:     Int           = 0
-  protected var eolPending: Boolean       = false
+  protected var indent:     Int                     = 0
+  protected var eolPending: Boolean                 = false
 
   def ast: String = output.toString()
 

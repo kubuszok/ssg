@@ -46,7 +46,7 @@ object TestUtils {
   val IGNORE:           DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](IGNORE_OPTION_NAME, false)
   val NO_FILE_EOL:      DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](NO_FILE_EOL_OPTION_NAME, true)
   val TIMED:            DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](TIMED_OPTION_NAME, false)
-  val TIMED_ITERATIONS: DataKey[java.lang.Integer]     = new DataKey[java.lang.Integer](TIMED_ITERATIONS_OPTION_NAME, 100)
+  val TIMED_ITERATIONS: DataKey[java.lang.Integer] = new DataKey[java.lang.Integer](TIMED_ITERATIONS_OPTION_NAME, 100)
 
   val TIMED_FORMAT_STRING: String = "Timing %s: parse %.3f ms, render %.3f ms, total %.3f\n"
 

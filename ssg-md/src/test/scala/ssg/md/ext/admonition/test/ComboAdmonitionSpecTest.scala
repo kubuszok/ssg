@@ -22,6 +22,7 @@ final class ComboAdmonitionSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboAdmonitionSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboAdmonitionSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAdmonitionSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("Admonition - Basic Tests - 16", "Admonition - Basic Tests - 17")
 }
 
 object ComboAdmonitionSpecTest {

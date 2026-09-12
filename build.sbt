@@ -329,6 +329,11 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       "org.jetbrains"    % "annotations"            % "24.0.1" % Provided,
       "org.nibor.autolink" % "autolink"             % "0.6.0",
     ),
+    // Baltic Porter: generated flexmark resources (entities.properties for Html5Entities).
+    Compile / unmanagedResourceDirectories += {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      bpRoot / "ported" / "ssg-md" / "src_managed" / "main" / "resources"
+    },
     // Baltic Porter: generate ssg-md Scala sources from flexmark-java originals.
     Compile / sourceGenerators += Def.task {
       BalticPorterGen.generateFlexmark((ThisBuild / baseDirectory).value, streams.value.log)

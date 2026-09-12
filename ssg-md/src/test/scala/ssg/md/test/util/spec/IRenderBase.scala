@@ -28,15 +28,15 @@ abstract class IRenderBase(val options: Nullable[DataHolder]) extends IRender {
 object IRenderBase {
 
   val NULL_RENDERER: IRender = new IRenderBase() {
-    override def getOptions(): ssg.md.util.data.DataHolder = new ssg.md.util.data.DataSet()
-    override def render(document: Node, output: Appendable): Unit = {
+    override def getOptions():                               ssg.md.util.data.DataHolder = new ssg.md.util.data.DataSet()
+    override def render(document: Node, output: Appendable): Unit                        = {
       // no-op
     }
   }
 
   val TEXT_RENDERER: IRender = new IRenderBase() {
-    override def getOptions(): ssg.md.util.data.DataHolder = new ssg.md.util.data.DataSet()
-    override def render(document: Node, output: Appendable): Unit =
+    override def getOptions():                               ssg.md.util.data.DataHolder = new ssg.md.util.data.DataSet()
+    override def render(document: Node, output: Appendable): Unit                        =
       try
         output.append(document.chars)
       catch {

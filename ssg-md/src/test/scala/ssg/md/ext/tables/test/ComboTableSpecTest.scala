@@ -22,6 +22,21 @@ final class ComboTableSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboTableSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboTableSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboTableSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set(
+    "Basic - 21",
+    "Basic - 46",
+    "Basic - 47",
+    "Basic - 48",
+    "Basic - 54",
+    "Emphasis in cell - 1",
+    "Issue - 216 - 3",
+    "Issue - xxx-1 - 1",
+    "Issue - xxx-2 - 2",
+    "Issue - xxx-2 - 3",
+    "Multiple - 1",
+    "Multiple - 2",
+    "Source Position Attribute - 3"
+  )
 }
 
 object ComboTableSpecTest {

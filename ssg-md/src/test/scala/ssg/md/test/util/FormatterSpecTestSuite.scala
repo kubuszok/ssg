@@ -158,9 +158,9 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
 object FormatterSpecTestSuite {
 
   /** DataKey for SHOW_LINE_RANGES from FormatterTranslationSpecTestBase */
-  val SHOW_LINE_RANGES: DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean]("SHOW_LINE_RANGES", false)
-  val EDIT_OP_CHAR:     DataKey[java.lang.Character]    = new DataKey[java.lang.Character]("EDIT_OP_CHAR", SequenceUtils.NUL)
-  val EDIT_OP:          DataKey[java.lang.Integer]     = new DataKey[java.lang.Integer]("EDIT_OP", 0)
+  val SHOW_LINE_RANGES: DataKey[java.lang.Boolean]   = new DataKey[java.lang.Boolean]("SHOW_LINE_RANGES", false)
+  val EDIT_OP_CHAR:     DataKey[java.lang.Character] = new DataKey[java.lang.Character]("EDIT_OP_CHAR", SequenceUtils.NUL)
+  val EDIT_OP:          DataKey[java.lang.Integer]   = new DataKey[java.lang.Integer]("EDIT_OP", 0)
 
   private val FIXED_INDENT_OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.FIXED_INDENT).toImmutable()
 

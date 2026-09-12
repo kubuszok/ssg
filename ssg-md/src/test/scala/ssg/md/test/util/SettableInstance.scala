@@ -15,9 +15,8 @@ import scala.language.implicitConversions
 
 /** A one-stop-shop class for setting test instances.
   *
-  * A single consumer is called with a DataHolder-registered DataKey key, while extracted instances delegate to their own SettableExtractedInstance consumers. Using one class for both keeps the test API
-  * uniform and avoids separate handling for main-test-case settings vs settings that propagate to
-  * keeping the results consistent.
+  * A single consumer is called with a DataHolder-registered DataKey key, while extracted instances delegate to their own SettableExtractedInstance consumers. Using one class for both keeps the test
+  * API uniform and avoids separate handling for main-test-case settings vs settings that propagate to keeping the results consistent.
   *
   * @tparam T
   *   type for the setting
@@ -45,9 +44,8 @@ final class SettableInstance[T](
     }
     myExtractedInstanceSetters.foreach { setters =>
       val iter = setters.iterator()
-      while (iter.hasNext()) {
+      while (iter.hasNext())
         dataHolder.foreach(dh => iter.next().aggregate(instance, dh))
-      }
     }
     instance
   }

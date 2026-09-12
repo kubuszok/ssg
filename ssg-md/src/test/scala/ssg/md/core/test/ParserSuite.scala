@@ -629,7 +629,7 @@ final class ParserSuite extends munit.FunSuite {
   // Custom block types for testing
 
   private class DashBlock extends Block {
-    override def segments: Array[BasedSequence] = Node.EMPTY_SEGMENTS
+    override def getSegments(): Array[BasedSequence] = Node.EMPTY_SEGMENTS
   }
 
   private class DashBlockParser(line: BasedSequence) extends AbstractBlockParser {
@@ -639,28 +639,28 @@ final class ParserSuite extends munit.FunSuite {
       d
     }
 
-    override def getBlock: Block = dash
+    override def getBlock(): Block = dash
 
     override def closeBlock(state: ParserState): Unit =
       dash.setCharsFromContent()
 
-    override def tryContinue(state: ParserState): Nullable[BlockContinue] =
+    override def tryContinue(state: ParserState): BlockContinue =
       BlockContinue.none()
   }
 
   class DashBlockParserFactory extends CustomBlockParserFactory {
-    override def afterDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
-    override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
-    override def affectsGlobalScope: Boolean                 = false
+    override def getAfterDependents(): scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
+    override def getBeforeDependents(): scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
+    override def affectsGlobalScope(): Boolean                 = false
 
     override def apply(options: DataHolder): BlockParserFactory =
       new BlockFactory(options)
   }
 
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
-    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
+    override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): BlockStart =
       if (state.getLine().equals("---")) {
-        BlockStart.of(new DashBlockParser(state.getLine()))
+        BlockStart.of(Array(new DashBlockParser(state.getLine())))
       } else {
         BlockStart.none()
       }

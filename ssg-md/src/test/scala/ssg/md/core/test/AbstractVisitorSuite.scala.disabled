@@ -17,14 +17,14 @@ import scala.language.implicitConversions
 final class AbstractVisitorSuite extends munit.FunSuite {
 
   test("replacingNodeInVisitorShouldNotDestroyVisitOrder") {
-    val visitor = new NodeVisitor(
+    val visitor = new NodeVisitor(Array(
       new VisitHandler[Text](classOf[Text],
                              (node: Text) => {
                                node.insertAfter(new Code(node.chars))
                                node.unlink()
                              }
       )
-    )
+    ))
 
     val paragraph = new Paragraph()
     paragraph.appendChild(new Text("foo"))
