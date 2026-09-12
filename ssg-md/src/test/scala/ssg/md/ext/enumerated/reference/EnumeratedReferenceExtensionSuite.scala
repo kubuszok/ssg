@@ -45,7 +45,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
       BasedSequence.of("fig:label"),
       BasedSequence.of("]")
     )
-    assertEquals(node.text.toString, "fig:label")
+    assertEquals(node.getText().toString, "fig:label")
     assertEquals(node.getOpeningMarker().toString, "[#")
     assertEquals(node.getClosingMarker().toString, "]")
   }
@@ -57,7 +57,7 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
       BasedSequence.of("fig:label"),
       BasedSequence.of("]")
     )
-    assertEquals(node.text.toString, "fig:label")
+    assertEquals(node.getText().toString, "fig:label")
     assertEquals(node.getOpeningMarker().toString, "[@")
   }
 

@@ -143,22 +143,22 @@ class CollectionHostValidator[T] {
     val out = new StringBuilder()
 
     out.append("\n").append(idStr()).append("Expected callbacks").append(":\n")
-    for (i <- 0 until expectedCallBacks.size()) {
+    for (i <- 0 until expectedCallBacks.size) {
       val pair     = expectedCallBacks.get(i)
-      val expected = prepareMessage(pair.first.get, pair.second.get*)
+      val expected = prepareMessage(pair.getFirst(), pair.getSecond()*)
       out.append("    [").append(i).append("]:").append(expected).append("\n")
     }
     out.toString
   }
 
   def validate(): CollectionHostValidator[T] = {
-    if (nextCallbackIndex < expectedCallBacks.size()) {
+    if (nextCallbackIndex < expectedCallBacks.size) {
       val out = new StringBuilder()
 
       out.append("\n").append(idStr()).append("Missing callbacks").append(":\n")
-      for (i <- nextCallbackIndex until expectedCallBacks.size()) {
+      for (i <- nextCallbackIndex until expectedCallBacks.size) {
         val pair     = expectedCallBacks.get(i)
-        val expected = prepareMessage(pair.first.get, pair.second.get*)
+        val expected = prepareMessage(pair.getFirst(), pair.getSecond()*)
         out.append("    [").append(i).append("]:").append(expected).append("\n")
       }
 
@@ -230,14 +230,14 @@ class CollectionHostValidator[T] {
       System.out.println(idStr() + "actual callback[" + index + "] " + actual)
     }
 
-    if (nextCallbackIndex >= expectedCallBacks.size()) {
+    if (nextCallbackIndex >= expectedCallBacks.size) {
       nextCallbackIndex += 1
       throw new IllegalStateException(idStr() + "un-expected callback[" + (nextCallbackIndex - 1) + "]" + actual)
     }
 
     val pair = expectedCallBacks.get(nextCallbackIndex)
     nextCallbackIndex += 1
-    val expected = prepareMessage(pair.first.get, pair.second.get*)
+    val expected = prepareMessage(pair.getFirst(), pair.getSecond()*)
 
     assert(expected == actual, idStr() + "callback[" + index + "] mismatch, expected:" + expected + " actual:" + actual)
   }

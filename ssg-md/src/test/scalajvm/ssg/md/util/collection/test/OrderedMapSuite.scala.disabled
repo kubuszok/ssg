@@ -32,7 +32,7 @@ final class OrderedMapSuite extends munit.FunSuite {
     for (j <- 0 until 10) {
       assertEquals(orderedMap.remove(String.valueOf(j)), Integer.valueOf(j))
 
-      assertEquals(orderedMap.keySet().getValueList.size(), if (j == 9) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (j == 9) 0 else 10)
 
       var lastJ = j + 1
       val iter2 = orderedMap.iterator()
@@ -70,7 +70,7 @@ final class OrderedMapSuite extends munit.FunSuite {
       assertEquals(orderedMap.remove(String.valueOf(j)), Integer.valueOf(j))
 
       // hosted sets don't shrink
-      assertEquals(orderedMap.keySet().getValueList.size(), if (orderedMap.size() == 0) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (orderedMap.size == 0) 0 else 10)
 
       var lastJ = 0
       val iter2 = orderedMap.entrySet().iterator()
@@ -129,7 +129,7 @@ final class OrderedMapSuite extends munit.FunSuite {
     var j = 10
     while ({ j -= 1; j >= 0 }) {
       assertEquals(orderedMap.keySet().remove(String.valueOf(j)), (j & 1) == 0)
-      assertEquals(orderedMap.containsKey(String.valueOf(j)), false)
+      assertEquals(orderedMap.contains(String.valueOf(j)), false)
     }
   }
 
@@ -159,7 +159,7 @@ final class OrderedMapSuite extends munit.FunSuite {
       iterator.next()
       iterator.remove()
 
-      assertEquals(orderedMap.keySet().getValueList.size(), if (j == 9) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (j == 9) 0 else 10)
 
       var lastJ = j + 1
       val iter2 = orderedMap.iterator()
@@ -200,7 +200,7 @@ final class OrderedMapSuite extends munit.FunSuite {
       iterator.next()
       iterator.remove()
 
-      assertEquals(orderedMap.keySet().getValueList.size(), if (j == 9) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (j == 9) 0 else 10)
 
       var lastJ = j + 1
       val iter2 = orderedMap.entrySet().iterator()
@@ -244,7 +244,7 @@ final class OrderedMapSuite extends munit.FunSuite {
       iterator.remove()
 
       // hosted sets don't shrink until empty
-      assertEquals(orderedMap.keySet().getValueList.size(), if (orderedMap.size() == 0) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (orderedMap.size == 0) 0 else 10)
 
       var lastJ = 0
       val iter2 = orderedMap.entrySet().iterator()
@@ -289,7 +289,7 @@ final class OrderedMapSuite extends munit.FunSuite {
       iterator.remove()
 
       // hosted sets don't shrink
-      assertEquals(orderedMap.keySet().getValueList.size(), if (orderedMap.size() == 0) 0 else 10)
+      assertEquals(orderedMap.keySet().getValueList.size, if (orderedMap.size == 0) 0 else 10)
 
       var lastJ = 0
       val iter2 = orderedMap.entrySet().iterator()

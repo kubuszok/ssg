@@ -12,7 +12,7 @@ import java.util.function.BiFunction
 final class BoundedMinAggregatorSuite extends munit.FunSuite {
 
   private def reduce(aggregator: BiFunction[Nullable[Integer], Nullable[Integer], Nullable[Integer]], items: Nullable[Integer]*): Nullable[Integer] = {
-    var aggregate: Nullable[Integer] = null
+    var aggregate: Nullable[Integer] = Nullable.empty[Integer]
     for (item <- items)
       aggregate = aggregator.apply(aggregate, item)
     aggregate

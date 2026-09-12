@@ -1668,7 +1668,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val sequence = BasedSequence.of(fiveLineInput)
     val fa: LineAppendable = new LineAppendableImpl(SequenceBuilder.emptyBuilder(sequence), LineAppendable.F_FORMAT_ALL | LineAppendable.F_TRIM_LEADING_WHITESPACE)
 
-    val iMax = sequence.length()
+    val iMax = sequence.length
     var i    = 0
     while (i < iMax) {
       fa.append(sequence.subSequence(i, i + 1))
@@ -1682,7 +1682,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val sequence = BasedSequence.of(fiveLineInput)
     val fa: LineAppendable = new LineAppendableImpl(SequenceBuilder.emptyBuilder(sequence), LineAppendable.F_FORMAT_ALL | LineAppendable.F_TRIM_LEADING_WHITESPACE)
 
-    val iMax    = sequence.length()
+    val iMax    = sequence.length
     var lastEol = 0
     var i       = 0
     while (i < iMax) {
