@@ -401,7 +401,16 @@ lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
     // ISS-1353: the SiteBuildPhase suites each run a full site build (SASS compile + file writes);
     // run them serially so concurrent filesystem access can't race — intermittent IOException on
     // Native-Windows only, where file locking is strict (POSIX tolerates it). Mirrors ssg-js/ssg-katex.
-    Test / parallelExecution := false
+    Test / parallelExecution := false,
+    // ANTLR parser classes from ssg-liquid's generated code (unmanagedClasspath is not transitive).
+    Test / unmanagedClasspath ++= {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      val parserDir = bpRoot / "out" / "liqp-parser-classes"
+      if (parserDir.exists()) {
+        val fc = fileConverter.value
+        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
+      } else Nil
+    }
   )
   .settings(publishSettings)
   .settings(mimaSettings)
