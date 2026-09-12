@@ -84,7 +84,10 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
     val sequence = BasedSequence.of(input)
     val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
     segments.append(0, 4)
-    assertEquals(escapeJavaString(segments.toStringPrep()), "BasedSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }")
+    assertEquals(
+      escapeJavaString(segments.toStringPrep()),
+      "BasedSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }"
+    )
     assertEquals(segments.toString(sequence).length, segments.length())
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 4))
@@ -158,7 +161,10 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
     val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
     segments.append(0, 5)
     segments.append(5, 7)
-    assertEquals(escapeJavaString(segments.toStringPrep()), "BasedSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }")
+    assertEquals(
+      escapeJavaString(segments.toStringPrep()),
+      "BasedSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }"
+    )
     assertEquals(segments.toString(sequence).length, segments.length())
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123456\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 7))
@@ -380,7 +386,10 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   // No Anchors variants
   test("test_appendRange1NoAnchors") {
     val input = "0123456789"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256); segments.append(0, 4);
-    assertEquals(escapeJavaString(segments.toStringPrep()), "BasedSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }");
+    assertEquals(
+      escapeJavaString(segments.toStringPrep()),
+      "BasedSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }"
+    );
     assertEquals(segments.toString(sequence).length, segments.length()); assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123\u27e7");
     assertEquals(segments.toString(sequence), input.substring(0, 4))
   }
@@ -424,7 +433,10 @@ final class BasedSegmentBuilderSuite extends munit.FunSuite {
   }
   test("test_appendRangeTouchingNoAnchors") {
     val input = "0123456789"; val sequence = BasedSequence.of(input); val segments = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256); segments.append(0, 5); segments.append(5, 7);
-    assertEquals(escapeJavaString(segments.toStringPrep()), "BasedSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }");
+    assertEquals(
+      escapeJavaString(segments.toStringPrep()),
+      "BasedSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }"
+    );
     assertEquals(segments.toString(sequence).length, segments.length()); assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123456\u27e7");
     assertEquals(segments.toString(sequence), input.substring(0, 7))
   }

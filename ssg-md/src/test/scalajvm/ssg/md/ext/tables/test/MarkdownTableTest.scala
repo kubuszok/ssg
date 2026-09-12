@@ -2858,7 +2858,8 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable()
+      formatOptions("", null)
+        .toMutable()
         .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(true))
         .set(TableFormatOptions.FORMAT_TABLE_FILL_MISSING_MIN_COLUMN, Integer.valueOf(0))
     )

@@ -44,7 +44,7 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
     .set(Parser.PARSE_INNER_HTML_COMMENTS, java.lang.Boolean.valueOf(true))
     .set(Parser.HEADING_NO_ATX_SPACE, java.lang.Boolean.valueOf(true))
     .set(Formatter.MAX_TRAILING_BLANK_LINES, java.lang.Integer.valueOf(0))
-    .set(JekyllTagExtension.INCLUDED_HTML, content)
+    .set(JekyllTagExtension.INCLUDED_HTML, { import scala.jdk.CollectionConverters.*; content.asScala })
     .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true))
     .toImmutable()
 

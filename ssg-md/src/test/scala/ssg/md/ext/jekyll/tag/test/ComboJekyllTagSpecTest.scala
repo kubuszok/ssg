@@ -47,7 +47,10 @@ object ComboJekyllTagSpecTest {
     content.put("test.html", "<h1>Heading 1</h1>\n<p>test text</p>\n")
     content.put("test2.md", "Included Text\n")
     content.put("links.html", "")
-    map.put("includes", new MutableDataSet().set(JekyllTagExtension.INCLUDED_HTML, content).toImmutable())
+    map.put(
+      "includes",
+      new MutableDataSet().set(JekyllTagExtension.INCLUDED_HTML, { import scala.jdk.CollectionConverters.*; content.asScala }).toImmutable()
+    )
     map.put(
       "embed-includes",
       new MutableDataSet().set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true)).toImmutable()
