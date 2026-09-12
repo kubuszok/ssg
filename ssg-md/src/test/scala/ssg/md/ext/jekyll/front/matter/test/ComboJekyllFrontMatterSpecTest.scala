@@ -21,11 +21,11 @@ import scala.language.implicitConversions
 
 final class ComboJekyllFrontMatterSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation     = ComboJekyllFrontMatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboJekyllFrontMatterSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboJekyllFrontMatterSpecTest.OPTIONS
 }
 
 object ComboJekyllFrontMatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/jekyll/front/matter/test/ext_jekyll_front_matter_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboJekyllFrontMatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllFrontMatterExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(JekyllFrontMatterExtension.create())).toImmutable()
 }

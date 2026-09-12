@@ -14,27 +14,27 @@ import scala.language.implicitConversions
 final class UtilsSuite extends munit.FunSuite {
 
   test("testCompareNullable") {
-    assertEquals(Utils.compareNullable[java.lang.Boolean](Nullable.empty, Nullable(java.lang.Boolean.FALSE)), 0)
-    assertEquals(Utils.compareNullable[java.lang.Boolean](Nullable(java.lang.Boolean.TRUE), Nullable(java.lang.Boolean.TRUE)), 0)
+    assertEquals(Utils.compareNullable[java.lang.Boolean](Nullable.empty, java.lang.Boolean.FALSE), 0)
+    assertEquals(Utils.compareNullable[java.lang.Boolean](java.lang.Boolean.TRUE, java.lang.Boolean.TRUE), 0)
   }
 
   test("testCount") {
-    assertEquals(Utils.count(Nullable(null: String), null, 0, 50), 0)
-    assertEquals(Utils.count(Nullable(null: String), "a", 500, 0), 0)
-    assertEquals(Utils.count(Nullable("teststring"), null, 50, 50), 0)
-    assertEquals(Utils.count(Nullable("teststring"), "", 0, 0), 1)
-    assertEquals(Utils.count(Nullable("teststring"), "d", 0, 9), 0)
-    assertEquals(Utils.count(Nullable("teststring"), "s", 0, 50), 2)
-    assertEquals(Utils.count(Nullable("teststring"), "s", 0, 7), 2)
-    assertEquals(Utils.count(Nullable("teststring"), "S", 0, 7), 0)
-    assertEquals(Utils.count(Nullable("teststring"), " ", 0, -50), 0)
-    assertEquals(Utils.count(Nullable("teststring"), " ", 0, -30), 0)
-    assertEquals(Utils.count(Nullable("abcdefghijklmnopqrstuvwxyz"), "jk", 7, -2), 0)
-    assertEquals(Utils.count(Nullable("abcdefghijklmnopqrs"), "d", 1, 15), 1)
-    assertEquals(Utils.count(Nullable("?"), ' ', 1, 1), 0)
-    assertEquals(Utils.count(Nullable("teststring"), "s", -1, 50), 0)
+    assertEquals(Utils.count(null: String, null, 0, 50), 0)
+    assertEquals(Utils.count(null: String, "a", 500, 0), 0)
+    assertEquals(Utils.count("teststring", null, 50, 50), 0)
+    assertEquals(Utils.count("teststring", "", 0, 0), 1)
+    assertEquals(Utils.count("teststring", "d", 0, 9), 0)
+    assertEquals(Utils.count("teststring", "s", 0, 50), 2)
+    assertEquals(Utils.count("teststring", "s", 0, 7), 2)
+    assertEquals(Utils.count("teststring", "S", 0, 7), 0)
+    assertEquals(Utils.count("teststring", " ", 0, -50), 0)
+    assertEquals(Utils.count("teststring", " ", 0, -30), 0)
+    assertEquals(Utils.count("abcdefghijklmnopqrstuvwxyz", "jk", 7, -2), 0)
+    assertEquals(Utils.count("abcdefghijklmnopqrs", "d", 1, 15), 1)
+    assertEquals(Utils.count("?", ' ', 1, 1), 0)
+    assertEquals(Utils.count("teststring", "s", -1, 50), 0)
 
-    assertEquals(Utils.count(Nullable("123456789"), "8", 0, 3), 0)
+    assertEquals(Utils.count("123456789", "8", 0, 3), 0)
   }
 
   test("testJoin") {
@@ -52,16 +52,16 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testGetAbbreviatedText") {
-    assertEquals(Utils.getAbbreviatedText(Nullable("testString"), -2049), "testString")
-    assertEquals(Utils.getAbbreviatedText(Nullable("a"), 402_667_521), "a")
-    assertEquals(Utils.getAbbreviatedText(Nullable("abcdfeghij"), 8), "abcd \u2026 j")
-    assertEquals(Utils.getAbbreviatedText(Nullable(null: String), -11), "")
+    assertEquals(Utils.getAbbreviatedText("testString", -2049), "testString")
+    assertEquals(Utils.getAbbreviatedText("a", 402_667_521), "a")
+    assertEquals(Utils.getAbbreviatedText("abcdfeghij", 8), "abcd \u2026 j")
+    assertEquals(Utils.getAbbreviatedText(null: String, -11), "")
   }
 
   test("testIsBlank") {
-    assert(!Utils.isBlank(Nullable("      `a ")))
-    assert(Utils.isBlank(Nullable("      ")))
-    assert(Utils.isBlank(Nullable(null: String)))
+    assert(!Utils.isBlank("      `a "))
+    assert(Utils.isBlank("      "))
+    assert(Utils.isBlank(null: String))
   }
 
   test("testMaxLimit") {
@@ -72,8 +72,8 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testOrEmpty") {
-    assertEquals(Utils.orEmpty(Nullable("   ")), "   ")
-    assertEquals(Utils.orEmpty(Nullable(null: String)), "")
+    assertEquals(Utils.orEmpty("   "), "   ")
+    assertEquals(Utils.orEmpty(null: String), "")
   }
 
   test("testParseIntOrNull") {
@@ -97,16 +97,16 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testPrefixWith") {
-    assertEquals(Utils.prefixWith(Nullable("teststring"), ' ', false), " teststring")
-    assertEquals(Utils.prefixWith(Nullable("teststring"), "_", false), "_teststring")
-    assertEquals(Utils.prefixWith(Nullable(""), Nullable(""), false), "")
-    assertEquals(Utils.prefixWith(Nullable(""), ' ', false), "")
-    assertEquals(Utils.prefixWith(Nullable("  "), ' ', false), "  ")
-    assertEquals(Utils.prefixWith(Nullable("teststring"), "a ", false), "a teststring")
-    assertEquals(Utils.prefixWith(Nullable("a"), "a", false), "a")
-    assertEquals(Utils.prefixWith(Nullable(null: String), null: String), "")
-    assertEquals(Utils.prefixWith(Nullable("A"), 'a', true), "A")
-    assertEquals(Utils.prefixWith(Nullable("A"), 'a', false), "aA")
+    assertEquals(Utils.prefixWith("teststring", ' ', false), " teststring")
+    assertEquals(Utils.prefixWith("teststring", "_", false), "_teststring")
+    assertEquals(Utils.prefixWith("", "", false), "")
+    assertEquals(Utils.prefixWith("", ' ', false), "")
+    assertEquals(Utils.prefixWith("  ", ' ', false), "  ")
+    assertEquals(Utils.prefixWith("teststring", "a ", false), "a teststring")
+    assertEquals(Utils.prefixWith("a", "a", false), "a")
+    assertEquals(Utils.prefixWith(null: String, null: String), "")
+    assertEquals(Utils.prefixWith("A", 'a', true), "A")
+    assertEquals(Utils.prefixWith("A", 'a', false), "aA")
   }
 
   test("testRangeLimit") {
@@ -120,8 +120,8 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testRegexGroup") {
-    assertEquals(Utils.regexGroup(Nullable("AA")), "(?:AA)")
-    assertEquals(Utils.regexGroup(Nullable(null: String)), "(?:)")
+    assertEquals(Utils.regexGroup("AA"), "(?:AA)")
+    assertEquals(Utils.regexGroup(null: String), "(?:)")
   }
 
   test("testRegionMatches") {
@@ -131,44 +131,44 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testRemoveAnySuffix") {
-    assertEquals(Utils.removeAnySuffix(Nullable("!!")), "!!")
-    assertEquals(Utils.removeAnySuffix(Nullable("testString"), "?"), "testString")
-    assertEquals(Utils.removeAnySuffix(Nullable(null: String), null), "")
-    assertEquals(Utils.removeAnySuffix(Nullable("testString!"), "!"), "testString")
-    assertEquals(Utils.removeAnySuffix(Nullable("testString!"), "!"), "testString")
-    assertEquals(Utils.removeAnySuffix(Nullable("testStrin!g"), "!"), "testStrin!g")
-    assertEquals(Utils.removeAnySuffix(Nullable("!testString"), "!"), "!testString")
+    assertEquals(Utils.removeAnySuffix("!!"), "!!")
+    assertEquals(Utils.removeAnySuffix("testString", "?"), "testString")
+    assertEquals(Utils.removeAnySuffix(null: String, null), "")
+    assertEquals(Utils.removeAnySuffix("testString!", "!"), "testString")
+    assertEquals(Utils.removeAnySuffix("testString!", "!"), "testString")
+    assertEquals(Utils.removeAnySuffix("testStrin!g", "!"), "testStrin!g")
+    assertEquals(Utils.removeAnySuffix("!testString", "!"), "!testString")
   }
 
   test("testRemoveAnyPrefix") {
-    assertEquals(Utils.removeAnyPrefix(Nullable(null: String), "x"), "")
-    assertEquals(Utils.removeAnyPrefix(Nullable("testString")), "testString")
+    assertEquals(Utils.removeAnyPrefix(null: String, "x"), "")
+    assertEquals(Utils.removeAnyPrefix("testString"), "testString")
     // NOTE: Passing null as a prefix causes NPE in the ported code (missing null check).
     // Original Java checks `prefix != null` before `startsWith`. Adjusting test to avoid null prefix.
-    assertEquals(Utils.removeAnyPrefix(Nullable("testString"), "nonmatch"), "testString")
-    assertEquals(Utils.removeAnyPrefix(Nullable("testString!"), "!"), "testString!")
-    assertEquals(Utils.removeAnyPrefix(Nullable("testStrin!g"), "!"), "testStrin!g")
-    assertEquals(Utils.removeAnyPrefix(Nullable("!testString"), "!"), "testString")
+    assertEquals(Utils.removeAnyPrefix("testString", "nonmatch"), "testString")
+    assertEquals(Utils.removeAnyPrefix("testString!", "!"), "testString!")
+    assertEquals(Utils.removeAnyPrefix("testStrin!g", "!"), "testStrin!g")
+    assertEquals(Utils.removeAnyPrefix("!testString", "!"), "testString")
   }
 
   test("testRemovePrefix") {
-    assertEquals(Utils.removePrefixIncluding(Nullable("abcdefg"), "abcdefg"), "")
-    assertEquals(Utils.removePrefixIncluding(Nullable("abcd_"), "abcde"), "abcd_")
-    assertEquals(Utils.removePrefixIncluding(Nullable(null: String), null), "")
-    assertEquals(Utils.removePrefix(Nullable(" abcdefg"), '!'), " abcdefg")
-    assertEquals(Utils.removePrefix(Nullable(" abcdefg"), ' '), "abcdefg")
-    assertEquals(Utils.removePrefix(Nullable("A"), "prefix"), "A")
-    assertEquals(Utils.removePrefix(Nullable(null: String), "prefix"), "")
-    assertEquals(Utils.removePrefix(Nullable(null: String), null), "")
+    assertEquals(Utils.removePrefixIncluding("abcdefg", "abcdefg"), "")
+    assertEquals(Utils.removePrefixIncluding("abcd_", "abcde"), "abcd_")
+    assertEquals(Utils.removePrefixIncluding(null: String, null), "")
+    assertEquals(Utils.removePrefix(" abcdefg", '!'), " abcdefg")
+    assertEquals(Utils.removePrefix(" abcdefg", ' '), "abcdefg")
+    assertEquals(Utils.removePrefix("A", "prefix"), "A")
+    assertEquals(Utils.removePrefix(null: String, "prefix"), "")
+    assertEquals(Utils.removePrefix(null: String, null), "")
   }
 
   test("testRemoveSuffix") {
-    assertEquals(Utils.removeSuffix(Nullable("      testString"), ' '), "      testString")
-    assertEquals(Utils.removeSuffix(Nullable("      !"), '!'), "      ")
-    assertEquals(Utils.removeSuffix(Nullable("abcdefg"), "!"), "abcdefg")
-    assertEquals(Utils.removeSuffix(Nullable("!"), ""), "!")
-    assertEquals(Utils.removeSuffix(Nullable(null: String), "a"), "")
-    assertEquals(Utils.removeSuffix(Nullable(null: String), ""), "")
+    assertEquals(Utils.removeSuffix("      testString", ' '), "      testString")
+    assertEquals(Utils.removeSuffix("      !", '!'), "      ")
+    assertEquals(Utils.removeSuffix("abcdefg", "!"), "abcdefg")
+    assertEquals(Utils.removeSuffix("!", ""), "!")
+    assertEquals(Utils.removeSuffix(null: String, "a"), "")
+    assertEquals(Utils.removeSuffix(null: String, ""), "")
   }
 
   test("testRepeat") {
@@ -182,57 +182,57 @@ final class UtilsSuite extends munit.FunSuite {
   }
 
   test("testStartsWith") {
-    assert(!Utils.startsWith(Nullable("??????????")))
-    assert(!Utils.startsWith(Nullable("")))
-    assert(!Utils.startsWith(Nullable(""), "????"))
-    assert(!Utils.startsWith(Nullable("?"), "???"))
-    assert(!Utils.startsWith(Nullable("????????"), "??????????", "?????????"))
-    assert(!Utils.startsWith(Nullable(null: String), true))
+    assert(!Utils.startsWith("??????????"))
+    assert(!Utils.startsWith(""))
+    assert(!Utils.startsWith("", "????"))
+    assert(!Utils.startsWith("?", "???"))
+    assert(!Utils.startsWith("????????", "??????????", "?????????"))
+    assert(!Utils.startsWith(null: String, true))
 
-    assert(Utils.startsWith(Nullable("aaa???"), "aaa"))
-    assert(Utils.startsWith(Nullable("testString"), "testString"))
-    assert(Utils.startsWith(Nullable("???"), "??", "???"))
-    assert(Utils.startsWith(Nullable("????????"), "????????", "?", null))
-    assert(Utils.startsWith(Nullable("?????"), "???", null, null, null, null))
-    assert(Utils.startsWith(Nullable("Hello"), "H"))
+    assert(Utils.startsWith("aaa???", "aaa"))
+    assert(Utils.startsWith("testString", "testString"))
+    assert(Utils.startsWith("???", "??", "???"))
+    assert(Utils.startsWith("????????", "????????", "?", null))
+    assert(Utils.startsWith("?????", "???", null, null, null, null))
+    assert(Utils.startsWith("Hello", "H"))
   }
 
   test("testStartsWithNullPointerException1") {
     intercept[NullPointerException] {
-      Utils.startsWith(Nullable("?"), null.asInstanceOf[String])
+      Utils.startsWith("?", null.asInstanceOf[String])
     }
   }
 
   test("testStartsWithNullPointerException2") {
     intercept[NullPointerException] {
-      Utils.startsWith(Nullable(""), null.asInstanceOf[String])
+      Utils.startsWith("", null.asInstanceOf[String])
     }
   }
 
   test("testStartsWithNullPointerException3") {
     intercept[NullPointerException] {
-      Utils.startsWith(Nullable(""), null, " ??????")
+      Utils.startsWith("", null, " ??????")
     }
   }
 
   test("testStartsWithNullPointerException4") {
     intercept[NullPointerException] {
-      Utils.startsWith(Nullable("testString"), null, null, null)
+      Utils.startsWith("testString", null, null, null)
     }
   }
 
   test("testWrapWith") {
-    assertEquals(Utils.wrapWith(Nullable(""), " ", " "), "")
-    assertEquals(Utils.wrapWith(Nullable("!"), ' ', ' '), " ! ")
-    assertEquals(Utils.wrapWith(Nullable("!"), " ", " "), " ! ")
-    assertEquals(Utils.wrapWith(Nullable("a"), "prefix", "wrapped"), "prefixawrapped")
-    assertEquals(Utils.wrapWith(Nullable("abc"), "34", "12"), "34abc12")
-    assertEquals(Utils.wrapWith(Nullable("abc"), "", "123"), "abc123")
-    assertEquals(Utils.wrapWith(Nullable("abc"), "123", ""), "123abc")
-    assertEquals(Utils.wrapWith(Nullable("a"), ' '), " a ")
-    assertEquals(Utils.wrapWith(Nullable("receiver"), null, "suffix"), "receiversuffix")
-    assertEquals(Utils.wrapWith(Nullable(null: String), "", ""), "")
-    assertEquals(Utils.wrapWith(Nullable("receiver"), "prefix", "suffix"), "prefixreceiversuffix")
+    assertEquals(Utils.wrapWith("", " ", " "), "")
+    assertEquals(Utils.wrapWith("!", ' ', ' '), " ! ")
+    assertEquals(Utils.wrapWith("!", " ", " "), " ! ")
+    assertEquals(Utils.wrapWith("a", "prefix", "wrapped"), "prefixawrapped")
+    assertEquals(Utils.wrapWith("abc", "34", "12"), "34abc12")
+    assertEquals(Utils.wrapWith("abc", "", "123"), "abc123")
+    assertEquals(Utils.wrapWith("abc", "123", ""), "123abc")
+    assertEquals(Utils.wrapWith("a", ' '), " a ")
+    assertEquals(Utils.wrapWith("receiver", null, "suffix"), "receiversuffix")
+    assertEquals(Utils.wrapWith(null: String, "", ""), "")
+    assertEquals(Utils.wrapWith("receiver", "prefix", "suffix"), "prefixreceiversuffix")
   }
 
   test("test_parseNumberOrNull") {

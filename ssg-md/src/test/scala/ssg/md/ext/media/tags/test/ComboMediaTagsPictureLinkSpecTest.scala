@@ -20,12 +20,12 @@ import scala.language.implicitConversions
 
 final class ComboMediaTagsPictureLinkSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboMediaTagsPictureLinkSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboMediaTagsPictureLinkSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboMediaTagsPictureLinkSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = new java.util.HashMap[String, DataHolder]()
 }
 
 object ComboMediaTagsPictureLinkSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/media/tags/test/ext_media_tags_picture_link_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMediaTagsPictureLinkSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(MediaTagsExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(MediaTagsExtension.create())).toImmutable()
 }

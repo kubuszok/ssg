@@ -24,35 +24,35 @@ final class BoundedMaxAggregatorSuite extends munit.FunSuite {
     assertEquals(
       reduce(
         new BoundedMaxAggregator(3),
-        Nullable(1),
-        Nullable(2),
-        Nullable(3),
-        Nullable(4),
-        Nullable(5),
-        Nullable(6),
-        Nullable(7),
-        Nullable(8),
-        Nullable(9),
-        Nullable(10)
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ).get.intValue(),
       2
     )
     assertEquals(
       reduce(
         new BoundedMaxAggregator(5),
-        Nullable(1),
-        Nullable(2),
-        Nullable(3),
-        Nullable(4),
-        Nullable(5),
-        Nullable(6),
-        Nullable(7),
-        Nullable(8),
-        Nullable(9),
-        Nullable(10)
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ).get.intValue(),
       4
     )
-    assert(reduce(new BoundedMaxAggregator(10), Nullable(10), Nullable(11), Nullable(12), Nullable(13)).isEmpty)
+    assert(reduce(new BoundedMaxAggregator(10), 10, 11, 12, 13).isEmpty)
   }
 }

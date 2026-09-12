@@ -21,14 +21,14 @@ import scala.language.implicitConversions
 
 final class ComboStrikethroughSubscriptSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboStrikethroughSubscriptSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboStrikethroughSubscriptSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboStrikethroughSubscriptSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboStrikethroughSubscriptSpecTest.OPTIONS_MAP
 }
 
 object ComboStrikethroughSubscriptSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gfm/strikethrough/test/ext_strikethrough_subscript_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboStrikethroughSubscriptSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 0).set(Parser.EXTENSIONS, Collections.singleton(StrikethroughSubscriptExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 0).set(Parser.EXTENSIONS, Collections.singleton(StrikethroughSubscriptExtension.create())).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
@@ -37,14 +37,14 @@ object ComboStrikethroughSubscriptSpecTest {
       new MutableDataSet()
         .set(StrikethroughSubscriptExtension.STRIKETHROUGH_STYLE_HTML_OPEN, "<span class=\"text-strike\">")
         .set(StrikethroughSubscriptExtension.STRIKETHROUGH_STYLE_HTML_CLOSE, "</span>")
-        .toImmutable
+        .toImmutable()
     )
     map.put(
       "style-subscript",
       new MutableDataSet()
         .set(StrikethroughSubscriptExtension.SUBSCRIPT_STYLE_HTML_OPEN, "<span class=\"text-sub\">")
         .set(StrikethroughSubscriptExtension.SUBSCRIPT_STYLE_HTML_CLOSE, "</span>")
-        .toImmutable
+        .toImmutable()
     )
     map
   }

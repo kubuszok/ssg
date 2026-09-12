@@ -116,7 +116,7 @@ class SpecReader(
               lastSectionLevel = pair.second.get
               section = pair.first
             } else {
-              section = Nullable(matcher.group(1))
+              section = matcher.group(1)
             }
 
             lineProcessed = true
@@ -152,7 +152,7 @@ class SpecReader(
             new SpecExample(
               resourceLocation,
               contentLineNumber,
-              Nullable(optionsSet),
+              optionsSet,
               section,
               exampleNumber,
               source.toString(),
@@ -179,12 +179,12 @@ class SpecReader(
             new SpecExample(
               resourceLocation,
               contentLineNumber,
-              Nullable(optionsSet),
+              optionsSet,
               section,
               exampleNumber,
               source.toString(),
               html.toString(),
-              Nullable(ast.toString()),
+              ast.toString(),
               comment.map(_.toString)
             )
           )
@@ -200,7 +200,7 @@ class SpecReader(
         comment = Nullable.empty
       } else if (section.isDefined && state == SpecReader.State.BEFORE) {
         if (comment.isEmpty) {
-          comment = Nullable(new StringBuilder())
+          comment = new StringBuilder()
         }
         comment.foreach(_.append(line).append('\n'))
       }

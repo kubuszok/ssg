@@ -30,7 +30,7 @@ final class ParserSuite extends munit.FunSuite {
   test("emptyReaderTest") {
     val parser    = Parser.builder().build()
     val document1 = parser.parseReader(new StringReader(""))
-    assert(!document1.hasChildren)
+    assert(!document1.hasChildren())
   }
 
   test("ioReaderTest") {
@@ -54,12 +54,12 @@ final class ParserSuite extends munit.FunSuite {
     // The dashes would normally be a ThematicBreak
     val document = parser.parse("hey\n\n---\n")
 
-    assert(document.firstChild.get.isInstanceOf[Paragraph])
+    assert(document.getFirstChild().isInstanceOf[Paragraph])
     assertEquals(
-      document.firstChild.get.firstChild.get.asInstanceOf[Text].chars.toString,
+      document.getFirstChild().getFirstChild().asInstanceOf[Text].chars.toString,
       "hey"
     )
-    assert(document.lastChild.get.isInstanceOf[DashBlock])
+    assert(document.getLastChild().isInstanceOf[DashBlock])
   }
 
   test("indentation") {
@@ -67,24 +67,24 @@ final class ParserSuite extends munit.FunSuite {
     val parser   = Parser.builder().build()
     val document = parser.parse(given_)
 
-    assert(document.firstChild.get.isInstanceOf[BulletList], "Document first child should be BulletList")
+    assert(document.getFirstChild().isInstanceOf[BulletList], "Document first child should be BulletList")
     assertEquals(document.lineCount, 4, "Document line count")
 
-    var list = document.firstChild.get // first level list
-    assertEquals(list.firstChild.get, list.lastChild.get, "expect one child")
-    assertEquals(firstText(list.firstChild.get), "1 space")
+    var list = document.getFirstChild() // first level list
+    assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
+    assertEquals(firstText(list.getFirstChild()), "1 space")
     assertEquals(list.startLineNumber, 0, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
 
-    list = list.firstChild.get.lastChild.get // second level list
-    assertEquals(list.firstChild.get, list.lastChild.get, "expect one child")
-    assertEquals(firstText(list.firstChild.get), "3 spaces")
+    list = list.getFirstChild().getLastChild() // second level list
+    assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
+    assertEquals(firstText(list.getFirstChild()), "3 spaces")
     assertEquals(list.startLineNumber, 1, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
 
-    list = list.firstChild.get.lastChild.get // third level list
-    assertEquals(firstText(list.firstChild.get), "5 spaces")
-    assertEquals(firstText(list.firstChild.get.next.get), "tab + space")
+    list = list.getFirstChild().getLastChild() // third level list
+    assertEquals(firstText(list.getFirstChild()), "5 spaces")
+    assertEquals(firstText(list.getFirstChild().getNext()), "tab + space")
     assertEquals(list.startLineNumber, 2, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
   }
@@ -95,24 +95,24 @@ final class ParserSuite extends munit.FunSuite {
     val parser   = Parser.builder(options).build()
     val document = parser.parse(given_)
 
-    assert(document.firstChild.get.isInstanceOf[BulletList], "Document first child should be BulletList")
+    assert(document.getFirstChild().isInstanceOf[BulletList], "Document first child should be BulletList")
     assertEquals(document.lineCount, 4, "Document line count")
 
-    var list = document.firstChild.get // first level list
-    assertEquals(list.firstChild.get, list.lastChild.get, "expect one child")
-    assertEquals(firstText(list.firstChild.get), "1 space")
+    var list = document.getFirstChild() // first level list
+    assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
+    assertEquals(firstText(list.getFirstChild()), "1 space")
     assertEquals(list.startLineNumber, 0, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
 
-    list = list.firstChild.get.lastChild.get // second level list
-    assertEquals(list.firstChild.get, list.lastChild.get, "expect one child")
-    assertEquals(firstText(list.firstChild.get), "3 spaces")
+    list = list.getFirstChild().getLastChild() // second level list
+    assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
+    assertEquals(firstText(list.getFirstChild()), "3 spaces")
     assertEquals(list.startLineNumber, 1, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
 
-    list = list.firstChild.get.lastChild.get // third level list
-    assertEquals(firstText(list.firstChild.get), "5 spaces")
-    assertEquals(firstText(list.firstChild.get.next.get), "tab + space")
+    list = list.getFirstChild().getLastChild() // third level list
+    assertEquals(firstText(list.getFirstChild()), "5 spaces")
+    assertEquals(firstText(list.getFirstChild().getNext()), "tab + space")
     assertEquals(list.startLineNumber, 2, "node start line number")
     assertEquals(list.endLineNumber, 3, "node end line number")
   }
@@ -124,55 +124,55 @@ final class ParserSuite extends munit.FunSuite {
     val parser   = Parser.builder().build()
     val document = parser.parse(given_)
 
-    assert(document.firstChild.get.isInstanceOf[BlockQuote])
-    assert(document.firstChild.get.firstChild.get.isInstanceOf[Paragraph])
-    val it = document.firstChild.get.firstChild.get.childIterator
+    assert(document.getFirstChild().isInstanceOf[BlockQuote])
+    assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
+    val it = document.getFirstChild().getFirstChild().childIterator
 
     assert(it.hasNext)
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
-    assertEquals(node.startOffset, 2)
-    assertEquals(node.endOffset, 7)
+    assertEquals(node.getStartOffset(), 2)
+    assertEquals(node.getEndOffset(), 7)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 7)
-    assertEquals(node.endOffset, 8)
+    assertEquals(node.getStartOffset(), 7)
+    assertEquals(node.getEndOffset(), 8)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
-    assertEquals(node.startOffset, 10)
-    assertEquals(node.endOffset, 15)
+    assertEquals(node.getStartOffset(), 10)
+    assertEquals(node.getEndOffset(), 15)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 16)
-    assertEquals(node.endOffset, 17)
+    assertEquals(node.getStartOffset(), 16)
+    assertEquals(node.getEndOffset(), 17)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
-    assertEquals(node.startOffset, 19)
-    assertEquals(node.endOffset, 24)
+    assertEquals(node.getStartOffset(), 19)
+    assertEquals(node.getEndOffset(), 24)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
-    assertEquals(node.startOffset, 24)
-    assertEquals(node.endOffset, 27)
+    assertEquals(node.getStartOffset(), 24)
+    assertEquals(node.getEndOffset(), 27)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
-    assertEquals(node.startOffset, 29)
-    assertEquals(node.endOffset, 34)
+    assertEquals(node.getStartOffset(), 29)
+    assertEquals(node.getEndOffset(), 34)
 
     assert(!it.hasNext)
   }
@@ -184,55 +184,55 @@ final class ParserSuite extends munit.FunSuite {
     val parser   = Parser.builder().build()
     val document = parser.parse(given_)
 
-    assert(document.firstChild.get.isInstanceOf[BlockQuote])
-    assert(document.firstChild.get.firstChild.get.isInstanceOf[Paragraph])
-    val it = document.firstChild.get.firstChild.get.childIterator
+    assert(document.getFirstChild().isInstanceOf[BlockQuote])
+    assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
+    val it = document.getFirstChild().getFirstChild().childIterator
 
     assert(it.hasNext)
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
-    assertEquals(node.startOffset, 2)
-    assertEquals(node.endOffset, 7)
+    assertEquals(node.getStartOffset(), 2)
+    assertEquals(node.getEndOffset(), 7)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 7)
-    assertEquals(node.endOffset, 8)
+    assertEquals(node.getStartOffset(), 7)
+    assertEquals(node.getEndOffset(), 8)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
-    assertEquals(node.startOffset, 10)
-    assertEquals(node.endOffset, 15)
+    assertEquals(node.getStartOffset(), 10)
+    assertEquals(node.getEndOffset(), 15)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 16)
-    assertEquals(node.endOffset, 17)
+    assertEquals(node.getStartOffset(), 16)
+    assertEquals(node.getEndOffset(), 17)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
-    assertEquals(node.startOffset, 19)
-    assertEquals(node.endOffset, 24)
+    assertEquals(node.getStartOffset(), 19)
+    assertEquals(node.getEndOffset(), 24)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
-    assertEquals(node.startOffset, 24)
-    assertEquals(node.endOffset, 27)
+    assertEquals(node.getStartOffset(), 24)
+    assertEquals(node.getEndOffset(), 27)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
-    assertEquals(node.startOffset, 29)
-    assertEquals(node.endOffset, 34)
+    assertEquals(node.getStartOffset(), 29)
+    assertEquals(node.getEndOffset(), 34)
 
     assert(!it.hasNext)
   }
@@ -244,55 +244,55 @@ final class ParserSuite extends munit.FunSuite {
     val parser   = Parser.builder().build()
     val document = parser.parse(given_)
 
-    assert(document.firstChild.get.isInstanceOf[BlockQuote])
-    assert(document.firstChild.get.firstChild.get.isInstanceOf[Paragraph])
-    val it = document.firstChild.get.firstChild.get.childIterator
+    assert(document.getFirstChild().isInstanceOf[BlockQuote])
+    assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
+    val it = document.getFirstChild().getFirstChild().childIterator
 
     assert(it.hasNext)
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
-    assertEquals(node.startOffset, 2)
-    assertEquals(node.endOffset, 7)
+    assertEquals(node.getStartOffset(), 2)
+    assertEquals(node.getEndOffset(), 7)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 7)
-    assertEquals(node.endOffset, 9)
+    assertEquals(node.getStartOffset(), 7)
+    assertEquals(node.getEndOffset(), 9)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
-    assertEquals(node.startOffset, 11)
-    assertEquals(node.endOffset, 16)
+    assertEquals(node.getStartOffset(), 11)
+    assertEquals(node.getEndOffset(), 16)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
-    assertEquals(node.startOffset, 17)
-    assertEquals(node.endOffset, 19)
+    assertEquals(node.getStartOffset(), 17)
+    assertEquals(node.getEndOffset(), 19)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
-    assertEquals(node.startOffset, 21)
-    assertEquals(node.endOffset, 26)
+    assertEquals(node.getStartOffset(), 21)
+    assertEquals(node.getEndOffset(), 26)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
-    assertEquals(node.startOffset, 26)
-    assertEquals(node.endOffset, 30)
+    assertEquals(node.getStartOffset(), 26)
+    assertEquals(node.getEndOffset(), 30)
 
     assert(it.hasNext)
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
-    assertEquals(node.startOffset, 32)
-    assertEquals(node.endOffset, 37)
+    assertEquals(node.getStartOffset(), 32)
+    assertEquals(node.getEndOffset(), 37)
 
     assert(!it.hasNext)
   }
@@ -621,7 +621,7 @@ final class ParserSuite extends munit.FunSuite {
     var current = n
     while (!current.isInstanceOf[Text]) {
       assert(current != null, "Expected non-null node")
-      current = current.firstChild.get
+      current = current.getFirstChild()
     }
     current.chars.toString
   }
@@ -660,7 +660,7 @@ final class ParserSuite extends munit.FunSuite {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
       if (state.line.equals("---")) {
-        Nullable(BlockStart.of(new DashBlockParser(state.line)))
+        BlockStart.of(new DashBlockParser(state.line))
       } else {
         BlockStart.none()
       }

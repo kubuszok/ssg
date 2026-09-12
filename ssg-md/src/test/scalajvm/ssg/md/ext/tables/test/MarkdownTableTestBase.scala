@@ -26,9 +26,9 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
 
   protected def getTables(markdown: CharSequence, options: DataHolder): Array[MarkdownTable] = {
     val useOptions: DataHolder = if (options == null) {
-      new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+      new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
     } else {
-      new MutableDataSet(options).set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+      new MutableDataSet(options).set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
     }
 
     val parser       = Parser.builder(useOptions).build()
@@ -128,8 +128,8 @@ abstract class MarkdownTableTestBase extends munit.FunSuite {
     assertEquals(index.toString, new MarkdownTable.IndexSpanOffset(expIndex, expSpanOffset).toString, message)
 
   protected def assertCellInfo(message: String, row: Int, column: Int, insideCol: Integer, insideOffset: Integer, info: TableCellOffsetInfo): Unit = {
-    val insideColN:    Nullable[Integer] = if (insideCol == null) Nullable.empty else Nullable(insideCol)
-    val insideOffsetN: Nullable[Integer] = if (insideOffset == null) Nullable.empty else Nullable(insideOffset)
+    val insideColN:    Nullable[Integer] = if (insideCol == null) Nullable.empty else insideCol
+    val insideOffsetN: Nullable[Integer] = if (insideOffset == null) Nullable.empty else insideOffset
     assertEquals(
       info.toString,
       new TableCellOffsetInfo(info.offset, info.table, info.section, Nullable.empty, Nullable.empty, row, column, insideColN, insideOffsetN).toString,

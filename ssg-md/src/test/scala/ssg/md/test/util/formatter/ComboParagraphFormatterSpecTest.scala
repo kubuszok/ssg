@@ -27,7 +27,7 @@ import scala.language.implicitConversions
 
 final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboParagraphFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboParagraphFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboParagraphFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboParagraphFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Wrap -")
 
@@ -43,7 +43,7 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
     val effectiveOptions = options
 
     val paragraph = new MarkdownParagraph(sequence, CharWidthProvider.NULL)
-    paragraph.options = Nullable(effectiveOptions)
+    paragraph.options = effectiveOptions
 
     val restoreTrackedSpaces = Formatter.RESTORE_TRACKED_SPACES.get(effectiveOptions)
     val rightMargin          = Formatter.RIGHT_MARGIN.get(effectiveOptions)
@@ -114,7 +114,7 @@ object ComboParagraphFormatterSpecTest {
 
   val OPTIONS: DataHolder = new MutableDataSet()
     .set(SharedDataKeys.RUNNING_TESTS, false) // Set to true to get stdout printout of intermediate wrapping information
-    .toImmutable
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
@@ -123,15 +123,15 @@ object ComboParagraphFormatterSpecTest {
       new MutableDataSet()
         .set(
           TestUtils.CUSTOM_OPTION,
-          ((option: String, params: String) => TestUtils.customIntOption(option, Nullable(params), (v: Int) => firstWidthDeltaOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Int) => firstWidthDeltaOption(v))): java.util.function.BiFunction[String, String, DataHolder]
         )
-        .toImmutable
+        .toImmutable()
     )
     map
   }
 
   private def firstWidthDeltaOption(params: Int): DataHolder =
-    new MutableDataSet().set(FIRST_WIDTH_DELTA, params).toImmutable
+    new MutableDataSet().set(FIRST_WIDTH_DELTA, params).toImmutable()
 
   val BANNER_TRACKED_OFFSETS: String = TestUtils.bannerText("Tracked Offsets")
   val BANNER_WITH_RANGES:     String = TestUtils.bannerText("Ranges")

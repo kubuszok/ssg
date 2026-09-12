@@ -24,7 +24,7 @@ import scala.language.implicitConversions
 
 final class ComboAbbreviationSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboAbbreviationSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAbbreviationSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboAbbreviationSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAbbreviationSpecTest.OPTIONS_MAP
 }
 
@@ -43,14 +43,14 @@ object ComboAbbreviationSpecTest {
         SuperscriptExtension.create()
       )
     )
-    .toImmutable
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("links", new MutableDataSet().set(AbbreviationExtension.USE_LINKS, true).toImmutable)
+    map.put("links", new MutableDataSet().set(AbbreviationExtension.USE_LINKS, true).toImmutable())
     map.put(
       "no-abbr",
-      new MutableDataSet().set(TestUtils.UNLOAD_EXTENSIONS, Collections.singletonList(classOf[AbbreviationExtension])).toImmutable
+      new MutableDataSet().set(TestUtils.UNLOAD_EXTENSIONS, Collections.singletonList(classOf[AbbreviationExtension])).toImmutable()
     )
     map
   }

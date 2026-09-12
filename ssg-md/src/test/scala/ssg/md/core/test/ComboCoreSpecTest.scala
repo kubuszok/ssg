@@ -21,7 +21,7 @@ final class ComboCoreSpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboCoreSpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboCoreSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboCoreSpecTest.OPTIONS
 
   override def compoundSections: Boolean = false
 }
@@ -35,5 +35,5 @@ object ComboCoreSpecTest {
     .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, false)
     .set(HtmlRenderer.PERCENT_ENCODE_URLS, true)
     .set(TestUtils.NO_FILE_EOL, false)
-    .toImmutable
+    .toImmutable()
 }

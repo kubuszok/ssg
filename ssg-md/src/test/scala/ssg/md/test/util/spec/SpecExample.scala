@@ -151,12 +151,12 @@ object SpecExample {
       location,
       traceElement.getLineNumber - 1,
       Nullable.empty,
-      Nullable(traceElement.getMethodName),
+      traceElement.getMethodName,
       0,
       source,
       html,
       ast,
-      Nullable("")
+      ""
     )
   }
 }

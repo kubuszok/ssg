@@ -20,12 +20,12 @@ import scala.language.implicitConversions
 
 final class ComboResizableImageSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboResizableImageSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboResizableImageSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboResizableImageSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = new java.util.HashMap[String, DataHolder]()
 }
 
 object ComboResizableImageSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/resizable/image/test/ext_resizable_image_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboResizableImageSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(ResizableImageExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(ResizableImageExtension.create())).toImmutable()
 }

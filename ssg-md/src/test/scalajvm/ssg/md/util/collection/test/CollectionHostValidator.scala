@@ -83,7 +83,7 @@ class CollectionHostValidator[T] {
     if (_conditional) {
       var i = 0
       while (i < _repeat) {
-        expectedCallBacks.add(new Pair[String, Array[Object]](Nullable(callBack), Nullable(params.toArray)))
+        expectedCallBacks.add(new Pair[String, Array[Object]](callBack, params.toArray))
         i += 1
       }
     }
@@ -181,7 +181,7 @@ class CollectionHostValidator[T] {
       override def removing(index: Int, s: Nullable[T]): Nullable[Object] = {
         self.validateCallback(hostName(host) + "removing", Integer.valueOf(index), s.asInstanceOf[Object])
         self._modificationCount += 1
-        Nullable(null)
+        null
       }
 
       override def clearing(): Unit = {

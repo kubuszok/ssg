@@ -34,7 +34,7 @@ class FlexmarkSpecExampleRenderer(
 
     if (includedText.nonEmpty) {
       // need to parse and transfer references
-      myIncludedDocument = Nullable(parser.parse(includedText))
+      myIncludedDocument = parser.parse(includedText)
       adjustParserForInclusion()
     }
   }
@@ -45,7 +45,7 @@ class FlexmarkSpecExampleRenderer(
   }
 
   override def parse(input: CharSequence): Unit =
-    myDocument = Nullable(parser.parse(BasedSequence.of(input)))
+    myDocument = parser.parse(BasedSequence.of(input))
 
   override def finalizeDocument(): Unit = {
     assert(myDocument.isDefined)

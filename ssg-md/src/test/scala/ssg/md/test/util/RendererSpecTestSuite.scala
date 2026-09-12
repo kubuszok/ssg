@@ -29,7 +29,7 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
   override protected def optionsFor(example: SpecExample): DataHolder = {
     val subclassBase = defaultOptions.getOrElse(new MutableDataSet())
     // Merge renderer base options (INDENT_SIZE=2) with subclass defaults
-    val base      = DataSet.aggregate(Nullable(RendererSpecTestSuite.RENDERER_OPTIONS), Nullable(subclassBase)).toImmutable
+    val base      = DataSet.aggregate(RendererSpecTestSuite.RENDERER_OPTIONS, subclassBase).toImmutable()
     val optionSet = example.optionsSet
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](RendererSpecTestSuite.BASE_OPTIONS_MAP)
@@ -39,7 +39,7 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
       }
       val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
       if (opts.isDefined) {
-        DataSet.aggregate(Nullable(base), opts).toImmutable
+        DataSet.aggregate(base, opts).toImmutable()
       } else {
         base
       }
@@ -85,19 +85,19 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
     // Render first so side effects (e.g. footnote ordinal resolution) are applied before AST collection
     renderer.render(document)
     val visitor = new AstCollectingVisitor()
-    Nullable(visitor.collectAndGetAstText(document))
+    visitor.collectAndGetAstText(document)
   }
 }
 
 object RendererSpecTestSuite {
 
   /** Base renderer options: INDENT_SIZE=2 (matches original RendererSpecTest). */
-  val RENDERER_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).toImmutable
+  val RENDERER_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).toImmutable()
 
   /** Base options map with "src-pos" (matches original RendererSpecTest). */
   val BASE_OPTIONS_MAP: ju.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
-    map.put("src-pos", new MutableDataSet().set(HtmlRenderer.SOURCE_POSITION_ATTRIBUTE, "md-pos").toImmutable)
+    map.put("src-pos", new MutableDataSet().set(HtmlRenderer.SOURCE_POSITION_ATTRIBUTE, "md-pos").toImmutable())
     map
   }
 }

@@ -21,7 +21,7 @@ abstract class SpecExampleRendererBase(
   def this(example: SpecExample, options: Nullable[DataHolder]) =
     this(example, options, true)
 
-  protected val myOptions:    DataHolder       = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable)
+  protected val myOptions:    DataHolder       = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable())
   private var myIsFinalized:  Boolean          = false
   private var myRenderedHtml: Nullable[String] = Nullable.empty
   private var myRenderedAst:  Nullable[String] = Nullable.empty
@@ -30,14 +30,14 @@ abstract class SpecExampleRendererBase(
 
   final override def getHtml: String = {
     if (myRenderedHtml.isEmpty || !isFinalized) {
-      myRenderedHtml = Nullable(renderHtml())
+      myRenderedHtml = renderHtml()
     }
     myRenderedHtml.get
   }
 
   final override def getAst: Nullable[String] = {
     if (myRenderedAst.isEmpty || !isFinalized) {
-      myRenderedAst = Nullable(renderAst())
+      myRenderedAst = renderAst()
     }
     myRenderedAst
   }
@@ -53,5 +53,5 @@ abstract class SpecExampleRendererBase(
 
   override def example: SpecExample = myExample
 
-  override def options: Nullable[DataHolder] = Nullable(myOptions.toImmutable)
+  override def options: Nullable[DataHolder] = myOptions.toImmutable()
 }

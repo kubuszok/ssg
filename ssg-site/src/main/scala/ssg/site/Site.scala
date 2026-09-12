@@ -309,7 +309,7 @@ object Site {
                 message = jailEx.getMessage,
                 cause = Nullable(jailEx)
               )
-            case e: RuntimeException =>
+            case e: RuntimeException if !e.isInstanceOf[LayoutCycleException] =>
               diagnosticsBuilder += BuildDiagnostic(
                 file = filePath,
                 stage = BuildStage.Liquid,

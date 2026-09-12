@@ -21,7 +21,7 @@ final class BasicParseTest extends munit.FunSuite {
 
   test("block parser factories are registered") {
     // Check that core block parser factories are actually created
-    val options   = new ssg.md.util.data.MutableDataSet().toImmutable
+    val options   = new ssg.md.util.data.MutableDataSet().toImmutable()
     val factories = ssg.md.parser.internal.DocumentParser.calculateBlockParserFactories(options, Nil)
     println(s"Number of block parser factories: ${factories.size}")
     factories.foreach(f => println(s"  Factory: ${f.getClass.getSimpleName}"))
@@ -42,14 +42,14 @@ final class BasicParseTest extends munit.FunSuite {
     val astVisitor = new ssg.md.test.util.AstCollectingVisitor()
     val ast        = astVisitor.collectAndGetAstText(doc)
     println(s"AST:\n$ast")
-    println(s"Doc children: ${doc.hasChildren}")
-    println(s"Doc firstChild: ${doc.firstChild}")
+    println(s"Doc children: ${doc.hasChildren()}")
+    println(s"Doc firstChild: ${doc.getFirstChild()}")
     println(s"Doc chars: '${doc.chars}'")
     println(s"Doc chars length: ${doc.chars.length()}")
 
     // Check if firstChild is a Paragraph
-    if (doc.firstChild.isDefined) {
-      val child = doc.firstChild.get
+    if (doc.getFirstChild() != null) {
+      val child = doc.getFirstChild()
       println(s"First child type: ${child.getClass.getSimpleName}")
       println(s"First child chars: '${child.chars}'")
     }
@@ -66,7 +66,7 @@ final class BasicParseTest extends munit.FunSuite {
     val doc      = parser.parse("# Hello")
 
     // Debug: check Heading node
-    val heading = doc.firstChild.get
+    val heading = doc.getFirstChild()
     println(s"Heading type: ${heading.getClass.getSimpleName}")
     println(s"Heading chars: '${heading.chars}'")
     println(s"Heading chars class: ${heading.chars.getClass.getSimpleName}")
@@ -79,7 +79,7 @@ final class BasicParseTest extends munit.FunSuite {
 
     // Debug: check LineAppendableImpl internals
     val htmlWriter = new ssg.md.html.HtmlWriter(
-      Nullable(new java.lang.StringBuilder(): Appendable),
+      new java.lang.StringBuilder(: Appendable),
       0,
       0,
       false,
@@ -119,9 +119,9 @@ final class BasicParseTest extends munit.FunSuite {
   test("Empty URL link AST includes url and pageRef fields") {
     val parser = Parser.builder().build()
     val doc    = parser.parse("[link]()")
-    val link   = doc.firstChild.get.firstChild.get.asInstanceOf[ssg.md.ast.Link]
+    val link   = doc.getFirstChild().getFirstChild().asInstanceOf[ssg.md.ast.Link]
     println(
-      s"link.url = '${link.url}', isNull=${link.url.isNull}, isNotNull=${link.url.isNotNull}, length=${link.url.length()}, startOffset=${link.url.startOffset}, endOffset=${link.url.endOffset}"
+      s"link.url = '${link.url}', isNull=${link.url.isNull}, isNotNull=${link.url.isNotNull}, length=${link.url.length()}, startOffset=${link.url.getStartOffset()}, endOffset=${link.url.getEndOffset()}"
     )
     println(s"link.pageRef = '${link.pageRef}', isNull=${link.pageRef.isNull}, isNotNull=${link.pageRef.isNotNull}")
     println(s"link.url eq BasedSequence.NULL: ${link.url eq ssg.md.util.sequence.BasedSequence.NULL}")
@@ -132,10 +132,10 @@ final class BasicParseTest extends munit.FunSuite {
 
   test("Nullable wrapping null NullableDataKey") {
     val key     = ssg.md.html.HtmlRenderer.EMPHASIS_STYLE_HTML_OPEN
-    val options = new ssg.md.util.data.MutableDataSet().toImmutable
-    val rawValue: String = key.get(Nullable(options))
+    val options = new ssg.md.util.data.MutableDataSet().toImmutable()
+    val rawValue: String = key.get(options)
     println(s"rawValue: '$rawValue', isNull: ${rawValue == null}")
-    val wrapped = Nullable(rawValue)
+    val wrapped = rawValue
     println(s"wrapped.isEmpty: ${wrapped.isEmpty}, wrapped.isDefined: ${wrapped.isDefined}")
     assert(wrapped.isEmpty, s"Expected empty but got: $wrapped (class: ${wrapped.getClass})")
   }

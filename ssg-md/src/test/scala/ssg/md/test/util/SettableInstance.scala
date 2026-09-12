@@ -31,7 +31,7 @@ final class SettableInstance[T](
     this(
       consumerKey,
       if (extractedInstanceSetters.size() == 0) Nullable.empty[ju.Collection[SettableExtractedInstance[T, ?]]]
-      else Nullable(extractedInstanceSetters)
+      else extractedInstanceSetters
     )
 
   def this(consumerKey: DataKey[Consumer[T]]) =

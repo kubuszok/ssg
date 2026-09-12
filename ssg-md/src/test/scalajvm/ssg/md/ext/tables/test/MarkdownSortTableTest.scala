@@ -340,7 +340,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(3, false, true, false)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(3, false, true, false)), 0, MarkdownTable.ALL_SUFFIXES_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -378,7 +378,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, false)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, false)), 0, MarkdownTable.ALL_SUFFIXES_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -416,7 +416,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, false)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, false)), 0, MarkdownTable.ALL_SUFFIXES_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -454,7 +454,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, true)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, true)), 0, MarkdownTable.ALL_SUFFIXES_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -492,7 +492,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, true)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, true)), 0, MarkdownTable.ALL_SUFFIXES_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -530,7 +530,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, false)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_NO_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, false)), 0, MarkdownTable.ALL_SUFFIXES_NO_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -568,7 +568,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, false)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_NO_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, false)), 0, MarkdownTable.ALL_SUFFIXES_NO_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -606,7 +606,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, true)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_NO_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, true, true)), 0, MarkdownTable.ALL_SUFFIXES_NO_SORT)
     sorted.appendTable(out)
 
     assertEquals(
@@ -644,7 +644,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, true)), 0, Nullable(MarkdownTable.ALL_SUFFIXES_NO_SORT))
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, true, true)), 0, MarkdownTable.ALL_SUFFIXES_NO_SORT)
     sorted.appendTable(out)
 
     assertEquals(

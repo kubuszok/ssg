@@ -617,7 +617,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val fa: LineAppendable = new LineAppendableImpl(LineAppendable.F_FORMAT_ALL | LineAppendable.F_TRIM_LEADING_WHITESPACE)
     fa.setIndentPrefix(indent)
 
-    val saved = fa.getOptions
+    val saved = fa.getOptions()
     fa.setOptions(saved & ~(LineAppendable.F_COLLAPSE_WHITESPACE | LineAppendable.F_TRIM_LEADING_WHITESPACE))
     fa.append("  abc")
     fa.setOptions(saved)

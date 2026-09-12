@@ -105,7 +105,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
     }
     val render = System.nanoTime()
 
-    val ast: Nullable[String] = if (expectedAst.isEmpty) Nullable.empty else Nullable(exampleRenderer.getAst.get)
+    val ast: Nullable[String] = if (expectedAst.isEmpty) Nullable.empty else exampleRenderer.getAst.get
     val embedTimed = TestUtils.EMBED_TIMED.get(exampleRenderer.options.get)
 
     val formattedTimingInfo = TestUtils.getFormattedTimingInfo(iterations, specExampleParse.startTime, specExampleParse.parseTime, render)

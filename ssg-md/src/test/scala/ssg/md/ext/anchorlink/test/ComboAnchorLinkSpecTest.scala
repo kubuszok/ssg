@@ -20,7 +20,7 @@ import scala.language.implicitConversions
 
 final class ComboAnchorLinkSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboAnchorLinkSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAnchorLinkSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboAnchorLinkSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAnchorLinkSpecTest.OPTIONS_MAP
 }
 
@@ -33,17 +33,17 @@ object ComboAnchorLinkSpecTest {
     .set(AnchorLinkExtension.ANCHORLINKS_NO_BLOCK_QUOTE, true)
     .set(HtmlRenderer.RENDER_HEADER_ID, false)
     .set(HtmlRenderer.GENERATE_HEADER_ID, true)
-    .toImmutable
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-wrap", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false).toImmutable)
-    map.put("set-name", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_NAME, true).toImmutable)
-    map.put("no-id", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_ID, false).toImmutable)
-    map.put("no-class", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_ANCHOR_CLASS, "").toImmutable)
+    map.put("no-wrap", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false).toImmutable())
+    map.put("set-name", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_NAME, true).toImmutable())
+    map.put("no-id", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_SET_ID, false).toImmutable())
+    map.put("no-class", new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_ANCHOR_CLASS, "").toImmutable())
     map.put(
       "prefix-suffix",
-      new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_TEXT_PREFIX, "<span class=\"anchor\">").set(AnchorLinkExtension.ANCHORLINKS_TEXT_SUFFIX, "</span>").toImmutable
+      new MutableDataSet().set(AnchorLinkExtension.ANCHORLINKS_TEXT_PREFIX, "<span class=\"anchor\">").set(AnchorLinkExtension.ANCHORLINKS_TEXT_SUFFIX, "</span>").toImmutable()
     )
     map
   }

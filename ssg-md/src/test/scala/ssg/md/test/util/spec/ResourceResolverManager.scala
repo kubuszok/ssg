@@ -34,7 +34,7 @@ object ResourceResolverManager {
         val filePath = resolver.apply(externalForm)
         if (filePath != null) { // Java interop: resolver returns null to indicate no match
           if (ResourceUrlResolver.hasProtocol(filePath) && bestProtocolMatch.isEmpty) {
-            bestProtocolMatch = Nullable(filePath)
+            bestProtocolMatch = filePath
           } else {
             // In cross-platform mode we cannot check file existence,
             // so accept the first non-protocol match

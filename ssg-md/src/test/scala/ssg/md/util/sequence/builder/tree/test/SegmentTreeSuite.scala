@@ -186,12 +186,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
           { (bj, j) =>
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData1, 0, 1),
-              if (j >= i) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(0, 0, 0)),
+              if (j >= i) Nullable.empty[SegmentTreePos] else SegmentTreePos(0, 0, 0),
               s"i: $i j: $j"
             )
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData2, 1, 1),
-              if (j >= i) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(1, 0, 0)),
+              if (j >= i) Nullable.empty[SegmentTreePos] else SegmentTreePos(1, 0, 0),
               s"i: $i j: $j"
             )
           }
@@ -211,12 +211,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
           { (bj, j) =>
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData1, 0, 2),
-              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(if (j >= i) 1 else 0, if (j >= i) i else 0, 0)),
+              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else SegmentTreePos(if (j >= i 1 else 0, if (j >= i) i else 0, 0)),
               s"i: $i j: $j"
             )
             assertEquals(
               SegmentTree.findSegmentPos(j, aggrSegData2, 1, 3),
-              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(if (j >= i) 2 else 1, if (j >= i) i else 0, 0)),
+              if (j >= i + 1000) Nullable.empty[SegmentTreePos] else SegmentTreePos(if (j >= i 2 else 1, if (j >= i) i else 0, 0)),
               s"i: $i j: $j"
             )
           }
@@ -264,12 +264,12 @@ final class SegmentTreeSuite extends munit.FunSuite {
 
               assertEquals(
                 SegmentTree.findSegmentPos(j, aggrSegData1, 0, finalK),
-                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(segment(0), startIndex(0), 0)),
+                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else SegmentTreePos(segment(0, startIndex(0), 0)),
                 s"k: $finalK i: $i j: $j s:${segment(0)}"
               )
               assertEquals(
                 SegmentTree.findSegmentPos(j, aggrSegData2, 1, finalK + 1),
-                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else Nullable(SegmentTreePos(segment(0) + 1, startIndex(0), 0)),
+                if (segment(0) >= finalK) Nullable.empty[SegmentTreePos] else SegmentTreePos(segment(0 + 1, startIndex(0), 0)),
                 s"k: $finalK i: $i j: $j s:${segment(0)}"
               )
             }
@@ -358,8 +358,8 @@ final class SegmentTreeSuite extends munit.FunSuite {
       builder.segmentBuilder,
       segRange.startIndex,
       segRange.startIndex + segRange.length,
-      segRange.startOffset,
-      segRange.endOffset,
+      segRange.getStartOffset(),
+      segRange.getEndOffset(),
       segRange.startPos,
       segRange.endPos
     )
@@ -398,8 +398,8 @@ final class SegmentTreeSuite extends munit.FunSuite {
       builder.segmentBuilder,
       segRange.startIndex,
       segRange.startIndex + segRange.length,
-      segRange.startOffset,
-      segRange.endOffset,
+      segRange.getStartOffset(),
+      segRange.getEndOffset(),
       segRange.startPos,
       segRange.endPos
     )

@@ -66,10 +66,10 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
       .set(JekyllTagExtension.LINK_RESOLVER_FACTORIES, factories)
       // NOTE: CONTENT_RESOLVER_FACTORIES is deliberately left empty so the default
       // FileUriContentResolver.Factory fallback path is exercised.
-      .toImmutable
+      .toImmutable()
 
     val parser   = Parser.builder(options).build()
-    val renderer = HtmlRenderer.builder(Nullable(options)).build()
+    val renderer = HtmlRenderer.builder(options).build()
 
     val source   = "before\n\n{% include " + included.toAbsolutePath.toUri.toString + " %}\n\nafter\n"
     val document = parser.parse(source)
@@ -91,10 +91,10 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
       .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
       .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
       .set(JekyllTagExtension.LINK_RESOLVER_FACTORIES, factories)
-      .toImmutable
+      .toImmutable()
 
     val parser   = Parser.builder(options).build()
-    val renderer = HtmlRenderer.builder(Nullable(options)).build()
+    val renderer = HtmlRenderer.builder(options).build()
 
     val source   = "before\n\n{% include file:/no/such/iss983-missing-file.md %}\n\nafter\n"
     val document = parser.parse(source)
