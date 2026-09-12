@@ -649,9 +649,9 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   class DashBlockParserFactory extends CustomBlockParserFactory {
-    override def getAfterDependents(): scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
+    override def getAfterDependents():  scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
     override def getBeforeDependents(): scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
-    override def affectsGlobalScope(): Boolean                 = false
+    override def affectsGlobalScope():  Boolean                                = false
 
     override def apply(options: DataHolder): BlockParserFactory =
       new BlockFactory(options)
