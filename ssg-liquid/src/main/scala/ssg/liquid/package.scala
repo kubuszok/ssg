@@ -17,21 +17,46 @@ package object liquid {
   extension (t: Template.type) def parse(input: String): Template = TemplateParser.DEFAULT.parse(input)
 
   extension (t: Template) {
-    def render(vars: java.util.Map[String, ?]): String = {
-      import scala.jdk.CollectionConverters.*
-      t.render(vars.asScala.asInstanceOf[scala.collection.mutable.Map[String, Object]])
+    def render(vars: java.util.Map[String, ?]): String =
+      t.render(unwrapDataViewMap(vars))
+    def renderToObject(vars: java.util.Map[String, ?]): Object =
+      t.renderToObject(unwrapDataViewMap(vars))
+    def renderUnguarded(vars: java.util.Map[String, ?]): String =
+      t.renderUnguarded(unwrapDataViewMap(vars))
+    def renderToObjectUnguarded(vars: java.util.Map[String, ?]): Object =
+      t.renderToObjectUnguarded(unwrapDataViewMap(vars))
+  }
+
+  private def unwrapDataViewMap(vars: java.util.Map[String, ?]): scala.collection.mutable.Map[String, Object] = {
+    val result = new scala.collection.mutable.HashMap[String, Object]()
+    vars.forEach { (k, v) =>
+      result.put(k, unwrapValue(v.asInstanceOf[Object]))
     }
-    def renderToObject(vars: java.util.Map[String, ?]): Object = {
-      import scala.jdk.CollectionConverters.*
-      t.renderToObject(vars.asScala.asInstanceOf[scala.collection.mutable.Map[String, Object]])
-    }
-    def renderUnguarded(vars: java.util.Map[String, ?]): String = {
-      import scala.jdk.CollectionConverters.*
-      t.renderUnguarded(vars.asScala.asInstanceOf[scala.collection.mutable.Map[String, Object]])
-    }
-    def renderToObjectUnguarded(vars: java.util.Map[String, ?]): Object = {
-      import scala.jdk.CollectionConverters.*
-      t.renderToObjectUnguarded(vars.asScala.asInstanceOf[scala.collection.mutable.Map[String, Object]])
-    }
+    result
+  }
+
+  private def unwrapValue(v: Object): Object = v match {
+    case dv: ssg.data.DataView =>
+      dv.view match {
+        case null => null
+        case b:   Boolean                             => java.lang.Boolean.valueOf(b)
+        case s:   Short                               => java.lang.Short.valueOf(s)
+        case i:   Int                                 => java.lang.Integer.valueOf(i)
+        case l:   Long                                => java.lang.Long.valueOf(l)
+        case f:   Float                               => java.lang.Float.valueOf(f)
+        case d:   Double                              => java.lang.Double.valueOf(d)
+        case s:   String                              => s
+        case bd:  java.math.BigDecimal                => bd
+        case ta:  java.time.temporal.TemporalAccessor => ta
+        case vec: Vector[?]                           =>
+          val list = new java.util.ArrayList[Object](vec.size)
+          vec.foreach(elem => list.add(unwrapValue(elem.asInstanceOf[Object])))
+          list
+        case map: scala.collection.immutable.VectorMap[?, ?] =>
+          val jmap = new java.util.LinkedHashMap[String, Object](map.size)
+          map.foreach((k, v) => jmap.put(k.asInstanceOf[String], unwrapValue(v.asInstanceOf[Object])))
+          jmap
+      }
+    case _ => v
   }
 }
