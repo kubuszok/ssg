@@ -21,7 +21,7 @@ final class ComboExtraSpec2Test extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboExtraSpec2Test.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboExtraSpec2Test.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboExtraSpec2Test.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = CoreRendererOptions.OPTIONS_MAP
 }
@@ -30,9 +30,9 @@ object ComboExtraSpec2Test {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_extra_ast_spec2.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboExtraSpec2Test], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 }

@@ -22,14 +22,14 @@ import scala.language.implicitConversions
 
 final class ComboMacrosSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboMacrosSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboMacrosSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboMacrosSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboMacrosSpecTest.OPTIONS_MAP
 }
 
 object ComboMacrosSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/macros/test/ext_macros_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMacrosSpecTest], SPEC_RESOURCE)
-  // Note: original OPTIONS is not .toImmutable — but we call .toImmutable for consistency
+  // Note: original OPTIONS is not .toImmutable() — but we call .toImmutable() for consistency
   val OPTIONS: DataHolder = new MutableDataSet()
     .set(Parser.EXTENSIONS, Arrays.asList(MacrosExtension.create(), GitLabExtension.create(), TablesExtension.create()))
     .set(GitLabExtension.RENDER_BLOCK_MATH, false)
@@ -37,12 +37,12 @@ object ComboMacrosSpecTest {
     .set(GitLabExtension.DEL_PARSER, false)
     .set(GitLabExtension.INS_PARSER, false)
     .set(GitLabExtension.RENDER_VIDEO_IMAGES, false)
-    .toImmutable
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("references-keep-first", new MutableDataSet().set(MacrosExtension.MACRO_DEFINITIONS_KEEP, KeepType.FIRST).toImmutable)
-    map.put("references-keep-last", new MutableDataSet().set(MacrosExtension.MACRO_DEFINITIONS_KEEP, KeepType.LAST).toImmutable)
+    map.put("references-keep-first", new MutableDataSet().set(MacrosExtension.MACRO_DEFINITIONS_KEEP, KeepType.FIRST).toImmutable())
+    map.put("references-keep-last", new MutableDataSet().set(MacrosExtension.MACRO_DEFINITIONS_KEEP, KeepType.LAST).toImmutable())
     map
   }
 }

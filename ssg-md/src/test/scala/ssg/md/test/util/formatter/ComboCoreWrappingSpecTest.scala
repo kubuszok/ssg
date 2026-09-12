@@ -18,7 +18,7 @@ import scala.language.implicitConversions
 
 final class ComboCoreWrappingSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation     = ComboCoreWrappingSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder] = Nullable(ComboCoreWrappingSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder] = ComboCoreWrappingSpecTest.OPTIONS
   override def knownFailurePrefixes: Set[String]          = Set("Wrap -", "Wrap - Delete Indent -", "Wrap - Images -", "Wrap - Links -", "Wrap - Restore Spaces -")
 }
 
@@ -27,5 +27,5 @@ object ComboCoreWrappingSpecTest {
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCoreWrappingSpecTest], SPEC_RESOURCE)
   val OPTIONS:           DataHolder       = new MutableDataSet()
     .set(SharedDataKeys.RUNNING_TESTS, false) // Set to true to get stdout printout of intermediate wrapping information
-    .toImmutable
+    .toImmutable()
 }

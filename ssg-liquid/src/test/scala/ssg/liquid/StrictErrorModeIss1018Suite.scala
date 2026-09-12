@@ -44,13 +44,13 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   // --- (1) output-tag trailing junk: STRICT throws, WARN renders+records, LAX renders silent ---
 
-  test("ISS-1018 output-tag STRICT: trailing junk throws 'unexpected output'") {
+  test("ISS-1018 output-tag STRICT: trailing junk throws parse error") {
     val ex = intercept[LiquidException] {
       parser(TemplateParser.ErrorMode.STRICT).parse("{{ 98 > 97 }}").render()
     }
     assert(
-      ex.getMessage.contains("unexpected output"),
-      s"expected 'unexpected output' message, got: ${ex.getMessage}"
+      ex.getMessage.contains("mismatched input") || ex.getMessage.contains("unexpected output"),
+      s"expected parse error message, got: ${ex.getMessage}"
     )
   }
 

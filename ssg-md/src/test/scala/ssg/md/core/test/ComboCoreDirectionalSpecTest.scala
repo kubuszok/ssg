@@ -22,7 +22,7 @@ final class ComboCoreDirectionalSpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboCoreDirectionalSpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboCoreDirectionalSpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboCoreDirectionalSpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = CoreRendererOptions.OPTIONS_MAP
 
@@ -38,9 +38,9 @@ object ComboCoreDirectionalSpecTest {
     .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, true)
     .set(HtmlRenderer.PERCENT_ENCODE_URLS, true)
     .set(TestUtils.NO_FILE_EOL, false)
-    .toImmutable
+    .toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 }

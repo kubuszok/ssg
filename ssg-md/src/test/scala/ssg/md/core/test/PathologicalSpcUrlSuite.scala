@@ -24,7 +24,7 @@ final class PathologicalSpcUrlSuite extends munit.FunSuite {
 
   private val x = PathologicalSize.x
 
-  private val options = new MutableDataSet().set(Parser.SPACE_IN_LINK_URLS, true).toImmutable
+  private val options = new MutableDataSet().set(Parser.SPACE_IN_LINK_URLS, true).toImmutable()
 
   private def assertRendering(source: String, expectedHtml: String): Unit = {
     val parser   = Parser.builder(options).build()

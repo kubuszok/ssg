@@ -22,7 +22,7 @@ final class ComboPegdownCompatibilitySpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboPegdownCompatibilitySpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboPegdownCompatibilitySpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboPegdownCompatibilitySpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = ComboPegdownCompatibilitySpecTest.MERGED_OPTIONS_MAP
 
@@ -38,11 +38,11 @@ object ComboPegdownCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_pegdown_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboPegdownCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.PEGDOWN_STRICT).set(HtmlRenderer.INDENT_SIZE, 2).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.PEGDOWN_STRICT).set(HtmlRenderer.INDENT_SIZE, 2).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 
   /** This test's own options. */
   private val LOCAL_OPTIONS_MAP: ju.Map[String, DataHolder] = {

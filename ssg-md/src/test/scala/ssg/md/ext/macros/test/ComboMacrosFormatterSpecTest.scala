@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 
 final class ComboMacrosFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboMacrosFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboMacrosFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboMacrosFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboMacrosFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Macros -")
 }
@@ -39,11 +39,11 @@ object ComboMacrosFormatterSpecTest {
     .set(GitLabExtension.INS_PARSER, false)
     .set(GitLabExtension.RENDER_VIDEO_IMAGES, false)
     .set(Parser.LISTS_AUTO_LOOSE, false)
-    .toImmutable
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_KEEP),
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_PLACEMENT),
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_SORT)
+    MacrosExtension.MACRO_DEFINITIONS_KEEP,
+    MacrosExtension.MACRO_DEFINITIONS_PLACEMENT,
+    MacrosExtension.MACRO_DEFINITIONS_SORT
   )
 }

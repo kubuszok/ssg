@@ -22,7 +22,7 @@ final class ComboMarkdownCompatibilitySpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboMarkdownCompatibilitySpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboMarkdownCompatibilitySpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboMarkdownCompatibilitySpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = CoreRendererOptions.OPTIONS_MAP
 
@@ -35,9 +35,9 @@ object ComboMarkdownCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_markdown_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMarkdownCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.MARKDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.MARKDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 }

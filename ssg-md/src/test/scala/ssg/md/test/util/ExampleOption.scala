@@ -28,7 +28,7 @@ final class ExampleOption private (
 
   def getCustomParams: Nullable[String] =
     if (customParams.isNull) Nullable.empty
-    else Nullable(customParams.toString)
+    else customParams.toString
 
   def isIgnore: Boolean = isBuiltIn && optionName.equals(TestUtils.IGNORE_OPTION_NAME)
 

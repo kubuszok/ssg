@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 
 final class ComboTableFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboTableFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboTableFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboTableFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboTableFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Diagnostic/3095 -", "GFM -", "Tables Extension -", "Tracked Offset -", "Width Provider -")
 }
@@ -31,7 +31,7 @@ final class ComboTableFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboTableFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/tables/test/ext_tables_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboTableFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TablesExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TablesExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
 
   private val WIDTH_PROVIDER: CharWidthProvider = new CharWidthProvider {
     override def spaceWidth:            Int = 8
@@ -47,49 +47,49 @@ object ComboTableFormatterSpecTest {
         .set(TablesExtension.APPEND_MISSING_COLUMNS, true)
         .set(TablesExtension.DISCARD_EXTRA_COLUMNS, true)
         .set(TablesExtension.HEADER_SEPARATOR_COLUMN_MATCH, true)
-        .toImmutable
+        .toImmutable()
     )
-    map.put("no-caption", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE).toImmutable)
-    map.put("no-alignment", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, false).toImmutable)
-    map.put("no-width", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, false).toImmutable)
-    map.put("keep-whitespace", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, false).toImmutable)
-    map.put("lead-trail-pipes", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, false).toImmutable)
-    map.put("space-around-pipe", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, false).toImmutable)
-    map.put("adjust-column-width", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, false).toImmutable)
+    map.put("no-caption", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE).toImmutable())
+    map.put("no-alignment", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, false).toImmutable())
+    map.put("no-width", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, false).toImmutable())
+    map.put("keep-whitespace", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_TRIM_CELL_WHITESPACE, false).toImmutable())
+    map.put("lead-trail-pipes", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEAD_TRAIL_PIPES, false).toImmutable())
+    map.put("space-around-pipe", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_SPACE_AROUND_PIPES, false).toImmutable())
+    map.put("adjust-column-width", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_ADJUST_COLUMN_WIDTH, false).toImmutable())
     map.put(
       "apply-column-alignment",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, false).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_APPLY_COLUMN_ALIGNMENT, false).toImmutable()
     )
-    map.put("fill-missing-columns", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, true).toImmutable)
+    map.put("fill-missing-columns", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, true).toImmutable())
     map.put(
       "left-align-marker-as-is",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS).toImmutable()
     )
     map.put(
       "left-align-marker-add",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.ADD).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.ADD).toImmutable()
     )
     map.put(
       "left-align-marker-remove",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.REMOVE).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.REMOVE).toImmutable()
     )
-    map.put("line-prefix", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, ">   ").toImmutable)
+    map.put("line-prefix", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, ">   ").toImmutable())
     map.put(
       "add-caption-spaces",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.ADD).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.ADD).toImmutable()
     )
     map.put(
       "remove-caption-spaces",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.REMOVE).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION_SPACES, DiscretionaryText.REMOVE).toImmutable()
     )
-    map.put("add-caption", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.ADD).toImmutable)
+    map.put("add-caption", new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.ADD).toImmutable())
     map.put(
       "remove-empty-caption",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE_EMPTY).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE_EMPTY).toImmutable()
     )
     map.put(
       "remove-caption",
-      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE).toImmutable
+      new MutableDataSet().set(TablesExtension.FORMAT_TABLE_CAPTION, TableCaptionHandling.REMOVE).toImmutable()
     )
     map.put(
       "markdown-navigator",
@@ -113,9 +113,9 @@ object ComboTableFormatterSpecTest {
             override def getCharWidth(c: Char): Int = if (c == TableFormatOptions.INTELLIJ_DUMMY_IDENTIFIER_CHAR) 0 else 1
           }
         )
-        .toImmutable
+        .toImmutable()
     )
-    map.put("width-provider", new MutableDataSet().set(TablesExtension.FORMAT_CHAR_WIDTH_PROVIDER, WIDTH_PROVIDER).toImmutable)
+    map.put("width-provider", new MutableDataSet().set(TablesExtension.FORMAT_CHAR_WIDTH_PROVIDER, WIDTH_PROVIDER).toImmutable())
     map
   }
 }

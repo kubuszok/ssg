@@ -77,7 +77,7 @@ final class MdResultFacadeIss1373Suite extends munit.FunSuite {
     val result  = Markdown.parseResult(softBreakMarkdown, options)
     assert(result.isSuccess, s"expected clean success, got $result")
     val document = result.value.getOrElse(fail("expected a Document value"))
-    val rendered = HtmlRenderer.builder(Nullable(options)).build().render(document)
+    val rendered = HtmlRenderer.builder(options).build().render(document)
     assertEquals(rendered, Markdown.render(softBreakMarkdown, options))
   }
 

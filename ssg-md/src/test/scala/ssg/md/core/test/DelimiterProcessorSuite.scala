@@ -25,7 +25,7 @@ import scala.language.implicitConversions
 
 final class DelimiterProcessorSuite extends munit.FunSuite {
 
-  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).toImmutable
+  private val OPTIONS: DataHolder = new MutableDataSet().set(TestUtils.NO_FILE_EOL, false).toImmutable()
 
   private val PARSER:   Parser       = Parser.builder(OPTIONS).customDelimiterProcessor(new AsymmetricDelimiterProcessor()).build()
   private val RENDERER: HtmlRenderer = HtmlRenderer.builder(OPTIONS).nodeRendererFactory(new UpperCaseNodeRendererFactory()).build()
@@ -148,10 +148,10 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
 
     def this(openingMarker: BasedSequence, text: BasedSequence, closingMarker: BasedSequence) = {
       this()
-      this.chars = openingMarker.baseSubSequence(openingMarker.startOffset, closingMarker.endOffset)
-      this.openingMarker = openingMarker
+      this.chars = openingMarker.baseSubSequence(openingMarker.getStartOffset(), closingMarker.getEndOffset())
+      this.getOpeningMarker() = openingMarker
       this.text = text
-      this.closingMarker = closingMarker
+      this.getClosingMarker() = closingMarker
     }
   }
 
@@ -168,7 +168,7 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
           classOf[UpperCaseNode],
           new NodeRenderingHandler.CustomNodeRenderer[UpperCaseNode] {
             override def render(node: UpperCaseNode, context: NodeRendererContext, html: ssg.md.html.HtmlWriter): Unit = {
-              var child = node.firstChild
+              var child = node.getFirstChild()
               while (child.isDefined) {
                 val c = child.get
                 c match {
@@ -183,7 +183,7 @@ final class DelimiterProcessorSuite extends munit.FunSuite {
           }
         )
       )
-      Nullable(set.toSet)
+      set.toSet
     }
   }
 }

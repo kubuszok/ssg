@@ -55,7 +55,7 @@ object TestUtils {
   val SOURCE_SUFFIX:     DataKey[String] = new DataKey[String]("SOURCE_SUFFIX", "")
   val SOURCE_INDENT:     DataKey[String] = new DataKey[String]("SOURCE_INDENT", "")
 
-  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, false).toImmutable
+  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, false).toImmutable()
   val UNLOAD_EXTENSIONS:     DataKey[ju.Collection[Class[? <: Extension]]]   = LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS
   val LOAD_EXTENSIONS:       DataKey[ju.Collection[Extension]]               = LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS
   private val EMPTY_OPTIONS: DataHolder                                      = new DataSet()
@@ -66,7 +66,7 @@ object TestUtils {
   def processOption(optionsMap: ju.Map[String, ? <: DataHolder], option: String): Nullable[DataHolder] = {
     var dataHolder: Nullable[DataHolder] = Nullable.empty
     if (!option.startsWith(DISABLED_OPTION_PREFIX)) {
-      dataHolder = Nullable(optionsMap.get(option))
+      dataHolder = optionsMap.get(option)
       var customOption = option
       var params: Nullable[String] = Nullable.empty
 
@@ -77,7 +77,7 @@ object TestUtils {
           // parameterized, see if there is a handler defined for it
           customOption = exampleOption.getOptionName
           params = exampleOption.getCustomParams
-          dataHolder = Nullable(optionsMap.get(customOption))
+          dataHolder = optionsMap.get(customOption)
         }
       }
 
@@ -86,7 +86,7 @@ object TestUtils {
         val customHandler = CUSTOM_OPTION.get(dataHolder.get)
         @annotation.nowarn("msg=deprecated") // orNull needed for Java BiFunction interop
         val paramsOrNull = params.orNull
-        dataHolder = Nullable(customHandler.apply(customOption, paramsOrNull))
+        dataHolder = customHandler.apply(customOption, paramsOrNull)
       }
     }
     dataHolder
@@ -145,7 +145,7 @@ object TestUtils {
   def addSpecSection(headingLine: String, headingText: String, sectionHeadings: Array[Nullable[String]]): Pair[String, Int] = {
     assert(sectionHeadings.length == 7)
     val lastSectionLevel = Math.max(1, Math.min(6, RichSequence.of(headingLine).countLeading(CharPredicate.HASH)))
-    sectionHeadings(lastSectionLevel) = Nullable(headingText)
+    sectionHeadings(lastSectionLevel) = headingText
     val iMax = 7
     var i    = lastSectionLevel + 1
     while (i < iMax) {
@@ -197,15 +197,15 @@ object TestUtils {
             case IGNORE_OPTION_NAME =>
               throwIgnoredOption(example, optionSets.get, option)
             case FAIL_OPTION_NAME =>
-              options = Nullable(addOption(options, FAIL, true))
+              options = addOption(options, FAIL, true)
             case NO_FILE_EOL_OPTION_NAME =>
-              options = Nullable(addOption(options, NO_FILE_EOL, true))
+              options = addOption(options, NO_FILE_EOL, true)
             case FILE_EOL_OPTION_NAME =>
-              options = Nullable(addOption(options, NO_FILE_EOL, false))
+              options = addOption(options, NO_FILE_EOL, false)
             case TIMED_OPTION_NAME =>
-              options = Nullable(addOption(options, TIMED, true))
+              options = addOption(options, TIMED, true)
             case EMBED_TIMED_OPTION_NAME =>
-              options = Nullable(addOption(options, EMBED_TIMED, true))
+              options = addOption(options, EMBED_TIMED, true)
             case _ =>
               if (options.isEmpty) {
                 options = optionsProvider(option)
@@ -214,13 +214,13 @@ object TestUtils {
                   throwIllegalStateException(example, option)
                 }
 
-                options = Nullable(options.get.toImmutable)
+                options = options.get.toImmutable()
               } else {
                 val dataSet = optionsProvider(option)
 
                 if (dataSet.isDefined) {
                   // CAUTION: have to only aggregate actions here
-                  options = Nullable(DataSet.aggregateActions(options.get.toImmutable, dataSet.get))
+                  options = DataSet.aggregateActions(options.get.toImmutable(, dataSet.get))
                 } else {
                   throwIllegalStateException(example, option)
                 }
@@ -232,7 +232,7 @@ object TestUtils {
           }
         }
       }
-      options.map(_.toImmutable)
+      options.map(_.toImmutable())
     }
 
   def addOption[T](options: Nullable[DataHolder], key: DataKey[T], value: T): MutableDataSet =
@@ -602,15 +602,15 @@ object TestUtils {
     defaultOptions.flatMap { opts =>
       var combinedOptions: Nullable[DataHolder] = Nullable.empty
       for (options <- opts)
-        combinedOptions = Nullable(DataSet.aggregate(combinedOptions, Nullable(options)))
-      combinedOptions.map(_.toImmutable)
+        combinedOptions = DataSet.aggregate(combinedOptions, Nullable(options))
+      combinedOptions.map(_.toImmutable())
     }
 
   def optionsMaps(other: Nullable[ju.Map[String, ? <: DataHolder]], overrides: Nullable[ju.Map[String, ? <: DataHolder]]): Nullable[ju.Map[String, ? <: DataHolder]] =
     if (other.isDefined && overrides.isDefined) {
       val map = new ju.HashMap[String, DataHolder](other.get)
       map.putAll(overrides.get)
-      Nullable(map)
+      map
     } else if (other.isDefined) {
       other
     } else {
@@ -621,13 +621,13 @@ object TestUtils {
     if (other.isEmpty) {
       overrides
     } else if (overrides.isEmpty || overrides.exists(_.isEmpty)) {
-      Nullable(Array[DataHolder](other.get))
+      Array[DataHolder](other.get)
     } else {
       val ov      = overrides.get
       val holders = new Array[DataHolder](ov.length + 1)
       System.arraycopy(ov, 0, holders, 1, ov.length)
       holders(0) = other.get
-      Nullable(holders)
+      holders
     }
 
   def getTestResourceRootDirectoryForModule(resourceClass: Class[?], moduleRootPackage: String): String = {
@@ -639,7 +639,7 @@ object TestUtils {
   def getRootDirectoryForModule(resourceClass: Class[?], moduleDirectoryName: String): String = {
     import ssg.md.util.misc.Utils._
     // get project root from our class file url path
-    var fileUrl = SpecExample.ofCaller(0, resourceClass, "", "", Nullable("")).fileUrl
+    var fileUrl = SpecExample.ofCaller(0, resourceClass, "", "", "").fileUrl
     val pos     = fileUrl.indexOf(wrapWith(moduleDirectoryName, '/'))
     if (pos != -1) {
       fileUrl = fileUrl.substring(0, pos)

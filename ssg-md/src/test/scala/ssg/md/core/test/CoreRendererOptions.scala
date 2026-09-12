@@ -33,7 +33,7 @@ import scala.language.implicitConversions
 object CoreRendererOptions {
 
   /** Base options: OBFUSCATE_EMAIL_RANDOM=false (matches original CoreRendererSpecTest). */
-  val BASE_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.OBFUSCATE_EMAIL_RANDOM, false).toImmutable
+  val BASE_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.OBFUSCATE_EMAIL_RANDOM, false).toImmutable()
 
   /** Named option entries from CoreRendererSpecTest.optionsMap.
     *

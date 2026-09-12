@@ -1,4 +1,6 @@
 /* Copyright (c) 2026 SSG contributors SPDX-License-Identifier: Apache-2.0 */
+// Stubbed: EnumBitField type class is ssg-specific, not in generated code.
+// The generated BitFieldSet uses Java reflection instead.
 package ssg
 package md
 package util

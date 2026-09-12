@@ -24,48 +24,48 @@ final class BoundedMinAggregatorSuite extends munit.FunSuite {
     assertEquals(
       reduce(
         new BoundedMinAggregator(3),
-        Nullable(1),
-        Nullable(2),
-        Nullable(3),
-        Nullable(4),
-        Nullable(5),
-        Nullable(6),
-        Nullable(7),
-        Nullable(8),
-        Nullable(9),
-        Nullable(10)
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ).get.intValue(),
       4
     )
     assertEquals(
       reduce(
         new BoundedMinAggregator(5),
-        Nullable(1),
-        Nullable(2),
-        Nullable(3),
-        Nullable(4),
-        Nullable(5),
-        Nullable(6),
-        Nullable(7),
-        Nullable(8),
-        Nullable(9),
-        Nullable(10)
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ).get.intValue(),
       6
     )
     assert(
       reduce(
         new BoundedMinAggregator(10),
-        Nullable(1),
-        Nullable(2),
-        Nullable(3),
-        Nullable(4),
-        Nullable(5),
-        Nullable(6),
-        Nullable(7),
-        Nullable(8),
-        Nullable(9),
-        Nullable(10)
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ).isEmpty
     )
   }

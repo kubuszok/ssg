@@ -55,7 +55,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
       if (opts.isDefined) {
         val combined = new MutableDataSet(base)
         combined.setAll(opts.get)
-        combined.toImmutable
+        combined.toImmutable()
       } else {
         base
       }

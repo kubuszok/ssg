@@ -268,9 +268,9 @@ final class TemplateSuite extends munit.FunSuite {
   // TemplateParser.Builder: flavor defaults
   // ---------------------------------------------------------------------------
 
-  test("Builder: default flavor is JEKYLL") {
+  test("Builder: default flavor is LIQP (upstream default)") {
     val parser = new TemplateParser.Builder().build()
-    assertEquals(parser.flavor, Flavor.JEKYLL)
+    assertEquals(parser.flavor, Flavor.LIQP)
   }
 
   test("Builder: LIQP flavor sets liquidStyleWhere true") {

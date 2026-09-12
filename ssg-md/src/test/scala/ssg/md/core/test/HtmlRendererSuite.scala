@@ -130,7 +130,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
@@ -157,7 +157,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
@@ -193,7 +193,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
@@ -231,7 +231,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
@@ -252,14 +252,14 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
       override def getDelegates: Nullable[Set[Class[?]]] = {
         val set = mutable.HashSet.empty[Class[?]]
         set.add(nodeRendererFactory.getClass)
-        Nullable(set.toSet)
+        set.toSet
       }
     }
 
@@ -291,7 +291,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
@@ -312,14 +312,14 @@ final class HtmlRendererSuite extends munit.FunSuite {
               }
             )
           )
-          Nullable(set.toSet)
+          set.toSet
         }
       }
 
       override def getDelegates: Nullable[Set[Class[?]]] = {
         val set = mutable.HashSet.empty[Class[?]]
         set.add(nodeRendererFactory.getClass)
-        Nullable(set.toSet)
+        set.toSet
       }
     }
 
@@ -366,9 +366,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
 
   test("withOptions_linkRefCustomLinkResolver") {
     // make sure custom link resolver is preserved when using withOptions() on HTML builder
-    val OPTIONS:  DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url").toImmutable
-    val OPTIONS1: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url1").toImmutable
-    val OPTIONS2: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url2").toImmutable
+    val OPTIONS:  DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url").toImmutable()
+    val OPTIONS1: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url1").toImmutable()
+    val OPTIONS2: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url2").toImmutable()
 
     val rendererBase = HtmlRenderer.builder(OPTIONS).linkResolverFactory(new CustomLinkResolverFactory()).build()
     val renderer1    = HtmlRenderer.builder(OPTIONS1).linkResolverFactory(new CustomLinkResolverFactory()).build()
@@ -403,7 +403,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
   // Custom link resolver implementations
 
   private class CustomLinkResolverImpl(context: LinkResolverBasicContext) extends LinkResolver {
-    private val docUrl: String = CustomLinkResolverImpl.DOC_RELATIVE_URL.get(Nullable(context.getOptions))
+    private val docUrl: String = CustomLinkResolverImpl.DOC_RELATIVE_URL.get(context.getOptions())
 
     override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink =
       node match {

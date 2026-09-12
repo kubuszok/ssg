@@ -37,7 +37,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<NAME>", "<USER>")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("Joe Smith", "<NAME>"))
   }
@@ -48,7 +48,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<NA", "ME>")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("", "Joe Smith"))
   }
@@ -59,7 +59,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<", "USER", ">")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("", "", "<NAME>"))
   }
@@ -70,7 +70,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<NA", "ME> <", "USER", ">")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("", "Joe Smith ", "", "<NAME>"))
   }
@@ -81,7 +81,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<NA", "ME> <U", "SER", ">")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("", "Joe Smith ", "", "<NAME>"))
   }
@@ -92,7 +92,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     map.put("USER", "<NAME>")
 
     val params = spansOfList("<NA", "ME> <U", "SER", ">")
-    PlaceholderReplacer.replaceAll(params, k => Nullable(map.get(k)), '<', '>', ourGetter, ourSetter)
+    PlaceholderReplacer.replaceAll(params, k => map.get(k), '<', '>', ourGetter, ourSetter)
 
     assertEquals(spansOfResult(params).toSeq, Seq("", "Joe Smith ", "", "<NAME>"))
   }

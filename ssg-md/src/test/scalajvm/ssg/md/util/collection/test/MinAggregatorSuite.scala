@@ -23,9 +23,9 @@ final class MinAggregatorSuite extends munit.FunSuite {
   test("test_Basic") {
     assert(reduce(MaxAggregator).isEmpty)
     assert(reduce(MaxAggregator, Nullable.empty).isEmpty)
-    assertEquals(reduce(MaxAggregator, Nullable(-1), Nullable(-2), Nullable(-5), Nullable(0), Nullable(1)).get, Integer.valueOf(1))
+    assertEquals(reduce(MaxAggregator, -1, -2, -5, 0, 1).get, Integer.valueOf(1))
     assertEquals(
-      reduce(MaxAggregator, Nullable(-1), Nullable(-2), Nullable(-5), Nullable(0), Nullable(1), Nullable(5)).get,
+      reduce(MaxAggregator, -1, -2, -5, 0, 1, 5).get,
       Integer.valueOf(5)
     )
   }

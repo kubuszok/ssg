@@ -23,7 +23,7 @@ final class ComboIssuesSpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboIssuesSpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboIssuesSpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboIssuesSpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = ComboIssuesSpecTest.MERGED_OPTIONS_MAP
 
@@ -36,11 +36,11 @@ object ComboIssuesSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_issues_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboIssuesSpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 
   /** This test's own options. */
   private val LOCAL_OPTIONS_MAP: ju.Map[String, DataHolder] = {

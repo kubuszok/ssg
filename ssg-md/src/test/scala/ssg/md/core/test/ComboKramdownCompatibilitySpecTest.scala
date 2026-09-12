@@ -22,7 +22,7 @@ final class ComboKramdownCompatibilitySpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboKramdownCompatibilitySpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboKramdownCompatibilitySpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboKramdownCompatibilitySpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = CoreRendererOptions.OPTIONS_MAP
 
@@ -41,9 +41,9 @@ object ComboKramdownCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_kramdown_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboKramdownCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.KRAMDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.KRAMDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 }

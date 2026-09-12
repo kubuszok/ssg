@@ -46,12 +46,12 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
     .set(Formatter.MAX_TRAILING_BLANK_LINES, 0)
     .set(JekyllTagExtension.INCLUDED_HTML, content)
     .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
-    .toImmutable
+    .toImmutable()
 
-  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(Nullable(OPTIONS)).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false).toImmutable
+  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(OPTIONS).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false).toImmutable()
 
-  private val EMBEDDING_FORMATTER:     Formatter = Formatter.builder(Nullable(OPTIONS)).build()
-  private val NON_EMBEDDING_FORMATTER: Formatter = Formatter.builder(Nullable(NON_EMBEDDING_OPTIONS)).build()
+  private val EMBEDDING_FORMATTER:     Formatter = Formatter.builder(OPTIONS).build()
+  private val NON_EMBEDDING_FORMATTER: Formatter = Formatter.builder(NON_EMBEDDING_OPTIONS).build()
   private val EMBEDDING_PARSER:        Parser    = Parser.builder(OPTIONS).build()
   private val NON_EMBEDDING_PARSER:    Parser    = Parser.builder(NON_EMBEDDING_OPTIONS).build()
 

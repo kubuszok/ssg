@@ -32,7 +32,7 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
             .remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS)
             .remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
             .set(SharedDataKeys.EXTENSIONS, new ju.ArrayList[Extension](resolvedExtensions).asInstanceOf[ju.Collection[Extension]])
-            .toImmutable
+            .toImmutable()
         } else {
           combined.toMutable.remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
         }

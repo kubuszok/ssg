@@ -33,12 +33,12 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
   val AST_DETAILS: DataKey[Boolean] = new DataKey[Boolean]("AST_DETAILS", SHOW_INTERMEDIATE_AST)
 
   private val TRANSLATION_BASE_OPTIONS: DataHolder =
-    new MutableDataSet().set(Parser.HTML_FOR_TRANSLATOR, true).set(Parser.PARSE_INNER_HTML_COMMENTS, true).set(Formatter.MAX_TRAILING_BLANK_LINES, 0).toImmutable
+    new MutableDataSet().set(Parser.HTML_FOR_TRANSLATOR, true).set(Parser.PARSE_INNER_HTML_COMMENTS, true).set(Formatter.MAX_TRAILING_BLANK_LINES, 0).toImmutable()
 
   private val translationOptionsMap: ju.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
-    map.put("details", new MutableDataSet().set(DETAILS, true).toImmutable)
-    map.put("ast-details", new MutableDataSet().set(AST_DETAILS, true).toImmutable)
+    map.put("details", new MutableDataSet().set(DETAILS, true).toImmutable())
+    map.put("ast-details", new MutableDataSet().set(AST_DETAILS, true).toImmutable())
     map
   }
 
@@ -47,10 +47,10 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
     // Merge translation base options with formatter base options and subclass defaults
     val base = DataSet
       .aggregate(
-        Nullable(FormatterSpecTestSuite.BASE_OPTIONS),
-        DataSet.aggregate(Nullable(TRANSLATION_BASE_OPTIONS), Nullable(subclassBase))
+        FormatterSpecTestSuite.BASE_OPTIONS,
+        DataSet.aggregate(TRANSLATION_BASE_OPTIONS, subclassBase)
       )
-      .toImmutable
+      .toImmutable()
     val optionSet = example.optionsSet
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](FormatterSpecTestSuite.BASE_OPTIONS_MAP)
@@ -61,7 +61,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
       }
       val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
       if (opts.isDefined) {
-        DataSet.aggregate(Nullable(base), opts).toImmutable
+        DataSet.aggregate(base, opts).toImmutable()
       } else {
         base
       }
@@ -101,7 +101,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
 
   override protected def renderHtml(example: SpecExample, options: DataHolder): String = {
     val parser    = Parser.builder(options).build()
-    val formatter = Formatter.builder(Nullable(options)).build()
+    val formatter = Formatter.builder(options).build()
 
     val noFileEol     = TestUtils.NO_FILE_EOL.get(options)
     val trimmedSource = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
@@ -116,7 +116,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
     // now need to output translation strings, delimited
     val translatingTexts = handler.getTranslatingTexts
 
-    val outputAst: Nullable[StringBuilder] = if (showIntermediateAst) Nullable(new StringBuilder()) else Nullable.empty
+    val outputAst: Nullable[StringBuilder] = if (showIntermediateAst) new StringBuilder() else Nullable.empty
 
     val out = new StringBuilder()
 

@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 
 final class ComboExtEnumeratedReferenceSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboExtEnumeratedReferenceSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboExtEnumeratedReferenceSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboExtEnumeratedReferenceSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = new java.util.HashMap[String, DataHolder]()
 }
 
@@ -35,5 +35,5 @@ object ComboExtEnumeratedReferenceSpecTest {
       Parser.EXTENSIONS,
       Arrays.asList(EnumeratedReferenceExtension.create(), AttributesExtension.create(), TablesExtension.create())
     )
-    .toImmutable
+    .toImmutable()
 }
