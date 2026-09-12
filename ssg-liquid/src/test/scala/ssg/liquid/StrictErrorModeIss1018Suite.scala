@@ -58,11 +58,11 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
     val holder = new Template.ContextHolder()
     val res    = parser(TemplateParser.ErrorMode.WARN).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
-    val errors = holder.getContext.errors()
-    assertEquals(errors.size(), 1)
+    val errors = holder.getContext().errors()
+    assertEquals(errors.size, 1)
     assert(
-      errors.get(0).getMessage.contains("unexpected output"),
-      s"expected 'unexpected output' message, got: ${errors.get(0).getMessage}"
+      errors(0).getMessage.contains("unexpected output"),
+      s"expected 'unexpected output' message, got: ${errors(0).getMessage}"
     )
   }
 
@@ -70,7 +70,7 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
     val holder = new Template.ContextHolder()
     val res    = parser(TemplateParser.ErrorMode.LAX).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
-    assertEquals(holder.getContext.errors().size(), 0)
+    assertEquals(holder.getContext().errors().size, 0)
   }
 
   // --- (2) built-in block missing its end: throws in ALL modes (required-end grammar) ---

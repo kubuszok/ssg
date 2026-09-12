@@ -27,13 +27,13 @@ package ssg
 package liquid
 package parser
 
-import lowlevel.Nullable
 import ssg.data.DataView
 import ssg.liquid.exceptions.LiquidException
 import ssg.liquid.nodes._
 
 import java.util.ArrayList
 
+import scala.jdk.CollectionConverters.*
 import scala.util.boundary
 import scala.util.boundary.break
 
@@ -78,7 +78,7 @@ final class LiquidParser(
     * unconditionally here, faithful to liqp's always-throwing parser listener.
     */
   private def reportTokenError(message: String, token: Token): Nothing = {
-    val ex = new LiquidException(s"$message: '${token.value}'", token.line, token.col)
+    val ex = new LiquidException(s"$message: '${token.value}'", token.line, token.col, null)
     parseErrors.add(ex)
     throw ex
   }
@@ -88,7 +88,7 @@ final class LiquidParser(
     */
   private def reportTokenError(message: String): Nothing = {
     val t  = peek()
-    val ex = new LiquidException(message, t.line, t.col)
+    val ex = new LiquidException(message, t.line, t.col, null)
     parseErrors.add(ex)
     throw ex
   }
@@ -169,7 +169,10 @@ final class LiquidParser(
         val unexpected = peek()
         advance()
         throw new ssg.liquid.exceptions.LiquidException(
-          s"Unexpected token: ${unexpected.tokenType} '${unexpected.value}' at line ${unexpected.line}"
+          s"Unexpected token: ${unexpected.tokenType} '${unexpected.value}' at line ${unexpected.line}",
+          unexpected.line,
+          0,
+          null
         )
     }
   }
@@ -315,7 +318,7 @@ final class LiquidParser(
       nodes.add(parseFilter())
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("assign").get, nodes)
+    new InsertionNode(insertions.get("assign"), nodes.asScala.toArray)
   }
 
   // --- Specific tag parsers ---
@@ -354,7 +357,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("if").get, nodes)
+    new InsertionNode(insertions.get("if"), nodes.asScala.toArray)
   }
 
   /** unless_tag: {% unless expr %} block ({% else %} block)? {% endunless %} */
@@ -380,7 +383,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("unless").get, nodes)
+    new InsertionNode(insertions.get("unless"), nodes.asScala.toArray)
   }
 
   /** case_tag: {% case expr %} when_tag+ else_tag? {% endcase %} */
@@ -421,7 +424,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("case").get, nodes)
+    new InsertionNode(insertions.get("case"), nodes.asScala.toArray)
   }
 
   /** for_tag: {% for id in lookup/range ... %} block {% else %} block {% endfor %} */
@@ -500,7 +503,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("for").get, nodes)
+    new InsertionNode(insertions.get("for"), nodes.asScala.toArray)
   }
 
   /** Parses for_attribute entries: offset:expr, limit:expr, etc. */
@@ -556,7 +559,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("tablerow").get, nodes)
+    new InsertionNode(insertions.get("tablerow"), nodes.asScala.toArray)
   }
 
   /** capture_tag: {% capture id %} block {% endcapture %} */
@@ -577,7 +580,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("capture").get, Array[LNode](new AtomNode(DataView.from(id)), block))
+    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(DataView.from(id)), block))
   }
 
   /** comment_tag: {% comment %} ... {% endcomment %} */
@@ -591,12 +594,12 @@ final class LiquidParser(
         consume(TokenType.TAG_START)
         advance() // consume ENDCOMMENT
         consume(TokenType.TAG_END)
-        break(new InsertionNode(insertions.get("comment").get, Array.empty[LNode]))
+        break(new InsertionNode(insertions.get("comment"), Array.empty[LNode]))
       }
       advance()
     }
 
-    new InsertionNode(insertions.get("comment").get, Array.empty[LNode])
+    new InsertionNode(insertions.get("comment"), Array.empty[LNode])
   }
 
   /** raw_tag: The lexer already handles raw body as TEXT between {% raw %} and {% endraw %} */
@@ -615,14 +618,14 @@ final class LiquidParser(
           consume(TokenType.TAG_START)
           advance() // consume RAW (endraw)
           consume(TokenType.TAG_END)
-          break(new InsertionNode(insertions.get("raw").get, Array[LNode](new AtomNode(DataView.from(sb.toString())))))
+          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString())))))
         }
       }
       sb.append(t.value)
       advance()
     }
 
-    new InsertionNode(insertions.get("raw").get, Array[LNode](new AtomNode(DataView.from(sb.toString()))))
+    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString()))))
   }
 
   /** cycle_tag: {% cycle group: expr, expr, ... %} */
@@ -648,7 +651,7 @@ final class LiquidParser(
     }
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("cycle").get, nodes)
+    new InsertionNode(insertions.get("cycle"), nodes.asScala.toArray)
   }
 
   /** include_tag: {% include 'file' %} or {% include file var=val %} */
@@ -702,7 +705,7 @@ final class LiquidParser(
     }
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("include").get, nodes)
+    new InsertionNode(insertions.get("include"), nodes.asScala.toArray)
   }
 
   /** Assembles an unquoted Jekyll include file name from the token run.
@@ -768,7 +771,8 @@ final class LiquidParser(
       throw new LiquidException(
         s"Expected include file name but got ${t.tokenType} ('${t.value}')",
         t.line,
-        t.col
+        t.col,
+        null
       )
     }
     val fileName = sb.toString
@@ -784,7 +788,8 @@ final class LiquidParser(
       throw new LiquidException(
         s"in `{% include filename %}` the `filename` is {$fileName}, but it cannot have spaces for Flavor.JEKYLL",
         wsLine,
-        wsCol
+        wsCol,
+        null
       )
     }
     fileName
@@ -824,23 +829,23 @@ final class LiquidParser(
 
     consume(TokenType.TAG_END)
     val incRelative = insertions.get("include_relative")
-    if (incRelative.isDefined) {
-      new InsertionNode(incRelative.get, nodes)
+    if (incRelative != null) {
+      new InsertionNode(incRelative, nodes.asScala.toArray)
     } else {
-      new InsertionNode(insertions.get("include").get, nodes)
+      new InsertionNode(insertions.get("include"), nodes.asScala.toArray)
     }
   }
 
   private def parseBreakTag(): LNode = {
     advance() // consume BREAK_TAG
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("break").get, Array.empty[LNode])
+    new InsertionNode(insertions.get("break"), Array.empty[LNode])
   }
 
   private def parseContinueTag(): LNode = {
     advance() // consume CONTINUE_TAG
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("continue").get, Array.empty[LNode])
+    new InsertionNode(insertions.get("continue"), Array.empty[LNode])
   }
 
   /** custom block: {% blockid ... %} block {% endblockid %} */
@@ -900,8 +905,8 @@ final class LiquidParser(
       reportTokenError("Missing End Tag")
     }
 
-    if (insertion.isDefined) {
-      new InsertionNode(insertion.get, params)
+    if (insertion != null) {
+      new InsertionNode(insertion, params.asScala.toArray)
     } else {
       block // fallback: just render the block content
     }
@@ -925,8 +930,8 @@ final class LiquidParser(
     }
     consume(TokenType.TAG_END)
 
-    if (insertion.isDefined) {
-      new InsertionNode(insertion.get, params)
+    if (insertion != null) {
+      new InsertionNode(insertion, params.asScala.toArray)
     } else {
       new AtomNode(DataView.from("")) // unknown tag, produce empty
     }
@@ -939,8 +944,8 @@ final class LiquidParser(
     val varName   = consumeId() // The variable name as a literal string
     consume(TokenType.TAG_END)
 
-    if (insertion.isDefined) {
-      new InsertionNode(insertion.get, Array[LNode](new AtomNode(DataView.from(varName))))
+    if (insertion != null) {
+      new InsertionNode(insertion, Array[LNode](new AtomNode(DataView.from(varName))))
     } else {
       new AtomNode(DataView.from(""))
     }
@@ -962,7 +967,7 @@ final class LiquidParser(
     // (LiquidParser.g4:102-103). Whether or not a block is open, an `end...`
     // that does not close the current block is invalid here: if it closed the
     // open block it would have been an END_BLOCK_ID handled in the block parser.
-    if (insertion.isEmpty && tagName.length > 3 && tagName.startsWith("end")) {
+    if (insertion == null && tagName.length > 3 && tagName.startsWith("end")) {
       // The parser listener throws unconditionally in all error modes
       // (Template.java:91-98); error_other_tag has no errorMode predicate
       // (LiquidParser.g4:98-110).
@@ -977,8 +982,8 @@ final class LiquidParser(
       }
       consume(TokenType.TAG_END)
 
-      if (insertion.isDefined) {
-        new InsertionNode(insertion.get, params)
+      if (insertion != null) {
+        new InsertionNode(insertion, params.asScala.toArray)
       } else {
         // Unregistered start tag → Invalid Tag (LiquidParser.g4:106-107). The
         // parser listener throws unconditionally in all error modes
@@ -1126,7 +1131,8 @@ final class LiquidParser(
             throw new LiquidException(
               s"Invalid dotted key '${t.value}': numeric path segments after '.' may not begin with '-' (liqp IdChain [a-zA-Z_0-9]+, LiquidLexer.g4:182-184)",
               t.line,
-              t.col
+              t.col,
+              null
             )
           }
           // liqp's IdChain (LiquidLexer.g4:182-184) tokenizes dotted chains like
@@ -1197,7 +1203,8 @@ final class LiquidParser(
       throw new LiquidException(
         s"Expected $expected but got ${t.tokenType} ('${t.value}')",
         t.line,
-        t.col
+        t.col,
+        null
       )
     }
     advance()
@@ -1215,7 +1222,8 @@ final class LiquidParser(
       throw new LiquidException(
         s"Expected $expected but got ${t.tokenType} ('${t.value}')",
         t.line,
-        t.col
+        t.col,
+        null
       )
     }
 
@@ -1229,7 +1237,8 @@ final class LiquidParser(
       throw new LiquidException(
         s"Expected identifier but got ${t.tokenType} ('${t.value}')",
         t.line,
-        t.col
+        t.col,
+        null
       )
     }
   }

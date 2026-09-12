@@ -2,7 +2,6 @@
 package ssg
 package liquid
 
-import ssg.liquid.antlr.NameResolver
 import ssg.liquid.exceptions.LiquidException
 import ssg.liquid.parser.Flavor
 
@@ -44,7 +43,7 @@ final class IncludeNamesIss1010Suite extends munit.FunSuite {
   private def parserWith(templates: (String, String)*): TemplateParser = {
     val map = new JHashMap[String, String]()
     templates.foreach { case (name, content) => map.put(name, content) }
-    new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new NameResolver.InMemory(map)).withShowExceptionsFromInclude(true).build()
+    new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new TestBridges.InMemoryNameResolver(map)).withShowExceptionsFromInclude(true).build()
   }
 
   // ---------------------------------------------------------------------------

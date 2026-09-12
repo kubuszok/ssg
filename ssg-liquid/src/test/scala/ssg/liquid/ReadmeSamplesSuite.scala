@@ -74,7 +74,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("b") {
-          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
             val text = super.asString(value, context)
             DataView.from(text.replaceAll("\\*(\\w(.*?\\w)?)\\*", "<strong>$1</strong>"))
           }
@@ -92,7 +92,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("repeat") {
-          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
             val text    = super.asString(value, context)
             var times   = if (params.length == 0) 1 else super.asNumber(params(0)).intValue()
             val builder = new StringBuilder()
@@ -115,7 +115,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {
-          override def apply(value: DataView, context: TemplateContext, params: Array[DataView]): DataView = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
             val numbers = super.asArray(value, context)
             var sum     = 0.0
             numbers.foreach { obj =>

@@ -292,12 +292,13 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
         Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
       } else Nil
     },
+    Test / unmanagedClasspath ++= (Compile / unmanagedClasspath).value,
     // Baltic Porter: generate ssg-liquid Scala sources from liqp Java originals.
     Compile / sourceGenerators += Def.task {
       BalticPorterGen.generateLiquid((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
     // Suppress warnings from generated code (porter notes, unused imports, etc.)
-    scalacOptions += "-Wconf:src=target/balticporter-ssg-liquid/.*:s"
+    scalacOptions += "-Wconf:src=.*/ported/ssg-liquid/src_managed/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -322,7 +323,21 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   )) *)
   .settings(
     name := "ssg-md",
-    libraryDependencies += "com.kubuszok" %% "multiarch-resources" % versions.multiarch
+    libraryDependencies ++= Seq(
+      "com.kubuszok"    %% "multiarch-resources"    % versions.multiarch,
+      "com.kubuszok"    %% "balticporter-runtime"    % "0.1.0-SNAPSHOT",
+      "org.jetbrains"    % "annotations"            % "24.0.1" % Provided,
+      "org.nibor.autolink" % "autolink"             % "0.6.0",
+    ),
+    // Baltic Porter: generate ssg-md Scala sources from flexmark-java originals.
+    Compile / sourceGenerators += Def.task {
+      BalticPorterGen.generateFlexmark((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
+    // Baltic Porter: generate ssg-md-ext Scala sources from flexmark extension modules.
+    Compile / sourceGenerators += Def.task {
+      BalticPorterGen.generateFlexmarkExt((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
+    scalacOptions += "-Wconf:src=.*/ported/ssg-md.*/src_managed/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
