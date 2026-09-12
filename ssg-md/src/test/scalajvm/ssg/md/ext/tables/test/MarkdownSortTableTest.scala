@@ -36,7 +36,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -74,7 +74,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -112,7 +112,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_PAGE_REF, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_PAGE_REF, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -150,7 +150,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_ANCHOR, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_ANCHOR, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -188,7 +188,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_URL, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, false, false, false)), TextContainer.F_LINK_URL, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -226,7 +226,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(0, true, false, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -264,7 +264,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(1, false, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(1, false, false, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -302,7 +302,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(1, true, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(1, true, false, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -682,7 +682,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(3, false, true, true)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(3, false, true, true)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -720,7 +720,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(3, true, true, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(3, true, true, false)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -758,7 +758,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     )
 
     val out    = new MarkdownWriter(LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(3, true, true, true)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(3, true, true, true)), 0, null)
     sorted.appendTable(out)
 
     assertEquals(
@@ -803,7 +803,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
         ColumnSort.columnSort(2, false, false, false)
       ),
       0,
-      Nullable.empty
+      null
     )
     sorted.appendTable(out)
 
@@ -849,7 +849,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
         ColumnSort.columnSort(2, true, false, false)
       ),
       0,
-      Nullable.empty
+      null
     )
     sorted.appendTable(out)
 
@@ -895,7 +895,7 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
         ColumnSort.columnSort(2, false, false, false)
       ),
       0,
-      Nullable.empty
+      null
     )
     sorted.appendTable(out)
 
@@ -934,9 +934,9 @@ final class MarkdownSortTableTest extends MarkdownTableTestBase {
     val charSequence: CharSequence = markdown.substring(0, pos) + markdown.substring(pos + 1)
     val source = BasedSequence.of(charSequence)
     val table  = getTable(source, formatOptionsAsIs("", null))
-    assert(table.addTrackedOffset(TrackedOffset.track(pos, Nullable.empty[Character], false)))
+    assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out    = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
-    val sorted = table.sorted(Array(ColumnSort.columnSort(1, false, false, false)), 0, Nullable.empty)
+    val sorted = table.sorted(Array(ColumnSort.columnSort(1, false, false, false)), 0, null)
     sorted.appendTable(out)
     val sortedTable = out.toString(0, 0)
     val offset      = sorted.getTrackedOffsetIndex(pos)

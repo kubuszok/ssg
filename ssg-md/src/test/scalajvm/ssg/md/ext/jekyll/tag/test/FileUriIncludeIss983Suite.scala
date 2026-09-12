@@ -37,15 +37,15 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
   // DocxLinkResolver branch `url.startsWith("file:/")` -> withStatus(VALID).withUrl(url)).
   final private class FileLinkResolver extends LinkResolver {
     override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink = {
-      val url = link.url
+      val url = link.getUrl()
       if (url.startsWith("file:/")) link.withStatus(LinkStatus.VALID).withUrl(url)
       else link
     }
   }
 
   final private class FileLinkResolverFactory extends LinkResolverFactory {
-    override def afterDependents:                          Nullable[Set[Class[?]]] = Nullable.empty
-    override def beforeDependents:                         Nullable[Set[Class[?]]] = Nullable.empty
+    override def afterDependents:                          Nullable[Set[Class[?]]] = null
+    override def beforeDependents:                         Nullable[Set[Class[?]]] = null
     override def affectsGlobalScope:                       Boolean                 = false
     override def apply(context: LinkResolverBasicContext): LinkResolver            = new FileLinkResolver()
   }
@@ -62,7 +62,7 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
 
     val options: DataHolder = new MutableDataSet()
       .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
-      .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
+      .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true))
       .set(JekyllTagExtension.LINK_RESOLVER_FACTORIES, factories)
       // NOTE: CONTENT_RESOLVER_FACTORIES is deliberately left empty so the default
       // FileUriContentResolver.Factory fallback path is exercised.
@@ -89,7 +89,7 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
 
     val options: DataHolder = new MutableDataSet()
       .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
-      .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
+      .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true))
       .set(JekyllTagExtension.LINK_RESOLVER_FACTORIES, factories)
       .toImmutable()
 

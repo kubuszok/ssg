@@ -31,7 +31,11 @@ object ComboCommonMarkCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_commonmark_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCommonMarkCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.COMMONMARK.getOptions()).set(HtmlRenderer.INDENT_SIZE, 4).set(HtmlRenderer.RENDER_HEADER_ID, true).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet()
+    .setFrom(ParserEmulationProfile.COMMONMARK.getOptions())
+    .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(4))
+    .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(true))
+    .toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =

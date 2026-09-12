@@ -30,8 +30,14 @@ object ComboTypographicSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-quotes", new MutableDataSet().set(TypographicExtension.ENABLE_QUOTES, false).toImmutable())
-    map.put("no-smarts", new MutableDataSet().set(TypographicExtension.ENABLE_SMARTS, false).toImmutable())
+    map.put(
+      "no-quotes",
+      new MutableDataSet().set(TypographicExtension.ENABLE_QUOTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-smarts",
+      new MutableDataSet().set(TypographicExtension.ENABLE_SMARTS, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map
   }
 }

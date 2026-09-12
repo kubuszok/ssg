@@ -46,7 +46,8 @@ final class ComboAttributesFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboAttributesFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/attributes/test/ext_attributes_format_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAttributesFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
@@ -57,12 +58,18 @@ object ComboAttributesFormatterSpecTest {
           Parser.EXTENSIONS,
           Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create())
         )
-        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
-        .set(HtmlRenderer.RENDER_HEADER_ID, false)
+        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(false))
         .toImmutable()
     )
-    map.put("text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true).toImmutable())
-    map.put("no-text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, false).toImmutable())
+    map.put(
+      "text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put(
       "attributes-spaces-as-is",
       new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTES_SPACES, DiscretionaryText.AS_IS).toImmutable()
@@ -117,9 +124,12 @@ object ComboAttributesFormatterSpecTest {
     )
     map.put(
       "combine-consecutive",
-      new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTES_COMBINE_CONSECUTIVE, true).toImmutable()
+      new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTES_COMBINE_CONSECUTIVE, java.lang.Boolean.valueOf(true)).toImmutable()
     )
-    map.put("sort-attributes", new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTES_SORT, true).toImmutable())
+    map.put(
+      "sort-attributes",
+      new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTES_SORT, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put("id-as-is", new MutableDataSet().set(AttributesExtension.FORMAT_ATTRIBUTE_ID, AttributeImplicitName.AS_IS).toImmutable())
     map.put(
       "id-implicit",

@@ -92,7 +92,7 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
 object RendererSpecTestSuite {
 
   /** Base renderer options: INDENT_SIZE=2 (matches original RendererSpecTest). */
-  val RENDERER_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).toImmutable()
+  val RENDERER_OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(2)).toImmutable()
 
   /** Base options map with "src-pos" (matches original RendererSpecTest). */
   val BASE_OPTIONS_MAP: ju.Map[String, DataHolder] = {

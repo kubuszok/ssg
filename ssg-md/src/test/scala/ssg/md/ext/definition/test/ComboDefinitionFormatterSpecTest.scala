@@ -30,13 +30,23 @@ final class ComboDefinitionFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboDefinitionFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/definition/test/ext_definition_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboDefinitionFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(DefinitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(DefinitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("marker-spaces-1", new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, 1).toImmutable())
-    map.put("marker-spaces-2", new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, 2).toImmutable())
-    map.put("marker-spaces-3", new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, 3).toImmutable())
+    map.put(
+      "marker-spaces-1",
+      new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, java.lang.Integer.valueOf(1)).toImmutable()
+    )
+    map.put(
+      "marker-spaces-2",
+      new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, java.lang.Integer.valueOf(2)).toImmutable()
+    )
+    map.put(
+      "marker-spaces-3",
+      new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_SPACES, java.lang.Integer.valueOf(3)).toImmutable()
+    )
     map.put("marker-type-any", new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_TYPE, DefinitionMarker.ANY).toImmutable())
     map.put(
       "marker-type-colon",
@@ -46,7 +56,7 @@ object ComboDefinitionFormatterSpecTest {
       "marker-type-tilde",
       new MutableDataSet().set(DefinitionExtension.FORMAT_MARKER_TYPE, DefinitionMarker.TILDE).toImmutable()
     )
-    map.put("no-blank-lines", new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, false).toImmutable())
+    map.put("no-blank-lines", new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(false)).toImmutable())
     map
   }
 }

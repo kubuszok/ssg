@@ -68,53 +68,53 @@ final class ParserSuite extends munit.FunSuite {
     val document = parser.parse(given_)
 
     assert(document.getFirstChild().isInstanceOf[BulletList], "Document first child should be BulletList")
-    assertEquals(document.lineCount, 4, "Document line count")
+    assertEquals(document.getLineCount(), 4, "Document line count")
 
     var list = document.getFirstChild() // first level list
     assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
     assertEquals(firstText(list.getFirstChild()), "1 space")
-    assertEquals(list.startLineNumber, 0, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 0, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
 
     list = list.getFirstChild().getLastChild() // second level list
     assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
     assertEquals(firstText(list.getFirstChild()), "3 spaces")
-    assertEquals(list.startLineNumber, 1, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 1, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
 
     list = list.getFirstChild().getLastChild() // third level list
     assertEquals(firstText(list.getFirstChild()), "5 spaces")
     assertEquals(firstText(list.getFirstChild().getNext()), "tab + space")
-    assertEquals(list.startLineNumber, 2, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 2, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
   }
 
   test("indentationWithLines") {
     val given_   = " - 1 space\n   - 3 spaces\n     - 5 spaces\n\t - tab + space"
-    val options  = new MutableDataSet().set(Parser.TRACK_DOCUMENT_LINES, true)
+    val options  = new MutableDataSet().set(Parser.TRACK_DOCUMENT_LINES, java.lang.Boolean.valueOf(true))
     val parser   = Parser.builder(options).build()
     val document = parser.parse(given_)
 
     assert(document.getFirstChild().isInstanceOf[BulletList], "Document first child should be BulletList")
-    assertEquals(document.lineCount, 4, "Document line count")
+    assertEquals(document.getLineCount(), 4, "Document line count")
 
     var list = document.getFirstChild() // first level list
     assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
     assertEquals(firstText(list.getFirstChild()), "1 space")
-    assertEquals(list.startLineNumber, 0, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 0, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
 
     list = list.getFirstChild().getLastChild() // second level list
     assertEquals(list.getFirstChild(), list.getLastChild(), "expect one child")
     assertEquals(firstText(list.getFirstChild()), "3 spaces")
-    assertEquals(list.startLineNumber, 1, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 1, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
 
     list = list.getFirstChild().getLastChild() // third level list
     assertEquals(firstText(list.getFirstChild()), "5 spaces")
     assertEquals(firstText(list.getFirstChild().getNext()), "tab + space")
-    assertEquals(list.startLineNumber, 2, "node start line number")
-    assertEquals(list.endLineNumber, 3, "node end line number")
+    assertEquals(list.getStartLineNumber(), 2, "node start line number")
+    assertEquals(list.getEndLineNumber(), 3, "node end line number")
   }
 
   test("blockquotesWithLfLineBreaks") {
@@ -126,55 +126,55 @@ final class ParserSuite extends munit.FunSuite {
 
     assert(document.getFirstChild().isInstanceOf[BlockQuote])
     assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
-    val it = document.getFirstChild().getFirstChild().childIterator
+    val it = document.getFirstChild().getFirstChild().getChildIterator()
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
     assertEquals(node.getStartOffset(), 2)
     assertEquals(node.getEndOffset(), 7)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 7)
     assertEquals(node.getEndOffset(), 8)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
     assertEquals(node.getStartOffset(), 10)
     assertEquals(node.getEndOffset(), 15)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 16)
     assertEquals(node.getEndOffset(), 17)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
     assertEquals(node.getStartOffset(), 19)
     assertEquals(node.getEndOffset(), 24)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
     assertEquals(node.getStartOffset(), 24)
     assertEquals(node.getEndOffset(), 27)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
     assertEquals(node.getStartOffset(), 29)
     assertEquals(node.getEndOffset(), 34)
 
-    assert(!it.hasNext)
+    assert(!it.hasNext())
   }
 
   test("blockquotesWithCrLineBreaks") {
@@ -186,55 +186,55 @@ final class ParserSuite extends munit.FunSuite {
 
     assert(document.getFirstChild().isInstanceOf[BlockQuote])
     assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
-    val it = document.getFirstChild().getFirstChild().childIterator
+    val it = document.getFirstChild().getFirstChild().getChildIterator()
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
     assertEquals(node.getStartOffset(), 2)
     assertEquals(node.getEndOffset(), 7)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 7)
     assertEquals(node.getEndOffset(), 8)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
     assertEquals(node.getStartOffset(), 10)
     assertEquals(node.getEndOffset(), 15)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 16)
     assertEquals(node.getEndOffset(), 17)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
     assertEquals(node.getStartOffset(), 19)
     assertEquals(node.getEndOffset(), 24)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
     assertEquals(node.getStartOffset(), 24)
     assertEquals(node.getEndOffset(), 27)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
     assertEquals(node.getStartOffset(), 29)
     assertEquals(node.getEndOffset(), 34)
 
-    assert(!it.hasNext)
+    assert(!it.hasNext())
   }
 
   test("blockquotesWithCrLfLineBreaks") {
@@ -246,55 +246,55 @@ final class ParserSuite extends munit.FunSuite {
 
     assert(document.getFirstChild().isInstanceOf[BlockQuote])
     assert(document.getFirstChild().getFirstChild().isInstanceOf[Paragraph])
-    val it = document.getFirstChild().getFirstChild().childIterator
+    val it = document.getFirstChild().getFirstChild().getChildIterator()
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     var node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line1")
     assertEquals(node.getStartOffset(), 2)
     assertEquals(node.getEndOffset(), 7)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 7)
     assertEquals(node.getEndOffset(), 9)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line2")
     assertEquals(node.getStartOffset(), 11)
     assertEquals(node.getEndOffset(), 16)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[SoftLineBreak])
     assertEquals(node.getStartOffset(), 17)
     assertEquals(node.getEndOffset(), 19)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line3")
     assertEquals(node.getStartOffset(), 21)
     assertEquals(node.getEndOffset(), 26)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[HardLineBreak])
     assertEquals(node.getStartOffset(), 26)
     assertEquals(node.getEndOffset(), 30)
 
-    assert(it.hasNext)
+    assert(it.hasNext())
     node = it.next()
     assert(node.isInstanceOf[Text])
     assertEquals(node.chars.toString, "line4")
     assertEquals(node.getStartOffset(), 32)
     assertEquals(node.getEndOffset(), 37)
 
-    assert(!it.hasNext)
+    assert(!it.hasNext())
   }
 
   test("test_escapeCustom") {
@@ -334,7 +334,7 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   test("test_escapeHeadingNoAtxSpace") {
-    val parser = Parser.builder(new MutableDataSet().set(Parser.HEADING_NO_ATX_SPACE, true)).build()
+    val parser = Parser.builder(new MutableDataSet().set(Parser.HEADING_NO_ATX_SPACE, java.lang.Boolean.valueOf(true))).build()
 
     assertEquals(doEscape("abc", parser), "abc")
     assertEquals(doEscape("#", parser), "\\#")
@@ -370,7 +370,7 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   test("test_escapeUnorderedListNoNumbered") {
-    val parser = Parser.builder(new MutableDataSet().set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, false)).build()
+    val parser = Parser.builder(new MutableDataSet().set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, java.lang.Boolean.valueOf(false))).build()
 
     assertEquals(doEscape("abc", parser), "abc")
 
@@ -470,7 +470,7 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   test("test_escapeOrderedListNoNumbered") {
-    val parser = Parser.builder(new MutableDataSet().set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, false)).build()
+    val parser = Parser.builder(new MutableDataSet().set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, java.lang.Boolean.valueOf(false))).build()
 
     assertEquals(doEscape("1", parser), "1")
     assertEquals(doEscape("2", parser), "2")
@@ -516,7 +516,7 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   test("test_escapeOrderedListDotOnly") {
-    val parser = Parser.builder(new MutableDataSet().set(Parser.LISTS_ORDERED_ITEM_DOT_ONLY, true)).build()
+    val parser = Parser.builder(new MutableDataSet().set(Parser.LISTS_ORDERED_ITEM_DOT_ONLY, java.lang.Boolean.valueOf(true))).build()
 
     assertEquals(doEscape("1", parser), "1")
     assertEquals(doEscape("2", parser), "2")
@@ -554,7 +554,7 @@ final class ParserSuite extends munit.FunSuite {
   test("test_escapeOrderedListDotOnlyNoNumbered") {
     val parser = Parser
       .builder(
-        new MutableDataSet().set(Parser.LISTS_ORDERED_ITEM_DOT_ONLY, true).set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, false)
+        new MutableDataSet().set(Parser.LISTS_ORDERED_ITEM_DOT_ONLY, java.lang.Boolean.valueOf(true)).set(SharedDataKeys.ESCAPE_NUMBERED_LEAD_IN, java.lang.Boolean.valueOf(false))
       )
       .build()
 
@@ -649,8 +649,8 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   class DashBlockParserFactory extends CustomBlockParserFactory {
-    override def afterDependents:    Nullable[Set[Class[?]]] = Nullable.empty
-    override def beforeDependents:   Nullable[Set[Class[?]]] = Nullable.empty
+    override def afterDependents:    Nullable[Set[Class[?]]] = null
+    override def beforeDependents:   Nullable[Set[Class[?]]] = null
     override def affectsGlobalScope: Boolean                 = false
 
     override def apply(options: DataHolder): BlockParserFactory =
@@ -659,8 +659,8 @@ final class ParserSuite extends munit.FunSuite {
 
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): Nullable[BlockStart] =
-      if (state.line.equals("---")) {
-        BlockStart.of(new DashBlockParser(state.line))
+      if (state.getLine().equals("---")) {
+        BlockStart.of(new DashBlockParser(state.getLine()))
       } else {
         BlockStart.none()
       }

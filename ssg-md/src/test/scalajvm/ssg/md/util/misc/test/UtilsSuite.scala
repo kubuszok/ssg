@@ -14,7 +14,7 @@ import scala.language.implicitConversions
 final class UtilsSuite extends munit.FunSuite {
 
   test("testCompareNullable") {
-    assertEquals(Utils.compareNullable[java.lang.Boolean](Nullable.empty, java.lang.Boolean.FALSE), 0)
+    assertEquals(Utils.compareNullable[java.lang.Boolean](null, java.lang.Boolean.FALSE), 0)
     assertEquals(Utils.compareNullable[java.lang.Boolean](java.lang.Boolean.TRUE, java.lang.Boolean.TRUE), 0)
   }
 

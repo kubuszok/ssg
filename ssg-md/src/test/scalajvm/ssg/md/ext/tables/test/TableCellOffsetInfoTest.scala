@@ -55,7 +55,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "|            Default             | Lefts                          |    Right | Centered in a column | ^  |\n" +
@@ -102,7 +102,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features^                                                                        | Basic | Enhanced |    |\n" +
@@ -115,7 +115,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic^ | Enhanced |    |\n" +
@@ -128,7 +128,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced^ |    |\n" +
@@ -141,7 +141,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced | ^   |\n" +
@@ -154,7 +154,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -167,7 +167,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -180,7 +180,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -193,7 +193,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -206,7 +206,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -219,7 +219,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -232,7 +232,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -245,7 +245,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -258,7 +258,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -271,7 +271,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -284,7 +284,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -297,7 +297,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -310,7 +310,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -323,7 +323,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -336,7 +336,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -349,7 +349,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -362,7 +362,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -375,7 +375,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -388,7 +388,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -401,7 +401,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -414,7 +414,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -427,7 +427,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.nextOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.nextOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -472,7 +472,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -485,7 +485,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -498,7 +498,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -511,7 +511,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -524,7 +524,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -537,7 +537,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -550,7 +550,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -563,7 +563,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -576,7 +576,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -589,7 +589,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -602,7 +602,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -615,7 +615,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -628,7 +628,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -641,7 +641,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -654,7 +654,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -667,7 +667,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -680,7 +680,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -693,7 +693,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -706,7 +706,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -719,7 +719,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -732,7 +732,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced |    |\n" +
@@ -745,7 +745,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced | ^   |\n" +
@@ -758,7 +758,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic | Enhanced^ |    |\n" +
@@ -771,7 +771,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features                                                                        | Basic^ | Enhanced |    |\n" +
@@ -784,7 +784,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "| Features^                                                                        | Basic | Enhanced |    |\n" +
@@ -797,7 +797,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
       formattedTable.substring(0, offsetInfo.offset) + "^" + formattedTable.substring(offsetInfo.offset)
     )
 
-    offsetInfo = offsetInfo.previousOffsetStop(Nullable.empty)
+    offsetInfo = offsetInfo.previousOffsetStop(null)
     assertEquals(
       "" +
         "^| Features                                                                        | Basic | Enhanced |    |\n" +

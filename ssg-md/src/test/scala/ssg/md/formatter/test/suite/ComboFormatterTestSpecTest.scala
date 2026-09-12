@@ -89,19 +89,25 @@ object ComboFormatterTestSpecTest {
         YamlFrontMatterExtension.create()
       )
     )
-    .set(Parser.BLANK_LINES_IN_AST, true)
-    .set(SimTocExtension.BLANK_LINE_SPACER, true)
-    .set(Parser.HEADING_NO_ATX_SPACE, true)
-    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false)
+    .set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true))
+    .set(SimTocExtension.BLANK_LINE_SPACER, java.lang.Boolean.valueOf(true))
+    .set(Parser.HEADING_NO_ATX_SPACE, java.lang.Boolean.valueOf(true))
+    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(false))
     .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-tailing-blanks", new MutableDataSet().set(Formatter.MAX_TRAILING_BLANK_LINES, 0).toImmutable())
+    map.put(
+      "no-tailing-blanks",
+      new MutableDataSet().set(Formatter.MAX_TRAILING_BLANK_LINES, java.lang.Integer.valueOf(0)).toImmutable()
+    )
     map.put("atx-space-as-is", new MutableDataSet().set(Formatter.SPACE_AFTER_ATX_MARKER, DiscretionaryText.AS_IS).toImmutable())
     map.put("atx-space-add", new MutableDataSet().set(Formatter.SPACE_AFTER_ATX_MARKER, DiscretionaryText.ADD).toImmutable())
     map.put("atx-space-remove", new MutableDataSet().set(Formatter.SPACE_AFTER_ATX_MARKER, DiscretionaryText.REMOVE).toImmutable())
-    map.put("setext-no-equalize", new MutableDataSet().set(Formatter.SETEXT_HEADING_EQUALIZE_MARKER, false).toImmutable())
+    map.put(
+      "setext-no-equalize",
+      new MutableDataSet().set(Formatter.SETEXT_HEADING_EQUALIZE_MARKER, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put(
       "atx-trailing-add",
       new MutableDataSet().set(Formatter.ATX_HEADING_TRAILING_MARKER, EqualizeTrailingMarker.ADD).toImmutable()
@@ -124,11 +130,26 @@ object ComboFormatterTestSpecTest {
       new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_COMPACT_WITH_SPACE).toImmutable()
     )
     map.put("block-quote-spaced", new MutableDataSet().set(Formatter.BLOCK_QUOTE_MARKERS, BlockQuoteMarker.ADD_SPACED).toImmutable())
-    map.put("indented-code-minimize", new MutableDataSet().set(Formatter.INDENTED_CODE_MINIMIZE_INDENT, true).toImmutable())
-    map.put("fenced-code-minimize", new MutableDataSet().set(Formatter.FENCED_CODE_MINIMIZE_INDENT, true).toImmutable())
-    map.put("fenced-code-match-closing", new MutableDataSet().set(Formatter.FENCED_CODE_MATCH_CLOSING_MARKER, true).toImmutable())
-    map.put("fenced-code-spaced-info", new MutableDataSet().set(Formatter.FENCED_CODE_SPACE_BEFORE_INFO, true).toImmutable())
-    map.put("fenced-code-marker-length", new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_LENGTH, 6).toImmutable())
+    map.put(
+      "indented-code-minimize",
+      new MutableDataSet().set(Formatter.INDENTED_CODE_MINIMIZE_INDENT, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "fenced-code-minimize",
+      new MutableDataSet().set(Formatter.FENCED_CODE_MINIMIZE_INDENT, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "fenced-code-match-closing",
+      new MutableDataSet().set(Formatter.FENCED_CODE_MATCH_CLOSING_MARKER, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "fenced-code-spaced-info",
+      new MutableDataSet().set(Formatter.FENCED_CODE_SPACE_BEFORE_INFO, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "fenced-code-marker-length",
+      new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_LENGTH, java.lang.Integer.valueOf(6)).toImmutable()
+    )
     map.put(
       "fenced-code-marker-backtick",
       new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.BACK_TICK).toImmutable()
@@ -137,8 +158,14 @@ object ComboFormatterTestSpecTest {
       "fenced-code-marker-tilde",
       new MutableDataSet().set(Formatter.FENCED_CODE_MARKER_TYPE, CodeFenceMarker.TILDE).toImmutable()
     )
-    map.put("list-add-blank-line-before", new MutableDataSet().set(Formatter.LIST_ADD_BLANK_LINE_BEFORE, true).toImmutable())
-    map.put("list-no-renumber-items", new MutableDataSet().set(Formatter.LIST_RENUMBER_ITEMS, false).toImmutable())
+    map.put(
+      "list-add-blank-line-before",
+      new MutableDataSet().set(Formatter.LIST_ADD_BLANK_LINE_BEFORE, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "list-no-renumber-items",
+      new MutableDataSet().set(Formatter.LIST_RENUMBER_ITEMS, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put("list-bullet-any", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.ANY).toImmutable())
     map.put("list-bullet-dash", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.DASH).toImmutable())
     map.put("list-bullet-asterisk", new MutableDataSet().set(Formatter.LIST_BULLET_MARKER, ListBulletMarker.ASTERISK).toImmutable())

@@ -31,19 +31,22 @@ object ComboTocSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("text-only", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, true).toImmutable())
-    map.put("formatted", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, false).toImmutable())
+    map.put("text-only", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put("formatted", new MutableDataSet().set(TocExtension.IS_TEXT_ONLY, java.lang.Boolean.valueOf(false)).toImmutable())
     map.put("hierarchy", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.HIERARCHY).toImmutable())
     map.put("flat", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.FLAT).toImmutable())
     map.put("flat-reversed", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.FLAT_REVERSED).toImmutable())
     map.put("sorted", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED).toImmutable())
     map.put("sorted-reversed", new MutableDataSet().set(TocExtension.LIST_TYPE, TocOptions.ListType.SORTED_REVERSED).toImmutable())
-    map.put("numbered", new MutableDataSet().set(TocExtension.IS_NUMBERED, true).toImmutable())
+    map.put("numbered", new MutableDataSet().set(TocExtension.IS_NUMBERED, java.lang.Boolean.valueOf(true)).toImmutable())
     map.put("levels-2", new MutableDataSet().set(TocExtension.LEVELS, Integer.valueOf(1 << 2)).toImmutable())
     map.put("title", new MutableDataSet().set(TocExtension.TITLE, "Table of Contents").toImmutable())
     map.put("div-class", new MutableDataSet().set(TocExtension.DIV_CLASS, "content-class").toImmutable())
     map.put("list-class", new MutableDataSet().set(TocExtension.LIST_CLASS, "list-class").toImmutable())
-    map.put("not-case-sensitive", new MutableDataSet().set(TocExtension.CASE_SENSITIVE_TOC_TAG, false).toImmutable())
+    map.put(
+      "not-case-sensitive",
+      new MutableDataSet().set(TocExtension.CASE_SENSITIVE_TOC_TAG, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map
   }
 }

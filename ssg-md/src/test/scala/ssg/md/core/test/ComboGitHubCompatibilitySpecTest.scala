@@ -47,9 +47,9 @@ object ComboGitHubCompatibilitySpecTest {
 
   val OPTIONS: DataHolder = new MutableDataSet()
     .setFrom(ParserEmulationProfile.GITHUB_DOC)
-    // .set(Parser.THEMATIC_BREAK_RELAXED_START, true)
-    .set(HtmlRenderer.INDENT_SIZE, 4)
-    .set(HtmlRenderer.RENDER_HEADER_ID, true)
+    // .set(Parser.THEMATIC_BREAK_RELAXED_START, java.lang.Boolean.valueOf(true))
+    .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(4))
+    .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(true))
     .set(HtmlRenderer.SOFT_BREAK, " ")
     .toImmutable()
 
@@ -62,7 +62,9 @@ object ComboGitHubCompatibilitySpecTest {
     val map = new ju.HashMap[String, DataHolder]()
     map.put(
       "no-loose-non-list-children",
-      new MutableDataSet().set(Parser.LISTS_LOOSE_WHEN_HAS_NON_LIST_CHILDREN, false).set(Parser.LISTS_LOOSE_WHEN_BLANK_LINE_FOLLOWS_ITEM_PARAGRAPH, false)
+      new MutableDataSet()
+        .set(Parser.LISTS_LOOSE_WHEN_HAS_NON_LIST_CHILDREN, java.lang.Boolean.valueOf(false))
+        .set(Parser.LISTS_LOOSE_WHEN_BLANK_LINE_FOLLOWS_ITEM_PARAGRAPH, java.lang.Boolean.valueOf(false))
     )
     map
   }

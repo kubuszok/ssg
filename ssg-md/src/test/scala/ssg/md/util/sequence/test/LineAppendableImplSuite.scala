@@ -26,7 +26,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val fa       = new LineAppendableImpl(SequenceBuilder.emptyBuilder(sequence), LineAppendable.F_FORMAT_ALL | LineAppendable.F_TRIM_LEADING_WHITESPACE)
 
     val iter = fa.iterator()
-    while (iter.hasNext) {
+    while (iter.hasNext()) {
       iter.next()
       fail("Should not iterate over empty appendable")
     }
@@ -1523,7 +1523,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
       val i    = 2
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLinesInfo(i).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val info = iter.next()
         out.append(info.lineSeq)
       }
@@ -1534,7 +1534,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     while ({ i -= 1; i >= 0 }) {
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLinesInfo(i).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val info = iter.next()
         out.append(info.lineSeq)
       }
@@ -1557,7 +1557,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
       val i    = 2
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLines(i).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val lineSeq = iter.next()
         out.append(lineSeq)
       }
@@ -1568,7 +1568,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     while ({ i -= 1; i >= 0 }) {
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLines(i).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val lineSeq = iter.next()
         out.append(lineSeq)
       }
@@ -1590,7 +1590,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val lines = new ArrayList[BasedSequence]()
     val faLines: java.lang.Iterable[BasedSequence] = fa.getLines(-1, true)
     val iter = faLines.iterator()
-    while (iter.hasNext) {
+    while (iter.hasNext()) {
       val line = iter.next()
       lines.add(line)
     }
@@ -1617,7 +1617,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
       val i    = 2
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLines(i, false).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val lineSeq = iter.next()
         out.append(lineSeq)
       }
@@ -1628,7 +1628,7 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     while ({ i -= 1; i >= 0 }) {
       val out  = new java.lang.StringBuilder()
       val iter = fa.getLines(i, false).iterator()
-      while (iter.hasNext) {
+      while (iter.hasNext()) {
         val lineSeq = iter.next()
         out.append(lineSeq)
       }
@@ -1829,23 +1829,23 @@ final class LineAppendableImplSuite extends munit.FunSuite {
     val mapped = sequence.toMapped(SpaceMapper.toNonBreakSpace)
     fa.append(mapped)
     val info        = fa.getLineInfo(0)
-    val lineBuilder = sequence.getBuilder.asInstanceOf[SequenceBuilder].append(info.getLine)
+    val lineBuilder = sequence.getBuilder().asInstanceOf[SequenceBuilder].append(info.getLine)
     assertEquals(
       lineBuilder.toStringWithRanges(true),
       "\u27e6\u27e7> \u27e6[simLink\u27e7\u00a0\u27e6spaced](simLink.md)\u27e7\\n\u27e6\u27e7"
     )
 
-    val lineBuilder2 = sequence.getBuilder.asInstanceOf[SequenceBuilder].append(info.getLineNoEOL)
+    val lineBuilder2 = sequence.getBuilder().asInstanceOf[SequenceBuilder].append(info.getLineNoEOL)
     assertEquals(lineBuilder2.toStringWithRanges(true), "\u27e6\u27e7> \u27e6[simLink\u27e7\u00a0\u27e6spaced](simLink.md)\u27e7")
 
     val actual = BasedSequence.of(fa.toSequence(0, -1))
     assertEquals(actual.toString, "> [simLink\u00A0spaced](simLink.md)")
-    val actualBuilder = sequence.getBuilder.asInstanceOf[SequenceBuilder].append(actual)
+    val actualBuilder = sequence.getBuilder().asInstanceOf[SequenceBuilder].append(actual)
     assertEquals(actualBuilder.toStringWithRanges(true), "\u27e6\u27e7> \u27e6[simLink\u27e7\u00A0\u27e6spaced](simLink.md)\u27e7")
 
     val actualSpc = actual.toMapped(SpaceMapper.fromNonBreakSpace)
     assertEquals(actualSpc.toString, "> [simLink spaced](simLink.md)")
-    val actualSpcBuilder = sequence.getBuilder.asInstanceOf[SequenceBuilder].append(actualSpc)
+    val actualSpcBuilder = sequence.getBuilder().asInstanceOf[SequenceBuilder].append(actualSpc)
     assertEquals(actualSpcBuilder.toStringWithRanges(true), "\u27e6\u27e7> \u27e6[simLink spaced](simLink.md)\u27e7")
   }
 }

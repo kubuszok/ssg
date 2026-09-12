@@ -28,7 +28,8 @@ final class ComboStrikethroughSpecTest extends RendererSpecTestSuite {
 object ComboStrikethroughSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gfm/strikethrough/test/ext_gfm_strikethrough_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboStrikethroughSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 0).set(Parser.EXTENSIONS, Collections.singleton(StrikethroughExtension.create())).toImmutable()
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(0)).set(Parser.EXTENSIONS, Collections.singleton(StrikethroughExtension.create())).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()

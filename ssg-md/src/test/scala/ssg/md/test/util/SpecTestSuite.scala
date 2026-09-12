@@ -25,7 +25,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
   def specResource: ResourceLocation
 
   /** Default data options for parsing/rendering. */
-  def defaultOptions: Nullable[DataHolder] = Nullable.empty
+  def defaultOptions: Nullable[DataHolder] = null
 
   /** Whether to use compound (hierarchical) section names. */
   def compoundSections: Boolean = true
@@ -68,7 +68,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
   protected def renderHtml(example: SpecExample, options: DataHolder): String
 
   /** Optionally render AST — subclasses override if needed. */
-  protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = Nullable.empty
+  protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = null
 
   // Read spec file and register tests
   private lazy val specReader: SpecReader = {

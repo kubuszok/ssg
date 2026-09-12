@@ -80,9 +80,9 @@ object TemplateReader {
   val ENTRY_START: String = "```````````````````````````````` template"
   val ENTRY_BREAK: String = "````````````````````````````````"
 
-  def readEntries(): ju.List[TemplateEntry] = readEntries(Nullable.empty, Nullable.empty)
+  def readEntries(): ju.List[TemplateEntry] = readEntries(null, null)
 
-  def readEntries(resource: Nullable[String]): ju.List[TemplateEntry] = readEntries(resource, Nullable.empty)
+  def readEntries(resource: Nullable[String]): ju.List[TemplateEntry] = readEntries(resource, null)
 
   def readEntries(resource: Nullable[String], readerFactory: Nullable[TemplateReaderFactory]): ju.List[TemplateEntry] =
     try {
@@ -94,20 +94,20 @@ object TemplateReader {
         throw new RuntimeException(e)
     }
 
-  def readExamplesAsString(): ju.List[String] = readExamplesAsString(Nullable.empty, Nullable.empty)
+  def readExamplesAsString(): ju.List[String] = readExamplesAsString(null, null)
 
-  def readExamplesAsString(resource: Nullable[String]): ju.List[String] = readExamplesAsString(resource, Nullable.empty)
+  def readExamplesAsString(resource: Nullable[String]): ju.List[String] = readExamplesAsString(resource, null)
 
   def readExamplesAsString(resource: Nullable[String], readerFactory: Nullable[TemplateReaderFactory]): ju.List[String] = {
     val entries = readEntries(resource, readerFactory)
     val result  = new ju.ArrayList[String]()
     val iter    = entries.iterator()
-    while (iter.hasNext)
+    while (iter.hasNext())
       result.add(iter.next().source)
     result
   }
 
-  def readSpec(): String = readSpec(Nullable.empty)
+  def readSpec(): String = readSpec(null)
 
   def readSpec(resource: Nullable[String]): String = {
     val sb = new StringBuilder()
@@ -126,7 +126,7 @@ object TemplateReader {
     }
   }
 
-  def getSpecInputStream(): InputStream = getSpecInputStream(Nullable.empty)
+  def getSpecInputStream(): InputStream = getSpecInputStream(null)
 
   def getSpecInputStream(resource: Nullable[String]): InputStream = {
     val specPath = resource.getOrElse("/template.txt")

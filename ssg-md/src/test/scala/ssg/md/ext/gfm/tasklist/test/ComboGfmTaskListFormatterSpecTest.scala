@@ -32,11 +32,14 @@ final class ComboGfmTaskListFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboGfmTaskListFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gfm/tasklist/test/ext_gfm_tasklist_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboGfmTaskListFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TaskListExtension.create())).set(Parser.BLANK_LINES_IN_AST, true).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(TaskListExtension.create())).set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-suffix-content", new MutableDataSet().set(Parser.LISTS_ITEM_CONTENT_AFTER_SUFFIX, true).toImmutable())
+    map.put(
+      "no-suffix-content",
+      new MutableDataSet().set(Parser.LISTS_ITEM_CONTENT_AFTER_SUFFIX, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "task-case-as-is",
       new MutableDataSet().set(TaskListExtension.FORMAT_LIST_ITEM_CASE, TaskListItemCase.AS_IS).toImmutable()
@@ -69,18 +72,25 @@ object ComboGfmTaskListFormatterSpecTest {
       "task-placement-complete-nested-to-non-task",
       new MutableDataSet().set(TaskListExtension.FORMAT_LIST_ITEM_PLACEMENT, TaskListItemPlacement.COMPLETE_NESTED_TO_NON_TASK).toImmutable()
     )
-    map.put("remove-empty-items", new MutableDataSet().set(Formatter.LIST_REMOVE_EMPTY_ITEMS, true).toImmutable())
+    map.put(
+      "remove-empty-items",
+      new MutableDataSet().set(Formatter.LIST_REMOVE_EMPTY_ITEMS, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "prioritized-tasks",
-      new MutableDataSet().set(TaskListExtension.FORMAT_PRIORITIZED_TASK_ITEMS, true).set(Parser.LISTS_DELIMITER_MISMATCH_TO_NEW_LIST, false).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+      new MutableDataSet()
+        .set(TaskListExtension.FORMAT_PRIORITIZED_TASK_ITEMS, java.lang.Boolean.valueOf(true))
+        .set(Parser.LISTS_DELIMITER_MISMATCH_TO_NEW_LIST, java.lang.Boolean.valueOf(false))
+        .set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false))
+        .toImmutable()
     )
     map.put(
       "ordered-task-item-priority-high",
-      new MutableDataSet().set(TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY, 1).toImmutable()
+      new MutableDataSet().set(TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY, java.lang.Integer.valueOf(1)).toImmutable()
     )
     map.put(
       "ordered-task-item-priority-normal",
-      new MutableDataSet().set(TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY, 0).toImmutable()
+      new MutableDataSet().set(TaskListExtension.FORMAT_ORDERED_TASK_ITEM_PRIORITY, java.lang.Integer.valueOf(0)).toImmutable()
     )
     map.put(
       "ordered-task-item-priority-low",

@@ -77,7 +77,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
 
   /* Convenience functions for those tests that do not have an example */
   final protected def assertRendering(source: String, html: String): Unit =
-    assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, Nullable.empty))
+    assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, null))
 
   final protected def assertRendering(source: String, html: String, ast: Nullable[String]): Unit =
     assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, ast))
@@ -105,7 +105,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
     }
     val render = System.nanoTime()
 
-    val ast: Nullable[String] = if (expectedAst.isEmpty) Nullable.empty else exampleRenderer.getAst.get
+    val ast: Nullable[String] = if (expectedAst.isEmpty) null else exampleRenderer.getAst.get
     val embedTimed = TestUtils.EMBED_TIMED.get(exampleRenderer.options.get)
 
     val formattedTimingInfo = TestUtils.getFormattedTimingInfo(iterations, specExampleParse.startTime, specExampleParse.parseTime, render)

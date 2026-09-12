@@ -126,7 +126,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  context.getHtmlWriter.text("test")
+                  context.getHtmlWriter().text("test")
               }
             )
           )
@@ -150,7 +150,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                    context.getHtmlWriter().text("test")
                   } else {
                     context.delegateRender()
                   }
@@ -180,14 +180,14 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                    context.getHtmlWriter().text("test")
                   } else {
                     val subContext = context.getDelegatedSubContext(true)
                     if (node.text.equals("raw")) {
                       subContext.doNotRenderLinks()
                     }
                     subContext.delegateRender()
-                    val s = subContext.getHtmlWriter.asInstanceOf[LineAppendable].toString(-1, -1)
+                    val s = subContext.getHtmlWriter().asInstanceOf[LineAppendable].toString(-1, -1)
                     html.raw(s)
                   }
               }
@@ -222,9 +222,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                    context.getHtmlWriter().text("test")
                   } else if (node.text.equals("bars")) {
-                    context.getHtmlWriter.text("tests")
+                    context.getHtmlWriter().text("tests")
                   } else {
                     context.delegateRender()
                   }
@@ -245,7 +245,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("testing")
+                    context.getHtmlWriter().text("testing")
                   } else {
                     context.delegateRender()
                   }
@@ -282,9 +282,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                    context.getHtmlWriter().text("test")
                   } else if (node.text.equals("bars")) {
-                    context.getHtmlWriter.text("tests")
+                    context.getHtmlWriter().text("tests")
                   } else {
                     context.delegateRender()
                   }
@@ -305,7 +305,7 @@ final class HtmlRendererSuite extends munit.FunSuite {
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
                   if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("testing")
+                    context.getHtmlWriter().text("testing")
                   } else {
                     context.delegateRender()
                   }
@@ -378,9 +378,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
     val rendered1 = renderer1.render(parse("foo [bar](/url)"))
     val rendered2 = renderer2.render(parse("foo [bar](/url)"))
 
-    assertEquals(rendered, "<p>foo <a href=\"www.url.com/url\">bar</a></p>\n")
-    assertEquals(rendered1, "<p>foo <a href=\"www.url.com/url1\">bar</a></p>\n")
-    assertEquals(rendered2, "<p>foo <a href=\"www.url.com/url2\">bar</a></p>\n")
+    assertEquals(rendered, "<p>foo <a href=\"www.getUrl().com/url\">bar</a></p>\n")
+    assertEquals(rendered1, "<p>foo <a href=\"www.getUrl().com/url1\">bar</a></p>\n")
+    assertEquals(rendered2, "<p>foo <a href=\"www.getUrl().com/url2\">bar</a></p>\n")
   }
 
   // Helper methods
@@ -408,8 +408,8 @@ final class HtmlRendererSuite extends munit.FunSuite {
     override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink =
       node match {
         case linkNode: Link =>
-          if (linkNode.url.equals("/url")) {
-            link.withUrl("www.url.com" + docUrl)
+          if (linkNode.getUrl().equals("/url")) {
+            link.withUrl("www.getUrl().com" + docUrl)
           } else {
             link
           }

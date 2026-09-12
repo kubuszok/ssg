@@ -40,7 +40,7 @@ object SpecExampleRenderer {
 
     override def includeExampleInfo: Boolean = false
 
-    override def options: Nullable[DataHolder] = Nullable.empty
+    override def options: Nullable[DataHolder] = null
 
     override def includeDocument(includedText: String): Unit = {}
 
@@ -52,7 +52,7 @@ object SpecExampleRenderer {
 
     override def getHtml: String = ""
 
-    override def getAst: Nullable[String] = Nullable.empty
+    override def getAst: Nullable[String] = null
 
     override def finalizeRender(): Unit = {}
   }

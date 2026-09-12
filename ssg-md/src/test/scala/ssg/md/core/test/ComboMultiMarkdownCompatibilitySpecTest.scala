@@ -35,7 +35,7 @@ object ComboMultiMarkdownCompatibilitySpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_multi_markdown_compatibility_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMultiMarkdownCompatibilitySpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.MULTI_MARKDOWN).set(HtmlRenderer.INDENT_SIZE, 4).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet().setFrom(ParserEmulationProfile.MULTI_MARKDOWN).set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(4)).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =

@@ -12,7 +12,7 @@ import java.util.function.BiFunction
 final class BoundedMinAggregatorSuite extends munit.FunSuite {
 
   private def reduce(aggregator: BiFunction[Nullable[Integer], Nullable[Integer], Nullable[Integer]], items: Nullable[Integer]*): Nullable[Integer] = {
-    var aggregate: Nullable[Integer] = Nullable.empty
+    var aggregate: Nullable[Integer] = null
     for (item <- items)
       aggregate = aggregator.apply(aggregate, item)
     aggregate
@@ -20,7 +20,7 @@ final class BoundedMinAggregatorSuite extends munit.FunSuite {
 
   test("test_Basic") {
     assert(reduce(new BoundedMinAggregator(3)).isEmpty)
-    assert(reduce(new BoundedMinAggregator(3), Nullable.empty).isEmpty)
+    assert(reduce(new BoundedMinAggregator(3), null).isEmpty)
     assertEquals(
       reduce(
         new BoundedMinAggregator(3),

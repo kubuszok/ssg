@@ -32,9 +32,15 @@ object ComboGfmTaskListSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-suffix-content", new MutableDataSet().set(Parser.LISTS_ITEM_CONTENT_AFTER_SUFFIX, true).toImmutable())
-    map.put("marker-space", new MutableDataSet().set(Parser.LISTS_ITEM_MARKER_SPACE, true).toImmutable())
-    map.put("src-pos-lines", new MutableDataSet().set(HtmlRenderer.SOURCE_POSITION_PARAGRAPH_LINES, true).toImmutable())
+    map.put(
+      "no-suffix-content",
+      new MutableDataSet().set(Parser.LISTS_ITEM_CONTENT_AFTER_SUFFIX, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put("marker-space", new MutableDataSet().set(Parser.LISTS_ITEM_MARKER_SPACE, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put(
+      "src-pos-lines",
+      new MutableDataSet().set(HtmlRenderer.SOURCE_POSITION_PARAGRAPH_LINES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put("item-class", new MutableDataSet().set(TaskListExtension.TIGHT_ITEM_CLASS, "").toImmutable())
     map.put("loose-class", new MutableDataSet().set(TaskListExtension.LOOSE_ITEM_CLASS, "").toImmutable())
     map.put("closed-item-class", new MutableDataSet().set(TaskListExtension.ITEM_DONE_CLASS, "closed-task").toImmutable())
@@ -45,7 +51,10 @@ object ComboGfmTaskListSpecTest {
       "not-done",
       new MutableDataSet().set(TaskListExtension.ITEM_NOT_DONE_MARKER, "<span class=\"taskitem\">O</span>").toImmutable()
     )
-    map.put("no-ordered-items", new MutableDataSet().set(Parser.LISTS_NUMBERED_ITEM_MARKER_SUFFIXED, false).toImmutable())
+    map.put(
+      "no-ordered-items",
+      new MutableDataSet().set(Parser.LISTS_NUMBERED_ITEM_MARKER_SUFFIXED, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map.put(
       "kramdown",
       new MutableDataSet().setFrom(ParserEmulationProfile.KRAMDOWN).set(Parser.EXTENSIONS, Collections.singleton(TaskListExtension.create())).toImmutable()

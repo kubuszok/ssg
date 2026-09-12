@@ -460,7 +460,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
 
   test("splitBasic") {
     val sequence = basedSequenceOf(" 1,2 , 3 ,4,5,   ").subSequence(0, " 1,2 , 3 ,4,5,   ".length)
-    val list     = sequence.split(",", 0, SequenceUtils.SPLIT_TRIM_PARTS | SequenceUtils.SPLIT_SKIP_EMPTY, ssg.md.Nullable.empty[CharPredicate])
+    val list     = sequence.split(",", 0, SequenceUtils.SPLIT_TRIM_PARTS | SequenceUtils.SPLIT_SKIP_EMPTY, ssg.md.null)
     val sl       = new ArrayList[String](list.length)
     for (bs <- list) sl.add(bs.toString)
     assertEquals(sl.toArray(new Array[String](0)).toSeq, Seq("1", "2", "3", "4", "5"))
@@ -468,7 +468,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
 
   test("splitEol") {
     val sequence = basedSequenceOf("   line1 \nline2 \n line3 \n").subSequence(0, "   line1 \nline2 \n line3 \n".length)
-    val list     = sequence.split("\n", 0, SequenceUtils.SPLIT_INCLUDE_DELIMS, ssg.md.Nullable.empty[CharPredicate])
+    val list     = sequence.split("\n", 0, SequenceUtils.SPLIT_INCLUDE_DELIMS, ssg.md.null)
     val sl       = new ArrayList[String](list.length)
     for (bs <- list) sl.add(bs.toString)
     assertEquals(sl.toArray(new Array[String](0)).toSeq, Seq("   line1 \n", "line2 \n", " line3 \n"))
@@ -1050,7 +1050,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
   test("replacePrefix11") {
     val input    = "0123456789"
     val sequence = basedSequenceOf(input)
-    val builder:  SequenceBuilder     = sequence.getBuilder[SequenceBuilder]
+    val builder:  SequenceBuilder     = sequence.getBuilder()[SequenceBuilder]
     val segments: BasedSegmentBuilder = builder.segmentBuilder
 
     segments.append(Range.of(0, 0))
@@ -1534,9 +1534,9 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val input = "[simLink spaced](simLink.md)"
     val sequence: BasedSequence = BasedSequence.of(input)
     val mapped = sequence.toMapped(SpaceMapper.toNonBreakSpace)
-    val appended: BasedSequence = sequence.getBuilder[SequenceBuilder].append("> ").append(mapped).append("\n").toSequence
+    val appended: BasedSequence = sequence.getBuilder()[SequenceBuilder].append("> ").append(mapped).append("\n").toSequence
     assertEquals(appended.toString, "> [simLink spaced](simLink.md)\n")
-    val appendedBuilder: SequenceBuilder = sequence.getBuilder[SequenceBuilder].append(appended)
+    val appendedBuilder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder].append(appended)
     assertEquals(
       appendedBuilder.toStringWithRanges(true),
       "\u27E6\u27E7> \u27E6[simLink\u27E7 \u27E6spaced](simLink.md)\u27E7\\n\u27E6\u27E7"
@@ -1545,7 +1545,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val appendedSub = appended.trimEOL()
     assertEquals(appendedSub.toString, "> [simLink spaced](simLink.md)")
 
-    val appendedSubBuilder: SequenceBuilder = sequence.getBuilder[SequenceBuilder].append(appendedSub)
+    val appendedSubBuilder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder].append(appendedSub)
     assertEquals(appendedSubBuilder.toStringWithRanges(true), "\u27E6\u27E7> \u27E6[simLink\u27E7 \u27E6spaced](simLink.md)\u27E7")
   }
 }

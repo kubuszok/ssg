@@ -55,12 +55,18 @@ object ComboAttributesTranslationFormatterSpecTest {
           Parser.EXTENSIONS,
           Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create())
         )
-        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
-        .set(HtmlRenderer.RENDER_HEADER_ID, false)
+        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(false))
         .toImmutable()
     )
-    map.put("text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true).toImmutable())
-    map.put("no-text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, false).toImmutable())
+    map.put(
+      "text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map
   }
 }

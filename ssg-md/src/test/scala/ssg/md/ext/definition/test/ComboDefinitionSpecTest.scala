@@ -31,12 +31,19 @@ object ComboDefinitionSpecTest {
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("blank-lines-in-ast", new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, true).toImmutable())
-    map.put("no-auto-loose", new MutableDataSet().set(Parser.LISTS_AUTO_LOOSE, false).toImmutable())
-    map.put("break-list", new MutableDataSet().set(DefinitionExtension.DOUBLE_BLANK_LINE_BREAKS_LIST, true).toImmutable())
+    map.put("blank-lines-in-ast", new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true)).toImmutable())
+    map.put("no-auto-loose", new MutableDataSet().set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable())
+    map.put(
+      "break-list",
+      new MutableDataSet().set(DefinitionExtension.DOUBLE_BLANK_LINE_BREAKS_LIST, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
     map.put(
       "suppress-format-eol",
-      new MutableDataSet().set(HtmlRenderer.HTML_BLOCK_OPEN_TAG_EOL, false).set(HtmlRenderer.HTML_BLOCK_CLOSE_TAG_EOL, false).set(HtmlRenderer.INDENT_SIZE, 0).toImmutable()
+      new MutableDataSet()
+        .set(HtmlRenderer.HTML_BLOCK_OPEN_TAG_EOL, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.HTML_BLOCK_CLOSE_TAG_EOL, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(0))
+        .toImmutable()
     )
     map
   }

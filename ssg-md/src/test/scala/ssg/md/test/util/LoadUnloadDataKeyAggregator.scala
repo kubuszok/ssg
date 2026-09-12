@@ -68,7 +68,7 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
       combined
     }
 
-  override def invokeAfterSet(): Nullable[Set[Class[?]]] = Nullable.empty
+  override def invokeAfterSet(): Nullable[Set[Class[?]]] = null
 }
 
 object LoadUnloadDataKeyAggregator {

@@ -28,5 +28,5 @@ final class ComboGitLabFormatterSpecTest extends FormatterSpecTestSuite {
 object ComboGitLabFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/gitlab/test/ext_gitlab_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboGitLabFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(GitLabExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable()
+  val OPTIONS: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(GitLabExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 }

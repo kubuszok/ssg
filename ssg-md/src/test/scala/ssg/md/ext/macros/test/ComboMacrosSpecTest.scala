@@ -32,11 +32,11 @@ object ComboMacrosSpecTest {
   // Note: original OPTIONS is not .toImmutable() — but we call .toImmutable() for consistency
   val OPTIONS: DataHolder = new MutableDataSet()
     .set(Parser.EXTENSIONS, Arrays.asList(MacrosExtension.create(), GitLabExtension.create(), TablesExtension.create()))
-    .set(GitLabExtension.RENDER_BLOCK_MATH, false)
-    .set(GitLabExtension.RENDER_BLOCK_MERMAID, false)
-    .set(GitLabExtension.DEL_PARSER, false)
-    .set(GitLabExtension.INS_PARSER, false)
-    .set(GitLabExtension.RENDER_VIDEO_IMAGES, false)
+    .set(GitLabExtension.RENDER_BLOCK_MATH, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.RENDER_BLOCK_MERMAID, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.DEL_PARSER, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.INS_PARSER, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.RENDER_VIDEO_IMAGES, java.lang.Boolean.valueOf(false))
     .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {

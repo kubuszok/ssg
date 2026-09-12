@@ -20,7 +20,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
     val params = new Array[String](spans.size())
     var i      = 0
     val iter   = spans.iterator()
-    while (iter.hasNext) {
+    while (iter.hasNext()) {
       val span = iter.next()
       params(i) = span(0)
       i += 1

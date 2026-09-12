@@ -80,7 +80,7 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
 
     val actual = paragraph.wrapText()
 
-    val builder: SequenceBuilder = sequence.getBuilder
+    val builder: SequenceBuilder = sequence.getBuilder()
     actual.addSegments(builder.segmentBuilder)
 
     val trackedOffsets = paragraph.getTrackedOffsets.asScala.toList
@@ -113,7 +113,7 @@ object ComboParagraphFormatterSpecTest {
   val FIRST_WIDTH_DELTA: DataKey[Int] = new DataKey[Int]("FIRST_WIDTH_DELTA", 0)
 
   val OPTIONS: DataHolder = new MutableDataSet()
-    .set(SharedDataKeys.RUNNING_TESTS, false) // Set to true to get stdout printout of intermediate wrapping information
+    .set(SharedDataKeys.RUNNING_TESTS, java.lang.Boolean.valueOf(false)) // Set to true to get stdout printout of intermediate wrapping information
     .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {

@@ -26,7 +26,7 @@ final class AsideParserTest extends munit.FunSuite {
 
     boundary {
       for (handler <- handlers)
-        if (handler.escape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.escape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }
@@ -38,7 +38,7 @@ final class AsideParserTest extends munit.FunSuite {
 
     boundary {
       for (handler <- handlers)
-        if (handler.unEscape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.unEscape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }

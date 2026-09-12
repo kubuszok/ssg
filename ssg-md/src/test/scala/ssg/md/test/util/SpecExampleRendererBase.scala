@@ -23,8 +23,8 @@ abstract class SpecExampleRendererBase(
 
   protected val myOptions:    DataHolder       = exampleOptions.fold(new DataSet().asInstanceOf[DataHolder])(_.toImmutable())
   private var myIsFinalized:  Boolean          = false
-  private var myRenderedHtml: Nullable[String] = Nullable.empty
-  private var myRenderedAst:  Nullable[String] = Nullable.empty
+  private var myRenderedHtml: Nullable[String] = null
+  private var myRenderedAst:  Nullable[String] = null
 
   def isFinalized: Boolean = myIsFinalized
 

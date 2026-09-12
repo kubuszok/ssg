@@ -17,7 +17,7 @@ final class TrackedOffsetListSuite extends munit.FunSuite {
     val result = new Array[Int](trackedOffsets.size())
     var i      = 0
     val iter   = trackedOffsets.iterator()
-    while (iter.hasNext) {
+    while (iter.hasNext()) {
       result(i) = iter.next().offset
       i += 1
     }
