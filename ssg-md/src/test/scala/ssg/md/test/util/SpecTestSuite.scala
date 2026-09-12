@@ -76,7 +76,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
     reader
   }
 
-  private lazy val examples: List[SpecExample] = specReader.getExamples.asScala.toList
+  private lazy val examples: List[SpecExample] = specReader.getExamples.iterator().asScala.toList
 
   // Register all spec examples as individual tests
   examples.foreach { example =>

@@ -15,7 +15,6 @@ import ssg.md.util.ast.Document
 import ssg.md.util.data.{ DataHolder, DataKey, DataSet, MutableDataSet }
 
 import java.{ util => ju }
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 /** munit suite for Translation Formatter spec tests.
@@ -150,7 +149,7 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
       out.append("- Partial ----------------\n")
     }
 
-    handler.setTranslatedTexts(translatedTexts.asScala.toBuffer)
+    handler.setTranslatedTexts { import scala.jdk.CollectionConverters.*; translatedTexts.asScala.toBuffer }
     val partial = formatter.translationRender(document, handler, RenderPurpose.TRANSLATED_SPANS)
 
     if (showIntermediate) {
