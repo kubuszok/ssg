@@ -7,7 +7,6 @@ package ext
 package aside
 package test
 
-import ssg.md.Nullable
 import ssg.md.ext.aside.AsideExtension
 import ssg.md.parser.Parser
 import ssg.md.util.sequence.BasedSequence

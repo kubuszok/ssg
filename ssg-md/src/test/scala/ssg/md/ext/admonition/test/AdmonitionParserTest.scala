@@ -7,7 +7,6 @@ package ext
 package admonition
 package test
 
-import ssg.md.Nullable
 import ssg.md.ext.admonition.AdmonitionExtension
 import ssg.md.parser.Parser
 import ssg.md.util.sequence.BasedSequence
