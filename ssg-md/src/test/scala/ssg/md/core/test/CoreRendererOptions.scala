@@ -12,7 +12,6 @@ package md
 package core
 package test
 
-import ssg.md.Nullable
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.md.util.ast.KeepType

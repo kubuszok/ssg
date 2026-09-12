@@ -337,7 +337,8 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     Compile / sourceGenerators += Def.task {
       BalticPorterGen.generateFlexmarkExt((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/ported/ssg-md.*/src_managed/.*:s"
+    scalacOptions += "-Wconf:src=.*/ported/ssg-md.*/src_managed/.*:s",
+    Test / scalacOptions += "-language:implicitConversions"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
