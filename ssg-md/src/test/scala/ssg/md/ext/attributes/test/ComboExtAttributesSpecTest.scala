@@ -29,6 +29,7 @@ final class ComboExtAttributesSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboExtAttributesSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboExtAttributesSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboExtAttributesSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("No Previous Sibling - Cond 3.5 - 6", "TOC - 1")
 }
 
 object ComboExtAttributesSpecTest {

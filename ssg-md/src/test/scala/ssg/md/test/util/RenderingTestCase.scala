@@ -20,17 +20,17 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
   val IGNORE:            DataKey[java.lang.Boolean] = TestUtils.IGNORE
   val FAIL:              DataKey[java.lang.Boolean] = TestUtils.FAIL
   val NO_FILE_EOL:       DataKey[java.lang.Boolean] = TestUtils.NO_FILE_EOL
-  val TIMED_ITERATIONS:  DataKey[java.lang.Integer]     = TestUtils.TIMED_ITERATIONS
+  val TIMED_ITERATIONS:  DataKey[java.lang.Integer] = TestUtils.TIMED_ITERATIONS
   val EMBED_TIMED:       DataKey[java.lang.Boolean] = TestUtils.EMBED_TIMED
   val TIMED:             DataKey[java.lang.Boolean] = TestUtils.TIMED
-  val INCLUDED_DOCUMENT: DataKey[String]  = TestUtils.INCLUDED_DOCUMENT
-  val SOURCE_PREFIX:     DataKey[String]  = TestUtils.SOURCE_PREFIX
-  val SOURCE_SUFFIX:     DataKey[String]  = TestUtils.SOURCE_SUFFIX
-  val SOURCE_INDENT:     DataKey[String]  = TestUtils.SOURCE_INDENT
+  val INCLUDED_DOCUMENT: DataKey[String]            = TestUtils.INCLUDED_DOCUMENT
+  val SOURCE_PREFIX:     DataKey[String]            = TestUtils.SOURCE_PREFIX
+  val SOURCE_SUFFIX:     DataKey[String]            = TestUtils.SOURCE_SUFFIX
+  val SOURCE_INDENT:     DataKey[String]            = TestUtils.SOURCE_INDENT
 
-  val NO_FILE_EOL_FALSE: DataHolder                                    = TestUtils.NO_FILE_EOL_FALSE
-  val UNLOAD_EXTENSIONS: DataKey[ju.Collection[Class[? <: Extension]]] = TestUtils.UNLOAD_EXTENSIONS
-  val LOAD_EXTENSIONS:   DataKey[ju.Collection[Extension]]             = TestUtils.LOAD_EXTENSIONS
+  val NO_FILE_EOL_FALSE: DataHolder                                              = TestUtils.NO_FILE_EOL_FALSE
+  val UNLOAD_EXTENSIONS: DataKey[ju.Collection[Class[? <: Extension]]]           = TestUtils.UNLOAD_EXTENSIONS
+  val LOAD_EXTENSIONS:   DataKey[ju.Collection[Extension]]                       = TestUtils.LOAD_EXTENSIONS
   val EXTENSIONS:        DataKey[balticporter.runtime.JavaCollection[Extension]] = SharedDataKeys.EXTENSIONS
 
   // JUnit 4: @Rule ExpectedException — stubbed, will need adaptation to munit later

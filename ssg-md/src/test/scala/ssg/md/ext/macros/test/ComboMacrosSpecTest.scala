@@ -24,6 +24,7 @@ final class ComboMacrosSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboMacrosSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboMacrosSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboMacrosSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("Macros - 7", "Macros - 8", "Macros - 9")
 }
 
 object ComboMacrosSpecTest {

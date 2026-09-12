@@ -27,7 +27,7 @@ class SpecReader(
   protected var lastSectionLevel: Int                     = 1
 
   protected var state:             SpecReader.State        = SpecReader.State.BEFORE
-  protected var section:           Nullable[String] = Nullable.empty[String]
+  protected var section:           Nullable[String]        = Nullable.empty[String]
   protected var optionsSet:        String                  = ""
   protected var source:            StringBuilder           = new StringBuilder()
   protected var html:              StringBuilder           = new StringBuilder()

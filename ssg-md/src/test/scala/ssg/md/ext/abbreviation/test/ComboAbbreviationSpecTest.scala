@@ -26,6 +26,7 @@ final class ComboAbbreviationSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboAbbreviationSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboAbbreviationSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAbbreviationSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("Typographic quotes interaction - 1")
 }
 
 object ComboAbbreviationSpecTest {

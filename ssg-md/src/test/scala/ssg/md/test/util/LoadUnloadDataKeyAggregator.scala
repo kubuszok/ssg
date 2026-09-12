@@ -28,7 +28,8 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
           for (ext <- extensions) resolvedExtensions.add(ext)
           resolvedExtensions.addAll(loadExtensions)
           resolvedExtensions.removeIf((extension: Extension) => unloadExtensions.contains(extension.getClass))
-          combined.toMutable()
+          combined
+            .toMutable()
             .remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS)
             .remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
             .set(SharedDataKeys.EXTENSIONS, new ju.ArrayList[Extension](resolvedExtensions).asInstanceOf[ju.Collection[Extension]])

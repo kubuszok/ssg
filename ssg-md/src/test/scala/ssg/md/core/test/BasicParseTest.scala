@@ -22,7 +22,7 @@ final class BasicParseTest extends munit.FunSuite {
   test("block parser factories are registered") {
     // Check that core block parser factories are actually created
     val options   = new ssg.md.util.data.MutableDataSet().toImmutable()
-    val factories = ssg.md.parser.internal.DocumentParser.calculateBlockParserFactories(options, Nil)
+    val factories = ssg.md.parser.internal.DocumentParser.calculateBlockParserFactories(options, scala.collection.mutable.Buffer.empty)
     println(s"Number of block parser factories: ${factories.size}")
     factories.foreach(f => println(s"  Factory: ${f.getClass.getSimpleName}"))
     assert(factories.nonEmpty, "Block parser factories should not be empty")

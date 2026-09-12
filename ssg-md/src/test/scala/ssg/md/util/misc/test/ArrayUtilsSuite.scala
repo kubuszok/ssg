@@ -5,6 +5,7 @@ package util
 package misc
 package test
 
+import ssg.md.Nullable
 import java.util.BitSet
 import java.util.Objects
 
@@ -64,18 +65,18 @@ final class ArrayUtilsSuite extends munit.FunSuite {
       0 // 12
     )
 
-    assert(ArrayUtils.firstOf(ints, (i: Integer) => i != null && i == 6).isEmpty)
-    assertEquals(ArrayUtils.firstOf(ints, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.firstOf(ints, 1, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
+    assert(Nullable(ArrayUtils.firstOf(ints, (i: Integer) => i != null && i == 6)).isEmpty)
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 1, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 2, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
     // Objects.isNull() returns the null element itself, which is null
     assert(
-      ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i)).get == null
+      Nullable(ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i))).isEmpty || Nullable(ArrayUtils.firstOf(ints, 0, (i: Integer) => Objects.isNull(i))).get == null
     )
-    assertEquals(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 5).get, Integer.valueOf(5))
-    assertEquals(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 0).get, Integer.valueOf(0))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 5)).get, Integer.valueOf(5))
+    assertEquals(Nullable(ArrayUtils.firstOf(ints, 0, (i: Integer) => i != null && i == 0)).get, Integer.valueOf(0))
   }
 
   test("test_lastIndexOf") {
@@ -133,34 +134,34 @@ final class ArrayUtilsSuite extends munit.FunSuite {
       0 // 12
     )
 
-    assert(ArrayUtils.lastOf(ints, (i: Integer) => i != null && i == 6).isEmpty)
-    assertEquals(ArrayUtils.lastOf(ints, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.lastOf(ints, 7, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.lastOf(ints, 6, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.lastOf(ints, 3, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.lastOf(ints, 2, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assertEquals(ArrayUtils.lastOf(ints, 1, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
-    assert(ArrayUtils.lastOf(ints, 1, 1, (i: Integer) => i != null && i == 1).isEmpty)
-    assertEquals(ArrayUtils.lastOf(ints, 10, (i: Integer) => i != null && i == 1).get, Integer.valueOf(1))
+    assert(Nullable(ArrayUtils.lastOf(ints, (i: Integer) => i != null && i == 6)).isEmpty)
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 7, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 6, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 3, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 2, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 1, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
+    assert(Nullable(ArrayUtils.lastOf(ints, 1, 1, (i: Integer) => i != null && i == 1)).isEmpty)
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 10, (i: Integer) => i != null && i == 1)).get, Integer.valueOf(1))
     // lastOf finds the element at index, which is null — Nullable wraps it as empty
     assert(
-      ArrayUtils.lastOf(ints, 0, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.lastOf(ints, 0, (i: Integer) => Objects.isNull(i)).get == null
+      Nullable(ArrayUtils.lastOf(ints, 0, (i: Integer) => Objects.isNull(i))).isEmpty || Nullable(ArrayUtils.lastOf(ints, 0, (i: Integer) => Objects.isNull(i))).get == null
     )
     assert(
-      ArrayUtils.lastOf(ints, 5, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.lastOf(ints, 5, (i: Integer) => Objects.isNull(i)).get == null
+      Nullable(ArrayUtils.lastOf(ints, 5, (i: Integer) => Objects.isNull(i))).isEmpty || Nullable(ArrayUtils.lastOf(ints, 5, (i: Integer) => Objects.isNull(i))).get == null
     )
     assert(
-      ArrayUtils.lastOf(ints, 3, 5, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.lastOf(ints, 3, 5, (i: Integer) => Objects.isNull(i)).get == null
+      Nullable(ArrayUtils.lastOf(ints, 3, 5, (i: Integer) => Objects.isNull(i))).isEmpty || Nullable(ArrayUtils.lastOf(ints, 3, 5, (i: Integer) => Objects.isNull(i))).get == null
     )
     assert(
-      ArrayUtils.lastOf(ints, 4, 5, (i: Integer) => Objects.isNull(i)).isEmpty || ArrayUtils.lastOf(ints, 4, 5, (i: Integer) => Objects.isNull(i)).get == null
+      Nullable(ArrayUtils.lastOf(ints, 4, 5, (i: Integer) => Objects.isNull(i))).isEmpty || Nullable(ArrayUtils.lastOf(ints, 4, 5, (i: Integer) => Objects.isNull(i))).get == null
     )
-    assertEquals(ArrayUtils.lastOf(ints, 20, (i: Integer) => i != null && i == 5).get, Integer.valueOf(5))
-    assertEquals(ArrayUtils.lastOf(ints, 5, (i: Integer) => i != null && i == 5).get, Integer.valueOf(5))
-    assert(ArrayUtils.lastOf(ints, 4, (i: Integer) => i != null && i == 5).isEmpty)
-    assertEquals(ArrayUtils.lastOf(ints, 15, (i: Integer) => i != null && i == 0).get, Integer.valueOf(0))
-    assertEquals(ArrayUtils.lastOf(ints, 12, (i: Integer) => i != null && i == 0).get, Integer.valueOf(0))
-    assert(ArrayUtils.lastOf(ints, 11, (i: Integer) => i != null && i == 0).isEmpty)
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 20, (i: Integer) => i != null && i == 5)).get, Integer.valueOf(5))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 5, (i: Integer) => i != null && i == 5)).get, Integer.valueOf(5))
+    assert(Nullable(ArrayUtils.lastOf(ints, 4, (i: Integer) => i != null && i == 5)).isEmpty)
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 15, (i: Integer) => i != null && i == 0)).get, Integer.valueOf(0))
+    assertEquals(Nullable(ArrayUtils.lastOf(ints, 12, (i: Integer) => i != null && i == 0)).get, Integer.valueOf(0))
+    assert(Nullable(ArrayUtils.lastOf(ints, 11, (i: Integer) => i != null && i == 0)).isEmpty)
   }
 
   test("test_toArrayBitSet") {

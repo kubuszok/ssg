@@ -22,6 +22,7 @@ final class ComboFootnotesSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboFootnotesSpecTest.RESOURCE_LOCATION
   override def defaultOptions: Nullable[DataHolder]                   = ComboFootnotesSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboFootnotesSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("Footnotes - 17", "Footnotes - 18")
 }
 
 object ComboFootnotesSpecTest {

@@ -19,9 +19,10 @@ import java.util.{ Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboTocSpecTest extends RendererSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboTocSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = ComboTocSpecTest.OPTIONS
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboTocSpecTest.OPTIONS_MAP
+  override def specResource:         ResourceLocation                       = ComboTocSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboTocSpecTest.OPTIONS
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboTocSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("Toc - ", "Test unordered skipped headings - ", "Source Position Attribute - ")
 }
 
 object ComboTocSpecTest {

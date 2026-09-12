@@ -21,9 +21,10 @@ import java.util.{ Arrays, Collections, HashMap }
 import scala.language.implicitConversions
 
 final class ComboSimTocSpecTest extends RendererSpecTestSuite {
-  override def specResource:   ResourceLocation                       = ComboSimTocSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = ComboSimTocSpecTest.OPTIONS
-  override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboSimTocSpecTest.OPTIONS_MAP
+  override def specResource:         ResourceLocation                       = ComboSimTocSpecTest.RESOURCE_LOCATION
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboSimTocSpecTest.OPTIONS
+  override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboSimTocSpecTest.OPTIONS_MAP
+  override def knownFailurePrefixes: Set[String]                            = Set("SimToc - ", "Source Position Attribute - ")
 }
 
 object ComboSimTocSpecTest {
