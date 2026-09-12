@@ -309,6 +309,14 @@ object Site {
                 message = jailEx.getMessage,
                 cause = Nullable(jailEx)
               )
+            case e: RuntimeException =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Liquid,
+                severity = Severity.Error,
+                message = e.getMessage,
+                cause = Nullable(e)
+              )
           }
         }
       }
