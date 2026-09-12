@@ -85,7 +85,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     var i = 0
     while (i < iMax) {
       if (seg.isEmpty || seg.get.notInSegment(i)) {
-        seg = segTree.findSegment(i, sequence, seg)
+        seg = segTree.findSegment(i, sequence, seg.getOrElse(null.asInstanceOf[ssg.md.util.sequence.builder.tree.Segment]))
         assert(seg.isDefined)
         // System.out.println("i: " + i + " pos: " + seg.get.pos + ", seg: " + seg.get)
       }
@@ -100,7 +100,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     i = iMax - 1
     while (i >= 0) {
       if (seg.isEmpty || seg.get.notInSegment(i)) {
-        seg = segTree.findSegment(i, sequence, seg)
+        seg = segTree.findSegment(i, sequence, seg.getOrElse(null.asInstanceOf[ssg.md.util.sequence.builder.tree.Segment]))
         assert(seg.isDefined, s"i: $i")
         // System.out.println("i: " + i + " pos: " + seg.get.pos + ", seg: " + seg.get)
       }
@@ -358,8 +358,8 @@ final class SegmentTreeSuite extends munit.FunSuite {
       builder.getSegmentBuilder(),
       segRange.startIndex,
       segRange.startIndex + segRange.length,
-      segRange.getStartOffset(),
-      segRange.getEndOffset(),
+      segRange.startOffset(),
+      segRange.endOffset(),
       segRange.startPos,
       segRange.endPos
     )
@@ -398,8 +398,8 @@ final class SegmentTreeSuite extends munit.FunSuite {
       builder.getSegmentBuilder(),
       segRange.startIndex,
       segRange.startIndex + segRange.length,
-      segRange.getStartOffset(),
-      segRange.getEndOffset(),
+      segRange.startOffset(),
+      segRange.endOffset(),
       segRange.startPos,
       segRange.endPos
     )
@@ -422,7 +422,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
 
     val lines = sequence.splitListEOL(false)
 
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
       segments.append(trim.getSourceRange())
@@ -433,7 +433,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
       escapeJavaString(segments.toStringPrep()),
       "BasedSegmentBuilder{[0, 30), s=3:6, u=3:6, t=3:6, l=34, sz=8, na=8: a:2x' ', [0, 8), [9, 10), a:2x' ', [10, 18), [19, 21), a:2x' ', [21, 30) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
     assertEquals(
       segments.toStringWithRangesVisibleWhitespace(input),
       "  \u27e6  line 1\u27e7\u27e6\\n\u27e7  \u27e6  line 2\u27e7\u27e6\\n\\n\u27e7  \u27e6  line 3\\n\u27e7"
@@ -446,7 +446,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     )
 
     val segments2 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
-    segTree.addSegments(segments2, 0, segments.length, segments.startOffsetIfNeeded, segments.endOffsetIfNeeded, 0, segTree.size())
+    segTree.addSegments(segments2, 0, segments.length(), segments.getStartOffsetIfNeeded(), segments.getEndOffsetIfNeeded(), 0, segTree.size())
 
     assertEquals(
       escapeJavaString(segments2.toStringPrep()),
@@ -471,7 +471,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
 
     val lines = sequence.splitListEOL(false)
 
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
       segments.append(trim.getSourceRange())
@@ -482,7 +482,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
       escapeJavaString(segments.toStringPrep()),
       "BasedSegmentBuilder{[0, 30), s=3:6, u=3:6, t=3:6, l=34, sz=8, na=8: a:2x' ', [0, 8), [9, 10), a:2x' ', [10, 18), [19, 21), a:2x' ', [21, 30) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
     assertEquals(
       segments.toStringWithRangesVisibleWhitespace(input),
       "  \u27e6  line 1\u27e7\u27e6\\n\u27e7  \u27e6  line 2\u27e7\u27e6\\n\\n\u27e7  \u27e6  line 3\\n\u27e7"
@@ -496,7 +496,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
 
     val segments3 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
     val sequence1 = SegmentedSequenceFull.create(sequence, segments)
-    val sequence2 = sequence1.subSequence(10, segments.length - 10)
+    val sequence2 = sequence1.subSequence(10, segments.length() - 10)
     assertEquals(sequence2.toVisibleWhitespaceString(), "\\n    line 2\\n\\n ")
     sequence2.addSegments(segments3)
     assertEquals(
@@ -509,7 +509,7 @@ final class SegmentTreeSuite extends munit.FunSuite {
     )
 
     val segments2 = BasedSegmentBuilder.emptyBuilder(sequence, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
-    val treeRange = segTree.getSegmentRange(10, segments.length - 10, 0, segTree.size(), sequence, null)
+    val treeRange = segTree.getSegmentRange(10, segments.length() - 10, 0, segTree.size(), sequence, null)
     segTree.addSegments(segments2, treeRange)
 
     assertEquals(

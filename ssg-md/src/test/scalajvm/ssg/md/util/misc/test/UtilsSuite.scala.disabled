@@ -39,7 +39,7 @@ final class UtilsSuite extends munit.FunSuite {
 
   test("testJoin") {
     assertEquals(Utils.join(Array[String](), "prefix", "suffix", "$", "#"), "prefixsuffix")
-    assertEquals(Utils.join(new java.util.ArrayList[String]().asScala, "prefix", "suffix", "        ", "!!!!"), "prefixsuffix")
+    assertEquals(Utils.join(new java.util.ArrayList[String](), "prefix", "suffix", "        ", "!!!!"), "prefixsuffix")
     assertEquals(Utils.join(Array("1", "2"), "", "", "itemPrefix", "itemSuffix"), "itemPrefix1itemSuffixitemPrefix2itemSuffix")
     assertEquals(Utils.join(Array("1", "2"), "list", "end", "#", "-"), "list#1-#2-end")
   }

@@ -888,21 +888,21 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
     val input    = "\n\t    test\n\n\n"
     val result   = "\t    test\n"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges().asScala).toString, result)
+    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges()).toString, result)
   }
 
   test("removeBlankLinesRanges2") {
     val input    = "\n\t    test\n\n    t\n\n"
     val result   = "\t    test\n    t\n"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges().asScala).toString, result)
+    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges()).toString, result)
   }
 
   test("removeBlankLinesRanges3") {
     val input    = "\n\t    test\n\n    t1\n\n    t2\n\n\n\n    t3\n\n    t4\n\n"
     val result   = "\t    test\n    t1\n    t2\n    t3\n    t4\n"
     val sequence = basedSequenceOf(input)
-    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges().asScala).toString, result)
+    assertEquals(sequence.extractRanges(sequence.blankLinesRemovedRanges()).toString, result)
   }
 
   test("extendToEndOfLine") {
@@ -1055,7 +1055,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
     segments.append(Range.of(0, 0))
     segments.append("^")
     segments.append(Range.of(1, 10))
-    assertEquals(segments.length, segments.toString(sequence).length)
+    assertEquals(segments.length(), segments.toString(sequence).length)
     assertEquals(segments.toString(sequence), "^123456789")
 
     val replaced: BasedSequence = builder.toSequence()

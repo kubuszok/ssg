@@ -321,7 +321,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
         30,
         { wrapped =>
           val indented = wrapped.getBuilder()[SequenceBuilder]
-          wrapped.splitListEOL(true).asScala.foreach { line =>
+          wrapped.splitListEOL(true).foreach { line =>
             indented.append("    ")
             indented.append(line)
           }
@@ -355,7 +355,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
         30,
         { wrapped =>
           val indented = wrapped.getBuilder()[SequenceBuilder]
-          wrapped.splitListEOL(true).asScala.foreach { line =>
+          wrapped.splitListEOL(true).foreach { line =>
             indented.append("    ")
             indented.append(line)
           }
@@ -388,7 +388,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
         30,
         { wrapped =>
           val indented = wrapped.getBuilder()[SequenceBuilder]
-          wrapped.splitListEOL(true).asScala.foreach { line =>
+          wrapped.splitListEOL(true).foreach { line =>
             indented.append("    ")
             indented.append(line)
           }
@@ -421,7 +421,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
         30,
         { wrapped =>
           val indented = wrapped.getBuilder()[SequenceBuilder]
-          wrapped.splitListEOL(true).asScala.foreach { line =>
+          wrapped.splitListEOL(true).foreach { line =>
             indented.append("    ")
             indented.append(line)
           }

@@ -858,7 +858,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
       segments.append(trim.getSourceRange)
@@ -895,7 +895,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
       segments.append(trim.getSourceRange)
@@ -934,7 +934,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
       segments.append(trim.getSourceRange)
@@ -970,7 +970,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
       segments.append(trim.getSourceRange)
@@ -1007,7 +1007,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
       segments.append(trim.getSourceRange)
@@ -1046,7 +1046,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
       segments.append(trim.getSourceRange)
