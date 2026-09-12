@@ -40,10 +40,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 1)
+    val data = visitor.getData()
+    assertEquals(data.size, 1)
     assertEquals(data.keySet().iterator().next(), "hello")
-    assertEquals(data.get("hello").size(), 1)
+    assertEquals(data.get("hello").size, 1)
     assertEquals(data.get("hello").get(0), "world")
 
     assertRendering(input, rendered)
@@ -57,10 +57,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 1)
+    val data = visitor.getData()
+    assertEquals(data.size, 1)
     assertEquals(data.keySet().iterator().next(), "key")
-    assertEquals(data.get("key").size(), 0)
+    assertEquals(data.get("key").size, 0)
 
     assertRendering(input, rendered)
   }
@@ -73,10 +73,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 1)
-    assert(data.containsKey("list"))
-    assertEquals(data.get("list").size(), 2)
+    val data = visitor.getData()
+    assertEquals(data.size, 1)
+    assert(data.contains("list"))
+    assertEquals(data.get("list").size, 2)
     assertEquals(data.get("list").get(0), "value1")
     assertEquals(data.get("list").get(1), "value2")
 
@@ -91,10 +91,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 1)
-    assert(data.containsKey("literal"))
-    assertEquals(data.get("literal").size(), 1)
+    val data = visitor.getData()
+    assertEquals(data.size, 1)
+    assert(data.contains("literal"))
+    assertEquals(data.get("literal").size, 1)
     assertEquals(data.get("literal").get(0), "hello markdown!\nliteral thing...")
 
     assertRendering(input, rendered)
@@ -108,10 +108,10 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 1)
-    assert(data.containsKey("literal"))
-    assertEquals(data.get("literal").size(), 1)
+    val data = visitor.getData()
+    assertEquals(data.size, 1)
+    assert(data.contains("literal"))
+    assertEquals(data.get("literal").size, 1)
     assertEquals(data.get("literal").get(0), "- hello markdown!")
 
     assertRendering(input, rendered)
@@ -125,19 +125,19 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
-    assertEquals(data.size(), 3)
+    val data = visitor.getData()
+    assertEquals(data.size, 3)
 
-    assert(data.containsKey("simple"))
-    assertEquals(data.get("simple").size(), 1)
+    assert(data.contains("simple"))
+    assertEquals(data.get("simple").size, 1)
     assertEquals(data.get("simple").get(0), "value")
 
-    assert(data.containsKey("literal"))
-    assertEquals(data.get("literal").size(), 1)
+    assert(data.contains("literal"))
+    assertEquals(data.get("literal").size, 1)
     assertEquals(data.get("literal").get(0), "hello markdown!\n\nliteral literal")
 
-    assert(data.containsKey("list"))
-    assertEquals(data.get("list").size(), 2)
+    assert(data.contains("list"))
+    assertEquals(data.get("list").size, 2)
     assertEquals(data.get("list").get(0), "value1")
     assertEquals(data.get("list").get(1), "value2")
 
@@ -152,7 +152,7 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
+    val data = visitor.getData()
     assert(data.isEmpty)
 
     assertRendering(input, rendered)
@@ -166,7 +166,7 @@ final class YamlFrontMatterTest extends munit.FunSuite {
     val document = PARSER.parse(input)
     visitor.visit(document)
 
-    val data = visitor.getData
+    val data = visitor.getData()
     assert(data.isEmpty)
 
     assertRendering(input, rendered)

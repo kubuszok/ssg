@@ -649,8 +649,8 @@ final class ParserSuite extends munit.FunSuite {
   }
 
   class DashBlockParserFactory extends CustomBlockParserFactory {
-    override def afterDependents:    Nullable[Set[Class[?]]] = null
-    override def beforeDependents:   Nullable[Set[Class[?]]] = null
+    override def afterDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
+    override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
     override def affectsGlobalScope: Boolean                 = false
 
     override def apply(options: DataHolder): BlockParserFactory =

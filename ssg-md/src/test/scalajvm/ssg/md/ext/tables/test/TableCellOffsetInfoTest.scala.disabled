@@ -34,7 +34,7 @@ final class TableCellOffsetInfoTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
     )
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
     table.appendTable(out)

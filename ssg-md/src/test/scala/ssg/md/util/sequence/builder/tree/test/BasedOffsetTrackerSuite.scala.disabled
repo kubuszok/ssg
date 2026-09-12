@@ -16,12 +16,12 @@ import scala.language.implicitConversions
 
 final class BasedOffsetTrackerSuite extends munit.FunSuite {
 
-  private def getInput(input: String): Pair[String, Int] = {
+  private def getInput(input: String): Pair[String, java.lang.Integer] = {
     val pos = input.indexOf("\u299a")
     if (pos >= 0) {
-      Pair.of(input.substring(0, pos) + input.substring(pos + 1), pos)
+      Pair.of(input.substring(0, pos) + input.substring(pos + 1), java.lang.Integer.valueOf(pos))
     } else {
-      Pair.of(input, 0)
+      Pair.of(input, java.lang.Integer.valueOf(0))
     }
   }
 
@@ -35,7 +35,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
 
   private def wrapText(input: String, margin: Int): BasedSequence = {
     val info     = getInput(input)
-    val sequence = BasedSequence.of(info.first.get)
+    val sequence = BasedSequence.of(info.getFirst())
 
     val formatter = new MarkdownParagraph(sequence, CharWidthProvider.NULL)
     formatter.setFirstIndent("")
@@ -44,16 +44,16 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
     formatter.keepSoftLineBreaks = false // cannot keep line breaks when formatting as you type
     formatter.keepHardLineBreaks = true
 
-    val offset   = info.second.get
+    val offset   = info.getSecond()
     val builder1 = sequence.getBuilder()[SequenceBuilder]
-    if (offset >= 0 && offset < sequence.length()) {
-      sequence.subSequence(0, offset).addSegments(builder1.segmentBuilder)
+    if (offset >= 0 && offset < sequence.length) {
+      sequence.subSequence(0, offset).addSegments(builder1.getSegmentBuilder())
       builder1.append("\u299a")
-      sequence.subSequence(offset).addSegments(builder1.segmentBuilder)
+      sequence.subSequence(offset).addSegments(builder1.getSegmentBuilder())
     } else {
-      sequence.addSegments(builder1.segmentBuilder)
+      sequence.addSegments(builder1.getSegmentBuilder())
     }
-    // System.out.println(builder1.toStringWithRanges)
+    // System.out.println(builder1.toStringWithRanges())
 
     formatter.wrapTextNotTracked()
   }
@@ -61,26 +61,26 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
   private def wrapText(input: String, isEndOffset: Boolean, margin: Int): String = {
     val actual    = wrapText(input, margin)
     val info1     = getInput(input)
-    val sequence1 = BasedSequence.of(info1.first.get)
-    resolveOffset(sequence1, actual, info1.second.get, isEndOffset)
+    val sequence1 = BasedSequence.of(info1.getFirst())
+    resolveOffset(sequence1, actual, info1.getSecond(), isEndOffset)
   }
 
   private def wrapText(input: String, isEndOffset: Boolean, margin: Int, postProcessor: BasedSequence => BasedSequence): String = {
     val actual    = postProcessor(wrapText(input, margin))
     val info1     = getInput(input)
-    val sequence1 = BasedSequence.of(info1.first.get)
-    resolveOffset(sequence1, actual, info1.second.get, isEndOffset)
+    val sequence1 = BasedSequence.of(info1.getFirst())
+    resolveOffset(sequence1, actual, info1.getSecond(), isEndOffset)
   }
 
   private def resolveOffset(sequence: BasedSequence, actual: BasedSequence, offset: Int, isEndOffset: Boolean): String = {
     val builder = sequence.getBuilder()[SequenceBuilder]
-    actual.addSegments(builder.segmentBuilder)
-    // System.out.println(builder.toStringWithRanges)
+    actual.addSegments(builder.getSegmentBuilder())
+    // System.out.println(builder.toStringWithRanges())
 
     val tracker = BasedOffsetTracker.create(actual)
     val result  = tracker.getOffsetInfo(offset, isEndOffset)
     result.toString + "\n-----------------------------------------------------\n" +
-      builder.toStringWithRanges.replace("\\n", "\n") + "\n-----------------------------------------------------\n" +
+      builder.toStringWithRanges().replace("\\n", "\n") + "\n-----------------------------------------------------\n" +
       getResult(actual.toString, result)
   }
 
@@ -325,7 +325,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
             indented.append("    ")
             indented.append(line)
           }
-          indented.toSequence
+          indented.toSequence()
         }
       ),
       expected
@@ -359,7 +359,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
             indented.append("    ")
             indented.append(line)
           }
-          indented.toSequence
+          indented.toSequence()
         }
       ),
       expected
@@ -392,7 +392,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
             indented.append("    ")
             indented.append(line)
           }
-          indented.toSequence
+          indented.toSequence()
         }
       ),
       expected
@@ -425,7 +425,7 @@ final class BasedOffsetTrackerSuite extends munit.FunSuite {
             indented.append("    ")
             indented.append(line)
           }
-          indented.toSequence
+          indented.toSequence()
         }
       ),
       expected

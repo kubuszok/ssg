@@ -32,7 +32,7 @@ final class OrderedSetSuite extends munit.FunSuite {
     for (j <- 0 until 10) {
       assertEquals(orderedSet.remove(String.valueOf(j)), true)
 
-      assertEquals(orderedSet.getValueList.size(), if (j == 9) 0 else 10)
+      assertEquals(orderedSet.getValueList.size, if (j == 9) 0 else 10)
 
       var lastJ = j + 1
       val iter2 = orderedSet.iterator()
@@ -66,7 +66,7 @@ final class OrderedSetSuite extends munit.FunSuite {
     while ({ j -= 1; j >= 0 }) {
       assertEquals(orderedSet.remove(String.valueOf(j)), true)
 
-      assertEquals(orderedSet.getValueList.size(), j)
+      assertEquals(orderedSet.getValueList.size, j)
 
       var lastJ = 0
       val iter2 = orderedSet.iterator()
@@ -140,7 +140,7 @@ final class OrderedSetSuite extends munit.FunSuite {
       iterator.next()
       iterator.remove()
 
-      assertEquals(orderedSet.getValueList.size(), if (j == 9) 0 else 10)
+      assertEquals(orderedSet.getValueList.size, if (j == 9) 0 else 10)
 
       var lastJ = j + 1
       val iter2 = orderedSet.iterator()
@@ -178,7 +178,7 @@ final class OrderedSetSuite extends munit.FunSuite {
       iterator.next()
       iterator.remove()
 
-      assertEquals(orderedSet.getValueList.size(), j)
+      assertEquals(orderedSet.getValueList.size, j)
 
       var lastJ = 0
       val iter2 = orderedSet.iterator()

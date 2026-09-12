@@ -50,9 +50,9 @@ final class SegmentedSequenceStatsSuite extends munit.FunSuite {
     options.set(BasedOptionsHolder.SEGMENTED_STATS, stats)
 
     val s1 = BasedOptionsSequence.of(sC, BasedOptionsHolder.F_COLLECT_SEGMENTED_STATS, options)
-    val s  = BasedSequence.of(s1).subSequence(0, s1.length())
+    val s  = BasedSequence.of(s1).subSequence(0, s1.length)
 
-    val iMax = s.length()
+    val iMax = s.length
     var i    = 0
     while (i < iMax) {
       var j = i

@@ -913,7 +913,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
     )
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, true)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
@@ -955,7 +955,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
     )
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, true)))
 
@@ -1003,7 +1003,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
     )
     assert(table.addTrackedOffset(TrackedOffset.track(pos, Character.valueOf(' '), true)))
 
@@ -1051,7 +1051,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS)
     )
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, true)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
@@ -2225,7 +2225,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.REMOVE)
+      formatOptions("", null).toMutable().set(TableFormatOptions.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.REMOVE)
     )
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
@@ -2764,7 +2764,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false))
+      formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false))
     )
     table.fillMissingColumns()
 
@@ -2811,7 +2811,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false))
+      formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false))
     )
     table.fillMissingColumns(Integer.valueOf(0))
 
@@ -2858,7 +2858,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable
+      formatOptions("", null).toMutable()
         .set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(true))
         .set(TableFormatOptions.FORMAT_TABLE_FILL_MISSING_MIN_COLUMN, Integer.valueOf(0))
     )
@@ -2907,7 +2907,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val source = BasedSequence.of(charSequence)
     val table  = getTable(
       source,
-      formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false)).set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, "    ")
+      formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_FILL_MISSING_COLUMNS, java.lang.Boolean.valueOf(false)).set(TablesExtension.FORMAT_TABLE_INDENT_PREFIX, "    ")
     )
     table.fillMissingColumns()
 
@@ -2950,7 +2950,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val pos = markdown.indexOf("^")
     val charSequence: CharSequence = markdown.substring(0, pos) + markdown.substring(pos + 1)
     val source = BasedSequence.of(charSequence)
-    val table  = getTable(source, formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
+    val table  = getTable(source, formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
     table.appendTable(out)
@@ -2985,7 +2985,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val pos = markdown.indexOf("^")
     val charSequence: CharSequence = markdown.substring(0, pos) + markdown.substring(pos + 1)
     val source = BasedSequence.of(charSequence)
-    val table  = getTable(source, formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
+    val table  = getTable(source, formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
     table.appendTable(out)
@@ -3020,7 +3020,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val pos = markdown.indexOf("^")
     val charSequence: CharSequence = markdown.substring(0, pos) + markdown.substring(pos + 1)
     val source = BasedSequence.of(charSequence)
-    val table  = getTable(source, formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
+    val table  = getTable(source, formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
     table.appendTable(out)
@@ -3055,7 +3055,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val pos = markdown.indexOf("^")
     val charSequence: CharSequence = markdown.substring(0, pos) + markdown.substring(pos + 1)
     val source = BasedSequence.of(charSequence)
-    val table  = getTable(source, formatOptions("", null).toMutable.set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
+    val table  = getTable(source, formatOptions("", null).toMutable().set(TablesExtension.FORMAT_TABLE_LEFT_ALIGN_MARKER, DiscretionaryText.AS_IS))
     assert(table.addTrackedOffset(TrackedOffset.track(pos, null, false)))
     val out = new HtmlWriter(0, LineAppendable.F_FORMAT_ALL)
     table.appendTable(out)
@@ -3087,7 +3087,7 @@ final class MarkdownTableTest extends MarkdownTableTestBase {
     val table = getTable(markdown1)
     val rows  = table.getAllRows
     assert(rows != null, "getAllRows should return non-null list")
-    assert(rows.size() > 0, "getAllRows should return at least one row")
+    assert(rows.size > 0, "getAllRows should return at least one row")
   }
 
   test("allRowCount") {

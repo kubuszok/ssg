@@ -17,7 +17,7 @@ final class PlaceholderReplacerSuite extends munit.FunSuite {
   }
 
   private def spansOfResult(spans: java.util.List[Array[String]]): Array[String] = {
-    val params = new Array[String](spans.size())
+    val params = new Array[String](spans.size)
     var i      = 0
     val iter   = spans.iterator()
     while (iter.hasNext()) {

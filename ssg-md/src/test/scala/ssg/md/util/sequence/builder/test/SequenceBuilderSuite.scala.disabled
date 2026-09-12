@@ -23,8 +23,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(Range.of(0, 4))
     builder.append(Range.of(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendRangeAnchors") {
@@ -36,8 +36,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(Range.of(0, 4))
     builder.append(Range.of(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendRangeNoAnchors") {
@@ -49,8 +49,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(Range.of(0, 4))
     builder.append(Range.of(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendSubSequenceDefault") {
@@ -62,8 +62,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(sequence.subSequence(0, 4))
     builder.append(sequence.subSequence(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendSubSequenceAnchors") {
@@ -75,8 +75,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(sequence.subSequence(0, 4))
     builder.append(sequence.subSequence(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendSubSequenceNoAnchors") {
@@ -88,8 +88,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(sequence.subSequence(0, 4))
     builder.append(sequence.subSequence(10, 10))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendRange1") {
@@ -99,8 +99,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(Range.of(0, 4))
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123")
   }
 
   test("test_appendRangeNonOverlapping") {
@@ -112,8 +112,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 4)
     builder.append(6, 7)
 
-    assertEquals(builder.toStringWithRanges, "\u27e60123\u27e7\u27e66\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01236")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123\u27e7\u27e66\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01236")
   }
 
   test("test_appendRangeTouching") {
@@ -124,8 +124,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(Range.of(0, 5))
     builder.append(Range.of(5, 7))
-    assertEquals(builder.toStringWithRanges, "\u27e60123456\u27e7")
-    assertEquals(builder.toSequence.toString, "0123456")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123456\u27e7")
+    assertEquals(builder.toSequence().toString, "0123456")
   }
 
   test("test_appendRangeOverlapping") {
@@ -136,8 +136,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(0, 5)
     builder.append(3, 7)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e734\u27e656\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "012343456")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e734\u27e656\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "012343456")
   }
 
   test("test_appendRangeOverlappingOverString") {
@@ -149,8 +149,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("abc")
     builder.append(3, 7)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7abc34\u27e656\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234abc3456")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7abc34\u27e656\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234abc3456")
   }
 
   test("test_appendRangeStrings") {
@@ -162,8 +162,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("abc")
     builder.append("def")
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7abcdef\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234abcdef")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7abcdef\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234abcdef")
   }
 
   /*
@@ -179,8 +179,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("345")
     builder.append(6, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e60123456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123456789")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123456789")
   }
 
   test("test_optimizerExtendPrev2") {
@@ -192,8 +192,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34 ")
     builder.append(6, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7 \u27e66789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234 6789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7 \u27e66789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234 6789")
   }
 
   test("test_optimizerExtendPrevNext") {
@@ -205,8 +205,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34 5")
     builder.append(6, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7 \u27e656789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234 56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7 \u27e656789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234 56789")
   }
 
   test("test_optimizerExtendPrevNextCollapse") {
@@ -218,8 +218,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34 56")
     builder.append(7, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7 \u27e656789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234 56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7 \u27e656789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234 56789")
   }
 
   test("test_optimizerExtendNext") {
@@ -231,8 +231,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append(" 3456")
     builder.append(7, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e6012\u27e7 \u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "012 3456789")
+    assertEquals(builder.toStringWithRanges(), "\u27e6012\u27e7 \u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "012 3456789")
   }
 
   test("test_optimizerExtendNext1") {
@@ -244,8 +244,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append(" 345")
     builder.append(6, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e6012\u27e7 \u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "012 3456789")
+    assertEquals(builder.toStringWithRanges(), "\u27e6012\u27e7 \u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "012 3456789")
   }
 
   test("test_optimizerIndent1") {
@@ -257,8 +257,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append(" 345")
     builder.append(6, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e6012\u27e7 \u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "012 3456789")
+    assertEquals(builder.toStringWithRanges(), "\u27e6012\u27e7 \u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "012 3456789")
   }
 
   /*
@@ -273,8 +273,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append("    ")
     builder.append(2, 12)
-    assertEquals(builder.toStringWithRanges, "  \u27e6  0123456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "    0123456789")
+    assertEquals(builder.toStringWithRanges(), "  \u27e6  0123456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "    0123456789")
   }
 
   test("test_optimizersSpacesNone") {
@@ -286,8 +286,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("    ")
     builder.append(7, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234 \u27e7  \u27e6 56789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234    56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234 \u27e7  \u27e6 56789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234    56789")
   }
 
   test("test_optimizersSpacesLeft") {
@@ -299,8 +299,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("    ")
     builder.append(7, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7  \u27e6  56789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234    56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7  \u27e6  56789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234    56789")
   }
 
   test("test_optimizersSpacesRight") {
@@ -312,8 +312,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("    ")
     builder.append(7, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234  \u27e7  \u27e656789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234    56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234  \u27e7  \u27e656789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234    56789")
   }
 
   test("test_optimizersIndent1Left") {
@@ -324,8 +324,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append("    ")
     builder.append(2, 12)
-    assertEquals(builder.toStringWithRanges, "  \u27e6  0123456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "    0123456789")
+    assertEquals(builder.toStringWithRanges(), "  \u27e6  0123456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "    0123456789")
   }
 
   test("test_optimizersIndent1Right") {
@@ -336,8 +336,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append("    ")
     builder.append(2, 12)
-    assertEquals(builder.toStringWithRanges, "  \u27e6  0123456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "    0123456789")
+    assertEquals(builder.toStringWithRanges(), "  \u27e6  0123456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "    0123456789")
   }
 
   test("test_optimizersEOL1None") {
@@ -349,8 +349,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizersEOL1Left") {
@@ -362,8 +362,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizersEOL1Right") {
@@ -375,8 +375,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizersEOL2None") {
@@ -388,8 +388,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n\n   ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n\\n   5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n\\n   5678")
   }
 
   test("test_optimizersEOL2Left") {
@@ -401,8 +401,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n\n   ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n\\n   5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n\\n   5678")
   }
 
   test("test_optimizersEOL2Right") {
@@ -414,8 +414,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n\n   ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n\\n   5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\\n\u27e7  \u27e6 5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n\\n   5678")
   }
 
   test("test_optimizersEOL3None") {
@@ -427,8 +427,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizersEOL3Left") {
@@ -440,8 +440,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizersEOL3Right") {
@@ -453,8 +453,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 3)
     builder.append("34\n    ")
     builder.append(8, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n    5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\\n\u27e7  \u27e6  5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n    5678")
   }
 
   test("test_optimizers1") {
@@ -466,8 +466,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n  ")
     builder.append(7, 12)
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7\u27e6\\n\u27e7  \u27e656789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n  56789")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7\u27e6\\n\u27e7  \u27e656789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n  56789")
   }
 
   test("test_optimizers2") {
@@ -478,8 +478,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(0, 5)
     builder.append("\n")
-    assertEquals(builder.toStringWithRanges, "\u27e601234\u27e7\u27e6\\n\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234\\n")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234\u27e7\u27e6\\n\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234\\n")
   }
 
   test("test_optimizers2a") {
@@ -491,8 +491,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(0, 5)
     builder.append(" \n")
-    assertEquals(builder.toStringWithRanges, "\u27e601234 \u27e7\u27e6\\n\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "01234 \\n")
+    assertEquals(builder.toStringWithRanges(), "\u27e601234 \u27e7\u27e6\\n\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "01234 \\n")
   }
 
   test("test_optimizers3") {
@@ -503,8 +503,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(0, 5)
     builder.append("01234")
-    assertEquals(builder.toStringWithRanges, "\u27e60123401234\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123401234")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123401234\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123401234")
   }
 
   test("test_optimizers4") {
@@ -516,8 +516,8 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 5)
     builder.append("\n")
     builder.append(8, 13)
-    assertEquals(builder.toStringWithRanges, "\u27e60123 \u27e7\u27e6\\n\u27e7\u27e6 5678\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "0123 \\n 5678")
+    assertEquals(builder.toStringWithRanges(), "\u27e60123 \u27e7\u27e6\\n\u27e7\u27e6 5678\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "0123 \\n 5678")
   }
 
   test("test_optimizersCompoundDefault1") {
@@ -535,12 +535,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("    ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
 
     assertEquals(
-      builder.toStringWithRanges,
+      builder.toStringWithRanges(),
       "  \u27e6  line 1\u27e7\u27e6\\n\u27e7  \u27e6  line 2\u27e7\u27e6\\n\\n\u27e7  \u27e6  line 3\\n\u27e7"
     )
     assertEquals(builder.toString,
@@ -568,10 +568,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "  line 1\n" +
@@ -597,10 +597,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "line 1\n" +
@@ -626,12 +626,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("    ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
 
     assertEquals(
-      builder.toStringWithRanges,
+      builder.toStringWithRanges(),
       "  \u27e6  line 1\u27e7\u27e6\\n\u27e7  \u27e6  line 2\u27e7\u27e6\\n\\n\u27e7  \u27e6  line 3\\n\u27e7"
     )
     assertEquals(builder.toString,
@@ -659,10 +659,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "  line 1\n" +
@@ -688,10 +688,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "line 1\n" +
@@ -717,12 +717,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("    ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
 
     assertEquals(
-      builder.toStringWithRanges,
+      builder.toStringWithRanges(),
       "  \u27e6  line 1\u27e7\u27e6\\n\u27e7  \u27e6  line 2\u27e7\u27e6\\n\\n\u27e7  \u27e6  line 3\\n\u27e7"
     )
     assertEquals(builder.toString,
@@ -750,10 +750,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) builder.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6  line 1\u27e7\u27e6\\n  line 2\u27e7\u27e6\\n\\n  line 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "  line 1\n" +
@@ -779,10 +779,10 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     lines.asScala.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      builder.append(trim.getSourceRange)
+      builder.append(trim.getSourceRange())
       builder.append("\n")
     }
-    assertEquals(builder.toStringWithRanges, "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
+    assertEquals(builder.toStringWithRanges(), "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
     assertEquals(builder.toString,
                  "" +
                    "line 1\n" +
@@ -804,12 +804,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     builder.append(sequence.subSequence(0, 8))
     builder.append(">")
-    assertEquals(builder.toStringWithRanges, "\u27e612345678\u27e7>\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "12345678>")
+    assertEquals(builder.toStringWithRanges(), "\u27e612345678\u27e7>\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "12345678>")
 
     builder.append(">")
-    assertEquals(builder.toStringWithRanges, "\u27e612345678\u27e7>\u27e6\u27e7>\u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "12345678>>")
+    assertEquals(builder.toStringWithRanges(), "\u27e612345678\u27e7>\u27e6\u27e7>\u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "12345678>>")
 
     val replaced1 = base.suffixWith(">")
     assertEquals(replaced1.toString, "0123456789>")
@@ -822,11 +822,11 @@ final class SequenceBuilderSuite extends munit.FunSuite {
 
     val builder2 = SequenceBuilder.emptyBuilder(replaced1, optimizer)
     builder2.append(replaced1)
-    assertEquals(builder2.toStringWithRanges, "\u27e60123456789\u27e7>\u27e6\u27e7")
+    assertEquals(builder2.toStringWithRanges(), "\u27e60123456789\u27e7>\u27e6\u27e7")
     builder2.append(">")
-    assertEquals(builder2.toStringWithRanges, "\u27e60123456789\u27e7>\u27e6\u27e7>\u27e6\u27e7")
-    assertEquals(builder2.toSequence.toVisibleWhitespaceString(), "0123456789>>")
-    assertEquals(builder2.toSequence.getSourceRange, Range.of(0, 10))
+    assertEquals(builder2.toStringWithRanges(), "\u27e60123456789\u27e7>\u27e6\u27e7>\u27e6\u27e7")
+    assertEquals(builder2.toSequence().toVisibleWhitespaceString(), "0123456789>>")
+    assertEquals(builder2.toSequence().getSourceRange(), Range.of(0, 10))
   }
 
   test("test_replaced") {
@@ -840,15 +840,15 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(0, 0)
     builder.append("^")
     builder.append(1, 10)
-    assertEquals(builder.toStringWithRanges, "\u27e6\u27e7^\u27e6123456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "^123456789")
-    val sequence1 = builder.toSequence
-    assertEquals(sequence1.getSourceRange, Range.of(0, 10))
+    assertEquals(builder.toStringWithRanges(), "\u27e6\u27e7^\u27e6123456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "^123456789")
+    val sequence1 = builder.toSequence()
+    assertEquals(sequence1.getSourceRange(), Range.of(0, 10))
 
     val replaced = sequence.replace(0, 1, "^")
 
     assertEquals(replaced.toString, "^123456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 10))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 10))
   }
 
   test("test_replaced2") {
@@ -863,14 +863,14 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(3, 10)
     builder.append("abcd")
     builder.append(13, 20)
-    assertEquals(builder.toStringWithRanges, "\u27e6\u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "abcd3456789abcd3456789")
-    val sequence1 = builder.toSequence
-    assertEquals(sequence1.getSourceRange, Range.of(0, 20))
+    assertEquals(builder.toStringWithRanges(), "\u27e6\u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "abcd3456789abcd3456789")
+    val sequence1 = builder.toSequence()
+    assertEquals(sequence1.getSourceRange(), Range.of(0, 20))
 
     val replaced = sequence.replace("012", "abcd")
     assertEquals(replaced.toString, "abcd3456789abcd3456789")
-    assertEquals(replaced.getSourceRange, Range.of(3, 20))
+    assertEquals(replaced.getSourceRange(), Range.of(3, 20))
 
     val builder2 = SequenceBuilder.emptyBuilder(replaced, optimizer)
     builder2.append("  ")
@@ -879,12 +879,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder2.append(replaced.subSequence(11, 22))
     builder2.append("\n")
     assertEquals(
-      builder2.toStringWithRanges,
+      builder2.toStringWithRanges(),
       "  \u27e6\u27e7abcd\u27e63456789\u27e7\\n  \u27e6\u27e7abcd\u27e63456789\u27e7\\n\u27e6\u27e7"
     )
-    assertEquals(builder2.toSequence.toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
-    val sequence2 = builder2.toSequence
-    assertEquals(sequence2.getSourceRange, Range.of(3, 20))
+    assertEquals(builder2.toSequence().toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
+    val sequence2 = builder2.toSequence()
+    assertEquals(sequence2.getSourceRange(), Range.of(3, 20))
   }
 
   test("test_replaced3") {
@@ -899,14 +899,14 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(4, 11)
     builder.append("abcd")
     builder.append(16, 23)
-    assertEquals(builder.toStringWithRanges, "\u27e6 \u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), " abcd3456789abcd3456789")
-    val sequence1 = builder.toSequence
-    assertEquals(sequence1.getSourceRange, Range.of(0, 23))
+    assertEquals(builder.toStringWithRanges(), "\u27e6 \u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), " abcd3456789abcd3456789")
+    val sequence1 = builder.toSequence()
+    assertEquals(sequence1.getSourceRange(), Range.of(0, 23))
 
     val replaced = sequence.replace("012", "abcd")
     assertEquals(replaced.toString, " abcd3456789\n abcd3456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 23))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 23))
 
     val builder2 = SequenceBuilder.emptyBuilder(replaced, optimizer)
     builder2.append("  ")
@@ -915,12 +915,12 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder2.append(replaced.subSequence(14, 25))
     builder2.append("\n")
     assertEquals(
-      builder2.toStringWithRanges,
+      builder2.toStringWithRanges(),
       "  \u27e6\u27e7abcd\u27e63456789\\n\u27e7  \u27e6\u27e7abcd\u27e63456789\u27e7\\n\u27e6\u27e7"
     )
-    assertEquals(builder2.toSequence.toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
-    val sequence2 = builder2.toSequence
-    assertEquals(sequence2.getSourceRange, Range.of(4, 23))
+    assertEquals(builder2.toSequence().toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
+    val sequence2 = builder2.toSequence()
+    assertEquals(sequence2.getSourceRange(), Range.of(4, 23))
   }
 
   test("test_replaced4") {
@@ -934,40 +934,40 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     builder.append(4, 11)
     builder.append("abcd")
     builder.append(16, 23)
-    assertEquals(builder.toStringWithRanges, "\u27e6 \u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), " abcd3456789abcd3456789")
-    val sequence1 = builder.toSequence
-    assertEquals(sequence1.getSourceRange, Range.of(0, 23))
+    assertEquals(builder.toStringWithRanges(), "\u27e6 \u27e7abcd\u27e63456789\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), " abcd3456789abcd3456789")
+    val sequence1 = builder.toSequence()
+    assertEquals(sequence1.getSourceRange(), Range.of(0, 23))
 
     val replaced = sequence.replace("012", "abcd")
     assertEquals(replaced.toString, " abcd3456789\n abcd3456789")
-    assertEquals(replaced.getSourceRange, Range.of(0, 23))
+    assertEquals(replaced.getSourceRange(), Range.of(0, 23))
 
     val optimizer = new CharRecoveryOptimizer(PositionAnchor.NEXT)
     val builder2  = SequenceBuilder.emptyBuilder(replaced, optimizer)
     builder2.append("  ")
-    assertEquals(builder2.toStringWithRanges, "  ")
+    assertEquals(builder2.toStringWithRanges(), "  ")
     builder2.append(replaced.subSequence(1, 12))
-    assertEquals(builder2.toStringWithRanges, "  \u27e6\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder2.toStringWithRanges(), "  \u27e6\u27e7abcd\u27e63456789\u27e7")
     builder2.append("\n  ")
-    assertEquals(builder2.toStringWithRanges, "  \u27e6\u27e7abcd\u27e63456789\\n\u27e7  ")
+    assertEquals(builder2.toStringWithRanges(), "  \u27e6\u27e7abcd\u27e63456789\\n\u27e7  ")
 
     val builder3 = SequenceBuilder.emptyBuilder(replaced, optimizer)
     builder3.append(replaced.subSequence(14, 25))
-    assertEquals(builder3.toStringWithRanges, "\u27e6\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder3.toStringWithRanges(), "\u27e6\u27e7abcd\u27e63456789\u27e7")
 
     builder2.append(replaced.subSequence(14, 25))
-    assertEquals(builder2.toStringWithRanges, "  \u27e6\u27e7abcd\u27e63456789\\n \u27e7 \u27e6\u27e7abcd\u27e63456789\u27e7")
+    assertEquals(builder2.toStringWithRanges(), "  \u27e6\u27e7abcd\u27e63456789\\n \u27e7 \u27e6\u27e7abcd\u27e63456789\u27e7")
 
     builder2.append("\n")
     assertEquals(
-      builder2.toStringWithRanges,
+      builder2.toStringWithRanges(),
       "  \u27e6\u27e7abcd\u27e63456789\\n \u27e7 \u27e6\u27e7abcd\u27e63456789\u27e7\\n\u27e6\u27e7"
     )
 
-    assertEquals(builder2.toSequence.toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
-    val sequence2 = builder2.toSequence
-    assertEquals(sequence2.getSourceRange, Range.of(4, 23))
+    assertEquals(builder2.toSequence().toVisibleWhitespaceString(), "  abcd3456789\\n  abcd3456789\\n")
+    val sequence2 = builder2.toSequence()
+    assertEquals(sequence2.getSourceRange(), Range.of(4, 23))
   }
 
   test("test_appendPrefixed2") {
@@ -980,7 +980,7 @@ final class SequenceBuilderSuite extends munit.FunSuite {
     val text = PrefixedSubSequence.repeatOf(" ", 5, sequence).append(PrefixedSubSequence.repeatOf(" ", 5, sequence.getEmptySuffix))
     builder.append(text)
 
-    assertEquals(builder.toStringWithRanges, "\u27e6\u27e7     \u27e60123456789\u27e7     \u27e6\u27e7")
-    assertEquals(builder.toSequence.toVisibleWhitespaceString(), "     0123456789     ")
+    assertEquals(builder.toStringWithRanges(), "\u27e6\u27e7     \u27e60123456789\u27e7     \u27e6\u27e7")
+    assertEquals(builder.toSequence().toVisibleWhitespaceString(), "     0123456789     ")
   }
 }

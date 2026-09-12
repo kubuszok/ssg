@@ -87,9 +87,9 @@ final class MarkdownParagraphSuite extends munit.FunSuite {
     assertEquals(actual.toString, expected)
 
     val builder = SequenceBuilder.emptyBuilder(basedInput)
-    actual.addSegments(builder.segmentBuilder)
+    actual.addSegments(builder.getSegmentBuilder())
     assertEquals(
-      builder.segmentBuilder.toStringWithRanges(),
+      builder.getSegmentBuilder().toStringWithRanges(),
       "" +
         "\u27e6Fix: mixed task and non-task items, toggle prefix adds it to all instead of removing only\u27e7\n" +
         "\\\u27e6#\u27e7\u27e6 \u27e7\u27e6item prefix or adding to only list items. Test is done.\u27e7" +
@@ -99,9 +99,9 @@ final class MarkdownParagraphSuite extends munit.FunSuite {
     val sequence = actual.toSpc().trimEnd(CharPredicate.WHITESPACE).appendEOL()
 
     val builder2 = SequenceBuilder.emptyBuilder(basedInput)
-    sequence.addSegments(builder2.segmentBuilder)
+    sequence.addSegments(builder2.getSegmentBuilder())
     assertEquals(
-      builder2.segmentBuilder.toStringWithRanges(),
+      builder2.getSegmentBuilder().toStringWithRanges(),
       "" +
         "\u27e6Fix: mixed task and non-task items, toggle prefix adds it to all instead of removing only\u27e7\n" +
         "\\\u27e6#\u27e7\u27e6 \u27e7\u27e6item prefix or adding to only list items. Test is done.\u27e7\n" +
@@ -137,9 +137,9 @@ final class MarkdownParagraphSuite extends munit.FunSuite {
     assertEquals(actual.toString, expected)
 
     val builder = SequenceBuilder.emptyBuilder(basedInput)
-    actual.addSegments(builder.segmentBuilder)
+    actual.addSegments(builder.getSegmentBuilder())
     assertEquals(
-      builder.segmentBuilder.toStringWithRanges(),
+      builder.getSegmentBuilder().toStringWithRanges(),
       "" +
         "\u27e6Fix: mixed task and non-task items, toggle prefix adds it to all instead of removing only\u27e7\u27e6 \u27e7\u27e6#\u27e7\n" +
         "\u27e6item prefix or adding to only list items. Test is done.\u27e7" +
@@ -149,9 +149,9 @@ final class MarkdownParagraphSuite extends munit.FunSuite {
     val sequence = actual.toSpc().trimEnd(CharPredicate.WHITESPACE).appendEOL()
 
     val builder2 = SequenceBuilder.emptyBuilder(basedInput)
-    sequence.addSegments(builder2.segmentBuilder)
+    sequence.addSegments(builder2.getSegmentBuilder())
     assertEquals(
-      builder2.segmentBuilder.toStringWithRanges(),
+      builder2.getSegmentBuilder().toStringWithRanges(),
       "" +
         "\u27e6Fix: mixed task and non-task items, toggle prefix adds it to all instead of removing only\u27e7\u27e6 \u27e7\u27e6#\u27e7\n" +
         "\u27e6item prefix or adding to only list items. Test is done.\u27e7\n" +

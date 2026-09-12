@@ -1051,7 +1051,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val input    = "0123456789"
     val sequence = basedSequenceOf(input)
     val builder:  SequenceBuilder     = sequence.getBuilder()[SequenceBuilder]
-    val segments: BasedSegmentBuilder = builder.segmentBuilder
+    val segments: BasedSegmentBuilder = builder.getSegmentBuilder()
 
     segments.append(Range.of(0, 0))
     segments.append("^")
@@ -1059,7 +1059,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     assertEquals(segments.length, segments.toString(sequence).length)
     assertEquals(segments.toString(sequence), "^123456789")
 
-    val replaced: BasedSequence = builder.toSequence
+    val replaced: BasedSequence = builder.toSequence()
     assertEquals(replaced.toString, "^123456789")
     assertEquals(replaced.getSourceRange, Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), -1)
@@ -1534,7 +1534,7 @@ final class SegmentedSequenceTreeSuite extends munit.FunSuite {
     val input = "[simLink spaced](simLink.md)"
     val sequence: BasedSequence = BasedSequence.of(input)
     val mapped = sequence.toMapped(SpaceMapper.toNonBreakSpace)
-    val appended: BasedSequence = sequence.getBuilder()[SequenceBuilder].append("> ").append(mapped).append("\n").toSequence
+    val appended: BasedSequence = sequence.getBuilder()[SequenceBuilder].append("> ").append(mapped).append("\n").toSequence()
     assertEquals(appended.toString, "> [simLink spaced](simLink.md)\n")
     val appendedBuilder: SequenceBuilder = sequence.getBuilder()[SequenceBuilder].append(appended)
     assertEquals(

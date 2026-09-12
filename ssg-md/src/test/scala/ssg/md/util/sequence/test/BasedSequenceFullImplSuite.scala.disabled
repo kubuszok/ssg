@@ -1050,7 +1050,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
     val input    = "0123456789"
     val sequence = basedSequenceOf(input)
     val builder:  SequenceBuilder     = sequence.getBuilder()[SequenceBuilder]
-    val segments: BasedSegmentBuilder = builder.segmentBuilder
+    val segments: BasedSegmentBuilder = builder.getSegmentBuilder()
 
     segments.append(Range.of(0, 0))
     segments.append("^")
@@ -1058,7 +1058,7 @@ final class BasedSequenceFullImplSuite extends munit.FunSuite {
     assertEquals(segments.length, segments.toString(sequence).length)
     assertEquals(segments.toString(sequence), "^123456789")
 
-    val replaced: BasedSequence = builder.toSequence
+    val replaced: BasedSequence = builder.toSequence()
     assertEquals(replaced.toString, "^123456789")
     assertEquals(replaced.getSourceRange, Range.of(0, 10))
     assertEquals(replaced.getIndexOffset(0), -1)

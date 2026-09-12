@@ -44,8 +44,8 @@ final class FileUriIncludeIss983Suite extends munit.FunSuite {
   }
 
   final private class FileLinkResolverFactory extends LinkResolverFactory {
-    override def afterDependents:                          Nullable[Set[Class[?]]] = null
-    override def beforeDependents:                         Nullable[Set[Class[?]]] = null
+    override def afterDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
+    override def beforeDependents: Nullable[Set[Class[?]]] = Nullable.empty[Set[Class[?]]]
     override def affectsGlobalScope:                       Boolean                 = false
     override def apply(context: LinkResolverBasicContext): LinkResolver            = new FileLinkResolver()
   }
