@@ -6,4 +6,7 @@ ssg-liquid
 ssg-minify
 ssg-js
 ssg-sass
+ssg-katex
+ssg-mermaid
+ssg-graphs-commons
 ssg

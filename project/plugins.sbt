@@ -8,5 +8,6 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 // that the sourceGenerator calls to produce ssg-liquid and ssg-md Scala sources from the
 // upstream Java originals. The frontend-ts module provides the non-Java emitters
 // (ParityDerive, TerserEmitter, KaTeXEmitter, MermaidEmitter, DartSassEmitter, roughjs emitters).
+resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots"
 libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "0.1.0-SNAPSHOT"
 libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "0.1.0-SNAPSHOT"

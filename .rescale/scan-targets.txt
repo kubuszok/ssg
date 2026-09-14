@@ -4,4 +4,12 @@ ssg-md/src/main/scala
 ssg-liquid/src/main/scala
 ssg-minify/src/main/scala
 ssg-js/src/main/scala
+ssg-js/reference/scala
 ssg-sass/src/main/scala
+ssg-sass/reference/scala
+ssg-katex/src/main/scala
+ssg-katex/reference/scala
+ssg-mermaid/src/main/scala
+ssg-mermaid/reference/scala
+ssg-graphs-commons/src/main/scala
+ssg-graphs-commons/reference/scala
