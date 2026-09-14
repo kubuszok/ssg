@@ -4,22 +4,9 @@ import sbt.Keys.*
 import java.nio.file.{Files, Path}
 import scala.jdk.CollectionConverters.*
 
-/** sbt sourceGenerator that uses Baltic Porter to mechanically port Java and
-  * non-Java sources into Scala 3.
-  *
-  * Java ports (liqp, flexmark): run the full porting engine at build time.
-  * Requires upstream sources (submodules) and the balticporter sibling checkout.
-  *
-  * Non-Java ports (roughjs, katex, mermaid, terser, dart-sass): interleave RAST-
-  * translated bodies into reference files via ParityDerive. Self-contained — only
-  * needs the published `balticporter-frontend-ts` artifact.
-  *
-  * Requires:
-  *   - upstream sources at `original-src/*` (git submodules, Java ports only)
-  *   - balticporter checkout at `../balticporter` (sibling, Java ports only)
-  *   - `balticporter-corpus` 0.1.0-SNAPSHOT (Java ports) and
-  *     `balticporter-frontend-ts` 0.1.0-SNAPSHOT (non-Java ports) published
-  */
+// sbt sourceGenerator that uses Baltic Porter to mechanically port Java and
+// non-Java sources into Scala 3. Java ports run the full engine; non-Java ports
+// interleave RAST bodies into reference files via ParityDerive.
 object BalticPorterGen {
 
   private def bpRoot(ssgRoot: Path): Path =
