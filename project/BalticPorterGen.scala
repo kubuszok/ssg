@@ -138,7 +138,6 @@ object BalticPorterGen {
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
 
     val forceRegen  = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
     val commit      = balticporter.runner.VendoredCommit.of(flexmarkSrc)
     val cached      = !forceRegen && Files.exists(marker) &&
       Files.exists(outPath) &&
