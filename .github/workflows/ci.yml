@@ -68,8 +68,6 @@ jobs:
         with:
           submodules: false
 
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
       - uses: actions/setup-java@v6
         with:
@@ -80,11 +78,6 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
-      - name: Setup Baltic Porter
-        shell: bash
-        run: |
-          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch publishLocal
 
       - name: Run JVM tests with coverage
         run: sbt ci-jvm-3
@@ -153,8 +146,6 @@ jobs:
         with:
           submodules: false
 
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
       - uses: actions/setup-java@v6
         with:
@@ -228,8 +219,6 @@ jobs:
         with:
           submodules: false
 
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
       - uses: actions/setup-java@v6
         with:
@@ -240,11 +229,6 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
-      - name: Setup Baltic Porter
-        shell: bash
-        run: |
-          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch publishLocal
 
       - name: Install Scala Native system dependencies (Linux)
         if: runner.os == 'Linux'
