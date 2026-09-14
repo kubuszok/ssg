@@ -161,7 +161,8 @@ lazy val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-graphs-commons"
+    name := "ssg-graphs-commons",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-graphs-commons" / "reference" / "scala"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
