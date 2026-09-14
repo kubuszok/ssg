@@ -71,7 +71,7 @@ object BalticPorterGen {
 
   /** Generate ssg-md Scala sources from flexmark-java originals. */
   def generateFlexmark(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
-    val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+    val ssgRoot     = buildBase.toPath.toAbsolutePath.normalize
     val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
     if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
       log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md generation")
@@ -125,7 +125,7 @@ object BalticPorterGen {
 
   /** Generate ssg-md-ext Scala sources from flexmark extension modules. */
   def generateFlexmarkExt(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
-    val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+    val ssgRoot     = buildBase.toPath.toAbsolutePath.normalize
     val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
     if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
       log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md-ext generation")
@@ -137,9 +137,9 @@ object BalticPorterGen {
     val outPath  = outDir.toPath
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
 
-    val forceRegen  = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit      = balticporter.runner.VendoredCommit.of(flexmarkSrc)
-    val cached      = !forceRegen && Files.exists(marker) &&
+    val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
+    val commit     = balticporter.runner.VendoredCommit.of(flexmarkSrc)
+    val cached     = !forceRegen && Files.exists(marker) &&
       Files.exists(outPath) &&
       Files.readString(marker).trim == commit
 
