@@ -283,4 +283,29 @@ object BalticPorterGen {
       builder.result()
     } finally stream.close()
   }
+
+  // ---------------------------------------------------------------------------
+  // Non-Java ports: proof-of-concept wiring for ParityDerive pipeline
+  // ---------------------------------------------------------------------------
+
+  /** Verify that the Baltic Porter non-Java frontend is resolvable.
+    *
+    * This method imports from the published `balticporter-frontend-ts` and
+    * `balticporter-corpus` artifacts, proving D1 (published artifacts) works
+    * end-to-end. Full emitter wiring comes after RAST files are available.
+    */
+  def verifyNonJavaFrontend(log: sbt.util.Logger): Unit = {
+    // Import from the published frontend-ts artifact
+    val parityClass = classOf[balticporter.frontend.ts.ParityDerive.Policy]
+    log.info(s"[BalticPorterGen] Non-Java frontend available: ${parityClass.getName}")
+
+    // Import from the corpus emitters (namespace-moved in D6)
+    val terserClass = classOf[balticporter.corpus.terser.TerserEmitter.type]
+    log.info(s"[BalticPorterGen] Terser emitter available: ${terserClass.getName}")
+
+    val katexClass = classOf[balticporter.corpus.katex.KaTeXEmitter.type]
+    log.info(s"[BalticPorterGen] KaTeX emitter available: ${katexClass.getName}")
+
+    log.info("[BalticPorterGen] D1 verified: all non-Java emitters resolve from published snapshots")
+  }
 }
