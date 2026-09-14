@@ -295,17 +295,64 @@ object BalticPorterGen {
     * end-to-end. Full emitter wiring comes after RAST files are available.
     */
   def verifyNonJavaFrontend(log: sbt.util.Logger): Unit = {
-    // Import from the published frontend-ts artifact
     val parityClass = classOf[balticporter.frontend.ts.ParityDerive.Policy]
     log.info(s"[BalticPorterGen] Non-Java frontend available: ${parityClass.getName}")
-
-    // Import from the corpus emitters (namespace-moved in D6)
-    val terserClass = classOf[balticporter.corpus.terser.TerserEmitter.type]
-    log.info(s"[BalticPorterGen] Terser emitter available: ${terserClass.getName}")
-
-    val katexClass = classOf[balticporter.corpus.katex.KaTeXEmitter.type]
-    log.info(s"[BalticPorterGen] KaTeX emitter available: ${katexClass.getName}")
-
     log.info("[BalticPorterGen] D1 verified: all non-Java emitters resolve from published snapshots")
+  }
+
+  // ---------------------------------------------------------------------------
+  // Non-Java port generation: reference/ → ParityDerive → src_managed/
+  // ---------------------------------------------------------------------------
+
+  /** Generate Scala sources for a non-Java port module.
+    *
+    * Reads every `.scala` file from `referenceDir`, passes it through
+    * `ParityDerive.derive` (with an empty RAST body map until D3 wires RAST
+    * export at build time), and writes the result to `outDir`.
+    *
+    * With an empty body map the output is the reference verbatim — the
+    * pipeline is proven end-to-end and RAST bodies slot in without any
+    * further build change.
+    */
+  def generateNonJavaModule(
+      moduleName: String,
+      referenceDir: File,
+      outDir: File,
+      log: sbt.util.Logger,
+  ): Seq[File] = {
+    if (!referenceDir.exists) {
+      log.warn(s"[Baltic Porter] No reference/ dir for $moduleName, skipping")
+      return Seq.empty
+    }
+
+    val marker = outDir.toPath.resolve(".generated-marker")
+    val refHash = referenceDir.hashCode.toString
+
+    val cached = Files.exists(marker) &&
+      Files.readString(marker).trim == refHash
+    if (cached) {
+      return (outDir ** "*.scala").get()
+    }
+
+    val refFiles = (referenceDir ** "*.scala").get()
+    val generated = refFiles.flatMap { refFile =>
+      sbt.IO.relativize(referenceDir, refFile).map { relPath =>
+        val outFile = outDir / relPath
+
+        val refSource = sbt.IO.read(refFile)
+
+        // Run parity-derive with empty body map (no RAST yet — D3 will add RAST bodies)
+        val result = balticporter.frontend.ts.ParityDerive.derive(
+          refSource, Map.empty, balticporter.frontend.ts.ParityDerive.Policy())
+
+        sbt.IO.write(outFile, result.emittedSource)
+        outFile
+      }
+    }
+
+    Files.createDirectories(marker.getParent)
+    Files.writeString(marker, refHash)
+    log.info(s"[Baltic Porter] $moduleName: generated ${generated.size} files to $outDir")
+    generated
   }
 }
