@@ -319,10 +319,12 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     Test / unmanagedClasspath ++= (Compile / unmanagedClasspath).value,
     // Baltic Porter: generate ssg-liquid Scala sources from liqp Java originals.
     Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateLiquid((ThisBuild / baseDirectory).value, streams.value.log)
+      BalticPorterGen.generateLiquid(
+        (ThisBuild / baseDirectory).value,
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log)
     }.taskValue,
-    // Suppress warnings from generated code (porter notes, unused imports, etc.)
-    scalacOptions += "-Wconf:src=.*/ported/ssg-liquid/src_managed/.*:s"
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -356,17 +358,25 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     // Baltic Porter: generated flexmark resources (entities.properties for Html5Entities).
     Compile / unmanagedResourceDirectories += {
       val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
-      bpRoot / "ported" / "ssg-md" / "src_managed" / "main" / "resources"
+      val resDir = bpRoot / "ported" / "ssg-md" / "src_managed" / "main" / "resources"
+      if (resDir.exists()) resDir
+      else (Compile / resourceManaged).value / "balticporter"
     },
     // Baltic Porter: generate ssg-md Scala sources from flexmark-java originals.
     Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateFlexmark((ThisBuild / baseDirectory).value, streams.value.log)
+      BalticPorterGen.generateFlexmark(
+        (ThisBuild / baseDirectory).value,
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log)
     }.taskValue,
     // Baltic Porter: generate ssg-md-ext Scala sources from flexmark extension modules.
     Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateFlexmarkExt((ThisBuild / baseDirectory).value, streams.value.log)
+      BalticPorterGen.generateFlexmarkExt(
+        (ThisBuild / baseDirectory).value,
+        (Compile / sourceManaged).value / "balticporter-ext",
+        streams.value.log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/ported/ssg-md.*/src_managed/.*:s",
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s",
     Test / scalacOptions += "-language:implicitConversions"
   )
   .settings(publishSettings)
