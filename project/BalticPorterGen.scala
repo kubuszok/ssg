@@ -306,19 +306,24 @@ object BalticPorterGen {
 
   /** Generate Scala sources for a non-Java port module.
     *
-    * Reads every `.scala` file from `referenceDir`, passes it through
-    * `ParityDerive.derive` (with an empty RAST body map until D3 wires RAST
-    * export at build time), and writes the result to `outDir`.
+    * Reads every `.scala` file from `referenceDir`, optionally loads RAST
+    * files from `rastDir` to build a body map, then passes each reference
+    * file through `ParityDerive.derive` with the RAST bodies.
     *
-    * With an empty body map the output is the reference verbatim — the
-    * pipeline is proven end-to-end and RAST bodies slot in without any
-    * further build change.
+    * D3 implementation: RAST files are pre-committed under `<module>/rast/`.
+    * When RAST is available, translated method bodies replace reference
+    * bodies where the translation compiles. When no RAST is available,
+    * the reference is emitted verbatim (identity transform).
     */
   def generateNonJavaModule(
       moduleName: String,
       referenceDir: File,
       outDir: File,
       log: sbt.util.Logger,
+      rastDir: Option[File] = None,
+      policy: balticporter.frontend.ts.ParityDerive.Policy =
+        balticporter.frontend.ts.ParityDerive.Policy(),
+      bodyMapBuilder: Option[(File, File) => Map[String, (String, Int)]] = None,
   ): Seq[File] = {
     if (!referenceDir.exists) {
       log.warn(s"[Baltic Porter] No reference/ dir for $moduleName, skipping")
@@ -326,7 +331,8 @@ object BalticPorterGen {
     }
 
     val marker = outDir.toPath.resolve(".generated-marker")
-    val refHash = referenceDir.hashCode.toString
+    val refHash = referenceDir.hashCode.toString +
+      rastDir.map(_.hashCode.toString).getOrElse("")
 
     val cached = Files.exists(marker) &&
       Files.readString(marker).trim == refHash
@@ -334,16 +340,38 @@ object BalticPorterGen {
       return (outDir ** "*.scala").get()
     }
 
+    // Build RAST body map if a builder and RAST dir are provided
+    val globalBodies: Map[String, (String, Int)] =
+      (for {
+        rd <- rastDir if rd.exists
+        builder <- bodyMapBuilder
+      } yield {
+        try {
+          val bodies = builder(referenceDir, rd)
+          log.info(s"[Baltic Porter] $moduleName: loaded ${bodies.size} RAST bodies from ${rd.getName}")
+          bodies
+        } catch {
+          case e: Exception =>
+            log.warn(s"[Baltic Porter] $moduleName: RAST body map failed: ${e.getMessage}, using empty")
+            Map.empty[String, (String, Int)]
+        }
+      }).getOrElse(Map.empty)
+
     val refFiles = (referenceDir ** "*.scala").get()
+    var rastUsed = 0
+    var refUsed = 0
+
     val generated = refFiles.flatMap { refFile =>
       sbt.IO.relativize(referenceDir, refFile).map { relPath =>
         val outFile = outDir / relPath
 
         val refSource = sbt.IO.read(refFile)
 
-        // Run parity-derive with empty body map (no RAST yet — D3 will add RAST bodies)
         val result = balticporter.frontend.ts.ParityDerive.derive(
-          refSource, Map.empty, balticporter.frontend.ts.ParityDerive.Policy())
+          refSource, globalBodies, policy)
+
+        rastUsed += result.rastCount
+        refUsed += result.referenceCount
 
         sbt.IO.write(outFile, result.emittedSource)
         outFile
@@ -352,7 +380,11 @@ object BalticPorterGen {
 
     Files.createDirectories(marker.getParent)
     Files.writeString(marker, refHash)
-    log.info(s"[Baltic Porter] $moduleName: generated ${generated.size} files to $outDir")
+
+    val total = rastUsed + refUsed
+    val pct = if (total > 0) f"${rastUsed * 100.0 / total}%.1f" else "0.0"
+    log.info(s"[Baltic Porter] $moduleName: generated ${generated.size} files, " +
+      s"$rastUsed/$total ($pct%) RAST-derived bodies")
     generated
   }
 }
