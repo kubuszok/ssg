@@ -6,5 +6,7 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 
 // Baltic Porter: the corpus module provides the migrators (LiqpMigrate, FlexmarkMigrate)
 // that the sourceGenerator calls to produce ssg-liquid and ssg-md Scala sources from the
-// upstream Java originals.
+// upstream Java originals. The frontend-ts module provides the non-Java emitters
+// (ParityDerive, TerserEmitter, KaTeXEmitter, MermaidEmitter, DartSassEmitter, roughjs emitters).
 libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "0.1.0-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "0.1.0-SNAPSHOT"
