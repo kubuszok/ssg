@@ -18,14 +18,12 @@ object BalticPorterGen {
   /** Generate ssg-liquid Scala sources from liqp Java originals. */
   def generateLiquid(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
     val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
-    if (!hasBpSibling(ssgRoot)) {
-      log.warn("[Baltic Porter] No balticporter sibling — skipping ssg-liquid generation")
+    val liqpSrc = ssgRoot.resolve("original-src/liqp/src/main/java")
+    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(liqpSrc)) {
+      log.warn("[Baltic Porter] No balticporter sibling or liqp submodule — skipping ssg-liquid generation")
       return collectScalaFiles(outDir.toPath)
     }
     val bp = bpRoot(ssgRoot)
-
-    val liqpSrc = ssgRoot.resolve("original-src/liqp/src/main/java")
-    require(Files.isDirectory(liqpSrc), s"liqp sources not found at $liqpSrc — run: git submodule update --init")
 
     val portRoot = outDir.toPath.getParent
     val outPath  = outDir.toPath
@@ -74,14 +72,12 @@ object BalticPorterGen {
   /** Generate ssg-md Scala sources from flexmark-java originals. */
   def generateFlexmark(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
     val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
-    if (!hasBpSibling(ssgRoot)) {
-      log.warn("[Baltic Porter] No balticporter sibling — skipping ssg-md generation")
+    val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
+    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
+      log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md generation")
       return collectScalaFiles(outDir.toPath)
     }
     val bp = bpRoot(ssgRoot)
-
-    val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
-    require(Files.isDirectory(flexmarkSrc), s"flexmark-java sources not found at $flexmarkSrc — run: git submodule update --init")
 
     val portRoot = outDir.toPath.getParent
     val outPath  = outDir.toPath
@@ -130,8 +126,9 @@ object BalticPorterGen {
   /** Generate ssg-md-ext Scala sources from flexmark extension modules. */
   def generateFlexmarkExt(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
     val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
-    if (!hasBpSibling(ssgRoot)) {
-      log.warn("[Baltic Porter] No balticporter sibling — skipping ssg-md-ext generation")
+    val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
+    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
+      log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md-ext generation")
       return collectScalaFiles(outDir.toPath)
     }
     val bp = bpRoot(ssgRoot)
